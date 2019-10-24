@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/server"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -48,20 +49,23 @@ const ClientUIPort = 8090
 
 // RunUI executes the functionality "devspace ui"
 func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
-
 	// Set config root
 	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
 	}
-	if !configExists {
-		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
-	}
 
-	// Load generated config
-	generatedConfig, err := generated.LoadConfig(cmd.Profile)
-	if err != nil {
-		return errors.Errorf("Error loading generated.yaml: %v", err)
+	var (
+		config          *latest.Config
+		generatedConfig *generated.Config
+	)
+
+	if configExists {
+		// Load generated config
+		generatedConfig, err = generated.LoadConfig(cmd.Profile)
+		if err != nil {
+			return errors.Errorf("Error loading generated.yaml: %v", err)
+		}
 	}
 
 	// Use last context if specified
@@ -88,11 +92,13 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Add current kube context to context
-	configOptions := cmd.ToConfigOptions()
-	config, err := configutil.GetConfig(configOptions)
-	if err != nil {
-		return err
+	if configExists {
+		// Add current kube context to context
+		configOptions := cmd.ToConfigOptions()
+		config, err = configutil.GetConfig(configOptions)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Override error runtime handler

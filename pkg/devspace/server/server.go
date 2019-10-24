@@ -139,10 +139,15 @@ type returnConfig struct {
 }
 
 func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
+	profile := ""
+	if h.generatedConfig != nil {
+		profile = h.generatedConfig.GetActiveProfile()
+	}
+
 	s, err := yaml.Marshal(&returnConfig{
 		Config:          h.config,
 		GeneratedConfig: h.generatedConfig,
-		Profile:         h.generatedConfig.GetActiveProfile(),
+		Profile:         profile,
 		KubeContext:     h.client.CurrentContext,
 		KubeNamespace:   h.client.Namespace,
 	})

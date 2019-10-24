@@ -6,17 +6,19 @@ import { V1Pod, V1ContainerStatus } from '@kubernetes/client-node';
 
 export const getDeployedImageNames = (devSpaceConfig: DevSpaceConfig) => {
   const imageSelector = [];
-  const activeCache = devSpaceConfig.generatedConfig.profiles[devSpaceConfig.profile];
+  if (devSpaceConfig.config && devSpaceConfig.generatedConfig) {
+    const activeCache = devSpaceConfig.generatedConfig.profiles[devSpaceConfig.profile];
 
-  for (const generatedImageName in activeCache.images) {
-    if (
-      activeCache.images[generatedImageName].imageName &&
-      devSpaceConfig.config.images &&
-      devSpaceConfig.config.images[generatedImageName]
-    ) {
-      imageSelector.push(
-        activeCache.images[generatedImageName].imageName + ':' + activeCache.images[generatedImageName].tag
-      );
+    for (const generatedImageName in activeCache.images) {
+      if (
+        activeCache.images[generatedImageName].imageName &&
+        devSpaceConfig.config.images &&
+        devSpaceConfig.config.images[generatedImageName]
+      ) {
+        imageSelector.push(
+          activeCache.images[generatedImageName].imageName + ':' + activeCache.images[generatedImageName].tag
+        );
+      }
     }
   }
 
