@@ -11,7 +11,7 @@ import StackLinkTabSelector from 'components/basic/LinkTabSelector/StackLinkTabS
 import CodeSnippet from 'components/basic/CodeSnippet/CodeSnippet';
 import ProfilePortlet from 'components/views/Stack/Configuration/ProfilePortlet/ProfilePortlet';
 import ConfigVariablesPortlet from 'components/views/Stack/Configuration/ConfigVariablesPortlet/ConfigVariablesPortlet';
-import yaml from 'js-yaml';
+import { configToYAML } from 'lib/utils';
 
 interface Props extends DevSpaceConfigContext, PopupContext, WarningContext, RouteComponentProps {}
 
@@ -24,12 +24,9 @@ class StackConfiguration extends React.PureComponent<Props, State> {
   state: State = {};
 
   renderConfig = () => {
-    const yamlString = yaml.safeDump(this.props.devSpaceConfig.config, {
-      sortKeys: (a, b) => (a < b ? 1 : a > b ? -1 : 0),
-    });
     return (
       <CodeSnippet lineNumbers={true} className={styles.codesnippet}>
-        {yamlString}
+        {configToYAML(this.props.devSpaceConfig.config)}
       </CodeSnippet>
     );
   };

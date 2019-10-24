@@ -6,8 +6,12 @@
   position: relative;
   padding: 15px;
   justify-content: space-between;
-  width: 350px;
+  width: 420px;
   margin-bottom: 20px;
+
+  .buttons {
+    display: flex;
+  }
 
   &.single-container {
     cursor: pointer;
