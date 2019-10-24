@@ -158,7 +158,7 @@ func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace str
 		namespace = client.Namespace
 	}
 
-	minWait := 30 * time.Second
+	minWait := 60 * time.Second
 	waitingInterval := 1 * time.Second
 	for maxWaiting > 0 {
 		time.Sleep(waitingInterval)
@@ -218,6 +218,7 @@ func (client *Client) GetNewestRunningPod(labelSelector string, imageSelector []
 		namespace = client.Namespace
 	}
 
+	now := time.Now()
 	waitingInterval := 1 * time.Second
 	for ok := true; ok; ok = maxWaiting > 0 {
 		time.Sleep(waitingInterval)
@@ -261,6 +262,8 @@ func (client *Client) GetNewestRunningPod(labelSelector string, imageSelector []
 				} else if podStatus == "Error" || podStatus == "Unknown" || podStatus == "ImagePullBackOff" || podStatus == "CrashLoopBackOff" || podStatus == "RunContainerError" || podStatus == "ErrImagePull" || podStatus == "CreateContainerConfigError" || podStatus == "InvalidImageName" {
 					return nil, errors.Errorf("Selected Pod(s) cannot start (Status: %s)", podStatus)
 				}
+			} else if time.Since(now) > time.Minute {
+				return nil, errors.Errorf("Couldn't find a pod with selector %s in namespace %s", labelSelector, namespace)
 			}
 		}
 
