@@ -19,9 +19,11 @@
     color: white;
   }
 
-  .status {
+  .status-padding {
     padding-left: 11px;
+  }
 
+  .status {
     span {
       display: flex;
       align-items: center;

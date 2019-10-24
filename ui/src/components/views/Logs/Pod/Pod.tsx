@@ -6,12 +6,15 @@ import { GetPodStatus, GetContainerStatus } from 'lib/utils';
 import { SelectedLogs } from '../LogsList/LogsList';
 import { Portlet } from 'components/basic/Portlet/Portlet';
 import IconButton from 'components/basic/IconButton/IconButton';
+import TerminalIconExists from 'images/icon-terminal-exists.svg';
 import TerminalIconWhite from 'images/icon-terminal-white.svg';
 import TerminalIcon from 'images/icon-terminal.svg';
 import WarningIcon from 'components/basic/Icon/WarningIcon/WarningIcon';
+import TerminalCache from '../TerminalCache/TerminalCache';
 
 interface Props {
   pod: V1Pod;
+  cache: TerminalCache;
 
   selectedContainer?: string;
   onSelect: (selected: SelectedLogs) => void;
@@ -34,32 +37,43 @@ const getRestarts = (pod: V1Pod) => {
 const renderContainers = (props: Props) => {
   return (
     <div className={style['container-wrapper']}>
-      {props.pod.spec.containers.map((container) => (
-        <div
-          key={container.name}
-          className={props.selectedContainer === container.name ? style.container + ' ' + style.selected : style.container}
-          onClick={() => props.onSelect({ pod: props.pod.metadata.name, container: container.name })}
-        >
-          <StatusIconText
-            status={GetContainerStatus(props.pod.status.containerStatuses.find((status) => status.name === container.name))}
+      {props.pod.spec.containers.map((container) => {
+        const containerStatus = props.pod.status.containerStatuses.find((status) => status.name === container.name);
+
+        return (
+          <div
+            key={container.name}
+            className={props.selectedContainer === container.name ? style.container + ' ' + style.selected : style.container}
+            onClick={() => props.onSelect({ pod: props.pod.metadata.name, container: container.name })}
           >
-            {container.name}
-          </StatusIconText>
-          <IconButton
-            filter={false}
-            icon={props.selectedContainer === container.name ? TerminalIconWhite : TerminalIcon}
-            tooltipText={'Open terminal'}
-            onClick={(e) => {
-              e.stopPropagation();
-              props.onSelect({
-                pod: props.pod.metadata.name,
-                container: container.name,
-                interactive: true,
-              });
-            }}
-          />
-        </div>
-      ))}
+            <StatusIconText className={style.status} status={GetContainerStatus(containerStatus)}>
+              {container.name}
+              {containerStatus && containerStatus.restartCount > 0 && (
+                <WarningIcon className={style.warning} tooltipText={containerStatus.restartCount + ' restarts'} />
+              )}
+            </StatusIconText>
+            <IconButton
+              filter={false}
+              icon={
+                props.cache.exists({ pod: props.pod.metadata.name, container: container.name, interactive: true })
+                  ? TerminalIconExists
+                  : props.selectedContainer === container.name
+                  ? TerminalIconWhite
+                  : TerminalIcon
+              }
+              tooltipText={'Open terminal'}
+              onClick={(e) => {
+                e.stopPropagation();
+                props.onSelect({
+                  pod: props.pod.metadata.name,
+                  container: container.name,
+                  interactive: true,
+                });
+              }}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -86,7 +100,7 @@ const Pod = (props: Props) => {
           : null
       }
     >
-      <StatusIconText className={style.status} status={status}>
+      <StatusIconText className={style.status + ' ' + style['status-padding']} status={status}>
         {props.pod.metadata.name}
         {restarts > 0 && <WarningIcon className={style.warning} tooltipText={restarts + ' restarts'} />}
       </StatusIconText>
@@ -94,7 +108,18 @@ const Pod = (props: Props) => {
       {singleContainer && (
         <IconButton
           filter={false}
-          icon={selected ? TerminalIconWhite : TerminalIcon}
+          icon={
+            singleContainer &&
+            props.cache.exists({
+              pod: props.pod.metadata.name,
+              container: props.pod.spec.containers[0].name,
+              interactive: true,
+            })
+              ? TerminalIconExists
+              : selected
+              ? TerminalIconWhite
+              : TerminalIcon
+          }
           tooltipText={'Open terminal'}
           onClick={(e) => {
             e.stopPropagation();

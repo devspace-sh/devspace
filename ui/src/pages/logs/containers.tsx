@@ -114,6 +114,7 @@ class LogsContainers extends React.PureComponent<Props, State> {
           <ChangeNamespace />
           {this.state.podList ? (
             <LogsList
+              cache={this.cache}
               podList={this.state.podList}
               onSelect={(selected: SelectedLogs) => {
                 if (JSON.stringify(selected) === JSON.stringify(this.state.selected)) {

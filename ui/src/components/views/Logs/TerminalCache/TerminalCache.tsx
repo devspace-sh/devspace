@@ -32,6 +32,15 @@ class TerminalCache {
     this.onDelete = onDelete;
   }
 
+  public exists(selected: SelectedLogs) {
+    return !!this.cache.terminals.find(
+      (terminal) =>
+        terminal.pod === selected.pod &&
+        terminal.container === selected.container &&
+        terminal.interactive === selected.interactive
+    );
+  }
+
   public updateNamespace(namespace: string): boolean {
     if (namespace !== this.namespace) {
       this.namespace = namespace;

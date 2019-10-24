@@ -5,6 +5,7 @@ import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpace
 import LogsMultiple from '../LogsMultiple/LogsMultiple';
 import { getDeployedImageNames } from 'lib/utils';
 import styles from './LogsList.module.scss';
+import TerminalCache from '../TerminalCache/TerminalCache';
 
 export interface SelectedLogs {
   pod?: string;
@@ -15,6 +16,7 @@ export interface SelectedLogs {
 
 interface Props extends DevSpaceConfigContext {
   podList: V1PodList;
+  cache: TerminalCache;
   onSelect: (selected: SelectedLogs) => void;
   selected?: SelectedLogs;
 }
@@ -27,6 +29,7 @@ const renderPods = (props: Props) => {
   return props.podList.items.map((pod) => (
     <Pod
       key={pod.metadata.uid}
+      cache={props.cache}
       pod={pod}
       onSelect={props.onSelect}
       selectedContainer={props.selected && props.selected.pod === pod.metadata.name ? props.selected.container : undefined}
