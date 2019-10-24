@@ -87,6 +87,7 @@ class LogsContainers extends React.PureComponent<Props, State> {
   };
 
   componentWillUnmount() {
+    this.cache.close();
     clearTimeout(this.timeout);
   }
 

@@ -35,8 +35,6 @@ class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
   initialHeight: number;
 
   updateDimensions = () => {
-    console.info(this.props.show, this.props.url);
-
     if (!this.props.show) {
       this.needUpdate = true;
       return;
