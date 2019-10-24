@@ -57,37 +57,25 @@ const renderContainers = (props: Props) => {
                 <WarningIcon className={style.warning} tooltipText={containerStatus.restartCount + ' restarts'} />
               )}
             </StatusIconText>
-            <div className={style.buttons}>
-              <IconButton
-                filter={false}
-                icon={LeftAlignIcon}
-                tooltipText="Show YAML"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openYAMLPopup(props);
-                }}
-              />
-
-              <IconButton
-                filter={false}
-                icon={
-                  props.cache.exists({ pod: props.pod.metadata.name, container: container.name, interactive: true })
-                    ? TerminalIconExists
-                    : props.selectedContainer === container.name
-                    ? TerminalIconWhite
-                    : TerminalIcon
-                }
-                tooltipText={'Open terminal'}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  props.onSelect({
-                    pod: props.pod.metadata.name,
-                    container: container.name,
-                    interactive: true,
-                  });
-                }}
-              />
-            </div>
+            <IconButton
+              filter={false}
+              icon={
+                props.cache.exists({ pod: props.pod.metadata.name, container: container.name, interactive: true })
+                  ? TerminalIconExists
+                  : props.selectedContainer === container.name
+                  ? TerminalIconWhite
+                  : TerminalIcon
+              }
+              tooltipText={'Open terminal'}
+              onClick={(e) => {
+                e.stopPropagation();
+                props.onSelect({
+                  pod: props.pod.metadata.name,
+                  container: container.name,
+                  interactive: true,
+                });
+              }}
+            />
           </div>
         );
       })}
@@ -99,7 +87,7 @@ const openYAMLPopup = (props: Props) => {
   props.popup.openPopup(
     <AlertPopupContent hideCloseButton={true} width="1000px" title={'Pod ' + props.pod.metadata.name + ' YAML'}>
       <CodeSnippet lineNumbers={true} className={style.codesnippet}>
-        {configToYAML({ apiVersion: 'v1', kind: 'Pod', ...props.pod })}
+        {configToYAML({ apiVersion: 'v1', kind: 'Pod', ...props.pod }, false)}
       </CodeSnippet>
     </AlertPopupContent>
   );
@@ -132,17 +120,17 @@ const Pod = (props: Props) => {
         {restarts > 0 && <WarningIcon className={style.warning} tooltipText={restarts + ' restarts'} />}
       </StatusIconText>
       {!singleContainer && renderContainers(props)}
-      {singleContainer && (
-        <div className={style.buttons}>
-          <IconButton
-            filter={false}
-            icon={LeftAlignIcon}
-            tooltipText="Show YAML"
-            onClick={(e) => {
-              e.stopPropagation();
-              openYAMLPopup(props);
-            }}
-          />
+      <div className={style.buttons}>
+        <IconButton
+          filter={false}
+          icon={LeftAlignIcon}
+          tooltipText="Show YAML"
+          onClick={(e) => {
+            e.stopPropagation();
+            openYAMLPopup(props);
+          }}
+        />
+        {singleContainer && (
           <IconButton
             filter={false}
             icon={
@@ -167,8 +155,8 @@ const Pod = (props: Props) => {
               });
             }}
           />
-        </div>
-      )}
+        )}
+      </div>
     </Portlet>
   );
 };
