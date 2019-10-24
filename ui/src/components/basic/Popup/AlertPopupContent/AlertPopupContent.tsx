@@ -8,6 +8,7 @@ interface Props extends PopupProps {
   onConfirm?: () => Promise<any>;
   buttonText?: string;
   className?: string;
+  hideCloseButton?: boolean;
 }
 
 interface State extends PopupState {
@@ -50,11 +51,13 @@ class AlertPopupContent extends Popup<Props, State> {
         }
       >
         {content}
-        <div className={styles.buttons}>
-          <Button loading={this.state.loading} onClick={() => this.onConfirm()}>
-            {this.props.buttonText || 'Close'}
-          </Button>
-        </div>
+        {!this.props.hideCloseButton && (
+          <div className={styles.buttons}>
+            <Button loading={this.state.loading} onClick={() => this.onConfirm()}>
+              {this.props.buttonText || 'Close'}
+            </Button>
+          </div>
+        )}
       </div>
     );
   }

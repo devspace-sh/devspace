@@ -2,7 +2,8 @@ import http, { IncomingMessage } from 'http';
 import https from 'https';
 import React from 'react';
 import { DevSpaceConfig } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
-import { V1Pod, V1ContainerStatus } from '@kubernetes/client-node';
+import { V1Pod, V1ContainerStatus, Config } from '@kubernetes/client-node';
+import yaml from 'js-yaml';
 
 export const getDeployedImageNames = (devSpaceConfig: DevSpaceConfig) => {
   const imageSelector = [];
@@ -326,4 +327,11 @@ export const GetContainerStatus = (container: V1ContainerStatus) => {
   }
 
   return reason;
+};
+
+export const configToYAML = (config: Config, reverse?: boolean) => {
+  const yamlString = yaml.safeDump(config, {
+    sortKeys: reverse ? (a, b) => (a < b ? 1 : a > b ? -1 : 0) : false,
+  });
+  return yamlString;
 };
