@@ -20,6 +20,12 @@
       }
     }
 
+    .no-vars {
+      text-align: center;
+      font-size: 14px;
+      font: $list-label;
+    }
+
     .var {
       display: flex;
       align-items: center;

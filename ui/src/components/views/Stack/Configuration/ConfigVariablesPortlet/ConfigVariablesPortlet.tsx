@@ -13,23 +13,28 @@ const ConfigVariablesPortlet = (props: Props) => {
   const renderContent = () => {
     return (
       <div className={styles.vars}>
-        <div className={styles.heading}>
-          <div>Variable</div>
-          <div>Value</div>
-        </div>
-        {Object.entries(props.vars).map(([key, value]) => {
-          return (
-            <div className={styles.var} key={key}>
-              <div className={styles['key-wrapper']}>
-                <label>
-                  <Input className={styles.key} disabled={true} value={key} />
-                </label>
-                <span>=</span>
-              </div>
-              <Input className={styles.value} disabled={true} value={value} />
+        {!props.vars && <div className={styles['no-vars']}>No variables set</div>}
+        {props.vars && (
+          <React.Fragment>
+            <div className={styles.heading}>
+              <div>Variable</div>
+              <div>Value</div>
             </div>
-          );
-        })}
+            {Object.entries(props.vars).map(([key, value]) => {
+              return (
+                <div className={styles.var} key={key}>
+                  <div className={styles['key-wrapper']}>
+                    <label>
+                      <Input className={styles.key} disabled={true} value={key} />
+                    </label>
+                    <span>=</span>
+                  </div>
+                  <Input className={styles.value} disabled={true} value={value} />
+                </div>
+              );
+            })}
+          </React.Fragment>
+        )}
       </div>
     );
   };
