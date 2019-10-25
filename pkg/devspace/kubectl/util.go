@@ -160,7 +160,7 @@ func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace str
 
 	minWait := 60 * time.Second
 	waitingInterval := 1 * time.Second
-	for maxWaiting > 0 {
+	for maxWaiting >= 0 {
 		time.Sleep(waitingInterval)
 
 		podList, err := client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{})

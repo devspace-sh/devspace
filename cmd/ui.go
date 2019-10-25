@@ -105,7 +105,7 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 	log.OverrideRuntimeErrorHandler(true)
 
 	// Create server
-	server, err := server.NewServer(client, config, generatedConfig, cmd.Dev, log.GetInstance())
+	server, err := server.NewServer(config, generatedConfig, cmd.Dev, client.CurrentContext, client.Namespace, log.GetInstance())
 	if err != nil {
 		return err
 	}

@@ -382,7 +382,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 		defer log.StopWait()
 
 		// Create server
-		server, err := server.NewServer(client, config, generatedConfig, false, log)
+		server, err := server.NewServer(config, generatedConfig, false, client.CurrentContext, client.Namespace, log)
 		if err != nil {
 			return 0, err
 		}

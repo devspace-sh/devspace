@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/gorilla/websocket"
@@ -14,24 +15,6 @@ import (
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
-}
-
-func pipeReader(ws *websocket.Conn, r io.Reader) error {
-	b := make([]byte, 1024)
-	for {
-		n, err := r.Read(b)
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return err
-		}
-
-		if err := ws.WriteMessage(websocket.BinaryMessage, b[:n]); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 type wsStream struct {
@@ -54,7 +37,6 @@ func (ws *wsStream) Write(p []byte) (int, error) {
 
 func (ws *wsStream) Read(p []byte) (int, error) {
 	ws.WebSocket.SetReadLimit(int64(len(p)))
-
 	_, message, err := ws.WebSocket.ReadMessage()
 	if err != nil {
 		return 0, err
@@ -65,11 +47,28 @@ func (ws *wsStream) Read(p []byte) (int, error) {
 }
 
 func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
+	// Kube Context
+	kubeContext := h.defaultContext
+	context, ok := r.URL.Query()["context"]
+	if ok && len(context) == 1 && context[0] != "" {
+		kubeContext = context[0]
+	}
+
+	// Namespace
+	kubeNamespace := h.defaultNamespace
 	namespace, ok := r.URL.Query()["namespace"]
-	if !ok || len(namespace) != 1 {
-		http.Error(w, "namespace is missing", http.StatusBadRequest)
+	if ok && len(namespace) == 1 && namespace[0] != "" {
+		kubeNamespace = namespace[0]
+	}
+
+	// Create kubectl client
+	client, err := kubectl.NewClientFromContext(kubeContext, kubeNamespace, false)
+	if err != nil {
+		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	imageSelector, ok := r.URL.Query()["imageSelector"]
 	if !ok || len(imageSelector) == 0 {
 		http.Error(w, "imageSelector is missing", http.StatusBadRequest)
@@ -78,7 +77,7 @@ func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
 
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		h.log.Errorf("Error upgrading connection: %v", err)
+		h.log.Errorf("Error upgrading connection in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -86,12 +85,12 @@ func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
 	defer ws.Close()
 
 	writer := &wsStream{WebSocket: ws}
-	err = h.client.LogMultipleTimeout(imageSelector, make(chan error), ptr.Int64(100), writer, 0, log.Discard)
+	err = client.LogMultipleTimeout(imageSelector, make(chan error), ptr.Int64(100), writer, 0, log.Discard)
 	if err != nil {
 		ws.SetWriteDeadline(time.Now().Add(time.Second))
 		ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
 
-		h.log.Errorf("Error in /api/logs-multiple logs: %v", err)
+		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -101,14 +100,31 @@ func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
+	// Kube Context
+	kubeContext := h.defaultContext
+	contextParam, ok := r.URL.Query()["context"]
+	if ok && len(contextParam) == 1 && contextParam[0] != "" {
+		kubeContext = contextParam[0]
+	}
+
+	// Namespace
+	kubeNamespace := h.defaultNamespace
+	namespace, ok := r.URL.Query()["namespace"]
+	if ok && len(namespace) == 1 && namespace[0] != "" {
+		kubeNamespace = namespace[0]
+	}
+
+	// Create kubectl client
+	client, err := kubectl.NewClientFromContext(kubeContext, kubeNamespace, false)
+	if err != nil {
+		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	name, ok := r.URL.Query()["name"]
 	if !ok || len(name) != 1 {
 		http.Error(w, "name is missing", http.StatusBadRequest)
-		return
-	}
-	namespace, ok := r.URL.Query()["namespace"]
-	if !ok || len(namespace) != 1 {
-		http.Error(w, "namespace is missing", http.StatusBadRequest)
 		return
 	}
 	container, ok := r.URL.Query()["container"]
@@ -119,7 +135,7 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		h.log.Errorf("Error upgrading connection: %v", err)
+		h.log.Errorf("Error upgrading connection in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -127,12 +143,12 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	defer ws.Close()
 
 	// Open logs connection
-	reader, err := h.client.Logs(context.Background(), namespace[0], name[0], container[0], false, ptr.Int64(100), true)
+	reader, err := client.Logs(context.Background(), namespace[0], name[0], container[0], false, ptr.Int64(100), true)
 	if err != nil {
 		ws.SetWriteDeadline(time.Now().Add(time.Second))
 		ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
 
-		h.log.Errorf("Error in /api/logs logs: %v", err)
+		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -140,9 +156,10 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	defer reader.Close()
 
 	// Stream logs
-	err = pipeReader(ws, reader)
+	stream := &wsStream{WebSocket: ws}
+	_, err = io.Copy(stream, reader)
 	if err != nil {
-		h.log.Errorf("Error in /api/logs pipeReader: %v", err)
+		h.log.Errorf("Error in %s pipeReader: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
