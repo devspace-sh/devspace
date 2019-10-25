@@ -91,7 +91,6 @@ func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
 		ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
 
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -149,7 +148,6 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 		ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
 
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -160,7 +158,6 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	_, err = io.Copy(stream, reader)
 	if err != nil {
 		h.log.Errorf("Error in %s pipeReader: %v", r.URL.String(), err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

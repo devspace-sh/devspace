@@ -67,7 +67,6 @@ func (h *handler) enter(w http.ResponseWriter, r *http.Request) {
 		ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
 
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

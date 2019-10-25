@@ -68,6 +68,18 @@ class LogsContainers extends React.PureComponent<Props, State> {
     this.timeout = setTimeout(this.componentDidMount, 1000);
   };
 
+  componentDidUpdate(prevProps: Props) {
+    if (
+      prevProps &&
+      (this.props.devSpaceConfig.kubeNamespace !== prevProps.devSpaceConfig.kubeNamespace ||
+        this.props.devSpaceConfig.kubeContext !== prevProps.devSpaceConfig.kubeContext)
+    ) {
+      this.setState({
+        selected: null,
+      });
+    }
+  }
+
   componentWillUnmount() {
     clearTimeout(this.timeout);
   }

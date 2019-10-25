@@ -27,6 +27,8 @@ func (h *handler) command(w http.ResponseWriter, r *http.Request) {
 	stream := &wsStream{WebSocket: ws}
 	cmd := exec.Command("devspace", "run", name[0])
 
+	// The current problem if we pipe the stdin to the command is that the command
+	// is not terminating anymore, since it waits forever for stdin to close
 	// cmd.Stdin = stream
 	cmd.Stdout = stream
 	cmd.Stderr = stream
@@ -37,7 +39,6 @@ func (h *handler) command(w http.ResponseWriter, r *http.Request) {
 		ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
 
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
