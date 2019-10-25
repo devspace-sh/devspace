@@ -12,6 +12,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
@@ -34,7 +35,7 @@ func enableCors(w *http.ResponseWriter) {
 const DefaultPort = 8090
 
 // NewServer creates a new server from the given parameters
-func NewServer(config *latest.Config, generatedConfig *generated.Config, ignoreDownloadError bool, defaultContext, defaultNamespace string, log log.Logger) (*Server, error) {
+func NewServer(config *latest.Config, generatedConfig *generated.Config, ignoreDownloadError bool, defaultContext, defaultNamespace string, forcePort *int, log log.Logger) (*Server, error) {
 	path, err := downloadUI()
 	if err != nil {
 		if !ignoreDownloadError {
@@ -46,13 +47,22 @@ func NewServer(config *latest.Config, generatedConfig *generated.Config, ignoreD
 
 	// Find an open port
 	usePort := DefaultPort
-	for {
-		unused, _ := port.CheckHostPort("localhost", usePort)
-		if unused {
-			break
-		}
+	if forcePort != nil {
+		usePort = *forcePort
 
-		usePort++
+		unused, _ := port.CheckHostPort("localhost", usePort)
+		if unused == false {
+			return nil, errors.Errorf("Port %d already in use", usePort)
+		}
+	} else {
+		for {
+			unused, _ := port.CheckHostPort("localhost", usePort)
+			if unused {
+				break
+			}
+
+			usePort++
+		}
 	}
 
 	// Create handler
@@ -139,6 +149,7 @@ func newHandler(config *latest.Config, generatedConfig *generated.Config, defaul
 		http.ServeFile(w, r, filepath.Join(path, "index.html"))
 	})
 	handler.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(path, "static")))))
+	handler.mux.HandleFunc("/api/version", handler.version)
 	handler.mux.HandleFunc("/api/resource", handler.request)
 	handler.mux.HandleFunc("/api/config", handler.returnConfig)
 	handler.mux.HandleFunc("/api/enter", handler.enter)
@@ -174,6 +185,27 @@ func convert(i interface{}) interface{} {
 		}
 	}
 	return i
+}
+
+// UIServerVersion is the struct that is returned by the /api/version request
+type UIServerVersion struct {
+	Version  string `json:"version"`
+	DevSpace bool   `json:"devSpace"`
+}
+
+func (h *handler) version(w http.ResponseWriter, r *http.Request) {
+	version := upgrade.GetVersion()
+	b, err := json.Marshal(&UIServerVersion{
+		Version:  version,
+		DevSpace: true,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(b)
 }
 
 type returnConfig struct {
