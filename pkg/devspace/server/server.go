@@ -13,6 +13,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
+	"github.com/devspace-cloud/devspace/pkg/util/analytics"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
@@ -98,6 +99,7 @@ type handler struct {
 	rawConfig        map[interface{}]interface{}
 	kubeContexts     map[string]string
 	workingDirectory string
+	analyticsEnabled bool
 	path             string
 	log              log.Logger
 	mux              *http.ServeMux
@@ -134,6 +136,11 @@ func newHandler(config *latest.Config, generatedConfig *generated.Config, defaul
 		config:           config,
 		log:              log,
 		generatedConfig:  generatedConfig,
+	}
+
+	analytics, err := analytics.GetAnalytics()
+	if err == nil {
+		handler.analyticsEnabled = analytics.Enabled()
 	}
 
 	// Load raw config
@@ -213,6 +220,7 @@ type returnConfig struct {
 	RawConfig       map[interface{}]interface{} `yaml:"rawConfig"`
 	GeneratedConfig *generated.Config           `yaml:"generatedConfig"`
 
+	AnalyticsEnabled bool              `yaml:"analyticsEnabled"`
 	Profile          string            `yaml:"profile"`
 	WorkingDirectory string            `yaml:"workingDirectory"`
 	KubeContext      string            `yaml:"kubeContext"`
@@ -227,6 +235,7 @@ func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s, err := yaml.Marshal(&returnConfig{
+		AnalyticsEnabled: h.analyticsEnabled,
 		Config:           h.config,
 		GeneratedConfig:  h.generatedConfig,
 		Profile:          profile,
