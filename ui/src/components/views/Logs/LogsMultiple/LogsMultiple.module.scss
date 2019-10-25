@@ -10,7 +10,7 @@
   text-align: center;
   display: flex;
   align-items: center;
-  padding-left: 50px;
+  justify-content: center;
 
   &.selected {
     background-color: $blue-dark;
