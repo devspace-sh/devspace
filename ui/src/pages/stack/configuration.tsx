@@ -35,7 +35,13 @@ class StackConfiguration extends React.PureComponent<Props, State> {
     return (
       <PageLayout className={styles['stack-configuration-component']} heading={<StackLinkTabSelector />}>
         {!this.props.devSpaceConfig.config || !this.props.devSpaceConfig.generatedConfig ? (
-          <div className={styles['no-config']}>There is no DevSpace configuration loaded</div>
+          <div className={styles['no-config']}>
+            There was no DevSpace configuration loaded.{' '}
+            <a href="https://devspace.cloud/docs/cli/getting-started/deployment" target="_blank">
+              Click here
+            </a>{' '}
+            to create a new DevSpace configuration
+          </div>
         ) : (
           <React.Fragment>
             {this.renderConfig()}
