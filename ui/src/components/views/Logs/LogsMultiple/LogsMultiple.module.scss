@@ -5,8 +5,12 @@
   margin-bottom: 20px;
   padding: 15px;
   font: 600 14px 'Open Sans';
-  width: 350px;
+  width: 420px;
+  height: 60px;
   text-align: center;
+  display: flex;
+  align-items: center;
+  padding-left: 50px;
 
   &.selected {
     background-color: $blue-dark;

@@ -1,14 +1,17 @@
 import React from 'react';
-import styles from './ChangeNamespace.module.scss';
+import styles from './ChangeKubeContext.module.scss';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 import { PortletSimple } from 'components/basic/Portlet/PortletSimple/PortletSimple';
 import CustomDropDown, { DropDownSelectedOption } from 'components/basic/CustomDropDown/CustomDropDown';
+import { ApiHostname } from 'lib/rest';
+import { V1NamespaceList, V1Namespace } from '@kubernetes/client-node';
 
 interface Props extends DevSpaceConfigContext {}
 
 interface State {
   namespaceValue: DropDownSelectedOption;
   kubecontextValue: DropDownSelectedOption;
+  namespaceList: V1Namespace[];
 }
 
 class ChangeNamespace extends React.PureComponent<Props, State> {
@@ -44,17 +47,53 @@ class ChangeNamespace extends React.PureComponent<Props, State> {
       id: this.props.devSpaceConfig.kubeContext,
       text: this.props.devSpaceConfig.kubeContext,
     },
+    namespaceList: null,
+  };
+
+  componentDidMount = async () => {
+    this.getNamespaces();
+  };
+
+  componentDidUpdate = (prevProps: Props) => {
+    if (this.props.devSpaceConfig.kubeContext !== prevProps.devSpaceConfig.kubeContext) {
+      this.getNamespaces();
+    }
+  };
+
+  getNamespaces = async () => {
+    try {
+      const response = await fetch(
+        `http://${ApiHostname()}/api/resource?resource=namespaces&context=${this.props.devSpaceConfig.kubeContext}`
+      );
+      if (response.status !== 200) {
+        throw new Error(await response.text());
+      }
+
+      const namespaces: V1NamespaceList = await response.json();
+      this.setState({ namespaceList: namespaces.items });
+    } catch (err) {
+      this.setState({ namespaceList: null });
+    }
   };
 
   render() {
     const classnames = [styles['change-namespace']];
 
-    const namespaceOptions: DropDownSelectedOption[] = [
+    let namespaceOptions: DropDownSelectedOption[] = [
       {
         id: this.props.devSpaceConfig.kubeNamespace,
         text: this.props.devSpaceConfig.kubeNamespace,
       },
     ];
+
+    if (this.state.namespaceList) {
+      namespaceOptions = this.state.namespaceList.map((namespace) => {
+        return {
+          id: namespace.metadata.name,
+          text: namespace.metadata.name,
+        };
+      });
+    }
 
     const kubeContextOptions: DropDownSelectedOption[] = Object.entries(this.props.devSpaceConfig.kubeContexts).map(
       ([key, value]) => {
@@ -97,7 +136,9 @@ class ChangeNamespace extends React.PureComponent<Props, State> {
                     options={namespaceOptions}
                     selectedValue={this.state.namespaceValue}
                     onChange={(selected: DropDownSelectedOption) => {
-                      this.setState({ namespaceValue: selected });
+                      this.props.devSpaceConfig.changeKubeContext({
+                        contextNamespace: selected.text,
+                      });
                     }}
                   />
                 </label>
