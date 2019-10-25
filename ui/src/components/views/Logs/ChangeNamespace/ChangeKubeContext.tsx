@@ -54,8 +54,10 @@ class ChangeNamespace extends React.PureComponent<Props, State> {
     this.getNamespaces();
   };
 
-  componentDidUpdate = () => {
-    this.getNamespaces();
+  componentDidUpdate = (prevProps: Props) => {
+    if (this.props.devSpaceConfig.kubeContext !== prevProps.devSpaceConfig.kubeContext) {
+      this.getNamespaces();
+    }
   };
 
   getNamespaces = async () => {
@@ -68,10 +70,9 @@ class ChangeNamespace extends React.PureComponent<Props, State> {
       }
 
       const namespaces: V1NamespaceList = await response.json();
-
       this.setState({ namespaceList: namespaces.items });
     } catch (err) {
-      console.log(err);
+      this.setState({ namespaceList: null });
     }
   };
 
