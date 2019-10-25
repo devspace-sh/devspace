@@ -40,7 +40,7 @@ func (h *handler) enter(w http.ResponseWriter, r *http.Request) {
 	// Create kubectl client
 	client, err := kubectl.NewClientFromContext(kubeContext, kubeNamespace, false)
 	if err != nil {
-		h.log.Errorf("Error in /api/enter: %v", err)
+		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -66,7 +66,7 @@ func (h *handler) enter(w http.ResponseWriter, r *http.Request) {
 		ws.SetWriteDeadline(time.Now().Add(time.Second))
 		ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
 
-		h.log.Errorf("Error in /api/enter: %v", err)
+		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

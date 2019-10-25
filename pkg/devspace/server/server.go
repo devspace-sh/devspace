@@ -157,6 +157,7 @@ func newHandler(config *latest.Config, generatedConfig *generated.Config, defaul
 	})
 	handler.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(path, "static")))))
 	handler.mux.HandleFunc("/api/version", handler.version)
+	handler.mux.HandleFunc("/api/command", handler.command)
 	handler.mux.HandleFunc("/api/resource", handler.request)
 	handler.mux.HandleFunc("/api/config", handler.returnConfig)
 	handler.mux.HandleFunc("/api/enter", handler.enter)

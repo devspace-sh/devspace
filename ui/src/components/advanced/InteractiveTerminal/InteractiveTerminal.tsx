@@ -9,7 +9,7 @@ import IconTrash from 'images/trash.svg';
 export interface InteractiveTerminalProps {
   className?: string;
   url: string;
-  interactive: boolean;
+  interactive?: boolean;
   show: boolean;
 
   firstLine?: React.ReactNode;
