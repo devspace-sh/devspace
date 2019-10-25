@@ -17,6 +17,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/port"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Server is listens on a given port for the ui functionality
@@ -100,7 +101,12 @@ func newHandler(config *latest.Config, generatedConfig *generated.Config, defaul
 
 	kubeContexts := map[string]string{}
 	for name, context := range kubeConfig.Contexts {
-		kubeContexts[name] = context.Namespace
+		namespace := context.Namespace
+		if namespace != "" {
+			namespace = metav1.NamespaceDefault
+		}
+
+		kubeContexts[name] = namespace
 	}
 
 	cwd, err := os.Getwd()
