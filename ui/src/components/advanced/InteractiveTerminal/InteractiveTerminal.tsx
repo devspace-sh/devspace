@@ -10,7 +10,7 @@ export interface InteractiveTerminalProps {
   className?: string;
   url: string;
   interactive?: boolean;
-  show: boolean;
+  show?: boolean;
 
   firstLine?: React.ReactNode;
 
