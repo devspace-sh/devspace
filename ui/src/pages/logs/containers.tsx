@@ -11,7 +11,7 @@ import { ApiHostname } from 'lib/rest';
 import LogsLinkTabSelector from 'components/basic/LinkTabSelector/LogsLinkTabSelector/LogsLinkTabSelector';
 import TerminalCache from 'components/views/Logs/TerminalCache/TerminalCache';
 import withWarning, { WarningContext } from 'contexts/withWarning/withWarning';
-import ChangeNamespace from 'components/views/Logs/ChangeNamespace/ChangeNamespace';
+import ChangeNamespace from 'components/views/Logs/ChangeNamespace/ChangeKubeContext';
 
 interface Props extends DevSpaceConfigContext, PopupContext, WarningContext, RouteComponentProps {}
 
