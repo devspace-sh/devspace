@@ -3,7 +3,7 @@ import { DevSpaceConfig, DevSpaceConfigContextProvider } from './withDevSpaceCon
 import ErrorMessage from 'components/basic/ErrorMessage/ErrorMessage';
 import { ApiHostname } from 'lib/rest';
 import Button from 'components/basic/Button/Button';
-import style from './DevSpaceConfigWrapper.module.scss';
+import styles from './DevSpaceConfigWrapper.module.scss';
 
 interface Props {}
 
@@ -73,8 +73,8 @@ export default class DevSpaceConfigWrapper extends React.PureComponent<Props, St
   render() {
     if (this.state.error) {
       return (
-        <div className={style['error']}>
-          <ErrorMessage className={style['message']}>{this.state.error}</ErrorMessage>
+        <div className={styles['error']}>
+          <ErrorMessage className={styles['message']}>{this.state.error}</ErrorMessage>
           <div>
             <Button onClick={() => this.componentDidMount()}>Retry</Button>
           </div>

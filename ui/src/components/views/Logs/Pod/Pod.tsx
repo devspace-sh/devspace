@@ -1,6 +1,6 @@
 import React from 'react';
 import { V1Pod } from '@kubernetes/client-node';
-import style from './Pod.module.scss';
+import styles from './Pod.module.scss';
 import StatusIconText from 'components/basic/IconText/StatusIconText/StatusIconText';
 import { GetPodStatus, GetContainerStatus, configToYAML } from 'lib/utils';
 import { SelectedLogs } from '../LogsList/LogsList';
@@ -50,20 +50,22 @@ const getRestarts = (pod: V1Pod) => {
 
 const renderContainers = (props: Props) => {
   return (
-    <div className={style['container-wrapper']}>
+    <div className={styles['container-wrapper']}>
       {props.pod.spec.containers.map((container) => {
         const containerStatus = props.pod.status.containerStatuses.find((status) => status.name === container.name);
 
         return (
           <div
             key={container.name}
-            className={props.selectedContainer === container.name ? style.container + ' ' + style.selected : style.container}
+            className={
+              props.selectedContainer === container.name ? styles.container + ' ' + styles.selected : styles.container
+            }
             onClick={() => props.onSelect({ pod: props.pod.metadata.name, container: container.name })}
           >
-            <StatusIconText className={style.status} status={GetContainerStatus(containerStatus)}>
+            <StatusIconText className={styles.status} status={GetContainerStatus(containerStatus)}>
               {container.name}
               {containerStatus && containerStatus.restartCount > 0 && (
-                <WarningIcon className={style.warning} tooltipText={containerStatus.restartCount + ' restarts'} />
+                <WarningIcon className={styles.warning} tooltipText={containerStatus.restartCount + ' restarts'} />
               )}
             </StatusIconText>
             <IconButton
@@ -95,7 +97,7 @@ const renderContainers = (props: Props) => {
 const openYAMLPopup = (props: Props) => {
   props.popup.openPopup(
     <AlertPopupContent hideCloseButton={true} width="1000px" title={'Pod ' + props.pod.metadata.name + ' YAML'}>
-      <CodeSnippet lineNumbers={true} className={style.codesnippet}>
+      <CodeSnippet lineNumbers={true} className={styles.codesnippet}>
         {configToYAML({ apiVersion: 'v1', kind: 'Pod', ...props.pod }, false)}
       </CodeSnippet>
     </AlertPopupContent>
@@ -107,12 +109,12 @@ const Pod = (props: Props) => {
   const status = GetPodStatus(props.pod);
   const restarts = getRestarts(props.pod);
   const selected = singleContainer && props.selectedContainer;
-  const classNames = [style.pod];
+  const classNames = [styles.pod];
   if (selected) {
-    classNames.push(style.selected);
+    classNames.push(styles.selected);
   }
   if (singleContainer) {
-    classNames.push(style['single-container']);
+    classNames.push(styles['single-container']);
   }
 
   return (
@@ -127,13 +129,13 @@ const Pod = (props: Props) => {
       {{
         top: {
           left: (
-            <StatusIconText className={style.status + ' ' + style['status-padding']} status={status}>
+            <StatusIconText className={styles.status + ' ' + styles['status-padding']} status={status}>
               {props.pod.metadata.name}
-              {restarts > 0 && <WarningIcon className={style.warning} tooltipText={restarts + ' restarts'} />}
+              {restarts > 0 && <WarningIcon className={styles.warning} tooltipText={restarts + ' restarts'} />}
             </StatusIconText>
           ),
           right: (
-            <div className={style.buttons}>
+            <div className={styles.buttons}>
               <IconButton
                 filter={false}
                 icon={LeftAlignIcon}

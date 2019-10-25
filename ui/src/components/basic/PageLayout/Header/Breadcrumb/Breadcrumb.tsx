@@ -4,13 +4,14 @@ import Arrow from 'images/breadcrumb-arrow.svg';
 import { withRouter, RouteComponentProps } from 'react-router';
 import { Link } from 'react-router-dom';
 import ErrorBoundary from 'components/basic/ErrorBoundary/ErrorBoundary';
+import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 
 const capitalize = (s: string) => {
   if (typeof s !== 'string') return '';
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
-interface Props extends RouteComponentProps {}
+interface Props extends RouteComponentProps, DevSpaceConfigContext {}
 interface State {}
 
 class Breadcrumb extends React.Component<Props, State> {
@@ -66,10 +67,28 @@ class Breadcrumb extends React.Component<Props, State> {
     ];
   };
 
+  renderPrefix = () => {
+    if (!this.props.devSpaceConfig.workingDirectory) {
+      return 'DevSpace';
+    } else {
+      const wd = this.props.devSpaceConfig.workingDirectory;
+      // Unix
+      const lastIdxOfSlash = wd.lastIndexOf('/');
+      // Windows
+      const lastIdxOfBackSlash = wd.lastIndexOf('\\');
+
+      if (lastIdxOfSlash !== -1) {
+        return '.' + wd.slice(lastIdxOfSlash);
+      } else {
+        return '.' + wd.slice(lastIdxOfBackSlash);
+      }
+    }
+  };
+
   renderRoute() {
     return (
       <React.Fragment>
-        <div className={styles['account-selector']}>DevSpace</div>
+        <div className={styles['account-selector']}>{this.renderPrefix()}</div>
         <div className={styles.crumbs}>{this.renderBreadcrumb()}</div>
       </React.Fragment>
     );
@@ -84,4 +103,4 @@ class Breadcrumb extends React.Component<Props, State> {
   }
 }
 
-export default withRouter(Breadcrumb);
+export default withRouter(withDevSpaceConfig(Breadcrumb));

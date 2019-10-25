@@ -9,6 +9,7 @@ const reactDevSpaceConfigContext = React.createContext({
   kubeNamespace: null,
   kubeContext: null,
   kubeContexts: null,
+  workingDirectory: null,
 });
 
 const DevSpaceConfigConsumer: React.ExoticComponent<React.ConsumerProps<DevSpaceConfig>> =
@@ -24,6 +25,7 @@ export interface DevSpaceConfig {
   kubeNamespace: string;
   kubeContext: string;
   kubeContexts: { [key: string]: string };
+  workingDirectory: string;
 }
 
 // TODO: complete

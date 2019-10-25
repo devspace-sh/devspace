@@ -1,7 +1,7 @@
 import React from 'react';
 import { Terminal } from 'xterm';
 import { AttachAddon } from 'lib/attach';
-import style from './InteractiveTerminal.module.scss';
+import styles from './InteractiveTerminal.module.scss';
 import MaximizeButton from 'components/basic/IconButton/MaximizeButton/MaximizeButton';
 
 export interface InteractiveTerminalProps {
@@ -127,27 +127,27 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
   }
 
   render() {
-    const classnames = [style['terminal-wrapper']];
+    const classnames = [styles['terminal-wrapper']];
     if (this.props.className) {
       classnames.push(this.props.className);
     }
     if (this.state.fullscreen) {
-      classnames.push(style['fullscreen']);
+      classnames.push(styles['fullscreen']);
     }
 
     return (
       <div className={classnames.join(' ')} style={{ display: this.props.show ? 'flex' : 'none' }}>
-        <div className={style.header}>
+        <div className={styles.header}>
           {this.props.firstLine || <div />}
           <MaximizeButton
             maximized={this.state.fullscreen}
-            className={style.maximize}
+            className={styles.maximize}
             filter={false}
             tooltipPosition={'bottom'}
             onClick={() => this.setState({ fullscreen: !this.state.fullscreen }, this.updateDimensions)}
           />
         </div>
-        <div className={style['terminal']} ref={(ref) => this.attach(ref)} />
+        <div className={styles['terminal']} ref={(ref) => this.attach(ref)} />
       </div>
     );
   }
