@@ -43,6 +43,9 @@ const LogsList = (props: Props) => (
       <LogsMultiple selected={props.selected} onSelect={props.onSelect} />
     )}
     {renderPods(props)}
+    {renderPods(props)}
+    {renderPods(props)}
+    {renderPods(props)}
   </div>
 );
 

@@ -2,6 +2,7 @@ import React from 'react';
 
 const reactDevSpaceConfigContext = React.createContext({
   changeNamespace: (_: string) => null,
+  changeKubeContext: (_: string) => null,
   config: null,
   generatedConfig: null,
   profile: null,
@@ -14,6 +15,7 @@ const DevSpaceConfigConsumer: React.ExoticComponent<React.ConsumerProps<DevSpace
 
 export interface DevSpaceConfig {
   changeNamespace: (newNamespace: string) => void;
+  changeKubeContext: (newContext: string) => void;
 
   config: Config;
   generatedConfig: GeneratedConfig;

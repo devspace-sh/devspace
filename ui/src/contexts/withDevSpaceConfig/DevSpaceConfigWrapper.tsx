@@ -30,6 +30,7 @@ export default class DevSpaceConfigWrapper extends React.PureComponent<Props, St
 
       const devSpaceConfig: DevSpaceConfig = await response.json();
       devSpaceConfig.changeNamespace = this.changeNamespace;
+      devSpaceConfig.changeKubeContext = this.changeKubeContext;
 
       this.setState({
         error: null,
@@ -51,6 +52,15 @@ export default class DevSpaceConfigWrapper extends React.PureComponent<Props, St
       devSpaceConfig: {
         ...this.state.devSpaceConfig,
         kubeNamespace: newNamespace,
+      },
+    });
+  };
+
+  changeKubeContext = (newContext: string) => {
+    this.setState({
+      devSpaceConfig: {
+        ...this.state.devSpaceConfig,
+        kubeContext: newContext,
       },
     });
   };
