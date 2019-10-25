@@ -123,31 +123,29 @@ class TerminalCache extends React.PureComponent<Props, State> {
   render() {
     const terminals = [];
     if (this.cache.multiLog) {
-      terminals.push(
-        <InteractiveTerminal
-          key="multi-logs"
-          {...this.cache.multiLog.props}
-          onClose={() => this.delete({ multiple: this.cache.multiLog.multiple })}
-        />
-      );
+      terminals.push(<InteractiveTerminal key="multi-logs" {...this.cache.multiLog.props} />);
     }
 
     terminals.push(
-      ...this.cache.terminals.map((terminal) => (
-        <InteractiveTerminal
-          key={terminal.pod + ':' + terminal.container + ':' + (terminal.interactive ? 'interactive' : 'non-interactive')}
-          {...terminal.props}
-          firstLine={
-            <AdvancedCodeLine className={style['first-line']}>
-              devspace {terminal.interactive ? 'enter' : 'logs'} -n {this.cache.kubeNamespace} --pod {terminal.pod} -c{' '}
-              {terminal.container}
-            </AdvancedCodeLine>
-          }
-          onClose={() =>
-            this.delete({ pod: terminal.pod, container: terminal.container, interactive: terminal.interactive })
-          }
-        />
-      ))
+      ...this.cache.terminals.map((terminal) => {
+        return (
+          <InteractiveTerminal
+            key={terminal.pod + ':' + terminal.container + ':' + (terminal.interactive ? 'interactive' : 'non-interactive')}
+            {...terminal.props}
+            firstLine={
+              <AdvancedCodeLine className={style['first-line']}>
+                devspace {terminal.interactive ? 'enter' : 'logs'} -n {this.cache.kubeNamespace} --pod {terminal.pod} -c{' '}
+                {terminal.container}
+              </AdvancedCodeLine>
+            }
+            closeOnConnectionLost={terminal.interactive}
+            closeDelay={5000}
+            onClose={() =>
+              this.delete({ pod: terminal.pod, container: terminal.container, interactive: terminal.interactive })
+            }
+          />
+        );
+      })
     );
 
     return this.props.children({ terminals, cache: this.cache });
