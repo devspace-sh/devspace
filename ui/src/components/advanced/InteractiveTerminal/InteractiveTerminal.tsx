@@ -3,7 +3,8 @@ import { Terminal } from 'xterm';
 import { AttachAddon } from 'lib/attach';
 import styles from './InteractiveTerminal.module.scss';
 import MaximizeButton from 'components/basic/IconButton/MaximizeButton/MaximizeButton';
-import DeleteButton from 'components/basic/IconButton/DeleteButton/DeleteButton';
+import IconButton from 'components/basic/IconButton/IconButton';
+import IconTrash from 'images/trash.svg';
 
 export interface InteractiveTerminalProps {
   className?: string;
@@ -164,7 +165,9 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
               tooltipPosition={'bottom'}
               onClick={() => this.setState({ fullscreen: !this.state.fullscreen }, this.updateDimensions)}
             />
-            <DeleteButton
+            <IconButton
+              icon={IconTrash}
+              filter={false}
               tooltipText="Kill Terminal"
               tooltipPosition={'bottom'}
               onClick={() => {
