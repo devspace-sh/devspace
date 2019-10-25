@@ -4,7 +4,7 @@ import React from 'react';
 import { SelectedLogs } from 'components/views/Logs/LogsList/LogsList';
 import { ApiHostname } from '../../../../lib/rest';
 import AdvancedCodeLine from 'components/basic/CodeSnippet/AdvancedCodeLine/AdvancedCodeLine';
-import style from './TerminalCache.module.scss';
+import styles from './TerminalCache.module.scss';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 
 export interface TerminalCacheInterface {
@@ -133,7 +133,7 @@ class TerminalCache extends React.PureComponent<Props, State> {
             key={terminal.pod + ':' + terminal.container + ':' + (terminal.interactive ? 'interactive' : 'non-interactive')}
             {...terminal.props}
             firstLine={
-              <AdvancedCodeLine className={style['first-line']}>
+              <AdvancedCodeLine className={styles['first-line']}>
                 devspace {terminal.interactive ? 'enter' : 'logs'} -n {this.cache.kubeNamespace} --pod {terminal.pod} -c{' '}
                 {terminal.container}
               </AdvancedCodeLine>

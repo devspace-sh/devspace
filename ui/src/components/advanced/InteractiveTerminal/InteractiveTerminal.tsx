@@ -1,9 +1,10 @@
 import React from 'react';
 import { Terminal } from 'xterm';
 import { AttachAddon } from 'lib/attach';
-import style from './InteractiveTerminal.module.scss';
+import styles from './InteractiveTerminal.module.scss';
 import MaximizeButton from 'components/basic/IconButton/MaximizeButton/MaximizeButton';
-import DeleteButton from 'components/basic/IconButton/DeleteButton/DeleteButton';
+import IconButton from 'components/basic/IconButton/IconButton';
+import IconTrash from 'images/trash.svg';
 
 export interface InteractiveTerminalProps {
   className?: string;
@@ -144,27 +145,29 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
   }
 
   render() {
-    const classnames = [style['terminal-wrapper']];
+    const classnames = [styles['terminal-wrapper']];
     if (this.props.className) {
       classnames.push(this.props.className);
     }
     if (this.state.fullscreen) {
-      classnames.push(style['fullscreen']);
+      classnames.push(styles['fullscreen']);
     }
 
     return (
       <div className={classnames.join(' ')} style={{ display: this.props.show ? 'flex' : 'none' }}>
-        <div className={style.header}>
+        <div className={styles.header}>
           {this.props.firstLine || <div />}
-          <div className={style.buttons}>
+          <div className={styles.buttons}>
             <MaximizeButton
               maximized={this.state.fullscreen}
-              className={style.maximize}
+              className={styles.maximize}
               filter={false}
               tooltipPosition={'bottom'}
               onClick={() => this.setState({ fullscreen: !this.state.fullscreen }, this.updateDimensions)}
             />
-            <DeleteButton
+            <IconButton
+              icon={IconTrash}
+              filter={false}
               tooltipText="Kill Terminal"
               tooltipPosition={'bottom'}
               onClick={() => {
@@ -176,7 +179,7 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
             />
           </div>
         </div>
-        <div className={style['terminal']} ref={(ref) => this.attach(ref)} />
+        <div className={styles['terminal']} ref={(ref) => this.attach(ref)} />
       </div>
     );
   }
