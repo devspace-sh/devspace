@@ -5,7 +5,7 @@ import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpace
 import LogsMultiple from '../LogsMultiple/LogsMultiple';
 import { getDeployedImageNames } from 'lib/utils';
 import styles from './LogsList.module.scss';
-import TerminalCache from '../TerminalCache/TerminalCache';
+import { TerminalCacheInterface } from '../TerminalCache/TerminalCache';
 
 export interface SelectedLogs {
   pod?: string;
@@ -16,7 +16,7 @@ export interface SelectedLogs {
 
 interface Props extends DevSpaceConfigContext {
   podList: V1PodList;
-  cache: TerminalCache;
+  cache: TerminalCacheInterface;
   onSelect: (selected: SelectedLogs) => void;
   selected?: SelectedLogs;
 }
