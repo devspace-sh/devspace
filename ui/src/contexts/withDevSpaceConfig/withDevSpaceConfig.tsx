@@ -1,21 +1,21 @@
 import React from 'react';
+import { NewContext } from './DevSpaceConfigWrapper';
 
 const reactDevSpaceConfigContext = React.createContext({
-  changeNamespace: (_: string) => null,
-  changeKubeContext: (_: string) => null,
+  changeKubeContext: (_: NewContext) => null,
   config: null,
   generatedConfig: null,
   profile: null,
   kubeNamespace: null,
   kubeContext: null,
+  kubeContexts: null,
 });
 
 const DevSpaceConfigConsumer: React.ExoticComponent<React.ConsumerProps<DevSpaceConfig>> =
   reactDevSpaceConfigContext.Consumer;
 
 export interface DevSpaceConfig {
-  changeNamespace: (newNamespace: string) => void;
-  changeKubeContext: (newContext: string) => void;
+  changeKubeContext: (newContext: NewContext) => void;
 
   config: Config;
   generatedConfig: GeneratedConfig;
@@ -23,6 +23,7 @@ export interface DevSpaceConfig {
   profile: string;
   kubeNamespace: string;
   kubeContext: string;
+  kubeContexts: { [key: string]: string };
 }
 
 // TODO: complete

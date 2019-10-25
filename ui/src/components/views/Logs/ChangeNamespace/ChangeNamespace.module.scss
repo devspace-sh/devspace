@@ -2,28 +2,34 @@
 
 .change-namespace {
   width: 420px;
-  margin-right: 18px;
-  margin-bottom: 10px;
+  margin-right: 16px;
+  margin-bottom: 17px;
 
-  :global(.top) {
-    height: unset;
-    flex-direction: column;
-    padding: 10px 20px;
+  > div {
+    background-color: $gray-4;
 
-    > div {
-      margin-bottom: 5px;
+    :global(.top) {
+      height: unset;
+      flex-direction: column;
+      padding: 10px 20px;
 
-      &:first-of-type {
-        margin-bottom: 10px;
-      }
+      > div {
+        margin-bottom: 5px;
 
-      label {
-        width: 100%;
-        font: $list-label;
-        color: $gray-4;
+        &:first-of-type {
+          margin-bottom: 10px;
+        }
 
-        .dropdown {
-          margin-top: 5px;
+        label {
+          width: 100%;
+          font: $list-label;
+          font-size: 13px;
+          color: $gray-1;
+
+          .dropdown {
+            margin-top: 5px;
+            border-radius: 2px;
+          }
         }
       }
     }

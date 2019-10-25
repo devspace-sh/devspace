@@ -12,6 +12,29 @@ interface State {
 }
 
 class ChangeNamespace extends React.PureComponent<Props, State> {
+  static getDerivedStateFromProps(nextProps: Props, prevState: State) {
+    if (nextProps.devSpaceConfig.kubeContext !== prevState.kubecontextValue.text) {
+      return {
+        kubecontextValue: {
+          id: nextProps.devSpaceConfig.kubeContext,
+          text: nextProps.devSpaceConfig.kubeContext,
+        },
+        namespaceValue: {
+          id: nextProps.devSpaceConfig.kubeNamespace,
+          text: nextProps.devSpaceConfig.kubeNamespace,
+        },
+      };
+    }
+    if (nextProps.devSpaceConfig.kubeNamespace !== prevState.namespaceValue.text) {
+      return {
+        namespaceValue: {
+          id: nextProps.devSpaceConfig.kubeNamespace,
+          text: nextProps.devSpaceConfig.kubeNamespace,
+        },
+      };
+    } else return null;
+  }
+
   state: State = {
     namespaceValue: {
       id: this.props.devSpaceConfig.kubeNamespace,
@@ -33,14 +56,17 @@ class ChangeNamespace extends React.PureComponent<Props, State> {
       },
     ];
 
-    const kubeContextOptions: DropDownSelectedOption[] = [
-      {
-        id: this.props.devSpaceConfig.kubeNamespace,
-        text: this.props.devSpaceConfig.kubeNamespace,
-      },
-    ];
-
-    console.log(this.props.devSpaceConfig);
+    const kubeContextOptions: DropDownSelectedOption[] = Object.entries(this.props.devSpaceConfig.kubeContexts).map(
+      ([key, value]) => {
+        return {
+          id: key,
+          text: key,
+          data: {
+            namespace: value,
+          },
+        };
+      }
+    );
 
     return (
       <div className={classnames.join(' ')}>
@@ -48,6 +74,22 @@ class ChangeNamespace extends React.PureComponent<Props, State> {
           {{
             top: {
               left: (
+                <label>
+                  KubeContext
+                  <CustomDropDown
+                    className={styles.dropdown}
+                    options={kubeContextOptions}
+                    selectedValue={this.state.kubecontextValue}
+                    onChange={(selected: DropDownSelectedOption) => {
+                      this.props.devSpaceConfig.changeKubeContext({
+                        contextName: selected.text,
+                        contextNamespace: selected.data.namespace,
+                      });
+                    }}
+                  />
+                </label>
+              ),
+              right: (
                 <label>
                   Namespace
                   <CustomDropDown
@@ -60,31 +102,9 @@ class ChangeNamespace extends React.PureComponent<Props, State> {
                   />
                 </label>
               ),
-              right: (
-                <label>
-                  KubeContext
-                  <CustomDropDown
-                    className={styles.dropdown}
-                    options={kubeContextOptions}
-                    selectedValue={this.state.kubecontextValue}
-                    onChange={(selected: DropDownSelectedOption) => {
-                      this.setState({ kubecontextValue: selected });
-                    }}
-                  />
-                </label>
-              ),
             },
           }}
         </PortletSimple>
-        {/* Namespace: */}
-        {/* <Input
-          placeholder="Namespace"
-          value={this.state.namespaceValue}
-          onChange={(e) => this.setState({ namespaceValue: e.target.value })}
-        />
-        {this.props.devSpaceConfig.kubeNamespace !== this.state.namespaceValue && (
-          <Button onClick={() => this.props.devSpaceConfig.changeNamespace(this.state.namespaceValue)}>Change</Button>
-        )} */}
       </div>
     );
   }
