@@ -25,19 +25,17 @@ export interface TerminalCacheInterface {
 
 interface Props extends DevSpaceConfigContext {
   podList: V1PodList;
+  selected: SelectedLogs;
   onDelete: (selected: SelectedLogs) => void;
 
-  children: (obj: {
-    terminals: React.ReactNode[];
-    cache: TerminalCacheInterface;
-    select: (selected: SelectedLogs) => void;
-  }) => React.ReactNode;
+  children: (obj: { terminals: React.ReactNode[]; cache: TerminalCacheInterface }) => React.ReactNode;
 }
 
 interface State {}
 
 class TerminalCache extends React.PureComponent<Props, State> {
   private closed: boolean = false;
+  private selected: SelectedLogs = this.props.selected;
   private cache: TerminalCacheInterface = {
     kubeNamespace: this.props.devSpaceConfig.kubeNamespace,
     kubeContext: this.props.devSpaceConfig.kubeContext,
@@ -45,6 +43,8 @@ class TerminalCache extends React.PureComponent<Props, State> {
   };
 
   select = (selected: SelectedLogs) => {
+    this.selected = selected;
+
     let found = false;
     for (let i = 0; i < this.cache.terminals.length; i++) {
       this.cache.terminals[i].props.show =
@@ -123,34 +123,32 @@ class TerminalCache extends React.PureComponent<Props, State> {
   render() {
     const terminals = [];
     if (this.cache.multiLog) {
-      terminals.push(
-        <InteractiveTerminal
-          key="multi-logs"
-          {...this.cache.multiLog.props}
-          onClose={() => this.delete({ multiple: this.cache.multiLog.multiple })}
-        />
-      );
+      terminals.push(<InteractiveTerminal key="multi-logs" {...this.cache.multiLog.props} />);
     }
 
     terminals.push(
-      ...this.cache.terminals.map((terminal) => (
-        <InteractiveTerminal
-          key={terminal.pod + ':' + terminal.container + ':' + (terminal.interactive ? 'interactive' : 'non-interactive')}
-          {...terminal.props}
-          firstLine={
-            <AdvancedCodeLine className={styles['first-line']}>
-              devspace {terminal.interactive ? 'enter' : 'logs'} -n {this.cache.kubeNamespace} --pod {terminal.pod} -c{' '}
-              {terminal.container}
-            </AdvancedCodeLine>
-          }
-          onClose={() =>
-            this.delete({ pod: terminal.pod, container: terminal.container, interactive: terminal.interactive })
-          }
-        />
-      ))
+      ...this.cache.terminals.map((terminal) => {
+        return (
+          <InteractiveTerminal
+            key={terminal.pod + ':' + terminal.container + ':' + (terminal.interactive ? 'interactive' : 'non-interactive')}
+            {...terminal.props}
+            firstLine={
+              <AdvancedCodeLine className={styles['first-line']}>
+                devspace {terminal.interactive ? 'enter' : 'logs'} -n {this.cache.kubeNamespace} --pod {terminal.pod} -c{' '}
+                {terminal.container}
+              </AdvancedCodeLine>
+            }
+            closeOnConnectionLost={terminal.interactive}
+            closeDelay={5000}
+            onClose={() =>
+              this.delete({ pod: terminal.pod, container: terminal.container, interactive: terminal.interactive })
+            }
+          />
+        );
+      })
     );
 
-    return this.props.children({ terminals, cache: this.cache, select: this.select });
+    return this.props.children({ terminals, cache: this.cache });
   }
 
   private update() {
@@ -183,6 +181,11 @@ class TerminalCache extends React.PureComponent<Props, State> {
           continue;
         }
       }
+    }
+
+    if (this.props.selected !== this.selected) {
+      this.select(this.props.selected);
+      this.forceUpdate();
     }
   }
 }

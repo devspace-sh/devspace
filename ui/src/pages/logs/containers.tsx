@@ -72,21 +72,11 @@ class LogsContainers extends React.PureComponent<Props, State> {
     clearTimeout(this.timeout);
   }
 
-  renderTerminals(terminals: React.ReactNode[]) {
-    return (
-      <React.Fragment>
-        {!this.state.selected && (
-          <div className={styles['nothing-selected']}>Please select a container on the right side to display a terminal</div>
-        )}
-        {terminals}
-      </React.Fragment>
-    );
-  }
-
   render() {
     return (
       <PageLayout className={styles['logs-containers-component']} heading={<LogsLinkTabSelector />}>
         <TerminalCache
+          selected={this.state.selected}
           podList={this.state.podList}
           onDelete={(selected: SelectedLogs) => {
             if (
@@ -108,9 +98,14 @@ class LogsContainers extends React.PureComponent<Props, State> {
             this.forceUpdate();
           }}
         >
-          {({ terminals, cache, select }) => (
+          {({ terminals, cache }) => (
             <React.Fragment>
-              {this.renderTerminals(terminals)}
+              {terminals}
+              {!this.state.selected && (
+                <div className={styles['nothing-selected']}>
+                  Please select a container on the right side to display a terminal
+                </div>
+              )}
               <div className={styles['info-part']}>
                 <ChangeNamespace />
                 {this.state.podList ? (
@@ -122,7 +117,6 @@ class LogsContainers extends React.PureComponent<Props, State> {
                         selected = null;
                       }
 
-                      select(selected);
                       this.setState({ selected });
                     }}
                     selected={this.state.selected}

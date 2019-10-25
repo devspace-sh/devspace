@@ -3,6 +3,7 @@ import { Terminal } from 'xterm';
 import { AttachAddon } from 'lib/attach';
 import styles from './InteractiveTerminal.module.scss';
 import MaximizeButton from 'components/basic/IconButton/MaximizeButton/MaximizeButton';
+import DeleteButton from 'components/basic/IconButton/DeleteButton/DeleteButton';
 
 export interface InteractiveTerminalProps {
   className?: string;
@@ -11,6 +12,10 @@ export interface InteractiveTerminalProps {
   show: boolean;
 
   firstLine?: React.ReactNode;
+
+  closeOnConnectionLost?: boolean;
+  closeDelay?: number;
+
   onClose?: () => void;
 }
 
@@ -26,13 +31,14 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
     fullscreen: false,
   };
 
-  socket: WebSocket;
-  term: Terminal;
+  private socket: WebSocket;
+  private term: Terminal;
 
-  ref: HTMLDivElement;
-  needUpdate: boolean;
-  initialWidth: number;
-  initialHeight: number;
+  private ref: HTMLDivElement;
+  private needUpdate: boolean;
+  private initialWidth: number;
+  private initialHeight: number;
+  private closed: boolean = false;
 
   updateDimensions = () => {
     if (!this.props.show) {
@@ -97,8 +103,18 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
     const attachAddon = new AttachAddon(this.socket, {
       bidirectional: this.props.interactive,
       onClose: () => {
-        this.term.writeln('Stream closed, will close in 5 seconds');
-        setTimeout(this.props.onClose, 5000);
+        if (!this.closed) {
+          if (this.props.closeDelay && this.props.closeOnConnectionLost && this.props.onClose) {
+            this.term.writeln(`Connection closed, will close in ${this.props.closeDelay / 1000} seconds`);
+            setTimeout(this.props.onClose, this.props.closeDelay);
+            return;
+          }
+
+          this.term.writeln('Connection closed');
+          if (this.props.closeOnConnectionLost && this.props.onClose) {
+            this.props.onClose();
+          }
+        }
       },
       onError: (err) => {
         this.term.writeln('\u001b[31m' + err.message);
@@ -113,16 +129,17 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
     window.addEventListener('resize', this.updateDimensions, true);
   }
 
-  componentWillUnmount() {
-    window.removeEventListener('resize', this.updateDimensions, true);
-    if (this.socket) {
-      this.socket.close();
-    }
-  }
-
   componentDidUpdate() {
     if (this.props.show && this.needUpdate) {
       this.updateDimensions();
+    }
+  }
+
+  componentWillUnmount() {
+    this.closed = true;
+    window.removeEventListener('resize', this.updateDimensions, true);
+    if (this.socket) {
+      this.socket.close();
     }
   }
 
@@ -139,13 +156,25 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
       <div className={classnames.join(' ')} style={{ display: this.props.show ? 'flex' : 'none' }}>
         <div className={styles.header}>
           {this.props.firstLine || <div />}
-          <MaximizeButton
-            maximized={this.state.fullscreen}
-            className={styles.maximize}
-            filter={false}
-            tooltipPosition={'bottom'}
-            onClick={() => this.setState({ fullscreen: !this.state.fullscreen }, this.updateDimensions)}
-          />
+          <div className={styles.buttons}>
+            <MaximizeButton
+              maximized={this.state.fullscreen}
+              className={styles.maximize}
+              filter={false}
+              tooltipPosition={'bottom'}
+              onClick={() => this.setState({ fullscreen: !this.state.fullscreen }, this.updateDimensions)}
+            />
+            <DeleteButton
+              tooltipText="Kill Terminal"
+              tooltipPosition={'bottom'}
+              onClick={() => {
+                this.socket.close();
+                if (this.props.onClose) {
+                  this.props.onClose();
+                }
+              }}
+            />
+          </div>
         </div>
         <div className={styles['terminal']} ref={(ref) => this.attach(ref)} />
       </div>

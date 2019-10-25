@@ -1,6 +1,6 @@
 import React from 'react';
-import IconTrash from 'images/icon-trash.svg';
-import IconTrashWhite from 'images/IconButton/trash-white.svg';
+import IconTrash from 'images/trash.svg';
+import IconTrashWhite from 'images/trash-white.svg';
 import styles from './DeleteButton.module.scss';
 import IconButton, { IconButtonProps } from 'components/basic/IconButton/IconButton';
 
