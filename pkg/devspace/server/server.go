@@ -112,7 +112,7 @@ func newHandler(config *latest.Config, generatedConfig *generated.Config, defaul
 	kubeContexts := map[string]string{}
 	for name, context := range kubeConfig.Contexts {
 		namespace := context.Namespace
-		if namespace != "" {
+		if namespace == "" {
 			namespace = metav1.NamespaceDefault
 		}
 
