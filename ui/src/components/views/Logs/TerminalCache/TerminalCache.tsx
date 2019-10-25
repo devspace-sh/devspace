@@ -1,78 +1,50 @@
-import LogsTerminal, { LogsTerminalProps } from 'components/views/Logs/LogsTerminal/LogsTerminal';
+import InteractiveTerminal, { InteractiveTerminalProps } from 'components/advanced/InteractiveTerminal/InteractiveTerminal';
 import { V1PodList } from '@kubernetes/client-node';
 import React from 'react';
 import { SelectedLogs } from 'components/views/Logs/LogsList/LogsList';
 import { ApiHostname } from '../../../../lib/rest';
 import AdvancedCodeLine from 'components/basic/CodeSnippet/AdvancedCodeLine/AdvancedCodeLine';
 import style from './TerminalCache.module.scss';
+import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 
 export interface TerminalCacheInterface {
+  kubeContext: string;
+  kubeNamespace: string;
+
   multiLog?: {
     multiple: string[];
-    props: LogsTerminalProps;
+    props: InteractiveTerminalProps;
   };
   terminals: Array<{
     pod: string;
     container: string;
     interactive: boolean;
-    props: LogsTerminalProps;
+    props: InteractiveTerminalProps;
   }>;
 }
 
-class TerminalCache {
+interface Props extends DevSpaceConfigContext {
+  podList: V1PodList;
+  onDelete: (selected: SelectedLogs) => void;
+
+  children: (obj: {
+    terminals: React.ReactNode[];
+    cache: TerminalCacheInterface;
+    select: (selected: SelectedLogs) => void;
+  }) => React.ReactNode;
+}
+
+interface State {}
+
+class TerminalCache extends React.PureComponent<Props, State> {
   private closed: boolean = false;
-  private namespace: string;
-  private onDelete: (selected: SelectedLogs) => void;
   private cache: TerminalCacheInterface = {
+    kubeNamespace: this.props.devSpaceConfig.kubeNamespace,
+    kubeContext: this.props.devSpaceConfig.kubeContext,
     terminals: [],
   };
 
-  constructor(namespace: string, onDelete: (selected: SelectedLogs) => void) {
-    this.namespace = namespace;
-    this.onDelete = onDelete;
-  }
-
-  public exists(selected: SelectedLogs) {
-    return !!this.cache.terminals.find(
-      (terminal) =>
-        terminal.pod === selected.pod &&
-        terminal.container === selected.container &&
-        terminal.interactive === selected.interactive
-    );
-  }
-
-  public updateNamespace(namespace: string): boolean {
-    if (namespace !== this.namespace) {
-      this.namespace = namespace;
-      this.cache.terminals = [];
-      this.cache.multiLog = null;
-      return true;
-    }
-
-    return false;
-  }
-
-  public updateCache(podList: V1PodList) {
-    for (let i = 0; i < this.cache.terminals.length; i++) {
-      const selectedPod = podList && podList.items.find((pod) => this.cache.terminals[i].pod === pod.metadata.name);
-      if (!selectedPod) {
-        this.cache.terminals.splice(i, 1);
-        i--;
-        continue;
-      }
-
-      const selectedContainer = selectedPod.spec.containers.find(
-        (container) => this.cache.terminals[i].container === container.name
-      );
-      if (!selectedContainer) {
-        this.cache.terminals.splice(i, 1);
-        i--;
-        continue;
-      }
-    }
-  }
-
-  public select(selected: SelectedLogs) {
+  select = (selected: SelectedLogs) => {
     let found = false;
     for (let i = 0; i < this.cache.terminals.length; i++) {
       this.cache.terminals[i].props.show =
@@ -91,9 +63,9 @@ class TerminalCache {
       this.cache.multiLog = {
         multiple: selected.multiple,
         props: {
-          url: `ws://${ApiHostname()}/api/logs-multiple?namespace=${this.namespace}&imageSelector=${selected.multiple.join(
-            '&imageSelector='
-          )}`,
+          url: `ws://${ApiHostname()}/api/logs-multiple?context=${this.cache.kubeContext}&namespace=${
+            this.cache.kubeNamespace
+          }&imageSelector=${selected.multiple.join('&imageSelector=')}`,
           interactive: false,
           show: true,
         },
@@ -104,17 +76,17 @@ class TerminalCache {
         container: selected.container,
         interactive: selected.interactive,
         props: {
-          url: `ws://${ApiHostname()}/api/${selected.interactive ? 'enter' : 'logs'}?namespace=${this.namespace}&name=${
-            selected.pod
-          }&container=${selected.container}`,
+          url: `ws://${ApiHostname()}/api/${selected.interactive ? 'enter' : 'logs'}?context=${
+            this.cache.kubeContext
+          }&namespace=${this.cache.kubeNamespace}&name=${selected.pod}&container=${selected.container}`,
           interactive: selected.interactive,
           show: true,
         },
       });
     }
-  }
+  };
 
-  public delete(selected: SelectedLogs) {
+  delete(selected: SelectedLogs) {
     if (this.closed || !selected) {
       return;
     }
@@ -128,24 +100,31 @@ class TerminalCache {
       );
       if (idx !== -1) {
         this.cache.terminals.splice(idx, 1);
-        this.onDelete(selected);
+        this.props.onDelete(selected);
       }
     } else if (selected.multiple) {
       this.cache.multiLog = null;
-      this.onDelete(selected);
+      this.props.onDelete(selected);
     }
   }
 
-  public close() {
+  componentWillUnmount() {
     this.closed = true;
   }
 
-  public renderTerminals() {
-    const terminals = [];
+  componentDidMount() {
+    this.update();
+  }
 
+  componentDidUpdate() {
+    this.update();
+  }
+
+  render() {
+    const terminals = [];
     if (this.cache.multiLog) {
       terminals.push(
-        <LogsTerminal
+        <InteractiveTerminal
           key="multi-logs"
           {...this.cache.multiLog.props}
           onClose={() => this.delete({ multiple: this.cache.multiLog.multiple })}
@@ -155,12 +134,12 @@ class TerminalCache {
 
     terminals.push(
       ...this.cache.terminals.map((terminal) => (
-        <LogsTerminal
+        <InteractiveTerminal
           key={terminal.pod + ':' + terminal.container + ':' + (terminal.interactive ? 'interactive' : 'non-interactive')}
           {...terminal.props}
           firstLine={
             <AdvancedCodeLine className={style['first-line']}>
-              devspace {terminal.interactive ? 'enter' : 'logs'} -n {this.namespace} --pod {terminal.pod} -c{' '}
+              devspace {terminal.interactive ? 'enter' : 'logs'} -n {this.cache.kubeNamespace} --pod {terminal.pod} -c{' '}
               {terminal.container}
             </AdvancedCodeLine>
           }
@@ -171,8 +150,41 @@ class TerminalCache {
       ))
     );
 
-    return terminals;
+    return this.props.children({ terminals, cache: this.cache, select: this.select });
+  }
+
+  private update() {
+    if (
+      this.props.devSpaceConfig.kubeNamespace !== this.cache.kubeNamespace ||
+      this.props.devSpaceConfig.kubeContext !== this.cache.kubeContext
+    ) {
+      this.cache.kubeNamespace = this.props.devSpaceConfig.kubeNamespace;
+      this.cache.kubeContext = this.props.devSpaceConfig.kubeContext;
+      this.cache.terminals = [];
+      this.cache.multiLog = null;
+      this.forceUpdate();
+    } else {
+      // Update cache
+      for (let i = 0; i < this.cache.terminals.length; i++) {
+        const selectedPod =
+          this.props.podList && this.props.podList.items.find((pod) => this.cache.terminals[i].pod === pod.metadata.name);
+        if (!selectedPod) {
+          this.cache.terminals.splice(i, 1);
+          i--;
+          continue;
+        }
+
+        const selectedContainer = selectedPod.spec.containers.find(
+          (container) => this.cache.terminals[i].container === container.name
+        );
+        if (!selectedContainer) {
+          this.cache.terminals.splice(i, 1);
+          i--;
+          continue;
+        }
+      }
+    }
   }
 }
 
-export default TerminalCache;
+export default withDevSpaceConfig(TerminalCache);

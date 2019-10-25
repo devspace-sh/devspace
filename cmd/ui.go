@@ -1,6 +1,10 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 	"time"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -10,6 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/server"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/port"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
@@ -20,6 +25,9 @@ type UICmd struct {
 	*flags.GlobalFlags
 
 	Dev bool
+
+	Port        int
+	ForceServer bool
 }
 
 // NewUICmd creates a new ui command
@@ -40,12 +48,11 @@ Opens the client ui in the browser
 		RunE: cmd.RunUI,
 	}
 
+	uiCmd.Flags().IntVar(&cmd.Port, "port", 0, "The port to use when opening the server")
+	uiCmd.Flags().BoolVar(&cmd.ForceServer, "server", false, "If enabled will force start a server (otherwise an existing UI server is searched)")
 	uiCmd.Flags().BoolVar(&cmd.Dev, "dev", false, "Will ignore download ui errors")
 	return uiCmd
 }
-
-// ClientUIPort of devspace ui
-const ClientUIPort = 8090
 
 // RunUI executes the functionality "devspace ui"
 func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
@@ -53,6 +60,53 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
 	if err != nil {
 		return err
+	}
+
+	// Search for an already existing server
+	if cmd.ForceServer == false && cmd.Dev == false {
+		checkPort := server.DefaultPort
+		if cmd.Port != 0 {
+			checkPort = cmd.Port
+		}
+
+		for {
+			unused, _ := port.CheckHostPort("localhost", checkPort)
+			if unused == false {
+				domain := fmt.Sprintf("http://localhost:%d", checkPort)
+
+				// Check if DevSpace server
+				response, err := http.Get(domain + "/api/version")
+				if err != nil {
+					checkPort++
+					continue
+				}
+
+				defer response.Body.Close()
+				contents, err := ioutil.ReadAll(response.Body)
+				if err != nil {
+					checkPort++
+					continue
+				}
+
+				serverVersion := &server.UIServerVersion{}
+				err = json.Unmarshal(contents, serverVersion)
+				if err != nil {
+					checkPort++
+					continue
+				}
+
+				if serverVersion.DevSpace {
+					log.Infof("Found running UI server at %s", domain)
+					open.Start(domain)
+					return nil
+				}
+
+				checkPort++
+				continue
+			}
+
+			break
+		}
 	}
 
 	var (
@@ -104,8 +158,14 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 	// Override error runtime handler
 	log.OverrideRuntimeErrorHandler(true)
 
+	// Check if we should force the port
+	var forcePort *int
+	if cmd.Port != 0 {
+		forcePort = &cmd.Port
+	}
+
 	// Create server
-	server, err := server.NewServer(config, generatedConfig, cmd.Dev, client.CurrentContext, client.Namespace, log.GetInstance())
+	server, err := server.NewServer(config, generatedConfig, cmd.Dev, client.CurrentContext, client.Namespace, forcePort, log.GetInstance())
 	if err != nil {
 		return err
 	}

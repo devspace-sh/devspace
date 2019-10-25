@@ -1,10 +1,10 @@
 import React from 'react';
 import { Terminal } from 'xterm';
 import { AttachAddon } from 'lib/attach';
-import style from './LogsTerminal.module.scss';
+import style from './InteractiveTerminal.module.scss';
 import MaximizeButton from 'components/basic/IconButton/MaximizeButton/MaximizeButton';
 
-export interface LogsTerminalProps {
+export interface InteractiveTerminalProps {
   className?: string;
   url: string;
   interactive: boolean;
@@ -21,7 +21,7 @@ interface State {
 const MINIMUM_COLS = 2;
 const MINIMUM_ROWS = 1;
 
-class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
+class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, State> {
   state: State = {
     fullscreen: false,
   };
@@ -153,4 +153,4 @@ class LogsTerminal extends React.PureComponent<LogsTerminalProps, State> {
   }
 }
 
-export default LogsTerminal;
+export default InteractiveTerminal;

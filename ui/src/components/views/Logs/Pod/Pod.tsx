@@ -10,7 +10,7 @@ import TerminalIconWhite from 'images/icon-terminal-white.svg';
 import TerminalIcon from 'images/icon-terminal.svg';
 import WarningIcon from 'components/basic/Icon/WarningIcon/WarningIcon';
 import LeftAlignIcon from 'images/left-alignment.svg';
-import TerminalCache from '../TerminalCache/TerminalCache';
+import { TerminalCacheInterface } from '../TerminalCache/TerminalCache';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 import withPopup, { PopupContext } from 'contexts/withPopup/withPopup';
 import AlertPopupContent from 'components/basic/Popup/AlertPopupContent/AlertPopupContent';
@@ -19,11 +19,20 @@ import { PortletSimple } from 'components/basic/Portlet/PortletSimple/PortletSim
 
 interface Props extends DevSpaceConfigContext, PopupContext {
   pod: V1Pod;
-  cache: TerminalCache;
+  cache: TerminalCacheInterface;
 
   selectedContainer?: string;
   onSelect: (selected: SelectedLogs) => void;
 }
+
+const exists = (cache: TerminalCacheInterface, selected: SelectedLogs) => {
+  return !!cache.terminals.find(
+    (terminal) =>
+      terminal.pod === selected.pod &&
+      terminal.container === selected.container &&
+      terminal.interactive === selected.interactive
+  );
+};
 
 const getRestarts = (pod: V1Pod) => {
   let restarts = 0;
@@ -60,7 +69,7 @@ const renderContainers = (props: Props) => {
             <IconButton
               filter={false}
               icon={
-                props.cache.exists({ pod: props.pod.metadata.name, container: container.name, interactive: true })
+                exists(props.cache, { pod: props.pod.metadata.name, container: container.name, interactive: true })
                   ? TerminalIconExists
                   : props.selectedContainer === container.name
                   ? TerminalIconWhite
@@ -139,7 +148,7 @@ const Pod = (props: Props) => {
                   filter={false}
                   icon={
                     singleContainer &&
-                    props.cache.exists({
+                    exists(props.cache, {
                       pod: props.pod.metadata.name,
                       container: props.pod.spec.containers[0].name,
                       interactive: true,

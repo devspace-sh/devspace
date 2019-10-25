@@ -22,25 +22,6 @@ interface State {
 
 class LogsContainers extends React.PureComponent<Props, State> {
   timeout: any;
-  cache: TerminalCache = new TerminalCache(this.props.devSpaceConfig.kubeNamespace, (selected: SelectedLogs) => {
-    if (
-      this.state.selected &&
-      selected.pod === this.state.selected.pod &&
-      selected.container === this.state.selected.container
-    ) {
-      this.setState({
-        selected: null,
-      });
-      return;
-    } else if (this.state.selected && selected.multiple && this.state.selected.multiple) {
-      this.setState({
-        selected: null,
-      });
-      return;
-    }
-
-    this.forceUpdate();
-  });
   state: State = {};
 
   componentDidMount = async () => {
@@ -56,7 +37,6 @@ class LogsContainers extends React.PureComponent<Props, State> {
 
       const podList = await response.json();
       if (!this.state.podList || JSON.stringify(this.state.podList.items) !== JSON.stringify(podList.items)) {
-        this.cache.updateCache(podList);
         this.setState({
           podList,
         });
@@ -89,23 +69,16 @@ class LogsContainers extends React.PureComponent<Props, State> {
   };
 
   componentWillUnmount() {
-    this.cache.close();
     clearTimeout(this.timeout);
   }
 
-  componentDidUpdate() {
-    if (this.cache.updateNamespace(this.props.devSpaceConfig.kubeNamespace)) {
-      this.forceUpdate();
-    }
-  }
-
-  renderTerminal() {
+  renderTerminals(terminals: React.ReactNode[]) {
     return (
       <React.Fragment>
         {!this.state.selected && (
           <div className={styles['nothing-selected']}>Please select a container on the right side to display a terminal</div>
         )}
-        {this.cache.renderTerminals()}
+        {terminals}
       </React.Fragment>
     );
   }
@@ -113,27 +86,54 @@ class LogsContainers extends React.PureComponent<Props, State> {
   render() {
     return (
       <PageLayout className={styles['logs-containers-component']} heading={<LogsLinkTabSelector />}>
-        {this.renderTerminal()}
-        <div className={styles['info-part']}>
-          <ChangeNamespace />
-          {this.state.podList ? (
-            <LogsList
-              cache={this.cache}
-              podList={this.state.podList}
-              onSelect={(selected: SelectedLogs) => {
-                if (JSON.stringify(selected) === JSON.stringify(this.state.selected)) {
-                  selected = null;
-                }
+        <TerminalCache
+          podList={this.state.podList}
+          onDelete={(selected: SelectedLogs) => {
+            if (
+              this.state.selected &&
+              selected.pod === this.state.selected.pod &&
+              selected.container === this.state.selected.container
+            ) {
+              this.setState({
+                selected: null,
+              });
+              return;
+            } else if (this.state.selected && selected.multiple && this.state.selected.multiple) {
+              this.setState({
+                selected: null,
+              });
+              return;
+            }
 
-                this.cache.select(selected);
-                this.setState({ selected });
-              }}
-              selected={this.state.selected}
-            />
-          ) : (
-            <Loading />
+            this.forceUpdate();
+          }}
+        >
+          {({ terminals, cache, select }) => (
+            <React.Fragment>
+              {this.renderTerminals(terminals)}
+              <div className={styles['info-part']}>
+                <ChangeNamespace />
+                {this.state.podList ? (
+                  <LogsList
+                    cache={cache}
+                    podList={this.state.podList}
+                    onSelect={(selected: SelectedLogs) => {
+                      if (JSON.stringify(selected) === JSON.stringify(this.state.selected)) {
+                        selected = null;
+                      }
+
+                      select(selected);
+                      this.setState({ selected });
+                    }}
+                    selected={this.state.selected}
+                  />
+                ) : (
+                  <Loading />
+                )}
+              </div>
+            </React.Fragment>
           )}
-        </div>
+        </TerminalCache>
       </PageLayout>
     );
   }
