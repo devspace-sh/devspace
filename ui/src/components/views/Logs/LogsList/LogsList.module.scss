@@ -1,5 +1,32 @@
 .logs-list {
-  margin-right: 30px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: calc(100% - 50px);
+  padding: 3px 10px;
+  padding-left: 3px;
+  // padding: 12px;
+
+  &::-webkit-scrollbar-button {
+    display: none;
+    height: 13px;
+    border-radius: 0px;
+    background-color: transparent;
+  }
+  &::-webkit-scrollbar-button:hover {
+    background-color: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: #aaa;
+  }
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+  &::-webkit-scrollbar-track:hover {
+    background-color: transparent;
+  }
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
 
   .nothing-found {
     font: 600 15px 'Open Sans';

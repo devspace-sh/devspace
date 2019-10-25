@@ -46,7 +46,9 @@ class LogsContainers extends React.PureComponent<Props, State> {
   componentDidMount = async () => {
     try {
       const response = await fetch(
-        `http://${ApiHostname()}/api/resource?resource=pods&namespace=${this.props.devSpaceConfig.kubeNamespace}`
+        `http://${ApiHostname()}/api/resource?resource=pods&context=${this.props.devSpaceConfig.kubeContext}&namespace=${
+          this.props.devSpaceConfig.kubeNamespace
+        }`
       );
       if (response.status !== 200) {
         throw new Error(await response.text());
@@ -101,7 +103,7 @@ class LogsContainers extends React.PureComponent<Props, State> {
     return (
       <React.Fragment>
         {!this.state.selected && (
-          <div className={styles['nothing-selected']}>Please select a container on the left side to display a terminal</div>
+          <div className={styles['nothing-selected']}>Please select a container on the right side to display a terminal</div>
         )}
         {this.cache.renderTerminals()}
       </React.Fragment>
@@ -111,7 +113,8 @@ class LogsContainers extends React.PureComponent<Props, State> {
   render() {
     return (
       <PageLayout className={styles['logs-containers-component']} heading={<LogsLinkTabSelector />}>
-        <div>
+        {this.renderTerminal()}
+        <div className={styles['info-part']}>
           <ChangeNamespace />
           {this.state.podList ? (
             <LogsList
@@ -131,8 +134,6 @@ class LogsContainers extends React.PureComponent<Props, State> {
             <Loading />
           )}
         </div>
-
-        {this.renderTerminal()}
       </PageLayout>
     );
   }
