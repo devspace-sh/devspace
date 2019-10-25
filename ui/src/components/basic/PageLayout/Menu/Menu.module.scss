@@ -93,6 +93,9 @@
             &.stack::before {
               background-image: url(../../../../images/stack-logo.svg);
             }
+            &.commands::before {
+              background-image: url(../../../../images/commands-logo.svg);
+            }
           }
         }
       }
