@@ -46,6 +46,11 @@ class Menu extends React.PureComponent<Props, State> {
                     Stack
                   </CustomNavLink>
                 </li>
+                <li>
+                  <CustomNavLink className={styles.commands} to="/commands/commands" activeClassName={styles.selected}>
+                    Commands
+                  </CustomNavLink>
+                </li>
               </ul>
             </nav>
           </div>

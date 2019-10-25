@@ -10,6 +10,7 @@ const reactDevSpaceConfigContext = React.createContext({
   kubeContext: null,
   kubeContexts: null,
   workingDirectory: null,
+  rawConfig: null,
 });
 
 const DevSpaceConfigConsumer: React.ExoticComponent<React.ConsumerProps<DevSpaceConfig>> =
@@ -26,6 +27,7 @@ export interface DevSpaceConfig {
   kubeContext: string;
   kubeContexts: { [key: string]: string };
   workingDirectory: string;
+  rawConfig: RawConfig;
 }
 
 // TODO: complete
@@ -33,6 +35,15 @@ interface Config {
   version: string;
 
   images: { [key: string]: ImageConfig };
+}
+
+interface RawConfig {
+  commands: Command[];
+}
+
+export interface Command {
+  command: string;
+  name: string;
 }
 
 interface ImageConfig {

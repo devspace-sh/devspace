@@ -1,0 +1,28 @@
+.commands-component {
+  display: flex;
+  flex-direction: row !important;
+  justify-content: center;
+
+  .codesnippet {
+    width: 100%;
+  }
+
+  .no-config {
+    font: 600 19px 'Open Sans';
+    opacity: 0.8;
+
+    a {
+      font: 600 19px 'Open Sans';
+    }
+  }
+
+  .info-part {
+    width: 100%;
+    max-width: 570px;
+    margin-left: 30px;
+
+    > div {
+      margin-bottom: 20px;
+    }
+  }
+}

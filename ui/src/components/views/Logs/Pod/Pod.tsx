@@ -160,7 +160,7 @@ const Pod = (props: Props) => {
                       ? TerminalIconWhite
                       : TerminalIcon
                   }
-                  tooltipText={'Open terminal'}
+                  tooltipText={'Terminal'}
                   onClick={(e) => {
                     e.stopPropagation();
                     props.onSelect({
