@@ -3,12 +3,16 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
 	"github.com/pkg/errors"
@@ -29,7 +33,7 @@ func enableCors(w *http.ResponseWriter) {
 const DefaultPort = 8090
 
 // NewServer creates a new server from the given parameters
-func NewServer(client *kubectl.Client, config *latest.Config, generatedConfig *generated.Config, ignoreDownloadError bool, log log.Logger) (*Server, error) {
+func NewServer(config *latest.Config, generatedConfig *generated.Config, ignoreDownloadError bool, defaultContext, defaultNamespace string, log log.Logger) (*Server, error) {
 	path, err := downloadUI()
 	if err != nil {
 		if !ignoreDownloadError {
@@ -50,10 +54,16 @@ func NewServer(client *kubectl.Client, config *latest.Config, generatedConfig *g
 		usePort++
 	}
 
+	// Create handler
+	handler, err := newHandler(config, generatedConfig, defaultContext, defaultNamespace, path, log)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Server{
 		Server: &http.Server{
 			Addr:    "localhost:" + strconv.Itoa(usePort),
-			Handler: newHandler(client, config, generatedConfig, path, log),
+			Handler: handler,
 			// ReadTimeout:  5 * time.Second,
 			// WriteTimeout: 10 * time.Second,
 			// IdleTimeout:  60 * time.Second,
@@ -70,22 +80,53 @@ func (s *Server) ListenAndServe() error {
 }
 
 type handler struct {
-	config          *latest.Config
-	path            string
-	generatedConfig *generated.Config
-	client          *kubectl.Client
-	log             log.Logger
-	mux             *http.ServeMux
+	config           *latest.Config
+	generatedConfig  *generated.Config
+	defaultContext   string
+	defaultNamespace string
+	rawConfig        map[interface{}]interface{}
+	kubeContexts     map[string]string
+	workingDirectory string
+	path             string
+	log              log.Logger
+	mux              *http.ServeMux
 }
 
-func newHandler(client *kubectl.Client, config *latest.Config, generatedConfig *generated.Config, path string, log log.Logger) *handler {
+func newHandler(config *latest.Config, generatedConfig *generated.Config, defaultContext, defaultNamespace, path string, log log.Logger) (*handler, error) { // Get kube config
+	kubeConfig, err := kubeconfig.LoadConfig().RawConfig()
+	if err != nil {
+		return nil, errors.Wrap(err, "load kube config")
+	}
+
+	kubeContexts := map[string]string{}
+	for name, context := range kubeConfig.Contexts {
+		kubeContexts[name] = context.Namespace
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, errors.Wrap(err, "get working directory")
+	}
+
 	handler := &handler{
-		mux:             http.NewServeMux(),
-		path:            path,
-		client:          client,
-		config:          config,
-		log:             log,
-		generatedConfig: generatedConfig,
+		mux:              http.NewServeMux(),
+		path:             path,
+		defaultContext:   defaultContext,
+		defaultNamespace: defaultNamespace,
+		kubeContexts:     kubeContexts,
+		workingDirectory: cwd,
+		config:           config,
+		log:              log,
+		generatedConfig:  generatedConfig,
+	}
+
+	// Load raw config
+	if config != nil {
+		configPath := filepath.Join(cwd, constants.DefaultConfigPath)
+		handler.rawConfig, err = configutil.GetRawConfig(configPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "load raw config")
+		}
 	}
 
 	handler.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +138,7 @@ func newHandler(client *kubectl.Client, config *latest.Config, generatedConfig *
 	handler.mux.HandleFunc("/api/enter", handler.enter)
 	handler.mux.HandleFunc("/api/logs", handler.logs)
 	handler.mux.HandleFunc("/api/logs-multiple", handler.logsMultiple)
-	return handler
+	return handler, nil
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -130,12 +171,15 @@ func convert(i interface{}) interface{} {
 }
 
 type returnConfig struct {
-	Config          *latest.Config    `yaml:"config"`
-	GeneratedConfig *generated.Config `yaml:"generatedConfig"`
+	Config          *latest.Config              `yaml:"config"`
+	RawConfig       map[interface{}]interface{} `yaml:"rawConfig"`
+	GeneratedConfig *generated.Config           `yaml:"generatedConfig"`
 
-	Profile       string `yaml:"profile"`
-	KubeContext   string `yaml:"kubeContext"`
-	KubeNamespace string `yaml:"kubeNamespace"`
+	Profile          string            `yaml:"profile"`
+	WorkingDirectory string            `yaml:"workingDirectory"`
+	KubeContext      string            `yaml:"kubeContext"`
+	KubeNamespace    string            `yaml:"kubeNamespace"`
+	KubeContexts     map[string]string `yaml:"kubeContexts"`
 }
 
 func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
@@ -145,11 +189,14 @@ func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s, err := yaml.Marshal(&returnConfig{
-		Config:          h.config,
-		GeneratedConfig: h.generatedConfig,
-		Profile:         profile,
-		KubeContext:     h.client.CurrentContext,
-		KubeNamespace:   h.client.Namespace,
+		Config:           h.config,
+		GeneratedConfig:  h.generatedConfig,
+		Profile:          profile,
+		RawConfig:        h.rawConfig,
+		WorkingDirectory: h.workingDirectory,
+		KubeContexts:     h.kubeContexts,
+		KubeContext:      h.defaultContext,
+		KubeNamespace:    h.defaultNamespace,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -184,9 +231,18 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 	// Build request options
 	options := &kubectl.GenericRequestOptions{Resource: resource[0]}
 
+	// Kube Context
+	kubeContext := h.defaultContext
+	context, ok := r.URL.Query()["context"]
+	if ok && len(context) == 1 && context[0] != "" {
+		kubeContext = context[0]
+	}
+
 	// Namespace
+	kubeNamespace := h.defaultNamespace
 	namespace, ok := r.URL.Query()["namespace"]
-	if ok && len(namespace) == 1 {
+	if ok && len(namespace) == 1 && namespace[0] != "" {
+		kubeNamespace = namespace[0]
 		options.Namespace = namespace[0]
 	}
 
@@ -208,10 +264,18 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 		options.LabelSelector = labelSelector[0]
 	}
 
-	// Do the request
-	out, err := kubectl.GenericRequest(h.client, options)
+	// Create kubectl client
+	client, err := kubectl.NewClientFromContext(kubeContext, kubeNamespace, false)
 	if err != nil {
-		h.log.Errorf("Error in /api/resource: %v", err)
+		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Do the request
+	out, err := kubectl.GenericRequest(client, options)
+	if err != nil {
+		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
