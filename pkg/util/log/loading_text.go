@@ -113,20 +113,20 @@ func (l *loadingText) render() {
 	timeElapsed := fmt.Sprintf("%d", (time.Now().UnixNano()-l.StartTimestamp)/int64(time.Second))
 	message := []byte(l.getLoadingChar() + " " + l.Message)
 	messageSuffix := " (" + timeElapsed + "s)"
-	terminalSize := tty.GetSize()
 	prefixLength := len(messagePrefix)
 	suffixLength := len(messageSuffix)
 
+	terminalSize := tty.GetSize()
 	if terminalSize != nil && uint16(prefixLength+len(message)+suffixLength) > terminalSize.Width {
 		dots := []byte("...")
-		maxMessageLength := terminalSize.Width - uint16(prefixLength+suffixLength+len(dots))
 
+		maxMessageLength := int(terminalSize.Width) - (prefixLength + suffixLength + len(dots))
 		if maxMessageLength > 0 {
 			message = append(message[:maxMessageLength], dots...)
 		}
 	}
-	message = append(message, messageSuffix...)
 
+	message = append(message, messageSuffix...)
 	l.Stream.Write(message)
 }
 
