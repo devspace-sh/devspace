@@ -106,7 +106,7 @@ func (client *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 
 	_, err := client.Client.RbacV1().ClusterRoleBindings().Get(ClusterRoleBindingName, metav1.GetOptions{})
 	if err != nil {
-		if client.RestConfig.AuthProvider != nil && client.RestConfig.AuthProvider.Name == "gcp" {
+		if client.RestConfig != nil && client.RestConfig.AuthProvider != nil && client.RestConfig.AuthProvider.Name == "gcp" {
 			username := ptr.String("")
 
 			log.StartWait("Checking gcloud account")
