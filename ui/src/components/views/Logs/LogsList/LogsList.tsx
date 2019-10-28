@@ -29,7 +29,7 @@ const renderPods = (props: Props) => {
 
   return props.podList.items.map((pod) => {
     const labels = pod.metadata && pod.metadata.labels ? pod.metadata.labels : {};
-    const ports = {};
+    let servicePort = '';
 
     // Check if there is a service that listens to that pod
     if (props.serviceList && props.serviceList.items) {
@@ -48,22 +48,23 @@ const renderPods = (props: Props) => {
           });
 
           if (notFound === false) {
-            ports[
-              service.spec.ports[0].targetPort ? (service.spec.ports[0].targetPort as any) : service.spec.ports[0].port
-            ] = true;
+            servicePort =
+              service.metadata.name +
+              ':' +
+              (service.spec.ports[0].targetPort ? (service.spec.ports[0].targetPort as any) : service.spec.ports[0].port);
+            break;
           }
         }
       }
     }
 
-    const openPorts = Object.keys(ports);
     return (
       <Pod
         key={pod.metadata.uid}
         cache={props.cache}
         pod={pod}
         onSelect={props.onSelect}
-        openPort={openPorts.length === 1 ? openPorts[0] : undefined}
+        service={servicePort}
         selectedContainer={props.selected && props.selected.pod === pod.metadata.name ? props.selected.container : undefined}
       />
     );

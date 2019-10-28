@@ -1,5 +1,5 @@
 import React from 'react';
-import { V1Pod } from '@kubernetes/client-node';
+import { V1Pod, ExtensionsV1beta1IngressList } from '@kubernetes/client-node';
 import styles from './Pod.module.scss';
 import StatusIconText from 'components/basic/IconText/StatusIconText/StatusIconText';
 import { GetPodStatus, GetContainerStatus, configToYAML, formatError } from 'lib/utils';
@@ -24,7 +24,7 @@ import { ApiHostname } from 'lib/rest';
 interface Props extends DevSpaceConfigContext, PopupContext {
   pod: V1Pod;
   cache: TerminalCacheInterface;
-  openPort?: string;
+  service?: string;
 
   selectedContainer?: string;
   onSelect: (selected: SelectedLogs) => void;
@@ -111,10 +111,41 @@ const openYAMLPopup = (props: Props) => {
 
 const startPortForwarding = async (props: Props) => {
   try {
+    const ingressReponse = await fetch(
+      `http://${ApiHostname()}/api/resource?resource=ingresses&apiVersion=extensions/v1beta1&context=${
+        props.devSpaceConfig.kubeContext
+      }&namespace=${props.devSpaceConfig.kubeNamespace}`
+    );
+    if (ingressReponse.status !== 200) {
+      throw new Error(await ingressReponse.text());
+    }
+
+    const ingressList: ExtensionsV1beta1IngressList = await ingressReponse.json();
+    const splittedService = props.service.split(':');
+    if (ingressList && ingressList.items) {
+      for (let i = 0; i < ingressList.items.length; i++) {
+        if (ingressList.items[i].spec.rules && ingressList.items[i].spec.rules.length > 0) {
+          for (let j = 0; j < ingressList.items[i].spec.rules.length; j++) {
+            const rule = ingressList.items[i].spec.rules[j];
+
+            if (rule.http && rule.http.paths) {
+              for (let x = 0; x < rule.http.paths.length; x++) {
+                const path = rule.http.paths[x];
+                if (path.backend && path.backend.serviceName === splittedService[0]) {
+                  window.open('http://' + rule.host + path.path);
+                  return;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     const response = await fetch(
       `http://${ApiHostname()}/api/forward?context=${props.devSpaceConfig.kubeContext}&namespace=${
         props.devSpaceConfig.kubeNamespace
-      }&name=${props.pod.metadata.name}&port=${props.openPort}`
+      }&name=${props.pod.metadata.name}&port=${splittedService[1]}`
     );
     if (response.status !== 200) {
       throw new Error(await response.text());
@@ -159,7 +190,7 @@ const Pod = (props: Props) => {
           ),
           right: (
             <div className={styles.buttons}>
-              {props.openPort && (
+              {props.service && (
                 <IconButton
                   filter={false}
                   icon={selected ? DomainsWhite : Domains}
