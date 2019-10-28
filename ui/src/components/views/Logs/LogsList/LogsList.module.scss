@@ -10,12 +10,14 @@
     content: '';
     display: block;
     position: absolute;
-    height: 26px;
-    width: 8px;
+    height: 27px;
+    width: 100%;
     background-color: $blue-light-1;
-    top: 3px;
+    top: 0;
     right: 2px;
+    z-index: 2;
   }
+
   .logs-list-wrapper {
     overflow-y: auto;
     overflow-x: hidden;
