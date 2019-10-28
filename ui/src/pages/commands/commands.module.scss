@@ -17,6 +17,19 @@
     justify-content: center;
   }
 
+  .no-config {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 19px 'Open Sans';
+    opacity: 0.8;
+
+    a {
+      font: 600 19px 'Open Sans';
+    }
+  }
+
   .info-part {
     width: 100%;
     max-width: 350px;
