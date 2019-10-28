@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
@@ -20,6 +21,7 @@ import (
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/portforward"
 )
 
 // Server is listens on a given port for the ui functionality
@@ -103,6 +105,17 @@ type handler struct {
 	path             string
 	log              log.Logger
 	mux              *http.ServeMux
+
+	ports      map[string]*forward
+	portsMutex sync.Mutex
+}
+
+type forward struct {
+	portForwarder     *portforward.PortForwarder
+	portForwarderStop chan struct{}
+	portForwarderPort int
+
+	podUUID string
 }
 
 func newHandler(config *latest.Config, generatedConfig *generated.Config, defaultContext, defaultNamespace, path string, log log.Logger) (*handler, error) { // Get kube config
@@ -136,6 +149,7 @@ func newHandler(config *latest.Config, generatedConfig *generated.Config, defaul
 		config:           config,
 		log:              log,
 		generatedConfig:  generatedConfig,
+		ports:            make(map[string]*forward),
 	}
 
 	analytics, err := analytics.GetAnalytics()
@@ -160,6 +174,7 @@ func newHandler(config *latest.Config, generatedConfig *generated.Config, defaul
 	handler.mux.HandleFunc("/api/command", handler.command)
 	handler.mux.HandleFunc("/api/resource", handler.request)
 	handler.mux.HandleFunc("/api/config", handler.returnConfig)
+	handler.mux.HandleFunc("/api/forward", handler.forward)
 	handler.mux.HandleFunc("/api/enter", handler.enter)
 	handler.mux.HandleFunc("/api/logs", handler.logs)
 	handler.mux.HandleFunc("/api/logs-multiple", handler.logsMultiple)

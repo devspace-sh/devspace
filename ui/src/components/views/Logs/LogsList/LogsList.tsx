@@ -1,5 +1,5 @@
 import React from 'react';
-import { V1PodList } from '@kubernetes/client-node';
+import { V1PodList, V1ServiceList } from '@kubernetes/client-node';
 import Pod from '../Pod/Pod';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 import LogsMultiple from '../LogsMultiple/LogsMultiple';
@@ -16,6 +16,7 @@ export interface SelectedLogs {
 
 interface Props extends DevSpaceConfigContext {
   podList: V1PodList;
+  serviceList: V1ServiceList;
   cache: TerminalCacheInterface;
   onSelect: (selected: SelectedLogs) => void;
   selected?: SelectedLogs;
@@ -26,15 +27,49 @@ const renderPods = (props: Props) => {
     return <div className={styles['nothing-found']}>No pods found in namespace {props.devSpaceConfig.kubeNamespace}</div>;
   }
 
-  return props.podList.items.map((pod) => (
-    <Pod
-      key={pod.metadata.uid}
-      cache={props.cache}
-      pod={pod}
-      onSelect={props.onSelect}
-      selectedContainer={props.selected && props.selected.pod === pod.metadata.name ? props.selected.container : undefined}
-    />
-  ));
+  return props.podList.items.map((pod) => {
+    const labels = pod.metadata && pod.metadata.labels ? pod.metadata.labels : {};
+    const ports: { [key: number]: boolean } = {};
+
+    // Check if there is a service that listens to that pod
+    if (props.serviceList && props.serviceList.items) {
+      for (let i = 0; i < props.serviceList.items.length; i++) {
+        const service = props.serviceList.items[i];
+        if (service.spec.type === 'ClusterIP' && service.spec.ports && service.spec.ports.length === 1) {
+          if (service.spec.ports[0].targetPort && typeof service.spec.ports[0].targetPort === 'string') {
+            continue;
+          }
+
+          let notFound = false;
+          Object.keys(service.spec.selector).forEach((key) => {
+            if (labels[key] !== service.spec.selector[key]) {
+              notFound = true;
+            }
+          });
+
+          if (notFound === false) {
+            ports[
+              service.spec.ports[0].targetPort
+                ? ((service.spec.ports[0].targetPort as unknown) as number)
+                : service.spec.ports[0].port
+            ] = true;
+          }
+        }
+      }
+    }
+
+    const openPorts = Object.keys(ports);
+    return (
+      <Pod
+        key={pod.metadata.uid}
+        cache={props.cache}
+        pod={pod}
+        onSelect={props.onSelect}
+        openPort={openPorts.length === 1 ? parseInt(openPorts[0]) : undefined}
+        selectedContainer={props.selected && props.selected.pod === pod.metadata.name ? props.selected.container : undefined}
+      />
+    );
+  });
 };
 
 const LogsList = (props: Props) => (

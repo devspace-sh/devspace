@@ -4,7 +4,7 @@ import styles from './containers.module.scss';
 import PageLayout from 'components/basic/PageLayout/PageLayout';
 import withPopup, { PopupContext } from 'contexts/withPopup/withPopup';
 import LogsList, { SelectedLogs } from 'components/views/Logs/LogsList/LogsList';
-import { V1PodList } from '@kubernetes/client-node';
+import { V1PodList, V1ServiceList } from '@kubernetes/client-node';
 import Loading from 'components/basic/Loading/Loading';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 import { ApiHostname } from 'lib/rest';
@@ -17,6 +17,7 @@ interface Props extends DevSpaceConfigContext, PopupContext, WarningContext, Rou
 
 interface State {
   podList?: V1PodList;
+  serviceList?: V1ServiceList;
   selected?: SelectedLogs;
 }
 
@@ -24,23 +25,46 @@ class LogsContainers extends React.PureComponent<Props, State> {
   timeout: any;
   state: State = {};
 
+  fetchPods = async () => {
+    const response = await fetch(
+      `http://${ApiHostname()}/api/resource?resource=pods&context=${this.props.devSpaceConfig.kubeContext}&namespace=${
+        this.props.devSpaceConfig.kubeNamespace
+      }`
+    );
+    if (response.status !== 200) {
+      throw new Error(await response.text());
+    }
+
+    const podList = await response.json();
+    if (!this.state.podList || JSON.stringify(this.state.podList.items) !== JSON.stringify(podList.items)) {
+      this.setState({
+        podList,
+      });
+    }
+  };
+
+  fetchServices = async () => {
+    const response = await fetch(
+      `http://${ApiHostname()}/api/resource?resource=services&context=${this.props.devSpaceConfig.kubeContext}&namespace=${
+        this.props.devSpaceConfig.kubeNamespace
+      }`
+    );
+    if (response.status !== 200) {
+      throw new Error(await response.text());
+    }
+
+    const serviceList = await response.json();
+    if (!this.state.serviceList || JSON.stringify(this.state.serviceList.items) !== JSON.stringify(serviceList.items)) {
+      this.setState({
+        serviceList,
+      });
+    }
+  };
+
   componentDidMount = async () => {
     try {
-      const response = await fetch(
-        `http://${ApiHostname()}/api/resource?resource=pods&context=${this.props.devSpaceConfig.kubeContext}&namespace=${
-          this.props.devSpaceConfig.kubeNamespace
-        }`
-      );
-      if (response.status !== 200) {
-        throw new Error(await response.text());
-      }
-
-      const podList = await response.json();
-      if (!this.state.podList || JSON.stringify(this.state.podList.items) !== JSON.stringify(podList.items)) {
-        this.setState({
-          podList,
-        });
-      }
+      await this.fetchPods();
+      await this.fetchServices();
 
       if (
         this.props.warning.getActive() &&
@@ -65,7 +89,7 @@ class LogsContainers extends React.PureComponent<Props, State> {
       }
     }
 
-    this.timeout = setTimeout(this.componentDidMount, 1000);
+    this.timeout = setTimeout(this.componentDidMount, 1500);
   };
 
   componentDidUpdate(prevProps: Props) {
@@ -123,6 +147,7 @@ class LogsContainers extends React.PureComponent<Props, State> {
                 {this.state.podList ? (
                   <LogsList
                     cache={cache}
+                    serviceList={this.state.serviceList}
                     podList={this.state.podList}
                     onSelect={(selected: SelectedLogs) => {
                       if (JSON.stringify(selected) === JSON.stringify(this.state.selected)) {
