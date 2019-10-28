@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -46,7 +47,7 @@ func TestCreateTiller(t *testing.T) {
 		Client: fake.NewSimpleClientset(),
 	}
 
-	err := createTillerRBAC(config, client, "tiller-namespace")
+	err := createTillerRBAC(config, client, "tiller-namespace", log.GetInstance())
 	if err != nil {
 		t.Fatal(err)
 	}
