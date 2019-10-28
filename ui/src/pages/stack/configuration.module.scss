@@ -10,6 +10,9 @@
   }
 
   .no-config {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font: 600 19px 'Open Sans';
     opacity: 0.8;
 

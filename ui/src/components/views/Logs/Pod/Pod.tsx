@@ -7,10 +7,12 @@ import { SelectedLogs } from '../LogsList/LogsList';
 import IconButton from 'components/basic/IconButton/IconButton';
 import TerminalIconExists from 'images/icon-terminal-exists.svg';
 import TerminalIconWhite from 'images/icon-terminal-white.svg';
+import DomainsWhite from 'images/domains-white.svg';
 import Domains from 'images/domains.svg';
 import TerminalIcon from 'images/icon-terminal.svg';
 import WarningIcon from 'components/basic/Icon/WarningIcon/WarningIcon';
 import LeftAlignIcon from 'images/left-alignment.svg';
+import LeftAlignIconWhite from 'images/left-alignment-white.svg';
 import { TerminalCacheInterface } from '../TerminalCache/TerminalCache';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 import withPopup, { PopupContext } from 'contexts/withPopup/withPopup';
@@ -160,7 +162,7 @@ const Pod = (props: Props) => {
               {props.openPort && (
                 <IconButton
                   filter={false}
-                  icon={Domains}
+                  icon={selected ? DomainsWhite : Domains}
                   tooltipText="Open"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -170,7 +172,7 @@ const Pod = (props: Props) => {
               )}
               <IconButton
                 filter={false}
-                icon={LeftAlignIcon}
+                icon={selected ? LeftAlignIconWhite : LeftAlignIcon}
                 tooltipText="YAML"
                 onClick={(e) => {
                   e.stopPropagation();
