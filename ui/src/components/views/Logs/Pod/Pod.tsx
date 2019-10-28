@@ -132,7 +132,12 @@ const startPortForwarding = async (props: Props) => {
               for (let x = 0; x < rule.http.paths.length; x++) {
                 const path = rule.http.paths[x];
                 if (path.backend && path.backend.serviceName === splittedService[0]) {
-                  window.open('http://' + rule.host + path.path);
+                  let suffix = '';
+                  if (path.path) {
+                    suffix = path.path;
+                  }
+
+                  window.open('http://' + rule.host + suffix);
                   return;
                 }
               }

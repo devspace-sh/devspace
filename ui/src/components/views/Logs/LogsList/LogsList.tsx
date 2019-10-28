@@ -41,18 +41,20 @@ const renderPods = (props: Props) => {
           }
 
           let notFound = false;
-          Object.keys(service.spec.selector).forEach((key) => {
-            if (labels[key] !== service.spec.selector[key]) {
-              notFound = true;
-            }
-          });
+          if (service.spec.selector) {
+            Object.keys(service.spec.selector).forEach((key) => {
+              if (labels[key] !== service.spec.selector[key]) {
+                notFound = true;
+              }
+            });
 
-          if (notFound === false) {
-            servicePort =
-              service.metadata.name +
-              ':' +
-              (service.spec.ports[0].targetPort ? (service.spec.ports[0].targetPort as any) : service.spec.ports[0].port);
-            break;
+            if (notFound === false) {
+              servicePort =
+                service.metadata.name +
+                ':' +
+                (service.spec.ports[0].targetPort ? (service.spec.ports[0].targetPort as any) : service.spec.ports[0].port);
+              break;
+            }
           }
         }
       }
