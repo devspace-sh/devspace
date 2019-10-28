@@ -23,11 +23,18 @@ const TillerRoleManagerName = "tiller-config-manager"
 
 var alreadyExistsRegexp = regexp.MustCompile(".* already exists$")
 
-func createTillerRBAC(config *latest.Config, client *kubectl.Client, tillerNamespace string) error {
+func createTillerRBAC(config *latest.Config, client *kubectl.Client, tillerNamespace string, log log.Logger) error {
 	// Create service account
 	err := createTillerServiceAccount(client, tillerNamespace)
 	if err != nil {
 		return err
+	}
+
+	// Create cluster role binding if necessary
+	err = client.EnsureGoogleCloudClusterRoleBinding(log)
+	if err != nil {
+		log.Warnf("Couldn't create gke cluster-admin binding: %v", err)
+		log.Warnf("This could cause issues with creating the tiller roles")
 	}
 
 	// Tiller does need full access to all namespaces is should deploy to and therefore we create the roles & rolebindings

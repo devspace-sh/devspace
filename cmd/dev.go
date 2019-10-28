@@ -182,12 +182,6 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return errors.Errorf("Unable to create namespace: %v", err)
 	}
 
-	// Create cluster role binding if necessary
-	err = client.EnsureGoogleCloudClusterRoleBinding(log.GetInstance())
-	if err != nil {
-		return err
-	}
-
 	// Create the image pull secrets and add them to the default service account
 	dockerClient, err := docker.NewClient(log.GetInstance())
 	if err != nil {
