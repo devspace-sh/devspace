@@ -8,6 +8,7 @@ import PauseIcon from 'images/pause-blue-icon.svg';
 import IconButton from 'components/basic/IconButton/IconButton';
 import CodeSnippet from 'components/basic/CodeSnippet/CodeSnippet';
 import { ApiHostname } from 'lib/rest';
+import SimpleCodeLine from 'components/basic/CodeSnippet/SimpleCodeLine/SimpleCodeLine';
 
 interface Props extends DevSpaceConfigContext {
   commandsList: Command[];
@@ -61,7 +62,9 @@ class CommandsList extends React.PureComponent<Props, State> {
             content:
               idx === this.state.openCommandIdx ? (
                 <div className={styles['show-command']}>
-                  <CodeSnippet>{cmd.command}</CodeSnippet>
+                  <CodeSnippet className={styles.codesnippet}>
+                    <SimpleCodeLine>{cmd.command}</SimpleCodeLine>
+                  </CodeSnippet>
                 </div>
               ) : null,
           }}

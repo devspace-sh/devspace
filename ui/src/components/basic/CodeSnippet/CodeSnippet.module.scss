@@ -27,6 +27,7 @@
     flex-direction: column;
     color: $code-color;
     font: $code;
+    height: 100%;
 
     > div::-webkit-scrollbar {
       height: 7px;
@@ -45,6 +46,7 @@
       overflow-y: hidden;
       padding: 17px 0 10px 0;
       z-index: 1;
+      height: 100%;
 
       > .line {
         padding: 2px 0 2px 0;

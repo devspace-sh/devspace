@@ -66,5 +66,17 @@
       font: 600 15px 'Open Sans';
       text-align: center;
     }
+
+    .codesnippet {
+      padding-top: 0;
+      padding-bottom: 0;
+      padding-left: 20px;
+
+      > div > div {
+        overflow-x: auto;
+        white-space: nowrap;
+        padding: 15px 0;
+      }
+    }
   }
 }

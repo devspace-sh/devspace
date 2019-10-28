@@ -7,6 +7,8 @@
 
   .codesnippet {
     width: 100%;
+    max-width: calc(100% - 450px);
+    min-width: 50%;
   }
 
   .no-config {
@@ -23,7 +25,7 @@
 
   .info-part {
     width: 100%;
-    max-width: 570px;
+    max-width: 450px;
     margin-left: 30px;
 
     > div {
