@@ -22,6 +22,10 @@
   }
   &::-webkit-scrollbar-track {
     background-color: transparent;
+    margin-top: 30px;
+  }
+  &::-webkit-scrollbar-track-piece {
+    background-color: transparent;
   }
   &::-webkit-scrollbar-track:hover {
     background-color: transparent;
