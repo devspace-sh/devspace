@@ -22,7 +22,7 @@ import { ApiHostname } from 'lib/rest';
 interface Props extends DevSpaceConfigContext, PopupContext {
   pod: V1Pod;
   cache: TerminalCacheInterface;
-  openPort?: number;
+  openPort?: string;
 
   selectedContainer?: string;
   onSelect: (selected: SelectedLogs) => void;

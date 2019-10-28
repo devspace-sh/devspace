@@ -29,7 +29,7 @@ const renderPods = (props: Props) => {
 
   return props.podList.items.map((pod) => {
     const labels = pod.metadata && pod.metadata.labels ? pod.metadata.labels : {};
-    const ports: { [key: number]: boolean } = {};
+    const ports = {};
 
     // Check if there is a service that listens to that pod
     if (props.serviceList && props.serviceList.items) {
@@ -49,9 +49,7 @@ const renderPods = (props: Props) => {
 
           if (notFound === false) {
             ports[
-              service.spec.ports[0].targetPort
-                ? ((service.spec.ports[0].targetPort as unknown) as number)
-                : service.spec.ports[0].port
+              service.spec.ports[0].targetPort ? (service.spec.ports[0].targetPort as any) : service.spec.ports[0].port
             ] = true;
           }
         }
@@ -65,7 +63,7 @@ const renderPods = (props: Props) => {
         cache={props.cache}
         pod={pod}
         onSelect={props.onSelect}
-        openPort={openPorts.length === 1 ? parseInt(openPorts[0]) : undefined}
+        openPort={openPorts.length === 1 ? openPorts[0] : undefined}
         selectedContainer={props.selected && props.selected.pod === pod.metadata.name ? props.selected.container : undefined}
       />
     );
