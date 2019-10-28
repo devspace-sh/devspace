@@ -9,8 +9,8 @@ import IconTrash from 'images/trash.svg';
 export interface InteractiveTerminalProps {
   className?: string;
   url: string;
-  interactive: boolean;
-  show: boolean;
+  interactive?: boolean;
+  show?: boolean;
 
   firstLine?: React.ReactNode;
 
@@ -172,6 +172,7 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
               tooltipPosition={'bottom'}
               onClick={() => {
                 this.socket.close();
+                console.info('CLOSED');
                 if (this.props.onClose) {
                   this.props.onClose();
                 }

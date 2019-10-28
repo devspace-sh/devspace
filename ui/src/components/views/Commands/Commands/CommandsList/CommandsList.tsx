@@ -4,16 +4,29 @@ import styles from './CommandsList.module.scss';
 import { PortletSimple } from 'components/basic/Portlet/PortletSimple/PortletSimple';
 import LeftAlignIcon from 'images/left-alignment.svg';
 import PlayIcon from 'images/play-icon.svg';
+import PauseIcon from 'images/pause-blue-icon.svg';
 import IconButton from 'components/basic/IconButton/IconButton';
 import CodeSnippet from 'components/basic/CodeSnippet/CodeSnippet';
+import { ApiHostname } from 'lib/rest';
 
 interface Props extends DevSpaceConfigContext {
   commandsList: Command[];
+  selected: string;
+  running: string[];
+  onSelect: (commandName: string) => void;
 }
 
 interface State {
   openCommandIdx: number;
 }
+
+export const getURLByName = (name: string) => {
+  if (!name) {
+    return null;
+  }
+
+  return `ws://${ApiHostname()}/api/command?name=${name}`;
+};
 
 class CommandsList extends React.PureComponent<Props, State> {
   state: State = {
@@ -37,7 +50,11 @@ class CommandsList extends React.PureComponent<Props, State> {
                       this.onShowCommandClick(idx);
                     }}
                   />
-                  <IconButton filter={false} icon={PlayIcon} />
+                  <IconButton
+                    filter={false}
+                    icon={this.props.running.find((url) => url === getURLByName(cmd.name)) ? PauseIcon : PlayIcon}
+                    onClick={() => this.props.onSelect(cmd.name)}
+                  />
                 </React.Fragment>
               ),
             },

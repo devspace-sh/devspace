@@ -18,6 +18,7 @@
     background-color: transparent;
   }
   &::-webkit-scrollbar-thumb {
+    padding-top: 10px;
     background-color: #aaa;
   }
   &::-webkit-scrollbar-track {

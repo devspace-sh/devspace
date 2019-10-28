@@ -21,6 +21,7 @@ type wsStream struct {
 	WebSocket *websocket.Conn
 
 	writeMutex sync.Mutex
+	readMutex  sync.Mutex
 }
 
 func (ws *wsStream) Write(p []byte) (int, error) {
@@ -36,6 +37,9 @@ func (ws *wsStream) Write(p []byte) (int, error) {
 }
 
 func (ws *wsStream) Read(p []byte) (int, error) {
+	ws.readMutex.Lock()
+	defer ws.readMutex.Unlock()
+
 	ws.WebSocket.SetReadLimit(int64(len(p)))
 	_, message, err := ws.WebSocket.ReadMessage()
 	if err != nil {
@@ -87,11 +91,8 @@ func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
 	writer := &wsStream{WebSocket: ws}
 	err = client.LogMultipleTimeout(imageSelector, make(chan error), ptr.Int64(100), writer, 0, log.Discard)
 	if err != nil {
-		ws.SetWriteDeadline(time.Now().Add(time.Second))
-		ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
-
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		websocketError(ws, err)
 		return
 	}
 
@@ -145,11 +146,8 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	// Open logs connection
 	reader, err := client.Logs(context.Background(), namespace[0], name[0], container[0], false, ptr.Int64(100), true)
 	if err != nil {
-		ws.SetWriteDeadline(time.Now().Add(time.Second))
-		ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
-
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		websocketError(ws, err)
 		return
 	}
 
@@ -160,7 +158,7 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	_, err = io.Copy(stream, reader)
 	if err != nil {
 		h.log.Errorf("Error in %s pipeReader: %v", r.URL.String(), err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		websocketError(ws, err)
 		return
 	}
 

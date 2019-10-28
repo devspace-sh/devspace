@@ -8,9 +8,6 @@ import styles from './TerminalCache.module.scss';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 
 export interface TerminalCacheInterface {
-  kubeContext: string;
-  kubeNamespace: string;
-
   multiLog?: {
     multiple: string[];
     props: InteractiveTerminalProps;
@@ -37,8 +34,6 @@ class TerminalCache extends React.PureComponent<Props, State> {
   private closed: boolean = false;
   private selected: SelectedLogs = this.props.selected;
   private cache: TerminalCacheInterface = {
-    kubeNamespace: this.props.devSpaceConfig.kubeNamespace,
-    kubeContext: this.props.devSpaceConfig.kubeContext,
     terminals: [],
   };
 
@@ -63,8 +58,8 @@ class TerminalCache extends React.PureComponent<Props, State> {
       this.cache.multiLog = {
         multiple: selected.multiple,
         props: {
-          url: `ws://${ApiHostname()}/api/logs-multiple?context=${this.cache.kubeContext}&namespace=${
-            this.cache.kubeNamespace
+          url: `ws://${ApiHostname()}/api/logs-multiple?context=${this.props.devSpaceConfig.kubeContext}&namespace=${
+            this.props.devSpaceConfig.kubeNamespace
           }&imageSelector=${selected.multiple.join('&imageSelector=')}`,
           interactive: false,
           show: true,
@@ -77,8 +72,8 @@ class TerminalCache extends React.PureComponent<Props, State> {
         interactive: selected.interactive,
         props: {
           url: `ws://${ApiHostname()}/api/${selected.interactive ? 'enter' : 'logs'}?context=${
-            this.cache.kubeContext
-          }&namespace=${this.cache.kubeNamespace}&name=${selected.pod}&container=${selected.container}`,
+            this.props.devSpaceConfig.kubeContext
+          }&namespace=${this.props.devSpaceConfig.kubeNamespace}&name=${selected.pod}&container=${selected.container}`,
           interactive: selected.interactive,
           show: true,
         },
@@ -116,14 +111,20 @@ class TerminalCache extends React.PureComponent<Props, State> {
     this.update();
   }
 
-  componentDidUpdate() {
-    this.update();
+  componentDidUpdate(prevProps: Props) {
+    this.update(prevProps);
   }
 
   render() {
     const terminals = [];
     if (this.cache.multiLog) {
-      terminals.push(<InteractiveTerminal key="multi-logs" {...this.cache.multiLog.props} />);
+      terminals.push(
+        <InteractiveTerminal
+          key="multi-logs"
+          {...this.cache.multiLog.props}
+          onClose={() => this.delete({ multiple: this.cache.multiLog.multiple })}
+        />
+      );
     }
 
     terminals.push(
@@ -134,8 +135,8 @@ class TerminalCache extends React.PureComponent<Props, State> {
             {...terminal.props}
             firstLine={
               <AdvancedCodeLine className={styles['first-line']}>
-                devspace {terminal.interactive ? 'enter' : 'logs'} -n {this.cache.kubeNamespace} --pod {terminal.pod} -c{' '}
-                {terminal.container}
+                devspace {terminal.interactive ? 'enter' : 'logs'} -n {this.props.devSpaceConfig.kubeNamespace} --pod{' '}
+                {terminal.pod} -c {terminal.container}
               </AdvancedCodeLine>
             }
             closeOnConnectionLost={terminal.interactive}
@@ -151,13 +152,12 @@ class TerminalCache extends React.PureComponent<Props, State> {
     return this.props.children({ terminals, cache: this.cache });
   }
 
-  private update() {
+  private update(prevProps?: Props) {
     if (
-      this.props.devSpaceConfig.kubeNamespace !== this.cache.kubeNamespace ||
-      this.props.devSpaceConfig.kubeContext !== this.cache.kubeContext
+      prevProps &&
+      (this.props.devSpaceConfig.kubeNamespace !== prevProps.devSpaceConfig.kubeNamespace ||
+        this.props.devSpaceConfig.kubeContext !== prevProps.devSpaceConfig.kubeContext)
     ) {
-      this.cache.kubeNamespace = this.props.devSpaceConfig.kubeNamespace;
-      this.cache.kubeContext = this.props.devSpaceConfig.kubeContext;
       this.cache.terminals = [];
       this.cache.multiLog = null;
       this.forceUpdate();
