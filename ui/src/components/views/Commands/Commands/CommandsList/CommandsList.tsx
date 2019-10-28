@@ -4,7 +4,7 @@ import styles from './CommandsList.module.scss';
 import { PortletSimple } from 'components/basic/Portlet/PortletSimple/PortletSimple';
 import LeftAlignIcon from 'images/left-alignment.svg';
 import PlayIcon from 'images/play-icon.svg';
-import PlayBlueIcon from 'images/play-blue-icon.svg';
+import PauseIcon from 'images/pause-blue-icon.svg';
 import IconButton from 'components/basic/IconButton/IconButton';
 import CodeSnippet from 'components/basic/CodeSnippet/CodeSnippet';
 import { ApiHostname } from 'lib/rest';
@@ -52,7 +52,7 @@ class CommandsList extends React.PureComponent<Props, State> {
                   />
                   <IconButton
                     filter={false}
-                    icon={this.props.running.find((url) => url === getURLByName(cmd.name)) ? PlayBlueIcon : PlayIcon}
+                    icon={this.props.running.find((url) => url === getURLByName(cmd.name)) ? PauseIcon : PlayIcon}
                     onClick={() => this.props.onSelect(cmd.name)}
                   />
                 </React.Fragment>

@@ -135,7 +135,7 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Warn the user if we deployed into a different context before
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
 	if err != nil {
 		return err
 	}

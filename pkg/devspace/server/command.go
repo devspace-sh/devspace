@@ -1,12 +1,18 @@
 package server
 
 import (
+	"io"
 	"net/http"
 	"os/exec"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
+
+func websocketError(ws *websocket.Conn, err error) {
+	ws.SetWriteDeadline(time.Now().Add(time.Second * 2))
+	ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
+}
 
 func (h *handler) command(w http.ResponseWriter, r *http.Request) {
 	name, ok := r.URL.Query()["name"]
@@ -26,19 +32,36 @@ func (h *handler) command(w http.ResponseWriter, r *http.Request) {
 	// Open logs connection
 	stream := &wsStream{WebSocket: ws}
 	cmd := exec.Command("devspace", "run", name[0])
+	done := make(chan bool)
+	defer close(done)
 
-	// The current problem if we pipe the stdin to the command is that the command
-	// is not terminating anymore, since it waits forever for stdin to close
-	// cmd.Stdin = stream
+	stdinWriter, err := cmd.StdinPipe()
+	if err != nil {
+		return
+	}
+
+	defer stdinWriter.Close()
+
 	cmd.Stdout = stream
 	cmd.Stderr = stream
 
+	go func(done chan bool) {
+		io.Copy(stdinWriter, stream)
+
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			proc := cmd.Process
+			if proc != nil {
+				proc.Kill()
+			}
+		}
+	}(done)
+
 	err = cmd.Run()
 	if err != nil {
-		ws.SetWriteDeadline(time.Now().Add(time.Second))
-		ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
-
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+		websocketError(ws, err)
 		return
 	}
 

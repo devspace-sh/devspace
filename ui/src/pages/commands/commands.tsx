@@ -39,9 +39,18 @@ class Commands extends React.PureComponent<Props, State> {
         ],
       });
     } else {
-      this.setState({
-        selected: terminalURL,
-      });
+      if (this.state.selected === terminalURL) {
+        const newTerminals = [...this.state.terminals];
+        newTerminals.splice(idx, 1);
+        this.setState({
+          terminals: newTerminals,
+          selected: null,
+        });
+      } else {
+        this.setState({
+          selected: terminalURL,
+        });
+      }
     }
   };
 
@@ -51,6 +60,7 @@ class Commands extends React.PureComponent<Props, State> {
         key={terminal.url}
         {...terminal}
         show={this.state.selected === terminal.url}
+        interactive={true}
         onClose={() => {
           const newTerminals = [...this.state.terminals];
           const idx = this.state.terminals.findIndex((t) => t.url === terminal.url);

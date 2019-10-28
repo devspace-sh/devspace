@@ -172,6 +172,7 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
               tooltipPosition={'bottom'}
               onClick={() => {
                 this.socket.close();
+                console.info('CLOSED');
                 if (this.props.onClose) {
                   this.props.onClose();
                 }
