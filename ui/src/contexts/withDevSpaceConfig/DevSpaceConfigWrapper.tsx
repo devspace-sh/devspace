@@ -34,7 +34,10 @@ export default class DevSpaceConfigWrapper extends React.PureComponent<Props, St
       }
 
       const devSpaceConfig: DevSpaceConfig = await response.json();
+
       devSpaceConfig.changeKubeContext = this.changeKubeContext;
+      devSpaceConfig.originalKubeContext = devSpaceConfig.kubeContext;
+      devSpaceConfig.originalKubeNamespace = devSpaceConfig.kubeNamespace;
 
       this.setState({
         error: null,

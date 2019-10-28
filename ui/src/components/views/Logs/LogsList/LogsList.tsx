@@ -40,9 +40,11 @@ const renderPods = (props: Props) => {
 const LogsList = (props: Props) => (
   <div className={styles['logs-list']}>
     <div className={styles['logs-list-wrapper']}>
-      {getDeployedImageNames(props.devSpaceConfig).length > 0 && (
-        <LogsMultiple selected={props.selected} onSelect={props.onSelect} />
-      )}
+      {getDeployedImageNames(props.devSpaceConfig).length > 0 &&
+        props.devSpaceConfig.kubeNamespace === props.devSpaceConfig.originalKubeNamespace &&
+        props.devSpaceConfig.kubeContext === props.devSpaceConfig.originalKubeContext && (
+          <LogsMultiple selected={props.selected} onSelect={props.onSelect} />
+        )}
       {renderPods(props)}
     </div>
   </div>

@@ -82,7 +82,13 @@ class Commands extends React.PureComponent<Props, State> {
         {!this.props.devSpaceConfig.rawConfig ||
         !this.props.devSpaceConfig.rawConfig.commands ||
         this.props.devSpaceConfig.rawConfig.commands.length === 0 ? (
-          <div className={styles['no-config']}>There is no command available</div>
+          <div className={styles['no-config']}>
+            No commands available. Take a look at{' '}
+            <a target="_blank" href="https://devspace.cloud/docs/cli/configuration/custom-commands">
+              commands
+            </a>{' '}
+            to add commands to your config
+          </div>
         ) : (
           <React.Fragment>
             {this.renderTerminals()}

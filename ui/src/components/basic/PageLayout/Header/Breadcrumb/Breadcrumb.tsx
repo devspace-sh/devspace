@@ -68,7 +68,7 @@ class Breadcrumb extends React.Component<Props, State> {
   };
 
   renderPrefix = () => {
-    if (!this.props.devSpaceConfig.workingDirectory) {
+    if (!this.props.devSpaceConfig.workingDirectory || !this.props.devSpaceConfig.config) {
       return 'DevSpace';
     } else {
       const wd = this.props.devSpaceConfig.workingDirectory;
@@ -78,9 +78,9 @@ class Breadcrumb extends React.Component<Props, State> {
       const lastIdxOfBackSlash = wd.lastIndexOf('\\');
 
       if (lastIdxOfSlash !== -1) {
-        return '.' + wd.slice(lastIdxOfSlash);
+        return './' + wd.slice(lastIdxOfSlash + 1) + '/devspace.yaml';
       } else {
-        return '.' + wd.slice(lastIdxOfBackSlash);
+        return './' + wd.slice(lastIdxOfBackSlash + 1) + '/devspace.yaml';
       }
     }
   };
