@@ -1,24 +1,25 @@
 .commands-component {
   display: flex;
   flex-direction: row !important;
-  justify-content: center;
+  justify-content: flex-end;
+  max-height: calc(100% - 83px);
 
   .codesnippet {
     width: 100%;
   }
 
-  .no-config {
+  .nothing-selected {
+    display: flex;
     font: 600 19px 'Open Sans';
     opacity: 0.8;
-
-    a {
-      font: 600 19px 'Open Sans';
-    }
+    flex: 1;
+    align-items: center;
+    justify-content: center;
   }
 
   .info-part {
     width: 100%;
-    max-width: 570px;
+    max-width: 350px;
     margin-left: 30px;
 
     > div {

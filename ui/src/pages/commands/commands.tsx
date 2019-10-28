@@ -54,6 +54,10 @@ class Commands extends React.PureComponent<Props, State> {
   };
 
   renderTerminals = () => {
+    if (!this.state.selected) {
+      return <div className={styles['nothing-selected']}>Please start a command on the right side</div>;
+    }
+
     return this.state.terminals.map((terminal) => (
       <InteractiveTerminal
         key={terminal.url}
