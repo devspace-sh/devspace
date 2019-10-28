@@ -9,13 +9,18 @@ import withWarning, { WarningContext } from 'contexts/withWarning/withWarning';
 import CommandsLinkTabSelector from 'components/basic/LinkTabSelector/CommandsLinkTabSelector/CommandsLinkTabSelector';
 import CommandsList, { getURLByName } from 'components/views/Commands/Commands/CommandsList/CommandsList';
 import InteractiveTerminal, { InteractiveTerminalProps } from 'components/advanced/InteractiveTerminal/InteractiveTerminal';
+import AdvancedCodeLine from 'components/basic/CodeSnippet/AdvancedCodeLine/AdvancedCodeLine';
 
 interface Props extends DevSpaceConfigContext, PopupContext, WarningContext, RouteComponentProps {}
 
 interface State {
   podList?: V1PodList;
   selected?: string;
-  terminals: InteractiveTerminalProps[];
+  terminals: StateTerminalProps[];
+}
+
+interface StateTerminalProps extends InteractiveTerminalProps {
+  name: string;
 }
 
 class Commands extends React.PureComponent<Props, State> {
@@ -32,25 +37,19 @@ class Commands extends React.PureComponent<Props, State> {
       this.setState({
         selected: terminalURL,
         terminals: [
-          ...this.state.terminals,
           {
+            name: commandName,
             url: terminalURL,
           },
         ],
       });
     } else {
-      if (this.state.selected === terminalURL) {
-        const newTerminals = [...this.state.terminals];
-        newTerminals.splice(idx, 1);
-        this.setState({
-          terminals: newTerminals,
-          selected: null,
-        });
-      } else {
-        this.setState({
-          selected: terminalURL,
-        });
-      }
+      const newTerminals = [...this.state.terminals];
+      newTerminals.splice(idx, 1);
+      this.setState({
+        terminals: newTerminals,
+        selected: null,
+      });
     }
   };
 
@@ -61,6 +60,7 @@ class Commands extends React.PureComponent<Props, State> {
         {...terminal}
         show={this.state.selected === terminal.url}
         interactive={true}
+        firstLine={<AdvancedCodeLine>devspace run {terminal.name}</AdvancedCodeLine>}
         onClose={() => {
           const newTerminals = [...this.state.terminals];
           const idx = this.state.terminals.findIndex((t) => t.url === terminal.url);
