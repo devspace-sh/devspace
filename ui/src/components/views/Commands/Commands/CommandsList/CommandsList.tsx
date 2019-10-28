@@ -77,10 +77,7 @@ class CommandsList extends React.PureComponent<Props, State> {
   render() {
     return (
       <div className={styles['commands-list']}>
-        <div className={styles['commands-list-wrapper']}>
-          {this.renderCommands()}
-          {this.renderCommands()}
-        </div>
+        <div className={styles['commands-list-wrapper']}>{this.renderCommands()}</div>
       </div>
     );
   }
