@@ -1,0 +1,18 @@
+version: v1beta4
+commands:
+- name: test
+  command: "echo test1"
+- name: test2
+  command: "echo test2"
+- name: test3
+  command: "echo test2"
+- name: test4
+  command: "echo test2"
+- name: test5
+  command: "echo test2"
+- name: test6
+  command: "echo test2"
+- name: test7
+  command: "echo test2"
+- name: test8
+  command: "echo test2"

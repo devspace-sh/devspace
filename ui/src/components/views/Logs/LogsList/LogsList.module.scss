@@ -1,38 +1,62 @@
+@import '../../../../styles/constants.scss';
+
 .logs-list {
-  overflow-y: auto;
-  overflow-x: hidden;
-  max-height: calc(100% - 50px);
-  padding-left: 30px;
-  padding-top: 30px;
-  padding-bottom: 3px;
-  padding-right: 10px;
   width: 100%;
+  height: 100%;
+  max-height: calc(100% - 130px);
+  position: relative;
 
-  &::-webkit-scrollbar-button {
-    display: none;
-    height: 13px;
-    border-radius: 0px;
-    background-color: transparent;
-  }
-  &::-webkit-scrollbar-button:hover {
-    background-color: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    padding-top: 10px;
-    background-color: #aaa;
-  }
-  &::-webkit-scrollbar-track {
-    background-color: transparent;
-  }
-  &::-webkit-scrollbar-track:hover {
-    background-color: transparent;
-  }
-  &::-webkit-scrollbar {
-    width: 6px;
+  &::before {
+    content: '';
+    display: block;
+    position: absolute;
+    height: 27px;
+    width: 100%;
+    background-color: $blue-light-1;
+    top: 0;
+    right: 2px;
+    z-index: 2;
   }
 
-  .nothing-found {
-    font: 600 15px 'Open Sans';
-    text-align: center;
+  .logs-list-wrapper {
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 100%;
+    padding-left: 30px;
+    padding-top: 30px;
+    padding-bottom: 3px;
+    padding-right: 20px;
+    width: 100%;
+
+    &::-webkit-scrollbar-button {
+      display: none;
+      height: 13px;
+      border-radius: 0px;
+      background-color: transparent;
+    }
+    &::-webkit-scrollbar-button:hover {
+      background-color: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: #aaa;
+    }
+    &::-webkit-scrollbar-track {
+      background-color: transparent;
+      margin-top: 30px;
+    }
+    &::-webkit-scrollbar-track-piece {
+      background-color: transparent;
+    }
+    &::-webkit-scrollbar-track:hover {
+      background-color: transparent;
+    }
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .nothing-found {
+      font: 600 15px 'Open Sans';
+      text-align: center;
+    }
   }
 }

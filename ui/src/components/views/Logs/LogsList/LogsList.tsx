@@ -39,10 +39,12 @@ const renderPods = (props: Props) => {
 
 const LogsList = (props: Props) => (
   <div className={styles['logs-list']}>
-    {getDeployedImageNames(props.devSpaceConfig).length > 0 && (
-      <LogsMultiple selected={props.selected} onSelect={props.onSelect} />
-    )}
-    {renderPods(props)}
+    <div className={styles['logs-list-wrapper']}>
+      {getDeployedImageNames(props.devSpaceConfig).length > 0 && (
+        <LogsMultiple selected={props.selected} onSelect={props.onSelect} />
+      )}
+      {renderPods(props)}
+    </div>
   </div>
 );
 

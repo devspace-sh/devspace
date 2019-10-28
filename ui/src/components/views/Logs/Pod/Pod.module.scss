@@ -8,6 +8,10 @@
   width: 420px;
   margin-bottom: 20px;
 
+  &:last-of-type {
+    margin-bottom: 3px;
+  }
+
   .buttons {
     display: flex;
   }
