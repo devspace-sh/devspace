@@ -75,7 +75,7 @@ const renderPods = (props: Props) => {
 
 const LogsList = (props: Props) => (
   <div className={styles['logs-list']}>
-    <div className={styles['logs-list-wrapper']}>
+    <div className={styles['logs-list-wrappers']}>
       {getDeployedImageNames(props.devSpaceConfig).length > 0 &&
         props.devSpaceConfig.kubeNamespace === props.devSpaceConfig.originalKubeNamespace &&
         props.devSpaceConfig.kubeContext === props.devSpaceConfig.originalKubeContext && (
