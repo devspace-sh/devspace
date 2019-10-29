@@ -383,14 +383,14 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 		// Create server
 		server, err := server.NewServer(config, generatedConfig, false, client.CurrentContext, client.Namespace, nil, log)
 		if err != nil {
-			return 0, err
+			log.Warnf("Couldn't start UI server: %v", err)
+		} else {
+			// Start server
+			go func() { server.ListenAndServe() }()
+
+			log.StopWait()
+			log.Info("UI available at http://" + server.Server.Addr)
 		}
-
-		// Start server
-		go func() { server.ListenAndServe() }()
-
-		log.StopWait()
-		log.Info("UI available at http://" + server.Server.Addr)
 	}
 
 	// Check if we should open a terminal or stream logs

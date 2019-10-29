@@ -87,5 +87,5 @@ func locateChartPath(settings *environment.EnvSettings, repoURL, username, passw
 		return lname, nil
 	}
 
-	return filename, errors.Errorf("failed to download %q (hint: running `helm repo update` may help)", name)
+	return filename, errors.Errorf("failed to download %q (%v)", name, err)
 }
