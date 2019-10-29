@@ -4,7 +4,7 @@ import styles from './containers.module.scss';
 import PageLayout from 'components/basic/PageLayout/PageLayout';
 import withPopup, { PopupContext } from 'contexts/withPopup/withPopup';
 import LogsList, { SelectedLogs } from 'components/views/Logs/LogsList/LogsList';
-import { V1PodList, V1ServiceList } from '@kubernetes/client-node';
+import { V1PodList, V1ServiceList, V1NamespaceList, V1Namespace } from '@kubernetes/client-node';
 import Loading from 'components/basic/Loading/Loading';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 import { ApiHostname } from 'lib/rest';
@@ -19,11 +19,14 @@ interface State {
   podList?: V1PodList;
   serviceList?: V1ServiceList;
   selected?: SelectedLogs;
+  namespaceList: V1Namespace[];
 }
 
 class LogsContainers extends React.PureComponent<Props, State> {
   timeout: any;
-  state: State = {};
+  state: State = {
+    namespaceList: null,
+  };
 
   fetchPods = async () => {
     const response = await fetch(
@@ -61,10 +64,28 @@ class LogsContainers extends React.PureComponent<Props, State> {
     }
   };
 
+  fetchNamespaces = async () => {
+    try {
+      const response = await fetch(
+        `http://${ApiHostname()}/api/resource?resource=namespaces&context=${this.props.devSpaceConfig.kubeContext}`
+      );
+      if (response.status !== 200) {
+        throw new Error(await response.text());
+      }
+
+      const namespaces: V1NamespaceList = await response.json();
+      this.setState({ namespaceList: namespaces.items });
+    } catch (err) {
+      this.setState({ namespaceList: null });
+    }
+  };
+
   componentDidMount = async () => {
+    console.log('DidMount');
     try {
       await this.fetchPods();
       await this.fetchServices();
+      await this.fetchNamespaces();
 
       if (
         this.props.warning.getActive() &&
@@ -143,7 +164,7 @@ class LogsContainers extends React.PureComponent<Props, State> {
                 </div>
               )}
               <div className={styles['info-part']}>
-                <ChangeNamespace />
+                <ChangeNamespace namespaceList={this.state.namespaceList} refetchNamespaces={() => this.fetchNamespaces()} />
                 {this.state.podList ? (
                   <LogsList
                     cache={cache}

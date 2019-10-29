@@ -3,15 +3,16 @@ import styles from './ChangeKubeContext.module.scss';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 import { PortletSimple } from 'components/basic/Portlet/PortletSimple/PortletSimple';
 import CustomDropDown, { DropDownSelectedOption } from 'components/basic/CustomDropDown/CustomDropDown';
-import { ApiHostname } from 'lib/rest';
-import { V1NamespaceList, V1Namespace } from '@kubernetes/client-node';
+import { V1Namespace } from '@kubernetes/client-node';
 
-interface Props extends DevSpaceConfigContext {}
+interface Props extends DevSpaceConfigContext {
+  namespaceList?: V1Namespace[];
+  refetchNamespaces: () => void;
+}
 
 interface State {
   namespaceValue: DropDownSelectedOption;
   kubecontextValue: DropDownSelectedOption;
-  namespaceList: V1Namespace[];
 }
 
 class ChangeNamespace extends React.PureComponent<Props, State> {
@@ -47,32 +48,11 @@ class ChangeNamespace extends React.PureComponent<Props, State> {
       id: this.props.devSpaceConfig.kubeContext,
       text: this.props.devSpaceConfig.kubeContext,
     },
-    namespaceList: null,
-  };
-
-  componentDidMount = async () => {
-    this.getNamespaces();
   };
 
   componentDidUpdate = (prevProps: Props) => {
     if (this.props.devSpaceConfig.kubeContext !== prevProps.devSpaceConfig.kubeContext) {
-      this.getNamespaces();
-    }
-  };
-
-  getNamespaces = async () => {
-    try {
-      const response = await fetch(
-        `http://${ApiHostname()}/api/resource?resource=namespaces&context=${this.props.devSpaceConfig.kubeContext}`
-      );
-      if (response.status !== 200) {
-        throw new Error(await response.text());
-      }
-
-      const namespaces: V1NamespaceList = await response.json();
-      this.setState({ namespaceList: namespaces.items });
-    } catch (err) {
-      this.setState({ namespaceList: null });
+      this.props.refetchNamespaces();
     }
   };
 
@@ -86,8 +66,8 @@ class ChangeNamespace extends React.PureComponent<Props, State> {
       },
     ];
 
-    if (this.state.namespaceList) {
-      namespaceOptions = this.state.namespaceList.map((namespace) => {
+    if (this.props.namespaceList) {
+      namespaceOptions = this.props.namespaceList.map((namespace) => {
         return {
           id: namespace.metadata.name,
           text: namespace.metadata.name,
