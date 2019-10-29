@@ -11,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/server"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
 	"github.com/mgutz/ansi"
@@ -38,7 +39,7 @@ type DevCmd struct {
 	SkipPush                bool
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
-	SkipOpen                bool
+	Open                    bool
 
 	ForceBuild        bool
 	SkipBuild         bool
@@ -52,6 +53,8 @@ type DevCmd struct {
 	SkipPipeline    bool
 	Portforwarding  bool
 	VerboseSync     bool
+
+	UI bool
 
 	Terminal    bool
 	Interactive bool
@@ -98,6 +101,8 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVarP(&cmd.SkipPipeline, "skip-pipeline", "x", false, "Skips build & deployment and only starts sync, portforwarding & terminal")
 	devCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 
+	devCmd.Flags().BoolVar(&cmd.UI, "ui", true, "Start the ui server")
+	devCmd.Flags().BoolVar(&cmd.Open, "open", true, "Open defined URLs in the browser, if defined")
 	devCmd.Flags().BoolVar(&cmd.Sync, "sync", true, "Enable code synchronization")
 	devCmd.Flags().BoolVar(&cmd.VerboseSync, "verbose-sync", false, "When enabled the sync will log every file change")
 
@@ -175,12 +180,6 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	err = client.EnsureDefaultNamespace(log.GetInstance())
 	if err != nil {
 		return errors.Errorf("Unable to create namespace: %v", err)
-	}
-
-	// Create cluster role binding if necessary
-	err = client.EnsureGoogleCloudClusterRoleBinding(log.GetInstance())
-	if err != nil {
-		return err
 	}
 
 	// Create the image pull secrets and add them to the default service account
@@ -353,9 +352,9 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	}
 
 	// Run dev.open configs
-	if config.Dev.Open != nil && cmd.SkipOpen == false {
+	if config.Dev.Open != nil && cmd.Open == true {
 		// Skip executing open config next time (e.g. when automatic redeployment is enabled)
-		cmd.SkipOpen = true
+		cmd.Open = false
 
 		for _, openConfig := range config.Dev.Open {
 			if openConfig.URL != "" {
@@ -372,6 +371,25 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 					}
 				}()
 			}
+		}
+	}
+
+	// Open UI if configured
+	if cmd.UI {
+		cmd.UI = false
+		log.StartWait("Starting the ui server...")
+		defer log.StopWait()
+
+		// Create server
+		server, err := server.NewServer(config, generatedConfig, false, client.CurrentContext, client.Namespace, nil, log)
+		if err != nil {
+			log.Warnf("Couldn't start UI server: %v", err)
+		} else {
+			// Start server
+			go func() { server.ListenAndServe() }()
+
+			log.StopWait()
+			log.Info("UI available at http://" + server.Server.Addr)
 		}
 	}
 

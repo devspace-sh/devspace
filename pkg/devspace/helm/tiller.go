@@ -84,7 +84,7 @@ func createTiller(config *latest.Config, client *kubectl.Client, tillerNamespace
 	// If the service account is already there we do not create it or any roles/rolebindings
 	_, err := client.Client.CoreV1().ServiceAccounts(tillerNamespace).Get(TillerServiceAccountName, metav1.GetOptions{})
 	if err != nil {
-		err = createTillerRBAC(config, client, tillerNamespace)
+		err = createTillerRBAC(config, client, tillerNamespace, log)
 		if err != nil {
 			return err
 		}

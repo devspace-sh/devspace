@@ -74,7 +74,7 @@ func NewTargetSelector(config *latest.Config, kubeClient *kubectl.Client, sp *Se
 // GetPod retrieves a pod
 func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 	if t.pick == false {
-		timeout := time.Second * 120
+		timeout := time.Minute * 10
 		if t.SkipWait == true {
 			timeout = 0
 		}
@@ -92,7 +92,6 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 
 			return pod, nil
 		} else if t.labelSelector != "" {
-
 			pod, err := t.kubeClient.GetNewestRunningPod(t.labelSelector, t.imageSelector, t.namespace, timeout)
 			if err != nil {
 				return nil, err

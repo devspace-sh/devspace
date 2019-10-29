@@ -139,7 +139,7 @@ func StartFileLogging() {
 		defaultLogStdout.fileLogger = GetFileLogger("default")
 	}
 
-	OverrideRuntimeErrorHandler()
+	OverrideRuntimeErrorHandler(false)
 }
 
 // GetInstance returns the Logger instance

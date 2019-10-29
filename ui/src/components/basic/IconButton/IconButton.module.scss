@@ -1,0 +1,69 @@
+@import '../../../styles/constants';
+
+.icon-button-tooltip  {
+  display: inline-block;
+}
+
+.icon-button {
+  display: inline-block;
+  cursor: pointer;
+  background-color: transparent;
+  padding: 8px;
+  font-size: 0;
+  border-radius: 5px;
+  transition: all 0.2s ease;
+  height: 32px;
+  width: 32px;
+
+  &.filter {
+    > :global(.icon-container) {
+      filter: brightness(0%) contrast(0%);
+    }
+
+    &:hover {
+      > :global(.icon-container) {
+        filter: unset;
+      }
+    }
+  }
+
+  &:hover {
+    background-color: rgba($blue-kubernetes, 0.2);
+  }
+
+  > :global(.icon-container) {
+    display: inline-block;
+
+    > img {
+      height: 16px;
+      width: 16px;
+    }
+  }
+
+  &.-loading {
+    position: relative;
+    filter: grayscale(10%);
+    pointer-events: none;
+
+    > .button-loading-wrapper {
+      display: inline-flex;
+
+      > .button-loading-circle {
+        background-image: none;
+        width: 16px;
+        height: 16px;
+        border-color: $gray-2 $gray-2 $gray-2 transparent;
+        border-radius: 50%;
+        border-style: solid;
+        border-width: 2px;
+        animation: rotate360 0.8s infinite linear;
+
+        @keyframes rotate360 {
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,56 @@
+@import '../../../../styles/constants';
+
+.portlet-simple {
+  > :global.top {
+    height: 60px;
+    padding-left: 20px;
+    padding-right: 15px;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    width: 100%;
+
+    :global(.left) {
+      font: $portlet-title;
+      display: flex;
+      align-items: center;
+    }
+
+    :global(.right) {
+      display: flex;
+      align-items: center;
+
+      .tooltipcontainer {
+        margin-left: 5px;
+      }
+    }
+  }
+
+  > :global.content {
+    padding: 20px;
+  }
+
+  &.portlet-padding-small {
+    > .top {
+      padding-left: 12px;
+      padding-right: 10px;
+    }
+  }
+
+  &.portlet-with-content {
+    > :global.top {
+      &::after {
+        content: '';
+        display: block;
+        position: absolute;
+        width: calc(100% - 30px);
+        height: 1px;
+        left: 15px;
+        bottom: -1px;
+        background-color: $blue-dark-2;
+        opacity: 0.1;
+      }
+    }
+  }
+}

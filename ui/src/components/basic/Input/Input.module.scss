@@ -1,0 +1,53 @@
+@import '../../../styles/constants.scss';
+
+.input-component {
+  border-style: none;
+  height: 32px;
+  width: 100%;
+  padding: 0 8px;
+  font: $button-text;
+  color: $blue-dark-2;
+  border-radius: 3px;
+  box-shadow: $shadow-button;
+
+  &::placeholder {
+    color: rgba($blue-dark, 0.5);
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &[type='number']::-webkit-inner-spin-button,
+  &[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  &[readonly] {
+    background-color: $gray-1;
+    color: $violet;
+  }
+
+  &:disabled {
+    background-color: white;
+  }
+}
+
+.input-component-container {
+  position: relative;
+
+  input {
+    padding: 0 35px 0 8px;
+  }
+
+  .tooltip-container {
+    position: absolute;
+    top: 0;
+    right: 0;
+
+    .button {
+      border-radius: 0px 3px 3px 0px;
+    }
+  }
+}

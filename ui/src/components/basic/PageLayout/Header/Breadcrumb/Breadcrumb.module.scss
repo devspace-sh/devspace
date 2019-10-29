@@ -1,0 +1,60 @@
+@import '../../../../../styles/constants';
+
+.breadcrumb {
+  width: 100%;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  font: $breadcrumb;
+
+  .welcome {
+    font: normal 20px 'Kanit';
+    color: $blue-dark-2;
+  }
+
+  .account-selector {
+    color: $blue-dark;
+    opacity: 0.7;
+  }
+
+  .crumbs {
+    padding: 0 10px;
+    display: flex;
+
+    .crumb {
+      display: flex;
+      align-items: center;
+      margin-right: 12px;
+
+      .text {
+        color: $blue-dark;
+        opacity: 0.7;
+      }
+
+      img {
+        margin-right: 10px;
+        margin-bottom: -2px;
+      }
+
+      &:last-of-type {
+        .text {
+          color: $blue-dark-2 !important;
+          opacity: 1;
+          font: $breadcrumb-title;
+        }
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 950px) {
+  .breadcrumb {
+    margin-left: 20px;
+  }
+}
+
+@media screen and (max-width: 570px) {
+  .breadcrumb {
+    display: none;
+  }
+}

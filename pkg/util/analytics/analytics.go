@@ -37,6 +37,7 @@ var loadAnalyticsOnce sync.Once
 
 // Analytics is an interface for sending data to an analytics service
 type Analytics interface {
+	Enabled() bool
 	Disable() error
 	Enable() error
 	SendEvent(eventName string, eventProperties map[string]interface{}, userProperties map[string]interface{}) error
@@ -56,6 +57,10 @@ type analyticsConfig struct {
 
 	version          string
 	identityProvider *func() string
+}
+
+func (a *analyticsConfig) Enabled() bool {
+	return !a.Disabled
 }
 
 func (a *analyticsConfig) Disable() error {

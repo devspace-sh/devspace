@@ -143,12 +143,6 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return errors.Errorf("Unable to create namespace: %v", err)
 	}
 
-	// Create cluster binding if necessary
-	err = client.EnsureGoogleCloudClusterRoleBinding(log.GetInstance())
-	if err != nil {
-		return errors.Errorf("Unable to ensure cluster-admin role binding: %v", err)
-	}
-
 	// Create docker client
 	dockerClient, err := docker.NewClient(log.GetInstance())
 	if err != nil {

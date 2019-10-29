@@ -207,6 +207,8 @@ github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
 # github.com/gorilla/mux v1.7.0
 github.com/gorilla/mux
+# github.com/gorilla/websocket v0.0.0-20170926233335-4201258b820c
+github.com/gorilla/websocket
 # github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f
 github.com/gregjones/httpcache
 github.com/gregjones/httpcache/diskcache
