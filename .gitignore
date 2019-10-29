@@ -24,6 +24,4 @@
 .vscode/ipch
 
 ui/node_modules
-ui/build
-/build
-# ui/build
+ui/build/static/js/*.js.map

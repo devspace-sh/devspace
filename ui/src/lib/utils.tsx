@@ -1,5 +1,3 @@
-import http, { IncomingMessage } from 'http';
-import https from 'https';
 import React from 'react';
 import { DevSpaceConfig } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 import { V1Pod, V1ContainerStatus, Config } from '@kubernetes/client-node';
@@ -128,36 +126,6 @@ export const deepCopy: <T>(obj: T) => T = (obj: any) => {
   }
 
   return JSON.parse(JSON.stringify(obj));
-};
-
-export const getUrlStatusCode = async (url: string): Promise<any> => {
-  const options = { method: 'HEAD', rejectUnauthorized: false };
-  const client = url.startsWith('https') ? https : http;
-
-  return new Promise((resolve, reject) => {
-    client
-      .request(url, options, async (r: IncomingMessage) => {
-        console.log(r.statusCode);
-        if (r.statusCode === 200 || r.statusCode === 201 || r.statusCode === 202) {
-          console.log('link is up!!');
-          resolve({ isUp: true, statusCode: r.statusCode });
-        } else {
-          console.log('link is down :(');
-          resolve({ isUp: false, statusCode: r.statusCode });
-        }
-      })
-      .on('error', (err) => {
-        console.log(err);
-        reject();
-      })
-      .end();
-  })
-    .then((resp) => {
-      return resp;
-    })
-    .catch(() => {
-      return false;
-    });
 };
 
 export const AddExtraProps = (Component: JSX.Element, extraProps: any) => {

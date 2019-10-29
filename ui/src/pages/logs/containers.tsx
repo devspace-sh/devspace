@@ -81,7 +81,6 @@ class LogsContainers extends React.PureComponent<Props, State> {
   };
 
   componentDidMount = async () => {
-    console.log('DidMount');
     try {
       await this.fetchPods();
       await this.fetchServices();
