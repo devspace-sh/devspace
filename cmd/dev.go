@@ -389,7 +389,9 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 			go func() { server.ListenAndServe() }()
 
 			log.StopWait()
-			log.Info("UI available at http://" + server.Server.Addr)
+			log.WriteString("\n")
+			log.Infof("UI available at %s", ansi.Color("http://"+server.Server.Addr, "white+b"))
+			log.WriteString("\n")
 		}
 	}
 
