@@ -428,7 +428,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 			}
 		}
 
-		return services.StartTerminal(config, client, selectorParameter, args, imageSelector, exitChan, true, log)
+		return services.StartTerminal(config, generatedConfig, client, selectorParameter, args, imageSelector, exitChan, true, log)
 	} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
 		// Build an image selector
 		imageSelector := []string{}

@@ -88,8 +88,6 @@ func NewServer(config *latest.Config, generatedConfig *generated.Config, ignoreD
 
 // ListenAndServe implements interface
 func (s *Server) ListenAndServe() error {
-	s.log.Infof("Start listening on %s", s.Server.Addr)
-
 	return s.Server.ListenAndServe()
 }
 
