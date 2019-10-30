@@ -1,9 +1,9 @@
 package survey
 
 import (
+	"os"
 	"regexp"
 
-	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
@@ -121,7 +121,7 @@ func Question(params *QuestionOptions, log log.Logger) (string, error) {
 	err := surveypkg.Ask(question, &answers)
 	if err != nil {
 		// Keyboard interrupt
-		exit.Exit(0)
+		os.Exit(0)
 	}
 
 	return answers.Question, nil

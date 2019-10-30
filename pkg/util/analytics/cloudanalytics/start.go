@@ -12,6 +12,12 @@ import (
 
 // ReportPanics resolves a panic
 func ReportPanics() {
+	defer func() {
+		if r := recover(); r != nil {
+			// Fail silently
+		}
+	}()
+
 	analytics, err := analytics.GetAnalytics()
 	if err != nil {
 		return
@@ -22,6 +28,12 @@ func ReportPanics() {
 
 // SendCommandEvent sends a new event to the analytics provider
 func SendCommandEvent(commandErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			// Fail silently
+		}
+	}()
+
 	analytics, err := analytics.GetAnalytics()
 	if err != nil {
 		return
@@ -33,6 +45,12 @@ func SendCommandEvent(commandErr error) {
 
 // Start initializes the analytics
 func Start(version string) {
+	defer func() {
+		if r := recover(); r != nil {
+			// Fail silently
+		}
+	}()
+
 	analytics.SetConfigPath(constants.DefaultHomeDevSpaceFolder + "/analytics.yaml")
 
 	analytics, err := analytics.GetAnalytics()
@@ -41,11 +59,11 @@ func Start(version string) {
 	}
 
 	analytics.SetVersion(version)
-	analytics.SetIdentifyProvider(GetIdentity)
+	analytics.SetIdentifyProvider(getIdentity)
 }
 
-// GetIdentity return the cloud identifier
-func GetIdentity() string {
+// getIdentity return the cloud identifier
+func getIdentity() string {
 	providerConfig, err := config.ParseProviderConfig()
 	if err != nil {
 		return ""
