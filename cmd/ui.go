@@ -178,6 +178,8 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 		}(server.Server.Addr)
 	}
 
+	log.Infof("Start listening on http://%s", server.Server.Addr)
+
 	// Start server
 	return server.ListenAndServe()
 }

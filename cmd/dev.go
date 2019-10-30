@@ -389,7 +389,9 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 			go func() { server.ListenAndServe() }()
 
 			log.StopWait()
-			log.Info("UI available at http://" + server.Server.Addr)
+			log.WriteString("\n")
+			log.Infof("UI available at %s", ansi.Color("http://"+server.Server.Addr, "white+b"))
+			log.WriteString("\n")
 		}
 	}
 
@@ -428,7 +430,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 			}
 		}
 
-		return services.StartTerminal(config, client, selectorParameter, args, imageSelector, exitChan, true, log)
+		return services.StartTerminal(config, generatedConfig, client, selectorParameter, args, imageSelector, exitChan, true, log)
 	} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
 		// Build an image selector
 		imageSelector := []string{}

@@ -418,6 +418,12 @@ func GetAnalytics() (Analytics, error) {
 		signal.Notify(c, os.Interrupt)
 
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					// Fail silently
+				}
+			}()
+
 			<-c
 
 			analyticsInstance.SendCommandEvent(errors.New("interrupted"))

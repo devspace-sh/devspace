@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -88,8 +89,6 @@ func NewServer(config *latest.Config, generatedConfig *generated.Config, ignoreD
 
 // ListenAndServe implements interface
 func (s *Server) ListenAndServe() error {
-	s.log.Infof("Start listening on %s", s.Server.Addr)
-
 	return s.Server.ListenAndServe()
 }
 
@@ -338,7 +337,10 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 	// Do the request
 	out, err := kubectl.GenericRequest(client, options)
 	if err != nil {
-		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+		if strings.Index(err.Error(), "request: unknown") != 0 {
+			h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+		}
+
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
