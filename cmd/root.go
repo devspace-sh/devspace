@@ -60,10 +60,15 @@ func Execute() {
 	// Report any panics
 	defer cloudanalytics.ReportPanics()
 
+	go func() {
+		cloudanalytics.SendCommandEvent(nil)
+	}()
+
 	// Execute command
 	err := rootCmd.Execute()
-	cloudanalytics.SendCommandEvent(err)
 	if err != nil {
+		cloudanalytics.SendCommandEvent(err)
+
 		// Check if return code error
 		retCode, ok := err.(*exit.ReturnCodeError)
 		if ok {
