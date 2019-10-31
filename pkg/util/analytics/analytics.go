@@ -41,7 +41,7 @@ type Analytics interface {
 	Disable() error
 	Enable() error
 	SendEvent(eventName string, eventProperties map[string]interface{}, userProperties map[string]interface{}) error
-	SendCommandEvent(commandError error) error
+	SendCommandEvent(commandArgs []string, commandError error, commandDuration int64) error
 	ReportPanics()
 	Identify(identifier string) error
 	SetVersion(version string)
@@ -130,9 +130,9 @@ func (a *analyticsConfig) Identify(identifier string) error {
 	return nil
 }
 
-func (a *analyticsConfig) SendCommandEvent(commandError error) error {
+func (a *analyticsConfig) SendCommandEvent(commandArgs []string, commandError error, commandDuration int64) error {
 	executable, _ := os.Executable()
-	command := strings.Join(os.Args, " ")
+	command := strings.Join(commandArgs, " ")
 	command = strings.Replace(command, executable, "devspace", 1)
 
 	expr := regexp.MustCompile(`^.*\s+(login\s.*--key=?\s*)(.*)(\s.*|$)`)
@@ -175,13 +175,8 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 		commandProperties["kube_context"] = hash.String(contextName)
 	}
 
-	pid := os.Getpid()
-	p, err := process.NewProcess(int32(pid))
-	if err == nil {
-		procCreateTime, err := p.CreateTime()
-		if err == nil {
-			commandProperties["duration"] = strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond)-procCreateTime, 10) + "ms"
-		}
+	if commandDuration != 0 {
+		commandProperties["duration"] = strconv.FormatInt(commandDuration, 10) + "ms"
 	}
 
 	if regexp.MustCompile(`^.*\s+(use\s+space\s.*--get-token((\s*)|$))`).MatchString(command) {
@@ -266,7 +261,7 @@ func (a *analyticsConfig) ReportPanics() {
 	if r := recover(); r != nil {
 		err := errors.Errorf("Panic: %v\n%v", r, string(debug.Stack()))
 
-		a.SendCommandEvent(err)
+		a.SendCommandEvent(os.Args, err, GetProcessDuration())
 	}
 }
 
@@ -426,7 +421,7 @@ func GetAnalytics() (Analytics, error) {
 
 			<-c
 
-			analyticsInstance.SendCommandEvent(errors.New("interrupted"))
+			analyticsInstance.SendCommandEvent(os.Args, errors.New("interrupted"), GetProcessDuration())
 			signal.Stop(c)
 
 			pid := os.Getpid()
@@ -439,4 +434,18 @@ func GetAnalytics() (Analytics, error) {
 // SetConfigPath sets the config patch
 func SetConfigPath(path string) {
 	analyticsConfigFile = path
+}
+
+// GetProcessDuration returns the process duration
+func GetProcessDuration() int64 {
+	pid := os.Getpid()
+	p, err := process.NewProcess(int32(pid))
+	if err == nil {
+		procCreateTime, err := p.CreateTime()
+		if err == nil {
+			return time.Now().UnixNano()/int64(time.Millisecond) - procCreateTime
+		}
+	}
+
+	return 0
 }

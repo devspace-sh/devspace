@@ -1,7 +1,10 @@
 package cloudanalytics
 
 import (
+	"errors"
 	"net/url"
+	"os"
+	"os/exec"
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
@@ -18,12 +21,12 @@ func ReportPanics() {
 		}
 	}()
 
-	analytics, err := analytics.GetAnalytics()
+	a, err := analytics.GetAnalytics()
 	if err != nil {
 		return
 	}
 
-	analytics.ReportPanics()
+	a.ReportPanics()
 }
 
 // SendCommandEvent sends a new event to the analytics provider
@@ -34,13 +37,57 @@ func SendCommandEvent(commandErr error) {
 		}
 	}()
 
-	analytics, err := analytics.GetAnalytics()
+	a, err := analytics.GetAnalytics()
 	if err != nil {
 		return
 	}
 
-	// Ignore analytics error
-	_ = analytics.SendCommandEvent(commandErr)
+	a.SendCommandEvent(os.Args, commandErr, analytics.GetProcessDuration())
+}
+
+// SendCommandEventBackground sends a new event to the analytics provider in the background
+func SendCommandEventBackground(commandErr error) {
+	commandDuration := analytics.GetProcessDuration()
+	commandErrMessage := ""
+	if commandErr != nil {
+		commandErrMessage = commandErr.Error()
+	}
+
+	args := []string{"send", "event", strconv.FormatInt(commandDuration, 10), commandErrMessage}
+	args = append(args, os.Args...)
+
+	cmd := exec.Command("devspace", args...)
+	cmd.Start()
+}
+
+// HandleSendCommand sends an event
+func HandleSendCommand() {
+	if len(os.Args) < 6 || os.Args[1] != "send" || os.Args[2] != "event" {
+		return
+	}
+
+	a, err := analytics.GetAnalytics()
+	if err != nil {
+		panic(err)
+	}
+
+	commandDuration, err := strconv.ParseInt(os.Args[3], 10, 64)
+	if err != nil {
+		panic(err)
+	}
+
+	var commandErr error
+	if os.Args[4] != "" {
+		commandErr = errors.New(os.Args[4])
+	}
+
+	commandArgs := os.Args[5:]
+	err = a.SendCommandEvent(commandArgs, commandErr, commandDuration)
+	if err != nil {
+		panic(err)
+	}
+
+	os.Exit(0)
 }
 
 // Start initializes the analytics

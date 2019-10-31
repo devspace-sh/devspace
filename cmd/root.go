@@ -62,7 +62,7 @@ func Execute() {
 
 	// Execute command
 	err := rootCmd.Execute()
-	cloudanalytics.SendCommandEvent(err)
+	cloudanalytics.SendCommandEventBackground(err)
 	if err != nil {
 		// Check if return code error
 		retCode, ok := err.(*exit.ReturnCodeError)
