@@ -26,11 +26,11 @@ jobs:
         npm run build
       working-directory: ./docs/website
       env:
-        CI: true
+        NPM_CONFIG_GLOBALCONFIG: dist/npm/etc/npmrc
     - name: Deploy docs to netlify
       run: |
         cp quickstart/* build/devspace/
-        npm install --globalconfig=dist/npm/etc/npmrc -g netlify-cli
+        npm install -g netlify-cli
         netlify deploy
       working-directory: ./docs/website/build/devspace
       env:
