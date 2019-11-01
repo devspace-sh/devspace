@@ -27,6 +27,7 @@ jobs:
       working-directory: ./docs/website
       env:
         NPM_CONFIG_GLOBALCONFIG: dist/npm/etc/npmrc
+        NPM_REGISTRY_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
     - name: Deploy docs to netlify
       run: |
         cp quickstart/* build/devspace/
@@ -36,4 +37,3 @@ jobs:
       env:
         NETLIFY_SITE_ID : "8d48f1ea-d40f-4669-8f10-421293e3f6e5"
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-        NPM_REGISTRY_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
