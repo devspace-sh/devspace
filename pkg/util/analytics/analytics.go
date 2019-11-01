@@ -253,11 +253,11 @@ func (a *analyticsConfig) SendEvent(eventName string, eventProperties map[string
 
 func (a *analyticsConfig) getSessionID() (int64, error) {
 	now := time.Now()
-	sessionExpired := time.Unix(a.LatestUpdate*int64(time.Millisecond), 0).Add(time.Second * 30).Before(now)
+	sessionExpired := time.Unix(a.LatestUpdate*int64(time.Millisecond), 0).Add(time.Minute * 30).Before(now)
 	a.LatestUpdate = now.UnixNano() / int64(time.Millisecond)
 
 	if a.LatestSession == 0 || sessionExpired {
-		a.LatestSession = a.LatestUpdate
+		a.LatestSession = a.LatestUpdate - (a.LatestUpdate % (24 * 60 * 60 * 1000))
 	}
 	return a.LatestSession, nil
 }
