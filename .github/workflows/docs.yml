@@ -1,0 +1,44 @@
+name: Build & Deploy Docs
+
+on:
+  push:
+    branches: 
+    - master
+    - docs-ci
+  pull_request:
+    paths: 
+    - 'docs/**'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-18.04
+
+    strategy:
+      matrix:
+        node-version: [8.x, 10.x, 12.x]
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Build latest version of docs
+      run: |
+        cp versions.json versions.all.json
+        node -e "var versions = require('./versions.all.json'); console.log([versions[0]])" > versions.json
+        npm ci
+        npm run build
+      working-directory: ./docs/website
+      env:
+        CI: true
+    - name: Deploy docs to netlify
+      run: |
+        cp quickstart/* build/devspace/
+        npm install -g netlify-cli
+        netlify deploy
+      working-directory: ./docs/website/build/devspace
+      env:
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID : "8d48f1ea-d40f-4669-8f10-421293e3f6e5"
