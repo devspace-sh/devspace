@@ -56,9 +56,6 @@ func SetVersion(verText string) {
 
 	// Start analytics
 	cloudanalytics.Start(version)
-
-	// Handle Send command
-	cloudanalytics.HandleSendCommand()
 }
 
 var (

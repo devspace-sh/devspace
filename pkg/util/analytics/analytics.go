@@ -2,12 +2,14 @@ package analytics
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"regexp"
@@ -35,6 +37,8 @@ var analyticsConfigFile string
 var analyticsInstance *analyticsConfig
 var loadAnalyticsOnce sync.Once
 
+const DEFERRED_REQUEST_COMMAND = "send-deferred-request"
+
 // Analytics is an interface for sending data to an analytics service
 type Analytics interface {
 	Enabled() bool
@@ -46,6 +50,7 @@ type Analytics interface {
 	Identify(identifier string) error
 	SetVersion(version string)
 	SetIdentifyProvider(getIdentity func() string)
+	HandleDeferredRequest() error
 }
 
 type analyticsConfig struct {
@@ -279,11 +284,11 @@ func (a *analyticsConfig) SetIdentifyProvider(getIdentity func() string) {
 func (a *analyticsConfig) sendRequest(requestURL string, data map[string]interface{}) error {
 	if !a.Disabled && token != "" {
 		var err error
-		jsonData := []byte{}
+		jsonRequestBody := []byte{}
 		requestURL, err := url.Parse(requestURL)
 
 		if requestBody, ok := data["body"]; ok {
-			jsonData, err = json.Marshal(requestBody)
+			jsonRequestBody, err = json.Marshal(requestBody)
 			if err != nil {
 				return errors.Errorf("Couldn't marshal analytics data to json: %v", err)
 			}
@@ -319,26 +324,70 @@ func (a *analyticsConfig) sendRequest(requestURL string, data map[string]interfa
 			"Content-Type": []string{"application/json"},
 			"Accept":       []string{"*/*"},
 		}
-
-		request, err := http.NewRequest("POST", requestURL.String(), bytes.NewBuffer(jsonData))
+		jsonHeaders, err := json.Marshal(headers)
 		if err != nil {
-			return errors.Errorf("Error creating request to analytics endpoint: %v", err)
+			return errors.Errorf("Couldn't marshal analytics headers: %v", err)
 		}
-		request.Header = headers
-		client := &http.Client{}
 
-		response, err := client.Do(request)
+		args := []string{DEFERRED_REQUEST_COMMAND, "POST", base64.StdEncoding.EncodeToString([]byte(requestURL.String())), base64.StdEncoding.EncodeToString(jsonRequestBody), base64.StdEncoding.EncodeToString(jsonHeaders)}
+		executable, err := os.Executable()
 		if err != nil {
-			return errors.Errorf("Error sending request to analytics endpoint: %v", err)
+			executable = os.Args[0]
 		}
-		defer response.Body.Close()
-		body, _ := ioutil.ReadAll(response.Body)
 
-		if response.StatusCode != 200 {
-			return fmt.Errorf("Analytics returned HTTP code %d: %s", response.StatusCode, body)
-		}
+		cmd := exec.Command(executable, args...)
+
+		return cmd.Start()
+	}
+	return nil
+}
+
+// HandleDeferredRequest sends a request if args are: executable, DEFERRED_REQUEST_COMMAND
+func (a *analyticsConfig) HandleDeferredRequest() error {
+	if len(os.Args) < 6 || os.Args[1] != DEFERRED_REQUEST_COMMAND {
 		return nil
 	}
+
+	httpMethod := os.Args[2]
+	requestURL, err := base64.StdEncoding.DecodeString(os.Args[3])
+	if err != nil {
+		return errors.Errorf("Couldn't base64.decode request URL: %v", err)
+	}
+	requestBody, err := base64.StdEncoding.DecodeString(os.Args[4])
+	if err != nil {
+		return errors.Errorf("Couldn't base64.decode request body: %v", err)
+	}
+	jsonRequestHeaders, err := base64.StdEncoding.DecodeString(os.Args[5])
+	if err != nil {
+		return errors.Errorf("Couldn't base64.decode request headers: %v", err)
+	}
+
+	requestHeaders := map[string][]string{}
+	err = json.Unmarshal([]byte(jsonRequestHeaders), &requestHeaders)
+	if err != nil {
+		return errors.Errorf("Couldn't unmarshal request headers: %v", err)
+	}
+
+	request, err := http.NewRequest(httpMethod, string(requestURL), bytes.NewBuffer(requestBody))
+	if err != nil {
+		return errors.Errorf("Error creating request to analytics endpoint: %v", err)
+	}
+	request.Header = requestHeaders
+	client := &http.Client{}
+
+	response, err := client.Do(request)
+	if err != nil {
+		return errors.Errorf("Error sending request to analytics endpoint: %v", err)
+	}
+	defer response.Body.Close()
+	body, _ := ioutil.ReadAll(response.Body)
+
+	if response.StatusCode != 200 {
+		return fmt.Errorf("Analytics returned HTTP code %d: %s", response.StatusCode, body)
+	}
+
+	os.Exit(0)
+
 	return nil
 }
 
