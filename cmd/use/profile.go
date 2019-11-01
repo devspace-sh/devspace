@@ -5,6 +5,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/pkg/errors"
@@ -28,7 +29,8 @@ func newProfileCmd() *cobra.Command {
 Use a specific DevSpace profile
 
 Example:
-devspace use profile myconfig
+devspace use profile production
+devspace use profile staging
 devspace use profile --reset
 #######################################################
 	`,
@@ -49,7 +51,7 @@ func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) err
 		return err
 	}
 	if !configExists {
-		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New(message.ConfigNotFound)
 	}
 
 	profiles, err := configutil.GetProfiles(".")

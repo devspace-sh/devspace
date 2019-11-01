@@ -7,6 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
@@ -87,7 +88,7 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 
 			podStatus := kubectl.GetPodStatus(pod)
 			if podStatus != "Running" && strings.HasPrefix(podStatus, "Init") == false {
-				return nil, errors.Errorf("Couldn't get pod %s, because pod has status: %s which is not Running", pod.Name, podStatus)
+				return nil, errors.Errorf(message.PodStatusCritical, pod.Name, podStatus, pod.Name)
 			}
 
 			return pod, nil

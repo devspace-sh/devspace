@@ -113,7 +113,7 @@ func Question(params *QuestionOptions, log log.Logger) (string, error) {
 
 	// Check if we can ask the question
 	if log.GetLevel() < logrus.InfoLevel {
-		return "", errors.Errorf("Cannot ask question '%s' because logger level is too low", params.Question)
+		return "", errors.Errorf("Cannot ask question '%s' because log level is too low", params.Question)
 	}
 
 	log.WriteString("\n")

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
@@ -182,7 +183,7 @@ func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace str
 					for _, imageName := range imageNames {
 						if imageName == container.Image {
 							if CriticalStatus[podStatus] {
-								return nil, errors.Errorf("Pod '%s' cannot start (Status: %s)", currentPod.Name, podStatus)
+								return nil, errors.Errorf(message.PodStatusCritical, currentPod.Name, podStatus, currentPod.Name)
 							} else if podStatus == "Completed" {
 								break Outer
 							} else if podStatus != "Running" {
@@ -260,7 +261,7 @@ func (client *Client) GetNewestRunningPod(labelSelector string, imageSelector []
 				if podStatus == "Running" {
 					return selectedPod, nil
 				} else if podStatus == "Error" || podStatus == "Unknown" || podStatus == "ImagePullBackOff" || podStatus == "CrashLoopBackOff" || podStatus == "RunContainerError" || podStatus == "ErrImagePull" || podStatus == "CreateContainerConfigError" || podStatus == "InvalidImageName" {
-					return nil, errors.Errorf("Selected Pod(s) cannot start (Status: %s)", podStatus)
+					return nil, errors.Errorf(message.PodStatusCritical, selectedPod.Name, podStatus, selectedPod.Name)
 				}
 			} else if time.Since(now) > time.Minute {
 				return nil, errors.Errorf("Couldn't find a pod with selector %s in namespace %s", labelSelector, namespace)
@@ -271,7 +272,7 @@ func (client *Client) GetNewestRunningPod(labelSelector string, imageSelector []
 		maxWaiting -= waitingInterval * 2
 	}
 
-	return nil, errors.Errorf("No pod with selector %s in namespace %s found", labelSelector, namespace)
+	return nil, errors.Errorf(message.SelectorLabelNotFound, labelSelector, namespace)
 }
 
 // GetPodStatus returns the pod status as a string

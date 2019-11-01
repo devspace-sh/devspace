@@ -9,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/mgutz/ansi"
@@ -126,7 +127,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		space, err = provider.GetSpaceByName(args[0])
 		if err != nil {
-			return errors.Errorf("Error retrieving Spaces details: %v", err)
+			return errors.Errorf("%s: %v", message.SpaceQueryError, err)
 		}
 	} else {
 		spaceID, err := strconv.Atoi(cmd.SpaceID)
@@ -136,7 +137,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 
 		space, err = provider.GetSpace(spaceID)
 		if err != nil {
-			return errors.Errorf("Error retrieving Spaces details: %v", err)
+			return errors.Errorf("%s: %v", message.SpaceQueryError, err)
 		}
 	}
 
