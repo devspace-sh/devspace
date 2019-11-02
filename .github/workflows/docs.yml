@@ -24,7 +24,7 @@ jobs:
       uses: actions/setup-node@v1
     - name: Build latest version of docs
       run: |
-        mv versions.json versions.all.json
+        cp versions.json versions.all.json
         LATEST_VERSION=$(node ./ci-gen-version.js)
         
         npm ci
