@@ -14,7 +14,9 @@ for (let i = 0; i < versions.length; i++) {
 }
 const sidebarFile = `./versioned_sidebars/version-${latestVersion}-sidebars.json`;
 
-fs.copyFileSync(`./versioned_sidebars/version-${latestSidebarVersion}-sidebars.json`, sidebarFile);
+if (latestSidebarVersion != latestVersion) {
+    fs.copyFileSync(`./versioned_sidebars/version-${latestSidebarVersion}-sidebars.json`, sidebarFile);
+}
 
 const sidebarContent = fs.readFileSync(sidebarFile, 'utf8').replace(new RegExp(latestSidebarVersion, "g"), latestVersion);
 
@@ -47,7 +49,9 @@ for (let sidebarGroupName in sidebarStructure) {
                         const pageContent = fs.readFileSync(pagePath, 'utf8').replace(new RegExp(`(id: version-)${version}`, "g"), `$1${latestVersion}`);
                         const targetPagePath = `./versioned_docs/version-${latestVersion}/${sidebarLink}.md`;
 
-                        fs.mkdirSync(path.dirname(targetPagePath), { recursive: true });
+                        try {
+                            fs.mkdirSync(path.dirname(targetPagePath), { recursive: true});
+                        } catch(e) {}
                         fs.writeFileSync(targetPagePath, pageContent);
                     }
                     break;
