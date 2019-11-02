@@ -27,9 +27,13 @@ jobs:
       run: |
         cp versions.json versions.all.json
         LATEST_VERSION=$(node -e "var versions = require('./versions.all.json'); console.log(versions[0])")
-        rm versions.json
+        LATEST_SIDEBAR_VERSION=$(node -e "const fs = require('fs'); var versions = require('./versions.json'); for (var i = 0; i < versions.length; i++) { if (fs.existsSync('./versioned_sidebars/version-'+versions[i]+'-sidebars.json')) {console.log(versions[i]); break; } }")
+
+        echo "[\"$LATEST_VERSION\"]" > versions.json
+        cp ./versioned_sidebars/version-${LATEST_SIDEBAR_VERSION}-sidebars.json ./versioned_sidebars/version-${LATEST_VERSION}-sidebars.json
+        sed -i "s~$LATEST_SIDEBAR_VERSION~$LATEST_VERSION~" ./versioned_sidebars/version-${LATEST_VERSION}-sidebars.json
+        
         npm ci
-        npm run version $LATEST_VERSION
         npm run build
       working-directory: ./docs/website
       env:
