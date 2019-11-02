@@ -21,7 +21,7 @@ jobs:
     - name: Build latest version of docs
       run: |
         cp versions.json versions.all.json
-        node -e "var versions = require('./versions.all.json'); console.log([versions[0]])" > versions.json
+        node -e "var versions = require('./versions.all.json'); console.log(JSON.stringify([versions[0]]))" > versions.json
         npm ci
         npm run build
       working-directory: ./docs/website
