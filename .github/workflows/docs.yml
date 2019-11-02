@@ -24,6 +24,7 @@ jobs:
       uses: actions/setup-node@v1
     - name: Build latest version of docs
       run: |
+        mv versions.json versions.all.json
         LATEST_VERSION=$(node ./ci-gen-version.js)
         
         npm ci
@@ -40,7 +41,8 @@ jobs:
     - name: Merge docs pages of previous versions with current version
       if: github.ref == 'refs/heads/docs-ci'
       run: |
-        LATEST_VERSION=$(node -e "var versions = require('./versions.json'); console.log(versions[0]);")
+        LATEST_VERSION=$(node -e "var versions = require('./versions.all.json'); console.log(versions[0]);")
+        PREVIOUS_VERSION=$(node -e "var versions = require('./versions.all.json'); console.log(versions[1]);")
 
         echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
         curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
@@ -61,10 +63,10 @@ jobs:
         mv $OUT_DIR/docs-tmp $OUT_DIR/docs
         
         PREVIOUS_VERSION_LINKS=$(head -n 1 $OUT_DIR/versions.html | sed -E 's~^.*<h3 id="archive">.*<tbody>(.*)</tbody>.*$~\1~')
-        LATEST_CURRENT_VERSION=$(head -n 1 $OUT_DIR/versions.html | sed -E 's~^.*<tbody><tr><th>([^<]*).*<h3 id="rc">.*$~\1~')
+        PREVIOUS_VERSION_CACHED=$(echo $PREVIOUS_VERSION_LINKS | sed -E 's~^<tr><th>([^<]*).*$~\1~')
 
-        if [ "$LATEST_CURRENT_VERSION" != "$LATEST_VERSION" ]; then
-          PREVIOUS_VERSION_LINKS="<tr><th>$LATEST_CURRENT_VERSION</th><td><a href="/docs/$LATEST_CURRENT_VERSION/introduction">Documentation</a></td><td><a href="https://github.com/devspace-cloud/devspace/releases/tag/$LATEST_CURRENT_VERSION">Release Notes</a></td></tr>$PREVIOUS_VERSION_LINKS"
+        if [ "$PREVIOUS_VERSION_CACHED" != "$PREVIOUS_VERSION" ]; then
+          PREVIOUS_VERSION_LINKS="<tr><th>$PREVIOUS_VERSION</th><td><a href="/docs/$PREVIOUS_VERSION/introduction">Documentation</a></td><td><a href="https://github.com/devspace-cloud/devspace/releases/tag/$PREVIOUS_VERSION">Release Notes</a></td></tr>$PREVIOUS_VERSION_LINKS"
         fi
 
         sed -Ei "s~^(.*<h3 id=\"archive\">.*<tbody>)(.*)(</tbody>.*)$~\1$PREVIOUS_VERSION_LINKS\3~" ${OUT_DIR}-latest/versions.html
@@ -74,6 +76,7 @@ jobs:
         cp ${OUT_DIR}-latest/versions.html ${OUT_DIR}-latest/en/versions/index.html
 
         cp -r ${OUT_DIR}-latest/* $OUT_DIR
+        rm -rf $OUT_DIR/sitemap.xml
 
         gsutil -m rsync -d -r -x "docs/next/.*" $OUT_DIR gs://$GCLOUD_BUCKET/
       working-directory: ./docs/website
