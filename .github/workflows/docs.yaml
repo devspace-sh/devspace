@@ -4,10 +4,12 @@ on:
   push:
     branches:
     - master
-    paths: 
+    paths:
     - 'docs/**'
   pull_request:
-    paths: 
+    branches:
+    - master
+    paths:
     - 'docs/**'
 
 env:
@@ -16,7 +18,7 @@ env:
   OUT_DIR: build/devspace
 
 jobs:
-  build:
+  run:
 
     runs-on: ubuntu-18.04
 
