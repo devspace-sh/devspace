@@ -20,10 +20,10 @@ jobs:
       uses: actions/setup-node@v1
     - name: Build latest version of docs
       run: |
-        npm ci
         cp versions.json versions.all.json
         LATEST_VERSION=$(node -e "var versions = require('./versions.all.json'); console.log(JSON.stringify([versions[0]]))")
         rm versions.json
+        npm ci
         npm run version $LATEST_VERSION
         npm run build
       working-directory: ./docs/website
@@ -32,7 +32,6 @@ jobs:
         NPM_REGISTRY_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
     - name: Deploy docs to netlify
       run: |
-        cp quickstart/* build/devspace/
         npm install -g netlify-cli
         netlify deploy
       working-directory: ./docs/website/build/devspace
