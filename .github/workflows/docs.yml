@@ -25,13 +25,7 @@ jobs:
       uses: actions/setup-node@v1
     - name: Build latest version of docs
       run: |
-        cp versions.json versions.all.json
-        LATEST_VERSION=$(node -e "var versions = require('./versions.all.json'); console.log(versions[0])")
-        LATEST_SIDEBAR_VERSION=$(node -e "const fs = require('fs'); var versions = require('./versions.json'); for (var i = 0; i < versions.length; i++) { if (fs.existsSync('./versioned_sidebars/version-'+versions[i]+'-sidebars.json')) {console.log(versions[i]); break; } }")
-
-        echo "[\"$LATEST_VERSION\"]" > versions.json
-        cp ./versioned_sidebars/version-${LATEST_SIDEBAR_VERSION}-sidebars.json ./versioned_sidebars/version-${LATEST_VERSION}-sidebars.json
-        sed -i "s~$LATEST_SIDEBAR_VERSION~$LATEST_VERSION~" ./versioned_sidebars/version-${LATEST_VERSION}-sidebars.json
+        LATEST_VERSION=$(node ./ci-gen-version.js)
         
         npm ci
         npm run build
@@ -60,6 +54,9 @@ jobs:
 
         PREVIOUS_VERSION_LINKS=$(head -n 1 $OUT_DIR/versions.html | sed -E 's~^.*<h3 id="archive">.*<tbody>(.*)</tbody>.*$~\1~')
         LATEST_CURRENT_VERSION=$(head -n 1 $OUT_DIR/versions.html | sed -E 's~^.*<tbody><tr><th>([^<]*).*<h3 id="rc">.*$~\1~')
+
+        echo $LATEST_VERSION
+        echo $LATEST_CURRENT_VERSION
 
         if [ "$LATEST_CURRENT_VERSION" != "$LATEST_VERSION" ]; then
           PREVIOUS_VERSION_LINKS="<tr><th>$LATEST_CURRENT_VERSION</th><td><a href="/docs/$LATEST_CURRENT_VERSION/introduction">Documentation</a></td><td><a href="https://github.com/devspace-cloud/devspace/releases/tag/$LATEST_CURRENT_VERSION">Release Notes</a></td></tr>$PREVIOUS_VERSION_LINKS"
