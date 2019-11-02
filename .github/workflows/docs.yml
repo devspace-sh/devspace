@@ -2,12 +2,12 @@ name: Build & Deploy Docs
 
 on:
   push:
-    branches:
-    - master
-    paths: 
+    paths:
     - 'docs/**'
   pull_request:
-    paths: 
+    branches:
+    - master
+    paths:
     - 'docs/**'
 
 env:
