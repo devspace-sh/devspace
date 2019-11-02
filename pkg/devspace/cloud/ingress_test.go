@@ -74,7 +74,7 @@ func TestCreateIngress(t *testing.T) {
 					specExists: true,
 				},
 			},
-			expectedErr: fmt.Printf(message.ServiceNotFound, namespace),
+			expectedErr: fmt.Sprintf(message.ServiceNotFound, ""),
 		},
 		createIngressTestCase{
 			name: "No token",
