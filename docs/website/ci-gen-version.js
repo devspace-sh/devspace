@@ -43,7 +43,8 @@ for (let sidebarGroupName in sidebarStructure) {
 
                 if (fs.existsSync(pagePath)) {
                     if (version != latestVersion) {
-                        fs.copyFileSync(pagePath, `./versioned_docs/version-${latestVersion}/${sidebarLink}.md`);
+                        const pageContent = fs.readFileSync(pagePath, 'utf8').replace(new RegExp(`(id: version-)${version}`, "g"), `$1${latestVersion}`);
+                        fs.writeFileSync(`./versioned_docs/version-${latestVersion}/${sidebarLink}.md`, pageContent);
                     }
                     break;
                 }
