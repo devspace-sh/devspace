@@ -1,0 +1,91 @@
+name: Build & Deploy Docs
+
+on:
+  push:
+    paths: 
+    - 'docs/**'
+  pull_request:
+    paths: 
+    - 'docs/**'
+
+env:
+  NETLIFY_SITE_ID: "842923e2-f262-4e62-9e52-cbdcfadc6a47"
+  NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+  OUT_DIR: build/devspace
+
+jobs:
+  build:
+
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Use Node.js
+      uses: actions/setup-node@v1
+    - name: Build latest version of docs
+      run: |
+        cp versions.json versions.all.json
+        LATEST_VERSION=$(node ./ci-gen-version.js)
+        
+        npm ci
+        npm run build
+      working-directory: ./docs/website
+      env:
+        NPM_CONFIG_GLOBALCONFIG: "dist/npm/etc/npmrc"
+        NPM_REGISTRY_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
+    - name: Deploy preview site on netlify
+      run: |
+        npm install -g netlify-cli
+        netlify deploy --auth=$NETLIFY_AUTH_TOKEN --site=$NETLIFY_SITE_ID --dir=$OUT_DIR
+      working-directory: ./docs/website
+    - name: Merge docs pages of previous versions with current version
+      if: github.ref == 'refs/heads/master'
+      run: |
+        LATEST_VERSION=$(node -e "var versions = require('./versions.all.json'); console.log(versions[0]);")
+        PREVIOUS_VERSION=$(node -e "var versions = require('./versions.all.json'); console.log(versions[1]);")
+
+        echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+        sudo apt-get update && sudo apt-get install -y google-cloud-sdk
+
+        echo $GCLOUD_DOCS_SERVICE_ACCOUNT >gcloud-sa.json
+        gcloud auth activate-service-account --key-file=gcloud-sa.json
+        gcloud config set project $GCLOUD_PROJECT
+
+        mv $OUT_DIR ${OUT_DIR}-latest
+        mkdir -p $OUT_DIR/docs-tmp
+        gsutil -m cp -r gs://$GCLOUD_BUCKET/* $OUT_DIR
+
+        mv $OUT_DIR/docs/v* $OUT_DIR/docs-tmp
+        rm -rf $OUT_DIR/docs-tmp/$LATEST_VERSION
+        rm -rf $OUT_DIR/docs
+        
+        mv $OUT_DIR/docs-tmp $OUT_DIR/docs
+        
+        CACHED_VERSION_LINKS=$(head -n 1 $OUT_DIR/versions.html | sed -E 's~^.*<h3 id="archive">.*<tbody>(.*)</tbody>.*$~\1~')
+        PREVIOUS_VERSION_CACHED=$(echo $CACHED_VERSION_LINKS | sed -E 's~^<tr><th>([^<]*).*$~\1~')
+
+        if [ "$PREVIOUS_VERSION_CACHED" != "$PREVIOUS_VERSION" ]; then
+          CACHED_VERSION_LINKS="<tr><th>$PREVIOUS_VERSION</th><td><a href="/docs/$PREVIOUS_VERSION/introduction">Documentation</a></td><td><a href="https://github.com/devspace-cloud/devspace/releases/tag/$PREVIOUS_VERSION">Release Notes</a></td></tr>$CACHED_VERSION_LINKS"
+        fi
+
+        sed -Ei "s~^(.*<h3 id=\"archive\">.*<tbody>)(.*)(</tbody>.*)$~\1$CACHED_VERSION_LINKS\3~" ${OUT_DIR}-latest/versions.html
+
+        cp ${OUT_DIR}-latest/versions.html ${OUT_DIR}-latest/versions/index.html
+        cp ${OUT_DIR}-latest/versions.html ${OUT_DIR}-latest/en/versions.html
+        cp ${OUT_DIR}-latest/versions.html ${OUT_DIR}-latest/en/versions/index.html
+
+        cp -r ${OUT_DIR}-latest/* $OUT_DIR
+        rm -rf $OUT_DIR/sitemap.xml
+
+        gsutil -m rsync -d -r -x "docs/next/.*" $OUT_DIR gs://$GCLOUD_BUCKET/
+      working-directory: ./docs/website
+      env:
+        GCLOUD_DOCS_SERVICE_ACCOUNT: ${{ secrets.GCLOUD_DOCS_SERVICE_ACCOUNT }}
+        GCLOUD_PROJECT: "devspace-docs"
+        GCLOUD_BUCKET: "docs-site"
+    - name: Deploy production site on netlify
+      if: github.ref == 'refs/heads/master'
+      run: |
+        netlify deploy --auth=$NETLIFY_AUTH_TOKEN --site=$NETLIFY_SITE_ID --dir=$OUT_DIR --prod
+      working-directory: ./docs/website
