@@ -16,7 +16,7 @@ env:
   OUT_DIR: build/devspace
 
 jobs:
-  build:
+  run:
 
     runs-on: ubuntu-18.04
 
