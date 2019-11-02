@@ -29,9 +29,9 @@ profiles:
     path: images.backend.image
     value: john/prodbackend
   - op: remove
-    path: deployments[0].component.containers[1]
+    path: deployments[0].helm.values.containers[1]
   - op: add
-    path: deployments[0].component.containers
+    path: deployments[0].helm.values.containers
     value:
       image: john/cache
 ```
@@ -65,16 +65,16 @@ profiles:
     path: images.backend.image
     value: john/stagingbackend
   - op: remove
-    path: deployments[0].component.containers[1]
+    path: deployments[0].helm.values.containers[1]
 - name: production
   patches:
   - op: replace
     path: images.backend.image
     value: john/prodbackend
   - op: remove
-    path: deployments[0].component.containers[1]
+    path: deployments[0].helm.values.containers[1]
   - op: add
-    path: deployments[0].component.containers
+    path: deployments[0].helm.values.containers
     value:
       image: john/cache
 ```
@@ -89,7 +89,7 @@ profiles:
 ### `profiles[*].patches`
 The `patches` option expects a patch object which consists of the following properties:
 - `op` stating the patch operation (possible values: `replace`, `add`, `remove`)
-- `path` stating a jsonpath or an xpath within the config (e.g. `images.backend.image`, `deployments[0].component.containers[1]`)
+- `path` stating a jsonpath or an xpath within the config (e.g. `images.backend.image`, `deployments[0].helm.values.containers[1]`)
 - `value` stating an arbirary value used by the operation (e.g. a string, an integer, a boolean, a yaml object)
 
 > If you use the `replace` or `add` operation, `value` is a mandatory property.
@@ -118,9 +118,9 @@ profiles:
     path: images.backend.image
     value: john/prodbackend
   - op: remove
-    path: deployments[0].component.containers[1]
+    path: deployments[0].helm.values.containers[1]
   - op: add
-    path: deployments[0].component.containers
+    path: deployments[0].helm.values.containers
     value:
       image: john/cache
 ```
@@ -150,7 +150,7 @@ deployments:
 ### `profiles[*].replace`
 The `patches` option expects a patch object which consists of the following properties:
 - `op` stating the patch operation (possible values: `replace`, `add`, `remove`)
-- `path` stating a jsonpath or an xpath within the config (e.g. `images.backend.image`, `deployments[0].component.containers[1]`)
+- `path` stating a jsonpath or an xpath within the config (e.g. `images.backend.image`, `deployments[0].helm.values.containers[1]`)
 - `value` stating an arbirary value used by the operation (e.g. a string, an integer, a boolean, a yaml object)
 
 > If you use the `replace` or `add` operation, `value` is a mandatory property.
@@ -183,7 +183,7 @@ profiles:
     path: images.backend.image
     value: john/prodbackend
   - op: remove
-    path: deployments[0].component.containers[1]
+    path: deployments[0].helm.values.containers[1]
 ```
 **Explanation:**  
 - The above example defines 1 profile: `production`
