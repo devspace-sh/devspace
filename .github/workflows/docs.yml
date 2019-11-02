@@ -9,7 +9,7 @@ on:
     - 'docs/**'
 
 env:
-  NETLIFY_SITE_ID: "8d48f1ea-d40f-4669-8f10-421293e3f6e5"
+  NETLIFY_SITE_ID: "842923e2-f262-4e62-9e52-cbdcfadc6a47"
   NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
   OUT_DIR: build/devspace
 
@@ -39,7 +39,7 @@ jobs:
         netlify deploy --auth=$NETLIFY_AUTH_TOKEN --site=$NETLIFY_SITE_ID --dir=$OUT_DIR
       working-directory: ./docs/website
     - name: Merge docs pages of previous versions with current version
-      if: github.ref == 'refs/heads/docs-ci'
+      if: github.ref == 'refs/heads/master'
       run: |
         LATEST_VERSION=$(node -e "var versions = require('./versions.all.json'); console.log(versions[0]);")
         PREVIOUS_VERSION=$(node -e "var versions = require('./versions.all.json'); console.log(versions[1]);")
@@ -85,7 +85,7 @@ jobs:
         GCLOUD_PROJECT: "devspace-docs"
         GCLOUD_BUCKET: "docs-site"
     - name: Deploy production site on netlify
-      if: github.ref == 'refs/heads/docs-ci'
+      if: github.ref == 'refs/heads/master'
       run: |
         netlify deploy --auth=$NETLIFY_AUTH_TOKEN --site=$NETLIFY_SITE_ID --dir=$OUT_DIR --prod
       working-directory: ./docs/website
