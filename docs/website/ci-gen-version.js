@@ -1,5 +1,6 @@
-const versionsFile = './versions.json';
 const fs = require('fs');
+const path = require('path');
+const versionsFile = './versions.json';
 const versions = require(versionsFile);
 
 let latestVersion = versions[0];
@@ -44,7 +45,10 @@ for (let sidebarGroupName in sidebarStructure) {
                 if (fs.existsSync(pagePath)) {
                     if (version != latestVersion) {
                         const pageContent = fs.readFileSync(pagePath, 'utf8').replace(new RegExp(`(id: version-)${version}`, "g"), `$1${latestVersion}`);
-                        fs.writeFileSync(`./versioned_docs/version-${latestVersion}/${sidebarLink}.md`, pageContent);
+                        const targetPagePath = `./versioned_docs/version-${latestVersion}/${sidebarLink}.md`;
+
+                        fs.mkdirSync(path.dirname(targetPagePath), { recursive: true });
+                        fs.writeFileSync(targetPagePath, pageContent);
                     }
                     break;
                 }
