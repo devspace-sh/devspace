@@ -20,11 +20,11 @@ jobs:
       uses: actions/setup-node@v1
     - name: Build latest version of docs
       run: |
+        npm ci
         cp versions.json versions.all.json
         LATEST_VERSION=$(node -e "var versions = require('./versions.all.json'); console.log(JSON.stringify([versions[0]]))")
         rm versions.json
         npm run version $LATEST_VERSION
-        npm ci
         npm run build
       working-directory: ./docs/website
       env:
