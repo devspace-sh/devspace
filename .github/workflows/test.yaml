@@ -5,6 +5,7 @@ on:
       - "v*"
     branches:
       - master
+      - actions
   pull_request:
     branches:
       - master
