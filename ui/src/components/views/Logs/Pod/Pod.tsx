@@ -7,8 +7,8 @@ import { SelectedLogs } from '../LogsList/LogsList';
 import IconButton from 'components/basic/IconButton/IconButton';
 import TerminalIconExists from 'images/icon-terminal-exists.svg';
 import TerminalIconWhite from 'images/icon-terminal-white.svg';
-import DomainsWhite from 'images/domains-white.svg';
-import Domains from 'images/domains.svg';
+import OpenIconWhite from 'images/open-white.svg';
+import OpenIcon from 'images/open.svg';
 import TerminalIcon from 'images/icon-terminal.svg';
 import WarningIcon from 'components/basic/Icon/WarningIcon/WarningIcon';
 import LeftAlignIcon from 'images/left-alignment.svg';
@@ -198,7 +198,7 @@ const Pod = (props: Props) => {
               {props.service && (
                 <IconButton
                   filter={false}
-                  icon={selected ? DomainsWhite : Domains}
+                  icon={selected ? OpenIconWhite : OpenIcon}
                   tooltipText="Open"
                   onClick={(e) => {
                     e.stopPropagation();
