@@ -6,11 +6,13 @@ on:
     - master
     paths:
     - 'docs/**'
+    - '.github/workflows/docs.yaml'
   pull_request:
     branches:
     - master
     paths:
     - 'docs/**'
+    - '.github/workflows/docs.yaml'
 
 env:
   NETLIFY_SITE_ID: "842923e2-f262-4e62-9e52-cbdcfadc6a47"

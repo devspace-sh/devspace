@@ -6,11 +6,15 @@ on:
     - master
     paths:
     - '**.go'
+    - 'hack/coverage.bash'
+    - '.github/workflows/tests.yaml'
   pull_request:
     branches:
     - master
     paths:
     - '**.go'
+    - 'hack/coverage.bash'
+    - '.github/workflows/tests.yaml'
 
 jobs:
   test:
