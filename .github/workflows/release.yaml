@@ -42,7 +42,7 @@ jobs:
     - run: |
         npm ci
         export NPM_TAG=$(node index.js get-tag)
-        npm publish
+        npm publish --tag $NPM_TAG
       working-directory: ./dist/npm
       env:
         NODE_AUTH_TOKEN: ${{secrets.NPMJS_TOKEN}}
