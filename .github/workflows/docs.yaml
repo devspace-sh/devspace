@@ -33,7 +33,7 @@ jobs:
         cp versions.json versions.all.json
         LATEST_VERSION=$(node ./ci-gen-version.js)
         
-        npm ci
+        npm install
         npm run build
       working-directory: ./docs/website
       env:
