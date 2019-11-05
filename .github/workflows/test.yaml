@@ -11,11 +11,6 @@ on:
   pull_request:
     branches:
       - master
-    paths:
-      - "cmd/**"
-      - "pkg/**"
-      - "sync/**"
-      - "vendor/**"
 
 env:
   GO111MODULE: on
