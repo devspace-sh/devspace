@@ -9,11 +9,6 @@ on:
   pull_request:
     branches:
       - master
-    paths:
-      - "cmd/**"
-      - "pkg/**"
-      - "sync/**"
-      - "vendor/**"
 
 jobs:
   test:
