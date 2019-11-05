@@ -1,11 +1,12 @@
 name: Run CLI Tests
+
 on:
-- push:
+  push:
     branches:
     - master
     paths:
     - '**.go'
-- pull_request:
+  pull_request:
     branches:
     - master
     paths:
