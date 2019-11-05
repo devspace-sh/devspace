@@ -1,14 +1,13 @@
 name: Test & Deploy
 on:
-  push:
-    tags:
-      - "v*"
-    branches:
-      - master
-      - actions
-  pull_request:
-    branches:
-      - master
+  - release:
+      types: [created]
+  - push:
+      branches:
+        - master
+  - pull_request:
+      branches:
+        - master
 
 jobs:
   test:
