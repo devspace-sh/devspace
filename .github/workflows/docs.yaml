@@ -38,7 +38,7 @@ jobs:
       working-directory: ./docs/website
       env:
         NPM_CONFIG_GLOBALCONFIG: "dist/npm/etc/npmrc"
-        NPM_REGISTRY_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
+        NPM_REGISTRY_TOKEN: ${{ secrets.NPM_DEVSPACE_REGISTRY_TOKEN }}
     - name: Deploy preview site on netlify
       run: |
         npm install -g netlify-cli
