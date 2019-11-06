@@ -26,6 +26,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	logutil "github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
@@ -122,7 +123,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 	if !configExists {
-		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New(message.ConfigNotFound)
 	}
 
 	// Start file logging
@@ -578,7 +579,7 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 		images := config.Images
 		if config.Dev.Interactive.Images == nil && config.Dev.Interactive.Terminal == nil {
 			if config.Images == nil || len(config.Images) == 0 {
-				return nil, errors.New("Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`")
+				return nil, errors.New(message.ConfigNoImages)
 			}
 
 			imageNames := make([]string, 0, len(images))

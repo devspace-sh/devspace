@@ -8,6 +8,7 @@ import (
 	deployUtil "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/pkg/errors"
@@ -55,7 +56,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 		return err
 	}
 	if !configExists {
-		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New(message.ConfigNotFound)
 	}
 
 	name := ""

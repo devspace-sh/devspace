@@ -2,6 +2,7 @@ package cloudanalytics
 
 import (
 	"net/url"
+	"os"
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
@@ -18,12 +19,12 @@ func ReportPanics() {
 		}
 	}()
 
-	analytics, err := analytics.GetAnalytics()
+	a, err := analytics.GetAnalytics()
 	if err != nil {
 		return
 	}
 
-	analytics.ReportPanics()
+	a.ReportPanics()
 }
 
 // SendCommandEvent sends a new event to the analytics provider
@@ -34,13 +35,12 @@ func SendCommandEvent(commandErr error) {
 		}
 	}()
 
-	analytics, err := analytics.GetAnalytics()
+	a, err := analytics.GetAnalytics()
 	if err != nil {
 		return
 	}
 
-	// Ignore analytics error
-	_ = analytics.SendCommandEvent(commandErr)
+	a.SendCommandEvent(os.Args, commandErr, analytics.GetProcessDuration())
 }
 
 // Start initializes the analytics
@@ -60,6 +60,10 @@ func Start(version string) {
 
 	analytics.SetVersion(version)
 	analytics.SetIdentifyProvider(getIdentity)
+	err = analytics.HandleDeferredRequest()
+	if err != nil {
+		// ignore error
+	}
 }
 
 // getIdentity return the cloud identifier

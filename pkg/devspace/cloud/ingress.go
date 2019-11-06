@@ -8,6 +8,7 @@ import (
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 
@@ -49,7 +50,7 @@ func (p *Provider) CreateIngress(client *kubectl.Client, space *cloudlatest.Spac
 	servicePort := ""
 
 	if len(serviceNameList) == 0 {
-		return errors.Errorf("Couldn't find any active services an ingress could connect to. Please make sure you have a service for your application")
+		return errors.Errorf(message.ServiceNotFound, client.Namespace)
 	} else if len(serviceNameList) == 1 {
 		splitted := strings.Split(serviceNameList[0], ":")
 

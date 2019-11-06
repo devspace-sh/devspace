@@ -6,6 +6,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 )
 
@@ -483,7 +484,7 @@ func (p *Provider) GetSpaceByName(spaceName string) (*latest.Space, error) {
 
 	// Check result
 	if response.Space == nil || len(response.Space) == 0 {
-		return nil, fmt.Errorf("Space %s not found. You may need to prefix the space name with the name of its owner, e.g. USER:SPACE", spaceName)
+		return nil, fmt.Errorf(message.SpaceNotFound, spaceName)
 	}
 
 	spaceConfig := response.Space[0]

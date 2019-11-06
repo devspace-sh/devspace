@@ -9,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -34,13 +35,12 @@ func newDeploymentCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 
 	addDeploymentCmd := &cobra.Command{
 		Use:   "deployment [deployment-name]",
-		Short: "Add a deployment",
+		Short: "Adds a deployment to devspace.yaml",
 		Long: ` 
 #######################################################
 ############# devspace add deployment #################
 #######################################################
-Add a new deployment (docker image, components, 
-kubernetes manifests or helm chart) to your DevSpace configuration
+Adds a new deployment to this project's devspace.yaml
 
 Examples:
 # Deploy a predefined component 
@@ -88,7 +88,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 		return err
 	}
 	if !configExists {
-		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New(message.ConfigNotFound)
 	}
 
 	deploymentName := args[0]

@@ -130,7 +130,7 @@ func StartSync(config *latest.Config, generatedConfig *generated.Config, kubeCli
 		pod, container, err := selector.GetContainer(false, log)
 		log.StopWait()
 		if err != nil {
-			return nil, errors.Errorf("Unable to start sync, because an error occured during pod selection: %v", err)
+			return nil, errors.Errorf("Error selecting pod: %v", err)
 		}
 
 		log.StartWait("Starting sync...")

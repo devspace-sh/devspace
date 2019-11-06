@@ -2,12 +2,14 @@ package analytics
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"regexp"
@@ -35,17 +37,20 @@ var analyticsConfigFile string
 var analyticsInstance *analyticsConfig
 var loadAnalyticsOnce sync.Once
 
+const DEFERRED_REQUEST_COMMAND = "send-deferred-request"
+
 // Analytics is an interface for sending data to an analytics service
 type Analytics interface {
 	Enabled() bool
 	Disable() error
 	Enable() error
 	SendEvent(eventName string, eventProperties map[string]interface{}, userProperties map[string]interface{}) error
-	SendCommandEvent(commandError error) error
+	SendCommandEvent(commandArgs []string, commandError error, commandDuration int64) error
 	ReportPanics()
 	Identify(identifier string) error
 	SetVersion(version string)
 	SetIdentifyProvider(getIdentity func() string)
+	HandleDeferredRequest() error
 }
 
 type analyticsConfig struct {
@@ -130,9 +135,9 @@ func (a *analyticsConfig) Identify(identifier string) error {
 	return nil
 }
 
-func (a *analyticsConfig) SendCommandEvent(commandError error) error {
+func (a *analyticsConfig) SendCommandEvent(commandArgs []string, commandError error, commandDuration int64) error {
 	executable, _ := os.Executable()
-	command := strings.Join(os.Args, " ")
+	command := strings.Join(commandArgs, " ")
 	command = strings.Replace(command, executable, "devspace", 1)
 
 	expr := regexp.MustCompile(`^.*\s+(login\s.*--key=?\s*)(.*)(\s.*|$)`)
@@ -175,13 +180,8 @@ func (a *analyticsConfig) SendCommandEvent(commandError error) error {
 		commandProperties["kube_context"] = hash.String(contextName)
 	}
 
-	pid := os.Getpid()
-	p, err := process.NewProcess(int32(pid))
-	if err == nil {
-		procCreateTime, err := p.CreateTime()
-		if err == nil {
-			commandProperties["duration"] = strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond)-procCreateTime, 10) + "ms"
-		}
+	if commandDuration != 0 {
+		commandProperties["duration"] = strconv.FormatInt(commandDuration, 10) + "ms"
 	}
 
 	if regexp.MustCompile(`^.*\s+(use\s+space\s.*--get-token((\s*)|$))`).MatchString(command) {
@@ -253,11 +253,11 @@ func (a *analyticsConfig) SendEvent(eventName string, eventProperties map[string
 
 func (a *analyticsConfig) getSessionID() (int64, error) {
 	now := time.Now()
-	sessionExpired := time.Unix(a.LatestUpdate*int64(time.Millisecond), 0).Add(time.Second * 30).Before(now)
+	sessionExpired := time.Unix(a.LatestUpdate*int64(time.Millisecond), 0).Add(time.Minute * 30).Before(now)
 	a.LatestUpdate = now.UnixNano() / int64(time.Millisecond)
 
 	if a.LatestSession == 0 || sessionExpired {
-		a.LatestSession = a.LatestUpdate
+		a.LatestSession = a.LatestUpdate - (a.LatestUpdate % (24 * 60 * 60 * 1000))
 	}
 	return a.LatestSession, nil
 }
@@ -266,7 +266,7 @@ func (a *analyticsConfig) ReportPanics() {
 	if r := recover(); r != nil {
 		err := errors.Errorf("Panic: %v\n%v", r, string(debug.Stack()))
 
-		a.SendCommandEvent(err)
+		a.SendCommandEvent(os.Args, err, GetProcessDuration())
 	}
 }
 
@@ -284,11 +284,11 @@ func (a *analyticsConfig) SetIdentifyProvider(getIdentity func() string) {
 func (a *analyticsConfig) sendRequest(requestURL string, data map[string]interface{}) error {
 	if !a.Disabled && token != "" {
 		var err error
-		jsonData := []byte{}
+		jsonRequestBody := []byte{}
 		requestURL, err := url.Parse(requestURL)
 
 		if requestBody, ok := data["body"]; ok {
-			jsonData, err = json.Marshal(requestBody)
+			jsonRequestBody, err = json.Marshal(requestBody)
 			if err != nil {
 				return errors.Errorf("Couldn't marshal analytics data to json: %v", err)
 			}
@@ -324,26 +324,70 @@ func (a *analyticsConfig) sendRequest(requestURL string, data map[string]interfa
 			"Content-Type": []string{"application/json"},
 			"Accept":       []string{"*/*"},
 		}
-
-		request, err := http.NewRequest("POST", requestURL.String(), bytes.NewBuffer(jsonData))
+		jsonHeaders, err := json.Marshal(headers)
 		if err != nil {
-			return errors.Errorf("Error creating request to analytics endpoint: %v", err)
+			return errors.Errorf("Couldn't marshal analytics headers: %v", err)
 		}
-		request.Header = headers
-		client := &http.Client{}
 
-		response, err := client.Do(request)
+		args := []string{DEFERRED_REQUEST_COMMAND, "POST", base64.StdEncoding.EncodeToString([]byte(requestURL.String())), base64.StdEncoding.EncodeToString(jsonRequestBody), base64.StdEncoding.EncodeToString(jsonHeaders)}
+		executable, err := os.Executable()
 		if err != nil {
-			return errors.Errorf("Error sending request to analytics endpoint: %v", err)
+			executable = os.Args[0]
 		}
-		defer response.Body.Close()
-		body, _ := ioutil.ReadAll(response.Body)
 
-		if response.StatusCode != 200 {
-			return fmt.Errorf("Analytics returned HTTP code %d: %s", response.StatusCode, body)
-		}
+		cmd := exec.Command(executable, args...)
+
+		return cmd.Start()
+	}
+	return nil
+}
+
+// HandleDeferredRequest sends a request if args are: executable, DEFERRED_REQUEST_COMMAND
+func (a *analyticsConfig) HandleDeferredRequest() error {
+	if len(os.Args) < 6 || os.Args[1] != DEFERRED_REQUEST_COMMAND {
 		return nil
 	}
+
+	httpMethod := os.Args[2]
+	requestURL, err := base64.StdEncoding.DecodeString(os.Args[3])
+	if err != nil {
+		return errors.Errorf("Couldn't base64.decode request URL: %v", err)
+	}
+	requestBody, err := base64.StdEncoding.DecodeString(os.Args[4])
+	if err != nil {
+		return errors.Errorf("Couldn't base64.decode request body: %v", err)
+	}
+	jsonRequestHeaders, err := base64.StdEncoding.DecodeString(os.Args[5])
+	if err != nil {
+		return errors.Errorf("Couldn't base64.decode request headers: %v", err)
+	}
+
+	requestHeaders := map[string][]string{}
+	err = json.Unmarshal([]byte(jsonRequestHeaders), &requestHeaders)
+	if err != nil {
+		return errors.Errorf("Couldn't unmarshal request headers: %v", err)
+	}
+
+	request, err := http.NewRequest(httpMethod, string(requestURL), bytes.NewBuffer(requestBody))
+	if err != nil {
+		return errors.Errorf("Error creating request to analytics endpoint: %v", err)
+	}
+	request.Header = requestHeaders
+	client := &http.Client{}
+
+	response, err := client.Do(request)
+	if err != nil {
+		return errors.Errorf("Error sending request to analytics endpoint: %v", err)
+	}
+	defer response.Body.Close()
+	body, _ := ioutil.ReadAll(response.Body)
+
+	if response.StatusCode != 200 {
+		return fmt.Errorf("Analytics returned HTTP code %d: %s", response.StatusCode, body)
+	}
+
+	os.Exit(0)
+
 	return nil
 }
 
@@ -426,7 +470,7 @@ func GetAnalytics() (Analytics, error) {
 
 			<-c
 
-			analyticsInstance.SendCommandEvent(errors.New("interrupted"))
+			analyticsInstance.SendCommandEvent(os.Args, errors.New("interrupted"), GetProcessDuration())
 			signal.Stop(c)
 
 			pid := os.Getpid()
@@ -439,4 +483,18 @@ func GetAnalytics() (Analytics, error) {
 // SetConfigPath sets the config patch
 func SetConfigPath(path string) {
 	analyticsConfigFile = path
+}
+
+// GetProcessDuration returns the process duration
+func GetProcessDuration() int64 {
+	pid := os.Getpid()
+	p, err := process.NewProcess(int32(pid))
+	if err == nil {
+		procCreateTime, err := p.CreateTime()
+		if err == nil {
+			return time.Now().UnixNano()/int64(time.Millisecond) - procCreateTime
+		}
+	}
+
+	return 0
 }

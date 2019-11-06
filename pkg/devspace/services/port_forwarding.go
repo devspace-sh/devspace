@@ -12,6 +12,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
 	"github.com/pkg/errors"
 )
@@ -44,7 +45,7 @@ func StartPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 			pod, err := selector.GetPod(log)
 			log.StopWait()
 			if err != nil {
-				return nil, errors.Errorf("Error starting port-forwarding: Unable to list devspace pods: %s", err.Error())
+				return nil, errors.Errorf("%s: %s", message.SelectorErrorPod, err.Error())
 			} else if pod != nil {
 				ports := make([]string, len(portForwarding.PortMappings))
 				addresses := make([]string, len(portForwarding.PortMappings))

@@ -4,6 +4,7 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -44,7 +45,7 @@ func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	} else if !configExists {
-		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New(message.ConfigNotFound)
 	}
 
 	// Get profiles

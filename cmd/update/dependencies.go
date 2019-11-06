@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -50,7 +51,7 @@ func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []stri
 		return err
 	}
 	if !configExists {
-		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New(message.ConfigNotFound)
 	}
 
 	// Get the config

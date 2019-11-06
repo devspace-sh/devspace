@@ -7,6 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -102,7 +103,7 @@ func TestTargetSelector(t *testing.T) {
 	}
 	returnedPod, returnedContainer, err = targetSelector.GetContainer(false, log.GetInstance())
 	assert.Equal(t, false, err == nil, "No error from selecting in an empty namespace")
-	assert.Equal(t, fmt.Sprintf("Couldn't get pod %s, because pod has status: %s which is not Running", selectedPodName, "Stopped"), err.Error(), "Wrong error")
+	assert.Equal(t, fmt.Sprintf(message.PodStatusCritical, selectedPodName, "Stopped", selectedPodName), err.Error(), "Wrong error")
 	assert.Equal(t, true, returnedPod == nil, "returned Pod is not nil")
 	assert.Equal(t, true, returnedContainer == nil, "returned container is not nil")
 
