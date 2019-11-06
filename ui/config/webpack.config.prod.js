@@ -163,8 +163,9 @@ module.exports = {
                 loader: require.resolve('css-loader'),
                 options: {
                   importLoaders: 1,
-                  modules: true,
-                  localIdentName: '[hash:base64]',
+                  modules: {
+                    localIdentName: '[hash:base64]',
+                  },
                 },
               },
               {

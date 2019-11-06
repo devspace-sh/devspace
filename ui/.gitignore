@@ -7,7 +7,11 @@
 /coverage
 
 # production
-# /build
+/build
+
+# add yarn.lock to allow CI pipeline to run correctly
+# => please use npm instead of yarn
+yarn.lock
 
 # misc
 .DS_Store
