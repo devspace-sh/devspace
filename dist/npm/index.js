@@ -218,10 +218,6 @@ exec("npm bin -g || yarn global bin", function(err, stdout, stderr) {
     } else {
       removeGlobalFolder();
     }
-  
-    try {
-      fs.unlinkSync(binaryPath);
-    } catch (e) {}
   }
 
   if (platform != "windows" && action == "install") {
@@ -230,6 +226,10 @@ exec("npm bin -g || yarn global bin", function(err, stdout, stderr) {
 
   try {
     fs.unlinkSync(binaryPath + downloadExtension);
+  } catch (e) {}
+  
+  try {
+    fs.unlinkSync(binaryPath);
   } catch (e) {}
 
   if (platform == "windows") {
