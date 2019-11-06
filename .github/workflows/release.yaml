@@ -81,7 +81,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
   publish-npm:
     if: startsWith(github.ref, 'refs/tags/v') == true
-    needs: release
+    needs: [release, release-ui]
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
