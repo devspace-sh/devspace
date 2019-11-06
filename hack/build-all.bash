@@ -47,8 +47,11 @@ for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
     if [[ "${ARCH}" == "ppc64" || "${ARCH}" == "ppc64le" ]] && [[ "${OS}" != "linux" ]]; then
         # ppc64 and ppc64le are only supported on Linux.
         echo "Building for ${OS}/${ARCH} not supported."
+    elif [[ "${ARCH}" == "386" && "${OS}" == "darwin" ]]; then
+        # darwin 386 is deprecated and shouldn't be used anymore
+        echo "Building for ${OS}/${ARCH} not supported."
     else
-        echo "Building for ${OS}/${ARCH}"
+        echo "Building for ${OS}/${ARCH} with CGO_ENABLED=${CGO_ENABLED}"
         GOARCH=${ARCH} GOOS=${OS} ${GO_BUILD_CMD} -ldflags "${GO_BUILD_LDFLAGS}"\
             -o "${DEVSPACE_ROOT}/release/${NAME}" .
         shasum -a 256 "${DEVSPACE_ROOT}/release/${NAME}" > "${DEVSPACE_ROOT}/release/${NAME}".sha256
