@@ -195,6 +195,7 @@ let version = packageJson.version;
 let platform = PLATFORM_MAPPING[process.platform];
 let arch = ARCH_MAPPING[process.arch];
 let binaryName = "devspace";
+let downloadExtension = ".dl";
 
 if (platform == "windows") {
   binaryName += ".exe";
@@ -272,7 +273,7 @@ exec("npm bin", function(err, stdout, stderr) {
       spinner.start();
 
       let writeStream = fs
-        .createWriteStream(binaryPath)
+        .createWriteStream(binaryPath + downloadExtension)
         .on("error", function(err) {
           spinner.stop(true);
           showRootError();
@@ -325,11 +326,17 @@ exec("npm bin", function(err, stdout, stderr) {
           writeStream.end();
           spinner.stop(true);
 
-          try {
-            fs.chmodSync(binaryPath, 0755);
-          } catch (e) {
-            showRootError();
-          }
+          fs.copyFile(binaryPath + downloadExtension, binaryPath, (err) => {
+            if (err) {
+              showRootError();
+            }
+
+            try {
+              fs.chmodSync(binaryPath, 0755);
+            } catch (e) {
+              showRootError();
+            }
+          });
         });
     };
 

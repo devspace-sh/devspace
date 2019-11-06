@@ -12,6 +12,7 @@ const reactDevSpaceConfigContext = React.createContext({
   originalKubeNamespace: null,
   kubeContexts: null,
   workingDirectory: null,
+  analyticsEnabled: true,
   rawConfig: null,
 });
 
@@ -31,6 +32,7 @@ export interface DevSpaceConfig {
   originalKubeNamespace: string;
   kubeContexts: { [key: string]: string };
   workingDirectory: string;
+  analyticsEnabled: boolean;
   rawConfig: RawConfig;
 }
 

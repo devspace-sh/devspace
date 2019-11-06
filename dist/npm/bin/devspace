@@ -2,6 +2,13 @@
 
 echo "Finishing installation for DevSpace CLI"
 
+INDEX_FILE="devspace/index.js"
 NPM_GLOBAL_DIR="$(npm root -g)"
+DEVSPACE_INDEX_FILE="$NPM_GLOBAL_DIR/$INDEX_FILE"
 
-/usr/bin/env node $NPM_GLOBAL_DIR/devspace/index.js force-install $0 && $0 "$@"; exit 0;
+if [ ! -f "$DEVSPACE_INDEX_FILE" ]; then
+    YARN_GLOBAL_DIR="$(yarn global dir)"
+    DEVSPACE_INDEX_FILE="$YARN_GLOBAL_DIR/node_modules/$INDEX_FILE"
+fi
+
+/usr/bin/env node $DEVSPACE_INDEX_FILE force-install $0 && $0 "$@"; exit 0;

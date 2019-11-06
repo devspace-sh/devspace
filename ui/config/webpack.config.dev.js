@@ -158,8 +158,9 @@ module.exports = {
                 loader: require.resolve('css-loader'),
                 options: {
                   importLoaders: 1,
-                  modules: true,
-                  localIdentName: '[path][name]__[local]',
+                  modules: {
+                    localIdentName: '[path][name]__[local]',
+                  },
                   sourceMap: true,
                 },
               },

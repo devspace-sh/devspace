@@ -1,0 +1,98 @@
+name: Test & Release CLI Version
+
+on:
+  release:
+    types: [created]
+  push:
+    branches:
+      - master
+    paths:
+      - "**.go"
+      - "hack/coverage.bash"
+      - ".github/workflows/release.yaml"
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "**.go"
+      - "hack/coverage.bash"
+      - ".github/workflows/release.yaml"
+
+jobs:
+  test:
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Set up Go 1.13
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.13
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v1
+      - name: Test
+        run: ./hack/coverage.bash
+  release:
+    if: startsWith(github.ref, 'refs/tags/v') == true
+    needs: test
+    runs-on: macOS-latest
+    steps:
+      - name: Set up Go 1.13
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.13
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v1
+      - name: Compile binaries
+        run: ./hack/build-all.bash
+        env:
+          ANALYTICS_TOKEN: ${{ secrets.ANALYTICS_TOKEN }}
+          ANALYTICS_ENDPOINT_EVENT: ${{ secrets.ANALYTICS_ENDPOINT_EVENT }}
+          ANALYTICS_ENDPOINT_USER: ${{ secrets.ANALYTICS_ENDPOINT_USER }}
+      - name: Publish
+        uses: FabianKramm/release-asset-action@v1
+        with:
+          pattern: "release/*"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+  release-ui:
+    if: startsWith(github.ref, 'refs/tags/v') == true
+    needs: test
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+      - name: Cache node modules
+        uses: actions/cache@v1
+        with:
+          path: ui/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('../../ui/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Build UI
+        env:
+          NPM_CONFIG_GLOBALCONFIG: "../../dist/npm/config/npmrc"
+          NPM_REGISTRY_TOKEN: ${{ secrets.NPM_REGISTRY_TOKEN }}
+        run: ./hack/build-ui.bash
+      - name: Publish
+        uses: FabianKramm/release-asset-action@v1
+        with:
+          pattern: "release/*"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+  publish-npm:
+    if: startsWith(github.ref, 'refs/tags/v') == true
+    needs: test
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+      - run: |
+          npm ci
+          export NPM_TAG=$(node index.js get-tag)
+          npm publish --tag $NPM_TAG
+        working-directory: ./dist/npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
