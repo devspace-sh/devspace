@@ -143,65 +143,13 @@ function rimraf(dir_path) {
   }
 }
 
-if (action == "uninstall") {
-  let removeGlobalFolder = function() {
-    inquirer
-      .prompt([
-        {
-          type: "list",
-          name: "removeGlobalFolder",
-          message: "Do you want to remove the global DevSpace config folder ~/.devspace?",
-          choices: ["no", "yes"],
-        },
-      ])
-      .then(answers => {
-        if (answers.removeGlobalFolder == "yes") {
-          try {
-            let homedir = require('os').homedir();
-            rimraf(homedir + path.sep + ".devspace");
-          } catch (e) {
-            console.error(e)
-          }
-        }
-      });
-  };
-
-  if (process.ppid > 1) {
-    findProcess('pid', process.ppid)
-      .then(function (list) {
-        if (list.length == 1 && list[0].ppid > 1) {
-          findProcess('pid', list[0].ppid)
-            .then(function (list) {
-              if (list.length == 1 && /npm-cli.js("|')\s+up(date)?\s+(.+\s+)?devspace((\s)|$)/.test(list[0].cmd)) {
-                // Do not ask to remove global folder because user runs: npm upgrade
-              } else {
-                removeGlobalFolder();
-              }
-            }, function () {
-              removeGlobalFolder();
-            })
-        } else {
-          removeGlobalFolder();
-        }
-      }, function () {
-        removeGlobalFolder();
-      })
-  } else {
-    removeGlobalFolder();
-  }
-}
-
 let version = packageJson.version;
 let platform = PLATFORM_MAPPING[process.platform];
 let arch = ARCH_MAPPING[process.arch];
 let binaryName = "devspace";
 let downloadExtension = ".dl";
 
-if (platform == "windows") {
-  binaryName += ".exe";
-}
-
-exec("npm bin", function(err, stdout, stderr) {
+exec("npm bin -g || yarn global bin", function(err, stdout, stderr) {
   let dir = null;
   if (err || stderr || !stdout || stdout.length === 0) {
     let env = process.env;
@@ -214,10 +162,66 @@ exec("npm bin", function(err, stdout, stderr) {
 
   if (dir == null) callback("Error finding binary installation directory");
 
+  if (platform == "windows") {
+    binaryName += ".exe";
+  }
+
   let binaryPath = path.join(dir, binaryName);
 
   if (process.argv.length > 3) {
     binaryPath = process.argv[3];
+  }
+
+  if (action == "uninstall") {
+    let removeGlobalFolder = function() {
+      inquirer
+        .prompt([
+          {
+            type: "list",
+            name: "removeGlobalFolder",
+            message: "Do you want to remove the global DevSpace config folder ~/.devspace?",
+            choices: ["no", "yes"],
+          },
+        ])
+        .then(answers => {
+          if (answers.removeGlobalFolder == "yes") {
+            try {
+              let homedir = require('os').homedir();
+              rimraf(homedir + path.sep + ".devspace");
+            } catch (e) {
+              console.error(e)
+            }
+          }
+        });
+    };
+  
+    if (process.ppid > 1) {
+      findProcess('pid', process.ppid)
+        .then(function (list) {
+          if (list.length == 1 && list[0].ppid > 1) {
+            findProcess('pid', list[0].ppid)
+              .then(function (list) {
+                if (list.length == 1 && /npm-cli.js("|')\s+up(date)?\s+(.+\s+)?devspace((\s)|$)/.test(list[0].cmd)) {
+                  // Do not ask to remove global folder because user runs: npm upgrade
+                } else {
+                  removeGlobalFolder();
+                }
+              }, function () {
+                removeGlobalFolder();
+              })
+          } else {
+            removeGlobalFolder();
+          }
+        }, function () {
+          removeGlobalFolder();
+        })
+    } else {
+      removeGlobalFolder();
+    }
+  
+    try {
+      fs.unlinkSync(binaryPath);
+    } catch (e) {}
   }
 
   if (platform != "windows" && action == "install") {
@@ -225,7 +229,7 @@ exec("npm bin", function(err, stdout, stderr) {
   }
 
   try {
-    fs.unlinkSync(binaryPath);
+    fs.unlinkSync(binaryPath + downloadExtension);
   } catch (e) {}
 
   if (platform == "windows") {
@@ -326,17 +330,19 @@ exec("npm bin", function(err, stdout, stderr) {
           writeStream.end();
           spinner.stop(true);
 
-          fs.copyFile(binaryPath + downloadExtension, binaryPath, (err) => {
-            if (err) {
-              showRootError();
-            }
+          try {
+            fs.chmodSync(binaryPath + downloadExtension, 0755);
+          } catch (e) {
+            showRootError();
+          }
 
-            try {
-              fs.chmodSync(binaryPath, 0755);
-            } catch (e) {
-              showRootError();
-            }
-          });
+          try {
+            fs.renameSync(binaryPath + downloadExtension, binaryPath);
+          } catch (e) {
+            console.log(e);
+            console.error("\nRenaming release binary failed. Please copy file manually:\n from: " + binaryPath + downloadExtension + "\n to: " + binaryPath + "\n");
+            process.exit(1);
+          }
         });
     };
 

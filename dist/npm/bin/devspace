@@ -1,5 +1,25 @@
 #!/usr/bin/env sh
 
+if [ -f "$0.npm_bin_dir" ]; then
+    NPM_BIN_DIR="$(cat $0.npm_bin_dir)"
+else
+    NPM_BIN_DIR="$(npm bin -g)"
+    echo $NPM_BIN_DIR > $0.npm_bin_dir
+fi
+
+DEVSPACE_EXECUTABLE="$NPM_BIN_DIR/devspace"
+DEVSPACE_EXECUTABLE_WIN="$NPM_BIN_DIR/devspace.exe"
+
+if [ -f "$DEVSPACE_EXECUTABLE" ]; then
+    $DEVSPACE_EXECUTABLE "$@";
+    exit $?;
+fi
+
+if [ -f "$DEVSPACE_EXECUTABLE_WIN" ]; then
+    $DEVSPACE_EXECUTABLE_WIN "$@";
+    exit $?;
+fi
+
 echo "Finishing installation for DevSpace CLI"
 
 INDEX_FILE="devspace/index.js"
@@ -11,4 +31,5 @@ if [ ! -f "$DEVSPACE_INDEX_FILE" ]; then
     DEVSPACE_INDEX_FILE="$YARN_GLOBAL_DIR/node_modules/$INDEX_FILE"
 fi
 
-/usr/bin/env node $DEVSPACE_INDEX_FILE force-install $0 && $0 "$@"; exit 0;
+/usr/bin/env node $DEVSPACE_INDEX_FILE force-install $DEVSPACE_EXECUTABLE && $DEVSPACE_EXECUTABLE "$@"; 
+exit $?;
