@@ -11,7 +11,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"gotest.tools/assert"
 )
 
@@ -19,11 +18,9 @@ type addPortTestCase struct {
 	name string
 
 	args       []string
-	answers    []string
 	fakeConfig *latest.Config
 	cmd        *portCmd
 
-	expectedOutput   string
 	expectedErr      string
 	expectConfigFile bool
 	expectedPorts    []*latest.PortMapping
@@ -35,7 +32,6 @@ func TestRunAddPort(t *testing.T) {
 			name:             "Add valid port",
 			args:             []string{"1234"},
 			fakeConfig:       &latest.Config{},
-			expectedOutput:   "\nDone Successfully added port 1234",
 			expectConfigFile: true,
 			expectedPorts: []*latest.PortMapping{
 				&latest.PortMapping{
@@ -45,9 +41,7 @@ func TestRunAddPort(t *testing.T) {
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunAddPort(t, testCase)
@@ -55,8 +49,6 @@ func TestRunAddPort(t *testing.T) {
 }
 
 func testRunAddPort(t *testing.T, testCase addPortTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -69,10 +61,6 @@ func testRunAddPort(t *testing.T, testCase addPortTestCase) {
 	err = os.Chdir(dir)
 	if err != nil {
 		t.Fatalf("Error changing working directory: %v", err)
-	}
-
-	for _, answer := range testCase.answers {
-		survey.SetNextAnswer(answer)
 	}
 
 	isDeploymentsNil := testCase.fakeConfig == nil || testCase.fakeConfig.Deployments == nil
@@ -91,8 +79,6 @@ func testRunAddPort(t *testing.T, testCase addPortTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
 	if testCase.cmd == nil {

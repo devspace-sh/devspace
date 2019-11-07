@@ -37,8 +37,7 @@ type removeSpaceTestCase struct {
 	all              bool
 	providerList     []*cloudlatest.Provider
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestRunRemoveSpace(t *testing.T) {
@@ -81,7 +80,6 @@ func TestRunRemoveSpace(t *testing.T) {
 					ManagerDeleteSpace: true,
 				},
 			},
-			expectedOutput: "\nDone Deleted space \nDone All spaces removed",
 		},
 		removeSpaceTestCase{
 			name:     "Delete one space successfully",
@@ -112,15 +110,12 @@ func TestRunRemoveSpace(t *testing.T) {
 					ManagerDeleteSpace: true,
 				},
 			},
-			args:           []string{"a:b"},
-			fakeConfig:     &latest.Config{},
-			expectedOutput: "\nWait Delete space\nDone Deleted space ",
+			args:       []string{"a:b"},
+			fakeConfig: &latest.Config{},
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunRemoveSpace(t, testCase)
@@ -128,8 +123,6 @@ func TestRunRemoveSpace(t *testing.T) {
 }
 
 func testRunRemoveSpace(t *testing.T, testCase removeSpaceTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -193,5 +186,4 @@ func testRunRemoveSpace(t *testing.T, testCase removeSpaceTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

@@ -17,37 +17,6 @@ import (
 	"gotest.tools/assert"
 )
 
-var logOutput string
-
-type testLogger struct {
-	log.DiscardLogger
-}
-
-func (t testLogger) Info(args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
-}
-func (t testLogger) Infof(format string, args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Done(args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
-}
-func (t testLogger) Donef(format string, args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Warn(args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
-}
-func (t testLogger) Warnf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) StartWait(message string) {
-	logOutput = logOutput + "\nWait " + message
-}
-
 type customGraphqlClient struct {
 	responses []interface{}
 }
@@ -82,7 +51,6 @@ type connectClusterTestCase struct {
 	useHostNetworkFlag bool
 	optionsFlag        *cloudpkg.ConnectClusterOptions
 
-	expectedOutput string
 	expectedErr    string
 }
 
@@ -108,9 +76,7 @@ func TestRunConnectCluster(t *testing.T) {
 		},*/
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true},)
 
 	for _, testCase := range testCases {
 		testRunConnectCluster(t, testCase)
@@ -118,8 +84,6 @@ func TestRunConnectCluster(t *testing.T) {
 }
 
 func testRunConnectCluster(t *testing.T, testCase connectClusterTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -148,8 +112,6 @@ func testRunConnectCluster(t *testing.T, testCase connectClusterTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
 	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{

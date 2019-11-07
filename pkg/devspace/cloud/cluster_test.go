@@ -2,7 +2,6 @@ package cloud
 
 import (
 	"encoding/base64"
-	"fmt"
 	"testing"
 	"time"
 
@@ -18,31 +17,6 @@ import (
 
 	"gotest.tools/assert"
 )
-
-var logOutput string
-
-type testLogger struct {
-	log.DiscardLogger
-}
-
-func (t testLogger) Done(args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
-}
-func (t testLogger) Donef(format string, args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
-}
-func (t testLogger) Info(args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
-}
-func (t testLogger) Infof(format string, args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
-}
-func (t testLogger) StartWait(message string) {
-	logOutput = logOutput + "\nStartWait " + message
-}
-func (t testLogger) StopWait() {
-	logOutput = logOutput + "\nStopWait"
-}
 
 func TestConnectCluster(t *testing.T) {
 	provider := &Provider{latest.Provider{}, log.GetInstance()}
@@ -251,26 +225,18 @@ type initializeNamespaceTestCase struct {
 	name string
 
 	expectedErr string
-	expectedLog string
 }
 
 func TestInitializeNamespace(t *testing.T) {
 	testCases := []initializeNamespaceTestCase{
 		initializeNamespaceTestCase{
 			name: "Basic initialize",
-			expectedLog: `
-StartWait Initializing namespace
-Done Created namespace 'devspace-cloud'
-Done Created service account 'devspace-cloud-user'
-Info Created cluster role binding 'devspace-cloud-user-binding'
-StopWait`,
 		},
 	}
 	for _, testCase := range testCases {
 		kubeClient := fake.NewSimpleClientset()
 
-		logOutput = ""
-		log.SetInstance(&testLogger{})
+		log.SetInstance(log.Discard)
 
 		provider := &Provider{latest.Provider{}, log.GetInstance()}
 		err := initializeNamespace(provider, kubeClient)
@@ -280,6 +246,5 @@ StopWait`,
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from initializing namespace in testCase %s", testCase.name)
 		}
-		assert.Equal(t, logOutput, testCase.expectedLog, "Unexpected log output in testCase %s", testCase.name)
 	}
 }

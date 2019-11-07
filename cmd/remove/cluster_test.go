@@ -23,44 +23,6 @@ import (
 	"gotest.tools/assert"
 )
 
-var logOutput string
-
-type testLogger struct {
-	log.DiscardLogger
-}
-
-func (t testLogger) Info(args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
-}
-func (t testLogger) Infof(format string, args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Done(args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
-}
-func (t testLogger) Donef(format string, args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Fail(args ...interface{}) {
-	logOutput = logOutput + "\nFail " + fmt.Sprint(args...)
-}
-func (t testLogger) Failf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nFail " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Warn(args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
-}
-func (t testLogger) Warnf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) StartWait(msg string) {
-	logOutput = logOutput + "\nWait " + fmt.Sprint(msg)
-}
-
 type customGraphqlClient struct {
 	responses []interface{}
 }
@@ -94,8 +56,7 @@ type removeClusterTestCase struct {
 	provider         string
 	providerList     []*cloudlatest.Provider
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestRunRemoveCluster(t *testing.T) {
@@ -141,13 +102,10 @@ func TestRunRemoveCluster(t *testing.T) {
 				},
 				struct{}{},
 			},
-			expectedOutput: "\nWait Deleting cluster \nDone Successfully deleted cluster a:b",
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunRemoveCluster(t, testCase)
@@ -155,8 +113,6 @@ func TestRunRemoveCluster(t *testing.T) {
 }
 
 func testRunRemoveCluster(t *testing.T, testCase removeClusterTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -214,5 +170,4 @@ func testRunRemoveCluster(t *testing.T, testCase removeClusterTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

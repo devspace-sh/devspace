@@ -15,7 +15,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
 
 	"gopkg.in/yaml.v2"
@@ -49,12 +48,9 @@ func (q *customGraphqlClient) GrapqhlRequest(p *cloudpkg.Provider, request strin
 type addProviderTestCase struct {
 	name string
 
-	args             []string
-	answers          []string
-	files            map[string]interface{}
-	graphQLResponses []interface{}
+	args  []string
+	files map[string]interface{}
 
-	expectedOutput    string
 	expectedErr       string
 	expectConfigFile  bool
 	expectedProviders []*cloudlatest.Provider
@@ -86,9 +82,7 @@ func TestRunAddProvider(t *testing.T) {
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunAddProvider(t, testCase)
@@ -96,8 +90,6 @@ func TestRunAddProvider(t *testing.T) {
 }
 
 func testRunAddProvider(t *testing.T, testCase addProviderTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -119,14 +111,8 @@ func testRunAddProvider(t *testing.T, testCase addProviderTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	for _, answer := range testCase.answers {
-		survey.SetNextAnswer(answer)
-	}
-
 	cloudconfig.Reset()
-	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{
-		responses: testCase.graphQLResponses,
-	}
+	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{}
 
 	homedir, err := homedir.Dir()
 	assert.NilError(t, err, "Error getting homedir testCase %s", testCase.name)
@@ -145,8 +131,6 @@ func testRunAddProvider(t *testing.T, testCase addProviderTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
 	err = (&providerCmd{}).RunAddProvider(nil, testCase.args)

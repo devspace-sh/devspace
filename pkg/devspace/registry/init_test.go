@@ -2,7 +2,7 @@ package registry
 
 import (
 	//"encoding/base64"
-	"fmt"
+
 	"testing"
 
 	k8sv1 "k8s.io/api/core/v1"
@@ -16,37 +16,6 @@ import (
 
 	"gotest.tools/assert"
 )
-
-var logOutput string
-
-type testLogger struct {
-	log.DiscardLogger
-}
-
-func (t testLogger) Done(args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
-}
-func (t testLogger) Donef(format string, args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
-}
-func (t testLogger) Error(args ...interface{}) {
-	logOutput = logOutput + "\nError " + fmt.Sprint(args...)
-}
-func (t testLogger) Errorf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nError " + fmt.Sprintf(format, args...)
-}
-func (t testLogger) Info(args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
-}
-func (t testLogger) Infof(format string, args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
-}
-func (t testLogger) StartWait(message string) {
-	logOutput = logOutput + "\nStartWait " + message
-}
-func (t testLogger) StopWait() {
-	logOutput = logOutput + "\nStopWait"
-}
 
 type createPullSecretTestCase struct {
 	name string
@@ -119,17 +88,14 @@ StopWait`,
 			Deployments: []*latest.DeploymentConfig{},
 		}
 
-		logOutput = ""
-
 		//Unfortunately we can't fake dockerClients yet.
-		err = CreatePullSecrets(testConfig, kubeClient, nil, &testLogger{})
+		err = CreatePullSecrets(testConfig, kubeClient, nil, log.Discard)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error creating pull secrets in testCase %s", testCase.name)
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error creating pull secrets in testCase %s", testCase.name)
 		}
-		assert.Equal(t, testCase.expectedLog, logOutput, "Wrong log output in testCase %s", testCase.name)
 	}
 
 	//TODO: Fake a dockerClient to make this work

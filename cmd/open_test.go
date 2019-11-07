@@ -39,8 +39,7 @@ type openTestCase struct {
 	providerFlag string
 	globalFlags  flags.GlobalFlags
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestOpen(t *testing.T) {
@@ -76,9 +75,7 @@ func TestOpen(t *testing.T) {
 
 	testCases := []openTestCase{}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testOpen(t, testCase)
@@ -86,8 +83,6 @@ func TestOpen(t *testing.T) {
 }
 
 func testOpen(t *testing.T, testCase openTestCase) {
-	logOutput = ""
-
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
@@ -134,5 +129,4 @@ func testOpen(t *testing.T, testCase openTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

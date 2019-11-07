@@ -22,37 +22,6 @@ import (
 	"gotest.tools/assert"
 )
 
-var logOutput string
-
-type testLogger struct {
-	log.DiscardLogger
-}
-
-func (t testLogger) Info(args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
-}
-func (t testLogger) Infof(format string, args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Done(args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
-}
-func (t testLogger) Donef(format string, args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Warn(args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
-}
-func (t testLogger) Warnf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) StartWait(message string) {
-	logOutput = logOutput + "\nWait " + message
-}
-
 type customGraphqlClient struct {
 	responses []interface{}
 }
@@ -89,7 +58,6 @@ type createSpaceTestCase struct {
 	providerFlag string
 	clusterFlag  string
 
-	expectedOutput string
 	expectedErr    string
 }
 
@@ -123,7 +91,6 @@ func TestRunCreateSpace(t *testing.T) {
 				},
 			},
 			expectedErr:    "get projects: Custom graphQL server error",
-			expectedOutput: "\nWait Retrieving clusters",
 		},
 		createSpaceTestCase{
 			name:         "New project can't be created",
@@ -142,7 +109,6 @@ func TestRunCreateSpace(t *testing.T) {
 				},
 			},
 			expectedErr:    "Custom graphQL server error",
-			expectedOutput: "\nWait Retrieving clusters",
 		},
 		createSpaceTestCase{
 			name:         "Unparsable cluster name",
@@ -160,7 +126,6 @@ func TestRunCreateSpace(t *testing.T) {
 			},
 			clusterFlag:    "a:b:c",
 			expectedErr:    "Error parsing cluster name a:b:c: Expected : only once",
-			expectedOutput: "\nWait Retrieving clusters",
 		},
 		createSpaceTestCase{
 			name:         "Can't get clusters",
@@ -177,7 +142,6 @@ func TestRunCreateSpace(t *testing.T) {
 				}{Projects: []*cloudlatest.Project{&cloudlatest.Project{}}},
 			},
 			expectedErr:    "get clusters: Custom graphQL server error",
-			expectedOutput: "\nWait Retrieving clusters",
 		},
 		createSpaceTestCase{
 			name:         "No clusters",
@@ -197,7 +161,6 @@ func TestRunCreateSpace(t *testing.T) {
 				}{Clusters: []*cloudlatest.Cluster{}},
 			},
 			expectedErr:    "Cannot create space, because no cluster was found",
-			expectedOutput: "\nWait Retrieving clusters",
 		},
 		createSpaceTestCase{
 			name:         "Question 1 is not possible",
@@ -221,7 +184,6 @@ func TestRunCreateSpace(t *testing.T) {
 				}},
 			},
 			expectedErr:    "Cannot ask question 'Which cluster should the space created in?' because logger level is too low",
-			expectedOutput: "\nWait Retrieving clusters",
 		},
 		createSpaceTestCase{
 			name:         "Question 2 is not possible",
@@ -245,7 +207,6 @@ func TestRunCreateSpace(t *testing.T) {
 				}},
 			},
 			expectedErr:    "Cannot ask question 'Which hosted DevSpace cluster should the space created in?' because logger level is too low",
-			expectedOutput: "\nWait Retrieving clusters",
 		},
 		createSpaceTestCase{
 			name:         "Select non existent cluster",
@@ -270,7 +231,6 @@ func TestRunCreateSpace(t *testing.T) {
 			},
 			answers: []string{"notthere"},
 			expectedErr:    "No cluster selected",
-			expectedOutput: "\nWait Retrieving clusters",
 		},
 		createSpaceTestCase{
 			name:         "Space creation fails with server error",
@@ -293,7 +253,6 @@ func TestRunCreateSpace(t *testing.T) {
 				}},
 			},
 			expectedErr:    "create space: Custom graphQL server error",
-			expectedOutput: "\nWait Retrieving clusters\nWait Creating space ",
 		},
 		createSpaceTestCase{
 			name:         "Get space fails after creation",
@@ -321,7 +280,6 @@ func TestRunCreateSpace(t *testing.T) {
 			},
 			answers:        []string{"cluster1"},
 			expectedErr:    "get space: Custom graphQL server error",
-			expectedOutput: "\nWait Retrieving clusters\nWait Creating space ",
 		},
 		createSpaceTestCase{
 			name:         "Get serviceaccount fails after creation",
@@ -357,7 +315,6 @@ func TestRunCreateSpace(t *testing.T) {
 			},
 			answers:        []string{DevSpaceCloudHostedCluster},
 			expectedErr:    "get serviceaccount: Custom graphQL server error",
-			expectedOutput: "\nWait Retrieving clusters\nWait Creating space ",
 		},
 		createSpaceTestCase{
 			name:         "Undecodable CACert",
@@ -396,13 +353,10 @@ func TestRunCreateSpace(t *testing.T) {
 			},
 			answers:        []string{"cluster2"},
 			expectedErr:    "update kube context: illegal base64 data at input byte 8",
-			expectedOutput: "\nWait Retrieving clusters\nWait Creating space ",
 		},*/
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunCreateSpace(t, testCase)
@@ -468,6 +422,4 @@ func testRunCreateSpace(t *testing.T, testCase createSpaceTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

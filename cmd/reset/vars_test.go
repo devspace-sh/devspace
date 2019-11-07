@@ -20,8 +20,7 @@ type resetVarsTestCase struct {
 
 	files map[string]interface{}
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestRunResetVars(t *testing.T) {
@@ -61,13 +60,10 @@ func TestRunResetVars(t *testing.T) {
 			files: map[string]interface{}{
 				constants.DefaultConfigPath: "",
 			},
-			expectedOutput: "\nDone Successfully deleted all variables",
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunResetVars(t, testCase)
@@ -75,7 +71,6 @@ func TestRunResetVars(t *testing.T) {
 }
 
 func testRunResetVars(t *testing.T, testCase resetVarsTestCase) {
-	logOutput = ""
 	generated.ResetConfig()
 
 	for path, content := range testCase.files {
@@ -92,7 +87,6 @@ func testRunResetVars(t *testing.T, testCase resetVarsTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
 	err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {
 		os.RemoveAll(path)

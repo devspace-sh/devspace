@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -20,7 +19,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
-	"github.com/mgutz/ansi"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -48,8 +46,7 @@ type logsTestCase struct {
 	lastAmountOfLinesFlag int
 	globalFlags           flags.GlobalFlags
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestLogs(t *testing.T) {
@@ -100,15 +97,12 @@ func TestLogs(t *testing.T) {
 					},
 				},
 			},
-			pickFlag:       true,
-			expectedErr:    "Couldn't find a running pod in namespace ",
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
+			pickFlag:    true,
+			expectedErr: "Couldn't find a running pod in namespace ",
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testLogs(t, testCase)
@@ -116,8 +110,6 @@ func TestLogs(t *testing.T) {
 }
 
 func testLogs(t *testing.T, testCase logsTestCase) {
-	logOutput = ""
-
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
@@ -169,5 +161,4 @@ func testLogs(t *testing.T, testCase logsTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

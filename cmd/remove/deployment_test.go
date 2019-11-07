@@ -27,7 +27,6 @@ type removeDeploymentTestCase struct {
 	removeAll bool
 	files     map[string]interface{}
 
-	expectedOutput   string
 	expectedErr      string
 	expectConfigFile bool
 }
@@ -39,7 +38,6 @@ func TestRunRemoveDeployment(t *testing.T) {
 			fakeConfig:       &latest.Config{},
 			removeAll:        true,
 			answers:          []string{"no"},
-			expectedOutput:   "\nWarn Couldn't find any deployment",
 			expectConfigFile: true,
 		},
 		removeDeploymentTestCase{
@@ -53,7 +51,6 @@ func TestRunRemoveDeployment(t *testing.T) {
 			},
 			args:             []string{"Exists"},
 			answers:          []string{"no"},
-			expectedOutput:   "\nDone Successfully removed deployment Exists",
 			expectConfigFile: true,
 		},
 		removeDeploymentTestCase{
@@ -67,14 +64,11 @@ func TestRunRemoveDeployment(t *testing.T) {
 			},
 			removeAll:        true,
 			answers:          []string{"no"},
-			expectedOutput:   "\nDone Successfully removed all deployments",
 			expectConfigFile: true,
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunRemoveDeployment(t, testCase)
@@ -82,8 +76,6 @@ func TestRunRemoveDeployment(t *testing.T) {
 }
 
 func testRunRemoveDeployment(t *testing.T, testCase removeDeploymentTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -137,7 +129,6 @@ func testRunRemoveDeployment(t *testing.T, testCase removeDeploymentTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
 	err = os.Remove(constants.DefaultConfigPath)
 	assert.Equal(t, !os.IsNotExist(err), testCase.expectConfigFile, "Unexpectedly saved or not saved in testCase %s", testCase.name)

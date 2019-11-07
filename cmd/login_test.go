@@ -33,7 +33,6 @@ type loginTestCase struct {
 	keyFlag      string
 	providerFlag string
 
-	expectedOutput string
 	expectedErr    string
 }
 
@@ -85,7 +84,6 @@ func TestLogin(t *testing.T) {
 			},
 			keyFlag:        "someKey",
 			providerFlag:   "app.devspace.cloud",
-			expectedOutput: "\nDone Successfully logged into app.devspace.cloud\nWarn Error logging into docker registries: get registries: Custom server error\nInfo Successful logged into app.devspace.cloud",
 		},
 	}
 
@@ -96,9 +94,7 @@ func TestLogin(t *testing.T) {
 	cloudconfig.DevSpaceProvidersConfigPath = filepath.Join(relDir, "providerConfig")
 	cloudconfig.LegacyDevSpaceCloudConfigPath = filepath.Join(relDir, "providerCloudConfig")
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testLogin(t, testCase)
@@ -106,8 +102,6 @@ func TestLogin(t *testing.T) {
 }
 
 func testLogin(t *testing.T, testCase loginTestCase) {
-	logOutput = ""
-
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
@@ -143,5 +137,4 @@ func testLogin(t *testing.T, testCase loginTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

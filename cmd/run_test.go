@@ -38,8 +38,7 @@ type runTestCase struct {
 
 	globalFlags flags.GlobalFlags
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestRun(t *testing.T) {
@@ -133,9 +132,7 @@ func TestRun(t *testing.T) {
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRun(t, testCase)
@@ -143,8 +140,6 @@ func TestRun(t *testing.T) {
 }
 
 func testRun(t *testing.T, testCase runTestCase) {
-	logOutput = ""
-
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
@@ -188,5 +183,4 @@ func testRun(t *testing.T, testCase runTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

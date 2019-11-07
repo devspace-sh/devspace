@@ -11,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"gotest.tools/assert"
 
@@ -27,7 +28,6 @@ type resolverTestCase struct {
 
 	expectedDependencies []Dependency
 	expectedErr          string
-	expectedLog          string
 }
 
 func TestResolver(t *testing.T) {
@@ -65,8 +65,7 @@ func TestResolver(t *testing.T) {
 
 	testCases := []resolverTestCase{
 		resolverTestCase{
-			name:        "No depependency tasks",
-			expectedLog: "\nInfo Start resolving dependencies\nDone Resolved 0 dependencies",
+			name: "No depependency tasks",
 		},
 		resolverTestCase{
 			name: "Simple local dependency",
@@ -88,7 +87,6 @@ func TestResolver(t *testing.T) {
 					LocalPath: filepath.Join(dir, "dependency1"),
 				},
 			},
-			expectedLog: "\nInfo Start resolving dependencies\nDone Resolved 1 dependencies",
 		},
 		resolverTestCase{
 			name: "Simple git dependency",
@@ -110,7 +108,6 @@ func TestResolver(t *testing.T) {
 					LocalPath: filepath.Join(DependencyFolderPath, "84e3f5121aa5a99b3d26752f40e3935f494312ad82d0e85afc9b6e23c762c705", "mysubpath"),
 				},
 			},
-			expectedLog: "\nInfo Start resolving dependencies\nDone Pulled https://github.com/devspace-cloud/example-dependency.git@f8b2aa8cf8ac03238a28e8f78382b214d619893f:mysubpath\nDone Resolved 1 dependencies",
 		},
 		resolverTestCase{
 			name: "Cyclic allowed dependency",
@@ -141,7 +138,6 @@ func TestResolver(t *testing.T) {
 					LocalPath: filepath.Join(dir, "dependency1"),
 				},
 			},
-			expectedLog: "\nInfo Start resolving dependencies\nDone Resolved 1 dependencies",
 		},
 		resolverTestCase{
 			name: "Cyclic unallowed dependency",
@@ -165,7 +161,6 @@ func TestResolver(t *testing.T) {
 				},
 			},
 			expectedErr: fmt.Sprintf("Cyclic dependency found: \n%s\n%s\n%s", filepath.Join(dir, "dependency1"), dir, filepath.Join(dir, "dependency1")),
-			expectedLog: "\nInfo Start resolving dependencies",
 		},
 	}
 
@@ -177,11 +172,9 @@ func TestResolver(t *testing.T) {
 			assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 		}
 
-		logOutput = ""
-
 		testConfig := &latest.Config{}
 		generatedConfig := &generated.Config{}
-		testResolver, err := NewResolver(testConfig, generatedConfig, testCase.allowCyclic, &testLogger{})
+		testResolver, err := NewResolver(testConfig, generatedConfig, testCase.allowCyclic, log.Discard)
 		assert.NilError(t, err, "Error creating a resolver in testCase %s", testCase.name)
 
 		dependencies, err := testResolver.Resolve(testCase.dependencyTasks, &configutil.ConfigOptions{}, testCase.updateParam)

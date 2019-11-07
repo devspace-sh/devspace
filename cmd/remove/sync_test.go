@@ -27,7 +27,6 @@ type removeSyncTestCase struct {
 	containerPath string
 	removeAll     bool
 
-	expectedOutput   string
 	expectedErr      string
 	expectConfigFile bool
 }
@@ -46,9 +45,7 @@ func TestRunRemoveSync(t *testing.T) {
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunRemoveSync(t, testCase)
@@ -56,8 +53,6 @@ func TestRunRemoveSync(t *testing.T) {
 }
 
 func testRunRemoveSync(t *testing.T, testCase removeSyncTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -107,7 +102,6 @@ func testRunRemoveSync(t *testing.T, testCase removeSyncTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
 	err = os.Remove(constants.DefaultConfigPath)
 	assert.Equal(t, !os.IsNotExist(err), testCase.expectConfigFile, "Unexpectedly saved or not saved in testCase %s", testCase.name)

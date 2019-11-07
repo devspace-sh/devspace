@@ -10,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"gotest.tools/assert"
 )
 
@@ -18,11 +17,9 @@ type addImageTestCase struct {
 	name string
 
 	args       []string
-	answers    []string
 	fakeConfig *latest.Config
 	cmd        *imageCmd
 
-	expectedOutput   string
 	expectedErr      string
 	expectConfigFile bool
 	expectedImages   map[string]*latest.ImageConfig
@@ -34,7 +31,6 @@ func TestRunAddImage(t *testing.T) {
 			name:             "Add one empty image",
 			args:             []string{""},
 			fakeConfig:       &latest.Config{},
-			expectedOutput:   "\nDone Successfully added image ",
 			expectConfigFile: true,
 			expectedImages: map[string]*latest.ImageConfig{
 				"": &latest.ImageConfig{},
@@ -42,9 +38,7 @@ func TestRunAddImage(t *testing.T) {
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunAddImage(t, testCase)
@@ -52,8 +46,6 @@ func TestRunAddImage(t *testing.T) {
 }
 
 func testRunAddImage(t *testing.T, testCase addImageTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -66,10 +58,6 @@ func testRunAddImage(t *testing.T, testCase addImageTestCase) {
 	err = os.Chdir(dir)
 	if err != nil {
 		t.Fatalf("Error changing working directory: %v", err)
-	}
-
-	for _, answer := range testCase.answers {
-		survey.SetNextAnswer(answer)
 	}
 
 	isDeploymentsNil := testCase.fakeConfig == nil || testCase.fakeConfig.Deployments == nil
@@ -88,8 +76,6 @@ func testRunAddImage(t *testing.T, testCase addImageTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
 	if testCase.cmd == nil {

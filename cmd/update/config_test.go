@@ -1,7 +1,6 @@
 package update
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -20,56 +19,12 @@ import (
 	"gotest.tools/assert"
 )
 
-var logOutput string
-
-type testLogger struct {
-	log.DiscardLogger
-}
-
-func (t testLogger) Info(args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
-}
-func (t testLogger) Infof(format string, args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Done(args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
-}
-func (t testLogger) Donef(format string, args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Fail(args ...interface{}) {
-	logOutput = logOutput + "\nFail " + fmt.Sprint(args...)
-}
-func (t testLogger) Failf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nFail " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Warn(args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
-}
-func (t testLogger) Warnf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) StartWait(msg string) {
-	logOutput = logOutput + "\nWait " + fmt.Sprint(msg)
-}
-
-func (t testLogger) Write(msg []byte) (int, error) {
-	logOutput = logOutput + string(msg)
-	return len(msg), nil
-}
-
 type updateConfigTestCase struct {
 	name string
 
 	globalFlags flags.GlobalFlags
 	files       map[string]interface{}
 
-	expectedOutput string
 	expectedConfig interface{}
 	expectedErr    string
 }
@@ -116,7 +71,6 @@ func TestRunUpdateConfig(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: "\nWarn 'devspace update config' does NOT update profiles[*].replace or profiles[*].patches. Please manually update any profiles[*].replace and profiles[*].patches\nInfo Successfully converted base config to current version",
 			expectedConfig: latest.Config{
 				Version: latest.Version,
 				Dev:     &latest.DevConfig{},
@@ -145,13 +99,10 @@ func TestRunUpdateConfig(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: "\nInfo Successfully converted base config to current version",
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunUpdateConfig(t, testCase)
@@ -159,8 +110,6 @@ func TestRunUpdateConfig(t *testing.T) {
 }
 
 func testRunUpdateConfig(t *testing.T, testCase updateConfigTestCase) {
-	logOutput = ""
-
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)
 		assert.NilError(t, err, "Error parsing config to yaml in testCase %s", testCase.name)
@@ -187,7 +136,6 @@ func testRunUpdateConfig(t *testing.T, testCase updateConfigTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
 	err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {
 		os.RemoveAll(path)

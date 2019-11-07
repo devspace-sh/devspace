@@ -57,8 +57,7 @@ type devTestCase struct {
 	interactiveFlag     bool
 	globalFlags         flags.GlobalFlags
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestDev(t *testing.T) {
@@ -114,7 +113,6 @@ func TestDev(t *testing.T) {
 			},
 			interactiveFlag: true,
 			expectedErr:     "Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`",
-			expectedOutput:  fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
 		},
 		devTestCase{
 			name:       "Cloud Space can't be resumed",
@@ -132,18 +130,11 @@ func TestDev(t *testing.T) {
 				},
 			},
 			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context 'minikube' in kube-config file",
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
 		},*/
 	}
 
 	log.OverrideRuntimeErrorHandler(true)
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
-
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testDev(t, testCase)
@@ -151,8 +142,6 @@ func TestDev(t *testing.T) {
 }
 
 func testDev(t *testing.T, testCase devTestCase) {
-	logOutput = ""
-
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
@@ -211,5 +200,4 @@ func testDev(t *testing.T, testCase devTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

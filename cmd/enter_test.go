@@ -45,7 +45,6 @@ type enterTestCase struct {
 	pickFlag          bool
 	globalFlags       flags.GlobalFlags
 
-	expectedOutput string
 	expectedErr    string
 }
 
@@ -99,18 +98,11 @@ func TestEnter(t *testing.T) {
 			},
 			pickFlag:       true,
 			expectedErr:    "Couldn't find a running pod in namespace ",
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
 		},
 	}
 
 	log.OverrideRuntimeErrorHandler(true)
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
-
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testEnter(t, testCase)
@@ -118,8 +110,6 @@ func TestEnter(t *testing.T) {
 }
 
 func testEnter(t *testing.T, testCase enterTestCase) {
-	logOutput = ""
-
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
@@ -163,5 +153,4 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

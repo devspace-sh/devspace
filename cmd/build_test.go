@@ -40,8 +40,7 @@ type buildTestCase struct {
 	buildSequentialFlag         bool
 	forceDependenciesFlag       bool
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestBuild(t *testing.T) {
@@ -117,7 +116,6 @@ func TestBuild(t *testing.T) {
 				},
 			},
 			expectedErr:    fmt.Sprintf("build dependencies: Cyclic dependency found: \n%s\n%s\n%s.\n To allow cyclic dependencies run with the '%s' flag", filepath.Join(dir, "dependency1"), dir, filepath.Join(dir, "dependency1"), ansi.Color("--allow-cyclic", "white+b")),
-			expectedOutput: "\nInfo Start resolving dependencies",
 		},
 		buildTestCase{
 			name: "1 undeployable image",
@@ -139,7 +137,6 @@ func TestBuild(t *testing.T) {
 			},
 			buildSequentialFlag: true,
 			expectedErr:         fmt.Sprintf("build images: Error building image: exec: \" \": executable file not found in %s", pathVarKey),
-			expectedOutput:      "\nInfo Build someImage:someTag with custom command   someImage:someTag",
 		},
 		buildTestCase{
 			name: "Deploy 1 image that is too big (Or manipulate the error message to pretend to)",
@@ -161,7 +158,6 @@ func TestBuild(t *testing.T) {
 			},
 			buildSequentialFlag: true,
 			expectedErr:         fmt.Sprintf("Error building image: Error building image: exec: \" no space left on device \": executable file not found in %s\n\n Try running `%s` to free docker daemon space and retry", pathVarKey, ansi.Color("devspace cleanup images", "white+b")),
-			expectedOutput:      "\nInfo Build someImage:someTag with custom command  no space left on device  someImage:someTag",
 		},*/
 		buildTestCase{
 			name: "Nothing to build",
@@ -170,14 +166,11 @@ func TestBuild(t *testing.T) {
 					Version: latest.Version,
 				},
 			},
-			expectedOutput: "\nInfo No images to rebuild. Run with -b to force rebuilding",
 		},
 	}
 
 	log.OverrideRuntimeErrorHandler(true)
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testBuild(t, testCase)
@@ -185,8 +178,6 @@ func TestBuild(t *testing.T) {
 }
 
 func testBuild(t *testing.T, testCase buildTestCase) {
-	logOutput = ""
-
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
@@ -232,7 +223,6 @@ func testBuild(t *testing.T, testCase buildTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
 	err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {
 		os.RemoveAll(path)

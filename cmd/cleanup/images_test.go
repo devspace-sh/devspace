@@ -22,37 +22,6 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-var logOutput string
-
-type testLogger struct {
-	log.DiscardLogger
-}
-
-func (t testLogger) Info(args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
-}
-func (t testLogger) Infof(format string, args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Done(args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
-}
-func (t testLogger) Donef(format string, args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Warn(args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
-}
-func (t testLogger) Warnf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) StartWait(message string) {
-	logOutput = logOutput + "\nWait " + message
-}
-
 type customKubeConfig struct {
 	rawconfig      clientcmdapi.Config
 	rawConfigError error
@@ -126,7 +95,6 @@ func TestRunCleanupImages(t *testing.T) {
 				KubeContext: "someKubeContext",
 			},
 			fakeKubeConfig: &customKubeConfig{},
-			expectedOutput: "\nWait Deleting local image imageToDelete\nWait Deleting local dangling images\nDone Successfully cleaned up images",
 		},*/
 	}
 
@@ -137,8 +105,6 @@ func TestRunCleanupImages(t *testing.T) {
 }
 
 func testRunCleanupImages(t *testing.T, testCase RunCleanupImagesTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -189,12 +155,9 @@ func testRunCleanupImages(t *testing.T, testCase RunCleanupImagesTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
 	}()
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	err = (&imagesCmd{GlobalFlags: &testCase.globalFlags}).RunCleanupImages(nil, nil)
 

@@ -47,8 +47,7 @@ type syncTestCase struct {
 
 	globalFlags flags.GlobalFlags
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestSync(t *testing.T) {
@@ -101,13 +100,10 @@ func TestSync(t *testing.T) {
 			},
 			pickFlag:       true,
 			expectedErr:    "Couldn't find a running pod in namespace ",
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
 		},*/
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testSync(t, testCase)
@@ -115,8 +111,6 @@ func TestSync(t *testing.T) {
 }
 
 func testSync(t *testing.T, testCase syncTestCase) {
-	logOutput = ""
-
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
@@ -169,5 +163,4 @@ func testSync(t *testing.T, testCase syncTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

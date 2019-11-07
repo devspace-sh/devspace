@@ -44,7 +44,6 @@ type initTestCase struct {
 	dockerfileFlag  string
 	contextFlag     string
 
-	expectedOutput string
 	expectedErr    string
 	expectedConfig *latest.Config
 }
@@ -91,7 +90,6 @@ func TestInit(t *testing.T) {
 					Version: latest.Version,
 				},
 			},
-			expectedOutput: fmt.Sprintf("\nInfo Config already exists. If you want to recreate the config please run `devspace init --reconfigure`\nInfo \r         \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b")),
 			expectedConfig: &latest.Config{
 				Version: latest.Version,
 				Dev:     &latest.DevConfig{},
@@ -100,7 +98,6 @@ func TestInit(t *testing.T) {
 		initTestCase{
 			name:           "Init with helm chart",
 			answers:        []string{enterHelmChartOption, "someChart"},
-			expectedOutput: fmt.Sprintf("\nDone Project successfully initialized\nInfo \r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b")),
 			expectedConfig: &latest.Config{
 				Version: latest.Version,
 				Deployments: []*latest.DeploymentConfig{
@@ -122,7 +119,6 @@ func TestInit(t *testing.T) {
 				filepath.Join(gitIgnoreFile, "someFile"): "",
 			},
 			answers:        []string{enterManifestsOption, "myManifest"},
-			expectedOutput: fmt.Sprintf("\nWarn Error reading file .gitignore: "+readDirError+"\nDone Project successfully initialized\nInfo \r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ".gitignore", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b")),
 			expectedConfig: &latest.Config{
 				Version: latest.Version,
 				Deployments: []*latest.DeploymentConfig{
@@ -142,7 +138,6 @@ func TestInit(t *testing.T) {
 				gitIgnoreFile: "",
 			},
 			answers:        []string{useExistingImageOption, "someImage", "1000", "1234"},
-			expectedOutput: fmt.Sprintf("\nWarn Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.\nDone Project successfully initialized\nInfo \r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b")),
 			expectedConfig: &latest.Config{
 				Version: latest.Version,
 				Images: map[string]*latest.ImageConfig{
@@ -239,18 +234,11 @@ func TestInit(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: fmt.Sprintf("\nWait Checking registry authentication\nWarn You are not logged in to Docker Hub\nWarn Please make sure you have a https://hub.docker.com account\nWarn Installing docker is NOT required. You simply need a Docker Hub account\n\nWait Checking Docker credentials\nDone Project successfully initialized\nInfo \r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b")),
 		},
 	}
 
 	log.OverrideRuntimeErrorHandler(true)
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
-
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testInit(t, testCase)
@@ -258,8 +246,6 @@ func TestInit(t *testing.T) {
 }
 
 func testInit(t *testing.T, testCase initTestCase) {
-	logOutput = ""
-
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]

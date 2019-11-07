@@ -232,9 +232,7 @@ func TestRunAddDeployment(t *testing.T) {
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunAddDeployment(t, testCase)
@@ -242,8 +240,6 @@ func TestRunAddDeployment(t *testing.T) {
 }
 
 func testRunAddDeployment(t *testing.T, testCase addDeploymentTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)

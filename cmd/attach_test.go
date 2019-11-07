@@ -42,8 +42,7 @@ type attachTestCase struct {
 	pickFlag          bool
 	globalFlags       flags.GlobalFlags
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestAttach(t *testing.T) {
@@ -97,14 +96,11 @@ func TestAttach(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
 			expectedErr:    "Couldn't find a running pod in namespace someNamespace",
 		},*/
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testAttach(t, testCase)
@@ -112,8 +108,6 @@ func TestAttach(t *testing.T) {
 }
 
 func testAttach(t *testing.T, testCase attachTestCase) {
-	logOutput = ""
-
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
@@ -162,5 +156,4 @@ func testAttach(t *testing.T, testCase attachTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

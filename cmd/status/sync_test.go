@@ -2,7 +2,6 @@ package status
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,61 +9,18 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+
 	//"github.com/mgutz/ansi"
 
 	"gotest.tools/assert"
 )
-
-var logOutput string
-
-type testLogger struct {
-	log.DiscardLogger
-}
-
-func (t testLogger) Info(args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
-}
-func (t testLogger) Infof(format string, args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Done(args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
-}
-func (t testLogger) Donef(format string, args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Fail(args ...interface{}) {
-	logOutput = logOutput + "\nFail " + fmt.Sprint(args...)
-}
-func (t testLogger) Failf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nFail " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Warn(args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
-}
-func (t testLogger) Warnf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) StartWait(msg string) {
-	logOutput = logOutput + "\nWait " + fmt.Sprint(msg)
-}
-
-func (t testLogger) Write(msg []byte) (int, error) {
-	logOutput = logOutput + string(msg)
-	return len(msg), nil
-}
 
 type statusSyncTestCase struct {
 	name string
 
 	files map[string]interface{}
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestRunStatusSync(t *testing.T) {
@@ -106,7 +62,6 @@ func TestRunStatusSync(t *testing.T) {
 				constants.DefaultConfigPath: "",
 				".devspace/logs/sync.log":   "",
 			},
-			expectedOutput: "\nInfo No sync activity found. Did you run `devspace dev`?",
 		},
 		statusSyncTestCase{
 			name: "Valid sync.log",
@@ -147,13 +102,10 @@ func TestRunStatusSync(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: expectedHeader + "\n Active    TooLongAAAAAAAA...   ...AAAAAAAAAAAAAAAAAAAA   ...AAAAAAAAAAAAAAAAAAAA   Uploaded 1 changes (0s ago)   1              \n Stopped   stoppedPod           stoppedLocal              stoppedContainer          Sync stopped (1h ago)         0              \n Error     somePod              someLocal                 someContainer             someMsg (1d ago)              1              \n\n",
 		},*/
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunStatusSync(t, testCase)
@@ -161,8 +113,6 @@ func TestRunStatusSync(t *testing.T) {
 }
 
 func testRunStatusSync(t *testing.T, testCase statusSyncTestCase) {
-	logOutput = ""
-
 	for path, content := range testCase.files {
 		asJSON, err := json.Marshal(content)
 		assert.NilError(t, err, "Error parsing content to json in testCase %s", testCase.name)
@@ -189,7 +139,6 @@ func testRunStatusSync(t *testing.T, testCase statusSyncTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
 	err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {
 		os.RemoveAll(path)

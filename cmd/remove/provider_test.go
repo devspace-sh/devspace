@@ -30,8 +30,7 @@ type removeProviderTestCase struct {
 	provider         string
 	providerList     []*cloudlatest.Provider
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestRunRemoveProvider(t *testing.T) {
@@ -49,8 +48,7 @@ func TestRunRemoveProvider(t *testing.T) {
 			providerList: []*cloudlatest.Provider{
 				&cloudlatest.Provider{},
 			},
-			args:           []string{"Doesn'tExist"},
-			expectedOutput: "\nFail Couldn't find cloud provider Doesn'tExist\nDone Successfully removed cloud provider Doesn'tExist",
+			args: []string{"Doesn'tExist"},
 		},
 		removeProviderTestCase{
 			name: "Remove existent provider",
@@ -59,14 +57,11 @@ func TestRunRemoveProvider(t *testing.T) {
 					Name: "Exists",
 				},
 			},
-			args:           []string{"Exists"},
-			expectedOutput: "\nDone Successfully removed cloud provider Exists",
+			args: []string{"Exists"},
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunRemoveProvider(t, testCase)
@@ -74,8 +69,6 @@ func TestRunRemoveProvider(t *testing.T) {
 }
 
 func testRunRemoveProvider(t *testing.T, testCase removeProviderTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -133,5 +126,4 @@ func testRunRemoveProvider(t *testing.T, testCase removeProviderTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

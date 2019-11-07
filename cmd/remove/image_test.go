@@ -24,7 +24,6 @@ type removeImageTestCase struct {
 	answers   []string
 	removeAll bool
 
-	expectedOutput   string
 	expectedErr      string
 	expectConfigFile bool
 }
@@ -35,21 +34,17 @@ func TestRunRemoveImage(t *testing.T) {
 			name:             "Remove all zero images",
 			fakeConfig:       &latest.Config{},
 			removeAll:        true,
-			expectedOutput:   "\nDone Successfully removed all images",
 			expectConfigFile: true,
 		},
 		removeImageTestCase{
 			name:             "Remove not existent image",
 			fakeConfig:       &latest.Config{},
 			args:             []string{"Doesn'tExist"},
-			expectedOutput:   "\nDone Successfully removed image Doesn'tExist",
 			expectConfigFile: true,
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunRemoveImage(t, testCase)
@@ -57,8 +52,6 @@ func TestRunRemoveImage(t *testing.T) {
 }
 
 func testRunRemoveImage(t *testing.T, testCase removeImageTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -105,7 +98,6 @@ func testRunRemoveImage(t *testing.T, testCase removeImageTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
 	err = os.Remove(constants.DefaultConfigPath)
 	assert.Equal(t, !os.IsNotExist(err), testCase.expectConfigFile, "Unexpectedly saved or not saved in testCase %s", testCase.name)

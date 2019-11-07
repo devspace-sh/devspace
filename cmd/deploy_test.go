@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -19,7 +18,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -48,8 +46,7 @@ type deployTestCase struct {
 	allowCyclicDependenciesFlag bool
 	globalFlags                 flags.GlobalFlags
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestDeploy(t *testing.T) {
@@ -92,57 +89,6 @@ func TestDeploy(t *testing.T) {
 			expectedErr:    "Flags --skip-build & --force-build cannot be used together",
 		},
 		deployTestCase{
-			name: "Cyclic dependency",
-			fakeConfig: &latest.Config{
-				Version: "v1beta3",
-				Dependencies: []*latest.DependencyConfig{
-					&latest.DependencyConfig{
-						Source: &latest.SourceConfig{
-							Path: "dependency1",
-						},
-					},
-				},
-			},
-			fakeKubeClient: &kubectl.Client{
-				Client:         fake.NewSimpleClientset(),
-				CurrentContext: "minikube",
-			},
-			fakeKubeConfig: &customKubeConfig{
-				rawconfig: clientcmdapi.Config{
-					Contexts: map[string]*clientcmdapi.Context{
-						"minikube": &clientcmdapi.Context{},
-					},
-					AuthInfos: map[string]*clientcmdapi.AuthInfo{
-						"": &clientcmdapi.AuthInfo{},
-					},
-				},
-			},
-			files: map[string]interface{}{
-				"devspace.yaml": &latest.Config{
-					Version: "v1beta3",
-					Dependencies: []*latest.DependencyConfig{
-						&latest.DependencyConfig{
-							Source: &latest.SourceConfig{
-								Path: "dependency1",
-							},
-						},
-					},
-				},
-				"dependency1/devspace.yaml": &latest.Config{
-					Version: "v1beta3",
-					Dependencies: []*latest.DependencyConfig{
-						&latest.DependencyConfig{
-							Source: &latest.SourceConfig{
-								Path: "..",
-							},
-						},
-					},
-				},
-			},
-			expectedErr:    fmt.Sprintf("deploy dependencies: Cyclic dependency found: \n%s\n%s\n%s.\n To allow cyclic dependencies run with the '%s' flag", filepath.Join(dir, "dependency1"), dir, filepath.Join(dir, "dependency1"), ansi.Color("--allow-cyclic", "white+b")),
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nDone Created namespace: \nInfo Start resolving dependencies", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
-		},
-		deployTestCase{
 			name:       "Successfully deployed nothing",
 			fakeConfig: &latest.Config{},
 			fakeKubeClient: &kubectl.Client{
@@ -160,14 +106,11 @@ func TestDeploy(t *testing.T) {
 				},
 			},
 			deploymentsFlag: " ",
-			expectedOutput:  fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nDone Created namespace: \nDone Successfully deployed!\nInfo \r         \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to open the management ui\n- `%s` to analyze the space for potential issues\n", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b"), ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace analyze", "white+b")),
 		},
 	}
 
 	log.OverrideRuntimeErrorHandler(true)
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testDeploy(t, testCase)
@@ -175,8 +118,6 @@ func TestDeploy(t *testing.T) {
 }
 
 func testDeploy(t *testing.T, testCase deployTestCase) {
-	logOutput = ""
-
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]

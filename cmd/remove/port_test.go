@@ -25,7 +25,6 @@ type removePortTestCase struct {
 	removeAll     bool
 	labelSelector string
 
-	expectedOutput   string
 	expectedErr      string
 	expectConfigFile bool
 }
@@ -38,16 +37,13 @@ func TestRunRemovePort(t *testing.T) {
 			expectedErr: "You have to specify at least one of the supported flags",
 		},
 		removePortTestCase{
-			name:           "Remove all zero ports",
-			fakeConfig:     &latest.Config{},
-			removeAll:      true,
-			expectedOutput: "\nDone Successfully removed port",
+			name:       "Remove all zero ports",
+			fakeConfig: &latest.Config{},
+			removeAll:  true,
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunRemovePort(t, testCase)
@@ -55,8 +51,6 @@ func TestRunRemovePort(t *testing.T) {
 }
 
 func testRunRemovePort(t *testing.T, testCase removePortTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -104,7 +98,6 @@ func testRunRemovePort(t *testing.T, testCase removePortTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
 	err = os.Remove(constants.DefaultConfigPath)
 	assert.Equal(t, !os.IsNotExist(err), testCase.expectConfigFile, "Unexpectedly saved or not saved in testCase %s", testCase.name)

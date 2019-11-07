@@ -10,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"gotest.tools/assert"
 )
 
@@ -18,12 +17,10 @@ type addSyncTestCase struct {
 	name string
 
 	args       []string
-	answers    []string
 	fakeConfig *latest.Config
 
 	cmd *syncCmd
 
-	expectedOutput   string
 	expectedErr      string
 	expectConfigFile bool
 	expectedSync     []*latest.SyncConfig
@@ -39,7 +36,6 @@ func TestRunAddSync(t *testing.T) {
 				LocalPath:     "/",
 				ContainerPath: "/",
 			},
-			expectedOutput: "\nDone Successfully added sync between local path / and container path /",
 			expectedSync: []*latest.SyncConfig{
 				&latest.SyncConfig{
 					LabelSelector: map[string]string{
@@ -53,9 +49,7 @@ func TestRunAddSync(t *testing.T) {
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunAddSync(t, testCase)
@@ -63,8 +57,6 @@ func TestRunAddSync(t *testing.T) {
 }
 
 func testRunAddSync(t *testing.T, testCase addSyncTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -77,10 +69,6 @@ func testRunAddSync(t *testing.T, testCase addSyncTestCase) {
 	err = os.Chdir(dir)
 	if err != nil {
 		t.Fatalf("Error changing working directory: %v", err)
-	}
-
-	for _, answer := range testCase.answers {
-		survey.SetNextAnswer(answer)
 	}
 
 	isDeploymentsNil := testCase.fakeConfig == nil || testCase.fakeConfig.Deployments == nil
@@ -99,8 +87,6 @@ func testRunAddSync(t *testing.T, testCase addSyncTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
 	if testCase.cmd == nil {
@@ -118,8 +104,6 @@ func testRunAddSync(t *testing.T, testCase addSyncTestCase) {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 		return
 	}
-
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
 	config, err := configutil.GetBaseConfig(&configutil.ConfigOptions{})
 	if err != nil {

@@ -3,7 +3,6 @@ package remove
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -19,7 +18,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
-	"github.com/mgutz/ansi"
 	homedir "github.com/mitchellh/go-homedir"
 
 	"gotest.tools/assert"
@@ -68,8 +66,7 @@ type removeContextTestCase struct {
 	all              bool
 	providerList     []*cloudlatest.Provider
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestRunRemoveContext(t *testing.T) {
@@ -108,7 +105,6 @@ func TestRunRemoveContext(t *testing.T) {
 				},
 			},
 			fakeKubeConfig: &customKubeConfig{},
-			expectedOutput: "\nDone Removed kubectl context for space \nDone All space kubectl contexts removed",
 		},
 		removeContextTestCase{
 			name:     "Delete one context successfully",
@@ -142,7 +138,6 @@ func TestRunRemoveContext(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: "\nDone Kube-context 'myContext' has been successfully removed",
 		},
 		removeContextTestCase{
 			name:     "Delete current context successfully",
@@ -178,13 +173,10 @@ func TestRunRemoveContext(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: fmt.Sprintf("\nInfo Your kube-context has been updated to '%s'\nDone Kube-context 'current' has been successfully removed", ansi.Color("next", "white+b")),
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunRemoveContext(t, testCase)
@@ -192,8 +184,6 @@ func TestRunRemoveContext(t *testing.T) {
 }
 
 func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -251,5 +241,4 @@ func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

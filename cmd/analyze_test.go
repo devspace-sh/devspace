@@ -21,7 +21,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
 	homedir "github.com/mitchellh/go-homedir"
 
 	"gopkg.in/yaml.v2"
@@ -31,56 +30,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
-
-var logOutput string
-
-type testLogger struct {
-	log.DiscardLogger
-}
-
-func (t testLogger) Info(args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
-}
-func (t testLogger) Infof(format string, args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Done(args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
-}
-func (t testLogger) Donef(format string, args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Fail(args ...interface{}) {
-	logOutput = logOutput + "\nFail " + fmt.Sprint(args...)
-}
-func (t testLogger) Failf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nFail " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Error(args ...interface{}) {
-	logOutput = logOutput + "\nError " + fmt.Sprint(args...)
-}
-func (t testLogger) Errorf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nError " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Warn(args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
-}
-func (t testLogger) Warnf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) StartWait(msg string) {
-	logOutput = logOutput + "\nWait " + fmt.Sprint(msg)
-}
-
-func (t testLogger) Write(msg []byte) (int, error) {
-	logOutput = logOutput + string(msg)
-	return len(msg), nil
-}
 
 type customGraphqlClient struct {
 	responses []interface{}
@@ -145,8 +94,7 @@ type analyzeTestCase struct {
 	waitFlag             bool
 	globalFlags          flags.GlobalFlags
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestAnalyze(t *testing.T) {
@@ -169,7 +117,6 @@ func TestAnalyze(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nWait Analyzing pods\nWait Analyzing replica sets\nWait Analyzing stateful sets", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
 		},
 	}
 
@@ -210,9 +157,7 @@ func TestAnalyze(t *testing.T) {
 		}
 	}()
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testAnalyze(t, testCase)
@@ -220,8 +165,6 @@ func TestAnalyze(t *testing.T) {
 }
 
 func testAnalyze(t *testing.T, testCase analyzeTestCase) {
-	logOutput = ""
-
 	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{
 		responses: testCase.graphQLResponses,
 	}
@@ -251,5 +194,4 @@ func testAnalyze(t *testing.T, testCase analyzeTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
