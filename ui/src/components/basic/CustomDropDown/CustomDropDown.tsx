@@ -92,6 +92,7 @@ export default class CustomDropDown extends React.PureComponent<Props, State> {
                 key={idx}
                 className={option.disabled ? styles['option'] + ' ' + styles.disabled : styles['option']}
                 onClick={() => (option.disabled ? null : this.onListItemClick(option))}
+                title={option.text}
               >
                 {option.markup || option.text}
               </div>

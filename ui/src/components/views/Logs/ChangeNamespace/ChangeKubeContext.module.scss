@@ -7,7 +7,8 @@
   z-index: 11;
 
   > div {
-    background-color: $gray-4;
+    background-color: $blue;
+    padding: 8px 0;
 
     :global(.top) {
       height: unset;

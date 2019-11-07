@@ -78,9 +78,9 @@ class Breadcrumb extends React.Component<Props, State> {
       const lastIdxOfBackSlash = wd.lastIndexOf('\\');
 
       if (lastIdxOfSlash !== -1) {
-        return './' + wd.slice(lastIdxOfSlash + 1) + '/devspace.yaml';
+        return './' + wd.slice(lastIdxOfSlash + 1);
       } else {
-        return './' + wd.slice(lastIdxOfBackSlash + 1) + '/devspace.yaml';
+        return './' + wd.slice(lastIdxOfBackSlash + 1);
       }
     }
   };
