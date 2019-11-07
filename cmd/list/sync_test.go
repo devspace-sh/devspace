@@ -66,9 +66,7 @@ func TestListSyncs(t *testing.T) {
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(log.Discard)
 
 	for _, testCase := range testCases {
 		testListSyncs(t, testCase)

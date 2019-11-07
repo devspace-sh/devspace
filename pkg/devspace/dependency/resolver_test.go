@@ -196,8 +196,6 @@ func TestResolver(t *testing.T) {
 		}
 		os.RemoveAll(DependencyFolderPath) //No error catch because it doesn't need to exist
 
-		assert.Equal(t, logOutput, testCase.expectedLog, "Unexpected output in testCase %s", testCase.name)
-
 	}
 }
 

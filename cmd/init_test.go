@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -22,7 +21,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	dockertypes "github.com/docker/docker/api/types"
-	"github.com/mgutz/ansi"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"gopkg.in/yaml.v2"
@@ -78,9 +76,6 @@ func TestInit(t *testing.T) {
 			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
-
-	_, readDirErr := ioutil.ReadFile(".")
-	readDirError := strings.ReplaceAll(readDirErr.Error(), ".", "%s")
 
 	testCases := []initTestCase{
 		initTestCase{

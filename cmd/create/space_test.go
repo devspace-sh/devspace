@@ -58,7 +58,7 @@ type createSpaceTestCase struct {
 	providerFlag string
 	clusterFlag  string
 
-	expectedErr    string
+	expectedErr string
 }
 
 func TestRunCreateSpace(t *testing.T) {
@@ -364,8 +364,6 @@ func TestRunCreateSpace(t *testing.T) {
 }
 
 func testRunCreateSpace(t *testing.T, testCase createSpaceTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
