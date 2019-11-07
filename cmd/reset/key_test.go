@@ -171,22 +171,6 @@ func TestRunResetKey(t *testing.T) {
 
 	testCases := []resetKeyTestCase{
 		resetKeyTestCase{
-			name:        "Provider doesn't exist",
-			expectedErr: "Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
-		},
-		resetKeyTestCase{
-			name:     "Invalid clustername",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			args:        []string{"a:b:c"},
-			expectedErr: "get cluster: Error parsing cluster name a:b:c: Expected : only once",
-		},
-		resetKeyTestCase{
 			name:     "Successful reset",
 			provider: "myProvider",
 			providerList: []*cloudlatest.Provider{

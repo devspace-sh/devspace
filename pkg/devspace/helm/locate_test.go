@@ -64,13 +64,6 @@ func TestLocateChartPathDependencies(t *testing.T) {
 			verify:      true,
 			expectedErr: "chart must be a tgz file",
 		},
-		locateChartPathTestCase{
-			name:        "File is in home",
-			settedFiles: []string{"someFile.abc"},
-			nameParam:   "someFile.abc",
-			verify:      true,
-			expectedErr: "chart must be a tgz file",
-		},
 	}
 
 	for _, testCase := range testCases {

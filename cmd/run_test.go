@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -74,59 +73,7 @@ func TestRun(t *testing.T) {
 		}
 	}()
 
-	_, err = os.Open("doesn'tExist")
-	noFileFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
-
-	fsutil.WriteToFile([]byte(""), "someFakeDir")
-	err = fsutil.WriteToFile([]byte(""), "someFakeDir/someFile")
-	parentDirIsFileErr := strings.TrimPrefix(err.Error(), "mkdir someFakeDir: ")
-
 	testCases := []runTestCase{
-		runTestCase{
-			name:        "No devspace.yaml",
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		runTestCase{
-			name: "Only configs.yaml exists",
-			files: map[string]interface{}{
-				constants.DefaultConfigsPath: "",
-			},
-			expectedErr: "open devspace.yaml: " + noFileFoundError,
-		},
-		runTestCase{
-			name: "Unparsable devspace.yaml",
-			files: map[string]interface{}{
-				constants.DefaultConfigPath: "unparsable",
-			},
-			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into map[interface {}]interface {}",
-		},
-		runTestCase{
-			name: "Unparsable generated.yaml",
-			files: map[string]interface{}{
-				constants.DefaultConfigPath: map[interface{}]interface{}{},
-				generated.ConfigPath:        "unparsable",
-			},
-			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		runTestCase{
-			name: "Invalid version",
-			files: map[string]interface{}{
-				constants.DefaultConfigPath: &latest.Config{
-					Version: "invalid",
-				},
-			},
-			expectedErr: "Unrecognized config version invalid. Please upgrade devspace with `devspace upgrade`",
-		},
-		runTestCase{
-			name: "generated.yaml can't be saved",
-			files: map[string]interface{}{
-				constants.DefaultConfigPath: &latest.Config{
-					Version: latest.Version,
-				},
-				".devspace": "",
-			},
-			expectedErr: fmt.Sprintf("mkdir %s: %s", filepath.Join(dir, ".devspace"), parentDirIsFileErr),
-		},
 		runTestCase{
 			name: "empty command",
 			files: map[string]interface{}{

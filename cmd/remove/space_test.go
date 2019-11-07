@@ -20,7 +20,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
 
 	"gotest.tools/assert"
 )
@@ -53,53 +52,6 @@ func TestRunRemoveSpace(t *testing.T) {
 
 	testCases := []removeSpaceTestCase{
 		removeSpaceTestCase{
-			name:        "Cloud context not gettable",
-			expectedErr: "get provider: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
-		},
-		removeSpaceTestCase{
-			name:     "Spaces not gettable",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			all: true,
-			graphQLResponses: []interface{}{
-				errors.Errorf("TestError from graphql server"),
-			},
-			expectedErr: "TestError from graphql server",
-		},
-		removeSpaceTestCase{
-			name:     "Fail at deleting first of all spaces",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name:  "myProvider",
-					Key:   "someKey",
-					Token: "." + validEncodedClaim + ".",
-				},
-			},
-			all: true,
-			graphQLResponses: []interface{}{
-				struct {
-					Spaces []interface{} `json:"space"`
-				}{
-					Spaces: []interface{}{
-						struct {
-							Owner   struct{} `json:"account"`
-							Context struct {
-								Cluster struct{} `json:"cluster"`
-							} `json:"kube_context"`
-						}{},
-					},
-				},
-				errors.Errorf("TestError from graphql server"),
-			},
-			expectedErr: "TestError from graphql server",
-		},
-		removeSpaceTestCase{
 			name:     "Delete all one spaces",
 			provider: "myProvider",
 			providerList: []*cloudlatest.Provider{
@@ -130,60 +82,6 @@ func TestRunRemoveSpace(t *testing.T) {
 				},
 			},
 			expectedOutput: "\nDone Deleted space \nDone All spaces removed",
-		},
-		removeSpaceTestCase{
-			name:     "Unparsable spaceID",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			spaceID:        "abc",
-			expectedErr:    "parse space id: strconv.Atoi: parsing \"abc\": invalid syntax",
-			expectedOutput: "\nWait Delete space",
-		},
-		removeSpaceTestCase{
-			name:     "Space with given id not gettable",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			spaceID: "123",
-			graphQLResponses: []interface{}{
-				errors.Errorf("TestError from graphql server"),
-			},
-			expectedErr:    "get space: TestError from graphql server",
-			expectedOutput: "\nWait Delete space",
-		},
-		removeSpaceTestCase{
-			name:     "Unparsable space name",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			args:           []string{"a:b:c"},
-			expectedErr:    "get space: Error parsing space name a:b:c: Expected : only once",
-			expectedOutput: "\nWait Delete space",
-		},
-		removeSpaceTestCase{
-			name:     "No name or id",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			expectedErr:    "Please provide a space name or id for this command",
-			expectedOutput: "\nWait Delete space",
 		},
 		removeSpaceTestCase{
 			name:     "Delete one space successfully",

@@ -68,38 +68,6 @@ func TestListDeployments(t *testing.T) {
 	expectedHeader := ansi.Color(" NAME  ", "green+b") + ansi.Color(" TYPE  ", "green+b") + ansi.Color(" DEPLOY  ", "green+b") + ansi.Color(" STATUS  ", "green+b")
 	testCases := []listDeploymentsTestCase{
 		listDeploymentsTestCase{
-			name:        "no config exists",
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		listDeploymentsTestCase{
-			name:       "Kubectl client can't be created",
-			fakeConfig: &latest.Config{},
-			fakeKubeConfig: &customKubeConfig{
-				rawConfigError: fmt.Errorf("RawConfigError"),
-			},
-			expectedErr: "RawConfigError",
-		},
-		listDeploymentsTestCase{
-			name:                 "Space can't be resumed",
-			fakeConfig:           &latest.Config{},
-			generatedYamlContent: generated.Config{},
-			fakeKubeConfig: &customKubeConfig{
-				rawconfig: clientcmdapi.Config{
-					Contexts: map[string]*clientcmdapi.Context{
-						"": &clientcmdapi.Context{},
-					},
-					Clusters: map[string]*clientcmdapi.Cluster{
-						"": &clientcmdapi.Cluster{
-							LocationOfOrigin: "someLocation",
-							Server:           "someServer",
-						},
-					},
-				},
-			},
-			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find user information for context in kube-config file",
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("default", "white+b")),
-		},
-		listDeploymentsTestCase{
 			name: "All deployments not listable",
 			fakeConfig: &latest.Config{
 				Deployments: []*latest.DeploymentConfig{

@@ -19,7 +19,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
 
 	"gotest.tools/assert"
 )
@@ -110,21 +109,6 @@ func TestRunRemoveCluster(t *testing.T) {
 
 	testCases := []removeClusterTestCase{
 		removeClusterTestCase{
-			name:        "Cloud context not gettable",
-			expectedErr: "log into provider: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
-		},
-		removeClusterTestCase{
-			name:     "Question 1 fails",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			expectedErr: "Cannot ask question 'Are you sure you want to delete cluster ? This action is irreversible' because logger level is too low",
-		},
-		removeClusterTestCase{
 			name:     "Don't delete",
 			provider: "myProvider",
 			providerList: []*cloudlatest.Provider{
@@ -134,92 +118,6 @@ func TestRunRemoveCluster(t *testing.T) {
 				},
 			},
 			answers: []string{"no"},
-		},
-		removeClusterTestCase{
-			name:     "Unparsable clustername",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			answers:     []string{"Yes"},
-			args:        []string{"a:b:c"},
-			expectedErr: "Error parsing cluster name a:b:c: Expected : only once",
-		},
-		removeClusterTestCase{
-			name:     "Question 2 fails",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name:  "myProvider",
-					Key:   "someKey",
-					Token: "." + validEncodedClaim + ".",
-				},
-			},
-			graphQLResponses: []interface{}{
-				struct {
-					Clusters []*cloudlatest.Cluster `json:"cluster"`
-				}{
-					Clusters: []*cloudlatest.Cluster{
-						&cloudlatest.Cluster{},
-					},
-				},
-				errors.Errorf("Testerror from graphql server"),
-			},
-			answers:     []string{"Yes"},
-			args:        []string{"a:b"},
-			expectedErr: "Cannot ask question 'Do you want to delete all cluster spaces?' because logger level is too low",
-		},
-		removeClusterTestCase{
-			name:     "Question 3 fails",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name:  "myProvider",
-					Key:   "someKey",
-					Token: "." + validEncodedClaim + ".",
-				},
-			},
-			graphQLResponses: []interface{}{
-				struct {
-					Clusters []*cloudlatest.Cluster `json:"cluster"`
-				}{
-					Clusters: []*cloudlatest.Cluster{
-						&cloudlatest.Cluster{},
-					},
-				},
-				errors.Errorf("Testerror from graphql server"),
-			},
-			answers:     []string{"Yes", "no"},
-			args:        []string{"a:b"},
-			expectedErr: "Cannot ask question 'Do you want to delete all cluster services?' because logger level is too low",
-		},
-		removeClusterTestCase{
-			name:     "Cluster can't be deleted",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name:  "myProvider",
-					Key:   "someKey",
-					Token: "." + validEncodedClaim + ".",
-				},
-			},
-			answers: []string{"Yes", "No", "No"},
-			args:    []string{"a:b"},
-			graphQLResponses: []interface{}{
-				struct {
-					Clusters []*cloudlatest.Cluster `json:"cluster"`
-				}{
-					Clusters: []*cloudlatest.Cluster{
-						&cloudlatest.Cluster{},
-					},
-				},
-				errors.Errorf("Testerror from graphql server"),
-			},
-			expectedErr:    "Testerror from graphql server",
-			expectedOutput: "\nWait Deleting cluster ",
 		},
 		removeClusterTestCase{
 			name:     "Successful deletion",

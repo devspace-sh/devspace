@@ -90,27 +90,14 @@ type RunCleanupImagesTestCase struct {
 
 	answers []string
 
-	expectedOutput string
-	expectedErr    string
+	expectedErr string
 }
 
 func TestRunCleanupImages(t *testing.T) {
 	testCases := []RunCleanupImagesTestCase{
 		RunCleanupImagesTestCase{
-			name:        "No devspace config",
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		RunCleanupImagesTestCase{
-			name: "Unparsable devspace.yaml",
-			files: map[string]interface{}{
-				"devspace.yaml": "unparsable",
-			},
-			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into map[interface {}]interface {}",
-		},
-		RunCleanupImagesTestCase{
-			name:           "No images to delete",
-			fakeConfig:     &latest.Config{},
-			expectedOutput: "\nDone No images found in config to delete",
+			name:       "No images to delete",
+			fakeConfig: &latest.Config{},
 		},
 		RunCleanupImagesTestCase{
 			name: "Error getting kube config",
@@ -216,5 +203,4 @@ func testRunCleanupImages(t *testing.T, testCase RunCleanupImagesTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

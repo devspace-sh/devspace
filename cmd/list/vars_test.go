@@ -31,16 +31,6 @@ func TestListVars(t *testing.T) {
 	expectedHeader := ansi.Color(" Variable  ", "green+b") + ansi.Color(" Value  ", "green+b")
 	testCases := []listVarsTestCase{
 		listVarsTestCase{
-			name:        "no config exists",
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		listVarsTestCase{
-			name:                 "generated.yaml not parsable",
-			fakeConfig:           &latest.Config{},
-			generatedYamlContent: "unparsable",
-			expectedErr:          "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		listVarsTestCase{
 			name:           "no vars",
 			fakeConfig:     &latest.Config{},
 			expectedOutput: "\nInfo No variables found",

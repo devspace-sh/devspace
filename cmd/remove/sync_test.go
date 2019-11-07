@@ -35,10 +35,6 @@ type removeSyncTestCase struct {
 func TestRunRemoveSync(t *testing.T) {
 	testCases := []removeSyncTestCase{
 		removeSyncTestCase{
-			name:        "No devspace config",
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		removeSyncTestCase{
 			name:        "Specify nothing",
 			fakeConfig:  &latest.Config{},
 			expectedErr: "You have to specify at least one of the supported flags",

@@ -35,47 +35,6 @@ type removeDeploymentTestCase struct {
 func TestRunRemoveDeployment(t *testing.T) {
 	testCases := []removeDeploymentTestCase{
 		removeDeploymentTestCase{
-			name:        "No devspace config",
-			args:        []string{""},
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		removeDeploymentTestCase{
-			name: "Unparsable generated.yaml",
-			files: map[string]interface{}{
-				"devspace.yaml":            latest.Config{},
-				".devspace/generated.yaml": "unparsable",
-			},
-			args:             []string{""},
-			expectedErr:      "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-			expectConfigFile: true,
-		},
-		removeDeploymentTestCase{
-			name:        "Question 1 fails",
-			fakeConfig:  &latest.Config{},
-			args:        []string{""},
-			expectedErr: "Cannot ask question 'Do you want to delete all deployment resources deployed?' because logger level is too low",
-		},
-		removeDeploymentTestCase{
-			name:        "Don't specify what to remove",
-			fakeConfig:  &latest.Config{},
-			answers:     []string{"no"},
-			expectedErr: "You have to specify either a deployment name or the --all flag",
-		},
-		/*removeDeploymentTestCase{
-			name:          "Wrong kubectl configuration",
-			fakeConfig:    &latest.Config{},
-			answers:       []string{"yes"},
-			expectedErr: "Unable to create new kubectl client: invalid configuration: no configuration has been provided",
-		},
-		removeDeploymentTestCase{
-			name:             "Remove not existent deployment",
-			fakeConfig:       &latest.Config{},
-			args:             []string{"doesn'tExist"},
-			answers:          []string{"no"},
-			expectedOutput:   "\nWarn Couldn't find deployment doesn'tExist",
-			expectConfigFile: true,
-		},
-		removeDeploymentTestCase{
 			name:             "Remove all zero deployments",
 			fakeConfig:       &latest.Config{},
 			removeAll:        true,
@@ -110,7 +69,7 @@ func TestRunRemoveDeployment(t *testing.T) {
 			answers:          []string{"no"},
 			expectedOutput:   "\nDone Successfully removed all deployments",
 			expectConfigFile: true,
-		},*/
+		},
 	}
 
 	log.SetInstance(&testLogger{

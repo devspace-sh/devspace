@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -106,21 +105,7 @@ func TestRunUpdateConfig(t *testing.T) {
 		}
 	}()
 
-	_, err = ioutil.ReadFile(dir)
-	isDirError := strings.ReplaceAll(err.Error(), dir, "%s")
-
 	testCases := []updateConfigTestCase{
-		updateConfigTestCase{
-			name:        "No devspace.yaml",
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		updateConfigTestCase{
-			name: "devspace.yaml is a dir",
-			files: map[string]interface{}{
-				filepath.Join(constants.DefaultConfigPath, "someFile"): "",
-			},
-			expectedErr: fmt.Sprintf(isDirError, constants.DefaultConfigPath),
-		},
 		updateConfigTestCase{
 			name: "Safe with profiles",
 			files: map[string]interface{}{

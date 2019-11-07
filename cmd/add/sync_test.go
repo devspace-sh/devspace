@@ -32,20 +32,6 @@ type addSyncTestCase struct {
 func TestRunAddSync(t *testing.T) {
 	testCases := []addSyncTestCase{
 		addSyncTestCase{
-			name:        "No devspace config",
-			args:        []string{""},
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		addSyncTestCase{
-			name:       "Invalid selector",
-			args:       []string{""},
-			fakeConfig: &latest.Config{},
-			cmd: &syncCmd{
-				LabelSelector: "a=b=c",
-			},
-			expectedErr: "add sync path: Error parsing selectors: Wrong selector format: a=b=c",
-		},
-		addSyncTestCase{
 			name:       "Add empty selector",
 			args:       []string{""},
 			fakeConfig: &latest.Config{},

@@ -21,7 +21,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
 
 	"gotest.tools/assert"
 	restclient "k8s.io/client-go/rest"
@@ -83,32 +82,6 @@ func TestRunRemoveContext(t *testing.T) {
 	}
 
 	testCases := []removeContextTestCase{
-		removeContextTestCase{
-			name:     "Provider not gettable",
-			provider: "doesn'tExist",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-				},
-			},
-			all:         true,
-			expectedErr: "log into provider: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: myProvider ",
-		},
-		removeContextTestCase{
-			name:     "Spaces not gettable",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			all: true,
-			graphQLResponses: []interface{}{
-				errors.Errorf("TestError from graphql server"),
-			},
-			expectedErr: "TestError from graphql server",
-		},
 		removeContextTestCase{
 			name:     "Delete all one spaces",
 			provider: "myProvider",

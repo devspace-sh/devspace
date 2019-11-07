@@ -32,17 +32,6 @@ type addPortTestCase struct {
 func TestRunAddPort(t *testing.T) {
 	testCases := []addPortTestCase{
 		addPortTestCase{
-			name:        "No devspace config",
-			args:        []string{""},
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		addPortTestCase{
-			name:        "Add empty port",
-			args:        []string{""},
-			fakeConfig:  &latest.Config{},
-			expectedErr: "Error parsing port mappings: strconv.Atoi: parsing \"\": invalid syntax",
-		},
-		addPortTestCase{
 			name:             "Add valid port",
 			args:             []string{"1234"},
 			fakeConfig:       &latest.Config{},

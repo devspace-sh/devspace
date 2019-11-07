@@ -31,11 +31,6 @@ type addImageTestCase struct {
 func TestRunAddImage(t *testing.T) {
 	testCases := []addImageTestCase{
 		addImageTestCase{
-			name:        "No devspace config",
-			args:        []string{""},
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		addImageTestCase{
 			name:             "Add one empty image",
 			args:             []string{""},
 			fakeConfig:       &latest.Config{},

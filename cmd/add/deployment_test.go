@@ -10,10 +10,13 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/pkg/errors"
 
 	yaml "gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -22,58 +25,46 @@ import (
 type addDeploymentTestCase struct {
 	name string
 
-	fakeConfig    *latest.Config
+	fakeConfig    config.Config
 	fakeGenerated *generated.Config
 
 	args    []string
 	answers []string
 	cmd     *deploymentCmd
 
-	expectedOutput              string
-	expectedErr                 string
-	expectConfigFile            bool
-	expectedDeploymentName      string
-	expectedDeploymentNamespace string
-	expectedDeploymentsNumber   int
-
-	expectedDeploymentKubectlManifests []string
-
-	expectedHelmChartName    string
-	expectedHelmChartRepoURL string
-	expectedHelmChartVersion string
-
-	expectedImagesNumber           int
-	expectedImageName              string
-	expectedImageTag               string
-	expectedImageDockerfile        string
-	expectedImageContext           string
-	expectedImageCreatePullSecrets bool
+	expectedErr    string
+	expectedConfig latest.Config
 }
 
 func TestRunAddDeployment(t *testing.T) {
 	testCases := []addDeploymentTestCase{
 		addDeploymentTestCase{
-			name:        "No devspace config",
-			args:        []string{""},
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		addDeploymentTestCase{
-			name:        "No params",
-			args:        []string{""},
-			fakeConfig:  &latest.Config{},
-			expectedErr: "Please specifiy one of these parameters:\n--image: A docker image to deploy (e.g. dscr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)\n--manifests: The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)\n--chart: A helm chart to deploy (e.g. ./chart or stable/mysql)\n--component: A predefined component to use (run `devspace list available-components` to see all available components)",
-		},
-		addDeploymentTestCase{
 			name: "Add already existing deployment",
 			args: []string{"exists"},
 			fakeConfig: &latest.Config{
+				Version: latest.Version,
 				Deployments: []*latest.DeploymentConfig{
 					&latest.DeploymentConfig{
 						Name: "exists",
+						Kubectl: &latest.KubectlConfig{
+							Manifests: []string{""},
+						},
 					},
 				},
 			},
 			expectedErr: "Deployment exists already exists",
+			expectedConfig: latest.Config{
+				Version: latest.Version,
+				Deployments: []*latest.DeploymentConfig{
+					&latest.DeploymentConfig{
+						Name: "exists",
+						Kubectl: &latest.KubectlConfig{
+							Manifests: []string{""},
+						},
+					},
+				},
+				Dev: &latest.DevConfig{},
+			},
 		},
 		addDeploymentTestCase{
 			name: "Valid kubectl deployment",
@@ -89,12 +80,19 @@ func TestRunAddDeployment(t *testing.T) {
 				},
 			},
 
-			expectedOutput:                     "\nDone Successfully added newKubectlDeployment as new deployment",
-			expectConfigFile:                   true,
-			expectedDeploymentsNumber:          1,
-			expectedDeploymentName:             "newKubectlDeployment",
-			expectedDeploymentNamespace:        "kubectlNamespace",
-			expectedDeploymentKubectlManifests: []string{"these", "are", "manifests"},
+			expectedConfig: latest.Config{
+				Version: latest.Version,
+				Deployments: []*latest.DeploymentConfig{
+					&latest.DeploymentConfig{
+						Name:      "newKubectlDeployment",
+						Namespace: "kubectlNamespace",
+						Kubectl: &latest.KubectlConfig{
+							Manifests: []string{"these", "are", "manifests"},
+						},
+					},
+				},
+				Dev: &latest.DevConfig{},
+			},
 		},
 		addDeploymentTestCase{
 			name: "Valid helm deployment",
@@ -109,13 +107,22 @@ func TestRunAddDeployment(t *testing.T) {
 				ChartVersion: "myChartVersion",
 			},
 
-			expectedOutput:            "\nDone Successfully added newHelmDeployment as new deployment",
-			expectConfigFile:          true,
-			expectedDeploymentsNumber: 1,
-			expectedDeploymentName:    "newHelmDeployment",
-			expectedHelmChartName:     "myChart",
-			expectedHelmChartRepoURL:  "myChartRepo",
-			expectedHelmChartVersion:  "myChartVersion",
+			expectedConfig: latest.Config{
+				Version: latest.Version,
+				Deployments: []*latest.DeploymentConfig{
+					&latest.DeploymentConfig{
+						Name: "newHelmDeployment",
+						Helm: &latest.HelmConfig{
+							Chart: &latest.ChartConfig{
+								Name:    "myChart",
+								RepoURL: "myChartRepo",
+								Version: "myChartVersion",
+							},
+						},
+					},
+				},
+				Dev: &latest.DevConfig{},
+			},
 		},
 		addDeploymentTestCase{
 			name:    "Valid dockerfile deployment",
@@ -131,18 +138,42 @@ func TestRunAddDeployment(t *testing.T) {
 				Context:    "myContext",
 			},
 
-			expectedOutput:            "\nDone Successfully added newDockerfileDeployment as new deployment",
-			expectConfigFile:          true,
-			expectedDeploymentsNumber: 1,
-			expectedDeploymentName:    "newDockerfileDeployment",
-
-			expectedImagesNumber:           1,
-			expectedImageName:              "myImage",
-			expectedImageDockerfile:        "myDockerfile",
-			expectedImageContext:           "myContext",
-			expectedImageCreatePullSecrets: true,
+			expectedConfig: latest.Config{
+				Version: latest.Version,
+				Deployments: []*latest.DeploymentConfig{
+					&latest.DeploymentConfig{
+						Name: "newDockerfileDeployment",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []latest.ImageConfig{
+									latest.ImageConfig{
+										Image: "myImage",
+									},
+								},
+								"service": latest.ServiceConfig{
+									Ports: []*latest.ServicePortConfig{
+										&latest.ServicePortConfig{
+											Port: ptr.Int(1234),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Images: map[string]*latest.ImageConfig{
+					"newDockerfileDeployment": &latest.ImageConfig{
+						Image:            "myImage",
+						Dockerfile:       "myDockerfile",
+						Context:          "myContext",
+						CreatePullSecret: ptr.Bool(true),
+					},
+				},
+				Dev: &latest.DevConfig{},
+			},
 		},
-		addDeploymentTestCase{
+		/*addDeploymentTestCase{
 			name:    "Valid image deployment",
 			args:    []string{"newImageDeployment"},
 			answers: []string{"1234"},
@@ -160,16 +191,25 @@ func TestRunAddDeployment(t *testing.T) {
 				Context: "myContext",
 			},
 
-			expectedOutput:            "\nDone Successfully added newImageDeployment as new deployment",
-			expectConfigFile:          true,
-			expectedDeploymentsNumber: 1,
-			expectedDeploymentName:    "newImageDeployment",
-
-			expectedImagesNumber:           2,
-			expectedImageName:              "myImage",
-			expectedImageTag:               "latest",
-			expectedImageCreatePullSecrets: true,
-		},
+			expectedConfig: latest.Config{
+				Version: latest.Version,
+				Deployments: []*latest.DeploymentConfig{
+					&latest.DeploymentConfig{
+						Name: "newDockerfileDeployment",
+					},
+				},
+				Images: map[string]*latest.ImageConfig{
+					"someImage": &latest.ImageConfig{
+						Image: "someImage",
+					},
+					"myImage": &latest.ImageConfig{
+						Tag:              "latest",
+						CreatePullSecret: ptr.Bool(true),
+					},
+				},
+				Dev: &latest.DevConfig{},
+			},
+		},*/
 	}
 
 	log.SetInstance(&testLogger{
@@ -202,11 +242,12 @@ func testRunAddDeployment(t *testing.T, testCase addDeploymentTestCase) {
 		survey.SetNextAnswer(answer)
 	}
 
-	isDeploymentsNil := testCase.fakeConfig == nil || testCase.fakeConfig.Deployments == nil
-	configutil.SetFakeConfig(testCase.fakeConfig)
-	if isDeploymentsNil && testCase.fakeConfig != nil {
-		testCase.fakeConfig.Deployments = nil
+	if testCase.fakeConfig != nil {
+		fakeConfigAsYaml, err := yaml.Marshal(testCase.fakeConfig)
+		assert.NilError(t, err, "Error parsing fakeConfig into yaml in testCase %s", testCase.name)
+		fsutil.WriteToFile(fakeConfigAsYaml, constants.DefaultConfigPath)
 	}
+	configutil.ResetConfig()
 
 	defer func() {
 		//Delete temp folder
@@ -218,8 +259,6 @@ func testRunAddDeployment(t *testing.T, testCase addDeploymentTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
 	if testCase.cmd == nil {
@@ -236,42 +275,20 @@ func testRunAddDeployment(t *testing.T, testCase addDeploymentTestCase) {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
 
-	if testCase.expectConfigFile {
-		config, err := loadConfigFromPath()
-		assert.NilError(t, err, "Error loading config after adding deployment in testCase %s. Maybe it was unexpectedly not saved in %s", testCase.name, constants.DefaultConfigPath)
-
-		assert.Equal(t, len(config.Deployments), testCase.expectedDeploymentsNumber, "Unexpected number of deployments in testCase %s", testCase.name)
-		if testCase.expectedDeploymentsNumber != 0 {
-			assert.Equal(t, config.Deployments[0].Name, testCase.expectedDeploymentName, "Unexpected name of new deployment in testCase %s", testCase.name)
-			assert.Equal(t, config.Deployments[0].Namespace, testCase.expectedDeploymentNamespace, "Unexpected name of new deployment in testCase %s", testCase.name)
-
-			if len(testCase.expectedDeploymentKubectlManifests) != 0 {
-				assert.Equal(t, config.Deployments[0].Kubectl == nil || config.Deployments[0].Kubectl.Manifests == nil, false, "Kubectl manifests are unexpectedly nil in testCase %s", testCase.name)
-				assert.Equal(t, len(config.Deployments[0].Kubectl.Manifests), len(testCase.expectedDeploymentKubectlManifests), "Returned manifest has unexpected length in testCase %s", testCase.name)
-				for index, expected := range testCase.expectedDeploymentKubectlManifests {
-					assert.Equal(t, config.Deployments[0].Kubectl.Manifests[index], expected, "Returned manifest in index %d is unexpected in testCase %s", index, testCase.name)
-				}
-			} else if testCase.expectedHelmChartName != "" {
-				assert.Equal(t, config.Deployments[0].Helm == nil || config.Deployments[0].Helm.Chart == nil, false, "Helm field is unexpectedly nil in testCase %s", testCase.name)
-				assert.Equal(t, config.Deployments[0].Helm.Chart.Name, testCase.expectedHelmChartName, "Helm chart of new deployment has wrong name in testCase %s", testCase.name)
-				assert.Equal(t, config.Deployments[0].Helm.Chart.RepoURL, testCase.expectedHelmChartRepoURL, "Helm chart of new deployment has wrong RepoURL in testCase %s", testCase.name)
-				assert.Equal(t, config.Deployments[0].Helm.Chart.Version, testCase.expectedHelmChartVersion, "Helm chart of new deployment has wrong version in testCase %s", testCase.name)
-			}
-		}
-
-		assert.Equal(t, len(config.Images), testCase.expectedImagesNumber, "Unexpected number of images in testCase %s", testCase.name)
-		if testCase.expectedImagesNumber != 0 {
-			assert.Equal(t, config.Images[testCase.expectedDeploymentName] == nil, false, "No image with expected name in testCase %s", testCase.name)
-			assert.Equal(t, config.Images[testCase.expectedDeploymentName].Image, testCase.expectedImageName, "Image has unexpected name in testCase %s", testCase.name)
-			assert.Equal(t, config.Images[testCase.expectedDeploymentName].Tag, testCase.expectedImageTag, "Image has unexpected tag in testCase %s", testCase.name)
-			assert.Equal(t, config.Images[testCase.expectedDeploymentName].Dockerfile, testCase.expectedImageDockerfile, "Image has unexpected dockerfile in testCase %s", testCase.name)
-			assert.Equal(t, config.Images[testCase.expectedDeploymentName].Context, testCase.expectedImageContext, "Image has unexpected context in testCase %s", testCase.name)
-			assert.Equal(t, ptr.ReverseBool(config.Images[testCase.expectedDeploymentName].CreatePullSecret), testCase.expectedImageCreatePullSecrets, "Image has unexpected pull secrets settings name in testCase %s", testCase.name)
-		}
+	config, err := loadConfigFromPath()
+	if err != nil {
+		configContent, _ := fsutil.ReadFile(constants.DefaultConfigPath, -1)
+		t.Fatalf("Error loading config after adding deployment in testCase %s: \n%v\n Content of %s:\n%s", testCase.name, err, constants.DefaultConfigPath, string(configContent))
 	}
 
-	err = os.Remove(constants.DefaultConfigPath)
-	assert.Equal(t, !os.IsNotExist(err), testCase.expectConfigFile, "Unexpectedly saved or not saved in testCase %s", testCase.name)
+	configAsYaml, _ := yaml.Marshal(config)
+	expectedAsYaml, _ := yaml.Marshal(testCase.expectedConfig)
+	assert.Equal(t, string(configAsYaml), string(expectedAsYaml), "Unexpected config in testCase %s.\nExpected:\n%s\nActual config:\n%s", testCase.name, string(expectedAsYaml), string(configAsYaml))
+	/*if !isEqual {
+		configAsYaml, _ := yaml.Marshal(config)
+		expectedAsYaml, _ := yaml.Marshal(testCase.expectedConfig)
+		t.Fatalf("Unexpected config in testCase %s.\nExpected: \n%s\nActual config:\n%s", testCase.name, string(expectedAsYaml), string(configAsYaml))
+	}*/
 
 }
 
@@ -287,9 +304,9 @@ func loadConfigFromPath() (*latest.Config, error) {
 		return nil, err
 	}
 
-	newConfig, err := versions.Parse(oldConfig)
+	newConfig, err := versions.Parse(oldConfig, nil, log.Discard)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "parsing versions")
 	}
 
 	return newConfig, nil

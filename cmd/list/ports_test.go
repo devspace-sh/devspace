@@ -25,19 +25,8 @@ type listPortsTestCase struct {
 }
 
 func TestListPorts(t *testing.T) {
-	expectedHeader := ansi.Color(" LabelSelector  ", "green+b") + ansi.Color(" Ports (Local:Remote)  ", "green+b")
+	expectedHeader := ansi.Color(" Image  ", "green+b") + ansi.Color(" LabelSelector  ", "green+b") + ansi.Color(" Ports (Local:Remote)  ", "green+b")
 	testCases := []listPortsTestCase{
-		listPortsTestCase{
-			name:        "no config exists",
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		listPortsTestCase{
-			name: "no ports forwarded",
-			fakeConfig: &latest.Config{
-				Dev: &latest.DevConfig{},
-			},
-			expectedOutput: "\nInfo No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n",
-		},
 		listPortsTestCase{
 			name: "two ports forwarded",
 			fakeConfig: &latest.Config{
@@ -74,7 +63,7 @@ func TestListPorts(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: "\n" + expectedHeader + "\n app=test        1234:4321, 5678:8765  \n a=b=, a=b=      9012:2109             \n\n",
+			expectedOutput: "\n" + expectedHeader + "\n         app=test        1234:4321, 5678:8765  \n         a=b=, a=b=      9012:2109             \n\n",
 		},
 	}
 

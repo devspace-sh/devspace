@@ -33,11 +33,6 @@ type removePortTestCase struct {
 func TestRunRemovePort(t *testing.T) {
 	testCases := []removePortTestCase{
 		removePortTestCase{
-			name:        "No devspace config",
-			args:        []string{""},
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		removePortTestCase{
 			name:        "No port specified",
 			fakeConfig:  &latest.Config{},
 			expectedErr: "You have to specify at least one of the supported flags",

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -16,13 +15,10 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/command"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
 	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -79,30 +75,11 @@ func TestBuild(t *testing.T) {
 		}
 	}()
 
-	err = command.NewStreamCommand(" ", []string{}).Run(nil, nil, nil)
-	pathVarKey := strings.TrimPrefix(err.Error(), "exec: \" \": executable file not found in ")
+	//err = command.NewStreamCommand(" ", []string{}).Run(nil, nil, nil)
+	//pathVarKey := strings.TrimPrefix(err.Error(), "exec: \" \": executable file not found in ")
 
 	testCases := []buildTestCase{
-		buildTestCase{
-			name:        "Config doesn't exist",
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		buildTestCase{
-			name:       "Unparsable generated.yaml",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				".devspace/generated.yaml": "unparsable",
-			},
-			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		buildTestCase{
-			name: "Unparsable devspace.yaml",
-			files: map[string]interface{}{
-				"devspace.yaml": "unparsable",
-			},
-			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into map[interface {}]interface {}",
-		},
-		buildTestCase{
+		/*buildTestCase{
 			name: "Circle dependency",
 			fakeConfig: &latest.Config{
 				Version: "v1beta3",
@@ -185,7 +162,7 @@ func TestBuild(t *testing.T) {
 			buildSequentialFlag: true,
 			expectedErr:         fmt.Sprintf("Error building image: Error building image: exec: \" no space left on device \": executable file not found in %s\n\n Try running `%s` to free docker daemon space and retry", pathVarKey, ansi.Color("devspace cleanup images", "white+b")),
 			expectedOutput:      "\nInfo Build someImage:someTag with custom command  no space left on device  someImage:someTag",
-		},
+		},*/
 		buildTestCase{
 			name: "Nothing to build",
 			files: map[string]interface{}{
@@ -197,11 +174,7 @@ func TestBuild(t *testing.T) {
 		},
 	}
 
-	//The build-command wants to overwrite error logging with file logging. This workaround prevents that.
-	err = os.MkdirAll(log.Logdir+"errors.log", 0700)
-	assert.NilError(t, err, "Error overwriting log file before its creation")
-	log.OverrideRuntimeErrorHandler()
-
+	log.OverrideRuntimeErrorHandler(true)
 	log.SetInstance(&testLogger{
 		log.DiscardLogger{PanicOnExit: true},
 	})

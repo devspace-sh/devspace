@@ -63,14 +63,6 @@ type addProviderTestCase struct {
 func TestRunAddProvider(t *testing.T) {
 	testCases := []addProviderTestCase{
 		addProviderTestCase{
-			name: "Unparsable provider.yaml",
-			files: map[string]interface{}{
-				"provider.yaml": "unparsable",
-			},
-			args:        []string{""},
-			expectedErr: "parse provider config: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into latest.Config",
-		},
-		addProviderTestCase{
 			name: "Add existing provider",
 			files: map[string]interface{}{
 				"provider.yaml": cloudlatest.Config{

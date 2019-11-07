@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
@@ -82,79 +81,21 @@ func TestInit(t *testing.T) {
 	}()
 
 	_, readDirErr := ioutil.ReadFile(".")
-	readDirError := strings.ReplaceAll(readDirErr.Error(), dir, "%s")
+	readDirError := strings.ReplaceAll(readDirErr.Error(), ".", "%s")
 
 	testCases := []initTestCase{
 		initTestCase{
 			name: "Don't reconfigure the existing config",
 			files: map[string]interface{}{
-				constants.DefaultConfigPath: map[interface{}]interface{}{},
+				constants.DefaultConfigPath: latest.Config{
+					Version: latest.Version,
+				},
 			},
 			expectedOutput: fmt.Sprintf("\nInfo Config already exists. If you want to recreate the config please run `devspace init --reconfigure`\nInfo \r         \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b")),
 			expectedConfig: &latest.Config{
 				Version: latest.Version,
 				Dev:     &latest.DevConfig{},
 			},
-		},
-		initTestCase{
-			name:        "Error in No-Dockerfile-Question",
-			expectedErr: "Cannot ask question 'This project does not have a Dockerfile. What do you want to do?' because logger level is too low",
-		},
-		initTestCase{
-			name: "Error in Dockerfile-Question",
-			files: map[string]interface{}{
-				"Dockerfile": "",
-			},
-			dockerfileFlag: helper.DefaultDockerfilePath,
-			expectedErr:    "Cannot ask question 'How do you want to initialize this project?' because logger level is too low",
-		},
-		initTestCase{
-			name:           "Error in Language-Question",
-			answers:        []string{createDockerfileOption},
-			expectedOutput: "\nWait Detecting programming language",
-			expectedErr:    "containerize application: Cannot ask question 'Select the programming language of this project' because logger level is too low",
-		},
-		initTestCase{
-			name:        "Error in Enter-Dockerfile-Question",
-			answers:     []string{enterDockerfileOption},
-			expectedErr: "Cannot ask question 'Please enter a path to your Dockerfile (e.g. ./MyDockerfile)' because logger level is too low",
-		},
-		initTestCase{
-			name:        "Error in Enter-Manifests-Question",
-			answers:     []string{enterManifestsOption},
-			expectedErr: "Cannot ask question 'Please enter Kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. 'manifests/**' or 'kube/pod.yaml')' because logger level is too low",
-		},
-		initTestCase{
-			name:        "Error in Enter-HelmChart-Question",
-			answers:     []string{enterHelmChartOption},
-			expectedErr: "Cannot ask question 'Please enter the path to a helm chart to deploy (e.g. ./chart)' because logger level is too low",
-		},
-		initTestCase{
-			name:        "Error in Enter-Existing-Image-Question",
-			answers:     []string{useExistingImageOption},
-			expectedErr: "Cannot ask question 'Please enter a docker image to deploy (e.g. gcr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)' because logger level is too low",
-		},
-		initTestCase{
-			name:        "Error in Port-Question",
-			answers:     []string{useExistingImageOption, "someImage"},
-			expectedErr: "Cannot ask question 'Which port do you want to expose for this image? (Enter to skip)' because logger level is too low",
-		},
-		initTestCase{
-			name:        "Entered Dockerfile doesn't exist",
-			answers:     []string{enterDockerfileOption, "Doesn't Exist"},
-			expectedErr: "Couldn't find dockerfile at 'Doesn't Exist'. Please make sure you have a Dockerfile at the specified location",
-		},
-		initTestCase{
-			name: "Invalid Kube Config",
-			files: map[string]interface{}{
-				"Dockerfile": "unparsable",
-			},
-			fakeKubeConfig: &customKubeConfig{
-				rawConfigError: fmt.Errorf("RawConfigError"),
-			},
-			dockerfileFlag: helper.DefaultDockerfilePath,
-			answers:        []string{useExistingDockerfileOption},
-			expectedErr:    "get image config: RawConfigError",
 		},
 		initTestCase{
 			name:           "Init with helm chart",
@@ -194,24 +135,6 @@ func TestInit(t *testing.T) {
 				},
 				Dev: &latest.DevConfig{},
 			},
-		},
-		initTestCase{
-			name: "Error in PortForwarding-Question",
-			files: map[string]interface{}{
-				gitIgnoreFile: "",
-			},
-			answers:        []string{useExistingImageOption, "someImage", "1000"},
-			expectedOutput: "\nWarn Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.",
-			expectedErr:    "Cannot ask question 'Which forwarding port [1024-49151] do you want to use to access your application?' because logger level is too low",
-		},
-		initTestCase{
-			name: "Wrong answer in PortForwarding-Question",
-			files: map[string]interface{}{
-				gitIgnoreFile: "",
-			},
-			answers:        []string{useExistingImageOption, "someImage", "1000", "hello"},
-			expectedOutput: "\nWarn Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.",
-			expectedErr:    "Error parsing port 'hello'",
 		},
 		initTestCase{
 			name: "Init with existing image",
@@ -320,10 +243,10 @@ func TestInit(t *testing.T) {
 		},
 	}
 
-	//The dev-command wants to overwrite error logging with file logging. This workaround prevents that.
-	err = os.MkdirAll(log.Logdir+"errors.log", 0700)
-	assert.NilError(t, err, "Error overwriting log file before its creation")
-	log.OverrideRuntimeErrorHandler()
+	log.OverrideRuntimeErrorHandler(true)
+	log.SetInstance(&testLogger{
+		log.DiscardLogger{PanicOnExit: true},
+	})
 
 	log.SetInstance(&testLogger{
 		log.DiscardLogger{PanicOnExit: true},
@@ -388,11 +311,9 @@ func testInit(t *testing.T, testCase initTestCase) {
 		expectedConfigYaml, err := yaml.Marshal(testCase.expectedConfig)
 		assert.NilError(t, err, "Error parsing expected config to yaml after init call in testCase %s.", testCase.name)
 		assert.Equal(t, string(configYaml), string(expectedConfigYaml), "Initialized config is wrong in testCase %s.", testCase.name)
-
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
 	err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {
 		os.RemoveAll(path)

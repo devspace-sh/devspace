@@ -32,16 +32,6 @@ type removeImageTestCase struct {
 func TestRunRemoveImage(t *testing.T) {
 	testCases := []removeImageTestCase{
 		removeImageTestCase{
-			name:        "No devspace config",
-			args:        []string{""},
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		removeImageTestCase{
-			name:        "No image specified",
-			fakeConfig:  &latest.Config{},
-			expectedErr: "You have to specify at least one image",
-		},
-		removeImageTestCase{
 			name:             "Remove all zero images",
 			fakeConfig:       &latest.Config{},
 			removeAll:        true,

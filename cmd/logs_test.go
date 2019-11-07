@@ -85,39 +85,6 @@ func TestLogs(t *testing.T) {
 
 	testCases := []logsTestCase{
 		logsTestCase{
-			name:       "Unparsable generated.yaml",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				".devspace/generated.yaml": "unparsable",
-			},
-			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		logsTestCase{
-			name:       "Invalid global flags",
-			fakeConfig: &latest.Config{},
-			globalFlags: flags.GlobalFlags{
-				KubeContext:   "a",
-				SwitchContext: true,
-			},
-			expectedErr: "Flag --kube-context cannot be used together with --switch-context",
-		},
-		logsTestCase{
-			name:       "invalid kubeconfig",
-			fakeConfig: &latest.Config{},
-			fakeKubeConfig: &customKubeConfig{
-				rawConfigError: fmt.Errorf("RawConfigError"),
-			},
-			expectedErr: "create kube client: RawConfigError",
-		},
-		logsTestCase{
-			name:           "Cloud Space can't be resumed",
-			fakeConfig:     &latest.Config{},
-			fakeKubeClient: &kubectl.Client{},
-			fakeKubeConfig: &customKubeConfig{},
-			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context '' in kube-config file",
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
-		},
-		logsTestCase{
 			name:       "No resources",
 			fakeConfig: &latest.Config{},
 			fakeKubeClient: &kubectl.Client{

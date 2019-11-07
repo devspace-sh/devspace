@@ -48,16 +48,6 @@ func TestGetImageConfigFromDockerfile(t *testing.T) {
 	t.Skip("Dependent on docker installation")
 	testCases := []GetImageConfigFromDockerfileTestCase{
 		GetImageConfigFromDockerfileTestCase{
-			name:          "invalid Cloud provider",
-			cloudProvider: ptr.String("invalid"),
-			expectedErr:   "Error login into cloud provider: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers:  app.devspace.cloud ",
-		},
-		GetImageConfigFromDockerfileTestCase{
-			name:          "correct Cloud provider",
-			cloudProvider: ptr.String("app.devspace.cloud"),
-			expectedErr:   "Error retrieving registries: get token: Received invalid token from provider",
-		},
-		GetImageConfigFromDockerfileTestCase{
 			name:          "unknown cloud provider from question",
 			answers:       []string{"someRegistry.com", "someRegistry.com/user/imagename", "yes"},
 			expectedImage: "someRegistry.com/user/imagename",

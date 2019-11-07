@@ -27,10 +27,6 @@ func TestListSyncs(t *testing.T) {
 	expectedHeader := ansi.Color(" Label Selector  ", "green+b") + ansi.Color(" Local Path  ", "green+b") + ansi.Color(" Container Path  ", "green+b") + ansi.Color(" Excluded Paths  ", "green+b")
 	testCases := []listSyncsTestCase{
 		listSyncsTestCase{
-			name:        "no config exists",
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		listSyncsTestCase{
 			name: "no sync paths exists",
 			fakeConfig: &latest.Config{
 				Dev: &latest.DevConfig{},

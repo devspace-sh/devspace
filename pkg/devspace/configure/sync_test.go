@@ -29,11 +29,6 @@ type addSyncPathTestCase struct {
 func TestAddSyncPath(t *testing.T) {
 	testCases := []addSyncPathTestCase{
 		addSyncPathTestCase{
-			name:               "Add sync path with unparsable labelSelector",
-			labelSelectorParam: "unparsable",
-			expectedErr:        "Error parsing selectors: Wrong selector format: unparsable",
-		},
-		addSyncPathTestCase{
 			name:               "Add sync path with wrong containerPath",
 			containerPathParam: " ",
 			expectedErr:        "ContainerPath (--container) must start with '/'. Info: There is an issue with MINGW based terminals like git bash",
@@ -53,21 +48,6 @@ func TestAddSyncPath(t *testing.T) {
 					Namespace:     "",
 				},
 			},
-		},
-		addSyncPathTestCase{
-			name: "Config can't be saved",
-			fakeConfig: &latest.Config{
-				Profiles: []*latest.ProfileConfig{
-					&latest.ProfileConfig{},
-				},
-			},
-			containerPathParam: "/containerPath2",
-			expectedSyncInConfig: []*latest.SyncConfig{
-				&latest.SyncConfig{
-					ContainerPath: "/containerPath2",
-				},
-			},
-			expectedErr: "Couldn't save config file: Cannot save when a profile is applied",
 		},
 	}
 
@@ -143,13 +123,6 @@ type removeSyncPathTestCase struct {
 func TestRemoveSyncPath(t *testing.T) {
 	testCases := []removeSyncPathTestCase{
 		removeSyncPathTestCase{
-			name:                       "Unparsable LabelSelector",
-			fakeConfig:                 nil, //default config has two syncPaths
-			labelSelectorParam:         "unparsable",
-			expectedErr:                "Error parsing selectors: Wrong selector format: unparsable",
-			expectedSyncPathLocalPaths: []string{"somePath", "someOtherPath"},
-		},
-		removeSyncPathTestCase{
 			name:                       "No flag",
 			fakeConfig:                 nil, //default config has two syncPaths
 			expectedErr:                "You have to specify at least one of the supported flags",
@@ -159,19 +132,6 @@ func TestRemoveSyncPath(t *testing.T) {
 			name:           "Remove all",
 			fakeConfig:     nil, //default config has two syncPaths
 			removeAllParam: true,
-		},
-		removeSyncPathTestCase{
-			name: "Can't save",
-			fakeConfig: &latest.Config{
-				Dev: &latest.DevConfig{
-					Sync: []*latest.SyncConfig{
-						&latest.SyncConfig{},
-					},
-				},
-				Profiles: []*latest.ProfileConfig{&latest.ProfileConfig{}},
-			},
-			removeAllParam: true,
-			expectedErr: "Couldn't save config file: Cannot save when a profile is applied",
 		},
 		removeSyncPathTestCase{
 			name:                       "Remove one by local file",

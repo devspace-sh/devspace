@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -20,10 +19,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
-	"github.com/mgutz/ansi"
-	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -87,40 +83,7 @@ func TestSync(t *testing.T) {
 	}()
 
 	testCases := []syncTestCase{
-		syncTestCase{
-			name:       "Unparsable generated.yaml",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				".devspace/generated.yaml": "unparsable",
-			},
-			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		syncTestCase{
-			name:       "Invalid global flags",
-			fakeConfig: &latest.Config{},
-			globalFlags: flags.GlobalFlags{
-				KubeContext:   "a",
-				SwitchContext: true,
-			},
-			expectedErr: "Flag --kube-context cannot be used together with --switch-context",
-		},
-		syncTestCase{
-			name:       "invalid kubeconfig",
-			fakeConfig: &latest.Config{},
-			fakeKubeConfig: &customKubeConfig{
-				rawConfigError: fmt.Errorf("RawConfigError"),
-			},
-			expectedErr: "new kube client: RawConfigError",
-		},
-		syncTestCase{
-			name:           "Cloud Space can't be resumed",
-			fakeConfig:     &latest.Config{},
-			fakeKubeClient: &kubectl.Client{},
-			fakeKubeConfig: &customKubeConfig{},
-			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context '' in kube-config file",
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
-		},
-		syncTestCase{
+		/*syncTestCase{
 			name:       "No resources",
 			fakeConfig: &latest.Config{},
 			fakeKubeClient: &kubectl.Client{
@@ -139,7 +102,7 @@ func TestSync(t *testing.T) {
 			pickFlag:       true,
 			expectedErr:    "Couldn't find a running pod in namespace ",
 			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
-		},
+		},*/
 	}
 
 	log.SetInstance(&testLogger{

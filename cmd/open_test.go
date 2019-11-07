@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -75,33 +74,7 @@ func TestOpen(t *testing.T) {
 		}
 	}()
 
-	testCases := []openTestCase{
-		openTestCase{
-			name:       "Unparsable generated.yaml",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				".devspace/generated.yaml": "unparsable",
-			},
-			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		openTestCase{
-			name:       "Invalid global flags",
-			fakeConfig: &latest.Config{},
-			globalFlags: flags.GlobalFlags{
-				KubeContext:   "a",
-				SwitchContext: true,
-			},
-			expectedErr: "Flag --kube-context cannot be used together with --switch-context",
-		},
-		openTestCase{
-			name:       "invalid kubeconfig",
-			fakeConfig: &latest.Config{},
-			fakeKubeConfig: &customKubeConfig{
-				rawConfigError: fmt.Errorf("RawConfigError"),
-			},
-			expectedErr: "RawConfigError",
-		},
-	}
+	testCases := []openTestCase{}
 
 	log.SetInstance(&testLogger{
 		log.DiscardLogger{PanicOnExit: true},

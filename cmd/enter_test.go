@@ -82,39 +82,6 @@ func TestEnter(t *testing.T) {
 
 	testCases := []enterTestCase{
 		enterTestCase{
-			name:       "Unparsable generated.yaml",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				".devspace/generated.yaml": "unparsable",
-			},
-			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		enterTestCase{
-			name:       "Invalid global flags",
-			fakeConfig: &latest.Config{},
-			globalFlags: flags.GlobalFlags{
-				KubeContext:   "a",
-				SwitchContext: true,
-			},
-			expectedErr: "Flag --kube-context cannot be used together with --switch-context",
-		},
-		enterTestCase{
-			name:       "Invalid kube config",
-			fakeConfig: &latest.Config{},
-			fakeKubeConfig: &customKubeConfig{
-				rawConfigError: fmt.Errorf("RawConfigError"),
-			},
-			expectedErr: "new kube client: RawConfigError",
-		},
-		enterTestCase{
-			name:           "Cloud Space can't be resumed",
-			fakeConfig:     &latest.Config{},
-			fakeKubeClient: &kubectl.Client{},
-			fakeKubeConfig: &customKubeConfig{},
-			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context '' in kube-config file",
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
-		},
-		enterTestCase{
 			name:       "No resources",
 			fakeConfig: &latest.Config{},
 			fakeKubeClient: &kubectl.Client{
@@ -136,10 +103,10 @@ func TestEnter(t *testing.T) {
 		},
 	}
 
-	//The dev-command wants to overwrite error logging with file logging. This workaround prevents that.
-	err = os.MkdirAll(log.Logdir+"errors.log", 0700)
-	assert.NilError(t, err, "Error overwriting log file before its creation")
-	log.OverrideRuntimeErrorHandler()
+	log.OverrideRuntimeErrorHandler(true)
+	log.SetInstance(&testLogger{
+		log.DiscardLogger{PanicOnExit: true},
+	})
 
 	log.SetInstance(&testLogger{
 		log.DiscardLogger{PanicOnExit: true},

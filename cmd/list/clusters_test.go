@@ -71,26 +71,6 @@ func TestListClusters(t *testing.T) {
 
 	testCases := []listClustersTestCase{
 		listClustersTestCase{
-			name:         "Not existent provider",
-			providerFlag: "Doesn'tExist",
-			expectedErr:  "get provider: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
-		},
-		listClustersTestCase{
-			name:         "Error from server",
-			providerFlag: "app.devspace.com",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "app.devspace.com",
-					Key:  "someKey",
-				},
-			},
-			graphQLResponses: []interface{}{
-				fmt.Errorf("you want clusters? You get error from server"),
-			},
-			expectedErr:    "Error retrieving clusters: you want clusters? You get error from server",
-			expectedOutput: "\nWait Retrieving clusters",
-		},
-		listClustersTestCase{
 			name:         "No clusters",
 			providerFlag: "app.devspace.com",
 			providerList: []*cloudlatest.Provider{

@@ -152,32 +152,6 @@ type analyzeTestCase struct {
 func TestAnalyze(t *testing.T) {
 	testCases := []analyzeTestCase{
 		analyzeTestCase{
-			name:                 "Invalid generated config",
-			fakeConfig:           &latest.Config{},
-			generatedYamlContent: "unparsable",
-			expectedErr:          "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		analyzeTestCase{
-			name: "Invalid global flags",
-			globalFlags: flags.GlobalFlags{
-				KubeContext:   "a",
-				SwitchContext: true,
-			},
-			expectedErr: "Flag --kube-context cannot be used together with --switch-context",
-		},
-		analyzeTestCase{
-			name:           "Invalid kube config",
-			fakeKubeConfig: &customKubeConfig{},
-			expectedErr:    "Error loading kube config, context '' doesn't exist",
-		},
-		analyzeTestCase{
-			name:           "Cloud Space can't be resumed",
-			fakeKubeClient: &kubectl.Client{},
-			fakeKubeConfig: &customKubeConfig{},
-			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context '' in kube-config file",
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
-		},
-		analyzeTestCase{
 			name: "Successful analysis with zero errors",
 			globalFlags: flags.GlobalFlags{
 				Namespace: "someNamespace",

@@ -34,7 +34,7 @@ type listSpacesTestCase struct {
 	providerList     []*cloudlatest.Provider
 
 	expectedOutput string
-	expectedErr  string
+	expectedErr    string
 }
 
 func TestListSpaces(t *testing.T) {
@@ -47,11 +47,6 @@ func TestListSpaces(t *testing.T) {
 	}
 
 	testCases := []listSpacesTestCase{
-		listSpacesTestCase{
-			name:          "Not existent provider",
-			providerFlag:  "Doesn'tExist",
-			expectedErr: "log into provider: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
-		},
 		listSpacesTestCase{
 			name:         "Server responds with error",
 			providerFlag: "myProvider",

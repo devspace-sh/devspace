@@ -44,27 +44,6 @@ func TestListProfiles(t *testing.T) {
 	expectedHeader := ansi.Color(" Name  ", "green+b") + "       " + ansi.Color(" Active  ", "green+b")
 	testCases := []listProfilesTestCase{
 		listProfilesTestCase{
-			name:        "no config exists",
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		listProfilesTestCase{
-			name:       "unparsable devspace.yaml",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				"devspace.yaml": "unparsable",
-			},
-			expectedErr: "Error parsing devspace.yaml: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into map[interface {}]interface {}",
-		},
-		listProfilesTestCase{
-			name:       "unparsable generated.yaml",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				"devspace.yaml":            map[interface{}]interface{}{},
-				".devspace/generated.yaml": "unparsable",
-			},
-			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		listProfilesTestCase{
 			name:       "print 1 profile",
 			fakeConfig: &latest.Config{},
 			files: map[string]interface{}{

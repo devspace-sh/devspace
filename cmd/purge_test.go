@@ -82,43 +82,6 @@ func TestPurge(t *testing.T) {
 
 	testCases := []purgeTestCase{
 		purgeTestCase{
-			name:        "No devspace.yaml",
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		purgeTestCase{
-			name:       "Unparsable generated.yaml",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				".devspace/generated.yaml": "unparsable",
-			},
-			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		purgeTestCase{
-			name:       "Invalid global flags",
-			fakeConfig: &latest.Config{},
-			globalFlags: flags.GlobalFlags{
-				KubeContext:   "a",
-				SwitchContext: true,
-			},
-			expectedErr: "Flag --kube-context cannot be used together with --switch-context",
-		},
-		purgeTestCase{
-			name:       "invalid kubeconfig",
-			fakeConfig: &latest.Config{},
-			fakeKubeConfig: &customKubeConfig{
-				rawConfigError: fmt.Errorf("RawConfigError"),
-			},
-			expectedErr: "create kube client: RawConfigError",
-		},
-		purgeTestCase{
-			name:           "Cloud Space can't be resumed",
-			fakeConfig:     &latest.Config{},
-			fakeKubeClient: &kubectl.Client{},
-			fakeKubeConfig: &customKubeConfig{},
-			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context '' in kube-config file",
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("", "white+b")),
-		},
-		purgeTestCase{
 			name: "Cyclic dependency",
 			fakeConfig: &latest.Config{
 				Version: "v1beta3",
@@ -169,32 +132,6 @@ func TestPurge(t *testing.T) {
 			deploymentsFlag:       " ",
 			purgeDependenciesFlag: true,
 			expectedOutput:        fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nInfo Start resolving dependencies\nError %s", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b"), fmt.Sprintf("Error purging dependencies: Cyclic dependency found: \n%s\n%s\n%s.\n To allow cyclic dependencies run with the '%s' flag", filepath.Join(dir, "dependency1"), dir, filepath.Join(dir, "dependency1"), ansi.Color("--allow-cyclic", "white+b"))),
-		},
-		purgeTestCase{
-			name:       "generated.yaml is a dir",
-			fakeConfig: &latest.Config{},
-			fakeKubeClient: &kubectl.Client{
-				Client:         fake.NewSimpleClientset(),
-				CurrentContext: "minikube",
-			},
-			fakeKubeConfig: &customKubeConfig{
-				rawconfig: clientcmdapi.Config{
-					Contexts: map[string]*clientcmdapi.Context{
-						"minikube": &clientcmdapi.Context{},
-					},
-					AuthInfos: map[string]*clientcmdapi.AuthInfo{
-						"": &clientcmdapi.AuthInfo{},
-					},
-				},
-			},
-			files: map[string]interface{}{
-				".devspace/generated.yaml/someFile": "",
-			},
-			globalFlags: flags.GlobalFlags{
-				Namespace:   "someNamespace",
-				KubeContext: "someKubeContext",
-			},
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nError Error saving generated.yaml: open %s: is a directory", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b"), filepath.Join(dir, ".devspace/generated.yaml")),
 		},
 	}
 

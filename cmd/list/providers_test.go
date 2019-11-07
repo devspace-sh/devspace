@@ -45,11 +45,6 @@ func TestListProviders(t *testing.T) {
 	expectedHeader := ansi.Color(" Name  ", "green+b") + "              " + ansi.Color(" IsDefault  ", "green+b") + ansi.Color(" Host  ", "green+b") + "                      " + ansi.Color(" Is logged in  ", "green+b")
 	testCases := []listProvidersTestCase{
 		listProvidersTestCase{
-			name:                "Provider can't be parsed",
-			providerYamlContent: "unparsable",
-			expectedErr:         "log into provider: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into latest.Config",
-		},
-		listProvidersTestCase{
 			name: "One provider",
 			providerYamlContent: &cloudlatest.Config{
 				Providers: []*cloudlatest.Provider{

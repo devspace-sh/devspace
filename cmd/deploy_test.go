@@ -85,75 +85,11 @@ func TestDeploy(t *testing.T) {
 
 	testCases := []deployTestCase{
 		deployTestCase{
-			name:        "config doesn't exist",
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		deployTestCase{
 			name:           "Invalid flags",
 			fakeConfig:     &latest.Config{},
 			skipBuildFlag:  true,
 			forceBuildFlag: true,
 			expectedErr:    "Flags --skip-build & --force-build cannot be used together",
-		},
-		deployTestCase{
-			name:       "Invalid global flags",
-			fakeConfig: &latest.Config{},
-			globalFlags: flags.GlobalFlags{
-				KubeContext:   "a",
-				SwitchContext: true,
-			},
-			expectedErr: "Flag --kube-context cannot be used together with --switch-context",
-		},
-		deployTestCase{
-			name:       "Unparsable generated.yaml",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				".devspace/generated.yaml": "unparsable",
-			},
-			expectedErr: "Error loading generated.yaml: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		deployTestCase{
-			name:       "invalid kubeconfig",
-			fakeConfig: &latest.Config{},
-			fakeKubeConfig: &customKubeConfig{
-				rawConfigError: fmt.Errorf("RawConfigError"),
-			},
-			expectedErr: "Unable to create new kubectl client: RawConfigError",
-		},
-		deployTestCase{
-			name:       "Cloud Space can't be resumed",
-			fakeConfig: &latest.Config{},
-			fakeKubeClient: &kubectl.Client{
-				Client:         fake.NewSimpleClientset(),
-				CurrentContext: "minikube",
-			},
-			fakeKubeConfig: &customKubeConfig{},
-			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context 'minikube' in kube-config file",
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
-		},
-		deployTestCase{
-			name: "Error in pull secret creation",
-			fakeConfig: &latest.Config{
-				Images: map[string]*latest.ImageConfig{
-					"": &latest.ImageConfig{},
-				},
-			},
-			fakeKubeClient: &kubectl.Client{
-				Client:         fake.NewSimpleClientset(),
-				CurrentContext: "minikube",
-			},
-			fakeKubeConfig: &customKubeConfig{
-				rawconfig: clientcmdapi.Config{
-					Contexts: map[string]*clientcmdapi.Context{
-						"minikube": &clientcmdapi.Context{},
-					},
-					AuthInfos: map[string]*clientcmdapi.AuthInfo{
-						"": &clientcmdapi.AuthInfo{},
-					},
-				},
-			},
-			expectedErr:    "invalid reference format",
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nDone Created namespace: ", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
 		},
 		deployTestCase{
 			name: "Cyclic dependency",
@@ -207,34 +143,6 @@ func TestDeploy(t *testing.T) {
 			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nDone Created namespace: \nInfo Start resolving dependencies", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
 		},
 		deployTestCase{
-			name:       "generated.yaml is a dir",
-			fakeConfig: &latest.Config{},
-			fakeKubeClient: &kubectl.Client{
-				Client:         fake.NewSimpleClientset(),
-				CurrentContext: "minikube",
-			},
-			fakeKubeConfig: &customKubeConfig{
-				rawconfig: clientcmdapi.Config{
-					Contexts: map[string]*clientcmdapi.Context{
-						"minikube": &clientcmdapi.Context{},
-					},
-					AuthInfos: map[string]*clientcmdapi.AuthInfo{
-						"": &clientcmdapi.AuthInfo{},
-					},
-				},
-			},
-			files: map[string]interface{}{
-				"devspace.yaml":                     &latest.Config{},
-				".devspace/generated.yaml/someFile": "",
-			},
-			globalFlags: flags.GlobalFlags{
-				Namespace:   "someNamespace",
-				KubeContext: "someKubeContext",
-			},
-			expectedErr:    fmt.Sprintf("update last kube context: save generated: open %s: is a directory", filepath.Join(dir, ".devspace/generated.yaml")),
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'\nDone Created namespace: ", ansi.Color("minikube", "white+b"), ansi.Color("", "white+b")),
-		},
-		deployTestCase{
 			name:       "Successfully deployed nothing",
 			fakeConfig: &latest.Config{},
 			fakeKubeClient: &kubectl.Client{
@@ -256,11 +164,7 @@ func TestDeploy(t *testing.T) {
 		},
 	}
 
-	//The deploy-command wants to overwrite error logging with file logging. This workaround prevents that.
-	err = os.MkdirAll(log.Logdir+"errors.log", 0700)
-	assert.NilError(t, err, "Error overwriting log file before its creation")
-	log.OverrideRuntimeErrorHandler()
-
+	log.OverrideRuntimeErrorHandler(true)
 	log.SetInstance(&testLogger{
 		log.DiscardLogger{PanicOnExit: true},
 	})
@@ -322,7 +226,6 @@ func testDeploy(t *testing.T, testCase deployTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 
 	err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {
 		os.RemoveAll(path)

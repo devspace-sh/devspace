@@ -1,11 +1,9 @@
 package reset
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
@@ -57,31 +55,7 @@ func TestRunResetVars(t *testing.T) {
 		}
 	}()
 
-	fsutil.WriteToFile([]byte(""), "someFakeDir")
-	err = fsutil.WriteToFile([]byte(""), "someFakeDir/someFile")
-	parentDirIsFileErr := strings.TrimPrefix(err.Error(), "mkdir someFakeDir: ")
-
 	testCases := []resetVarsTestCase{
-		resetVarsTestCase{
-			name:        "No devspace.yaml",
-			expectedErr: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		resetVarsTestCase{
-			name: "Unparsable generated.yaml",
-			files: map[string]interface{}{
-				constants.DefaultConfigPath: "",
-				".devspace/generated.yaml":  "unparsable",
-			},
-			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		resetVarsTestCase{
-			name: "Unsavable generated.yaml",
-			files: map[string]interface{}{
-				constants.DefaultConfigPath: "",
-				".devspace":                 "",
-			},
-			expectedErr: fmt.Sprintf("Error saving config: mkdir %s: %s", filepath.Join(dir, ".devspace"), parentDirIsFileErr),
-		},
 		resetVarsTestCase{
 			name: "Success",
 			files: map[string]interface{}{

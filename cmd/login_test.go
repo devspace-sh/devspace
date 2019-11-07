@@ -70,37 +70,6 @@ func TestLogin(t *testing.T) {
 
 	testCases := []loginTestCase{
 		loginTestCase{
-			name:       "Unparsable providerConfig",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				"providerConfig": "unparsable",
-			},
-			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into latest.Config",
-		},
-		loginTestCase{
-			name:       "No key, default provider doesn't exist",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				"providerConfig": &cloudlatest.Config{
-					Default: "doesn'tExist",
-				},
-			},
-			expectedErr: "Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: app.devspace.cloud ",
-		},
-		loginTestCase{
-			name:       "Can't login with key",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				"providerConfig": &cloudlatest.Config{},
-			},
-			graphQLResponses: []interface{}{
-				fmt.Errorf("Custom server error"),
-			},
-			keyFlag:      "someKey",
-			providerFlag: "app.devspace.cloud",
-			expectedErr:  "Access denied for key someKey: Custom server error",
-		},
-		loginTestCase{
 			name:       "Successful relogin with key",
 			fakeConfig: &latest.Config{},
 			files: map[string]interface{}{

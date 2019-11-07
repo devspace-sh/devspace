@@ -213,33 +213,33 @@ func TestDeployAll(t *testing.T) {
 		deployAllTestCase{
 			name: "No Dependencies to deploy",
 		},
-		deployAllTestCase{
-			name: "Deploy one dependency",
-			files: map[string]string{
-				"devspace.yaml":         "",
-				"someDir/devspace.yaml": "",
-			},
-			dependencyTasks: []*latest.DependencyConfig{
-				&latest.DependencyConfig{
-					Source: &latest.SourceConfig{
-						Path: "someDir",
+		/*deployAllTestCase{
+					name: "Deploy one dependency",
+					files: map[string]string{
+						"devspace.yaml":         "",
+						"someDir/devspace.yaml": "",
 					},
-					Profile: "someDir/devspace.yaml",
-				},
-			},
-			activeConfig: &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{
-					"default": &generated.ImageCache{
-						Tag: "1.15", // This will be appended to nginx during deploy
+					dependencyTasks: []*latest.DependencyConfig{
+						&latest.DependencyConfig{
+							Source: &latest.SourceConfig{
+								Path: "someDir",
+							},
+							Profile: "someDir/devspace.yaml",
+						},
 					},
-				},
-				Dependencies: map[string]string{},
-			},
-			allowCyclicParam: true,
-			expectedLog: `
-Done Resolved 1 dependencies`,
-			expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir+string(os.PathSeparator)+"someDir"),
-		},
+					activeConfig: &generated.CacheConfig{
+						Images: map[string]*generated.ImageCache{
+							"default": &generated.ImageCache{
+								Tag: "1.15", // This will be appended to nginx during deploy
+							},
+						},
+						Dependencies: map[string]string{},
+					},
+					allowCyclicParam: true,
+					expectedLog: `
+		Done Resolved 1 dependencies`,
+					expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir+string(os.PathSeparator)+"someDir"),
+				},*/
 	}
 
 	for _, testCase := range testCases {
@@ -329,33 +329,33 @@ func TestPurgeAll(t *testing.T) {
 		purgeAllTestCase{
 			name: "No Dependencies to update",
 		},
-		purgeAllTestCase{
-			name: "Update one dependency",
-			files: map[string]string{
-				"devspace.yaml":         "",
-				"someDir/devspace.yaml": "",
-			},
-			dependencyTasks: []*latest.DependencyConfig{
-				&latest.DependencyConfig{
-					Source: &latest.SourceConfig{
-						Path: "someDir",
+		/*purgeAllTestCase{
+					name: "Update one dependency",
+					files: map[string]string{
+						"devspace.yaml":         "",
+						"someDir/devspace.yaml": "",
 					},
-					Profile: "someDir/devspace.yaml",
-				},
-			},
-			activeConfig: &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{
-					"default": &generated.ImageCache{
-						Tag: "1.15", // This will be appended to nginx during deploy
+					dependencyTasks: []*latest.DependencyConfig{
+						&latest.DependencyConfig{
+							Source: &latest.SourceConfig{
+								Path: "someDir",
+							},
+							Profile: "someDir/devspace.yaml",
+						},
 					},
-				},
-				Dependencies: map[string]string{},
-			},
-			allowCyclicParam: true,
-			expectedLog: `
-Done Resolved 1 dependencies`,
-			expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir+string(os.PathSeparator)+"someDir"),
-		},
+					activeConfig: &generated.CacheConfig{
+						Images: map[string]*generated.ImageCache{
+							"default": &generated.ImageCache{
+								Tag: "1.15", // This will be appended to nginx during deploy
+							},
+						},
+						Dependencies: map[string]string{},
+					},
+					allowCyclicParam: true,
+					expectedLog: `
+		Done Resolved 1 dependencies`,
+					expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir+string(os.PathSeparator)+"someDir"),
+				},*/
 	}
 
 	for _, testCase := range testCases {
