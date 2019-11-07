@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -15,7 +16,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
 	"gopkg.in/yaml.v2"
 
 	"gotest.tools/assert"
@@ -28,8 +28,10 @@ type listProfilesTestCase struct {
 	graphQLResponses []interface{}
 	files            map[string]interface{}
 
-	expectedOutput string
-	expectedErr    string
+	expectTablePrint bool
+	expectedHeader   []string
+	expectedValues   [][]string
+	expectedErr      string
 }
 
 func TestListProfiles(t *testing.T) {
@@ -41,7 +43,6 @@ func TestListProfiles(t *testing.T) {
 		validEncodedClaim = strings.TrimSuffix(validEncodedClaim, "=")
 	}
 
-	expectedHeader := ansi.Color(" Name  ", "green+b") + "       " + ansi.Color(" Active  ", "green+b")
 	testCases := []listProfilesTestCase{
 		listProfilesTestCase{
 			name:       "print 1 profile",
@@ -55,7 +56,10 @@ func TestListProfiles(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: "\n" + expectedHeader + "\n someProfile   false   \n\n",
+			expectedHeader: []string{"Name", "Active"},
+			expectedValues: [][]string{
+				[]string{"someProfile", "false"},
+			},
 		},
 	}
 
@@ -69,7 +73,11 @@ func TestListProfiles(t *testing.T) {
 }
 
 func testListProfiles(t *testing.T, testCase listProfilesTestCase) {
-	logOutput = ""
+	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
+		assert.Assert(t, testCase.expectTablePrint || len(testCase.expectedHeader)+len(testCase.expectedValues) > 0, "PrintTable unexpectedly called in testCase %s", testCase.name)
+		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
+		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
+	})
 
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
@@ -114,5 +122,4 @@ func testListProfiles(t *testing.T, testCase listProfilesTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

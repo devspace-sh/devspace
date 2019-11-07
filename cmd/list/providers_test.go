@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -16,7 +17,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
 	homedir "github.com/mitchellh/go-homedir"
 	"gopkg.in/yaml.v2"
 
@@ -29,8 +29,10 @@ type listProvidersTestCase struct {
 	graphQLResponses    []interface{}
 	providerYamlContent interface{}
 
-	expectedOutput string
-	expectedErr    string
+	expectTablePrint bool
+	expectedHeader   []string
+	expectedValues   [][]string
+	expectedErr      string
 }
 
 func TestListProviders(t *testing.T) {
@@ -42,7 +44,6 @@ func TestListProviders(t *testing.T) {
 		validEncodedClaim = strings.TrimSuffix(validEncodedClaim, "=")
 	}
 
-	expectedHeader := ansi.Color(" Name  ", "green+b") + "              " + ansi.Color(" IsDefault  ", "green+b") + ansi.Color(" Host  ", "green+b") + "                      " + ansi.Color(" Is logged in  ", "green+b")
 	testCases := []listProvidersTestCase{
 		listProvidersTestCase{
 			name: "One provider",
@@ -54,7 +55,11 @@ func TestListProviders(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: "\n" + expectedHeader + "\n someProvider         false       someHost                     false         \n app.devspace.cloud   false       https://app.devspace.cloud   false         \n\n",
+			expectedHeader: []string{"Name", "IsDefault", "Host", "Is logged in"},
+			expectedValues: [][]string{
+				[]string{"someProvider", "false", "someHost", "false"},
+				[]string{"app.devspace.cloud", "false", "https://app.devspace.cloud", "false"},
+			},
 		},
 	}
 
@@ -101,7 +106,11 @@ func TestListProviders(t *testing.T) {
 }
 
 func testListProviders(t *testing.T, testCase listProvidersTestCase) {
-	logOutput = ""
+	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
+		assert.Assert(t, testCase.expectTablePrint || len(testCase.expectedHeader)+len(testCase.expectedValues) > 0, "PrintTable unexpectedly called in testCase %s", testCase.name)
+		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
+		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
+	})
 
 	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{
 		responses: testCase.graphQLResponses,
@@ -123,5 +132,4 @@ func testListProviders(t *testing.T, testCase listProvidersTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

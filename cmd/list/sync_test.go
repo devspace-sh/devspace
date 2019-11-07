@@ -3,13 +3,13 @@ package list
 import (
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
 
 	"gotest.tools/assert"
 )
@@ -19,19 +19,19 @@ type listSyncsTestCase struct {
 
 	fakeConfig *latest.Config
 
-	expectedOutput string
-	expectedErr    string
+	expectTablePrint bool
+	expectedHeader   []string
+	expectedValues   [][]string
+	expectedErr      string
 }
 
 func TestListSyncs(t *testing.T) {
-	expectedHeader := ansi.Color(" Label Selector  ", "green+b") + ansi.Color(" Local Path  ", "green+b") + ansi.Color(" Container Path  ", "green+b") + ansi.Color(" Excluded Paths  ", "green+b")
 	testCases := []listSyncsTestCase{
 		listSyncsTestCase{
 			name: "no sync paths exists",
 			fakeConfig: &latest.Config{
 				Dev: &latest.DevConfig{},
 			},
-			expectedOutput: "\nInfo No sync paths are configured. Run `devspace add sync` to add new sync path\n",
 		},
 		listSyncsTestCase{
 			name: "Print one sync path",
@@ -58,7 +58,11 @@ func TestListSyncs(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: "\n" + expectedHeader + "\n app=test         local        container        path1, path2    \n a=b=, a=b=       local2       container2                       \n\n",
+			expectedHeader: []string{"Label Selector", "Local Path", "Container Path", "Excluded Paths"},
+			expectedValues: [][]string{
+				[]string{"app=test", "local", "container", "path1, path2"},
+				[]string{"a=b=, a=b=", "local2", "container2", ""},
+			},
 		},
 	}
 
@@ -72,7 +76,11 @@ func TestListSyncs(t *testing.T) {
 }
 
 func testListSyncs(t *testing.T, testCase listSyncsTestCase) {
-	logOutput = ""
+	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
+		assert.Assert(t, testCase.expectTablePrint || len(testCase.expectedHeader)+len(testCase.expectedValues) > 0, "PrintTable unexpectedly called in testCase %s", testCase.name)
+		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
+		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
+	})
 
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
@@ -109,5 +117,4 @@ func testListSyncs(t *testing.T, testCase listSyncsTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

@@ -167,8 +167,20 @@ func WriteString(message string) {
 	defaultLog.WriteString(message)
 }
 
+//SetFakePrintTable is a testing tool that allows overwriting the function PrintTable
+func SetFakePrintTable(fake func(s Logger, header []string, values [][]string)) {
+	fakePrintTable = fake
+}
+
+var fakePrintTable func(s Logger, header []string, values [][]string)
+
 // PrintTable prints a table with header columns and string values
 func PrintTable(s Logger, header []string, values [][]string) {
+	if fakePrintTable != nil {
+		fakePrintTable(s, header, values)
+		return
+	}
+
 	columnLengths := make([]int, len(header))
 
 	for k, v := range header {

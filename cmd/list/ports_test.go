@@ -3,6 +3,7 @@ package list
 import (
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -10,7 +11,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/mgutz/ansi"
 
 	"gotest.tools/assert"
 )
@@ -20,12 +20,13 @@ type listPortsTestCase struct {
 
 	fakeConfig *latest.Config
 
-	expectedOutput string
-	expectedErr    string
+	expectTablePrint bool
+	expectedHeader   []string
+	expectedValues   [][]string
+	expectedErr      string
 }
 
 func TestListPorts(t *testing.T) {
-	expectedHeader := ansi.Color(" Image  ", "green+b") + ansi.Color(" LabelSelector  ", "green+b") + ansi.Color(" Ports (Local:Remote)  ", "green+b")
 	testCases := []listPortsTestCase{
 		listPortsTestCase{
 			name: "two ports forwarded",
@@ -63,7 +64,11 @@ func TestListPorts(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: "\n" + expectedHeader + "\n         app=test        1234:4321, 5678:8765  \n         a=b=, a=b=      9012:2109             \n\n",
+			expectedHeader: []string{"Image", "LabelSelector", "Ports (Local:Remote)"},
+			expectedValues: [][]string{
+				[]string{"", "app=test", "1234:4321, 5678:8765"},
+				[]string{"", "a=b=, a=b=", "9012:2109"},
+			},
 		},
 	}
 
@@ -77,7 +82,11 @@ func TestListPorts(t *testing.T) {
 }
 
 func testListPorts(t *testing.T, testCase listPortsTestCase) {
-	logOutput = ""
+	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
+		assert.Assert(t, testCase.expectTablePrint || len(testCase.expectedHeader)+len(testCase.expectedValues) > 0, "PrintTable unexpectedly called in testCase %s", testCase.name)
+		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
+		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
+	})
 
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
@@ -114,5 +123,4 @@ func testListPorts(t *testing.T, testCase listPortsTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

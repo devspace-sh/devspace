@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -19,7 +20,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
-	"github.com/mgutz/ansi"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"gopkg.in/yaml.v2"
@@ -38,8 +38,10 @@ type commandsTestCase struct {
 
 	globalFlags flags.GlobalFlags
 
-	expectedOutput string
-	expectedErr    string
+	expectTablePrint bool
+	expectedHeader   []string
+	expectedValues   [][]string
+	expectedErr      string
 }
 
 func TestCommands(t *testing.T) {
@@ -73,7 +75,6 @@ func TestCommands(t *testing.T) {
 		}
 	}()
 
-	expectedHeader := ansi.Color(" Name  ", "green+b") + ansi.Color(" Command  ", "green+b")
 	testCases := []commandsTestCase{
 		commandsTestCase{
 			name: "Print commands",
@@ -82,7 +83,8 @@ func TestCommands(t *testing.T) {
 					Version: latest.Version,
 				},
 			},
-			expectedOutput: "\n" + expectedHeader + "\n No entries found\n\n",
+			expectedHeader: []string{"Name", "Command"},
+			expectedValues: [][]string{},
 		},
 	}
 
@@ -96,7 +98,11 @@ func TestCommands(t *testing.T) {
 }
 
 func testCommands(t *testing.T, testCase commandsTestCase) {
-	logOutput = ""
+	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
+		assert.Assert(t, testCase.expectTablePrint || len(testCase.expectedHeader)+len(testCase.expectedValues) > 0, "PrintTable unexpectedly called in testCase %s", testCase.name)
+		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
+		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
+	})
 
 	defer func() {
 		for path := range testCase.files {
@@ -143,5 +149,4 @@ func testCommands(t *testing.T, testCase commandsTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

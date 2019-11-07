@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -18,7 +19,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/mgutz/ansi"
 	homedir "github.com/mitchellh/go-homedir"
 
 	"gotest.tools/assert"
@@ -56,8 +56,10 @@ type listClustersTestCase struct {
 	graphQLResponses []interface{}
 	providerList     []*cloudlatest.Provider
 
-	expectedOutput string
-	expectedErr    string
+	expectTablePrint bool
+	expectedHeader   []string
+	expectedValues   [][]string
+	expectedErr      string
 }
 
 func TestListClusters(t *testing.T) {
@@ -86,7 +88,6 @@ func TestListClusters(t *testing.T) {
 					Clusters: []*cloudlatest.Cluster{},
 				},
 			},
-			expectedOutput: fmt.Sprintf("\nWait Retrieving clusters\nInfo No clusters found. You can connect a cluster with `%s`", ansi.Color("devspace connect cluster", "white+b")),
 		},
 		listClustersTestCase{
 			name:         "One cluster",
@@ -122,10 +123,10 @@ func TestListClusters(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: fmt.Sprintf("\nWait Retrieving clusters\n%s%s              %s    %s", ansi.Color(" ID  ", "green+b"), ansi.Color(" Name  ", "green+b"), ansi.Color(" Owner  ", "green+b"), ansi.Color(" Created  ", "green+b")+`
- 1    someOwner:someName   someOwner            
-
-`),
+			expectedHeader: []string{"ID", "Name", "Owner", "Created"},
+			expectedValues: [][]string{
+				[]string{"1", "someOwner:someName", "someOwner", ""},
+			},
 		},
 	}
 
@@ -172,7 +173,11 @@ func TestListClusters(t *testing.T) {
 }
 
 func testListClusters(t *testing.T, testCase listClustersTestCase) {
-	logOutput = ""
+	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
+		assert.Assert(t, testCase.expectTablePrint || len(testCase.expectedHeader)+len(testCase.expectedValues) > 0, "PrintTable unexpectedly called in testCase %s", testCase.name)
+		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
+		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
+	})
 
 	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{
 		responses: testCase.graphQLResponses,
@@ -192,6 +197,4 @@ func testListClusters(t *testing.T, testCase listClustersTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

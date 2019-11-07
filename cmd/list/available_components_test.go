@@ -5,12 +5,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
 	homedir "github.com/mitchellh/go-homedir"
 
 	"gotest.tools/assert"
@@ -62,22 +62,23 @@ func (t testLogger) Write(msg []byte) (int, error) {
 type listAvailableComponentsTestCase struct {
 	name string
 
-	expectedOutput string
+	expectedHeader []string
+	expectedValues [][]string
 	expectedErr    string
 }
 
 func TestListAvailableComponents(t *testing.T) {
 	testCases := []listAvailableComponentsTestCase{
 		listAvailableComponentsTestCase{
-			name: "List components",
-			expectedOutput: "\n" + ansi.Color(" Name  ", "green+b") + "    " + ansi.Color(" Description  ", "green+b") + "                                                                             " + `
- mariadb    MariaDB is a community-developed fork of MySQL intended to remain free under the GNU GPL  
- mongodb    MongoDB document databases provide high availability and easy scalability                 
- mysql      MySQL is a widely used, open-source relational database management system (RDBMS)         
- postgres   The PostgreSQL object-relational database system provides reliability and data integrity  
- redis      Redis is an open source key-value store that functions as a data structure server         
-
-`,
+			name:           "List components",
+			expectedHeader: []string{"Name", "Description"},
+			expectedValues: [][]string{
+				[]string{"mariadb", "MariaDB is a community-developed fork of MySQL intended to remain free under the GNU GPL"},
+				[]string{"mongodb", "MongoDB document databases provide high availability and easy scalability"},
+				[]string{"mysql", "MySQL is a widely used, open-source relational database management system (RDBMS)"},
+				[]string{"postgres", "The PostgreSQL object-relational database system provides reliability and data integrity"},
+				[]string{"redis", "Redis is an open source key-value store that functions as a data structure server"},
+			},
 		},
 	}
 
@@ -126,7 +127,11 @@ func TestListAvailableComponents(t *testing.T) {
 }
 
 func testListAvailableComponents(t *testing.T, testCase listAvailableComponentsTestCase) {
-	logOutput = ""
+	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
+		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
+		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
+		return
+	})
 
 	err := (&availableComponentsCmd{}).RunListAvailableComponents(nil, []string{})
 
@@ -135,6 +140,4 @@ func testListAvailableComponents(t *testing.T, testCase listAvailableComponentsT
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }

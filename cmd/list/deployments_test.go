@@ -1,9 +1,9 @@
 package list
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -15,7 +15,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -60,12 +59,13 @@ type listDeploymentsTestCase struct {
 	generatedYamlContent interface{}
 	providerList         []*cloudlatest.Provider
 
-	expectedOutput string
-	expectedErr    string
+	expectTablePrint bool
+	expectedHeader   []string
+	expectedValues   [][]string
+	expectedErr      string
 }
 
 func TestListDeployments(t *testing.T) {
-	expectedHeader := ansi.Color(" NAME  ", "green+b") + ansi.Color(" TYPE  ", "green+b") + ansi.Color(" DEPLOY  ", "green+b") + ansi.Color(" STATUS  ", "green+b")
 	testCases := []listDeploymentsTestCase{
 		listDeploymentsTestCase{
 			name: "All deployments not listable",
@@ -106,7 +106,7 @@ func TestListDeployments(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: fmt.Sprintf("\nInfo Using kube context '%s'\nInfo Using namespace '%s'", ansi.Color("", "white+b"), ansi.Color("default", "white+b")) + "\nWarn Unable to create kubectl deploy config for UndeployableKubectl: No manifests defined for kubectl deploy\nWarn No deployment method defined for deployment NoDeploymentMethod\n" + expectedHeader + "\n No entries found\n\n",
+			expectedHeader: []string{"NAME", "TYPE", "DEPLOY", "STATUS"},
 		},
 	}
 
@@ -120,7 +120,11 @@ func TestListDeployments(t *testing.T) {
 }
 
 func testListDeployments(t *testing.T, testCase listDeploymentsTestCase) {
-	logOutput = ""
+	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
+		assert.Assert(t, testCase.expectTablePrint || len(testCase.expectedHeader)+len(testCase.expectedValues) > 0, "PrintTable unexpectedly called in testCase %s", testCase.name)
+		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
+		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
+	})
 
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
@@ -169,5 +173,4 @@ func testListDeployments(t *testing.T, testCase listDeploymentsTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 }
