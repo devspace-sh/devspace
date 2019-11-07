@@ -2,6 +2,7 @@ package cloudanalytics
 
 import (
 	"net/url"
+	"os"
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
@@ -12,27 +13,44 @@ import (
 
 // ReportPanics resolves a panic
 func ReportPanics() {
-	analytics, err := analytics.GetAnalytics()
+	defer func() {
+		if r := recover(); r != nil {
+			// Fail silently
+		}
+	}()
+
+	a, err := analytics.GetAnalytics()
 	if err != nil {
 		return
 	}
 
-	analytics.ReportPanics()
+	a.ReportPanics()
 }
 
 // SendCommandEvent sends a new event to the analytics provider
 func SendCommandEvent(commandErr error) {
-	analytics, err := analytics.GetAnalytics()
+	defer func() {
+		if r := recover(); r != nil {
+			// Fail silently
+		}
+	}()
+
+	a, err := analytics.GetAnalytics()
 	if err != nil {
 		return
 	}
 
-	// Ignore analytics error
-	_ = analytics.SendCommandEvent(commandErr)
+	a.SendCommandEvent(os.Args, commandErr, analytics.GetProcessDuration())
 }
 
 // Start initializes the analytics
 func Start(version string) {
+	defer func() {
+		if r := recover(); r != nil {
+			// Fail silently
+		}
+	}()
+
 	analytics.SetConfigPath(constants.DefaultHomeDevSpaceFolder + "/analytics.yaml")
 
 	analytics, err := analytics.GetAnalytics()
@@ -41,11 +59,15 @@ func Start(version string) {
 	}
 
 	analytics.SetVersion(version)
-	analytics.SetIdentifyProvider(GetIdentity)
+	analytics.SetIdentifyProvider(getIdentity)
+	err = analytics.HandleDeferredRequest()
+	if err != nil {
+		// ignore error
+	}
 }
 
-// GetIdentity return the cloud identifier
-func GetIdentity() string {
+// getIdentity return the cloud identifier
+func getIdentity() string {
 	providerConfig, err := config.ParseProviderConfig()
 	if err != nil {
 		return ""

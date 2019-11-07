@@ -12,20 +12,24 @@ You can define a service for a component by configuring the `service` section of
 ```yaml
 deployments:
 - name: backend-api
-  component:
-    containers:
-    - image: "dscr.io/username/nodejs-app"
-    service:
-      ports:
-      - port: 80
-        containerPort: 3000
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: "dscr.io/username/nodejs-app"
+      service:
+        ports:
+        - port: 80
+          containerPort: 3000
 - name: database
-  component:
-    containers:
-    - image: "dscr.io/username/mysql"
-    service:
-      ports:
-      - port: 3306
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: "dscr.io/username/mysql"
+      service:
+        ports:
+        - port: 3306
 ```
 The example above would define two services:
 1. Service `backend-api` which forwards all traffic from `backend-api:80` (cluster-internal DNS address) to the component `backend-api` on port `3000`

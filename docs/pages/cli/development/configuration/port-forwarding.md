@@ -14,10 +14,12 @@ images:
     image: john/debugger
 deployments:
 - name: app-backend
-  component:
-    containers:
-    - image: john/devbackend
-    - image: john/debugger
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
 dev:
   ports:
   - imageName: backend
@@ -56,12 +58,14 @@ images:
     image: john/debugger
 deployments:
 - name: app-backend
-  component:
-    containers:
-    - name: container-0
-      image: john/devbackend
-    - name: container-1
-      image: john/debugger
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: container-0
+        image: john/devbackend
+      - name: container-1
+        image: john/debugger
 dev:
   ports:
   - imageName: backend
@@ -95,12 +99,14 @@ images:
     image: john/debugger
 deployments:
 - name: app-backend
-  component:
-    containers:
-    - name: container-0
-      image: john/devbackend
-    - name: container-1
-      image: john/debugger
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: container-0
+        image: john/devbackend
+      - name: container-1
+        image: john/debugger
 dev:
   ports:
   - labelSelector:

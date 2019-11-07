@@ -7,6 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/spf13/cobra"
 )
 
@@ -48,7 +49,7 @@ func (cmd *imageCmd) RunRemoveImage(cobraCmd *cobra.Command, args []string) erro
 		return err
 	}
 	if !configExists {
-		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New(message.ConfigNotFound)
 	}
 
 	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())

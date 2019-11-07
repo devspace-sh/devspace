@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -42,7 +43,7 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 	if !configExists {
-		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New(message.ConfigNotFound)
 	}
 
 	config, err := configutil.GetConfig(cmd.ToConfigOptions())
@@ -56,6 +57,7 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	headerColumnNames := []string{
+		"Image",
 		"LabelSelector",
 		"Ports (Local:Remote)",
 	}
@@ -65,7 +67,6 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) error {
 	// Transform values into string arrays
 	for _, value := range config.Dev.Ports {
 		selector := ""
-
 		for k, v := range value.LabelSelector {
 			if len(selector) > 0 {
 				selector += ", "
@@ -81,11 +82,17 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) error {
 					portMappings += ", "
 				}
 
-				portMappings += strconv.Itoa(*v.LocalPort) + ":" + strconv.Itoa(*v.RemotePort)
+				remotePort := *v.LocalPort
+				if v.RemotePort != nil {
+					remotePort = *v.RemotePort
+				}
+
+				portMappings += strconv.Itoa(*v.LocalPort) + ":" + strconv.Itoa(remotePort)
 			}
 		}
 
 		portForwards = append(portForwards, []string{
+			value.ImageName,
 			selector,
 			portMappings,
 		})

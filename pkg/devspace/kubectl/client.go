@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -18,6 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 //For testing only
@@ -49,7 +51,14 @@ func NewClientFromContext(context, namespace string, switchContext bool) (*Clien
 	}
 
 	// Load new raw config
-	kubeConfig, err := kubeconfig.NewConfig().RawConfig()
+	kubeConfigOriginal, err := kubeconfig.LoadConfig().RawConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	// We clone the config here to avoid changing the single loaded config
+	kubeConfig := clientcmdapi.Config{}
+	err = util.Convert(&kubeConfigOriginal, &kubeConfig)
 	if err != nil {
 		return nil, err
 	}

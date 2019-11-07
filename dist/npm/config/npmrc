@@ -1,0 +1,3 @@
+//npm.devspace.cloud/:_authToken=${NPM_REGISTRY_TOKEN}
+//npm.devspace.cloud/:always-auth=true
+registry=https://npm.devspace.cloud

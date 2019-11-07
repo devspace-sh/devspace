@@ -272,6 +272,7 @@
         "label": "devspace reset",
         "ids": [
           "cli/commands/devspace_reset",
+          "cli/commands/devspace_reset_dependencies",
           "cli/commands/devspace_reset_key",
           "cli/commands/devspace_reset_vars"
         ]
@@ -281,7 +282,8 @@
         "label": "devspace set",
         "ids": [
           "cli/commands/devspace_set",
-          "cli/commands/devspace_set_analytics"
+          "cli/commands/devspace_set_analytics",
+          "cli/commands/devspace_set_var"
         ]
       },
       {
@@ -342,7 +344,7 @@
       "cloud/spaces/what-are-spaces",
       "cloud/spaces/create-spaces",
       "cloud/spaces/delete-spaces",
-      "cloud/spaces/domains",
+      "cloud/spaces/networking",
       "cloud/spaces/resource-limits",
       "cloud/spaces/pause-spaces"
     ],

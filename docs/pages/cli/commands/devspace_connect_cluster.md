@@ -30,12 +30,15 @@ devspace connect cluster
       --cert-manager           Deploy a cert manager (default true)
       --context string         The kube context to use
       --domain string          The domain to use
+      --gatekeeper             Deploy the gatekeeper (default true)
+      --gatekeeper-rules       Deploy the gatekeeper default rules (default true)
   -h, --help                   help for cluster
       --ingress-controller     Deploy an ingress controller (default true)
       --key string             The encryption key to use
       --name string            The cluster name to create
       --open-ui                Opens the UI and displays the cluster overview
       --provider string        The cloud provider to use
+      --public                 Connects a new public cluster
       --use-domain             Use an automatic domain for the cluster
       --use-hostnetwork        Use the host network for the ingress controller instead of a loadbalancer
 ```

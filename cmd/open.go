@@ -22,6 +22,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
@@ -444,7 +445,7 @@ func getService(config *latest.Config, client *kubectl.Client, namespace, host s
 	servicePort := ""
 
 	if len(serviceNameList) == 0 {
-		return "", 0, nil, errors.Errorf("Couldn't find any active services an ingress could connect to. Please make sure you have a service for your application")
+		return "", 0, nil, errors.Errorf(message.ServiceNotFound, namespace)
 	} else if len(serviceNameList) == 1 {
 		splitted := strings.Split(serviceNameList[0], ":")
 

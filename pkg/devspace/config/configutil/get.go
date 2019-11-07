@@ -111,6 +111,22 @@ func GetConfig(options *ConfigOptions) (*latest.Config, error) {
 	return loadConfigOnce(options, true)
 }
 
+// GetRawConfig loads the raw config from a given path
+func GetRawConfig(configPath string) (map[interface{}]interface{}, error) {
+	fileContent, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	rawMap := map[interface{}]interface{}{}
+	err = yaml.Unmarshal(fileContent, &rawMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return rawMap, nil
+}
+
 // GetConfigFromPath loads the config from a given base path
 func GetConfigFromPath(generatedConfig *generated.Config, basePath string, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
 	if options == nil {
@@ -131,13 +147,7 @@ func GetConfigFromPath(generatedConfig *generated.Config, basePath string, optio
 		return nil, errors.Errorf("Couldn't find '%s': %v", configPath, err)
 	}
 
-	fileContent, err := ioutil.ReadFile(configPath)
-	if err != nil {
-		return nil, err
-	}
-
-	rawMap := map[interface{}]interface{}{}
-	err = yaml.Unmarshal(fileContent, &rawMap)
+	rawMap, err := GetRawConfig(configPath)
 	if err != nil {
 		return nil, err
 	}

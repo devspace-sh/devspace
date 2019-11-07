@@ -29,6 +29,7 @@ Builds all defined images and pushes them
       --force-dependencies     Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)
   -h, --help                   help for build
       --skip-push              Skips image pushing, useful for minikube deployment
+  -t, --tag string             Use the given tag for all built images
       --verbose-dependencies   Builds the dependencies verbosely
 ```
 

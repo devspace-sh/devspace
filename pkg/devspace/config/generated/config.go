@@ -140,12 +140,19 @@ func NewCache() *CacheConfig {
 	}
 }
 
-// GetActive returns the currently active devspace config
-func (config *Config) GetActive() *CacheConfig {
+// GetActiveProfile returns the active profile
+func (config *Config) GetActiveProfile() string {
 	active := config.ActiveProfile
 	if config.OverrideProfile != nil {
 		active = *config.OverrideProfile
 	}
+
+	return active
+}
+
+// GetActive returns the currently active devspace config
+func (config *Config) GetActive() *CacheConfig {
+	active := config.GetActiveProfile()
 
 	InitDevSpaceConfig(config, active)
 	return config.Profiles[active]

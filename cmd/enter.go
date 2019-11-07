@@ -23,6 +23,7 @@ type EnterCmd struct {
 	Container     string
 	Pod           string
 	Pick          bool
+	Wait          bool
 }
 
 // NewEnterCmd creates a new enter command
@@ -54,6 +55,7 @@ devspace enter bash -l release=test
 	enterCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 
 	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
+	enterCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "Wait for the pod(s) to start if they are not running")
 
 	return enterCmd
 }
@@ -112,7 +114,7 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Start terminal
-	exitCode, err := services.StartTerminal(nil, client, selectorParameter, args, nil, make(chan error), false, log.GetInstance())
+	exitCode, err := services.StartTerminal(nil, nil, client, selectorParameter, args, nil, make(chan error), cmd.Wait, log.GetInstance())
 	if err != nil {
 		return err
 	} else if exitCode != 0 {

@@ -1,0 +1,43 @@
+.commands-component {
+  display: flex;
+  flex-direction: row !important;
+  justify-content: flex-end;
+  max-height: calc(100% - 83px);
+
+  .codesnippet {
+    width: 100%;
+  }
+
+  .nothing-selected {
+    display: flex;
+    font: 600 19px 'Open Sans';
+    opacity: 0.8;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .no-config {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 19px 'Open Sans';
+    opacity: 0.8;
+    text-align: center;
+
+    a {
+      font: 600 19px 'Open Sans';
+    }
+  }
+
+  .info-part {
+    width: 100%;
+    max-width: 350px;
+    margin-left: 30px;
+
+    > div {
+      margin-bottom: 20px;
+    }
+  }
+}

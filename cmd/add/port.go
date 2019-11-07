@@ -5,6 +5,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -25,8 +26,9 @@ func newPortCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 #######################################################
 ################ devspace add port ####################
 #######################################################
-Add a new port mapping to your DevSpace configuration
-(format is local:remote comma separated):
+Add a new port mapping to this project's devspace.yaml
+
+Format is port(:remotePort) comma separated, e.g.
 devspace add port 8080:80,3000
 #######################################################
 	`,
@@ -47,7 +49,7 @@ func (cmd *portCmd) RunAddPort(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 	if !configExists {
-		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New(message.ConfigNotFound)
 	}
 
 	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())

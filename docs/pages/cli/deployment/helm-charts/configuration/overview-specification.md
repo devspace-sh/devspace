@@ -25,6 +25,16 @@ deployments:
 
 ## Chart
 
+### `deployments[*].helm.componentChart`
+The `componentChart` option expects a boolean which states if the Component Helm Chart should be used for deployment. Learn more about [configuring component deployments](../../../../cli/deployment/components/configuration/overview-specification.md).
+
+> If `componentChart: true` is configured, all options under `chart` will be ignored.
+
+#### Default Value for `componentChart`
+```yaml
+componentChart: false
+```
+
 ### `deployments[*].helm.chart.name`
 The `name` option expects a string stating either:
 - a path to a chart that is stored on the filesystem

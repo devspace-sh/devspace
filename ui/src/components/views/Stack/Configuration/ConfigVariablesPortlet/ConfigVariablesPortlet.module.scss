@@ -1,0 +1,95 @@
+@import '../../../../../styles/constants.scss';
+
+.config-var-portlet {
+  .label-value-title {
+    display: flex;
+    flex-direction: column;
+    margin-left: 10px;
+  }
+
+  .vars {
+    .heading {
+      display: flex;
+      margin-bottom: 5px;
+
+      > div {
+        text-indent: 5px;
+        width: 50%;
+        font: $list-label;
+        color: $gray-4;
+      }
+    }
+
+    .no-vars {
+      text-align: center;
+      font-size: 14px;
+      font: $list-label;
+    }
+
+    .var {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+
+      &:last-of-type {
+        margin-bottom: 0;
+      }
+
+      .key-wrapper {
+        display: flex;
+        align-items: center;
+
+        > span {
+          margin: 0 10px;
+          font: $portlet-title;
+          color: $gray-4;
+        }
+
+        > label {
+          position: relative;
+          width: 100%;
+
+          &::before {
+            content: '${';
+            position: absolute;
+            left: 5px;
+            color: $gray-3;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            font: $list-label;
+          }
+          &::after {
+            content: '}';
+            position: absolute;
+            right: 5px;
+            top: 0;
+            color: $gray-3;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            font: $list-label;
+          }
+          .key {
+            background-color: $gray-5;
+            color: white;
+            padding-left: 20px;
+            padding-right: 12px;
+            padding-top: 2px;
+            font: $button-text;
+          }
+        }
+      }
+
+      > .key-wrapper,
+      > .value {
+        width: 50%;
+      }
+
+      .value {
+        color: $gray-4;
+        font: $button-text;
+      }
+    }
+  }
+}

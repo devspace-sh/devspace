@@ -9,11 +9,12 @@ import (
 func NewAddCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	addCmd := &cobra.Command{
 		Use:   "add",
-		Short: "Change the DevSpace configuration",
+		Short: "Convenience command: adds something to devspace.yaml",
 		Long: `
 #######################################################
 #################### devspace add #####################
 #######################################################
+Adds config sections to devspace.yaml
 	`,
 		Args: cobra.NoArgs,
 	}

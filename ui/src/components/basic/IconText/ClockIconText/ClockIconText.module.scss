@@ -1,0 +1,12 @@
+@import '../../../../styles/constants';
+
+.clock-icon-text {
+  font: normal 14px 'Open Sans';
+  color: $gray-4;
+  display: flex;
+  align-items: center;
+
+  img.clock {
+    margin-right: 5px;
+  }
+}

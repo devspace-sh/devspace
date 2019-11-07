@@ -53,6 +53,19 @@ func (r *Resolver) Resolve(reqs *chartutil.Requirements, repoNames map[string]st
 	locked := make([]*chartutil.Dependency, len(reqs.Dependencies))
 	missing := []string{}
 	for i, d := range reqs.Dependencies {
+		if d.Repository == "" {
+			// Local chart subfolder
+			if _, err := GetLocalPath(filepath.Join("charts", d.Name), r.chartpath); err != nil {
+				return nil, err
+			}
+
+			locked[i] = &chartutil.Dependency{
+				Name:       d.Name,
+				Repository: "",
+				Version:    d.Version,
+			}
+			continue
+		}
 		if strings.HasPrefix(d.Repository, "file://") {
 
 			if _, err := GetLocalPath(d.Repository, r.chartpath); err != nil {
@@ -71,7 +84,18 @@ func (r *Resolver) Resolve(reqs *chartutil.Requirements, repoNames map[string]st
 			return nil, fmt.Errorf("dependency %q has an invalid version/constraint format: %s", d.Name, err)
 		}
 
-		repoIndex, err := repo.LoadIndexFile(r.helmhome.CacheIndex(repoNames[d.Name]))
+		// repo does not exist in cache but has url info
+		cacheRepoName := repoNames[d.Name]
+		if cacheRepoName == "" && d.Repository != "" {
+			locked[i] = &chartutil.Dependency{
+				Name:       d.Name,
+				Repository: d.Repository,
+				Version:    d.Version,
+			}
+			continue
+		}
+
+		repoIndex, err := repo.LoadIndexFile(r.helmhome.CacheIndex(cacheRepoName))
 		if err != nil {
 			return nil, fmt.Errorf("no cached repo found. (try 'helm repo update'). %s", err)
 		}

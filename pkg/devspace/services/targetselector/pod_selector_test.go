@@ -5,6 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -306,7 +307,7 @@ func TestPodSelectionOneRunningOneNotRunningPodsNoLabel(t *testing.T) {
 	//Test SelectPod
 	returnedPod, err := SelectPod(kubeClient, namespace, nil, nil, true, log.GetInstance())
 	if err != nil {
-		t.Fatalf("Error selecting pod: %v", err)
+		t.Fatalf("%s: %v", message.SelectorErrorPod, err)
 	}
 	assert.Equal(t, false, returnedPod == nil, "returned Pod is nil")
 	assert.Equal(t, returnedPod.Name == "RunningPod", true, "SelectPod returned the wrong pod")

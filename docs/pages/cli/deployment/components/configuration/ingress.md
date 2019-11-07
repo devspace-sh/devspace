@@ -6,18 +6,20 @@ To automatically create an ingress for a component, you can configure the `ingre
 ```yaml
 deployments:
 - name: frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
-    service:
-      ports:
-      - port: 3000
-    ingress:
-      rules:
-      - host: my-static-host.tld
-        tls: true
-      - host: ${DYNAMIC_HOSTNAME}
-        path: /login
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+      service:
+        ports:
+        - port: 3000
+      ingress:
+        rules:
+        - host: my-static-host.tld
+          tls: true
+        - host: ${DYNAMIC_HOSTNAME}
+          path: /login
 ```
 
 > You need to define a `service` with at least one `port` to be able to use the `ingress` option.
@@ -38,16 +40,18 @@ The `host` option expects a string stating the hostname (domain name) that the c
 ```yaml
 deployments:
 - name: frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
-    service:
-      ports:
-      - port: 3000
-    ingress:
-      rules:
-      - host: my-static-host.tld
-      - host: ${DYNAMIC_HOSTNAME}
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+      service:
+        ports:
+        - port: 3000
+      ingress:
+        rules:
+        - host: my-static-host.tld
+        - host: ${DYNAMIC_HOSTNAME}
 ```
 
 
@@ -67,17 +71,19 @@ tls: false
 ```yaml
 deployments:
 - name: frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
-    service:
-      ports:
-      - port: 3000
-    ingress:
-      rules:
-      - host: my-static-host.tld
-        tls: true
-      - host: my-static-host2.tld
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+      service:
+        ports:
+        - port: 3000
+      ingress:
+        rules:
+        - host: my-static-host.tld
+          tls: true
+        - host: my-static-host2.tld
 ```
 
 
@@ -93,16 +99,18 @@ path: /
 ```yaml
 deployments:
 - name: frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
-    service:
-      ports:
-      - port: 3000
-    ingress:
-      rules:
-      - host: my-static-host.tld
-        path: /login
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+      service:
+        ports:
+        - port: 3000
+      ingress:
+        rules:
+        - host: my-static-host.tld
+          path: /login
 ```
 
 
@@ -115,17 +123,19 @@ The `servicePort` option expects an integer stating the port of the service to w
 ```yaml
 deployments:
 - name: frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
-    service:
-      ports:
-      - port: 3000
-      - port: 8000
-    ingress:
-      rules:
-      - host: my-static-host.tld
-        servicePort: 8000
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+      service:
+        ports:
+        - port: 3000
+        - port: 8000
+      ingress:
+        rules:
+        - host: my-static-host.tld
+          servicePort: 8000
 ```
 
 
@@ -140,12 +150,14 @@ The `serviceName` option expects a string stating the name of the Kubernetes ser
 ```yaml
 deployments:
 - name: frontend
-  component:
-    ingress:
-      rules:
-      - host: my-static-host.tld
-        serviceName: my-custom-k8s-service
-        servicePort: 8000
+  helm:
+    componentChart: true
+    values:
+      ingress:
+        rules:
+        - host: my-static-host.tld
+          serviceName: my-custom-k8s-service
+          servicePort: 8000
 ```
 **Explanation:**  
 This example configuration would only create an ingress for a service called `my-custom-k8s-service` and forward the traffic from `my-static-host.tld` to port `8000` of this service.
@@ -162,18 +174,20 @@ The `name` option expects a string that will be used as a name for the ingress t
 ```yaml
 deployments:
 - name: frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
-    service:
-      ports:
-      - port: 3000
-    ingress:
-      name: custom-ingress-name
-      tls: true
-      rules:
-      - host: my-static-host.tld
-      - host: my-static-host2.tld
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+      service:
+        ports:
+        - port: 3000
+      ingress:
+        name: custom-ingress-name
+        tls: true
+        rules:
+        - host: my-static-host.tld
+        - host: my-static-host2.tld
 ```
 **Explanation:**  
 Instead of the default name `frontend`, the ingress of this component would be named `custom-ingress-name`.
@@ -199,20 +213,22 @@ labels: []
 ```yaml
 deployments:
 - name: frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
-    service:
-      ports:
-      - port: 3000
-    ingress:
-      tls: true
-      rules:
-      - host: my-static-host.tld
-      - host: my-static-host2.tld
-      labels:
-        label1: label-value-1
-        label1: label-value-2
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+      service:
+        ports:
+        - port: 3000
+      ingress:
+        tls: true
+        rules:
+        - host: my-static-host.tld
+        - host: my-static-host2.tld
+        labels:
+          label1: label-value-1
+          label1: label-value-2
 ```
 
 
@@ -235,20 +251,22 @@ annotations: []
 ```yaml
 deployments:
 - name: frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
-    service:
-      ports:
-      - port: 3000
-    ingress:
-      tls: true
-      rules:
-      - host: my-static-host.tld
-      - host: my-static-host2.tld
-      annotations:
-        annotation1: annotation-value-1
-        annotation1: annotation-value-2
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+      service:
+        ports:
+        - port: 3000
+      ingress:
+        tls: true
+        rules:
+        - host: my-static-host.tld
+        - host: my-static-host2.tld
+        annotations:
+          annotation1: annotation-value-1
+          annotation1: annotation-value-2
 ```
 
 
@@ -266,15 +284,17 @@ tls: false
 ```yaml
 deployments:
 - name: frontend
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
-    service:
-      ports:
-      - port: 3000
-    ingress:
-      tls: true
-      rules:
-      - host: my-static-host.tld
-      - host: my-static-host2.tld
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+      service:
+        ports:
+        - port: 3000
+      ingress:
+        tls: true
+        rules:
+        - host: my-static-host.tld
+        - host: my-static-host2.tld
 ```

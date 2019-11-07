@@ -14,9 +14,11 @@ images:
     image: john/database
 deployments:
 - name: app-backend
-  component:
-    containers:
-    - image: john/devbackend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
 - name: custom-manifests
   kubectl:
     manifests:

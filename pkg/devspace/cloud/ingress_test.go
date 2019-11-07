@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
@@ -9,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	v1 "k8s.io/api/core/v1"
@@ -72,7 +74,7 @@ func TestCreateIngress(t *testing.T) {
 					specExists: true,
 				},
 			},
-			expectedErr: "Couldn't find any active services an ingress could connect to. Please make sure you have a service for your application",
+			expectedErr: fmt.Sprintf(message.ServiceNotFound, ""),
 		},
 		createIngressTestCase{
 			name: "No token",

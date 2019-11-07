@@ -1,0 +1,63 @@
+@import '../../../styles/constants.scss';
+
+.terminal-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 15px;
+  padding-left: 40px;
+  border-radius: 4px;
+  background: $blue-dark;
+
+  &.fullscreen {
+    position: fixed;
+    border-radius: 0;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .buttons {
+      display: flex;
+      .maximize {
+        justify-self: flex-end;
+      }
+    }
+  }
+
+  .terminal {
+    flex: 1;
+    overflow: hidden;
+
+    :global(.xterm-viewport) {
+      &::-webkit-scrollbar-button {
+        display: none;
+        height: 13px;
+        border-radius: 0px;
+        background-color: transparent;
+      }
+      &::-webkit-scrollbar-button:hover {
+        background-color: transparent;
+      }
+      &::-webkit-scrollbar-thumb {
+        background-color: #aaa;
+      }
+      &::-webkit-scrollbar-track {
+        background-color: transparent;
+      }
+      &::-webkit-scrollbar-track:hover {
+        background-color: transparent;
+      }
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+    }
+  }
+}

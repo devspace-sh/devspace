@@ -15,6 +15,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -51,8 +52,7 @@ func NewDeployCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 Deploys the current project to a Space or namespace:
 
 devspace deploy
-devspace deploy --namespace=deploy
-devspace deploy --namespace=deploy
+devspace deploy -n deploy
 devspace deploy --kube-context=deploy-context
 #######################################################`,
 		Args: cobra.NoArgs,
@@ -82,7 +82,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 	if !configExists {
-		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New(message.ConfigNotFound)
 	}
 
 	// Start file logging
@@ -141,12 +141,6 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	err = client.EnsureDefaultNamespace(log.GetInstance())
 	if err != nil {
 		return errors.Errorf("Unable to create namespace: %v", err)
-	}
-
-	// Create cluster binding if necessary
-	err = client.EnsureGoogleCloudClusterRoleBinding(log.GetInstance())
-	if err != nil {
-		return errors.Errorf("Unable to ensure cluster-admin role binding: %v", err)
 	}
 
 	// Create docker client
@@ -210,7 +204,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	log.Donef("Successfully deployed!")
-	log.Infof("\r         \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to open the management ui\n- `%s` to analyze the space for potential issues\n", ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace analyze", "white+b"))
+	log.Infof("\r         \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to analyze the space for potential issues\n", ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace analyze", "white+b"))
 	return nil
 }
 

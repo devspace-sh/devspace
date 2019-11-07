@@ -8,11 +8,21 @@ Deployments are configured within the `deployments` section of the `devspace.yam
 # An array of deployments (kubectl, helm, component) which will be deployed with DevSpace in the specified order
 deployments:
 - name: deployment-1                    # Name of this deployment
-  component: ...                        # Deploy a Component
+  helm:                                 # Deploy using the Component Helm Chart
+    componentChart: true
+    values: ...
+
 - name: deployment-2                    # Name of this deployment
-  kubectl: ...                          # Deploy Kubernetes manifests or Kustomizations (using kubectl and kustomize)
+  kubectl:                              # Deploy Kubernetes manifests or Kustomizations (using kubectl and kustomize)
+    manifests:
+    - manifests/*
+    - ...
+
 - name: deployment-3                    # Name of this deployment
-  helm: ...                             # Deploy a Helm Chart
+  helm:                                 # Deploy a Helm Chart
+    chart: stable/mysql
+    values: ...
+
 - name: deployment-4                    # Name of this deployment
   helm: ...                             # Deploy another Helm Chart
 ...

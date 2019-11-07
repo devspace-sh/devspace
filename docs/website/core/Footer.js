@@ -22,13 +22,13 @@ class Footer extends React.Component {
   }
 
   render() {
-    let chatAndAnalytics = "";
+    let optionalComponent;
 
     try {
       const Chat = require("@devspace/react-components").Chat;
       const Analytics = require("@devspace/react-components").Analytics;
 
-      chatAndAnalytics = (
+      optionalComponent = (
         <div>
           <Chat />
           <Analytics />
@@ -50,6 +50,7 @@ class Footer extends React.Component {
           "v3.5.18": "v3", 
           "v4.0.0": "v4", 
           "v4.0.3": "v4",
+          "v4.1.0": "v4",
         };
 
         if (versionMeta) {
@@ -87,7 +88,7 @@ class Footer extends React.Component {
         `}}>
         </script>
 
-        {chatAndAnalytics}
+        {optionalComponent}
 
         <noscript>
           <iframe

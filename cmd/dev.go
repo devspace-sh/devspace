@@ -11,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/server"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
 	"github.com/mgutz/ansi"
@@ -25,6 +26,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	logutil "github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
@@ -38,7 +40,7 @@ type DevCmd struct {
 	SkipPush                bool
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
-	SkipOpen                bool
+	Open                    bool
 
 	ForceBuild        bool
 	SkipBuild         bool
@@ -52,6 +54,8 @@ type DevCmd struct {
 	SkipPipeline    bool
 	Portforwarding  bool
 	VerboseSync     bool
+
+	UI bool
 
 	Terminal    bool
 	Interactive bool
@@ -98,6 +102,8 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVarP(&cmd.SkipPipeline, "skip-pipeline", "x", false, "Skips build & deployment and only starts sync, portforwarding & terminal")
 	devCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 
+	devCmd.Flags().BoolVar(&cmd.UI, "ui", true, "Start the ui server")
+	devCmd.Flags().BoolVar(&cmd.Open, "open", true, "Open defined URLs in the browser, if defined")
 	devCmd.Flags().BoolVar(&cmd.Sync, "sync", true, "Enable code synchronization")
 	devCmd.Flags().BoolVar(&cmd.VerboseSync, "verbose-sync", false, "When enabled the sync will log every file change")
 
@@ -117,7 +123,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 	if !configExists {
-		return errors.New("Couldn't find a DevSpace configuration. Please run `devspace init`")
+		return errors.New(message.ConfigNotFound)
 	}
 
 	// Start file logging
@@ -175,12 +181,6 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	err = client.EnsureDefaultNamespace(log.GetInstance())
 	if err != nil {
 		return errors.Errorf("Unable to create namespace: %v", err)
-	}
-
-	// Create cluster role binding if necessary
-	err = client.EnsureGoogleCloudClusterRoleBinding(log.GetInstance())
-	if err != nil {
-		return err
 	}
 
 	// Create the image pull secrets and add them to the default service account
@@ -353,9 +353,9 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	}
 
 	// Run dev.open configs
-	if config.Dev.Open != nil && cmd.SkipOpen == false {
+	if config.Dev.Open != nil && cmd.Open == true {
 		// Skip executing open config next time (e.g. when automatic redeployment is enabled)
-		cmd.SkipOpen = true
+		cmd.Open = false
 
 		for _, openConfig := range config.Dev.Open {
 			if openConfig.URL != "" {
@@ -372,6 +372,27 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 					}
 				}()
 			}
+		}
+	}
+
+	// Open UI if configured
+	if cmd.UI {
+		cmd.UI = false
+		log.StartWait("Starting the ui server...")
+		defer log.StopWait()
+
+		// Create server
+		server, err := server.NewServer(config, generatedConfig, false, client.CurrentContext, client.Namespace, nil, log)
+		if err != nil {
+			log.Warnf("Couldn't start UI server: %v", err)
+		} else {
+			// Start server
+			go func() { server.ListenAndServe() }()
+
+			log.StopWait()
+			log.WriteString("\n")
+			log.Infof("UI available at %s", ansi.Color("http://"+server.Server.Addr, "white+b"))
+			log.WriteString("\n")
 		}
 	}
 
@@ -410,7 +431,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 			}
 		}
 
-		return services.StartTerminal(config, client, selectorParameter, args, imageSelector, exitChan, true, log)
+		return services.StartTerminal(config, generatedConfig, client, selectorParameter, args, imageSelector, exitChan, true, log)
 	} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
 		// Build an image selector
 		imageSelector := []string{}
@@ -558,7 +579,7 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 		images := config.Images
 		if config.Dev.Interactive.Images == nil && config.Dev.Interactive.Terminal == nil {
 			if config.Images == nil || len(config.Images) == 0 {
-				return nil, errors.New("Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`")
+				return nil, errors.New(message.ConfigNoImages)
 			}
 
 			imageNames := make([]string, 0, len(images))

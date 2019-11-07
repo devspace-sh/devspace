@@ -1,0 +1,38 @@
+@import '../../../../styles/constants.scss';
+
+.highlighted-area {
+  position: relative;
+
+  > :global(.highlighted-area-content) {
+    display: flex;
+    justify-content: flex-end;
+    padding: 15px 20px;
+    width: calc(100% + 40px);
+    margin-left: -20px;
+    background-color: $gray-1;
+    margin-top: 15px;
+    margin-bottom: 15px;
+  }
+
+  > .error {
+    width: calc(100% + 40px);
+    margin-left: -20px;
+    top: -15px;
+    background-color: rgba($red-2, 0.2);
+    padding: 5px 20px;
+    color: $red-2;
+    text-align: center;
+    position: relative;
+    font-size: 13px;
+  }
+
+  &:global(.negative-margin) {
+    > :global(.highlighted-area-content) {
+      margin-bottom: -20px;
+    }
+
+    > .error {
+      top: 20px;
+    }
+  }
+}
