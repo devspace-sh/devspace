@@ -8,10 +8,10 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta3"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -25,8 +25,7 @@ import (
 type addDeploymentTestCase struct {
 	name string
 
-	fakeConfig    config.Config
-	fakeGenerated *generated.Config
+	fakeConfig config.Config
 
 	args    []string
 	answers []string
@@ -173,14 +172,14 @@ func TestRunAddDeployment(t *testing.T) {
 				Dev: &latest.DevConfig{},
 			},
 		},
-		/*addDeploymentTestCase{
+		addDeploymentTestCase{
 			name:    "Valid image deployment",
 			args:    []string{"newImageDeployment"},
 			answers: []string{"1234"},
-			fakeConfig: &latest.Config{
+			fakeConfig: &v1beta3.Config{
 				Version: "v1beta3",
-				Images: map[string]*latest.ImageConfig{
-					"someImage": &latest.ImageConfig{
+				Images: map[string]*v1beta3.ImageConfig{
+					"someImage": &v1beta3.ImageConfig{
 						Image: "someImage",
 					},
 				},
@@ -195,21 +194,42 @@ func TestRunAddDeployment(t *testing.T) {
 				Version: latest.Version,
 				Deployments: []*latest.DeploymentConfig{
 					&latest.DeploymentConfig{
-						Name: "newDockerfileDeployment",
+						Name: "newImageDeployment",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []latest.ImageConfig{
+									latest.ImageConfig{
+										Image: "myImage",
+									},
+								},
+								"service": latest.ServiceConfig{
+									Ports: []*latest.ServicePortConfig{
+										&latest.ServicePortConfig{
+											Port: ptr.Int(1234),
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 				Images: map[string]*latest.ImageConfig{
 					"someImage": &latest.ImageConfig{
 						Image: "someImage",
 					},
-					"myImage": &latest.ImageConfig{
+					"newImageDeployment": &latest.ImageConfig{
+						Image:            "myImage",
 						Tag:              "latest",
 						CreatePullSecret: ptr.Bool(true),
+						Build: &latest.BuildConfig{
+							Disabled: ptr.Bool(true),
+						},
 					},
 				},
 				Dev: &latest.DevConfig{},
 			},
-		},*/
+		},
 	}
 
 	log.SetInstance(&testLogger{

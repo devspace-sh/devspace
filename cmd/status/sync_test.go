@@ -10,7 +10,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
+	//"github.com/mgutz/ansi"
 
 	"gotest.tools/assert"
 )
@@ -98,7 +98,7 @@ func TestRunStatusSync(t *testing.T) {
 		}
 	}()
 
-	expectedHeader := "\n" + ansi.Color(" Status  ", "green+b") + " " + ansi.Color(" Pod  ", "green+b") + "               " + ansi.Color(" Local  ", "green+b") + "                  " + ansi.Color(" Container  ", "green+b") + "              " + ansi.Color(" Latest Activity  ", "green+b") + "            " + ansi.Color(" Total Changes  ", "green+b")
+	//expectedHeader := "\n" + ansi.Color(" Status  ", "green+b") + " " + ansi.Color(" Pod  ", "green+b") + "               " + ansi.Color(" Local  ", "green+b") + "                  " + ansi.Color(" Container  ", "green+b") + "              " + ansi.Color(" Latest Activity  ", "green+b") + "            " + ansi.Color(" Total Changes  ", "green+b")
 	testCases := []statusSyncTestCase{
 		/*statusSyncTestCase{
 			name: "Empty sync.log",
