@@ -25,8 +25,7 @@ func createFakeConfig() *latest.Config {
 				},
 			},
 			&latest.DeploymentConfig{
-				Name:      "test-deployment",
-				Namespace: "",
+				Name: "test-deployment",
 				Helm: &latest.HelmConfig{
 					Chart: &latest.ChartConfig{
 						Name: "stable/nginx",
@@ -35,8 +34,8 @@ func createFakeConfig() *latest.Config {
 			},
 		},
 	}
-	configutil.SetFakeConfig(testConfig)
 
+	configutil.SetFakeConfig(testConfig)
 	return testConfig
 }
 func TestCreateTiller(t *testing.T) {

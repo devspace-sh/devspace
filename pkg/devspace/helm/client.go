@@ -121,10 +121,10 @@ func createNewClient(config *latest.Config, kubeClient *kubectl.Client, tillerNa
 
 	log.StopWait()
 
-	return create(config, tillerNamespace, helmClient, kubeClient, log)
+	return create(config, tillerNamespace, helmClient, kubeClient, true, log)
 }
 
-func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.Interface, kubeClient *kubectl.Client, log log.Logger) (*Client, error) {
+func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.Interface, kubeClient *kubectl.Client, updateRepo bool, log log.Logger) (*Client, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		return nil, err
@@ -157,11 +157,13 @@ func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.In
 		config:    config,
 	}
 
-	_, err = os.Stat(stableRepoCachePathAbs)
-	if err != nil {
-		err = wrapper.UpdateRepos(log)
+	if updateRepo {
+		_, err = os.Stat(stableRepoCachePathAbs)
 		if err != nil {
-			return nil, err
+			err = wrapper.UpdateRepos(log)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

@@ -44,33 +44,6 @@ func TestLocateChartPathDependencies(t *testing.T) {
 			expectedReturnedString: "someFile.abc",
 			expectReturnedStringToBeAbsolutePathInDir: true,
 		},
-		locateChartPathTestCase{
-			name:                   "Not existent dot name",
-			nameParam:              ".NotExistent",
-			expectedErr:            "path \".NotExistent\" not found",
-			expectedReturnedString: ".NotExistent",
-		},
-		locateChartPathTestCase{
-			name:        "Verify a directory",
-			settedDirs:  []string{"dir"},
-			nameParam:   "dir",
-			verify:      true,
-			expectedErr: "cannot verify a directory",
-		},
-		locateChartPathTestCase{
-			name:        "Verify a non-tgz-file",
-			settedFiles: []string{"someFile.abc"},
-			nameParam:   "someFile.abc",
-			verify:      true,
-			expectedErr: "chart must be a tgz file",
-		},
-		locateChartPathTestCase{
-			name:        "File is in home",
-			settedFiles: []string{"someFile.abc"},
-			nameParam:   "someFile.abc",
-			verify:      true,
-			expectedErr: "chart must be a tgz file",
-		},
 	}
 
 	for _, testCase := range testCases {

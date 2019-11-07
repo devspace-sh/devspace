@@ -64,7 +64,6 @@ func createTestResources(client kubernetes.Interface) error {
 }
 
 func TestTillerEnsure(t *testing.T) {
-	t.Skip("Skip this test for now because helm is creating tiller with extensions v1beta1 but we expect apps v1")
 	config := createFakeConfig()
 
 	// Create the fake client.
