@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"io/ioutil"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -36,22 +37,16 @@ func (client *FakeClient) ImageBuildCLI(useBuildkit bool, context io.Reader, wri
 	return nil
 }
 
-type nopCloser struct {
-	io.Reader
-}
-
-func (nopCloser) Close() error { return nil }
-
 // ImageBuild is a fake implementation
 func (client *FakeClient) ImageBuild(ctx context.Context, context io.Reader, options dockertypes.ImageBuildOptions) (dockertypes.ImageBuildResponse, error) {
 	return dockertypes.ImageBuildResponse{
-		Body: nopCloser{bytes.NewBufferString("")},
+		Body: ioutil.NopCloser(bytes.NewBufferString("")),
 	}, nil
 }
 
 // ImagePush is a fake implementation
 func (client *FakeClient) ImagePush(ctx context.Context, ref string, options dockertypes.ImagePushOptions) (io.ReadCloser, error) {
-	return nopCloser{bytes.NewBufferString("")}, nil
+	return ioutil.NopCloser(bytes.NewBufferString("")), nil
 }
 
 // Login is a fake implementation
