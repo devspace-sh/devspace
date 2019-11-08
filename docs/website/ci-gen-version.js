@@ -60,6 +60,13 @@ for (let sidebarGroupName in sidebarStructure) {
         }
     }
 }
-fs.writeFileSync(versionsFile, `["${latestVersion}"]`);
+
+let versionsToSave = [];
+if (process.argv.length > 2 && process.argv[2]) {
+    versionsToSave.push(process.argv[2]);
+}
+versionsToSave.push(latestVersion);
+
+fs.writeFileSync(versionsFile, JSON.stringify(versionsToSave));
 
 console.log(latestVersion)
