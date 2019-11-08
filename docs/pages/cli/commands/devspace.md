@@ -29,7 +29,7 @@ DevSpace accelerates developing, deploying and debugging applications with Docke
 
 ## See Also
 
-* [devspace add](../../cli/commands/devspace_add)	 - Change the DevSpace configuration
+* [devspace add](../../cli/commands/devspace_add)	 - Convenience command: adds something to devspace.yaml
 * [devspace analyze](../../cli/commands/devspace_analyze)	 - Analyzes a kubernetes namespace and checks for potential problems
 * [devspace attach](../../cli/commands/devspace_attach)	 - Attaches to a container
 * [devspace build](../../cli/commands/devspace_build)	 - Builds all defined images and pushes them
@@ -51,7 +51,7 @@ DevSpace accelerates developing, deploying and debugging applications with Docke
 * [devspace set](../../cli/commands/devspace_set)	 - Make global configuration changes
 * [devspace status](../../cli/commands/devspace_status)	 - Show the current status
 * [devspace sync](../../cli/commands/devspace_sync)	 - Starts a bi-directional sync between the target container and the local path
-* [devspace ui](../../cli/commands/devspace_ui)	 - Opens the management ui in the browser
+* [devspace ui](../../cli/commands/devspace_ui)	 - Opens the localhost UI in the browser
 * [devspace update](../../cli/commands/devspace_update)	 - Updates the current config
 * [devspace upgrade](../../cli/commands/devspace_upgrade)	 - Upgrade the DevSpace CLI to the newest version
 * [devspace use](../../cli/commands/devspace_use)	 - Use specific config

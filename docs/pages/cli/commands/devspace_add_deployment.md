@@ -4,7 +4,7 @@ sidebar_label: deployment
 ---
 
 
-Add a deployment
+Adds a deployment to devspace.yaml
 
 ## Synopsis
 
@@ -17,8 +17,7 @@ devspace add deployment [deployment-name] [flags]
 #######################################################
 ############# devspace add deployment #################
 #######################################################
-Add a new deployment (docker image, components, 
-kubernetes manifests or helm chart) to your DevSpace configuration
+Adds a new deployment to this project's devspace.yaml
 
 Examples:
 # Deploy a predefined component 
@@ -66,4 +65,4 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 
 ## See Also
 
-* [devspace add](../../cli/commands/devspace_add)	 - Change the DevSpace configuration
+* [devspace add](../../cli/commands/devspace_add)	 - Convenience command: adds something to devspace.yaml
