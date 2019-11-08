@@ -50,7 +50,7 @@ Opens the localhost UI in the browser
 
 	uiCmd.Flags().IntVar(&cmd.Port, "port", 0, "The port to use when opening the server")
 	uiCmd.Flags().BoolVar(&cmd.ForceServer, "server", false, "If enabled will force start a server (otherwise an existing UI server is searched)")
-	uiCmd.Flags().BoolVar(&cmd.Dev, "dev", false, "Ignore errors when downloading UIs")
+	uiCmd.Flags().BoolVar(&cmd.Dev, "dev", false, "Ignore errors when downloading UI")
 	return uiCmd
 }
 
