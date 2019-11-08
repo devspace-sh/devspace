@@ -68,5 +68,4 @@ if (process.argv.length > 2 && process.argv[2]) {
 versionsToSave.push(latestVersion);
 
 fs.writeFileSync(versionsFile, JSON.stringify(versionsToSave));
-
 console.log(latestVersion)
