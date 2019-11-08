@@ -71,14 +71,14 @@ body[data-sidebar-version="v4.2"] .toc .navGroups > .navGroup:nth-child(10) .nav
   border-top: none;
 }
 
-body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(5) > ul > .subNavGroup:nth-child(4) .navItem,
-body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(5) > ul > .subNavGroup:nth-child(5) .navItem,
-body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(5) > ul > .subNavGroup:nth-child(6) .navItem {
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(6) > ul > .subNavGroup:nth-child(4) .navItem,
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(6) > ul > .subNavGroup:nth-child(5) .navItem,
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(6) > ul > .subNavGroup:nth-child(6) .navItem {
   text-indent: 15px;
 }
 
-body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(5) > ul > .subNavGroup:nth-child(4)::after,
-body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(5) > ul > .subNavGroup:nth-child(5)::after,
-body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(5) > ul > .subNavGroup:nth-child(6)::after {
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(6) > ul > .subNavGroup:nth-child(4)::after,
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(6) > ul > .subNavGroup:nth-child(5)::after,
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(6) > ul > .subNavGroup:nth-child(6)::after {
   width: 32px;
 }
