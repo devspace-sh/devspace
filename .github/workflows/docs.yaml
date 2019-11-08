@@ -27,10 +27,13 @@ jobs:
       - uses: actions/checkout@v1
       - name: Use Node.js
         uses: actions/setup-node@v1
-      - name: Build latest version of docs
+      - name: Build latest two versions of docs
         run: |
           cp versions.json versions.all.json
           LATEST_VERSION=$(node ./ci-gen-version.js)
+
+          node -e "var versions = require('./versions.all.json'); versions.shift(); console.log(JSON.stringify(versions));" > versions.json
+          node ./ci-gen-version.js $LATEST_VERSION
 
           npm install
           npm run build
@@ -49,6 +52,8 @@ jobs:
           LATEST_VERSION=$(node -e "var versions = require('./versions.all.json'); console.log(versions[0]);")
           PREVIOUS_VERSION=$(node -e "var versions = require('./versions.all.json'); console.log(versions[1]);")
 
+          mv $OUT_DIR ${OUT_DIR}-latest
+
           echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
           curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
           sudo apt-get update && sudo apt-get install -y google-cloud-sdk
@@ -57,7 +62,6 @@ jobs:
           gcloud auth activate-service-account --key-file=gcloud-sa.json
           gcloud config set project $GCLOUD_PROJECT
 
-          mv $OUT_DIR ${OUT_DIR}-latest
           mkdir -p $OUT_DIR/docs-tmp
           gsutil -m cp -r gs://$GCLOUD_BUCKET/* $OUT_DIR
 
