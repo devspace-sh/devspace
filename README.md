@@ -234,7 +234,7 @@ $env:Path += ";" + $Env:APPDATA + "\devspace";
 
 ### 2. Choose a Project
 
-| Project | Command                                                                                 |
+| Project | Command                                     |
 | ------- | --------------------------------------------------------------------------------------- |
 | Node.js | `git clone https://github.com/devspace-cloud/quickstart-nodejs && cd quickstart-nodejs` |
 | Python  | `git clone https://github.com/devspace-cloud/quickstart-python && cd quickstart-python` |
@@ -436,6 +436,8 @@ devspace open
 ```
 When DevSpace asks you how to open your application, choose the first option **"via localhost"** because it will work no matter what cluster you are using.
 
+> If you want to connect a domain, check out our guide on [how to connect a domain by creating an ingress with DevSpace](https://devspace.cloud/docs/cli/guides/domains-ingresses).
+
 **Congratulations!** You just deployed your first project to Kubernetes using DevSpace.
 
 <img width="300" src="docs/website/static/img/congrats.gif">
@@ -459,19 +461,55 @@ Quickstart projects work out of the box in development mode because the `ENTRYPO
 
 <br>
 
-### 8. Learn more
+### 8. Open The Development UI
+When running `devspace dev`, DevSpace starts a client-only UI for Kubernetes. You can see that in the output of `devspace dev` which should contain a log line similar to this one:
+```bash
+#########################################################
+[info]   DevSpace UI available at: http://localhost:8090
+#########################################################
+```
+By default, DevSpace starts the development UI on port `8090` but if the port is already in use, it will use a different port.
+
+You can access the development UI once you:
+- open the link from your `devspace dev` logs in the browser, e.g. [http://localhost:8090](http://localhost:8090)
+- run the command `devspace ui` (e.g. in a separate terminal parallel to `devspace dev`)
+
+Once the UI is open in your browser, it will look similar to this screenshot:
+
+![DevSpace Localhost UI](https://devspace.cloud/img/blog/2019-11-07-release-v4.2.0-localhost-ui-kubernetes-development/devspace-localhost-ui-namespace-inspection.png)
+
+[Follow this guide to learn more about the functionalities of the DevSpace UI for Kubernetes development.](https://devspace.cloud/docs/cli/guides/localhost-ui)
+
+<br>
+
+### 9. Learn more
+Follow these links to more about how to use DevSpace:
+- [**DevSpace Tutorials**](https://devspace.cloud/docs/cli/guides/tutorials) (for different languages and frameworks)
+- [How to use the Localhost UI of DevSpace](https://devspace.cloud/docs/cli/guides/localhost-ui)
+- [How to connect a domain by creating an ingress](https://devspace.cloud/docs/cli/guides/domain-ingresses)
+- [How to execute commands in your containers and start terminal sessions](https://devspace.cloud/docs/cli/guides/executing-commands)
+- [How to synchronize files between your local computer and your containers](https://devspace.cloud/docs/cli/guides/file-synchronization)
+- [How to configure differences between development, staging and production](https://devspace.cloud/docs/cli/guides/development-staging-production)
+- [How to integrate DevSpace in your CI/CD pipeline](https://devspace.cloud/docs/cli/guides/ci-cd-integration)
+- [How to troubleshoot common issues](https://devspace.cloud/docs/cli/guides/ci-cd-integration)
 
 #### Useful Commands for Development
 
-| Command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Important flags                                                                                      |
+| Command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Important Flags / Notes |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `devspace dev`<br> Starts the development mode                      | `-b • Rebuild images (force)` <br> `-d • Redeploy everything (force)`  <br> `-i • Interactive mode (overrides ENTRYPOINT with [sleep, 999999] and starts interactive terminal session)`                                 |
-| `devspace enter`<br> Opens a terminal session for a container       |                                              |
-| `devspace open`<br> Opens your application after starting port-forwarding or generating an ingress    |                                                                                                      |
-| `devspace enter [command]`<br> Runs a command inside a container    |                                                                                                      |
-| `devspace logs` <br> Prints the logs of a container                 |  `-f • Stream logs (follow/attach)` |
-| `devspace analyze` <br> Analyzes your namespace for issues        |                                                                                                      |
-| `devspace build` <br> Only build and push images (no deployment) |                                                                                                      |
+| <a href="https://devspace.cloud/docs/cli/commands/devspace_dev">`devspace dev`</a><br> Starts the development mode    | `-b • Rebuild images (force)` <br> `-d • Redeploy everything (force)`  <br> `-i • Interactive mode (overrides ENTRYPOINT with [sleep, 999999] and starts interactive terminal session)`  |
+| <a href="https://devspace.cloud/docs/cli/commands/devspace_ui">`devspace ui`</a><br> Opens the localhost development UI       |  |
+| <a href="https://devspace.cloud/docs/cli/commands/devspace_open">`devspace open`</a><br> Opens your application after starting port-forwarding or generating an ingress   |   |
+| <a href="https://devspace.cloud/docs/cli/commands/devspace_enter">`devspace enter`</a><br> Opens a terminal session for a container       |  |
+| <a href="https://devspace.cloud/docs/cli/commands/devspace_enter">`devspace enter -- [command]`</a><br> Runs a command inside a container    |  |
+| <a href="https://devspace.cloud/docs/cli/commands/devspace_logs">`devspace logs`</a> <br> Prints the logs of a container                 |  `-f • Stream logs (follow/attach)` |
+| <a href="https://devspace.cloud/docs/cli/commands/devspace_analyze">`devspace analyze`</a> <br> Analyzes your namespace for issues        |  |
+| <a href="https://devspace.cloud/docs/cli/commands/devspace_build">`devspace build`</a> <br> Build, tag and push images (no deploy) | `-t [TAG] • Use specified [TAG] to tag all images` |
+| <a href="https://devspace.cloud/docs/cli/commands/devspace_cleanup_images">`devspace cleanup images`</a> <br> Deletes old images (locally, built by DevSpace) | <i>This is very useful after you built a lot of images and your local Docker daemon runs out of space (error: `no space left on device`) </i> |
+| <a href="https://devspace.cloud/docs/cli/commands/devspace_attach">`devspace attach`</a> <br> Attaches to a running container | <i><a href="https://devspace.cloud/docs/cli/configuration/reference#deployments-componentcontainers">Requires `stdin` and `tty` to be `true`</a></i> |
+| <a href="https://devspace.cloud/docs/cli/commands/devspace_attach">`devspace use space [NAME]`</a> <br> Switch into a different (existing) Space | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of all your Spaces.</i> |
+| <a href="https://devspace.cloud/docs/cli/commands/devspace_attach">`devspace use namespace [NAME]`</a> <br> Switch to a different namespace | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of available namespaces.</i> |
+| <a href="https://devspace.cloud/docs/cli/commands/devspace_attach">`devspace use context [NAME]`</a> <br> Switch to a different kube-context | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of available kube-contexts.</i> |
 
 <br>
 
@@ -1123,11 +1161,28 @@ DevSpace is an open-source command-line tool that provides everything you need t
 </details>
 
 <details>
+<summary>Is DevSpace free?</summary>
+
+**YES.** DevSpace is open-source and you can use it for free for any private projects and even for commercial projects.
+
+</details>
+
+<details>
 <summary>What is DevSpace Cloud?</summary>
 
 DevSpace Cloud extends DevSpace with a server-side component. It is entirely optional and meant for cluster admins that want to enable their developers to create isolated Kubernetes namespaces on-demand within a development cluster. DevSpace Cloud lets you easily manage cluster users, enforce resource limits and make sure developers can share a dev cluster without getting in the way of each other.
 
 > Even when using DevSpace Cloud, DevSpace directly interacts with the Kubernetes cluster, so you code or commands will never go through DevSpace Cloud.
+
+</details>
+
+<details>
+<summary>Is DevSpace Cloud free?</summary>
+
+**YES.** DevSpace Cloud has a free tier depending on how you use it:
+- You can use the SaaS edition and create 1 Hosted Space for free.
+- You can use the SaaS edition and connect 1 Kubernetes cluster and add up to 3 developers to this cluster for free.
+- You can install the on-premise edition and use it with up to 10 developers for free.
 
 </details>
 
@@ -1147,7 +1202,7 @@ Spaces are isolated Kubernetes namespaces which are managed by DevSpace Cloud an
 <details>
 <summary>Do I need a Kubernetes cluster to use DevSpace?</summary>
 
-**No.** You can simply use **the fully managed Spaces** provided by the SaaS version of DevSpace Cloud.
+**No.** You can simply use **the fully managed Hosted Spaces** provided by the SaaS version of DevSpace Cloud. You can create 1 Hosted Space for free.
 
 </details>
 
