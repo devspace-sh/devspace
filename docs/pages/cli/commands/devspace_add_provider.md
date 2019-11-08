@@ -45,4 +45,4 @@ devspace add provider app.devspace.cloud
 
 ## See Also
 
-* [devspace add](../../cli/commands/devspace_add)	 - Change the DevSpace configuration
+* [devspace add](../../cli/commands/devspace_add)	 - Convenience command: adds something to devspace.yaml

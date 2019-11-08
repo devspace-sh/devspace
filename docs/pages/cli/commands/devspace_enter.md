@@ -36,6 +36,7 @@ devspace enter bash -l release=test
   -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
       --pick                    Select a pod
       --pod string              Pod to open a shell to
+      --wait                    Wait for the pod(s) to start if they are not running
 ```
 
 ### Options inherited from parent commands

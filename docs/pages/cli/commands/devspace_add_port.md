@@ -17,8 +17,9 @@ devspace add port [flags]
 #######################################################
 ################ devspace add port ####################
 #######################################################
-Add a new port mapping to your DevSpace configuration
-(format is local:remote comma separated):
+Add a new port mapping to this project's devspace.yaml
+
+Format is port(:remotePort) comma separated, e.g.
 devspace add port 8080:80,3000
 #######################################################
 ```
@@ -44,4 +45,4 @@ devspace add port 8080:80,3000
 
 ## See Also
 
-* [devspace add](../../cli/commands/devspace_add)	 - Change the DevSpace configuration
+* [devspace add](../../cli/commands/devspace_add)	 - Convenience command: adds something to devspace.yaml

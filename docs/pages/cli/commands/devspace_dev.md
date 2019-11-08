@@ -41,12 +41,14 @@ Open terminal instead of logs:
   -d, --force-deploy           Forces to deploy every deployment
   -h, --help                   help for dev
   -i, --interactive            Enable interactive mode for images (overrides entrypoint with sleep command) and start terminal proxy
+      --open                   Open defined URLs in the browser, if defined (default true)
       --portforwarding         Enable port forwarding (default true)
       --skip-build             Skips building of images
   -x, --skip-pipeline          Skips build & deployment and only starts sync, portforwarding & terminal
       --skip-push              Skips image pushing, useful for minikube deployment
       --sync                   Enable code synchronization (default true)
   -t, --terminal               Open a terminal instead of showing logs
+      --ui                     Start the ui server (default true)
       --verbose-dependencies   Deploys the dependencies verbosely
       --verbose-sync           When enabled the sync will log every file change
 ```

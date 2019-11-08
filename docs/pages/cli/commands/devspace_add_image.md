@@ -17,7 +17,7 @@ devspace add image [flags]
 #######################################################
 ############# devspace add image ######################
 #######################################################
-Add a new image to your DevSpace configuration
+Adds a new image to this project's devspace.yaml
 
 Examples:
 devspace add image my-image --image=dockeruser/devspaceimage2
@@ -54,4 +54,4 @@ devspace add image my-image --image=dockeruser/devspaceimage2 --buildtool=kaniko
 
 ## See Also
 
-* [devspace add](../../cli/commands/devspace_add)	 - Change the DevSpace configuration
+* [devspace add](../../cli/commands/devspace_add)	 - Convenience command: adds something to devspace.yaml

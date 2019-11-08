@@ -17,9 +17,9 @@ devspace add sync [flags]
 #######################################################
 ################# devspace add sync ###################
 #######################################################
-Add a sync path to the DevSpace configuration
+Add a sync path to this project's devspace.yaml
 
-How to use:
+Example:
 devspace add sync --local=app --container=/app
 #######################################################
 ```
@@ -48,4 +48,4 @@ devspace add sync --local=app --container=/app
 
 ## See Also
 
-* [devspace add](../../cli/commands/devspace_add)	 - Change the DevSpace configuration
+* [devspace add](../../cli/commands/devspace_add)	 - Convenience command: adds something to devspace.yaml

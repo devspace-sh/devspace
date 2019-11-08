@@ -2,7 +2,7 @@
 
 /* hide category title for DevSpace and DevSpace Cloud */
 body[data-sidebar-version="v4"] .toc .navGroups > .navGroup:nth-child(2) .navGroupCategoryTitle,
-.toc .navGroups > .navGroup:nth-child(9) .navGroupCategoryTitle {
+body[data-sidebar-version="v4"] .toc .navGroups > .navGroup:nth-child(9) .navGroupCategoryTitle {
   display: none;
 }
 

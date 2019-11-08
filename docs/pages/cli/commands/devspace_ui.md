@@ -4,7 +4,7 @@ sidebar_label: devspace ui
 ---
 
 
-Opens the management ui in the browser
+Opens the localhost UI in the browser
 
 ## Synopsis
 
@@ -17,13 +17,16 @@ devspace ui [flags]
 #######################################################
 ##################### devspace ui #####################
 #######################################################
-Opens the management ui in the browser
+Opens the localhost UI in the browser
 #######################################################
 ```
 ## Options
 
 ```
-  -h, --help   help for ui
+      --dev        Ignore errors when downloading UI
+  -h, --help       help for ui
+      --port int   The port to use when opening the server
+      --server     If enabled will force start a server (otherwise an existing UI server is searched)
 ```
 
 ### Options inherited from parent commands

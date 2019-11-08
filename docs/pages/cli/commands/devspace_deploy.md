@@ -20,8 +20,7 @@ devspace deploy [flags]
 Deploys the current project to a Space or namespace:
 
 devspace deploy
-devspace deploy --namespace=deploy
-devspace deploy --namespace=deploy
+devspace deploy -n some-namespace
 devspace deploy --kube-context=deploy-context
 #######################################################
 ```

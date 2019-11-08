@@ -20,7 +20,8 @@ devspace use profile [flags]
 Use a specific DevSpace profile
 
 Example:
-devspace use profile myconfig
+devspace use profile production
+devspace use profile staging
 devspace use profile --reset
 #######################################################
 ```

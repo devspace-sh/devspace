@@ -11,6 +11,15 @@
       "cli/getting-started/deployment",
       "cli/getting-started/development"
     ],
+    "Guides": [
+      "cli/guides/tutorials",
+      "cli/guides/localhost-ui",
+      "cli/guides/domains-ingresses",
+      "cli/guides/executing-commands",
+      "cli/guides/file-synchronization",
+      "cli/guides/development-staging-production",
+      "cli/guides/ci-cd-integration"
+    ],
     "Image Building": [
       "cli/image-building/workflow-basics",
       {
