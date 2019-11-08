@@ -18,35 +18,34 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"k8s.io/client-go/kubernetes/fake"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )
 
-type enterTestCase struct {
+type attachTestCase struct {
 	name string
 
-	fakeConfig           *latest.Config
-	fakeKubeConfig       clientcmd.ClientConfig
-	fakeKubeClient       *kubectl.Client
-	files                map[string]interface{}
-	generatedYamlContent interface{}
-	graphQLResponses     []interface{}
-	providerList         []*cloudlatest.Provider
+	fakeConfig       *latest.Config
+	fakeKubeConfig   clientcmd.ClientConfig
+	fakeKubeClient   *kubectl.Client
+	files            map[string]interface{}
+	graphQLResponses []interface{}
+	providerList     []*cloudlatest.Provider
+	answers          []string
 
-	containerFlag     string
 	labelSelectorFlag string
+	containerFlag     string
 	podFlag           string
 	pickFlag          bool
 	globalFlags       flags.GlobalFlags
 
-	expectedErr    string
+	expectedErr string
 }
 
-func TestEnter(t *testing.T) {
+func TestAttach(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -77,10 +76,13 @@ func TestEnter(t *testing.T) {
 		}
 	}()
 
-	testCases := []enterTestCase{
-		enterTestCase{
-			name:       "No resources",
-			fakeConfig: &latest.Config{},
+	testCases := []attachTestCase{
+		/*attachTestCase{
+			name: "No resources",
+			globalFlags: flags.GlobalFlags{
+				Namespace: "someNamespace",
+			},
+			pickFlag: true,
 			fakeKubeClient: &kubectl.Client{
 				Client: fake.NewSimpleClientset(),
 			},
@@ -94,20 +96,18 @@ func TestEnter(t *testing.T) {
 					},
 				},
 			},
-			pickFlag:       true,
-			expectedErr:    "Couldn't find a running pod in namespace ",
-		},
+			expectedErr:    "Couldn't find a running pod in namespace someNamespace",
+		},*/
 	}
 
-	log.OverrideRuntimeErrorHandler(true)
 	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
-		testEnter(t, testCase)
+		testAttach(t, testCase)
 	}
 }
 
-func testEnter(t *testing.T, testCase enterTestCase) {
+func testAttach(t *testing.T, testCase attachTestCase) {
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
@@ -122,11 +122,16 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		responses: testCase.graphQLResponses,
 	}
 
+	for _, answer := range testCase.answers {
+		survey.SetNextAnswer(answer)
+	}
+
 	providerConfig, err := cloudconfig.ParseProviderConfig()
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
+	configutil.ResetConfig()
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 	kubectl.SetFakeClient(testCase.fakeKubeClient)
@@ -138,12 +143,12 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	err = (&EnterCmd{
-		GlobalFlags:   &testCase.globalFlags,
-		Container:     testCase.containerFlag,
+	err = (&AttachCmd{
 		LabelSelector: testCase.labelSelectorFlag,
+		Container:     testCase.containerFlag,
 		Pod:           testCase.podFlag,
 		Pick:          testCase.pickFlag,
+		GlobalFlags:   &testCase.globalFlags,
 	}).Run(nil, []string{})
 
 	if testCase.expectedErr == "" {

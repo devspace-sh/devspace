@@ -1,6 +1,5 @@
 package list
 
-/* @Florian adjust to new behaviour
 import (
 	"encoding/base64"
 	"encoding/json"
@@ -8,7 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -35,8 +34,10 @@ type listSpacesTestCase struct {
 	answers          []string
 	providerList     []*cloudlatest.Provider
 
-	expectedOutput string
-	expectedPanic  string
+	expectTablePrint bool
+	expectedHeader   []string
+	expectedValues   [][]string
+	expectedErr      string
 }
 
 func TestListSpaces(t *testing.T) {
@@ -50,11 +51,6 @@ func TestListSpaces(t *testing.T) {
 
 	testCases := []listSpacesTestCase{
 		listSpacesTestCase{
-			name:          "Not existent provider",
-			providerFlag:  "Doesn'tExist",
-			expectedPanic: "Error getting cloud context: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
-		},
-		listSpacesTestCase{
 			name:         "Server responds with error",
 			providerFlag: "myProvider",
 			providerList: []*cloudlatest.Provider{
@@ -66,7 +62,7 @@ func TestListSpaces(t *testing.T) {
 			graphQLResponses: []interface{}{
 				fmt.Errorf("Error response from server"),
 			},
-			expectedPanic: "Error retrieving spaces: Error response from server",
+			expectedErr: "Error retrieving spaces: Error response from server",
 		},
 	}
 
@@ -103,9 +99,7 @@ func TestListSpaces(t *testing.T) {
 		}
 	}()
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(log.Discard)
 
 	for _, testCase := range testCases {
 		testListSpaces(t, testCase)
@@ -113,7 +107,11 @@ func TestListSpaces(t *testing.T) {
 }
 
 func testListSpaces(t *testing.T, testCase listSpacesTestCase) {
-	logOutput = ""
+	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
+		assert.Assert(t, testCase.expectTablePrint || len(testCase.expectedHeader)+len(testCase.expectedValues) > 0, "PrintTable unexpectedly called in testCase %s", testCase.name)
+		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
+		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
+	})
 
 	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{
 		responses: testCase.graphQLResponses,
@@ -127,29 +125,16 @@ func testListSpaces(t *testing.T, testCase listSpacesTestCase) {
 		survey.SetNextAnswer(answer)
 	}
 
-	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-	}()
-
-	(&spacesCmd{
+	err = (&spacesCmd{
 		All:      testCase.allFlag,
 		Provider: testCase.providerFlag,
 		Name:     testCase.nameFlag,
 		Cluster:  testCase.clusterFlag,
 	}).RunListSpaces(nil, []string{})
 
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/

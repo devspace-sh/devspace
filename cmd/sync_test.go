@@ -18,35 +18,39 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"k8s.io/client-go/kubernetes/fake"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )
 
-type enterTestCase struct {
+type syncTestCase struct {
 	name string
 
-	fakeConfig           *latest.Config
-	fakeKubeConfig       clientcmd.ClientConfig
-	fakeKubeClient       *kubectl.Client
-	files                map[string]interface{}
-	generatedYamlContent interface{}
-	graphQLResponses     []interface{}
-	providerList         []*cloudlatest.Provider
+	fakeConfig       *latest.Config
+	fakeKubeConfig   clientcmd.ClientConfig
+	fakeKubeClient   *kubectl.Client
+	files            map[string]interface{}
+	graphQLResponses []interface{}
+	providerList     []*cloudlatest.Provider
+	answers          []string
 
-	containerFlag     string
 	labelSelectorFlag string
+	containerFlag     string
 	podFlag           string
 	pickFlag          bool
-	globalFlags       flags.GlobalFlags
+	excludeFlag       []string
+	containerPathFlag string
+	localPathFlag     string
+	verboseFlag       bool
 
-	expectedErr    string
+	globalFlags flags.GlobalFlags
+
+	expectedErr string
 }
 
-func TestEnter(t *testing.T) {
+func TestSync(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -77,8 +81,8 @@ func TestEnter(t *testing.T) {
 		}
 	}()
 
-	testCases := []enterTestCase{
-		enterTestCase{
+	testCases := []syncTestCase{
+		/*syncTestCase{
 			name:       "No resources",
 			fakeConfig: &latest.Config{},
 			fakeKubeClient: &kubectl.Client{
@@ -96,18 +100,17 @@ func TestEnter(t *testing.T) {
 			},
 			pickFlag:       true,
 			expectedErr:    "Couldn't find a running pod in namespace ",
-		},
+		},*/
 	}
 
-	log.OverrideRuntimeErrorHandler(true)
 	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
-		testEnter(t, testCase)
+		testSync(t, testCase)
 	}
 }
 
-func testEnter(t *testing.T, testCase enterTestCase) {
+func testSync(t *testing.T, testCase syncTestCase) {
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
@@ -120,6 +123,10 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 
 	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{
 		responses: testCase.graphQLResponses,
+	}
+
+	for _, answer := range testCase.answers {
+		survey.SetNextAnswer(answer)
 	}
 
 	providerConfig, err := cloudconfig.ParseProviderConfig()
@@ -138,16 +145,21 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	err = (&EnterCmd{
-		GlobalFlags:   &testCase.globalFlags,
-		Container:     testCase.containerFlag,
+	err = (&SyncCmd{
 		LabelSelector: testCase.labelSelectorFlag,
+		Container:     testCase.containerFlag,
 		Pod:           testCase.podFlag,
 		Pick:          testCase.pickFlag,
+		Exclude:       testCase.excludeFlag,
+		ContainerPath: testCase.containerPathFlag,
+		LocalPath:     testCase.localPathFlag,
+		Verbose:       testCase.verboseFlag,
+		GlobalFlags:   &testCase.globalFlags,
 	}).Run(nil, []string{})
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}

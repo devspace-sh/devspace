@@ -61,6 +61,7 @@ func ResetConfig() {
 	defer getConfigOnceMutex.Unlock()
 
 	getConfigOnce = sync.Once{}
+	getConfigOnceErr = nil
 }
 
 // InitConfig initializes the config objects
@@ -261,6 +262,9 @@ func validate(config *latest.Config) error {
 
 	if config.Images != nil {
 		for imageConfigName, imageConf := range config.Images {
+			if imageConfigName == "" {
+				return errors.Errorf("images keys cannot be an empty string")
+			}
 			if imageConf.Image == "" {
 				return errors.Errorf("images.%s.image is required", imageConfigName)
 			}

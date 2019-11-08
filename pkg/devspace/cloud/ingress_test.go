@@ -77,17 +77,6 @@ func TestCreateIngress(t *testing.T) {
 			expectedErr: fmt.Sprintf(message.ServiceNotFound, ""),
 		},
 		createIngressTestCase{
-			name: "No token",
-			createServices: []simplifiedService{
-				simplifiedService{
-					name:            "active",
-					specExists:      true,
-					activeWithPorts: true,
-				},
-			},
-			expectedErr: "graphql create ingress path: get token: Provider has no key specified",
-		},
-		createIngressTestCase{
 			name: "Wrong result",
 			createServices: []simplifiedService{
 				simplifiedService{

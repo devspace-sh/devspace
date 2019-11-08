@@ -1,8 +1,10 @@
-package remove
+package reset
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -14,17 +16,45 @@ import (
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
 
 	"gotest.tools/assert"
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+type customGraphqlClient struct {
+	responses []interface{}
+}
+
+func (q *customGraphqlClient) GrapqhlRequest(p *cloudpkg.Provider, request string, vars map[string]interface{}, response interface{}) error {
+	if len(q.responses) == 0 {
+		panic("Not enough responses. Need response for: " + request)
+	}
+	currentResponse := q.responses[0]
+	q.responses = q.responses[1:]
+
+	errorResponse, isError := currentResponse.(error)
+	if isError {
+		return errorResponse
+	}
+	buf, err := json.Marshal(currentResponse)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot encode response. %d responses left", len(q.responses)))
+	}
+	json.NewDecoder(bytes.NewReader(buf)).Decode(&response)
+
+	return nil
+}
 
 type customKubeConfig struct {
 	rawconfig      clientcmdapi.Config
@@ -53,61 +83,56 @@ func (config *customKubeConfig) ConfigAccess() clientcmd.ConfigAccess {
 	return config.configAccess
 }
 
-type removeContextTestCase struct {
+type resetKeyTestCase struct {
 	name string
-
-	fakeConfig     *latest.Config
-	fakeKubeConfig clientcmd.ClientConfig
 
 	args             []string
 	answers          []string
 	graphQLResponses []interface{}
 	provider         string
-	all              bool
 	providerList     []*cloudlatest.Provider
+	fakeKubeConfig   clientcmd.ClientConfig
+	fakeKubeClient   *kubectl.Client
 
 	expectedErr string
 }
 
-func TestRunRemoveContext(t *testing.T) {
+func TestRunResetKey(t *testing.T) {
 	claimAsJSON, _ := json.Marshal(token.ClaimSet{
 		Expiration: time.Now().Add(time.Hour).Unix(),
+		Hasura: token.Hasura{
+			AccountID: "1",
+		},
 	})
 	validEncodedClaim := base64.URLEncoding.EncodeToString(claimAsJSON)
 	for strings.HasSuffix(string(validEncodedClaim), "=") {
 		validEncodedClaim = strings.TrimSuffix(validEncodedClaim, "=")
 	}
 
-	testCases := []removeContextTestCase{
-		removeContextTestCase{
-			name:     "Delete all one spaces",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name:  "myProvider",
-					Key:   "someKey",
-					Token: "." + validEncodedClaim + ".",
-				},
-			},
-			all: true,
-			graphQLResponses: []interface{}{
-				struct {
-					Spaces []interface{} `json:"space"`
-				}{
-					Spaces: []interface{}{
-						struct {
-							Owner   struct{} `json:"account"`
-							Context struct {
-								Cluster struct{} `json:"cluster"`
-							} `json:"kube_context"`
-						}{},
-					},
-				},
-			},
-			fakeKubeConfig: &customKubeConfig{},
+	kubeClientWithDSCloudUser := fake.NewSimpleClientset()
+	_, err := kubeClientWithDSCloudUser.CoreV1().ServiceAccounts(cloudpkg.DevSpaceCloudNamespace).Create(&v1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "devspace-cloud-user",
 		},
-		removeContextTestCase{
-			name:     "Delete one context successfully",
+		Secrets: []v1.ObjectReference{
+			v1.ObjectReference{},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = kubeClientWithDSCloudUser.CoreV1().Secrets(cloudpkg.DevSpaceCloudNamespace).Create(&v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []resetKeyTestCase{
+		resetKeyTestCase{
+			name:     "Successful reset",
 			provider: "myProvider",
 			providerList: []*cloudlatest.Provider{
 				&cloudlatest.Provider{
@@ -116,74 +141,56 @@ func TestRunRemoveContext(t *testing.T) {
 					Token: "." + validEncodedClaim + ".",
 				},
 			},
+			args: []string{"myCluster"},
 			graphQLResponses: []interface{}{
 				struct {
-					Spaces []interface{} `json:"space"`
+					Clusters []*cloudlatest.Cluster `json:"cluster"`
 				}{
-					Spaces: []interface{}{
-						struct {
-							Owner   struct{} `json:"account"`
-							Context struct {
-								Cluster struct{} `json:"cluster"`
-							} `json:"kube_context"`
-						}{},
+					Clusters: []*cloudlatest.Cluster{
+						&cloudlatest.Cluster{
+							Name:   "myCluster",
+							Server: ptr.String(""),
+						},
 					},
 				},
+				struct {
+					ClusterUser []*cloudlatest.ClusterUser `json:"cluster_user"`
+				}{
+					ClusterUser: []*cloudlatest.ClusterUser{
+						&cloudlatest.ClusterUser{},
+					},
+				},
+				struct{}{},
 			},
-			args: []string{"myContext"},
 			fakeKubeConfig: &customKubeConfig{
 				rawconfig: clientcmdapi.Config{
 					Contexts: map[string]*clientcmdapi.Context{
-						"myContext": &clientcmdapi.Context{},
+						"": &clientcmdapi.Context{},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
+					Clusters: map[string]*clientcmdapi.Cluster{
+						"": &clientcmdapi.Cluster{},
 					},
 				},
 			},
-		},
-		removeContextTestCase{
-			name:     "Delete current context successfully",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name:  "myProvider",
-					Key:   "someKey",
-					Token: "." + validEncodedClaim + ".",
-				},
+			fakeKubeClient: &kubectl.Client{
+				Client:     kubeClientWithDSCloudUser,
+				RestConfig: &restclient.Config{},
 			},
-			graphQLResponses: []interface{}{
-				struct {
-					Spaces []interface{} `json:"space"`
-				}{
-					Spaces: []interface{}{
-						struct {
-							Owner   struct{} `json:"account"`
-							Context struct {
-								Cluster struct{} `json:"cluster"`
-							} `json:"kube_context"`
-						}{},
-					},
-				},
-			},
-			answers: []string{"current"},
-			fakeKubeConfig: &customKubeConfig{
-				rawconfig: clientcmdapi.Config{
-					CurrentContext: "current",
-					Contexts: map[string]*clientcmdapi.Context{
-						"current": &clientcmdapi.Context{},
-						"next":    &clientcmdapi.Context{},
-					},
-				},
-			},
+			answers: []string{"", "encryptionKey", "encryptionKey"},
 		},
 	}
 
 	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
-		testRunRemoveContext(t, testCase)
+		testRunResetKey(t, testCase)
 	}
 }
 
-func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
+func testRunResetKey(t *testing.T, testCase resetKeyTestCase) {
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -209,6 +216,9 @@ func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 
+	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
+	kubectl.SetFakeClient(testCase.fakeKubeClient)
+
 	for _, answer := range testCase.answers {
 		survey.SetNextAnswer(answer)
 	}
@@ -216,8 +226,6 @@ func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
 	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{
 		responses: testCase.graphQLResponses,
 	}
-
-	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 
 	defer func() {
 		//Delete temp folder
@@ -231,10 +239,12 @@ func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
 		}
 	}()
 
-	err = (&contextCmd{
-		Provider:  testCase.provider,
-		AllSpaces: testCase.all,
-	}).RunRemoveContext(nil, testCase.args)
+	if len(testCase.args) == 0 {
+		testCase.args = []string{""}
+	}
+	err = (&keyCmd{
+		Provider: testCase.provider,
+	}).RunResetkey(nil, testCase.args)
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)

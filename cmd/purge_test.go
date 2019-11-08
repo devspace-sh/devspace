@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -18,35 +17,34 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"k8s.io/client-go/kubernetes/fake"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )
 
-type enterTestCase struct {
+type purgeTestCase struct {
 	name string
 
-	fakeConfig           *latest.Config
-	fakeKubeConfig       clientcmd.ClientConfig
-	fakeKubeClient       *kubectl.Client
-	files                map[string]interface{}
-	generatedYamlContent interface{}
-	graphQLResponses     []interface{}
-	providerList         []*cloudlatest.Provider
+	fakeConfig       *latest.Config
+	fakeKubeConfig   clientcmd.ClientConfig
+	fakeKubeClient   *kubectl.Client
+	files            map[string]interface{}
+	graphQLResponses []interface{}
+	providerList     []*cloudlatest.Provider
+	answers          []string
 
-	containerFlag     string
-	labelSelectorFlag string
-	podFlag           string
-	pickFlag          bool
-	globalFlags       flags.GlobalFlags
+	deploymentsFlag             string
+	allowCyclicDependenciesFlag bool
+	verboseDependenciesFlag     bool
+	purgeDependenciesFlag       bool
+	globalFlags                 flags.GlobalFlags
 
-	expectedErr    string
+	expectedErr string
 }
 
-func TestEnter(t *testing.T) {
+func TestPurge(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -77,49 +75,74 @@ func TestEnter(t *testing.T) {
 		}
 	}()
 
-	testCases := []enterTestCase{
-		enterTestCase{
-			name:       "No resources",
-			fakeConfig: &latest.Config{},
+	testCases := []purgeTestCase{
+		/*purgeTestCase{
+			name: "Cyclic dependency",
+			fakeConfig: &latest.Config{
+				Version: "v1beta3",
+				Dependencies: []*latest.DependencyConfig{
+					&latest.DependencyConfig{
+						Source: &latest.SourceConfig{
+							Path: "dependency1",
+						},
+					},
+				},
+			},
 			fakeKubeClient: &kubectl.Client{
-				Client: fake.NewSimpleClientset(),
+				Client:         fake.NewSimpleClientset(),
+				CurrentContext: "minikube",
 			},
 			fakeKubeConfig: &customKubeConfig{
 				rawconfig: clientcmdapi.Config{
 					Contexts: map[string]*clientcmdapi.Context{
-						"": &clientcmdapi.Context{},
+						"minikube": &clientcmdapi.Context{},
 					},
 					AuthInfos: map[string]*clientcmdapi.AuthInfo{
 						"": &clientcmdapi.AuthInfo{},
 					},
 				},
 			},
-			pickFlag:       true,
-			expectedErr:    "Couldn't find a running pod in namespace ",
-		},
+			files: map[string]interface{}{
+				"devspace.yaml": &latest.Config{
+					Version: "v1beta3",
+					Dependencies: []*latest.DependencyConfig{
+						&latest.DependencyConfig{
+							Source: &latest.SourceConfig{
+								Path: "dependency1",
+							},
+						},
+					},
+				},
+				"dependency1/devspace.yaml": &latest.Config{
+					Version: "v1beta3",
+					Dependencies: []*latest.DependencyConfig{
+						&latest.DependencyConfig{
+							Source: &latest.SourceConfig{
+								Path: "..",
+							},
+						},
+					},
+				},
+			},
+			deploymentsFlag:       " ",
+			purgeDependenciesFlag: true,
+		},*/
 	}
 
-	log.OverrideRuntimeErrorHandler(true)
 	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
-		testEnter(t, testCase)
+		testPurge(t, testCase)
 	}
 }
 
-func testEnter(t *testing.T, testCase enterTestCase) {
-	defer func() {
-		for path := range testCase.files {
-			removeTask := strings.Split(path, "/")[0]
-			err := os.RemoveAll(removeTask)
-			assert.NilError(t, err, "Error cleaning up folder in testCase %s", testCase.name)
-		}
-		err := os.RemoveAll(log.Logdir)
-		assert.NilError(t, err, "Error cleaning up folder in testCase %s", testCase.name)
-	}()
-
+func testPurge(t *testing.T, testCase purgeTestCase) {
 	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{
 		responses: testCase.graphQLResponses,
+	}
+
+	for _, answer := range testCase.answers {
+		survey.SetNextAnswer(answer)
 	}
 
 	providerConfig, err := cloudconfig.ParseProviderConfig()
@@ -138,12 +161,12 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	err = (&EnterCmd{
-		GlobalFlags:   &testCase.globalFlags,
-		Container:     testCase.containerFlag,
-		LabelSelector: testCase.labelSelectorFlag,
-		Pod:           testCase.podFlag,
-		Pick:          testCase.pickFlag,
+	err = (&PurgeCmd{
+		Deployments:             testCase.deploymentsFlag,
+		AllowCyclicDependencies: testCase.allowCyclicDependenciesFlag,
+		VerboseDependencies:     testCase.verboseDependenciesFlag,
+		PurgeDependencies:       testCase.purgeDependenciesFlag,
+		GlobalFlags:             &testCase.globalFlags,
 	}).Run(nil, []string{})
 
 	if testCase.expectedErr == "" {
@@ -151,4 +174,10 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
+
+	err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {
+		os.RemoveAll(path)
+		return nil
+	})
+	assert.NilError(t, err, "Error cleaning up in testCase %s", testCase.name)
 }

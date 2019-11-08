@@ -1,23 +1,32 @@
 package list
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 
-	"github.com/devspace-cloud/devspace/cmd/flags"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"gopkg.in/yaml.v2"
 
 	"gotest.tools/assert"
 )
 
-type listSyncsTestCase struct {
+type listProfilesTestCase struct {
 	name string
 
-	fakeConfig *latest.Config
+	fakeConfig       *latest.Config
+	graphQLResponses []interface{}
+	files            map[string]interface{}
 
 	expectTablePrint bool
 	expectedHeader   []string
@@ -25,43 +34,31 @@ type listSyncsTestCase struct {
 	expectedErr      string
 }
 
-func TestListSyncs(t *testing.T) {
-	testCases := []listSyncsTestCase{
-		listSyncsTestCase{
-			name: "no sync paths exists",
-			fakeConfig: &latest.Config{
-				Dev: &latest.DevConfig{},
-			},
-		},
-		listSyncsTestCase{
-			name: "Print one sync path",
-			fakeConfig: &latest.Config{
-				Dev: &latest.DevConfig{
-					Sync: []*latest.SyncConfig{
-						&latest.SyncConfig{
-							LocalSubPath:  "local",
-							ContainerPath: "container",
-							LabelSelector: map[string]string{
-								"app": "test",
-							},
-							ExcludePaths: []string{"path1", "path2"},
-						},
-						&latest.SyncConfig{
-							LocalSubPath:  "local2",
-							ContainerPath: "container2",
-							LabelSelector: map[string]string{
-								//The order can be any way, so we do a little trick so the selectors are printed equally
-								"a":   "b=",
-								"a=b": "",
-							},
+func TestListProfiles(t *testing.T) {
+	claimAsJSON, _ := json.Marshal(token.ClaimSet{
+		Expiration: time.Now().Add(time.Hour).Unix(),
+	})
+	validEncodedClaim := base64.URLEncoding.EncodeToString(claimAsJSON)
+	for strings.HasSuffix(string(validEncodedClaim), "=") {
+		validEncodedClaim = strings.TrimSuffix(validEncodedClaim, "=")
+	}
+
+	testCases := []listProfilesTestCase{
+		listProfilesTestCase{
+			name:       "print 1 profile",
+			fakeConfig: &latest.Config{},
+			files: map[string]interface{}{
+				"devspace.yaml": map[interface{}]interface{}{
+					"profiles": []interface{}{
+						map[interface{}]interface{}{
+							"name": "someProfile",
 						},
 					},
 				},
 			},
-			expectedHeader: []string{"Label Selector", "Local Path", "Container Path", "Excluded Paths"},
+			expectedHeader: []string{"Name", "Active"},
 			expectedValues: [][]string{
-				[]string{"app=test", "local", "container", "path1, path2"},
-				[]string{"a=b=, a=b=", "local2", "container2", ""},
+				[]string{"someProfile", "false"},
 			},
 		},
 	}
@@ -69,11 +66,11 @@ func TestListSyncs(t *testing.T) {
 	log.SetInstance(log.Discard)
 
 	for _, testCase := range testCases {
-		testListSyncs(t, testCase)
+		testListProfiles(t, testCase)
 	}
 }
 
-func testListSyncs(t *testing.T, testCase listSyncsTestCase) {
+func testListProfiles(t *testing.T, testCase listProfilesTestCase) {
 	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
 		assert.Assert(t, testCase.expectTablePrint || len(testCase.expectedHeader)+len(testCase.expectedValues) > 0, "PrintTable unexpectedly called in testCase %s", testCase.name)
 		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
@@ -106,9 +103,17 @@ func testListSyncs(t *testing.T, testCase listSyncsTestCase) {
 		}
 	}()
 
-	configutil.SetFakeConfig(testCase.fakeConfig)
+	for path, content := range testCase.files {
+		asYAML, err := yaml.Marshal(content)
+		assert.NilError(t, err, "Error parsing config to yaml in testCase %s", testCase.name)
+		err = fsutil.WriteToFile(asYAML, path)
+		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
+	}
 
-	err = (&syncCmd{GlobalFlags: &flags.GlobalFlags{}}).RunListSync(nil, []string{})
+	configutil.SetFakeConfig(testCase.fakeConfig)
+	generated.ResetConfig()
+
+	err = (&profilesCmd{}).RunListProfiles(nil, []string{})
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)

@@ -1,9 +1,11 @@
-package cmd
+package list
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -14,39 +16,35 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"k8s.io/client-go/kubernetes/fake"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )
 
-type enterTestCase struct {
+type namespacesTestCase struct {
 	name string
 
-	fakeConfig           *latest.Config
-	fakeKubeConfig       clientcmd.ClientConfig
-	fakeKubeClient       *kubectl.Client
-	files                map[string]interface{}
-	generatedYamlContent interface{}
-	graphQLResponses     []interface{}
-	providerList         []*cloudlatest.Provider
+	fakeConfig       *latest.Config
+	fakeKubeConfig   clientcmd.ClientConfig
+	files            map[string]interface{}
+	graphQLResponses []interface{}
+	providerList     []*cloudlatest.Provider
+	answers          []string
 
-	containerFlag     string
-	labelSelectorFlag string
-	podFlag           string
-	pickFlag          bool
-	globalFlags       flags.GlobalFlags
+	globalFlags flags.GlobalFlags
 
-	expectedErr    string
+	expectTablePrint bool
+	expectedHeader   []string
+	expectedValues   [][]string
+	expectedErr      string
 }
 
-func TestEnter(t *testing.T) {
+func TestNamespaces(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -77,37 +75,48 @@ func TestEnter(t *testing.T) {
 		}
 	}()
 
-	testCases := []enterTestCase{
-		enterTestCase{
-			name:       "No resources",
+	testCases := []namespacesTestCase{
+		namespacesTestCase{
+			name:       "Unparsable generated.yaml",
 			fakeConfig: &latest.Config{},
-			fakeKubeClient: &kubectl.Client{
-				Client: fake.NewSimpleClientset(),
+			files: map[string]interface{}{
+				".devspace/generated.yaml": "unparsable",
 			},
+			expectedErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
+		},
+		namespacesTestCase{
+			name:       "Invalid global flags",
+			fakeConfig: &latest.Config{},
+			globalFlags: flags.GlobalFlags{
+				KubeContext:   "a",
+				SwitchContext: true,
+			},
+			expectedErr: "Flag --kube-context cannot be used together with --switch-context",
+		},
+		namespacesTestCase{
+			name:       "invalid kubeconfig",
+			fakeConfig: &latest.Config{},
 			fakeKubeConfig: &customKubeConfig{
-				rawconfig: clientcmdapi.Config{
-					Contexts: map[string]*clientcmdapi.Context{
-						"": &clientcmdapi.Context{},
-					},
-					AuthInfos: map[string]*clientcmdapi.AuthInfo{
-						"": &clientcmdapi.AuthInfo{},
-					},
-				},
+				rawConfigError: fmt.Errorf("RawConfigError"),
 			},
-			pickFlag:       true,
-			expectedErr:    "Couldn't find a running pod in namespace ",
+			expectedErr: "new kube client: RawConfigError",
 		},
 	}
 
-	log.OverrideRuntimeErrorHandler(true)
-	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
+	log.SetInstance(log.Discard)
 
 	for _, testCase := range testCases {
-		testEnter(t, testCase)
+		testNamespaces(t, testCase)
 	}
 }
 
-func testEnter(t *testing.T, testCase enterTestCase) {
+func testNamespaces(t *testing.T, testCase namespacesTestCase) {
+	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
+		assert.Assert(t, testCase.expectTablePrint || len(testCase.expectedHeader)+len(testCase.expectedValues) > 0, "PrintTable unexpectedly called in testCase %s", testCase.name)
+		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
+		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
+	})
+
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
@@ -122,14 +131,18 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		responses: testCase.graphQLResponses,
 	}
 
+	for _, answer := range testCase.answers {
+		survey.SetNextAnswer(answer)
+	}
+
 	providerConfig, err := cloudconfig.ParseProviderConfig()
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
+	configutil.ResetConfig()
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
-	kubectl.SetFakeClient(testCase.fakeKubeClient)
 
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)
@@ -138,16 +151,13 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	err = (&EnterCmd{
-		GlobalFlags:   &testCase.globalFlags,
-		Container:     testCase.containerFlag,
-		LabelSelector: testCase.labelSelectorFlag,
-		Pod:           testCase.podFlag,
-		Pick:          testCase.pickFlag,
-	}).Run(nil, []string{})
+	err = (&namespacesCmd{
+		GlobalFlags: &testCase.globalFlags,
+	}).RunListNamespaces(nil, []string{})
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}

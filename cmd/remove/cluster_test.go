@@ -1,6 +1,5 @@
 package remove
 
-/* @Florian adjust to new behaviour
 import (
 	"bytes"
 	"encoding/base64"
@@ -9,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -21,48 +19,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
 
 	"gotest.tools/assert"
 )
-
-var logOutput string
-
-type testLogger struct {
-	log.DiscardLogger
-}
-
-func (t testLogger) Info(args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
-}
-func (t testLogger) Infof(format string, args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Done(args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
-}
-func (t testLogger) Donef(format string, args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Fail(args ...interface{}) {
-	logOutput = logOutput + "\nFail " + fmt.Sprint(args...)
-}
-func (t testLogger) Failf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nFail " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Warn(args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
-}
-func (t testLogger) Warnf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) StartWait(msg string) {
-	logOutput = logOutput + "\nWait " + fmt.Sprint(msg)
-}
 
 type customGraphqlClient struct {
 	responses []interface{}
@@ -97,8 +56,7 @@ type removeClusterTestCase struct {
 	provider         string
 	providerList     []*cloudlatest.Provider
 
-	expectedOutput string
-	expectedPanic  string
+	expectedErr string
 }
 
 func TestRunRemoveCluster(t *testing.T) {
@@ -112,10 +70,6 @@ func TestRunRemoveCluster(t *testing.T) {
 
 	testCases := []removeClusterTestCase{
 		removeClusterTestCase{
-			name:          "Cloud context not gettable",
-			expectedPanic: "Error getting cloud context: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
-		},
-		removeClusterTestCase{
 			name:     "Don't delete",
 			provider: "myProvider",
 			providerList: []*cloudlatest.Provider{
@@ -125,44 +79,6 @@ func TestRunRemoveCluster(t *testing.T) {
 				},
 			},
 			answers: []string{"no"},
-		},
-		removeClusterTestCase{
-			name:     "Unparsable clustername",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			answers:       []string{"Yes"},
-			args:          []string{"a:b:c"},
-			expectedPanic: "Error parsing cluster name a:b:c: Expected : only once",
-		},
-		removeClusterTestCase{
-			name:     "Cluster can't be deleted",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name:  "myProvider",
-					Key:   "someKey",
-					Token: "." + validEncodedClaim + ".",
-				},
-			},
-			answers: []string{"Yes", "No", "No"},
-			args:    []string{"a:b"},
-			graphQLResponses: []interface{}{
-				struct {
-					Clusters []*cloudlatest.Cluster `json:"cluster"`
-				}{
-					Clusters: []*cloudlatest.Cluster{
-						&cloudlatest.Cluster{},
-					},
-				},
-				errors.Errorf("Testerror from graphql server"),
-			},
-			expectedPanic:  "Testerror from graphql server",
-			expectedOutput: "\nWait Deleting cluster ",
 		},
 		removeClusterTestCase{
 			name:     "Successful deletion",
@@ -186,13 +102,10 @@ func TestRunRemoveCluster(t *testing.T) {
 				},
 				struct{}{},
 			},
-			expectedOutput: "\nWait Deleting cluster \nDone Successfully deleted cluster a:b",
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunRemoveCluster(t, testCase)
@@ -200,8 +113,6 @@ func TestRunRemoveCluster(t *testing.T) {
 }
 
 func testRunRemoveCluster(t *testing.T, testCase removeClusterTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -245,29 +156,18 @@ func testRunRemoveCluster(t *testing.T, testCase removeClusterTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
 	if len(testCase.args) == 0 {
 		testCase.args = []string{""}
 	}
-	(&clusterCmd{
+	err = (&clusterCmd{
 		Provider: testCase.provider,
 	}).RunRemoveCluster(nil, testCase.args)
 
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/

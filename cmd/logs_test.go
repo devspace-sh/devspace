@@ -18,6 +18,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -26,27 +27,29 @@ import (
 	"gotest.tools/assert"
 )
 
-type enterTestCase struct {
+type logsTestCase struct {
 	name string
 
-	fakeConfig           *latest.Config
-	fakeKubeConfig       clientcmd.ClientConfig
-	fakeKubeClient       *kubectl.Client
-	files                map[string]interface{}
-	generatedYamlContent interface{}
-	graphQLResponses     []interface{}
-	providerList         []*cloudlatest.Provider
+	fakeConfig       *latest.Config
+	fakeKubeConfig   clientcmd.ClientConfig
+	fakeKubeClient   *kubectl.Client
+	files            map[string]interface{}
+	graphQLResponses []interface{}
+	providerList     []*cloudlatest.Provider
+	answers          []string
 
-	containerFlag     string
-	labelSelectorFlag string
-	podFlag           string
-	pickFlag          bool
-	globalFlags       flags.GlobalFlags
+	labelSelectorFlag     string
+	containerFlag         string
+	podFlag               string
+	pickFlag              bool
+	followFlag            bool
+	lastAmountOfLinesFlag int
+	globalFlags           flags.GlobalFlags
 
-	expectedErr    string
+	expectedErr string
 }
 
-func TestEnter(t *testing.T) {
+func TestLogs(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -77,8 +80,8 @@ func TestEnter(t *testing.T) {
 		}
 	}()
 
-	testCases := []enterTestCase{
-		enterTestCase{
+	testCases := []logsTestCase{
+		logsTestCase{
 			name:       "No resources",
 			fakeConfig: &latest.Config{},
 			fakeKubeClient: &kubectl.Client{
@@ -94,20 +97,19 @@ func TestEnter(t *testing.T) {
 					},
 				},
 			},
-			pickFlag:       true,
-			expectedErr:    "Couldn't find a running pod in namespace ",
+			pickFlag:    true,
+			expectedErr: "Couldn't find a running pod in namespace ",
 		},
 	}
 
-	log.OverrideRuntimeErrorHandler(true)
 	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
-		testEnter(t, testCase)
+		testLogs(t, testCase)
 	}
 }
 
-func testEnter(t *testing.T, testCase enterTestCase) {
+func testLogs(t *testing.T, testCase logsTestCase) {
 	defer func() {
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
@@ -122,11 +124,16 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		responses: testCase.graphQLResponses,
 	}
 
+	for _, answer := range testCase.answers {
+		survey.SetNextAnswer(answer)
+	}
+
 	providerConfig, err := cloudconfig.ParseProviderConfig()
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
+	configutil.ResetConfig()
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 	kubectl.SetFakeClient(testCase.fakeKubeClient)
@@ -138,16 +145,19 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	err = (&EnterCmd{
-		GlobalFlags:   &testCase.globalFlags,
-		Container:     testCase.containerFlag,
-		LabelSelector: testCase.labelSelectorFlag,
-		Pod:           testCase.podFlag,
-		Pick:          testCase.pickFlag,
-	}).Run(nil, []string{})
+	err = (&LogsCmd{
+		LabelSelector:     testCase.labelSelectorFlag,
+		Container:         testCase.containerFlag,
+		Pod:               testCase.podFlag,
+		Pick:              testCase.pickFlag,
+		Follow:            testCase.followFlag,
+		LastAmountOfLines: testCase.lastAmountOfLinesFlag,
+		GlobalFlags:       &testCase.globalFlags,
+	}).RunLogs(nil, []string{})
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}

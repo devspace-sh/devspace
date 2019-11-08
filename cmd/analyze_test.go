@@ -1,6 +1,5 @@
 package cmd
 
-/* @Florian adjust to new behaviour
 import (
 	"bytes"
 	"encoding/json"
@@ -8,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -19,6 +17,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -26,53 +25,11 @@ import (
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
+	"k8s.io/client-go/kubernetes/fake"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
-
-var logOutput string
-
-type testLogger struct {
-	log.DiscardLogger
-}
-
-func (t testLogger) Info(args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
-}
-func (t testLogger) Infof(format string, args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Done(args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
-}
-func (t testLogger) Donef(format string, args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Fail(args ...interface{}) {
-	logOutput = logOutput + "\nFail " + fmt.Sprint(args...)
-}
-func (t testLogger) Failf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nFail " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Warn(args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
-}
-func (t testLogger) Warnf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) StartWait(msg string) {
-	logOutput = logOutput + "\nWait " + fmt.Sprint(msg)
-}
-
-func (t testLogger) Write(msg []byte) (int, error) {
-	logOutput = logOutput + string(msg)
-	return len(msg), nil
-}
 
 type customGraphqlClient struct {
 	responses []interface{}
@@ -130,22 +87,36 @@ type analyzeTestCase struct {
 
 	fakeConfig           *latest.Config
 	fakeKubeConfig       clientcmd.ClientConfig
+	fakeKubeClient       *kubectl.Client
 	generatedYamlContent interface{}
 	graphQLResponses     []interface{}
 	providerList         []*cloudlatest.Provider
-	namespaceFlag        string
 	waitFlag             bool
+	globalFlags          flags.GlobalFlags
 
-	expectedOutput string
-	expectedPanic  string
+	expectedErr string
 }
 
 func TestAnalyze(t *testing.T) {
 	testCases := []analyzeTestCase{
 		analyzeTestCase{
-			name:           "Invalid config",
-			fakeKubeConfig: &customKubeConfig{},
-			expectedPanic:  "Error loading kube config, context '' doesn't exist",
+			name: "Successful analysis with zero errors",
+			globalFlags: flags.GlobalFlags{
+				Namespace: "someNamespace",
+			},
+			fakeKubeClient: &kubectl.Client{
+				Client: fake.NewSimpleClientset(),
+			},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"": &clientcmdapi.Context{},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
+				},
+			},
 		},
 	}
 
@@ -186,9 +157,7 @@ func TestAnalyze(t *testing.T) {
 		}
 	}()
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testAnalyze(t, testCase)
@@ -196,8 +165,6 @@ func TestAnalyze(t *testing.T) {
 }
 
 func testAnalyze(t *testing.T, testCase analyzeTestCase) {
-	logOutput = ""
-
 	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{
 		responses: testCase.graphQLResponses,
 	}
@@ -205,6 +172,7 @@ func testAnalyze(t *testing.T, testCase analyzeTestCase) {
 	configutil.SetFakeConfig(testCase.fakeConfig)
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 	generated.ResetConfig()
+	kubectl.SetFakeClient(testCase.fakeKubeClient)
 
 	if testCase.generatedYamlContent != nil {
 		content, err := yaml.Marshal(testCase.generatedYamlContent)
@@ -216,27 +184,14 @@ func testAnalyze(t *testing.T, testCase analyzeTestCase) {
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 
-	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-	}()
-
-	(&AnalyzeCmd{
-		GlobalFlags: &flags.GlobalFlags{
-			Namespace: testCase.namespaceFlag,
-		},
-		Wait: testCase.waitFlag,
+	err = (&AnalyzeCmd{
+		GlobalFlags: &testCase.globalFlags,
+		Wait:        testCase.waitFlag,
 	}).RunAnalyze(nil, []string{})
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/

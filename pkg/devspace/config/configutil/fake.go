@@ -10,6 +10,7 @@ const TestNamespace = "test-namespace"
 // SetFakeConfig initializes the config objects
 func SetFakeConfig(fakeConfig *latest.Config) {
 	getConfigOnce.Do(func() {})
+	getConfigOnceErr = nil
 
 	if fakeConfig == nil {
 		config = nil

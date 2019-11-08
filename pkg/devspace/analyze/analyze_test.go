@@ -1,7 +1,6 @@
 package analyze
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -19,33 +18,14 @@ import (
 	"gotest.tools/assert"
 )
 
-type testLogger struct {
-	log.DiscardLogger
-}
-
-var writtenText string
-
-func (l *testLogger) WriteString(message string) {
-	writtenText += message
-}
-func (l *testLogger) Debug(message ...interface{}) {
-	writtenText += fmt.Sprint(message...)
-}
-
 func TestAnalyze(t *testing.T) {
 	kubeClient := &kubectl.Client{
 		Client: fake.NewSimpleClientset(),
 	}
-	logger := testLogger{}
 
 	//Analyze empty
-	err := Analyze(kubeClient, "testNS", true, &logger)
+	err := Analyze(kubeClient, "testNS", true, &log.DiscardLogger{})
 	assert.NilError(t, err, "Error while analyzing")
-	assert.Equal(t, writtenText, `
-  No problems found.
-  Run `+"`"+ansi.Color("devspace logs --pick", "white+b")+"`"+` if you want show pod logs
-
-`, "Wrong analyze result")
 
 }
 

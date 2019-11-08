@@ -1,33 +1,26 @@
 package add
 
-/* @Florian adjust to new behaviour
 import (
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"gotest.tools/assert"
 )
 
 type addImageTestCase struct {
 	name string
 
-	args                []string
-	answers             []string
-	fakeConfig          *latest.Config
-	imageName           string
-	imageTag            string
-	imageContextPath    string
-	imageDockerfilePath string
-	imageBuildTool    string
+	args       []string
+	fakeConfig *latest.Config
+	cmd        *imageCmd
 
-	expectedOutput   string
-	expectedPanic    string
+	expectedErr      string
 	expectConfigFile bool
 	expectedImages   map[string]*latest.ImageConfig
 }
@@ -35,15 +28,9 @@ type addImageTestCase struct {
 func TestRunAddImage(t *testing.T) {
 	testCases := []addImageTestCase{
 		addImageTestCase{
-			name:          "No devspace config",
-			args:          []string{""},
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		addImageTestCase{
 			name:             "Add one empty image",
 			args:             []string{""},
 			fakeConfig:       &latest.Config{},
-			expectedOutput:   "\nDone Successfully added image ",
 			expectConfigFile: true,
 			expectedImages: map[string]*latest.ImageConfig{
 				"": &latest.ImageConfig{},
@@ -51,9 +38,7 @@ func TestRunAddImage(t *testing.T) {
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunAddImage(t, testCase)
@@ -61,8 +46,6 @@ func TestRunAddImage(t *testing.T) {
 }
 
 func testRunAddImage(t *testing.T, testCase addImageTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -75,10 +58,6 @@ func testRunAddImage(t *testing.T, testCase addImageTestCase) {
 	err = os.Chdir(dir)
 	if err != nil {
 		t.Fatalf("Error changing working directory: %v", err)
-	}
-
-	for _, answer := range testCase.answers {
-		survey.SetNextAnswer(answer)
 	}
 
 	isDeploymentsNil := testCase.fakeConfig == nil || testCase.fakeConfig.Deployments == nil
@@ -97,33 +76,25 @@ func testRunAddImage(t *testing.T, testCase addImageTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s", testCase.name, rec)
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s", testCase.name)
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
-	(&imageCmd{
-		Name:           testCase.imageName,
-		Tag:            testCase.imageTag,
-		ContextPath:    testCase.imageContextPath,
-		DockerfilePath: testCase.imageDockerfilePath,
-		BuildTool:    testCase.imageBuildTool,
-	}).RunAddImage(nil, testCase.args)
+	if testCase.cmd == nil {
+		testCase.cmd = &imageCmd{}
+	}
+	if testCase.cmd.GlobalFlags == nil {
+		testCase.cmd.GlobalFlags = &flags.GlobalFlags{}
+	}
 
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+	err = (testCase.cmd).RunAddImage(nil, testCase.args)
 
-	config, err := configutil.GetBaseConfig("")
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+		return
+	}
+
+	config, err := configutil.GetBaseConfig(&configutil.ConfigOptions{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -140,4 +111,3 @@ func testRunAddImage(t *testing.T, testCase addImageTestCase) {
 	err = os.Remove(constants.DefaultConfigPath)
 	assert.Equal(t, !os.IsNotExist(err), testCase.expectConfigFile, "Unexpectedly saved or not saved in testCase %s", testCase.name)
 }
-*/
