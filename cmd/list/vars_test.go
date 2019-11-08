@@ -1,18 +1,17 @@
 package list
 
-/* @Florian adjust to new behaviour
 import (
 	"io/ioutil"
 	"os"
-	"runtime/debug"
+	"reflect"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
 	"gopkg.in/yaml.v2"
 
 	"gotest.tools/assert"
@@ -24,27 +23,17 @@ type listVarsTestCase struct {
 	fakeConfig           *latest.Config
 	generatedYamlContent interface{}
 
-	expectedOutput string
-	expectedPanic  string
+	expectTablePrint bool
+	expectedHeader   []string
+	expectedValues   [][]string
+	expectedErr      string
 }
 
 func TestListVars(t *testing.T) {
-	expectedHeader := ansi.Color(" Variable  ", "green+b") + ansi.Color(" Value  ", "green+b")
 	testCases := []listVarsTestCase{
 		listVarsTestCase{
-			name:          "no config exists",
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		listVarsTestCase{
-			name:                 "generated.yaml not parsable",
-			fakeConfig:           &latest.Config{},
-			generatedYamlContent: "unparsable",
-			expectedPanic:        "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		listVarsTestCase{
-			name:           "no vars",
-			fakeConfig:     &latest.Config{},
-			expectedOutput: "\nInfo No variables found",
+			name:       "no vars",
+			fakeConfig: &latest.Config{},
 		},
 		listVarsTestCase{
 			name:       "one var",
@@ -58,13 +47,14 @@ func TestListVars(t *testing.T) {
 					"hello": "world",
 				},
 			},
-			expectedOutput: "\n" + expectedHeader + "\n hello      world  \n\n",
+			expectedHeader: []string{"Variable", "Value"},
+			expectedValues: [][]string{
+				[]string{"hello", "world"},
+			},
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(log.Discard)
 
 	for _, testCase := range testCases {
 		testListVars(t, testCase)
@@ -72,7 +62,11 @@ func TestListVars(t *testing.T) {
 }
 
 func testListVars(t *testing.T, testCase listVarsTestCase) {
-	logOutput = ""
+	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
+		assert.Assert(t, testCase.expectTablePrint || len(testCase.expectedHeader)+len(testCase.expectedValues) > 0, "PrintTable unexpectedly called in testCase %s", testCase.name)
+		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
+		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
+	})
 
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
@@ -109,22 +103,11 @@ func testListVars(t *testing.T, testCase listVarsTestCase) {
 		fsutil.WriteToFile(content, generated.ConfigPath)
 	}
 
-	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-	}()
+	err = (&varsCmd{GlobalFlags: &flags.GlobalFlags{}}).RunListVars(nil, []string{})
 
-	(&varsCmd{}).RunListVars(nil, []string{})
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/

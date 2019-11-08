@@ -4,7 +4,7 @@ sidebar_label: devspace add
 ---
 
 
-Change the DevSpace configuration
+Convenience command: adds something to devspace.yaml
 
 ## Synopsis
 
@@ -13,6 +13,7 @@ Change the DevSpace configuration
 #######################################################
 #################### devspace add #####################
 #######################################################
+Adds config sections to devspace.yaml
 ```
 ## Options
 
@@ -34,7 +35,7 @@ Change the DevSpace configuration
 ```
 
 ## See Also
-* [devspace add deployment](../../cli/commands/devspace_add_deployment)	 - Add a deployment
+* [devspace add deployment](../../cli/commands/devspace_add_deployment)	 - Adds a deployment to devspace.yaml
 * [devspace add image](../../cli/commands/devspace_add_image)	 - Add an image
 * [devspace add port](../../cli/commands/devspace_add_port)	 - Add a new port forward configuration
 * [devspace add provider](../../cli/commands/devspace_add_provider)	 - Adds a new cloud provider to the configuration

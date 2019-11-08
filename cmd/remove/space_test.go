@@ -1,6 +1,5 @@
 package remove
 
-/* @Florian adjust to new behaviour
 import (
 	"encoding/base64"
 	"encoding/json"
@@ -16,11 +15,11 @@ import (
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
 
 	"gotest.tools/assert"
 )
@@ -38,8 +37,7 @@ type removeSpaceTestCase struct {
 	all              bool
 	providerList     []*cloudlatest.Provider
 
-	expectedOutput string
-	expectedPanic  string
+	expectedErr string
 }
 
 func TestRunRemoveSpace(t *testing.T) {
@@ -52,53 +50,6 @@ func TestRunRemoveSpace(t *testing.T) {
 	}
 
 	testCases := []removeSpaceTestCase{
-		removeSpaceTestCase{
-			name:          "Cloud context not gettable",
-			expectedPanic: "Error getting cloud context: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
-		},
-		removeSpaceTestCase{
-			name:     "Spaces not gettable",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			all: true,
-			graphQLResponses: []interface{}{
-				errors.Errorf("TestError from graphql server"),
-			},
-			expectedPanic: "TestError from graphql server",
-		},
-		removeSpaceTestCase{
-			name:     "Fail at deleting first of all spaces",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name:  "myProvider",
-					Key:   "someKey",
-					Token: "." + validEncodedClaim + ".",
-				},
-			},
-			all: true,
-			graphQLResponses: []interface{}{
-				struct {
-					Spaces []interface{} `json:"space"`
-				}{
-					Spaces: []interface{}{
-						struct {
-							Owner   struct{} `json:"account"`
-							Context struct {
-								Cluster struct{} `json:"cluster"`
-							} `json:"kube_context"`
-						}{},
-					},
-				},
-				errors.Errorf("TestError from graphql server"),
-			},
-			expectedPanic: "TestError from graphql server",
-		},
 		removeSpaceTestCase{
 			name:     "Delete all one spaces",
 			provider: "myProvider",
@@ -129,61 +80,6 @@ func TestRunRemoveSpace(t *testing.T) {
 					ManagerDeleteSpace: true,
 				},
 			},
-			expectedOutput: "\nDone Deleted space \nDone All spaces removed",
-		},
-		removeSpaceTestCase{
-			name:     "Unparsable spaceID",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			spaceID:        "abc",
-			expectedPanic:  "Couldn't parse space id abc: strconv.Atoi: parsing \"abc\": invalid syntax",
-			expectedOutput: "\nWait Delete space",
-		},
-		removeSpaceTestCase{
-			name:     "Space with given id not gettable",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			spaceID: "123",
-			graphQLResponses: []interface{}{
-				errors.Errorf("TestError from graphql server"),
-			},
-			expectedPanic:  "Error retrieving space: TestError from graphql server",
-			expectedOutput: "\nWait Delete space",
-		},
-		removeSpaceTestCase{
-			name:     "Unparsable space name",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			args:           []string{"a:b:c"},
-			expectedPanic:  "Error retrieving space a:b:c: Error parsing space name a:b:c: Expected : only once",
-			expectedOutput: "\nWait Delete space",
-		},
-		removeSpaceTestCase{
-			name:     "No name or id",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			expectedPanic:  "Please provide a space name or id for this command",
-			expectedOutput: "\nWait Delete space",
 		},
 		removeSpaceTestCase{
 			name:     "Delete one space successfully",
@@ -214,15 +110,12 @@ func TestRunRemoveSpace(t *testing.T) {
 					ManagerDeleteSpace: true,
 				},
 			},
-			args:           []string{"a:b"},
-			fakeConfig:     &latest.Config{},
-			expectedOutput: "\nWait Delete space\nDone Deleted space ",
+			args:       []string{"a:b"},
+			fakeConfig: &latest.Config{},
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunRemoveSpace(t, testCase)
@@ -230,8 +123,6 @@ func TestRunRemoveSpace(t *testing.T) {
 }
 
 func testRunRemoveSpace(t *testing.T, testCase removeSpaceTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -265,6 +156,8 @@ func testRunRemoveSpace(t *testing.T, testCase removeSpaceTestCase) {
 		responses: testCase.graphQLResponses,
 	}
 
+	generated.ResetConfig()
+
 	defer func() {
 		//Delete temp folder
 		err = os.Chdir(wdBackup)
@@ -277,26 +170,20 @@ func testRunRemoveSpace(t *testing.T, testCase removeSpaceTestCase) {
 		}
 
 		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
+		if rec != nil {
+			t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
 		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
-	(&spaceCmd{
+	err = (&spaceCmd{
 		SpaceID:  testCase.spaceID,
 		Provider: testCase.provider,
 		All:      testCase.all,
 	}).RunRemoveCloudDevSpace(nil, testCase.args)
 
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/

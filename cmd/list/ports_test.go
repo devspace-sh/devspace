@@ -1,17 +1,16 @@
 package list
 
-/* @Florian adjust to new behaviour
 import (
 	"io/ioutil"
 	"os"
-	"runtime/debug"
+	"reflect"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/mgutz/ansi"
 
 	"gotest.tools/assert"
 )
@@ -21,24 +20,14 @@ type listPortsTestCase struct {
 
 	fakeConfig *latest.Config
 
-	expectedOutput string
-	expectedPanic  string
+	expectTablePrint bool
+	expectedHeader   []string
+	expectedValues   [][]string
+	expectedErr      string
 }
 
 func TestListPorts(t *testing.T) {
-	expectedHeader := ansi.Color(" Selector  ", "green+b") + "  " + ansi.Color(" LabelSelector  ", "green+b") + ansi.Color(" Ports (Local:Remote)  ", "green+b")
 	testCases := []listPortsTestCase{
-		listPortsTestCase{
-			name:          "no config exists",
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		listPortsTestCase{
-			name: "no ports forwarded",
-			fakeConfig: &latest.Config{
-				Dev: &latest.DevConfig{},
-			},
-			expectedOutput: "\nInfo No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n",
-		},
 		listPortsTestCase{
 			name: "two ports forwarded",
 			fakeConfig: &latest.Config{
@@ -75,13 +64,15 @@ func TestListPorts(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: "\n" + expectedHeader + "\n mySelector                   1234:4321, 5678:8765  \n              a=b=, a=b=      9012:2109             \n\n",
+			expectedHeader: []string{"Image", "LabelSelector", "Ports (Local:Remote)"},
+			expectedValues: [][]string{
+				[]string{"", "app=test", "1234:4321, 5678:8765"},
+				[]string{"", "a=b=, a=b=", "9012:2109"},
+			},
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(log.Discard)
 
 	for _, testCase := range testCases {
 		testListPorts(t, testCase)
@@ -89,7 +80,11 @@ func TestListPorts(t *testing.T) {
 }
 
 func testListPorts(t *testing.T, testCase listPortsTestCase) {
-	logOutput = ""
+	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
+		assert.Assert(t, testCase.expectTablePrint || len(testCase.expectedHeader)+len(testCase.expectedValues) > 0, "PrintTable unexpectedly called in testCase %s", testCase.name)
+		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
+		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
+	})
 
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
@@ -119,24 +114,11 @@ func testListPorts(t *testing.T, testCase listPortsTestCase) {
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
 
-	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-	}()
+	err = (&portsCmd{GlobalFlags: &flags.GlobalFlags{}}).RunListPort(nil, []string{})
 
-	(&portsCmd{}).RunListPort(nil, []string{})
-
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/

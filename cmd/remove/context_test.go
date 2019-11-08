@@ -1,14 +1,11 @@
 package remove
 
-/* @Florian adjust to new behaviour
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -21,9 +18,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
-	"github.com/mgutz/ansi"
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
 
 	"gotest.tools/assert"
 	restclient "k8s.io/client-go/rest"
@@ -71,8 +66,7 @@ type removeContextTestCase struct {
 	all              bool
 	providerList     []*cloudlatest.Provider
 
-	expectedOutput string
-	expectedPanic  string
+	expectedErr string
 }
 
 func TestRunRemoveContext(t *testing.T) {
@@ -85,32 +79,6 @@ func TestRunRemoveContext(t *testing.T) {
 	}
 
 	testCases := []removeContextTestCase{
-		removeContextTestCase{
-			name:     "Provider not gettable",
-			provider: "doesn'tExist",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-				},
-			},
-			all:           true,
-			expectedPanic: "Error getting cloud context: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: myProvider ",
-		},
-		removeContextTestCase{
-			name:     "Spaces not gettable",
-			provider: "myProvider",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "myProvider",
-					Key:  "someKey",
-				},
-			},
-			all: true,
-			graphQLResponses: []interface{}{
-				errors.Errorf("TestError from graphql server"),
-			},
-			expectedPanic: "TestError from graphql server",
-		},
 		removeContextTestCase{
 			name:     "Delete all one spaces",
 			provider: "myProvider",
@@ -137,7 +105,6 @@ func TestRunRemoveContext(t *testing.T) {
 				},
 			},
 			fakeKubeConfig: &customKubeConfig{},
-			expectedOutput: "\nDone Removed kubectl context for space \nDone All space kubectl contexts removed",
 		},
 		removeContextTestCase{
 			name:     "Delete one context successfully",
@@ -171,7 +138,6 @@ func TestRunRemoveContext(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: "\nDone Kube-context 'myContext' has been successfully removed",
 		},
 		removeContextTestCase{
 			name:     "Delete current context successfully",
@@ -207,13 +173,10 @@ func TestRunRemoveContext(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: fmt.Sprintf("\nInfo Your kube-context has been updated to '%s'\nDone Kube-context 'current' has been successfully removed", ansi.Color("next", "white+b")),
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunRemoveContext(t, testCase)
@@ -221,8 +184,6 @@ func TestRunRemoveContext(t *testing.T) {
 }
 
 func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -268,25 +229,16 @@ func testRunRemoveContext(t *testing.T, testCase removeContextTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
-	(&contextCmd{
+	err = (&contextCmd{
 		Provider:  testCase.provider,
 		AllSpaces: testCase.all,
 	}).RunRemoveContext(nil, testCase.args)
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/

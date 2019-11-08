@@ -5,7 +5,7 @@
   cursor: pointer;
   position: relative;
   user-select: none;
-  height: 34px;
+  padding: 10px 16px;
 
   display: flex;
   align-items: center;
@@ -21,7 +21,6 @@
 
   > :global(.CustomDropDown_selected-value) {
     width: 100%;
-    padding-left: 12px;
     font: $button-text;
     color: $gray-4;
     display: flex;
@@ -40,12 +39,12 @@
     position: relative;
     width: 12px;
     min-width: 12px;
-    height: 100%;
+    height: 1em;
     background-image: url(../../../images/handle-dropdown.svg);
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
-    margin: 0 10px;
+    margin: 0;
   }
 
   > .list-items {
@@ -69,10 +68,14 @@
     }
 
     .option {
+      width: 100%;
       padding: 10px 16px;
       font: $button-text;
       color: $gray-4;
       position: relative;
+      text-overflow: ellipsis;
+      white-space: nowrap;;
+      overflow: hidden;
 
       &:hover {
         background: #f1f8fc;
@@ -96,11 +99,11 @@
     }
     .list-items {
       z-index: 9;
-      display: flex;
-      flex-direction: column;
       top: 100%;
+      left: 0;
+      right: 0;
       visibility: visible;
-      max-height: 200px;
+      max-height: calc(100vh - 300px);
       overflow-y: auto;
       height: unset;
 

@@ -52,7 +52,7 @@ func NewDeployCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 Deploys the current project to a Space or namespace:
 
 devspace deploy
-devspace deploy -n deploy
+devspace deploy -n some-namespace
 devspace deploy --kube-context=deploy-context
 #######################################################`,
 		Args: cobra.NoArgs,

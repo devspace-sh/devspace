@@ -22,6 +22,9 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
+//For testing only
+var fakeClient *Client
+
 // Client holds all important information for kubernetes
 type Client struct {
 	Client       kubernetes.Interface
@@ -37,8 +40,16 @@ func NewDefaultClient() (*Client, error) {
 	return NewClientFromContext("", "", false)
 }
 
+func SetFakeClient(fake *Client) {
+	fakeClient = fake
+}
+
 // NewClientFromContext creates a new kubernetes client from given context
 func NewClientFromContext(context, namespace string, switchContext bool) (*Client, error) {
+	if fakeClient != nil {
+		return fakeClient, nil
+	}
+
 	// Load new raw config
 	kubeConfigOriginal, err := kubeconfig.LoadConfig().RawConfig()
 	if err != nil {

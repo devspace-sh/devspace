@@ -34,18 +34,6 @@ type getClusterKeyTestCase struct {
 func TestGetClusterKey(t *testing.T) {
 	testCases := []getClusterKeyTestCase{
 		getClusterKeyTestCase{
-			name:         "Ask for encryption key and then fail",
-			clusterOwner: &latest.Owner{},
-			setAnswers:   []string{"123456"},
-			expectedErr:  "verify key: get token: Provider has no key specified",
-		},
-		getClusterKeyTestCase{
-			name:           "Use only encryption key and fail when validate",
-			clusterOwner:   &latest.Owner{},
-			setClusterKeys: map[int]string{2: "someKey"},
-			expectedErr:    "verify key: get token: Provider has no key specified",
-		},
-		getClusterKeyTestCase{
 			name:         "Ask for encryption key and succeed on secound try",
 			clusterOwner: &latest.Owner{},
 			setAnswers:   []string{"234567", "345678"},

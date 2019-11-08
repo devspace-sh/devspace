@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -63,12 +64,18 @@ func createTestSyncClient(testLocalPath string, testCases testCaseList) (*Sync, 
 }
 
 func TestInitialSync(t *testing.T) {
+	for _, downloadOnInitialSync := range []bool{true, false}{
+		t.Log("DownloadOnInitialSync: " + strconv.FormatBool(downloadOnInitialSync))
 	remote, local, outside := initTestDirs(t)
 	defer os.RemoveAll(remote)
 	defer os.RemoveAll(local)
 	defer os.RemoveAll(outside)
 
 	filesToCheck, foldersToCheck := makeBasicTestCases()
+	if !downloadOnInitialSync {
+		filesToCheck = disableDownload(filesToCheck)
+		foldersToCheck = disableDownload(foldersToCheck)
+	}
 
 	// Start the client
 	syncClient, err := createTestSyncClient(local, append(filesToCheck, foldersToCheck...))
@@ -76,6 +83,7 @@ func TestInitialSync(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer syncClient.Stop(nil)
+	syncClient.Options.DownloadOnInitialSync = downloadOnInitialSync
 
 	// Set bandwidth limits
 	syncClient.Options.DownstreamLimit = 1024
@@ -143,6 +151,7 @@ func TestInitialSync(t *testing.T) {
 	}
 
 	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 15*time.Second)
+	}
 }
 
 func TestNormalSync(t *testing.T) {
@@ -252,7 +261,6 @@ func getSyncOptions(testCases testCaseList) *Options {
 		ExcludePaths:          []string{},
 		DownloadExcludePaths:  []string{},
 		UploadExcludePaths:    []string{},
-		DownloadOnInitialSync: true,
 		Verbose:               true,
 	}
 
@@ -346,11 +354,25 @@ func makeBasicTestCases() (testCaseList, testCaseList) {
 	filesToCheck = makeRemoteTestCases(filesToCheck)
 	foldersToCheck = makeRemoteTestCases(foldersToCheck)
 
+	filesToCheck = makeSymLinkTestCases(filesToCheck)
+	foldersToCheck = makeSymLinkTestCases(foldersToCheck)
+
 	//Add Files and Folders that are inside a shared testFolder
 	filesToCheck = makeDeepTestCases(filesToCheck)
 	foldersToCheck = makeDeepTestCases(foldersToCheck)
 
 	return filesToCheck, foldersToCheck
+}
+
+func disableDownload(testCases testCaseList) testCaseList {
+	for i, f := range testCases {
+		if !strings.Contains(f.path, "Remote") {
+			continue
+		}
+		testCases[i].shouldExistInLocal = false
+		testCases[i].shouldExistInRemote = strings.Contains(f.path, "ignore") || strings.Contains(f.path, "noDownload")
+	}
+	return testCases
 }
 
 func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck testCaseList) (testCaseList, testCaseList) {
@@ -365,6 +387,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 				shouldExistInLocal:  f.shouldExistInLocal,
 				shouldExistInRemote: f.shouldExistInRemote,
 				editLocation:        f.editLocation,
+				isSymLink: f.isSymLink,
 			}
 			array = append(array, removeEquivalent)
 
@@ -373,6 +396,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 				shouldExistInLocal:  f.shouldExistInLocal,
 				shouldExistInRemote: f.shouldExistInRemote,
 				editLocation:        f.editLocation,
+				isSymLink: f.isSymLink,
 			}
 			array = append(array, renameEquivalent)
 
@@ -383,6 +407,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 					shouldExistInLocal:  f.shouldExistInLocal,
 					shouldExistInRemote: f.shouldExistInRemote,
 					editLocation:        f.editLocation,
+				isSymLink: f.isSymLink,
 				}
 				array = append(array, renameEquivalent)
 				renameEquivalent = checkedFileOrFolder{
@@ -390,6 +415,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 					shouldExistInLocal:  f.shouldExistInLocal,
 					shouldExistInRemote: f.shouldExistInRemote,
 					editLocation:        f.editLocation,
+				isSymLink: f.isSymLink,
 				}
 				array = append(array, renameEquivalent)
 				renameEquivalent = checkedFileOrFolder{
@@ -397,6 +423,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 					shouldExistInLocal:  f.shouldExistInLocal,
 					shouldExistInRemote: f.shouldExistInRemote,
 					editLocation:        f.editLocation,
+				isSymLink: f.isSymLink,
 				}
 				array = append(array, renameEquivalent)
 				renameEquivalent = checkedFileOrFolder{
@@ -404,6 +431,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 					shouldExistInLocal:  f.shouldExistInLocal,
 					shouldExistInRemote: f.shouldExistInRemote,
 					editLocation:        f.editLocation,
+				isSymLink: f.isSymLink,
 				}
 				array = append(array, renameEquivalent)
 			}
@@ -452,6 +480,9 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 		},
 	}
 
+	renameFilesFromOutside = makeSymLinkTestCases(renameFilesFromOutside)
+	renameFolderFromOutside = makeSymLinkTestCases(renameFolderFromOutside)
+
 	renameFilesFromOutside = makeDeepTestCases(renameFilesFromOutside)
 	renameFolderFromOutside = makeDeepTestCases(renameFolderFromOutside)
 
@@ -499,21 +530,60 @@ func makeDeepTestCases(testCases testCaseList) testCaseList {
 	return testCases
 }
 
+func makeSymLinkTestCases(testCases testCaseList) testCaseList{
+	for _, f := range testCases {
+		if f.isSymLink || strings.Contains(f.path, "Remote") || f.path == "testFolder"{
+			continue
+		}
+
+		deepEquivalent := checkedFileOrFolder{
+			path:                strings.ReplaceAll(strings.ReplaceAll(f.path, "File", "SymLinkToFile"), "Folder", "SymLinkToFolder"),
+			shouldExistInLocal:  f.shouldExistInLocal,
+			shouldExistInRemote: f.shouldExistInRemote,
+			editLocation:        f.editLocation,
+			isSymLink: true,
+		}
+		testCases = append(testCases, deepEquivalent)
+	}
+
+	return testCases
+}
+
 func createTestFilesAndFolders(local string, remote string, outside string, filesToCheck testCaseList, foldersToCheck testCaseList) error {
 	for _, f := range foldersToCheck {
-		parentDir, err := getParentDir(local, remote, outside, f.editLocation)
+		createLocation := f.editLocation
+		if f.isSymLink {
+			createLocation = editSymLinkDir
+		}
+
+		parentDir, err := getParentDir(local, remote, outside, createLocation)
 		if err != nil {
 			return errors.Wrap(err, "get parent dir")
 		}
 
-		err = os.Mkdir(path.Join(parentDir, f.path), 0755)
+		err = os.MkdirAll(path.Join(parentDir, f.path), 0755)
 		if err != nil {
-			return errors.Wrap(err, "mk parent dir")
+			return errors.Wrap(err, "make dir")
+		}
+
+		if f.isSymLink {
+		symLinkParentDir, err := getParentDir(local, remote, outside, f.editLocation)
+		if err != nil {
+			return errors.Wrap(err, "get parent dir for symLink")
+		}
+		err = os.Symlink(path.Join(parentDir, f.path), path.Join(symLinkParentDir, f.path))
+		if err != nil {
+			return errors.Wrap(err, "make symLink")
+		}
 		}
 	}
 
 	for _, f := range filesToCheck {
-		parentDir, err := getParentDir(local, remote, outside, f.editLocation)
+		createLocation := f.editLocation
+		if f.isSymLink {
+			createLocation = editSymLinkDir
+		}
+		parentDir, err := getParentDir(local, remote, outside, createLocation)
 		if err != nil {
 			return errors.Wrap(err, "get parent dir from "+f.path)
 		}
@@ -522,6 +592,17 @@ func createTestFilesAndFolders(local string, remote string, outside string, file
 		if err != nil {
 			return errors.Wrap(err, "write file")
 		}
+		
+		if f.isSymLink {
+		symLinkParentDir, err := getParentDir(local, remote, outside, f.editLocation)
+		if err != nil {
+			return errors.Wrap(err, "get parent dir for symLink")
+		}
+		err = os.Symlink(path.Join(parentDir, f.path), path.Join(symLinkParentDir, f.path))
+		if err != nil {
+			return errors.Wrap(err, "make symLink")
+		}
+	}
 	}
 
 	return nil

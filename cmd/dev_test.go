@@ -1,12 +1,9 @@
 package cmd
 
-/* @Florian adjust to new behaviour
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 
@@ -17,6 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -31,6 +29,7 @@ type devTestCase struct {
 
 	fakeConfig           *latest.Config
 	fakeKubeConfig       clientcmd.ClientConfig
+	fakeKubeClient       *kubectl.Client
 	files                map[string]interface{}
 	generatedYamlContent interface{}
 	graphQLResponses     []interface{}
@@ -55,10 +54,10 @@ type devTestCase struct {
 	selectorFlag        string
 	containerFlag       string
 	labelSelectorFlag   string
-	namespaceFlag       string
+	interactiveFlag     bool
+	globalFlags         flags.GlobalFlags
 
-	expectedOutput string
-	expectedPanic  string
+	expectedErr string
 }
 
 func TestDev(t *testing.T) {
@@ -80,9 +79,6 @@ func TestDev(t *testing.T) {
 		t.Fatalf("Error changing working directory: %v", err)
 	}
 
-	//_, err = os.Open("doesn'tExist")
-	//noFileFoundError := strings.TrimPrefix(err.Error(), "open doesn'tExist: ")
-
 	defer func() {
 		//Delete temp folder
 		err = os.Chdir(wdBackup)
@@ -97,75 +93,48 @@ func TestDev(t *testing.T) {
 
 	testCases := []devTestCase{
 		devTestCase{
-			name:          "config doesn't exist",
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		devTestCase{
 			name:           "Invalid flags",
 			fakeConfig:     &latest.Config{},
 			skipBuildFlag:  true,
 			forceBuildFlag: true,
-			expectedPanic:  "Flags --skip-build & --force-build cannot be used together",
-		},
-		devTestCase{
-			name:       "Unparsable generated.yaml",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				".devspace/generated.yaml": "unparsable",
-			},
-			expectedPanic: "Error loading generated.yaml: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		devTestCase{
-			name:       "Unparsable generated.yaml",
-			fakeConfig: &latest.Config{},
-			fakeKubeConfig: &customKubeConfig{
-				rawConfigError: fmt.Errorf("RawConfigError"),
-			},
-			expectedPanic: "Unable to create new kubectl client: RawConfigError",
+			expectedErr:    "Flags --skip-build & --force-build cannot be used together",
 		},
 		/*devTestCase{
-			name:          "No devspace.yaml",
-			fakeConfig:    &latest.Config{},
-			expectedPanic: fmt.Sprintf("Loading config: open devspace.yaml: %s", noFileFoundError),
-		},
-		devTestCase{
-			name: "generated.yaml is a dir",
-			files: map[string]interface{}{
-				"devspace.yaml":                     &latest.Config{},
-				".devspace/generated.yaml/someFile": "",
+			name:       "interactive without images",
+			fakeConfig: &latest.Config{},
+			fakeKubeClient: &kubectl.Client{
+				Client:         fake.NewSimpleClientset(),
+				CurrentContext: "minikube",
 			},
-			namespaceFlag:  "someNamespace",
-			expectedPanic:  fmt.Sprintf("Couldn't save generated config: open %s: is a directory", filepath.Join(dir, ".devspace/generated.yaml")),
-			expectedOutput: "\nInfo Loaded config from devspace.yaml\nInfo Using someNamespace namespace",
-		},
-		devTestCase{
-			name: "cloud space can't be resumed",
 			files: map[string]interface{}{
-				"devspace.yaml":            &latest.Config{},
-				".devspace/generated.yaml": &generated.Config{
+				constants.DefaultConfigPath: &latest.Config{
+					Version: latest.Version,
 				},
 			},
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Key: "someKey",
+			interactiveFlag: true,
+			expectedErr:     "Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`",
+		},
+		devTestCase{
+			name:       "Cloud Space can't be resumed",
+			fakeConfig: &latest.Config{},
+			fakeKubeClient: &kubectl.Client{
+				Client:         fake.NewSimpleClientset(),
+				CurrentContext: "minikube",
+			},
+			files: map[string]interface{}{
+				constants.DefaultConfigPath: &latest.Config{
+					Version: latest.Version,
+					Dev: &latest.DevConfig{
+						Interactive: &latest.InteractiveConfig{},
+					},
 				},
 			},
-			graphQLResponses: []interface{}{
-				fmt.Errorf("Custom graphQL error"),
-			},
-			expectedPanic:  "Error retrieving Spaces details: Custom graphQL error",
-			expectedOutput: "\nInfo Loaded config from devspace.yaml",
-		},
+			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context 'minikube' in kube-config file",
+		},*/
 	}
 
-	//The dev-command wants to overwrite error logging with file logging. This workaround prevents that.
-	err = os.MkdirAll(log.Logdir+"errors.log", 0700)
-	assert.NilError(t, err, "Error overwriting log file before its creation")
-	log.OverrideRuntimeErrorHandler()
-
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.OverrideRuntimeErrorHandler(true)
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testDev(t, testCase)
@@ -173,23 +142,7 @@ func TestDev(t *testing.T) {
 }
 
 func testDev(t *testing.T, testCase devTestCase) {
-	logOutput = ""
-
 	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
 			err := os.RemoveAll(removeTask)
@@ -208,8 +161,10 @@ func testDev(t *testing.T, testCase devTestCase) {
 	providerConfig.Providers = testCase.providerList
 
 	configutil.SetFakeConfig(testCase.fakeConfig)
+	configutil.ResetConfig()
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
+	kubectl.SetFakeClient(testCase.fakeKubeClient)
 
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)
@@ -218,10 +173,8 @@ func testDev(t *testing.T, testCase devTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	(&DevCmd{
-		GlobalFlags: &flags.GlobalFlags{
-			Namespace: testCase.namespaceFlag,
-		},
+	err = (&DevCmd{
+		GlobalFlags: &testCase.globalFlags,
 
 		AllowCyclicDependencies: testCase.allowCyclicDependenciesFlag,
 		SkipPush:                testCase.skipPushFlag,
@@ -239,6 +192,12 @@ func testDev(t *testing.T, testCase devTestCase) {
 		SkipPipeline:    testCase.skipPipelineFlag,
 		Portforwarding:  testCase.portForwardingFlag,
 		VerboseSync:     testCase.verboseSyncFlag,
+		Interactive:     testCase.interactiveFlag,
 	}).Run(nil, []string{})
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/

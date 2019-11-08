@@ -1,6 +1,5 @@
 package connect
 
-/* @Florian adjust to new behaviour
 import (
 	"bytes"
 	"encoding/json"
@@ -8,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"testing"
 
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
@@ -18,37 +16,6 @@ import (
 
 	"gotest.tools/assert"
 )
-
-var logOutput string
-
-type testLogger struct {
-	log.DiscardLogger
-}
-
-func (t testLogger) Info(args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprint(args...)
-}
-func (t testLogger) Infof(format string, args ...interface{}) {
-	logOutput = logOutput + "\nInfo " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Done(args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprint(args...)
-}
-func (t testLogger) Donef(format string, args ...interface{}) {
-	logOutput = logOutput + "\nDone " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) Warn(args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprint(args...)
-}
-func (t testLogger) Warnf(format string, args ...interface{}) {
-	logOutput = logOutput + "\nWarn " + fmt.Sprintf(format, args...)
-}
-
-func (t testLogger) StartWait(message string) {
-	logOutput = logOutput + "\nWait " + message
-}
 
 type customGraphqlClient struct {
 	responses []interface{}
@@ -84,23 +51,12 @@ type connectClusterTestCase struct {
 	useHostNetworkFlag bool
 	optionsFlag        *cloudpkg.ConnectClusterOptions
 
-	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestRunConnectCluster(t *testing.T) {
 	testCases := []connectClusterTestCase{
-		connectClusterTestCase{
-			name:         "Provider doesn't Exist",
-			providerFlag: "Doesn'tExist",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "SomeProvider",
-				},
-			},
-			expectedPanic: "Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: SomeProvider ",
-		},
-		connectClusterTestCase{
+		/*connectClusterTestCase{
 			name:         "Invalid cluster name",
 			providerFlag: "SomeProvider",
 			providerList: []*cloudlatest.Provider{
@@ -116,13 +72,11 @@ func TestRunConnectCluster(t *testing.T) {
 			optionsFlag: &cloudpkg.ConnectClusterOptions{
 				ClusterName: "!nva|id clu5ter_nam3",
 			},
-			expectedPanic: "Cluster name !nva|id clu5ter_nam3 can only contain letters, numbers and dashes (-)",
-		},
+			expectedErr: "Cluster name !nva|id clu5ter_nam3 can only contain letters, numbers and dashes (-)",
+		},*/
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true},)
 
 	for _, testCase := range testCases {
 		testRunConnectCluster(t, testCase)
@@ -130,8 +84,6 @@ func TestRunConnectCluster(t *testing.T) {
 }
 
 func testRunConnectCluster(t *testing.T, testCase connectClusterTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -160,20 +112,6 @@ func testRunConnectCluster(t *testing.T, testCase connectClusterTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
 	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{
@@ -186,10 +124,15 @@ func testRunConnectCluster(t *testing.T, testCase connectClusterTestCase) {
 
 	cobraCmd := newClusterCmd()
 	cobraCmd.Flag("use-hostnetwork").Changed = true
-	(&clusterCmd{
+	err = (&clusterCmd{
 		Provider:       testCase.providerFlag,
 		UseHostNetwork: testCase.useHostNetworkFlag,
 		Options:        testCase.optionsFlag,
 	}).RunConnectCluster(cobraCmd, nil)
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/

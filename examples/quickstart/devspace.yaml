@@ -2,6 +2,9 @@ version: v1beta4
 images:
   default:
     image: dscr.io/${DEVSPACE_USERNAME}/devspace
+commands:
+- name: test
+  command: echo test
 deployments:
 - name: quickstart
   helm:

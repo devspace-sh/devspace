@@ -147,8 +147,6 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) erro
 }
 
 func getCluster(p *cloud.Provider) (*latest.Cluster, error) {
-	log.StartWait("Retrieving clusters")
-	defer log.StopWait()
 
 	clusters, err := p.GetClusters()
 	if err != nil {

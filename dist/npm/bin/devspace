@@ -10,7 +10,7 @@ fi
 DEVSPACE_EXECUTABLE="$NPM_BIN_DIR/devspace"
 DEVSPACE_EXECUTABLE_WIN="$NPM_BIN_DIR/devspace.exe"
 
-if [ -f "$DEVSPACE_EXECUTABLE" ]; then
+if [ -f "$DEVSPACE_EXECUTABLE" ] && [ ! -L "$DEVSPACE_EXECUTABLE" ]; then
     $DEVSPACE_EXECUTABLE "$@";
     exit $?;
 fi

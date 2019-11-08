@@ -1,11 +1,9 @@
 package list
 
-/* @Florian adjust to new behaviour
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
-	"runtime/debug"
+	"reflect"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -61,59 +59,58 @@ type listDeploymentsTestCase struct {
 	generatedYamlContent interface{}
 	providerList         []*cloudlatest.Provider
 
-	expectedOutput string
-	expectedPanic  string
+	expectTablePrint bool
+	expectedHeader   []string
+	expectedValues   [][]string
+	expectedErr      string
 }
 
 func TestListDeployments(t *testing.T) {
-	//expectedHeader := ansi.Color(" NAME  ", "green+b") + ansi.Color(" TYPE  ", "green+b") + ansi.Color(" DEPLOY  ", "green+b") + ansi.Color(" STATUS  ", "green+b")
 	testCases := []listDeploymentsTestCase{
 		listDeploymentsTestCase{
-			name:          "no config exists",
-			expectedPanic: "Couldn't find a DevSpace configuration. Please run `devspace init`",
-		},
-		listDeploymentsTestCase{
-			name:       "Kubectl client can't be created",
-			fakeConfig: &latest.Config{},
-			fakeKubeConfig: &customKubeConfig{
-				rawConfigError: fmt.Errorf("RawConfigError"),
-			},
-			expectedPanic: "RawConfigError",
-		},
-		/*listDeploymentsTestCase{
-			name:                 "Space can't be resumed",
-			fakeConfig:           &latest.Config{},
-			generatedYamlContent: generated.Config{
-				//CloudSpace: &generated.CloudSpaceConfig{},
-			},
-			expectedPanic: "Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
-		},
-		listDeploymentsTestCase{
-			name:           "No deployments",
-			fakeConfig:     &latest.Config{},
-			expectedOutput: "\n" + expectedHeader + "\n No entries found\n\n",
-		},
-		listDeploymentsTestCase{
-			name: "Print deployments",
+			name: "All deployments not listable",
 			fakeConfig: &latest.Config{
-				Cluster: &latest.Cluster{Namespace: ptr.String("someNS")},
-				Deployments: &[]*latest.DeploymentConfig{
+				Deployments: []*latest.DeploymentConfig{
 					&latest.DeploymentConfig{
-						Name:    ptr.String("UndeployableKubectl"),
+						Name:    "UndeployableKubectl",
 						Kubectl: &latest.KubectlConfig{},
 					},
+					//Those slow down the test
+					/*&latest.DeploymentConfig{
+						Name: "ErrStatusHelm",
+						Helm: &latest.HelmConfig{},
+					},
 					&latest.DeploymentConfig{
-						Name: ptr.String("NoDeploymentMethod"),
+						Name:      "ErrStatusComponent",
+						Component: &latest.ComponentConfig{},
+					},*/
+					&latest.DeploymentConfig{
+						Name: "NoDeploymentMethod",
 					},
 				},
 			},
-			expectedOutput: "\nWarn Unable to create kubectl deploy config for UndeployableKubectl: No manifests defined for kubectl deploy\nWarn No deployment method defined for deployment NoDeploymentMethod" + "\n" + expectedHeader + "\n No entries found\n\n",
+			generatedYamlContent: generated.Config{},
+			fakeKubeConfig: &customKubeConfig{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"": &clientcmdapi.Context{},
+					},
+					Clusters: map[string]*clientcmdapi.Cluster{
+						"": &clientcmdapi.Cluster{
+							LocationOfOrigin: "someLocation",
+							Server:           "someServer",
+						},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
+				},
+			},
+			expectedHeader: []string{"NAME", "TYPE", "DEPLOY", "STATUS"},
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(log.Discard)
 
 	for _, testCase := range testCases {
 		testListDeployments(t, testCase)
@@ -121,7 +118,11 @@ func TestListDeployments(t *testing.T) {
 }
 
 func testListDeployments(t *testing.T, testCase listDeploymentsTestCase) {
-	logOutput = ""
+	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
+		assert.Assert(t, testCase.expectTablePrint || len(testCase.expectedHeader)+len(testCase.expectedValues) > 0, "PrintTable unexpectedly called in testCase %s", testCase.name)
+		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
+		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
+	})
 
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
@@ -163,23 +164,11 @@ func testListDeployments(t *testing.T, testCase listDeploymentsTestCase) {
 		fsutil.WriteToFile(content, generated.ConfigPath)
 	}
 
-	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-	}()
+	err = (&deploymentsCmd{GlobalFlags: &flags.GlobalFlags{}}).RunDeploymentsStatus(nil, []string{})
 
-	(&deploymentsCmd{GlobalFlags: &flags.GlobalFlags{}}).RunDeploymentsStatus(nil, []string{})
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/

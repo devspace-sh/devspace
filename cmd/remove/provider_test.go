@@ -1,13 +1,11 @@
 package remove
 
-/* @Florian adjust to new behaviour
 import (
 	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -32,8 +30,7 @@ type removeProviderTestCase struct {
 	provider         string
 	providerList     []*cloudlatest.Provider
 
-	expectedOutput string
-	expectedPanic  string
+	expectedErr string
 }
 
 func TestRunRemoveProvider(t *testing.T) {
@@ -51,8 +48,7 @@ func TestRunRemoveProvider(t *testing.T) {
 			providerList: []*cloudlatest.Provider{
 				&cloudlatest.Provider{},
 			},
-			args:           []string{"Doesn'tExist"},
-			expectedOutput: "\nFail Couldn't find cloud provider Doesn'tExist\nDone Successfully removed cloud provider Doesn'tExist",
+			args: []string{"Doesn'tExist"},
 		},
 		removeProviderTestCase{
 			name: "Remove existent provider",
@@ -61,14 +57,11 @@ func TestRunRemoveProvider(t *testing.T) {
 					Name: "Exists",
 				},
 			},
-			args:           []string{"Exists"},
-			expectedOutput: "\nDone Successfully removed cloud provider Exists",
+			args: []string{"Exists"},
 		},
 	}
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testRunRemoveProvider(t, testCase)
@@ -76,8 +69,6 @@ func TestRunRemoveProvider(t *testing.T) {
 }
 
 func testRunRemoveProvider(t *testing.T, testCase removeProviderTestCase) {
-	logOutput = ""
-
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -121,29 +112,18 @@ func testRunRemoveProvider(t *testing.T, testCase removeProviderTestCase) {
 		if err != nil {
 			t.Fatalf("Error removing dir: %v", err)
 		}
-
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
 	}()
 
 	if len(testCase.args) == 0 {
 		testCase.args = []string{""}
 	}
-	(&providerCmd{
+	err = (&providerCmd{
 		Name: testCase.provider,
 	}).RunRemoveCloudProvider(nil, testCase.args)
 
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/

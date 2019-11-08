@@ -1,12 +1,9 @@
 package cmd
 
-/* @Florian adjust to new behaviour
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"testing"
 
@@ -17,10 +14,13 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -31,6 +31,7 @@ type enterTestCase struct {
 
 	fakeConfig           *latest.Config
 	fakeKubeConfig       clientcmd.ClientConfig
+	fakeKubeClient       *kubectl.Client
 	files                map[string]interface{}
 	generatedYamlContent interface{}
 	graphQLResponses     []interface{}
@@ -38,12 +39,11 @@ type enterTestCase struct {
 
 	containerFlag     string
 	labelSelectorFlag string
-	namespaceFlag     string
 	podFlag           string
 	pickFlag          bool
+	globalFlags       flags.GlobalFlags
 
-	expectedOutput string
-	expectedPanic  string
+	expectedErr    string
 }
 
 func TestEnter(t *testing.T) {
@@ -79,48 +79,28 @@ func TestEnter(t *testing.T) {
 
 	testCases := []enterTestCase{
 		enterTestCase{
-			name:       "Invalid kube config",
+			name:       "No resources",
 			fakeConfig: &latest.Config{},
+			fakeKubeClient: &kubectl.Client{
+				Client: fake.NewSimpleClientset(),
+			},
 			fakeKubeConfig: &customKubeConfig{
-				rawConfigError: fmt.Errorf("RawConfigError"),
-			},
-			expectedPanic: "Unable to create new kubectl client: RawConfigError",
-		},
-		/*enterTestCase{
-			name:       "Unparsable generated.yaml",
-			fakeConfig: &latest.Config{},
-			files: map[string]interface{}{
-				".devspace/generated.yaml": "unparsable",
-			},
-			expectedPanic: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `unparsable` into generated.Config",
-		},
-		enterTestCase{
-			name: "cloud space can't be resumed",
-			files: map[string]interface{}{
-				"devspace.yaml":            &latest.Config{},
-				".devspace/generated.yaml": &generated.Config{
+				rawconfig: clientcmdapi.Config{
+					Contexts: map[string]*clientcmdapi.Context{
+						"": &clientcmdapi.Context{},
+					},
+					AuthInfos: map[string]*clientcmdapi.AuthInfo{
+						"": &clientcmdapi.AuthInfo{},
+					},
 				},
 			},
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Key: "someKey",
-				},
-			},
-			graphQLResponses: []interface{}{
-				fmt.Errorf("Custom graphQL error"),
-			},
-			expectedPanic: "Error retrieving Spaces details: Custom graphQL error",
+			pickFlag:       true,
+			expectedErr:    "Couldn't find a running pod in namespace ",
 		},
 	}
 
-	//The dev-command wants to overwrite error logging with file logging. This workaround prevents that.
-	err = os.MkdirAll(log.Logdir+"errors.log", 0700)
-	assert.NilError(t, err, "Error overwriting log file before its creation")
-	log.OverrideRuntimeErrorHandler()
-
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.OverrideRuntimeErrorHandler(true)
+	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
 	for _, testCase := range testCases {
 		testEnter(t, testCase)
@@ -128,23 +108,7 @@ func TestEnter(t *testing.T) {
 }
 
 func testEnter(t *testing.T, testCase enterTestCase) {
-	logOutput = ""
-
 	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-
 		for path := range testCase.files {
 			removeTask := strings.Split(path, "/")[0]
 			err := os.RemoveAll(removeTask)
@@ -165,6 +129,7 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 	configutil.SetFakeConfig(testCase.fakeConfig)
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
+	kubectl.SetFakeClient(testCase.fakeKubeClient)
 
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)
@@ -173,14 +138,17 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 		assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 	}
 
-	(&EnterCmd{
-		GlobalFlags: &flags.GlobalFlags{
-			Namespace: testCase.namespaceFlag,
-		},
+	err = (&EnterCmd{
+		GlobalFlags:   &testCase.globalFlags,
 		Container:     testCase.containerFlag,
 		LabelSelector: testCase.labelSelectorFlag,
 		Pod:           testCase.podFlag,
 		Pick:          testCase.pickFlag,
 	}).Run(nil, []string{})
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/

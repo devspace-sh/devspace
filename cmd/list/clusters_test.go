@@ -1,6 +1,5 @@
 package list
 
-/* @Florian adjust to new behaviour
 import (
 	"bytes"
 	"encoding/base64"
@@ -9,7 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime/debug"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -20,7 +19,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/mgutz/ansi"
 	homedir "github.com/mitchellh/go-homedir"
 
 	"gotest.tools/assert"
@@ -58,8 +56,10 @@ type listClustersTestCase struct {
 	graphQLResponses []interface{}
 	providerList     []*cloudlatest.Provider
 
-	expectedOutput string
-	expectedPanic  string
+	expectTablePrint bool
+	expectedHeader   []string
+	expectedValues   [][]string
+	expectedErr      string
 }
 
 func TestListClusters(t *testing.T) {
@@ -72,26 +72,6 @@ func TestListClusters(t *testing.T) {
 	}
 
 	testCases := []listClustersTestCase{
-		listClustersTestCase{
-			name:          "Not existent provider",
-			providerFlag:  "Doesn'tExist",
-			expectedPanic: "Error getting cloud context: Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: ",
-		},
-		listClustersTestCase{
-			name:         "Error from server",
-			providerFlag: "app.devspace.com",
-			providerList: []*cloudlatest.Provider{
-				&cloudlatest.Provider{
-					Name: "app.devspace.com",
-					Key:  "someKey",
-				},
-			},
-			graphQLResponses: []interface{}{
-				fmt.Errorf("you want clusters? You get error from server"),
-			},
-			expectedPanic:  "Error retrieving clusters: you want clusters? You get error from server",
-			expectedOutput: "\nWait Retrieving clusters",
-		},
 		listClustersTestCase{
 			name:         "No clusters",
 			providerFlag: "app.devspace.com",
@@ -108,7 +88,6 @@ func TestListClusters(t *testing.T) {
 					Clusters: []*cloudlatest.Cluster{},
 				},
 			},
-			expectedOutput: fmt.Sprintf("\nWait Retrieving clusters\nInfo No clusters found. You can connect a cluster with `%s`", ansi.Color("devspace connect cluster", "white+b")),
 		},
 		listClustersTestCase{
 			name:         "One cluster",
@@ -135,13 +114,19 @@ func TestListClusters(t *testing.T) {
 								Name:    "someOwner",
 							},
 						},
+						&cloudlatest.Cluster{
+							ClusterID:    2,
+							Server:       ptr.String("someServer2"),
+							Name:         "someName2",
+							EncryptToken: true,
+						},
 					},
 				},
 			},
-			expectedOutput: fmt.Sprintf("\nWait Retrieving clusters\n%s%s              %s    %s", ansi.Color(" ID  ", "green+b"), ansi.Color(" Name  ", "green+b"), ansi.Color(" Owner  ", "green+b"), ansi.Color(" Created  ", "green+b")+`
- 1    someOwner:someName   someOwner
-
-`),
+			expectedHeader: []string{"ID", "Name", "Owner", "Created"},
+			expectedValues: [][]string{
+				[]string{"1", "someOwner:someName", "someOwner", ""},
+			},
 		},
 	}
 
@@ -178,9 +163,7 @@ func TestListClusters(t *testing.T) {
 		}
 	}()
 
-	log.SetInstance(&testLogger{
-		log.DiscardLogger{PanicOnExit: true},
-	})
+	log.SetInstance(log.Discard)
 
 	for _, testCase := range testCases {
 		testListClusters(t, testCase)
@@ -188,7 +171,11 @@ func TestListClusters(t *testing.T) {
 }
 
 func testListClusters(t *testing.T, testCase listClustersTestCase) {
-	logOutput = ""
+	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
+		assert.Assert(t, testCase.expectTablePrint || len(testCase.expectedHeader)+len(testCase.expectedValues) > 0, "PrintTable unexpectedly called in testCase %s", testCase.name)
+		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
+		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
+	})
 
 	cloudpkg.DefaultGraphqlClient = &customGraphqlClient{
 		responses: testCase.graphQLResponses,
@@ -198,27 +185,14 @@ func testListClusters(t *testing.T, testCase listClustersTestCase) {
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 
-	defer func() {
-		rec := recover()
-		if testCase.expectedPanic == "" {
-			if rec != nil {
-				t.Fatalf("Unexpected panic in testCase %s. Message: %s. Stack: %s", testCase.name, rec, string(debug.Stack()))
-			}
-		} else {
-			if rec == nil {
-				t.Fatalf("Unexpected no panic in testCase %s", testCase.name)
-			} else {
-				assert.Equal(t, rec, testCase.expectedPanic, "Wrong panic message in testCase %s. Stack: %s", testCase.name, string(debug.Stack()))
-			}
-		}
-		assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
-	}()
-
-	(&clustersCmd{
+	err = (&clustersCmd{
 		All:      testCase.allFlag,
 		Provider: testCase.providerFlag,
 	}).RunListClusters(nil, []string{})
 
-	assert.Equal(t, logOutput, testCase.expectedOutput, "Unexpected output in testCase %s", testCase.name)
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
+	}
 }
-*/

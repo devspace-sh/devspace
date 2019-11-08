@@ -63,12 +63,6 @@ EXPOSE 1012`,
 			expectedDockerfile: "customDockerFile",
 			expectedPort:       1011,
 		},
-		GetDockerfileComponentDeploymentTestCase{
-			name:        "Invalid port",
-			imageName:   "someImage",
-			answers:     []string{"hello"},
-			expectedErr: "parsing port: strconv.Atoi: parsing \"hello\": invalid syntax",
-		},
 	}
 
 	//Create tempDir and go into it
@@ -157,12 +151,6 @@ func TestGetImageComponentDeployment(t *testing.T) {
 			expectedDeploymentName: "someDeployment",
 			expectedPort:           12345,
 		},
-		getImageComponentDeploymentTestCase{
-			name:    "invalid port",
-			answers: []string{"abc"},
-
-			expectedErr: "parsing port: strconv.Atoi: parsing \"abc\": invalid syntax",
-		},
 	}
 
 	for _, testCase := range testCases {
@@ -208,13 +196,7 @@ type getPredefinedComponentDeploymentTestCase struct {
 }
 
 func TestGetPredefinedComponentDeployment(t *testing.T) {
-	testCases := []getPredefinedComponentDeploymentTestCase{
-		getPredefinedComponentDeploymentTestCase{
-			name:          "Component doesn't exist",
-			componentName: "doesn'tExist",
-			expectedErr:   "Error retrieving template: Component doesn'tExist does not exist",
-		},
-	}
+	testCases := []getPredefinedComponentDeploymentTestCase{}
 
 	for _, testCase := range testCases {
 		for _, answer := range testCase.answers {
