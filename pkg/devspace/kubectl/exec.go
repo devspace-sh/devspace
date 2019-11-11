@@ -12,7 +12,7 @@ import (
 	kubectlExec "k8s.io/client-go/util/exec"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	k8sapi "k8s.io/kubernetes/pkg/apis/core"
-	"k8s.io/kubernetes/pkg/kubectl/util/term"
+	"k8s.io/kubectl/pkg/util/term"
 )
 
 // SubResource specifies with sub resources should be used for the container connection (exec or attach)
