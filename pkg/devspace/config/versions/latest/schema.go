@@ -201,9 +201,11 @@ type AutoScalingConfig struct {
 
 // AutoScalingHorizontalConfig holds the horizontal autoscaling config of a component
 type AutoScalingHorizontalConfig struct {
-	MaxReplicas   *int   `yaml:"maxReplicas,omitempty"`
-	AverageCPU    string `yaml:"averageCPU,omitempty"`
-	AverageMemory string `yaml:"averageMemory,omitempty"`
+	MaxReplicas           *int   `yaml:"maxReplicas,omitempty"`
+	AverageCPU            string `yaml:"averageCPU,omitempty"`
+	AverageRelativeCPU    string `yaml:"averageRelativeCPU,omitempty"`
+	AverageMemory         string `yaml:"averageMemory,omitempty"`
+	AverageRelativeMemory string `yaml:"averageRelativeMemory,omitempty"`
 }
 
 // RollingUpdateConfig holds the configuration for rolling updates
