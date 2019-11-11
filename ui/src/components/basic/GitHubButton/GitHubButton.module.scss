@@ -1,0 +1,192 @@
+@import '../../../styles/constants';
+
+.github {
+    height: inherit;
+    position: relative;
+    margin-right: -25px;
+
+    &:hover {
+        .githubIcon {
+            background: $blue-dark !important;
+
+            &::before {
+                opacity: 0 !important;
+            }
+        }
+
+        .close {
+            display: block;
+        }
+
+        .githubDetails {
+            display: block;
+        }
+    }
+
+    .close {
+        display: none;
+        position: absolute;
+        right: -3px;
+        top: -3px;
+        opacity: 0.5;
+        z-index: 1;
+        transform: scale(0.7);
+
+        &:hover {
+            opacity: 1;
+            background: transparent;
+        }
+    }
+
+    .githubIcon {
+        display: block;
+        height: inherit;
+        padding: 15px;
+        overflow: hidden;
+        background: rgba($blue-dark, 0.85);
+        transform: scale(1);
+
+        > img {
+            height: 100%;
+            filter: invert(1);
+        }
+
+        &.highlighted {
+            background: transparent;
+
+            &::before {
+                content: ' ';
+                position: absolute;
+                width: 200%;
+                height: 200%;
+                left: -50%;
+                top: -50%;
+                background: linear-gradient(
+                    124deg,
+                    #ff2400,
+                    #e81d1d,
+                    #e83b1d,
+                    #e8891d,
+                    #dd00f3,
+                    #0a68ff,
+                    #2b1de8,
+                    #dd00f3,
+                    #dd00f3,
+                    #ff2400,
+                    #e81d1d,
+                    #e83b1d
+                );
+                background-size: 1800% 1800%;
+                z-index: -1;
+
+                -webkit-animation: rainbow 6s linear infinite;
+                -z-animation: rainbow 6s linear infinite;
+                -o-animation: rainbow 6s linear infinite;
+                animation: rainbow 6s linear infinite;
+            }
+
+            @-webkit-keyframes rainbow {
+                0% {
+                    background-position: 0% 82%;
+                }
+                50% {
+                    background-position: 100% 19%;
+                    transform: rotate(180deg);
+                }
+                100% {
+                    background-position: 0% 82%;
+                    transform: rotate(360deg);
+                }
+            }
+            @-moz-keyframes rainbow {
+                0% {
+                    background-position: 0% 82%;
+                }
+                50% {
+                    background-position: 100% 19%;
+                    transform: rotate(180deg);
+                }
+                100% {
+                    background-position: 0% 82%;
+                    transform: rotate(360deg);
+                }
+            }
+            @-o-keyframes rainbow {
+                0% {
+                    background-position: 0% 82%;
+                }
+                50% {
+                    background-position: 100% 19%;
+                    transform: rotate(180deg);
+                }
+                100% {
+                    background-position: 0% 82%;
+                    transform: rotate(360deg);
+                }
+            }
+            @keyframes rainbow {
+                0% {
+                    background-position: 0% 82%;
+                }
+                50% {
+                    background-position: 100% 19%;
+                    transform: rotate(180deg);
+                }
+                100% {
+                    background-position: 0% 82%;
+                    transform: rotate(360deg);
+                }
+            }
+        }
+    }
+
+    .githubDetails {
+        display: none;
+        width: 450px;
+        position: absolute;
+        top: 70px;
+        right: 0;
+        padding: 20px;
+        background: $blue-dark;
+        color: #fff;
+        font-family: Kanit, sans-serif;
+        text-align: center;
+        box-shadow: 0 0 10px 7px rgba($blue-dark, 0.2);
+
+        &:hover {
+            display: block;
+        }
+
+        h2 {
+            font-weight: normal !important;
+        }
+
+        p {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .githubProjects {
+            display: flex;
+
+            > div {
+                flex: 0 1 50%;
+                margin: 10px;
+                padding-bottom: 10px;
+                background: $gray-1;
+                box-shadow: inset 0 0 3px 2px rgba($blue-dark, 0.2);
+            }
+
+            h3 {
+                white-space: nowrap;
+                color: $blue-dark;
+            }
+        }
+    }
+}
+
+@media screen and (max-width: 750px) {
+  .github {
+    display: none;
+  }
+}

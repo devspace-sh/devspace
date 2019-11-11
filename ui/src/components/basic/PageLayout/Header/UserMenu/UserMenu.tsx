@@ -4,6 +4,7 @@ import withPopup, { PopupContext } from 'contexts/withPopup/withPopup';
 import { withRouter, RouteComponentProps } from 'react-router-dom';
 import ErrorBoundary from 'components/basic/ErrorBoundary/ErrorBoundary';
 import Tooltip from 'components/basic/Tooltip/Tooltip';
+import GitHubButton from 'components/basic/GitHubButton/GitHubButton';
 
 interface Props extends PopupContext {}
 interface State {
@@ -23,6 +24,7 @@ class UserMenu extends React.PureComponent<Props & RouteComponentProps, State> {
             <a href="https://devspace.cloud/docs" target="_blank" className={styles.link + ' ' + styles.docs} />
           </Tooltip>
         </div>
+        <GitHubButton/>
       </ErrorBoundary>
     );
   }
