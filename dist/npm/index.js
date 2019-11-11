@@ -184,20 +184,20 @@ exec("npm bin -g || yarn global bin", function(err, stdout, stderr) {
 
     let checkRemoveGlobalFolder = function() {
       if (process.stdout.isTTY) {
-      inquirer
-        .prompt([
-          {
-            type: "list",
-            name: "checkRemoveGlobalFolder",
-            message: "Do you want to remove the global DevSpace config folder ~/.devspace?",
-            choices: ["no", "yes"],
-          },
-        ])
-        .then(answers => {
-          if (answers.checkRemoveGlobalFolder == "yes") {
-            removeGlobalFolder();
-          }
-        });
+        inquirer
+          .prompt([
+            {
+              type: "list",
+              name: "checkRemoveGlobalFolder",
+              message: "Do you want to remove the global DevSpace config folder ~/.devspace?",
+              choices: ["no", "yes"],
+            },
+          ])
+          .then(answers => {
+            if (answers.checkRemoveGlobalFolder == "yes") {
+              removeGlobalFolder();
+            }
+          });
       } else {
         console.warn("DevSpace will remvove the global ~/.devspace folder without asking because this uninstall call is being executed in a non-interactive environment.")
         removeGlobalFolder();
