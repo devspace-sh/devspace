@@ -124,8 +124,13 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		params.Pick = &cmd.Pick
 	}
 
+	selectorParameter := &targetselector.SelectorParameter{
+		CmdParameter: params,
+	}
+
 	// Start terminal
-	err = services.StartSyncFromCmd(config, client, params, cmd.LocalPath, cmd.ContainerPath, cmd.Exclude, cmd.Verbose, cmd.DownloadOnInitialSync, cmd.NoWatch, log.GetInstance())
+	servicesClient := services.NewClient(config, generatedConfig, client, selectorParameter, log.GetInstance())
+	err = servicesClient.StartSyncFromCmd(cmd.LocalPath, cmd.ContainerPath, cmd.Exclude, cmd.Verbose, cmd.DownloadOnInitialSync, cmd.NoWatch)
 	if err != nil {
 		return err
 	}

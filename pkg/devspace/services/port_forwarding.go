@@ -7,9 +7,6 @@ import (
 
 	"k8s.io/client-go/tools/portforward"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -18,20 +15,20 @@ import (
 )
 
 // StartPortForwarding starts the port forwarding functionality
-func StartPortForwarding(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, log log.Logger) ([]*portforward.PortForwarder, error) {
-	if config.Dev.Ports != nil {
-		portforwarder := make([]*portforward.PortForwarder, 0, len(config.Dev.Ports))
+func (serviceClient *client) StartPortForwarding() ([]*portforward.PortForwarder, error) {
+	if serviceClient.config.Dev.Ports != nil {
+		portforwarder := make([]*portforward.PortForwarder, 0, len(serviceClient.config.Dev.Ports))
 
-		for portConfigIndex, portForwarding := range config.Dev.Ports {
+		for portConfigIndex, portForwarding := range serviceClient.config.Dev.Ports {
 			var imageSelector []string
-			if portForwarding.ImageName != "" && generatedConfig != nil {
-				imageConfigCache := generatedConfig.GetActive().GetImageCache(portForwarding.ImageName)
+			if portForwarding.ImageName != "" && serviceClient.generated != nil {
+				imageConfigCache := serviceClient.generated.GetActive().GetImageCache(portForwarding.ImageName)
 				if imageConfigCache.ImageName != "" {
 					imageSelector = []string{imageConfigCache.ImageName + ":" + imageConfigCache.Tag}
 				}
 			}
 
-			selector, err := targetselector.NewTargetSelector(config, client, &targetselector.SelectorParameter{
+			selector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, &targetselector.SelectorParameter{
 				ConfigParameter: targetselector.ConfigParameter{
 					Namespace:     portForwarding.Namespace,
 					LabelSelector: portForwarding.LabelSelector,
@@ -42,7 +39,7 @@ func StartPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 			}
 
 			log.StartWait("Port-Forwarding: Waiting for containers to start...")
-			pod, err := selector.GetPod(log)
+			pod, err := selector.GetPod(serviceClient.log)
 			log.StopWait()
 			if err != nil {
 				return nil, errors.Errorf("%s: %s", message.SelectorErrorPod, err.Error())
@@ -76,7 +73,7 @@ func StartPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 
 				readyChan := make(chan struct{})
 
-				pf, err := client.NewPortForwarder(pod, ports, addresses, make(chan struct{}), readyChan)
+				pf, err := serviceClient.client.NewPortForwarder(pod, ports, addresses, make(chan struct{}), readyChan)
 				if err != nil {
 					return nil, errors.Errorf("Error starting port forwarding: %v", err)
 				}

@@ -295,8 +295,25 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 }
 
 func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, log log.Logger) (int, error) {
+	selectorParameter := &targetselector.SelectorParameter{
+		CmdParameter: targetselector.CmdParameter{
+			Namespace:   cmd.Namespace,
+			Interactive: true,
+		},
+	}
+
+	if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil {
+		selectorParameter.ConfigParameter = targetselector.ConfigParameter{
+			Namespace:     config.Dev.Interactive.Terminal.Namespace,
+			LabelSelector: config.Dev.Interactive.Terminal.LabelSelector,
+			ContainerName: config.Dev.Interactive.Terminal.ContainerName,
+		}
+	}
+
+	servicesClient := services.NewClient(config, generatedConfig, client, selectorParameter, log)
+
 	if cmd.Portforwarding {
-		portForwarder, err := services.StartPortForwarding(config, generatedConfig, client, log)
+		portForwarder, err := servicesClient.StartPortForwarding()
 		if err != nil {
 			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
 		}
@@ -309,7 +326,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	}
 
 	if cmd.Sync {
-		syncConfigs, err := services.StartSync(config, generatedConfig, client, cmd.VerboseSync, log)
+		syncConfigs, err := servicesClient.StartSync(cmd.VerboseSync)
 		if err != nil {
 			return 0, errors.Errorf("Unable to start sync: %v", err)
 		}
@@ -416,22 +433,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 			}
 		}
 
-		selectorParameter := &targetselector.SelectorParameter{
-			CmdParameter: targetselector.CmdParameter{
-				Namespace:   cmd.Namespace,
-				Interactive: true,
-			},
-		}
-
-		if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil {
-			selectorParameter.ConfigParameter = targetselector.ConfigParameter{
-				Namespace:     config.Dev.Interactive.Terminal.Namespace,
-				LabelSelector: config.Dev.Interactive.Terminal.LabelSelector,
-				ContainerName: config.Dev.Interactive.Terminal.ContainerName,
-			}
-		}
-
-		return services.StartTerminal(config, generatedConfig, client, selectorParameter, args, imageSelector, exitChan, true, log)
+		return servicesClient.StartTerminal(args, imageSelector, exitChan, true)
 	} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
 		// Build an image selector
 		imageSelector := []string{}

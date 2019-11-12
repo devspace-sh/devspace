@@ -369,11 +369,12 @@ func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config,
 	}
 
 	// start port-forwarding for localhost access
-	portForwarder, err := services.StartPortForwarding(&latest.Config{
+	servicesClient := services.NewClient(&latest.Config{
 		Dev: &latest.DevConfig{
 			Ports: portforwardingConfig,
 		},
-	}, generatedConfig, client, log.GetInstance())
+	}, generatedConfig, client, nil, log.GetInstance())
+	portForwarder, err := servicesClient.StartPortForwarding()
 	if err != nil {
 		return errors.Wrap(err, "start port forwarding")
 	}
