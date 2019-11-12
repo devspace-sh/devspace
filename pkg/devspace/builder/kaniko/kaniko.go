@@ -50,8 +50,8 @@ type Builder struct {
 const waitTimeout = 2 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(config *latest.Config, dockerClient docker.ClientInterface, kubeClient *kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (*Builder, error) {
-	buildNamespace := kubeClient.Namespace
+func NewBuilder(config *latest.Config, dockerClient docker.ClientInterface, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (*Builder, error) {
+	buildNamespace := kubeClient.Namespace()
 	if imageConf.Build.Kaniko.Namespace != "" {
 		buildNamespace = imageConf.Build.Kaniko.Namespace
 	}
@@ -166,7 +166,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	// Delete the build pod when we are done or get interrupted during build
 	deleteBuildPod := func() {
 		gracePeriod := int64(3)
-		deleteErr := b.helper.KubeClient.Client.CoreV1().Pods(b.BuildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
+		deleteErr := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
 			GracePeriodSeconds: &gracePeriod,
 		})
 
@@ -179,7 +179,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	err = intr.Run(func() error {
 		defer log.StopWait()
 
-		buildPodCreated, err := b.helper.KubeClient.Client.CoreV1().Pods(b.BuildNamespace).Create(buildPod)
+		buildPodCreated, err := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Create(buildPod)
 		if err != nil {
 			return errors.Errorf("Unable to create build pod: %s", err.Error())
 		}
@@ -188,7 +188,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		log.StartWait("Waiting for build init container to start")
 
 		for {
-			buildPod, _ = b.helper.KubeClient.Client.CoreV1().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
+			buildPod, _ = b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
 			if len(buildPod.Status.InitContainerStatuses) > 0 && buildPod.Status.InitContainerStatuses[0].State.Running != nil {
 				break
 			}
@@ -232,7 +232,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 		now = time.Now()
 		for true {
-			buildPod, _ = b.helper.KubeClient.Client.CoreV1().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
+			buildPod, _ = b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
 			if len(buildPod.Status.ContainerStatuses) > 0 && buildPod.Status.ContainerStatuses[0].Ready {
 				break
 			}
@@ -267,7 +267,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			time.Sleep(time.Second)
 
 			// Check if build was successfull
-			pod, err := b.helper.KubeClient.Client.CoreV1().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
+			pod, err := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
 			if err != nil {
 				return errors.Errorf("Error checking if build was successful: %v", err)
 			}
@@ -289,14 +289,14 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 	if err != nil {
 		// Delete all build pods on error
-		pods, getErr := b.helper.KubeClient.Client.CoreV1().Pods(b.BuildNamespace).List(metav1.ListOptions{
+		pods, getErr := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).List(metav1.ListOptions{
 			LabelSelector: "devspace-build=true",
 		})
 		if getErr != nil {
 			return err
 		}
 		for _, pod := range pods.Items {
-			b.helper.KubeClient.Client.CoreV1().Pods(b.BuildNamespace).Delete(pod.Name, &metav1.DeleteOptions{})
+			b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Delete(pod.Name, &metav1.DeleteOptions{})
 		}
 
 		return err

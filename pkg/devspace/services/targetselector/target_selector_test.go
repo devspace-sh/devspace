@@ -1,6 +1,6 @@
 package targetselector
 
-import (
+/*import (
 	"fmt"
 	"testing"
 
@@ -223,4 +223,4 @@ func TestTargetSelector(t *testing.T) {
 	assert.Equal(t, "Couldn't find a running pod, because no labelselector or pod name was specified", err.Error(), "Wrong error")
 	assert.Equal(t, true, returnedPod == nil, "returned Pod is not nil")
 	assert.Equal(t, true, returnedContainer == nil, "returned container is not nil")
-}
+}*/

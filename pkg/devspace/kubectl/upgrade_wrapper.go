@@ -6,18 +6,22 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/transport"
 	"k8s.io/apimachinery/pkg/util/httpstream"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/transport/spdy"
 )
 
 // UpgraderWrapper wraps the upgrader and adds a connections array
-type UpgraderWrapper struct {
+type UpgraderWrapper interface {
+	NewConnection(resp *http.Response) (httpstream.Connection, error)
+	Close() error
+}
+
+type upgraderWrapper struct {
 	Upgrader    spdy.Upgrader
 	Connections []httpstream.Connection
 }
 
 // NewConnection receives a new connection
-func (uw *UpgraderWrapper) NewConnection(resp *http.Response) (httpstream.Connection, error) {
+func (uw *upgraderWrapper) NewConnection(resp *http.Response) (httpstream.Connection, error) {
 	conn, err := uw.Upgrader.NewConnection(resp)
 	if err != nil {
 		return nil, err
@@ -46,7 +50,7 @@ func (uw *UpgraderWrapper) NewConnection(resp *http.Response) (httpstream.Connec
 }
 
 // Close closes all connections
-func (uw *UpgraderWrapper) Close() error {
+func (uw *upgraderWrapper) Close() error {
 	for _, conn := range uw.Connections {
 		err := conn.Close()
 		if err != nil {
@@ -57,14 +61,14 @@ func (uw *UpgraderWrapper) Close() error {
 	return nil
 }
 
-// GetUpgraderWrapper returns an upgrade wrapper for the given config
-func GetUpgraderWrapper(config *rest.Config) (http.RoundTripper, *UpgraderWrapper, error) {
-	wrapper, upgradeRoundTripper, err := transport.RoundTripperFor(config)
+// GetUpgraderWrapper returns an upgrade wrapper for the given config @Factory
+func (client *client) GetUpgraderWrapper() (http.RoundTripper, *upgraderWrapper, error) {
+	wrapper, upgradeRoundTripper, err := transport.RoundTripperFor(client.restConfig)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return wrapper, &UpgraderWrapper{
+	return wrapper, &upgraderWrapper{
 		Upgrader:    upgradeRoundTripper,
 		Connections: make([]httpstream.Connection, 0, 1),
 	}, nil

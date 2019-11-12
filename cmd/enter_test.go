@@ -1,6 +1,6 @@
 package cmd
 
-import (
+/*import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -31,7 +31,7 @@ type enterTestCase struct {
 
 	fakeConfig           *latest.Config
 	fakeKubeConfig       clientcmd.ClientConfig
-	fakeKubeClient       *kubectl.Client
+	fakeKubeClient       kubectl.Client
 	files                map[string]interface{}
 	generatedYamlContent interface{}
 	graphQLResponses     []interface{}
@@ -151,4 +151,4 @@ func testEnter(t *testing.T, testCase enterTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-}
+}*/

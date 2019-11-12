@@ -1,6 +1,6 @@
 package registry
 
-import (
+/*import (
 	//"encoding/base64"
 
 	"testing"
@@ -112,6 +112,6 @@ StopWait`,
 					"email": "someuser@example.com"
 				}
 			}
-		}`, string(resultSecret.Data[k8sv1.DockerConfigJsonKey]), "Saved secret has wrong data")*/
+		}`, string(resultSecret.Data[k8sv1.DockerConfigJsonKey]), "Saved secret has wrong data")*//*
 
-}
+}*/

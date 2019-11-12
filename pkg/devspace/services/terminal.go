@@ -15,7 +15,7 @@ import (
 )
 
 // StartTerminal opens a new terminal
-func StartTerminal(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, selectorParameter *targetselector.SelectorParameter, args []string, imageSelector []string, interrupt chan error, wait bool, log log.Logger) (int, error) {
+func StartTerminal(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, selectorParameter *targetselector.SelectorParameter, args []string, imageSelector []string, interrupt chan error, wait bool, log log.Logger) (int, error) {
 	command := getCommand(config, args)
 
 	targetSelector, err := targetselector.NewTargetSelector(config, client, selectorParameter, true, imageSelector)
@@ -33,7 +33,7 @@ func StartTerminal(config *latest.Config, generatedConfig *generated.Config, cli
 		return 0, err
 	}
 
-	wrapper, upgradeRoundTripper, err := kubectl.GetUpgraderWrapper(client.RestConfig)
+	wrapper, upgradeRoundTripper, err := client.GetUpgraderWrapper()
 	if err != nil {
 		return 0, err
 	}

@@ -21,7 +21,7 @@ const WaitTimeout = 120 * time.Second
 const IgnoreRestartsSince = time.Hour * 2
 
 // Pods analyzes the pods for problems
-func Pods(client *kubectl.Client, namespace string, noWait bool) ([]string, error) {
+func Pods(client kubectl.Client, namespace string, noWait bool) ([]string, error) {
 	problems := []string{}
 
 	log.StartWait("Analyzing pods")
@@ -39,7 +39,7 @@ func Pods(client *kubectl.Client, namespace string, noWait bool) ([]string, erro
 			loop = false
 
 			// Get all pods
-			pods, err = client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+			pods, err = client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{})
 			if err != nil {
 				return nil, err
 			}
@@ -77,7 +77,7 @@ func Pods(client *kubectl.Client, namespace string, noWait bool) ([]string, erro
 		}
 	} else {
 		// Get all pods
-		pods, err = client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+		pods, err = client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -135,7 +135,7 @@ type containerProblem struct {
 }
 
 // Pod analyzes the pod for potential problems
-func checkPod(client *kubectl.Client, pod *v1.Pod) *podProblem {
+func checkPod(client kubectl.Client, pod *v1.Pod) *podProblem {
 	hasProblem := false
 	podProblem := &podProblem{
 		Name:                  pod.Name,
@@ -195,7 +195,7 @@ func checkPod(client *kubectl.Client, pod *v1.Pod) *podProblem {
 	return nil
 }
 
-func getContainerProblem(client *kubectl.Client, pod *v1.Pod, containerStatus *v1.ContainerStatus) *containerProblem {
+func getContainerProblem(client kubectl.Client, pod *v1.Pod, containerStatus *v1.ContainerStatus) *containerProblem {
 	tailLines := int64(50)
 	hasProblem := false
 	containerProblem := &containerProblem{

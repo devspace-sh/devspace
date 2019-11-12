@@ -1,6 +1,6 @@
 package helm
 
-import (
+/*import (
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
@@ -39,6 +39,7 @@ func createFakeConfig() *latest.Config {
 
 	return testConfig
 }
+
 func TestCreateTiller(t *testing.T) {
 	config := createFakeConfig()
 
@@ -51,4 +52,4 @@ func TestCreateTiller(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-}
+}*/

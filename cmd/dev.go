@@ -207,7 +207,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
+func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
 	if cmd.SkipPipeline == false {
 		// Dependencies
 		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, cmd.ToConfigOptions(), log.GetInstance())
@@ -294,7 +294,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 	return exitCode, nil
 }
 
-func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, log log.Logger) (int, error) {
+func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, log log.Logger) (int, error) {
 	if cmd.Portforwarding {
 		portForwarder, err := services.StartPortForwarding(config, generatedConfig, client, log)
 		if err != nil {
@@ -382,7 +382,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 		defer log.StopWait()
 
 		// Create server
-		server, err := server.NewServer(config, generatedConfig, false, client.CurrentContext, client.Namespace, nil, log)
+		server, err := server.NewServer(config, generatedConfig, false, client.CurrentContext(), client.Namespace(), nil, log)
 		if err != nil {
 			log.Warnf("Couldn't start UI server: %v", err)
 		} else {

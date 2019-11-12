@@ -83,31 +83,31 @@ func IsPrivateIP(ip net.IP) bool {
 }
 
 // EnsureDefaultNamespace makes sure the default namespace exists or will be created
-func (client *Client) EnsureDefaultNamespace(log log.Logger) error {
-	_, err := client.Client.CoreV1().Namespaces().Get(client.Namespace, metav1.GetOptions{})
+func (client *client) EnsureDefaultNamespace(log log.Logger) error {
+	_, err := client.KubeClient().CoreV1().Namespaces().Get(client.namespace, metav1.GetOptions{})
 	if err != nil {
 		// Create release namespace
-		_, err = client.Client.CoreV1().Namespaces().Create(&v1.Namespace{
+		_, err = client.KubeClient().CoreV1().Namespaces().Create(&v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: client.Namespace,
+				Name: client.namespace,
 			},
 		})
 
-		log.Donef("Created namespace: %s", client.Namespace)
+		log.Donef("Created namespace: %s", client.Namespace())
 	}
 
 	return err
 }
 
 // EnsureGoogleCloudClusterRoleBinding makes sure the needed cluster role is created in the google cloud or a warning is printed
-func (client *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error {
+func (client *client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error {
 	if client.IsLocalKubernetes() {
 		return nil
 	}
 
-	_, err := client.Client.RbacV1().ClusterRoleBindings().Get(ClusterRoleBindingName, metav1.GetOptions{})
+	_, err := client.KubeClient().RbacV1().ClusterRoleBindings().Get(ClusterRoleBindingName, metav1.GetOptions{})
 	if err != nil {
-		if client.RestConfig != nil && client.RestConfig.AuthProvider != nil && client.RestConfig.AuthProvider.Name == "gcp" {
+		if client.restConfig != nil && client.restConfig.AuthProvider != nil && client.restConfig.AuthProvider.Name == "gcp" {
 			username := ptr.String("")
 
 			log.StartWait("Checking gcloud account")
@@ -143,7 +143,7 @@ func (client *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 				},
 			}
 
-			_, err = client.Client.RbacV1().ClusterRoleBindings().Create(rolebinding)
+			_, err = client.KubeClient().RbacV1().ClusterRoleBindings().Create(rolebinding)
 			if err != nil {
 				return err
 			}
@@ -154,9 +154,9 @@ func (client *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 }
 
 // GetRunningPodsWithImage retrieves the running pods that have at least one of the specified image names
-func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace string, maxWaiting time.Duration) ([]*k8sv1.Pod, error) {
+func (client *client) GetRunningPodsWithImage(imageNames []string, namespace string, maxWaiting time.Duration) ([]*k8sv1.Pod, error) {
 	if namespace == "" {
-		namespace = client.Namespace
+		namespace = client.namespace
 	}
 
 	minWait := 60 * time.Second
@@ -164,7 +164,7 @@ func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace str
 	for maxWaiting >= 0 {
 		time.Sleep(waitingInterval)
 
-		podList, err := client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -214,9 +214,9 @@ func (client *Client) GetRunningPodsWithImage(imageNames []string, namespace str
 }
 
 // GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
-func (client *Client) GetNewestRunningPod(labelSelector string, imageSelector []string, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
+func (client *client) GetNewestRunningPod(labelSelector string, imageSelector []string, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
 	if namespace == "" {
-		namespace = client.Namespace
+		namespace = client.namespace
 	}
 
 	now := time.Now()
@@ -224,7 +224,7 @@ func (client *Client) GetNewestRunningPod(labelSelector string, imageSelector []
 	for ok := true; ok; ok = maxWaiting > 0 {
 		time.Sleep(waitingInterval)
 
-		podList, err := client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{
+		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})
 		if err != nil {
@@ -350,12 +350,12 @@ func GetPodStatus(pod *k8sv1.Pod) string {
 }
 
 // GetPodsFromDeployment retrieves all found pods from a deployment name
-func (client *Client) GetPodsFromDeployment(deployment, namespace string) (*k8sv1.PodList, error) {
+func (client *client) GetPodsFromDeployment(deployment, namespace string) (*k8sv1.PodList, error) {
 	if namespace == "" {
-		namespace = client.Namespace
+		namespace = client.namespace
 	}
 
-	deploy, err := client.Client.AppsV1().Deployments(namespace).Get(deployment, metav1.GetOptions{})
+	deploy, err := client.KubeClient().AppsV1().Deployments(namespace).Get(deployment, metav1.GetOptions{})
 	// Deployment not there
 	if err != nil {
 		return nil, err
@@ -375,13 +375,13 @@ func (client *Client) GetPodsFromDeployment(deployment, namespace string) (*k8sv
 		matchLabelString += k + "=" + v
 	}
 
-	return client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{
+	return client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{
 		LabelSelector: matchLabelString,
 	})
 }
 
 // ForwardPorts forwards the specified ports on the specified interface addresses from the cluster to the local machine
-func (client *Client) ForwardPorts(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) error {
+func (client *client) ForwardPorts(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) error {
 	fw, err := client.NewPortForwarder(pod, ports, addresses, stopChan, readyChan)
 	if err != nil {
 		return err
@@ -391,14 +391,14 @@ func (client *Client) ForwardPorts(pod *k8sv1.Pod, ports []string, addresses []s
 }
 
 // NewPortForwarder creates a new port forwarder object for the specified pods, ports and addresses
-func (client *Client) NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
-	execRequest := client.Client.CoreV1().RESTClient().Post().
+func (client *client) NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
+	execRequest := client.KubeClient().CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).
 		Namespace(pod.Namespace).
 		SubResource("portforward")
 
-	transport, upgrader, err := GetUpgraderWrapper(client.RestConfig)
+	transport, upgrader, err := client.GetUpgraderWrapper()
 	if err != nil {
 		return nil, err
 	}
@@ -416,8 +416,8 @@ func (client *Client) NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses
 }
 
 // IsLocalKubernetes returns true if the current context belongs to a local Kubernetes cluster
-func (client *Client) IsLocalKubernetes() bool {
-	return IsLocalKubernetes(client.CurrentContext)
+func (client *client) IsLocalKubernetes() bool {
+	return IsLocalKubernetes(client.currentContext)
 }
 
 // IsLocalKubernetes returns true if the context belongs to a local Kubernetes cluster

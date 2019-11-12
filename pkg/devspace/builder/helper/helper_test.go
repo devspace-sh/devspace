@@ -1,6 +1,6 @@
 package helper
 
-import (
+/*import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -125,4 +125,4 @@ func TestShouldRebuild(t *testing.T) {
 	assert.Equal(t, false, cache.Images["ImageConf"].ContextHash == "", "ContextHash not set")
 	assert.Equal(t, false, cache.Images["ImageConf"].ImageConfigHash == "", "ImageConfigHash not set")
 	assert.Equal(t, false, cache.Images["ImageConf"].EntrypointHash == "", "EntrypointHash not set")
-}
+}*/

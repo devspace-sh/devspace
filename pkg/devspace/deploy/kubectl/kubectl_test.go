@@ -1,21 +1,21 @@
 package kubectl
 
 import (
-	"io/ioutil"
+	//"io/ioutil"
 	"os"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	//"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	//"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	//"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	//"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	//"github.com/devspace-cloud/devspace/pkg/util/log"
 
-	k8sv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-
-	"gotest.tools/assert"
+	//k8sv1 "k8s.io/api/core/v1"
+	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	//"k8s.io/client-go/kubernetes/fake"
+ 
+	//"gotest.tools/assert"
 )
 
 // Test namespace to create
@@ -27,7 +27,7 @@ const testKustomizeNamespace = "test-kubectl-kustomize-deploy"
 // @MoreTests
 //When kubectl is testable, test it
 
-func TestKubectlManifests(t *testing.T) {
+/*func TestKubectlManifests(t *testing.T) {
 	t.Skip("Not yet testable")
 	namespace := "testnamespace"
 	// 1. Create fake config & generated config
@@ -127,7 +127,7 @@ func TestKubectlManifests(t *testing.T) {
 	// 5. Validate manifests
 	// 6. Delete manifests
 	// 7. Delete test namespace
-}
+}*/
 
 func TestKubectlManifestsWithKustomize(t *testing.T) {
 	// @MoreTests

@@ -96,15 +96,15 @@ func createTestResources(client kubernetes.Interface) error {
 
 func TestGetPodStatus(t *testing.T) {
 	// Create the fake client.
-	client := fake.NewSimpleClientset()
+	kubeClient := fake.NewSimpleClientset()
 
 	// Inject an event into the fake client.
-	err := createTestResources(client)
+	err := createTestResources(kubeClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	podList, err := client.CoreV1().Pods(configutil.TestNamespace).List(metav1.ListOptions{})
+	podList, err := kubeClient.CoreV1().Pods(configutil.TestNamespace).List(metav1.ListOptions{})
 	if err != nil {
 		t.Fatalf("error retrieving list: %v", err)
 	}

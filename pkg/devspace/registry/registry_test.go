@@ -1,6 +1,6 @@
 package registry
 
-import (
+/*import (
 	"encoding/base64"
 	"testing"
 
@@ -44,4 +44,4 @@ func TestCreatePullSecret(t *testing.T) {
 				}
 			}
 		}`, string(resultSecret.Data[k8sv1.DockerConfigJsonKey]), "Saved secret has wrong data")
-}
+}*/

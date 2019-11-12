@@ -1,6 +1,6 @@
 package cmd
 
-import (
+/*import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -32,7 +32,7 @@ type logsTestCase struct {
 
 	fakeConfig       *latest.Config
 	fakeKubeConfig   clientcmd.ClientConfig
-	fakeKubeClient   *kubectl.Client
+	fakeKubeClient   kubectl.Client
 	files            map[string]interface{}
 	graphQLResponses []interface{}
 	providerList     []*cloudlatest.Provider
@@ -162,3 +162,4 @@ func testLogs(t *testing.T, testCase logsTestCase) {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
 }
+*/

@@ -1,6 +1,6 @@
 package analyze
 
-import (
+/*import (
 	"strings"
 	"testing"
 	"time"
@@ -120,4 +120,4 @@ func TestReportToString(t *testing.T) {
 	expectedString = expectedString + `Somethings wrong, I guess...
 `
 	assert.Equal(t, expectedString, ReportToString(report), "Report wrong translated")
-}
+}*/

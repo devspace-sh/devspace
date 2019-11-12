@@ -5,7 +5,7 @@ import (
 )
 
 // GroupVersionExist checks if the given group version exists
-func GroupVersionExist(groupVersion string, resourceList []*metav1.APIResourceList) bool {
+func (client *client) GroupVersionExist(groupVersion string, resourceList []*metav1.APIResourceList) bool {
 	for _, resources := range resourceList {
 		if resources.GroupVersion == groupVersion {
 			return true
@@ -16,7 +16,7 @@ func GroupVersionExist(groupVersion string, resourceList []*metav1.APIResourceLi
 }
 
 // ResourceExist checks if the given resource exists in the group version
-func ResourceExist(groupVersion, name string, resourceList []*metav1.APIResourceList) bool {
+func (client *client) ResourceExist(groupVersion, name string, resourceList []*metav1.APIResourceList) bool {
 	for _, resources := range resourceList {
 		if resources.GroupVersion == groupVersion {
 			for _, resource := range resources.APIResources {

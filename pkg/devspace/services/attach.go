@@ -13,7 +13,7 @@ import (
 )
 
 // StartAttach opens a new terminal
-func StartAttach(config *latest.Config, client *kubectl.Client, selectorParameter *targetselector.SelectorParameter, imageSelector []string, interrupt chan error, log log.Logger) error {
+func StartAttach(config *latest.Config, client kubectl.Client, selectorParameter *targetselector.SelectorParameter, imageSelector []string, interrupt chan error, log log.Logger) error {
 	targetSelector, err := targetselector.NewTargetSelector(config, client, selectorParameter, true, imageSelector)
 	if err != nil {
 		return err
@@ -26,7 +26,7 @@ func StartAttach(config *latest.Config, client *kubectl.Client, selectorParamete
 		return err
 	}
 
-	wrapper, upgradeRoundTripper, err := kubectl.GetUpgraderWrapper(client.RestConfig)
+	wrapper, upgradeRoundTripper, err := client.GetUpgraderWrapper()
 	if err != nil {
 		return err
 	}

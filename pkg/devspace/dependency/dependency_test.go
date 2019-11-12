@@ -3,18 +3,18 @@ package dependency
 import (
 	"io/ioutil"
 	"os"
-	"path/filepath"
+	//"path/filepath"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	//"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"gotest.tools/assert"
-	"k8s.io/client-go/kubernetes/fake"
+	//"k8s.io/client-go/kubernetes/fake"
 )
 
 type updateAllTestCase struct {
@@ -131,7 +131,7 @@ type deployAllTestCase struct {
 	expectedErr string
 }
 
-func TestDeployAll(t *testing.T) {
+/*func TestDeployAll(t *testing.T) {
 	t.Skip("Skipped for now")
 
 	dir, err := ioutil.TempDir("", "testFolder")
@@ -192,7 +192,7 @@ func TestDeployAll(t *testing.T) {
 			},
 			allowCyclicParam: true,
 			expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir+string(os.PathSeparator)+"someDir"),
-		},*/
+		},*//*
 	}
 
 	for _, testCase := range testCases {
@@ -302,7 +302,7 @@ func TestPurgeAll(t *testing.T) {
 			},
 			allowCyclicParam: true,
 			expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir+string(os.PathSeparator)+"someDir"),
-		},*/
+		},*//*
 	}
 
 	for _, testCase := range testCases {
@@ -338,4 +338,4 @@ func TestPurgeAll(t *testing.T) {
 			assert.NilError(t, err, "Error removing file in testCase %s", testCase.name)
 		}
 	}
-}
+}*/

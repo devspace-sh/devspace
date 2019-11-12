@@ -50,7 +50,7 @@ type Builder struct {
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config *latest.Config, client dockerclient.ClientInterface, kubeClient *kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool) (*Builder, error) {
+func NewBuilder(config *latest.Config, client dockerclient.ClientInterface, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool) (*Builder, error) {
 	return &Builder{
 		helper:   helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTag, isDev),
 		client:   client,

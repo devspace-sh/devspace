@@ -1,6 +1,6 @@
 package targetselector
 
-import (
+/*import (
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"

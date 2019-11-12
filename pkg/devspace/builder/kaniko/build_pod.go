@@ -184,7 +184,7 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 
 // Determine available resources (This is only necessary in the devspace cloud)
 func (b *Builder) getAvailableResources() (*availableResources, error) {
-	quota, err := b.helper.KubeClient.Client.CoreV1().ResourceQuotas(b.BuildNamespace).Get(devspaceQuota, metav1.GetOptions{})
+	quota, err := b.helper.KubeClient.KubeClient().CoreV1().ResourceQuotas(b.BuildNamespace).Get(devspaceQuota, metav1.GetOptions{})
 	if err != nil {
 		return defaultResources, nil
 	}
@@ -210,7 +210,7 @@ func (b *Builder) getAvailableResources() (*availableResources, error) {
 	}
 
 	// Get limitrange
-	limitrange, err := b.helper.KubeClient.Client.CoreV1().LimitRanges(b.BuildNamespace).Get(devspaceLimitRange, metav1.GetOptions{})
+	limitrange, err := b.helper.KubeClient.KubeClient().CoreV1().LimitRanges(b.BuildNamespace).Get(devspaceLimitRange, metav1.GetOptions{})
 	if err != nil {
 		return availableResources, nil
 	}

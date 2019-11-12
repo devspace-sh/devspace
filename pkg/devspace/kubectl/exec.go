@@ -10,9 +10,9 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/transport/spdy"
 	kubectlExec "k8s.io/client-go/util/exec"
+	"k8s.io/kubectl/pkg/util/term"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	k8sapi "k8s.io/kubernetes/pkg/apis/core"
-	"k8s.io/kubectl/pkg/util/term"
 )
 
 // SubResource specifies with sub resources should be used for the container connection (exec or attach)
@@ -27,14 +27,14 @@ const (
 )
 
 // ExecStreamWithTransport executes a kubectl exec with given transport round tripper and upgrader
-func (client *Client) ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer, subResource SubResource) error {
+func (client *client) ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer, subResource SubResource) error {
 	var (
 		t             term.TTY
 		sizeQueue     remotecommand.TerminalSizeQueue
 		streamOptions remotecommand.StreamOptions
 	)
 
-	execRequest := client.Client.CoreV1().RESTClient().Post().
+	execRequest := client.KubeClient().CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).
 		Namespace(pod.Namespace).
@@ -93,8 +93,8 @@ func (client *Client) ExecStreamWithTransport(transport http.RoundTripper, upgra
 }
 
 // ExecStream executes a command and streams the output to the given streams
-func (client *Client) ExecStream(pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-	wrapper, upgradeRoundTripper, err := GetUpgraderWrapper(client.RestConfig)
+func (client *client) ExecStream(pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	wrapper, upgradeRoundTripper, err := client.GetUpgraderWrapper()
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (client *Client) ExecStream(pod *k8sv1.Pod, container string, command []str
 }
 
 // ExecBuffered executes a command for kubernetes and returns the output and error buffers
-func (client *Client) ExecBuffered(pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error) {
+func (client *client) ExecBuffered(pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error) {
 	stdoutBuffer := &bytes.Buffer{}
 	stderrBuffer := &bytes.Buffer{}
 

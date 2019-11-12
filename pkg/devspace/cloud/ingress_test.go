@@ -1,6 +1,6 @@
 package cloud
 
-import (
+/*import (
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -140,4 +140,4 @@ func TestCreateIngress(t *testing.T) {
 
 		DefaultGraphqlClient = &GraphqlClient{}
 	}
-}
+}*/

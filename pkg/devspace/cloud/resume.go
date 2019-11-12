@@ -13,8 +13,8 @@ import (
 )
 
 // ResumeSpace signals the cloud that we are currently working on the space and resumes it if it's currently paused
-func ResumeSpace(client *kubectl.Client, loop bool, log log.Logger) error {
-	isSpace, err := kubeconfig.IsCloudSpace(client.CurrentContext)
+func ResumeSpace(client kubectl.Client, loop bool, log log.Logger) error {
+	isSpace, err := kubeconfig.IsCloudSpace(client.CurrentContext())
 	if err != nil {
 		return errors.Wrap(err, "is cloud space")
 	}
@@ -25,9 +25,9 @@ func ResumeSpace(client *kubectl.Client, loop bool, log log.Logger) error {
 	}
 
 	// Retrieve space id and cloud provider
-	spaceID, cloudProvider, err := kubeconfig.GetSpaceID(client.CurrentContext)
+	spaceID, cloudProvider, err := kubeconfig.GetSpaceID(client.CurrentContext())
 	if err != nil {
-		return errors.Errorf("Unable to get Space ID for context '%s': %v", client.CurrentContext, err)
+		return errors.Errorf("Unable to get Space ID for context '%s': %v", client.CurrentContext(), err)
 	}
 
 	p, err := GetProvider(&cloudProvider, log)
@@ -73,12 +73,12 @@ func ResumeSpace(client *kubectl.Client, loop bool, log log.Logger) error {
 }
 
 // WaitForSpaceResume waits for a space to resume
-func WaitForSpaceResume(client *kubectl.Client) error {
+func WaitForSpaceResume(client kubectl.Client) error {
 	maxWait := time.Minute * 5
 	start := time.Now()
 
 	for time.Now().Sub(start) <= maxWait {
-		pods, err := client.Client.CoreV1().Pods(client.Namespace).List(metav1.ListOptions{})
+		pods, err := client.KubeClient().CoreV1().Pods(client.Namespace()).List(metav1.ListOptions{})
 		if err != nil {
 			return errors.Wrap(err, "list pods")
 		}

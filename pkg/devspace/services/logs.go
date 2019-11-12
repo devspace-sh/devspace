@@ -13,12 +13,12 @@ import (
 )
 
 // StartLogs print the logs and then attaches to the container
-func StartLogs(config *latest.Config, client *kubectl.Client, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger) error {
+func StartLogs(config *latest.Config, client kubectl.Client, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger) error {
 	return StartLogsWithWriter(config, client, cmdParameter, follow, tail, log, os.Stdout)
 }
 
 // StartLogsWithWriter prints the logs and then attaches to the container with the given stdout and stderr
-func StartLogsWithWriter(config *latest.Config, client *kubectl.Client, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger, writer io.Writer) error {
+func StartLogsWithWriter(config *latest.Config, client kubectl.Client, cmdParameter targetselector.CmdParameter, follow bool, tail int64, log log.Logger, writer io.Writer) error {
 	selectorParameter := &targetselector.SelectorParameter{
 		CmdParameter: cmdParameter,
 	}
