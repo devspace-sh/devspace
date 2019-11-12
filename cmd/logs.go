@@ -110,8 +110,13 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) error {
 		params.Pick = &cmd.Pick
 	}
 
+	selectorParameter := &targetselector.SelectorParameter{
+		CmdParameter: params,
+	}
+
 	// Start terminal
-	err = services.StartLogs(nil, client, params, cmd.Follow, int64(cmd.LastAmountOfLines), log.GetInstance())
+	servicesClient := services.NewClient(nil, generatedConfig, client, selectorParameter, log.GetInstance())
+	err = servicesClient.StartLogs(cmd.Follow, int64(cmd.LastAmountOfLines))
 	if err != nil {
 		return err
 	}

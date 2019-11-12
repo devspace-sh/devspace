@@ -257,7 +257,10 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		stdoutLogger := kanikoLogger{out: writer}
 
 		// Stream the logs
-		err = services.StartLogsWithWriter(b.helper.Config, b.helper.KubeClient, targetselector.CmdParameter{PodName: buildPod.Name, ContainerName: buildPod.Spec.Containers[0].Name, Namespace: buildPod.Namespace}, true, 100, log, stdoutLogger)
+		servicesClient := services.NewClient(b.helper.Config, nil, b.helper.KubeClient, &targetselector.SelectorParameter{
+			CmdParameter: targetselector.CmdParameter{PodName: buildPod.Name, ContainerName: buildPod.Spec.Containers[0].Name, Namespace: buildPod.Namespace},
+		}, log)
+		err = servicesClient.StartLogsWithWriter(true, 100, stdoutLogger)
 		if err != nil {
 			return errors.Errorf("Error during printling build logs: %v", err)
 		}
