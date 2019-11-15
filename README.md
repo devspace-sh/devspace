@@ -152,8 +152,6 @@ Stop wasting time for running the same build and deploy commands over and over a
 
 </details>
 
-<br>
-
 [![DevSpace Deployment Process](docs/website/static/img/processes/deployment-process-devspace.svg)](https://devspace.cloud/docs/cli/deployment/workflow-basics)
 
 <details>
@@ -167,8 +165,6 @@ Stop wasting time for running the same build and deploy commands over and over a
 - **Terminal Proxy** that opens automatically and lets you run commands in your pods directly from your IDE terminal
 
 </details>
-
-<br>
 
 [![DevSpace Development Process](docs/website/static/img/processes/development-process-devspace.svg)](https://devspace.cloud/docs/cli/development/workflow-basics)
 
