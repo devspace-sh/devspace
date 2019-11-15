@@ -67,7 +67,13 @@ func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []stri
 		return errors.Errorf("Error loading generated.yaml: %v", err)
 	}
 
-	err = dependency.UpdateAll(config, generatedConfig, cmd.AllowCyclicDependencies, configOptions, log.GetInstance())
+	// Create Dependencymanager
+	manager, err := dependency.NewManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log.GetInstance())
+	if err != nil {
+		return errors.Wrap(err, "new manager")
+	}
+
+	err = manager.UpdateAll()
 	if err != nil {
 		return err
 	}

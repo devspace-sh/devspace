@@ -117,7 +117,14 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 
 	// Purge dependencies
 	if cmd.PurgeDependencies {
-		err = dependency.PurgeAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.VerboseDependencies, configOptions, log.GetInstance())
+
+		// Create Dependencymanager
+		manager, err := dependency.NewManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), log.GetInstance())
+		if err != nil {
+			return errors.Wrap(err, "new manager")
+		}
+
+		err = manager.PurgeAll(cmd.VerboseDependencies)
 		if err != nil {
 			log.Errorf("Error purging dependencies: %v", err)
 		}
