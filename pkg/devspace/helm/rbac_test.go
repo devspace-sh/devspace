@@ -16,8 +16,7 @@ import ()
 				},
 			},
 			&latest.DeploymentConfig{
-				Name:      "test-deployment",
-				Namespace: "",
+				Name: "test-deployment",
 				Helm: &latest.HelmConfig{
 					Chart: &latest.ChartConfig{
 						Name: "stable/nginx",
@@ -26,8 +25,8 @@ import ()
 			},
 		},
 	}
-	configutil.SetFakeConfig(testConfig)
 
+	configutil.SetFakeConfig(testConfig)
 	return testConfig
 }
 

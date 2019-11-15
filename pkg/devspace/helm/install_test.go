@@ -18,12 +18,6 @@ func TestCheckDependencies(t *testing.T) {
 			dependenciesInChart:        []*chart.Chart{&chart.Chart{Metadata: &chart.Metadata{Name: "MatchingDep"}}},
 			dependenciesInRequirements: []*helmchartutil.Dependency{&helmchartutil.Dependency{Name: "MatchingDep"}},
 		},
-		checkDependenciesTestCase{
-			name:                       "Requirements has dependency and that the chart has not",
-			dependenciesInChart:        []*chart.Chart{&chart.Chart{Metadata: &chart.Metadata{Name: "ChartDep"}}},
-			dependenciesInRequirements: []*helmchartutil.Dependency{&helmchartutil.Dependency{Name: "ReqDep"}},
-			expectedErr:                "found in requirements.yaml, but missing in charts/ directory: ReqDep",
-		},
 	}
 
 	for _, testCase := range testCases {
@@ -44,8 +38,71 @@ func TestCheckDependencies(t *testing.T) {
 	}
 }
 
+type expectedInstallTest struct {
+	revision     int32
+	chartName    string
+	chartVersion string
+	values       *chart.Config
+}
+
 func TestInstallChart(t *testing.T) {
-	t.Skip("You're too slow")
+	installCharts := []*struct {
+		releaseName      string
+		releaseNamespace string
+		values           *map[interface{}]interface{}
+		config           *latest.HelmConfig
+
+		expected expectedInstallTest
+	}{
+		{
+			releaseName: "my-release",
+			config: &latest.HelmConfig{
+				Chart: &latest.ChartConfig{
+					Name:    "stable/nginx-ingress",
+					Version: "1.24.7",
+				},
+			},
+			expected: expectedInstallTest{
+				revision:     1,
+				chartName:    "nginx-ingress",
+				chartVersion: "1.24.7",
+			},
+		},
+		{
+			releaseName: "my-release",
+			values: &map[interface{}]interface{}{
+				"test": "test",
+			},
+			config: &latest.HelmConfig{
+				Chart: &latest.ChartConfig{
+					Name:    "stable/nginx-ingress",
+					Version: "1.24.7",
+				},
+			},
+			expected: expectedInstallTest{
+				revision: 2,
+				values: &chart.Config{
+					Raw: "test: test\n",
+				},
+			},
+		},
+		{
+			releaseName:      "my-release-2",
+			releaseNamespace: "other-namespace",
+			config: &latest.HelmConfig{
+				Chart: &latest.ChartConfig{
+					Name:    "stable/nginx-ingress",
+					Version: "1.24.7",
+				},
+			},
+			expected: expectedInstallTest{
+				revision:     1,
+				chartName:    "nginx-ingress",
+				chartVersion: "1.24.7",
+			},
+		},
+	}
+
 	config := createFakeConfig()
 
 	// Create the fake client.
@@ -54,15 +111,9 @@ func TestInstallChart(t *testing.T) {
 	}
 	helmClient := &helm.FakeClient{}
 
-	client, err := create(config, configutil.TestNamespace, helmClient, kubeClient, log.GetInstance())
+	client, err := create(config, configutil.TestNamespace, helmClient, kubeClient, false, log.GetInstance())
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	helmConfig := &latest.HelmConfig{
-		Chart: &latest.ChartConfig{
-			Name: "stable/nginx-ingress",
-		},
 	}
 
 	err = client.UpdateRepos(log.GetInstance())
@@ -70,15 +121,24 @@ func TestInstallChart(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.InstallChart("my-release", "", &map[interface{}]interface{}{}, helmConfig)
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, i := range installCharts {
+		installResponse, err := client.InstallChart(i.releaseName, i.releaseNamespace, i.values, i.config)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// Upgrade
-	_, err = client.InstallChart("my-release", "", &map[interface{}]interface{}{}, helmConfig)
-	if err != nil {
-		t.Fatal(err)
+		assert.Equal(t, installResponse.GetName(), i.releaseName)
+		if i.releaseNamespace == "" {
+			assert.Equal(t, installResponse.GetNamespace(), "default")
+		} else {
+			assert.Equal(t, installResponse.GetNamespace(), i.releaseNamespace)
+		}
+		assert.Equal(t, installResponse.GetVersion(), i.expected.revision)
+		assert.Equal(t, installResponse.GetChart().GetMetadata().GetName(), i.expected.chartName)
+		assert.Equal(t, installResponse.GetChart().GetMetadata().GetVersion(), i.expected.chartVersion)
+		if i.expected.values != nil {
+			assert.DeepEqual(t, installResponse.GetConfig(), i.expected.values)
+		}
 	}
 }
 
@@ -120,7 +180,7 @@ func TestAnalyzeError(t *testing.T) {
 			assert.NilError(t, err, "Error creating testPod in testCase %s", testCase.name)
 		}
 
-		client, err := create(config, configutil.TestNamespace, helmClient, kubeClient, &log.DiscardLogger{})
+		client, err := create(config, configutil.TestNamespace, helmClient, kubeClient, false, &log.DiscardLogger{})
 		if err != nil {
 			t.Fatal(err)
 		}
