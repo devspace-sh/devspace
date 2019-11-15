@@ -189,7 +189,8 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		dockerClient = nil
 	}
 
-	err = registry.CreatePullSecrets(config, client, dockerClient, log.GetInstance())
+	registryClient := registry.NewClient(config, client, dockerClient, log.GetInstance())
+	err = registryClient.CreatePullSecrets()
 	if err != nil {
 		return err
 	}

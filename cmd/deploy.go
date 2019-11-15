@@ -150,7 +150,8 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Create pull secrets and private registry if necessary
-	err = registry.CreatePullSecrets(config, client, dockerClient, log.GetInstance())
+	registryClient := registry.NewClient(config, client, dockerClient, log.GetInstance())
+	err = registryClient.CreatePullSecrets()
 	if err != nil {
 		return err
 	}
