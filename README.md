@@ -137,8 +137,6 @@ Stop wasting time for running the same build and deploy commands over and over a
 
 </details>
 
-<br>
-
 [![DevSpace Image Building Process](docs/website/static/img/processes/image-building-process-devspace.svg)](https://devspace.cloud/docs/cli/image-building/workflow-basics)
 
 <details>
