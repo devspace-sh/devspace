@@ -178,9 +178,9 @@ Stop wasting time for running the same build and deploy commands over and over a
 
 ![DevSpace Localhost UI Demo](docs/website/static/img/readme/devspace-localhost-ui-demo.gif)
 
-</details>
-
 <br>
+
+</details>
 
 
 <details>
@@ -201,8 +201,6 @@ Stop wasting time for running the same build and deploy commands over and over a
 
 </details>
 
-<br>
-
 
 <details>
 <summary><b>Powerful Configuration</b></summary>
@@ -216,8 +214,6 @@ Stop wasting time for running the same build and deploy commands over and over a
 
 </details>
 
-<br>
-
 
 <details>
 <summary><b>Lightweight & Easy to Setup</b></summary>
@@ -229,8 +225,6 @@ Stop wasting time for running the same build and deploy commands over and over a
 - **Automatic Dockerfile Generation** (optional)
 
 </details>
-
-<br>
 
 
 <details>
@@ -246,8 +240,6 @@ Stop wasting time for running the same build and deploy commands over and over a
 **More info and install intructions for DevSpace Cloud on: [www.github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud)**
 
 </details>
-
-<br>
 
 
 <br>
