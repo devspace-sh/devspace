@@ -13,11 +13,21 @@ import (
 	gitignore "github.com/sabhiram/go-gitignore"
 )
 
+// DefaultPollInterval is the default time interval in which the watcher updates
+const DefaultPollInterval = time.Second
+
 // Callback is the function type
 type Callback func(changed []string, deleted []string) error
 
-// Watcher is the struct that contains the watching information
-type Watcher struct {
+// Watcher watches a folder
+type Watcher interface{
+	Start()
+	Stop()
+	Update() ([]string, []string, error)
+}
+
+// watcher is the struct that contains the watching information
+type watcher struct {
 	Paths   []string
 	Exclude gitignore.IgnoreParser
 
@@ -33,16 +43,20 @@ type Watcher struct {
 }
 
 // New watches a given glob paths array for changes
-func New(paths []string, exclude []string, callback Callback, log log.Logger) (*Watcher, error) {
+func New(paths []string, exclude []string, pollInterval time.Duration, callback Callback, log log.Logger) (Watcher, error) {
 	ignoreMatcher, err := compilePaths(exclude)
 	if err != nil {
 		return nil, err
 	}
 
-	watcher := &Watcher{
+	if pollInterval == 0 {
+		pollInterval = DefaultPollInterval
+	}
+
+	watcher := &watcher{
 		Paths:        paths,
 		Exclude:      ignoreMatcher,
-		PollInterval: time.Second,
+		PollInterval: pollInterval,
 		Callback:     callback,
 		FileMap:      make(map[string]os.FileInfo),
 		Log:          log,
@@ -59,7 +73,7 @@ func New(paths []string, exclude []string, callback Callback, log log.Logger) (*
 }
 
 // Start starts the watching process every second
-func (w *Watcher) Start() {
+func (w *watcher) Start() {
 	w.startOnce.Do(func() {
 		go func() {
 			for {
@@ -87,14 +101,14 @@ func (w *Watcher) Start() {
 }
 
 // Stop stopps the watcher
-func (w *Watcher) Stop() {
+func (w *watcher) Stop() {
 	w.closeOnce.Do(func() {
 		close(w.interrupt)
 	})
 }
 
 // Update updates the filemap and returns if there was a change
-func (w *Watcher) Update() ([]string, []string, error) {
+func (w *watcher) Update() ([]string, []string, error) {
 	fileMap := make(map[string]os.FileInfo)
 
 	for _, pattern := range w.Paths {
@@ -125,7 +139,7 @@ func (w *Watcher) Update() ([]string, []string, error) {
 	return changed, deleted, nil
 }
 
-func (w *Watcher) gatherChanges(newState map[string]os.FileInfo) ([]string, []string) {
+func (w *watcher) gatherChanges(newState map[string]os.FileInfo) ([]string, []string) {
 	changed := make([]string, 0, 1)
 	deleted := make([]string, 0, 1)
 
