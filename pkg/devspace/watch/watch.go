@@ -13,9 +13,6 @@ import (
 	gitignore "github.com/sabhiram/go-gitignore"
 )
 
-// DefaultPollInterval is the default time interval in which the watcher updates
-const DefaultPollInterval = time.Second
-
 // Callback is the function type
 type Callback func(changed []string, deleted []string) error
 
@@ -47,10 +44,6 @@ func New(paths []string, exclude []string, pollInterval time.Duration, callback 
 	ignoreMatcher, err := compilePaths(exclude)
 	if err != nil {
 		return nil, err
-	}
-
-	if pollInterval == 0 {
-		pollInterval = DefaultPollInterval
 	}
 
 	watcher := &watcher{
