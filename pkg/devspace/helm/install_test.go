@@ -1,24 +1,8 @@
 package helm
 
-import (
-	"testing"
+import ()
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/pkg/errors"
-
-	k8sv1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes/fake"
-	helmchartutil "k8s.io/helm/pkg/chartutil"
-	"k8s.io/helm/pkg/helm"
-	"k8s.io/helm/pkg/proto/hapi/chart"
-
-	"gotest.tools/assert"
-)
-
-type checkDependenciesTestCase struct {
+/*type checkDependenciesTestCase struct {
 	name string
 
 	dependenciesInChart        []*chart.Chart
@@ -208,4 +192,4 @@ func TestAnalyzeError(t *testing.T) {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error returned in testCase %s", testCase.name)
 		}
 	}
-}
+}*/

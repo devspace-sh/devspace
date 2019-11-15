@@ -3,7 +3,6 @@ package services
 import (
 	"os"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -13,20 +12,20 @@ import (
 )
 
 // StartAttach opens a new terminal
-func StartAttach(config *latest.Config, client *kubectl.Client, selectorParameter *targetselector.SelectorParameter, imageSelector []string, interrupt chan error, log log.Logger) error {
-	targetSelector, err := targetselector.NewTargetSelector(config, client, selectorParameter, true, imageSelector)
+func (serviceClient *client) StartAttach(imageSelector []string, interrupt chan error) error {
+	targetSelector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, serviceClient.selectorParameter, true, imageSelector)
 	if err != nil {
 		return err
 	}
 
 	targetSelector.PodQuestion = ptr.String("Which pod do you want to attach to?")
 
-	pod, container, err := targetSelector.GetContainer(true, log)
+	pod, container, err := targetSelector.GetContainer(true, serviceClient.log)
 	if err != nil {
 		return err
 	}
 
-	wrapper, upgradeRoundTripper, err := kubectl.GetUpgraderWrapper(client.RestConfig)
+	wrapper, upgradeRoundTripper, err := serviceClient.client.GetUpgraderWrapper()
 	if err != nil {
 		return err
 	}
@@ -39,7 +38,7 @@ func StartAttach(config *latest.Config, client *kubectl.Client, selectorParamete
 	log.Info("If you don't see a command prompt, try pressing enter.")
 
 	go func() {
-		interrupt <- client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container.Name, nil, container.TTY, os.Stdin, os.Stdout, os.Stderr, kubectl.SubResourceAttach)
+		interrupt <- serviceClient.client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container.Name, nil, container.TTY, os.Stdin, os.Stdout, os.Stderr, kubectl.SubResourceAttach)
 	}()
 
 	err = <-interrupt

@@ -57,7 +57,7 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pod, err := client.Client.CoreV1().Pods(kubeNamespace).Get(name[0], metav1.GetOptions{})
+	pod, err := client.KubeClient().CoreV1().Pods(kubeNamespace).Get(name[0], metav1.GetOptions{})
 	if err != nil {
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

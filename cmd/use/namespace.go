@@ -51,7 +51,7 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 	}
 
 	// Check if current kube context belongs to a space
-	isSpace, err := kubeconfig.IsCloudSpace(client.CurrentContext)
+	isSpace, err := kubeconfig.IsCloudSpace(client.CurrentContext())
 	if err != nil {
 		return errors.Errorf("Unable to check if context belongs to Space: %v", err)
 	}
@@ -65,18 +65,18 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 		return errors.Errorf("Unable to load kube-config: %v", err)
 	}
 
-	if kubeConfig.Contexts[client.CurrentContext] == nil {
-		return errors.Errorf("Couldn't find kube context '%s' in kube config", client.CurrentContext)
+	if kubeConfig.Contexts[client.CurrentContext()] == nil {
+		return errors.Errorf("Couldn't find kube context '%s' in kube config", client.CurrentContext())
 	}
 
 	// Remember current default namespace
-	oldDefaultNamespace := kubeConfig.Contexts[client.CurrentContext].Namespace
+	oldDefaultNamespace := kubeConfig.Contexts[client.CurrentContext()].Namespace
 
 	namespace := ""
 	if len(args) > 0 {
 		namespace = args[0]
 	} else if !cmd.Reset {
-		namespaceList, err := client.Client.CoreV1().Namespaces().List(metav1.ListOptions{})
+		namespaceList, err := client.KubeClient().CoreV1().Namespaces().List(metav1.ListOptions{})
 		if err != nil {
 			return errors.Errorf("Unable to list namespaces: %v", err)
 		}
@@ -97,7 +97,7 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 
 	if oldDefaultNamespace != namespace {
 		// Set namespace as default for used kube-context
-		kubeConfig.Contexts[client.CurrentContext].Namespace = namespace
+		kubeConfig.Contexts[client.CurrentContext()].Namespace = namespace
 
 		// Save updated kube-config
 		err = kubeconfig.SaveConfig(kubeConfig)

@@ -1,24 +1,8 @@
 package analyze
 
-import (
-	"strings"
-	"testing"
-	"time"
+import ()
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/mgutz/ansi"
-
-	v1 "k8s.io/api/apps/v1"
-	k8sv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-
-	"gotest.tools/assert"
-)
-
-func TestAnalyze(t *testing.T) {
+/*func TestAnalyze(t *testing.T) {
 	kubeClient := &kubectl.Client{
 		Client: fake.NewSimpleClientset(),
 	}
@@ -120,4 +104,4 @@ func TestReportToString(t *testing.T) {
 	expectedString = expectedString + `Somethings wrong, I guess...
 `
 	assert.Equal(t, expectedString, ReportToString(report), "Report wrong translated")
-}
+}*/

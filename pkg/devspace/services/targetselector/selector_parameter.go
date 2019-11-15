@@ -31,7 +31,7 @@ type ConfigParameter struct {
 }
 
 // GetNamespace retrieves the target namespace
-func (t *SelectorParameter) GetNamespace(config *latest.Config, kubeClient *kubectl.Client) (string, error) {
+func (t *SelectorParameter) GetNamespace(config *latest.Config, kubeClient kubectl.Client) (string, error) {
 	if t.CmdParameter.Namespace != "" {
 		return t.CmdParameter.Namespace, nil
 	}
@@ -39,7 +39,7 @@ func (t *SelectorParameter) GetNamespace(config *latest.Config, kubeClient *kube
 		return t.ConfigParameter.Namespace, nil
 	}
 
-	return kubeClient.Namespace, nil
+	return kubeClient.Namespace(), nil
 }
 
 // GetLabelSelector retrieves the label selector of the target

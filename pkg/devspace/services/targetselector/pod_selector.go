@@ -11,13 +11,13 @@ import (
 )
 
 // SelectPod let's the user select a pod if necessary and optionally a container
-func SelectPod(client *kubectl.Client, namespace string, labelSelector *string, question *string, onlyRunning bool, log log.Logger) (*v1.Pod, error) {
+func SelectPod(client kubectl.Client, namespace string, labelSelector *string, question *string, onlyRunning bool, log log.Logger) (*v1.Pod, error) {
 	if question == nil {
 		question = ptr.String(DefaultPodQuestion)
 	}
 
 	if labelSelector != nil {
-		podList, err := client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{
+		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{
 			LabelSelector: *labelSelector,
 		})
 		if err != nil {
@@ -65,7 +65,7 @@ func SelectPod(client *kubectl.Client, namespace string, labelSelector *string, 
 		}
 	}
 
-	podList, err := client.Client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+	podList, err := client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

@@ -21,10 +21,10 @@ import (
 const IngressName = "devspace-ingress"
 
 // CreateIngress creates an ingress in the space if there is none
-func (p *Provider) CreateIngress(client *kubectl.Client, space *cloudlatest.Space, host string) error {
+func (p *Provider) CreateIngress(client kubectl.Client, space *cloudlatest.Space, host string) error {
 	// Let user select service
 	serviceNameList := []string{}
-	serviceList, err := client.Client.CoreV1().Services(client.Namespace).List(metav1.ListOptions{})
+	serviceList, err := client.KubeClient().CoreV1().Services(client.Namespace()).List(metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrap(err, "list services")
 	}
@@ -50,7 +50,7 @@ func (p *Provider) CreateIngress(client *kubectl.Client, space *cloudlatest.Spac
 	servicePort := ""
 
 	if len(serviceNameList) == 0 {
-		return errors.Errorf(message.ServiceNotFound, client.Namespace)
+		return errors.Errorf(message.ServiceNotFound, client.Namespace())
 	} else if len(serviceNameList) == 1 {
 		splitted := strings.Split(serviceNameList[0], ":")
 

@@ -107,6 +107,8 @@ func (cmd *AttachCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		selectorParameter.CmdParameter.Pick = &cmd.Pick
 	}
 
+	servicesClient := services.NewClient(nil, nil, client, selectorParameter, log.GetInstance())
+
 	// Start attach
-	return services.StartAttach(nil, client, selectorParameter, nil, make(chan error), log.GetInstance())
+	return servicesClient.StartAttach(nil, make(chan error))
 }

@@ -2,31 +2,11 @@ package reset
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
-	"testing"
-	"time"
 
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
-	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
-	homedir "github.com/mitchellh/go-homedir"
 
-	"gotest.tools/assert"
-	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -83,7 +63,7 @@ func (config *customKubeConfig) ConfigAccess() clientcmd.ConfigAccess {
 	return config.configAccess
 }
 
-type resetKeyTestCase struct {
+/*type resetKeyTestCase struct {
 	name string
 
 	args             []string
@@ -92,7 +72,7 @@ type resetKeyTestCase struct {
 	provider         string
 	providerList     []*cloudlatest.Provider
 	fakeKubeConfig   clientcmd.ClientConfig
-	fakeKubeClient   *kubectl.Client
+	fakeKubeClient   kubectl.Client
 
 	expectedErr string
 }
@@ -251,4 +231,4 @@ func testRunResetKey(t *testing.T, testCase resetKeyTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-}
+}*/

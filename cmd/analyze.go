@@ -89,7 +89,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) error 
 	}
 
 	// Override namespace
-	namespace := client.Namespace
+	namespace := client.Namespace()
 	if cmd.Namespace != "" {
 		namespace = cmd.Namespace
 	}

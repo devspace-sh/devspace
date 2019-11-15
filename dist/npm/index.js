@@ -174,25 +174,34 @@ exec("npm bin -g || yarn global bin", function(err, stdout, stderr) {
 
   if (action == "uninstall") {
     let removeGlobalFolder = function() {
-      inquirer
-        .prompt([
-          {
-            type: "list",
-            name: "removeGlobalFolder",
-            message: "Do you want to remove the global DevSpace config folder ~/.devspace?",
-            choices: ["no", "yes"],
-          },
-        ])
-        .then(answers => {
-          if (answers.removeGlobalFolder == "yes") {
-            try {
-              let homedir = require('os').homedir();
-              rimraf(homedir + path.sep + ".devspace");
-            } catch (e) {
-              console.error(e)
+      try {
+        let homedir = require('os').homedir();
+        rimraf(homedir + path.sep + ".devspace");
+      } catch (e) {
+        console.error(e)
+      }
+    };
+
+    let checkRemoveGlobalFolder = function() {
+      if (process.stdout.isTTY) {
+        inquirer
+          .prompt([
+            {
+              type: "list",
+              name: "checkRemoveGlobalFolder",
+              message: "Do you want to remove the global DevSpace config folder ~/.devspace?",
+              choices: ["no", "yes"],
+            },
+          ])
+          .then(answers => {
+            if (answers.checkRemoveGlobalFolder == "yes") {
+              removeGlobalFolder();
             }
-          }
-        });
+          });
+      } else {
+        console.warn("DevSpace will remvove the global ~/.devspace folder without asking because this uninstall call is being executed in a non-interactive environment.")
+        removeGlobalFolder();
+      }
     };
   
     if (process.ppid > 1) {
@@ -204,19 +213,19 @@ exec("npm bin -g || yarn global bin", function(err, stdout, stderr) {
                 if (list.length == 1 && /npm-cli.js("|')\s+up(date)?\s+(.+\s+)?devspace((\s)|$)/.test(list[0].cmd)) {
                   // Do not ask to remove global folder because user runs: npm upgrade
                 } else {
-                  removeGlobalFolder();
+                  checkRemoveGlobalFolder();
                 }
               }, function () {
-                removeGlobalFolder();
+                checkRemoveGlobalFolder();
               })
           } else {
-            removeGlobalFolder();
+            checkRemoveGlobalFolder();
           }
         }, function () {
-          removeGlobalFolder();
+          checkRemoveGlobalFolder();
         })
     } else {
-      removeGlobalFolder();
+      checkRemoveGlobalFolder();
     }
   }
 

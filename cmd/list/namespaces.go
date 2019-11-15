@@ -67,7 +67,7 @@ func (cmd *namespacesCmd) RunListNamespaces(cobraCmd *cobra.Command, args []stri
 		return errors.Wrap(err, "new kube client")
 	}
 
-	namespaces, err := client.Client.CoreV1().Namespaces().List(metav1.ListOptions{})
+	namespaces, err := client.KubeClient().CoreV1().Namespaces().List(metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrap(err, "list namespaces")
 	}
@@ -84,18 +84,18 @@ func (cmd *namespacesCmd) RunListNamespaces(cobraCmd *cobra.Command, args []stri
 	for _, namespace := range namespaces.Items {
 		namespaceRows = append(namespaceRows, []string{
 			namespace.Name,
-			strconv.FormatBool(namespace.Name == client.Namespace),
+			strconv.FormatBool(namespace.Name == client.Namespace()),
 			"true",
 		})
 
-		if namespace.Name == client.Namespace {
+		if namespace.Name == client.Namespace() {
 			defaultFound = true
 		}
 	}
 
 	if defaultFound == false {
 		namespaceRows = append(namespaceRows, []string{
-			client.Namespace,
+			client.Namespace(),
 			"true",
 			"false",
 		})

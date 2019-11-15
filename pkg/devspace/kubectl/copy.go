@@ -14,7 +14,7 @@ import (
 )
 
 // CopyFromReader extracts a tar from the reader to a container path
-func (client *Client) CopyFromReader(pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error {
+func (client *client) CopyFromReader(pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error {
 	_, stderr, err := client.ExecBuffered(pod, container, []string{"tar", "xzp", "-C", containerPath + "/."}, reader)
 	if err != nil {
 		if stderr != nil {
@@ -28,7 +28,7 @@ func (client *Client) CopyFromReader(pod *k8sv1.Pod, container, containerPath st
 }
 
 // Copy copies the specified folder to the container
-func (client *Client) Copy(pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error {
+func (client *client) Copy(pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error {
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		return errors.Wrap(err, "create pipe")

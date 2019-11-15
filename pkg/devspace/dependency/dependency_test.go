@@ -3,18 +3,15 @@ package dependency
 import (
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"gotest.tools/assert"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 type updateAllTestCase struct {
@@ -131,68 +128,68 @@ type deployAllTestCase struct {
 	expectedErr string
 }
 
-func TestDeployAll(t *testing.T) {
-	t.Skip("Skipped for now")
+/*func TestDeployAll(t *testing.T) {
+t.Skip("Skipped for now")
 
-	dir, err := ioutil.TempDir("", "testFolder")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
+dir, err := ioutil.TempDir("", "testFolder")
+if err != nil {
+	t.Fatalf("Error creating temporary directory: %v", err)
+}
 
-	wdBackup, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Error getting current working directory: %v", err)
-	}
-	err = os.Chdir(dir)
-	if err != nil {
-		t.Fatalf("Error changing working directory: %v", err)
-	}
-	dir, err = filepath.EvalSymlinks(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+wdBackup, err := os.Getwd()
+if err != nil {
+	t.Fatalf("Error getting current working directory: %v", err)
+}
+err = os.Chdir(dir)
+if err != nil {
+	t.Fatalf("Error changing working directory: %v", err)
+}
+dir, err = filepath.EvalSymlinks(dir)
+if err != nil {
+	t.Fatal(err)
+}
 
-	// Delete temp folder
-	defer func() {
-		err = os.Chdir(wdBackup)
-		if err != nil {
-			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
-		}
-	}()
+// Delete temp folder
+defer func() {
+	err = os.Chdir(wdBackup)
+	if err != nil {
+		t.Fatalf("Error changing dir back: %v", err)
+	}
+	err = os.RemoveAll(dir)
+	if err != nil {
+		t.Fatalf("Error removing dir: %v", err)
+	}
+}()
 
-	testCases := []deployAllTestCase{
-		deployAllTestCase{
-			name: "No Dependencies to deploy",
+testCases := []deployAllTestCase{
+	deployAllTestCase{
+		name: "No Dependencies to deploy",
+	},
+	/*deployAllTestCase{
+		name: "Deploy one dependency",
+		files: map[string]string{
+			"devspace.yaml":         "",
+			"someDir/devspace.yaml": "",
 		},
-		/*deployAllTestCase{
-			name: "Deploy one dependency",
-			files: map[string]string{
-				"devspace.yaml":         "",
-				"someDir/devspace.yaml": "",
+		dependencyTasks: []*latest.DependencyConfig{
+			&latest.DependencyConfig{
+				Source: &latest.SourceConfig{
+					Path: "someDir",
+				},
+				Profile: "someDir/devspace.yaml",
 			},
-			dependencyTasks: []*latest.DependencyConfig{
-				&latest.DependencyConfig{
-					Source: &latest.SourceConfig{
-						Path: "someDir",
-					},
-					Profile: "someDir/devspace.yaml",
+		},
+		activeConfig: &generated.CacheConfig{
+			Images: map[string]*generated.ImageCache{
+				"default": &generated.ImageCache{
+					Tag: "1.15", // This will be appended to nginx during deploy
 				},
 			},
-			activeConfig: &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{
-					"default": &generated.ImageCache{
-						Tag: "1.15", // This will be appended to nginx during deploy
-					},
-				},
-				Dependencies: map[string]string{},
-			},
-			allowCyclicParam: true,
-			expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir+string(os.PathSeparator)+"someDir"),
-		},*/
+			Dependencies: map[string]string{},
+		},
+		allowCyclicParam: true,
+		expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir+string(os.PathSeparator)+"someDir"),
+	},*/ /*
 	}
 
 	for _, testCase := range testCases {
@@ -302,7 +299,7 @@ func TestPurgeAll(t *testing.T) {
 			},
 			allowCyclicParam: true,
 			expectedErr: fmt.Sprintf("Error deploying dependency %s:  Unable to create new kubectl client: invalid configuration: no configuration has been provided", dir+string(os.PathSeparator)+"someDir"),
-		},*/
+		},*/ /*
 	}
 
 	for _, testCase := range testCases {
@@ -338,4 +335,4 @@ func TestPurgeAll(t *testing.T) {
 			assert.NilError(t, err, "Error removing file in testCase %s", testCase.name)
 		}
 	}
-}
+}*/

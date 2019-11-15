@@ -335,7 +335,7 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Do the request
-	out, err := kubectl.GenericRequest(client, options)
+	out, err := client.GenericRequest(options)
 	if err != nil {
 		if strings.Index(err.Error(), "request: unknown") != 0 {
 			h.log.Errorf("Error in %s: %v", r.URL.String(), err)

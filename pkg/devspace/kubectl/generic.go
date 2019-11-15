@@ -21,7 +21,7 @@ type GenericRequestOptions struct {
 }
 
 // GenericRequest makes a new request to the given server with the specified options
-func GenericRequest(client *Client, options *GenericRequestOptions) (string, error) {
+func (client *client) GenericRequest(options *GenericRequestOptions) (string, error) {
 	// Create new client
 	var restClient restclient.Interface
 	if options.APIVersion != "" {
@@ -48,7 +48,7 @@ func GenericRequest(client *Client, options *GenericRequestOptions) (string, err
 			return "", err
 		}
 	} else {
-		restClient = client.Client.CoreV1().RESTClient()
+		restClient = client.KubeClient().CoreV1().RESTClient()
 	}
 
 	req := restClient.Get()

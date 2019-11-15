@@ -165,7 +165,7 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Create server
-	server, err := server.NewServer(config, generatedConfig, cmd.Dev, client.CurrentContext, client.Namespace, forcePort, log.GetInstance())
+	server, err := server.NewServer(config, generatedConfig, cmd.Dev, client.CurrentContext(), client.Namespace(), forcePort, log.GetInstance())
 	if err != nil {
 		return err
 	}

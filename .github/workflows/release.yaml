@@ -71,7 +71,7 @@ jobs:
             ${{ runner.os }}-node-
       - name: Build UI
         env:
-          NPM_CONFIG_GLOBALCONFIG: "../dist/npm/config/npmrc"
+          NPM_CONFIG_GLOBALCONFIG: "dist/npm/config/npmrc"
           NPM_REGISTRY_TOKEN: ${{ secrets.NPM_DEVSPACE_REGISTRY_TOKEN }}
         run: ./hack/build-ui.bash
       - name: Publish

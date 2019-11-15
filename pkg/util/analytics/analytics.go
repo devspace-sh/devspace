@@ -329,7 +329,7 @@ func (a *analyticsConfig) sendRequest(requestURL string, data map[string]interfa
 			return errors.Errorf("Couldn't marshal analytics headers: %v", err)
 		}
 
-		args := []string{DEFERRED_REQUEST_COMMAND, "POST", base64.StdEncoding.EncodeToString([]byte(requestURL.String())), base64.StdEncoding.EncodeToString(jsonRequestBody), base64.StdEncoding.EncodeToString(jsonHeaders)}
+		args := []string{DEFERRED_REQUEST_COMMAND, "POST", base64.StdEncoding.EncodeToString([]byte(requestURL.String())), base64.StdEncoding.EncodeToString(jsonHeaders), base64.StdEncoding.EncodeToString(jsonRequestBody)}
 		executable, err := os.Executable()
 		if err != nil {
 			executable = os.Args[0]
@@ -344,7 +344,7 @@ func (a *analyticsConfig) sendRequest(requestURL string, data map[string]interfa
 
 // HandleDeferredRequest sends a request if args are: executable, DEFERRED_REQUEST_COMMAND
 func (a *analyticsConfig) HandleDeferredRequest() error {
-	if len(os.Args) < 6 || os.Args[1] != DEFERRED_REQUEST_COMMAND {
+	if len(os.Args) < 5 || os.Args[1] != DEFERRED_REQUEST_COMMAND {
 		return nil
 	}
 
@@ -353,13 +353,18 @@ func (a *analyticsConfig) HandleDeferredRequest() error {
 	if err != nil {
 		return errors.Errorf("Couldn't base64.decode request URL: %v", err)
 	}
-	requestBody, err := base64.StdEncoding.DecodeString(os.Args[4])
-	if err != nil {
-		return errors.Errorf("Couldn't base64.decode request body: %v", err)
-	}
-	jsonRequestHeaders, err := base64.StdEncoding.DecodeString(os.Args[5])
+
+	jsonRequestHeaders, err := base64.StdEncoding.DecodeString(os.Args[4])
 	if err != nil {
 		return errors.Errorf("Couldn't base64.decode request headers: %v", err)
+	}
+
+	requestBody := []byte{}
+	if len(os.Args) > 5 {
+		requestBody, err = base64.StdEncoding.DecodeString(os.Args[5])
+		if err != nil {
+			return errors.Errorf("Couldn't base64.decode request body: %v", err)
+		}
 	}
 
 	requestHeaders := map[string][]string{}

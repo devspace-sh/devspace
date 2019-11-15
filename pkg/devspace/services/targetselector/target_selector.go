@@ -40,12 +40,12 @@ type TargetSelector struct {
 
 	allowPick bool
 
-	kubeClient *kubectl.Client
+	kubeClient kubectl.Client
 	config     *latest.Config
 }
 
 // NewTargetSelector creates a new target selector for selecting a target pod or container
-func NewTargetSelector(config *latest.Config, kubeClient *kubectl.Client, sp *SelectorParameter, allowPick bool, imageSelector []string) (*TargetSelector, error) {
+func NewTargetSelector(config *latest.Config, kubeClient kubectl.Client, sp *SelectorParameter, allowPick bool, imageSelector []string) (*TargetSelector, error) {
 	// Get namespace
 	namespace, err := sp.GetNamespace(config, kubeClient)
 	if err != nil {
@@ -81,7 +81,7 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 		}
 
 		if t.podName != "" {
-			pod, err := t.kubeClient.Client.CoreV1().Pods(t.namespace).Get(t.podName, metav1.GetOptions{})
+			pod, err := t.kubeClient.KubeClient().CoreV1().Pods(t.namespace).Get(t.podName, metav1.GetOptions{})
 			if err != nil {
 				return nil, err
 			}

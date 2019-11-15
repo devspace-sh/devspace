@@ -12,14 +12,14 @@ import (
 // DevSpaceChartConfig is the config that holds the devspace chart information
 var DevSpaceChartConfig = &latest.ChartConfig{
 	Name:    "component-chart",
-	Version: "v0.0.6",
+	Version: "v0.0.8",
 	RepoURL: "https://charts.devspace.cloud",
 }
 
 // DeployConfig holds the information necessary to deploy via helm
 type DeployConfig struct {
 	// Public because we can switch them to fake clients for testing
-	Kube *kubectl.Client
+	Kube kubectl.Client
 	Helm helm.Interface
 
 	TillerNamespace  string
@@ -30,8 +30,8 @@ type DeployConfig struct {
 }
 
 // New creates a new helm deployment client
-func New(config *latest.Config, kubeClient *kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
-	tillerNamespace := kubeClient.Namespace
+func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+	tillerNamespace := kubeClient.Namespace()
 	if deployConfig.Helm.TillerNamespace != "" {
 		tillerNamespace = deployConfig.Helm.TillerNamespace
 	}
