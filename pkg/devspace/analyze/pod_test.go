@@ -1,19 +1,8 @@
 package analyze
 
-/*import (
-	"regexp"
-	"strings"
-	"testing"
-	"time"
+import ()
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"gotest.tools/assert"
-	k8sv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-)
-
-func TestPods(t *testing.T) {
+/*func TestPods(t *testing.T) {
 	kubeClient := &kubectl.Client{
 		Client: fake.NewSimpleClientset(),
 	}

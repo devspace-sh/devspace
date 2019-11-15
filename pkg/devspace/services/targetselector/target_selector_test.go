@@ -1,22 +1,8 @@
 package targetselector
 
-/*import (
-	"fmt"
-	"testing"
+import ()
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
-
-	k8sv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-
-	"gotest.tools/assert"
-)
-
-func TestTargetSelector(t *testing.T) {
+/*func TestTargetSelector(t *testing.T) {
 	namespace := "test"
 	selectedContainerName := "TestContainer2"
 	selectedPodName := "TestPod"

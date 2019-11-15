@@ -1,22 +1,6 @@
 package cloud
 
-/*import (
-	"encoding/base64"
-	"testing"
-	"time"
-
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
-
-	k8sv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-
-	"gotest.tools/assert"
-)
+import ()
 
 func TestConnectCluster(t *testing.T) {
 	provider := &Provider{latest.Provider{}, log.GetInstance()}

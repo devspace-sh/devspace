@@ -62,8 +62,6 @@ type Client interface {
 	EnsureGoogleCloudClusterRoleBinding(log log.Logger) error
 	GetRunningPodsWithImage(imageNames []string, namespace string, maxWaiting time.Duration) ([]*k8sv1.Pod, error)
 	GetNewestRunningPod(labelSelector string, imageSelector []string, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error)
-	GetPodsFromDeployment(deployment, namespace string) (*k8sv1.PodList, error)
-	ForwardPorts(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) error
 	NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error)
 	IsLocalKubernetes() bool
 }

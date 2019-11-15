@@ -1,23 +1,8 @@
 package helm
 
-/*import (
-	"testing"
+import ()
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/pkg/errors"
-	v1beta1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/fake"
-
-	"gotest.tools/assert"
-)
-
-func createTestResources(client kubernetes.Interface) error {
+/*func createTestResources(client kubernetes.Interface) error {
 	podMetadata := metav1.ObjectMeta{
 		Name: "test-pod",
 		Labels: map[string]string{

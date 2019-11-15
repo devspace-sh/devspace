@@ -1,23 +1,9 @@
 package registry
 
-/*import (
-	//"encoding/base64"
-
-	"testing"
-
-	k8sv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-
-	"gotest.tools/assert"
+import (
 )
 
-type createPullSecretTestCase struct {
+/*type createPullSecretTestCase struct {
 	name string
 
 	namespace       string

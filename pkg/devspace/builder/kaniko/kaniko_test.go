@@ -1,25 +1,8 @@
 package kaniko
 
-/*import (
-	"io/ioutil"
-	"os"
-	"testing"
-	"time"
+import ()
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-
-	k8sv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-)
-
-const testNamespace = "test-kaniko-build"
+/*const testNamespace = "test-kaniko-build"
 
 func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 	t.Skip("Package is untestable because of kubeClient stream usage")

@@ -1,31 +1,11 @@
 package helm
 
-/*import (
-	"io/ioutil"
-	"os"
-	"reflect"
-	"strings"
-	"testing"
-
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	otherhelmpackage "github.com/devspace-cloud/devspace/pkg/devspace/helm"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	yaml "gopkg.in/yaml.v2"
-
-	k8sv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-
-	"gotest.tools/assert"
-)
+import ()
 
 // Test namespace to create
 const testNamespace = "test-helm-deploy"
 
-func TestHelmDeployment(t *testing.T) {
+/*func TestHelmDeployment(t *testing.T) {
 	namespace := "testnamespace"
 	chartName := "chart"
 

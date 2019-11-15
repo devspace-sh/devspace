@@ -349,47 +349,6 @@ func GetPodStatus(pod *k8sv1.Pod) string {
 	return reason
 }
 
-// GetPodsFromDeployment retrieves all found pods from a deployment name
-func (client *client) GetPodsFromDeployment(deployment, namespace string) (*k8sv1.PodList, error) {
-	if namespace == "" {
-		namespace = client.namespace
-	}
-
-	deploy, err := client.KubeClient().AppsV1().Deployments(namespace).Get(deployment, metav1.GetOptions{})
-	// Deployment not there
-	if err != nil {
-		return nil, err
-	}
-
-	matchLabels := deploy.Spec.Selector.MatchLabels
-	if len(matchLabels) <= 0 {
-		return nil, errors.New("No matchLabels defined deployment")
-	}
-
-	matchLabelString := ""
-	for k, v := range matchLabels {
-		if len(matchLabelString) > 0 {
-			matchLabelString += ","
-		}
-
-		matchLabelString += k + "=" + v
-	}
-
-	return client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{
-		LabelSelector: matchLabelString,
-	})
-}
-
-// ForwardPorts forwards the specified ports on the specified interface addresses from the cluster to the local machine
-func (client *client) ForwardPorts(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) error {
-	fw, err := client.NewPortForwarder(pod, ports, addresses, stopChan, readyChan)
-	if err != nil {
-		return err
-	}
-
-	return fw.ForwardPorts()
-}
-
 // NewPortForwarder creates a new port forwarder object for the specified pods, ports and addresses
 func (client *client) NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error) {
 	execRequest := client.KubeClient().CoreV1().RESTClient().Post().

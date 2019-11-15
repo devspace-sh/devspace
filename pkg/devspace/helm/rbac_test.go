@@ -1,17 +1,8 @@
 package helm
 
-/*import (
-	"testing"
+import ()
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-
-	"k8s.io/client-go/kubernetes/fake"
-)
-
-func createFakeConfig() *latest.Config {
+/*func createFakeConfig() *latest.Config {
 	// Create fake devspace config
 	testConfig := &latest.Config{
 		Deployments: []*latest.DeploymentConfig{

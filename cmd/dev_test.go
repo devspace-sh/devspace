@@ -1,136 +1,78 @@
 package cmd
 
-/*import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
-	"testing"
+type devTestCase struct{}
 
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
-	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"k8s.io/client-go/tools/clientcmd"
-
-	"gopkg.in/yaml.v2"
-	"gotest.tools/assert"
-)
-
-type devTestCase struct {
-	name string
-
-	fakeConfig           *latest.Config
-	fakeKubeConfig       clientcmd.ClientConfig
-	fakeKubeClient       kubectl.Client
-	files                map[string]interface{}
-	generatedYamlContent interface{}
-	graphQLResponses     []interface{}
-	providerList         []*cloudlatest.Provider
-
-	forceBuildFlag              bool
-	skipBuildFlag               bool
-	buildSequentialFlag         bool
-	forceDeploymentFlag         bool
-	deploymentsFlag             string
-	forceDependenciesFlag       bool
-	skipPushFlag                bool
-	allowCyclicDependenciesFlag bool
-
-	syncFlag            bool
-	terminalFlag        bool
-	exitAfterDeployFlag bool
-	skipPipelineFlag    bool
-	switchContextFlag   bool
-	portForwardingFlag  bool
-	verboseSyncFlag     bool
-	selectorFlag        string
-	containerFlag       string
-	labelSelectorFlag   string
-	interactiveFlag     bool
-	globalFlags         flags.GlobalFlags
-
-	expectedErr string
+/*func TestDev(t *testing.T) {
+dir, err := ioutil.TempDir("", "test")
+if err != nil {
+	t.Fatalf("Error creating temporary directory: %v", err)
+}
+dir, err = filepath.EvalSymlinks(dir)
+if err != nil {
+	t.Fatal(err)
 }
 
-func TestDev(t *testing.T) {
-	dir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
-	dir, err = filepath.EvalSymlinks(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+wdBackup, err := os.Getwd()
+if err != nil {
+	t.Fatalf("Error getting current working directory: %v", err)
+}
+err = os.Chdir(dir)
+if err != nil {
+	t.Fatalf("Error changing working directory: %v", err)
+}
 
-	wdBackup, err := os.Getwd()
+defer func() {
+	//Delete temp folder
+	err = os.Chdir(wdBackup)
 	if err != nil {
-		t.Fatalf("Error getting current working directory: %v", err)
+		t.Fatalf("Error changing dir back: %v", err)
 	}
-	err = os.Chdir(dir)
+	err = os.RemoveAll(dir)
 	if err != nil {
-		t.Fatalf("Error changing working directory: %v", err)
+		t.Fatalf("Error removing dir: %v", err)
 	}
+}()
 
-	defer func() {
-		//Delete temp folder
-		err = os.Chdir(wdBackup)
-		if err != nil {
-			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
-		}
-	}()
-
-	testCases := []devTestCase{
-		devTestCase{
-			name:           "Invalid flags",
-			fakeConfig:     &latest.Config{},
-			skipBuildFlag:  true,
-			forceBuildFlag: true,
-			expectedErr:    "Flags --skip-build & --force-build cannot be used together",
+testCases := []devTestCase{
+	devTestCase{
+		name:           "Invalid flags",
+		fakeConfig:     &latest.Config{},
+		skipBuildFlag:  true,
+		forceBuildFlag: true,
+		expectedErr:    "Flags --skip-build & --force-build cannot be used together",
+	},
+	/*devTestCase{
+		name:       "interactive without images",
+		fakeConfig: &latest.Config{},
+		fakeKubeClient: &kubectl.Client{
+			Client:         fake.NewSimpleClientset(),
+			CurrentContext: "minikube",
 		},
-		/*devTestCase{
-			name:       "interactive without images",
-			fakeConfig: &latest.Config{},
-			fakeKubeClient: &kubectl.Client{
-				Client:         fake.NewSimpleClientset(),
-				CurrentContext: "minikube",
+		files: map[string]interface{}{
+			constants.DefaultConfigPath: &latest.Config{
+				Version: latest.Version,
 			},
-			files: map[string]interface{}{
-				constants.DefaultConfigPath: &latest.Config{
-					Version: latest.Version,
+		},
+		interactiveFlag: true,
+		expectedErr:     "Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`",
+	},
+	devTestCase{
+		name:       "Cloud Space can't be resumed",
+		fakeConfig: &latest.Config{},
+		fakeKubeClient: &kubectl.Client{
+			Client:         fake.NewSimpleClientset(),
+			CurrentContext: "minikube",
+		},
+		files: map[string]interface{}{
+			constants.DefaultConfigPath: &latest.Config{
+				Version: latest.Version,
+				Dev: &latest.DevConfig{
+					Interactive: &latest.InteractiveConfig{},
 				},
 			},
-			interactiveFlag: true,
-			expectedErr:     "Your configuration does not contain any images to build for interactive mode. If you simply want to start the terminal instead of streaming the logs, run `devspace dev -t`",
 		},
-		devTestCase{
-			name:       "Cloud Space can't be resumed",
-			fakeConfig: &latest.Config{},
-			fakeKubeClient: &kubectl.Client{
-				Client:         fake.NewSimpleClientset(),
-				CurrentContext: "minikube",
-			},
-			files: map[string]interface{}{
-				constants.DefaultConfigPath: &latest.Config{
-					Version: latest.Version,
-					Dev: &latest.DevConfig{
-						Interactive: &latest.InteractiveConfig{},
-					},
-				},
-			},
-			expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context 'minikube' in kube-config file",
-		},*//*
+		expectedErr:    "is cloud space: Unable to get AuthInfo for kube-context: Unable to find kube-context 'minikube' in kube-config file",
+	},*/ /*
 	}
 
 	log.OverrideRuntimeErrorHandler(true)

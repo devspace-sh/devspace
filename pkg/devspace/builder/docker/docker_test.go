@@ -1,24 +1,11 @@
 package docker
 
-/*import (
-	"io/ioutil"
-	"os"
-	"testing"
-
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/randutil"
-
-	"k8s.io/client-go/kubernetes/fake"
-)
+import ()
 
 //@Moretest
 //Coverage is 46% and that's not enough
 
-func TestDockerBuild(t *testing.T) {
+/*func TestDockerBuild(t *testing.T) {
 	t.Skip("For some reason there's a problem with the coverage in this package")
 
 	// 1. Write test dockerfile and context to a temp folder
