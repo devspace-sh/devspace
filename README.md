@@ -413,7 +413,7 @@ devspace create space my-namespace
 
 > You can either
 > - use the fully managed **[SaaS edition of DevSpace Cloud](https://app.devspace.cloud)**
-> - or run it on your clusters using the <img width="20px" style="vertical-align: sub" src="/img/logos/github-logo.svg" alt="DevSpace Demo"> **[on-premise edition available on GitHub](https://github.com/devspace-cloud/devspace-cloud)**.
+> - or run it on your clusters using the **[on-premise edition available on GitHub](https://github.com/devspace-cloud/devspace-cloud)**.
 
 <br>
 </details>
