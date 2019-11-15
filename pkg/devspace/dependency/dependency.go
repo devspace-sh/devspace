@@ -64,7 +64,7 @@ func (m *manager) UpdateAll() error {
 	// Resolve all dependencies
 	_, err := m.resolver.Resolve(true)
 	if err != nil {
-		if _, ok := err.(*CyclicError); ok {
+		if _, ok := err.(*cyclicError); ok {
 			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
 		}
 
@@ -88,7 +88,7 @@ func (m *manager) BuildAll(options BuildOptions) error {
 	// Resolve all dependencies
 	dependencies, err := m.resolver.Resolve(options.UpdateDependencies)
 	if err != nil {
-		if _, ok := err.(*CyclicError); ok {
+		if _, ok := err.(*cyclicError); ok {
 			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
 		}
 
@@ -145,7 +145,7 @@ func (m *manager) DeployAll(options DeployOptions) error {
 	// Resolve all dependencies
 	dependencies, err := m.resolver.Resolve(options.UpdateDependencies)
 	if err != nil {
-		if _, ok := err.(*CyclicError); ok {
+		if _, ok := err.(*cyclicError); ok {
 			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
 		}
 
@@ -198,7 +198,7 @@ func (m *manager) PurgeAll(verbose bool) error {
 	// Resolve all dependencies
 	dependencies, err := m.resolver.Resolve(false)
 	if err != nil {
-		if _, ok := err.(*CyclicError); ok {
+		if _, ok := err.(*cyclicError); ok {
 			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
 		}
 

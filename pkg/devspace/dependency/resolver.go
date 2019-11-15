@@ -37,7 +37,7 @@ type ResolverInterface interface {
 
 // Resolver implements the resolver interface
 type resolver struct {
-	DependencyGraph *Graph
+	DependencyGraph *graph
 
 	BasePath   string
 	BaseConfig *latest.Config
@@ -67,7 +67,7 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, allowCy
 	}
 
 	return &resolver{
-		DependencyGraph: NewGraph(NewNode(id, nil)),
+		DependencyGraph: newGraph(newNode(id, nil)),
 
 		BaseConfig: baseConfig,
 		BaseCache:  baseCache,
@@ -90,7 +90,7 @@ func (r *resolver) Resolve(update bool) ([]*Dependency, error) {
 
 	err = r.resolveRecursive(currentWorkingDirectory, r.DependencyGraph.Root.ID, r.BaseConfig.Dependencies, update)
 	if err != nil {
-		if _, ok := err.(*CyclicError); ok {
+		if _, ok := err.(*cyclicError); ok {
 			return nil, err
 		}
 
@@ -112,14 +112,14 @@ func (r *resolver) buildDependencyQueue() ([]*Dependency, error) {
 	retDependencies := make([]*Dependency, 0, len(r.DependencyGraph.Nodes)-1)
 
 	for len(r.DependencyGraph.Nodes) > 1 {
-		next := r.DependencyGraph.GetNextLeaf(r.DependencyGraph.Root)
+		next := r.DependencyGraph.getNextLeaf(r.DependencyGraph.Root)
 		if next == r.DependencyGraph.Root {
 			break
 		}
 
 		retDependencies = append(retDependencies, next.Data.(*Dependency))
 
-		err := r.DependencyGraph.RemoveNode(next.ID)
+		err := r.DependencyGraph.removeNode(next.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -134,9 +134,9 @@ func (r *resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 
 		// Try to insert new edge
 		if _, ok := r.DependencyGraph.Nodes[ID]; ok {
-			err := r.DependencyGraph.AddEdge(parentID, ID)
+			err := r.DependencyGraph.addEdge(parentID, ID)
 			if err != nil {
-				if _, ok := err.(*CyclicError); ok {
+				if _, ok := err.(*cyclicError); ok {
 					// Check if cyclic dependencies are allowed
 					if !r.AllowCyclic {
 						return err
@@ -151,7 +151,7 @@ func (r *resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 				return err
 			}
 
-			_, err = r.DependencyGraph.InsertNodeAt(parentID, ID, dependency)
+			_, err = r.DependencyGraph.insertNodeAt(parentID, ID, dependency)
 			if err != nil {
 				return errors.Wrap(err, "insert node")
 			}
