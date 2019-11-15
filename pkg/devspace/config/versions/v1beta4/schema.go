@@ -1,11 +1,11 @@
-package latest
+package v1beta4
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 )
 
 // Version is the current api version
-const Version string = "v1beta5"
+const Version string = "v1beta4"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -227,7 +227,6 @@ type HelmConfig struct {
 	Timeout          *int64                      `yaml:"timeout,omitempty"`
 	Rollback         *bool                       `yaml:"rollback,omitempty"`
 	Force            *bool                       `yaml:"force,omitempty"`
-	V2               *bool                       `yaml:"v2,omitempty"`
 	TillerNamespace  string                      `yaml:"tillerNamespace,omitempty"`
 }
 

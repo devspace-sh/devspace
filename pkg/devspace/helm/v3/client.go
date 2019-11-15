@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
@@ -102,7 +102,7 @@ func (client *v3Client) InstallChart(releaseName string, releaseNamespace string
 	}
 
 	vals := make(map[string]interface{})
-	err = json.Unmarshal(out, vals)
+	err = json.Unmarshal(out, &vals)
 	if err != nil {
 		return nil, err
 	}

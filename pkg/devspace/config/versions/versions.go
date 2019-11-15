@@ -11,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta1"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta2"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta3"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta4"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
@@ -29,6 +30,7 @@ var versionLoader = map[string]*loader{
 	v1beta1.Version:  &loader{New: v1beta1.New},
 	v1beta2.Version:  &loader{New: v1beta2.New},
 	v1beta3.Version:  &loader{New: v1beta3.New},
+	v1beta4.Version:  &loader{New: v1beta4.New},
 	latest.Version:   &loader{New: latest.New},
 }
 
