@@ -22,7 +22,7 @@ type PullSecretOptions struct {
 }
 
 // CreatePullSecret creates an image pull secret for a registry
-func (r *client) CreatePullSecret(options PullSecretOptions) error {
+func (r *client) CreatePullSecret(options *PullSecretOptions) error {
 	pullSecretName := GetRegistryAuthSecretName(options.RegistryURL)
 	if options.RegistryURL == "hub.docker.com" || options.RegistryURL == "" {
 		options.RegistryURL = "https://index.docker.io/v1/"

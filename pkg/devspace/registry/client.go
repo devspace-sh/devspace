@@ -10,7 +10,7 @@ import (
 // Client communicates with a registry
 type Client interface {
 	CreatePullSecrets() error
-	CreatePullSecret(options PullSecretOptions) error
+	CreatePullSecret(options *PullSecretOptions) error
 }
 
 // NewClient creates a client for a registry

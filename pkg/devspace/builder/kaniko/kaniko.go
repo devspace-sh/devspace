@@ -126,7 +126,7 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 
 	registryClient := registry.NewClient(nil, b.helper.KubeClient, b.dockerClient, log)
 
-	return registryClient.CreatePullSecret(registry.PullSecretOptions{
+	return registryClient.CreatePullSecret(&registry.PullSecretOptions{
 		Namespace:       b.BuildNamespace,
 		RegistryURL:     registryURL,
 		Username:        username,

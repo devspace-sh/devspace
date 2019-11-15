@@ -108,13 +108,13 @@ func (r *client) createPullSecretForRegistry(registryURL string) error {
 				namespace = deployConfig.Namespace
 			}
 
-			err := r.CreatePullSecret(PullSecretOptions{
-				Namespace: namespace, 
-				RegistryURL: registryURL, 
-				Username: username, 
-				PasswordOrToken: password, 
-				Email: email,
-			}) 
+			err := r.CreatePullSecret(&PullSecretOptions{
+				Namespace:       namespace,
+				RegistryURL:     registryURL,
+				Username:        username,
+				PasswordOrToken: password,
+				Email:           email,
+			})
 			if err != nil {
 				return err
 			}
