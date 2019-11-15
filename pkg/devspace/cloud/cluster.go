@@ -146,12 +146,12 @@ func (p *Provider) ConnectCluster(options *ConnectClusterOptions) error {
 	defer p.Log.StopWait()
 	var clusterID int
 	if options.Public {
-		clusterID, err = p.CreatePublicCluster(clusterName, client.Host(), caCert, string(encryptedToken))
+		clusterID, err = p.CreatePublicCluster(clusterName, client.RestConfig().Host, caCert, string(encryptedToken))
 		if err != nil {
 			return errors.Wrap(err, "create cluster")
 		}
 	} else {
-		clusterID, err = p.CreateUserCluster(clusterName, client.Host(), caCert, string(encryptedToken), availableResources.NetworkPolicy)
+		clusterID, err = p.CreateUserCluster(clusterName, client.RestConfig().Host, caCert, string(encryptedToken), availableResources.NetworkPolicy)
 		if err != nil {
 			return errors.Wrap(err, "create cluster")
 		}
@@ -737,15 +737,15 @@ func checkResources(p *Provider, client kubectl.Client) (*clusterResources, erro
 		return nil, errors.Wrap(err, "discover server resources")
 	}
 
-	exist := client.GroupVersionExist("rbac.authorization.k8s.io/v1beta1", groupResources)
+	exist := kubectl.GroupVersionExist("rbac.authorization.k8s.io/v1beta1", groupResources)
 	if exist == false {
 		return nil, errors.New("Group version rbac.authorization.k8s.io/v1beta1 does not exist in cluster, but is required. Is RBAC enabled?")
 	}
 
 	return &clusterResources{
-		PodPolicy:     client.ResourceExist("extensions/v1beta1", "podsecuritypolicies", groupResources),
-		NetworkPolicy: client.ResourceExist("networking.k8s.io/v1", "networkpolicies", groupResources),
-		CertManager:   client.GroupVersionExist("certmanager.k8s.io/v1alpha1", groupResources),
+		PodPolicy:     kubectl.ResourceExist("extensions/v1beta1", "podsecuritypolicies", groupResources),
+		NetworkPolicy: kubectl.ResourceExist("networking.k8s.io/v1", "networkpolicies", groupResources),
+		CertManager:   kubectl.GroupVersionExist("certmanager.k8s.io/v1alpha1", groupResources),
 	}, nil
 }
 
@@ -829,8 +829,8 @@ func (p *Provider) ResetKey(clusterName string) error {
 	if err != nil {
 		return err
 	}
-	if client.Host() != *cluster.Server {
-		return errors.Errorf("Selected context does not point to the correct host. Selected %s <> %s", client.Host(), *cluster.Server)
+	if client.RestConfig().Host != *cluster.Server {
+		return errors.Errorf("Selected context does not point to the correct host. Selected %s <> %s", client.RestConfig().Host, *cluster.Server)
 	}
 
 	key, err := getKey(p, true)
