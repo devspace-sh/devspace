@@ -99,6 +99,7 @@ replace (
 	github.com/Nvveen/Gotty => github.com/ijc25/Gotty v0.0.0-20170406111628-a8b993ba6abd
 	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20191024225408-dee21c0394b5
 	github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309
+	golang.org/x/sys => golang.org/x/sys v0.0.0-20190812073006-9eafafc0a87e
 
 	k8s.io/api => k8s.io/api v0.0.0-20191016110408-35e52d86657a
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20191016113550-5357c4baaf65

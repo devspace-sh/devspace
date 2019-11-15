@@ -57,13 +57,13 @@ func newDownstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*do
 }
 
 func (d *downstream) populateFileMap() error {
+	d.sync.fileIndex.fileMapMutex.Lock()
+	defer d.sync.fileIndex.fileMapMutex.Unlock()
+
 	changes, err := d.collectChanges()
 	if err != nil {
 		return errors.Wrap(err, "collect changes")
 	}
-
-	d.sync.fileIndex.fileMapMutex.Lock()
-	defer d.sync.fileIndex.fileMapMutex.Unlock()
 
 	for _, element := range changes {
 		if d.sync.fileIndex.fileMap[element.Path] == nil {

@@ -346,6 +346,10 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 	defer reader.Close()
 	defer writer.Close()
 
+	// Upload files
+	u.sync.fileIndex.fileMapMutex.Lock()
+	defer u.sync.fileIndex.fileMapMutex.Unlock()
+
 	errorChan := make(chan error)
 	go func() {
 		errorChan <- u.compress(writer, files, ignoreMatcher)
@@ -361,9 +365,6 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 
 func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ignoreMatcher gitignore.IgnoreParser) error {
 	defer writer.Close()
-
-	u.sync.fileIndex.fileMapMutex.Lock()
-	defer u.sync.fileIndex.fileMapMutex.Unlock()
 
 	// Use compression
 	gw := gzip.NewWriter(writer)
