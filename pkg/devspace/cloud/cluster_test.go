@@ -2,7 +2,7 @@ package cloud
 
 import ()
 
-func TestConnectCluster(t *testing.T) {
+/*func TestConnectCluster(t *testing.T) {
 	provider := &Provider{latest.Provider{}, log.GetInstance()}
 	options := &ConnectClusterOptions{
 		ClusterName: "#",
