@@ -20,7 +20,7 @@ var DevSpaceChartConfig = &latest.ChartConfig{
 type DeployConfig struct {
 	// Public because we can switch them to fake clients for testing
 	Kube kubectl.Client
-	Helm helm.Interface
+	Helm helm.Client
 
 	TillerNamespace  string
 	DeploymentConfig *latest.DeploymentConfig
@@ -68,7 +68,7 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 		}
 	}
 
-	_, err := d.Helm.DeleteRelease(d.DeploymentConfig.Name, true)
+	err := d.Helm.DeleteRelease(d.DeploymentConfig.Name, true)
 	if err != nil {
 		return err
 	}

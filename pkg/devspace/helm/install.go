@@ -3,6 +3,7 @@ package helm
 import (
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
@@ -18,7 +19,6 @@ import (
 	"k8s.io/helm/pkg/getter"
 	k8shelm "k8s.io/helm/pkg/helm"
 	"k8s.io/helm/pkg/proto/hapi/chart"
-	hapi_release5 "k8s.io/helm/pkg/proto/hapi/release"
 )
 
 // DeploymentTimeout is the timeout to wait for helm to deploy
@@ -48,7 +48,7 @@ func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error 
 }
 
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
-func (client *Client) InstallChartByPath(releaseName, releaseNamespace, chartPath string, values *map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*hapi_release5.Release, error) {
+func (client *client) InstallChartByPath(releaseName, releaseNamespace, chartPath string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*Release, error) {
 	if releaseNamespace == "" {
 		releaseNamespace = client.kubectl.Namespace()
 	}
@@ -139,7 +139,13 @@ func (client *Client) InstallChartByPath(releaseName, releaseNamespace, chartPat
 			return nil, nil
 		}
 
-		return upgradeResponse.GetRelease(), nil
+		return &Release{
+			Name:         upgradeResponse.Release.GetName(),
+			Namespace:    upgradeResponse.Release.GetNamespace(),
+			Version:      upgradeResponse.Release.Version,
+			Status:       upgradeResponse.Release.Info.Status.Code.String(),
+			LastDeployed: time.Unix(upgradeResponse.Release.Info.LastDeployed.Seconds, 0),
+		}, nil
 	}
 
 	installResponse, err := client.helm.InstallReleaseFromChart(
@@ -165,11 +171,17 @@ func (client *Client) InstallChartByPath(releaseName, releaseNamespace, chartPat
 		return nil, nil
 	}
 
-	return installResponse.GetRelease(), nil
+	return &Release{
+		Name:         installResponse.Release.GetName(),
+		Namespace:    installResponse.Release.GetNamespace(),
+		Version:      installResponse.Release.Version,
+		Status:       installResponse.Release.Info.Status.Code.String(),
+		LastDeployed: time.Unix(installResponse.Release.Info.LastDeployed.Seconds, 0),
+	}, nil
 }
 
 // analyzeError calls analyze and tries to find the issue
-func (client *Client) analyzeError(srcErr error, releaseNamespace string) error {
+func (client *client) analyzeError(srcErr error, releaseNamespace string) error {
 	errMessage := srcErr.Error()
 
 	// Only check if the error is time out
@@ -190,7 +202,7 @@ func (client *Client) analyzeError(srcErr error, releaseNamespace string) error 
 }
 
 // InstallChart installs the given chart by name under the releasename in the releasenamespace
-func (client *Client) InstallChart(releaseName string, releaseNamespace string, values *map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*hapi_release5.Release, error) {
+func (client *client) InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*Release, error) {
 	chart := helmConfig.Chart
 	chartPath, err := locateChartPath(client.Settings, chart.RepoURL, chart.Username, chart.Password, chart.Name, chart.Version, false, "", "", "", "")
 	if err != nil {

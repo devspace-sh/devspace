@@ -23,19 +23,26 @@ import (
 	helmenvironment "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/helmpath"
 	"k8s.io/helm/pkg/helm/portforwarder"
-	hapi_release5 "k8s.io/helm/pkg/proto/hapi/release"
-	rls "k8s.io/helm/pkg/proto/hapi/services"
 )
 
-// Interface is the client interface for helm
-type Interface interface {
-	InstallChart(releaseName string, releaseNamespace string, values *map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*hapi_release5.Release, error)
-	DeleteRelease(releaseName string, purge bool) (*rls.UninstallReleaseResponse, error)
-	ListReleases() (*rls.ListReleasesResponse, error)
+// Client is the client interface for helm
+type Client interface {
+	InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*Release, error)
+	DeleteRelease(releaseName string, purge bool) error
+	ListReleases() ([]*Release, error)
 }
 
-// Client holds the necessary information for helm
-type Client struct {
+// Release is the helm release struct
+type Release struct {
+	Name         string
+	Namespace    string
+	Status       string
+	Version      int32
+	LastDeployed time.Time
+}
+
+// client holds the necessary information for helm
+type client struct {
 	Settings  *helmenvironment.EnvSettings
 	Namespace string
 
@@ -46,10 +53,10 @@ type Client struct {
 }
 
 var helmClientsMutex sync.Mutex
-var helmClients = map[string]*Client{}
+var helmClients = map[string]*client{}
 
 // NewClient creates a new helm client
-func NewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
+func NewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller bool) (Client, error) {
 	helmClientsMutex.Lock()
 	defer helmClientsMutex.Unlock()
 
@@ -66,7 +73,7 @@ func NewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace
 	return client, nil
 }
 
-func createNewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
+func createNewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller bool) (*client, error) {
 	// Create tiller if necessary
 	err := ensureTiller(config, kubeClient, tillerNamespace, upgradeTiller, log)
 	if err != nil {
@@ -124,7 +131,7 @@ func createNewClient(config *latest.Config, kubeClient kubectl.Client, tillerNam
 	return create(config, tillerNamespace, helmClient, kubeClient, true, log)
 }
 
-func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.Interface, kubeClient kubectl.Client, updateRepo bool, log log.Logger) (*Client, error) {
+func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.Interface, kubeClient kubectl.Client, updateRepo bool, log log.Logger) (*client, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		return nil, err
@@ -147,7 +154,7 @@ func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.In
 		}
 	}
 
-	wrapper := &Client{
+	wrapper := &client{
 		Settings: &helmenvironment.EnvSettings{
 			Home: helmpath.Home(helmHomePath),
 		},
@@ -171,7 +178,7 @@ func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.In
 }
 
 // UpdateRepos will update the helm repositories
-func (client *Client) UpdateRepos(log log.Logger) error {
+func (client *client) UpdateRepos(log log.Logger) error {
 	allRepos, err := repo.LoadRepositoriesFile(client.Settings.Home.RepositoryFile())
 	if err != nil {
 		return err
@@ -224,11 +231,30 @@ func ReleaseExists(helm helm.Interface, releaseName string) bool {
 }
 
 // DeleteRelease deletes a helm release and optionally purges it
-func (client *Client) DeleteRelease(releaseName string, purge bool) (*rls.UninstallReleaseResponse, error) {
-	return client.helm.DeleteRelease(releaseName, k8shelm.DeletePurge(purge))
+func (client *client) DeleteRelease(releaseName string, purge bool) error {
+	_, err := client.helm.DeleteRelease(releaseName, k8shelm.DeletePurge(purge))
+	return err
 }
 
 // ListReleases lists all helm releases
-func (client *Client) ListReleases() (*rls.ListReleasesResponse, error) {
-	return client.helm.ListReleases()
+func (client *client) ListReleases() ([]*Release, error) {
+	releases, err := client.helm.ListReleases()
+	if err != nil {
+		return nil, err
+	} else if releases == nil {
+		return nil, nil
+	}
+
+	retReleases := make([]*Release, len(releases.Releases))
+	for i, release := range releases.Releases {
+		retReleases[i] = &Release{
+			Name:         release.GetName(),
+			Namespace:    release.GetNamespace(),
+			Version:      release.Version,
+			Status:       release.Info.Status.Code.String(),
+			LastDeployed: time.Unix(release.Info.LastDeployed.Seconds, 0),
+		}
+	}
+
+	return retReleases, nil
 }
