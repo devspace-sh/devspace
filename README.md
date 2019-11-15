@@ -199,6 +199,7 @@ Stop wasting time for running the same build and deploy commands over and over a
   - `devspace use namespace` shows a list of namespaces (select to set defaut namespace for current context)
   - `devspace remove context` shows a list of contexts (select to remove a kube-context)
 
+<br>
 </details>
 
 
@@ -212,6 +213,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 - **Hooks** for executing custom commands before or after each build and deployment step
 - **Multiple Configs** for advanced deployment scenarios
 
+<br>
 </details>
 
 
@@ -224,6 +226,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 - **Automatic Config Generation** from existing Dockerfiles, Helm chart or Kubernetes manifests (optional)
 - **Automatic Dockerfile Generation** (optional)
 
+<br>
 </details>
 
 
