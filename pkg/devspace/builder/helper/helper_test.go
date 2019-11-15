@@ -1,25 +1,8 @@
 package helper
 
-import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"runtime"
-	"testing"
+import ()
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/pkg/errors"
-
-	"k8s.io/client-go/kubernetes/fake"
-
-	"gotest.tools/assert"
-)
-
-var expectedAbsoluteContextPath, expectedAbsoluteDockerfilePath string
+/*var expectedAbsoluteContextPath, expectedAbsoluteDockerfilePath string
 var expectedEntryPoint *[]*string
 var expectedLog log.Logger
 var usedT *testing.T
@@ -125,4 +108,4 @@ func TestShouldRebuild(t *testing.T) {
 	assert.Equal(t, false, cache.Images["ImageConf"].ContextHash == "", "ContextHash not set")
 	assert.Equal(t, false, cache.Images["ImageConf"].ImageConfigHash == "", "ImageConfigHash not set")
 	assert.Equal(t, false, cache.Images["ImageConf"].EntrypointHash == "", "EntrypointHash not set")
-}
+}*/

@@ -26,16 +26,16 @@ repositories:
 `
 
 // Ensure that tiller is running
-func ensureTiller(config *latest.Config, client *kubectl.Client, tillerNamespace string, upgrade bool, log log.Logger) error {
+func ensureTiller(config *latest.Config, client kubectl.Client, tillerNamespace string, upgrade bool, log log.Logger) error {
 	tillerOptions := getTillerOptions(tillerNamespace)
 
 	// Create tillerNamespace if necessary
-	_, err := client.Client.CoreV1().Namespaces().Get(tillerNamespace, metav1.GetOptions{})
+	_, err := client.KubeClient().CoreV1().Namespaces().Get(tillerNamespace, metav1.GetOptions{})
 	if err != nil {
 		log.Donef("Create namespace %s", tillerNamespace)
 
 		// Create tiller namespace
-		_, err = client.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+		_, err = client.KubeClient().CoreV1().Namespaces().Create(&k8sv1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: tillerNamespace,
 			},
@@ -46,7 +46,7 @@ func ensureTiller(config *latest.Config, client *kubectl.Client, tillerNamespace
 	}
 
 	// Create tiller if necessary
-	_, err = client.Client.AppsV1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+	_, err = client.KubeClient().AppsV1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		// Create tiller server
 		err = createTiller(config, client, tillerNamespace, tillerOptions, log)
@@ -77,12 +77,12 @@ func getTillerOptions(tillerNamespace string) (tillerOptions *helminstaller.Opti
 	}
 }
 
-func createTiller(config *latest.Config, client *kubectl.Client, tillerNamespace string, tillerOptions *helminstaller.Options, log log.Logger) error {
+func createTiller(config *latest.Config, client kubectl.Client, tillerNamespace string, tillerOptions *helminstaller.Options, log log.Logger) error {
 	log.StartWait("Installing Tiller server")
 	defer log.StopWait()
 
 	// If the service account is already there we do not create it or any roles/rolebindings
-	_, err := client.Client.CoreV1().ServiceAccounts(tillerNamespace).Get(TillerServiceAccountName, metav1.GetOptions{})
+	_, err := client.KubeClient().CoreV1().ServiceAccounts(tillerNamespace).Get(TillerServiceAccountName, metav1.GetOptions{})
 	if err != nil {
 		err = createTillerRBAC(config, client, tillerNamespace, log)
 		if err != nil {
@@ -91,7 +91,7 @@ func createTiller(config *latest.Config, client *kubectl.Client, tillerNamespace
 	}
 
 	// Create the deployment
-	err = helminstaller.Install(client.Client, tillerOptions)
+	err = helminstaller.Install(client.KubeClient(), tillerOptions)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func createTiller(config *latest.Config, client *kubectl.Client, tillerNamespace
 	return nil
 }
 
-func waitUntilTillerIsStarted(client *kubectl.Client, tillerNamespace string, log log.Logger) error {
+func waitUntilTillerIsStarted(client kubectl.Client, tillerNamespace string, log log.Logger) error {
 	tillerWaitingTime := 2 * 60 * time.Second
 	tillerCheckInterval := 5 * time.Second
 
@@ -108,7 +108,7 @@ func waitUntilTillerIsStarted(client *kubectl.Client, tillerNamespace string, lo
 	defer log.StopWait()
 
 	for tillerWaitingTime > 0 {
-		tillerDeployment, err := client.Client.AppsV1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+		tillerDeployment, err := client.KubeClient().AppsV1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 		if err != nil {
 			continue
 		}
@@ -123,9 +123,9 @@ func waitUntilTillerIsStarted(client *kubectl.Client, tillerNamespace string, lo
 	return errors.New("Tiller didn't start in time")
 }
 
-func upgradeTiller(client *kubectl.Client, tillerOptions *helminstaller.Options, log log.Logger) error {
+func upgradeTiller(client kubectl.Client, tillerOptions *helminstaller.Options, log log.Logger) error {
 	log.StartWait("Upgrading tiller")
-	err := helminstaller.Upgrade(client.Client, tillerOptions)
+	err := helminstaller.Upgrade(client.KubeClient(), tillerOptions)
 	log.StopWait()
 	if err != nil {
 		return err
@@ -135,8 +135,8 @@ func upgradeTiller(client *kubectl.Client, tillerOptions *helminstaller.Options,
 }
 
 // IsTillerDeployed determines if we could connect to a tiller server
-func IsTillerDeployed(config *latest.Config, client *kubectl.Client, tillerNamespace string) bool {
-	deployment, err := client.Client.AppsV1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+func IsTillerDeployed(config *latest.Config, client kubectl.Client, tillerNamespace string) bool {
+	deployment, err := client.KubeClient().AppsV1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		return false
 	}
@@ -157,19 +157,19 @@ func IsTillerDeployed(config *latest.Config, client *kubectl.Client, tillerNames
 }
 
 // DeleteTiller clears the tiller server, the service account and role binding
-func DeleteTiller(config *latest.Config, client *kubectl.Client, tillerNamespace string) error {
+func DeleteTiller(config *latest.Config, client kubectl.Client, tillerNamespace string) error {
 	propagationPolicy := metav1.DeletePropagationForeground
 
 	// Delete deployment
-	client.Client.AppsV1().Deployments(tillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{
+	client.KubeClient().AppsV1().Deployments(tillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
 	})
 
 	// Delete service
-	client.Client.CoreV1().Services(tillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+	client.KubeClient().CoreV1().Services(tillerNamespace).Delete(TillerDeploymentName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
 	// Delete serviceaccount
-	client.Client.CoreV1().ServiceAccounts(tillerNamespace).Delete(TillerServiceAccountName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+	client.KubeClient().CoreV1().ServiceAccounts(tillerNamespace).Delete(TillerServiceAccountName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
 	appNamespaces := []string{
 		tillerNamespace,
@@ -182,11 +182,11 @@ func DeleteTiller(config *latest.Config, client *kubectl.Client, tillerNamespace
 	}
 
 	for _, appNamespace := range appNamespaces {
-		client.Client.RbacV1().Roles(appNamespace).Delete(TillerRoleName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-		// client.Client.RbacV1().RoleBindings(*appNamespace).Delete(TillerRoleName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		client.KubeClient().RbacV1().Roles(appNamespace).Delete(TillerRoleName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		// client.KubeClient().RbacV1().RoleBindings(*appNamespace).Delete(TillerRoleName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 
-		client.Client.RbacV1().Roles(appNamespace).Delete(TillerRoleManagerName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
-		client.Client.RbacV1().RoleBindings(appNamespace).Delete(TillerRoleManagerName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		client.KubeClient().RbacV1().Roles(appNamespace).Delete(TillerRoleManagerName, &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
+		client.KubeClient().RbacV1().RoleBindings(appNamespace).Delete(TillerRoleManagerName+"-binding", &metav1.DeleteOptions{PropagationPolicy: &propagationPolicy})
 	}
 
 	return nil

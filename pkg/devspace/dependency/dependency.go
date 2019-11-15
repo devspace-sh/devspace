@@ -108,7 +108,7 @@ func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updat
 }
 
 // DeployAll will deploy all dependencies if there are any
-func DeployAll(config *latest.Config, cache *generated.Config, client *kubectl.Client, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy, verbose bool, configOptions *configutil.ConfigOptions, logger log.Logger) error {
+func DeployAll(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy, verbose bool, configOptions *configutil.ConfigOptions, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(config.Dependencies) == 0 {
 		return nil
 	}
@@ -167,7 +167,7 @@ func DeployAll(config *latest.Config, cache *generated.Config, client *kubectl.C
 }
 
 // PurgeAll purges all dependencies in reverse order
-func PurgeAll(config *latest.Config, cache *generated.Config, client *kubectl.Client, allowCyclic, verbose bool, configOptions *configutil.ConfigOptions, logger log.Logger) error {
+func PurgeAll(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic, verbose bool, configOptions *configutil.ConfigOptions, logger log.Logger) error {
 	if config == nil || config.Dependencies == nil || len(config.Dependencies) == 0 {
 		return nil
 	}
@@ -285,7 +285,7 @@ func (d *Dependency) Build(skipPush, forceDependencies, forceBuild bool, log log
 }
 
 // Deploy deploys the dependency if necessary
-func (d *Dependency) Deploy(client *kubectl.Client, skipPush, forceDependencies, skipBuild, forceBuild, forceDeploy bool, log log.Logger) error {
+func (d *Dependency) Deploy(client kubectl.Client, skipPush, forceDependencies, skipBuild, forceBuild, forceDeploy bool, log log.Logger) error {
 	// Check if we should redeploy
 	directoryHash, err := hash.DirectoryExcludes(d.LocalPath, []string{".git", ".devspace"}, true)
 	if err != nil {
@@ -315,7 +315,7 @@ func (d *Dependency) Deploy(client *kubectl.Client, skipPush, forceDependencies,
 
 	// Recreate client if necessary
 	if d.DependencyConfig.Namespace != "" {
-		client, err = kubectl.NewClientFromContext(client.CurrentContext, d.DependencyConfig.Namespace, false)
+		client, err = kubectl.NewClientFromContext(client.CurrentContext(), d.DependencyConfig.Namespace, false)
 		if err != nil {
 			return errors.Wrap(err, "create new client")
 		}
@@ -374,7 +374,7 @@ func (d *Dependency) Deploy(client *kubectl.Client, skipPush, forceDependencies,
 }
 
 // Purge purges the dependency
-func (d *Dependency) Purge(client *kubectl.Client, log log.Logger) error {
+func (d *Dependency) Purge(client kubectl.Client, log log.Logger) error {
 	// Switch current working directory
 	currentWorkingDirectory, err := os.Getwd()
 	if err != nil {
@@ -393,7 +393,7 @@ func (d *Dependency) Purge(client *kubectl.Client, log log.Logger) error {
 
 	// Recreate client if necessary
 	if d.DependencyConfig.Namespace != "" {
-		client, err = kubectl.NewClientFromContext(client.CurrentContext, d.DependencyConfig.Namespace, false)
+		client, err = kubectl.NewClientFromContext(client.CurrentContext(), d.DependencyConfig.Namespace, false)
 		if err != nil {
 			return errors.Wrap(err, "create new client")
 		}

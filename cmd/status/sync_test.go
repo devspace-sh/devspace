@@ -10,8 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
-	//"github.com/mgutz/ansi"
-
 	"gotest.tools/assert"
 )
 

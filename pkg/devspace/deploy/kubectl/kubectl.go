@@ -21,7 +21,7 @@ import (
 
 // DeployConfig holds the necessary information for kubectl deployment
 type DeployConfig struct {
-	KubeClient *kubectl.Client // This is not used yet, however the plan is to use it instead of calling kubectl via cmd
+	KubeClient kubectl.Client // This is not used yet, however the plan is to use it instead of calling kubectl via cmd
 	Name       string
 	CmdPath    string
 	Context    string
@@ -35,7 +35,7 @@ type DeployConfig struct {
 }
 
 // New creates a new deploy config for kubectl
-func New(config *latest.Config, kubeClient *kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	if deployConfig.Kubectl == nil {
 		return nil, errors.New("Error creating kubectl deploy config: kubectl is nil")
 	}
@@ -43,7 +43,7 @@ func New(config *latest.Config, kubeClient *kubectl.Client, deployConfig *latest
 		return nil, errors.New("No manifests defined for kubectl deploy")
 	}
 
-	namespace := kubeClient.Namespace
+	namespace := kubeClient.Namespace()
 	if deployConfig.Namespace != "" {
 		namespace = deployConfig.Namespace
 	}
@@ -67,7 +67,7 @@ func New(config *latest.Config, kubeClient *kubectl.Client, deployConfig *latest
 		Name:       deployConfig.Name,
 		KubeClient: kubeClient,
 		CmdPath:    cmdPath,
-		Context:    kubeClient.CurrentContext,
+		Context:    kubeClient.CurrentContext(),
 		Namespace:  namespace,
 		Manifests:  manifests,
 

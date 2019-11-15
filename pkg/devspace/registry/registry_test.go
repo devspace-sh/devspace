@@ -1,20 +1,8 @@
 package registry
 
-import (
-	"encoding/base64"
-	"testing"
+import ()
 
-	k8sv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-
-	"gotest.tools/assert"
-)
-
-func TestCreatePullSecret(t *testing.T) {
+/*func TestCreatePullSecret(t *testing.T) {
 	namespace := "myns"
 	//Setting up kubeClient
 	kubeClient := &kubectl.Client{
@@ -44,4 +32,4 @@ func TestCreatePullSecret(t *testing.T) {
 				}
 			}
 		}`, string(resultSecret.Data[k8sv1.DockerConfigJsonKey]), "Saved secret has wrong data")
-}
+}*/

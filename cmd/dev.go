@@ -207,7 +207,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
+func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
 	if cmd.SkipPipeline == false {
 		// Dependencies
 		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, cmd.ToConfigOptions(), log.GetInstance())
@@ -294,9 +294,26 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 	return exitCode, nil
 }
 
-func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, args []string, log log.Logger) (int, error) {
+func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, log log.Logger) (int, error) {
+	selectorParameter := &targetselector.SelectorParameter{
+		CmdParameter: targetselector.CmdParameter{
+			Namespace:   cmd.Namespace,
+			Interactive: true,
+		},
+	}
+
+	if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil {
+		selectorParameter.ConfigParameter = targetselector.ConfigParameter{
+			Namespace:     config.Dev.Interactive.Terminal.Namespace,
+			LabelSelector: config.Dev.Interactive.Terminal.LabelSelector,
+			ContainerName: config.Dev.Interactive.Terminal.ContainerName,
+		}
+	}
+
+	servicesClient := services.NewClient(config, generatedConfig, client, selectorParameter, log)
+
 	if cmd.Portforwarding {
-		portForwarder, err := services.StartPortForwarding(config, generatedConfig, client, log)
+		portForwarder, err := servicesClient.StartPortForwarding()
 		if err != nil {
 			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
 		}
@@ -309,7 +326,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	}
 
 	if cmd.Sync {
-		syncConfigs, err := services.StartSync(config, generatedConfig, client, cmd.VerboseSync, log)
+		syncConfigs, err := servicesClient.StartSync(cmd.VerboseSync)
 		if err != nil {
 			return 0, errors.Errorf("Unable to start sync: %v", err)
 		}
@@ -382,7 +399,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 		defer log.StopWait()
 
 		// Create server
-		server, err := server.NewServer(config, generatedConfig, false, client.CurrentContext, client.Namespace, nil, log)
+		server, err := server.NewServer(config, generatedConfig, false, client.CurrentContext(), client.Namespace(), nil, log)
 		if err != nil {
 			log.Warnf("Couldn't start UI server: %v", err)
 		} else {
@@ -416,22 +433,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 			}
 		}
 
-		selectorParameter := &targetselector.SelectorParameter{
-			CmdParameter: targetselector.CmdParameter{
-				Namespace:   cmd.Namespace,
-				Interactive: true,
-			},
-		}
-
-		if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil {
-			selectorParameter.ConfigParameter = targetselector.ConfigParameter{
-				Namespace:     config.Dev.Interactive.Terminal.Namespace,
-				LabelSelector: config.Dev.Interactive.Terminal.LabelSelector,
-				ContainerName: config.Dev.Interactive.Terminal.ContainerName,
-			}
-		}
-
-		return services.StartTerminal(config, generatedConfig, client, selectorParameter, args, imageSelector, exitChan, true, log)
+		return servicesClient.StartTerminal(args, imageSelector, exitChan, true)
 	} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
 		// Build an image selector
 		imageSelector := []string{}

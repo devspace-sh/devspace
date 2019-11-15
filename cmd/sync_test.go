@@ -14,7 +14,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -30,7 +29,6 @@ type syncTestCase struct {
 
 	fakeConfig       *latest.Config
 	fakeKubeConfig   clientcmd.ClientConfig
-	fakeKubeClient   *kubectl.Client
 	files            map[string]interface{}
 	graphQLResponses []interface{}
 	providerList     []*cloudlatest.Provider
@@ -81,27 +79,7 @@ func TestSync(t *testing.T) {
 		}
 	}()
 
-	testCases := []syncTestCase{
-		/*syncTestCase{
-			name:       "No resources",
-			fakeConfig: &latest.Config{},
-			fakeKubeClient: &kubectl.Client{
-				Client: fake.NewSimpleClientset(),
-			},
-			fakeKubeConfig: &customKubeConfig{
-				rawconfig: clientcmdapi.Config{
-					Contexts: map[string]*clientcmdapi.Context{
-						"": &clientcmdapi.Context{},
-					},
-					AuthInfos: map[string]*clientcmdapi.AuthInfo{
-						"": &clientcmdapi.AuthInfo{},
-					},
-				},
-			},
-			pickFlag:       true,
-			expectedErr:    "Couldn't find a running pod in namespace ",
-		},*/
-	}
+	testCases := []syncTestCase{}
 
 	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})
 
@@ -136,7 +114,6 @@ func testSync(t *testing.T, testCase syncTestCase) {
 	configutil.SetFakeConfig(testCase.fakeConfig)
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
-	kubectl.SetFakeClient(testCase.fakeKubeClient)
 
 	for path, content := range testCase.files {
 		asYAML, err := yaml.Marshal(content)

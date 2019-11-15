@@ -50,7 +50,7 @@ func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error 
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
 func (client *Client) InstallChartByPath(releaseName, releaseNamespace, chartPath string, values *map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*hapi_release5.Release, error) {
 	if releaseNamespace == "" {
-		releaseNamespace = client.kubectl.Namespace
+		releaseNamespace = client.kubectl.Namespace()
 	}
 
 	chart, err := helmchartutil.Load(chartPath)

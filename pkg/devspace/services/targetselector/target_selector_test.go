@@ -1,22 +1,8 @@
 package targetselector
 
-import (
-	"fmt"
-	"testing"
+import ()
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
-
-	k8sv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-
-	"gotest.tools/assert"
-)
-
-func TestTargetSelector(t *testing.T) {
+/*func TestTargetSelector(t *testing.T) {
 	namespace := "test"
 	selectedContainerName := "TestContainer2"
 	selectedPodName := "TestPod"
@@ -223,4 +209,4 @@ func TestTargetSelector(t *testing.T) {
 	assert.Equal(t, "Couldn't find a running pod, because no labelselector or pod name was specified", err.Error(), "Wrong error")
 	assert.Equal(t, true, returnedPod == nil, "returned Pod is not nil")
 	assert.Equal(t, true, returnedContainer == nil, "returned container is not nil")
-}
+}*/

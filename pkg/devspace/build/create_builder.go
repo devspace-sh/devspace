@@ -17,7 +17,7 @@ import (
 )
 
 // CreateBuilder creates a new builder
-func CreateBuilder(config *latest.Config, client *kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool, log log.Logger) (builder.Interface, error) {
+func CreateBuilder(config *latest.Config, client kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool, log log.Logger) (builder.Interface, error) {
 	var (
 		imageBuilder builder.Interface
 		err          error
@@ -57,7 +57,7 @@ func CreateBuilder(config *latest.Config, client *kubectl.Client, imageConfigNam
 				return nil, errors.Wrap(err, "get current context")
 			}
 		} else {
-			kubeContext = client.CurrentContext
+			kubeContext = client.CurrentContext()
 		}
 
 		dockerClient, err := dockerclient.NewClientWithMinikube(kubeContext, preferMinikube, log)

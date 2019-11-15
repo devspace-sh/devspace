@@ -9,20 +9,23 @@ import (
 )
 
 func TestGetCommend(t *testing.T) {
-	config := &latest.Config{
-		Dev: &latest.DevConfig{
-			Interactive: &latest.InteractiveConfig{
-				Terminal: &latest.TerminalConfig{
-					Command: []string{"echo"},
+	client := &client{
+		config: &latest.Config{
+			Dev: &latest.DevConfig{
+				Interactive: &latest.InteractiveConfig{
+					Terminal: &latest.TerminalConfig{
+						Command: []string{"echo"},
+					},
 				},
 			},
 		},
 	}
-	command := getCommand(config, []string{"args"})
+	command := client.getCommand([]string{"args"})
 	assert.Equal(t, 1, len(command), "Returned command has wrong length")
 	assert.Equal(t, "args", command[0], "Wrong command returned")
 
-	command = getCommand(&latest.Config{}, []string{})
+	client.config = &latest.Config{}
+	command = client.getCommand([]string{})
 	assert.Equal(t, 3, len(command), "Returned command has wrong length")
 	assert.Equal(t, "sh", command[0], "Wrong command returned")
 	assert.Equal(t, "-c", command[1], "Wrong command returned")

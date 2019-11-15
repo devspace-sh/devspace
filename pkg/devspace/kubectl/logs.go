@@ -20,7 +20,7 @@ import (
 const k8sComponentLabel = "app.kubernetes.io/component"
 
 // ReadLogs reads the logs and returns a string
-func (client *Client) ReadLogs(namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error) {
+func (client *client) ReadLogs(namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error) {
 	readCloser, err := client.Logs(context.Background(), namespace, podName, containerName, lastContainerLog, tail, false)
 	if err != nil {
 		return "", err
@@ -51,10 +51,10 @@ var colors = []string{
 }
 
 // LogMultipleTimeout will log multiple and wait for a specific time for ready pods until timeout
-func (client *Client) LogMultipleTimeout(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, timeout time.Duration, log log.Logger) error {
+func (client *client) LogMultipleTimeout(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, timeout time.Duration, log log.Logger) error {
 	// Get pods
 	log.StartWait("Find running pods...")
-	pods, err := client.GetRunningPodsWithImage(imageSelector, client.Namespace, timeout)
+	pods, err := client.GetRunningPodsWithImage(imageSelector, client.namespace, timeout)
 	log.StopWait()
 	if err != nil {
 		return errors.Errorf("Error finding images: %v", err)
@@ -137,18 +137,18 @@ func (client *Client) LogMultipleTimeout(imageSelector []string, interrupt chan 
 }
 
 // LogMultiple will log multiple
-func (client *Client) LogMultiple(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, log log.Logger) error {
+func (client *client) LogMultiple(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, log log.Logger) error {
 	return client.LogMultipleTimeout(imageSelector, interrupt, tail, writer, time.Minute*2, log)
 }
 
 // Logs prints the container logs
-func (client *Client) Logs(ctx context.Context, namespace, podName, containerName string, lastContainerLog bool, tail *int64, follow bool) (io.ReadCloser, error) {
+func (client *client) Logs(ctx context.Context, namespace, podName, containerName string, lastContainerLog bool, tail *int64, follow bool) (io.ReadCloser, error) {
 	lines := int64(100)
 	if tail != nil {
 		lines = *tail
 	}
 
-	request := client.Client.CoreV1().Pods(namespace).GetLogs(podName, &v1.PodLogOptions{
+	request := client.KubeClient().CoreV1().Pods(namespace).GetLogs(podName, &v1.PodLogOptions{
 		Container: containerName,
 		TailLines: &lines,
 		Previous:  lastContainerLog,

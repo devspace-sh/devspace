@@ -114,7 +114,8 @@ func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Start terminal
-	exitCode, err := services.StartTerminal(nil, nil, client, selectorParameter, args, nil, make(chan error), cmd.Wait, log.GetInstance())
+	servicesClient := services.NewClient(nil, generatedConfig, client, selectorParameter, log.GetInstance())
+	exitCode, err := servicesClient.StartTerminal(args, nil, make(chan error), cmd.Wait)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {

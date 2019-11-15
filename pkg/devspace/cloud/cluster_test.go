@@ -1,24 +1,8 @@
 package cloud
 
-import (
-	"encoding/base64"
-	"testing"
-	"time"
+import ()
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
-
-	k8sv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-
-	"gotest.tools/assert"
-)
-
-func TestConnectCluster(t *testing.T) {
+/*func TestConnectCluster(t *testing.T) {
 	provider := &Provider{latest.Provider{}, log.GetInstance()}
 	options := &ConnectClusterOptions{
 		ClusterName: "#",
@@ -193,16 +177,6 @@ type checkResourcesTestCase struct {
 
 func TestCheckResources(t *testing.T) {
 	testCases := []checkResourcesTestCase{
-		/*checkResourcesTestCase{
-			name:         "Test without nodes",
-			createdNodes: []*k8sv1.Node{},
-			expectedErr:  "The cluster specified has no nodes, please choose a cluster where at least one node is up and running",
-		},
-		checkResourcesTestCase{
-			name:         "Test without group versions",
-			createdNodes: []*k8sv1.Node{&k8sv1.Node{}},
-			expectedErr:  "Group version rbac.authorization.k8s.io/v1beta1 does not exist in cluster, but is required. Is RBAC enabled?",
-		},*/
 	}
 
 	for _, testCase := range testCases {
@@ -247,4 +221,4 @@ func TestInitializeNamespace(t *testing.T) {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from initializing namespace in testCase %s", testCase.name)
 		}
 	}
-}
+}*/

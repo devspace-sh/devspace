@@ -3,16 +3,12 @@ package terminal
 import (
 	"bytes"
 	"os"
-	//"strings"
 	"testing"
-
-	//"github.com/docker/docker/pkg/term"
 	
 	"gotest.tools/assert"
 )
 
 func TestTTY(t *testing.T) {
-	//reader := strings.NewReader("")
 	buf := make([]byte, 1000)
 	writer := bytes.NewBuffer(buf)
 

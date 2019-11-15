@@ -136,8 +136,8 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
-	namespace := client.Namespace
-	currentContext := client.CurrentContext
+	namespace := client.Namespace()
+	currentContext := client.CurrentContext()
 
 	// Retrieve space
 	spaceID, currentContextProvider, err := kubeconfig.GetSpaceID(currentContext)
@@ -182,7 +182,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 
 	// create ingress for public access via domain
 	if space != nil {
-		namespace, err := client.Client.CoreV1().Namespaces().Get(space.Namespace, metav1.GetOptions{})
+		namespace, err := client.KubeClient().CoreV1().Namespaces().Get(space.Namespace, metav1.GetOptions{})
 		if err != nil {
 			return errors.Wrap(err, "get space namespace")
 		}
@@ -242,7 +242,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 		domainHash := hash.String(domain)
 
 		ingressName := "devspace-ingress-" + domainHash[:10]
-		_, err = client.Client.ExtensionsV1beta1().Ingresses(namespace).Create(&v1beta1.Ingress{
+		_, err = client.KubeClient().ExtensionsV1beta1().Ingresses(namespace).Create(&v1beta1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{Name: ingressName},
 			Spec: v1beta1.IngressSpec{
 				Rules: []v1beta1.IngressRule{
@@ -293,7 +293,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string, log log.Logger, maxWait time.Duration) error {
+func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, log log.Logger, maxWait time.Duration) error {
 	// Loop and check if http code is != 502
 	log.StartWait("Waiting for ingress")
 	defer log.StopWait()
@@ -329,8 +329,8 @@ func openURL(url string, kubectlClient *kubectl.Client, analyzeNamespace string,
 	return nil
 }
 
-func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config, client *kubectl.Client, domain string) error {
-	_, servicePort, serviceLabels, err := getService(devspaceConfig, client, client.Namespace, domain, true)
+func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config, client kubectl.Client, domain string) error {
+	_, servicePort, serviceLabels, err := getService(devspaceConfig, client, client.Namespace(), domain, true)
 	if err != nil {
 		return errors.Errorf("Unable to get service: %v", err)
 	}
@@ -369,11 +369,12 @@ func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config,
 	}
 
 	// start port-forwarding for localhost access
-	portForwarder, err := services.StartPortForwarding(&latest.Config{
+	servicesClient := services.NewClient(&latest.Config{
 		Dev: &latest.DevConfig{
 			Ports: portforwardingConfig,
 		},
-	}, generatedConfig, client, log.GetInstance())
+	}, generatedConfig, client, nil, log.GetInstance())
+	portForwarder, err := servicesClient.StartPortForwarding()
 	if err != nil {
 		return errors.Wrap(err, "start port forwarding")
 	}
@@ -403,12 +404,12 @@ func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config,
 	return nil
 }
 
-func getService(config *latest.Config, client *kubectl.Client, namespace, host string, getEndpoints bool) (string, int, *map[string]string, error) {
+func getService(config *latest.Config, client kubectl.Client, namespace, host string, getEndpoints bool) (string, int, *map[string]string, error) {
 	// Let user select service
 	serviceNameList := []string{}
 	serviceLabels := map[string]map[string]string{}
 
-	serviceList, err := client.Client.CoreV1().Services(namespace).List(metav1.ListOptions{})
+	serviceList, err := client.KubeClient().CoreV1().Services(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return "", 0, nil, errors.Wrap(err, "list services")
 	}
@@ -481,12 +482,12 @@ func getService(config *latest.Config, client *kubectl.Client, namespace, host s
 	return serviceName, servicePortInt, &labels, nil
 }
 
-func findDomain(client *kubectl.Client, namespace, host string) (string, bool, error) {
+func findDomain(client kubectl.Client, namespace, host string) (string, bool, error) {
 	log.StartWait("Retrieve ingresses")
 	defer log.StopWait()
 
 	// List all ingresses and only create one if there is none already
-	ingressList, err := client.Client.ExtensionsV1beta1().Ingresses(namespace).List(metav1.ListOptions{})
+	ingressList, err := client.KubeClient().ExtensionsV1beta1().Ingresses(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return "", false, errors.Errorf("Error listing ingresses: %v", err)
 	}

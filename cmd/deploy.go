@@ -216,8 +216,8 @@ func (cmd *DeployCmd) validateFlags() error {
 	return nil
 }
 
-func fillDevSpaceDomainVars(client *kubectl.Client, generatedConfig *generated.Config) error {
-	namespace, err := client.Client.CoreV1().Namespaces().Get(client.Namespace, metav1.GetOptions{})
+func fillDevSpaceDomainVars(client kubectl.Client, generatedConfig *generated.Config) error {
+	namespace, err := client.KubeClient().CoreV1().Namespaces().Get(client.Namespace(), metav1.GetOptions{})
 	if err != nil {
 		return nil
 	}

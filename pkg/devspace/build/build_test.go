@@ -1,25 +1,8 @@
 package build
 
-import (
-	"testing"
-	"os"
-	"io/ioutil"
-	"time"
-	
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	
-	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import ()
 
-	"gotest.tools/assert"
-)
-
-func TestBuild(t *testing.T) {
+/*func TestBuild(t *testing.T) {
 	t.Skip("Not yet testable because docker client must be faked")
 
 	//Create tempDir and go into it
@@ -256,4 +239,4 @@ spec:
 	}
 
 	return nil
-}
+}*/

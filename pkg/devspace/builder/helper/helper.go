@@ -31,7 +31,7 @@ type BuildHelper struct {
 	Cmd        []string
 
 	IsDev      bool
-	KubeClient *kubectl.Client
+	KubeClient kubectl.Client
 }
 
 // BuildHelperInterface is the interface the build helper uses to build an image
@@ -40,7 +40,7 @@ type BuildHelperInterface interface {
 }
 
 // NewBuildHelper creates a new build helper for a certain engine
-func NewBuildHelper(config *latest.Config, kubeClient *kubectl.Client, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) *BuildHelper {
+func NewBuildHelper(config *latest.Config, kubeClient kubectl.Client, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) *BuildHelper {
 	var (
 		dockerfilePath, contextPath = GetDockerfileAndContext(config, imageConfigName, imageConf, isDev)
 		imageName                   = imageConf.Image
@@ -200,7 +200,7 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, ignoreContextP
 
 	// Okay this check verifies if the previous deploy context was local kubernetes context where we didn't push the image and now have a kubernetes context where we probably push
 	// or use another docker client (e.g. minikube <-> docker-desktop)
-	if b.KubeClient != nil && cache.LastContext != nil && cache.LastContext.Context != b.KubeClient.CurrentContext && kubectl.IsLocalKubernetes(cache.LastContext.Context) {
+	if b.KubeClient != nil && cache.LastContext != nil && cache.LastContext.Context != b.KubeClient.CurrentContext() && kubectl.IsLocalKubernetes(cache.LastContext.Context) {
 		mustRebuild = true
 	}
 

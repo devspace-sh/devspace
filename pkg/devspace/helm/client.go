@@ -40,7 +40,7 @@ type Client struct {
 	Namespace string
 
 	helm    k8shelm.Interface
-	kubectl *kubectl.Client
+	kubectl kubectl.Client
 
 	config *latest.Config
 }
@@ -49,7 +49,7 @@ var helmClientsMutex sync.Mutex
 var helmClients = map[string]*Client{}
 
 // NewClient creates a new helm client
-func NewClient(config *latest.Config, kubeClient *kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
+func NewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
 	helmClientsMutex.Lock()
 	defer helmClientsMutex.Unlock()
 
@@ -66,7 +66,7 @@ func NewClient(config *latest.Config, kubeClient *kubectl.Client, tillerNamespac
 	return client, nil
 }
 
-func createNewClient(config *latest.Config, kubeClient *kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
+func createNewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller bool) (*Client, error) {
 	// Create tiller if necessary
 	err := ensureTiller(config, kubeClient, tillerNamespace, upgradeTiller, log)
 	if err != nil {
@@ -85,7 +85,7 @@ func createNewClient(config *latest.Config, kubeClient *kubectl.Client, tillerNa
 	for true {
 		// Next we wait till we can establish a tunnel to the running pod
 		for true {
-			tunnel, err = portforwarder.New(tillerNamespace, kubeClient.Client, kubeClient.RestConfig)
+			tunnel, err = portforwarder.New(tillerNamespace, kubeClient.KubeClient(), kubeClient.RestConfig())
 			if err == nil && tunnel != nil {
 				break
 			}
@@ -124,7 +124,7 @@ func createNewClient(config *latest.Config, kubeClient *kubectl.Client, tillerNa
 	return create(config, tillerNamespace, helmClient, kubeClient, log)
 }
 
-func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.Interface, kubeClient *kubectl.Client, log log.Logger) (*Client, error) {
+func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.Interface, kubeClient kubectl.Client, log log.Logger) (*Client, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		return nil, err

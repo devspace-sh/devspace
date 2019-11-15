@@ -1,25 +1,10 @@
 package deploy
 
 import (
-	"io/ioutil"
-	"os"
-	"testing"
-
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-
-	k8sv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
-	//"gotest.tools/assert"
 )
 
 // Test namespace to create
-const testNamespace = "test-helm-deploy"
+/*const testNamespace = "test-helm-deploy"
 
 func TestHelmDeployment(t *testing.T) {
 	namespace := "testnamespace"
@@ -120,10 +105,6 @@ func TestHelmDeployment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error deploying all: %v", err)
 	}
-
-	/*if strings.HasPrefix(status.Status, "Deployed") == false {
-		t.Fatalf("Unexpected deployment status: %s != Deployed", status.Status)
-	}*/
 
 	testConfig.Deployments = []*latest.DeploymentConfig{
 		&latest.DeploymentConfig{
@@ -498,4 +479,4 @@ spec:
 	}
 
 	return nil
-}
+}*/

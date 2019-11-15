@@ -12,7 +12,7 @@ import (
 )
 
 // CreatePullSecrets creates the image pull secrets
-func CreatePullSecrets(config *latest.Config, client *kubectl.Client, dockerClient docker.ClientInterface, log log.Logger) error {
+func CreatePullSecrets(config *latest.Config, client kubectl.Client, dockerClient docker.ClientInterface, log log.Logger) error {
 	if config.Images != nil {
 		pullSecrets := []string{}
 		createPullSecrets := map[string]bool{}
@@ -55,11 +55,11 @@ func CreatePullSecrets(config *latest.Config, client *kubectl.Client, dockerClie
 	return nil
 }
 
-func addPullSecretsToServiceAccount(client *kubectl.Client, pullSecrets []string, log log.Logger) error {
+func addPullSecretsToServiceAccount(client kubectl.Client, pullSecrets []string, log log.Logger) error {
 	// Get default service account
-	serviceaccount, err := client.Client.CoreV1().ServiceAccounts(client.Namespace).Get("default", metav1.GetOptions{})
+	serviceaccount, err := client.KubeClient().CoreV1().ServiceAccounts(client.Namespace()).Get("default", metav1.GetOptions{})
 	if err != nil {
-		log.Errorf("Couldn't find service account 'default' in namespace '%s': %v", client.Namespace, err)
+		log.Errorf("Couldn't find service account 'default' in namespace '%s': %v", client.Namespace(), err)
 		return nil
 	}
 
@@ -83,7 +83,7 @@ func addPullSecretsToServiceAccount(client *kubectl.Client, pullSecrets []string
 
 	// Should we update the service account?
 	if changed {
-		_, err := client.Client.CoreV1().ServiceAccounts(client.Namespace).Update(serviceaccount)
+		_, err := client.KubeClient().CoreV1().ServiceAccounts(client.Namespace()).Update(serviceaccount)
 		if err != nil {
 			return errors.Wrap(err, "update service account")
 		}
@@ -92,7 +92,7 @@ func addPullSecretsToServiceAccount(client *kubectl.Client, pullSecrets []string
 	return nil
 }
 
-func createPullSecretForRegistry(config *latest.Config, client *kubectl.Client, dockerClient docker.ClientInterface, registryURL string, log log.Logger) error {
+func createPullSecretForRegistry(config *latest.Config, client kubectl.Client, dockerClient docker.ClientInterface, registryURL string, log log.Logger) error {
 	username, password := "", ""
 	if dockerClient != nil {
 		authConfig, _ := dockerClient.GetAuthConfig(registryURL, true)
@@ -106,7 +106,7 @@ func createPullSecretForRegistry(config *latest.Config, client *kubectl.Client, 
 		for _, deployConfig := range config.Deployments {
 			email := "noreply@devspace.cloud"
 
-			namespace := client.Namespace
+			namespace := client.Namespace()
 			if deployConfig.Namespace != "" {
 				namespace = deployConfig.Namespace
 			}

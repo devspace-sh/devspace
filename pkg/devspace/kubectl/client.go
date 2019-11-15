@@ -1,7 +1,10 @@
 package kubectl
 
 import (
+	"context"
+	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"sort"
 	"time"
@@ -15,42 +18,67 @@ import (
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/tools/portforward"
+	"k8s.io/client-go/transport/spdy"
 )
 
-//For testing only
-var fakeClient *Client
+// Client holds all kubect functions
+type Client interface {
+	CurrentContext() string
+	KubeClient() kubernetes.Interface
+	Namespace() string
+	RestConfig() *rest.Config
 
-// Client holds all important information for kubernetes
-type Client struct {
-	Client       kubernetes.Interface
-	ClientConfig clientcmd.ClientConfig
-	RestConfig   *rest.Config
+	UpdateLastKubeContext(generatedConfig *generated.Config) error
+	PrintWarning(generatedConfig *generated.Config, noWarning, shouldWait bool, log log.Logger) error
 
-	CurrentContext string
-	Namespace      string
+	CopyFromReader(pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error
+	Copy(pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error
+
+	ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer, subResource SubResource) error
+	ExecStream(pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
+	ExecBuffered(pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error)
+
+	GenericRequest(options *GenericRequestOptions) (string, error)
+
+	ReadLogs(namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error)
+	LogMultipleTimeout(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, timeout time.Duration, log log.Logger) error
+	LogMultiple(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, log log.Logger) error
+	Logs(ctx context.Context, namespace, podName, containerName string, lastContainerLog bool, tail *int64, follow bool) (io.ReadCloser, error)
+
+	GetUpgraderWrapper() (http.RoundTripper, *upgraderWrapper, error)
+
+	EnsureDefaultNamespace(log log.Logger) error
+	EnsureGoogleCloudClusterRoleBinding(log log.Logger) error
+	GetRunningPodsWithImage(imageNames []string, namespace string, maxWaiting time.Duration) ([]*k8sv1.Pod, error)
+	GetNewestRunningPod(labelSelector string, imageSelector []string, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error)
+	NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}) (*portforward.PortForwarder, error)
+	IsLocalKubernetes() bool
 }
 
-// NewDefaultClient creates the new default kube client from the active context
-func NewDefaultClient() (*Client, error) {
+type client struct {
+	Client       kubernetes.Interface
+	ClientConfig clientcmd.ClientConfig
+	restConfig   *rest.Config
+
+	currentContext string
+	namespace      string
+}
+
+// NewDefaultClient creates the new default kube client from the active context @Factory
+func NewDefaultClient() (Client, error) {
 	return NewClientFromContext("", "", false)
 }
 
-func SetFakeClient(fake *Client) {
-	fakeClient = fake
-}
-
-// NewClientFromContext creates a new kubernetes client from given context
-func NewClientFromContext(context, namespace string, switchContext bool) (*Client, error) {
-	if fakeClient != nil {
-		return fakeClient, nil
-	}
-
+// NewClientFromContext creates a new kubernetes client from given context @Factory
+func NewClientFromContext(context, namespace string, switchContext bool) (Client, error) {
 	// Load new raw config
 	kubeConfigOriginal, err := kubeconfig.LoadConfig().RawConfig()
 	if err != nil {
@@ -113,23 +141,23 @@ func NewClientFromContext(context, namespace string, switchContext bool) (*Clien
 		return nil, err
 	}
 
-	client, err := kubernetes.NewForConfig(restConfig)
+	kubeClient, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "new client")
 	}
 
-	return &Client{
-		Client:       client,
+	return &client{
+		Client:       kubeClient,
 		ClientConfig: clientConfig,
-		RestConfig:   restConfig,
+		restConfig:   restConfig,
 
-		Namespace:      activeNamespace,
-		CurrentContext: activeContext,
+		namespace:      activeNamespace,
+		currentContext: activeContext,
 	}, nil
 }
 
-// NewClientBySelect creates a new kubernetes client by user select
-func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (*Client, error) {
+// NewClientBySelect creates a new kubernetes client by user select @Factory
+func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (Client, error) {
 	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return nil, err
@@ -181,12 +209,12 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (*
 }
 
 // UpdateLastKubeContext updates the last kube context
-func (client *Client) UpdateLastKubeContext(generatedConfig *generated.Config) error {
+func (client *client) UpdateLastKubeContext(generatedConfig *generated.Config) error {
 	// Update generated if we deploy the application
 	if generatedConfig != nil {
 		generatedConfig.GetActive().LastContext = &generated.LastContextConfig{
-			Context:   client.CurrentContext,
-			Namespace: client.Namespace,
+			Context:   client.currentContext,
+			Namespace: client.namespace,
 		}
 
 		err := generated.SaveConfig(generatedConfig)
@@ -199,26 +227,26 @@ func (client *Client) UpdateLastKubeContext(generatedConfig *generated.Config) e
 }
 
 // PrintWarning prints a warning if the last kube context is different than this one
-func (client *Client) PrintWarning(generatedConfig *generated.Config, noWarning, shouldWait bool, log log.Logger) error {
+func (client *client) PrintWarning(generatedConfig *generated.Config, noWarning, shouldWait bool, log log.Logger) error {
 	if generatedConfig != nil && log.GetLevel() >= logrus.InfoLevel && noWarning == false {
 		// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
 		if generatedConfig.GetActive().LastContext != nil {
 			wait := false
 
-			if generatedConfig.GetActive().LastContext.Context != "" && generatedConfig.GetActive().LastContext.Context != client.CurrentContext {
+			if generatedConfig.GetActive().LastContext.Context != "" && generatedConfig.GetActive().LastContext.Context != client.currentContext {
 				log.WriteString("\n")
 				log.Warnf(ansi.Color("Are you using the correct kube context?", "white+b"))
-				log.Warnf("Current kube context: '%s'", ansi.Color(client.CurrentContext, "white+b"))
+				log.Warnf("Current kube context: '%s'", ansi.Color(client.currentContext, "white+b"))
 				log.Warnf("Last    kube context: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Context, "white+b"))
 				log.WriteString("\n")
 
 				log.Infof("Use the '%s' flag to switch to the context and namespace previously used to deploy this project", ansi.Color("-s / --switch-context", "white+b"))
 				log.Infof("Or use the '%s' flag to ignore this warning", ansi.Color("--no-warn", "white+b"))
 				wait = true
-			} else if generatedConfig.GetActive().LastContext.Namespace != "" && generatedConfig.GetActive().LastContext.Namespace != client.Namespace {
+			} else if generatedConfig.GetActive().LastContext.Namespace != "" && generatedConfig.GetActive().LastContext.Namespace != client.namespace {
 				log.WriteString("\n")
 				log.Warnf(ansi.Color("Are you using the correct namespace?", "white+b"))
-				log.Warnf("Current namespace: '%s'", ansi.Color(client.Namespace, "white+b"))
+				log.Warnf("Current namespace: '%s'", ansi.Color(client.namespace, "white+b"))
 				log.Warnf("Last    namespace: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Namespace, "white+b"))
 				log.WriteString("\n")
 
@@ -236,7 +264,7 @@ func (client *Client) PrintWarning(generatedConfig *generated.Config, noWarning,
 		}
 
 		// Warn if using default namespace unless previous deployment was also to default namespace
-		if shouldWait && client.Namespace == metav1.NamespaceDefault && (generatedConfig.GetActive().LastContext == nil || generatedConfig.GetActive().LastContext.Namespace != metav1.NamespaceDefault) {
+		if shouldWait && client.namespace == metav1.NamespaceDefault && (generatedConfig.GetActive().LastContext == nil || generatedConfig.GetActive().LastContext.Namespace != metav1.NamespaceDefault) {
 			log.Warn("Deploying into the 'default' namespace is usually not a good idea as this namespace cannot be deleted\n")
 			log.StartWait("Will continue in 5 seconds...")
 			time.Sleep(5 * time.Second)
@@ -245,8 +273,24 @@ func (client *Client) PrintWarning(generatedConfig *generated.Config, noWarning,
 	}
 
 	// Info messages
-	log.Infof("Using kube context '%s'", ansi.Color(client.CurrentContext, "white+b"))
-	log.Infof("Using namespace '%s'", ansi.Color(client.Namespace, "white+b"))
+	log.Infof("Using kube context '%s'", ansi.Color(client.currentContext, "white+b"))
+	log.Infof("Using namespace '%s'", ansi.Color(client.namespace, "white+b"))
 
 	return nil
+}
+
+func (client *client) CurrentContext() string {
+	return client.currentContext
+}
+
+func (client *client) KubeClient() kubernetes.Interface {
+	return client.Client
+}
+
+func (client *client) Namespace() string {
+	return client.namespace
+}
+
+func (client *client) RestConfig() *rest.Config {
+	return client.restConfig
 }
