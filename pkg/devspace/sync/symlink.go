@@ -32,7 +32,7 @@ type Symlink struct {
 
 	IsDir bool
 
-	watcher  *watch.Watcher
+	watcher  watch.Watcher
 	upstream *upstream
 }
 
@@ -50,14 +50,12 @@ func NewSymlink(upstream *upstream, symlinkPath, targetPath string, isDir bool) 
 		watchPath += "/**"
 	}
 
-	watcher, err := watch.New([]string{watchPath}, []string{}, symlink.handleChange, log.Discard)
+	watcher, err := watch.New([]string{watchPath}, []string{}, time.Millisecond * 500, symlink.handleChange, log.Discard)
 	if err != nil {
 		return nil, err
 	}
 
 	symlink.watcher = watcher
-
-	symlink.watcher.PollInterval = time.Millisecond * 500
 	symlink.watcher.Start()
 
 	return symlink, nil

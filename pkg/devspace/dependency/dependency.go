@@ -351,7 +351,8 @@ func (d *Dependency) Deploy(client kubectl.Client, skipPush, forceDependencies, 
 	}
 
 	// Create pull secrets and private registry if necessary
-	err = registry.CreatePullSecrets(d.Config, client, dockerClient, log)
+	registryClient := registry.NewClient(d.Config, client, dockerClient, log)
+	err = registryClient.CreatePullSecrets()
 	if err != nil {
 		return err
 	}

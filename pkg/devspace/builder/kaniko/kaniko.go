@@ -124,7 +124,15 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 		password = authConfig.IdentityToken
 	}
 
-	return registry.CreatePullSecret(b.helper.KubeClient, b.BuildNamespace, registryURL, username, password, email, log)
+	registryClient := registry.NewClient(nil, b.helper.KubeClient, b.dockerClient, log)
+
+	return registryClient.CreatePullSecret(&registry.PullSecretOptions{
+		Namespace:       b.BuildNamespace,
+		RegistryURL:     registryURL,
+		Username:        username,
+		PasswordOrToken: password,
+		Email:           email,
+	})
 }
 
 // BuildImage builds a dockerimage within a kaniko pod

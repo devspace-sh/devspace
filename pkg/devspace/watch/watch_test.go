@@ -135,13 +135,12 @@ func TestWatcher(t *testing.T) {
 		return nil
 	}
 
-	watcher, err := New(watchedPaths, []string{}, callback, log.GetInstance())
+	watcherObj, err := New(watchedPaths, []string{}, time.Millisecond * 10, callback, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error creating watcher: %v", err)
 	}
 
-	watcher.PollInterval = time.Millisecond * 10
-	watcher.Start()
+	watcherObj.Start()
 
 	for _, testCase := range testCases {
 		changeLock.Lock()
@@ -181,7 +180,7 @@ func TestWatcher(t *testing.T) {
 		}
 	}
 
-	watcher.Stop()
+	watcherObj.Stop()
 }
 
 func indexOf(element string, data []string) int {

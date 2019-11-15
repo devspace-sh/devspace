@@ -41,7 +41,8 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectl.Cli
 	}
 
 	// Execute before images build hook
-	err := hook.Execute(config, hook.Before, hook.StageImages, hook.All, log)
+	executer := hook.NewExecuter(config, log)
+	err := executer.Execute(hook.Before, hook.StageImages, hook.All)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +157,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectl.Cli
 	}
 
 	// Execute after images build hook
-	err = hook.Execute(config, hook.After, hook.StageImages, hook.All, log)
+	err = executer.Execute(hook.After, hook.StageImages, hook.All)
 	if err != nil {
 		return nil, err
 	}

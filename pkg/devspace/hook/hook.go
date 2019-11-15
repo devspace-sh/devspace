@@ -14,6 +14,24 @@ import (
 	dockerterm "github.com/docker/docker/pkg/term"
 )
 
+// Executer executes configured commands locally
+type Executer interface {
+	Execute(when When, stage Stage, which string) error
+}
+
+type executer struct {
+	config *latest.Config
+	log    logpkg.Logger
+}
+
+// NewExecuter creates an instance of Executer for the specified config
+func NewExecuter(config *latest.Config, log logpkg.Logger) Executer {
+	return &executer{
+		config: config,
+		log:    log,
+	}
+}
+
 // When is the type that is used to tell devspace when relatively to a stage a hook should be executed
 type When int
 
@@ -42,12 +60,12 @@ var (
 )
 
 // Execute executes hooks at a specific time
-func Execute(config *latest.Config, when When, stage Stage, which string, log logpkg.Logger) error {
-	if config.Hooks != nil && len(config.Hooks) > 0 {
+func (e *executer) Execute(when When, stage Stage, which string) error {
+	if e.config.Hooks != nil && len(e.config.Hooks) > 0 {
 		hooksToExecute := []*latest.HookConfig{}
 
 		// Gather all hooks we should execute
-		for _, hook := range config.Hooks {
+		for _, hook := range e.config.Hooks {
 			if hook.When != nil {
 				if when == Before && hook.When.Before != nil {
 					if stage == StageDeployments && hook.When.Before.Deployments != "" && strings.TrimSpace(hook.When.Before.Deployments) == strings.TrimSpace(which) {
@@ -79,13 +97,13 @@ func Execute(config *latest.Config, when When, stage Stage, which string, log lo
 
 			// Determine output writer
 			var writer io.Writer
-			if log == logpkg.GetInstance() {
+			if e.log == logpkg.GetInstance() {
 				writer = stdout
 			} else {
-				writer = log
+				writer = e.log
 			}
 
-			log.Infof("Execute hook: %s", ansi.Color(fmt.Sprintf("%s '%s'", hook.Command, strings.Join(args, "' '")), "white+b"))
+			e.log.Infof("Execute hook: %s", ansi.Color(fmt.Sprintf("%s '%s'", hook.Command, strings.Join(args, "' '")), "white+b"))
 			err := cmd.Run(writer, writer, nil)
 			if err != nil {
 				return errors.Errorf("Error executing hook: %v", err)
