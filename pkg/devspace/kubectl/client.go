@@ -28,10 +28,9 @@ import (
 	"k8s.io/client-go/transport/spdy"
 )
 
-//Client holds all kubect functions
+// Client holds all kubect functions
 type Client interface {
 	CurrentContext() string
-	Host() string
 	KubeClient() kubernetes.Interface
 	Namespace() string
 	RestConfig() *rest.Config
@@ -52,9 +51,6 @@ type Client interface {
 	LogMultipleTimeout(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, timeout time.Duration, log log.Logger) error
 	LogMultiple(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, log log.Logger) error
 	Logs(ctx context.Context, namespace, podName, containerName string, lastContainerLog bool, tail *int64, follow bool) (io.ReadCloser, error)
-
-	GroupVersionExist(groupVersion string, resourceList []*metav1.APIResourceList) bool
-	ResourceExist(groupVersion, name string, resourceList []*metav1.APIResourceList) bool
 
 	GetUpgraderWrapper() (http.RoundTripper, *upgraderWrapper, error)
 
@@ -280,4 +276,20 @@ func (client *client) PrintWarning(generatedConfig *generated.Config, noWarning,
 	log.Infof("Using namespace '%s'", ansi.Color(client.namespace, "white+b"))
 
 	return nil
+}
+
+func (client *client) CurrentContext() string {
+	return client.currentContext
+}
+
+func (client *client) KubeClient() kubernetes.Interface {
+	return client.Client
+}
+
+func (client *client) Namespace() string {
+	return client.namespace
+}
+
+func (client *client) RestConfig() *rest.Config {
+	return client.restConfig
 }

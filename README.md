@@ -1,12 +1,15 @@
 <img src="docs/website/static/img/devspace-logo.svg">
 
-<img src="docs/website/static/img/readme/line.svg" height="1">
+### **[Website](https://devspace.sh)** • **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.cloud/docs)** • **[Blog](https://devspace.cloud/blog)** • **[Slack](https://devspace.cloud/slack)** • **[Twitter](https://twitter.com/devspace)**
 
-### **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.cloud/docs)** • **[Slack](https://devspace.cloud/slack)** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  [![](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Check%20out%20%23DevSpace%20-%20it%20lets%20you%20build%20cloud-native%20applications%20faster%20and%20automate%20the%20deployment%20process%20to%20%23Kubernetes%20https%3A//github.com/devspace-cloud/devspace/%0A%23cncf%20%23cloudnative%20%23cloud%20%23docker%20%23containers) [![](https://travis-ci.org/devspace-cloud/devspace.svg?branch=master)](https://travis-ci.org/devspace-cloud/devspace) [![](https://goreportcard.com/badge/github.com/devspace-cloud/devspace)](https://goreportcard.com/report/github.com/devspace-cloud/devspace) [![](https://devspace.cloud/slack/badge.svg)](http://devspace.cloud/slack)
+![Build Status Passing](https://img.shields.io/travis/devspace-cloud/devspace?style=for-the-badge)
+![Latest Release](https://img.shields.io/github/v/release/devspace-cloud/devspace?style=for-the-badge&label=Latest%20Release&color=%23007ec6)
+![License: Apache-2.0](https://img.shields.io/github/license/devspace-cloud/devspace?style=for-the-badge&color=%23007ec6)
+<br>
+![Total Downloads (GitHub Releases)](https://img.shields.io/github/downloads/devspace-cloud/devspace/total?style=for-the-badge&label=Total%20Downloads&color=%23007ec6)
+![NPM Installs per Month](https://img.shields.io/npm/dm/devspace?label=NPM%20Installs&style=for-the-badge&color=%23007ec6)
 
-<img src="docs/website/static/img/readme/line.svg" height="1">
-
-### DevSpace makes it much faster to develop applications for Kubernetes
+### Client-Only Developer Tool for Cloud-Native Development with Kubernetes
 - **Build, test and debug applications directly inside Kubernetes**
 - **Develop with hot reloading**: updates your running containers without rebuilding images or restarting containers
 - **Unify deployment workflows** within your team and across dev, staging and production
@@ -14,11 +17,14 @@
 
 <br>
 
+[![DevSpace Intro](docs/website/static/img/readme/devspace-readme-intro.gif)](https://devspace.sh)
 
-[![DevSpace Demo](docs/website/static/img/devspace-cli-demo.gif)](https://youtu.be/G2l7VkQrkXo)
+![DevSpace Intro](docs/website/static/img/readme/devspace-cluster-compatibility.png)
+
+<br>
 
 <p align="center">
-<a href="https://youtu.be/G2l7VkQrkXo">Click here to watch the full-length video with explanations on YouTube [4min]</a><br><br> ⭐️ <strong>Do you like DevSpace? Support the project with a star</strong> ⭐️
+⭐️ <strong>Do you like DevSpace? Support the project with a star</strong> ⭐️
 </p>
 
 
@@ -116,8 +122,11 @@ DevSpace runs as a single binary CLI tool directly on your computer and ideally,
 
 Stop wasting time for running the same build and deploy commands over and over again. Let DevSpace automate your workflow and build cloud-native applications directly inside Kubernetes.
 
-### Automatic Image Building with `devspace build`
-  
+
+<details>
+<summary><b>Automated Image Building with <code>devspace build</code></b></summary>
+<br>
+
 - **Customizable Build Process** supporting Docker, kaniko or even custom scripts
 - **Parallel Image Building** to save time when multiple Dockerfiles have to be built  
 - **Automatic Image Tagging** according to custom tag schema (e.g. using timestamp, commit hash or random strings)  
@@ -125,9 +134,14 @@ Stop wasting time for running the same build and deploy commands over and over a
 - **Automatic Configuration of Pull Secrets** within the Kubernetes cluster
 - **Smart Caching** that skips images which do not need to be rebuilt
 
+</details>
+
 [![DevSpace Image Building Process](docs/website/static/img/processes/image-building-process-devspace.svg)](https://devspace.cloud/docs/cli/image-building/workflow-basics)
 
-### Automatic Deployment with `devspace deploy`
+<details>
+<summary><b>Automated Deployment with <code>devspace deploy</code></b></summary>
+<br>
+
 - **Automatig Image Building** for images required in the deployment process
 - **Customizable Deployment Process** supporting kubectl, helm, kustomize and more
 - **Multi-Step Deployments** to deploy multiple application components (e.g. 1. webserver, 2. database, 3. cache)
@@ -135,18 +149,43 @@ Stop wasting time for running the same build and deploy commands over and over a
 - **Smart Caching** that skips deployments which do not need to be redeployed
 - **Easy Integration into CI/CD Tools** with non-interactive mode
 
+</details>
+
 [![DevSpace Deployment Process](docs/website/static/img/processes/deployment-process-devspace.svg)](https://devspace.cloud/docs/cli/deployment/workflow-basics)
 
-### Efficient In-Cluster Development with `devspace dev`
+<details>
+<summary><b>Efficient In-Cluster Development with <code>devspace dev</code></b></summary>
+<br>
+
 - **Hot Reloading** that updates your running containers without restarting them (whenever you change a line of code)
 - **Fast + Reliable File Synchronization** to keep all files in sync between your local workspace and your containers
 - **Port Forwarding** that lets you access services and pods on localhost and allows you to attach debuggers with ease
 - **Multi-Container Log Streaming** that lets you stream the logs of multiple containers at once (+ color-coded prefix)
 - **Terminal Proxy** that opens automatically and lets you run commands in your pods directly from your IDE terminal
 
+</details>
+
 [![DevSpace Development Process](docs/website/static/img/processes/development-process-devspace.svg)](https://devspace.cloud/docs/cli/development/workflow-basics)
 
-### Faster Interaction with Kubernetes
+
+<details>
+<summary><b>Feature-Rich Localhost UI with <code>devspace ui</code></b></summary>
+<br>
+
+- **Graphical UI** for streaming logs, opening interactive terminals, starting port-forwarding and more
+- **Runs 100% on localhost**: uses current kube-context, no server-side installation required
+
+![DevSpace Localhost UI Demo](docs/website/static/img/readme/devspace-localhost-ui-demo.gif)
+
+<br>
+
+</details>
+
+
+<details>
+<summary><b>Convenience Commands for Kubernetes</b></summary>
+<br>
+
 - **Quick Pod Selection** eliminates the need to copy & paste pod names, namespaces etc.  
   &raquo; Shows a "dropdown selector" for pods directly in the CLI when running one of these commands:
   - `devspace enter` to open a **Interactive Terminal Session**
@@ -154,30 +193,55 @@ Stop wasting time for running the same build and deploy commands over and over a
   - `devspace sync` for quickly starting a **Bi-Directional, Real-Time File Synchronization** on demand 
 - **Automatic Issue Analysis** via `devspace analyze` reporting crashed containers, missing endpoints, scheduling errors, ...
 - **Fast Deletion of Deployments** using `devspace purge` (deletes all helm charts, manifests etc. defined in the config)
+- **Context Management** via:
+  - `devspace use context` shows a list of contexts (select to set current kube-context)
+  - `devspace use namespace` shows a list of namespaces (select to set defaut namespace for current context)
+  - `devspace remove context` shows a list of contexts (select to remove a kube-context)
+
+<br>
+</details>
 
 
-### Powerful Configuration
+<details>
+<summary><b>Powerful Configuration</b></summary>
+<br>
+
 - **Declarative Configuration File** that can be versioned and shared just like the source code of your project (e.g. via git)
 - **Config Variables** which allow you to parameterize the config and share a unified config file with your team
 - **Config Overrides** for overriding Dockerfiles or ENTRYPOINTs (e.g. to separate development, staging and production)
 - **Hooks** for executing custom commands before or after each build and deployment step
 - **Multiple Configs** for advanced deployment scenarios
 
+<br>
+</details>
 
-### Lightweight & Easy to Setup
+
+<details>
+<summary><b>Lightweight & Easy to Setup</b></summary>
+<br>
+
 - **Client-Only Binary** (server-side [DevSpace Cloud](https://devspace.cloud/docs/cloud/what-is-devspace-cloud) is optional for visual UI and team management)
 - **Standalone Executable for all platforms** with no external dependencies and *fully written in Golang*
 - **Automatic Config Generation** from existing Dockerfiles, Helm chart or Kubernetes manifests (optional)
 - **Automatic Dockerfile Generation** (optional)
 
-### Management UI for Teams & Dev Clusters *(optional, using [DevSpace Cloud](https://github.com/devspace-cloud/devspace-cloud))*
-- **Graphical UI** for managing clusters, cluster users and user permissions (resource limits etc.)
+<br>
+</details>
+
+
+<details>
+<summary><b>DevSpace Cloud: Server-Side Add-On (optional)</b></summary>
+<br>
+
 - **On-Demand Namespace Creation & Isolation** with automatic RBAC, network policies, pod security policies etc.
+- **Graphical UI** for managing clusters, cluster users and user permissions (resource limits etc.)
 - **Advanced Permission System** that automatically enforces user limits via resource quotas, adminission controllers etc.
 - **Fully Automatic Context Configuration** on the machines of all cluster users with secure access token handling
 - **100% Pure Kubernetes** and nothing else! Works with any Kubernetes cluster.
-
+  
 **More info and install intructions for DevSpace Cloud on: [www.github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud)**
+
+</details>
 
 
 <br>
@@ -348,7 +412,7 @@ devspace create space my-namespace
 
 > You can either
 > - use the fully managed **[SaaS edition of DevSpace Cloud](https://app.devspace.cloud)**
-> - or run it on your clusters using the <img width="20px" style="vertical-align: sub" src="/img/logos/github-logo.svg" alt="DevSpace Demo"> **[on-premise edition available on GitHub](https://github.com/devspace-cloud/devspace-cloud)**.
+> - or run it on your clusters using the **[on-premise edition available on GitHub](https://github.com/devspace-cloud/devspace-cloud)**.
 
 <br>
 </details>
@@ -486,7 +550,7 @@ Once the UI is open in your browser, it will look similar to this screenshot:
 Follow these links to more about how to use DevSpace:
 - [**DevSpace Tutorials**](https://devspace.cloud/docs/cli/guides/tutorials) (for different languages and frameworks)
 - [How to use the Localhost UI of DevSpace](https://devspace.cloud/docs/cli/guides/localhost-ui)
-- [How to connect a domain by creating an ingress](https://devspace.cloud/docs/cli/guides/domain-ingresses)
+- [How to connect a domain by creating an ingress](https://devspace.cloud/docs/cli/guides/domains-ingresses)
 - [How to execute commands in your containers and start terminal sessions](https://devspace.cloud/docs/cli/guides/executing-commands)
 - [How to synchronize files between your local computer and your containers](https://devspace.cloud/docs/cli/guides/file-synchronization)
 - [How to configure differences between development, staging and production](https://devspace.cloud/docs/cli/guides/development-staging-production)
