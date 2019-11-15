@@ -7,17 +7,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Graph is the dependency graph structure
-type Graph struct {
-	Nodes map[string]*Node
+type graph struct {
+	Nodes map[string]*node
 
-	Root *Node
+	Root *node
 }
 
-// NewGraph creates a new graph with given root node
-func NewGraph(root *Node) *Graph {
-	graph := &Graph{
-		Nodes: make(map[string]*Node),
+func newGraph(root *node) *graph {
+	graph := &graph{
+		Nodes: make(map[string]*node),
 		Root:  root,
 	}
 
@@ -25,34 +23,33 @@ func NewGraph(root *Node) *Graph {
 	return graph
 }
 
-// Node is a node in a graph
-type Node struct {
+// node is a node in a graph
+type node struct {
 	ID   string
 	Data interface{}
 
-	parents []*Node
-	childs  []*Node
+	parents []*node
+	childs  []*node
 }
 
-// NewNode creates a new node for the graph
-func NewNode(id string, data interface{}) *Node {
-	return &Node{
+func newNode(id string, data interface{}) *node {
+	return &node{
 		ID:   id,
 		Data: data,
 
-		parents: make([]*Node, 0, 1),
-		childs:  make([]*Node, 0, 1),
+		parents: make([]*node, 0, 1),
+		childs:  make([]*node, 0, 1),
 	}
 }
 
-// InsertNodeAt inserts a new node at the given parent position
-func (g *Graph) InsertNodeAt(parentID string, id string, data interface{}) (*Node, error) {
+// insertNodeAt inserts a new node at the given parent position
+func (g *graph) insertNodeAt(parentID string, id string, data interface{}) (*node, error) {
 	parentNode, ok := g.Nodes[parentID]
 	if !ok {
 		return nil, errors.Errorf("Parent %s does not exist", parentID)
 	}
 	if existingNode, ok := g.Nodes[id]; ok {
-		err := g.AddEdge(parentNode.ID, existingNode.ID)
+		err := g.addEdge(parentNode.ID, existingNode.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -60,7 +57,7 @@ func (g *Graph) InsertNodeAt(parentID string, id string, data interface{}) (*Nod
 		return existingNode, nil
 	}
 
-	node := NewNode(id, data)
+	node := newNode(id, data)
 
 	g.Nodes[node.ID] = node
 
@@ -70,8 +67,8 @@ func (g *Graph) InsertNodeAt(parentID string, id string, data interface{}) (*Nod
 	return node, nil
 }
 
-// RemoveNode removes a node with no children in the graph
-func (g *Graph) RemoveNode(id string) error {
+// removeNode removes a node with no children in the graph
+func (g *graph) removeNode(id string) error {
 	if node, ok := g.Nodes[id]; ok {
 		if len(node.childs) > 0 {
 			return errors.Errorf("Cannot remove %s from graph because it has still children", id)
@@ -98,22 +95,22 @@ func (g *Graph) RemoveNode(id string) error {
 	return nil
 }
 
-// GetNextLeaf returns the next leaf in the graph from node start
-func (g *Graph) GetNextLeaf(start *Node) *Node {
+// getNextLeaf returns the next leaf in the graph from node start
+func (g *graph) getNextLeaf(start *node) *node {
 	if len(start.childs) == 0 {
 		return start
 	}
 
-	return g.GetNextLeaf(start.childs[0])
+	return g.getNextLeaf(start.childs[0])
 }
 
-// CyclicError is the type that is returned if a cyclic edge would be inserted
-type CyclicError struct {
-	path []*Node
+// cyclicError is the type that is returned if a cyclic edge would be inserted
+type cyclicError struct {
+	path []*node
 }
 
 // Error implements error interface
-func (c *CyclicError) Error() string {
+func (c *cyclicError) Error() string {
 	cycle := []string{c.path[len(c.path)-1].ID}
 	for _, node := range c.path {
 		cycle = append(cycle, node.ID)
@@ -122,8 +119,8 @@ func (c *CyclicError) Error() string {
 	return fmt.Sprintf("Cyclic dependency found: \n%s", strings.Join(cycle, "\n"))
 }
 
-// AddEdge adds a new edge from a node to a node and returns an error if it would result in a cyclic graph
-func (g *Graph) AddEdge(fromID string, toID string) error {
+// addEdge adds a new edge from a node to a node and returns an error if it would result in a cyclic graph
+func (g *graph) addEdge(fromID string, toID string) error {
 	from, ok := g.Nodes[fromID]
 	if !ok {
 		return errors.Errorf("fromID %s does not exist", fromID)
@@ -136,7 +133,7 @@ func (g *Graph) AddEdge(fromID string, toID string) error {
 	// Check if cyclic
 	path := findFirstPath(to, from)
 	if path != nil {
-		return &CyclicError{
+		return &cyclicError{
 			path: path,
 		}
 	}
@@ -154,9 +151,9 @@ func (g *Graph) AddEdge(fromID string, toID string) error {
 }
 
 // find first path from node to node with DFS
-func findFirstPath(from *Node, to *Node) []*Node {
+func findFirstPath(from *node, to *node) []*node {
 	isVisited := map[string]bool{}
-	pathList := []*Node{from}
+	pathList := []*node{from}
 
 	// Call recursive utility
 	if findFirstPathRecursive(from, to, isVisited, &pathList) {
@@ -172,7 +169,7 @@ func findFirstPath(from *Node, to *Node) []*Node {
 // vertices in current path.
 // localPathList<> stores actual
 // vertices in the current path
-func findFirstPathRecursive(u *Node, d *Node, isVisited map[string]bool, localPathList *[]*Node) bool {
+func findFirstPathRecursive(u *node, d *node, isVisited map[string]bool, localPathList *[]*node) bool {
 	// Mark the current node
 	isVisited[u.ID] = true
 

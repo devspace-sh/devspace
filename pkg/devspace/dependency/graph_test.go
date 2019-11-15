@@ -6,31 +6,31 @@ import (
 
 func TestGraph(t *testing.T) {
 	var (
-		root                   = NewNode("root", nil)
-		rootChild1             = NewNode("rootChild1", nil)
-		rootChild2             = NewNode("rootChild2", nil)
-		rootChild3             = NewNode("rootChild3", nil)
-		rootChild2Child1       = NewNode("rootChild2Child1", nil)
-		rootChild2Child1Child1 = NewNode("rootChild2Child1Child1", nil)
+		root                   = newNode("root", nil)
+		rootChild1             = newNode("rootChild1", nil)
+		rootChild2             = newNode("rootChild2", nil)
+		rootChild3             = newNode("rootChild3", nil)
+		rootChild2Child1       = newNode("rootChild2Child1", nil)
+		rootChild2Child1Child1 = newNode("rootChild2Child1Child1", nil)
 
-		testGraph = NewGraph(root)
+		testGraph = newGraph(root)
 	)
 
-	_, err := testGraph.InsertNodeAt("does not exits", rootChild1.ID, nil)
+	_, err := testGraph.insertNodeAt("does not exits", rootChild1.ID, nil)
 	if err == nil {
-		t.Fatal("InsertNodeAt error expected")
+		t.Fatal("insertNodeAt error expected")
 	}
 
-	testGraph.InsertNodeAt(root.ID, rootChild1.ID, nil)
-	testGraph.InsertNodeAt(root.ID, rootChild2.ID, nil)
-	testGraph.InsertNodeAt(root.ID, rootChild3.ID, nil)
+	testGraph.insertNodeAt(root.ID, rootChild1.ID, nil)
+	testGraph.insertNodeAt(root.ID, rootChild2.ID, nil)
+	testGraph.insertNodeAt(root.ID, rootChild3.ID, nil)
 
-	testGraph.InsertNodeAt(rootChild2.ID, rootChild2Child1.ID, nil)
-	testGraph.InsertNodeAt(rootChild2Child1.ID, rootChild2Child1Child1.ID, nil)
-	testGraph.InsertNodeAt(rootChild3.ID, rootChild2.ID, nil)
+	testGraph.insertNodeAt(rootChild2.ID, rootChild2Child1.ID, nil)
+	testGraph.insertNodeAt(rootChild2Child1.ID, rootChild2Child1Child1.ID, nil)
+	testGraph.insertNodeAt(rootChild3.ID, rootChild2.ID, nil)
 
 	// Cyclic graph error
-	_, err = testGraph.InsertNodeAt(rootChild2Child1Child1.ID, rootChild3.ID, nil)
+	_, err = testGraph.insertNodeAt(rootChild2Child1Child1.ID, rootChild3.ID, nil)
 	if err == nil {
 		t.Fatal("Cyclic error expected")
 	} else {
@@ -59,35 +59,35 @@ rootChild2Child1Child1`
 	}
 
 	// Get leaf node
-	leaf := testGraph.GetNextLeaf(root)
+	leaf := testGraph.getNextLeaf(root)
 	if leaf.ID != rootChild1.ID {
 		t.Fatalf("GetLeaf1: Got id %s, expected %s", leaf.ID, rootChild1.ID)
 	}
 
-	err = testGraph.AddEdge("NotThere", leaf.ID)
+	err = testGraph.addEdge("NotThere", leaf.ID)
 	if err == nil {
 		t.Fatal("No error when adding an edge from a non-existing node")
 	}
 
-	err = testGraph.AddEdge(leaf.ID, "NotThere")
+	err = testGraph.addEdge(leaf.ID, "NotThere")
 	if err == nil {
 		t.Fatal("No error when adding an edge to a non-existing node")
 	}
 
 	// Remove node
-	err = testGraph.RemoveNode(leaf.ID)
+	err = testGraph.removeNode(leaf.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Get leaf node
-	leaf = testGraph.GetNextLeaf(root)
+	leaf = testGraph.getNextLeaf(root)
 	if leaf.ID != rootChild2Child1Child1.ID {
 		t.Fatalf("GetLeaf2: Got id %s, expected %s", leaf.ID, rootChild2Child1Child1.ID)
 	}
 
 	// Remove node
-	err = testGraph.RemoveNode(root.ID)
+	err = testGraph.removeNode(root.ID)
 	if err == nil {
 		t.Fatal("Expected error")
 	}

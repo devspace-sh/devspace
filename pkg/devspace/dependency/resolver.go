@@ -32,16 +32,18 @@ func init() {
 
 // ResolverInterface defines the resolver interface that takes dependency configs and resolves them
 type ResolverInterface interface {
-	Resolve(dependencies []*latest.DependencyConfig, update bool) ([]*Dependency, error)
+	Resolve(update bool) ([]*Dependency, error)
 }
 
 // Resolver implements the resolver interface
-type Resolver struct {
-	DependencyGraph *Graph
+type resolver struct {
+	DependencyGraph *graph
 
 	BasePath   string
 	BaseConfig *latest.Config
 	BaseCache  *generated.Config
+
+	ConfigOptions *configutil.ConfigOptions
 
 	AllowCyclic bool
 
@@ -49,7 +51,7 @@ type Resolver struct {
 }
 
 // NewResolver creates a new resolver for resolving dependencies
-func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, allowCyclic bool, log log.Logger) (*Resolver, error) {
+func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, allowCyclic bool, configOptions *configutil.ConfigOptions, log log.Logger) (ResolverInterface, error) {
 	var id string
 
 	basePath, err := filepath.Abs(".")
@@ -64,20 +66,21 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, allowCy
 		id = basePath
 	}
 
-	return &Resolver{
-		DependencyGraph: NewGraph(NewNode(id, nil)),
+	return &resolver{
+		DependencyGraph: newGraph(newNode(id, nil)),
 
 		BaseConfig: baseConfig,
 		BaseCache:  baseCache,
 
-		AllowCyclic: allowCyclic,
+		AllowCyclic:   allowCyclic,
+		ConfigOptions: configOptions,
 
 		log: log,
 	}, nil
 }
 
 // Resolve implements interface
-func (r *Resolver) Resolve(dependencies []*latest.DependencyConfig, configOptions *configutil.ConfigOptions, update bool) ([]*Dependency, error) {
+func (r *resolver) Resolve(update bool) ([]*Dependency, error) {
 	r.log.Info("Start resolving dependencies")
 
 	currentWorkingDirectory, err := os.Getwd()
@@ -85,9 +88,9 @@ func (r *Resolver) Resolve(dependencies []*latest.DependencyConfig, configOption
 		return nil, errors.Wrap(err, "get current working directory")
 	}
 
-	err = r.resolveRecursive(currentWorkingDirectory, r.DependencyGraph.Root.ID, dependencies, configOptions, update)
+	err = r.resolveRecursive(currentWorkingDirectory, r.DependencyGraph.Root.ID, r.BaseConfig.Dependencies, update)
 	if err != nil {
-		if _, ok := err.(*CyclicError); ok {
+		if _, ok := err.(*cyclicError); ok {
 			return nil, err
 		}
 
@@ -105,18 +108,18 @@ func (r *Resolver) Resolve(dependencies []*latest.DependencyConfig, configOption
 	return r.buildDependencyQueue()
 }
 
-func (r *Resolver) buildDependencyQueue() ([]*Dependency, error) {
+func (r *resolver) buildDependencyQueue() ([]*Dependency, error) {
 	retDependencies := make([]*Dependency, 0, len(r.DependencyGraph.Nodes)-1)
 
 	for len(r.DependencyGraph.Nodes) > 1 {
-		next := r.DependencyGraph.GetNextLeaf(r.DependencyGraph.Root)
+		next := r.DependencyGraph.getNextLeaf(r.DependencyGraph.Root)
 		if next == r.DependencyGraph.Root {
 			break
 		}
 
 		retDependencies = append(retDependencies, next.Data.(*Dependency))
 
-		err := r.DependencyGraph.RemoveNode(next.ID)
+		err := r.DependencyGraph.removeNode(next.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -125,15 +128,15 @@ func (r *Resolver) buildDependencyQueue() ([]*Dependency, error) {
 	return retDependencies, nil
 }
 
-func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*latest.DependencyConfig, configOptions *configutil.ConfigOptions, update bool) error {
+func (r *resolver) resolveRecursive(basePath, parentID string, dependencies []*latest.DependencyConfig, update bool) error {
 	for _, dependencyConfig := range dependencies {
 		ID := r.getDependencyID(basePath, dependencyConfig)
 
 		// Try to insert new edge
 		if _, ok := r.DependencyGraph.Nodes[ID]; ok {
-			err := r.DependencyGraph.AddEdge(parentID, ID)
+			err := r.DependencyGraph.addEdge(parentID, ID)
 			if err != nil {
-				if _, ok := err.(*CyclicError); ok {
+				if _, ok := err.(*cyclicError); ok {
 					// Check if cyclic dependencies are allowed
 					if !r.AllowCyclic {
 						return err
@@ -143,12 +146,12 @@ func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 				}
 			}
 		} else {
-			dependency, err := r.resolveDependency(basePath, dependencyConfig, configOptions, update)
+			dependency, err := r.resolveDependency(basePath, dependencyConfig, update)
 			if err != nil {
 				return err
 			}
 
-			_, err = r.DependencyGraph.InsertNodeAt(parentID, ID, dependency)
+			_, err = r.DependencyGraph.insertNodeAt(parentID, ID, dependency)
 			if err != nil {
 				return errors.Wrap(err, "insert node")
 			}
@@ -156,7 +159,7 @@ func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 			// Load dependencies from dependency
 			if dependencyConfig.IgnoreDependencies == nil || *dependencyConfig.IgnoreDependencies == false {
 				if dependency.Config.Dependencies != nil && len(dependency.Config.Dependencies) > 0 {
-					err = r.resolveRecursive(dependency.LocalPath, ID, dependency.Config.Dependencies, configOptions, update)
+					err = r.resolveRecursive(dependency.LocalPath, ID, dependency.Config.Dependencies, update)
 					if err != nil {
 						return err
 					}
@@ -168,7 +171,7 @@ func (r *Resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 	return nil
 }
 
-func (r *Resolver) resolveDependency(basePath string, dependency *latest.DependencyConfig, configOptions *configutil.ConfigOptions, update bool) (*Dependency, error) {
+func (r *resolver) resolveDependency(basePath string, dependency *latest.DependencyConfig, update bool) (*Dependency, error) {
 	var (
 		ID        = r.getDependencyID(basePath, dependency)
 		localPath string
@@ -223,7 +226,7 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 	}
 
 	// Clone config options
-	cloned, err := configOptions.Clone()
+	cloned, err := r.ConfigOptions.Clone()
 	if err != nil {
 		return nil, errors.Wrap(err, "clone config options")
 	}
@@ -267,7 +270,7 @@ func (r *Resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 var authRegEx = regexp.MustCompile("^(https?:\\/\\/)[^:]+:[^@]+@(.*)$")
 
-func (r *Resolver) getDependencyID(basePath string, dependency *latest.DependencyConfig) string {
+func (r *resolver) getDependencyID(basePath string, dependency *latest.DependencyConfig) string {
 	if dependency.Source.Git != "" {
 		// Erase authentication credentials
 		id := strings.TrimSpace(dependency.Source.Git)

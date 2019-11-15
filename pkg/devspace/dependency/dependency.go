@@ -21,25 +21,50 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Manager can update, build, deploy and purge dependencies.
+type Manager interface {
+	UpdateAll() error
+	BuildAll(options BuildOptions) error
+	DeployAll(options DeployOptions) error
+	PurgeAll(verbose bool) error
+}
+
+type manager struct {
+	config *latest.Config
+	client kubectl.Client
+	log    log.Logger
+
+	resolver ResolverInterface
+}
+
+// NewManager creates a new instance of the interface Manager
+func NewManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *configutil.ConfigOptions, logger log.Logger) (Manager, error) {
+	resolver, err := NewResolver(config, cache, allowCyclic, configOptions, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "new resolver")
+	}
+
+	return &manager{
+		config:   config,
+		client:   client,
+		log:      logger,
+		resolver: resolver,
+	}, nil
+}
+
 // UpdateAll will update all dependencies if there are any
-func UpdateAll(config *latest.Config, cache *generated.Config, allowCyclic bool, configOptions *configutil.ConfigOptions, log log.Logger) error {
-	if config == nil || config.Dependencies == nil || len(config.Dependencies) == 0 {
+func (m *manager) UpdateAll() error {
+	if m.config == nil || m.config.Dependencies == nil || len(m.config.Dependencies) == 0 {
 		return nil
 	}
 
-	log.StartWait("Update dependencies")
-	defer log.StopWait()
-
-	// Create a new dependency resolver
-	resolver, err := NewResolver(config, cache, allowCyclic, log)
-	if err != nil {
-		return errors.Wrap(err, "new resolver")
-	}
+	m.log.StartWait("Update dependencies")
+	defer m.log.StopWait()
 
 	// Resolve all dependencies
-	_, err = resolver.Resolve(config.Dependencies, configOptions, true)
+	_, err := m.resolver.Resolve(true)
 	if err != nil {
-		if _, ok := err.(*CyclicError); ok {
+		if _, ok := err.(*cyclicError); ok {
 			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
 		}
 
@@ -49,32 +74,31 @@ func UpdateAll(config *latest.Config, cache *generated.Config, allowCyclic bool,
 	return nil
 }
 
+// BuildOptions has all options for building all dependencies
+type BuildOptions struct {
+	UpdateDependencies, SkipPush, ForceDeployDependencies, ForceBuild, Verbose bool
+}
+
 // BuildAll will build all dependencies if there are any
-func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, forceBuild, verbose bool, configOptions *configutil.ConfigOptions, logger log.Logger) error {
-	if config == nil || config.Dependencies == nil || len(config.Dependencies) == 0 {
+func (m *manager) BuildAll(options BuildOptions) error {
+	if m.config == nil || m.config.Dependencies == nil || len(m.config.Dependencies) == 0 {
 		return nil
 	}
 
-	// Create a new dependency resolver
-	resolver, err := NewResolver(config, cache, allowCyclic, logger)
-	if err != nil {
-		return errors.Wrap(err, "new resolver")
-	}
-
 	// Resolve all dependencies
-	dependencies, err := resolver.Resolve(config.Dependencies, configOptions, updateDependencies)
+	dependencies, err := m.resolver.Resolve(options.UpdateDependencies)
 	if err != nil {
-		if _, ok := err.(*CyclicError); ok {
+		if _, ok := err.(*cyclicError); ok {
 			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
 		}
 
 		return err
 	}
 
-	defer logger.StopWait()
+	defer m.log.StopWait()
 
-	if verbose == false {
-		logger.Infof("To display the complete dependency build run with the '--verbose-dependencies' flag")
+	if options.Verbose == false {
+		m.log.Infof("To display the complete dependency build run with the '--verbose-dependencies' flag")
 	}
 
 	// Deploy all dependencies
@@ -82,57 +106,56 @@ func BuildAll(config *latest.Config, cache *generated.Config, allowCyclic, updat
 		var (
 			dependency       = dependencies[i]
 			buff             = &bytes.Buffer{}
-			dependencyLogger = logger
+			dependencyLogger = m.log
 		)
 
 		// If not verbose log to a stream
-		if verbose == false {
-			logger.StartWait(fmt.Sprintf("Building dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
+		if options.Verbose == false {
+			m.log.StartWait(fmt.Sprintf("Building dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
 			dependencyLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
 		} else {
-			logger.Infof(fmt.Sprintf("Building dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
+			m.log.Infof(fmt.Sprintf("Building dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
 		}
 
-		err := dependency.Build(skipPush, forceDeployDependencies, forceBuild, dependencyLogger)
+		err := dependency.Build(options.SkipPush, options.ForceDeployDependencies, options.ForceBuild, dependencyLogger)
 		if err != nil {
 			return errors.Errorf("Error building dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
 
-		logger.Donef("Built dependency %s", dependency.ID)
+		m.log.Donef("Built dependency %s", dependency.ID)
 	}
 
-	logger.StopWait()
-	logger.Donef("Successfully built %d dependencies", len(dependencies))
+	m.log.StopWait()
+	m.log.Donef("Successfully built %d dependencies", len(dependencies))
 
 	return nil
 }
 
+// DeployOptions has all options for deploying all dependencies
+type DeployOptions struct {
+	UpdateDependencies, SkipPush, ForceDeployDependencies, SkipBuild, ForceBuild, ForceDeploy, Verbose bool
+}
+
 // DeployAll will deploy all dependencies if there are any
-func DeployAll(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic, updateDependencies, skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy, verbose bool, configOptions *configutil.ConfigOptions, logger log.Logger) error {
-	if config == nil || config.Dependencies == nil || len(config.Dependencies) == 0 {
+func (m *manager) DeployAll(options DeployOptions) error {
+	if m.config == nil || m.config.Dependencies == nil || len(m.config.Dependencies) == 0 {
 		return nil
 	}
 
-	// Create a new dependency resolver
-	resolver, err := NewResolver(config, cache, allowCyclic, logger)
-	if err != nil {
-		return errors.Wrap(err, "new resolver")
-	}
-
 	// Resolve all dependencies
-	dependencies, err := resolver.Resolve(config.Dependencies, configOptions, updateDependencies)
+	dependencies, err := m.resolver.Resolve(options.UpdateDependencies)
 	if err != nil {
-		if _, ok := err.(*CyclicError); ok {
+		if _, ok := err.(*cyclicError); ok {
 			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
 		}
 
 		return err
 	}
 
-	defer logger.StopWait()
+	defer m.log.StopWait()
 
-	if verbose == false {
-		logger.Infof("To display the complete dependency deployment run with the '--verbose-dependencies' flag")
+	if options.Verbose == false {
+		m.log.Infof("To display the complete dependency deployment run with the '--verbose-dependencies' flag")
 	}
 
 	// Deploy all dependencies
@@ -140,58 +163,52 @@ func DeployAll(config *latest.Config, cache *generated.Config, client kubectl.Cl
 		var (
 			dependency       = dependencies[i]
 			buff             = &bytes.Buffer{}
-			dependencyLogger = logger
+			dependencyLogger = m.log
 		)
 
 		// If not verbose log to a stream
-		if verbose == false {
-			logger.StartWait(fmt.Sprintf("Deploying dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
+		if options.Verbose == false {
+			m.log.StartWait(fmt.Sprintf("Deploying dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
 			dependencyLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
 		} else {
-			logger.Infof(fmt.Sprintf("Deploying dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
+			m.log.Infof(fmt.Sprintf("Deploying dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
 		}
 
-		err := dependency.Deploy(client, skipPush, forceDeployDependencies, skipBuild, forceBuild, forceDeploy, dependencyLogger)
+		err := dependency.Deploy(m.client, options.SkipPush, options.ForceDeployDependencies, options.SkipBuild, options.ForceBuild, options.ForceDeploy, dependencyLogger)
 		if err != nil {
 			return errors.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
 
 		// Prettify path if its a path deployment
-		logger.Donef("Deployed dependency %s", dependency.ID)
+		m.log.Donef("Deployed dependency %s", dependency.ID)
 	}
 
-	logger.StopWait()
-	logger.Donef("Successfully deployed %d dependencies", len(dependencies))
+	m.log.StopWait()
+	m.log.Donef("Successfully deployed %d dependencies", len(dependencies))
 
 	return nil
 }
 
 // PurgeAll purges all dependencies in reverse order
-func PurgeAll(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic, verbose bool, configOptions *configutil.ConfigOptions, logger log.Logger) error {
-	if config == nil || config.Dependencies == nil || len(config.Dependencies) == 0 {
+func (m *manager) PurgeAll(verbose bool) error {
+	if m.config == nil || m.config.Dependencies == nil || len(m.config.Dependencies) == 0 {
 		return nil
 	}
 
-	// Create a new dependency resolver
-	resolver, err := NewResolver(config, cache, allowCyclic, logger)
-	if err != nil {
-		return err
-	}
-
 	// Resolve all dependencies
-	dependencies, err := resolver.Resolve(config.Dependencies, configOptions, false)
+	dependencies, err := m.resolver.Resolve(false)
 	if err != nil {
-		if _, ok := err.(*CyclicError); ok {
+		if _, ok := err.(*cyclicError); ok {
 			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
 		}
 
 		return errors.Wrap(err, "resolve dependencies")
 	}
 
-	defer logger.StopWait()
+	defer m.log.StopWait()
 
 	if verbose == false {
-		logger.Infof("To display the complete dependency deletion run with the '--verbose-dependencies' flag")
+		m.log.Infof("To display the complete dependency deletion run with the '--verbose-dependencies' flag")
 	}
 
 	// Purge all dependencies
@@ -199,25 +216,25 @@ func PurgeAll(config *latest.Config, cache *generated.Config, client kubectl.Cli
 		var (
 			dependency       = dependencies[i]
 			buff             = &bytes.Buffer{}
-			dependencyLogger = logger
+			dependencyLogger = m.log
 		)
 
 		// If not verbose log to a stream
 		if verbose == false {
-			logger.StartWait(fmt.Sprintf("Purging %d dependencies", i+1))
+			m.log.StartWait(fmt.Sprintf("Purging %d dependencies", i+1))
 			dependencyLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
 		}
 
-		err := dependency.Purge(client, dependencyLogger)
+		err := dependency.Purge(m.client, dependencyLogger)
 		if err != nil {
 			return errors.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
 
-		logger.Donef("Purged dependency %s", dependency.ID)
+		m.log.Donef("Purged dependency %s", dependency.ID)
 	}
 
-	logger.StopWait()
-	logger.Donef("Successfully purged %d dependencies", len(dependencies))
+	m.log.StopWait()
+	m.log.Donef("Successfully purged %d dependencies", len(dependencies))
 
 	return nil
 }
@@ -334,7 +351,8 @@ func (d *Dependency) Deploy(client kubectl.Client, skipPush, forceDependencies, 
 	}
 
 	// Create pull secrets and private registry if necessary
-	err = registry.CreatePullSecrets(d.Config, client, dockerClient, log)
+	registryClient := registry.NewClient(d.Config, client, dockerClient, log)
+	err = registryClient.CreatePullSecrets()
 	if err != nil {
 		return err
 	}

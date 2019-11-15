@@ -18,8 +18,9 @@ import (
 // All deploys all deployments in the config
 func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.Client, isDev, forceDeploy bool, builtImages map[string]string, deployments []string, log log.Logger) error {
 	if config.Deployments != nil && len(config.Deployments) > 0 {
+		executer := hook.NewExecuter(config, log)
 		// Execute before deployments deploy hook
-		err := hook.Execute(config, hook.Before, hook.StageDeployments, hook.All, log)
+		err := executer.Execute(hook.Before, hook.StageDeployments, hook.All)
 		if err != nil {
 			return err
 		}
@@ -65,7 +66,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.
 			}
 
 			// Execute before deploment deploy hook
-			err = hook.Execute(config, hook.Before, hook.StageDeployments, deployConfig.Name, log)
+			err = executer.Execute(hook.Before, hook.StageDeployments, deployConfig.Name)
 			if err != nil {
 				return err
 			}
@@ -79,7 +80,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.
 				log.Donef("Successfully deployed %s with %s", deployConfig.Name, method)
 
 				// Execute after deploment deploy hook
-				err = hook.Execute(config, hook.After, hook.StageDeployments, deployConfig.Name, log)
+				err = executer.Execute(hook.After, hook.StageDeployments, deployConfig.Name)
 				if err != nil {
 					return err
 				}
@@ -89,7 +90,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.
 		}
 
 		// Execute after deployments deploy hook
-		err = hook.Execute(config, hook.After, hook.StageDeployments, hook.All, log)
+		err = executer.Execute(hook.After, hook.StageDeployments, hook.All)
 		if err != nil {
 			return err
 		}

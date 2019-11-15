@@ -189,7 +189,8 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		dockerClient = nil
 	}
 
-	err = registry.CreatePullSecrets(config, client, dockerClient, log.GetInstance())
+	registryClient := registry.NewClient(config, client, dockerClient, log.GetInstance())
+	err = registryClient.CreatePullSecrets()
 	if err != nil {
 		return err
 	}
@@ -209,8 +210,22 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 
 func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
 	if cmd.SkipPipeline == false {
+
+		// Create Dependencymanager
+		manager, err := dependency.NewManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), log.GetInstance())
+		if err != nil {
+			return 0, errors.Wrap(err, "new manager")
+		}
+
 		// Dependencies
-		err := dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, cmd.ToConfigOptions(), log.GetInstance())
+		err = manager.DeployAll(dependency.DeployOptions{
+			SkipPush:                cmd.SkipPush,
+			ForceDeployDependencies: cmd.ForceDependencies,
+			SkipBuild:               cmd.SkipBuild,
+			ForceBuild:              cmd.ForceBuild,
+			ForceDeploy:             cmd.ForceDeploy,
+			Verbose:                 cmd.VerboseDependencies,
+		})
 		if err != nil {
 			return 0, errors.Errorf("Error deploying dependencies: %v", err)
 		}
@@ -347,7 +362,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	// Start watcher if we have at least one auto reload path and if we should not skip the pipeline
 	if cmd.SkipPipeline == false && len(autoReloadPaths) > 0 {
 		var once sync.Once
-		watcher, err := watch.New(autoReloadPaths, []string{".devspace/"}, func(changed []string, deleted []string) error {
+		watcher, err := watch.New(autoReloadPaths, []string{".devspace/"}, time.Second, func(changed []string, deleted []string) error {
 			once.Do(func() {
 				if interactiveMode {
 					log.Info("Change detected, will reload in 2 seconds")

@@ -150,13 +150,27 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Create pull secrets and private registry if necessary
-	err = registry.CreatePullSecrets(config, client, dockerClient, log.GetInstance())
+	registryClient := registry.NewClient(config, client, dockerClient, log.GetInstance())
+	err = registryClient.CreatePullSecrets()
 	if err != nil {
 		return err
 	}
 
+	// Create Dependencymanager
+	manager, err := dependency.NewManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, configOptions, log.GetInstance())
+	if err != nil {
+		return errors.Wrap(err, "new manager")
+	}
+
 	// Dependencies
-	err = dependency.DeployAll(config, generatedConfig, client, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.SkipBuild, cmd.ForceBuild, cmd.ForceDeploy, cmd.VerboseDependencies, configOptions, log.GetInstance())
+	err = manager.DeployAll(dependency.DeployOptions{
+		SkipPush:                cmd.SkipPush,
+		ForceDeployDependencies: cmd.ForceDependencies,
+		SkipBuild:               cmd.SkipBuild,
+		ForceBuild:              cmd.ForceBuild,
+		ForceDeploy:             cmd.ForceDeploy,
+		Verbose:                 cmd.VerboseDependencies,
+	})
 	if err != nil {
 		return errors.Wrap(err, "deploy dependencies")
 	}
