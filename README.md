@@ -1,6 +1,6 @@
 <img src="docs/website/static/img/devspace-logo.svg">
 
-### **[Website](https://devspace.sh)** • **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.cloud/docs)** • **[Slack Channel](https://devspace.cloud/slack)** • **[Twitter](https://twitter.com/devspace)**
+### **[Website](https://devspace.sh)** • **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.cloud/docs)** • **[Blog](https://devspace.cloud/blog)** • **[Slack](https://devspace.cloud/slack)** • **[Twitter](https://twitter.com/devspace)**
 
 ![Build Status Passing](https://img.shields.io/travis/devspace-cloud/devspace?style=for-the-badge)
 ![License: Apache-2.0](https://img.shields.io/github/license/devspace-cloud/devspace?style=for-the-badge&color=%23007ec6)
