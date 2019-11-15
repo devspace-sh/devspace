@@ -551,7 +551,7 @@ Once the UI is open in your browser, it will look similar to this screenshot:
 Follow these links to more about how to use DevSpace:
 - [**DevSpace Tutorials**](https://devspace.cloud/docs/cli/guides/tutorials) (for different languages and frameworks)
 - [How to use the Localhost UI of DevSpace](https://devspace.cloud/docs/cli/guides/localhost-ui)
-- [How to connect a domain by creating an ingress](https://devspace.cloud/docs/cli/guides/domain-ingresses)
+- [How to connect a domain by creating an ingress](https://devspace.cloud/docs/cli/guides/domains-ingresses)
 - [How to execute commands in your containers and start terminal sessions](https://devspace.cloud/docs/cli/guides/executing-commands)
 - [How to synchronize files between your local computer and your containers](https://devspace.cloud/docs/cli/guides/file-synchronization)
 - [How to configure differences between development, staging and production](https://devspace.cloud/docs/cli/guides/development-staging-production)
