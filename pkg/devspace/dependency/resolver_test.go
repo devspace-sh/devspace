@@ -172,12 +172,14 @@ func TestResolver(t *testing.T) {
 			assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 		}
 
-		testConfig := &latest.Config{}
+		testConfig := &latest.Config{
+			Dependencies: testCase.dependencyTasks,
+		}
 		generatedConfig := &generated.Config{}
-		testResolver, err := NewResolver(testConfig, generatedConfig, testCase.allowCyclic, log.Discard)
+		testResolver, err := NewResolver(testConfig, generatedConfig, testCase.allowCyclic, &configutil.ConfigOptions{}, log.Discard)
 		assert.NilError(t, err, "Error creating a resolver in testCase %s", testCase.name)
 
-		dependencies, err := testResolver.Resolve(testCase.dependencyTasks, &configutil.ConfigOptions{}, testCase.updateParam)
+		dependencies, err := testResolver.Resolve(testCase.updateParam)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Unexpected error in testCase %s", testCase.name)
 		} else {

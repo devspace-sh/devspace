@@ -94,8 +94,19 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Create Dependencymanager
+	manager, err := dependency.NewManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log.GetInstance())
+	if err != nil {
+		return errors.Wrap(err, "new manager")
+	}
+
 	// Dependencies
-	err = dependency.BuildAll(config, generatedConfig, cmd.AllowCyclicDependencies, false, cmd.SkipPush, cmd.ForceDependencies, cmd.ForceBuild, cmd.VerboseDependencies, configOptions, log.GetInstance())
+	err = manager.BuildAll(dependency.BuildOptions{
+		SkipPush:                cmd.SkipPush,
+		ForceDeployDependencies: cmd.ForceDependencies,
+		ForceBuild:              cmd.ForceBuild,
+		Verbose:                 cmd.VerboseDependencies,
+	})
 	if err != nil {
 		return errors.Wrap(err, "build dependencies")
 	}
