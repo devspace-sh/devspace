@@ -85,6 +85,7 @@ require (
 	helm.sh/helm/v3 v3.0.0
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
+	k8s.io/cli-runtime v0.0.0
 	k8s.io/client-go v0.0.0
 	k8s.io/helm v2.16.1+incompatible
 	k8s.io/klog v1.0.0

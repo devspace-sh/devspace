@@ -1,4 +1,4 @@
-package helm
+package v2
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"

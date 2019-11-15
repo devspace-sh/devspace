@@ -1,4 +1,4 @@
-package helm
+package v2
 
 import (
 	"k8s.io/helm/pkg/downloader"

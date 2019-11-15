@@ -1,6 +1,4 @@
-package helm
-
-import ()
+package v2
 
 /*type checkDependenciesTestCase struct {
 	name string

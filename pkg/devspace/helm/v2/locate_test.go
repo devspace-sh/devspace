@@ -1,4 +1,4 @@
-package helm
+package v2
 
 import (
 	"io/ioutil"

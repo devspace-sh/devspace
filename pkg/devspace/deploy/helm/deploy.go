@@ -63,7 +63,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 
 	// Get HelmClient if necessary
 	if d.Helm == nil {
-		d.Helm, err = helm.NewClient(d.config, d.Kube, d.TillerNamespace, d.Log, false)
+		d.Helm, err = helm.NewClient(d.config, d.DeploymentConfig, d.Kube, d.TillerNamespace, false, d.Log)
 		if err != nil {
 			return false, errors.Errorf("Error creating helm client: %v", err)
 		}

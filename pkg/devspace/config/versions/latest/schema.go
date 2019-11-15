@@ -227,6 +227,7 @@ type HelmConfig struct {
 	Timeout          *int64                      `yaml:"timeout,omitempty"`
 	Rollback         *bool                       `yaml:"rollback,omitempty"`
 	Force            *bool                       `yaml:"force,omitempty"`
+	V2               *bool                       `yaml:"v2,omitempty"`
 	TillerNamespace  string                      `yaml:"tillerNamespace,omitempty"`
 }
 

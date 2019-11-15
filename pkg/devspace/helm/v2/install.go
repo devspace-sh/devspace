@@ -1,4 +1,4 @@
-package helm
+package v2
 
 import (
 	"io/ioutil"
@@ -9,8 +9,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	yaml "gopkg.in/yaml.v2"
@@ -48,7 +48,7 @@ func checkDependencies(ch *chart.Chart, reqs *helmchartutil.Requirements) error 
 }
 
 // InstallChartByPath installs the given chartpath und the releasename in the releasenamespace
-func (client *client) InstallChartByPath(releaseName, releaseNamespace, chartPath string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*Release, error) {
+func (client *client) InstallChartByPath(releaseName, releaseNamespace, chartPath string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
 	if releaseNamespace == "" {
 		releaseNamespace = client.kubectl.Namespace()
 	}
@@ -88,10 +88,10 @@ func (client *client) InstallChartByPath(releaseName, releaseNamespace, chartPat
 
 	if values != nil {
 		unmarshalledValues, err := yaml.Marshal(values)
-
 		if err != nil {
 			return nil, err
 		}
+
 		overwriteValues = unmarshalledValues
 	}
 
@@ -139,7 +139,7 @@ func (client *client) InstallChartByPath(releaseName, releaseNamespace, chartPat
 			return nil, nil
 		}
 
-		return &Release{
+		return &types.Release{
 			Name:         upgradeResponse.Release.GetName(),
 			Namespace:    upgradeResponse.Release.GetNamespace(),
 			Version:      upgradeResponse.Release.Version,
@@ -171,7 +171,7 @@ func (client *client) InstallChartByPath(releaseName, releaseNamespace, chartPat
 		return nil, nil
 	}
 
-	return &Release{
+	return &types.Release{
 		Name:         installResponse.Release.GetName(),
 		Namespace:    installResponse.Release.GetNamespace(),
 		Version:      installResponse.Release.Version,
@@ -202,7 +202,7 @@ func (client *client) analyzeError(srcErr error, releaseNamespace string) error 
 }
 
 // InstallChart installs the given chart by name under the releasename in the releasenamespace
-func (client *client) InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*Release, error) {
+func (client *client) InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
 	chart := helmConfig.Chart
 	chartPath, err := locateChartPath(client.Settings, chart.RepoURL, chart.Username, chart.Password, chart.Name, chart.Version, false, "", "", "", "")
 	if err != nil {
