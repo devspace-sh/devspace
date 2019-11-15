@@ -3,10 +3,9 @@
 ### **[Website](https://devspace.sh)** • **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.cloud/docs)** • **[Blog](https://devspace.cloud/blog)** • **[Slack](https://devspace.cloud/slack)** • **[Twitter](https://twitter.com/devspace)**
 
 ![Build Status Passing](https://img.shields.io/travis/devspace-cloud/devspace?style=for-the-badge)
-![License: Apache-2.0](https://img.shields.io/github/license/devspace-cloud/devspace?style=for-the-badge&color=%23007ec6)
-![Commits per Year](https://img.shields.io/github/commit-activity/y/devspace-cloud/devspace?label=Commits%20%2F%20Year&style=for-the-badge)
-<br>
 ![Latest Release](https://img.shields.io/github/v/release/devspace-cloud/devspace?style=for-the-badge&label=Latest%20Release&color=%23007ec6)
+![License: Apache-2.0](https://img.shields.io/github/license/devspace-cloud/devspace?style=for-the-badge&color=%23007ec6)
+<br>
 ![Total Downloads (GitHub Releases)](https://img.shields.io/github/downloads/devspace-cloud/devspace/total?style=for-the-badge&label=Total%20Downloads&color=%23007ec6)
 ![NPM Installs per Month](https://img.shields.io/npm/dm/devspace?label=NPM%20Installs&style=for-the-badge&color=%23007ec6)
 
