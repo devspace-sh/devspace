@@ -115,7 +115,9 @@ func (d *downstream) mainLoop() error {
 
 		// Compare change amount
 		if lastAmountChanges > 0 && changeAmount.Amount == lastAmountChanges {
+			d.sync.fileIndex.fileMapMutex.Lock()
 			changes, err := d.collectChanges()
+			d.sync.fileIndex.fileMapMutex.Unlock()
 			if err != nil {
 				return errors.Wrap(err, "collect changes")
 			}
@@ -138,9 +140,6 @@ func (d *downstream) mainLoop() error {
 }
 
 func (d *downstream) shouldKeep(change *remote.Change) bool {
-	d.sync.fileIndex.fileMapMutex.Lock()
-	defer d.sync.fileIndex.fileMapMutex.Unlock()
-
 	// Is a delete change?
 	if change.ChangeType == remote.ChangeType_DELETE {
 		return shouldRemoveLocal(filepath.Join(d.sync.LocalPath, change.Path), parseFileInformation(change), d.sync)
