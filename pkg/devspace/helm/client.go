@@ -11,9 +11,9 @@ import (
 
 // NewClient creates a new helm client based on the config
 func NewClient(config *latest.Config, deployConfig *latest.DeploymentConfig, kubeClient kubectl.Client, tillerNamespace string, upgradeTiller bool, log log.Logger) (types.Client, error) {
-	if deployConfig.Helm.V2 != nil && *deployConfig.Helm.V2 == true {
+	if deployConfig.Helm.V2 == true {
 		return v2.NewClient(config, kubeClient, tillerNamespace, log, upgradeTiller)
 	}
 
-	return v3.NewClient(kubeClient, "", log)
+	return v3.NewClient(kubeClient, deployConfig.Helm.Driver, log)
 }

@@ -1,7 +1,6 @@
 package v3
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -80,8 +80,13 @@ func (client *v3Client) InstallChart(releaseName string, releaseNamespace string
 	upgrade.Install = true
 	upgrade.Namespace = releaseNamespace
 
-	upgrade.Force = ptr.ReverseBool(helmConfig.Force)
-	upgrade.Wait = ptr.ReverseBool(helmConfig.Wait)
+	upgrade.Force = helmConfig.Force
+	upgrade.DisableHooks = helmConfig.DisableHooks
+	upgrade.Recreate = helmConfig.Recreate
+	upgrade.CleanupOnFail = helmConfig.CleanupOnFail
+	upgrade.ReuseValues = false
+	upgrade.Atomic = helmConfig.Atomic
+	upgrade.Wait = helmConfig.Wait || helmConfig.Atomic
 	if helmConfig.Timeout != nil {
 		upgrade.Timeout = time.Duration(*helmConfig.Timeout)
 	}
@@ -96,17 +101,7 @@ func (client *v3Client) InstallChart(releaseName string, releaseNamespace string
 		return nil, err
 	}
 
-	out, err := json.Marshal(values)
-	if err != nil {
-		return nil, err
-	}
-
-	vals := make(map[string]interface{})
-	err = json.Unmarshal(out, &vals)
-	if err != nil {
-		return nil, err
-	}
-
+	vals := yamlutil.Convert(values).(map[string]interface{})
 	if upgrade.Install {
 		// If a release does not exist, install it. If another error occurs during
 		// the check, ignore the error and continue with the upgrade.
@@ -123,7 +118,7 @@ func (client *v3Client) InstallChart(releaseName string, releaseNamespace string
 			instClient.Namespace = upgrade.Namespace
 			instClient.Atomic = upgrade.Atomic
 
-			rel, err := client.install(releaseName, releaseNamespace, instClient, vals, settings)
+			rel, err := client.install(releaseName, releaseNamespace, chartPath, instClient, vals, settings)
 			if err != nil {
 				return nil, err
 			}
@@ -161,12 +156,12 @@ func (client *v3Client) InstallChart(releaseName string, releaseNamespace string
 	}, nil
 }
 
-func (client *v3Client) install(releaseName string, releaseNamespace string, install *action.Install, values map[string]interface{}, settings *cli.EnvSettings) (*release.Release, error) {
+func (client *v3Client) install(releaseName string, releaseNamespace string, chartName string, install *action.Install, values map[string]interface{}, settings *cli.EnvSettings) (*release.Release, error) {
 	if install.Version == "" && install.Devel {
 		install.Version = ">0.0.0-0"
 	}
 
-	name, chart, err := install.NameAndChart([]string{releaseName})
+	name, chart, err := install.NameAndChart([]string{releaseName, chartName})
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +208,7 @@ func (client *v3Client) install(releaseName string, releaseNamespace string, ins
 	}
 
 	install.Namespace = releaseNamespace
-	return install.Run(chartRequested, nil)
+	return install.Run(chartRequested, values)
 }
 
 // isChartInstallable validates if a chart can be installed

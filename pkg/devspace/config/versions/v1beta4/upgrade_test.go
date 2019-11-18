@@ -22,7 +22,9 @@ func TestSimple(t *testing.T) {
 				Deployments: []*DeploymentConfig{
 					{
 						Name: "Test",
-						Helm: &HelmConfig{},
+						Helm: &HelmConfig{
+							Rollback: ptr.Bool(true),
+						},
 					},
 				},
 			},
@@ -31,7 +33,8 @@ func TestSimple(t *testing.T) {
 					{
 						Name: "Test",
 						Helm: &next.HelmConfig{
-							V2: ptr.Bool(true),
+							V2:     true,
+							Atomic: true,
 						},
 					},
 				},

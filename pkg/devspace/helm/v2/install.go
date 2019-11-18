@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
@@ -101,33 +100,28 @@ func (client *client) InstallChartByPath(releaseName, releaseNamespace, chartPat
 		waitTimeout = *helmConfig.Timeout
 	}
 
-	wait := false
-	if helmConfig.Wait != nil {
-		wait = *helmConfig.Wait
-	}
-
-	rollback := false
-	if helmConfig.Rollback != nil {
-		rollback = *helmConfig.Rollback
-	}
-
+	wait := helmConfig.Wait || helmConfig.Atomic
 	if releaseExists {
 		upgradeResponse, err := client.helm.UpdateRelease(
 			releaseName,
 			chartPath,
+			k8shelm.UpgradeCleanupOnFail(helmConfig.Atomic),
 			k8shelm.UpgradeWait(wait),
 			k8shelm.UpgradeTimeout(waitTimeout),
 			k8shelm.UpdateValueOverrides(overwriteValues),
+			k8shelm.UpgradeCleanupOnFail(helmConfig.CleanupOnFail),
 			k8shelm.ReuseValues(false),
-			k8shelm.UpgradeForce(ptr.ReverseBool(helmConfig.Force)),
+			k8shelm.UpgradeRecreate(helmConfig.Recreate),
+			k8shelm.UpgradeForce(helmConfig.Force),
+			k8shelm.UpgradeDisableHooks(helmConfig.DisableHooks),
 		)
 
 		if err != nil {
 			err = client.analyzeError(errors.Errorf("helm upgrade: %v", err), releaseNamespace)
 			if err != nil {
-				if rollback {
+				if helmConfig.Atomic {
 					log.Warn("Try to roll back back chart because of previous error")
-					_, rollbackError := client.helm.RollbackRelease(releaseName, k8shelm.RollbackTimeout(180))
+					_, rollbackError := client.helm.RollbackRelease(releaseName, k8shelm.RollbackWait(true), k8shelm.RollbackDisableHooks(helmConfig.DisableHooks), k8shelm.RollbackTimeout(180), k8shelm.RollbackRecreate(helmConfig.Recreate), k8shelm.RollbackForce(helmConfig.Force))
 					if rollbackError != nil {
 						return nil, err
 					}
@@ -156,11 +150,12 @@ func (client *client) InstallChartByPath(releaseName, releaseNamespace, chartPat
 		k8shelm.ValueOverrides(overwriteValues),
 		k8shelm.ReleaseName(releaseName),
 		k8shelm.InstallReuseName(true),
+		k8shelm.InstallDisableHooks(helmConfig.DisableHooks),
 	)
 	if err != nil {
 		err = client.analyzeError(errors.Errorf("helm install: %v", err), releaseNamespace)
 		if err != nil {
-			if rollback {
+			if helmConfig.Atomic {
 				// Try to delete and ignore errors, because otherwise we have a broken release laying around and always get the no deployed resources error
 				client.DeleteRelease(releaseName, true)
 			}

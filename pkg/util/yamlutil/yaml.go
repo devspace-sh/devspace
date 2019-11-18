@@ -8,6 +8,23 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+// Convert converts an map[interface{}] to map[string] type
+func Convert(i interface{}) interface{} {
+	switch x := i.(type) {
+	case map[interface{}]interface{}:
+		m2 := map[string]interface{}{}
+		for k, v := range x {
+			m2[k.(string)] = Convert(v)
+		}
+		return m2
+	case []interface{}:
+		for i, v := range x {
+			x[i] = Convert(v)
+		}
+	}
+	return i
+}
+
 // WriteYamlToFile formats yamlData and writes it to a file
 func WriteYamlToFile(yamlData interface{}, filePath string) error {
 	yamlString, err := yaml.Marshal(yamlData)

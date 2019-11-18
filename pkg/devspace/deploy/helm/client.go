@@ -55,7 +55,7 @@ func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.
 // Delete deletes the release
 func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 	// Delete with helm engine
-	if d.DeploymentConfig.Helm.V2 != nil && *d.DeploymentConfig.Helm.V2 == true {
+	if d.DeploymentConfig.Helm.V2 == true {
 		isDeployed := helmv2.IsTillerDeployed(d.config, d.Kube, d.TillerNamespace)
 		if isDeployed == false {
 			return nil

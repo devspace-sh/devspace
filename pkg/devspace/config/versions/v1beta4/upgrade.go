@@ -19,7 +19,8 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	if len(c.Deployments) > 0 {
 		for idx, deploymentConfig := range c.Deployments {
 			if deploymentConfig.Helm != nil {
-				nextConfig.Deployments[idx].Helm.V2 = ptr.Bool(true)
+				nextConfig.Deployments[idx].Helm.V2 = true
+				nextConfig.Deployments[idx].Helm.Atomic = ptr.ReverseBool(deploymentConfig.Helm.Rollback)
 			}
 		}
 	}
