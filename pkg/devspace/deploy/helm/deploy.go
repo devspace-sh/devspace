@@ -63,7 +63,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 
 	// Get HelmClient if necessary
 	if d.Helm == nil {
-		d.Helm, err = helm.NewClient(d.config, d.Kube, d.TillerNamespace, d.Log, false)
+		d.Helm, err = helm.NewClient(d.config, d.DeploymentConfig, d.Kube, d.TillerNamespace, false, d.Log)
 		if err != nil {
 			return false, errors.Errorf("Error creating helm client: %v", err)
 		}
@@ -78,12 +78,10 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 		}
 
 		forceDeploy = true
-		if releases != nil {
-			for _, release := range releases.Releases {
-				if release.GetName() == releaseName {
-					forceDeploy = false
-					break
-				}
+		for _, release := range releases {
+			if release.Name == releaseName {
+				forceDeploy = false
+				break
 			}
 		}
 	}
@@ -171,7 +169,7 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 	defer d.Log.StopWait()
 
 	// Deploy chart
-	appRelease, err := d.Helm.InstallChart(releaseName, releaseNamespace, &overwriteValues, d.DeploymentConfig.Helm)
+	appRelease, err := d.Helm.InstallChart(releaseName, releaseNamespace, overwriteValues, d.DeploymentConfig.Helm)
 	if err != nil {
 		return false, errors.Errorf("Unable to deploy helm chart: %v\nRun `%s` and `%s` to recreate the chart", err, ansi.Color("devspace purge -d "+d.DeploymentConfig.Name, "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}

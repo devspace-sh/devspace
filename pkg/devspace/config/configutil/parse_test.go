@@ -61,6 +61,7 @@ deployments:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
+							V2:             true,
 							Values: map[interface{}]interface{}{
 								"containers": []interface{}{
 									map[interface{}]interface{}{
@@ -95,6 +96,7 @@ deployments:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
+							V2:             true,
 							Values: map[interface{}]interface{}{
 								"containers": []interface{}{
 									map[interface{}]interface{}{
@@ -137,6 +139,7 @@ profiles:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
+							V2:             true,
 							Values: map[interface{}]interface{}{
 								"containers": []interface{}{
 									map[interface{}]interface{}{
@@ -186,6 +189,7 @@ profiles:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
+							V2:             true,
 							Values: map[interface{}]interface{}{
 								"containers": []interface{}{
 									map[interface{}]interface{}{
@@ -233,6 +237,7 @@ profiles:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
+							V2:             true,
 							Values: map[interface{}]interface{}{
 								"containers": []interface{}{
 									map[interface{}]interface{}{

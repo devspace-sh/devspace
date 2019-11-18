@@ -19,6 +19,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
+	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -193,22 +194,6 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.mux.ServeHTTP(w, r)
 }
 
-func convert(i interface{}) interface{} {
-	switch x := i.(type) {
-	case map[interface{}]interface{}:
-		m2 := map[string]interface{}{}
-		for k, v := range x {
-			m2[k.(string)] = convert(v)
-		}
-		return m2
-	case []interface{}:
-		for i, v := range x {
-			x[i] = convert(v)
-		}
-	}
-	return i
-}
-
 // UIServerVersion is the struct that is returned by the /api/version request
 type UIServerVersion struct {
 	Version  string `json:"version"`
@@ -271,7 +256,7 @@ func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data = convert(data)
+	data = yamlutil.Convert(data)
 
 	b, err := json.Marshal(data)
 	if err != nil {

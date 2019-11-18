@@ -7,6 +7,7 @@ import (
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/homedir"
 )
@@ -30,5 +31,22 @@ func GetAllAuthConfigs() (map[string]types.AuthConfig, error) {
 		return nil, err
 	}
 
-	return config.GetAllCredentials()
+	authMap, err := config.GetAllCredentials()
+	if err != nil {
+		return nil, err
+	}
+
+	retMap := make(map[string]types.AuthConfig)
+	for k, v := range authMap {
+		// convert
+		authconfigConverted := &types.AuthConfig{}
+		err = util.Convert(v, authconfigConverted)
+		if err != nil {
+			return nil, err
+		}
+
+		retMap[k] = *authconfigConverted
+	}
+
+	return retMap, nil
 }

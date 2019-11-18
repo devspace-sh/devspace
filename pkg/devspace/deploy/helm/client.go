@@ -4,6 +4,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
+	helmtypes "github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
+	helmv2 "github.com/devspace-cloud/devspace/pkg/devspace/helm/v2"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -20,7 +22,7 @@ var DevSpaceChartConfig = &latest.ChartConfig{
 type DeployConfig struct {
 	// Public because we can switch them to fake clients for testing
 	Kube kubectl.Client
-	Helm helm.Interface
+	Helm helmtypes.Client
 
 	TillerNamespace  string
 	DeploymentConfig *latest.DeploymentConfig
@@ -53,22 +55,24 @@ func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.
 // Delete deletes the release
 func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 	// Delete with helm engine
-	isDeployed := helm.IsTillerDeployed(d.config, d.Kube, d.TillerNamespace)
-	if isDeployed == false {
-		return nil
+	if d.DeploymentConfig.Helm.V2 == true {
+		isDeployed := helmv2.IsTillerDeployed(d.config, d.Kube, d.TillerNamespace)
+		if isDeployed == false {
+			return nil
+		}
 	}
 
 	if d.Helm == nil {
 		var err error
 
 		// Get HelmClient
-		d.Helm, err = helm.NewClient(d.config, d.Kube, d.TillerNamespace, d.Log, false)
+		d.Helm, err = helm.NewClient(d.config, d.DeploymentConfig, d.Kube, d.TillerNamespace, false, d.Log)
 		if err != nil {
 			return errors.Wrap(err, "new helm client")
 		}
 	}
 
-	_, err := d.Helm.DeleteRelease(d.DeploymentConfig.Name, true)
+	err := d.Helm.DeleteRelease(d.DeploymentConfig.Name, true)
 	if err != nil {
 		return err
 	}
