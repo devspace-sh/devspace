@@ -246,12 +246,15 @@ node_modules/`))
 	if err != nil {
 		return err
 	}
-	_, err = file.Write([]byte(`apiVersion: extensions/v1beta1
+	_, err = file.Write([]byte(`apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: devspace
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      release: devspace-node
   template:
     metadata:
       labels:

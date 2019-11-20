@@ -65,7 +65,7 @@ func (serviceClient *client) StartPortForwarding() ([]*portforward.PortForwarder
 
 					ports[index] = localPort + ":" + remotePort
 					if value.BindAddress == "" {
-						addresses[index] = "127.0.0.1"
+						addresses[index] = "localhost"
 					} else {
 						addresses[index] = value.BindAddress
 					}

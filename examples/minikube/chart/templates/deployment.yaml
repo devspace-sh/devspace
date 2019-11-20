@@ -1,9 +1,14 @@
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: devspace
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: {{ $.Release.Name | quote }}
+      app.kubernetes.io/name: devspace-app
+      helm.sh/chart: "{{ $.Chart.Name }}-{{ $.Chart.Version }}"
   template:
     metadata:
       labels:
