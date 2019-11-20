@@ -1,4 +1,4 @@
-version: v1beta5
+version: v1beta4
 images:
   default:
     image: dscr.io/${DEVSPACE_USERNAME}/devspace

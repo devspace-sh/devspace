@@ -1,9 +1,13 @@
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: devspace
 spec:
-  replicas: 1
+  replicas: 1 
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: default
+      app.kubernetes.io/name: devspace-app
   template:
     metadata:
       labels:

@@ -1,4 +1,4 @@
-version: v1beta5
+version: v1beta4
 images:
   service-image-1:
     image: dscr.io/${DEVSPACE_USERNAME}/service-1

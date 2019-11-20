@@ -61,7 +61,8 @@ func NewClient(kubeClient kubectl.Client, helmDriver string, log log.Logger) (ty
 			Releases:         store,
 			KubeClient:       kube.New(getter),
 			Log: func(msg string, params ...interface{}) {
-				log.Infof(msg, params...)
+				// We don't log helm messages
+				// log.Infof(msg, params...)
 			},
 		},
 		kubectl: kubeClient,
