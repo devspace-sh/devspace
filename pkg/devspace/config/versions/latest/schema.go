@@ -5,7 +5,7 @@ import (
 )
 
 // Version is the current api version
-const Version string = "v1beta4"
+const Version string = "v1beta5"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -223,10 +223,15 @@ type HelmConfig struct {
 	Values           map[interface{}]interface{} `yaml:"values,omitempty"`
 	ValuesFiles      []string                    `yaml:"valuesFiles,omitempty"`
 	ReplaceImageTags *bool                       `yaml:"replaceImageTags,omitempty"`
-	Wait             *bool                       `yaml:"wait,omitempty"`
+	Wait             bool                        `yaml:"wait,omitempty"`
+	Atomic           bool                        `yaml:"atomic,omitempty"`
+	CleanupOnFail    bool                        `yaml:"cleanupOnFail,omitempty"`
+	Recreate         bool                        `yaml:"recreate,omitempty"`
+	DisableHooks     bool                        `yaml:"disableHooks,omitempty"`
 	Timeout          *int64                      `yaml:"timeout,omitempty"`
-	Rollback         *bool                       `yaml:"rollback,omitempty"`
-	Force            *bool                       `yaml:"force,omitempty"`
+	Force            bool                        `yaml:"force,omitempty"`
+	Driver           string                      `yaml:"driver,omitempty"`
+	V2               bool                        `yaml:"v2,omitempty"`
 	TillerNamespace  string                      `yaml:"tillerNamespace,omitempty"`
 }
 

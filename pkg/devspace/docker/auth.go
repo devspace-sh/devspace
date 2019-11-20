@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
+	cliTypes "github.com/docker/cli/cli/config/types"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/registry"
 	"github.com/pkg/errors"
@@ -81,7 +83,14 @@ func (client *Client) Login(registryURL, user, password string, checkCredentials
 			return nil, err
 		}
 
-		err = configfile.GetCredentialsStore(serverAddress).Store(*authConfig)
+		// convert
+		authconfigConverted := &cliTypes.AuthConfig{}
+		err = util.Convert(authConfig, authconfigConverted)
+		if err != nil {
+			return nil, err
+		}
+
+		err = configfile.GetCredentialsStore(serverAddress).Store(*authconfigConverted)
 		if err != nil {
 			return nil, errors.Errorf("Error saving auth info in credentials store: %v", err)
 		}
@@ -125,7 +134,16 @@ func getDefaultAuthConfig(checkCredStore bool, serverAddress string, isDefaultRe
 		configfile, err := loadDockerConfig()
 
 		if configfile != nil && err == nil {
-			authconfig, err = configfile.GetAuthConfig(serverAddress)
+			authconfigOrig, err := configfile.GetAuthConfig(serverAddress)
+			if err != nil {
+				return nil, err
+			}
+
+			// convert
+			err = util.Convert(authconfigOrig, &authconfig)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

@@ -3,7 +3,6 @@ module github.com/devspace-cloud/devspace
 go 1.13
 
 require (
-	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.16.0+incompatible // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
@@ -12,31 +11,26 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bmatcuk/doublestar v1.1.1
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
-	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
+	github.com/containerd/fifo v0.0.0-20190816180239-bda0ff6ed73c // indirect
+	github.com/containerd/ttrpc v0.0.0-20191028202541-4f1b8fe65a5c // indirect
 	github.com/davidrjenni/reftools v0.0.0-20190827201643-0605d60846fb // indirect
 	github.com/devspace-cloud/penv v0.0.1 // indirect
-	github.com/docker/cli v0.0.0-20181026145426-51668a30f262
+	github.com/docker/cli v0.0.0-20190506213505-d88565df0c2d
+	github.com/docker/compose-on-kubernetes v0.4.24 // indirect
 	github.com/docker/distribution v2.7.1+incompatible
-	github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0
-	github.com/docker/docker-credential-helpers v0.6.1 // indirect
+	github.com/docker/docker v1.4.2-0.20181221150755-2cb26cfe9cbf
 	github.com/docker/go v1.5.1-1 // indirect
 	github.com/docker/go-connections v0.4.0
-	github.com/docker/go-metrics v0.0.0-20180209012529-399ea8c73916 // indirect
+	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c
-	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/golang/groupcache v0.0.0-20181024230925-c65c006176ff // indirect
-	github.com/golang/lint v0.0.0-20180702182130-06c8688daad7 // indirect
-	github.com/golang/protobuf v1.3.1
+	github.com/gogo/googleapis v1.3.0 // indirect
+	github.com/golang/protobuf v1.3.2
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/uuid v1.1.1
-	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/gorilla/websocket v1.4.0
-	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect
 	github.com/hashicorp/go-version v1.0.0 // indirect
 	github.com/haya14busa/goplay v1.0.0 // indirect
-	github.com/huandu/xstrings v1.2.0 // indirect
-	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf // indirect
 	github.com/jmoiron/sqlx v1.2.0 // indirect
 	github.com/josharian/impl v0.0.0-20190715203526-f0d59e96e372 // indirect
@@ -66,7 +60,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
 	github.com/spf13/cobra v0.0.5
-	github.com/spf13/pflag v1.0.3
+	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.3.2
 	github.com/stamblerre/gocode v0.0.0-20190327203809-810592086997 // indirect
 	github.com/tcnksm/go-gitconfig v0.1.2 // indirect
@@ -80,20 +74,21 @@ require (
 	golang.org/x/tools v0.0.0-20191025023517-2077df36852e // indirect
 	golang.org/x/tools/gopls v0.1.7 // indirect
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
-	google.golang.org/grpc v1.23.0
+	google.golang.org/grpc v1.24.0
 	gopkg.in/AlecAivazis/survey.v1 v1.8.7
 	gopkg.in/gorp.v1 v1.7.2 // indirect
-	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/src-d/enry.v1 v1.6.4
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
 	gopkg.in/yaml.v2 v2.2.4
 	gotest.tools v2.2.0+incompatible
+	helm.sh/helm/v3 v3.0.0
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
+	k8s.io/cli-runtime v0.0.0
 	k8s.io/client-go v0.0.0
-	k8s.io/helm v2.16.0+incompatible
-	k8s.io/klog v0.4.0
+	k8s.io/helm v2.16.1+incompatible
+	k8s.io/klog v1.0.0
 	k8s.io/kubectl v0.0.0
 	k8s.io/kubernetes v1.16.2
 	mvdan.cc/sh/v3 v3.0.0-alpha2
@@ -101,7 +96,12 @@ require (
 )
 
 replace (
+	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.0+incompatible
 	github.com/Nvveen/Gotty => github.com/ijc25/Gotty v0.0.0-20170406111628-a8b993ba6abd
+	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20191024225408-dee21c0394b5
+	github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309
+	golang.org/x/sys => golang.org/x/sys v0.0.0-20190812073006-9eafafc0a87e
+
 	k8s.io/api => k8s.io/api v0.0.0-20191016110408-35e52d86657a
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20191016113550-5357c4baaf65
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20191004115801-a2eda9f80ab8

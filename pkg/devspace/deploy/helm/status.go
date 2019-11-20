@@ -17,7 +17,7 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 
 	if d.Helm == nil {
 		// Get HelmClient
-		d.Helm, err = helm.NewClient(d.config, d.Kube, d.TillerNamespace, d.Log, false)
+		d.Helm, err = helm.NewClient(d.config, d.DeploymentConfig, d.Kube, d.TillerNamespace, false, d.Log)
 		if err != nil {
 			return nil, err
 		}
@@ -34,7 +34,7 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 		}, nil
 	}
 
-	if releases == nil || len(releases.Releases) == 0 {
+	if releases == nil || len(releases) == 0 {
 		return &deploy.StatusResult{
 			Name:   d.DeploymentConfig.Name,
 			Type:   "Helm",
@@ -43,14 +43,14 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 		}, nil
 	}
 
-	for _, release := range releases.Releases {
-		if release.GetName() == d.DeploymentConfig.Name {
-			if release.Info.Status.Code.String() != "DEPLOYED" {
+	for _, release := range releases {
+		if release.Name == d.DeploymentConfig.Name {
+			if release.Status != "DEPLOYED" {
 				return &deploy.StatusResult{
 					Name:   d.DeploymentConfig.Name,
 					Type:   "Helm",
 					Target: deployTargetStr,
-					Status: "Status:" + release.Info.Status.Code.String(),
+					Status: "Status:" + release.Status,
 				}, nil
 			}
 
@@ -58,7 +58,7 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 				Name:   d.DeploymentConfig.Name,
 				Type:   "Helm",
 				Target: deployTargetStr,
-				Status: "Deployed " + time.Since(time.Unix(release.Info.LastDeployed.Seconds, 0)).String() + " ago",
+				Status: "Deployed " + time.Since(release.LastDeployed).String() + " ago",
 			}, nil
 		}
 	}
