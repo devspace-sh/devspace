@@ -19,6 +19,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -54,6 +55,9 @@ var globalFlags *flags.GlobalFlags
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	f := factory.DefaultFactory()
+	buildRoot(f)
+
 	// Set version for --version flag
 	rootCmd.Version = upgrade.GetVersion()
 
@@ -78,7 +82,7 @@ func Execute() {
 	}
 }
 
-func init() {
+func buildRoot(f factory.Factory) {
 	persistentFlags := rootCmd.PersistentFlags()
 	globalFlags = flags.SetGlobalFlags(persistentFlags)
 
@@ -103,7 +107,7 @@ func init() {
 	rootCmd.AddCommand(NewPurgeCmd(globalFlags))
 	rootCmd.AddCommand(NewUpgradeCmd())
 	rootCmd.AddCommand(NewDeployCmd(globalFlags))
-	rootCmd.AddCommand(NewEnterCmd(globalFlags))
+	rootCmd.AddCommand(NewEnterCmd(f, globalFlags))
 	rootCmd.AddCommand(NewLoginCmd())
 	rootCmd.AddCommand(NewAnalyzeCmd(globalFlags))
 	rootCmd.AddCommand(NewLogsCmd(globalFlags))

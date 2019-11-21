@@ -4,11 +4,11 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 
@@ -27,7 +27,7 @@ type EnterCmd struct {
 }
 
 // NewEnterCmd creates a new enter command
-func NewEnterCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewEnterCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &EnterCmd{GlobalFlags: globalFlags}
 
 	enterCmd := &cobra.Command{
@@ -47,7 +47,9 @@ devspace enter -c my-container
 devspace enter bash -n my-namespace
 devspace enter bash -l release=test
 #######################################################`,
-		RunE: cmd.Run,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.Run(f, cobraCmd, args)
+		},
 	}
 
 	enterCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
@@ -61,9 +63,9 @@ devspace enter bash -l release=test
 }
 
 // Run executes the command logic
-func (cmd *EnterCmd) Run(cobraCmd *cobra.Command, args []string) error {
+func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
