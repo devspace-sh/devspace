@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -60,103 +59,8 @@ func (p *Provider) GetToken() (string, error) {
 	return p.Token, nil
 }
 
-// ReLogin loggs the user in with the given key or via browser
-func ReLogin(providerConfig *latest.Config, cloudProvider string, key *string, log log.Logger) error {
-	// Let's check if we are logged in first
-	p := config.GetProvider(providerConfig, cloudProvider)
-	if p == nil {
-		cloudProviders := ""
-		for _, p := range providerConfig.Providers {
-			cloudProviders += p.Name + " "
-		}
-
-		return errors.Errorf("Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: %s", cloudProviders)
-	}
-
-	provider := &Provider{
-		*p,
-		log,
-	}
-	if key != nil {
-		provider.Token = ""
-		provider.Key = *key
-
-		// Check if we got access
-		_, err := provider.GetSpaces()
-		if err != nil {
-			return errors.Errorf("Access denied for key %s: %v", *key, err)
-		}
-	} else {
-		provider.Token = ""
-		provider.Key = ""
-
-		err := provider.Login()
-		if err != nil {
-			return errors.Wrap(err, "Login")
-		}
-	}
-
-	log.Donef("Successfully logged into %s", provider.Name)
-
-	// Login into registries
-	err := provider.LoginIntoRegistries()
-	if err != nil {
-		log.Warnf("Error logging into docker registries: %v", err)
-	}
-
-	// Save config
-	err = provider.Save()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// EnsureLoggedIn checks if the user is logged into a certain cloud provider and if not loggs the user in
-func EnsureLoggedIn(providerConfig *latest.Config, cloudProvider string, log log.Logger) error {
-	// Let's check if we are logged in first
-	p := config.GetProvider(providerConfig, cloudProvider)
-	if p == nil {
-		cloudProviders := ""
-		for _, p := range providerConfig.Providers {
-			cloudProviders += p.Name + " "
-		}
-
-		return errors.Errorf("Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: %s", cloudProviders)
-	}
-
-	provider := &Provider{
-		*p,
-		log,
-	}
-	if provider.Key == "" {
-		provider.Token = ""
-
-		err := provider.Login()
-		if err != nil {
-			return errors.Wrap(err, "ensure logged in")
-		}
-
-		log.Donef("Successfully logged into %s", provider.Name)
-
-		// Login into registries
-		err = provider.LoginIntoRegistries()
-		if err != nil {
-			log.Warnf("Error logging into docker registries: %v", err)
-		}
-
-		err = provider.Save()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // Login logs the user into DevSpace Cloud
-func (p *Provider) Login() error {
+func (p *Provider) Login(providerConfig *latest.Config) error {
 	var (
 		url        = p.Host + LoginEndpoint
 		ctx        = context.Background()
@@ -180,13 +84,7 @@ func (p *Provider) Login() error {
 		key = strings.TrimSpace(key)
 
 		p.Log.WriteString("\n")
-
-		providerConfig, err := config.ParseProviderConfig()
-		if err != nil {
-			return err
-		}
-
-		err = ReLogin(providerConfig, p.Name, &key, p.Log)
+		_, err = GetProviderWithOptions(providerConfig, p.Name, key, true, p.Log)
 		if err != nil {
 			return errors.Wrap(err, "login")
 		}

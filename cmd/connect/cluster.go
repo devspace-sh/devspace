@@ -58,14 +58,8 @@ devspace connect cluster
 
 // RunConnectCluster executes the connect cluster command logic
 func (cmd *clusterCmd) RunConnectCluster(cobraCmd *cobra.Command, args []string) error {
-	// Check if user has specified a certain provider
-	var cloudProvider *string
-	if cmd.Provider != "" {
-		cloudProvider = &cmd.Provider
-	}
-
 	// Get provider
-	provider, err := cloud.GetProvider(cloudProvider, log.GetInstance())
+	provider, err := cloud.GetProvider(cmd.Provider, log.GetInstance())
 	if err != nil {
 		return err
 	}

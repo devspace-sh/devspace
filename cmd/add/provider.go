@@ -73,7 +73,7 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) e
 	})
 
 	// Ensure user is logged in
-	err = cloudpkg.EnsureLoggedIn(providerConfig, providerName, log.GetInstance())
+	_, err = cloudpkg.GetProviderWithOptions(providerConfig, providerName, "", false, log.GetInstance())
 	if err != nil {
 		return errors.Wrap(err, "log into provider")
 	}

@@ -30,7 +30,7 @@ func ResumeSpace(client kubectl.Client, loop bool, log log.Logger) error {
 		return errors.Errorf("Unable to get Space ID for context '%s': %v", client.CurrentContext(), err)
 	}
 
-	p, err := GetProvider(&cloudProvider, log)
+	p, err := GetProvider(cloudProvider, log)
 	if err != nil {
 		return err
 	}
