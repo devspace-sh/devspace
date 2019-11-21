@@ -90,7 +90,8 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 	}
 
 	// Get cloud provider if context is a space
-	cloudProvider, err := cloudconfig.GetDefaultProviderName()
+	loader := cloudconfig.NewLoader()
+	cloudProvider, err := loader.GetDefaultProviderName()
 	if err != nil {
 		return nil, err
 	}

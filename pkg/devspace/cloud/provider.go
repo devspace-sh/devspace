@@ -38,23 +38,27 @@ type provider struct {
 	latest.Provider
 
 	client client.Client
+	loader config.Loader
 	log    log.Logger
 }
 
 // GetProvider returns the current specified cloud provider
 func GetProvider(useProviderName string, log log.Logger) (Provider, error) {
 	// Get provider configuration
-	providerConfig, err := config.ParseProviderConfig()
-	if err != nil {
-		return nil, err
-	}
+	loader := config.NewLoader()
 
-	return GetProviderWithOptions(providerConfig, useProviderName, "", false, log)
+	return GetProviderWithOptions(useProviderName, "", false, loader, log)
 }
 
 // GetProviderWithOptions returns a provider by options
-func GetProviderWithOptions(providerConfig *latest.Config, useProviderName, key string, relogin bool, log log.Logger) (Provider, error) {
+func GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, log log.Logger) (Provider, error) {
 	var err error
+
+	//Get config
+	providerConfig, err := loader.Load()
+	if err != nil {
+		return nil, err
+	}
 
 	// Get provider name
 	providerName := config.DevSpaceCloudProviderName
@@ -94,6 +98,7 @@ func GetProviderWithOptions(providerConfig *latest.Config, useProviderName, key 
 	provider := &provider{
 		*p,
 		client.NewClient(providerName, p.Host, p.Key, p.Token),
+		loader,
 		log,
 	}
 	if relogin == true || provider.Key == "" {
@@ -109,7 +114,7 @@ func GetProviderWithOptions(providerConfig *latest.Config, useProviderName, key 
 				return nil, errors.Errorf("Access denied for key %s: %v", key, err)
 			}
 		} else {
-			err := provider.Login(providerConfig)
+			err := provider.Login()
 			if err != nil {
 				return nil, errors.Wrap(err, "Login")
 			}
@@ -135,7 +140,7 @@ func GetProviderWithOptions(providerConfig *latest.Config, useProviderName, key 
 
 // Save saves the provider config
 func (p *provider) Save() error {
-	providerConfig, err := config.ParseProviderConfig()
+	providerConfig, err := p.loader.Load()
 	if err != nil {
 		return err
 	}
@@ -152,7 +157,7 @@ func (p *provider) Save() error {
 		providerConfig.Providers = append(providerConfig.Providers, &p.Provider)
 	}
 
-	return config.SaveProviderConfig(providerConfig)
+	return p.loader.Save(providerConfig)
 }
 
 // Client returns the providers' client

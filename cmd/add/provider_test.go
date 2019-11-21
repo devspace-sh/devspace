@@ -142,7 +142,7 @@ func testRunAddProvider(t *testing.T, testCase addProviderTestCase) {
 		return
 	}
 
-	config, err := cloudconfig.ParseProviderConfig()
+	config, err := cloudconfig.Load()
 	if err != nil {
 		log.Fatal(err)
 	}

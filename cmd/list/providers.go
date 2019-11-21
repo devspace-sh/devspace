@@ -34,7 +34,8 @@ Lists the providers that exist
 // RunListProviders runs the list providers command logic
 func (cmd *providersCmd) RunListProviders(cobraCmd *cobra.Command, args []string) error {
 	// Get provider configuration
-	providerConfig, err := config.ParseProviderConfig()
+	loader := config.NewLoader()
+	providerConfig, err := loader.Load()
 	if err != nil {
 		return errors.Wrap(err, "log into provider")
 	}

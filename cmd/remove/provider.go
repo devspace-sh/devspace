@@ -42,7 +42,8 @@ func (cmd *providerCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args []s
 	providerName := args[0]
 
 	// Get provider configuration
-	providerConfig, err := config.ParseProviderConfig()
+			loader := config.NewLoader()
+	providerConfig, err := loader.Load()
 	if err != nil {
 		return errors.Wrap(err, "parse provider config")
 	}
@@ -66,7 +67,7 @@ func (cmd *providerCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args []s
 		providerConfig.Default = config.DevSpaceCloudProviderName
 	}
 
-	err = config.SaveProviderConfig(providerConfig)
+	err = loader.Save(providerConfig)
 	if err != nil {
 		return errors.Wrap(err, "save provider config")
 	}

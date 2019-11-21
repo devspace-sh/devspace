@@ -49,7 +49,8 @@ func (c *client) GetToken() (string, error) {
 }
 
 func (c *client) saveToken() error {
-	providerConfig, err := config.ParseProviderConfig()
+	loader := config.NewLoader()
+	providerConfig, err := loader.Load()
 	if err != nil {
 		return err
 	}
@@ -57,7 +58,7 @@ func (c *client) saveToken() error {
 	for idx, provider := range providerConfig.Providers {
 		if provider.Name == c.provider {
 			providerConfig.Providers[idx].Token = c.token
-			return config.SaveProviderConfig(providerConfig)
+			return loader.Save(providerConfig)
 		}
 	}
 

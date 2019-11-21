@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -60,7 +59,7 @@ func (p *provider) GetToken() (string, error) {
 }
 
 // Login logs the user into DevSpace Cloud
-func (p *provider) Login(providerConfig *latest.Config) error {
+func (p *provider) Login() error {
 	var (
 		url        = p.Host + LoginEndpoint
 		ctx        = context.Background()
@@ -84,7 +83,7 @@ func (p *provider) Login(providerConfig *latest.Config) error {
 		key = strings.TrimSpace(key)
 
 		p.log.WriteString("\n")
-		_, err = GetProviderWithOptions(providerConfig, p.Name, key, true, p.log)
+		_, err = GetProviderWithOptions(p.Name, key, true, p.loader, p.log)
 		if err != nil {
 			return errors.Wrap(err, "login")
 		}

@@ -68,7 +68,8 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 				return nil, err
 			}
 
-			cloudConfigData, err := cloudconfig.ParseProviderConfig()
+			loader := cloudconfig.NewLoader()
+			cloudConfigData, err := loader.Load()
 			if err != nil {
 				return nil, nil
 			}
@@ -108,7 +109,8 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 				return nil, err
 			}
 
-			cloudConfigData, err := cloudconfig.ParseProviderConfig()
+			loader := cloudconfig.NewLoader()
+			cloudConfigData, err := loader.Load()
 			if err != nil {
 				return nil, nil
 			}
@@ -138,7 +140,8 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 				kubeContext = options.KubeContext
 			}
 
-			cloudConfigData, err := cloudconfig.ParseProviderConfig()
+			loader := cloudconfig.NewLoader()
+			cloudConfigData, err := loader.Load()
 			if err != nil {
 				return nil, err
 			}

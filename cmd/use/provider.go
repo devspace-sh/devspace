@@ -38,7 +38,8 @@ devspace use provider my.domain.com
 // RunUseProvider executes the "devspace use provider" command logic
 func (*providerCmd) RunUseProvider(cobraCmd *cobra.Command, args []string) error {
 	// Get provider configuration
-	providerConfig, err := config.ParseProviderConfig()
+	loader := config.NewLoader()
+	providerConfig, err := loader.Load()
 	if err != nil {
 		return errors.Errorf("Error loading provider config: %v", err)
 	}
@@ -68,7 +69,7 @@ func (*providerCmd) RunUseProvider(cobraCmd *cobra.Command, args []string) error
 	}
 
 	providerConfig.Default = provider.Name
-	err = config.SaveProviderConfig(providerConfig)
+	err = loader.Save(providerConfig)
 	if err != nil {
 		return errors.Errorf("Couldn't save provider config: %v", err)
 	}
