@@ -7,8 +7,8 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
@@ -77,7 +77,9 @@ devspace deploy --kube-context=deploy-context
 // Run executes the down command logic
 func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configOptions := cmd.ToConfigOptions()
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -95,7 +97,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig(cmd.Profile)
+	generatedConfig, err := configLoader.Generated()
 	if err != nil {
 		return errors.Errorf("Error loading generated.yaml: %v", err)
 	}
@@ -125,8 +127,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Add current kube context to context
-	configOptions := cmd.ToConfigOptions()
-	config, err := configutil.GetConfig(configOptions)
+	config, err := configLoader.Load()
 	if err != nil {
 		return err
 	}
@@ -189,7 +190,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 
 		// Save config if an image was built
 		if len(builtImages) > 0 {
-			err := generated.SaveConfig(generatedConfig)
+			err := configLoader.SaveGenerated(generatedConfig)
 			if err != nil {
 				return errors.Errorf("Error saving generated config: %v", err)
 			}
@@ -212,7 +213,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Update last used kube context & save generated yaml
-	err = client.UpdateLastKubeContext(generatedConfig)
+	err = updateLastKubeContext(configLoader, client, generatedConfig)
 	if err != nil {
 		return errors.Wrap(err, "update last kube context")
 	}

@@ -35,9 +35,7 @@ type Client interface {
 	Namespace() string
 	RestConfig() *rest.Config
 
-	UpdateLastKubeContext(generatedConfig *generated.Config) error
 	PrintWarning(generatedConfig *generated.Config, noWarning, shouldWait bool, log log.Logger) error
-
 	CopyFromReader(pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error
 	Copy(pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error
 
@@ -205,24 +203,6 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (C
 	}
 
 	return nil, errors.New("We should not reach this point")
-}
-
-// UpdateLastKubeContext updates the last kube context
-func (client *client) UpdateLastKubeContext(generatedConfig *generated.Config) error {
-	// Update generated if we deploy the application
-	if generatedConfig != nil {
-		generatedConfig.GetActive().LastContext = &generated.LastContextConfig{
-			Context:   client.currentContext,
-			Namespace: client.namespace,
-		}
-
-		err := generated.SaveConfig(generatedConfig)
-		if err != nil {
-			return errors.Wrap(err, "save generated")
-		}
-	}
-
-	return nil
 }
 
 // PrintWarning prints a warning if the last kube context is different than this one

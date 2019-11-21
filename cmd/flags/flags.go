@@ -1,7 +1,7 @@
 package flags
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
@@ -49,8 +49,8 @@ func (gf *GlobalFlags) UseLastContext(generatedConfig *generated.Config, log log
 }
 
 // ToConfigOptions converts the globalFlags into config options
-func (gf *GlobalFlags) ToConfigOptions() *configutil.ConfigOptions {
-	return &configutil.ConfigOptions{
+func (gf *GlobalFlags) ToConfigOptions() *loader.ConfigOptions {
+	return &loader.ConfigOptions{
 		Profile:     gf.Profile,
 		KubeContext: gf.KubeContext,
 		Vars:        gf.Vars,

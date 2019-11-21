@@ -48,7 +48,7 @@ func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
 			},
 		},
 	}
-	configutil.SetFakeConfig(testConfig)
+	loader.SetFakeConfig(testConfig)
 
 	// Create fake generated config
 	generatedConfig := &generated.Config{

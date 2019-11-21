@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -229,11 +228,6 @@ func RemoveDeployment(baseConfig *latest.Config, removeAll bool, name string) (b
 		}
 
 		baseConfig.Deployments = newDeployments
-	}
-
-	err := configutil.SaveLoadedConfig()
-	if err != nil {
-		return false, errors.Errorf("Couldn't save config file: %s", err.Error())
 	}
 
 	return found, nil

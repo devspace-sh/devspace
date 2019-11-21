@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
@@ -176,7 +176,7 @@ func TestResolver(t *testing.T) {
 			Dependencies: testCase.dependencyTasks,
 		}
 		generatedConfig := &generated.Config{}
-		testResolver, err := NewResolver(testConfig, generatedConfig, testCase.allowCyclic, &configutil.ConfigOptions{}, log.Discard)
+		testResolver, err := NewResolver(testConfig, generatedConfig, testCase.allowCyclic, &loader.ConfigOptions{}, log.Discard)
 		assert.NilError(t, err, "Error creating a resolver in testCase %s", testCase.name)
 
 		dependencies, err := testResolver.Resolve(testCase.updateParam)

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
@@ -130,9 +130,9 @@ func testRunCleanupImages(t *testing.T, testCase RunCleanupImagesTestCase) {
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 	isDeploymentsNil := testCase.fakeConfig == nil || testCase.fakeConfig.Deployments == nil
 	if testCase.fakeConfig == nil {
-		configutil.ResetConfig()
+		loader.ResetConfig()
 	} else {
-		configutil.SetFakeConfig(testCase.fakeConfig)
+		loader.SetFakeConfig(testCase.fakeConfig)
 		if isDeploymentsNil && testCase.fakeConfig != nil {
 			testCase.fakeConfig.Deployments = nil
 		}

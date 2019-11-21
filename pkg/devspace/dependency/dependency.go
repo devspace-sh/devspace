@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
@@ -38,7 +38,7 @@ type manager struct {
 }
 
 // NewManager creates a new instance of the interface Manager
-func NewManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *configutil.ConfigOptions, logger log.Logger) (Manager, error) {
+func NewManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (Manager, error) {
 	resolver, err := NewResolver(config, cache, allowCyclic, configOptions, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "new resolver")
@@ -248,6 +248,8 @@ type Dependency struct {
 
 	DependencyConfig *latest.DependencyConfig
 	DependencyCache  *generated.Config
+
+	generatedSaver generated.ConfigLoader
 }
 
 // Build builds and pushes all defined images
@@ -290,7 +292,7 @@ func (d *Dependency) Build(skipPush, forceDependencies, forceBuild bool, log log
 
 		// Save config if an image was built
 		if len(builtImages) > 0 {
-			err := generated.SaveConfig(d.GeneratedConfig)
+			err := d.generatedSaver.Save(d.GeneratedConfig)
 			if err != nil {
 				return errors.Errorf("Error saving generated config: %v", err)
 			}
@@ -368,7 +370,7 @@ func (d *Dependency) Deploy(client kubectl.Client, skipPush, forceDependencies, 
 
 		// Save config if an image was built
 		if len(builtImages) > 0 {
-			err := generated.SaveConfig(d.GeneratedConfig)
+			err := d.generatedSaver.Save(d.GeneratedConfig)
 			if err != nil {
 				return errors.Errorf("Error saving generated config: %v", err)
 			}
@@ -382,7 +384,7 @@ func (d *Dependency) Deploy(client kubectl.Client, skipPush, forceDependencies, 
 	}
 
 	// Save Config
-	err = generated.SaveConfig(d.GeneratedConfig)
+	err = d.generatedSaver.Save(d.GeneratedConfig)
 	if err != nil {
 		return errors.Errorf("Error saving generated config: %v", err)
 	}
@@ -420,7 +422,7 @@ func (d *Dependency) Purge(client kubectl.Client, log log.Logger) error {
 	// Purge the deployments
 	deploy.PurgeDeployments(d.Config, d.GeneratedConfig.GetActive(), client, nil, log)
 
-	err = generated.SaveConfig(d.GeneratedConfig)
+	err = d.generatedSaver.Save(d.GeneratedConfig)
 	if err != nil {
 		log.Errorf("Error saving generated.yaml: %v", err)
 	}

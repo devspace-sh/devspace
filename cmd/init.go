@@ -10,9 +10,8 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
@@ -84,7 +83,8 @@ folder. Creates a devspace.yaml with all configuration.
 // Run executes the command logic
 func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Check if config already exists
-	configExists := configutil.ConfigExists()
+	configLoader := loader.NewConfigLoader(nil, log.GetInstance())
+	configExists := configLoader.Exists()
 	if configExists && cmd.Reconfigure == false {
 		log.Info("Config already exists. If you want to recreate the config please run `devspace init --reconfigure`")
 		log.Infof("\r         \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
@@ -104,7 +104,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	os.Remove(constants.DefaultVarsPath)
 
 	// Create config
-	config := configutil.InitConfig()
+	config := configLoader.New()
 
 	// Print DevSpace logo
 	log.PrintLogo()
@@ -218,7 +218,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 			return errors.Errorf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.Dockerfile)
 		}
 
-		generatedConfig, err := generated.LoadConfig("")
+		generatedConfig, err := configLoader.Generated()
 		if err != nil {
 			return err
 		}
@@ -249,13 +249,13 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Add the development configuration
-	err = cmd.addDevConfig()
+	err = cmd.addDevConfig(config)
 	if err != nil {
 		return err
 	}
 
 	// Save config
-	err = configutil.SaveLoadedConfig()
+	err = configLoader.Save(config)
 	if err != nil {
 		return err
 	}
@@ -312,16 +312,11 @@ func getDeploymentName() (string, error) {
 	return dirname, nil
 }
 
-func (cmd *InitCmd) addDevConfig() error {
-	config, err := configutil.GetConfig(nil)
-	if err != nil {
-		return err
-	}
-
+func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 	// Forward ports
 	if len(config.Images) > 0 && len(config.Deployments) > 0 && config.Deployments[0].Helm != nil && config.Deployments[0].Helm.ComponentChart != nil && *config.Deployments[0].Helm.ComponentChart == true {
 		componentValues := latest.ComponentConfig{}
-		err = util.Convert(config.Deployments[0].Helm.Values, &componentValues)
+		err := util.Convert(config.Deployments[0].Helm.Values, &componentValues)
 		if err == nil && componentValues.Service != nil && componentValues.Service.Ports != nil && len(componentValues.Service.Ports) > 0 {
 			servicePort := componentValues.Service.Ports[0]
 			if servicePort.Port != nil {

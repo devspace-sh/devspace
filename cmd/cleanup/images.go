@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -42,7 +42,8 @@ Deletes all locally created docker images from docker
 // RunCleanupImages executes the cleanup images command logic
 func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -66,7 +67,7 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) e
 	}
 
 	// Load config
-	config, err := configutil.GetConfig(cmd.ToConfigOptions())
+	config, err := configLoader.Load()
 	if err != nil {
 		return err
 	}

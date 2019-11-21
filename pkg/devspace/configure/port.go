@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/pkg/errors"
 )
@@ -42,7 +41,7 @@ func AddPort(baseConfig *latest.Config, namespace, labelSelector string, args []
 			(baseConfig.Dev.Ports)[0].PortMappings = append((baseConfig.Dev.Ports)[0].PortMappings, portMapping)
 		}
 
-		return configutil.SaveLoadedConfig()
+		return nil
 	} else if labelSelector == "" {
 		labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(baseConfig)
 	}
@@ -55,11 +54,6 @@ func AddPort(baseConfig *latest.Config, namespace, labelSelector string, args []
 	}
 
 	insertOrReplacePortMapping(baseConfig, namespace, labelSelectorMap, portMappings)
-	err = configutil.SaveLoadedConfig()
-	if err != nil {
-		return errors.Errorf("Couldn't save config file: %s", err.Error())
-	}
-
 	return nil
 }
 
@@ -107,11 +101,6 @@ func RemovePort(baseConfig *latest.Config, removeAll bool, labelSelector string,
 		}
 
 		baseConfig.Dev.Ports = newPortForwards
-
-		err = configutil.SaveLoadedConfig()
-		if err != nil {
-			return errors.Errorf("Couldn't save config file: %s", err.Error())
-		}
 	}
 
 	return nil

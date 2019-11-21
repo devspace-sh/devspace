@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -75,8 +75,10 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Load generated config if possible
 	var err error
 	var generatedConfig *generated.Config
-	if configutil.ConfigExists() {
-		generatedConfig, err = generated.LoadConfig(cmd.Profile)
+
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	if configLoader.Exists() {
+		generatedConfig, err = configLoader.Generated()
 		if err != nil {
 			return err
 		}
@@ -106,8 +108,8 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	var config *latest.Config
-	if configutil.ConfigExists() {
-		config, err = configutil.GetConfig(cmd.ToConfigOptions())
+	if configLoader.Exists() {
+		config, err = configLoader.Load()
 		if err != nil {
 			return err
 		}

@@ -1,11 +1,10 @@
-package configutil
+package loader
 
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sync"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -20,26 +19,75 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 )
 
-// Global config vars
-var config *latest.Config // merged config
+// ConfigLoader is the base interface for the main config loader
+type ConfigLoader interface {
+	New() *latest.Config
+	Exists() bool
 
-// Thread-safety helper
-var getConfigOnce sync.Once
-var getConfigOnceErr error
-var getConfigOnceMutex sync.Mutex
+	Load() (*latest.Config, error)
+	LoadFromPath(generatedConfig *generated.Config, path string) (*latest.Config, error)
+	LoadRaw(path string) (map[interface{}]interface{}, error)
+	LoadWithoutProfile() (*latest.Config, error)
 
-// ConfigExists checks whether the yaml file for the config exists or the configs.yaml exists
-func ConfigExists() bool {
+	Generated() (*generated.Config, error)
+	SaveGenerated(generatedConfig *generated.Config) error
+
+	Save(config *latest.Config) error
+	RestoreVars(config *latest.Config) (*latest.Config, error)
+	SetDevSpaceRoot() (bool, error)
+}
+
+type configLoader struct {
+	generatedLoader generated.ConfigLoader
+	generatedConfig *generated.Config
+
+	options *ConfigOptions
+	log     log.Logger
+}
+
+// NewConfigLoader creates a new config loader with the given options
+func NewConfigLoader(options *ConfigOptions, log log.Logger) ConfigLoader {
+	if options == nil {
+		options = &ConfigOptions{}
+	}
+
+	// Set loaded vars for this
+	options.LoadedVars = make(map[string]string)
+
+	return &configLoader{
+		generatedLoader: generated.NewConfigLoader(options.Profile),
+		options:         options,
+		log:             log,
+	}
+}
+
+// LoadGenerated loads the generated config
+func (l *configLoader) Generated() (*generated.Config, error) {
+	var err error
+	if l.generatedConfig == nil {
+		l.generatedConfig, err = l.generatedLoader.Load()
+	}
+
+	return l.generatedConfig, err
+}
+
+// SaveGenerated is a convenience method to save the generated config
+func (l *configLoader) SaveGenerated(generatedConfig *generated.Config) error {
+	return l.generatedLoader.Save(generatedConfig)
+}
+
+// LoadGenerated loads the generated config
+func (l *configLoader) LoadGeneratedFromPath(path string) (*generated.Config, error) {
+	return l.generatedLoader.LoadFromPath(path)
+}
+
+// Exists checks whether the yaml file for the config exists or the configs.yaml exists
+func (l *configLoader) Exists() bool {
 	return configExistsInPath(".")
 }
 
 // configExistsInPath checks wheter a devspace configuration exists at a certain path
 func configExistsInPath(path string) bool {
-	// Needed for testing
-	if config != nil {
-		return true
-	}
-
 	// Check devspace.yaml
 	_, err := os.Stat(filepath.Join(path, constants.DefaultConfigPath))
 	if err == nil {
@@ -55,25 +103,9 @@ func configExistsInPath(path string) bool {
 	return false // Normal config file found
 }
 
-// ResetConfig resets the current config
-func ResetConfig() {
-	getConfigOnceMutex.Lock()
-	defer getConfigOnceMutex.Unlock()
-
-	getConfigOnce = sync.Once{}
-	getConfigOnceErr = nil
-}
-
-// InitConfig initializes the config objects
-func InitConfig() *latest.Config {
-	getConfigOnceMutex.Lock()
-	defer getConfigOnceMutex.Unlock()
-
-	getConfigOnce.Do(func() {
-		config = latest.New().(*latest.Config)
-	})
-
-	return config
+// New initializes a new config object
+func (l *configLoader) New() *latest.Config {
+	return latest.New().(*latest.Config)
 }
 
 // ConfigOptions defines options to load the config
@@ -102,17 +134,17 @@ func (co *ConfigOptions) Clone() (*ConfigOptions, error) {
 }
 
 // GetBaseConfig returns the config
-func GetBaseConfig(options *ConfigOptions) (*latest.Config, error) {
-	return loadConfigOnce(options, false)
+func (l *configLoader) LoadWithoutProfile() (*latest.Config, error) {
+	return l.loadInternal(false)
 }
 
 // GetConfig returns the config merged with all potential overwrite files
-func GetConfig(options *ConfigOptions) (*latest.Config, error) {
-	return loadConfigOnce(options, true)
+func (l *configLoader) Load() (*latest.Config, error) {
+	return l.loadInternal(true)
 }
 
 // GetRawConfig loads the raw config from a given path
-func GetRawConfig(configPath string) (map[interface{}]interface{}, error) {
+func (l *configLoader) LoadRaw(configPath string) (map[interface{}]interface{}, error) {
 	fileContent, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		return nil, err
@@ -127,32 +159,20 @@ func GetRawConfig(configPath string) (map[interface{}]interface{}, error) {
 	return rawMap, nil
 }
 
-// GetConfigFromPath loads the config from a given base path
-func GetConfigFromPath(generatedConfig *generated.Config, basePath string, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
-	if options == nil {
-		options = &ConfigOptions{}
-	}
-
-	configPath := filepath.Join(basePath, constants.DefaultConfigPath)
-
+// LoadPath loads the config from a given base path
+func (l *configLoader) LoadFromPath(generatedConfig *generated.Config, configPath string) (*latest.Config, error) {
 	// Check devspace.yaml
 	_, err := os.Stat(configPath)
 	if err != nil {
-		// Check for legacy devspace-configs.yaml
-		_, configErr := os.Stat(filepath.Join(basePath, constants.DefaultConfigsPath))
-		if configErr == nil {
-			return nil, errors.Errorf("devspace-configs.yaml is not supported anymore in devspace v4. Please use 'profiles' in 'devspace.yaml' instead")
-		}
-
 		return nil, errors.Errorf("Couldn't find '%s': %v", configPath, err)
 	}
 
-	rawMap, err := GetRawConfig(configPath)
+	rawMap, err := l.LoadRaw(configPath)
 	if err != nil {
 		return nil, err
 	}
 
-	loadedConfig, err := ParseConfig(generatedConfig, rawMap, options, log)
+	loadedConfig, err := ParseConfig(generatedConfig, rawMap, l.options, l.log)
 	if err != nil {
 		return nil, err
 	}
@@ -166,49 +186,34 @@ func GetConfigFromPath(generatedConfig *generated.Config, basePath string, optio
 	return loadedConfig, nil
 }
 
-// loadConfigOnce loads the config globally once
-func loadConfigOnce(options *ConfigOptions, allowProfile bool) (*latest.Config, error) {
-	getConfigOnceMutex.Lock()
-	defer getConfigOnceMutex.Unlock()
+// loadInternal loads the config internally
+func (l *configLoader) loadInternal(allowProfile bool) (*latest.Config, error) {
+	// Get generated config
+	generatedConfig, err := l.Generated()
+	if err != nil {
+		return nil, err
+	}
 
-	getConfigOnce.Do(func() {
-		if options == nil {
-			options = &ConfigOptions{}
-		}
+	// Check if we should load a specific config
+	if allowProfile && generatedConfig.ActiveProfile != "" && l.options.Profile == "" {
+		l.options.Profile = generatedConfig.ActiveProfile
+	} else if !allowProfile {
+		l.options.Profile = ""
+	}
 
-		// Get generated config
-		generatedConfig, err := generated.LoadConfig(options.Profile)
-		if err != nil {
-			getConfigOnceErr = err
-			return
-		}
+	// Load base config
+	config, err := l.LoadFromPath(generatedConfig, constants.DefaultConfigPath)
+	if err != nil {
+		return nil, err
+	}
 
-		// Check if we should load a specific config
-		if allowProfile && generatedConfig.ActiveProfile != "" && options.Profile == "" {
-			options.Profile = generatedConfig.ActiveProfile
-		} else if !allowProfile {
-			options.Profile = ""
-		}
+	// Save generated config
+	err = l.generatedLoader.Save(generatedConfig)
+	if err != nil {
+		return nil, err
+	}
 
-		// Set loaded vars for this
-		options.LoadedVars = LoadedVars
-
-		// Load base config
-		config, err = GetConfigFromPath(generatedConfig, ".", options, log.GetInstance())
-		if err != nil {
-			getConfigOnceErr = err
-			return
-		}
-
-		// Save generated config
-		err = generated.SaveConfig(generatedConfig)
-		if err != nil {
-			getConfigOnceErr = err
-			return
-		}
-	})
-
-	return config, getConfigOnceErr
+	return config, nil
 }
 
 func validate(config *latest.Config) error {
@@ -332,7 +337,7 @@ func validate(config *latest.Config) error {
 }
 
 // SetDevSpaceRoot checks the current directory and all parent directories for a .devspace folder with a config and sets the current working directory accordingly
-func SetDevSpaceRoot(log log.Logger) (bool, error) {
+func (l *configLoader) SetDevSpaceRoot() (bool, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return false, err
@@ -357,7 +362,7 @@ func SetDevSpaceRoot(log log.Logger) (bool, error) {
 
 				// Notify user that we are not using the current working directory
 				if originalCwd != cwd {
-					log.Infof("Using devspace config in %s", filepath.ToSlash(cwd))
+					l.log.Infof("Using devspace config in %s", filepath.ToSlash(cwd))
 				}
 
 				return true, nil

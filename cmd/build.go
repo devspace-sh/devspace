@@ -5,8 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -63,7 +62,9 @@ Builds all defined images and pushes them
 // Run executes the command logic
 func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configOptions := cmd.ToConfigOptions()
+	configLoader := loader.NewConfigLoader(configOptions, log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -75,14 +76,13 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	log.StartFileLogging()
 
 	// Load config
-	generatedConfig, err := generated.LoadConfig(cmd.Profile)
+	generatedConfig, err := configLoader.Generated()
 	if err != nil {
 		return err
 	}
 
 	// Get the config
-	configOptions := cmd.ToConfigOptions()
-	config, err := configutil.GetConfig(configOptions)
+	config, err := configLoader.Load()
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) error {
 
 	// Save config if an image was built
 	if len(builtImages) > 0 {
-		err := generated.SaveConfig(generatedConfig)
+		err := configLoader.SaveGenerated(generatedConfig)
 		if err != nil {
 			return err
 		}

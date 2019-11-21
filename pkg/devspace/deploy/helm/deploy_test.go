@@ -33,7 +33,7 @@ const testNamespace = "test-helm-deploy"
 			},
 		},
 	}
-	configutil.SetFakeConfig(testConfig)
+	loader.SetFakeConfig(testConfig)
 
 	// Create fake generated config
 	generatedConfig := &generated.Config{
