@@ -8,7 +8,7 @@ import (
 )
 
 // GetClusterKey makes sure there is a correct key for the given cluster id
-func (p *Provider) GetClusterKey(cluster *latest.Cluster) (string, error) {
+func (p *provider) GetClusterKey(cluster *latest.Cluster) (string, error) {
 	if cluster.EncryptToken == false {
 		return "", nil
 	}
@@ -26,7 +26,7 @@ func (p *Provider) GetClusterKey(cluster *latest.Cluster) (string, error) {
 	}
 
 	// Verifies the cluster key
-	verified, err := p.VerifyKey(key, cluster.ClusterID)
+	verified, err := p.client.VerifyKey(key, cluster.ClusterID)
 	if err != nil {
 		return "", errors.Wrap(err, "verify key")
 	}
@@ -52,8 +52,8 @@ func (p *Provider) GetClusterKey(cluster *latest.Cluster) (string, error) {
 }
 
 // AskForEncryptionKey asks the user for his her encryption key and verifies that the key is correct
-func (p *Provider) AskForEncryptionKey(cluster *latest.Cluster) (string, error) {
-	p.Log.StopWait()
+func (p *provider) AskForEncryptionKey(cluster *latest.Cluster) (string, error) {
+	p.log.StopWait()
 
 	// Wait till user enters the correct key
 	for true {
@@ -62,7 +62,7 @@ func (p *Provider) AskForEncryptionKey(cluster *latest.Cluster) (string, error) 
 			ValidationRegexPattern: "^.{6,32}$",
 			ValidationMessage:      "Key has to be between 6 and 32 characters long",
 			IsPassword:             true,
-		}, p.Log)
+		}, p.log)
 		if err != nil {
 			return "", err
 		}
@@ -72,12 +72,12 @@ func (p *Provider) AskForEncryptionKey(cluster *latest.Cluster) (string, error) 
 			return "", errors.Wrap(err, "hash key")
 		}
 
-		verified, err := p.VerifyKey(hashedKey, cluster.ClusterID)
+		verified, err := p.client.VerifyKey(hashedKey, cluster.ClusterID)
 		if err != nil {
 			return "", errors.Wrap(err, "verify key")
 		}
 		if verified == false {
-			p.Log.Errorf("Encryption key is incorrect. Please try again")
+			p.log.Errorf("Encryption key is incorrect. Please try again")
 			continue
 		}
 
@@ -94,30 +94,4 @@ func (p *Provider) AskForEncryptionKey(cluster *latest.Cluster) (string, error) 
 
 	// We should never reach that
 	return "", nil
-}
-
-// VerifyKey verifies the given key for the given cluster
-func (p *Provider) VerifyKey(key string, clusterID int) (bool, error) {
-	// Response struct
-	response := struct {
-		VerifyKey bool `json:"manager_verifyUserClusterKey"`
-	}{}
-
-	// Do the request
-	err := p.GrapqhlRequest(`
-		mutation ($clusterID:Int!, $key:String!) {
-			manager_verifyUserClusterKey(
-				clusterID: $clusterID,
-				key: $key
-			)
-		}
-	`, map[string]interface{}{
-		"clusterID": clusterID,
-		"key":       key,
-	}, &response)
-	if err != nil {
-		return false, err
-	}
-
-	return response.VerifyKey, nil
 }

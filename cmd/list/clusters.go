@@ -57,7 +57,7 @@ func (cmd *clustersCmd) RunListClusters(cobraCmd *cobra.Command, args []string) 
 	}
 
 	log.StartWait("Retrieving clusters")
-	clusters, err := provider.GetClusters()
+	clusters, err := provider.Client().GetClusters()
 	if err != nil {
 		return errors.Errorf("Error retrieving clusters: %v", err)
 	}

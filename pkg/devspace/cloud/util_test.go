@@ -3,15 +3,8 @@ package cloud
 import (
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"gotest.tools/assert"
 )
-
-func TestPrintSpaces(t *testing.T) {
-	err := (&Provider{latest.Provider{}, log.GetInstance()}).PrintSpaces("", "", true)
-	assert.Error(t, err, "Error retrieving spaces: get token: Provider has no key specified", "Wrong or no error when trying print spaces without any token")
-}
 
 func TestPadKey(t *testing.T) {
 	assert.Equal(t, "12345678901234567890123456789012", string(PadKey([]byte("12345678901234567890123456789012"))), "PadKey of length 32 isn't equal to original key")

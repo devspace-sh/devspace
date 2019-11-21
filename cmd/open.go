@@ -12,6 +12,7 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -85,7 +86,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 
 	var (
 		providerName             *string
-		provider                 *cloud.Provider
+		provider                 cloud.Provider
 		space                    *cloudlatest.Space
 		domain                   string
 		tls                      bool
@@ -121,7 +122,8 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Signal that we are working on the space if there is any
-	err = cloud.ResumeSpace(client, true, log.GetInstance())
+	resumer := resume.NewResumer(client, log.GetInstance())
+	err = resumer.ResumeSpace(true)
 	if err != nil {
 		return err
 	}
@@ -153,7 +155,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 		}
 
 		// Get space
-		space, err = provider.GetSpace(spaceID)
+		space, err = provider.Client().GetSpace(spaceID)
 		if err != nil {
 			return err
 		}

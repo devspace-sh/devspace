@@ -74,7 +74,7 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 	}
 
 	// Get cluster by name
-	cluster, err := provider.GetClusterByName(args[0])
+	cluster, err := provider.Client().GetClusterByName(args[0])
 	if err != nil {
 		return err
 	}
@@ -114,13 +114,20 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 
 	// Delete cluster
 	log.StartWait("Deleting cluster " + cluster.Name)
-	err = provider.DeleteCluster(cluster, deleteServices == "Yes", deleteSpaces == "Yes")
+
+	key, err := provider.GetClusterKey(cluster)
+	if err != nil {
+		return errors.Wrap(err, "get cluster key")
+	}
+
+	err = provider.Client().DeleteCluster(key, cluster, deleteServices == "Yes", deleteSpaces == "Yes")
 	if err != nil {
 		return err
 	}
 	log.StopWait()
 
-	delete(provider.ClusterKey, cluster.ClusterID)
+	providerConfig := provider.GetConfig()
+	delete(providerConfig.ClusterKey, cluster.ClusterID)
 	err = provider.Save()
 	if err != nil {
 		return err

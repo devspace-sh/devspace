@@ -1,4 +1,4 @@
-package cloud
+package client
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
@@ -6,7 +6,7 @@ import (
 )
 
 // CreatePublicCluster creates a new public cluster
-func (p *Provider) CreatePublicCluster(name, server, caCert, adminToken string) (int, error) {
+func (c *client) CreatePublicCluster(name, server, caCert, adminToken string) (int, error) {
 	// Response struct
 	response := struct {
 		CreateCluster *struct {
@@ -15,7 +15,7 @@ func (p *Provider) CreatePublicCluster(name, server, caCert, adminToken string) 
 	}{}
 
 	// Do the request
-	err := p.GrapqhlRequest(`
+	err := c.grapqhlRequest(`
 		mutation($name:String!,$caCert:String!,$server:String!,$adminToken:String!) {
   			manager_createCluster(
 				name:$name,
@@ -45,7 +45,7 @@ func (p *Provider) CreatePublicCluster(name, server, caCert, adminToken string) 
 }
 
 // CreateUserCluster creates a user cluster with the given name
-func (p *Provider) CreateUserCluster(name, server, caCert, encryptedToken string, networkPolicyEnabled bool) (int, error) {
+func (c *client) CreateUserCluster(name, server, caCert, encryptedToken string, networkPolicyEnabled bool) (int, error) {
 	// Response struct
 	response := struct {
 		CreateCluster *struct {
@@ -54,7 +54,7 @@ func (p *Provider) CreateUserCluster(name, server, caCert, encryptedToken string
 	}{}
 
 	// Do the request
-	err := p.GrapqhlRequest(`
+	err := c.grapqhlRequest(`
 		mutation($name:String!,$caCert:String!,$server:String!,$encryptedToken:String!,$networkPolicyEnabled:Boolean!) {
 			manager_createUserCluster(
 				name:$name,
@@ -86,12 +86,7 @@ func (p *Provider) CreateUserCluster(name, server, caCert, encryptedToken string
 }
 
 // CreateSpace creates a new space and returns the space id
-func (p *Provider) CreateSpace(name string, projectID int, cluster *latest.Cluster) (int, error) {
-	key, err := p.GetClusterKey(cluster)
-	if err != nil {
-		return 0, errors.Wrap(err, "get cluster key")
-	}
-
+func (c *client) CreateSpace(key, name string, projectID int, cluster *latest.Cluster) (int, error) {
 	// Response struct
 	response := struct {
 		CreateSpace *struct {
@@ -100,7 +95,7 @@ func (p *Provider) CreateSpace(name string, projectID int, cluster *latest.Clust
 	}{}
 
 	// Do the request
-	err = p.GrapqhlRequest(`
+	err := c.grapqhlRequest(`
 		mutation($key: String, $spaceName: String!, $clusterID: Int!, $projectID: Int!) {
 			manager_createSpace(key: $key, spaceName: $spaceName, clusterID: $clusterID, projectID: $projectID) {
 				SpaceID
@@ -125,7 +120,7 @@ func (p *Provider) CreateSpace(name string, projectID int, cluster *latest.Clust
 }
 
 // CreateProject creates a new project and returns the project id
-func (p *Provider) CreateProject(projectName string) (int, error) {
+func (c *client) CreateProject(projectName string) (int, error) {
 	// Response struct
 	response := struct {
 		CreateProject *struct {
@@ -134,7 +129,7 @@ func (p *Provider) CreateProject(projectName string) (int, error) {
 	}{}
 
 	// Do the request
-	err := p.GrapqhlRequest(`
+	err := c.grapqhlRequest(`
 		mutation($projectName: String!) {
 			manager_createProject(projectName: $projectName) {
 				ProjectID
@@ -153,4 +148,40 @@ func (p *Provider) CreateProject(projectName string) (int, error) {
 	}
 
 	return response.CreateProject.ProjectID, nil
+}
+
+// CreateKubeContextDomainIngressPath creates an ingress path
+func (c *client) CreateKubeContextDomainIngressPath(key string, spaceID int, ingressName, host, newPath, serviceName, servicePort string) (bool, error) {
+	// Response struct
+	response := struct {
+		ManagerCreateIngressPath bool `json:"manager_createKubeContextDomainIngressPath"`
+	}{}
+
+	// Do the request
+	err := c.grapqhlRequest(`
+		mutation($spaceID: Int!, $ingressName: String!, $host: String!, $newPath: String!, $newServiceName: String!, $newServicePort: String!, $key: String) {
+			manager_createKubeContextDomainIngressPath(
+				spaceID: $spaceID,
+				key: $key,
+				ingressName: $ingressName,
+				host: $host,
+				newPath: $newPath,
+				newServiceName: $newServiceName,
+				newServicePort: $newServicePort,
+			)
+		}
+	`, map[string]interface{}{
+		"key":            key,
+		"spaceID":        spaceID,
+		"ingressName":    ingressName,
+		"host":           host,
+		"newPath":        newPath,
+		"newServiceName": serviceName,
+		"newServicePort": servicePort,
+	}, &response)
+	if err != nil {
+		return false, errors.Wrap(err, "graphql create ingress path")
+	}
+
+	return response.ManagerCreateIngressPath, nil
 }

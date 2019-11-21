@@ -4,8 +4,8 @@ import (
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -71,7 +71,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Get cloud provider from config
-	provider, err := cloudpkg.GetProvider(cloudProvider, logger)
+	provider, err := cloud.GetProvider(cloudProvider, logger)
 	if err != nil {
 		return errors.Wrap(err, "get provider")
 	}
@@ -81,7 +81,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 
 	// List spaces
 	if len(args) == 0 && cmd.SpaceID == "" {
-		spaces, err := provider.GetSpaces()
+		spaces, err := provider.Client().GetSpaces()
 		if err != nil {
 			return errors.Errorf("Error retrieving spaces: %v", err)
 		} else if len(spaces) == 0 {
@@ -125,7 +125,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 	)
 
 	if len(args) > 0 {
-		space, err = provider.GetSpaceByName(args[0])
+		space, err = provider.Client().GetSpaceByName(args[0])
 		if err != nil {
 			return errors.Errorf("%s: %v", message.SpaceQueryError, err)
 		}
@@ -135,7 +135,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 			return errors.Errorf("Error parsing space id: %v", err)
 		}
 
-		space, err = provider.GetSpace(spaceID)
+		space, err = provider.Client().GetSpace(spaceID)
 		if err != nil {
 			return errors.Errorf("%s: %v", message.SpaceQueryError, err)
 		}
@@ -146,14 +146,20 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 	// Get kube context name
 	kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, space.ProviderName)
 
+	// Get cluster key
+	key, err := provider.GetClusterKey(space.Cluster)
+	if err != nil {
+		return errors.Wrap(err, "get cluster key")
+	}
+
 	// Get service account
-	serviceAccount, err := provider.GetServiceAccount(space)
+	serviceAccount, err := provider.Client().GetServiceAccount(key, space)
 	if err != nil {
 		return errors.Errorf("Error retrieving space service account: %v", err)
 	}
 
 	// Change kube context
-	err = cloud.UpdateKubeConfig(kubeContext, serviceAccount, space.SpaceID, provider.Name, true)
+	err = provider.UpdateKubeConfig(kubeContext, serviceAccount, space.SpaceID, true)
 	if err != nil {
 		return errors.Errorf("Error saving kube config: %v", err)
 	}
@@ -170,7 +176,8 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Signal that we are working on the space if there is any
-	err = cloud.ResumeSpace(client, false, log.GetInstance())
+	resumer := resume.NewResumer(client, log.GetInstance())
+	err = resumer.ResumeSpace(false)
 	if err != nil {
 		return err
 	}

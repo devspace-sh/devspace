@@ -1,4 +1,4 @@
-package cloud
+package client
 
 import (
 	"fmt"
@@ -11,14 +11,14 @@ import (
 )
 
 // GetRegistries returns all docker image registries
-func (p *Provider) GetRegistries() ([]*latest.Registry, error) {
+func (c *client) GetRegistries() ([]*latest.Registry, error) {
 	// Response struct
 	response := struct {
 		ImageRegistry []*latest.Registry `json:"image_registry"`
 	}{}
 
 	// Do the request
-	err := p.GrapqhlRequest(`
+	err := c.grapqhlRequest(`
 		query {
 			image_registry {
 				id
@@ -39,7 +39,7 @@ func (p *Provider) GetRegistries() ([]*latest.Registry, error) {
 }
 
 // GetClusterByName retrieves an user cluster by name (username:clustername)
-func (p *Provider) GetClusterByName(clusterName string) (*latest.Cluster, error) {
+func (c *client) GetClusterByName(clusterName string) (*latest.Cluster, error) {
 	clusterNameSplitted := strings.Split(clusterName, ":")
 	if len(clusterNameSplitted) > 2 {
 		return nil, errors.Errorf("Error parsing cluster name %s: Expected : only once", clusterName)
@@ -47,12 +47,7 @@ func (p *Provider) GetClusterByName(clusterName string) (*latest.Cluster, error)
 
 	clusterName = clusterNameSplitted[0]
 
-	bearerToken, err := p.GetToken()
-	if err != nil {
-		return nil, errors.Wrap(err, "get token")
-	}
-
-	accountName, err := token.GetAccountName(bearerToken)
+	accountName, err := token.GetAccountName(c.token)
 	if err != nil {
 		return nil, errors.Wrap(err, "get account name")
 	}
@@ -66,7 +61,7 @@ func (p *Provider) GetClusterByName(clusterName string) (*latest.Cluster, error)
 		Clusters []*latest.Cluster `json:"cluster"`
 	}{}
 
-	err = p.GrapqhlRequest(`
+	err = c.grapqhlRequest(`
 	query ($accountName:String!, $clusterName:String!){
 		cluster (where:{_and:[
 			{name: {_eq:$clusterName}},
@@ -98,7 +93,7 @@ func (p *Provider) GetClusterByName(clusterName string) (*latest.Cluster, error)
 	}
 
 	// Exchange cluster name
-	err = p.exchangeClusterName(response.Clusters[0])
+	err = c.exchangeClusterName(response.Clusters[0])
 	if err != nil {
 		return nil, err
 	}
@@ -107,14 +102,14 @@ func (p *Provider) GetClusterByName(clusterName string) (*latest.Cluster, error)
 }
 
 // GetClusters returns all clusters accessable by the user
-func (p *Provider) GetClusters() ([]*latest.Cluster, error) {
+func (c *client) GetClusters() ([]*latest.Cluster, error) {
 	// Response struct
 	response := struct {
 		Clusters []*latest.Cluster `json:"cluster"`
 	}{}
 
 	// Do the request
-	err := p.GrapqhlRequest(`
+	err := c.grapqhlRequest(`
 	  query {
 		cluster {
 			id
@@ -141,7 +136,7 @@ func (p *Provider) GetClusters() ([]*latest.Cluster, error) {
 
 	// Exchange cluster name
 	for _, cluster := range response.Clusters {
-		err := p.exchangeClusterName(cluster)
+		err := c.exchangeClusterName(cluster)
 		if err != nil {
 			return nil, err
 		}
@@ -151,14 +146,14 @@ func (p *Provider) GetClusters() ([]*latest.Cluster, error) {
 }
 
 // GetProjects returns all projects by the user
-func (p *Provider) GetProjects() ([]*latest.Project, error) {
+func (c *client) GetProjects() ([]*latest.Project, error) {
 	// Response struct
 	response := struct {
 		Projects []*latest.Project `json:"project"`
 	}{}
 
 	// Do the request
-	err := p.GrapqhlRequest(`
+	err := c.grapqhlRequest(`
 	  query {
 		project {
 			id
@@ -181,25 +176,20 @@ func (p *Provider) GetProjects() ([]*latest.Project, error) {
 }
 
 // GetClusterUser retrieves the cluster user
-func (p *Provider) GetClusterUser(clusterID int) (*latest.ClusterUser, error) {
+func (c *client) GetClusterUser(clusterID int) (*latest.ClusterUser, error) {
 	// Response struct
 	response := struct {
 		ClusterUser []*latest.ClusterUser `json:"cluster_user"`
 	}{}
 
-	bearerToken, err := p.GetToken()
-	if err != nil {
-		return nil, errors.Wrap(err, "get token")
-	}
-
 	// Get account id
-	accountID, err := token.GetAccountID(bearerToken)
+	accountID, err := token.GetAccountID(c.token)
 	if err != nil {
 		return nil, err
 	}
 
 	// Do the request
-	err = p.GrapqhlRequest(`
+	err = c.grapqhlRequest(`
 		query ($clusterID: Int!, $accountID: Int!) {
 		cluster_user(where:{_and:[
 			{cluster_id:{_eq:$clusterID}},
@@ -226,19 +216,14 @@ func (p *Provider) GetClusterUser(clusterID int) (*latest.ClusterUser, error) {
 }
 
 // GetServiceAccount returns a service account for a certain space
-func (p *Provider) GetServiceAccount(space *latest.Space) (*latest.ServiceAccount, error) {
-	key, err := p.GetClusterKey(space.Cluster)
-	if err != nil {
-		return nil, errors.Wrap(err, "get cluster key")
-	}
-
+func (c *client) GetServiceAccount(key string, space *latest.Space) (*latest.ServiceAccount, error) {
 	// Response struct
 	response := struct {
 		ServiceAccount *latest.ServiceAccount `json:"manager_serviceAccount"`
 	}{}
 
 	// Do the request
-	err = p.GrapqhlRequest(`
+	err := c.grapqhlRequest(`
 	  query($spaceID:Int!, $key: String) {
 		manager_serviceAccount(spaceID:$spaceID, key: $key) {
 		  namespace
@@ -273,14 +258,14 @@ type spaceGraphql struct {
 }
 
 // GetSpaces returns all spaces by the user
-func (p *Provider) GetSpaces() ([]*latest.Space, error) {
+func (c *client) GetSpaces() ([]*latest.Space, error) {
 	// Response struct
 	response := struct {
 		Spaces []*spaceGraphql `json:"space"`
 	}{}
 
 	// Do the request
-	err := p.GrapqhlRequest(`
+	err := c.grapqhlRequest(`
 	  query {
 		space {
 			id
@@ -328,13 +313,13 @@ func (p *Provider) GetSpaces() ([]*latest.Space, error) {
 			Owner:        spaceConfig.Owner,
 			Name:         spaceConfig.Name,
 			Namespace:    spaceConfig.KubeContext.Namespace,
-			ProviderName: p.Name,
+			ProviderName: c.provider,
 			Cluster:      spaceConfig.KubeContext.Cluster,
 			Created:      spaceConfig.CreatedAt,
 		}
 
 		// Exchange space name
-		err = p.exchangeSpaceName(newSpace)
+		err = c.exchangeSpaceName(newSpace)
 		if err != nil {
 			return nil, err
 		}
@@ -346,14 +331,14 @@ func (p *Provider) GetSpaces() ([]*latest.Space, error) {
 }
 
 // GetSpace returns a specific space by id
-func (p *Provider) GetSpace(spaceID int) (*latest.Space, error) {
+func (c *client) GetSpace(spaceID int) (*latest.Space, error) {
 	// Response struct
 	response := struct {
 		Space *spaceGraphql `json:"space_by_pk"`
 	}{}
 
 	// Do the request
-	err := p.GrapqhlRequest(`
+	err := c.grapqhlRequest(`
 	  query($ID:Int!) {
 		space_by_pk(id:$ID) {
 			id
@@ -401,13 +386,13 @@ func (p *Provider) GetSpace(spaceID int) (*latest.Space, error) {
 		Owner:        spaceConfig.Owner,
 		Name:         spaceConfig.Name,
 		Namespace:    spaceConfig.KubeContext.Namespace,
-		ProviderName: p.Name,
+		ProviderName: c.provider,
 		Cluster:      spaceConfig.KubeContext.Cluster,
 		Created:      spaceConfig.CreatedAt,
 	}
 
 	// Exchange space name
-	err = p.exchangeSpaceName(retSpace)
+	err = c.exchangeSpaceName(retSpace)
 	if err != nil {
 		return nil, err
 	}
@@ -416,7 +401,7 @@ func (p *Provider) GetSpace(spaceID int) (*latest.Space, error) {
 }
 
 // GetSpaceByName returns a space by name
-func (p *Provider) GetSpaceByName(spaceName string) (*latest.Space, error) {
+func (c *client) GetSpaceByName(spaceName string) (*latest.Space, error) {
 	spaceNameSplitted := strings.Split(spaceName, ":")
 	if len(spaceNameSplitted) > 2 {
 		return nil, errors.Errorf("Error parsing space name %s: Expected : only once", spaceName)
@@ -424,12 +409,7 @@ func (p *Provider) GetSpaceByName(spaceName string) (*latest.Space, error) {
 
 	spaceName = spaceNameSplitted[0]
 
-	bearerToken, err := p.GetToken()
-	if err != nil {
-		return nil, errors.Wrap(err, "get token")
-	}
-
-	accountName, err := token.GetAccountName(bearerToken)
+	accountName, err := token.GetAccountName(c.token)
 	if err != nil {
 		return nil, errors.Wrap(err, "get account name")
 	}
@@ -444,7 +424,7 @@ func (p *Provider) GetSpaceByName(spaceName string) (*latest.Space, error) {
 	}{}
 
 	// Do the request
-	err = p.GrapqhlRequest(`
+	err = c.grapqhlRequest(`
 		query($accountName:String!, $spaceName:String!) {
 			space(where:{
 			_and: [
@@ -497,13 +477,13 @@ func (p *Provider) GetSpaceByName(spaceName string) (*latest.Space, error) {
 		Owner:        spaceConfig.Owner,
 		Name:         spaceConfig.Name,
 		Namespace:    spaceConfig.KubeContext.Namespace,
-		ProviderName: p.Name,
+		ProviderName: c.provider,
 		Cluster:      spaceConfig.KubeContext.Cluster,
 		Created:      spaceConfig.CreatedAt,
 	}
 
 	// Exchange space name
-	err = p.exchangeSpaceName(retSpace)
+	err = c.exchangeSpaceName(retSpace)
 	if err != nil {
 		return nil, err
 	}
@@ -511,13 +491,8 @@ func (p *Provider) GetSpaceByName(spaceName string) (*latest.Space, error) {
 	return retSpace, nil
 }
 
-func (p *Provider) exchangeSpaceName(space *latest.Space) error {
-	bearerToken, err := p.GetToken()
-	if err != nil {
-		return errors.Wrap(err, "get token")
-	}
-
-	userAccountName, err := token.GetAccountName(bearerToken)
+func (c *client) exchangeSpaceName(space *latest.Space) error {
+	userAccountName, err := token.GetAccountName(c.token)
 	if err != nil {
 		return errors.Wrap(err, "get account name")
 	}
@@ -527,20 +502,15 @@ func (p *Provider) exchangeSpaceName(space *latest.Space) error {
 	}
 
 	// Exchange also cluster name
-	return p.exchangeClusterName(space.Cluster)
+	return c.exchangeClusterName(space.Cluster)
 }
 
-func (p *Provider) exchangeClusterName(cluster *latest.Cluster) error {
+func (c *client) exchangeClusterName(cluster *latest.Cluster) error {
 	if cluster.Owner == nil {
 		return nil
 	}
 
-	bearerToken, err := p.GetToken()
-	if err != nil {
-		return errors.Wrap(err, "get token")
-	}
-
-	userAccountName, err := token.GetAccountName(bearerToken)
+	userAccountName, err := token.GetAccountName(c.token)
 	if err != nil {
 		return errors.Wrap(err, "get account name")
 	}
@@ -550,4 +520,61 @@ func (p *Provider) exchangeClusterName(cluster *latest.Cluster) error {
 	}
 
 	return nil
+}
+
+// VerifyKey verifies the given key for the given cluster
+func (c *client) VerifyKey(key string, clusterID int) (bool, error) {
+	// Response struct
+	response := struct {
+		VerifyKey bool `json:"manager_verifyUserClusterKey"`
+	}{}
+
+	// Do the request
+	err := c.grapqhlRequest(`
+		mutation ($clusterID:Int!, $key:String!) {
+			manager_verifyUserClusterKey(
+				clusterID: $clusterID,
+				key: $key
+			)
+		}
+	`, map[string]interface{}{
+		"clusterID": clusterID,
+		"key":       key,
+	}, &response)
+	if err != nil {
+		return false, err
+	}
+
+	return response.VerifyKey, nil
+}
+
+//Setting is a setting object in a server response
+type Setting struct {
+	ID    string `json:"id"`
+	Value string `json:"value"`
+}
+
+// Settings retrieves cloud settings
+func (c *client) Settings(encryptToken string) ([]Setting, error) {
+	// Response struct
+	response := struct {
+		Settings []Setting `json:"manager_settings"`
+	}{}
+
+	// Do the request
+	err := c.grapqhlRequest(`
+		query ($settings: [String!]!) {
+			manager_settings(settings:$settings) {
+				id
+				value
+			}
+		}
+	`, map[string]interface{}{
+		"settings": []string{encryptToken},
+	}, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Settings, nil
 }

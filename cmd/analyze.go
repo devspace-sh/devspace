@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -83,7 +83,8 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) error 
 	}
 
 	// Signal that we are working on the space if there is any
-	err = cloud.ResumeSpace(client, true, log.GetInstance())
+	resumer := resume.NewResumer(client, log.GetInstance())
+	err = resumer.ResumeSpace(true)
 	if err != nil {
 		return err
 	}

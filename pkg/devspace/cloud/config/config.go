@@ -193,3 +193,20 @@ func loadLegacyConfig(path string) (*latest.Config, error) {
 	os.Remove(path)
 	return newConfig, nil
 }
+
+// GetDefaultProviderName returns the default provider name
+func GetDefaultProviderName() (string, error) {
+	// Get provider configuration
+	providerConfig, err := ParseProviderConfig()
+	if err != nil {
+		return "", err
+	}
+
+	// Choose cloud provider
+	providerName := DevSpaceCloudProviderName
+	if providerConfig.Default != "" {
+		providerName = providerConfig.Default
+	}
+
+	return providerName, nil
+}

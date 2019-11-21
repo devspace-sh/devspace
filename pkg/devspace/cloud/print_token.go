@@ -12,14 +12,14 @@ import (
 )
 
 // PrintToken prints and resumes a space if necessary
-func (p *Provider) PrintToken(spaceID int) error {
+func (p *provider) PrintToken(spaceID int) error {
 	space, wasUpdated, err := p.GetAndUpdateSpaceCache(spaceID, false)
 	if err != nil {
 		return err
 	}
 
 	if wasUpdated == false && time.Unix(space.LastResume, 0).Add(time.Minute*3).Before(time.Now()) == false {
-		err := printToken(space.ServiceAccount.Token)
+		err := p.printToken(space.ServiceAccount.Token)
 		if err != nil {
 			return err
 		}
@@ -29,7 +29,7 @@ func (p *Provider) PrintToken(spaceID int) error {
 	}
 
 	// Resume space
-	err = resume(p, space.ServiceAccount.Server, space.ServiceAccount.CaCert, space.ServiceAccount.Token, space.ServiceAccount.Namespace, spaceID, space.Space.Cluster)
+	err = p.resume(space.ServiceAccount.Server, space.ServiceAccount.CaCert, space.ServiceAccount.Token, space.ServiceAccount.Namespace, spaceID, space.Space.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "resume space")
 	}
@@ -41,12 +41,18 @@ func (p *Provider) PrintToken(spaceID int) error {
 	_ = p.Save()
 
 	// Print token and return
-	return printToken(space.ServiceAccount.Token)
+	return p.printToken(space.ServiceAccount.Token)
 }
 
-func resume(p *Provider, server, caCert, token, namespace string, spaceID int, cluster *latest.Cluster) error {
+func (p *provider) resume(server, caCert, token, namespace string, spaceID int, cluster *latest.Cluster) error {
+	//Get cluster key
+	key, err := p.GetClusterKey(cluster)
+	if err != nil {
+		return errors.Wrap(err, "get cluster key")
+	}
+
 	// Resume space
-	resumed, err := p.ResumeSpace(spaceID, cluster)
+	resumed, err := p.client.ResumeSpace(key, spaceID, cluster)
 	if err != nil {
 		// We ignore the error here, because we don't want kubectl or other commands to fail if we have an outage
 		// return err
@@ -61,7 +67,7 @@ func resume(p *Provider, server, caCert, token, namespace string, spaceID int, c
 	return nil
 }
 
-func printToken(token string) error {
+func (p *provider) printToken(token string) error {
 	// Print token to stdout
 	expireTime := metav1.NewTime(time.Now().Add(time.Hour))
 	response := &v1alpha1.ExecCredential{

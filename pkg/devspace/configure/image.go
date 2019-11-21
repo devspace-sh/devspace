@@ -90,7 +90,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 	}
 
 	// Get cloud provider if context is a space
-	cloudProvider, err := cloud.GetDefaultProviderName()
+	cloudProvider, err := cloudconfig.GetDefaultProviderName()
 	if err != nil {
 		return nil, err
 	}
@@ -308,7 +308,7 @@ func getCloudRegistryHostname(cloudProvider *string) (string, error) {
 			return "", errors.Errorf("Error login into cloud provider: %v", err)
 		}
 
-		registries, err := provider.GetRegistries()
+		registries, err := provider.Client().GetRegistries()
 		if err != nil {
 			return "", errors.Errorf("Error retrieving registries: %v", err)
 		}

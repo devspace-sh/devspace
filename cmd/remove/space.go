@@ -71,18 +71,28 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 
 	// Delete all spaces
 	if cmd.All {
-		spaces, err := provider.GetSpaces()
+		spaces, err := provider.Client().GetSpaces()
 		if err != nil {
 			return err
 		}
 
 		for _, space := range spaces {
-			err = provider.DeleteSpace(space)
+			key, err := provider.GetClusterKey(space.Cluster)
+			if err != nil {
+				return errors.Wrap(err, "get cluster key")
+			}
+
+			managerDeleteSpace, err := provider.Client().DeleteSpace(key, space)
 			if err != nil {
 				return err
 			}
 
-			err = cloudpkg.DeleteKubeContext(space)
+			// Check result
+			if managerDeleteSpace == false {
+				return errors.New("Mutation returned wrong result")
+			}
+
+			err = provider.DeleteKubeContext(space)
 			if err != nil {
 				return errors.Wrap(err, "delete kube context")
 			}
@@ -106,12 +116,12 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 			return errors.Wrap(err, "parse space id")
 		}
 
-		space, err = provider.GetSpace(spaceID)
+		space, err = provider.Client().GetSpace(spaceID)
 		if err != nil {
 			return errors.Wrap(err, "get space")
 		}
 	} else if len(args) > 0 {
-		space, err = provider.GetSpaceByName(args[0])
+		space, err = provider.Client().GetSpaceByName(args[0])
 		if err != nil {
 			return errors.Wrap(err, "get space")
 		}
@@ -120,13 +130,22 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 	}
 
 	// Delete space remotely
-	err = provider.DeleteSpace(space)
+	key, err := provider.GetClusterKey(space.Cluster)
+	if err != nil {
+		return errors.Wrap(err, "get cluster key")
+	}
+	managerDeleteSpace, err := provider.Client().DeleteSpace(key, space)
 	if err != nil {
 		return errors.Wrap(err, "delete space")
 	}
 
+	// Check result
+	if managerDeleteSpace == false {
+		return errors.New("Mutation returned wrong result")
+	}
+
 	// Delete kube context
-	err = cloudpkg.DeleteKubeContext(space)
+	err = provider.DeleteKubeContext(space)
 	if err != nil {
 		return errors.Wrap(err, "delete kube context")
 	}

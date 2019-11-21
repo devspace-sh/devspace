@@ -62,14 +62,14 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 		}
 
 		// Retrieve spaces
-		spaces, err := provider.GetSpaces()
+		spaces, err := provider.Client().GetSpaces()
 		if err != nil {
 			return err
 		}
 
 		for _, space := range spaces {
 			// Remove kube context
-			err = cloudpkg.DeleteKubeContext(space)
+			err = provider.DeleteKubeContext(space)
 			if err != nil {
 				return errors.Wrap(err, "delete kube context")
 			}

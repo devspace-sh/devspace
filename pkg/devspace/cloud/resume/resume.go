@@ -1,9 +1,9 @@
-package cloud
+package resume
 
 import (
 	"time"
 
-	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -12,9 +12,27 @@ import (
 	"github.com/pkg/errors"
 )
 
+//Resumer can resume a space
+type Resumer interface {
+	ResumeSpace(loop bool) error
+}
+
+type resumer struct {
+	kubeClient kubectl.Client
+	log        log.Logger
+}
+
+// NewResumer creates a new instance of the interface Resumer
+func NewResumer(kubeClient kubectl.Client, log log.Logger) Resumer {
+	return &resumer{
+		kubeClient: kubeClient,
+		log:        log,
+	}
+}
+
 // ResumeSpace signals the cloud that we are currently working on the space and resumes it if it's currently paused
-func ResumeSpace(client kubectl.Client, loop bool, log log.Logger) error {
-	isSpace, err := kubeconfig.IsCloudSpace(client.CurrentContext())
+func (r *resumer) ResumeSpace(loop bool) error {
+	isSpace, err := kubeconfig.IsCloudSpace(r.kubeClient.CurrentContext())
 	if err != nil {
 		return errors.Wrap(err, "is cloud space")
 	}
@@ -25,12 +43,12 @@ func ResumeSpace(client kubectl.Client, loop bool, log log.Logger) error {
 	}
 
 	// Retrieve space id and cloud provider
-	spaceID, cloudProvider, err := kubeconfig.GetSpaceID(client.CurrentContext())
+	spaceID, cloudProvider, err := kubeconfig.GetSpaceID(r.kubeClient.CurrentContext())
 	if err != nil {
-		return errors.Errorf("Unable to get Space ID for context '%s': %v", client.CurrentContext(), err)
+		return errors.Errorf("Unable to get Space ID for context '%s': %v", r.kubeClient.CurrentContext(), err)
 	}
 
-	p, err := GetProvider(&cloudProvider, log)
+	p, err := cloud.GetProvider(&cloudProvider, r.log)
 	if err != nil {
 		return err
 	}
@@ -41,7 +59,12 @@ func ResumeSpace(client kubectl.Client, loop bool, log log.Logger) error {
 		return err
 	}
 
-	resumed, err := p.ResumeSpace(spaceID, space.Space.Cluster)
+	key, err := p.GetClusterKey(space.Space.Cluster)
+	if err != nil {
+		return errors.Wrap(err, "get cluster key")
+	}
+
+	resumed, err := p.Client().ResumeSpace(key, spaceID, space.Space.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "resume space")
 	}
@@ -54,7 +77,7 @@ func ResumeSpace(client kubectl.Client, loop bool, log log.Logger) error {
 		// Give the controllers some time to create the pods
 		time.Sleep(time.Second * 3)
 
-		err = WaitForSpaceResume(client)
+		err = r.waitForSpaceResume()
 		if err != nil {
 			return err
 		}
@@ -64,7 +87,7 @@ func ResumeSpace(client kubectl.Client, loop bool, log log.Logger) error {
 		go func() {
 			for {
 				time.Sleep(time.Minute * 3)
-				p.ResumeSpace(spaceID, space.Space.Cluster)
+				p.Client().ResumeSpace(key, spaceID, space.Space.Cluster)
 			}
 		}()
 	}
@@ -73,12 +96,12 @@ func ResumeSpace(client kubectl.Client, loop bool, log log.Logger) error {
 }
 
 // WaitForSpaceResume waits for a space to resume
-func WaitForSpaceResume(client kubectl.Client) error {
+func (r *resumer) waitForSpaceResume() error {
 	maxWait := time.Minute * 5
 	start := time.Now()
 
 	for time.Now().Sub(start) <= maxWait {
-		pods, err := client.KubeClient().CoreV1().Pods(client.Namespace()).List(metav1.ListOptions{})
+		pods, err := r.kubeClient.KubeClient().CoreV1().Pods(r.kubeClient.Namespace()).List(metav1.ListOptions{})
 		if err != nil {
 			return errors.Wrap(err, "list pods")
 		}
@@ -100,30 +123,4 @@ func WaitForSpaceResume(client kubectl.Client) error {
 	}
 
 	return nil
-}
-
-// ResumeSpace resumes a space if its sleeping and sets the last activity to the current timestamp
-func (p *Provider) ResumeSpace(spaceID int, cluster *cloudlatest.Cluster) (bool, error) {
-	key, err := p.GetClusterKey(cluster)
-	if err != nil {
-		return false, errors.Wrap(err, "get cluster key")
-	}
-
-	// Do the request
-	response := &struct {
-		ResumeSpace bool `json:"manager_resumeSpace"`
-	}{}
-	err = p.GrapqhlRequest(`
-		mutation ($key:String, $spaceID: Int!){
-			manager_resumeSpace(key: $key, spaceID: $spaceID)
-		}
-	`, map[string]interface{}{
-		"key":     key,
-		"spaceID": spaceID,
-	}, response)
-	if err != nil {
-		return false, err
-	}
-
-	return response.ResumeSpace, nil
 }

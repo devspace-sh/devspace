@@ -17,8 +17,8 @@ import (
 )
 
 // PrintSpaces prints the users spaces
-func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
-	spaces, err := p.GetSpaces()
+func (p *provider) PrintSpaces(cluster, name string, all bool) error {
+	spaces, err := p.client.GetSpaces()
 	if err != nil {
 		return errors.Errorf("Error retrieving spaces: %v", err)
 	}
@@ -51,7 +51,7 @@ func (p *Provider) PrintSpaces(cluster, name string, all bool) error {
 
 	values := [][]string{}
 
-	bearerToken, err := p.GetToken()
+	bearerToken, err := p.client.GetToken()
 	if err != nil {
 		return errors.Wrap(err, "get token")
 	}

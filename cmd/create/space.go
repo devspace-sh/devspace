@@ -72,7 +72,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) erro
 	defer log.StopWait()
 
 	// Get projects
-	projects, err := provider.GetProjects()
+	projects, err := provider.Client().GetProjects()
 	if err != nil {
 		return errors.Wrap(err, "get projects")
 	}
@@ -95,7 +95,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) erro
 			return err
 		}
 	} else {
-		cluster, err = provider.GetClusterByName(cmd.Cluster)
+		cluster, err = provider.Client().GetClusterByName(cmd.Cluster)
 		if err != nil {
 			return err
 		}
@@ -104,27 +104,32 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) erro
 	log.StartWait("Creating space " + args[0])
 	defer log.StopWait()
 
+	key, err := provider.GetClusterKey(cluster)
+	if err != nil {
+		return errors.Wrap(err, "get cluster key")
+	}
+
 	// Create space
-	spaceID, err := provider.CreateSpace(args[0], projectID, cluster)
+	spaceID, err := provider.Client().CreateSpace(key, args[0], projectID, cluster)
 	if err != nil {
 		return errors.Wrap(err, "create space")
 	}
 
 	// Get Space
-	space, err := provider.GetSpace(spaceID)
+	space, err := provider.Client().GetSpace(spaceID)
 	if err != nil {
 		return errors.Wrap(err, "get space")
 	}
 
 	// Get service account
-	serviceAccount, err := provider.GetServiceAccount(space)
+	serviceAccount, err := provider.Client().GetServiceAccount(key, space)
 	if err != nil {
 		return errors.Wrap(err, "get serviceaccount")
 	}
 
 	// Change kube context
 	kubeContext := cloud.GetKubeContextNameFromSpace(space.Name, space.ProviderName)
-	err = cloud.UpdateKubeConfig(kubeContext, serviceAccount, spaceID, provider.Name, true)
+	err = provider.UpdateKubeConfig(kubeContext, serviceAccount, spaceID, true)
 	if err != nil {
 		return errors.Wrap(err, "update kube context")
 	}
@@ -146,9 +151,9 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) erro
 	return nil
 }
 
-func getCluster(p *cloud.Provider) (*latest.Cluster, error) {
+func getCluster(p cloud.Provider) (*latest.Cluster, error) {
 
-	clusters, err := p.GetClusters()
+	clusters, err := p.Client().GetClusters()
 	if err != nil {
 		return nil, errors.Wrap(err, "get clusters")
 	}
@@ -240,6 +245,6 @@ func getCluster(p *cloud.Provider) (*latest.Cluster, error) {
 	return nil, errors.New("No cluster selected")
 }
 
-func createProject(p *cloud.Provider) (int, error) {
-	return p.CreateProject("default")
+func createProject(p cloud.Provider) (int, error) {
+	return p.Client().CreateProject("default")
 }
