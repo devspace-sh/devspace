@@ -49,14 +49,8 @@ devspace remove context --all-spaces
 func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) error {
 	// Remove all contexts
 	if cmd.AllSpaces {
-		// Check if user has specified a certain provider
-		var cloudProvider *string
-		if cmd.Provider != "" {
-			cloudProvider = &cmd.Provider
-		}
-
 		// Get provider
-		provider, err := cloudpkg.GetProvider(cloudProvider, log.GetInstance())
+		provider, err := cloudpkg.GetProvider(cmd.Provider, log.GetInstance())
 		if err != nil {
 			return errors.Wrap(err, "log into provider")
 		}

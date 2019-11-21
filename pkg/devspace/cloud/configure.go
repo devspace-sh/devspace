@@ -11,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/pkg/errors"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -35,15 +36,23 @@ func GetDefaultProviderName() (string, error) {
 }
 
 // GetProvider returns the current specified cloud provider
-func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
+func GetProvider(useProviderName string, log log.Logger) (*Provider, error) {
 	// Get provider configuration
 	providerConfig, err := config.ParseProviderConfig()
 	if err != nil {
 		return nil, err
 	}
 
+	return GetProviderWithOptions(providerConfig, useProviderName, "", false, log)
+}
+
+// GetProviderWithOptions returns a provider by options
+func GetProviderWithOptions(providerConfig *latest.Config, useProviderName, key string, relogin bool, log log.Logger) (*Provider, error) {
+	var err error
+
+	// Get provider name
 	providerName := config.DevSpaceCloudProviderName
-	if useProviderName == nil {
+	if useProviderName == "" {
 		// Choose cloud provider
 		if providerConfig.Default != "" {
 			providerName = providerConfig.Default
@@ -62,23 +71,59 @@ func GetProvider(useProviderName *string, log log.Logger) (*Provider, error) {
 			}
 		}
 	} else {
-		providerName = *useProviderName
+		providerName = useProviderName
 	}
 
-	// Ensure user is logged in
-	err = EnsureLoggedIn(providerConfig, providerName, log)
-	if err != nil {
-		return nil, err
+	// Let's check if we are logged in first
+	p := config.GetProvider(providerConfig, providerName)
+	if p == nil {
+		cloudProviders := ""
+		for _, p := range providerConfig.Providers {
+			cloudProviders += p.Name + " "
+		}
+
+		return nil, errors.Errorf("Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: %s", cloudProviders)
 	}
 
-	// Set cluster key map
-	provider := config.GetProvider(providerConfig, providerName)
-	if provider.ClusterKey == nil {
-		provider.ClusterKey = make(map[int]string)
+	provider := &Provider{
+		*p,
+		log,
+	}
+	if relogin == true || provider.Key == "" {
+		provider.Token = ""
+		provider.Key = ""
+
+		if key != "" {
+			provider.Key = key
+
+			// Check if we got access
+			_, err := provider.GetSpaces()
+			if err != nil {
+				return nil, errors.Errorf("Access denied for key %s: %v", key, err)
+			}
+		} else {
+			err := provider.Login(providerConfig)
+			if err != nil {
+				return nil, errors.Wrap(err, "Login")
+			}
+		}
+
+		log.Donef("Successfully logged into %s", provider.Name)
+
+		// Login into registries
+		err = provider.LoginIntoRegistries()
+		if err != nil {
+			log.Warnf("Error logging into docker registries: %v", err)
+		}
+
+		err = provider.Save()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Return provider config
-	return &Provider{*provider, log}, nil
+	return provider, nil
 }
 
 // GetKubeContextNameFromSpace returns the kube context name for a space

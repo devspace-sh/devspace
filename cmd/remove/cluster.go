@@ -43,14 +43,8 @@ devspace remove cluster my-cluster
 
 // RunRemoveCluster executes the devspace remove cluster functionality
 func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) error {
-	// Check if user has specified a certain provider
-	var cloudProvider *string
-	if cmd.Provider != "" {
-		cloudProvider = &cmd.Provider
-	}
-
 	// Get provider
-	provider, err := cloudpkg.GetProvider(cloudProvider, log.GetInstance())
+	provider, err := cloudpkg.GetProvider(cmd.Provider, log.GetInstance())
 	if err != nil {
 		return errors.Wrap(err, "log into provider")
 	}

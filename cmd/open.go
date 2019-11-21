@@ -84,7 +84,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	var (
-		providerName             *string
+		providerName             string
 		provider                 *cloud.Provider
 		space                    *cloudlatest.Space
 		domain                   string
@@ -142,8 +142,8 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	// Retrieve space
 	spaceID, currentContextProvider, err := kubeconfig.GetSpaceID(currentContext)
 	if err == nil { // Current kube-context is a Space
-		if providerName == nil {
-			providerName = &currentContextProvider
+		if providerName == "" {
+			providerName = currentContextProvider
 		}
 
 		// Get provider
