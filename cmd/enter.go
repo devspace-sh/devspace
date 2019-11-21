@@ -2,10 +2,7 @@ package cmd
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
@@ -87,7 +84,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	}
 
 	// Get kubectl client
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Wrap(err, "new kube client")
 	}
@@ -98,8 +95,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	}
 
 	// Signal that we are working on the space if there is any
-	resumer := resume.NewSpaceResumer(client, log.GetInstance())
-	err = resumer.ResumeSpace(true)
+	err = f.NewSpaceResumer(client, log.GetInstance()).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
@@ -118,8 +114,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	}
 
 	// Start terminal
-	servicesClient := services.NewClient(nil, generatedConfig, client, selectorParameter, log.GetInstance())
-	exitCode, err := servicesClient.StartTerminal(args, nil, make(chan error), cmd.Wait)
+	exitCode, err := f.NewServicesClient(nil, generatedConfig, client, selectorParameter, log.GetInstance()).StartTerminal(args, nil, make(chan error), cmd.Wait)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {

@@ -45,12 +45,12 @@ type Builder struct {
 	helper *helper.BuildHelper
 
 	authConfig *types.AuthConfig
-	client     dockerclient.ClientInterface
+	client     dockerclient.Client
 	skipPush   bool
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config *latest.Config, client dockerclient.ClientInterface, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool) (*Builder, error) {
+func NewBuilder(config *latest.Config, client dockerclient.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool) (*Builder, error) {
 	return &Builder{
 		helper:   helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTag, isDev),
 		client:   client,

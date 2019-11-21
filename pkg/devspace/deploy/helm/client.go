@@ -32,7 +32,7 @@ type DeployConfig struct {
 }
 
 // New creates a new helm deployment client
-func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+func New(config *latest.Config, helmClient helmtypes.Client, kubeClient kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
 	tillerNamespace := kubeClient.Namespace()
 	if deployConfig.Helm.TillerNamespace != "" {
 		tillerNamespace = deployConfig.Helm.TillerNamespace
@@ -45,6 +45,7 @@ func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.
 
 	return &DeployConfig{
 		Kube:             kubeClient,
+		Helm:             helmClient,
 		TillerNamespace:  tillerNamespace,
 		DeploymentConfig: deployConfig,
 		Log:              log,

@@ -43,14 +43,14 @@ type Builder struct {
 	BuildNamespace string
 
 	allowInsecureRegistry bool
-	dockerClient          docker.ClientInterface
+	dockerClient          docker.Client
 }
 
 // Wait timeout is the maximum time to wait for the kaniko init and build container to get ready
 const waitTimeout = 2 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(config *latest.Config, dockerClient docker.ClientInterface, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (*Builder, error) {
+func NewBuilder(config *latest.Config, dockerClient docker.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (*Builder, error) {
 	buildNamespace := kubeClient.Namespace()
 	if imageConf.Build.Kaniko.Namespace != "" {
 		buildNamespace = imageConf.Build.Kaniko.Namespace

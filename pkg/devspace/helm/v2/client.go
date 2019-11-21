@@ -37,25 +37,9 @@ type client struct {
 	config *latest.Config
 }
 
-var helmClientsMutex sync.Mutex
-var helmClients = map[string]*client{}
-
 // NewClient creates a new helm client
 func NewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller bool) (types.Client, error) {
-	helmClientsMutex.Lock()
-	defer helmClientsMutex.Unlock()
-
-	if client, ok := helmClients[tillerNamespace]; ok {
-		return client, nil
-	}
-
-	client, err := createNewClient(config, kubeClient, tillerNamespace, log, upgradeTiller)
-	if err != nil {
-		return nil, err
-	}
-
-	helmClients[tillerNamespace] = client
-	return client, nil
+	return createNewClient(config, kubeClient, tillerNamespace, log, upgradeTiller)
 }
 
 func createNewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller bool) (*client, error) {
@@ -96,13 +80,11 @@ func createNewClient(config *latest.Config, kubeClient kubectl.Client, tillerNam
 
 		helmClient = k8shelm.NewClient(helmOptions...)
 		_, err = helmClient.ListReleases(k8shelm.ReleaseListLimit(1))
-
 		if err == nil {
 			break
 		}
 
 		tunnel.Close()
-
 		tunnelWaitTime = tunnelWaitTime - tunnelCheckInterval
 		time.Sleep(tunnelCheckInterval)
 

@@ -4,9 +4,11 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
+	helmtypes "github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
 	deployKubectl "github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
+	deployutil "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -95,6 +97,8 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	if config.Deployments != nil {
+		helmV2Clients := map[string]helmtypes.Client{}
+
 		for _, deployConfig := range config.Deployments {
 			var deployClient deploy.Interface
 
@@ -106,7 +110,13 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 					continue
 				}
 			} else if deployConfig.Helm != nil {
-				deployClient, err = deployHelm.New(config, client, deployConfig, log.GetInstance())
+				helmClient, err := deployutil.GetCachedHelmClient(config, deployConfig, client, helmV2Clients, log.GetInstance())
+				if err != nil {
+					log.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
+					continue
+				}
+
+				deployClient, err = deployHelm.New(config, helmClient, client, deployConfig, log.GetInstance())
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
 					continue
