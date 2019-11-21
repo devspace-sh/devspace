@@ -71,7 +71,7 @@ func getTillerOptions(tillerNamespace string) (tillerOptions *helminstaller.Opti
 	return &helminstaller.Options{
 		Namespace:                    tillerNamespace,
 		MaxHistory:                   10,
-		ImageSpec:                    "gcr.io/kubernetes-helm/tiller:v2.16.0",
+		ImageSpec:                    "gcr.io/kubernetes-helm/tiller:v2.16.1",
 		ServiceAccount:               TillerServiceAccountName,
 		AutoMountServiceAccountToken: true,
 	}
