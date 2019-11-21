@@ -1,4 +1,4 @@
-package configutil
+package loader
 
 import "github.com/pkg/errors"
 

@@ -2,7 +2,7 @@ package add
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -44,7 +44,8 @@ devspace add port 8080:80,3000
 // RunAddPort executes the add port command logic
 func (cmd *portCmd) RunAddPort(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -52,12 +53,17 @@ func (cmd *portCmd) RunAddPort(cobraCmd *cobra.Command, args []string) error {
 		return errors.New(message.ConfigNotFound)
 	}
 
-	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())
+	config, err := configLoader.LoadWithoutProfile()
 	if err != nil {
 		return err
 	}
 
 	err = configure.AddPort(config, cmd.Namespace, cmd.LabelSelector, args)
+	if err != nil {
+		return err
+	}
+
+	err = configLoader.Save(config)
 	if err != nil {
 		return err
 	}

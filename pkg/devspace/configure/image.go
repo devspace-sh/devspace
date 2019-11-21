@@ -10,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
@@ -366,11 +365,6 @@ func AddImage(baseConfig *latest.Config, nameInConfig, name, tag, contextPath, d
 
 	baseConfig.Images[nameInConfig] = imageConfig
 
-	err := configutil.SaveLoadedConfig()
-	if err != nil {
-		return errors.Errorf("Couldn't save config file: %s", err.Error())
-	}
-
 	return nil
 }
 
@@ -396,11 +390,6 @@ func RemoveImage(baseConfig *latest.Config, removeAll bool, names []string) erro
 	}
 
 	baseConfig.Images = newImageList
-
-	err := configutil.SaveLoadedConfig()
-	if err != nil {
-		return errors.Errorf("Couldn't save config file: %v", err)
-	}
 
 	return nil
 }

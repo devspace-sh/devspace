@@ -5,8 +5,7 @@ import (
 
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
@@ -52,7 +51,8 @@ devspace remove space --all
 // RunRemoveCloudDevSpace executes the devspace remove cloud devspace functionality
 func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(nil, log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 
 	if configExists {
 		// Get current space
-		generatedConfig, err := generated.LoadConfig("")
+		generatedConfig, err := configLoader.Generated()
 		if err != nil {
 			return err
 		}
@@ -159,7 +159,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 			}
 		}
 
-		err = generated.SaveConfig(generatedConfig)
+		err = configLoader.SaveGenerated(generatedConfig)
 		if err != nil {
 			return err
 		}

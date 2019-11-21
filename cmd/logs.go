@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
@@ -62,7 +62,8 @@ devspace logs --namespace=mynamespace
 // RunLogs executes the functionality devspace logs
 func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -70,7 +71,7 @@ func (cmd *LogsCmd) RunLogs(cobraCmd *cobra.Command, args []string) error {
 	// Load generated config if possible
 	var generatedConfig *generated.Config
 	if configExists {
-		generatedConfig, err = generated.LoadConfig(cmd.Profile)
+		generatedConfig, err = configLoader.Generated()
 		if err != nil {
 			return err
 		}

@@ -5,8 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -59,7 +58,9 @@ devspace purge -d my-deployment
 // Run executes the purge command logic
 func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configOptions := cmd.ToConfigOptions()
+	configLoader := loader.NewConfigLoader(configOptions, log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -70,7 +71,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	log.StartFileLogging()
 
 	// Get config with adjusted cluster config
-	generatedConfig, err := generated.LoadConfig(cmd.Profile)
+	generatedConfig, err := configLoader.Generated()
 	if err != nil {
 		return err
 	}
@@ -99,8 +100,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Get config with adjusted cluster config
-	configOptions := cmd.ToConfigOptions()
-	config, err := configutil.GetConfig(configOptions)
+	config, err := configLoader.Load()
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
-	err = generated.SaveConfig(generatedConfig)
+	err = configLoader.SaveGenerated(generatedConfig)
 	if err != nil {
 		log.Errorf("Error saving generated.yaml: %v", err)
 	}

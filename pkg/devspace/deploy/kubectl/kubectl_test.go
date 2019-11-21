@@ -38,7 +38,7 @@ const testKustomizeNamespace = "test-kubectl-kustomize-deploy"
 			},
 		},
 	}
-	configutil.SetFakeConfig(testConfig)
+	loader.SetFakeConfig(testConfig)
 
 	// Create fake generated config
 	generatedConfig := &generated.Config{

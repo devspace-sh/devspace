@@ -14,8 +14,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
@@ -79,7 +79,8 @@ devspace open
 // RunOpen executes the functionality "devspace open"
 func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -98,7 +99,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	if configExists {
 		log.StartFileLogging()
 
-		generatedConfig, err = generated.LoadConfig(cmd.Profile)
+		generatedConfig, err = configLoader.Generated()
 		if err != nil {
 			return err
 		}
@@ -132,7 +133,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	var devspaceConfig *latest.Config
 	if configExists {
 		// Get config with adjusted cluster config
-		devspaceConfig, err = configutil.GetConfig(cmd.ToConfigOptions())
+		devspaceConfig, err = configLoader.Load()
 		if err != nil {
 			return err
 		}

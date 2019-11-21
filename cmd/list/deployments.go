@@ -3,8 +3,7 @@ package list
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
 	deployKubectl "github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
@@ -41,7 +40,8 @@ Shows the status of all deployments
 // RunDeploymentsStatus executes the devspace status deployments command logic
 func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	// Load generated
-	generatedConfig, err := generated.LoadConfig(cmd.Profile)
+	generatedConfig, err := configLoader.Generated()
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	// Get config with adjusted cluster config
-	config, err := configutil.GetConfig(cmd.ToConfigOptions())
+	config, err := configLoader.Load()
 	if err != nil {
 		return err
 	}

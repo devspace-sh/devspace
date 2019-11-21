@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/server"
@@ -57,7 +57,8 @@ Opens the localhost UI in the browser
 // RunUI executes the functionality "devspace ui"
 func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -116,7 +117,7 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 
 	if configExists {
 		// Load generated config
-		generatedConfig, err = generated.LoadConfig(cmd.Profile)
+		generatedConfig, err = configLoader.Generated()
 		if err != nil {
 			return errors.Errorf("Error loading generated.yaml: %v", err)
 		}
@@ -148,8 +149,7 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 		}
 
 		// Add current kube context to context
-		configOptions := cmd.ToConfigOptions()
-		config, err = configutil.GetConfig(configOptions)
+		config, err = configLoader.Load()
 		if err != nil {
 			return err
 		}
@@ -165,7 +165,7 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Create server
-	server, err := server.NewServer(config, generatedConfig, cmd.Dev, client.CurrentContext(), client.Namespace(), forcePort, log.GetInstance())
+	server, err := server.NewServer(configLoader, config, generatedConfig, cmd.Dev, client.CurrentContext(), client.Namespace(), forcePort, log.GetInstance())
 	if err != nil {
 		return err
 	}

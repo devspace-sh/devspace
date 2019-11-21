@@ -1,8 +1,7 @@
 package use
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -46,7 +45,8 @@ devspace use profile --reset
 // RunUseProfile executes the "devspace use config command" logic
 func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(nil, log.Discard)
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) err
 		return errors.New(message.ConfigNotFound)
 	}
 
-	profiles, err := configutil.GetProfiles(".")
+	profiles, err := loader.GetProfiles(".")
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) err
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig("")
+	generatedConfig, err := configLoader.Generated()
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) err
 	generatedConfig.ActiveProfile = profileName
 
 	// Save generated config
-	err = generated.SaveConfig(generatedConfig)
+	err = configLoader.SaveGenerated(generatedConfig)
 	if err != nil {
 		return err
 	}

@@ -16,8 +16,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
 	"github.com/mgutz/ansi"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -59,6 +59,8 @@ type DevCmd struct {
 
 	Terminal    bool
 	Interactive bool
+
+	configLoader loader.ConfigLoader
 }
 
 const interactiveDefaultPickerValue = "Open Picker"
@@ -118,7 +120,8 @@ Open terminal instead of logs:
 // Run executes the command logic
 func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	cmd.configLoader = loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := cmd.configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -136,7 +139,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig(cmd.Profile)
+	generatedConfig, err := cmd.configLoader.Generated()
 	if err != nil {
 		return errors.Errorf("Error loading generated.yaml: %v", err)
 	}
@@ -245,7 +248,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 
 			// Save config if an image was built
 			if len(builtImages) > 0 {
-				err := generated.SaveConfig(generatedConfig)
+				err := cmd.configLoader.SaveGenerated(generatedConfig)
 				if err != nil {
 					return 0, errors.Errorf("Error saving generated config: %v", err)
 				}
@@ -270,14 +273,14 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 			}
 
 			// Save Config
-			err = generated.SaveConfig(generatedConfig)
+			err = cmd.configLoader.SaveGenerated(generatedConfig)
 			if err != nil {
 				return 0, errors.Errorf("Error saving generated config: %v", err)
 			}
 		}
 
 		// Update last used kube context
-		err = client.UpdateLastKubeContext(generatedConfig)
+		err = updateLastKubeContext(cmd.configLoader, client, generatedConfig)
 		if err != nil {
 			return 0, errors.Wrap(err, "update last kube context")
 		}
@@ -415,7 +418,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 		defer log.StopWait()
 
 		// Create server
-		server, err := server.NewServer(config, generatedConfig, false, client.CurrentContext(), client.Namespace(), nil, log)
+		server, err := server.NewServer(cmd.configLoader, config, generatedConfig, false, client.CurrentContext(), client.Namespace(), nil, log)
 		if err != nil {
 			log.Warnf("Couldn't start UI server: %v", err)
 		} else {
@@ -576,10 +579,8 @@ func (r *reloadError) Error() string {
 }
 
 func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
-	configutil.ResetConfig()
-
 	// Load config
-	config, err := configutil.GetConfig(cmd.ToConfigOptions())
+	config, err := cmd.configLoader.Load()
 	if err != nil {
 		return nil, err
 	}
@@ -659,4 +660,21 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 	}
 
 	return config, nil
+}
+
+func updateLastKubeContext(configLoader loader.ConfigLoader, client kubectl.Client, generatedConfig *generated.Config) error {
+	// Update generated if we deploy the application
+	if generatedConfig != nil {
+		generatedConfig.GetActive().LastContext = &generated.LastContextConfig{
+			Context:   client.CurrentContext(),
+			Namespace: client.Namespace(),
+		}
+
+		err := configLoader.SaveGenerated(generatedConfig)
+		if err != nil {
+			return errors.Wrap(err, "save generated")
+		}
+	}
+
+	return nil
 }

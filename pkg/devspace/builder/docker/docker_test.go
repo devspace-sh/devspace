@@ -56,7 +56,7 @@ import ()
 			},
 		},
 	}
-	configutil.SetFakeConfig(testConfig)
+	loader.SetFakeConfig(testConfig)
 
 	dockerClient, err := docker.NewClient(log.GetInstance())
 	if err != nil {
@@ -152,7 +152,7 @@ func TestDockerbuildWithEntryppointOverride(t *testing.T) {
 			},
 		},
 	}
-	configutil.SetFakeConfig(testConfig)
+	loader.SetFakeConfig(testConfig)
 
 	dockerClient, err := docker.NewClient(log.GetInstance())
 	if err != nil {

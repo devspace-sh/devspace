@@ -1,4 +1,4 @@
-package configutil
+package loader
 
 import (
 	"io/ioutil"
@@ -13,18 +13,18 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func replaceVar(path, value string) (interface{}, error) {
-	oldValue, _ := LoadedVars[path]
+func (l *configLoader) replaceVar(path, value string) (interface{}, error) {
+	oldValue, _ := l.options.LoadedVars[path]
 	return oldValue, nil
 }
 
-func matchVar(path, key, value string) bool {
-	_, ok := LoadedVars[path+"."+key]
+func (l *configLoader) matchVar(path, key, value string) bool {
+	_, ok := l.options.LoadedVars[path+"."+key]
 	return ok
 }
 
 // RestoreVars restores the variables in the config
-func RestoreVars(config *latest.Config) (*latest.Config, error) {
+func (l *configLoader) RestoreVars(config *latest.Config) (*latest.Config, error) {
 	configMap := make(map[interface{}]interface{})
 
 	// Copy config
@@ -34,8 +34,8 @@ func RestoreVars(config *latest.Config) (*latest.Config, error) {
 	}
 
 	// Restore old vars values
-	if len(LoadedVars) > 0 {
-		walk.Walk(configMap, matchVar, replaceVar)
+	if len(l.options.LoadedVars) > 0 {
+		walk.Walk(configMap, l.matchVar, l.replaceVar)
 	}
 
 	// Check if config exists
@@ -73,19 +73,19 @@ func RestoreVars(config *latest.Config) (*latest.Config, error) {
 	return clonedConfig, nil
 }
 
-// SaveLoadedConfig writes the data of a config to its yaml file
-func SaveLoadedConfig() error {
+// Save writes the data of a config to its yaml file
+func (l *configLoader) Save(config *latest.Config) error {
 	// RestoreVars restores the variables in the config
-	clonedConfig, err := RestoreVars(config)
+	clonedConfig, err := l.RestoreVars(config)
 	if err != nil {
 		return errors.Wrap(err, "restore vars")
 	}
 
-	return SaveConfig(clonedConfig)
+	return saveConfig(clonedConfig)
 }
 
-// SaveConfig saves the config to file
-func SaveConfig(config *latest.Config) error {
+// saveConfig saves the config to file
+func saveConfig(config *latest.Config) error {
 	// Convert to string
 	configYaml, err := yaml.Marshal(config)
 	if err != nil {

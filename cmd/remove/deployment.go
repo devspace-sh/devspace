@@ -2,8 +2,7 @@ package remove
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	deployUtil "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -51,7 +50,8 @@ devspace remove deployment --all
 // RunRemoveDeployment executes the specified deployment
 func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 	}
 
 	// Load base config
-	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())
+	config, err := configLoader.LoadWithoutProfile()
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 			deployments = []string{name}
 		}
 
-		generatedConfig, err := generated.LoadConfig("")
+		generatedConfig, err := configLoader.Generated()
 		if err != nil {
 			log.Errorf("Error loading generated.yaml: %v", err)
 			return nil
@@ -100,13 +100,18 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 
 		deployUtil.PurgeDeployments(config, generatedConfig.GetActive(), client, deployments, log.GetInstance())
 
-		err = generated.SaveConfig(generatedConfig)
+		err = configLoader.SaveGenerated(generatedConfig)
 		if err != nil {
 			log.Errorf("Error saving generated.yaml: %v", err)
 		}
 	}
 
 	found, err := configure.RemoveDeployment(config, cmd.RemoveAll, name)
+	if err != nil {
+		return err
+	}
+
+	err = configLoader.Save(config)
 	if err != nil {
 		return err
 	}

@@ -4,97 +4,38 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sync"
 
 	yaml "gopkg.in/yaml.v2"
 )
 
-// Config specifies the runtime config struct
-type Config struct {
-	OverrideProfile *string                 `yaml:"lastOverrideProfile,omitempty"`
-	ActiveProfile   string                  `yaml:"activeProfile,omitempty"`
-	Vars            map[string]string       `yaml:"vars,omitempty"`
-	Profiles        map[string]*CacheConfig `yaml:"profiles,omitempty"`
-}
-
-// LastContextConfig holds all the informations about the last used kubernetes context
-type LastContextConfig struct {
-	Namespace string `yaml:"namespace,omitempty"`
-	Context   string `yaml:"context,omitempty"`
-}
-
-// CacheConfig holds all the information specific to a certain config
-type CacheConfig struct {
-	Deployments  map[string]*DeploymentCache `yaml:"deployments,omitempty"`
-	Images       map[string]*ImageCache      `yaml:"images,omitempty"`
-	Dependencies map[string]string           `yaml:"dependencies,omitempty"`
-	LastContext  *LastContextConfig          `yaml:"lastContext,omitempty"`
-}
-
-// ImageCache holds the cache related information about a certain image
-type ImageCache struct {
-	ImageConfigHash string `yaml:"imageConfigHash,omitempty"`
-
-	DockerfileHash string `yaml:"dockerfileHash,omitempty"`
-	ContextHash    string `yaml:"contextHash,omitempty"`
-	EntrypointHash string `yaml:"entrypointHash,omitempty"`
-
-	CustomFilesHash string `yaml:"customFilesHash,omitempty"`
-
-	ImageName string `yaml:"imageName,omitempty"`
-	Tag       string `yaml:"tag,omitempty"`
-}
-
-// DeploymentCache holds the information about a specific deployment
-type DeploymentCache struct {
-	DeploymentConfigHash string `yaml:"deploymentConfigHash,omitempty"`
-
-	HelmOverridesHash    string `yaml:"helmOverridesHash,omitempty"`
-	HelmChartHash        string `yaml:"helmChartHash,omitempty"`
-	KubectlManifestsHash string `yaml:"kubectlManifestsHash,omitempty"`
-}
-
 // ConfigPath is the relative generated config path
 var ConfigPath = ".devspace/generated.yaml"
 
-var loadedConfig *Config
-var loadedConfigErr error
-var loadedConfigOnce sync.Once
-var loadedConfigMutex sync.Mutex
-
-var testDontSaveConfig = false
-
-// SetTestConfig sets the config for testing purposes
-func SetTestConfig(config *Config) {
-	loadedConfigOnce.Do(func() {})
-	loadedConfig = config
-	testDontSaveConfig = true
+// ConfigLoader is the interface for loading the generated config
+type ConfigLoader interface {
+	Load() (*Config, error)
+	LoadFromPath(path string) (*Config, error)
+	Save(config *Config) error
 }
 
-// ResetConfig resets the config to nil and enables loading from configs.yaml
-func ResetConfig() {
-	loadedConfigMutex.Lock()
-	defer loadedConfigMutex.Unlock()
-
-	loadedConfigOnce = sync.Once{}
-	loadedConfigErr = nil
-	loadedConfig = nil
+type configLoader struct {
+	profile string
 }
 
-// LoadConfig loads the config from the filesystem
-func LoadConfig(profile string) (*Config, error) {
-	loadedConfigMutex.Lock()
-	defer loadedConfigMutex.Unlock()
-
-	loadedConfigOnce.Do(func() {
-		loadedConfig, loadedConfigErr = LoadConfigFromPath(ConfigPath, profile)
-	})
-
-	return loadedConfig, loadedConfigErr
+// NewConfigLoader creates a new generated config loader
+func NewConfigLoader(profile string) ConfigLoader {
+	return &configLoader{
+		profile: profile,
+	}
 }
 
-// LoadConfigFromPath loads the generated config from a given path
-func LoadConfigFromPath(path, profile string) (*Config, error) {
+// Load loads the config from the filesystem
+func (l *configLoader) Load() (*Config, error) {
+	return l.LoadFromPath(ConfigPath)
+}
+
+// LoadFromPath loads the generated config from a given path
+func (l *configLoader) LoadFromPath(path string) (*Config, error) {
 	var loadedConfig *Config
 
 	data, readErr := ioutil.ReadFile(path)
@@ -121,13 +62,30 @@ func LoadConfigFromPath(path, profile string) (*Config, error) {
 	}
 
 	// Set override profile
-	if profile != "" {
-		loadedConfig.OverrideProfile = &profile
+	if l.profile != "" {
+		loadedConfig.OverrideProfile = &l.profile
 	} else {
 		loadedConfig.OverrideProfile = nil
 	}
 
 	return loadedConfig, nil
+}
+
+// Save saves the config to the filesystem
+func (l *configLoader) Save(config *Config) error {
+	workdir, _ := os.Getwd()
+	data, err := yaml.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	configPath := filepath.Join(workdir, ConfigPath)
+	err = os.MkdirAll(filepath.Dir(configPath), 0755)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(configPath, data, 0666)
 }
 
 // NewCache returns a new cache object
@@ -192,28 +150,4 @@ func InitDevSpaceConfig(config *Config, configName string) {
 	if config.Profiles[configName].Dependencies == nil {
 		config.Profiles[configName].Dependencies = make(map[string]string)
 	}
-}
-
-// SaveConfig saves the config to the filesystem
-func SaveConfig(config *Config) error {
-	loadedConfigMutex.Lock()
-	defer loadedConfigMutex.Unlock()
-
-	if testDontSaveConfig {
-		return nil
-	}
-
-	workdir, _ := os.Getwd()
-	data, err := yaml.Marshal(config)
-	if err != nil {
-		return err
-	}
-
-	configPath := filepath.Join(workdir, ConfigPath)
-	err = os.MkdirAll(filepath.Dir(configPath), 0755)
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(configPath, data, 0666)
 }

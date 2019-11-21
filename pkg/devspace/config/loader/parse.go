@@ -1,4 +1,4 @@
-package configutil
+package loader
 
 import (
 	"io/ioutil"
@@ -17,9 +17,6 @@ import (
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
-
-// LoadedVars holds all variables that were loaded
-var LoadedVars = make(map[string]string)
 
 func varMatchFn(path, key, value string) bool {
 	return varspkg.VarMatchRegex.MatchString(value)
