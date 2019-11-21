@@ -61,5 +61,5 @@ func (c *client) saveToken() error {
 		}
 	}
 
-	return errors.New("No provider of graphql client found")
+	return errors.Errorf("Couldn't find provider %s", c.provider)
 }

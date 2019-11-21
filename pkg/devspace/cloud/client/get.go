@@ -45,9 +45,14 @@ func (c *client) GetClusterByName(clusterName string) (*latest.Cluster, error) {
 		return nil, errors.Errorf("Error parsing cluster name %s: Expected : only once", clusterName)
 	}
 
+	baererToken, err := c.GetToken()
+	if err != nil {
+		return nil, errors.Wrap(err, "get token")
+	}
+
 	clusterName = clusterNameSplitted[0]
 
-	accountName, err := token.GetAccountName(c.token)
+	accountName, err := token.GetAccountName(baererToken)
 	if err != nil {
 		return nil, errors.Wrap(err, "get account name")
 	}
@@ -182,8 +187,13 @@ func (c *client) GetClusterUser(clusterID int) (*latest.ClusterUser, error) {
 		ClusterUser []*latest.ClusterUser `json:"cluster_user"`
 	}{}
 
+	baererToken, err := c.GetToken()
+	if err != nil {
+		return nil, errors.Wrap(err, "get token")
+	}
+
 	// Get account id
-	accountID, err := token.GetAccountID(c.token)
+	accountID, err := token.GetAccountID(baererToken)
 	if err != nil {
 		return nil, err
 	}
@@ -407,9 +417,14 @@ func (c *client) GetSpaceByName(spaceName string) (*latest.Space, error) {
 		return nil, errors.Errorf("Error parsing space name %s: Expected : only once", spaceName)
 	}
 
+	baererToken, err := c.GetToken()
+	if err != nil {
+		return nil, errors.Wrap(err, "get token")
+	}
+
 	spaceName = spaceNameSplitted[0]
 
-	accountName, err := token.GetAccountName(c.token)
+	accountName, err := token.GetAccountName(baererToken)
 	if err != nil {
 		return nil, errors.Wrap(err, "get account name")
 	}
@@ -492,7 +507,12 @@ func (c *client) GetSpaceByName(spaceName string) (*latest.Space, error) {
 }
 
 func (c *client) exchangeSpaceName(space *latest.Space) error {
-	userAccountName, err := token.GetAccountName(c.token)
+	baererToken, err := c.GetToken()
+	if err != nil {
+		return errors.Wrap(err, "get token")
+	}
+
+	userAccountName, err := token.GetAccountName(baererToken)
 	if err != nil {
 		return errors.Wrap(err, "get account name")
 	}
@@ -510,7 +530,12 @@ func (c *client) exchangeClusterName(cluster *latest.Cluster) error {
 		return nil
 	}
 
-	userAccountName, err := token.GetAccountName(c.token)
+	baererToken, err := c.GetToken()
+	if err != nil {
+		return errors.Wrap(err, "get token")
+	}
+
+	userAccountName, err := token.GetAccountName(baererToken)
 	if err != nil {
 		return errors.Wrap(err, "get account name")
 	}
