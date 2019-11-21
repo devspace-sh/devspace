@@ -12,7 +12,7 @@ import (
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
+	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/pkg/errors"
 )
@@ -35,8 +35,8 @@ type ClientInterface interface {
 }
 
 //Client is a client for docker
-type Client struct {
-	client.Client
+type client struct {
+	dockerclient.Client
 }
 
 // NewClient retrieves a new docker client
@@ -74,21 +74,21 @@ func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log l
 }
 
 func newDockerClient() (ClientInterface, error) {
-	cli, err := client.NewClientWithOpts()
+	cli, err := dockerclient.NewClientWithOpts()
 	if err != nil {
 		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
 
-	return &Client{*cli}, nil
+	return &client{*cli}, nil
 }
 
 func newDockerClientFromEnvironment() (ClientInterface, error) {
-	cli, err := client.NewEnvClient()
+	cli, err := dockerclient.NewEnvClient()
 	if err != nil {
 		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
 
-	return &Client{*cli}, nil
+	return &client{*cli}, nil
 }
 
 func newDockerClientFromMinikube(currentKubeContext string) (ClientInterface, error) {
@@ -118,21 +118,21 @@ func newDockerClientFromMinikube(currentKubeContext string) (ClientInterface, er
 			Transport: &http.Transport{
 				TLSClientConfig: tlsc,
 			},
-			CheckRedirect: client.CheckRedirect,
+			CheckRedirect: dockerclient.CheckRedirect,
 		}
 	}
 
 	host := env["DOCKER_HOST"]
 	if host == "" {
-		host = client.DefaultDockerHost
+		host = dockerclient.DefaultDockerHost
 	}
 
-	cli, err := client.NewClientWithOpts(client.WithHost(host), client.WithVersion(env["DOCKER_API_VERSION"]), client.WithHTTPClient(httpclient), client.WithHTTPHeaders(nil))
+	cli, err := dockerclient.NewClientWithOpts(dockerclient.WithHost(host), dockerclient.WithVersion(env["DOCKER_API_VERSION"]), dockerclient.WithHTTPClient(httpclient), dockerclient.WithHTTPHeaders(nil))
 	if err != nil {
 		return nil, err
 	}
 
-	return &Client{*cli}, nil
+	return &client{*cli}, nil
 }
 
 func getMinikubeEnvironment() (map[string]string, error) {
