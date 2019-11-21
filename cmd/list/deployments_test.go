@@ -150,7 +150,8 @@ func testListDeployments(t *testing.T, testCase listDeploymentsTestCase) {
 		}
 	}()
 
-	providerConfig, err := cloudconfig.Load()
+	loader := cloudconfig.NewLoader()
+	providerConfig, err := loader.Load()
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 
