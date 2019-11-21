@@ -10,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/encryption"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -134,7 +135,7 @@ func (p *provider) ConnectCluster(options *ConnectClusterOptions) error {
 			}
 		}
 
-		encryptedToken, err = EncryptAES([]byte(options.Key), token)
+		encryptedToken, err = encryption.EncryptAES([]byte(options.Key), token)
 		if err != nil {
 			return errors.Wrap(err, "encrypt token")
 		}
@@ -688,7 +689,7 @@ func (p *provider) ResetKey(clusterName string) error {
 		return errors.Wrap(err, "get service account credentials")
 	}
 
-	encryptedToken, err := EncryptAES([]byte(key), token)
+	encryptedToken, err := encryption.EncryptAES([]byte(key), token)
 	if err != nil {
 		return errors.Wrap(err, "encrypt token")
 	}

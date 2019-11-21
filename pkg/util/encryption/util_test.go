@@ -1,4 +1,4 @@
-package cloud
+package encryption
 
 import (
 	"testing"

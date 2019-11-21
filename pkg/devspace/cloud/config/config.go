@@ -45,7 +45,7 @@ func GetProvider(config *latest.Config, provider string) *latest.Provider {
 	return nil
 }
 
-//Reset resets the loaded config and enables another loading processa
+// Reset resets the loaded config and enables another loading process
 func Reset() {
 	loadedConfig = nil
 	loadedConfigErr = nil

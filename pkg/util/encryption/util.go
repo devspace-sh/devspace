@@ -1,111 +1,17 @@
-package cloud
+package encryption
 
 import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"io"
-	"strconv"
-	"strings"
-	"time"
-
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
+	
 	"github.com/pkg/errors"
-
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
-
-// PrintSpaces prints the users spaces
-func (p *provider) PrintSpaces(cluster, name string, all bool) error {
-	spaces, err := p.client.GetSpaces()
-	if err != nil {
-		return errors.Errorf("Error retrieving spaces: %v", err)
-	}
-
-	activeSpaceID := 0
-	if err == nil {
-		context, _ := kubeconfig.GetCurrentContext()
-		if context != "" {
-			activeSpaceID, _, _ = kubeconfig.GetSpaceID(context)
-		}
-	}
-
-	headerColumnNames := []string{}
-	if activeSpaceID != 0 {
-		headerColumnNames = append(headerColumnNames, []string{
-			"SpaceID",
-			"Name",
-			"Cluster",
-			"Active",
-			"Created",
-		}...)
-	} else {
-		headerColumnNames = append(headerColumnNames, []string{
-			"SpaceID",
-			"Name",
-			"Cluster",
-			"Created",
-		}...)
-	}
-
-	values := [][]string{}
-
-	bearerToken, err := p.client.GetToken()
-	if err != nil {
-		return errors.Wrap(err, "get token")
-	}
-
-	accountID, err := token.GetAccountID(bearerToken)
-	if err != nil {
-		return errors.Wrap(err, "get account id")
-	}
-
-	for _, space := range spaces {
-		if name == "" || name == space.Name {
-			if cluster != "" && cluster != space.Cluster.Name {
-				continue
-			}
-			if all == false && space.Owner.OwnerID != accountID {
-				continue
-			}
-
-			created, err := time.Parse(time.RFC3339, strings.Split(space.Created, ".")[0]+"Z")
-			if err != nil {
-				return err
-			}
-
-			if activeSpaceID != 0 {
-				values = append(values, []string{
-					strconv.Itoa(space.SpaceID),
-					space.Name,
-					space.Cluster.Name,
-					strconv.FormatBool(space.SpaceID == activeSpaceID),
-					created.String(),
-				})
-			} else {
-				values = append(values, []string{
-					strconv.Itoa(space.SpaceID),
-					space.Name,
-					space.Cluster.Name,
-					created.String(),
-				})
-			}
-		}
-	}
-
-	if len(values) > 0 {
-		log.PrintTable(log.GetInstance(), headerColumnNames, values)
-	} else {
-		log.Info("No spaces found")
-	}
-
-	return nil
-}
 
 // PadKey formats the key to the correct padding (32 byte)
 func PadKey(key []byte) []byte {
-	if len(key) == 32 {
+	if len(key) == 32 { 
 		return key
 	} else if len(key) > 32 {
 		return key[:32]

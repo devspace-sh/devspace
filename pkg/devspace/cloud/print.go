@@ -3,13 +3,106 @@ package cloud
 import (
 	"encoding/json"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
+
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
+
+// PrintSpaces prints the users spaces
+func (p *provider) PrintSpaces(cluster, name string, all bool) error {
+	spaces, err := p.client.GetSpaces()
+	if err != nil {
+		return errors.Errorf("Error retrieving spaces: %v", err)
+	}
+
+	activeSpaceID := 0
+	if err == nil {
+		context, _ := kubeconfig.GetCurrentContext()
+		if context != "" {
+			activeSpaceID, _, _ = kubeconfig.GetSpaceID(context)
+		}
+	}
+
+	headerColumnNames := []string{}
+	if activeSpaceID != 0 {
+		headerColumnNames = append(headerColumnNames, []string{
+			"SpaceID",
+			"Name",
+			"Cluster",
+			"Active",
+			"Created",
+		}...)
+	} else {
+		headerColumnNames = append(headerColumnNames, []string{
+			"SpaceID",
+			"Name",
+			"Cluster",
+			"Created",
+		}...)
+	}
+
+	values := [][]string{}
+
+	bearerToken, err := p.client.GetToken()
+	if err != nil {
+		return errors.Wrap(err, "get token")
+	}
+
+	accountID, err := token.GetAccountID(bearerToken)
+	if err != nil {
+		return errors.Wrap(err, "get account id")
+	}
+
+	for _, space := range spaces {
+		if name == "" || name == space.Name {
+			if cluster != "" && cluster != space.Cluster.Name {
+				continue
+			}
+			if all == false && space.Owner.OwnerID != accountID {
+				continue
+			}
+
+			created, err := time.Parse(time.RFC3339, strings.Split(space.Created, ".")[0]+"Z")
+			if err != nil {
+				return err
+			}
+
+			if activeSpaceID != 0 {
+				values = append(values, []string{
+					strconv.Itoa(space.SpaceID),
+					space.Name,
+					space.Cluster.Name,
+					strconv.FormatBool(space.SpaceID == activeSpaceID),
+					created.String(),
+				})
+			} else {
+				values = append(values, []string{
+					strconv.Itoa(space.SpaceID),
+					space.Name,
+					space.Cluster.Name,
+					created.String(),
+				})
+			}
+		}
+	}
+
+	if len(values) > 0 {
+		log.PrintTable(log.GetInstance(), headerColumnNames, values)
+	} else {
+		log.Info("No spaces found")
+	}
+
+	return nil
+}
 
 // PrintToken prints and resumes a space if necessary
 func (p *provider) PrintToken(spaceID int) error {
