@@ -303,7 +303,7 @@ func getCloudRegistryHostname(cloudProvider *string) (string, error) {
 		registryURL = "dscr.io"
 	} else {
 		// Get default registry
-		provider, err := cloud.GetProvider(cloudProvider, log.GetInstance())
+		provider, err := cloud.GetProvider(ptr.ReverseString(cloudProvider), log.GetInstance())
 		if err != nil {
 			return "", errors.Errorf("Error login into cloud provider: %v", err)
 		}
@@ -321,37 +321,9 @@ func getCloudRegistryHostname(cloudProvider *string) (string, error) {
 }
 
 func loginDevSpaceCloud(cloudProvider string, log log.Logger) error {
-	// Get provider configuration
-	providerConfig, err := cloudconfig.ParseProviderConfig()
-	if err != nil {
-		return err
-	}
-
-	// Set default cloud provider, if none is provided
-	if cloudProvider == "" {
-		cloudProvider = cloudconfig.DevSpaceCloudProviderName
-	}
-
-	// Choose cloud provider
-	if providerConfig.Default != "" {
-		cloudProvider = providerConfig.Default
-	} else if len(providerConfig.Providers) > 1 {
-		options := []string{}
-		for _, provider := range providerConfig.Providers {
-			options = append(options, provider.Name)
-		}
-
-		cloudProvider, err = survey.Question(&survey.QuestionOptions{
-			Question: "Select a cloud provider",
-			Options:  options,
-		}, log)
-		if err != nil {
-			return err
-		}
-	}
-
 	// Ensure user is logged in
-	return cloud.EnsureLoggedIn(providerConfig, cloudProvider, log)
+	_, err := cloud.GetProvider(cloudProvider, log)
+	return err
 }
 
 // AddImage adds an image to the devspace

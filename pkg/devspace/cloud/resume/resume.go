@@ -48,7 +48,7 @@ func (r *resumer) ResumeSpace(loop bool) error {
 		return errors.Errorf("Unable to get Space ID for context '%s': %v", r.kubeClient.CurrentContext(), err)
 	}
 
-	p, err := cloud.GetProvider(&cloudProvider, r.log)
+	p, err := cloud.GetProvider(cloudProvider, r.log)
 	if err != nil {
 		return err
 	}

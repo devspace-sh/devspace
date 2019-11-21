@@ -59,19 +59,13 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Check if user has specified a certain provider
-	var cloudProvider *string
-	if cmd.Provider != "" {
-		cloudProvider = &cmd.Provider
-	}
-
 	logger := log.GetInstance()
 	if cmd.GetToken == true {
 		logger = log.Discard
 	}
 
 	// Get cloud provider from config
-	provider, err := cloud.GetProvider(cloudProvider, logger)
+	provider, err := cloud.GetProvider(cmd.Provider, logger)
 	if err != nil {
 		return errors.Wrap(err, "get provider")
 	}

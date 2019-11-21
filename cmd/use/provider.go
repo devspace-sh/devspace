@@ -53,8 +53,9 @@ func (*providerCmd) RunUseProvider(cobraCmd *cobra.Command, args []string) error
 		}
 
 		providerName, err = survey.Question(&survey.QuestionOptions{
-			Question: "Please select a default provider",
-			Options:  providerNames,
+			Question:     "Please select a default provider",
+			DefaultValue: providerConfig.Default,
+			Options:      providerNames,
 		}, log.GetInstance())
 		if err != nil {
 			return err

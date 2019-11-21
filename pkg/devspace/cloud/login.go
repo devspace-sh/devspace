@@ -2,12 +2,12 @@ package cloud
 
 import (
 	"context"
+	"io/ioutil"
 	"net/http"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/client"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
@@ -20,106 +20,47 @@ const LoginEndpoint = "/login?cli=true"
 // LoginSuccessEndpoint is the url redirected to after successful login
 const LoginSuccessEndpoint = "/login-success"
 
-// ReLogin loggs the user in with the given key or via browser
-func ReLogin(providerConfig *latest.Config, cloudProvider string, key *string, log log.Logger) error {
-	// Let's check if we are logged in first
-	p := config.GetProvider(providerConfig, cloudProvider)
-	if p == nil {
-		cloudProviders := ""
-		for _, p := range providerConfig.Providers {
-			cloudProviders += p.Name + " "
-		}
+// TokenEndpoint is the endpoint where to get a token from
+const TokenEndpoint = "/auth/token"
 
-		return errors.Errorf("Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: %s", cloudProviders)
+// GetToken returns a valid access token to the provider
+func (p *provider) GetToken() (string, error) {
+	if p.Key == "" {
+		return "", errors.New("Provider has no key specified")
+	}
+	if p.Token != "" && token.IsTokenValid(p.Token) {
+		return p.Token, nil
 	}
 
-	provider := &provider{
-		*p,
-		client.NewClient(p.Name, p.Host, p.Key, p.Token),
-		log,
-	}
-	if key != nil {
-		provider.Token = ""
-		provider.Key = *key
-
-		// Check if we got access
-		_, err := provider.client.GetSpaces()
-		if err != nil {
-			return errors.Errorf("Access denied for key %s: %v", *key, err)
-		}
-	} else {
-		provider.Token = ""
-		provider.Key = ""
-
-		err := provider.Login()
-		if err != nil {
-			return errors.Wrap(err, "Login")
-		}
-	}
-
-	log.Donef("Successfully logged into %s", provider.Name)
-
-	provider.client = client.NewClient(provider.Name, provider.Host, provider.Key, provider.Token)
-	// Login into registries
-	err := provider.loginIntoRegistries()
+	resp, err := http.Get(p.Host + TokenEndpoint + "?key=" + p.Key)
 	if err != nil {
-		log.Warnf("Error logging into docker registries: %v", err)
+		return "", errors.Wrap(err, "token request")
 	}
 
-	// Save config
-	err = provider.Save()
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return "", errors.Wrap(err, "read request body")
 	}
 
-	return nil
-}
-
-// EnsureLoggedIn checks if the user is logged into a certain cloud provider and if not loggs the user in
-func EnsureLoggedIn(providerConfig *latest.Config, cloudProvider string, log log.Logger) error {
-	// Let's check if we are logged in first
-	p := config.GetProvider(providerConfig, cloudProvider)
-	if p == nil {
-		cloudProviders := ""
-		for _, p := range providerConfig.Providers {
-			cloudProviders += p.Name + " "
-		}
-
-		return errors.Errorf("Cloud provider not found! Did you run `devspace add provider [url]`? Existing cloud providers: %s", cloudProviders)
+	if resp.StatusCode != http.StatusOK {
+		return "", errors.Errorf("Error retrieving token: Code %v => %s. Try to relogin with 'devspace login'", resp.StatusCode, string(body))
 	}
 
-	provider := &provider{
-		*p,
-		nil,
-		log,
-	}
-	if provider.Key == "" {
-		provider.Token = ""
-
-		err := provider.Login()
-		if err != nil {
-			return errors.Wrap(err, "ensure logged in")
-		}
-
-		log.Donef("Successfully logged into %s", provider.Name)
-
-		// Login into registries
-		err = provider.loginIntoRegistries()
-		if err != nil {
-			log.Warnf("Error logging into docker registries: %v", err)
-		}
-
-		err = provider.Save()
-		if err != nil {
-			return err
-		}
+	p.Token = string(body)
+	if token.IsTokenValid(p.Token) == false {
+		return "", errors.New("Received invalid token from provider")
 	}
 
-	return nil
+	err = p.Save()
+	if err != nil {
+		return "", errors.Wrap(err, "token save")
+	}
+
+	return p.Token, nil
 }
 
 // Login logs the user into DevSpace Cloud
-func (p *provider) Login() error {
+func (p *provider) Login(providerConfig *latest.Config) error {
 	var (
 		url        = p.Host + LoginEndpoint
 		ctx        = context.Background()
@@ -143,13 +84,7 @@ func (p *provider) Login() error {
 		key = strings.TrimSpace(key)
 
 		p.log.WriteString("\n")
-
-		providerConfig, err := config.ParseProviderConfig()
-		if err != nil {
-			return err
-		}
-
-		err = ReLogin(providerConfig, p.Name, &key, p.log)
+		_, err = GetProviderWithOptions(providerConfig, p.Name, key, true, p.log)
 		if err != nil {
 			return errors.Wrap(err, "login")
 		}

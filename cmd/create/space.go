@@ -56,14 +56,8 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) erro
 		return err
 	}
 
-	// Check if user has specified a certain provider
-	var cloudProvider *string
-	if cmd.Provider != "" {
-		cloudProvider = &cmd.Provider
-	}
-
 	// Get provider
-	provider, err := cloud.GetProvider(cloudProvider, log.GetInstance())
+	provider, err := cloud.GetProvider(cmd.Provider, log.GetInstance())
 	if err != nil {
 		return err
 	}

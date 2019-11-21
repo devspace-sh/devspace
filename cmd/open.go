@@ -12,8 +12,8 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -85,7 +85,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	var (
-		providerName             *string
+		providerName             string
 		provider                 cloud.Provider
 		space                    *cloudlatest.Space
 		domain                   string
@@ -144,8 +144,8 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	// Retrieve space
 	spaceID, currentContextProvider, err := kubeconfig.GetSpaceID(currentContext)
 	if err == nil { // Current kube-context is a Space
-		if providerName == nil {
-			providerName = &currentContextProvider
+		if providerName == "" {
+			providerName = currentContextProvider
 		}
 
 		// Get provider

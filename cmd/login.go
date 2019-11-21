@@ -58,12 +58,12 @@ func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	if cmd.Key != "" {
-		err = cloud.ReLogin(providerConfig, providerName, &cmd.Key, log.GetInstance())
+		_, err = cloud.GetProviderWithOptions(providerConfig, providerName, cmd.Key, true, log.GetInstance())
 		if err != nil {
 			return err
 		}
 	} else {
-		err = cloud.ReLogin(providerConfig, providerName, nil, log.GetInstance())
+		_, err = cloud.GetProviderWithOptions(providerConfig, providerName, "", true, log.GetInstance())
 		if err != nil {
 			return err
 		}
