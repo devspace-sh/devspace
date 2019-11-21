@@ -147,7 +147,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Get service account
-	serviceAccount, err := provider.Client().GetServiceAccount(key, space)
+	serviceAccount, err := provider.Client().GetServiceAccount(space, key)
 	if err != nil {
 		return errors.Errorf("Error retrieving space service account: %v", err)
 	}
@@ -170,7 +170,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Signal that we are working on the space if there is any
-	resumer := resume.NewResumer(client, log.GetInstance())
+	resumer := resume.NewSpaceResumer(client, log.GetInstance())
 	err = resumer.ResumeSpace(false)
 	if err != nil {
 		return err

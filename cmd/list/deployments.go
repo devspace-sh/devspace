@@ -88,7 +88,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	// Signal that we are working on the space if there is any
-	resumer := resume.NewResumer(client, log.GetInstance())
+	resumer := resume.NewSpaceResumer(client, log.GetInstance())
 	err = resumer.ResumeSpace(true)
 	if err != nil {
 		return err

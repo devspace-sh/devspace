@@ -104,7 +104,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) erro
 	}
 
 	// Create space
-	spaceID, err := provider.Client().CreateSpace(key, args[0], projectID, cluster)
+	spaceID, err := provider.Client().CreateSpace(args[0], key, projectID, cluster)
 	if err != nil {
 		return errors.Wrap(err, "create space")
 	}
@@ -116,7 +116,7 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) erro
 	}
 
 	// Get service account
-	serviceAccount, err := provider.Client().GetServiceAccount(key, space)
+	serviceAccount, err := provider.Client().GetServiceAccount(space, key)
 	if err != nil {
 		return errors.Wrap(err, "get serviceaccount")
 	}

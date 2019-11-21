@@ -12,8 +12,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-//Resumer can resume a space
-type Resumer interface {
+//SpaceResumer can resume a space
+type SpaceResumer interface {
 	ResumeSpace(loop bool) error
 }
 
@@ -22,8 +22,8 @@ type resumer struct {
 	log        log.Logger
 }
 
-// NewResumer creates a new instance of the interface Resumer
-func NewResumer(kubeClient kubectl.Client, log log.Logger) Resumer {
+// NewSpaceResumer creates a new instance of the interface SpaceResumer
+func NewSpaceResumer(kubeClient kubectl.Client, log log.Logger) SpaceResumer {
 	return &resumer{
 		kubeClient: kubeClient,
 		log:        log,
@@ -64,7 +64,7 @@ func (r *resumer) ResumeSpace(loop bool) error {
 		return errors.Wrap(err, "get cluster key")
 	}
 
-	resumed, err := p.Client().ResumeSpace(key, spaceID, space.Space.Cluster)
+	resumed, err := p.Client().ResumeSpace(spaceID, key, space.Space.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "resume space")
 	}
@@ -87,7 +87,7 @@ func (r *resumer) ResumeSpace(loop bool) error {
 		go func() {
 			for {
 				time.Sleep(time.Minute * 3)
-				p.Client().ResumeSpace(key, spaceID, space.Space.Cluster)
+				p.Client().ResumeSpace(spaceID, key, space.Space.Cluster)
 			}
 		}()
 	}

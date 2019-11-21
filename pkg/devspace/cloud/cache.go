@@ -85,7 +85,7 @@ func (p *provider) GetAndUpdateSpaceCache(spaceID int, forceUpdate bool) (*lates
 	}
 
 	// Get service account token
-	serviceAccount, err := p.client.GetServiceAccount(key, space)
+	serviceAccount, err := p.client.GetServiceAccount(space, key)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "get service account")
 	}

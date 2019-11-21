@@ -1,6 +1,6 @@
 package cmd
 
-import (
+/*import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -140,4 +140,4 @@ func testSync(t *testing.T, testCase syncTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-}
+}*/

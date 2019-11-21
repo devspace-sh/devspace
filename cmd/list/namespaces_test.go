@@ -1,6 +1,6 @@
 package list
 
-import (
+/*import (
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -161,4 +161,4 @@ func testNamespaces(t *testing.T, testCase namespacesTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-}
+}*/

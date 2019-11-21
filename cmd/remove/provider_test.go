@@ -1,6 +1,6 @@
 package remove
 
-import (
+/*import (
 	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
@@ -126,4 +126,4 @@ func testRunRemoveProvider(t *testing.T, testCase removeProviderTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-}
+}*/

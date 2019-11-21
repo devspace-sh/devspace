@@ -226,7 +226,7 @@ func (c *client) GetClusterUser(clusterID int) (*latest.ClusterUser, error) {
 }
 
 // GetServiceAccount returns a service account for a certain space
-func (c *client) GetServiceAccount(key string, space *latest.Space) (*latest.ServiceAccount, error) {
+func (c *client) GetServiceAccount(space *latest.Space, key string) (*latest.ServiceAccount, error) {
 	// Response struct
 	response := struct {
 		ServiceAccount *latest.ServiceAccount `json:"manager_serviceAccount"`
@@ -548,7 +548,7 @@ func (c *client) exchangeClusterName(cluster *latest.Cluster) error {
 }
 
 // VerifyKey verifies the given key for the given cluster
-func (c *client) VerifyKey(key string, clusterID int) (bool, error) {
+func (c *client) VerifyKey(clusterID int, key string) (bool, error) {
 	// Response struct
 	response := struct {
 		VerifyKey bool `json:"manager_verifyUserClusterKey"`

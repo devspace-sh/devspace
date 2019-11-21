@@ -7,7 +7,7 @@ import (
 )
 
 // UseDefaultClusterDomain resets the used clusterID
-func (c *client) UseDefaultClusterDomain(key string, clusterID int) (string, error) {
+func (c *client) UseDefaultClusterDomain(clusterID int, key string) (string, error) {
 	output := struct {
 		UseDefaultClusterDomain string `json:"manager_useDefaultClusterDomain"`
 	}{}
@@ -204,7 +204,7 @@ func (c *client) UpdateUserClusterUser(clusterUserID int, encryptedToken []byte)
 }
 
 // ResumeSpace resumes a space if its sleeping and sets the last activity to the current timestamp
-func (c *client) ResumeSpace(key string, spaceID int, cluster *latest.Cluster) (bool, error) {
+func (c *client) ResumeSpace(spaceID int, key string, cluster *latest.Cluster) (bool, error) {
 	// Do the request
 	response := &struct {
 		ResumeSpace bool `json:"manager_resumeSpace"`

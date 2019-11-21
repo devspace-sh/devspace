@@ -175,7 +175,7 @@ func (p *provider) ConnectCluster(options *ConnectClusterOptions) error {
 	if err != nil {
 		// Try to delete cluster if core initialization has failed
 		p.log.StartWait("Error happened. Rolling back")
-		p.client.DeleteCluster(options.Key, &latest.Cluster{ClusterID: clusterID}, false, false)
+		p.client.DeleteCluster(&latest.Cluster{ClusterID: clusterID}, options.Key, false, false)
 
 		return errors.Wrap(err, "initialize core")
 	}
@@ -280,7 +280,7 @@ func (p *provider) defaultClusterSpaceDomain(client kubectl.Client, useHostNetwo
 		}
 	}
 
-	useDefaultClusterDomain, err := p.client.UseDefaultClusterDomain(key, clusterID)
+	useDefaultClusterDomain, err := p.client.UseDefaultClusterDomain(clusterID, key)
 	if err != nil {
 		return errors.Wrap(err, "graphql client")
 	}

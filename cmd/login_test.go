@@ -1,6 +1,6 @@
 package cmd
 
-import (
+/*import (
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -137,4 +137,4 @@ func testLogin(t *testing.T, testCase loginTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-}
+}*/

@@ -86,7 +86,7 @@ func (c *client) CreateUserCluster(name, server, caCert, encryptedToken string, 
 }
 
 // CreateSpace creates a new space and returns the space id
-func (c *client) CreateSpace(key, name string, projectID int, cluster *latest.Cluster) (int, error) {
+func (c *client) CreateSpace(name, key string, projectID int, cluster *latest.Cluster) (int, error) {
 	// Response struct
 	response := struct {
 		CreateSpace *struct {
@@ -148,40 +148,4 @@ func (c *client) CreateProject(projectName string) (int, error) {
 	}
 
 	return response.CreateProject.ProjectID, nil
-}
-
-// CreateKubeContextDomainIngressPath creates an ingress path
-func (c *client) CreateKubeContextDomainIngressPath(key string, spaceID int, ingressName, host, newPath, serviceName, servicePort string) (bool, error) {
-	// Response struct
-	response := struct {
-		ManagerCreateIngressPath bool `json:"manager_createKubeContextDomainIngressPath"`
-	}{}
-
-	// Do the request
-	err := c.grapqhlRequest(`
-		mutation($spaceID: Int!, $ingressName: String!, $host: String!, $newPath: String!, $newServiceName: String!, $newServicePort: String!, $key: String) {
-			manager_createKubeContextDomainIngressPath(
-				spaceID: $spaceID,
-				key: $key,
-				ingressName: $ingressName,
-				host: $host,
-				newPath: $newPath,
-				newServiceName: $newServiceName,
-				newServicePort: $newServicePort,
-			)
-		}
-	`, map[string]interface{}{
-		"key":            key,
-		"spaceID":        spaceID,
-		"ingressName":    ingressName,
-		"host":           host,
-		"newPath":        newPath,
-		"newServiceName": serviceName,
-		"newServicePort": servicePort,
-	}, &response)
-	if err != nil {
-		return false, errors.Wrap(err, "graphql create ingress path")
-	}
-
-	return response.ManagerCreateIngressPath, nil
 }

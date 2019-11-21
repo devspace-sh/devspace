@@ -1,6 +1,6 @@
 package list
 
-import (
+/*import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -147,4 +147,4 @@ func testCommands(t *testing.T, testCase commandsTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-}
+}*/

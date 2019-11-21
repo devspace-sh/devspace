@@ -21,17 +21,17 @@ func (p *provider) GetClusterKey(cluster *latest.Cluster) (string, error) {
 				break
 			}
 		} else {
-			return p.AskForEncryptionKey(cluster)
+			return p.askForEncryptionKey(cluster)
 		}
 	}
 
 	// Verifies the cluster key
-	verified, err := p.client.VerifyKey(key, cluster.ClusterID)
+	verified, err := p.client.VerifyKey(cluster.ClusterID, key)
 	if err != nil {
 		return "", errors.Wrap(err, "verify key")
 	}
 	if verified == false {
-		return p.AskForEncryptionKey(cluster)
+		return p.askForEncryptionKey(cluster)
 	}
 
 	// Save the key if it was not there
@@ -51,8 +51,8 @@ func (p *provider) GetClusterKey(cluster *latest.Cluster) (string, error) {
 	return key, nil
 }
 
-// AskForEncryptionKey asks the user for his her encryption key and verifies that the key is correct
-func (p *provider) AskForEncryptionKey(cluster *latest.Cluster) (string, error) {
+// askForEncryptionKey asks the user for his her encryption key and verifies that the key is correct
+func (p *provider) askForEncryptionKey(cluster *latest.Cluster) (string, error) {
 	p.log.StopWait()
 
 	// Wait till user enters the correct key
@@ -72,7 +72,7 @@ func (p *provider) AskForEncryptionKey(cluster *latest.Cluster) (string, error) 
 			return "", errors.Wrap(err, "hash key")
 		}
 
-		verified, err := p.client.VerifyKey(hashedKey, cluster.ClusterID)
+		verified, err := p.client.VerifyKey(cluster.ClusterID, hashedKey)
 		if err != nil {
 			return "", errors.Wrap(err, "verify key")
 		}

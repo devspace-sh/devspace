@@ -5,7 +5,7 @@ import (
 )
 
 // DeleteCluster deletes an cluster
-func (c *client) DeleteCluster(key string, cluster *latest.Cluster, deleteServices, deleteKubeContexts bool) error {
+func (c *client) DeleteCluster(cluster *latest.Cluster, key string, deleteServices, deleteKubeContexts bool) error {
 	err := c.grapqhlRequest(`
 		mutation($key:String!,$clusterID:Int!,$deleteServices:Boolean!,$deleteKubeContexts:Boolean!){
 			manager_deleteCluster(
@@ -31,7 +31,7 @@ func (c *client) DeleteCluster(key string, cluster *latest.Cluster, deleteServic
 }
 
 // DeleteSpace deletes a space with the given id
-func (c *client) DeleteSpace(key string, space *latest.Space) (bool, error) {
+func (c *client) DeleteSpace(space *latest.Space, key string) (bool, error) {
 	// Response struct
 	response := struct {
 		ManagerDeleteSpace bool `json:"manager_deleteSpace"`

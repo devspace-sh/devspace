@@ -17,28 +17,27 @@ const graphqlEndpoint = "/graphql"
 type Client interface {
 	CreatePublicCluster(name, server, caCert, adminToken string) (int, error)
 	CreateUserCluster(name, server, caCert, encryptedToken string, networkPolicyEnabled bool) (int, error)
-	CreateSpace(key, name string, projectID int, cluster *latest.Cluster) (int, error)
+	CreateSpace(name, key string, projectID int, cluster *latest.Cluster) (int, error)
 	CreateProject(projectName string) (int, error)
-	CreateKubeContextDomainIngressPath(key string, spaceID int, ingressName, host, newPath, serviceName string, servicePort string) (bool, error)
 
-	DeleteCluster(key string, cluster *latest.Cluster, deleteServices, deleteKubeContexts bool) error
-	DeleteSpace(key string, space *latest.Space) (bool, error)
+	DeleteCluster(cluster *latest.Cluster, key string, deleteServices, deleteKubeContexts bool) error
+	DeleteSpace(space *latest.Space, key string) (bool, error)
 
 	GetRegistries() ([]*latest.Registry, error)
 	GetClusterByName(clusterName string) (*latest.Cluster, error)
 	GetClusters() ([]*latest.Cluster, error)
 	GetProjects() ([]*latest.Project, error)
 	GetClusterUser(clusterID int) (*latest.ClusterUser, error)
-	GetServiceAccount(key string, space *latest.Space) (*latest.ServiceAccount, error)
+	GetServiceAccount(space *latest.Space, key string) (*latest.ServiceAccount, error)
 	GetSpaces() ([]*latest.Space, error)
 	GetSpace(spaceID int) (*latest.Space, error)
 	GetSpaceByName(spaceName string) (*latest.Space, error)
-	VerifyKey(key string, clusterID int) (bool, error)
+	VerifyKey(clusterID int, key string) (bool, error)
 	Settings(encryptToken string) ([]Setting, error)
 
 	GetToken() (string, error)
 
-	UseDefaultClusterDomain(key string, clusterID int) (string, error)
+	UseDefaultClusterDomain(clusterID int, key string) (string, error)
 	UpdateClusterDomain(clusterID int, domain string) error
 	DeployIngressController(clusterID int, key string, useHostNetwork bool) error
 	DeployAdmissionController(clusterID int, key string) error
@@ -47,7 +46,7 @@ type Client interface {
 	DeployCertManager(clusterID int, key string) error
 	InitCore(clusterID int, key string, enablePodPolicy bool) error
 	UpdateUserClusterUser(clusterUserID int, encryptedToken []byte) error
-	ResumeSpace(key string, spaceID int, cluster *latest.Cluster) (bool, error)
+	ResumeSpace(spaceID int, key string, cluster *latest.Cluster) (bool, error)
 }
 
 // client is the default implementation of Client

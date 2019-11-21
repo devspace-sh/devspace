@@ -76,7 +76,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 				return errors.Wrap(err, "get cluster key")
 			}
 
-			managerDeleteSpace, err := provider.Client().DeleteSpace(key, space)
+			managerDeleteSpace, err := provider.Client().DeleteSpace(space, key)
 			if err != nil {
 				return err
 			}
@@ -128,7 +128,7 @@ func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []stri
 	if err != nil {
 		return errors.Wrap(err, "get cluster key")
 	}
-	managerDeleteSpace, err := provider.Client().DeleteSpace(key, space)
+	managerDeleteSpace, err := provider.Client().DeleteSpace(space, key)
 	if err != nil {
 		return errors.Wrap(err, "delete space")
 	}

@@ -100,7 +100,7 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Signal that we are working on the space if there is any
-	resumer := resume.NewResumer(client, log.GetInstance())
+	resumer := resume.NewSpaceResumer(client, log.GetInstance())
 	err = resumer.ResumeSpace(true)
 	if err != nil {
 		return err

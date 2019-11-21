@@ -21,7 +21,6 @@ type Provider interface {
 	DeleteKubeContext(space *latest.Space) error
 
 	GetClusterKey(cluster *latest.Cluster) (string, error)
-	AskForEncryptionKey(cluster *latest.Cluster) (string, error)
 
 	PrintToken(spaceID int) error
 	PrintSpaces(cluster, name string, all bool) error

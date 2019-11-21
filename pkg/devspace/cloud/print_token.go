@@ -19,7 +19,7 @@ func (p *provider) PrintToken(spaceID int) error {
 	}
 
 	if wasUpdated == false && time.Unix(space.LastResume, 0).Add(time.Minute*3).Before(time.Now()) == false {
-		err := p.printToken(space.ServiceAccount.Token)
+		err := printToken(space.ServiceAccount.Token)
 		if err != nil {
 			return err
 		}
@@ -41,7 +41,7 @@ func (p *provider) PrintToken(spaceID int) error {
 	_ = p.Save()
 
 	// Print token and return
-	return p.printToken(space.ServiceAccount.Token)
+	return printToken(space.ServiceAccount.Token)
 }
 
 func (p *provider) resume(server, caCert, token, namespace string, spaceID int, cluster *latest.Cluster) error {
@@ -52,7 +52,7 @@ func (p *provider) resume(server, caCert, token, namespace string, spaceID int, 
 	}
 
 	// Resume space
-	resumed, err := p.client.ResumeSpace(key, spaceID, cluster)
+	resumed, err := p.client.ResumeSpace(spaceID, key, cluster)
 	if err != nil {
 		// We ignore the error here, because we don't want kubectl or other commands to fail if we have an outage
 		// return err
@@ -67,7 +67,7 @@ func (p *provider) resume(server, caCert, token, namespace string, spaceID int, 
 	return nil
 }
 
-func (p *provider) printToken(token string) error {
+func printToken(token string) error {
 	// Print token to stdout
 	expireTime := metav1.NewTime(time.Now().Add(time.Hour))
 	response := &v1alpha1.ExecCredential{
