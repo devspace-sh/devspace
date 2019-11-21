@@ -57,7 +57,7 @@ While initializing your project, DevSpace will ask you a couple of questions and
 
 ```yaml
 # Config version
-version: v1beta3
+version: v1beta5
 
 # Defines all Dockerfiles that DevSpace will build, tag and push
 images:
