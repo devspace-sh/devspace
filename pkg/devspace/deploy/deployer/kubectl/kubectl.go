@@ -9,8 +9,8 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 
@@ -35,7 +35,7 @@ type DeployConfig struct {
 }
 
 // New creates a new deploy config for kubectl
-func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (*DeployConfig, error) {
+func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (deployer.Interface, error) {
 	if deployConfig.Kubectl == nil {
 		return nil, errors.New("Error creating kubectl deploy config: kubectl is nil")
 	}
@@ -78,14 +78,14 @@ func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.
 }
 
 // Status prints the status of all matched manifests from kubernetes
-func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
+func (d *DeployConfig) Status() (*deployer.StatusResult, error) {
 	// TODO: parse kubectl get output into the required string array
 	manifests := strings.Join(d.Manifests, ",")
 	if len(manifests) > 20 {
 		manifests = manifests[:20] + "..."
 	}
 
-	return &deploy.StatusResult{
+	return &deployer.StatusResult{
 		Name:   d.Name,
 		Type:   "Manifests",
 		Target: manifests,

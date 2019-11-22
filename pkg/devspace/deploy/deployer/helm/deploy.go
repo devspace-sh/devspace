@@ -9,8 +9,8 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm/merge"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/helm/merge"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	hashpkg "github.com/devspace-cloud/devspace/pkg/util/hash"

@@ -31,7 +31,7 @@ type Options struct {
 
 // Controller is the main building interface
 type Controller interface {
-	BuildAll(options *Options, log logpkg.Logger) (map[string]string, error)
+	Build(options *Options, log logpkg.Logger) (map[string]string, error)
 }
 
 type controller struct {
@@ -54,7 +54,7 @@ func NewController(config *latest.Config, cache *generated.CacheConfig, client k
 }
 
 // All builds all images
-func (c *controller) BuildAll(options *Options, log logpkg.Logger) (map[string]string, error) {
+func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]string, error) {
 	var (
 		builtImages = make(map[string]string)
 

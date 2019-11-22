@@ -1,4 +1,4 @@
-package deploy
+package deployer
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"

@@ -4,7 +4,7 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
-	deployUtil "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -98,7 +98,10 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 			return nil
 		}
 
-		deployUtil.PurgeDeployments(config, generatedConfig.GetActive(), client, deployments, log.GetInstance())
+		err = deploy.NewController(config, generatedConfig.GetActive(), client).Purge(deployments, log.GetInstance())
+		if err != nil {
+			log.Errorf("Error purging deployments: %v", err)
+		}
 
 		err = configLoader.SaveGenerated(generatedConfig)
 		if err != nil {

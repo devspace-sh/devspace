@@ -7,7 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
-	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -93,8 +93,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Signal that we are working on the space if there is any
-	resumer := resume.NewSpaceResumer(client, log.GetInstance())
-	err = resumer.ResumeSpace(true)
+	err = resume.NewSpaceResumer(client, log.GetInstance()).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
@@ -114,7 +113,10 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Purge deployments
-	deploy.PurgeDeployments(config, generatedConfig.GetActive(), client, deployments, log.GetInstance())
+	err = deploy.NewController(config, generatedConfig.GetActive(), client).Purge(deployments, log.GetInstance())
+	if err != nil {
+		log.Errorf("Error purging deployments: %v", err)
+	}
 
 	// Purge dependencies
 	if cmd.PurgeDependencies {

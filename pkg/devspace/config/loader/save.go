@@ -6,7 +6,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"

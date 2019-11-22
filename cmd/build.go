@@ -112,7 +112,7 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Build images if necessary
-	builtImages, err := build.NewController(config, generatedConfig.GetActive(), nil).BuildAll(&build.Options{
+	builtImages, err := build.NewController(config, generatedConfig.GetActive(), nil).Build(&build.Options{
 		SkipPush:     cmd.SkipPush,
 		IsDev:        true,
 		ForceRebuild: cmd.ForceBuild,

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 )
 
 // Status gets the status of the deployment
-func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
+func (d *DeployConfig) Status() (*deployer.StatusResult, error) {
 	var (
 		deployTargetStr = d.getDeployTarget()
 		err             error
@@ -26,7 +26,7 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 	// Get all releases
 	releases, err := d.Helm.ListReleases()
 	if err != nil {
-		return &deploy.StatusResult{
+		return &deployer.StatusResult{
 			Name:   d.DeploymentConfig.Name,
 			Type:   "Helm",
 			Target: deployTargetStr,
@@ -35,7 +35,7 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 	}
 
 	if releases == nil || len(releases) == 0 {
-		return &deploy.StatusResult{
+		return &deployer.StatusResult{
 			Name:   d.DeploymentConfig.Name,
 			Type:   "Helm",
 			Target: deployTargetStr,
@@ -46,7 +46,7 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 	for _, release := range releases {
 		if release.Name == d.DeploymentConfig.Name {
 			if release.Status != "DEPLOYED" {
-				return &deploy.StatusResult{
+				return &deployer.StatusResult{
 					Name:   d.DeploymentConfig.Name,
 					Type:   "Helm",
 					Target: deployTargetStr,
@@ -54,7 +54,7 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 				}, nil
 			}
 
-			return &deploy.StatusResult{
+			return &deployer.StatusResult{
 				Name:   d.DeploymentConfig.Name,
 				Type:   "Helm",
 				Target: deployTargetStr,
@@ -63,7 +63,7 @@ func (d *DeployConfig) Status() (*deploy.StatusResult, error) {
 		}
 	}
 
-	return &deploy.StatusResult{
+	return &deployer.StatusResult{
 		Name:   d.DeploymentConfig.Name,
 		Type:   "Helm",
 		Target: deployTargetStr,

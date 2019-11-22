@@ -5,34 +5,68 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/helm"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/helm"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl"
 	helmclient "github.com/devspace-cloud/devspace/pkg/devspace/helm"
 	helmtypes "github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
+	kubectlclient "github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	kubectlpkg "github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
 )
 
-// All deploys all deployments in the config
-func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.Client, isDev, forceDeploy bool, builtImages map[string]string, deployments []string, log log.Logger) error {
-	if config.Deployments != nil && len(config.Deployments) > 0 {
+// Options describe how the deployments should be deployed
+type Options struct {
+	IsDev       bool
+	ForceDeploy bool
+	BuiltImages map[string]string
+	Deployments []string
+}
+
+// Controller is the main deploying interface
+type Controller interface {
+	Deploy(options *Options, log log.Logger) error
+	Purge(deployments []string, log log.Logger) error
+}
+
+type controller struct {
+	config *latest.Config
+	cache  *generated.CacheConfig
+
+	hookExecuter hook.Executer
+	client       kubectlclient.Client
+}
+
+// NewController creates a new image build controller
+func NewController(config *latest.Config, cache *generated.CacheConfig, client kubectlclient.Client) Controller {
+	return &controller{
+		config: config,
+		cache:  cache,
+
+		hookExecuter: hook.NewExecuter(config),
+		client:       client,
+	}
+}
+
+// DeployAll deploys all deployments in the config
+func (c *controller) Deploy(options *Options, log log.Logger) error {
+	if c.config.Deployments != nil && len(c.config.Deployments) > 0 {
 		helmV2Clients := map[string]helmtypes.Client{}
-		executer := hook.NewExecuter(config)
+
 		// Execute before deployments deploy hook
-		err := executer.Execute(hook.Before, hook.StageDeployments, hook.All, log)
+		err := c.hookExecuter.Execute(hook.Before, hook.StageDeployments, hook.All, log)
 		if err != nil {
 			return err
 		}
 
-		for _, deployConfig := range config.Deployments {
-			if len(deployments) > 0 {
+		for _, deployConfig := range c.config.Deployments {
+			if len(options.Deployments) > 0 {
 				shouldSkip := true
 
-				for _, deployment := range deployments {
+				for _, deployment := range options.Deployments {
 					if deployment == strings.TrimSpace(deployConfig.Name) {
 						shouldSkip = false
 						break
@@ -45,13 +79,13 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.
 			}
 
 			var (
-				deployClient deploy.Interface
+				deployClient deployer.Interface
 				err          error
 				method       string
 			)
 
 			if deployConfig.Kubectl != nil {
-				deployClient, err = kubectl.New(config, client, deployConfig, log)
+				deployClient, err = kubectl.New(c.config, c.client, deployConfig, log)
 				if err != nil {
 					return errors.Errorf("Error deploying devspace: deployment %s error: %v", deployConfig.Name, err)
 				}
@@ -59,12 +93,12 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.
 				method = "kubectl"
 			} else if deployConfig.Helm != nil {
 				// Get helm client
-				helmClient, err := GetCachedHelmClient(config, deployConfig, client, helmV2Clients, log)
+				helmClient, err := GetCachedHelmClient(c.config, deployConfig, c.client, helmV2Clients, log)
 				if err != nil {
 					return err
 				}
 
-				deployClient, err = helm.New(config, helmClient, client, deployConfig, log)
+				deployClient, err = helm.New(c.config, helmClient, c.client, deployConfig, log)
 				if err != nil {
 					return errors.Errorf("Error deploying devspace: deployment %s error: %v", deployConfig.Name, err)
 				}
@@ -75,12 +109,12 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.
 			}
 
 			// Execute before deploment deploy hook
-			err = executer.Execute(hook.Before, hook.StageDeployments, deployConfig.Name, log)
+			err = c.hookExecuter.Execute(hook.Before, hook.StageDeployments, deployConfig.Name, log)
 			if err != nil {
 				return err
 			}
 
-			wasDeployed, err := deployClient.Deploy(cache, forceDeploy, builtImages)
+			wasDeployed, err := deployClient.Deploy(c.cache, options.ForceDeploy, options.BuiltImages)
 			if err != nil {
 				return errors.Errorf("Error deploying %s: %v", deployConfig.Name, err)
 			}
@@ -89,7 +123,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.
 				log.Donef("Successfully deployed %s with %s", deployConfig.Name, method)
 
 				// Execute after deploment deploy hook
-				err = executer.Execute(hook.After, hook.StageDeployments, deployConfig.Name, log)
+				err = c.hookExecuter.Execute(hook.After, hook.StageDeployments, deployConfig.Name, log)
 				if err != nil {
 					return err
 				}
@@ -99,7 +133,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.
 		}
 
 		// Execute after deployments deploy hook
-		err = executer.Execute(hook.After, hook.StageDeployments, hook.All, log)
+		err = c.hookExecuter.Execute(hook.After, hook.StageDeployments, hook.All, log)
 		if err != nil {
 			return err
 		}
@@ -108,21 +142,21 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.
 	return nil
 }
 
-// PurgeDeployments removes all deployments or a set of deployments from the cluster
-func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.Client, deployments []string, log log.Logger) {
+// Purge removes all deployments or a set of deployments from the cluster
+func (c *controller) Purge(deployments []string, log log.Logger) error {
 	if deployments != nil && len(deployments) == 0 {
 		deployments = nil
 	}
 
-	if config.Deployments != nil {
+	if c.config.Deployments != nil {
 		helmV2Clients := map[string]helmtypes.Client{}
 
 		// Reverse them
-		for i := len(config.Deployments) - 1; i >= 0; i-- {
+		for i := len(c.config.Deployments) - 1; i >= 0; i-- {
 			var (
 				err          error
-				deployClient deploy.Interface
-				deployConfig = (config.Deployments)[i]
+				deployClient deployer.Interface
+				deployConfig = (c.config.Deployments)[i]
 			)
 
 			// Check if we should skip deleting deployment
@@ -143,27 +177,24 @@ func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, clien
 
 			// Delete kubectl engine
 			if deployConfig.Kubectl != nil {
-				deployClient, err = kubectl.New(config, client, deployConfig, log)
+				deployClient, err = kubectl.New(c.config, c.client, deployConfig, log)
 				if err != nil {
-					log.Warnf("Unable to create kubectl deploy config: %v", err)
-					continue
+					return errors.Wrap(err, "create kube client")
 				}
 			} else if deployConfig.Helm != nil {
-				helmClient, err := GetCachedHelmClient(config, deployConfig, client, helmV2Clients, log)
+				helmClient, err := GetCachedHelmClient(c.config, deployConfig, c.client, helmV2Clients, log)
 				if err != nil {
-					log.Warnf("Unable to delete helm deployment: %v", err)
-					continue
+					return errors.Wrap(err, "get cached helm client")
 				}
 
-				deployClient, err = helm.New(config, helmClient, client, deployConfig, log)
+				deployClient, err = helm.New(c.config, helmClient, c.client, deployConfig, log)
 				if err != nil {
-					log.Warnf("Unable to create helm deploy config: %v", err)
-					continue
+					return errors.Wrap(err, "create helm client")
 				}
 			}
 
 			log.StartWait("Deleting deployment " + deployConfig.Name)
-			err = deployClient.Delete(cache)
+			err = deployClient.Delete(c.cache)
 			log.StopWait()
 			if err != nil {
 				log.Warnf("Error deleting deployment %s: %v", deployConfig.Name, err)
@@ -172,6 +203,8 @@ func PurgeDeployments(config *latest.Config, cache *generated.CacheConfig, clien
 			log.Donef("Successfully deleted deployment %s", deployConfig.Name)
 		}
 	}
+
+	return nil
 }
 
 // GetCachedHelmClient returns a helm client that could be cached in a helmV2Clients map. If not found it will add it to the map and create it

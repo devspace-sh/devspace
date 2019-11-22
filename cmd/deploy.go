@@ -10,7 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
-	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
@@ -178,7 +178,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Build images
 	builtImages := make(map[string]string)
 	if cmd.SkipBuild == false {
-		builtImages, err = build.NewController(config, generatedConfig.GetActive(), client).BuildAll(&build.Options{
+		builtImages, err = build.NewController(config, generatedConfig.GetActive(), client).Build(&build.Options{
 			SkipPush:     cmd.SkipPush,
 			ForceRebuild: cmd.ForceBuild,
 			Sequential:   cmd.BuildSequential,
@@ -210,7 +210,11 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Deploy all defined deployments
-	err = deploy.All(config, generatedConfig.GetActive(), client, false, cmd.ForceDeploy, builtImages, deployments, log.GetInstance())
+	err = deploy.NewController(config, generatedConfig.GetActive(), client).Deploy(&deploy.Options{
+		ForceDeploy: cmd.ForceDeploy,
+		BuiltImages: builtImages,
+		Deployments: deployments,
+	}, log.GetInstance())
 	if err != nil {
 		return err
 	}

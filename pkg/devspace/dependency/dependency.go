@@ -9,7 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
@@ -246,9 +246,10 @@ type Dependency struct {
 	DependencyConfig *latest.DependencyConfig
 	DependencyCache  *generated.Config
 
-	kubeClient      kubectl.Client
-	buildController build.Controller
-	generatedSaver  generated.ConfigLoader
+	kubeClient       kubectl.Client
+	buildController  build.Controller
+	deployController deploy.Controller
+	generatedSaver   generated.ConfigLoader
 }
 
 // Build builds and pushes all defined images
@@ -284,7 +285,7 @@ func (d *Dependency) Build(skipPush, forceDependencies, forceBuild bool, log log
 	builtImages := make(map[string]string)
 	if d.DependencyConfig.SkipBuild == nil || *d.DependencyConfig.SkipBuild == false {
 		// Build images
-		builtImages, err = d.buildController.BuildAll(&build.Options{
+		builtImages, err = d.buildController.Build(&build.Options{
 			SkipPush:     skipPush,
 			ForceRebuild: forceBuild,
 		}, log)
@@ -357,7 +358,7 @@ func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, 
 	builtImages := make(map[string]string)
 	if skipBuild == false && (d.DependencyConfig.SkipBuild == nil || *d.DependencyConfig.SkipBuild == false) {
 		// Build images
-		builtImages, err = d.buildController.BuildAll(&build.Options{
+		builtImages, err = d.buildController.Build(&build.Options{
 			SkipPush:     skipPush,
 			ForceRebuild: forceBuild,
 		}, log)
@@ -375,7 +376,10 @@ func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, 
 	}
 
 	// Deploy all defined deployments
-	err = deploy.All(d.Config, d.GeneratedConfig.GetActive(), d.kubeClient, false, forceDeploy, builtImages, nil, log)
+	err = d.deployController.Deploy(&deploy.Options{
+		ForceDeploy: forceDeploy,
+		BuiltImages: builtImages,
+	}, log)
 	if err != nil {
 		return err
 	}
@@ -409,7 +413,10 @@ func (d *Dependency) Purge(log log.Logger) error {
 	}()
 
 	// Purge the deployments
-	deploy.PurgeDeployments(d.Config, d.GeneratedConfig.GetActive(), d.kubeClient, nil, log)
+	err = d.deployController.Purge(nil, log)
+	if err != nil {
+		log.Errorf("Error purging dependency %s: %v", d.ID, err)
+	}
 
 	err = d.generatedSaver.Save(d.GeneratedConfig)
 	if err != nil {

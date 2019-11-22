@@ -11,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 
 	"github.com/devspace-cloud/devspace/pkg/util/git"
@@ -288,9 +289,11 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		DependencyConfig: dependency,
 		DependencyCache:  r.BaseCache,
 
-		kubeClient:      client,
-		buildController: build.NewController(dConfig, dGeneratedConfig.GetActive(), client),
-		generatedSaver:  gLoader,
+		kubeClient: client,
+
+		buildController:  build.NewController(dConfig, dGeneratedConfig.GetActive(), client),
+		deployController: deploy.NewController(dConfig, dGeneratedConfig.GetActive(), client),
+		generatedSaver:   gLoader,
 	}, nil
 }
 

@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"

@@ -3,10 +3,10 @@ package build
 import (
 	"context"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder/custom"
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder/kaniko"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/custom"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/kaniko"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"

@@ -10,7 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
-	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/server"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
@@ -237,7 +237,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 		// Build image if necessary
 		builtImages := make(map[string]string)
 		if cmd.SkipBuild == false {
-			builtImages, err = build.NewController(config, generatedConfig.GetActive(), client).BuildAll(&build.Options{
+			builtImages, err = build.NewController(config, generatedConfig.GetActive(), client).Build(&build.Options{
 				SkipPush:                 cmd.SkipPush,
 				IsDev:                    true,
 				ForceRebuild:             cmd.ForceBuild,
@@ -273,7 +273,12 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 			}
 
 			// Deploy all
-			err = deploy.All(config, generatedConfig.GetActive(), client, true, cmd.ForceDeploy, builtImages, deployments, log.GetInstance())
+			err = deploy.NewController(config, generatedConfig.GetActive(), client).Deploy(&deploy.Options{
+				IsDev:       true,
+				ForceDeploy: cmd.ForceDeploy,
+				BuiltImages: builtImages,
+				Deployments: deployments,
+			}, log.GetInstance())
 			if err != nil {
 				return 0, errors.Errorf("Error deploying: %v", err)
 			}
@@ -336,7 +341,6 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	}
 
 	servicesClient := services.NewClient(config, generatedConfig, client, selectorParameter, log)
-
 	if cmd.Portforwarding {
 		portForwarder, err := servicesClient.StartPortForwarding()
 		if err != nil {
