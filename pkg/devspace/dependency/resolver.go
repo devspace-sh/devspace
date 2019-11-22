@@ -6,10 +6,13 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+
 	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -45,15 +48,15 @@ type resolver struct {
 	BaseCache  *generated.Config
 
 	ConfigOptions *loader.ConfigOptions
+	AllowCyclic   bool
 
-	AllowCyclic bool
-
+	client         kubectl.Client
 	generatedSaver generated.ConfigLoader
-	log log.Logger
+	log            log.Logger
 }
 
 // NewResolver creates a new resolver for resolving dependencies
-func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, allowCyclic bool, configOptions *loader.ConfigOptions, log log.Logger) (ResolverInterface, error) {
+func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, log log.Logger) (ResolverInterface, error) {
 	var id string
 
 	basePath, err := filepath.Abs(".")
@@ -79,7 +82,8 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, allowCy
 
 		// We only need that for saving
 		generatedSaver: generated.NewConfigLoader(""),
-		log: log,
+		client:         client,
+		log:            log,
 	}, nil
 }
 
@@ -265,6 +269,15 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	dGeneratedConfig.ActiveProfile = dependency.Profile
 	generated.InitDevSpaceConfig(dGeneratedConfig, dependency.Profile)
 
+	// Recreate client if necessary
+	client := r.client
+	if dependency.Namespace != "" {
+		client, err = kubectl.NewClientFromContext(client.CurrentContext(), dependency.Namespace, false)
+		if err != nil {
+			return nil, errors.Wrap(err, "create new client")
+		}
+	}
+
 	return &Dependency{
 		ID:        ID,
 		LocalPath: localPath,
@@ -275,7 +288,9 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		DependencyConfig: dependency,
 		DependencyCache:  r.BaseCache,
 
-		generatedSaver: gLoader,
+		kubeClient:      client,
+		buildController: build.NewController(dConfig, dGeneratedConfig.GetActive(), client),
+		generatedSaver:  gLoader,
 	}, nil
 }
 

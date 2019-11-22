@@ -133,8 +133,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Signal that we are working on the space if there is any
-	resumer := resume.NewSpaceResumer(client, log.GetInstance())
-	err = resumer.ResumeSpace(true)
+	err = resume.NewSpaceResumer(client, log.GetInstance()).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
@@ -152,8 +151,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Create pull secrets and private registry if necessary
-	registryClient := registry.NewClient(config, client, dockerClient, log.GetInstance())
-	err = registryClient.CreatePullSecrets()
+	err = registry.NewClient(config, client, dockerClient, log.GetInstance()).CreatePullSecrets()
 	if err != nil {
 		return err
 	}
@@ -180,7 +178,11 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Build images
 	builtImages := make(map[string]string)
 	if cmd.SkipBuild == false {
-		builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, false, cmd.ForceBuild, cmd.BuildSequential, false, log.GetInstance())
+		builtImages, err = build.NewController(config, generatedConfig.GetActive(), client).BuildAll(&build.Options{
+			SkipPush:     cmd.SkipPush,
+			ForceRebuild: cmd.ForceBuild,
+			Sequential:   cmd.BuildSequential,
+		}, log.GetInstance())
 		if err != nil {
 			if strings.Index(err.Error(), "no space left on device") != -1 {
 				err = errors.Errorf("%v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))

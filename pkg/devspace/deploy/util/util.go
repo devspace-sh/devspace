@@ -21,9 +21,9 @@ import (
 func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.Client, isDev, forceDeploy bool, builtImages map[string]string, deployments []string, log log.Logger) error {
 	if config.Deployments != nil && len(config.Deployments) > 0 {
 		helmV2Clients := map[string]helmtypes.Client{}
-		executer := hook.NewExecuter(config, log)
+		executer := hook.NewExecuter(config)
 		// Execute before deployments deploy hook
-		err := executer.Execute(hook.Before, hook.StageDeployments, hook.All)
+		err := executer.Execute(hook.Before, hook.StageDeployments, hook.All, log)
 		if err != nil {
 			return err
 		}
@@ -75,7 +75,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.
 			}
 
 			// Execute before deploment deploy hook
-			err = executer.Execute(hook.Before, hook.StageDeployments, deployConfig.Name)
+			err = executer.Execute(hook.Before, hook.StageDeployments, deployConfig.Name, log)
 			if err != nil {
 				return err
 			}
@@ -89,7 +89,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.
 				log.Donef("Successfully deployed %s with %s", deployConfig.Name, method)
 
 				// Execute after deploment deploy hook
-				err = executer.Execute(hook.After, hook.StageDeployments, deployConfig.Name)
+				err = executer.Execute(hook.After, hook.StageDeployments, deployConfig.Name, log)
 				if err != nil {
 					return err
 				}
@@ -99,7 +99,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectlpkg.
 		}
 
 		// Execute after deployments deploy hook
-		err = executer.Execute(hook.After, hook.StageDeployments, hook.All)
+		err = executer.Execute(hook.After, hook.StageDeployments, hook.All, log)
 		if err != nil {
 			return err
 		}

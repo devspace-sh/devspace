@@ -112,7 +112,12 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Build images if necessary
-	builtImages, err := build.All(config, generatedConfig.GetActive(), nil, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, false, log.GetInstance())
+	builtImages, err := build.NewController(config, generatedConfig.GetActive(), nil).BuildAll(&build.Options{
+		SkipPush:     cmd.SkipPush,
+		IsDev:        true,
+		ForceRebuild: cmd.ForceBuild,
+		Sequential:   cmd.BuildSequential,
+	}, log.GetInstance())
 	if err != nil {
 		if strings.Index(err.Error(), "no space left on device") != -1 {
 			return errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))

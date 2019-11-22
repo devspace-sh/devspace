@@ -10,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
@@ -50,7 +51,7 @@ type Builder struct {
 const waitTimeout = 2 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(config *latest.Config, dockerClient docker.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (*Builder, error) {
+func NewBuilder(config *latest.Config, dockerClient docker.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (builder.Interface, error) {
 	buildNamespace := kubeClient.Namespace()
 	if imageConf.Build.Kaniko.Namespace != "" {
 		buildNamespace = imageConf.Build.Kaniko.Namespace

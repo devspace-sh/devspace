@@ -237,7 +237,13 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 		// Build image if necessary
 		builtImages := make(map[string]string)
 		if cmd.SkipBuild == false {
-			builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, skipBuildIfAlreadyBuilt, log.GetInstance())
+			builtImages, err = build.NewController(config, generatedConfig.GetActive(), client).BuildAll(&build.Options{
+				SkipPush:                 cmd.SkipPush,
+				IsDev:                    true,
+				ForceRebuild:             cmd.ForceBuild,
+				Sequential:               cmd.BuildSequential,
+				IgnoreContextPathChanges: skipBuildIfAlreadyBuilt,
+			}, log.GetInstance())
 			if err != nil {
 				if strings.Index(err.Error(), "no space left on device") != -1 {
 					return 0, errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
