@@ -2,8 +2,8 @@ package list
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -70,7 +70,7 @@ func (cmd *commandsCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) 
 	}
 
 	// Parse commands
-	commands, err := loader.ParseCommands(generatedConfig, rawMap, nil, log.GetInstance())
+	commands, err := configLoader.ParseCommands(generatedConfig, rawMap)
 	if err != nil {
 		return err
 	}

@@ -42,7 +42,8 @@ Deletes all locally created docker images from docker
 // RunCleanupImages executes the cleanup images command logic
 func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	log := log.GetInstance()
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -61,7 +62,7 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) e
 	}
 
 	// Create docker client
-	client, err := docker.NewClientWithMinikube(kubeContext, true, log.GetInstance())
+	client, err := docker.NewClientWithMinikube(kubeContext, true, log)
 	if err != nil {
 		return err
 	}
@@ -87,7 +88,7 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) e
 	for _, imageConfig := range config.Images {
 		log.StartWait("Deleting local image " + imageConfig.Image)
 
-		response, err := client.DeleteImageByName(imageConfig.Image, log.GetInstance())
+		response, err := client.DeleteImageByName(imageConfig.Image, log)
 		if err != nil {
 			return err
 		}
@@ -105,7 +106,7 @@ func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) e
 
 	// Cleanup dangling images aswell
 	for {
-		response, err := client.DeleteImageByFilter(filters.NewArgs(filters.Arg("dangling", "true")), log.GetInstance())
+		response, err := client.DeleteImageByFilter(filters.NewArgs(filters.Arg("dangling", "true")), log)
 		if err != nil {
 			return err
 		}

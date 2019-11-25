@@ -43,6 +43,6 @@ func (cmd *dependenciesCmd) RunResetDependencies(cobraCmd *cobra.Command, args [
 		return errors.Wrapf(err, "delete %s", dependency.DependencyFolderPath)
 	}
 
-	log.Done("Successfully reseted the dependency cache")
+	log.GetInstance().Done("Successfully reseted the dependency cache")
 	return nil
 }

@@ -1,16 +1,8 @@
 package v2
 
-import (
-	"testing"
-
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"k8s.io/client-go/kubernetes/fake"
-)
-
 //@MoreTest
 //Coverage 51% is not enough
-
+/*
 func TestFakeInstallChart(t *testing.T) {
 	// Create the fake client.
 	kubeClient := fake.NewSimpleClientset()
@@ -61,3 +53,4 @@ func TestFakeInstallChart(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+*/

@@ -91,7 +91,7 @@ func (cmd *varCmd) RunSetVar(cobraCmd *cobra.Command, args []string) error {
 		return errors.Errorf("Error saving config: %v", err)
 	}
 
-	log.Done("Successfully changed variables")
+	log.GetInstance().Done("Successfully changed variables")
 	return nil
 }
 

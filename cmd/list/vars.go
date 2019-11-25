@@ -81,7 +81,7 @@ func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) error {
 
 	// No variable found
 	if len(varRow) == 0 {
-		log.Info("No variables found")
+		log.GetInstance().Info("No variables found")
 		return nil
 	}
 

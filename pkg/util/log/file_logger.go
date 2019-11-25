@@ -1,9 +1,11 @@
 package log
 
 import (
+	"errors"
 	"os"
 	"sync"
 
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/runtime"
 )
@@ -196,4 +198,8 @@ func (f *fileLogger) Write(message []byte) (int, error) {
 
 func (f *fileLogger) WriteString(message string) {
 	f.logger.Out.Write([]byte(message))
+}
+
+func (f *fileLogger) Question(params *survey.QuestionOptions) (string, error) {
+	return "", errors.New("Questions in file logger not supported")
 }

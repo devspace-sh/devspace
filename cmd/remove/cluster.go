@@ -44,21 +44,22 @@ devspace remove cluster my-cluster
 // RunRemoveCluster executes the devspace remove cluster functionality
 func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) error {
 	// Get provider
-	provider, err := cloudpkg.GetProvider(cmd.Provider, log.GetInstance())
+	log := log.GetInstance()
+	provider, err := cloudpkg.GetProvider(cmd.Provider, log)
 	if err != nil {
 		return errors.Wrap(err, "log into provider")
 	}
 
 	if cmd.AllYes == false {
 		// Verify user is sure to delete the cluster
-		deleteCluster, err := survey.Question(&survey.QuestionOptions{
+		deleteCluster, err := log.Question(&survey.QuestionOptions{
 			Question:     fmt.Sprintf("Are you sure you want to delete cluster %s? This action is irreversible", args[0]),
 			DefaultValue: "No",
 			Options: []string{
 				"No",
 				"Yes",
 			},
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}
@@ -80,27 +81,27 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 	)
 
 	if cmd.AllYes == false {
-		deleteSpaces, err = survey.Question(&survey.QuestionOptions{
+		deleteSpaces, err = log.Question(&survey.QuestionOptions{
 			Question:     "Do you want to delete all cluster spaces?",
 			DefaultValue: "No",
 			Options: []string{
 				"No",
 				"Yes",
 			},
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}
 
 		// Delete services
-		deleteServices, err = survey.Question(&survey.QuestionOptions{
+		deleteServices, err = log.Question(&survey.QuestionOptions{
 			Question:     "Do you want to delete all cluster services?",
 			DefaultValue: "No",
 			Options: []string{
 				"No",
 				"Yes",
 			},
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}

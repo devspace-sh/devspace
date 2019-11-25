@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 
 	k8sv1 "k8s.io/api/core/v1"
@@ -62,7 +61,7 @@ func (r *client) CreatePullSecret(options *PullSecretOptions) error {
 			return errors.Errorf("Unable to create image pull secret: %s", err.Error())
 		}
 
-		log.Donef("Created image pull secret %s/%s", options.Namespace, pullSecretName)
+		r.log.Donef("Created image pull secret %s/%s", options.Namespace, pullSecretName)
 	} else if secret.Data == nil || string(secret.Data[pullSecretDataKey]) != string(pullSecretData[pullSecretDataKey]) {
 		_, err = r.kubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Update(registryPullSecret)
 		if err != nil {

@@ -29,6 +29,8 @@ type ConfigLoader interface {
 	LoadRaw(path string) (map[interface{}]interface{}, error)
 	LoadWithoutProfile() (*latest.Config, error)
 
+	ParseCommands(generatedConfig *generated.Config, data map[interface{}]interface{}) ([]*latest.CommandConfig, error)
+
 	Generated() (*generated.Config, error)
 	SaveGenerated(generatedConfig *generated.Config) error
 
@@ -172,7 +174,7 @@ func (l *configLoader) LoadFromPath(generatedConfig *generated.Config, configPat
 		return nil, err
 	}
 
-	loadedConfig, err := ParseConfig(generatedConfig, rawMap, l.options, l.log)
+	loadedConfig, err := l.parseConfig(generatedConfig, rawMap)
 	if err != nil {
 		return nil, err
 	}

@@ -61,6 +61,6 @@ func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) error {
 		return errors.Errorf("Error saving config: %v", err)
 	}
 
-	log.Donef("Successfully deleted all variables")
+	log.GetInstance().Donef("Successfully deleted all variables")
 	return nil
 }

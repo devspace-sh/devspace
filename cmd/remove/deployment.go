@@ -50,7 +50,8 @@ devspace remove deployment --all
 // RunRemoveDeployment executes the specified deployment
 func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	log := log.GetInstance()
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -70,14 +71,14 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 		return err
 	}
 
-	shouldPurgeDeployment, err := survey.Question(&survey.QuestionOptions{
+	shouldPurgeDeployment, err := log.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all deployment resources deployed?",
 		DefaultValue: "yes",
 		Options: []string{
 			"yes",
 			"no",
 		},
-	}, log.GetInstance())
+	})
 	if err != nil {
 		return err
 	}
@@ -98,7 +99,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 			return nil
 		}
 
-		err = deploy.NewController(config, generatedConfig.GetActive(), client).Purge(deployments, log.GetInstance())
+		err = deploy.NewController(config, generatedConfig.GetActive(), client).Purge(deployments, log)
 		if err != nil {
 			log.Errorf("Error purging deployments: %v", err)
 		}

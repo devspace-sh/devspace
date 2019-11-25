@@ -3,7 +3,7 @@ package use
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
@@ -45,7 +45,8 @@ devspace use profile --reset
 // RunUseProfile executes the "devspace use config command" logic
 func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(nil, log.Discard)
+	log := logpkg.GetInstance()
+	configLoader := loader.NewConfigLoader(nil, logpkg.Discard)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -64,10 +65,10 @@ func (cmd *profileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) err
 		if len(args) > 0 {
 			profileName = args[0]
 		} else {
-			profileName, err = survey.Question(&survey.QuestionOptions{
+			profileName, err = log.Question(&survey.QuestionOptions{
 				Question: "Please select a profile to use",
 				Options:  profiles,
-			}, log.GetInstance())
+			})
 			if err != nil {
 				return err
 			}

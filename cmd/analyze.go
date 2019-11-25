@@ -95,7 +95,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) error 
 		namespace = cmd.Namespace
 	}
 
-	err = analyze.Analyze(client, namespace, !cmd.Wait, log.GetInstance())
+	err = analyze.NewAnalyzer(client, log.GetInstance()).Analyze(namespace, !cmd.Wait)
 	if err != nil {
 		return errors.Wrap(err, "analyze")
 	}

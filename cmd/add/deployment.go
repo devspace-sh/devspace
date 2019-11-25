@@ -200,6 +200,6 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 		return errors.Errorf("Couldn't save config file: %s", err.Error())
 	}
 
-	log.Donef("Successfully added %s as new deployment", args[0])
+	log.GetInstance().Donef("Successfully added %s as new deployment", args[0])
 	return nil
 }

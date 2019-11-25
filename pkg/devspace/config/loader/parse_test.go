@@ -260,7 +260,7 @@ profiles:
 			t.Fatal(err)
 		}
 
-		newConfig, err := ParseConfig(testCase.in.generatedConfig, testMap, testCase.in.options, log.Discard)
+		newConfig, err := NewConfigLoader(testCase.in.options, log.Discard).(*configLoader).parseConfig(testCase.in.generatedConfig, testMap)
 		if err != nil {
 			t.Fatal(err)
 		}

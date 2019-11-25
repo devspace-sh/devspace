@@ -296,11 +296,11 @@ func (p *provider) specifyDomain(clusterID int, options *ConnectClusterOptions) 
 	if options.Domain == "" {
 		var err error
 
-		options.Domain, err = survey.Question(&survey.QuestionOptions{
+		options.Domain, err = p.log.Question(&survey.QuestionOptions{
 			Question:               "DevSpace will automatically create an ingress for each space, which base domain do you want to use for the created spaces? (e.g. users.test.com)",
 			ValidationRegexPattern: "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$",
 			ValidationMessage:      "Please enter a valid hostname (e.g. users.my-domain.com)",
-		}, p.log)
+		})
 		if err != nil {
 			return err
 		}
@@ -341,14 +341,14 @@ func (p *provider) deployServices(client kubectl.Client, clusterID int, availabl
 	if options.DeployIngressController {
 		// Ask if we should use the host network
 		if options.UseHostNetwork == nil {
-			useHostNetwork, err := survey.Question(&survey.QuestionOptions{
+			useHostNetwork, err := p.log.Question(&survey.QuestionOptions{
 				Question:     "Should the ingress controller use a LoadBalancer or the host network?",
 				DefaultValue: loadBalancerOption,
 				Options: []string{
 					loadBalancerOption,
 					hostNetworkOption,
 				},
-			}, p.log)
+			})
 			if err != nil {
 				return err
 			}
@@ -493,22 +493,22 @@ func (p *provider) getKey(forceQuestion bool) (string, error) {
 	}
 
 	for true {
-		firstKey, err := survey.Question(&survey.QuestionOptions{
+		firstKey, err := p.log.Question(&survey.QuestionOptions{
 			Question:               "Please enter a secure encryption key for your cluster credentials",
 			ValidationRegexPattern: "^.{6,32}$",
 			ValidationMessage:      "Key has to be between 6 and 32 characters long",
 			IsPassword:             true,
-		}, p.log)
+		})
 		if err != nil {
 			return "", err
 		}
 
-		secondKey, err := survey.Question(&survey.QuestionOptions{
+		secondKey, err := p.log.Question(&survey.QuestionOptions{
 			Question:               "Please re-enter the key",
 			ValidationRegexPattern: "^.{6,32}$",
 			ValidationMessage:      "Key has to be between 6 and 32 characters long",
 			IsPassword:             true,
-		}, p.log)
+		})
 		if err != nil {
 			return "", err
 		}
@@ -539,10 +539,10 @@ func (p *provider) getClusterName(clusterName string) (string, error) {
 
 	// Ask for cluster name
 	for true {
-		clusterName, err := survey.Question(&survey.QuestionOptions{
+		clusterName, err := p.log.Question(&survey.QuestionOptions{
 			Question:     "Please enter a cluster name (e.g. my-cluster)",
 			DefaultValue: "my-cluster",
-		}, p.log)
+		})
 		if err != nil {
 			return "", err
 		}

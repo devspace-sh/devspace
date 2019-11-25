@@ -171,11 +171,11 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (C
 
 	sort.Strings(options)
 	for true {
-		kubeContext, err := survey.Question(&survey.QuestionOptions{
+		kubeContext, err := log.Question(&survey.QuestionOptions{
 			Question:     "Which kube context do you want to use",
 			DefaultValue: kubeConfig.CurrentContext,
 			Options:      options,
-		}, log)
+		})
 		if err != nil {
 			return nil, err
 		}

@@ -104,7 +104,7 @@ func (cmd *syncCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) error 
 	}
 
 	if len(syncMap) == 0 {
-		log.Info("No sync activity found. Did you run `devspace dev`?")
+		log.GetInstance().Info("No sync activity found. Did you run `devspace dev`?")
 		return nil
 	}
 

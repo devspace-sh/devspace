@@ -71,8 +71,8 @@ func (r *resumer) ResumeSpace(loop bool) error {
 
 	// We will wait a little bit till the space has resumed
 	if resumed {
-		log.StartWait("Resuming space")
-		defer log.StopWait()
+		r.log.StartWait("Resuming space")
+		defer r.log.StopWait()
 
 		// Give the controllers some time to create the pods
 		time.Sleep(time.Second * 3)

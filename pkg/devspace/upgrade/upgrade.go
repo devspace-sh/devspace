@@ -46,7 +46,7 @@ func SetVersion(verText string) {
 	if len(verText) > 0 {
 		_version, err := eraseVersionPrefix(verText)
 		if err != nil {
-			log.Errorf("Error parsing version: %v", err)
+			log.GetInstance().Errorf("Error parsing version: %v", err)
 			return
 		}
 
@@ -109,6 +109,8 @@ func NewerVersionAvailable() string {
 
 // Upgrade downloads the latest release from github and replaces devspace if a new version is found
 func Upgrade() error {
+	log := log.GetInstance()
+
 	newerVersion, err := CheckForNewerVersion()
 	if err != nil {
 		return err

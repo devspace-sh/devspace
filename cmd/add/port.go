@@ -68,6 +68,6 @@ func (cmd *portCmd) RunAddPort(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.Donef("Successfully added port %v", args[0])
+	log.GetInstance().Donef("Successfully added port %v", args[0])
 	return nil
 }

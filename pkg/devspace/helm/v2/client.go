@@ -16,6 +16,7 @@ import (
 	"k8s.io/helm/pkg/kube"
 	"k8s.io/helm/pkg/repo"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -31,10 +32,12 @@ type client struct {
 	Settings  *helmenvironment.EnvSettings
 	Namespace string
 
-	helm    k8shelm.Interface
-	kubectl kubectl.Client
+	helm     k8shelm.Interface
+	kubectl  kubectl.Client
+	analyzer analyze.Analyzer
 
 	config *latest.Config
+	log    log.Logger
 }
 
 // NewClient creates a new helm client
@@ -129,12 +132,14 @@ func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.In
 		helm:      helmClient,
 		kubectl:   kubeClient,
 		config:    config,
+		analyzer:  analyze.NewAnalyzer(kubeClient, log),
+		log:       log,
 	}
 
 	if updateRepo {
 		_, err = os.Stat(stableRepoCachePathAbs)
 		if err != nil {
-			err = wrapper.UpdateRepos(log)
+			err = wrapper.UpdateRepos()
 			if err != nil {
 				return nil, err
 			}
@@ -145,7 +150,7 @@ func create(config *latest.Config, tillerNamespace string, helmClient k8shelm.In
 }
 
 // UpdateRepos will update the helm repositories
-func (client *client) UpdateRepos(log log.Logger) error {
+func (client *client) UpdateRepos() error {
 	allRepos, err := repo.LoadRepositoriesFile(client.Settings.Home.RepositoryFile())
 	if err != nil {
 		return err
@@ -170,7 +175,7 @@ func (client *client) UpdateRepos(log log.Logger) error {
 
 			err := re.DownloadIndexFile(client.Settings.Home.String())
 			if err != nil {
-				log.Errorf("Unable to download repo index: %v", err)
+				client.log.Errorf("Unable to download repo index: %v", err)
 			}
 		}(re)
 	}

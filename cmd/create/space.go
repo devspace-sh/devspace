@@ -51,14 +51,15 @@ devspace create space myspace
 // RunCreateSpace executes the "devspace create space" command logic
 func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(nil, log.GetInstance())
+	log := log.GetInstance()
+	configLoader := loader.NewConfigLoader(nil, log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
 
 	// Get provider
-	provider, err := cloud.GetProvider(cmd.Provider, log.GetInstance())
+	provider, err := cloud.GetProvider(cmd.Provider, log)
 	if err != nil {
 		return err
 	}
@@ -147,7 +148,6 @@ func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) erro
 }
 
 func getCluster(p cloud.Provider) (*latest.Cluster, error) {
-
 	clusters, err := p.Client().GetClusters()
 	if err != nil {
 		return nil, errors.Wrap(err, "get clusters")
@@ -156,7 +156,7 @@ func getCluster(p cloud.Provider) (*latest.Cluster, error) {
 		return nil, errors.New("Cannot create space, because no cluster was found")
 	}
 
-	log.StopWait()
+	log.GetInstance().StopWait()
 
 	// Check if the user has access to a connected cluster
 	connectedClusters := make([]*latest.Cluster, 0, len(clusters))
@@ -186,11 +186,11 @@ func getCluster(p cloud.Provider) (*latest.Cluster, error) {
 		}
 
 		// Choose cluster
-		chosenCluster, err := survey.Question(&survey.QuestionOptions{
+		chosenCluster, err := log.GetInstance().Question(&survey.QuestionOptions{
 			Question:     "Which cluster should the space created in?",
 			DefaultValue: clusterNames[0],
 			Options:      clusterNames,
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -222,11 +222,11 @@ func getCluster(p cloud.Provider) (*latest.Cluster, error) {
 	}
 
 	// Choose cluster
-	chosenCluster, err := survey.Question(&survey.QuestionOptions{
+	chosenCluster, err := log.GetInstance().Question(&survey.QuestionOptions{
 		Question:     "Which hosted DevSpace cluster should the space created in?",
 		DefaultValue: clusterNames[0],
 		Options:      clusterNames,
-	}, log.GetInstance())
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -45,8 +45,9 @@ in the devspace.yaml
 // RunDependencies executes the functionality "devspace update dependencies"
 func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
+	log := log.GetInstance()
 	configOptions := cmd.ToConfigOptions()
-	configLoader := loader.NewConfigLoader(configOptions, log.GetInstance())
+	configLoader := loader.NewConfigLoader(configOptions, log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -68,7 +69,7 @@ func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []stri
 	}
 
 	// Create Dependencymanager
-	manager, err := dependency.NewManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log.GetInstance())
+	manager, err := dependency.NewManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log)
 	if err != nil {
 		return errors.Wrap(err, "new manager")
 	}

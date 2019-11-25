@@ -78,6 +78,6 @@ func (cmd *syncCmd) RunAddSync(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.Donef("Successfully added sync between local path %v and container path %v", cmd.LocalPath, cmd.ContainerPath)
+	log.GetInstance().Donef("Successfully added sync between local path %v and container path %v", cmd.LocalPath, cmd.ContainerPath)
 	return nil
 }

@@ -72,7 +72,7 @@ func (cmd *imageCmd) RunAddImage(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = configure.AddImage(config, args[0], cmd.Name, cmd.Tag, cmd.ContextPath, cmd.DockerfilePath, cmd.BuildTool)
+	err = configure.AddImage(config, args[0], cmd.Name, cmd.Tag, cmd.ContextPath, cmd.DockerfilePath, cmd.BuildTool, log.GetInstance())
 	if err != nil {
 		return err
 	}
@@ -82,6 +82,6 @@ func (cmd *imageCmd) RunAddImage(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.Donef("Successfully added image %s", args[0])
+	log.GetInstance().Donef("Successfully added image %s", args[0])
 	return nil
 }

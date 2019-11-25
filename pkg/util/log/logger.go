@@ -1,6 +1,7 @@
 package log
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/sirupsen/logrus"
 )
 
@@ -52,6 +53,8 @@ type Logger interface {
 
 	Write(message []byte) (int, error)
 	WriteString(message string)
+
+	Question(params *survey.QuestionOptions) (string, error)
 
 	SetLevel(level logrus.Level)
 	GetLevel() logrus.Level

@@ -41,7 +41,8 @@ Note: This does not upgrade the overwrite configs
 // RunConfig executes the functionality "devspace update config"
 func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	log := log.GetInstance()
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err

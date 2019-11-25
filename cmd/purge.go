@@ -24,11 +24,16 @@ type PurgeCmd struct {
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 	PurgeDependencies       bool
+
+	log log.Logger
 }
 
 // NewPurgeCmd creates a new purge command
 func NewPurgeCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &PurgeCmd{GlobalFlags: globalFlags}
+	cmd := &PurgeCmd{
+		GlobalFlags: globalFlags,
+		log:         log.GetInstance(),
+	}
 
 	purgeCmd := &cobra.Command{
 		Use:   "purge",
@@ -59,7 +64,7 @@ devspace purge -d my-deployment
 func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configOptions := cmd.ToConfigOptions()
-	configLoader := loader.NewConfigLoader(configOptions, log.GetInstance())
+	configLoader := loader.NewConfigLoader(configOptions, cmd.log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -77,7 +82,7 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	err = cmd.UseLastContext(generatedConfig, cmd.log)
 	if err != nil {
 		return err
 	}
@@ -87,13 +92,13 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "create kube client")
 	}
 
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, cmd.log)
 	if err != nil {
 		return err
 	}
 
 	// Signal that we are working on the space if there is any
-	err = resume.NewSpaceResumer(client, log.GetInstance()).ResumeSpace(true)
+	err = resume.NewSpaceResumer(client, cmd.log).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
@@ -113,29 +118,29 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Purge deployments
-	err = deploy.NewController(config, generatedConfig.GetActive(), client).Purge(deployments, log.GetInstance())
+	err = deploy.NewController(config, generatedConfig.GetActive(), client).Purge(deployments, cmd.log)
 	if err != nil {
-		log.Errorf("Error purging deployments: %v", err)
+		cmd.log.Errorf("Error purging deployments: %v", err)
 	}
 
 	// Purge dependencies
 	if cmd.PurgeDependencies {
 
 		// Create Dependencymanager
-		manager, err := dependency.NewManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), log.GetInstance())
+		manager, err := dependency.NewManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log)
 		if err != nil {
 			return errors.Wrap(err, "new manager")
 		}
 
 		err = manager.PurgeAll(cmd.VerboseDependencies)
 		if err != nil {
-			log.Errorf("Error purging dependencies: %v", err)
+			cmd.log.Errorf("Error purging dependencies: %v", err)
 		}
 	}
 
 	err = configLoader.SaveGenerated(generatedConfig)
 	if err != nil {
-		log.Errorf("Error saving generated.yaml: %v", err)
+		cmd.log.Errorf("Error saving generated.yaml: %v", err)
 	}
 
 	return nil

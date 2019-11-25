@@ -52,7 +52,7 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	if config.Dev.Sync == nil || len(config.Dev.Sync) == 0 {
-		log.Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
+		log.GetInstance().Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
 		return nil
 	}
 

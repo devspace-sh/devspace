@@ -5,7 +5,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
 	"github.com/mgutz/ansi"
@@ -36,7 +35,7 @@ func (serviceClient *client) StartTerminal(args []string, imageSelector []string
 		return 0, err
 	}
 
-	log.Infof("Opening shell to pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
+	serviceClient.log.Infof("Opening shell to pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
 	if serviceClient.selectorParameter.CmdParameter.Interactive == true && len(container.Command) > 0 && serviceClient.config != nil && serviceClient.generated != nil && serviceClient.config.Dev != nil && serviceClient.config.Dev.Interactive != nil && len(serviceClient.config.Dev.Interactive.Images) > 0 {
 		for _, image := range serviceClient.config.Dev.Interactive.Images {
 			imageSelector = []string{}
@@ -44,7 +43,7 @@ func (serviceClient *client) StartTerminal(args []string, imageSelector []string
 			if imageConfigCache != nil && imageConfigCache.ImageName != "" {
 				imageName := imageConfigCache.ImageName + ":" + imageConfigCache.Tag
 				if imageName == container.Image && (len(image.Entrypoint) > 0 || len(image.Cmd) > 0) {
-					log.Warnf("The container you are entering was started with a Kubernetes `command` option (%s) instead of the original Dockerfile ENTRYPOINT. Interactive mode ENTRYPOINT override does not work for containers started using with Kubernetes command.", container.Command)
+					serviceClient.log.Warnf("The container you are entering was started with a Kubernetes `command` option (%s) instead of the original Dockerfile ENTRYPOINT. Interactive mode ENTRYPOINT override does not work for containers started using with Kubernetes command.", container.Command)
 				}
 			}
 		}

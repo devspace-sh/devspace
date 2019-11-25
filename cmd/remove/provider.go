@@ -40,9 +40,10 @@ devspace remove provider app.devspace.cloud
 // RunRemoveCloudProvider executes the devspace remove cloud provider functionality
 func (cmd *providerCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args []string) error {
 	providerName := args[0]
+	log := log.GetInstance()
 
 	// Get provider configuration
-			loader := config.NewLoader()
+	loader := config.NewLoader()
 	providerConfig, err := loader.Load()
 	if err != nil {
 		return errors.Wrap(err, "parse provider config")

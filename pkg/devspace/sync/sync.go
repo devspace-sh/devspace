@@ -489,7 +489,7 @@ func (s *Sync) Stop(fatalError error) {
 			// This needs to be rethought because we do not always kill the application here, would be better to have an error channel
 			// or runtime error here
 			sendError := fmt.Errorf("Fatal sync error: %v. For more information check .devspace/logs/sync.log", fatalError)
-			log.Error(sendError)
+			log.GetInstance().Error(sendError)
 			cloudanalytics.SendCommandEvent(sendError)
 			os.Exit(1)
 		}

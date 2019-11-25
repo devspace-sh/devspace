@@ -71,6 +71,6 @@ func (cmd *portCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) error 
 		return err
 	}
 
-	log.Done("Successfully removed port")
+	log.GetInstance().Done("Successfully removed port")
 	return nil
 }

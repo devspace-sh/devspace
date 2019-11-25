@@ -25,6 +25,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	logutil "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -61,13 +62,17 @@ type DevCmd struct {
 	Interactive bool
 
 	configLoader loader.ConfigLoader
+	log          logpkg.Logger
 }
 
 const interactiveDefaultPickerValue = "Open Picker"
 
 // NewDevCmd creates a new devspace dev command
 func NewDevCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &DevCmd{GlobalFlags: globalFlags}
+	cmd := &DevCmd{
+		GlobalFlags: globalFlags,
+		log:         log.GetInstance(),
+	}
 
 	devCmd := &cobra.Command{
 		Use:   "dev",
@@ -120,7 +125,7 @@ Open terminal instead of logs:
 // Run executes the command logic
 func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	cmd.configLoader = loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	cmd.configLoader = loader.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
 	configExists, err := cmd.configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -130,7 +135,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Start file logging
-	log.StartFileLogging()
+	logpkg.StartFileLogging()
 
 	// Validate flags
 	err = cmd.validateFlags()
@@ -145,7 +150,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	err = cmd.UseLastContext(generatedConfig, cmd.log)
 	if err != nil {
 		return err
 	}
@@ -157,7 +162,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Show a warning if necessary
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, cmd.log)
 	if err != nil {
 		return err
 	}
@@ -175,25 +180,25 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Signal that we are working on the space if there is any
-	resumer := resume.NewSpaceResumer(client, log.GetInstance())
+	resumer := resume.NewSpaceResumer(client, cmd.log)
 	err = resumer.ResumeSpace(true)
 	if err != nil {
 		return err
 	}
 
 	// Create namespace if necessary
-	err = client.EnsureDefaultNamespace(log.GetInstance())
+	err = client.EnsureDefaultNamespace(cmd.log)
 	if err != nil {
 		return errors.Errorf("Unable to create namespace: %v", err)
 	}
 
 	// Create the image pull secrets and add them to the default service account
-	dockerClient, err := docker.NewClient(log.GetInstance())
+	dockerClient, err := docker.NewClient(cmd.log)
 	if err != nil {
 		dockerClient = nil
 	}
 
-	registryClient := registry.NewClient(config, client, dockerClient, log.GetInstance())
+	registryClient := registry.NewClient(config, client, dockerClient, cmd.log)
 	err = registryClient.CreatePullSecrets()
 	if err != nil {
 		return err
@@ -216,7 +221,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 	if cmd.SkipPipeline == false {
 
 		// Create Dependencymanager
-		manager, err := dependency.NewManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), log.GetInstance())
+		manager, err := dependency.NewManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log)
 		if err != nil {
 			return 0, errors.Wrap(err, "new manager")
 		}
@@ -243,7 +248,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 				ForceRebuild:             cmd.ForceBuild,
 				Sequential:               cmd.BuildSequential,
 				IgnoreContextPathChanges: skipBuildIfAlreadyBuilt,
-			}, log.GetInstance())
+			}, cmd.log)
 			if err != nil {
 				if strings.Index(err.Error(), "no space left on device") != -1 {
 					return 0, errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
@@ -278,7 +283,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 				ForceDeploy: cmd.ForceDeploy,
 				BuiltImages: builtImages,
 				Deployments: deployments,
-			}, log.GetInstance())
+			}, cmd.log)
 			if err != nil {
 				return 0, errors.Errorf("Error deploying: %v", err)
 			}
@@ -303,7 +308,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 		var err error
 
 		// Start services
-		exitCode, err = cmd.startServices(config, generatedConfig, client, args, log.GetInstance())
+		exitCode, err = cmd.startServices(config, generatedConfig, client, args, cmd.log)
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
@@ -626,10 +631,10 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 					question = "Which image do you want to open a terminal to?"
 				}
 
-				imageName, err = survey.Question(&survey.QuestionOptions{
+				imageName, err = cmd.log.Question(&survey.QuestionOptions{
 					Question: question,
 					Options:  imageNames,
-				}, log.GetInstance())
+				})
 				if err != nil {
 					return nil, err
 				}
@@ -653,15 +658,15 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 			}
 
 			if imageConf.Entrypoint != nil && imageConf.Cmd != nil {
-				log.Infof("Override image '%s' entrypoint with %+v and cmd with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Entrypoint, imageConf.Cmd)
+				cmd.log.Infof("Override image '%s' entrypoint with %+v and cmd with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Entrypoint, imageConf.Cmd)
 			} else if imageConf.Entrypoint != nil {
-				log.Infof("Override image '%s' entrypoint with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Entrypoint)
+				cmd.log.Infof("Override image '%s' entrypoint with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Entrypoint)
 			} else if imageConf.Cmd != nil {
-				log.Infof("Override image '%s' cmd with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Cmd)
+				cmd.log.Infof("Override image '%s' cmd with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Cmd)
 			}
 		}
 
-		log.Info("Interactive mode: enable terminal")
+		cmd.log.Info("Interactive mode: enable terminal")
 		config.Dev.Interactive.DefaultEnabled = ptr.Bool(true)
 	} else {
 		if config.Dev != nil && config.Dev.Interactive != nil {

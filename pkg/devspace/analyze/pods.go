@@ -7,7 +7,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -21,11 +20,11 @@ const WaitTimeout = 120 * time.Second
 const IgnoreRestartsSince = time.Hour * 2
 
 // Pods analyzes the pods for problems
-func Pods(client kubectl.Client, namespace string, noWait bool) ([]string, error) {
+func (a *analyzer) pods(namespace string, noWait bool) ([]string, error) {
 	problems := []string{}
 
-	log.StartWait("Analyzing pods")
-	defer log.StopWait()
+	a.log.StartWait("Analyzing pods")
+	defer a.log.StopWait()
 
 	// Get current time
 	now := time.Now()
@@ -39,7 +38,7 @@ func Pods(client kubectl.Client, namespace string, noWait bool) ([]string, error
 			loop = false
 
 			// Get all pods
-			pods, err = client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{})
+			pods, err = a.client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{})
 			if err != nil {
 				return nil, err
 			}
@@ -50,20 +49,20 @@ func Pods(client kubectl.Client, namespace string, noWait bool) ([]string, error
 					for _, status := range kubectl.WaitStatus {
 						if podStatus == status {
 							loop = true
-							log.StartWait("Waiting for pod " + pod.Name + " with status " + podStatus)
+							a.log.StartWait("Waiting for pod " + pod.Name + " with status " + podStatus)
 							break
 						}
 					}
 
 					if strings.HasPrefix(podStatus, "Init:") {
 						loop = true
-						log.StartWait("Waiting for pod " + pod.Name + " with status " + podStatus)
+						a.log.StartWait("Waiting for pod " + pod.Name + " with status " + podStatus)
 						break
 					}
 
 					if podStatus == "Running" && time.Since(pod.Status.StartTime.UTC()) < MinimumPodAge {
 						loop = true
-						log.StartWait("Waiting for pod " + pod.Name + " startup")
+						a.log.StartWait("Waiting for pod " + pod.Name + " startup")
 						break
 					}
 
@@ -77,7 +76,7 @@ func Pods(client kubectl.Client, namespace string, noWait bool) ([]string, error
 		}
 	} else {
 		// Get all pods
-		pods, err = client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{})
+		pods, err = a.client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +85,7 @@ func Pods(client kubectl.Client, namespace string, noWait bool) ([]string, error
 	// Analyzing pods
 	if pods.Items != nil {
 		for _, pod := range pods.Items {
-			problem := checkPod(client, &pod)
+			problem := checkPod(a.client, &pod)
 			if problem != nil {
 				problems = append(problems, printPodProblem(problem))
 			}
