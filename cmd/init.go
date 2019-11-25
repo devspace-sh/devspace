@@ -11,11 +11,11 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -55,9 +55,9 @@ type InitCmd struct {
 }
 
 // NewInitCmd creates a new init command
-func NewInitCmd() *cobra.Command {
+func NewInitCmd(f factory.Factory) *cobra.Command {
 	cmd := &InitCmd{
-		log: log.GetInstance(),
+		log: f.GetLog(),
 	}
 
 	initCmd := &cobra.Command{
@@ -72,7 +72,9 @@ folder. Creates a devspace.yaml with all configuration.
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.Run,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.Run(f, cobraCmd, args)
+		},
 	}
 
 	initCmd.Flags().BoolVarP(&cmd.Reconfigure, "reconfigure", "r", false, "Change existing configuration")
@@ -84,9 +86,9 @@ folder. Creates a devspace.yaml with all configuration.
 }
 
 // Run executes the command logic
-func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
+func (cmd *InitCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Check if config already exists
-	configLoader := loader.NewConfigLoader(nil, cmd.log)
+	configLoader := f.NewConfigLoader(nil, cmd.log)
 	configExists := configLoader.Exists()
 	if configExists && cmd.Reconfigure == false {
 		cmd.log.Info("Config already exists. If you want to recreate the config please run `devspace init --reconfigure`")

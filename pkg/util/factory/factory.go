@@ -1,6 +1,7 @@
 package factory
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
@@ -8,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
@@ -53,6 +55,10 @@ type Factory interface {
 	GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, log log.Logger) (cloud.Provider, error)
 	NewSpaceResumer(kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer
 
+	// Build & Deploy
+	NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller
+	NewDeployController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) deploy.Controller
+
 	// Log
 	GetLog() log.Logger
 }
@@ -62,6 +68,14 @@ type factory struct{}
 // DefaultFactory returns the default factory implementation
 func DefaultFactory() Factory {
 	return &factory{}
+}
+
+func (f *factory) NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller {
+	return build.NewController(config, cache, client)
+}
+
+func (f *factory) NewDeployController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) deploy.Controller {
+	return deploy.NewController(config, cache, client)
 }
 
 func (f *factory) GetLog() log.Logger {

@@ -6,14 +6,11 @@ import (
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/mgutz/ansi"
@@ -41,10 +38,10 @@ type DeployCmd struct {
 }
 
 // NewDeployCmd creates a new deploy command
-func NewDeployCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewDeployCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &DeployCmd{
 		GlobalFlags: globalFlags,
-		log:         logpkg.GetInstance(),
+		log:         f.GetLog(),
 	}
 
 	deployCmd := &cobra.Command{
@@ -61,7 +58,9 @@ devspace deploy -n some-namespace
 devspace deploy --kube-context=deploy-context
 #######################################################`,
 		Args: cobra.NoArgs,
-		RunE: cmd.Run,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.Run(f, cobraCmd, args)
+		},
 	}
 
 	deployCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
@@ -80,10 +79,10 @@ devspace deploy --kube-context=deploy-context
 }
 
 // Run executes the down command logic
-func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
+func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	configOptions := cmd.ToConfigOptions()
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -114,7 +113,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Create kubectl client
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
@@ -138,7 +137,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Signal that we are working on the space if there is any
-	err = resume.NewSpaceResumer(client, cmd.log).ResumeSpace(true)
+	err = f.NewSpaceResumer(client, cmd.log).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
@@ -150,19 +149,19 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Create docker client
-	dockerClient, err := docker.NewClient(cmd.log)
+	dockerClient, err := f.NewDockerClient(cmd.log)
 	if err != nil {
 		dockerClient = nil
 	}
 
 	// Create pull secrets and private registry if necessary
-	err = registry.NewClient(config, client, dockerClient, cmd.log).CreatePullSecrets()
+	err = f.NewPullSecretClient(config, client, dockerClient, cmd.log).CreatePullSecrets()
 	if err != nil {
 		return err
 	}
 
 	// Create Dependencymanager
-	manager, err := dependency.NewManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, configOptions, cmd.log)
+	manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, configOptions, cmd.log)
 	if err != nil {
 		return errors.Wrap(err, "new manager")
 	}
@@ -183,7 +182,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Build images
 	builtImages := make(map[string]string)
 	if cmd.SkipBuild == false {
-		builtImages, err = build.NewController(config, generatedConfig.GetActive(), client).Build(&build.Options{
+		builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
 			SkipPush:     cmd.SkipPush,
 			ForceRebuild: cmd.ForceBuild,
 			Sequential:   cmd.BuildSequential,
@@ -215,7 +214,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Deploy all defined deployments
-	err = deploy.NewController(config, generatedConfig.GetActive(), client).Deploy(&deploy.Options{
+	err = f.NewDeployController(config, generatedConfig.GetActive(), client).Deploy(&deploy.Options{
 		ForceDeploy: cmd.ForceDeploy,
 		BuiltImages: builtImages,
 		Deployments: deployments,
