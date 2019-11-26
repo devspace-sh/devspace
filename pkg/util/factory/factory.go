@@ -63,77 +63,95 @@ type Factory interface {
 	GetLog() log.Logger
 }
 
-type factory struct{}
+// DefaultFactoryImpl is the default factory implementation
+type DefaultFactoryImpl struct{}
 
 // DefaultFactory returns the default factory implementation
 func DefaultFactory() Factory {
-	return &factory{}
+	return &DefaultFactoryImpl{}
 }
 
-func (f *factory) NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller {
+// NewBuildController implements interface
+func (f *DefaultFactoryImpl) NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller {
 	return build.NewController(config, cache, client)
 }
 
-func (f *factory) NewDeployController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) deploy.Controller {
+// NewDeployController implements interface
+func (f *DefaultFactoryImpl) NewDeployController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) deploy.Controller {
 	return deploy.NewController(config, cache, client)
 }
 
-func (f *factory) GetLog() log.Logger {
+// GetLog implements interface
+func (f *DefaultFactoryImpl) GetLog() log.Logger {
 	return log.GetInstance()
 }
 
-func (f *factory) NewHookExecutor(config *latest.Config) hook.Executer {
+// NewHookExecutor implements interface
+func (f *DefaultFactoryImpl) NewHookExecutor(config *latest.Config) hook.Executer {
 	return hook.NewExecuter(config)
 }
 
-func (f *factory) NewDependencyManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (dependency.Manager, error) {
+// NewDependencyManager implements interface
+func (f *DefaultFactoryImpl) NewDependencyManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (dependency.Manager, error) {
 	return dependency.NewManager(config, cache, client, allowCyclic, configOptions, logger)
 }
 
-func (f *factory) NewPullSecretClient(config *latest.Config, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) registry.Client {
+// NewPullSecretClient implements interface
+func (f *DefaultFactoryImpl) NewPullSecretClient(config *latest.Config, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) registry.Client {
 	return registry.NewClient(config, kubeClient, dockerClient, log)
 }
 
-func (f *factory) NewConfigLoader(options *loader.ConfigOptions, log log.Logger) loader.ConfigLoader {
+// NewConfigLoader implements interface
+func (f *DefaultFactoryImpl) NewConfigLoader(options *loader.ConfigOptions, log log.Logger) loader.ConfigLoader {
 	return loader.NewConfigLoader(options, log)
 }
 
-func (f *factory) NewDockerClient(log log.Logger) (docker.Client, error) {
+// NewDockerClient implements interface
+func (f *DefaultFactoryImpl) NewDockerClient(log log.Logger) (docker.Client, error) {
 	return docker.NewClient(log)
 }
 
-func (f *factory) NewDockerClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error) {
+// NewDockerClientWithMinikube implements interface
+func (f *DefaultFactoryImpl) NewDockerClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error) {
 	return docker.NewClientWithMinikube(currentKubeContext, preferMinikube, log)
 }
 
-func (f *factory) NewKubeDefaultClient() (kubectl.Client, error) {
+// NewKubeDefaultClient implements interface
+func (f *DefaultFactoryImpl) NewKubeDefaultClient() (kubectl.Client, error) {
 	return kubectl.NewDefaultClient()
 }
 
-func (f *factory) NewKubeClientFromContext(context, namespace string, switchContext bool) (kubectl.Client, error) {
+// NewKubeClientFromContext implements interface
+func (f *DefaultFactoryImpl) NewKubeClientFromContext(context, namespace string, switchContext bool) (kubectl.Client, error) {
 	return kubectl.NewClientFromContext(context, namespace, switchContext)
 }
 
-func (f *factory) NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error) {
+// NewKubeClientBySelect implements interface
+func (f *DefaultFactoryImpl) NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error) {
 	return kubectl.NewClientBySelect(allowPrivate, switchContext, log)
 }
 
-func (f *factory) NewHelmClient(config *latest.Config, deployConfig *latest.DeploymentConfig, kubeClient kubectl.Client, tillerNamespace string, upgradeTiller bool, log log.Logger) (types.Client, error) {
+// NewHelmClient implements interface
+func (f *DefaultFactoryImpl) NewHelmClient(config *latest.Config, deployConfig *latest.DeploymentConfig, kubeClient kubectl.Client, tillerNamespace string, upgradeTiller bool, log log.Logger) (types.Client, error) {
 	return helm.NewClient(config, deployConfig, kubeClient, tillerNamespace, upgradeTiller, log)
 }
 
-func (f *factory) NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, selectorParameter *targetselector.SelectorParameter, log log.Logger) services.Client {
+// NewServicesClient implements interface
+func (f *DefaultFactoryImpl) NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, selectorParameter *targetselector.SelectorParameter, log log.Logger) services.Client {
 	return services.NewClient(config, generated, kubeClient, selectorParameter, log)
 }
 
-func (f *factory) GetProvider(useProviderName string, log log.Logger) (cloud.Provider, error) {
+// GetProvider implements interface
+func (f *DefaultFactoryImpl) GetProvider(useProviderName string, log log.Logger) (cloud.Provider, error) {
 	return cloud.GetProvider(useProviderName, log)
 }
 
-func (f *factory) GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, log log.Logger) (cloud.Provider, error) {
+// GetProviderWithOptions implements interface
+func (f *DefaultFactoryImpl) GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, log log.Logger) (cloud.Provider, error) {
 	return cloud.GetProviderWithOptions(useProviderName, key, relogin, loader, log)
 }
 
-func (f *factory) NewSpaceResumer(kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer {
+// NewSpaceResumer implements interface
+func (f *DefaultFactoryImpl) NewSpaceResumer(kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer {
 	return resume.NewSpaceResumer(kubeClient, log)
 }
