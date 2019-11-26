@@ -759,6 +759,9 @@ func initializeNamespace(p *Provider, client kubernetes.Interface) error {
 		_, err = client.CoreV1().Namespaces().Create(&v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: DevSpaceCloudNamespace,
+				Labels: map[string]string{
+					"devspace.cloud/control-plane": "true",
+				},
 			},
 		})
 		if err != nil {
