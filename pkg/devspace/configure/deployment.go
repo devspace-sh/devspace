@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -50,10 +49,10 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 		if len(ports) == 1 {
 			port = strconv.Itoa(ports[0])
 		} else if len(ports) > 1 {
-			port, err = survey.Question(&survey.QuestionOptions{
+			port, err = log.Question(&survey.QuestionOptions{
 				Question:     "Which port is your application listening on?",
 				DefaultValue: strconv.Itoa(ports[0]),
-			}, log)
+			})
 			if err != nil {
 				return nil, nil, err
 			}
@@ -64,9 +63,9 @@ func GetDockerfileComponentDeployment(config *latest.Config, generatedConfig *ge
 		}
 	}
 	if port == "" {
-		port, err = survey.Question(&survey.QuestionOptions{
+		port, err = log.Question(&survey.QuestionOptions{
 			Question: "Which port is your application listening on? (Enter to skip)",
-		}, log)
+		})
 		if err != nil {
 			return nil, nil, err
 		}
@@ -105,9 +104,9 @@ func GetImageComponentDeployment(name, imageName string, log log.Logger) (*lates
 	}
 
 	// Configure port
-	port, err := survey.Question(&survey.QuestionOptions{
+	port, err := log.Question(&survey.QuestionOptions{
 		Question: "Which port do you want to expose for this image? (Enter to skip)",
-	}, log)
+	})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -229,11 +228,6 @@ func RemoveDeployment(baseConfig *latest.Config, removeAll bool, name string) (b
 		}
 
 		baseConfig.Deployments = newDeployments
-	}
-
-	err := configutil.SaveLoadedConfig()
-	if err != nil {
-		return false, errors.Errorf("Couldn't save config file: %s", err.Error())
 	}
 
 	return found, nil

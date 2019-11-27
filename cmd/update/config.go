@@ -2,7 +2,7 @@ package update
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -41,7 +41,9 @@ Note: This does not upgrade the overwrite configs
 // RunConfig executes the functionality "devspace update config"
 func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	log := log.GetInstance()
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log)
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	} else if !configExists {
@@ -49,19 +51,19 @@ func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Get profiles
-	profiles, err := configutil.GetProfiles(".")
+	profiles, err := loader.GetProfiles(".")
 	if err != nil {
 		return err
 	}
 
 	// Get config
-	_, err = configutil.GetBaseConfig(cmd.ToConfigOptions())
+	config, err := configLoader.LoadWithoutProfile()
 	if err != nil {
 		return errors.Wrap(err, "load config")
 	}
 
 	// Save it
-	err = configutil.SaveLoadedConfig()
+	err = configLoader.Save(config)
 	if err != nil {
 		return errors.Errorf("Error saving config: %v", err)
 	}

@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
@@ -45,7 +45,8 @@ devspace list clusters
 // RunListClusters executes the "devspace list clusters" functionality
 func (cmd *clustersCmd) RunListClusters(cobraCmd *cobra.Command, args []string) error {
 	// Get provider
-	provider, err := cloudpkg.GetProvider(cmd.Provider, log.GetInstance())
+	log := logpkg.GetInstance()
+	provider, err := cloudpkg.GetProvider(cmd.Provider, log)
 	if err != nil {
 		return errors.Wrap(err, "get provider")
 	}
@@ -88,7 +89,7 @@ func (cmd *clustersCmd) RunListClusters(cobraCmd *cobra.Command, args []string) 
 	}
 
 	if len(values) > 0 {
-		log.PrintTable(log.GetInstance(), headerColumnNames, values)
+		logpkg.PrintTable(log, headerColumnNames, values)
 	} else {
 		log.Infof("No clusters found. You can connect a cluster with `%s`", ansi.Color("devspace connect cluster", "white+b"))
 	}

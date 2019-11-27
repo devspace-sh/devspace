@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/kubectl/walk"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -28,7 +28,8 @@ const ComponentsRepoPath = ".devspace/components"
 // ComponentsGenerator holds the information to create a component
 type ComponentsGenerator struct {
 	LocalPath string
-	gitRepo   *git.Repository
+
+	gitRepo *git.Repository
 }
 
 // ComponentSchema is the component schema
@@ -116,7 +117,7 @@ func (c *ComponentSchema) askQuestion(variable *latest.Variable, log log.Logger)
 		}
 	}
 
-	c.VariableValues[variable.Name], err = survey.Question(params, log)
+	c.VariableValues[variable.Name], err = log.Question(params)
 	if err != nil {
 		return err
 	}

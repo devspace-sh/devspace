@@ -18,6 +18,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sirupsen/logrus"
@@ -27,26 +28,28 @@ import (
 
 var cfgFile string
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:           "devspace",
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	Short:         "Welcome to the DevSpace!",
-	PersistentPreRun: func(cobraCmd *cobra.Command, args []string) {
-		if globalFlags.Silent {
-			log.GetInstance().SetLevel(logrus.FatalLevel)
-		}
+// NewRootCmd returns a new root command
+func NewRootCmd(log log.Logger) *cobra.Command {
+	return &cobra.Command{
+		Use:           "devspace",
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		Short:         "Welcome to the DevSpace!",
+		PersistentPreRun: func(cobraCmd *cobra.Command, args []string) {
+			if globalFlags.Silent {
+				log.SetLevel(logrus.FatalLevel)
+			}
 
-		// Get version of current binary
-		latestVersion := upgrade.NewerVersionAvailable()
-		if latestVersion != "" {
-			log.Warnf("There is a newer version of DevSpace: v%s. Run `devspace upgrade` to upgrade to the newest version.\n", latestVersion)
-		}
-	},
-	Long: `DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
-
-	devspace init`,
+			// Get version of current binary
+			latestVersion := upgrade.NewerVersionAvailable()
+			if latestVersion != "" {
+				log.Warnf("There is a newer version of DevSpace: v%s. Run `devspace upgrade` to upgrade to the newest version.\n", latestVersion)
+			}
+		},
+		Long: `DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
+	
+		devspace init`,
+	}
 }
 
 var globalFlags *flags.GlobalFlags
@@ -54,6 +57,9 @@ var globalFlags *flags.GlobalFlags
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	f := factory.DefaultFactory()
+	rootCmd := BuildRoot(f)
+
 	// Set version for --version flag
 	rootCmd.Version = upgrade.GetVersion()
 
@@ -71,14 +77,16 @@ func Execute() {
 		}
 
 		if globalFlags.Debug {
-			log.Fatalf("%+v", err)
+			f.GetLog().Fatalf("%+v", err)
 		} else {
-			log.Fatal(err)
+			f.GetLog().Fatal(err)
 		}
 	}
 }
 
-func init() {
+// BuildRoot creates a new root command from the
+func BuildRoot(f factory.Factory) *cobra.Command {
+	rootCmd := NewRootCmd(f.GetLog())
 	persistentFlags := rootCmd.PersistentFlags()
 	globalFlags = flags.SetGlobalFlags(persistentFlags)
 
@@ -96,14 +104,14 @@ func init() {
 	rootCmd.AddCommand(update.NewUpdateCmd(globalFlags))
 
 	// Add main commands
-	rootCmd.AddCommand(NewInitCmd())
+	rootCmd.AddCommand(NewInitCmd(f))
 	rootCmd.AddCommand(NewDevCmd(globalFlags))
 	rootCmd.AddCommand(NewBuildCmd(globalFlags))
 	rootCmd.AddCommand(NewSyncCmd(globalFlags))
 	rootCmd.AddCommand(NewPurgeCmd(globalFlags))
 	rootCmd.AddCommand(NewUpgradeCmd())
-	rootCmd.AddCommand(NewDeployCmd(globalFlags))
-	rootCmd.AddCommand(NewEnterCmd(globalFlags))
+	rootCmd.AddCommand(NewDeployCmd(f, globalFlags))
+	rootCmd.AddCommand(NewEnterCmd(f, globalFlags))
 	rootCmd.AddCommand(NewLoginCmd())
 	rootCmd.AddCommand(NewAnalyzeCmd(globalFlags))
 	rootCmd.AddCommand(NewLogsCmd(globalFlags))
@@ -112,11 +120,12 @@ func init() {
 	rootCmd.AddCommand(NewRunCmd(globalFlags))
 	rootCmd.AddCommand(NewAttachCmd(globalFlags))
 
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(func() { initConfig(f.GetLog()) })
+	return rootCmd
 }
 
 // initConfig reads in config file and ENV variables if set.
-func initConfig() {
+func initConfig(log log.Logger) {
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
@@ -138,9 +147,4 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		log.Info("Using config file:", viper.ConfigFileUsed())
 	}
-}
-
-// GetRoot returns the root command
-func GetRoot() *cobra.Command {
-	return rootCmd
 }

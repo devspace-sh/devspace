@@ -8,7 +8,6 @@ import (
 	"k8s.io/client-go/tools/portforward"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
 	"github.com/pkg/errors"
@@ -38,9 +37,9 @@ func (serviceClient *client) StartPortForwarding() ([]*portforward.PortForwarder
 				return nil, errors.Errorf("Error creating target selector: %v", err)
 			}
 
-			log.StartWait("Port-Forwarding: Waiting for containers to start...")
+			serviceClient.log.StartWait("Port-Forwarding: Waiting for containers to start...")
 			pod, err := selector.GetPod(serviceClient.log)
-			log.StopWait()
+			serviceClient.log.StopWait()
 			if err != nil {
 				return nil, errors.Errorf("%s: %s", message.SelectorErrorPod, err.Error())
 			} else if pod != nil {
@@ -60,7 +59,7 @@ func (serviceClient *client) StartPortForwarding() ([]*portforward.PortForwarder
 
 					open, _ := port.Check(*value.LocalPort)
 					if open == false {
-						log.Warnf("Seems like port %d is already in use. Is another application using that port?", *value.LocalPort)
+						serviceClient.log.Warnf("Seems like port %d is already in use. Is another application using that port?", *value.LocalPort)
 					}
 
 					ports[index] = localPort + ":" + remotePort
@@ -81,14 +80,14 @@ func (serviceClient *client) StartPortForwarding() ([]*portforward.PortForwarder
 				go func() {
 					err := pf.ForwardPorts()
 					if err != nil {
-						log.Fatalf("Error forwarding ports: %v", err)
+						serviceClient.log.Fatalf("Error forwarding ports: %v", err)
 					}
 				}()
 
 				// Wait till forwarding is ready
 				select {
 				case <-readyChan:
-					log.Donef("Port forwarding started on %s", strings.Join(ports, ", "))
+					serviceClient.log.Donef("Port forwarding started on %s", strings.Join(ports, ", "))
 
 					portforwarder = append(portforwarder, pf)
 				case <-time.After(20 * time.Second):

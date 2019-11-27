@@ -6,9 +6,14 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+
 	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -43,15 +48,16 @@ type resolver struct {
 	BaseConfig *latest.Config
 	BaseCache  *generated.Config
 
-	ConfigOptions *configutil.ConfigOptions
+	ConfigOptions *loader.ConfigOptions
+	AllowCyclic   bool
 
-	AllowCyclic bool
-
-	log log.Logger
+	client         kubectl.Client
+	generatedSaver generated.ConfigLoader
+	log            log.Logger
 }
 
 // NewResolver creates a new resolver for resolving dependencies
-func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, allowCyclic bool, configOptions *configutil.ConfigOptions, log log.Logger) (ResolverInterface, error) {
+func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, log log.Logger) (ResolverInterface, error) {
 	var id string
 
 	basePath, err := filepath.Abs(".")
@@ -75,7 +81,10 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, allowCy
 		AllowCyclic:   allowCyclic,
 		ConfigOptions: configOptions,
 
-		log: log,
+		// We only need that for saving
+		generatedSaver: generated.NewConfigLoader(""),
+		client:         client,
+		log:            log,
 	}, nil
 }
 
@@ -100,7 +109,7 @@ func (r *resolver) Resolve(update bool) ([]*Dependency, error) {
 	r.log.Donef("Resolved %d dependencies", len(r.DependencyGraph.Nodes)-1)
 
 	// Save generated
-	err = generated.SaveConfig(r.BaseCache)
+	err = r.generatedSaver.Save(r.BaseCache)
 	if err != nil {
 		return nil, err
 	}
@@ -233,8 +242,12 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 	cloned.Profile = dependency.Profile
 
+	// Construct load path
+	configPath := filepath.Join(localPath, constants.DefaultConfigPath)
+
 	// Load config
-	dConfig, err := configutil.GetConfigFromPath(r.BaseCache, localPath, cloned, log.Discard)
+	configLoader := loader.NewConfigLoader(cloned, log.Discard)
+	dConfig, err := configLoader.LoadFromPath(r.BaseCache, configPath)
 	if err != nil {
 		return nil, errors.Errorf("Error loading config for dependency %s: %v", ID, err)
 	}
@@ -248,13 +261,23 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	}
 
 	// Load dependency generated config
-	dGeneratedConfig, err := generated.LoadConfigFromPath(filepath.Join(localPath, filepath.FromSlash(generated.ConfigPath)), dependency.Profile)
+	gLoader := generated.NewConfigLoader(dependency.Profile)
+	dGeneratedConfig, err := gLoader.LoadFromPath(filepath.Join(localPath, filepath.FromSlash(generated.ConfigPath)))
 	if err != nil {
 		return nil, errors.Errorf("Error loading generated config for dependency %s: %v", ID, err)
 	}
 
 	dGeneratedConfig.ActiveProfile = dependency.Profile
 	generated.InitDevSpaceConfig(dGeneratedConfig, dependency.Profile)
+
+	// Recreate client if necessary
+	client := r.client
+	if dependency.Namespace != "" {
+		client, err = kubectl.NewClientFromContext(client.CurrentContext(), dependency.Namespace, false)
+		if err != nil {
+			return nil, errors.Wrap(err, "create new client")
+		}
+	}
 
 	return &Dependency{
 		ID:        ID,
@@ -265,6 +288,12 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 		DependencyConfig: dependency,
 		DependencyCache:  r.BaseCache,
+
+		kubeClient: client,
+
+		buildController:  build.NewController(dConfig, dGeneratedConfig.GetActive(), client),
+		deployController: deploy.NewController(dConfig, dGeneratedConfig.GetActive(), client),
+		generatedSaver:   gLoader,
 	}, nil
 }
 

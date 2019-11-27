@@ -70,6 +70,6 @@ func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
-	log.Infof("Successful logged into %s", providerName)
+	log.GetInstance().Infof("Successful logged into %s", providerName)
 	return nil
 }

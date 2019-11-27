@@ -1,9 +1,11 @@
 package log
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/sirupsen/logrus"
 )
 
@@ -101,3 +103,8 @@ func (d *DiscardLogger) Write(message []byte) (int, error) {
 
 // WriteString implements logger interface
 func (d *DiscardLogger) WriteString(message string) {}
+
+// Question asks a new question
+func (d *DiscardLogger) Question(params *survey.QuestionOptions) (string, error) {
+	return "", errors.New("Questions in discard logger not supported")
+}

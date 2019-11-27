@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -54,7 +54,8 @@ func newSyncCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 // RunRemoveSync executes the remove sync command logic
 func (cmd *syncCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -62,7 +63,7 @@ func (cmd *syncCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) error 
 		return errors.New(message.ConfigNotFound)
 	}
 
-	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())
+	config, err := configLoader.LoadWithoutProfile()
 	if err != nil {
 		return err
 	}
@@ -72,5 +73,5 @@ func (cmd *syncCmd) RunRemoveSync(cobraCmd *cobra.Command, args []string) error 
 		return err
 	}
 
-	return nil
+	return configLoader.Save(config)
 }

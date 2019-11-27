@@ -10,14 +10,14 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
-	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/server"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
 	"github.com/mgutz/ansi"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -25,6 +25,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	logutil "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -59,13 +60,19 @@ type DevCmd struct {
 
 	Terminal    bool
 	Interactive bool
+
+	configLoader loader.ConfigLoader
+	log          logpkg.Logger
 }
 
 const interactiveDefaultPickerValue = "Open Picker"
 
 // NewDevCmd creates a new devspace dev command
 func NewDevCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &DevCmd{GlobalFlags: globalFlags}
+	cmd := &DevCmd{
+		GlobalFlags: globalFlags,
+		log:         log.GetInstance(),
+	}
 
 	devCmd := &cobra.Command{
 		Use:   "dev",
@@ -118,7 +125,8 @@ Open terminal instead of logs:
 // Run executes the command logic
 func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	cmd.configLoader = loader.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
+	configExists, err := cmd.configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -127,7 +135,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Start file logging
-	log.StartFileLogging()
+	logpkg.StartFileLogging()
 
 	// Validate flags
 	err = cmd.validateFlags()
@@ -136,13 +144,13 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig(cmd.Profile)
+	generatedConfig, err := cmd.configLoader.Generated()
 	if err != nil {
 		return errors.Errorf("Error loading generated.yaml: %v", err)
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	err = cmd.UseLastContext(generatedConfig, cmd.log)
 	if err != nil {
 		return err
 	}
@@ -154,7 +162,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Show a warning if necessary
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, cmd.log)
 	if err != nil {
 		return err
 	}
@@ -172,25 +180,25 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Signal that we are working on the space if there is any
-	resumer := resume.NewSpaceResumer(client, log.GetInstance())
+	resumer := resume.NewSpaceResumer(client, cmd.log)
 	err = resumer.ResumeSpace(true)
 	if err != nil {
 		return err
 	}
 
 	// Create namespace if necessary
-	err = client.EnsureDefaultNamespace(log.GetInstance())
+	err = client.EnsureDefaultNamespace(cmd.log)
 	if err != nil {
 		return errors.Errorf("Unable to create namespace: %v", err)
 	}
 
 	// Create the image pull secrets and add them to the default service account
-	dockerClient, err := docker.NewClient(log.GetInstance())
+	dockerClient, err := docker.NewClient(cmd.log)
 	if err != nil {
 		dockerClient = nil
 	}
 
-	registryClient := registry.NewClient(config, client, dockerClient, log.GetInstance())
+	registryClient := registry.NewClient(config, client, dockerClient, cmd.log)
 	err = registryClient.CreatePullSecrets()
 	if err != nil {
 		return err
@@ -213,7 +221,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 	if cmd.SkipPipeline == false {
 
 		// Create Dependencymanager
-		manager, err := dependency.NewManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), log.GetInstance())
+		manager, err := dependency.NewManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log)
 		if err != nil {
 			return 0, errors.Wrap(err, "new manager")
 		}
@@ -234,7 +242,13 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 		// Build image if necessary
 		builtImages := make(map[string]string)
 		if cmd.SkipBuild == false {
-			builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, true, cmd.ForceBuild, cmd.BuildSequential, skipBuildIfAlreadyBuilt, log.GetInstance())
+			builtImages, err = build.NewController(config, generatedConfig.GetActive(), client).Build(&build.Options{
+				SkipPush:                 cmd.SkipPush,
+				IsDev:                    true,
+				ForceRebuild:             cmd.ForceBuild,
+				Sequential:               cmd.BuildSequential,
+				IgnoreContextPathChanges: skipBuildIfAlreadyBuilt,
+			}, cmd.log)
 			if err != nil {
 				if strings.Index(err.Error(), "no space left on device") != -1 {
 					return 0, errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
@@ -245,7 +259,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 
 			// Save config if an image was built
 			if len(builtImages) > 0 {
-				err := generated.SaveConfig(generatedConfig)
+				err := cmd.configLoader.SaveGenerated(generatedConfig)
 				if err != nil {
 					return 0, errors.Errorf("Error saving generated config: %v", err)
 				}
@@ -264,20 +278,25 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 			}
 
 			// Deploy all
-			err = deploy.All(config, generatedConfig.GetActive(), client, true, cmd.ForceDeploy, builtImages, deployments, log.GetInstance())
+			err = deploy.NewController(config, generatedConfig.GetActive(), client).Deploy(&deploy.Options{
+				IsDev:       true,
+				ForceDeploy: cmd.ForceDeploy,
+				BuiltImages: builtImages,
+				Deployments: deployments,
+			}, cmd.log)
 			if err != nil {
 				return 0, errors.Errorf("Error deploying: %v", err)
 			}
 
 			// Save Config
-			err = generated.SaveConfig(generatedConfig)
+			err = cmd.configLoader.SaveGenerated(generatedConfig)
 			if err != nil {
 				return 0, errors.Errorf("Error saving generated config: %v", err)
 			}
 		}
 
 		// Update last used kube context
-		err = client.UpdateLastKubeContext(generatedConfig)
+		err = updateLastKubeContext(cmd.configLoader, client, generatedConfig)
 		if err != nil {
 			return 0, errors.Wrap(err, "update last kube context")
 		}
@@ -289,7 +308,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 		var err error
 
 		// Start services
-		exitCode, err = cmd.startServices(config, generatedConfig, client, args, log.GetInstance())
+		exitCode, err = cmd.startServices(config, generatedConfig, client, args, cmd.log)
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
@@ -327,7 +346,6 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	}
 
 	servicesClient := services.NewClient(config, generatedConfig, client, selectorParameter, log)
-
 	if cmd.Portforwarding {
 		portForwarder, err := servicesClient.StartPortForwarding()
 		if err != nil {
@@ -415,7 +433,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 		defer log.StopWait()
 
 		// Create server
-		server, err := server.NewServer(config, generatedConfig, false, client.CurrentContext(), client.Namespace(), nil, log)
+		server, err := server.NewServer(cmd.configLoader, config, generatedConfig, false, client.CurrentContext(), client.Namespace(), nil, log)
 		if err != nil {
 			log.Warnf("Couldn't start UI server: %v", err)
 		} else {
@@ -576,10 +594,8 @@ func (r *reloadError) Error() string {
 }
 
 func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
-	configutil.ResetConfig()
-
 	// Load config
-	config, err := configutil.GetConfig(cmd.ToConfigOptions())
+	config, err := cmd.configLoader.Load()
 	if err != nil {
 		return nil, err
 	}
@@ -615,10 +631,10 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 					question = "Which image do you want to open a terminal to?"
 				}
 
-				imageName, err = survey.Question(&survey.QuestionOptions{
+				imageName, err = cmd.log.Question(&survey.QuestionOptions{
 					Question: question,
 					Options:  imageNames,
-				}, log.GetInstance())
+				})
 				if err != nil {
 					return nil, err
 				}
@@ -642,15 +658,15 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 			}
 
 			if imageConf.Entrypoint != nil && imageConf.Cmd != nil {
-				log.Infof("Override image '%s' entrypoint with %+v and cmd with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Entrypoint, imageConf.Cmd)
+				cmd.log.Infof("Override image '%s' entrypoint with %+v and cmd with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Entrypoint, imageConf.Cmd)
 			} else if imageConf.Entrypoint != nil {
-				log.Infof("Override image '%s' entrypoint with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Entrypoint)
+				cmd.log.Infof("Override image '%s' entrypoint with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Entrypoint)
 			} else if imageConf.Cmd != nil {
-				log.Infof("Override image '%s' cmd with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Cmd)
+				cmd.log.Infof("Override image '%s' cmd with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Cmd)
 			}
 		}
 
-		log.Info("Interactive mode: enable terminal")
+		cmd.log.Info("Interactive mode: enable terminal")
 		config.Dev.Interactive.DefaultEnabled = ptr.Bool(true)
 	} else {
 		if config.Dev != nil && config.Dev.Interactive != nil {
@@ -659,4 +675,21 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 	}
 
 	return config, nil
+}
+
+func updateLastKubeContext(configLoader loader.ConfigLoader, client kubectl.Client, generatedConfig *generated.Config) error {
+	// Update generated if we deploy the application
+	if generatedConfig != nil {
+		generatedConfig.GetActive().LastContext = &generated.LastContextConfig{
+			Context:   client.CurrentContext(),
+			Namespace: client.Namespace(),
+		}
+
+		err := configLoader.SaveGenerated(generatedConfig)
+		if err != nil {
+			return errors.Wrap(err, "save generated")
+		}
+	}
+
+	return nil
 }

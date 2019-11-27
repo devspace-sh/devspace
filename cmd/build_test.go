@@ -11,7 +11,7 @@ package cmd
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -197,8 +197,8 @@ func testBuild(t *testing.T, testCase buildTestCase) {
 	providerConfig.Providers = testCase.providerList
 
 	generated.ResetConfig()
-	configutil.SetFakeConfig(testCase.fakeConfig)
-	configutil.ResetConfig()
+	loader.SetFakeConfig(testCase.fakeConfig)
+	loader.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 
 	for path, content := range testCase.files {

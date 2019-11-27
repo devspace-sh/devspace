@@ -87,6 +87,6 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) e
 		return errors.Wrap(err, "save provider config")
 	}
 
-	log.Donef("Successfully added cloud provider %s", providerName)
+	log.GetInstance().Donef("Successfully added cloud provider %s", providerName)
 	return nil
 }

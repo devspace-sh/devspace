@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
@@ -19,7 +19,7 @@ import (
 func createTestConfig() *latest.Config {
 	// Create fake devspace config
 	testConfig := &latest.Config{}
-	configutil.SetFakeConfig(testConfig)
+	loader.SetFakeConfig(testConfig)
 
 	return testConfig
 }
@@ -62,7 +62,7 @@ func createTestResources(client kubernetes.Interface) error {
 			UpdatedReplicas:    1,
 		},
 	}
-	_, err := client.AppsV1().Deployments(configutil.TestNamespace).Create(deploy)
+	_, err := client.AppsV1().Deployments(loader.TestNamespace).Create(deploy)
 	if err != nil {
 		return errors.Wrap(err, "create deployment")
 	}
@@ -86,7 +86,7 @@ func createTestResources(client kubernetes.Interface) error {
 			},
 		},
 	}
-	_, err = client.CoreV1().Pods(configutil.TestNamespace).Create(p)
+	_, err = client.CoreV1().Pods(loader.TestNamespace).Create(p)
 	if err != nil {
 		return errors.Wrap(err, "create pod")
 	}
@@ -104,7 +104,7 @@ func TestGetPodStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	podList, err := kubeClient.CoreV1().Pods(configutil.TestNamespace).List(metav1.ListOptions{})
+	podList, err := kubeClient.CoreV1().Pods(loader.TestNamespace).List(metav1.ListOptions{})
 	if err != nil {
 		t.Fatalf("error retrieving list: %v", err)
 	}

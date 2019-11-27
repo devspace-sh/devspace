@@ -57,12 +57,12 @@ func (p *provider) askForEncryptionKey(cluster *latest.Cluster) (string, error) 
 
 	// Wait till user enters the correct key
 	for true {
-		key, err := survey.Question(&survey.QuestionOptions{
+		key, err := p.log.Question(&survey.QuestionOptions{
 			Question:               "Please enter your encryption key for cluster " + cluster.Name,
 			ValidationRegexPattern: "^.{6,32}$",
 			ValidationMessage:      "Key has to be between 6 and 32 characters long",
 			IsPassword:             true,
-		}, p.log)
+		})
 		if err != nil {
 			return "", err
 		}

@@ -44,10 +44,10 @@ func SelectPod(client kubectl.Client, namespace string, labelSelector *string, q
 
 			podName := ""
 			if len(options) > 1 {
-				podName, err = survey.Question(&survey.QuestionOptions{
+				podName, err = log.Question(&survey.QuestionOptions{
 					Question: *question,
 					Options:  options,
-				}, log)
+				})
 				if err != nil {
 					return nil, err
 				}
@@ -90,10 +90,10 @@ func SelectPod(client kubectl.Client, namespace string, labelSelector *string, q
 
 		podName := ""
 		if len(options) > 1 {
-			podName, err = survey.Question(&survey.QuestionOptions{
+			podName, err = log.Question(&survey.QuestionOptions{
 				Question: *question,
 				Options:  options,
-			}, log)
+			})
 			if err != nil {
 				return nil, err
 			}

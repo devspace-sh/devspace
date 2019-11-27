@@ -5,8 +5,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -41,7 +40,8 @@ values
 // RunListVars runs the list vars command logic
 func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -50,13 +50,13 @@ func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Fill variables config
-	_, err = configutil.GetConfig(cmd.ToConfigOptions())
+	_, err = configLoader.Load()
 	if err != nil {
 		return err
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig(cmd.KubeContext)
+	generatedConfig, err := configLoader.Generated()
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) error {
 
 	// No variable found
 	if len(varRow) == 0 {
-		log.Info("No variables found")
+		log.GetInstance().Info("No variables found")
 		return nil
 	}
 

@@ -7,10 +7,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
@@ -116,7 +115,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 			dockerUsername = dockerAuthConfig.Username
 		}
 
-		imageName, err = survey.Question(&survey.QuestionOptions{
+		imageName, err = log.Question(&survey.QuestionOptions{
 			Question:          "Which image name do you want to use on Docker Hub?",
 			DefaultValue:      dockerUsername + "/" + imageName,
 			ValidationMessage: "Please enter a valid image name for Docker Hub (e.g. myregistry.com/user/repository | allowed charaters: /, a-z, 0-9)",
@@ -124,7 +123,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 				_, err := registry.GetStrippedDockerImageName(name)
 				return err
 			},
-		}, log)
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -138,7 +137,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 			gcloudProject = strings.TrimSpace(string(project))
 		}
 
-		imageName, err = survey.Question(&survey.QuestionOptions{
+		imageName, err = log.Question(&survey.QuestionOptions{
 			Question:          "Which image name do you want to push to?",
 			DefaultValue:      registryURL + "/" + gcloudProject + "/" + imageName,
 			ValidationMessage: "Please enter a valid Docker image name (e.g. myregistry.com/user/repository | allowed charaters: /, a-z, 0-9)",
@@ -146,7 +145,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 				_, err := registry.GetStrippedDockerImageName(name)
 				return err
 			},
-		}, log)
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -157,7 +156,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 			dockerUsername = "myuser"
 		}
 
-		imageName, err = survey.Question(&survey.QuestionOptions{
+		imageName, err = log.Question(&survey.QuestionOptions{
 			Question:          "Which image name do you want to push to?",
 			DefaultValue:      registryURL + "/" + dockerUsername + "/" + imageName,
 			ValidationMessage: "Please enter a valid docker image name (e.g. myregistry.com/user/repository)",
@@ -165,7 +164,7 @@ func GetImageConfigFromDockerfile(config *latest.Config, imageName, dockerfile, 
 				_, err := registry.GetStrippedDockerImageName(name)
 				return err
 			},
-		}, log)
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -220,11 +219,11 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 		registryOptions = []string{useDockerHub, useDevSpaceRegistry, useOtherRegistry}
 	}
 
-	selectedRegistry, err := survey.Question(&survey.QuestionOptions{
+	selectedRegistry, err := log.Question(&survey.QuestionOptions{
 		Question:     "Which registry do you want to use for storing your Docker images?",
 		DefaultValue: registryDefaultOption,
 		Options:      registryOptions,
-	}, log)
+	})
 	if err != nil {
 		return "", err
 	}
@@ -236,10 +235,10 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 		registryURL = cloudRegistryHostname
 		registryLoginHint = fmt.Sprintf(registryLoginHint, " "+cloudRegistryHostname)
 	} else {
-		registryURL, err = survey.Question(&survey.QuestionOptions{
+		registryURL, err = log.Question(&survey.QuestionOptions{
 			Question:     "Please enter the registry URL without image name:",
 			DefaultValue: "my.registry.tld/username",
-		}, log)
+		})
 		if err != nil {
 			return "", err
 		}
@@ -258,21 +257,21 @@ func getRegistryURL(config *latest.Config, cloudRegistryHostname string, cloudPr
 			log.Warn("Installing docker is NOT required. You simply need a Docker Hub account\n")
 
 			for {
-				dockerUsername, err := survey.Question(&survey.QuestionOptions{
+				dockerUsername, err := log.Question(&survey.QuestionOptions{
 					Question:               "What is your Docker Hub username?",
 					DefaultValue:           "",
 					ValidationRegexPattern: "^.*$",
-				}, log)
+				})
 				if err != nil {
 					return "", err
 				}
 
-				dockerPassword, err := survey.Question(&survey.QuestionOptions{
+				dockerPassword, err := log.Question(&survey.QuestionOptions{
 					Question:               "What is your Docker Hub password? (will only be sent to Docker Hub)",
 					DefaultValue:           "",
 					ValidationRegexPattern: "^.*$",
 					IsPassword:             true,
-				}, log)
+				})
 				if err != nil {
 					return "", err
 				}
@@ -328,7 +327,7 @@ func loginDevSpaceCloud(cloudProvider string, log log.Logger) error {
 }
 
 // AddImage adds an image to the devspace
-func AddImage(baseConfig *latest.Config, nameInConfig, name, tag, contextPath, dockerfilePath, buildTool string) error {
+func AddImage(baseConfig *latest.Config, nameInConfig, name, tag, contextPath, dockerfilePath, buildTool string, log log.Logger) error {
 	imageConfig := &v1.ImageConfig{
 		Image: name,
 	}
@@ -366,11 +365,6 @@ func AddImage(baseConfig *latest.Config, nameInConfig, name, tag, contextPath, d
 
 	baseConfig.Images[nameInConfig] = imageConfig
 
-	err := configutil.SaveLoadedConfig()
-	if err != nil {
-		return errors.Errorf("Couldn't save config file: %s", err.Error())
-	}
-
 	return nil
 }
 
@@ -396,11 +390,6 @@ func RemoveImage(baseConfig *latest.Config, removeAll bool, names []string) erro
 	}
 
 	baseConfig.Images = newImageList
-
-	err := configutil.SaveLoadedConfig()
-	if err != nil {
-		return errors.Errorf("Couldn't save config file: %v", err)
-	}
 
 	return nil
 }

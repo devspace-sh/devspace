@@ -72,10 +72,10 @@ func GetProviderWithOptions(useProviderName, key string, relogin bool, loader co
 				options = append(options, providerHost.Name)
 			}
 
-			providerName, err = survey.Question(&survey.QuestionOptions{
+			providerName, err = log.Question(&survey.QuestionOptions{
 				Question: "Select cloud provider",
 				Options:  options,
-			}, log)
+			})
 			if err != nil {
 				return nil, err
 			}

@@ -4,7 +4,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/pkg/errors"
 )
@@ -62,12 +61,6 @@ func AddSyncPath(baseConfig *latest.Config, localPath, containerPath, namespace,
 	})
 
 	baseConfig.Dev.Sync = Sync
-
-	err = configutil.SaveLoadedConfig()
-	if err != nil {
-		return errors.Errorf("Couldn't save config file: %s", err.Error())
-	}
-
 	return nil
 }
 
@@ -98,11 +91,6 @@ func RemoveSyncPath(baseConfig *latest.Config, removeAll bool, localPath, contai
 		}
 
 		baseConfig.Dev.Sync = newSyncPaths
-
-		err = configutil.SaveLoadedConfig()
-		if err != nil {
-			return errors.Errorf("Couldn't save config file: %v", err)
-		}
 	}
 
 	return nil

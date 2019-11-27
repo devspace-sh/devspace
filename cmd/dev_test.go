@@ -102,8 +102,8 @@ func testDev(t *testing.T, testCase devTestCase) {
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 
-	configutil.SetFakeConfig(testCase.fakeConfig)
-	configutil.ResetConfig()
+	loader.SetFakeConfig(testCase.fakeConfig)
+	loader.ResetConfig()
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 	kubectl.SetFakeClient(testCase.fakeKubeClient)

@@ -40,6 +40,7 @@ devspace use context my-context
 // RunUseContext executes the functionality "devspace use namespace"
 func (cmd *contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) error {
 	// Load kube-config
+	log := log.GetInstance()
 	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return errors.Wrap(err, "load kube config")
@@ -57,11 +58,11 @@ func (cmd *contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) err
 
 		sort.Strings(contexts)
 
-		context, err = survey.Question(&survey.QuestionOptions{
+		context, err = log.Question(&survey.QuestionOptions{
 			Question:     "Which context do you want to use?",
 			DefaultValue: kubeConfig.CurrentContext,
 			Options:      contexts,
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}

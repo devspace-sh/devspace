@@ -2,7 +2,7 @@ package add
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -58,7 +58,8 @@ devspace add image my-image --image=dockeruser/devspaceimage2 --buildtool=kaniko
 // RunAddImage executes the add image command logic
 func (cmd *imageCmd) RunAddImage(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -66,16 +67,21 @@ func (cmd *imageCmd) RunAddImage(cobraCmd *cobra.Command, args []string) error {
 		return errors.New(message.ConfigNotFound)
 	}
 
-	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())
+	config, err := configLoader.LoadWithoutProfile()
 	if err != nil {
 		return err
 	}
 
-	err = configure.AddImage(config, args[0], cmd.Name, cmd.Tag, cmd.ContextPath, cmd.DockerfilePath, cmd.BuildTool)
+	err = configure.AddImage(config, args[0], cmd.Name, cmd.Tag, cmd.ContextPath, cmd.DockerfilePath, cmd.BuildTool, log.GetInstance())
 	if err != nil {
 		return err
 	}
 
-	log.Donef("Successfully added image %s", args[0])
+	err = configLoader.Save(config)
+	if err != nil {
+		return err
+	}
+
+	log.GetInstance().Donef("Successfully added image %s", args[0])
 	return nil
 }

@@ -120,10 +120,10 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 					podMap[pod.Name] = pod
 				}
 
-				podName, err := survey.Question(&survey.QuestionOptions{
+				podName, err := log.Question(&survey.QuestionOptions{
 					Question: *t.PodQuestion,
 					Options:  podNames,
-				}, log)
+				})
 				if err != nil {
 					return nil, err
 				}
@@ -220,10 +220,10 @@ func (t *TargetSelector) GetContainer(allowInitContainer bool, log log.Logger) (
 			t.ContainerQuestion = ptr.String(DefaultContainerQuestion)
 		}
 
-		containerName, err := survey.Question(&survey.QuestionOptions{
+		containerName, err := log.Question(&survey.QuestionOptions{
 			Question: *t.ContainerQuestion,
 			Options:  options,
-		}, log)
+		})
 		if err != nil {
 			return nil, nil, err
 		} else if strings.HasPrefix(containerName, initContainerOptionPrefix) {
@@ -280,10 +280,10 @@ func (t *TargetSelector) GetContainer(allowInitContainer bool, log log.Logger) (
 			t.ContainerQuestion = ptr.String(DefaultContainerQuestion)
 		}
 
-		containerName, err := survey.Question(&survey.QuestionOptions{
+		containerName, err := log.Question(&survey.QuestionOptions{
 			Question: *t.ContainerQuestion,
 			Options:  options,
-		}, log)
+		})
 		if err != nil {
 			return nil, nil, err
 		}

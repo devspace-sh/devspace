@@ -53,11 +53,11 @@ func (*providerCmd) RunUseProvider(cobraCmd *cobra.Command, args []string) error
 			providerNames = append(providerNames, strings.TrimSpace(provider.Name))
 		}
 
-		providerName, err = survey.Question(&survey.QuestionOptions{
+		providerName, err = log.GetInstance().Question(&survey.QuestionOptions{
 			Question:     "Please select a default provider",
 			DefaultValue: providerConfig.Default,
 			Options:      providerNames,
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}
@@ -74,6 +74,6 @@ func (*providerCmd) RunUseProvider(cobraCmd *cobra.Command, args []string) error
 		return errors.Errorf("Couldn't save provider config: %v", err)
 	}
 
-	log.Donef("Successfully changed default cloud provider to %s", providerName)
+	log.GetInstance().Donef("Successfully changed default cloud provider to %s", providerName)
 	return nil
 }

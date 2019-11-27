@@ -8,7 +8,7 @@ import ()
 		Deployments: []*latest.DeploymentConfig{
 			&latest.DeploymentConfig{
 				Name:      "test-deployment",
-				Namespace: configutil.TestNamespace,
+				Namespace: loader.TestNamespace,
 				Helm: &latest.HelmConfig{
 					Chart: &latest.ChartConfig{
 						Name: "stable/nginx",
@@ -26,7 +26,7 @@ import ()
 		},
 	}
 
-	configutil.SetFakeConfig(testConfig)
+	loader.SetFakeConfig(testConfig)
 	return testConfig
 }
 

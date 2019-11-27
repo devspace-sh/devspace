@@ -6,9 +6,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
@@ -53,15 +53,17 @@ devspace use space my-space
 
 // RunUseSpace executes the functionality "devspace use space"
 func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
+	log := logpkg.GetInstance()
+
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configExists, err := loader.NewConfigLoader(nil, log).SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
 
-	logger := log.GetInstance()
+	logger := log
 	if cmd.GetToken == true {
-		logger = log.Discard
+		logger = logpkg.Discard
 	}
 
 	// Get cloud provider from config
@@ -87,10 +89,10 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 			names = append(names, space.Name)
 		}
 
-		spaceName, err := survey.Question(&survey.QuestionOptions{
+		spaceName, err := log.Question(&survey.QuestionOptions{
 			Question: "Please select the Space that you want to use",
 			Options:  names,
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}
@@ -170,8 +172,7 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Signal that we are working on the space if there is any
-	resumer := resume.NewSpaceResumer(client, log.GetInstance())
-	err = resumer.ResumeSpace(false)
+	err = resume.NewSpaceResumer(client, log).ResumeSpace(false)
 	if err != nil {
 		return err
 	}

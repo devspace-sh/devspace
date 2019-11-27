@@ -5,7 +5,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
 	"github.com/mgutz/ansi"
@@ -31,11 +30,11 @@ func (serviceClient *client) StartAttach(imageSelector []string, interrupt chan 
 	}
 
 	if container.TTY == false || container.Stdin == false {
-		log.Warnf("To be able to interact with the container options tty (currently `%t`) and stdin (currently `%t`) must both be `true`", container.TTY, container.Stdin)
+		serviceClient.log.Warnf("To be able to interact with the container options tty (currently `%t`) and stdin (currently `%t`) must both be `true`", container.TTY, container.Stdin)
 	}
 
-	log.Infof("Attaching to pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
-	log.Info("If you don't see a command prompt, try pressing enter.")
+	serviceClient.log.Infof("Attaching to pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
+	serviceClient.log.Info("If you don't see a command prompt, try pressing enter.")
 
 	go func() {
 		interrupt <- serviceClient.client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container.Name, nil, container.TTY, os.Stdin, os.Stdout, os.Stderr, kubectl.SubResourceAttach)

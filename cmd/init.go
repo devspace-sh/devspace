@@ -8,15 +8,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder/helper"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -52,11 +51,14 @@ type InitCmd struct {
 	Provider    string
 
 	dockerfileGenerator *generator.DockerfileGenerator
+	log                 log.Logger
 }
 
 // NewInitCmd creates a new init command
-func NewInitCmd() *cobra.Command {
-	cmd := &InitCmd{}
+func NewInitCmd(f factory.Factory) *cobra.Command {
+	cmd := &InitCmd{
+		log: f.GetLog(),
+	}
 
 	initCmd := &cobra.Command{
 		Use:   "init",
@@ -70,7 +72,9 @@ folder. Creates a devspace.yaml with all configuration.
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.Run,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.Run(f, cobraCmd, args)
+		},
 	}
 
 	initCmd.Flags().BoolVarP(&cmd.Reconfigure, "reconfigure", "r", false, "Change existing configuration")
@@ -82,12 +86,13 @@ folder. Creates a devspace.yaml with all configuration.
 }
 
 // Run executes the command logic
-func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
+func (cmd *InitCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Check if config already exists
-	configExists := configutil.ConfigExists()
+	configLoader := f.NewConfigLoader(nil, cmd.log)
+	configExists := configLoader.Exists()
 	if configExists && cmd.Reconfigure == false {
-		log.Info("Config already exists. If you want to recreate the config please run `devspace init --reconfigure`")
-		log.Infof("\r         \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
+		cmd.log.Info("Config already exists. If you want to recreate the config please run `devspace init --reconfigure`")
+		cmd.log.Infof("\r         \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
 		return nil
 	}
 
@@ -104,7 +109,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	os.Remove(constants.DefaultVarsPath)
 
 	// Create config
-	config := configutil.InitConfig()
+	config := configLoader.New()
 
 	// Print DevSpace logo
 	log.PrintLogo()
@@ -126,7 +131,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 
 	_, err = os.Stat(cmd.Dockerfile)
 	if err != nil {
-		selectedOption, err = survey.Question(&survey.QuestionOptions{
+		selectedOption, err = cmd.log.Question(&survey.QuestionOptions{
 			Question:     "This project does not have a Dockerfile. What do you want to do?",
 			DefaultValue: createDockerfileOption,
 			Options: []string{
@@ -136,12 +141,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 				enterHelmChartOption,
 				useExistingImageOption,
 			},
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}
 	} else {
-		selectedOption, err = survey.Question(&survey.QuestionOptions{
+		selectedOption, err = cmd.log.Question(&survey.QuestionOptions{
 			Question:     "How do you want to initialize this project?",
 			DefaultValue: useExistingDockerfileOption,
 			Options: []string{
@@ -151,7 +156,7 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 				enterHelmChartOption,
 				useExistingImageOption,
 			},
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}
@@ -159,22 +164,22 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 
 	if selectedOption == createDockerfileOption {
 		// Containerize application if necessary
-		err = generator.ContainerizeApplication(cmd.Dockerfile, ".", "", log.GetInstance())
+		err = generator.ContainerizeApplication(cmd.Dockerfile, ".", "", cmd.log)
 		if err != nil {
 			return errors.Wrap(err, "containerize application")
 		}
 	} else if selectedOption == enterDockerfileOption {
-		cmd.Dockerfile, err = survey.Question(&survey.QuestionOptions{
+		cmd.Dockerfile, err = cmd.log.Question(&survey.QuestionOptions{
 			Question: "Please enter a path to your Dockerfile (e.g. ./MyDockerfile)",
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}
 	} else if selectedOption == enterManifestsOption {
 		addFromDockerfile = false
-		manifests, err := survey.Question(&survey.QuestionOptions{
+		manifests, err := cmd.log.Question(&survey.QuestionOptions{
 			Question: "Please enter Kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. 'manifests/**' or 'kube/pod.yaml')",
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}
@@ -185,9 +190,9 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		}
 	} else if selectedOption == enterHelmChartOption {
 		addFromDockerfile = false
-		chartName, err := survey.Question(&survey.QuestionOptions{
+		chartName, err := cmd.log.Question(&survey.QuestionOptions{
 			Question: "Please enter the path to a helm chart to deploy (e.g. ./chart)",
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}
@@ -198,14 +203,14 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		}
 	} else if selectedOption == useExistingImageOption {
 		addFromDockerfile = false
-		existingImageName, err := survey.Question(&survey.QuestionOptions{
+		existingImageName, err := cmd.log.Question(&survey.QuestionOptions{
 			Question: "Please enter a docker image to deploy (e.g. gcr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)",
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}
 
-		newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, existingImageName, log.GetInstance())
+		newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, existingImageName, cmd.log)
 		if err != nil {
 			return err
 		}
@@ -218,12 +223,12 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 			return errors.Errorf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.Dockerfile)
 		}
 
-		generatedConfig, err := generated.LoadConfig("")
+		generatedConfig, err := configLoader.Generated()
 		if err != nil {
 			return err
 		}
 
-		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, "", cmd.Dockerfile, cmd.Context, log.GetInstance())
+		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, "", cmd.Dockerfile, cmd.Context, cmd.log)
 		if err != nil {
 			return err
 		}
@@ -231,14 +236,14 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		// Add devspace.yaml to .dockerignore
 		err = appendToIgnoreFile(dockerIgnoreFile, configDockerignore)
 		if err != nil {
-			log.Warn(err)
+			cmd.log.Warn(err)
 		}
 	}
 
 	// Add .devspace/ to .gitignore
 	err = appendToIgnoreFile(gitIgnoreFile, devspaceFolderGitignore)
 	if err != nil {
-		log.Warn(err)
+		cmd.log.Warn(err)
 	}
 
 	if newImage != nil {
@@ -249,20 +254,20 @@ func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Add the development configuration
-	err = cmd.addDevConfig()
+	err = cmd.addDevConfig(config)
 	if err != nil {
 		return err
 	}
 
 	// Save config
-	err = configutil.SaveLoadedConfig()
+	err = configLoader.Save(config)
 	if err != nil {
 		return err
 	}
 
-	log.WriteString("\n")
-	log.Done("Project successfully initialized")
-	log.Infof("\r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
+	cmd.log.WriteString("\n")
+	cmd.log.Done("Project successfully initialized")
+	cmd.log.Infof("\r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
 	return nil
 }
 
@@ -312,16 +317,11 @@ func getDeploymentName() (string, error) {
 	return dirname, nil
 }
 
-func (cmd *InitCmd) addDevConfig() error {
-	config, err := configutil.GetConfig(nil)
-	if err != nil {
-		return err
-	}
-
+func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 	// Forward ports
 	if len(config.Images) > 0 && len(config.Deployments) > 0 && config.Deployments[0].Helm != nil && config.Deployments[0].Helm.ComponentChart != nil && *config.Deployments[0].Helm.ComponentChart == true {
 		componentValues := latest.ComponentConfig{}
-		err = util.Convert(config.Deployments[0].Helm.Values, &componentValues)
+		err := util.Convert(config.Deployments[0].Helm.Values, &componentValues)
 		if err == nil && componentValues.Service != nil && componentValues.Service.Ports != nil && len(componentValues.Service.Ports) > 0 {
 			servicePort := componentValues.Service.Ports[0]
 			if servicePort.Port != nil {
@@ -329,13 +329,13 @@ func (cmd *InitCmd) addDevConfig() error {
 				var remotePortPtr *int
 
 				if *localPortPtr < 1024 {
-					log.WriteString("\n")
-					log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
+					cmd.log.WriteString("\n")
+					cmd.log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
 
-					portString, err := survey.Question(&survey.QuestionOptions{
+					portString, err := cmd.log.Question(&survey.QuestionOptions{
 						Question:     "Which forwarding port [1024-49151] do you want to use to access your application?",
 						DefaultValue: strconv.Itoa(*localPortPtr + 8000),
-					}, log.GetInstance())
+					})
 					if err != nil {
 						return err
 					}

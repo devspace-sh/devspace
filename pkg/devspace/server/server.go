@@ -9,9 +9,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
@@ -40,7 +40,7 @@ func enableCors(w *http.ResponseWriter) {
 const DefaultPort = 8090
 
 // NewServer creates a new server from the given parameters
-func NewServer(config *latest.Config, generatedConfig *generated.Config, ignoreDownloadError bool, defaultContext, defaultNamespace string, forcePort *int, log log.Logger) (*Server, error) {
+func NewServer(configLoader loader.ConfigLoader, config *latest.Config, generatedConfig *generated.Config, ignoreDownloadError bool, defaultContext, defaultNamespace string, forcePort *int, log log.Logger) (*Server, error) {
 	path, err := downloadUI()
 	if err != nil {
 		if !ignoreDownloadError {
@@ -71,7 +71,7 @@ func NewServer(config *latest.Config, generatedConfig *generated.Config, ignoreD
 	}
 
 	// Create handler
-	handler, err := newHandler(config, generatedConfig, defaultContext, defaultNamespace, path, log)
+	handler, err := newHandler(configLoader, config, generatedConfig, defaultContext, defaultNamespace, path, log)
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +94,7 @@ func (s *Server) ListenAndServe() error {
 }
 
 type handler struct {
+	configLoader     loader.ConfigLoader
 	config           *latest.Config
 	generatedConfig  *generated.Config
 	defaultContext   string
@@ -118,7 +119,7 @@ type forward struct {
 	podUUID string
 }
 
-func newHandler(config *latest.Config, generatedConfig *generated.Config, defaultContext, defaultNamespace, path string, log log.Logger) (*handler, error) { // Get kube config
+func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generatedConfig *generated.Config, defaultContext, defaultNamespace, path string, log log.Logger) (*handler, error) { // Get kube config
 	kubeConfig, err := kubeconfig.LoadConfig().RawConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "load kube config")
@@ -146,6 +147,7 @@ func newHandler(config *latest.Config, generatedConfig *generated.Config, defaul
 		defaultNamespace: defaultNamespace,
 		kubeContexts:     kubeContexts,
 		workingDirectory: cwd,
+		configLoader:     configLoader,
 		config:           config,
 		log:              log,
 		generatedConfig:  generatedConfig,
@@ -160,7 +162,7 @@ func newHandler(config *latest.Config, generatedConfig *generated.Config, defaul
 	// Load raw config
 	if config != nil {
 		configPath := filepath.Join(cwd, constants.DefaultConfigPath)
-		handler.rawConfig, err = configutil.GetRawConfig(configPath)
+		handler.rawConfig, err = configLoader.LoadRaw(configPath)
 		if err != nil {
 			return nil, errors.Wrap(err, "load raw config")
 		}

@@ -3,10 +3,10 @@ package build
 import (
 	"context"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder"
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder/custom"
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/builder/kaniko"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/custom"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/kaniko"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -16,8 +16,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// CreateBuilder creates a new builder
-func CreateBuilder(config *latest.Config, client kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool, log log.Logger) (builder.Interface, error) {
+// createBuilder creates a new builder
+func (c *controller) createBuilder(imageConfigName string, imageConf *latest.ImageConfig, imageTag string, options *Options, log log.Logger) (builder.Interface, error) {
 	var (
 		imageBuilder builder.Interface
 		err          error
@@ -30,9 +30,10 @@ func CreateBuilder(config *latest.Config, client kubectl.Client, imageConfigName
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker client: %v", err)
 		}
-		if client == nil {
+
+		if c.client == nil {
 			// Create kubectl client if not specified
-			client, err = kubectl.NewDefaultClient()
+			c.client, err = kubectl.NewDefaultClient()
 			if err != nil {
 				return nil, errors.Errorf("Unable to create new kubectl client: %v", err)
 			}
@@ -40,7 +41,7 @@ func CreateBuilder(config *latest.Config, client kubectl.Client, imageConfigName
 
 		log.StartWait("Creating kaniko builder")
 		defer log.StopWait()
-		imageBuilder, err = kaniko.NewBuilder(config, dockerClient, client, imageConfigName, imageConf, imageTag, isDev, log)
+		imageBuilder, err = kaniko.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTag, options.IsDev, log)
 		if err != nil {
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
 		}
@@ -51,13 +52,13 @@ func CreateBuilder(config *latest.Config, client kubectl.Client, imageConfigName
 		}
 
 		kubeContext := ""
-		if client == nil {
+		if c.client == nil {
 			kubeContext, err = kubeconfig.GetCurrentContext()
 			if err != nil {
 				return nil, errors.Wrap(err, "get current context")
 			}
 		} else {
-			kubeContext = client.CurrentContext()
+			kubeContext = c.client.CurrentContext()
 		}
 
 		dockerClient, err := dockerclient.NewClientWithMinikube(kubeContext, preferMinikube, log)
@@ -74,10 +75,10 @@ func CreateBuilder(config *latest.Config, client kubectl.Client, imageConfigName
 
 			// Fallback to kaniko
 			log.Infof("Couldn't find a running docker daemon. Will fallback to kaniko")
-			return CreateBuilder(config, client, imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTag, skipPush, isDev, log)
+			return c.createBuilder(imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTag, options, log)
 		}
 
-		imageBuilder, err = docker.NewBuilder(config, dockerClient, client, imageConfigName, imageConf, imageTag, skipPush, isDev)
+		imageBuilder, err = docker.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTag, options.SkipPush, options.IsDev)
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker builder: %v", err)
 		}
