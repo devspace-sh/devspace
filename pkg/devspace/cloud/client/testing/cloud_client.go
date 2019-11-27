@@ -7,8 +7,8 @@ import (
 
 type cloudClient struct{}
 
-// NewCloudClient creates a test instance of the cloud-client interface
-func NewCloudClient() cloudclient.Client {
+// NewFakeClient creates a test instance of the cloud-client interface
+func NewFakeClient() cloudclient.Client {
 	return &cloudClient{}
 }
 

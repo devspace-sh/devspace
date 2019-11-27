@@ -10,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
-	"github.com/skratchdot/open-golang/open"
 )
 
 // LoginEndpoint is the cloud endpoint that will log you in
@@ -68,7 +67,7 @@ func (p *provider) Login() error {
 	var key string
 
 	server := startServer(p.Host+LoginSuccessEndpoint, keyChannel, p.log)
-	err := open.Run(url)
+	err := p.browser.Run(url)
 	if err != nil {
 		p.log.Infof("Unable to open web browser for login page.\n\n Please follow these instructions for manually loggin in:\n\n  1. Open this URL in a browser: %s\n  2. After logging in, click the 'Create Key' button\n  3. Enter a key name (e.g. my-key) and click 'Create Access Key'\n  4. Copy the generated key from the input field", p.Host+"/settings/access-keys")
 

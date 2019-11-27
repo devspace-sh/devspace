@@ -17,7 +17,6 @@ import (
 
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
-	"github.com/skratchdot/open-golang/open"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -205,7 +204,7 @@ func (p *provider) ConnectCluster(options *ConnectClusterOptions) error {
 	// Open ui
 	if options.OpenUI {
 		url := fmt.Sprintf("%s/clusters/%d/overview", p.Host, clusterID)
-		err = open.Start(url)
+		err = p.browser.Start(url)
 		if err != nil {
 			p.log.Warnf("Couldn't open the url '%s': %v", url, err)
 		}
