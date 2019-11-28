@@ -192,8 +192,10 @@ func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map
 		return nil
 	}
 
-	if _, err := io.Copy(tw, f); err != nil {
+	if copied, err := io.CopyN(tw, f, stat.Size()); err != nil {
 		return errors.Wrapf(err, "io copy %s", filepath)
+	} else if copied != stat.Size() {
+		return errors.New("tar: file truncated during read")
 	}
 
 	writtenFiles[fileInformation.Name] = true

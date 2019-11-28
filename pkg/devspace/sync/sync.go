@@ -21,6 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var syncRetries = 5
 var initialUpstreamBatchSize = 1000
 var syncLog log.Logger
 
@@ -369,18 +370,21 @@ func (s *Sync) diffServerClient(absPath string, sendChanges *[]*FileInformation,
 		return s.diffDir(absPath, stat, sendChanges, downloadChanges, dontSend)
 	}
 
-	if dontSend == false {
+	if dontSend == false && stat != nil {
+		fileInfo := &FileInformation{
+			Name:           relativePath,
+			Mtime:          stat.ModTime().Unix(),
+			MtimeNano:      stat.ModTime().UnixNano(),
+			Size:           stat.Size(),
+			IsDirectory:    false,
+			IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
+		}
 		s.fileIndex.fileMapMutex.Lock()
-		shouldUpload := shouldUpload(relativePath, stat, s, true)
+		shouldUpload := shouldUpload(s, fileInfo, true)
 		s.fileIndex.fileMapMutex.Unlock()
 		if shouldUpload {
 			// Add file to upload
-			*sendChanges = append(*sendChanges, &FileInformation{
-				Name:        relativePath,
-				Mtime:       stat.ModTime().Unix(),
-				Size:        stat.Size(),
-				IsDirectory: false,
-			})
+			*sendChanges = append(*sendChanges, fileInfo)
 		}
 	}
 
@@ -396,18 +400,22 @@ func (s *Sync) diffDir(filepath string, stat os.FileInfo, sendChanges *[]*FileIn
 		return nil
 	}
 
-	if len(files) == 0 && relativePath != "" && dontSend == false {
+	if len(files) == 0 && relativePath != "" && dontSend == false && stat != nil {
+		fileInfo := &FileInformation{
+			Name:           relativePath,
+			Mtime:          stat.ModTime().Unix(),
+			MtimeNano:      stat.ModTime().UnixNano(),
+			Size:           stat.Size(),
+			IsDirectory:    true,
+			IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
+		}
+
 		s.fileIndex.fileMapMutex.Lock()
-		shouldUpload := shouldUpload(relativePath, stat, s, true)
+		shouldUpload := shouldUpload(s, fileInfo, true)
 		s.fileIndex.fileMapMutex.Unlock()
 
 		if shouldUpload {
-			*sendChanges = append(*sendChanges, &FileInformation{
-				Name:        relativePath,
-				Mtime:       stat.ModTime().Unix(),
-				Size:        stat.Size(),
-				IsDirectory: true,
-			})
+			*sendChanges = append(*sendChanges, fileInfo)
 		}
 	}
 

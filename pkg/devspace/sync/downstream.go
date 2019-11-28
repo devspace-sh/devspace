@@ -180,34 +180,63 @@ func (d *downstream) applyChanges(changes []*remote.Change) error {
 
 	// Extract downloaded archive
 	if len(download) > 0 {
-		reader, writer, err := os.Pipe()
-		if err != nil {
-			return errors.Wrap(err, "create pipe")
-		}
+		for i := 0; i < syncRetries; i++ {
+			err := d.initDownload(download)
+			if err == nil {
+				break
+			} else if i+1 >= syncRetries {
+				return err
+			}
 
-		defer reader.Close()
-		defer writer.Close()
+			d.sync.log.Infof("Downstream - Retry download because of error: %v", err)
 
-		errorChan := make(chan error)
-		go func() {
-			errorChan <- d.downloadFiles(writer, download)
-		}()
-
-		// Untaring all downloaded files to the right location
-		// this can be a lengthy process when we downloaded a lot of files
-		err = untarAll(reader, d.sync.LocalPath, "", d.sync)
-		if err != nil {
-			return errors.Wrap(err, "untar files")
-		}
-
-		err = <-errorChan
-		if err != nil {
-			return errors.Wrap(err, "download files")
+			download = d.updateDownloadChanges(download)
+			if len(download) == 0 {
+				break
+			}
 		}
 	}
 
 	d.sync.log.Infof("Downstream - Successfully processed %d change(s)", len(changes))
 	return nil
+}
+
+func (d *downstream) updateDownloadChanges(download []*remote.Change) []*remote.Change {
+	d.sync.fileIndex.fileMapMutex.Lock()
+	defer d.sync.fileIndex.fileMapMutex.Unlock()
+
+	newChanges := make([]*remote.Change, 0, len(download))
+	for _, change := range download {
+		if d.shouldKeep(change) {
+			newChanges = append(newChanges, change)
+		}
+	}
+
+	return newChanges
+}
+
+func (d *downstream) initDownload(download []*remote.Change) error {
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		return errors.Wrap(err, "create pipe")
+	}
+
+	defer reader.Close()
+	defer writer.Close()
+
+	errorChan := make(chan error)
+	go func() {
+		errorChan <- d.downloadFiles(writer, download)
+	}()
+
+	// Untaring all downloaded files to the right location
+	// this can be a lengthy process when we downloaded a lot of files
+	err = untarAll(reader, d.sync.LocalPath, "", d.sync)
+	if err != nil {
+		return errors.Wrap(err, "untar files")
+	}
+
+	return <-errorChan
 }
 
 // downloadFiles downloads the given files from the remote server and writes the contents into the given writer
