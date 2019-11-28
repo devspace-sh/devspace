@@ -181,11 +181,6 @@ func (d *downstream) applyChanges(changes []*remote.Change) error {
 	// Extract downloaded archive
 	if len(download) > 0 {
 		for i := 0; i < syncRetries; i++ {
-			download = d.updateDownloadChanges(download)
-			if len(download) == 0 {
-				break
-			}
-
 			err := d.initDownload(download)
 			if err == nil {
 				break
@@ -194,6 +189,11 @@ func (d *downstream) applyChanges(changes []*remote.Change) error {
 			}
 
 			d.sync.log.Infof("Downstream - Retry download because of error: %v", err)
+
+			download = d.updateDownloadChanges(download)
+			if len(download) == 0 {
+				break
+			}
 		}
 	}
 

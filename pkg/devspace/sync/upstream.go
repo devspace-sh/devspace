@@ -302,11 +302,6 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 	// Apply creates
 	if len(creates) > 0 {
 		for i := 0; i < syncRetries; i++ {
-			creates = u.updateUploadChanges(creates)
-			if len(creates) == 0 {
-				break
-			}
-
 			err := u.applyCreates(creates)
 			if err == nil {
 				break
@@ -315,6 +310,11 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 			}
 
 			u.sync.log.Infof("Upstream - Retry upload because of error: %v", errors.Cause(err))
+
+			creates = u.updateUploadChanges(creates)
+			if len(creates) == 0 {
+				break
+			}
 		}
 	}
 
