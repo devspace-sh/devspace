@@ -37,9 +37,9 @@ func shouldRemoveRemote(relativePath string, s *Sync) bool {
 }
 
 // s.fileIndex needs to be locked before this function is called
-func shouldUpload(relativePath string, stat os.FileInfo, s *Sync, isInitial bool) bool {
+func shouldUpload(s *Sync, fileInformation *FileInformation, isInitial bool) bool {
 	// Exclude if stat is nil
-	if stat == nil {
+	if fileInformation == nil {
 		return false
 	}
 
@@ -47,38 +47,40 @@ func shouldUpload(relativePath string, stat os.FileInfo, s *Sync, isInitial bool
 	// is not necessary here anymore because it was already
 	// checked
 
+	// stat.Mode()&os.ModeSymlink
+
 	// Exclude local symlinks
-	if stat.Mode()&os.ModeSymlink != 0 {
+	if fileInformation.IsSymbolicLink {
 		return false
 	}
 
 	// Exclude changes on the exclude list
 	if s.ignoreMatcher != nil {
-		if util.MatchesPath(s.ignoreMatcher, relativePath, stat.IsDir()) {
+		if util.MatchesPath(s.ignoreMatcher, fileInformation.Name, fileInformation.IsDirectory) {
 			return false
 		}
 	}
 
 	// Check if we already tracked the path
-	if s.fileIndex.fileMap[relativePath] != nil {
+	if s.fileIndex.fileMap[fileInformation.Name] != nil {
 		// Folder already exists, don't send change
-		if stat.IsDir() {
+		if fileInformation.IsDirectory {
 			return false
 		}
 
 		// Exclude symlinks
-		if s.fileIndex.fileMap[relativePath].IsSymbolicLink {
+		if s.fileIndex.fileMap[fileInformation.Name].IsSymbolicLink {
 			return false
 		}
 
 		if isInitial {
 			// File is older locally than remote so don't update remote
-			if stat.ModTime().Unix() <= s.fileIndex.fileMap[relativePath].Mtime {
+			if fileInformation.Mtime <= s.fileIndex.fileMap[fileInformation.Name].Mtime {
 				return false
 			}
 		} else {
 			// File did not change or was changed by downstream
-			if stat.ModTime().Unix() == s.fileIndex.fileMap[relativePath].Mtime && stat.Size() == s.fileIndex.fileMap[relativePath].Size {
+			if fileInformation.Mtime == s.fileIndex.fileMap[fileInformation.Name].Mtime && fileInformation.Size == s.fileIndex.fileMap[fileInformation.Name].Size {
 				return false
 			}
 		}

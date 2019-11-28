@@ -231,7 +231,7 @@ func tarFile(basePath string, fileInformation *FileInformation, writtenFiles map
 		return nil
 	}
 
-	if _, err := io.Copy(tw, f); err != nil {
+	if _, err := io.CopyN(tw, f, stat.Size()); err != nil {
 		return errors.Wrap(err, "tar copy file")
 	}
 
