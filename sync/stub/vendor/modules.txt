@@ -2,7 +2,7 @@
 github.com/devspace-cloud/devspace/sync/remote
 github.com/devspace-cloud/devspace/sync/server
 github.com/devspace-cloud/devspace/sync/util
-# github.com/golang/protobuf v1.3.1
+# github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go/descriptor
 github.com/golang/protobuf/ptypes
@@ -13,24 +13,23 @@ github.com/golang/protobuf/ptypes/timestamp
 github.com/pkg/errors
 # github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94
 github.com/sabhiram/go-gitignore
-# golang.org/x/net v0.0.0-20190620200207-3b0461eec859
-golang.org/x/net/context
+# golang.org/x/net v0.0.0-20191109021931-daa7c04131f5
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
 golang.org/x/net/trace
-# golang.org/x/sys v0.0.0-20190813064441-fde4db37ae7a
+# golang.org/x/sys v0.0.0-20191028164358-195ce5e7f934 => golang.org/x/sys v0.0.0-20190812073006-9eafafc0a87e
 golang.org/x/sys/unix
-# golang.org/x/text v0.3.1-0.20181227161524-e6919f6577db
+# golang.org/x/text v0.3.2
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# google.golang.org/genproto v0.0.0-20181202183823-bd91e49a0898
+# google.golang.org/genproto v0.0.0-20191028173616-919d9bdd9fe6
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.21.0
+# google.golang.org/grpc v1.24.0
 google.golang.org/grpc
 google.golang.org/grpc/balancer
 google.golang.org/grpc/balancer/base
@@ -62,6 +61,7 @@ google.golang.org/grpc/reflection/grpc_reflection_v1alpha
 google.golang.org/grpc/resolver
 google.golang.org/grpc/resolver/dns
 google.golang.org/grpc/resolver/passthrough
+google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
