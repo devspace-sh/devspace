@@ -39,9 +39,9 @@ type provider struct {
 	latest.Provider
 
 	browser browser.Browser
-	client client.Client
-	loader config.Loader
-	log    log.Logger
+	client  client.Client
+	loader  config.Loader
+	log     log.Logger
 }
 
 // GetProvider returns the current specified cloud provider
@@ -98,11 +98,10 @@ func GetProviderWithOptions(useProviderName, key string, relogin bool, loader co
 	}
 
 	provider := &provider{
-		*p,
-		browser.NewBrowser(),
-		client.NewClient(providerName, p.Host, p.Key, p.Token),
-		loader,
-		log,
+		Provider: *p,
+		browser:  browser.NewBrowser(),
+		loader:   loader,
+		log:      log,
 	}
 	if provider.Provider.ClusterKey == nil {
 		provider.Provider.ClusterKey = map[int]string{}
@@ -113,6 +112,7 @@ func GetProviderWithOptions(useProviderName, key string, relogin bool, loader co
 
 		if key != "" {
 			provider.Key = key
+			provider.client = client.NewClient(providerName, p.Host, key, p.Token)
 
 			// Check if we got access
 			_, err := provider.client.GetSpaces()
@@ -138,6 +138,8 @@ func GetProviderWithOptions(useProviderName, key string, relogin bool, loader co
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		provider.client = client.NewClient(providerName, p.Host, p.Key, p.Token)
 	}
 
 	// Return provider config

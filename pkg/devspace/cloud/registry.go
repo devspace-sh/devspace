@@ -25,6 +25,8 @@ func (p *provider) loginIntoRegistries() error {
 		return errors.Wrap(err, "get token")
 	}
 
+	p.Token = bearerToken
+
 	// Get account name
 	accountName, err := token.GetAccountName(bearerToken)
 	if err != nil {

@@ -56,7 +56,7 @@ func (t *SelectorParameter) GetLabelSelector(config *latest.Config) (string, err
 }
 
 func labelSelectorMapToString(m map[string]string) string {
-	labels := make([]string, 0, len(m)-1)
+	labels := []string{}
 	for key, value := range m {
 		labels = append(labels, key+"="+value)
 	}

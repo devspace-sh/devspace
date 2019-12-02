@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -249,7 +250,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	configLoader := loader.NewConfigLoader(cloned, log.Discard)
 	dConfig, err := configLoader.LoadFromPath(r.BaseCache, configPath)
 	if err != nil {
-		return nil, errors.Errorf("Error loading config for dependency %s: %v", ID, err)
+		return nil, errors.Wrap(err, fmt.Sprintf("Error loading config for dependency %s: %v", ID))
 	}
 
 	// Override complete dev config
