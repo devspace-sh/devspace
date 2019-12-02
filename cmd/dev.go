@@ -167,6 +167,9 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Clear the dependencies & deployments cache if necessary
+	clearCache(generatedConfig, client)
+
 	// Deprecated: Fill DEVSPACE_DOMAIN vars
 	err = fillDevSpaceDomainVars(client, generatedConfig)
 	if err != nil {

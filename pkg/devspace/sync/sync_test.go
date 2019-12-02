@@ -64,93 +64,93 @@ func createTestSyncClient(testLocalPath string, testCases testCaseList) (*Sync, 
 }
 
 func TestInitialSync(t *testing.T) {
-	for _, downloadOnInitialSync := range []bool{true, false}{
+	for _, downloadOnInitialSync := range []bool{true, false} {
 		t.Log("DownloadOnInitialSync: " + strconv.FormatBool(downloadOnInitialSync))
-	remote, local, outside := initTestDirs(t)
-	defer os.RemoveAll(remote)
-	defer os.RemoveAll(local)
-	defer os.RemoveAll(outside)
+		remote, local, outside := initTestDirs(t)
+		defer os.RemoveAll(remote)
+		defer os.RemoveAll(local)
+		defer os.RemoveAll(outside)
 
-	filesToCheck, foldersToCheck := makeBasicTestCases()
-	if !downloadOnInitialSync {
-		filesToCheck = disableDownload(filesToCheck)
-		foldersToCheck = disableDownload(foldersToCheck)
-	}
+		filesToCheck, foldersToCheck := makeBasicTestCases()
+		if !downloadOnInitialSync {
+			filesToCheck = disableDownload(filesToCheck)
+			foldersToCheck = disableDownload(foldersToCheck)
+		}
 
-	// Start the client
-	syncClient, err := createTestSyncClient(local, append(filesToCheck, foldersToCheck...))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer syncClient.Stop(nil)
-	syncClient.Options.DownloadOnInitialSync = downloadOnInitialSync
-
-	// Set bandwidth limits
-	syncClient.Options.DownstreamLimit = 1024
-	syncClient.Options.UpstreamLimit = 512
-
-	// Start the downstream server
-	downClientReader, downClientWriter, _ := os.Pipe()
-	downServerReader, downServerWriter, _ := os.Pipe()
-	defer downClientReader.Close()
-	defer downClientWriter.Close()
-	defer downServerReader.Close()
-	defer downServerWriter.Close()
-
-	// Build exclude paths
-	excludePaths := []string{}
-	excludePaths = append(excludePaths, syncClient.Options.ExcludePaths...)
-	excludePaths = append(excludePaths, syncClient.Options.DownloadExcludePaths...)
-
-	go func() {
-		err := server.StartDownstreamServer(remote, excludePaths, downServerReader, downClientWriter, false)
+		// Start the client
+		syncClient, err := createTestSyncClient(local, append(filesToCheck, foldersToCheck...))
 		if err != nil {
 			t.Fatal(err)
 		}
-	}()
+		defer syncClient.Stop(nil)
+		syncClient.Options.DownloadOnInitialSync = downloadOnInitialSync
 
-	// Start downstream client
-	err = syncClient.InitDownstream(downClientReader, downServerWriter)
-	if err != nil {
-		t.Fatal(err)
-	}
+		// Set bandwidth limits
+		syncClient.Options.DownstreamLimit = 1024
+		syncClient.Options.UpstreamLimit = 512
 
-	// Start upstream server
-	upClientReader, upClientWriter, _ := os.Pipe()
-	upServerReader, upServerWriter, _ := os.Pipe()
-	defer upClientReader.Close()
-	defer upClientWriter.Close()
-	defer upServerReader.Close()
-	defer upServerWriter.Close()
+		// Start the downstream server
+		downClientReader, downClientWriter, _ := os.Pipe()
+		downServerReader, downServerWriter, _ := os.Pipe()
+		defer downClientReader.Close()
+		defer downClientWriter.Close()
+		defer downServerReader.Close()
+		defer downServerWriter.Close()
 
-	go func() {
-		err := server.StartUpstreamServer(remote, []string{}, upServerReader, upClientWriter, false)
+		// Build exclude paths
+		excludePaths := []string{}
+		excludePaths = append(excludePaths, syncClient.Options.ExcludePaths...)
+		excludePaths = append(excludePaths, syncClient.Options.DownloadExcludePaths...)
+
+		go func() {
+			err := server.StartDownstreamServer(remote, excludePaths, downServerReader, downClientWriter, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}()
+
+		// Start downstream client
+		err = syncClient.InitDownstream(downClientReader, downServerWriter)
 		if err != nil {
 			t.Fatal(err)
 		}
-	}()
 
-	// Start upstream client
-	err = syncClient.InitUpstream(upClientReader, upServerWriter)
-	if err != nil {
-		t.Fatal(err)
-	}
+		// Start upstream server
+		upClientReader, upClientWriter, _ := os.Pipe()
+		upServerReader, upServerWriter, _ := os.Pipe()
+		defer upClientReader.Close()
+		defer upClientWriter.Close()
+		defer upServerReader.Close()
+		defer upServerWriter.Close()
 
-	// Create test landscape
-	err = createTestFilesAndFolders(local, remote, outside, filesToCheck, foldersToCheck)
-	if err != nil {
-		t.Fatal(err)
-	}
+		go func() {
+			err := server.StartUpstreamServer(remote, []string{}, upServerReader, upClientWriter, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}()
 
-	go syncClient.startUpstream()
+		// Start upstream client
+		err = syncClient.InitUpstream(upClientReader, upServerWriter)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// Do initial sync
-	err = syncClient.initialSync()
-	if err != nil {
-		t.Fatal(err)
-	}
+		// Create test landscape
+		err = createTestFilesAndFolders(local, remote, outside, filesToCheck, foldersToCheck)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 15*time.Second)
+		go syncClient.startUpstream()
+
+		// Do initial sync
+		err = syncClient.initialSync()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		checkFilesAndFolders(t, filesToCheck, foldersToCheck, local, remote, 15*time.Second)
 	}
 }
 
@@ -258,10 +258,10 @@ func TestNormalSync(t *testing.T) {
 
 func getSyncOptions(testCases testCaseList) *Options {
 	options := &Options{
-		ExcludePaths:          []string{},
-		DownloadExcludePaths:  []string{},
-		UploadExcludePaths:    []string{},
-		Verbose:               true,
+		ExcludePaths:         []string{},
+		DownloadExcludePaths: []string{},
+		UploadExcludePaths:   []string{},
+		Verbose:              true,
 	}
 
 	for _, testCase := range testCases {
@@ -387,7 +387,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 				shouldExistInLocal:  f.shouldExistInLocal,
 				shouldExistInRemote: f.shouldExistInRemote,
 				editLocation:        f.editLocation,
-				isSymLink: f.isSymLink,
+				isSymLink:           f.isSymLink,
 			}
 			array = append(array, removeEquivalent)
 
@@ -396,7 +396,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 				shouldExistInLocal:  f.shouldExistInLocal,
 				shouldExistInRemote: f.shouldExistInRemote,
 				editLocation:        f.editLocation,
-				isSymLink: f.isSymLink,
+				isSymLink:           f.isSymLink,
 			}
 			array = append(array, renameEquivalent)
 
@@ -407,7 +407,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 					shouldExistInLocal:  f.shouldExistInLocal,
 					shouldExistInRemote: f.shouldExistInRemote,
 					editLocation:        f.editLocation,
-				isSymLink: f.isSymLink,
+					isSymLink:           f.isSymLink,
 				}
 				array = append(array, renameEquivalent)
 				renameEquivalent = checkedFileOrFolder{
@@ -415,7 +415,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 					shouldExistInLocal:  f.shouldExistInLocal,
 					shouldExistInRemote: f.shouldExistInRemote,
 					editLocation:        f.editLocation,
-				isSymLink: f.isSymLink,
+					isSymLink:           f.isSymLink,
 				}
 				array = append(array, renameEquivalent)
 				renameEquivalent = checkedFileOrFolder{
@@ -423,7 +423,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 					shouldExistInLocal:  f.shouldExistInLocal,
 					shouldExistInRemote: f.shouldExistInRemote,
 					editLocation:        f.editLocation,
-				isSymLink: f.isSymLink,
+					isSymLink:           f.isSymLink,
 				}
 				array = append(array, renameEquivalent)
 				renameEquivalent = checkedFileOrFolder{
@@ -431,7 +431,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 					shouldExistInLocal:  f.shouldExistInLocal,
 					shouldExistInRemote: f.shouldExistInRemote,
 					editLocation:        f.editLocation,
-				isSymLink: f.isSymLink,
+					isSymLink:           f.isSymLink,
 				}
 				array = append(array, renameEquivalent)
 			}
@@ -530,9 +530,9 @@ func makeDeepTestCases(testCases testCaseList) testCaseList {
 	return testCases
 }
 
-func makeSymLinkTestCases(testCases testCaseList) testCaseList{
+func makeSymLinkTestCases(testCases testCaseList) testCaseList {
 	for _, f := range testCases {
-		if f.isSymLink || strings.Contains(f.path, "Remote") || f.path == "testFolder"{
+		if f.isSymLink || strings.Contains(f.path, "Remote") || f.path == "testFolder" {
 			continue
 		}
 
@@ -541,7 +541,7 @@ func makeSymLinkTestCases(testCases testCaseList) testCaseList{
 			shouldExistInLocal:  f.shouldExistInLocal,
 			shouldExistInRemote: f.shouldExistInRemote,
 			editLocation:        f.editLocation,
-			isSymLink: true,
+			isSymLink:           true,
 		}
 		testCases = append(testCases, deepEquivalent)
 	}
@@ -567,14 +567,14 @@ func createTestFilesAndFolders(local string, remote string, outside string, file
 		}
 
 		if f.isSymLink {
-		symLinkParentDir, err := getParentDir(local, remote, outside, f.editLocation)
-		if err != nil {
-			return errors.Wrap(err, "get parent dir for symLink")
-		}
-		err = os.Symlink(path.Join(parentDir, f.path), path.Join(symLinkParentDir, f.path))
-		if err != nil {
-			return errors.Wrap(err, "make symLink")
-		}
+			symLinkParentDir, err := getParentDir(local, remote, outside, f.editLocation)
+			if err != nil {
+				return errors.Wrap(err, "get parent dir for symLink")
+			}
+			err = os.Symlink(path.Join(parentDir, f.path), path.Join(symLinkParentDir, f.path))
+			if err != nil {
+				return errors.Wrap(err, "make symLink")
+			}
 		}
 	}
 
@@ -592,17 +592,17 @@ func createTestFilesAndFolders(local string, remote string, outside string, file
 		if err != nil {
 			return errors.Wrap(err, "write file")
 		}
-		
+
 		if f.isSymLink {
-		symLinkParentDir, err := getParentDir(local, remote, outside, f.editLocation)
-		if err != nil {
-			return errors.Wrap(err, "get parent dir for symLink")
+			symLinkParentDir, err := getParentDir(local, remote, outside, f.editLocation)
+			if err != nil {
+				return errors.Wrap(err, "get parent dir for symLink")
+			}
+			err = os.Symlink(path.Join(parentDir, f.path), path.Join(symLinkParentDir, f.path))
+			if err != nil {
+				return errors.Wrap(err, "make symLink")
+			}
 		}
-		err = os.Symlink(path.Join(parentDir, f.path), path.Join(symLinkParentDir, f.path))
-		if err != nil {
-			return errors.Wrap(err, "make symLink")
-		}
-	}
 	}
 
 	return nil

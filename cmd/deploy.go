@@ -124,6 +124,9 @@ func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 		return err
 	}
 
+	// Clear the dependencies & deployments cache if necessary
+	clearCache(generatedConfig, client)
+
 	// Deprecated: Fill DEVSPACE_DOMAIN vars
 	err = fillDevSpaceDomainVars(client, generatedConfig)
 	if err != nil {
@@ -271,4 +274,13 @@ func fillDevSpaceDomainVars(client kubectl.Client, generatedConfig *generated.Co
 	}
 
 	return nil
+}
+
+func clearCache(generatedConfig *generated.Config, client kubectl.Client) {
+	if generatedConfig.GetActive().LastContext != nil {
+		if (generatedConfig.GetActive().LastContext.Context != "" && generatedConfig.GetActive().LastContext.Context != client.CurrentContext()) || (generatedConfig.GetActive().LastContext.Namespace != "" && generatedConfig.GetActive().LastContext.Namespace != client.Namespace()) {
+			generatedConfig.GetActive().Deployments = map[string]*generated.DeploymentCache{}
+			generatedConfig.GetActive().Dependencies = map[string]string{}
+		}
+	}
 }

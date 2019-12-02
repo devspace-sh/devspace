@@ -104,6 +104,9 @@ func GetProviderWithOptions(useProviderName, key string, relogin bool, loader co
 		loader,
 		log,
 	}
+	if provider.Provider.ClusterKey == nil {
+		provider.Provider.ClusterKey = map[int]string{}
+	}
 	if relogin == true || provider.Key == "" {
 		provider.Token = ""
 		provider.Key = ""

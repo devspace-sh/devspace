@@ -126,7 +126,6 @@ func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) ([]*Fi
 	u.sync.fileIndex.fileMapMutex.Lock()
 	defer u.sync.fileIndex.fileMapMutex.Unlock()
 
-	fileMap := u.sync.fileIndex.fileMap
 	changes := make([]*FileInformation, 0, len(events))
 	for _, event := range events {
 		fileInfo, ok := event.(*FileInformation)
@@ -138,7 +137,7 @@ func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) ([]*Fi
 			relativePath := getRelativeFromFullPath(fullpath, u.sync.LocalPath)
 
 			// Determine what kind of change we got (Create or Remove)
-			newChange, err := evaluateChange(u.sync, fileMap, relativePath, fullpath)
+			newChange, err := u.evaluateChange(relativePath, fullpath)
 			if err != nil {
 				return nil, errors.Wrap(err, "evaluate change")
 			}
@@ -152,19 +151,19 @@ func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) ([]*Fi
 	return changes, nil
 }
 
-func evaluateChange(s *Sync, fileMap map[string]*FileInformation, relativePath, fullpath string) (*FileInformation, error) {
+func (u *upstream) evaluateChange(relativePath, fullpath string) (*FileInformation, error) {
 	stat, err := os.Stat(fullpath)
 
 	// File / Folder exist -> Create File or Folder
 	// if File / Folder does not exist, we create a new remove change
 	if err == nil {
 		// Exclude changes on the upload exclude list
-		if s.uploadIgnoreMatcher != nil {
-			if util.MatchesPath(s.uploadIgnoreMatcher, relativePath, stat.IsDir()) {
+		if u.sync.uploadIgnoreMatcher != nil {
+			if util.MatchesPath(u.sync.uploadIgnoreMatcher, relativePath, stat.IsDir()) {
 				// Add to file map and prevent download if local file is newer than the remote one
-				if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].Mtime < stat.ModTime().Unix() {
+				if u.sync.fileIndex.fileMap[relativePath] != nil && u.sync.fileIndex.fileMap[relativePath].Mtime < stat.ModTime().Unix() {
 					// Add it to the fileMap
-					s.fileIndex.fileMap[relativePath] = &FileInformation{
+					u.sync.fileIndex.fileMap[relativePath] = &FileInformation{
 						Name:        relativePath,
 						Mtime:       stat.ModTime().Unix(),
 						Size:        stat.Size(),
@@ -179,10 +178,10 @@ func evaluateChange(s *Sync, fileMap map[string]*FileInformation, relativePath, 
 		// Check if symbolic link
 		lstat, err := os.Lstat(fullpath)
 		if err == nil && lstat.Mode()&os.ModeSymlink != 0 {
-			_, symlinkExists := s.upstream.symlinks[fullpath]
+			_, symlinkExists := u.sync.upstream.symlinks[fullpath]
 
 			// Add symlink to map
-			stat, err = s.upstream.AddSymlink(relativePath, fullpath)
+			stat, err = u.sync.upstream.AddSymlink(relativePath, fullpath)
 			if err != nil {
 				return nil, errors.Wrap(err, "add symlink")
 			}
@@ -193,31 +192,35 @@ func evaluateChange(s *Sync, fileMap map[string]*FileInformation, relativePath, 
 			// Only crawl if symlink wasn't there before and it is a directory
 			if symlinkExists == false && stat.IsDir() {
 				// Crawl all linked files & folders
-				err = s.upstream.symlinks[fullpath].Crawl()
+				err = u.symlinks[fullpath].Crawl()
 				if err != nil {
 					return nil, errors.Wrap(err, "crawl symlink")
 				}
 			}
 		} else if err != nil {
 			return nil, nil
+		} else if stat == nil {
+			return nil, nil
 		}
 
-		if shouldUpload(relativePath, stat, s, false) {
+		fileInfo := &FileInformation{
+			Name:           relativePath,
+			Mtime:          stat.ModTime().Unix(),
+			MtimeNano:      stat.ModTime().UnixNano(),
+			Size:           stat.Size(),
+			IsDirectory:    stat.IsDir(),
+			IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
+		}
+		if shouldUpload(u.sync, fileInfo, false) {
 			// New Create Task
-			return &FileInformation{
-				Name:        relativePath,
-				Mtime:       stat.ModTime().Unix(),
-				MtimeNano:   stat.ModTime().UnixNano(),
-				Size:        stat.Size(),
-				IsDirectory: stat.IsDir(),
-			}, nil
+			return fileInfo, nil
 		}
 	} else {
 		// Remove symlinks
-		s.upstream.RemoveSymlinks(fullpath)
+		u.RemoveSymlinks(fullpath)
 
 		// Check if we should remove path remote
-		if shouldRemoveRemote(relativePath, s) {
+		if shouldRemoveRemote(relativePath, u.sync) {
 			// New Remove Task
 			return &FileInformation{
 				Name: relativePath,
@@ -298,14 +301,39 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 
 	// Apply creates
 	if len(creates) > 0 {
-		err := u.applyCreates(creates)
-		if err != nil {
-			return errors.Wrap(err, "apply creates")
+		for i := 0; i < syncRetries; i++ {
+			err := u.applyCreates(creates)
+			if err == nil {
+				break
+			} else if i+1 >= syncRetries {
+				return errors.Wrap(err, "apply creates")
+			}
+
+			u.sync.log.Infof("Upstream - Retry upload because of error: %v", errors.Cause(err))
+
+			creates = u.updateUploadChanges(creates)
+			if len(creates) == 0 {
+				break
+			}
 		}
 	}
 
 	u.sync.log.Infof("Upstream - Successfully processed %d change(s)", len(changes))
 	return nil
+}
+
+func (u *upstream) updateUploadChanges(files []*FileInformation) []*FileInformation {
+	u.sync.fileIndex.fileMapMutex.Lock()
+	defer u.sync.fileIndex.fileMapMutex.Unlock()
+
+	newChanges := make([]*FileInformation, 0, len(files))
+	for _, change := range files {
+		if shouldUpload(u.sync, change, false) {
+			newChanges = append(newChanges, change)
+		}
+	}
+
+	return newChanges
 }
 
 func (u *upstream) applyCreates(files []*FileInformation) error {
