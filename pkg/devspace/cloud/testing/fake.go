@@ -3,10 +3,10 @@ package testing
 import (
 	"fmt"
 
-	"github.com/covexo/devspace/pkg/devspace/cloud"
-	"github.com/covexo/devspace/pkg/devspace/cloud/client"
-	testClient "github.com/covexo/devspace/pkg/devspace/cloud/client/testing"
-	"github.com/covexo/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/client"
+	testClient "github.com/devspace-cloud/devspace/pkg/devspace/cloud/client/testing"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/pkg/errors"
 )
 
