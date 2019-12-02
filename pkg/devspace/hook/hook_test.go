@@ -9,8 +9,8 @@ import (
 
 func TestHookWithoutExecution(t *testing.T) {
 	//Execute 0 hooks
-	executer := NewExecuter(&latest.Config{}, log.Discard)
-	err := executer.Execute(0, 0, "")
+	executer := NewExecuter(&latest.Config{})
+	err := executer.Execute(0, 0, "", log.Discard)
 	if err != nil {
 		t.Fatalf("Failed to execute 0 hooks with error: %v", err)
 	}
@@ -20,8 +20,8 @@ func TestHookWithoutExecution(t *testing.T) {
 		Hooks: []*latest.HookConfig{
 			&latest.HookConfig{},
 		},
-	}, log.Discard)
-	err = executer.Execute(0, 0, "")
+	})
+	err = executer.Execute(0, 0, "", log.Discard)
 	if err != nil {
 		t.Fatalf("Failed to execute 1 hook without when with error: %v", err)
 	}
@@ -33,8 +33,8 @@ func TestHookWithoutExecution(t *testing.T) {
 				When: &latest.HookWhenConfig{},
 			},
 		},
-	}, log.Discard)
-	err = executer.Execute(0, 0, "")
+	})
+	err = executer.Execute(0, 0, "", log.Discard)
 	if err != nil {
 		t.Fatalf("Failed to execute 1 hook without When.Before and When.After with error: %v", err)
 	}
@@ -48,8 +48,8 @@ func TestHookWithoutExecution(t *testing.T) {
 				},
 			},
 		},
-	}, log.Discard)
-	err = executer.Execute(Before, 0, "")
+	})
+	err = executer.Execute(Before, 0, "", log.Discard)
 	if err != nil {
 		t.Fatalf("Failed to execute 1 hook with empty When.Before: %v", err)
 	}
@@ -63,8 +63,8 @@ func TestHookWithoutExecution(t *testing.T) {
 				},
 			},
 		},
-	}, log.Discard)
-	err = executer.Execute(After, 0, "")
+	})
+	err = executer.Execute(After, 0, "", log.Discard)
 	if err != nil {
 		t.Fatalf("Failed to execute 1 hook with empty When.After: %v", err)
 	}
@@ -84,8 +84,8 @@ func TestHookWithExecution(t *testing.T) {
 				Args:    []string{"hello"},
 			},
 		},
-	}, log.Discard)
-	err := executer.Execute(Before, StageDeployments, "theseDeployments")
+	})
+	err := executer.Execute(Before, StageDeployments, "theseDeployments", log.Discard)
 	if err != nil {
 		t.Fatalf("Failed to execute 1 hook with empty When.After: %v", err)
 	}
