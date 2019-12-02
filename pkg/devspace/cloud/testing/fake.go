@@ -84,7 +84,7 @@ func (p *provider) GetClusterKey(cluster *latest.Cluster) (string, error) {
 	if ok {
 		return key, nil
 	}
-	return "", errors.Errorf("No cluster key for %s", cluster.ClusterID)
+	return "", errors.Errorf("No cluster key for %d", cluster.ClusterID)
 }
 
 func (p *provider) PrintToken(spaceID int) error {
