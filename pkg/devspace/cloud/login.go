@@ -76,14 +76,21 @@ func (p *provider) Login() error {
 			IsPassword: true,
 		})
 		if err != nil {
+			close(keyChannel)
+			server.Shutdown(ctx)
 			return err
 		}
 
 		key = strings.TrimSpace(key)
 
 		p.log.WriteString("\n")
-		_, err = GetProviderWithOptions(p.Name, key, true, p.loader, p.log)
+
+		// Check if we got access
+		p.Key = key
+		_, err := p.client.GetSpaces()
 		if err != nil {
+			close(keyChannel)
+			server.Shutdown(ctx)
 			return errors.Wrap(err, "login")
 		}
 	} else {
@@ -111,6 +118,7 @@ func startServer(redirectURI string, keyChannel chan string, log log.Logger) *ht
 		keys, ok := r.URL.Query()["key"]
 		if !ok || len(keys[0]) < 1 {
 			log.Warn("Bad request")
+			return
 		}
 
 		keyChannel <- keys[0]
