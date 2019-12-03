@@ -2,7 +2,7 @@
 # If you want to try this example in other
 # Clusters you have to exchange the image names
 # and enable image pushing
-version: v1beta4
+version: v1beta5
 images:
   node:
     image: node
