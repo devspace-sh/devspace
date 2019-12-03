@@ -1,4 +1,4 @@
-version: v1beta4
+version: v1beta5
 deployments:
   # This will be filled with a question on `devspace deploy` or `devspace dev`, alternatevly you could also set the
   # environment variable SELECT to avoid the question and fill it automatically
