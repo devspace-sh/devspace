@@ -24,20 +24,13 @@ func (p *provider) DeleteKubeContext(space *latest.Space) error {
 		return errors.Wrap(err, "save kube config")
 	}
 
-	providerConfig, err := p.loader.Load()
-	if err != nil {
-		return errors.Wrap(err, "load provider config")
-	}
-
-	for _, profile := range providerConfig.Providers {
-		for id := range profile.Spaces {
-			if id == space.SpaceID {
-				delete(profile.Spaces, id)
-			}
+	for id := range p.Spaces {
+		if id == space.SpaceID {
+			delete(p.Spaces, id)
 		}
 	}
 
-	err = p.loader.Save(providerConfig)
+	err = p.Save()
 	if err != nil {
 		return errors.Wrap(err, "save provider config")
 	}
