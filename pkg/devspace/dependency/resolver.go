@@ -250,7 +250,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	configLoader := loader.NewConfigLoader(cloned, log.Discard)
 	dConfig, err := configLoader.LoadFromPath(r.BaseCache, configPath)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("Error loading config for dependency %s: %v", ID))
+		return nil, errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", ID))
 	}
 
 	// Override complete dev config
