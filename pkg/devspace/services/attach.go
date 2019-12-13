@@ -30,7 +30,7 @@ func (serviceClient *client) StartAttach(imageSelector []string, interrupt chan 
 	}
 
 	if container.TTY == false || container.Stdin == false {
-		serviceClient.log.Warnf("To be able to interact with the container options tty (currently `%t`) and stdin (currently `%t`) must both be `true`", container.TTY, container.Stdin)
+		serviceClient.log.Warnf("To be able to interact with the container its options tty (currently `%t`) and stdin (currently `%t`) must both be `true`", container.TTY, container.Stdin)
 	}
 
 	serviceClient.log.Infof("Attaching to pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))

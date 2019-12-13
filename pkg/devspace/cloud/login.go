@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/client"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -108,6 +109,7 @@ func (p *provider) Login() error {
 	}
 
 	p.Key = key
+	p.client = client.NewClient(p.Name, p.Host, key, p.Token)
 	return nil
 }
 

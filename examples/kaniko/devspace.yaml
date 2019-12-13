@@ -1,7 +1,7 @@
-version: v1beta4
+version: v1beta5
 images:
   default:
-    image: devspacecloud/devspace
+    image: yourdockeruser/devspace
     build:
       kaniko:
         cache: true

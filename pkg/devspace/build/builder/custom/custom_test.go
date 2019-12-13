@@ -10,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/command"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"gotest.tools/assert"
 )
 
 const imageConfigName = "test"
@@ -17,15 +18,11 @@ const imageTag = "test123"
 
 func TestShouldRebuild(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		log.Fatal(err)
-	}
+	assert.NilError(t, err, "Create temporary dir")
 	defer os.RemoveAll(tempDir)
 
 	err = os.Chdir(tempDir)
-	if err != nil {
-		log.Fatal(err)
-	}
+	assert.NilError(t, err, "Change dir")
 
 	imageConf := &latest.ImageConfig{
 		Image: "test-image",
@@ -41,9 +38,7 @@ func TestShouldRebuild(t *testing.T) {
 
 	// More complex test
 	err = ioutil.WriteFile("test", []byte("test123"), 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
+	assert.NilError(t, err, "Write File")
 
 	imageConf.Build.Custom.OnChange = []*string{
 		ptr.String("./**"),
@@ -55,29 +50,8 @@ func TestShouldRebuild(t *testing.T) {
 	imageCache.Tag = imageTag
 
 	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache, false)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if shouldRebuild == false {
-		log.Fatal("1: Expected rebuild true, got false")
-	}
-
-	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache, false)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if shouldRebuild == true {
-		log.Fatal("2: Expected rebuild false, got true")
-	}
-
-	imageConf.Image = "test-image-new"
-	shouldRebuild, err = NewBuilder(imageConfigName, imageConf, imageTag).ShouldRebuild(cache, false)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if shouldRebuild == false {
-		log.Fatal("3: Expected rebuild true, got false")
-	}
+	assert.NilError(t, err, "ShouldRebuild")
+	assert.Equal(t, shouldRebuild, true, "Unexpected shouldRebuild")
 }
 
 func TestBuild(t *testing.T) {

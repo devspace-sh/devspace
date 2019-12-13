@@ -32,7 +32,7 @@ func (p *provider) GetAndUpdateSpaceCache(spaceID int, forceUpdate bool) (*lates
 		return space, false, nil
 	}
 
-	p.CacheSpace(&latest.Space{Space: fmt.Sprintf("space-%d", spaceID), SpaceID: spaceID}, &latest.ServiceAccount{SpaceID: spaceID})
+	p.CacheSpace(&latest.Space{Name: fmt.Sprintf("space-%d", spaceID), SpaceID: spaceID}, &latest.ServiceAccount{SpaceID: spaceID})
 	return p.config.Spaces[spaceID], true, nil
 }
 
@@ -44,11 +44,11 @@ func (p *provider) CacheSpace(space *latest.Space, serviceAccount *latest.Servic
 		KubeContext: space.ProviderName + "-" + space.Name,
 	}
 
-	if p.client.Spaces == nil {
-		p.client.Spaces = map[int]*latest.SpaceCache{}
+	if p.config.Spaces == nil {
+		p.config.Spaces = map[int]*latest.SpaceCache{}
 	}
 
-	p.client.Spaces[space.SpaceID] = cachedSpace
+	p.config.Spaces[space.SpaceID] = cachedSpace
 
 	return nil
 }
@@ -59,8 +59,8 @@ func (p *provider) ConnectCluster(options *cloud.ConnectClusterOptions) error {
 func (p *provider) ResetKey(clusterName string) error {
 	var cluster *latest.Cluster
 	for _, space := range p.config.Spaces {
-		if space.Cluster.Name == clusterName {
-			cluster = space.Cluster
+		if space.Space.Cluster.Name == clusterName {
+			cluster = space.Space.Cluster
 			break
 		}
 	}
@@ -84,7 +84,7 @@ func (p *provider) GetClusterKey(cluster *latest.Cluster) (string, error) {
 	if ok {
 		return key, nil
 	}
-	return "", errors.Errorf("No cluster key for %s", cluster.ClusterID)
+	return "", errors.Errorf("No cluster key for %d", cluster.ClusterID)
 }
 
 func (p *provider) PrintToken(spaceID int) error {
