@@ -26,6 +26,7 @@ package remove
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
+
 type customKubeConfig struct {
 	rawconfig      clientcmdapi.Config
 	rawConfigError error
