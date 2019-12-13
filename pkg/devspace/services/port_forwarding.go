@@ -15,12 +15,14 @@ import (
 
 // StartPortForwarding starts the port forwarding functionality
 func (serviceClient *client) StartPortForwarding() error {
-	if serviceClient.config.Dev.Ports != nil {
-		for _, portForwarding := range serviceClient.config.Dev.Ports {
-			err := serviceClient.startForwarding(portForwarding, serviceClient.log)
-			if err != nil {
-				return err
-			}
+	if serviceClient.config.Dev == nil {
+		return nil
+	}
+
+	for _, portForwarding := range serviceClient.config.Dev.Ports {
+		err := serviceClient.startForwarding(portForwarding, serviceClient.log)
+		if err != nil {
+			return err
 		}
 	}
 

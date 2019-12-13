@@ -104,6 +104,10 @@ func (serviceClient *client) StartSyncFromCmd(localPath, containerPath string, e
 
 // StartSync starts the syncing functionality
 func (serviceClient *client) StartSync(verboseSync bool) error {
+	if serviceClient.config.Dev == nil {
+		return nil
+	}
+
 	// Start sync client
 	for _, syncConfig := range serviceClient.config.Dev.Sync {
 		err := serviceClient.startSyncClient(syncConfig, verboseSync, serviceClient.log)

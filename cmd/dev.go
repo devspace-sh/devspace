@@ -363,7 +363,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 		}
 	}
 
-	if config.Dev != nil && len(config.Dev.Sync) > 0 && cmd.Sync {
+	if cmd.Sync {
 		cmd.Sync = false
 		err := servicesClient.StartSync(cmd.VerboseSync)
 		if err != nil {
