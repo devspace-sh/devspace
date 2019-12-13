@@ -41,6 +41,7 @@ type Options struct {
 	DownstreamInitialSyncDone chan bool
 	UpstreamInitialSyncDone   chan bool
 	SyncDone                  chan bool
+	SyncError                 chan error
 
 	Log log.Logger
 }
@@ -65,7 +66,6 @@ type Sync struct {
 	stopOnce sync.Once
 
 	// Used for testing
-	errorChan chan error
 	readyChan chan bool
 }
 
@@ -127,9 +127,6 @@ func NewSync(localPath string, options *Options) (*Sync, error) {
 // Error handles a sync error
 func (s *Sync) Error(err error) {
 	s.log.Errorf("Sync Error on %s: %v", s.LocalPath, err)
-	if s.errorChan != nil {
-		s.errorChan <- err
-	}
 }
 
 // InitUpstream inits the upstream
@@ -486,20 +483,23 @@ func (s *Sync) Stop(fatalError error) {
 			}
 		}
 
-		s.log.Infof("Sync stopped")
-		if s.Options.SyncDone != nil {
-			close(s.Options.SyncDone)
-		}
-
 		if fatalError != nil {
 			s.Error(fatalError)
 
 			// This needs to be rethought because we do not always kill the application here, would be better to have an error channel
 			// or runtime error here
 			sendError := fmt.Errorf("Fatal sync error: %v. For more information check .devspace/logs/sync.log", fatalError)
-			log.Error(sendError)
 			cloudanalytics.SendCommandEvent(sendError)
-			os.Exit(1)
+
+			if s.Options.SyncError != nil {
+				s.Options.SyncError <- fatalError
+				close(s.Options.SyncError)
+			}
+		}
+
+		s.log.Infof("Sync stopped")
+		if s.Options.SyncDone != nil {
+			close(s.Options.SyncDone)
 		}
 	})
 }

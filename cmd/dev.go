@@ -23,6 +23,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
+	devspacesync "github.com/devspace-cloud/devspace/pkg/devspace/sync"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	logutil "github.com/devspace-cloud/devspace/pkg/util/log"
@@ -343,14 +344,49 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 		}()
 	}
 
-	if cmd.Sync {
-		syncConfigs, err := servicesClient.StartSync(cmd.VerboseSync)
-		if err != nil {
-			return 0, errors.Errorf("Unable to start sync: %v", err)
+	if config.Dev != nil && len(config.Dev.Sync) > 0 && cmd.Sync {
+		var syncClientMutex sync.Mutex
+		var syncClients = make([]*devspacesync.Sync, 0, len(config.Dev.Sync))
+
+		// Start sync client
+		for _, syncConfig := range config.Dev.Sync {
+			syncClient, err := servicesClient.StartSync(syncConfig, cmd.VerboseSync)
+			if err != nil {
+				return 0, errors.Errorf("Unable to start sync: %v", err)
+			}
+
+			syncClients = append(syncClients, syncClient)
+		}
+
+		// This loop starts the restart watchers, if a sync fails it will get restarted, on failure the sync will fatal
+		for i, c := range syncClients {
+			go func(idx int, syncConfig *latest.SyncConfig, syncClient *devspacesync.Sync) {
+				for {
+					select {
+					case _ = <-syncClient.Options.SyncError:
+						time.Sleep(time.Second * 5)
+
+						newClient, err := servicesClient.StartSync(syncConfig, cmd.VerboseSync)
+						if err != nil {
+							log.Fatalf("Error restarting sync client: %v", err)
+						}
+
+						syncClientMutex.Lock()
+						syncClients[idx] = newClient
+						syncClient = newClient
+						syncClientMutex.Unlock()
+					case <-syncClient.Options.SyncDone:
+						return
+					}
+				}
+			}(i, config.Dev.Sync[i], c)
 		}
 
 		defer func() {
-			for _, v := range syncConfigs {
+			syncClientMutex.Lock()
+			defer syncClientMutex.Unlock()
+
+			for _, v := range syncClients {
 				v.Stop(nil)
 			}
 		}()
@@ -497,6 +533,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 
 			log.Warnf("Couldn't print logs: %v", err)
 		}
+
 		log.WriteString("\n")
 		log.Warn("Log streaming service has been terminated")
 	}

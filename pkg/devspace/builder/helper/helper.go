@@ -169,7 +169,8 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, ignoreContextP
 		}
 	}
 
-	if ignoreContextPathChanges == false {
+	// We only ignore context changes after the first run and set the context hash to ""
+	if ignoreContextPathChanges == false || imageCache.ContextHash != "" {
 		// Hash context path
 		contextDir, relDockerfile, err := build.GetContextFromLocalDir(b.ContextPath, b.DockerfilePath)
 		if err != nil {
@@ -191,7 +192,12 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, ignoreContextP
 		}
 
 		mustRebuild = mustRebuild || imageCache.ContextHash != contextHash
-		imageCache.ContextHash = contextHash
+
+		if ignoreContextPathChanges {
+			imageCache.ContextHash = ""
+		} else {
+			imageCache.ContextHash = contextHash
+		}
 	}
 
 	imageCache.DockerfileHash = dockerfileHash
