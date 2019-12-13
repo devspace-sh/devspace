@@ -23,7 +23,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
-	devspacesync "github.com/devspace-cloud/devspace/pkg/devspace/sync"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
@@ -357,69 +356,19 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	)
 
 	if cmd.Portforwarding {
-		portForwarder, err := servicesClient.StartPortForwarding()
+		cmd.Portforwarding = false
+		err := servicesClient.StartPortForwarding()
 		if err != nil {
 			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
 		}
-
-		defer func() {
-			for _, v := range portForwarder {
-				v.Close()
-			}
-		}()
 	}
 
 	if config.Dev != nil && len(config.Dev.Sync) > 0 && cmd.Sync {
-		var syncClientMutex sync.Mutex
-		var syncClients = make([]*devspacesync.Sync, 0, len(config.Dev.Sync))
-
-		// Start sync client
-		for _, syncConfig := range config.Dev.Sync {
-			syncClient, err := servicesClient.StartSync(syncConfig, cmd.VerboseSync, log)
-			if err != nil {
-				return 0, errors.Errorf("Unable to start sync: %v", err)
-			}
-
-			syncClients = append(syncClients, syncClient)
+		cmd.Sync = false
+		err := servicesClient.StartSync(cmd.VerboseSync)
+		if err != nil {
+			return 0, errors.Wrap(err, "start sync")
 		}
-
-		// This loop starts the restart watchers, if a sync fails it will get restarted, on failure the sync will fatal
-		for i, c := range syncClients {
-			go func(idx int, syncClient *devspacesync.Sync) {
-				for {
-					select {
-					case _ = <-syncClient.Options.SyncError:
-						time.Sleep(time.Second * 5)
-
-						newLog := log
-						if interactiveMode {
-							newLog = logutil.Discard
-						}
-
-						newClient, err := servicesClient.StartSync(config.Dev.Sync[idx], cmd.VerboseSync, newLog)
-						if err != nil {
-							log.Fatalf("Couldn't restart sync: %v", err)
-						}
-
-						syncClientMutex.Lock()
-						syncClients[idx] = newClient
-						syncClient = newClient
-						syncClientMutex.Unlock()
-					case <-syncClient.Options.SyncDone:
-						return
-					}
-				}
-			}(i, c)
-		}
-
-		defer func() {
-			syncClientMutex.Lock()
-			defer syncClientMutex.Unlock()
-
-			for _, v := range syncClients {
-				v.Stop(nil)
-			}
-		}()
 	}
 
 	// Start watcher if we have at least one auto reload path and if we should not skip the pipeline

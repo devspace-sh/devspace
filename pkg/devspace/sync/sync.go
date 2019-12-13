@@ -23,6 +23,8 @@ import (
 
 var syncRetries = 5
 var initialUpstreamBatchSize = 1000
+
+var syncLogOnce sync.Once
 var syncLog log.Logger
 
 // Options holds the sync options
@@ -89,21 +91,19 @@ func NewSync(localPath string, options *Options) (*Sync, error) {
 	// We exclude the sync log to prevent an endless loop in upstream
 	options.ExcludePaths = append(options.ExcludePaths, ".devspace/")
 
-	// Initialize log, this is not thread safe !!!
-	if options.Log == nil && syncLog == nil {
-		// Check if syncLog already exists
-		stat, err := os.Stat(log.Logdir + "sync.log")
-		if err == nil || stat != nil {
-			err = cleanupSyncLogs()
-			if err != nil {
-				return nil, errors.Wrap(err, "cleanup sync logs")
-			}
-		}
-
-		syncLog = log.GetFileLogger("sync")
-		syncLog.SetLevel(logrus.InfoLevel)
-	}
+	// Initialize log
 	if options.Log == nil {
+		syncLogOnce.Do(func() {
+			// Check if syncLog already exists
+			stat, err := os.Stat(log.Logdir + "sync.log")
+			if err == nil || stat != nil {
+				cleanupSyncLogs()
+			}
+
+			syncLog = log.GetFileLogger("sync")
+			syncLog.SetLevel(logrus.InfoLevel)
+		})
+
 		options.Log = syncLog
 	}
 

@@ -14,7 +14,7 @@ import (
 )
 
 // StartPortForwarding starts the port forwarding functionality
-func (serviceClient *client) StartPortForwarding() ([]*portforward.PortForwarder, error) {
+func (serviceClient *client) StartPortForwarding() error {
 	if serviceClient.config.Dev.Ports != nil {
 		portforwarder := make([]*portforward.PortForwarder, 0, len(serviceClient.config.Dev.Ports))
 
@@ -34,21 +34,21 @@ func (serviceClient *client) StartPortForwarding() ([]*portforward.PortForwarder
 				},
 			}, false, imageSelector)
 			if err != nil {
-				return nil, errors.Errorf("Error creating target selector: %v", err)
+				return errors.Errorf("Error creating target selector: %v", err)
 			}
 
 			serviceClient.log.StartWait("Port-Forwarding: Waiting for containers to start...")
 			pod, err := selector.GetPod(serviceClient.log)
 			serviceClient.log.StopWait()
 			if err != nil {
-				return nil, errors.Errorf("%s: %s", message.SelectorErrorPod, err.Error())
+				return errors.Errorf("%s: %s", message.SelectorErrorPod, err.Error())
 			} else if pod != nil {
 				ports := make([]string, len(portForwarding.PortMappings))
 				addresses := make([]string, len(portForwarding.PortMappings))
 
 				for index, value := range portForwarding.PortMappings {
 					if value.LocalPort == nil {
-						return nil, errors.Errorf("port is not defined in portmapping %d:%d", portConfigIndex, index)
+						return errors.Errorf("port is not defined in portmapping %d:%d", portConfigIndex, index)
 					}
 
 					localPort := strconv.Itoa(*value.LocalPort)
@@ -74,7 +74,7 @@ func (serviceClient *client) StartPortForwarding() ([]*portforward.PortForwarder
 
 				pf, err := serviceClient.client.NewPortForwarder(pod, ports, addresses, make(chan struct{}), readyChan)
 				if err != nil {
-					return nil, errors.Errorf("Error starting port forwarding: %v", err)
+					return errors.Errorf("Error starting port forwarding: %v", err)
 				}
 
 				go func() {
@@ -91,13 +91,11 @@ func (serviceClient *client) StartPortForwarding() ([]*portforward.PortForwarder
 
 					portforwarder = append(portforwarder, pf)
 				case <-time.After(20 * time.Second):
-					return nil, errors.Errorf("Timeout waiting for port forwarding to start")
+					return errors.Errorf("Timeout waiting for port forwarding to start")
 				}
 			}
 		}
-
-		return portforwarder, nil
 	}
 
-	return nil, nil
+	return nil
 }
