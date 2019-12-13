@@ -67,9 +67,9 @@ func (serviceClient *client) StartSyncFromCmd(localPath, containerPath string, e
 		syncConfig.ExcludePaths = exclude
 	}
 
-	log.StartWait("Starting sync...")
+	serviceClient.log.StartWait("Starting sync...")
 	syncClient, err := serviceClient.startSync(pod, container.Name, syncConfig, verbose, syncDone, serviceClient.log)
-	log.StopWait()
+	serviceClient.log.StopWait()
 	if err != nil {
 		return errors.Wrap(err, "start sync")
 	}
@@ -79,13 +79,13 @@ func (serviceClient *client) StartSyncFromCmd(localPath, containerPath string, e
 		return errors.Errorf("Sync error: %v", err)
 	}
 
-	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, pod.Namespace, pod.Name)
+	serviceClient.log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, pod.Namespace, pod.Name)
 
 	if waitInitialSync {
-		log.StartWait("Sync: waiting for intial sync to complete")
+		serviceClient.log.StartWait("Sync: waiting for intial sync to complete")
 		<-syncClient.Options.UpstreamInitialSyncDone
 		<-syncClient.Options.DownstreamInitialSyncDone
-		log.StopWait()
+		serviceClient.log.StopWait()
 
 		return nil
 	}

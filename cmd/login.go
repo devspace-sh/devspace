@@ -44,7 +44,8 @@ devspace login --key myaccesskey
 
 // RunLogin executes the functionality devspace login
 func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) error {
-	providerConfig, err := cloudconfig.ParseProviderConfig()
+	loader := cloudconfig.NewLoader()
+	providerConfig, err := loader.Load()
 	if err != nil {
 		return err
 	}
@@ -58,17 +59,17 @@ func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	if cmd.Key != "" {
-		_, err = cloud.GetProviderWithOptions(providerConfig, providerName, cmd.Key, true, log.GetInstance())
+		_, err = cloud.GetProviderWithOptions(providerName, cmd.Key, true, loader, log.GetInstance())
 		if err != nil {
 			return err
 		}
 	} else {
-		_, err = cloud.GetProviderWithOptions(providerConfig, providerName, "", true, log.GetInstance())
+		_, err = cloud.GetProviderWithOptions(providerName, "", true, loader, log.GetInstance())
 		if err != nil {
 			return err
 		}
 	}
 
-	log.Infof("Successful logged into %s", providerName)
+	log.GetInstance().Infof("Successful logged into %s", providerName)
 	return nil
 }

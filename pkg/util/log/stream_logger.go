@@ -1,11 +1,13 @@
 package log
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"sync"
 
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/sirupsen/logrus"
 )
 
@@ -305,4 +307,9 @@ func (s *StreamLogger) WriteString(message string) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// Question asks a new question
+func (s *StreamLogger) Question(params *survey.QuestionOptions) (string, error) {
+	return "", errors.New("Questions in discard logger not supported")
 }

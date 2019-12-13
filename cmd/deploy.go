@@ -6,15 +6,12 @@ import (
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
-	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
+	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
@@ -36,11 +33,16 @@ type DeployCmd struct {
 
 	SkipPush                bool
 	AllowCyclicDependencies bool
+
+	log logpkg.Logger
 }
 
 // NewDeployCmd creates a new deploy command
-func NewDeployCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &DeployCmd{GlobalFlags: globalFlags}
+func NewDeployCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &DeployCmd{
+		GlobalFlags: globalFlags,
+		log:         f.GetLog(),
+	}
 
 	deployCmd := &cobra.Command{
 		Use:   "deploy",
@@ -56,7 +58,9 @@ devspace deploy -n some-namespace
 devspace deploy --kube-context=deploy-context
 #######################################################`,
 		Args: cobra.NoArgs,
-		RunE: cmd.Run,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.Run(f, cobraCmd, args)
+		},
 	}
 
 	deployCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
@@ -75,9 +79,11 @@ devspace deploy --kube-context=deploy-context
 }
 
 // Run executes the down command logic
-func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
+func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configOptions := cmd.ToConfigOptions()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -86,7 +92,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Start file logging
-	log.StartFileLogging()
+	logpkg.StartFileLogging()
 
 	// Validate flags
 	err = cmd.validateFlags()
@@ -95,25 +101,25 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig(cmd.Profile)
+	generatedConfig, err := configLoader.Generated()
 	if err != nil {
 		return errors.Errorf("Error loading generated.yaml: %v", err)
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	err = cmd.UseLastContext(generatedConfig, cmd.log)
 	if err != nil {
 		return err
 	}
 
 	// Create kubectl client
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Warn the user if we deployed into a different context before
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, cmd.log)
 	if err != nil {
 		return err
 	}
@@ -128,39 +134,37 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Add current kube context to context
-	configOptions := cmd.ToConfigOptions()
-	config, err := configutil.GetConfig(configOptions)
+	config, err := configLoader.Load()
 	if err != nil {
 		return err
 	}
 
 	// Signal that we are working on the space if there is any
-	err = cloud.ResumeSpace(client, true, log.GetInstance())
+	err = f.NewSpaceResumer(client, cmd.log).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
 
 	// Create namespace if necessary
-	err = client.EnsureDefaultNamespace(log.GetInstance())
+	err = client.EnsureDefaultNamespace(cmd.log)
 	if err != nil {
 		return errors.Errorf("Unable to create namespace: %v", err)
 	}
 
 	// Create docker client
-	dockerClient, err := docker.NewClient(log.GetInstance())
+	dockerClient, err := f.NewDockerClient(cmd.log)
 	if err != nil {
 		dockerClient = nil
 	}
 
 	// Create pull secrets and private registry if necessary
-	registryClient := registry.NewClient(config, client, dockerClient, log.GetInstance())
-	err = registryClient.CreatePullSecrets()
+	err = f.NewPullSecretClient(config, client, dockerClient, cmd.log).CreatePullSecrets()
 	if err != nil {
 		return err
 	}
 
 	// Create Dependencymanager
-	manager, err := dependency.NewManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, configOptions, log.GetInstance())
+	manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, configOptions, cmd.log)
 	if err != nil {
 		return errors.Wrap(err, "new manager")
 	}
@@ -181,7 +185,11 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Build images
 	builtImages := make(map[string]string)
 	if cmd.SkipBuild == false {
-		builtImages, err = build.All(config, generatedConfig.GetActive(), client, cmd.SkipPush, false, cmd.ForceBuild, cmd.BuildSequential, false, log.GetInstance())
+		builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
+			SkipPush:     cmd.SkipPush,
+			ForceRebuild: cmd.ForceBuild,
+			Sequential:   cmd.BuildSequential,
+		}, cmd.log)
 		if err != nil {
 			if strings.Index(err.Error(), "no space left on device") != -1 {
 				err = errors.Errorf("%v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
@@ -192,7 +200,7 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 
 		// Save config if an image was built
 		if len(builtImages) > 0 {
-			err := generated.SaveConfig(generatedConfig)
+			err := configLoader.SaveGenerated(generatedConfig)
 			if err != nil {
 				return errors.Errorf("Error saving generated config: %v", err)
 			}
@@ -209,19 +217,23 @@ func (cmd *DeployCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Deploy all defined deployments
-	err = deploy.All(config, generatedConfig.GetActive(), client, false, cmd.ForceDeploy, builtImages, deployments, log.GetInstance())
+	err = f.NewDeployController(config, generatedConfig.GetActive(), client).Deploy(&deploy.Options{
+		ForceDeploy: cmd.ForceDeploy,
+		BuiltImages: builtImages,
+		Deployments: deployments,
+	}, cmd.log)
 	if err != nil {
 		return err
 	}
 
 	// Update last used kube context & save generated yaml
-	err = client.UpdateLastKubeContext(generatedConfig)
+	err = updateLastKubeContext(configLoader, client, generatedConfig)
 	if err != nil {
 		return errors.Wrap(err, "update last kube context")
 	}
 
-	log.Donef("Successfully deployed!")
-	log.Infof("\r         \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to analyze the space for potential issues\n", ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace analyze", "white+b"))
+	cmd.log.Donef("Successfully deployed!")
+	cmd.log.Infof("\r         \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to analyze the space for potential issues\n", ansi.Color("devspace open", "white+b"), ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace analyze", "white+b"))
 	return nil
 }
 

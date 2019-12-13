@@ -48,6 +48,6 @@ func (*analyticsCmd) RunAnalyticsConfig(cobraCmd *cobra.Command, args []string) 
 		return errors.Wrap(err, "set analytics config")
 	}
 
-	log.Infof("Successfully updated analytics config")
+	log.GetInstance().Infof("Successfully updated analytics config")
 	return nil
 }

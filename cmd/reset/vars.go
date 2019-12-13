@@ -1,8 +1,7 @@
 package reset
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
@@ -38,7 +37,8 @@ devspace reset vars
 // RunResetVars executes the reset vars command logic
 func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(nil, log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig("")
+	generatedConfig, err := configLoader.Generated()
 	if err != nil {
 		return err
 	}
@@ -56,11 +56,11 @@ func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) error {
 	generatedConfig.Vars = map[string]string{}
 
 	// Save the config
-	err = generated.SaveConfig(generatedConfig)
+	err = configLoader.SaveGenerated(generatedConfig)
 	if err != nil {
 		return errors.Errorf("Error saving config: %v", err)
 	}
 
-	log.Donef("Successfully deleted all variables")
+	log.GetInstance().Donef("Successfully deleted all variables")
 	return nil
 }

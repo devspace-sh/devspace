@@ -9,7 +9,7 @@ import (
 )
 
 // ImageBuildCLI builds an image with the docker cli
-func (c *Client) ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Writer, options dockertypes.ImageBuildOptions) error {
+func (c *client) ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Writer, options dockertypes.ImageBuildOptions) error {
 	args := []string{"build"}
 
 	if options.BuildArgs != nil {

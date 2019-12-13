@@ -7,8 +7,8 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	fakelogger "github.com/devspace-cloud/devspace/pkg/util/log/testing"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"gotest.tools/assert"
 )
@@ -91,8 +91,9 @@ app.listen(3000, function () {
 		t.Fatalf("Error creating javascript file: %v", err)
 	}
 
-	survey.SetNextAnswer("javascript")
-	err = ContainerizeApplication("", "", "", log.GetInstance())
+	fakeLogger := fakelogger.NewFakeLogger()
+	fakeLogger.Survey.SetNextAnswer("javascript")
+	err = ContainerizeApplication("", "", "", fakeLogger)
 	if err != nil {
 		t.Fatalf("Error containerizing application: %v", err)
 	}

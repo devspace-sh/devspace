@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
 )
 
@@ -30,7 +29,7 @@ func (serviceClient *client) StartLogsWithWriter(follow bool, tail int64, writer
 		return err
 	}
 
-	log.Infof("Printing logs of pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
+	serviceClient.log.Infof("Printing logs of pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
 
 	reader, err := serviceClient.client.Logs(context.Background(), pod.Namespace, pod.Name, container.Name, false, &tail, follow)
 	if err != nil {

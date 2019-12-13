@@ -6,8 +6,10 @@ import (
 	"os"
 	"sync"
 
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	goansi "github.com/k0kubun/go-ansi"
 	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -19,7 +21,9 @@ type stdoutLogger struct {
 	level    logrus.Level
 
 	loadingText *loadingText
-	fileLogger  Logger
+
+	survey     survey.Survey
+	fileLogger Logger
 }
 
 type fnTypeInformation struct {
@@ -414,4 +418,17 @@ func (s *stdoutLogger) WriteString(message string) {
 			s.loadingText.Start()
 		}
 	}
+}
+
+func (s *stdoutLogger) Question(params *survey.QuestionOptions) (string, error) {
+	// Stop wait if there was any
+	s.StopWait()
+
+	// Check if we can ask the question
+	if s.GetLevel() < logrus.InfoLevel {
+		return "", errors.Errorf("Cannot ask question '%s' because log level is too low", params.Question)
+	}
+
+	s.WriteString("\n")
+	return s.survey.Question(params)
 }

@@ -4,10 +4,12 @@
     "description": "A sample Node.js app using Express 4",
     "main": "index.js",
     "scripts": {
-      "start": "node index.js"
+      "start": "node index.js",
+      "dev": "nodemon index.js"
     },
     "dependencies": {
-      "express": "^4.13.3"
+      "express": "^4.13.3",
+      "nodemon": "2.0.2"
     },
     "keywords": [
       "node",

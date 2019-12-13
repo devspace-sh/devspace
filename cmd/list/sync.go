@@ -2,7 +2,7 @@ package list
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
@@ -37,7 +37,8 @@ Lists the sync configuration
 // RunListSync runs the list sync command logic
 func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -45,13 +46,13 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) error {
 		return errors.New(message.ConfigNotFound)
 	}
 
-	config, err := configutil.GetConfig(cmd.ToConfigOptions())
+	config, err := configLoader.Load()
 	if err != nil {
 		return err
 	}
 
 	if config.Dev.Sync == nil || len(config.Dev.Sync) == 0 {
-		log.Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
+		log.GetInstance().Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
 		return nil
 	}
 

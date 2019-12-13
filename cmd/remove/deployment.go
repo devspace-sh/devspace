@@ -2,10 +2,9 @@ package remove
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
-	deployUtil "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -51,7 +50,9 @@ devspace remove deployment --all
 // RunRemoveDeployment executes the specified deployment
 func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	log := log.GetInstance()
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log)
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -65,19 +66,19 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 	}
 
 	// Load base config
-	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())
+	config, err := configLoader.LoadWithoutProfile()
 	if err != nil {
 		return err
 	}
 
-	shouldPurgeDeployment, err := survey.Question(&survey.QuestionOptions{
+	shouldPurgeDeployment, err := log.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all deployment resources deployed?",
 		DefaultValue: "yes",
 		Options: []string{
 			"yes",
 			"no",
 		},
-	}, log.GetInstance())
+	})
 	if err != nil {
 		return err
 	}
@@ -92,21 +93,29 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 			deployments = []string{name}
 		}
 
-		generatedConfig, err := generated.LoadConfig("")
+		generatedConfig, err := configLoader.Generated()
 		if err != nil {
 			log.Errorf("Error loading generated.yaml: %v", err)
 			return nil
 		}
 
-		deployUtil.PurgeDeployments(config, generatedConfig.GetActive(), client, deployments, log.GetInstance())
+		err = deploy.NewController(config, generatedConfig.GetActive(), client).Purge(deployments, log)
+		if err != nil {
+			log.Errorf("Error purging deployments: %v", err)
+		}
 
-		err = generated.SaveConfig(generatedConfig)
+		err = configLoader.SaveGenerated(generatedConfig)
 		if err != nil {
 			log.Errorf("Error saving generated.yaml: %v", err)
 		}
 	}
 
 	found, err := configure.RemoveDeployment(config, cmd.RemoveAll, name)
+	if err != nil {
+		return err
+	}
+
+	err = configLoader.Save(config)
 	if err != nil {
 		return err
 	}

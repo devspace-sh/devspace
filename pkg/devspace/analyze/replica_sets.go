@@ -3,20 +3,18 @@ package analyze
 import (
 	"fmt"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 // ReplicaSets checks replica sets for problems
-func ReplicaSets(client kubernetes.Interface, namespace string) ([]string, error) {
+func (a *analyzer) replicaSets(namespace string) ([]string, error) {
 	problems := []string{}
 
-	log.StartWait("Analyzing replica sets")
-	defer log.StopWait()
+	a.log.StartWait("Analyzing replica sets")
+	defer a.log.StopWait()
 
 	// Get all pods
-	replicaSets, err := client.AppsV1().ReplicaSets(namespace).List(metav1.ListOptions{})
+	replicaSets, err := a.client.KubeClient().AppsV1().ReplicaSets(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

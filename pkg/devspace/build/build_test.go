@@ -42,7 +42,7 @@ import ()
 		Deployments: []*latest.DeploymentConfig{
 			&latest.DeploymentConfig{
 				Name:      "test-deployment",
-				Namespace: configutil.TestNamespace,
+				Namespace: loader.TestNamespace,
 				Helm: &latest.HelmConfig{
 					Chart: &latest.ChartConfig{
 						Name: "stable/nginx",
@@ -51,7 +51,7 @@ import ()
 			},
 		},
 	}
-	configutil.SetFakeConfig(testConfig)
+	loader.SetFakeConfig(testConfig)
 
 	cache := &generated.CacheConfig{
 		Images: make(map[string]*generated.ImageCache) ,
@@ -59,7 +59,7 @@ import ()
 	kubeClient := fake.NewSimpleClientset()
 
 	//Test without images
-	go makeAllPodsRunning(t, kubeClient, configutil.TestNamespace)
+	go makeAllPodsRunning(t, kubeClient, loader.TestNamespace)
 	images, err := All(testConfig, cache, &kubectl.Client{Client: kubeClient}, true, true, true, true, true, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error building all 0 images: %v", err)

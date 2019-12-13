@@ -13,8 +13,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
@@ -47,11 +48,15 @@ type OpenCmd struct {
 	*flags.GlobalFlags
 
 	Provider string
+	log      log.Logger
 }
 
 // NewOpenCmd creates a new open command
 func NewOpenCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &OpenCmd{GlobalFlags: globalFlags}
+	cmd := &OpenCmd{
+		GlobalFlags: globalFlags,
+		log:         log.GetInstance(),
+	}
 
 	openCmd := &cobra.Command{
 		Use:   "open",
@@ -78,14 +83,15 @@ devspace open
 // RunOpen executes the functionality "devspace open"
 func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
 
 	var (
 		providerName             string
-		provider                 *cloud.Provider
+		provider                 cloud.Provider
 		space                    *cloudlatest.Space
 		domain                   string
 		tls                      bool
@@ -97,14 +103,14 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	if configExists {
 		log.StartFileLogging()
 
-		generatedConfig, err = generated.LoadConfig(cmd.Profile)
+		generatedConfig, err = configLoader.Generated()
 		if err != nil {
 			return err
 		}
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	err = cmd.UseLastContext(generatedConfig, cmd.log)
 	if err != nil {
 		return err
 	}
@@ -115,13 +121,13 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, cmd.log)
 	if err != nil {
 		return err
 	}
 
 	// Signal that we are working on the space if there is any
-	err = cloud.ResumeSpace(client, true, log.GetInstance())
+	err = resume.NewSpaceResumer(client, cmd.log).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
@@ -130,7 +136,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	var devspaceConfig *latest.Config
 	if configExists {
 		// Get config with adjusted cluster config
-		devspaceConfig, err = configutil.GetConfig(cmd.ToConfigOptions())
+		devspaceConfig, err = configLoader.Load()
 		if err != nil {
 			return err
 		}
@@ -147,13 +153,13 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 		}
 
 		// Get provider
-		provider, err = cloud.GetProvider(providerName, log.GetInstance())
+		provider, err = cloud.GetProvider(providerName, cmd.log)
 		if err != nil {
 			return err
 		}
 
 		// Get space
-		space, err = provider.GetSpace(spaceID)
+		space, err = provider.Client().GetSpace(spaceID)
 		if err != nil {
 			return err
 		}
@@ -161,22 +167,22 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 		ingressControllerWarning = ansi.Color(" ! an ingress controller must be installed in your cluster", "red+b")
 	}
 
-	openingMode, err := survey.Question(&survey.QuestionOptions{
+	openingMode, err := cmd.log.Question(&survey.QuestionOptions{
 		Question:     "How do you want to open your application?",
 		DefaultValue: openLocalHostOption,
 		Options: []string{
 			openLocalHostOption,
 			openDomainOption + ingressControllerWarning,
 		},
-	}, log.GetInstance())
+	})
 	if err != nil {
 		return err
 	}
-	log.WriteString("\n")
+	cmd.log.WriteString("\n")
 
 	// Check if we should open locally
 	if openingMode == openLocalHostOption {
-		openLocal(devspaceConfig, nil, client, domain)
+		cmd.openLocal(devspaceConfig, nil, client, domain)
 		return nil
 	}
 
@@ -197,10 +203,10 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 		if len(domains) == 1 {
 			domain = domains[0]
 		} else {
-			domain, err = survey.Question(&survey.QuestionOptions{
+			domain, err = cmd.log.Question(&survey.QuestionOptions{
 				Question: "Please select a domain to open",
 				Options:  domains,
-			}, log.GetInstance())
+			})
 			if err != nil {
 				return err
 			}
@@ -208,9 +214,9 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 
 		// Check if domain has wildcard
 		if strings.Index(domain, "*") != -1 {
-			replaceValue, err := survey.Question(&survey.QuestionOptions{
+			replaceValue, err := cmd.log.Question(&survey.QuestionOptions{
 				Question: fmt.Sprintf("Please enter a value for wildcard in domain '%s'", domain),
-			}, log.GetInstance())
+			})
 			if err != nil {
 				return err
 			}
@@ -218,23 +224,23 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 			domain = strings.Replace(domain, "*", replaceValue, -1)
 		}
 	} else {
-		domain, err = survey.Question(&survey.QuestionOptions{
+		domain, err = cmd.log.Question(&survey.QuestionOptions{
 			Question: "Which domain do you want to use? (must be connected via DNS)",
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}
 	}
 
 	// Check if ingress for domain already exists
-	existingIngressDomain, existingIngressTLS, err := findDomain(client, namespace, domain)
+	existingIngressDomain, existingIngressTLS, err := cmd.findDomain(client, namespace, domain)
 	if err != nil {
 		return err
 	}
 
 	// No suitable ingress found => create ingress
 	if existingIngressDomain == "" {
-		serviceName, servicePort, _, err := getService(devspaceConfig, client, namespace, domain, false)
+		serviceName, servicePort, _, err := cmd.getService(devspaceConfig, client, namespace, domain, false)
 		if err != nil {
 			return errors.Wrap(err, "get service")
 		}
@@ -265,11 +271,11 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 			},
 		})
 		if err != nil {
-			log.WriteString("\n")
+			cmd.log.WriteString("\n")
 			return errors.Errorf("Unable to create ingress for domain %s: %v", domain, err)
 		}
 
-		domain, tls, err = findDomain(client, namespace, domain)
+		domain, tls, err = cmd.findDomain(client, namespace, domain)
 		if err != nil {
 			return err
 		}
@@ -285,7 +291,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 		domain = "http://" + domain
 	}
 
-	err = openURL(domain, client, namespace, log.GetInstance(), 4*time.Minute)
+	err = openURL(domain, client, namespace, cmd.log, 4*time.Minute)
 	if err != nil {
 		return errors.Errorf("Timeout: domain %s still returns 502 code, even after several minutes. Either the app has no valid '/' route or it is listening on the wrong port: %v", domain, err)
 	}
@@ -314,7 +320,7 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 
 		if kubectlClient != nil && analyzeNamespace != "" {
 			// Analyze space for issues
-			report, err := analyze.CreateReport(kubectlClient, analyzeNamespace, false)
+			report, err := analyze.NewAnalyzer(kubectlClient, log).CreateReport(analyzeNamespace, false)
 			if err != nil {
 				return errors.Errorf("Error analyzing space: %v", err)
 			}
@@ -329,8 +335,8 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 	return nil
 }
 
-func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config, client kubectl.Client, domain string) error {
-	_, servicePort, serviceLabels, err := getService(devspaceConfig, client, client.Namespace(), domain, true)
+func (cmd *OpenCmd) openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config, client kubectl.Client, domain string) error {
+	_, servicePort, serviceLabels, err := cmd.getService(devspaceConfig, client, client.Namespace(), domain, true)
 	if err != nil {
 		return errors.Errorf("Unable to get service: %v", err)
 	}
@@ -373,7 +379,7 @@ func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config,
 		Dev: &latest.DevConfig{
 			Ports: portforwardingConfig,
 		},
-	}, generatedConfig, client, nil, log.GetInstance())
+	}, generatedConfig, client, nil, cmd.log)
 	portForwarder, err := servicesClient.StartPortForwarding()
 	if err != nil {
 		return errors.Wrap(err, "start port forwarding")
@@ -386,17 +392,17 @@ func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config,
 	}()
 
 	// Loop and check if http code is != 502
-	log.StartWait("Waiting for application")
-	defer log.StopWait()
+	cmd.log.StartWait("Waiting for application")
+	defer cmd.log.StopWait()
 
 	// Make sure the ingress has some time to take effect
 	time.Sleep(time.Second * 2)
 
-	log.StopWait()
+	cmd.log.StopWait()
 	open.Start(domain)
-	log.Donef("Successfully opened %s", domain)
-	log.WriteString("\n")
-	log.Info("Press ENTER to terminate port-forwarding process")
+	cmd.log.Donef("Successfully opened %s", domain)
+	cmd.log.WriteString("\n")
+	cmd.log.Info("Press ENTER to terminate port-forwarding process")
 
 	// Wait until user aborts the program or presses ENTER
 	reader := bufio.NewReader(os.Stdin)
@@ -404,7 +410,7 @@ func openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config,
 	return nil
 }
 
-func getService(config *latest.Config, client kubectl.Client, namespace, host string, getEndpoints bool) (string, int, *map[string]string, error) {
+func (cmd *OpenCmd) getService(config *latest.Config, client kubectl.Client, namespace, host string, getEndpoints bool) (string, int, *map[string]string, error) {
 	// Let user select service
 	serviceNameList := []string{}
 	serviceLabels := map[string]map[string]string{}
@@ -459,10 +465,10 @@ func getService(config *latest.Config, client kubectl.Client, namespace, host st
 		}
 
 		// Ask user which service
-		service, err := survey.Question(&survey.QuestionOptions{
+		service, err := cmd.log.Question(&survey.QuestionOptions{
 			Question: servicePickerQuestion,
 			Options:  serviceNameList,
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return "", 0, nil, err
 		}
@@ -482,9 +488,9 @@ func getService(config *latest.Config, client kubectl.Client, namespace, host st
 	return serviceName, servicePortInt, &labels, nil
 }
 
-func findDomain(client kubectl.Client, namespace, host string) (string, bool, error) {
-	log.StartWait("Retrieve ingresses")
-	defer log.StopWait()
+func (cmd *OpenCmd) findDomain(client kubectl.Client, namespace, host string) (string, bool, error) {
+	cmd.log.StartWait("Retrieve ingresses")
+	defer cmd.log.StopWait()
 
 	// List all ingresses and only create one if there is none already
 	ingressList, err := client.KubeClient().ExtensionsV1beta1().Ingresses(namespace).List(metav1.ListOptions{})

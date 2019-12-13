@@ -3,9 +3,9 @@ package cmd
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -50,7 +50,8 @@ devspace analyze --namespace=mynamespace
 // RunAnalyze executes the functionality "devspace analyze"
 func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -58,7 +59,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) error 
 	// Load generated config if possible
 	var generatedConfig *generated.Config
 	if configExists {
-		generatedConfig, err = generated.LoadConfig("")
+		generatedConfig, err = configLoader.Generated()
 		if err != nil {
 			return err
 		}
@@ -83,7 +84,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) error 
 	}
 
 	// Signal that we are working on the space if there is any
-	err = cloud.ResumeSpace(client, true, log.GetInstance())
+	err = resume.NewSpaceResumer(client, log.GetInstance()).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
@@ -94,7 +95,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(cobraCmd *cobra.Command, args []string) error 
 		namespace = cmd.Namespace
 	}
 
-	err = analyze.Analyze(client, namespace, !cmd.Wait, log.GetInstance())
+	err = analyze.NewAnalyzer(client, log.GetInstance()).Analyze(namespace, !cmd.Wait)
 	if err != nil {
 		return errors.Wrap(err, "analyze")
 	}

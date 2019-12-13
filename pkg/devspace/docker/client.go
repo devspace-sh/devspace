@@ -12,13 +12,13 @@ import (
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
+	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/pkg/errors"
 )
 
-//ClientInterface contains all functions required to interact with docker
-type ClientInterface interface {
+// Client contains all functions required to interact with docker
+type Client interface {
 	Ping(ctx context.Context) (dockertypes.Ping, error)
 	NegotiateAPIVersion(ctx context.Context)
 
@@ -35,22 +35,22 @@ type ClientInterface interface {
 }
 
 //Client is a client for docker
-type Client struct {
-	client.Client
+type client struct {
+	dockerclient.Client
 }
 
 // NewClient retrieves a new docker client
-func NewClient(log log.Logger) (ClientInterface, error) {
+func NewClient(log log.Logger) (Client, error) {
 	return NewClientWithMinikube("", false, log)
 }
 
 // NewClientWithMinikube creates a new docker client with optionally from the minikube vm
-func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (ClientInterface, error) {
+func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (Client, error) {
 	if fakeClient != nil {
 		return fakeClient, nil
 	}
 
-	var cli ClientInterface
+	var cli Client
 	var err error
 
 	if preferMinikube {
@@ -73,25 +73,25 @@ func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log l
 	return cli, nil
 }
 
-func newDockerClient() (ClientInterface, error) {
-	cli, err := client.NewClientWithOpts()
+func newDockerClient() (Client, error) {
+	cli, err := dockerclient.NewClientWithOpts()
 	if err != nil {
 		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
 
-	return &Client{*cli}, nil
+	return &client{*cli}, nil
 }
 
-func newDockerClientFromEnvironment() (ClientInterface, error) {
-	cli, err := client.NewEnvClient()
+func newDockerClientFromEnvironment() (Client, error) {
+	cli, err := dockerclient.NewEnvClient()
 	if err != nil {
 		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
 
-	return &Client{*cli}, nil
+	return &client{*cli}, nil
 }
 
-func newDockerClientFromMinikube(currentKubeContext string) (ClientInterface, error) {
+func newDockerClientFromMinikube(currentKubeContext string) (Client, error) {
 	if currentKubeContext != "minikube" {
 		return nil, errors.New("Cluster is not a minikube cluster")
 	}
@@ -118,21 +118,21 @@ func newDockerClientFromMinikube(currentKubeContext string) (ClientInterface, er
 			Transport: &http.Transport{
 				TLSClientConfig: tlsc,
 			},
-			CheckRedirect: client.CheckRedirect,
+			CheckRedirect: dockerclient.CheckRedirect,
 		}
 	}
 
 	host := env["DOCKER_HOST"]
 	if host == "" {
-		host = client.DefaultDockerHost
+		host = dockerclient.DefaultDockerHost
 	}
 
-	cli, err := client.NewClientWithOpts(client.WithHost(host), client.WithVersion(env["DOCKER_API_VERSION"]), client.WithHTTPClient(httpclient), client.WithHTTPHeaders(nil))
+	cli, err := dockerclient.NewClientWithOpts(dockerclient.WithHost(host), dockerclient.WithVersion(env["DOCKER_API_VERSION"]), dockerclient.WithHTTPClient(httpclient), dockerclient.WithHTTPHeaders(nil))
 	if err != nil {
 		return nil, err
 	}
 
-	return &Client{*cli}, nil
+	return &client{*cli}, nil
 }
 
 func getMinikubeEnvironment() (map[string]string, error) {

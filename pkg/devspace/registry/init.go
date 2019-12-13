@@ -3,7 +3,6 @@ package registry
 import (
 	"github.com/pkg/errors"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -31,9 +30,9 @@ func (r *client) CreatePullSecrets() error {
 				displayRegistryURL = "hub.docker.com"
 			}
 
-			log.StartWait("Creating image pull secret for registry: " + displayRegistryURL)
+			r.log.StartWait("Creating image pull secret for registry: " + displayRegistryURL)
 			err := r.createPullSecretForRegistry(registryURL)
-			log.StopWait()
+			r.log.StopWait()
 			if err != nil {
 				return errors.Errorf("Failed to create pull secret for registry: %v", err)
 			}
@@ -56,7 +55,7 @@ func (r *client) addPullSecretsToServiceAccount(pullSecrets []string) error {
 	// Get default service account
 	serviceaccount, err := r.kubeClient.KubeClient().CoreV1().ServiceAccounts(r.kubeClient.Namespace()).Get("default", metav1.GetOptions{})
 	if err != nil {
-		log.Errorf("Couldn't find service account 'default' in namespace '%s': %v", r.kubeClient.Namespace(), err)
+		r.log.Errorf("Couldn't find service account 'default' in namespace '%s': %v", r.kubeClient.Namespace(), err)
 		return nil
 	}
 

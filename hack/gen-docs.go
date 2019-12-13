@@ -49,7 +49,7 @@ func main() {
 		return "../../cli/commands/" + strings.ToLower(base)
 	}
 
-	rootCmd := cmd.GetRoot()
+	rootCmd := cmd.NewRootCmd()
 
 	err := doc.GenMarkdownTreeCustom(rootCmd, cliDocsDir, filePrepender, linkHandler)
 	if err != nil {

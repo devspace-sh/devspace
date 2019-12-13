@@ -1,6 +1,6 @@
 package list
 
-import (
+/*import (
 	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
@@ -130,4 +130,4 @@ func testListProviders(t *testing.T, testCase listProvidersTestCase) {
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s.", testCase.name)
 	}
-}
+}*/

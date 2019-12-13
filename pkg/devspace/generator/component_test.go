@@ -8,7 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	fakelog "github.com/devspace-cloud/devspace/pkg/util/log/testing"
 
 	"gotest.tools/assert"
 )
@@ -45,6 +45,7 @@ func TestComponentGenerator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating componentGenerator: %v", err)
 	}
+
 	componentGenerator.gitRepo.LocalPath = "."
 
 	//Test ListComponents
@@ -130,6 +131,7 @@ func TestComponentGenerator(t *testing.T) {
 }
 
 func TestVarReplaceFn(t *testing.T) {
+	fakeLogger := fakelog.NewFakeLogger()
 	comp := ComponentSchema{
 		VariableValues: map[string]string{
 			"hello":       "world",
@@ -150,22 +152,22 @@ func TestVarReplaceFn(t *testing.T) {
 		},
 	}
 
-	survey.SetNextAnswer("DoesNeedQuestion")
+	fakeLogger.Survey.SetNextAnswer("DoesNeedQuestion")
 
-	val, _ := comp.varReplaceFn("", "${hello}", log.GetInstance())
+	val, _ := comp.varReplaceFn("", "${hello}", fakeLogger)
 	assert.Equal(t, "world", val, "Wrong value returned for hello")
 
-	val, _ = comp.varReplaceFn("", "${isThisATest}", log.GetInstance())
+	val, _ = comp.varReplaceFn("", "${isThisATest}", fakeLogger)
 	assert.Equal(t, true, val, "Wrong value returned for isThisATest")
-	val, _ = comp.varReplaceFn("", "${OnePlusOne}", log.GetInstance())
+	val, _ = comp.varReplaceFn("", "${OnePlusOne}", fakeLogger)
 	assert.Equal(t, 2, val, "Wrong value returned for OnePlusOne")
-	val, _ = comp.varReplaceFn("", "${NeedsQuestion}", log.GetInstance())
+	val, _ = comp.varReplaceFn("", "${NeedsQuestion}", fakeLogger)
 	assert.Equal(t, "DoesNeedQuestion", val, "Wrong value returned for NeedsQuestion")
 
-	survey.SetNextAnswer("DoesNeedQuestionAsWell")
-	val, _ = comp.varReplaceFn("", "${AlsoNeedsQuestion}", log.GetInstance())
+	fakeLogger.Survey.SetNextAnswer("DoesNeedQuestionAsWell")
+	val, _ = comp.varReplaceFn("", "${AlsoNeedsQuestion}", fakeLogger)
 	assert.Equal(t, "DoesNeedQuestionAsWell", val, "Wrong value returned for AlsoNeedsQuestion")
 
-	val, _ = comp.varReplaceFn("", "${Doesn'tMatchRegex", log.GetInstance())
+	val, _ = comp.varReplaceFn("", "${Doesn'tMatchRegex", fakeLogger)
 	assert.Equal(t, "", val, "Wrong value returned for not matching input")
 }

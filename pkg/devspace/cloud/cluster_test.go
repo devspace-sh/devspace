@@ -1,125 +1,12 @@
 package cloud
 
-import ()
+import (
+	"testing"
 
-/*func TestConnectCluster(t *testing.T) {
-	provider := &Provider{latest.Provider{}, log.GetInstance()}
-	options := &ConnectClusterOptions{
-		ClusterName: "#",
-	}
-	err := provider.ConnectCluster(options)
-	assert.Error(t, err, "Cluster name # can only contain letters, numbers and dashes (-)", "Wrong or no error when connecting cluster with wrong clustername")
-
-	options.ClusterName = ""
-	survey.SetNextAnswer("aaa")
-	options.KubeContext = "invalidContext"
-
-	err = provider.ConnectCluster(options)
-	assert.Error(t, err, "new kubectl client: Error loading kube config, context 'invalidContext' doesn't exist", "Wrong or no error when connecting cluster with invalid context")
-}
-
-func TestDefaultClusterSpaceDomain(t *testing.T) {
-	kubeClient := &kubectl.Client{
-		Client: fake.NewSimpleClientset(),
-	}
-	err := defaultClusterSpaceDomain(&Provider{latest.Provider{}, log.GetInstance()}, kubeClient, true, 0, "")
-	assert.Error(t, err, "Couldn't find a node in cluster", "Wrong or no error when trying to get the spacedomain of the default cluster from empty setting")
-
-	kubeClient.Client.CoreV1().Nodes().Create(&k8sv1.Node{})
-	err = defaultClusterSpaceDomain(&Provider{latest.Provider{}, log.GetInstance()}, kubeClient, true, 0, "")
-	assert.Error(t, err, "Couldn't find a node with a valid external IP address in cluster, make sure your nodes are accessable from the outside", "Wrong or no error when trying to get the spacedomain of the default cluster without any ip")
-
-	kubeClient.Client.CoreV1().Nodes().Update(&k8sv1.Node{
-		Status: k8sv1.NodeStatus{
-			Addresses: []k8sv1.NodeAddress{
-				k8sv1.NodeAddress{
-					Type:    k8sv1.NodeExternalIP,
-					Address: "someAddress",
-				},
-			},
-		},
-	})
-	err = defaultClusterSpaceDomain(&Provider{latest.Provider{}, log.GetInstance()}, kubeClient, true, 0, "")
-	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to get the spacedomain of the default cluster without a token")
-
-	waitTimeout = time.Second * 8
-	err = defaultClusterSpaceDomain(&Provider{latest.Provider{}, log.GetInstance()}, kubeClient, false, 0, "")
-	assert.Error(t, err, "Loadbalancer didn't receive a valid IP address in time. Skipping configuration of default domain for space subdomains", "Wrong or no error when trying to get the spacedomain of the default cluster without services")
-
-	kubeClient.Client.CoreV1().Services(constants.DevSpaceCloudNamespace).Create(&k8sv1.Service{
-		Spec: k8sv1.ServiceSpec{
-			Type: k8sv1.ServiceTypeLoadBalancer,
-		},
-		Status: k8sv1.ServiceStatus{
-			LoadBalancer: k8sv1.LoadBalancerStatus{
-				Ingress: []k8sv1.LoadBalancerIngress{
-					k8sv1.LoadBalancerIngress{
-						IP:       "SomeIp",
-						Hostname: "SomeHost",
-					},
-				},
-			},
-		},
-	})
-	err = defaultClusterSpaceDomain(&Provider{latest.Provider{}, log.GetInstance()}, kubeClient, false, 0, "")
-	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to get the spacedomain of the default cluster without a token")
-}
-
-func TestDeleteClusterUnexported(t *testing.T) {
-	provider := &Provider{latest.Provider{}, log.GetInstance()}
-	err := deleteCluster(provider, 0, "")
-	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to delete a cluster without a token")
-}
-
-func TestSpecifyDomain(t *testing.T) {
-	provider := &Provider{latest.Provider{}, log.GetInstance()}
-	survey.SetNextAnswer("some.Domain")
-	err := provider.specifyDomain(0, &ConnectClusterOptions{})
-	assert.Error(t, err, "update cluster domain: get token: Provider has no key specified", "Wrong or no error when trying to delete a space without a token")
-}
-
-func TestInitCore(t *testing.T) {
-	provider := &Provider{latest.Provider{}, log.GetInstance()}
-	err := provider.initCore(0, "", true)
-	assert.Error(t, err, "get token: Provider has no key specified", "Wrong or no error when trying to init the core without a token")
-}
-
-func TestGetServiceAccountCredentials(t *testing.T) {
-	kubeClient := &kubectl.Client{
-		Client: fake.NewSimpleClientset(),
-	}
-	kubeClient.Client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(&k8sv1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: DevSpaceServiceAccount,
-		},
-		Secrets: []k8sv1.ObjectReference{
-			k8sv1.ObjectReference{
-				Name: "secret",
-			},
-		},
-	})
-
-	provider := &Provider{latest.Provider{}, log.GetInstance()}
-	_, _, err := getServiceAccountCredentials(provider, kubeClient)
-	assert.Error(t, err, "secrets \"secret\" not found", "Wrong or no error when getting non-existent service account credentials")
-
-	flag := []byte("flag")
-	kubeClient.Client.CoreV1().Secrets(DevSpaceCloudNamespace).Create(&k8sv1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "secret",
-		},
-		Data: map[string][]byte{
-			"token":  flag,
-			"ca.crt": flag,
-		},
-	})
-	returnedToken, cert, err := getServiceAccountCredentials(provider, kubeClient)
-	assert.NilError(t, err, "Error getting service account credentials")
-	assert.Equal(t, string(flag), string(returnedToken), "Wrong token returned")
-	decodedCert, err := base64.StdEncoding.DecodeString(cert)
-	assert.NilError(t, err, "Error decoding returned cert")
-	assert.Equal(t, string(flag), string(decodedCert), "Wrong cert returned")
-}
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	log "github.com/devspace-cloud/devspace/pkg/util/log/testing"
+	"gotest.tools/assert"
+)
 
 type getKeyTestCase struct {
 	name string
@@ -127,8 +14,9 @@ type getKeyTestCase struct {
 	givenKeys          map[int]string
 	forceQuestionParam bool
 	answers            []string
-	expectedErr        string
-	expectedKey        string
+
+	expectedErr string
+	expectedKey string
 }
 
 func TestGetKey(t *testing.T) {
@@ -148,17 +36,18 @@ func TestGetKey(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		provider := &Provider{
+		logger := log.NewFakeLogger()
+		for _, answer := range testCase.answers {
+			logger.Survey.SetNextAnswer(answer)
+		}
+		provider := &provider{
 			Provider: latest.Provider{
 				ClusterKey: testCase.givenKeys,
 			},
-			Log: log.GetInstance(),
-		}
-		for _, answer := range testCase.answers {
-			survey.SetNextAnswer(answer)
+			log: logger,
 		}
 
-		returnedKey, err := getKey(provider, testCase.forceQuestionParam)
+		returnedKey, err := provider.getKey(testCase.forceQuestionParam)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error getting Key in testCase %s", testCase.name)
@@ -169,15 +58,66 @@ func TestGetKey(t *testing.T) {
 	}
 }
 
-type checkResourcesTestCase struct {
+type getClusternameTestCase struct {
+	name string
+
+	clusterName string
+	answers     []string
+
+	expectedErr         string
+	expectedClustername string
+}
+
+func TestGetClustername(t *testing.T) {
+	testCases := []getClusternameTestCase{
+		getClusternameTestCase{
+			name:        "Invalid clustername",
+			clusterName: "%",
+			expectedErr: "Cluster name % can only contain letters, numbers and dashes (-)",
+		},
+		getClusternameTestCase{
+			name:                "Valid clustername",
+			clusterName:         "valid-name-1",
+			expectedClustername: "valid-name-1",
+		},
+		getClusternameTestCase{
+			name:                "Clustername from question",
+			answers:             []string{"()", "valid-name-2"},
+			expectedClustername: "valid-name-2",
+		},
+	}
+
+	for _, testCase := range testCases {
+		logger := log.NewFakeLogger()
+		for _, answer := range testCase.answers {
+			logger.Survey.SetNextAnswer(answer)
+		}
+		provider := &provider{
+			log: logger,
+		}
+
+		clusterName, err := provider.getClusterName(testCase.clusterName)
+
+		assert.Equal(t, clusterName, testCase.expectedClustername, "Wrong key returned in testCase %s", testCase.name)
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
+	}
+}
+
+// Kubectl fake client still missing
+/*type checkResourcesTestCase struct {
 	name         string
+	provider     *provider
 	createdNodes []*k8sv1.Node
-	expectedErr  string
+
+	expectedErr string
 }
 
 func TestCheckResources(t *testing.T) {
-	testCases := []checkResourcesTestCase{
-	}
+	testCases := []checkResourcesTestCase{}
 
 	for _, testCase := range testCases {
 		kubeClient := fake.NewSimpleClientset()
@@ -185,40 +125,11 @@ func TestCheckResources(t *testing.T) {
 			kubeClient.CoreV1().Nodes().Create(node)
 		}
 
-		provider := &Provider{latest.Provider{}, log.GetInstance()}
-		_, err := checkResources(provider, kubeClient)
+		_, err := testCase.provider.checkResources(kubeClient)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error checking resources in testCase %s", testCase.name)
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from checking resources in testCase %s", testCase.name)
-		}
-	}
-}
-
-type initializeNamespaceTestCase struct {
-	name string
-
-	expectedErr string
-}
-
-func TestInitializeNamespace(t *testing.T) {
-	testCases := []initializeNamespaceTestCase{
-		initializeNamespaceTestCase{
-			name: "Basic initialize",
-		},
-	}
-	for _, testCase := range testCases {
-		kubeClient := fake.NewSimpleClientset()
-
-		log.SetInstance(log.Discard)
-
-		provider := &Provider{latest.Provider{}, log.GetInstance()}
-		err := initializeNamespace(provider, kubeClient)
-
-		if testCase.expectedErr == "" {
-			assert.NilError(t, err, "Error initializing namespace in testCase %s", testCase.name)
-		} else {
-			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from initializing namespace in testCase %s", testCase.name)
 		}
 	}
 }*/

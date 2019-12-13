@@ -10,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	yaml "gopkg.in/yaml.v2"
 	helmchartutil "k8s.io/helm/pkg/chartutil"
@@ -120,7 +119,7 @@ func (client *client) InstallChartByPath(releaseName, releaseNamespace, chartPat
 			err = client.analyzeError(errors.Errorf("helm upgrade: %v", err), releaseNamespace)
 			if err != nil {
 				if helmConfig.Atomic {
-					log.Warn("Try to roll back back chart because of previous error")
+					client.log.Warn("Try to roll back back chart because of previous error")
 					_, rollbackError := client.helm.RollbackRelease(releaseName, k8shelm.RollbackWait(true), k8shelm.RollbackDisableHooks(helmConfig.DisableHooks), k8shelm.RollbackTimeout(180), k8shelm.RollbackRecreate(helmConfig.Recreate), k8shelm.RollbackForce(helmConfig.Force))
 					if rollbackError != nil {
 						return nil, err
@@ -181,9 +180,9 @@ func (client *client) analyzeError(srcErr error, releaseNamespace string) error 
 
 	// Only check if the error is time out
 	if strings.Index(errMessage, "timed out waiting") != -1 {
-		report, err := analyze.CreateReport(client.kubectl, releaseNamespace, false)
+		report, err := client.analyzer.CreateReport(releaseNamespace, false)
 		if err != nil {
-			log.Warnf("Error creating analyze report: %v", err)
+			client.log.Warnf("Error creating analyze report: %v", err)
 			return srcErr
 		}
 		if len(report) == 0 {

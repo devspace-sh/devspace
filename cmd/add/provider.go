@@ -52,7 +52,8 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) e
 	}
 
 	// Get provider configuration
-	providerConfig, err := config.ParseProviderConfig()
+	loader := config.NewLoader()
+	providerConfig, err := loader.Load()
 	if err != nil {
 		return errors.Wrap(err, "parse provider config")
 	}
@@ -73,7 +74,7 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) e
 	})
 
 	// Ensure user is logged in
-	_, err = cloudpkg.GetProviderWithOptions(providerConfig, providerName, "", false, log.GetInstance())
+	_, err = cloudpkg.GetProviderWithOptions(providerName, "", false, loader, log.GetInstance())
 	if err != nil {
 		return errors.Wrap(err, "log into provider")
 	}
@@ -81,11 +82,11 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) e
 	// Switch default provider to newly added provider name
 	providerConfig.Default = providerName
 
-	err = config.SaveProviderConfig(providerConfig)
+	err = loader.Save(providerConfig)
 	if err != nil {
 		return errors.Wrap(err, "save provider config")
 	}
 
-	log.Donef("Successfully added cloud provider %s", providerName)
+	log.GetInstance().Donef("Successfully added cloud provider %s", providerName)
 	return nil
 }

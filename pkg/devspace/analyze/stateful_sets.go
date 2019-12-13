@@ -3,20 +3,18 @@ package analyze
 import (
 	"fmt"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 // StatefulSets checks stateful sets for problems
-func StatefulSets(client kubernetes.Interface, namespace string) ([]string, error) {
+func (a *analyzer) statefulSets(namespace string) ([]string, error) {
 	problems := []string{}
 
-	log.StartWait("Analyzing stateful sets")
-	defer log.StopWait()
+	a.log.StartWait("Analyzing stateful sets")
+	defer a.log.StopWait()
 
 	// Get all pods
-	statefulSets, err := client.AppsV1().StatefulSets(namespace).List(metav1.ListOptions{})
+	statefulSets, err := a.client.KubeClient().AppsV1().StatefulSets(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

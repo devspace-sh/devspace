@@ -45,6 +45,7 @@ devspace use namespace my-namespace
 // RunUseNamespace executes the functionality "devspace use namespace"
 func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string) error {
 	// Get default context
+	log := log.GetInstance()
 	client, err := kubectl.NewDefaultClient()
 	if err != nil {
 		return err
@@ -86,10 +87,10 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 			namespaces = append(namespaces, ns.Name)
 		}
 
-		namespace, err = survey.Question(&survey.QuestionOptions{
+		namespace, err = log.Question(&survey.QuestionOptions{
 			Question: "Which namespace do you want to use?",
 			Options:  namespaces,
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}

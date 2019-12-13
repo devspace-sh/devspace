@@ -4,8 +4,7 @@ import (
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -83,7 +82,8 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 // RunAddDeployment executes the add deployment command logic
 func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	deploymentName := args[0]
 
 	// Get base config and check if deployment already exists
-	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())
+	config, err := configLoader.LoadWithoutProfile()
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	} else if cmd.Chart != "" {
 		newDeployment, err = configure.GetHelmDeployment(deploymentName, cmd.Chart, cmd.ChartRepo, cmd.ChartVersion)
 	} else if cmd.Dockerfile != "" {
-		generatedConfig, err := generated.LoadConfig("")
+		generatedConfig, err := configLoader.Generated()
 		if err != nil {
 			return err
 		}
@@ -140,7 +140,7 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	}
 
 	// Restore vars in config
-	clonedConfig, err := configutil.RestoreVars(config)
+	clonedConfig, err := configLoader.RestoreVars(config)
 	if err != nil {
 		return errors.Errorf("Error restoring vars: %v", err)
 	}
@@ -195,11 +195,11 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 	clonedConfig.Deployments = append([]*latest.DeploymentConfig{newDeployment}, clonedConfig.Deployments...)
 
 	// Save config
-	err = configutil.SaveConfig(clonedConfig)
+	err = configLoader.Save(clonedConfig)
 	if err != nil {
 		return errors.Errorf("Couldn't save config file: %s", err.Error())
 	}
 
-	log.Donef("Successfully added %s as new deployment", args[0])
+	log.GetInstance().Donef("Successfully added %s as new deployment", args[0])
 	return nil
 }
