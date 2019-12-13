@@ -23,6 +23,8 @@ import (
 
 var syncRetries = 5
 var initialUpstreamBatchSize = 1000
+
+var syncLogOnce sync.Once
 var syncLog log.Logger
 
 // Options holds the sync options
@@ -41,6 +43,7 @@ type Options struct {
 	DownstreamInitialSyncDone chan bool
 	UpstreamInitialSyncDone   chan bool
 	SyncDone                  chan bool
+	SyncError                 chan error
 
 	Log log.Logger
 }
@@ -65,7 +68,6 @@ type Sync struct {
 	stopOnce sync.Once
 
 	// Used for testing
-	errorChan chan error
 	readyChan chan bool
 }
 
@@ -89,21 +91,19 @@ func NewSync(localPath string, options *Options) (*Sync, error) {
 	// We exclude the sync log to prevent an endless loop in upstream
 	options.ExcludePaths = append(options.ExcludePaths, ".devspace/")
 
-	// Initialize log, this is not thread safe !!!
-	if options.Log == nil && syncLog == nil {
-		// Check if syncLog already exists
-		stat, err := os.Stat(log.Logdir + "sync.log")
-		if err == nil || stat != nil {
-			err = cleanupSyncLogs()
-			if err != nil {
-				return nil, errors.Wrap(err, "cleanup sync logs")
-			}
-		}
-
-		syncLog = log.GetFileLogger("sync")
-		syncLog.SetLevel(logrus.InfoLevel)
-	}
+	// Initialize log
 	if options.Log == nil {
+		syncLogOnce.Do(func() {
+			// Check if syncLog already exists
+			stat, err := os.Stat(log.Logdir + "sync.log")
+			if err == nil || stat != nil {
+				cleanupSyncLogs()
+			}
+
+			syncLog = log.GetFileLogger("sync")
+			syncLog.SetLevel(logrus.InfoLevel)
+		})
+
 		options.Log = syncLog
 	}
 
@@ -127,9 +127,6 @@ func NewSync(localPath string, options *Options) (*Sync, error) {
 // Error handles a sync error
 func (s *Sync) Error(err error) {
 	s.log.Errorf("Sync Error on %s: %v", s.LocalPath, err)
-	if s.errorChan != nil {
-		s.errorChan <- err
-	}
 }
 
 // InitUpstream inits the upstream
@@ -486,20 +483,23 @@ func (s *Sync) Stop(fatalError error) {
 			}
 		}
 
-		s.log.Infof("Sync stopped")
-		if s.Options.SyncDone != nil {
-			close(s.Options.SyncDone)
-		}
-
 		if fatalError != nil {
 			s.Error(fatalError)
 
 			// This needs to be rethought because we do not always kill the application here, would be better to have an error channel
 			// or runtime error here
 			sendError := fmt.Errorf("Fatal sync error: %v. For more information check .devspace/logs/sync.log", fatalError)
-			log.GetInstance().Error(sendError)
 			cloudanalytics.SendCommandEvent(sendError)
-			os.Exit(1)
+
+			if s.Options.SyncError != nil {
+				s.Options.SyncError <- fatalError
+				close(s.Options.SyncError)
+			}
+		}
+
+		s.log.Infof("Sync stopped")
+		if s.Options.SyncDone != nil {
+			close(s.Options.SyncDone)
 		}
 	})
 }

@@ -7,10 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/devspace/sync"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-
-	"k8s.io/client-go/tools/portforward"
 )
 
 // Client implements all service functions
@@ -20,10 +17,10 @@ type Client interface {
 	StartLogs(follow bool, tail int64) error
 	StartLogsWithWriter(follow bool, tail int64, writer io.Writer) error
 
-	StartPortForwarding() ([]*portforward.PortForwarder, error)
+	StartPortForwarding() error
 
 	StartSyncFromCmd(localPath, containerPath string, exclude []string, verbose, downloadOnInitialSync, waitInitialSync bool) error
-	StartSync(verboseSync bool) ([]*sync.Sync, error)
+	StartSync(verboseSync bool) error
 
 	StartTerminal(args []string, imageSelector []string, interrupt chan error, wait bool) (int, error)
 }
