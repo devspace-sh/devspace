@@ -55,7 +55,7 @@ func (l *configLoader) RestoreVars(config *latest.Config) (*latest.Config, error
 
 		// Now merge missing from original into new
 		for key := range originalConfig {
-			if _, ok := configMap[key]; !ok {
+			if _, ok := configMap[key]; !ok && l.shouldRestoreKey(key) {
 				configMap[key] = originalConfig[key]
 			}
 		}
@@ -71,6 +71,17 @@ func (l *configLoader) RestoreVars(config *latest.Config) (*latest.Config, error
 	}
 
 	return clonedConfig, nil
+}
+
+var keysNoRestoration = []string{"images", "deployments", "dev"}
+
+func (l *configLoader) shouldRestoreKey(key interface{}) bool {
+	for _, ignoreKey := range keysNoRestoration {
+		if ignoreKey == key {
+			return false
+		}
+	}
+	return true
 }
 
 // Save writes the data of a config to its yaml file
