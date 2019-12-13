@@ -2,6 +2,7 @@ package v3
 
 import (
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -32,6 +33,8 @@ type v3Client struct {
 	kubectl kubectl.Client
 	log     log.Logger
 }
+
+const stableChartRepo = "https://kubernetes-charts.storage.googleapis.com"
 
 // NewClient creates a new helm v3 client
 func NewClient(kubeClient kubectl.Client, helmDriver string, log log.Logger) (types.Client, error) {
@@ -75,7 +78,16 @@ func (client *v3Client) InstallChart(releaseName string, releaseNamespace string
 		releaseNamespace = client.kubectl.Namespace()
 	}
 
-	settings := cli.New()
+	var (
+		settings  = cli.New()
+		chartName = strings.TrimSpace(helmConfig.Chart.Name)
+		chartRepo = helmConfig.Chart.RepoURL
+	)
+
+	if strings.HasPrefix(chartName, "stable/") && chartRepo == "" {
+		chartName = chartName[7:]
+		chartRepo = stableChartRepo
+	}
 
 	upgrade := action.NewUpgrade(client.cfg)
 	upgrade.Install = true
@@ -93,11 +105,11 @@ func (client *v3Client) InstallChart(releaseName string, releaseNamespace string
 	}
 
 	upgrade.ChartPathOptions.Version = helmConfig.Chart.Version
-	upgrade.ChartPathOptions.RepoURL = helmConfig.Chart.RepoURL
+	upgrade.ChartPathOptions.RepoURL = chartRepo
 	upgrade.ChartPathOptions.Username = helmConfig.Chart.Username
 	upgrade.ChartPathOptions.Password = helmConfig.Chart.Password
 
-	chartPath, err := upgrade.ChartPathOptions.LocateChart(helmConfig.Chart.Name, settings)
+	chartPath, err := upgrade.ChartPathOptions.LocateChart(chartName, settings)
 	if err != nil {
 		return nil, err
 	}
