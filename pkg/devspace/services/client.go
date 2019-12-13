@@ -23,7 +23,7 @@ type Client interface {
 	StartPortForwarding() ([]*portforward.PortForwarder, error)
 
 	StartSyncFromCmd(localPath, containerPath string, exclude []string, verbose, downloadOnInitialSync, waitInitialSync bool) error
-	StartSync(syncConfig *latest.SyncConfig, verboseSync bool) (*sync.Sync, error)
+	StartSync(syncConfig *latest.SyncConfig, verboseSync bool, log log.Logger) (*sync.Sync, error)
 
 	StartTerminal(args []string, imageSelector []string, interrupt chan error, wait bool) (int, error)
 }

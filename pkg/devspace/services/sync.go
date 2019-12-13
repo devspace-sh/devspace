@@ -103,7 +103,7 @@ func (serviceClient *client) StartSyncFromCmd(localPath, containerPath string, e
 }
 
 // StartSync starts the syncing functionality
-func (serviceClient *client) StartSync(syncConfig *latest.SyncConfig, verboseSync bool) (*sync.Sync, error) {
+func (serviceClient *client) StartSync(syncConfig *latest.SyncConfig, verboseSync bool, log log.Logger) (*sync.Sync, error) {
 	var imageSelector []string
 	if syncConfig.ImageName != "" {
 		imageConfigCache := serviceClient.generated.GetActive().GetImageCache(syncConfig.ImageName)

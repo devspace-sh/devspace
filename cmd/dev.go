@@ -329,7 +329,12 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 		}
 	}
 
-	servicesClient := services.NewClient(config, generatedConfig, client, selectorParameter, log)
+	var (
+		servicesClient  = services.NewClient(config, generatedConfig, client, selectorParameter, log)
+		exitChan        = make(chan error)
+		autoReloadPaths = GetPaths(config)
+		interactiveMode = config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.DefaultEnabled != nil && *config.Dev.Interactive.DefaultEnabled == true
+	)
 
 	if cmd.Portforwarding {
 		portForwarder, err := servicesClient.StartPortForwarding()
@@ -350,7 +355,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 
 		// Start sync client
 		for _, syncConfig := range config.Dev.Sync {
-			syncClient, err := servicesClient.StartSync(syncConfig, cmd.VerboseSync)
+			syncClient, err := servicesClient.StartSync(syncConfig, cmd.VerboseSync, log)
 			if err != nil {
 				return 0, errors.Errorf("Unable to start sync: %v", err)
 			}
@@ -360,15 +365,20 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 
 		// This loop starts the restart watchers, if a sync fails it will get restarted, on failure the sync will fatal
 		for i, c := range syncClients {
-			go func(idx int, syncConfig *latest.SyncConfig, syncClient *devspacesync.Sync) {
+			go func(idx int, syncClient *devspacesync.Sync) {
 				for {
 					select {
 					case _ = <-syncClient.Options.SyncError:
 						time.Sleep(time.Second * 5)
 
-						newClient, err := servicesClient.StartSync(syncConfig, cmd.VerboseSync)
+						newLog := log
+						if interactiveMode {
+							newLog = logutil.Discard
+						}
+
+						newClient, err := servicesClient.StartSync(config.Dev.Sync[idx], cmd.VerboseSync, newLog)
 						if err != nil {
-							log.Fatalf("Error restarting sync client: %v", err)
+							log.Fatalf("Couldn't restart sync: %v", err)
 						}
 
 						syncClientMutex.Lock()
@@ -379,7 +389,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 						return
 					}
 				}
-			}(i, config.Dev.Sync[i], c)
+			}(i, c)
 		}
 
 		defer func() {
@@ -391,12 +401,6 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 			}
 		}()
 	}
-
-	var (
-		exitChan        = make(chan error)
-		autoReloadPaths = GetPaths(config)
-		interactiveMode = config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.DefaultEnabled != nil && *config.Dev.Interactive.DefaultEnabled == true
-	)
 
 	// Start watcher if we have at least one auto reload path and if we should not skip the pipeline
 	if cmd.SkipPipeline == false && len(autoReloadPaths) > 0 {
