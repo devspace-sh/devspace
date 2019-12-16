@@ -23,6 +23,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c
+	github.com/ghodss/yaml v1.0.0
 	github.com/gogo/googleapis v1.3.0 // indirect
 	github.com/golang/protobuf v1.3.2
 	github.com/google/go-github v17.0.0+incompatible // indirect
@@ -82,7 +83,7 @@ require (
 	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
 	gopkg.in/yaml.v2 v2.2.4
 	gotest.tools v2.2.0+incompatible
-	helm.sh/helm/v3 v3.0.0
+	helm.sh/helm/v3 v3.0.1
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
 	k8s.io/cli-runtime v0.0.0
