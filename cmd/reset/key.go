@@ -50,6 +50,6 @@ func (cmd *keyCmd) RunResetkey(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.Donef("Successfully reseted key for cluster %s", args[0])
+	log.GetInstance().Donef("Successfully reseted key for cluster %s", args[0])
 	return nil
 }

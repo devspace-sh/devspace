@@ -4,11 +4,10 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
-	deploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -25,11 +24,16 @@ type PurgeCmd struct {
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 	PurgeDependencies       bool
+
+	log log.Logger
 }
 
 // NewPurgeCmd creates a new purge command
 func NewPurgeCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &PurgeCmd{GlobalFlags: globalFlags}
+	cmd := &PurgeCmd{
+		GlobalFlags: globalFlags,
+		log:         log.GetInstance(),
+	}
 
 	purgeCmd := &cobra.Command{
 		Use:   "purge",
@@ -59,7 +63,9 @@ devspace purge -d my-deployment
 // Run executes the purge command logic
 func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configOptions := cmd.ToConfigOptions()
+	configLoader := loader.NewConfigLoader(configOptions, cmd.log)
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -70,13 +76,13 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	log.StartFileLogging()
 
 	// Get config with adjusted cluster config
-	generatedConfig, err := generated.LoadConfig(cmd.Profile)
+	generatedConfig, err := configLoader.Generated()
 	if err != nil {
 		return err
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	err = cmd.UseLastContext(generatedConfig, cmd.log)
 	if err != nil {
 		return err
 	}
@@ -86,20 +92,19 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "create kube client")
 	}
 
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, cmd.log)
 	if err != nil {
 		return err
 	}
 
 	// Signal that we are working on the space if there is any
-	err = cloud.ResumeSpace(client, true, log.GetInstance())
+	err = resume.NewSpaceResumer(client, cmd.log).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
 
 	// Get config with adjusted cluster config
-	configOptions := cmd.ToConfigOptions()
-	config, err := configutil.GetConfig(configOptions)
+	config, err := configLoader.Load()
 	if err != nil {
 		return err
 	}
@@ -113,26 +118,29 @@ func (cmd *PurgeCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Purge deployments
-	deploy.PurgeDeployments(config, generatedConfig.GetActive(), client, deployments, log.GetInstance())
+	err = deploy.NewController(config, generatedConfig.GetActive(), client).Purge(deployments, cmd.log)
+	if err != nil {
+		cmd.log.Errorf("Error purging deployments: %v", err)
+	}
 
 	// Purge dependencies
 	if cmd.PurgeDependencies {
 
 		// Create Dependencymanager
-		manager, err := dependency.NewManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), log.GetInstance())
+		manager, err := dependency.NewManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log)
 		if err != nil {
 			return errors.Wrap(err, "new manager")
 		}
 
 		err = manager.PurgeAll(cmd.VerboseDependencies)
 		if err != nil {
-			log.Errorf("Error purging dependencies: %v", err)
+			cmd.log.Errorf("Error purging dependencies: %v", err)
 		}
 	}
 
-	err = generated.SaveConfig(generatedConfig)
+	err = configLoader.SaveGenerated(generatedConfig)
 	if err != nil {
-		log.Errorf("Error saving generated.yaml: %v", err)
+		cmd.log.Errorf("Error saving generated.yaml: %v", err)
 	}
 
 	return nil

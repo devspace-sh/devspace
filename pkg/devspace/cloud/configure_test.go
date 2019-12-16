@@ -19,7 +19,8 @@ func TestGetKubeContextNameFromSpace(t *testing.T) {
 }
 
 func TestUpdateKubeConfig(t *testing.T) {
-	err := UpdateKubeConfig("", &latest.ServiceAccount{CaCert: "Undecodable"}, 1, "app.devspace.cloud", false)
+	testProvider := &provider{Provider: latest.Provider{Host: "app.devspace.cloud"}}
+	err := testProvider.UpdateKubeConfig("", &latest.ServiceAccount{CaCert: "Undecodable"}, 1, false)
 	assert.Error(t, err, "illegal base64 data at input byte 8", "No or wrong error when trying to update kube config with an undecodable cacert in the serviceaccount")
 
 	dir, err := ioutil.TempDir("", "test")
@@ -59,12 +60,12 @@ func TestUpdateKubeConfig(t *testing.T) {
 		}
 	}()
 
-	err = UpdateKubeConfig("someContext", &latest.ServiceAccount{
+	err = testProvider.UpdateKubeConfig("someContext", &latest.ServiceAccount{
 		CaCert:    "",
 		Namespace: "someNamespace",
 		Server:    "someServer",
 		Token:     "someToken",
-	}, 1, "app.devspace.cloud", true)
+	}, 1, true)
 	assert.NilError(t, err, "Error when updating kube config with a vailid serviceaccount")
 	config, err := kubeconfig.LoadRawConfig()
 	assert.NilError(t, err, "Error loading kubeconfig")

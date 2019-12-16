@@ -68,7 +68,8 @@ func Start(version string) {
 
 // getIdentity return the cloud identifier
 func getIdentity() string {
-	providerConfig, err := config.ParseProviderConfig()
+	loader := config.NewLoader()
+	providerConfig, err := loader.Load()
 	if err != nil {
 		return ""
 	}

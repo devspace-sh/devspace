@@ -5,7 +5,7 @@ import (
 )
 
 // Version is the current api version
-const Version string = "v1beta5"
+const Version string = "v1beta6"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -84,7 +84,7 @@ type KanikoConfig struct {
 // CustomConfig tells the DevSpace CLI to build with a custom build script
 type CustomConfig struct {
 	Command   string    `yaml:"command,omitempty"`
-	Args      []*string `yaml:"flags,omitempty"`
+	Args      []*string `yaml:"args,omitempty"`
 	ImageFlag string    `yaml:"imageFlag,omitempty"`
 	OnChange  []*string `yaml:"onChange,omitempty"`
 }

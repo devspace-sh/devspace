@@ -1,12 +1,12 @@
 package generator
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
-	"fmt"
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/git"
@@ -74,11 +74,11 @@ func ContainerizeApplication(dockerfilePath, localPath string, templateRepoURL s
 	log.StopWait()
 
 	// Let the user select the language
-	selectedLanguage, err := survey.Question(&survey.QuestionOptions{
+	selectedLanguage, err := log.Question(&survey.QuestionOptions{
 		Question:     "Select the programming language of this project",
 		DefaultValue: detectedLang,
 		Options:      supportedLanguages,
-	}, log)
+	})
 	if err != nil {
 		return err
 	}

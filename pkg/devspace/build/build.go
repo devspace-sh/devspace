@@ -20,8 +20,41 @@ type imageNameAndTag struct {
 	imageTag        string
 }
 
+// Options describe how images should be build
+type Options struct {
+	SkipPush                 bool
+	IsDev                    bool
+	ForceRebuild             bool
+	Sequential               bool
+	IgnoreContextPathChanges bool
+}
+
+// Controller is the main building interface
+type Controller interface {
+	Build(options *Options, log logpkg.Logger) (map[string]string, error)
+}
+
+type controller struct {
+	config *latest.Config
+	cache  *generated.CacheConfig
+
+	hookExecuter hook.Executer
+	client       kubectl.Client
+}
+
+// NewController creates a new image build controller
+func NewController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) Controller {
+	return &controller{
+		config: config,
+		cache:  cache,
+
+		hookExecuter: hook.NewExecuter(config),
+		client:       client,
+	}
+}
+
 // All builds all images
-func All(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client, skipPush, isDev, forceRebuild, sequential, ignoreContextPathChanges bool, log logpkg.Logger) (map[string]string, error) {
+func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]string, error) {
 	var (
 		builtImages = make(map[string]string)
 
@@ -31,24 +64,23 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectl.Cli
 	)
 
 	// Check if we have at least 1 image to build
-	if len(config.Images) == 0 {
+	if len(c.config.Images) == 0 {
 		return builtImages, nil
 	}
 
 	// Build not in parallel when we only have one image to build
-	if sequential == false && len(config.Images) <= 1 {
-		sequential = true
+	if options.Sequential == false && len(c.config.Images) <= 1 {
+		options.Sequential = true
 	}
 
 	// Execute before images build hook
-	executer := hook.NewExecuter(config, log)
-	err := executer.Execute(hook.Before, hook.StageImages, hook.All)
+	err := c.hookExecuter.Execute(hook.Before, hook.StageImages, hook.All, log)
 	if err != nil {
 		return nil, err
 	}
 
 	imagesToBuild := 0
-	for key, imageConf := range config.Images {
+	for key, imageConf := range c.config.Images {
 		if imageConf.Build != nil && imageConf.Build.Disabled != nil && *imageConf.Build.Disabled == true {
 			log.Infof("Skipping building image %s", key)
 			continue
@@ -69,24 +101,24 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectl.Cli
 		}
 
 		// Create new builder
-		builder, err := CreateBuilder(config, client, imageConfigName, &cImageConf, imageTag, skipPush, isDev, log)
+		builder, err := c.createBuilder(imageConfigName, &cImageConf, imageTag, options, log)
 		if err != nil {
 			return nil, errors.Wrap(err, "create builder")
 		}
 
 		// Check if rebuild is needed
-		needRebuild, err := builder.ShouldRebuild(cache, ignoreContextPathChanges)
+		needRebuild, err := builder.ShouldRebuild(c.cache, options.IgnoreContextPathChanges)
 		if err != nil {
 			return nil, errors.Errorf("Error during shouldRebuild check: %v", err)
 		}
 
-		if forceRebuild == false && needRebuild == false {
+		if options.ForceRebuild == false && needRebuild == false {
 			log.Infof("Skip building image '%s'", imageConfigName)
 			continue
 		}
 
 		// Sequential or parallel build?
-		if sequential {
+		if options.Sequential {
 			// Build the image
 			err = builder.Build(log)
 			if err != nil {
@@ -94,7 +126,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectl.Cli
 			}
 
 			// Update cache
-			imageCache := cache.GetImageCache(imageConfigName)
+			imageCache := c.cache.GetImageCache(imageConfigName)
 			if imageCache.Tag == imageTag {
 				log.Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", imageName, imageTag)
 			}
@@ -128,7 +160,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectl.Cli
 		}
 	}
 
-	if sequential == false && imagesToBuild > 0 {
+	if options.Sequential == false && imagesToBuild > 0 {
 		defer log.StopWait()
 
 		for imagesToBuild > 0 {
@@ -142,7 +174,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectl.Cli
 				log.Donef("Done building image %s:%s (%s)", done.imageName, done.imageTag, done.imageConfigName)
 
 				// Update cache
-				imageCache := cache.GetImageCache(done.imageConfigName)
+				imageCache := c.cache.GetImageCache(done.imageConfigName)
 				if imageCache.Tag == done.imageTag {
 					log.Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", done.imageName, done.imageTag)
 				}
@@ -157,7 +189,7 @@ func All(config *latest.Config, cache *generated.CacheConfig, client kubectl.Cli
 	}
 
 	// Execute after images build hook
-	err = executer.Execute(hook.After, hook.StageImages, hook.All)
+	err = c.hookExecuter.Execute(hook.After, hook.StageImages, hook.All, log)
 	if err != nil {
 		return nil, err
 	}

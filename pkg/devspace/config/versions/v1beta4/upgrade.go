@@ -2,7 +2,7 @@ package v1beta4
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
-	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta5"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"

@@ -44,21 +44,22 @@ devspace remove cluster my-cluster
 // RunRemoveCluster executes the devspace remove cluster functionality
 func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) error {
 	// Get provider
-	provider, err := cloudpkg.GetProvider(cmd.Provider, log.GetInstance())
+	log := log.GetInstance()
+	provider, err := cloudpkg.GetProvider(cmd.Provider, log)
 	if err != nil {
 		return errors.Wrap(err, "log into provider")
 	}
 
 	if cmd.AllYes == false {
 		// Verify user is sure to delete the cluster
-		deleteCluster, err := survey.Question(&survey.QuestionOptions{
+		deleteCluster, err := log.Question(&survey.QuestionOptions{
 			Question:     fmt.Sprintf("Are you sure you want to delete cluster %s? This action is irreversible", args[0]),
 			DefaultValue: "No",
 			Options: []string{
 				"No",
 				"Yes",
 			},
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}
@@ -68,7 +69,7 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 	}
 
 	// Get cluster by name
-	cluster, err := provider.GetClusterByName(args[0])
+	cluster, err := provider.Client().GetClusterByName(args[0])
 	if err != nil {
 		return err
 	}
@@ -80,27 +81,27 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 	)
 
 	if cmd.AllYes == false {
-		deleteSpaces, err = survey.Question(&survey.QuestionOptions{
+		deleteSpaces, err = log.Question(&survey.QuestionOptions{
 			Question:     "Do you want to delete all cluster spaces?",
 			DefaultValue: "No",
 			Options: []string{
 				"No",
 				"Yes",
 			},
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}
 
 		// Delete services
-		deleteServices, err = survey.Question(&survey.QuestionOptions{
+		deleteServices, err = log.Question(&survey.QuestionOptions{
 			Question:     "Do you want to delete all cluster services?",
 			DefaultValue: "No",
 			Options: []string{
 				"No",
 				"Yes",
 			},
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}
@@ -108,13 +109,20 @@ func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) 
 
 	// Delete cluster
 	log.StartWait("Deleting cluster " + cluster.Name)
-	err = provider.DeleteCluster(cluster, deleteServices == "Yes", deleteSpaces == "Yes")
+
+	key, err := provider.GetClusterKey(cluster)
+	if err != nil {
+		return errors.Wrap(err, "get cluster key")
+	}
+
+	err = provider.Client().DeleteCluster(cluster, key, deleteServices == "Yes", deleteSpaces == "Yes")
 	if err != nil {
 		return err
 	}
 	log.StopWait()
 
-	delete(provider.ClusterKey, cluster.ClusterID)
+	providerConfig := provider.GetConfig()
+	delete(providerConfig.ClusterKey, cluster.ClusterID)
 	err = provider.Save()
 	if err != nil {
 		return err

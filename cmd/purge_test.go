@@ -121,11 +121,11 @@ func testPurge(t *testing.T, testCase purgeTestCase) {
 		survey.SetNextAnswer(answer)
 	}
 
-	providerConfig, err := cloudconfig.ParseProviderConfig()
+	providerConfig, err := cloudconfig.Load()
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 
-	configutil.SetFakeConfig(testCase.fakeConfig)
+	loader.SetFakeConfig(testCase.fakeConfig)
 	generated.ResetConfig()
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 	kubectl.SetFakeClient(testCase.fakeKubeClient)

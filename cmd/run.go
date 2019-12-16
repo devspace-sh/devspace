@@ -5,9 +5,8 @@ import (
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/command"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -52,7 +51,8 @@ devspace run mycommand2 1 2 3
 // RunRun executes the functionality "devspace run"
 func (cmd *RunCmd) RunRun(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.Discard)
+	configLoader := loader.NewConfigLoader(nil, log.Discard)
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -72,19 +72,19 @@ func (cmd *RunCmd) RunRun(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig("")
+	generatedConfig, err := configLoader.Generated()
 	if err != nil {
 		return err
 	}
 
 	// Parse commands
-	commands, err := configutil.ParseCommands(generatedConfig, rawMap, nil, log.GetInstance())
+	commands, err := configLoader.ParseCommands(generatedConfig, rawMap)
 	if err != nil {
 		return err
 	}
 
 	// Save variables
-	err = generated.SaveConfig(generatedConfig)
+	err = configLoader.SaveGenerated(generatedConfig)
 	if err != nil {
 		return err
 	}

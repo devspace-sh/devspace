@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/legacy"
@@ -30,9 +29,22 @@ var DevSpaceCloudProviderConfig = &latest.Provider{
 	Host: "https://app.devspace.cloud",
 }
 
-var loadedConfig *latest.Config
-var loadedConfigErr error
-var loadConfigOnce sync.Once
+// Loader saves and loads cloud configuration
+type Loader interface {
+	Save(config *latest.Config) error
+	Load() (*latest.Config, error)
+	GetDefaultProviderName() (string, error)
+}
+
+type loader struct {
+	loadedConfig    *latest.Config
+	loadedConfigErr error
+}
+
+// NewLoader creates a new instance of the interface Loader
+func NewLoader() Loader {
+	return &loader{}
+}
 
 // GetProvider returns a provider from the loaded config
 func GetProvider(config *latest.Config, provider string) *latest.Provider {
@@ -45,15 +57,8 @@ func GetProvider(config *latest.Config, provider string) *latest.Provider {
 	return nil
 }
 
-//Reset resets the loaded config and enables another loading processa
-func Reset() {
-	loadedConfig = nil
-	loadedConfigErr = nil
-	loadConfigOnce = sync.Once{}
-}
-
-// SaveProviderConfig saves the cloud config
-func SaveProviderConfig(config *latest.Config) error {
+// Save saves the cloud config
+func (l *loader) Save(config *latest.Config) error {
 	homedir, err := homedir.Dir()
 	if err != nil {
 		return err
@@ -73,16 +78,16 @@ func SaveProviderConfig(config *latest.Config) error {
 	return ioutil.WriteFile(cfgPath, data, 0600)
 }
 
-// ParseProviderConfig reads the provider config and parses it
-func ParseProviderConfig() (*latest.Config, error) {
-	loadConfigOnce.Do(func() {
-		loadedConfig, loadedConfigErr = loadProviderConfig()
-	})
+// Load reads the provider config and parses it
+func (l *loader) Load() (*latest.Config, error) {
+	if l.loadedConfig == nil && l.loadedConfigErr == nil {
+		l.loadedConfig, l.loadedConfigErr = l.loadProviderConfig()
+	}
 
-	return loadedConfig, loadedConfigErr
+	return l.loadedConfig, l.loadedConfigErr
 }
 
-func loadProviderConfig() (*latest.Config, error) {
+func (l *loader) loadProviderConfig() (*latest.Config, error) {
 	homedir, err := homedir.Dir()
 	if err != nil {
 		return nil, err
@@ -105,7 +110,7 @@ func loadProviderConfig() (*latest.Config, error) {
 			return nil, err
 		}
 
-		return loadLegacyConfig(legacyPath)
+		return l.loadLegacyConfig(legacyPath)
 	} else if err != nil {
 		return nil, err
 	}
@@ -141,7 +146,7 @@ func loadProviderConfig() (*latest.Config, error) {
 	return config, nil
 }
 
-func loadLegacyConfig(path string) (*latest.Config, error) {
+func (l *loader) loadLegacyConfig(path string) (*latest.Config, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -184,7 +189,7 @@ func loadLegacyConfig(path string) (*latest.Config, error) {
 		})
 	}
 
-	err = SaveProviderConfig(newConfig)
+	err = l.Save(newConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "save config")
 	}
@@ -192,4 +197,21 @@ func loadLegacyConfig(path string) (*latest.Config, error) {
 	// Remove old config
 	os.Remove(path)
 	return newConfig, nil
+}
+
+// GetDefaultProviderName returns the default provider name
+func (l *loader) GetDefaultProviderName() (string, error) {
+	// Get provider configuration
+	providerConfig, err := l.Load()
+	if err != nil {
+		return "", err
+	}
+
+	// Choose cloud provider
+	providerName := DevSpaceCloudProviderName
+	if providerConfig.Default != "" {
+		providerName = providerConfig.Default
+	}
+
+	return providerName, nil
 }

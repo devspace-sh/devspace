@@ -109,7 +109,7 @@ func TestInstallChart(t *testing.T) {
 	}
 	helmClient := &helm.FakeClient{}
 
-	client, err := create(config, configutil.TestNamespace, helmClient, kubeClient, false, log.GetInstance())
+	client, err := create(config, loader.TestNamespace, helmClient, kubeClient, false, log.GetInstance())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +178,7 @@ func TestAnalyzeError(t *testing.T) {
 			assert.NilError(t, err, "Error creating testPod in testCase %s", testCase.name)
 		}
 
-		client, err := create(config, configutil.TestNamespace, helmClient, kubeClient, false, &log.DiscardLogger{})
+		client, err := create(config, loader.TestNamespace, helmClient, kubeClient, false, &log.DiscardLogger{})
 		if err != nil {
 			t.Fatal(err)
 		}

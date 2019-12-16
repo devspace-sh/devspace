@@ -1,5 +1,6 @@
 package cmd
 
+/*
 import (
 	"bytes"
 	"encoding/json"
@@ -150,7 +151,7 @@ func testAnalyze(t *testing.T, testCase analyzeTestCase) {
 		responses: testCase.graphQLResponses,
 	}
 
-	configutil.SetFakeConfig(testCase.fakeConfig)
+	loader.SetFakeConfig(testCase.fakeConfig)
 	kubeconfig.SetFakeConfig(testCase.fakeKubeConfig)
 	generated.ResetConfig()
 	kubectl.SetFakeClient(testCase.fakeKubeClient)
@@ -161,7 +162,7 @@ func testAnalyze(t *testing.T, testCase analyzeTestCase) {
 		fsutil.WriteToFile(content, generated.ConfigPath)
 	}
 
-	providerConfig, err := cloudconfig.ParseProviderConfig()
+	providerConfig, err := cloudconfig.Load()
 	assert.NilError(t, err, "Error getting provider config in testCase %s", testCase.name)
 	providerConfig.Providers = testCase.providerList
 

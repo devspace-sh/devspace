@@ -2,7 +2,7 @@ package add
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -54,7 +54,8 @@ devspace add sync --local=app --container=/app
 // RunAddSync executes the add sync command logic
 func (cmd *syncCmd) RunAddSync(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -62,7 +63,7 @@ func (cmd *syncCmd) RunAddSync(cobraCmd *cobra.Command, args []string) error {
 		return errors.New(message.ConfigNotFound)
 	}
 
-	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())
+	config, err := configLoader.LoadWithoutProfile()
 	if err != nil {
 		return err
 	}
@@ -72,6 +73,11 @@ func (cmd *syncCmd) RunAddSync(cobraCmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "add sync path")
 	}
 
-	log.Donef("Successfully added sync between local path %v and container path %v", cmd.LocalPath, cmd.ContainerPath)
+	err = configLoader.Save(config)
+	if err != nil {
+		return err
+	}
+
+	log.GetInstance().Donef("Successfully added sync between local path %v and container path %v", cmd.LocalPath, cmd.ContainerPath)
 	return nil
 }

@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -44,7 +44,9 @@ devspace remove image --all
 // RunRemoveImage executes the remove image command logic
 func (cmd *imageCmd) RunRemoveImage(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	log := log.GetInstance()
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log)
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -52,12 +54,17 @@ func (cmd *imageCmd) RunRemoveImage(cobraCmd *cobra.Command, args []string) erro
 		return errors.New(message.ConfigNotFound)
 	}
 
-	config, err := configutil.GetBaseConfig(cmd.ToConfigOptions())
+	config, err := configLoader.LoadWithoutProfile()
 	if err != nil {
 		return err
 	}
 
 	err = configure.RemoveImage(config, cmd.RemoveAll, args)
+	if err != nil {
+		return err
+	}
+
+	err = configLoader.Save(config)
 	if err != nil {
 		return err
 	}

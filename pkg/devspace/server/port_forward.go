@@ -88,9 +88,10 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 
 	readyChan := make(chan struct{})
 	stopChan := make(chan struct{})
+	errorChan := make(chan error)
 	ports := []string{strconv.Itoa(checkPort) + ":" + targetPort[0]}
 
-	pf, err := client.NewPortForwarder(pod, ports, []string{"127.0.0.1"}, stopChan, readyChan)
+	pf, err := client.NewPortForwarder(pod, ports, []string{"127.0.0.1"}, stopChan, readyChan, nil)
 
 	go func(key string, port int) {
 		defer h.log.Infof("Stop listening on on %d", port)
@@ -104,6 +105,17 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 
 		delete(h.ports, key)
 	}(key, checkPort)
+
+	go func(key string) {
+		err := <-errorChan
+		if err != nil {
+			h.portsMutex.Lock()
+			delete(h.ports, key)
+			h.portsMutex.Unlock()
+		}
+
+		pf.Close()
+	}(key)
 
 	// Wait till forwarding is ready
 	select {

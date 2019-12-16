@@ -14,7 +14,7 @@ type Client interface {
 }
 
 // NewClient creates a client for a registry
-func NewClient(config *latest.Config, kubeClient kubectl.Client, dockerClient docker.ClientInterface, log log.Logger) Client {
+func NewClient(config *latest.Config, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) Client {
 	return &client{
 		config:       config,
 		kubeClient:   kubeClient,
@@ -26,6 +26,6 @@ func NewClient(config *latest.Config, kubeClient kubectl.Client, dockerClient do
 type client struct {
 	config       *latest.Config
 	kubeClient   kubectl.Client
-	dockerClient docker.ClientInterface
+	dockerClient docker.Client
 	log          log.Logger
 }

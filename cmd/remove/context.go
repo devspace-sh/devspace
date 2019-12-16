@@ -47,23 +47,24 @@ devspace remove context --all-spaces
 
 // RunRemoveContext executes the devspace remove context functionality
 func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) error {
+	log := log.GetInstance()
 	// Remove all contexts
 	if cmd.AllSpaces {
 		// Get provider
-		provider, err := cloudpkg.GetProvider(cmd.Provider, log.GetInstance())
+		provider, err := cloudpkg.GetProvider(cmd.Provider, log)
 		if err != nil {
 			return errors.Wrap(err, "log into provider")
 		}
 
 		// Retrieve spaces
-		spaces, err := provider.GetSpaces()
+		spaces, err := provider.Client().GetSpaces()
 		if err != nil {
 			return err
 		}
 
 		for _, space := range spaces {
 			// Remove kube context
-			err = cloudpkg.DeleteKubeContext(space)
+			err = provider.DeleteKubeContext(space)
 			if err != nil {
 				return errors.Wrap(err, "delete kube context")
 			}
@@ -97,10 +98,10 @@ func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) 
 
 		sort.Strings(contexts)
 
-		contextName, err = survey.Question(&survey.QuestionOptions{
+		contextName, err = log.Question(&survey.QuestionOptions{
 			Question: "Which context do you want to remove?",
 			Options:  contexts,
-		}, log.GetInstance())
+		})
 		if err != nil {
 			return err
 		}

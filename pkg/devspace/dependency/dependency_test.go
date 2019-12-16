@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
@@ -97,7 +97,7 @@ func TestUpdateAll(t *testing.T) {
 			},
 		}
 
-		manager, err := NewManager(testConfig, generatedConfig, nil, testCase.allowCyclicParam, &configutil.ConfigOptions{}, log.Discard)
+		manager, err := NewManager(testConfig, generatedConfig, nil, testCase.allowCyclicParam, &loader.ConfigOptions{}, log.Discard)
 		assert.NilError(t, err, "Error creating manager in testCase %s", testCase.name)
 
 		err = manager.UpdateAll()
@@ -215,7 +215,7 @@ testCases := []deployAllTestCase{
 			Client: fake.NewSimpleClientset(),
 		}
 
-		err = DeployAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, testCase.updateDependenciesParam, testCase.skipPushParam, testCase.forceDeployDependenciesParam, false, testCase.forceBuildParam, testCase.forceDeployParam, false, &configutil.ConfigOptions{}, log.Discard)
+		err = DeployAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, testCase.updateDependenciesParam, testCase.skipPushParam, testCase.forceDeployDependenciesParam, false, testCase.forceBuildParam, testCase.forceDeployParam, false, &loader.ConfigOptions{}, log.Discard)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error deploying all in testCase %s", testCase.name)
@@ -325,7 +325,7 @@ func TestPurgeAll(t *testing.T) {
 			Client: fake.NewSimpleClientset(),
 		}
 
-		err = PurgeAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, false, &configutil.ConfigOptions{}, log.Discard)
+		err = PurgeAll(testConfig, generatedConfig, kubeClient, testCase.allowCyclicParam, false, &loader.ConfigOptions{}, log.Discard)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error purging all in testCase %s", testCase.name)

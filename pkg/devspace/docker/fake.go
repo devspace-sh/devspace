@@ -12,10 +12,10 @@ import (
 	"github.com/docker/docker/api/types/filters"
 )
 
-var fakeClient ClientInterface
+var fakeClient Client
 
 // SetFakeClient causes NewClient to return the given fake client. !ONLY FOR TESTING!
-func SetFakeClient(fake ClientInterface) {
+func SetFakeClient(fake Client) {
 	fakeClient = fake
 }
 

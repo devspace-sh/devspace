@@ -11,13 +11,14 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/sync"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -66,8 +67,87 @@ func (serviceClient *client) StartSyncFromCmd(localPath, containerPath string, e
 		syncConfig.ExcludePaths = exclude
 	}
 
-	log.StartWait("Starting sync...")
+	serviceClient.log.StartWait("Starting sync...")
 	syncClient, err := serviceClient.startSync(pod, container.Name, syncConfig, verbose, syncDone, serviceClient.log)
+	serviceClient.log.StopWait()
+	if err != nil {
+		return errors.Wrap(err, "start sync")
+	}
+
+	err = syncClient.Start()
+	if err != nil {
+		return errors.Errorf("Sync error: %v", err)
+	}
+
+	serviceClient.log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, pod.Namespace, pod.Name)
+
+	if waitInitialSync {
+		serviceClient.log.StartWait("Sync: waiting for intial sync to complete")
+		<-syncClient.Options.UpstreamInitialSyncDone
+		<-syncClient.Options.DownstreamInitialSyncDone
+		serviceClient.log.StopWait()
+
+		return nil
+	}
+
+	// Wait till sync is finished
+	select {
+	case _ = <-syncClient.Options.SyncError:
+		serviceClient.log.Info("Will reconnect in 5 seconds")
+		time.Sleep(time.Second * 5)
+		return serviceClient.StartSyncFromCmd(localPath, containerPath, exclude, verbose, downloadOnInitialSync, waitInitialSync)
+	case <-syncDone:
+	}
+
+	return nil
+}
+
+// StartSync starts the syncing functionality
+func (serviceClient *client) StartSync(verboseSync bool) error {
+	if serviceClient.config.Dev == nil {
+		return nil
+	}
+
+	// Start sync client
+	for _, syncConfig := range serviceClient.config.Dev.Sync {
+		err := serviceClient.startSyncClient(syncConfig, verboseSync, serviceClient.log)
+		if err != nil {
+			return errors.Errorf("Unable to start sync: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func (serviceClient *client) startSyncClient(syncConfig *latest.SyncConfig, verboseSync bool, log logpkg.Logger) error {
+	var imageSelector []string
+	if syncConfig.ImageName != "" {
+		imageConfigCache := serviceClient.generated.GetActive().GetImageCache(syncConfig.ImageName)
+		if imageConfigCache.ImageName != "" {
+			imageSelector = []string{imageConfigCache.ImageName + ":" + imageConfigCache.Tag}
+		}
+	}
+
+	selector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, &targetselector.SelectorParameter{
+		ConfigParameter: targetselector.ConfigParameter{
+			Namespace:     syncConfig.Namespace,
+			LabelSelector: syncConfig.LabelSelector,
+			ContainerName: syncConfig.ContainerName,
+		},
+	}, false, imageSelector)
+	if err != nil {
+		return errors.Errorf("Error creating target selector: %v", err)
+	}
+
+	log.StartWait("Sync: Waiting for pods...")
+	pod, container, err := selector.GetContainer(false, serviceClient.log)
+	log.StopWait()
+	if err != nil {
+		return errors.Errorf("Error selecting pod: %v", err)
+	}
+
+	log.StartWait("Starting sync...")
+	syncClient, err := serviceClient.startSync(pod, container.Name, syncConfig, verboseSync, nil, nil)
 	log.StopWait()
 	if err != nil {
 		return errors.Wrap(err, "start sync")
@@ -78,90 +158,43 @@ func (serviceClient *client) StartSyncFromCmd(localPath, containerPath string, e
 		return errors.Errorf("Sync error: %v", err)
 	}
 
+	containerPath := "."
+	if syncConfig.ContainerPath != "" {
+		containerPath = syncConfig.ContainerPath
+	}
+
 	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, pod.Namespace, pod.Name)
 
-	if waitInitialSync {
+	if syncConfig.WaitInitialSync != nil && *syncConfig.WaitInitialSync == true {
 		log.StartWait("Sync: waiting for intial sync to complete")
 		<-syncClient.Options.UpstreamInitialSyncDone
 		<-syncClient.Options.DownstreamInitialSyncDone
 		log.StopWait()
-
-		return nil
 	}
 
-	// Wait till sync is finished
-	<-syncDone
+	go func(syncClient *sync.Sync) {
+		select {
+		case _ = <-syncClient.Options.SyncError:
+			for {
+				time.Sleep(time.Second * 3)
+
+				err := serviceClient.startSyncClient(syncConfig, verboseSync, logpkg.Discard)
+				if err != nil {
+					serviceClient.log.Errorf("Error restarting sync: %v. See more logs at .devspace/logs/sync.log", err)
+					serviceClient.log.Errorf("Will try again in 3 seconds", err)
+					continue
+				}
+
+				break
+			}
+		case <-syncClient.Options.SyncDone:
+		}
+	}(syncClient)
 
 	return nil
 }
 
-// StartSync starts the syncing functionality
-func (serviceClient *client) StartSync(verboseSync bool) ([]*sync.Sync, error) {
-	if serviceClient.config.Dev.Sync == nil {
-		return []*sync.Sync{}, nil
-	}
-
-	syncClients := make([]*sync.Sync, 0, len(serviceClient.config.Dev.Sync))
-	for _, syncConfig := range serviceClient.config.Dev.Sync {
-		var imageSelector []string
-		if syncConfig.ImageName != "" {
-			imageConfigCache := serviceClient.generated.GetActive().GetImageCache(syncConfig.ImageName)
-			if imageConfigCache.ImageName != "" {
-				imageSelector = []string{imageConfigCache.ImageName + ":" + imageConfigCache.Tag}
-			}
-		}
-
-		selector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, &targetselector.SelectorParameter{
-			ConfigParameter: targetselector.ConfigParameter{
-				Namespace:     syncConfig.Namespace,
-				LabelSelector: syncConfig.LabelSelector,
-				ContainerName: syncConfig.ContainerName,
-			},
-		}, false, imageSelector)
-		if err != nil {
-			return nil, errors.Errorf("Error creating target selector: %v", err)
-		}
-
-		log.StartWait("Sync: Waiting for pods...")
-		pod, container, err := selector.GetContainer(false, serviceClient.log)
-		log.StopWait()
-		if err != nil {
-			return nil, errors.Errorf("Error selecting pod: %v", err)
-		}
-
-		log.StartWait("Starting sync...")
-		syncClient, err := serviceClient.startSync(pod, container.Name, syncConfig, verboseSync, nil, nil)
-		log.StopWait()
-		if err != nil {
-			return nil, errors.Wrap(err, "start sync")
-		}
-
-		err = syncClient.Start()
-		if err != nil {
-			return nil, errors.Errorf("Sync error: %v", err)
-		}
-
-		containerPath := "."
-		if syncConfig.ContainerPath != "" {
-			containerPath = syncConfig.ContainerPath
-		}
-
-		log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, pod.Namespace, pod.Name)
-
-		if syncConfig.WaitInitialSync != nil && *syncConfig.WaitInitialSync == true {
-			log.StartWait("Sync: waiting for intial sync to complete")
-			<-syncClient.Options.UpstreamInitialSyncDone
-			<-syncClient.Options.DownstreamInitialSyncDone
-			log.StopWait()
-		}
-
-		syncClients = append(syncClients, syncClient)
-	}
-
-	return syncClients, nil
-}
-
-func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, syncDone chan bool, customLog log.Logger) (*sync.Sync, error) {
+func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, syncDone chan bool, customLog logpkg.Logger) (*sync.Sync, error) {
 	err := serviceClient.injectSync(pod, container)
 	if err != nil {
 		return nil, err
@@ -184,6 +217,7 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 
 	options := &sync.Options{
 		Verbose:               verbose,
+		SyncError:             make(chan error),
 		SyncDone:              syncDone,
 		DownloadOnInitialSync: downloadOnInitialSync,
 		Log:                   customLog,

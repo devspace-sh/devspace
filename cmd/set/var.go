@@ -4,9 +4,9 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -44,7 +44,8 @@ devspace set var key=value key2=value2
 // RunSetVar executes the set var command logic
 func (cmd *varCmd) RunSetVar(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(nil, log.GetInstance())
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -53,7 +54,7 @@ func (cmd *varCmd) RunSetVar(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Load generated config
-	generatedConfig, err := generated.LoadConfig("")
+	generatedConfig, err := configLoader.Generated()
 	if err != nil {
 		return err
 	}
@@ -85,12 +86,12 @@ func (cmd *varCmd) RunSetVar(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Save the config
-	err = generated.SaveConfig(generatedConfig)
+	err = configLoader.SaveGenerated(generatedConfig)
 	if err != nil {
 		return errors.Errorf("Error saving config: %v", err)
 	}
 
-	log.Done("Successfully changed variables")
+	log.GetInstance().Done("Successfully changed variables")
 	return nil
 }
 

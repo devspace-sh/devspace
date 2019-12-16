@@ -26,25 +26,44 @@ const HeaderChar = "="
 
 var paddingLeft = newString(" ", PaddingLeft)
 
+// Analyzer is the interface for analyzing
+type Analyzer interface {
+	Analyze(namespace string, noWait bool) error
+	CreateReport(namespace string, noWait bool) ([]*ReportItem, error)
+}
+
+type analyzer struct {
+	client kubectl.Client
+	log    log.Logger
+}
+
+// NewAnalyzer creates a new analyzer from the kube client
+func NewAnalyzer(client kubectl.Client, log log.Logger) Analyzer {
+	return &analyzer{
+		client: client,
+		log:    log,
+	}
+}
+
 // Analyze analyses a given
-func Analyze(client kubectl.Client, namespace string, noWait bool, log log.Logger) error {
-	report, err := CreateReport(client, namespace, noWait)
+func (a *analyzer) Analyze(namespace string, noWait bool) error {
+	report, err := a.CreateReport(namespace, noWait)
 	if err != nil {
 		return err
 	}
 
 	reportString := ReportToString(report)
-	log.WriteString(reportString)
+	a.log.WriteString(reportString)
 
 	return nil
 }
 
 // CreateReport creates a new report about a certain namespace
-func CreateReport(client kubectl.Client, namespace string, noWait bool) ([]*ReportItem, error) {
+func (a *analyzer) CreateReport(namespace string, noWait bool) ([]*ReportItem, error) {
 	report := []*ReportItem{}
 
 	// Analyze pods
-	problems, err := Pods(client, namespace, noWait)
+	problems, err := a.pods(namespace, noWait)
 	if err != nil {
 		return nil, errors.Errorf("Error during analyzing pods: %v", err)
 	}
@@ -60,7 +79,7 @@ func CreateReport(client kubectl.Client, namespace string, noWait bool) ([]*Repo
 
 	// Analyze replicasets
 	if checkEvents == false {
-		replicaSetProblems, err := ReplicaSets(client.KubeClient(), namespace)
+		replicaSetProblems, err := a.replicaSets(namespace)
 		if err != nil {
 			return nil, errors.Errorf("Error during analyzing replica sets: %v", err)
 		}
@@ -71,7 +90,7 @@ func CreateReport(client kubectl.Client, namespace string, noWait bool) ([]*Repo
 
 	// Analyze statefulsets
 	if checkEvents == false {
-		statefulSetProblems, err := StatefulSets(client.KubeClient(), namespace)
+		statefulSetProblems, err := a.statefulSets(namespace)
 		if err != nil {
 			return nil, errors.Errorf("Error during analyzing stateful sets: %v", err)
 		}
@@ -82,7 +101,7 @@ func CreateReport(client kubectl.Client, namespace string, noWait bool) ([]*Repo
 
 	if checkEvents {
 		// Analyze events
-		problems, err = Events(client.KubeClient(), namespace)
+		problems, err = a.events(namespace)
 		if err != nil {
 			return nil, errors.Errorf("Error during analyzing events: %v", err)
 		}

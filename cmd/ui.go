@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/configutil"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/server"
@@ -28,11 +28,16 @@ type UICmd struct {
 
 	Port        int
 	ForceServer bool
+
+	log log.Logger
 }
 
 // NewUICmd creates a new ui command
 func NewUICmd(globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &UICmd{GlobalFlags: globalFlags}
+	cmd := &UICmd{
+		GlobalFlags: globalFlags,
+		log:         log.GetInstance(),
+	}
 
 	uiCmd := &cobra.Command{
 		Use:   "ui",
@@ -57,7 +62,8 @@ Opens the localhost UI in the browser
 // RunUI executes the functionality "devspace ui"
 func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configExists, err := configutil.SetDevSpaceRoot(log.GetInstance())
+	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
+	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
@@ -96,7 +102,7 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 				}
 
 				if serverVersion.DevSpace {
-					log.Infof("Found running UI server at %s", domain)
+					cmd.log.Infof("Found running UI server at %s", domain)
 					open.Start(domain)
 					return nil
 				}
@@ -116,14 +122,14 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 
 	if configExists {
 		// Load generated config
-		generatedConfig, err = generated.LoadConfig(cmd.Profile)
+		generatedConfig, err = configLoader.Generated()
 		if err != nil {
 			return errors.Errorf("Error loading generated.yaml: %v", err)
 		}
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	err = cmd.UseLastContext(generatedConfig, cmd.log)
 	if err != nil {
 		return err
 	}
@@ -135,7 +141,7 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Warn the user if we deployed into a different context before
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, cmd.log)
 	if err != nil {
 		return err
 	}
@@ -148,8 +154,7 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 		}
 
 		// Add current kube context to context
-		configOptions := cmd.ToConfigOptions()
-		config, err = configutil.GetConfig(configOptions)
+		config, err = configLoader.Load()
 		if err != nil {
 			return err
 		}
@@ -165,7 +170,7 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Create server
-	server, err := server.NewServer(config, generatedConfig, cmd.Dev, client.CurrentContext(), client.Namespace(), forcePort, log.GetInstance())
+	server, err := server.NewServer(configLoader, config, generatedConfig, cmd.Dev, client.CurrentContext(), client.Namespace(), forcePort, cmd.log)
 	if err != nil {
 		return err
 	}
@@ -178,7 +183,7 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 		}(server.Server.Addr)
 	}
 
-	log.Infof("Start listening on http://%s", server.Server.Addr)
+	cmd.log.Infof("Start listening on http://%s", server.Server.Addr)
 
 	// Start server
 	return server.ListenAndServe()

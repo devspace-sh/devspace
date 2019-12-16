@@ -16,19 +16,17 @@ import (
 
 // Executer executes configured commands locally
 type Executer interface {
-	Execute(when When, stage Stage, which string) error
+	Execute(when When, stage Stage, which string, log logpkg.Logger) error
 }
 
 type executer struct {
 	config *latest.Config
-	log    logpkg.Logger
 }
 
 // NewExecuter creates an instance of Executer for the specified config
-func NewExecuter(config *latest.Config, log logpkg.Logger) Executer {
+func NewExecuter(config *latest.Config) Executer {
 	return &executer{
 		config: config,
-		log:    log,
 	}
 }
 
@@ -60,7 +58,7 @@ var (
 )
 
 // Execute executes hooks at a specific time
-func (e *executer) Execute(when When, stage Stage, which string) error {
+func (e *executer) Execute(when When, stage Stage, which string, log logpkg.Logger) error {
 	if e.config.Hooks != nil && len(e.config.Hooks) > 0 {
 		hooksToExecute := []*latest.HookConfig{}
 
@@ -97,13 +95,13 @@ func (e *executer) Execute(when When, stage Stage, which string) error {
 
 			// Determine output writer
 			var writer io.Writer
-			if e.log == logpkg.GetInstance() {
+			if log == logpkg.GetInstance() {
 				writer = stdout
 			} else {
-				writer = e.log
+				writer = log
 			}
 
-			e.log.Infof("Execute hook: %s", ansi.Color(fmt.Sprintf("%s '%s'", hook.Command, strings.Join(args, "' '")), "white+b"))
+			log.Infof("Execute hook: %s", ansi.Color(fmt.Sprintf("%s '%s'", hook.Command, strings.Join(args, "' '")), "white+b"))
 			err := cmd.Run(writer, writer, nil)
 			if err != nil {
 				return errors.Errorf("Error executing hook: %v", err)

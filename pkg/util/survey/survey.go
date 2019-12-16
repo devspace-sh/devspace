@@ -4,10 +4,7 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	surveypkg "gopkg.in/AlecAivazis/survey.v1"
 )
 
@@ -25,16 +22,20 @@ type QuestionOptions struct {
 // DefaultValidationRegexPattern is the default regex pattern to validate the input
 var DefaultValidationRegexPattern = regexp.MustCompile("^.*$")
 
-var nextAnswers []string
+// Survey is the interface for asking questions
+type Survey interface {
+	Question(params *QuestionOptions) (string, error)
+}
 
-// SetNextAnswer will set the next answer for the question function
-// THIS SHOULD BE ONLY USED FOR UNIT TESTS
-func SetNextAnswer(answer string) {
-	nextAnswers = append(nextAnswers, answer)
+type survey struct{}
+
+// NewSurvey creates a new survey object
+func NewSurvey() Survey {
+	return &survey{}
 }
 
 // Question asks the user a question and returns the answer
-func Question(params *QuestionOptions, log log.Logger) (string, error) {
+func (s *survey) Question(params *QuestionOptions) (string, error) {
 	var prompt surveypkg.Prompt
 	compiledRegex := DefaultValidationRegexPattern
 	if params.ValidationRegexPattern != "" {
@@ -101,22 +102,6 @@ func Question(params *QuestionOptions, log log.Logger) (string, error) {
 	answers := struct {
 		Question string
 	}{}
-
-	// Stop wait if there was any
-	log.StopWait()
-
-	if len(nextAnswers) != 0 {
-		answer := nextAnswers[0]
-		nextAnswers = nextAnswers[1:]
-		return answer, nil
-	}
-
-	// Check if we can ask the question
-	if log.GetLevel() < logrus.InfoLevel {
-		return "", errors.Errorf("Cannot ask question '%s' because log level is too low", params.Question)
-	}
-
-	log.WriteString("\n")
 
 	err := surveypkg.Ask(question, &answers)
 	if err != nil {
