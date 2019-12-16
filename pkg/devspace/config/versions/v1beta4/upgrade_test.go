@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta5"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	yaml "gopkg.in/yaml.v2"
