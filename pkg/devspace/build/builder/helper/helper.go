@@ -1,7 +1,6 @@
 package helper
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -156,8 +155,6 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, 
 
 	// only rebuild Docker image when Dockerfile or context has changed since latest build
 	mustRebuild := imageCache.Tag == "" || imageCache.DockerfileHash != dockerfileHash || imageCache.ImageConfigHash != imageConfigHash || imageCache.EntrypointHash != entrypointHash
-
-	fmt.Println(ignoreContextPathChanges)
 
 	// Check if we really should skip context path changes, this is only the case if we find a sync config for the given image name
 	if ignoreContextPathChanges {
