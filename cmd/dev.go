@@ -204,7 +204,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	registryClient := registry.NewClient(config, client, dockerClient, cmd.log)
 	err = registryClient.CreatePullSecrets()
 	if err != nil {
-		return err
+		cmd.log.Warn(err)
 	}
 
 	// Build and deploy images

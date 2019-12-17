@@ -160,7 +160,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	// Create pull secrets and private registry if necessary
 	err = f.NewPullSecretClient(config, client, dockerClient, cmd.log).CreatePullSecrets()
 	if err != nil {
-		return err
+		cmd.log.Warn(err)
 	}
 
 	// Create Dependencymanager
