@@ -4,12 +4,15 @@ import (
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"strings"
 	"time"
 )
 
 func runDefault(f *customFactory) error {
+	log.GetInstance().Info("Run test 'default' of 'logs'")
+
 	lc := &cmd.LogsCmd{
 		GlobalFlags: &flags.GlobalFlags{
 			Namespace: f.namespace,

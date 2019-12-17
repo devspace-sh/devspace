@@ -2,13 +2,15 @@ package enter
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strings"
-	"time"
 )
 
 //1. enter --container
@@ -17,6 +19,8 @@ import (
 //4. enter --pick
 
 func runDefault(f *customFactory) error {
+	log.GetInstance().Info("Run test 'default' of 'enter'")
+
 	client, err := f.NewKubeClientFromContext("", f.namespace, false)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)

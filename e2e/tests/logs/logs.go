@@ -58,9 +58,9 @@ func (r *Runner) Run(subTests []string, ns string, pwd string) error {
 			Namespace: ns,
 			NoWarn:    true,
 		},
-		// ForceBuild:  true,
-		// ForceDeploy: true,
-		SkipPush: true,
+		ForceBuild:  true,
+		ForceDeploy: true,
+		SkipPush:    true,
 	}
 
 	dirPath, _, err := utils.CreateTempDir()

@@ -12,7 +12,9 @@ import (
 )
 
 func runDefault(f *customFactory) error {
+	log.GetInstance().Info("Run test 'default' of 'sync'")
 	log.GetInstance().SetLevel(logrus.FatalLevel)
+
 	sc := &cmd.SyncCmd{
 		GlobalFlags: &flags.GlobalFlags{
 			Namespace: f.namespace,
