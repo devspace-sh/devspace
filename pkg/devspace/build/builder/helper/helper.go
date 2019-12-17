@@ -178,8 +178,6 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, 
 		mustRebuild = true
 	}
 
-	fmt.Println(ignoreContextPathChanges)
-
 	// Check if should consider context path changes for rebuilding
 	if ignoreContextPathChanges == false {
 		// Hash context path
