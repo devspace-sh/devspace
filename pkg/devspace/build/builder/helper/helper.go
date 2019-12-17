@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -116,7 +117,7 @@ func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, log log.Logger) e
 }
 
 // ShouldRebuild determines if the image should be rebuilt
-func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, ignoreContextPathChanges bool) (bool, error) {
+func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, ignoreContextPathChanges bool) (bool, error) {
 	imageCache := cache.GetImageCache(b.ImageConfigName)
 
 	// Hash dockerfile
@@ -156,6 +157,8 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, ignoreContextP
 	// only rebuild Docker image when Dockerfile or context has changed since latest build
 	mustRebuild := imageCache.Tag == "" || imageCache.DockerfileHash != dockerfileHash || imageCache.ImageConfigHash != imageConfigHash || imageCache.EntrypointHash != entrypointHash
 
+	fmt.Println(ignoreContextPathChanges)
+
 	// Check if we really should skip context path changes, this is only the case if we find a sync config for the given image name
 	if ignoreContextPathChanges {
 		ignoreContextPathChanges = false
@@ -169,8 +172,14 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, ignoreContextP
 		}
 	}
 
-	// We only ignore context changes after the first run and set the context hash to ""
-	if ignoreContextPathChanges == false || imageCache.ContextHash != "" {
+	// Okay this check verifies if the previous deploy context was local kubernetes context where we didn't push the image and now have a kubernetes context where we probably push
+	// or use another docker client (e.g. minikube <-> docker-desktop)
+	if b.KubeClient != nil && cache.LastContext != nil && cache.LastContext.Context != b.KubeClient.CurrentContext() && kubectl.IsLocalKubernetes(cache.LastContext.Context) {
+		mustRebuild = true
+	}
+
+	// Check if should consider context path changes for rebuilding
+	if ignoreContextPathChanges == false {
 		// Hash context path
 		contextDir, relDockerfile, err := build.GetContextFromLocalDir(b.ContextPath, b.DockerfilePath)
 		if err != nil {
@@ -193,21 +202,20 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, ignoreContextP
 
 		mustRebuild = mustRebuild || imageCache.ContextHash != contextHash
 
-		if ignoreContextPathChanges {
-			imageCache.ContextHash = ""
-		} else {
+		// TODO: This is not an ideal solution since there can be the issue that the user runs
+		// devspace dev & the generated.yaml is written without ContextHash and on a subsequent
+		// devspace deploy the image would be rebuild, because the ContextHash was empty and is
+		// now different. However in this case it is probably better to save the context hash computing
+		// time during devspace dev instead of always hashing the context path.
+		if forceRebuild || mustRebuild {
 			imageCache.ContextHash = contextHash
 		}
 	}
 
-	imageCache.DockerfileHash = dockerfileHash
-	imageCache.ImageConfigHash = imageConfigHash
-	imageCache.EntrypointHash = entrypointHash
-
-	// Okay this check verifies if the previous deploy context was local kubernetes context where we didn't push the image and now have a kubernetes context where we probably push
-	// or use another docker client (e.g. minikube <-> docker-desktop)
-	if b.KubeClient != nil && cache.LastContext != nil && cache.LastContext.Context != b.KubeClient.CurrentContext() && kubectl.IsLocalKubernetes(cache.LastContext.Context) {
-		mustRebuild = true
+	if forceRebuild || mustRebuild {
+		imageCache.DockerfileHash = dockerfileHash
+		imageCache.ImageConfigHash = imageConfigHash
+		imageCache.EntrypointHash = entrypointHash
 	}
 
 	return mustRebuild, nil

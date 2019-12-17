@@ -107,7 +107,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		}
 
 		// Check if rebuild is needed
-		needRebuild, err := builder.ShouldRebuild(c.cache, options.IgnoreContextPathChanges)
+		needRebuild, err := builder.ShouldRebuild(c.cache, options.ForceRebuild, options.IgnoreContextPathChanges)
 		if err != nil {
 			return nil, errors.Errorf("Error during shouldRebuild check: %v", err)
 		}

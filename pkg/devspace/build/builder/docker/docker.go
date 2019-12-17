@@ -64,8 +64,8 @@ func (b *Builder) Build(log logpkg.Logger) error {
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, ignoreContextPathChanges bool) (bool, error) {
-	return b.helper.ShouldRebuild(cache, ignoreContextPathChanges)
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, ignoreContextPathChanges bool) (bool, error) {
+	return b.helper.ShouldRebuild(cache, forceRebuild, ignoreContextPathChanges)
 }
 
 // BuildImage builds a dockerimage with the docker cli

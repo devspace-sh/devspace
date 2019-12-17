@@ -113,10 +113,6 @@ func DirectoryExcludes(srcPath string, excludePatterns []string, fast bool) (str
 			return err
 		}
 
-		if include == "." && relFilePath != "." {
-			relFilePath = strings.Join([]string{".", relFilePath}, string(filepath.Separator))
-		}
-
 		skip := false
 
 		// If "include" is an exact match for the current file
@@ -167,7 +163,6 @@ func DirectoryExcludes(srcPath string, excludePatterns []string, fast bool) (str
 			return nil
 		}
 		seen[relFilePath] = true
-
 		if f.IsDir() {
 			// Path is enough
 			io.WriteString(hash, filePath)

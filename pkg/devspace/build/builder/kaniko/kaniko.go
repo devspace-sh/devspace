@@ -4,13 +4,13 @@ import (
 	"io"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
@@ -93,8 +93,8 @@ func (b *Builder) Build(log logpkg.Logger) error {
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, ignoreContextPathChanges bool) (bool, error) {
-	return b.helper.ShouldRebuild(cache, ignoreContextPathChanges)
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, ignoreContextPathChanges bool) (bool, error) {
+	return b.helper.ShouldRebuild(cache, forceRebuild, ignoreContextPathChanges)
 }
 
 // Authenticate authenticates kaniko for pushing to the RegistryURL (if username == "", it will try to get login data from local docker daemon)
