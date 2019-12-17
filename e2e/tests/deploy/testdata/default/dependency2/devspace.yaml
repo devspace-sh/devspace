@@ -1,0 +1,9 @@
+version: v1beta5
+deployments:
+- name: dependency2
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+

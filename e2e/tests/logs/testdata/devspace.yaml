@@ -1,0 +1,25 @@
+version: v1beta5
+images:
+  default:
+    image: dscr.io/${DEVSPACE_USERNAME}/testdata
+deployments:
+- name: testdata
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/testdata
+      service:
+        ports:
+        - port: 8080
+dev:
+  ports:
+  - imageName: default
+    forward:
+    - port: 8080
+  open:
+  - url: http://localhost:8080
+  sync:
+  - imageName: default
+    excludePaths:
+    - devspace.yaml

@@ -81,6 +81,7 @@ devspace deploy --kube-context=deploy-context
 // Run executes the down command logic
 func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
+	cmd.log = f.GetLog()
 	configOptions := cmd.ToConfigOptions()
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
 	configExists, err := configLoader.SetDevSpaceRoot()
