@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/portforward"
@@ -28,14 +29,12 @@ import (
 )
 
 // ChangeWorkingDir changes the working directory
-func ChangeWorkingDir(pwd string) error {
-	log := logger.GetInstance()
-
+func ChangeWorkingDir(pwd string, log logger.Logger) error {
 	wd, err := filepath.Abs(pwd)
 	if err != nil {
 		return err
 	}
-	fmt.Println("WD:", wd)
+	// fmt.Println("WD:", wd)
 	// Change working directory
 	err = os.Chdir(wd)
 	if err != nil {
@@ -49,20 +48,18 @@ func ChangeWorkingDir(pwd string) error {
 }
 
 // PrintTestResult prints a test result with a specific formatting
-func PrintTestResult(testName string, subTestName string, err error) {
+func PrintTestResult(testName string, subTestName string, err error, log logger.Logger) {
 	if err == nil {
 		successIcon := html.UnescapeString("&#" + strconv.Itoa(128513) + ";")
-		fmt.Printf("%v  Test '%v' of group test '%v' successfully passed!\n", successIcon, subTestName, testName)
+		log.Donef("%v  Test '%v' of group test '%v' successfully passed!\n", successIcon, subTestName, testName)
 	} else {
 		failureIcon := html.UnescapeString("&#" + strconv.Itoa(128545) + ";")
-		fmt.Printf("%v  Test '%v' of group test '%v' failed!\n", failureIcon, subTestName, testName)
+		log.Fatalf("%v  Test '%v' of group test '%v' failed!\n", failureIcon, subTestName, testName)
 	}
 }
 
 // DeleteNamespaceAndWait deletes a given namespace and waits for the process to finish
-func DeleteNamespaceAndWait(client kubectl.Client, namespace string) {
-	log := logger.GetInstance()
-
+func DeleteNamespaceAndWait(client kubectl.Client, namespace string, log logger.Logger) {
 	log.StartWait("Deleting namespace '" + namespace + "'")
 	err := client.KubeClient().CoreV1().Namespaces().Delete(namespace, nil)
 	if err != nil {
@@ -363,14 +360,12 @@ func CreateTempDir() (dirPath string, dirName string, err error) {
 	if err != nil {
 		return
 	}
-	fmt.Println("tempDir created:", dirPath)
+	// fmt.Println("tempDir created:", dirPath)
 	return
 }
 
 // DeleteTempDir deletes temp directory
-func DeleteTempDir(dirPath string) {
-	// log := logger.GetInstance()
-
+func DeleteTempDir(dirPath string, log logger.Logger) {
 	// //Delete temp folder
 	// err := os.RemoveAll(dirPath)
 	// if err != nil {
@@ -420,9 +415,9 @@ func StringInSlice(str string, list []string) bool {
 }
 
 // DeleteTempAndResetWorkingDir deletes /tmp dir and reinitialize the working dir
-func DeleteTempAndResetWorkingDir(tmpDir string, pwd string) {
-	DeleteTempDir(tmpDir)
-	_ = ChangeWorkingDir(pwd)
+func DeleteTempAndResetWorkingDir(tmpDir string, pwd string, log logger.Logger) {
+	DeleteTempDir(tmpDir, log)
+	_ = ChangeWorkingDir(pwd, log)
 }
 
 // LookForDeployment search for a specific deployment name among the deployments, returns true if found
