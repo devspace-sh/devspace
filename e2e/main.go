@@ -29,8 +29,6 @@ func (s *stringList) Set(value string) error {
 	return nil
 }
 
-//type Test func(subTests []string, ns string, pwd string) error
-
 type Test interface {
 	Run(subTests []string, ns string, pwd string) error
 	SubTests() []string
@@ -156,6 +154,3 @@ func main() {
 		}
 	}
 }
-
-// go run . test --test=bla --test-examples --test-enter
-// go run . list --test=examples
