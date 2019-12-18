@@ -176,7 +176,7 @@ func testLogin(t *testing.T, testCase loginTestCase) {
 				return nil
 			},
 		},
-		client: client.NewFakeClient(),
+		client: &client.CloudClient{},
 		log:    logger,
 	}
 

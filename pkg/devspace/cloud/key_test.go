@@ -6,6 +6,7 @@ import (
 	client "github.com/devspace-cloud/devspace/pkg/devspace/cloud/client/testing"
 	config "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/testing"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	log "github.com/devspace-cloud/devspace/pkg/util/log/testing"
 
 	"gotest.tools/assert"
@@ -14,10 +15,10 @@ import (
 type getClusterKeyTestCase struct {
 	name string
 
-	clusterOwner   *latest.Owner
-	answers        []string
-	setClusterKeys map[int]string
-	clusterID      int
+	answers           []string
+	localClusterKeys  map[int]string
+	clientClusterKeys map[int]string
+	clusterID         int
 
 	expectedErr            string
 	expectedKey            string
@@ -25,29 +26,47 @@ type getClusterKeyTestCase struct {
 }
 
 func TestGetClusterKey(t *testing.T) {
+	hash345678, err := hash.Password("345678")
+	assert.NilError(t, err, "Error getting hash")
+	hash456789, err := hash.Password("456789")
+	assert.NilError(t, err, "Error getting hash")
+	hash567890, err := hash.Password("567890")
+	assert.NilError(t, err, "Error getting hash")
+
 	testCases := []getClusterKeyTestCase{
-		/*getClusterKeyTestCase{
-			name:                   "Ask for encryption key and succeed on secound try",
-			clusterOwner:           &latest.Owner{},
-			answers:                []string{"234567", "345678"},
-			setClusterKeys:         map[int]string{},
-			expectedKey:            "d7da6caa27948d250f1ea385bf587f9d348c7334b23fa1766016b503572a73a8",
+		getClusterKeyTestCase{
+			name:    "Ask for encryption key and succeed on secound try",
+			answers: []string{"234567", "345678"},
+			clientClusterKeys: map[int]string{
+				3: hash345678,
+			},
+			clusterID:              3,
+			expectedKey:            hash345678,
 			keyExpectedInClusterID: true,
 		},
 		getClusterKeyTestCase{
-			name:                   "Try with invalid clusterKey from map and then ask and succeed",
-			clusterOwner:           &latest.Owner{},
-			answers:                []string{"456789"},
-			setClusterKeys:         map[int]string{2: "someKey"},
-			expectedKey:            "472bbe83616e93d3c09a79103ae47d8f71e3d35a966d6e8b22f743218d04171d",
-			keyExpectedInClusterID: true,
-		},*/
-		getClusterKeyTestCase{
-			name:                   "The only clusterKey is valid and then saved to ClusterID",
-			clusterOwner:           &latest.Owner{},
-			setClusterKeys:         map[int]string{2: "567890"},
-			expectedKey:            "567890",
+			name:    "Get wrong clusterkey from local config, then get the right by asking",
+			answers: []string{"456789"},
+			localClusterKeys: map[int]string{
+				1: "345678",
+			},
+			clientClusterKeys: map[int]string{
+				5: hash456789,
+			},
 			clusterID:              5,
+			expectedKey:            hash456789,
+			keyExpectedInClusterID: true,
+		},
+		getClusterKeyTestCase{
+			name: "Get correct clusterkey from local config",
+			localClusterKeys: map[int]string{
+				2: hash567890,
+			},
+			clientClusterKeys: map[int]string{
+				6: hash567890,
+			},
+			clusterID:              6,
+			expectedKey:            hash567890,
 			keyExpectedInClusterID: true,
 		},
 	}
@@ -57,21 +76,28 @@ func TestGetClusterKey(t *testing.T) {
 		for _, answer := range testCase.answers {
 			logger.Survey.SetNextAnswer(answer)
 		}
+
+		if testCase.localClusterKeys == nil {
+			testCase.localClusterKeys = map[int]string{}
+		}
+
 		provider := &provider{
 			Provider: latest.Provider{
-				ClusterKey: testCase.setClusterKeys,
+				ClusterKey: testCase.localClusterKeys,
 			},
-			log:    logger,
-			client: client.NewFakeClient(),
+			log: logger,
+			client: &client.CloudClient{
+				ClusterKeys: testCase.clientClusterKeys,
+			},
 			loader: config.NewLoader(&latest.Config{}),
 		}
 
-		key, err := provider.GetClusterKey(&latest.Cluster{Owner: testCase.clusterOwner, ClusterID: testCase.clusterID, EncryptToken: true})
+		key, err := provider.GetClusterKey(&latest.Cluster{ClusterID: testCase.clusterID, EncryptToken: true})
 
 		if testCase.expectedErr == "" {
-			assert.NilError(t, err, "Error calling graphqlRequest in testCase: %s", testCase.name)
+			assert.NilError(t, err, "Error in testCase: %s", testCase.name)
 		} else {
-			assert.Error(t, err, testCase.expectedErr, "Wrong or no error when trying to do a graphql request in testCase %s", testCase.name)
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error when trying in testCase %s", testCase.name)
 		}
 		assert.Equal(t, testCase.expectedKey, key, "Wrong key returned in testCase %s", testCase.name)
 

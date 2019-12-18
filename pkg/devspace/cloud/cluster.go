@@ -441,6 +441,8 @@ func (p *provider) needKey() (bool, error) {
 	return settings[0].ID == SettingDefaultClusterEncryptToken && settings[0].Value == "true", nil
 }
 
+var getServiceAccountTimeout = time.Second * 90
+
 func (p *provider) getServiceAccountCredentials(client kubectl.Client) ([]byte, string, error) {
 	p.log.StartWait("Retrieving service account credentials")
 	defer p.log.StopWait()
@@ -452,9 +454,8 @@ func (p *provider) getServiceAccountCredentials(client kubectl.Client) ([]byte, 
 	}
 
 	beginTimeStamp := time.Now()
-	timeout := time.Second * 90
 
-	for len(sa.Secrets) == 0 && time.Since(beginTimeStamp) < timeout {
+	for len(sa.Secrets) == 0 && time.Since(beginTimeStamp) < getServiceAccountTimeout {
 		time.Sleep(time.Second)
 
 		sa, err = client.KubeClient().CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
@@ -463,7 +464,7 @@ func (p *provider) getServiceAccountCredentials(client kubectl.Client) ([]byte, 
 		}
 	}
 
-	if time.Since(beginTimeStamp) >= timeout {
+	if time.Since(beginTimeStamp) >= getServiceAccountTimeout {
 		return nil, "", errors.New("ServiceAccount did not receive secret in time")
 	}
 
