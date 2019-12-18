@@ -380,16 +380,10 @@ func (cmd *OpenCmd) openLocal(devspaceConfig *latest.Config, generatedConfig *ge
 			Ports: portforwardingConfig,
 		},
 	}, generatedConfig, client, nil, cmd.log)
-	portForwarder, err := servicesClient.StartPortForwarding()
+	err = servicesClient.StartPortForwarding()
 	if err != nil {
 		return errors.Wrap(err, "start port forwarding")
 	}
-
-	defer func() {
-		for _, v := range portForwarder {
-			v.Close()
-		}
-	}()
 
 	// Loop and check if http code is != 502
 	cmd.log.StartWait("Waiting for application")

@@ -17,6 +17,10 @@ dev:
   - imageName: default
     forward:
     - port: 3000
+  autoReload:
+    paths:
+    - package.json
+    - Dockerfile
   sync:
   - imageName: default
     excludePaths:

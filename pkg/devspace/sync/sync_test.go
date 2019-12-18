@@ -59,7 +59,7 @@ func createTestSyncClient(testLocalPath string, testCases testCaseList) (*Sync, 
 		return nil, err
 	}
 
-	sync.errorChan = make(chan error)
+	sync.Options.SyncError = make(chan error)
 	return sync, nil
 }
 

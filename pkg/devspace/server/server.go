@@ -14,6 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"github.com/devspace-cloud/devspace/pkg/util/analytics"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
@@ -23,7 +24,6 @@ import (
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/portforward"
 )
 
 // Server is listens on a given port for the ui functionality

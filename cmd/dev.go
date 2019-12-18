@@ -204,7 +204,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	registryClient := registry.NewClient(config, client, dockerClient, cmd.log)
 	err = registryClient.CreatePullSecrets()
 	if err != nil {
-		return err
+		cmd.log.Warn(err)
 	}
 
 	// Build and deploy images
@@ -348,38 +348,28 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 		}
 	}
 
-	servicesClient := services.NewClient(config, generatedConfig, client, selectorParameter, log)
-	if cmd.Portforwarding {
-		portForwarder, err := servicesClient.StartPortForwarding()
-		if err != nil {
-			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
-		}
-
-		defer func() {
-			for _, v := range portForwarder {
-				v.Close()
-			}
-		}()
-	}
-
-	if cmd.Sync {
-		syncConfigs, err := servicesClient.StartSync(cmd.VerboseSync)
-		if err != nil {
-			return 0, errors.Errorf("Unable to start sync: %v", err)
-		}
-
-		defer func() {
-			for _, v := range syncConfigs {
-				v.Stop(nil)
-			}
-		}()
-	}
-
 	var (
+		servicesClient  = services.NewClient(config, generatedConfig, client, selectorParameter, log)
 		exitChan        = make(chan error)
 		autoReloadPaths = GetPaths(config)
 		interactiveMode = config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.DefaultEnabled != nil && *config.Dev.Interactive.DefaultEnabled == true
 	)
+
+	if cmd.Portforwarding {
+		cmd.Portforwarding = false
+		err := servicesClient.StartPortForwarding()
+		if err != nil {
+			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
+		}
+	}
+
+	if cmd.Sync {
+		cmd.Sync = false
+		err := servicesClient.StartSync(cmd.VerboseSync)
+		if err != nil {
+			return 0, errors.Wrap(err, "start sync")
+		}
+	}
 
 	// Start watcher if we have at least one auto reload path and if we should not skip the pipeline
 	if cmd.SkipPipeline == false && len(autoReloadPaths) > 0 {
@@ -516,6 +506,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 
 			log.Warnf("Couldn't print logs: %v", err)
 		}
+
 		log.WriteString("\n")
 		log.Warn("Log streaming service has been terminated")
 	}

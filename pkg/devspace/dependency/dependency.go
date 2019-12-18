@@ -351,7 +351,7 @@ func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, 
 	registryClient := registry.NewClient(d.Config, d.kubeClient, dockerClient, log)
 	err = registryClient.CreatePullSecrets()
 	if err != nil {
-		return err
+		log.Warn(err)
 	}
 
 	// Check if image build is enabled

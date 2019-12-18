@@ -128,15 +128,16 @@ func GetProviderWithOptions(useProviderName, key string, relogin bool, loader co
 
 		log.Donef("Successfully logged into %s", provider.Name)
 
+		// We have to save here so that the client when he saves the token will know that the provider exists
+		err = provider.Save()
+		if err != nil {
+			return nil, err
+		}
+
 		// Login into registries
 		err = provider.loginIntoRegistries()
 		if err != nil {
 			log.Warnf("Error logging into docker registries: %v", err)
-		}
-
-		err = provider.Save()
-		if err != nil {
-			return nil, err
 		}
 	} else {
 		provider.client = client.NewClient(providerName, p.Host, p.Key, p.Token)
