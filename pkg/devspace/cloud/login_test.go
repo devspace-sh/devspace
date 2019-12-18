@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	client "github.com/devspace-cloud/devspace/pkg/devspace/cloud/client/testing"
 	config "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/testing"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
@@ -142,11 +143,17 @@ func TestLogin(t *testing.T) {
 			name:        "Login with browser",
 			sendKey:     "myKey",
 			expectedKey: "myKey",
-		}, /*
-			loginTestCase{
-				name:        "Invalid login",
-				expectedKey: "",
-			},*/
+		},
+		/*loginTestCase{
+			name:        "Invalid login",
+			expectedKey: "",
+		},
+		loginTestCase{
+			name:              "Login with question",
+			browserShouldFail: true,
+			answers:           []string{" mykey "},
+			expectedKey:       "mykey",
+		},*/
 	}
 
 	for _, testCase := range testCases {
@@ -169,7 +176,8 @@ func testLogin(t *testing.T, testCase loginTestCase) {
 				return nil
 			},
 		},
-		log: logger,
+		client: client.NewFakeClient(),
+		log:    logger,
 	}
 
 	go func() {
