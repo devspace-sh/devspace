@@ -4,6 +4,6 @@
   "go.autocompleteUnimportedPackages": true,
   "go.installDependenciesWhenBuilding": false,
   "go.formatTool": "goimports",
-  "go.coverOnTestPackage": false,
+  "go.coverOnTestPackage": true,
   "go.useLanguageServer": true
 }
