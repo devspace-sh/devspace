@@ -47,12 +47,7 @@ func RunProfile(f *customFactory, logger log.Logger) error {
 				},
 			},
 			postCheck: func(f *customFactory, t *test) error {
-				client, err := f.NewKubeClientFromContext(t.deployConfig.KubeContext, t.deployConfig.Namespace, t.deployConfig.SwitchContext)
-				if err != nil {
-					return errors.Errorf("Unable to create new kubectl client: %v", err)
-				}
-
-				wasDeployed, err := utils.LookForDeployment(client, f.namespace, "sh.helm.release.v1.service-2.v1")
+				wasDeployed, err := utils.LookForDeployment(f.client, f.namespace, "sh.helm.release.v1.service-2.v1")
 				if err != nil {
 					return err
 				}
@@ -102,12 +97,7 @@ func RunProfile(f *customFactory, logger log.Logger) error {
 					return errors.Errorf("built images expected: %v, found: %v", imagesExpected, imagesCount)
 				}
 
-				client, err := f.NewKubeClientFromContext(t.deployConfig.KubeContext, t.deployConfig.Namespace, t.deployConfig.SwitchContext)
-				if err != nil {
-					return errors.Errorf("Unable to create new kubectl client: %v", err)
-				}
-
-				wasDeployed, err := utils.LookForDeployment(client, f.namespace, "sh.helm.release.v1.service-2.v3")
+				wasDeployed, err := utils.LookForDeployment(f.client, f.namespace, "sh.helm.release.v1.service-2.v3")
 				if err != nil {
 					return err
 				}
@@ -137,12 +127,7 @@ func RunProfile(f *customFactory, logger log.Logger) error {
 					return errors.Errorf("built images expected: %v, found: %v", imagesExpected, imagesCount)
 				}
 
-				client, err := f.NewKubeClientFromContext(t.deployConfig.KubeContext, t.deployConfig.Namespace, t.deployConfig.SwitchContext)
-				if err != nil {
-					return errors.Errorf("Unable to create new kubectl client: %v", err)
-				}
-
-				wasDeployed, err := utils.LookForDeployment(client, f.namespace, "sh.helm.release.v1.dependency1.v3")
+				wasDeployed, err := utils.LookForDeployment(f.client, f.namespace, "sh.helm.release.v1.dependency1.v3")
 				if err != nil {
 					return err
 				}
@@ -173,15 +158,10 @@ func RunProfile(f *customFactory, logger log.Logger) error {
 					return errors.Errorf("built images expected: %v, found: %v", imagesExpected, imagesCount)
 				}
 
-				client, err := f.NewKubeClientFromContext(t.deployConfig.KubeContext, t.deployConfig.Namespace, t.deployConfig.SwitchContext)
-				if err != nil {
-					return errors.Errorf("Unable to create new kubectl client: %v", err)
-				}
-
 				shouldBeDeployed := "sh.helm.release.v1.root-app.v4"
 				shouldNotBeDeployed := "sh.helm.release.v1.service-2.v5"
 
-				wasDeployed, err := utils.LookForDeployment(client, f.namespace, shouldBeDeployed)
+				wasDeployed, err := utils.LookForDeployment(f.client, f.namespace, shouldBeDeployed)
 				if err != nil {
 					return err
 				}
@@ -189,7 +169,7 @@ func RunProfile(f *customFactory, logger log.Logger) error {
 					return errors.Errorf("expected deployment '%v' was not found", shouldBeDeployed)
 				}
 
-				wasDeployed, err = utils.LookForDeployment(client, f.namespace, shouldNotBeDeployed)
+				wasDeployed, err = utils.LookForDeployment(f.client, f.namespace, shouldNotBeDeployed)
 				if err != nil {
 					return err
 				}

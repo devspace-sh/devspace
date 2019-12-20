@@ -30,7 +30,7 @@ import (
 )
 
 // ChangeWorkingDir changes the working directory
-func ChangeWorkingDir(pwd string, log logger.Logger) error {
+func ChangeWorkingDir(pwd string, cachedLogger logger.Logger) error {
 	wd, err := filepath.Abs(pwd)
 	if err != nil {
 		return err
@@ -43,7 +43,7 @@ func ChangeWorkingDir(pwd string, log logger.Logger) error {
 	}
 
 	// Notify user that we are not using the current working directory
-	log.Infof("Using devspace config in %s", filepath.ToSlash(wd))
+	cachedLogger.Infof("Using devspace config in %s", filepath.ToSlash(wd))
 
 	return nil
 }
@@ -86,7 +86,7 @@ func AnalyzePods(client kubectl.Client, namespace string, cachedLogger logger.Lo
 	return nil
 }
 
-func startPortForwarding(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client) ([]*portforward.PortForwarder, error) {
+func startPortForwarding(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, log logger.Logger) ([]*portforward.PortForwarder, error) {
 	if config.Dev == nil {
 		return nil, nil
 	}
@@ -94,7 +94,7 @@ func startPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 	var pf []*portforward.PortForwarder
 
 	for _, portForwarding := range config.Dev.Ports {
-		p, err := startForwarding(portForwarding, generatedConfig, config, client)
+		p, err := startForwarding(portForwarding, generatedConfig, config, client, log)
 		if err != nil {
 			return nil, err
 		}
@@ -105,9 +105,7 @@ func startPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 	return pf, nil
 }
 
-func startForwarding(portForwarding *latest.PortForwardingConfig, generatedConfig *generated.Config, config *latest.Config, client kubectl.Client) (*portforward.PortForwarder, error) {
-	log := logger.GetInstance()
-
+func startForwarding(portForwarding *latest.PortForwardingConfig, generatedConfig *generated.Config, config *latest.Config, client kubectl.Client, log logger.Logger) (*portforward.PortForwarder, error) {
 	var imageSelector []string
 	if portForwarding.ImageName != "" && generatedConfig != nil {
 		imageConfigCache := generatedConfig.GetActive().GetImageCache(portForwarding.ImageName)
@@ -189,10 +187,8 @@ func startForwarding(portForwarding *latest.PortForwardingConfig, generatedConfi
 }
 
 // PortForwardAndPing creates port-forwardings and ping them for a 200 status code
-func PortForwardAndPing(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client) error {
-	log := logger.GetInstance()
-
-	portForwarder, err := startPortForwarding(config, generatedConfig, client)
+func PortForwardAndPing(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, cachedLogger logger.Logger) error {
+	portForwarder, err := startPortForwarding(config, generatedConfig, client, cachedLogger)
 	if err != nil {
 		return err
 	}
@@ -207,11 +203,11 @@ func PortForwardAndPing(config *latest.Config, generatedConfig *generated.Config
 			url := fmt.Sprintf("http://localhost:%v/", p.Local)
 			resp, err := http.Get(url)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 
 			if resp.StatusCode == 200 {
-				log.Donef("Pinging %v: status code 200", url)
+				cachedLogger.Donef("Pinging %v: status code 200", url)
 			} else {
 				return fmt.Errorf("pinging %v: status code %v", url, resp.StatusCode)
 			}
@@ -365,12 +361,12 @@ func CreateTempDir() (dirPath string, dirName string, err error) {
 
 // DeleteTempDir deletes temp directory
 func DeleteTempDir(dirPath string, log logger.Logger) {
+	// TODO: Needs to be implemented later on (but bugs on windows)
 	// //Delete temp folder
 	// err := os.RemoveAll(dirPath)
 	// if err != nil {
 	// 	log.Fatalf("Error removing dir: %v", err)
 	// }
-	fmt.Println("Fake deleting temp")
 }
 
 // Capture replaces os.Stdout with a writer that buffers any data written

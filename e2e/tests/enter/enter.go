@@ -56,26 +56,24 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	}
 
 	f := &customFactory{
-		namespace:   ns,
 		pwd:         pwd,
 		cacheLogger: log.NewStreamLogger(buff, logrus.InfoLevel),
 	}
 
-	err := beforeTest(f)
-	defer afterTest(f)
-	if err != nil {
-		return errors.Errorf("beforeTest for 'enter' test failed: %s %v", buff.String(), err)
-	}
-
 	// Runs the tests
 	for _, subTestName := range subTests {
-		// Create logger
+		f.namespace = utils.GenerateNamespaceName("test-enter-" + subTestName)
 
-		err := availableSubTests[subTestName](f, logger)
+		err := beforeTest(f)
+		defer afterTest(f)
+		if err != nil {
+			return errors.Errorf("test 'enter' failed: %s %v", buff.String(), err)
+		}
+
+		err = availableSubTests[subTestName](f, logger)
 		utils.PrintTestResult("enter", subTestName, err, logger)
 		if err != nil {
-			// Print log contents
-			return err
+			return errors.Errorf("test 'enter' failed: %s %v", buff.String(), err)
 		}
 	}
 

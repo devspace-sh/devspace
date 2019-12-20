@@ -13,7 +13,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	fakelog "github.com/devspace-cloud/devspace/pkg/util/log/testing"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -34,7 +33,6 @@ type customFactory struct {
 	pwd         string
 	builtImages map[string]string
 
-	FakeLogger  *fakelog.FakeLogger
 	client      kubectl.Client
 	cacheLogger log.Logger
 	dirPath     string
@@ -78,6 +76,8 @@ var availableSubTests = map[string]func(factory *customFactory, logger log.Logge
 }
 
 func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger) error {
+	logger.Info("Run 'deploy' test")
+
 	// Populates the tests to run with all the available sub tests if no sub tests are specified
 	if len(subTests) == 0 {
 		for subTestName := range availableSubTests {
@@ -89,7 +89,6 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 		namespace: ns,
 		pwd:       pwd,
 	}
-	// myFactory.FakeLogger = fakelog.NewFakeLogger()
 
 	// Runs the tests
 	for _, subTestName := range subTests {
@@ -189,7 +188,7 @@ func beforeTest(f *customFactory, logger log.Logger, testDir string) error {
 	}
 
 	// Change working directory
-	err = utils.ChangeWorkingDir(dirPath, logger)
+	err = utils.ChangeWorkingDir(dirPath, f.cacheLogger)
 	if err != nil {
 		return err
 	}

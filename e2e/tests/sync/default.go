@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func runDefault(f *customFactory) error {
+func runDefault(f *customFactory, logger log.Logger) error {
 	log.GetInstance().Info("Run test 'default' of 'sync'")
 	log.GetInstance().SetLevel(logrus.FatalLevel)
 

@@ -174,12 +174,15 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 
 	err = beforeTest(f, logger, "tests/deploy/testdata/default")
 	defer afterTest(f)
+	if err != nil {
+		return errors.Errorf("sub test 'default' of 'deploy' test failed: %s %v", buff.String(), err)
+	}
 
 	for _, t := range ts {
 		err := runTest(f, &t)
 		utils.PrintTestResult("default", t.name, err, logger)
 		if err != nil {
-			return err
+			return errors.Errorf("sub test 'default' of 'deploy' test failed: %s %v", buff.String(), err)
 		}
 	}
 
@@ -201,7 +204,7 @@ func checkPortForwarding(f *customFactory, deployConfig *cmd.DeployCmd) error {
 	}
 
 	// Port-forwarding
-	err = utils.PortForwardAndPing(config, generatedConfig, f.client)
+	err = utils.PortForwardAndPing(config, generatedConfig, f.client, f.cacheLogger)
 	if err != nil {
 		return err
 	}

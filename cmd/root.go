@@ -100,7 +100,7 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	rootCmd.AddCommand(reset.NewResetCmd())
 	rootCmd.AddCommand(set.NewSetCmd())
 	rootCmd.AddCommand(status.NewStatusCmd())
-	rootCmd.AddCommand(use.NewUseCmd())
+	rootCmd.AddCommand(use.NewUseCmd(f))
 	rootCmd.AddCommand(update.NewUpdateCmd(globalFlags))
 
 	// Add main commands
@@ -114,7 +114,7 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	rootCmd.AddCommand(NewEnterCmd(f, globalFlags))
 	rootCmd.AddCommand(NewLoginCmd())
 	rootCmd.AddCommand(NewAnalyzeCmd(globalFlags))
-	rootCmd.AddCommand(NewLogsCmd(globalFlags))
+	rootCmd.AddCommand(NewLogsCmd(f, globalFlags))
 	rootCmd.AddCommand(NewOpenCmd(globalFlags))
 	rootCmd.AddCommand(NewUICmd(globalFlags))
 	rootCmd.AddCommand(NewRunCmd(globalFlags))

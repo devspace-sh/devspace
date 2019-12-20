@@ -1,17 +1,19 @@
 package logs
 
 import (
+	"strings"
+	"time"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"strings"
-	"time"
 )
 
-func runDefault(f *customFactory) error {
-	log.GetInstance().Info("Run test 'default' of 'logs'")
+func runDefault(f *customFactory, logger log.Logger) error {
+	logger.Info("Run sub test 'default' of test 'logs'")
+	logger.StartWait("Run test...")
+	defer logger.StopWait()
 
 	lc := &cmd.LogsCmd{
 		GlobalFlags: &flags.GlobalFlags{
@@ -22,7 +24,7 @@ func runDefault(f *customFactory) error {
 
 	done := utils.Capture()
 
-	err := lc.RunLogs(nil, nil)
+	err := lc.RunLogs(f, nil, nil)
 	if err != nil {
 		return err
 	}
