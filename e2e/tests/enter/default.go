@@ -1,7 +1,6 @@
 package enter
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -89,7 +88,6 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(capturedOutput)
 
 		if !strings.HasPrefix(capturedOutput, output) {
 			return errors.Errorf("capturedOutput is different than output for the enter cmd")

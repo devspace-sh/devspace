@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -17,6 +18,8 @@ type customFactory struct {
 	namespace   string
 	pwd         string
 	cacheLogger log.Logger
+	dirPath     string
+	client      kubectl.Client
 }
 
 func (cf *customFactory) GetLog() log.Logger {
@@ -58,9 +61,10 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 		cacheLogger: log.NewStreamLogger(buff, logrus.InfoLevel),
 	}
 
-	err := initTest(f)
+	err := beforeTest(f)
+	defer afterTest(f)
 	if err != nil {
-		return errors.Errorf("initTest for 'enter' test failed: %s %v", buff.String(), err)
+		return errors.Errorf("beforeTest for 'enter' test failed: %s %v", buff.String(), err)
 	}
 
 	// Runs the tests
@@ -78,7 +82,7 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	return nil
 }
 
-func initTest(f *customFactory) error {
+func beforeTest(f *customFactory) error {
 	deployConfig := &cmd.DeployCmd{
 		GlobalFlags: &flags.GlobalFlags{
 			Namespace: f.namespace,
@@ -91,6 +95,8 @@ func initTest(f *customFactory) error {
 		return err
 	}
 
+	f.dirPath = dirPath
+
 	err = utils.Copy(f.pwd+"/tests/enter/testdata", dirPath)
 	if err != nil {
 		return err
@@ -101,15 +107,13 @@ func initTest(f *customFactory) error {
 		return err
 	}
 
-	defer utils.DeleteTempAndResetWorkingDir(dirPath, f.pwd, f.cacheLogger)
-
 	// Create kubectl client
 	client, err := f.NewKubeDefaultClient()
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
-	defer utils.DeleteNamespaceAndWait(client, deployConfig.Namespace, f.cacheLogger)
+	f.client = client
 
 	err = deployConfig.Run(f, nil, nil)
 	if err != nil {
@@ -117,10 +121,15 @@ func initTest(f *customFactory) error {
 	}
 
 	// Checking if pods are running correctly
-	err = utils.AnalyzePods(client, f.namespace)
+	err = utils.AnalyzePods(client, f.namespace, f.cacheLogger)
 	if err != nil {
 		return errors.Errorf("An error occured while analyzing pods: %v", err)
 	}
 
 	return nil
+}
+
+func afterTest(f *customFactory) {
+	utils.DeleteTempAndResetWorkingDir(f.dirPath, f.pwd, f.cacheLogger)
+	utils.DeleteNamespace(f.client, f.namespace)
 }

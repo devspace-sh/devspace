@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"math/rand"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -54,32 +55,30 @@ func PrintTestResult(testName string, subTestName string, err error, log logger.
 		log.Donef("%v  Test '%v' of group test '%v' successfully passed!\n", successIcon, subTestName, testName)
 	} else {
 		failureIcon := html.UnescapeString("&#" + strconv.Itoa(128545) + ";")
-		log.Fatalf("%v  Test '%v' of group test '%v' failed!\n", failureIcon, subTestName, testName)
+		log.Warnf("%v  Test '%v' of group test '%v' failed!\n", failureIcon, subTestName, testName)
 	}
 }
 
-// DeleteNamespaceAndWait deletes a given namespace and waits for the process to finish
-func DeleteNamespaceAndWait(client kubectl.Client, namespace string, log logger.Logger) {
-	log.StartWait("Deleting namespace '" + namespace + "'")
+// DeleteNamespace deletes a given namespace and waits for the process to finish
+func DeleteNamespace(client kubectl.Client, namespace string) {
 	err := client.KubeClient().CoreV1().Namespaces().Delete(namespace, nil)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 
-	isExists := true
-	for isExists {
-		_, err = client.KubeClient().CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
-		if err != nil {
-			isExists = false
-		}
-	}
+	// isExists := true
+	// for isExists {
+	// 	_, err = client.KubeClient().CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
+	// 	if err != nil {
+	// 		isExists = false
+	// 	}
+	// }
 
-	defer log.StopWait()
 }
 
 // AnalyzePods waits for the pods to be running (if possible) and healthcheck them
-func AnalyzePods(client kubectl.Client, namespace string) error {
-	err := analyze.NewAnalyzer(client, logger.GetInstance()).Analyze(namespace, false)
+func AnalyzePods(client kubectl.Client, namespace string, cachedLogger logger.Logger) error {
+	err := analyze.NewAnalyzer(client, cachedLogger).Analyze(namespace, false)
 	if err != nil {
 		return err
 	}
@@ -441,4 +440,13 @@ func LookForDeployment(client kubectl.Client, namespace string, expectedDeployme
 	}
 
 	return true, nil
+}
+
+// GenerateNamespaceName generates a new Namespace name with the given prefix and a random suffix
+func GenerateNamespaceName(prefix string) string {
+	// Seed the random number generator using the current time (nanoseconds since epoch):
+	rand.Seed(time.Now().UnixNano())
+	r := rand.Intn(1000)
+
+	return fmt.Sprintf("%s-%v", prefix, r)
 }

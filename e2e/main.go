@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/e2e/tests/deploy"
 	"github.com/devspace-cloud/devspace/e2e/tests/enter"
 	"github.com/devspace-cloud/devspace/e2e/utils"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -33,7 +34,7 @@ type Test interface {
 
 var availableTests = map[string]Test{
 	// "examples": examples.RunNew,
-	// "deploy":   deploy.RunNew,
+	"deploy": deploy.RunNew,
 	// "init":     initTest.RunNew,
 	"enter": enter.RunNew,
 	// "sync":     sync.RunNew,
