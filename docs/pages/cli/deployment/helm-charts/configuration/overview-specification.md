@@ -100,7 +100,7 @@ deployments:
   helm:
     chart:
       name: custom-chart
-      repository: https://my-repo.tld/
+      repo: https://my-repo.tld/
 ```
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
