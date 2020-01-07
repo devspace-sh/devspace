@@ -9,6 +9,7 @@ import (
 // Client is the client interface for helm
 type Client interface {
 	InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*Release, error)
+	Template(releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error)
 	DeleteRelease(releaseName string, purge bool) error
 	ListReleases() ([]*Release, error)
 }

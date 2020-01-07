@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
@@ -92,8 +93,12 @@ func (serviceClient *client) StartSyncFromCmd(localPath, containerPath string, e
 
 	// Wait till sync is finished
 	select {
-	case _ = <-syncClient.Options.SyncError:
-		serviceClient.log.Info("Will reconnect in 5 seconds")
+	case err = <-syncClient.Options.SyncError:
+		if serviceClient.isFatalSyncError(err) {
+			serviceClient.log.Fatalf("Fatal error in sync: %v", err)
+		}
+
+		serviceClient.log.Infof("Will reconnect in 5 seconds, because of error: %v", err)
 		time.Sleep(time.Second * 5)
 		return serviceClient.StartSyncFromCmd(localPath, containerPath, exclude, verbose, downloadOnInitialSync, waitInitialSync)
 	case <-syncDone:
@@ -174,7 +179,11 @@ func (serviceClient *client) startSyncClient(syncConfig *latest.SyncConfig, verb
 
 	go func(syncClient *sync.Sync) {
 		select {
-		case _ = <-syncClient.Options.SyncError:
+		case err = <-syncClient.Options.SyncError:
+			if serviceClient.isFatalSyncError(err) {
+				serviceClient.log.Fatalf("Fatal error in sync: %v", err)
+			}
+
 			for {
 				time.Sleep(time.Second * 3)
 
@@ -192,6 +201,14 @@ func (serviceClient *client) startSyncClient(syncConfig *latest.SyncConfig, verb
 	}(syncClient)
 
 	return nil
+}
+
+func (serviceClient *client) isFatalSyncError(err error) bool {
+	if strings.Index(err.Error(), "no such file or directory") != -1 {
+		return true
+	}
+
+	return false
 }
 
 func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, syncDone chan bool, customLog logpkg.Logger) (*sync.Sync, error) {

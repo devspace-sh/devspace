@@ -1,6 +1,7 @@
 package deploy
 
 import (
+	"io"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -29,6 +30,7 @@ type Options struct {
 // Controller is the main deploying interface
 type Controller interface {
 	Deploy(options *Options, log log.Logger) error
+	Render(options *Options, out io.Writer) error
 	Purge(deployments []string, log log.Logger) error
 }
 
@@ -49,6 +51,62 @@ func NewController(config *latest.Config, cache *generated.CacheConfig, client k
 		hookExecuter: hook.NewExecuter(config),
 		client:       client,
 	}
+}
+
+func (c *controller) Render(options *Options, out io.Writer) error {
+	if c.config.Deployments != nil && len(c.config.Deployments) > 0 {
+		helmV2Clients := map[string]helmtypes.Client{}
+
+		for _, deployConfig := range c.config.Deployments {
+			if len(options.Deployments) > 0 {
+				shouldSkip := true
+
+				for _, deployment := range options.Deployments {
+					if deployment == strings.TrimSpace(deployConfig.Name) {
+						shouldSkip = false
+						break
+					}
+				}
+
+				if shouldSkip {
+					continue
+				}
+			}
+
+			var (
+				deployClient deployer.Interface
+				err          error
+			)
+
+			if deployConfig.Kubectl != nil {
+				deployClient, err = kubectl.New(c.config, c.client, deployConfig, log.Discard)
+				if err != nil {
+					return errors.Errorf("Error render: deployment %s error: %v", deployConfig.Name, err)
+				}
+
+			} else if deployConfig.Helm != nil {
+				// Get helm client
+				helmClient, err := GetCachedHelmClient(c.config, deployConfig, c.client, helmV2Clients, true, log.Discard)
+				if err != nil {
+					return errors.Wrap(err, "get cached helm client")
+				}
+
+				deployClient, err = helm.New(c.config, helmClient, c.client, deployConfig, log.Discard)
+				if err != nil {
+					return errors.Errorf("Error render: deployment %s error: %v", deployConfig.Name, err)
+				}
+			} else {
+				return errors.Errorf("Error render: deployment %s has no deployment method", deployConfig.Name)
+			}
+
+			err = deployClient.Render(c.cache, options.BuiltImages, out)
+			if err != nil {
+				return errors.Errorf("Error deploying %s: %v", deployConfig.Name, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // DeployAll deploys all deployments in the config
@@ -87,25 +145,25 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 			if deployConfig.Kubectl != nil {
 				deployClient, err = kubectl.New(c.config, c.client, deployConfig, log)
 				if err != nil {
-					return errors.Errorf("Error deploying devspace: deployment %s error: %v", deployConfig.Name, err)
+					return errors.Errorf("Error deploying: deployment %s error: %v", deployConfig.Name, err)
 				}
 
 				method = "kubectl"
 			} else if deployConfig.Helm != nil {
 				// Get helm client
-				helmClient, err := GetCachedHelmClient(c.config, deployConfig, c.client, helmV2Clients, log)
+				helmClient, err := GetCachedHelmClient(c.config, deployConfig, c.client, helmV2Clients, false, log)
 				if err != nil {
 					return err
 				}
 
 				deployClient, err = helm.New(c.config, helmClient, c.client, deployConfig, log)
 				if err != nil {
-					return errors.Errorf("Error deploying devspace: deployment %s error: %v", deployConfig.Name, err)
+					return errors.Errorf("Error deploying: deployment %s error: %v", deployConfig.Name, err)
 				}
 
 				method = "helm"
 			} else {
-				return errors.Errorf("Error deploying devspace: deployment %s has no deployment method", deployConfig.Name)
+				return errors.Errorf("Error deploying: deployment %s has no deployment method", deployConfig.Name)
 			}
 
 			// Execute before deploment deploy hook
@@ -182,7 +240,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 					return errors.Wrap(err, "create kube client")
 				}
 			} else if deployConfig.Helm != nil {
-				helmClient, err := GetCachedHelmClient(c.config, deployConfig, c.client, helmV2Clients, log)
+				helmClient, err := GetCachedHelmClient(c.config, deployConfig, c.client, helmV2Clients, false, log)
 				if err != nil {
 					return errors.Wrap(err, "get cached helm client")
 				}
@@ -208,7 +266,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 }
 
 // GetCachedHelmClient returns a helm client that could be cached in a helmV2Clients map. If not found it will add it to the map and create it
-func GetCachedHelmClient(config *latest.Config, deployConfig *latest.DeploymentConfig, client kubectlpkg.Client, helmV2Clients map[string]helmtypes.Client, log log.Logger) (helmtypes.Client, error) {
+func GetCachedHelmClient(config *latest.Config, deployConfig *latest.DeploymentConfig, client kubectlpkg.Client, helmV2Clients map[string]helmtypes.Client, dryInit bool, log log.Logger) (helmtypes.Client, error) {
 	var (
 		err        error
 		helmClient helmtypes.Client
@@ -218,7 +276,7 @@ func GetCachedHelmClient(config *latest.Config, deployConfig *latest.DeploymentC
 	if tillerNamespace != "" && helmV2Clients[tillerNamespace] != nil {
 		helmClient = helmV2Clients[tillerNamespace]
 	} else {
-		helmClient, err = helmclient.NewClient(config, deployConfig, client, tillerNamespace, false, log)
+		helmClient, err = helmclient.NewClient(config, deployConfig, client, tillerNamespace, false, dryInit, log)
 		if err != nil {
 			return nil, err
 		}
@@ -232,7 +290,7 @@ func GetCachedHelmClient(config *latest.Config, deployConfig *latest.DeploymentC
 }
 
 func getTillernamespace(kubeClient kubectlpkg.Client, deployConfig *latest.DeploymentConfig) string {
-	if deployConfig.Helm != nil && deployConfig.Helm.V2 == true {
+	if kubeClient != nil && deployConfig.Helm != nil && deployConfig.Helm.V2 == true {
 		tillerNamespace := kubeClient.Namespace()
 		if deployConfig.Helm.TillerNamespace != "" {
 			tillerNamespace = deployConfig.Helm.TillerNamespace

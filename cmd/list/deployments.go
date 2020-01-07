@@ -111,7 +111,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 					continue
 				}
 			} else if deployConfig.Helm != nil {
-				helmClient, err := deploy.GetCachedHelmClient(config, deployConfig, client, helmV2Clients, log)
+				helmClient, err := deploy.GetCachedHelmClient(config, deployConfig, client, helmV2Clients, false, log)
 				if err != nil {
 					log.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
 					continue
