@@ -350,6 +350,8 @@ github.com/gosuri/uitable/util/wordwrap
 # github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f
 github.com/gregjones/httpcache
 github.com/gregjones/httpcache/diskcache
+# github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
+github.com/grpc-ecosystem/go-grpc-prometheus
 # github.com/hashicorp/go-version v1.0.0
 github.com/hashicorp/go-version
 # github.com/hashicorp/golang-lru v0.5.3
@@ -519,6 +521,8 @@ github.com/src-d/gcfg/types
 github.com/syndtr/gocapability/capability
 # github.com/tcnksm/go-gitconfig v0.1.2
 github.com/tcnksm/go-gitconfig
+# github.com/technosophos/moniker v0.0.0-20180509230615-a5dbd03a2245
+github.com/technosophos/moniker
 # github.com/theupdateframework/notary v0.6.1
 github.com/theupdateframework/notary
 github.com/theupdateframework/notary/client
@@ -1122,25 +1126,31 @@ k8s.io/helm/pkg/helm
 k8s.io/helm/pkg/helm/environment
 k8s.io/helm/pkg/helm/helmpath
 k8s.io/helm/pkg/helm/portforwarder
+k8s.io/helm/pkg/hooks
 k8s.io/helm/pkg/ignore
 k8s.io/helm/pkg/kube
 k8s.io/helm/pkg/manifest
 k8s.io/helm/pkg/plugin
 k8s.io/helm/pkg/proto/hapi/chart
 k8s.io/helm/pkg/proto/hapi/release
+k8s.io/helm/pkg/proto/hapi/rudder
 k8s.io/helm/pkg/proto/hapi/services
 k8s.io/helm/pkg/proto/hapi/version
 k8s.io/helm/pkg/provenance
+k8s.io/helm/pkg/releasetesting
 k8s.io/helm/pkg/releaseutil
 k8s.io/helm/pkg/renderutil
 k8s.io/helm/pkg/repo
 k8s.io/helm/pkg/resolver
+k8s.io/helm/pkg/rudder
 k8s.io/helm/pkg/storage
 k8s.io/helm/pkg/storage/driver
 k8s.io/helm/pkg/storage/errors
 k8s.io/helm/pkg/strvals
 k8s.io/helm/pkg/sympath
+k8s.io/helm/pkg/tiller
 k8s.io/helm/pkg/tiller/environment
+k8s.io/helm/pkg/timeconv
 k8s.io/helm/pkg/tlsutil
 k8s.io/helm/pkg/urlutil
 k8s.io/helm/pkg/version
