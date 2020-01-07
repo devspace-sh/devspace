@@ -2,22 +2,25 @@ package testing
 
 import (
 	"errors"
+	"strings"
 
 	cloudclient "github.com/devspace-cloud/devspace/pkg/devspace/cloud/client"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 )
 
-// ClusterWithDomain is a latest.Cluster with a domain
-type ClusterWithDomain struct {
+// ExtendedCluster is an extended latest.Cluster with more required fields
+type ExtendedCluster struct {
 	latest.Cluster
-	Domain string
+	Domain   string
+	Deployed []string
 }
 
 // CloudClient is a fake version of the cloud client
 type CloudClient struct {
 	Spaces      []*latest.Space
 	Registries  []*latest.Registry
-	Clusters    []*ClusterWithDomain
+	Clusters    []*ExtendedCluster
 	ClusterKeys map[int]string
 	Projects    []*latest.Project
 	SettingsArr []cloudclient.Setting
@@ -27,21 +30,20 @@ type CloudClient struct {
 // CreatePublicCluster is a fake implementation for that function
 func (c *CloudClient) CreatePublicCluster(name, server, caCert, adminToken string) (int, error) {
 	clusterID := len(c.Clusters)
-	c.Clusters = append(c.Clusters, &ClusterWithDomain{
+	c.Clusters = append(c.Clusters, &ExtendedCluster{
 		Cluster: latest.Cluster{
 			ClusterID: clusterID,
 			Name:      name,
 			Server:    &server,
 		},
 	})
-	c.ClusterKeys[clusterID] = caCert
 	return clusterID, nil
 }
 
 // CreateUserCluster is a fake implementation for that function
 func (c *CloudClient) CreateUserCluster(name, server, caCert, encryptedToken string, networkPolicyEnabled bool) (int, error) {
 	clusterID := len(c.Clusters)
-	c.Clusters = append(c.Clusters, &ClusterWithDomain{
+	c.Clusters = append(c.Clusters, &ExtendedCluster{
 		Cluster: latest.Cluster{
 			ClusterID:    clusterID,
 			Name:         name,
@@ -49,7 +51,6 @@ func (c *CloudClient) CreateUserCluster(name, server, caCert, encryptedToken str
 			EncryptToken: true,
 		},
 	})
-	c.ClusterKeys[clusterID] = caCert
 	return clusterID, nil
 }
 
@@ -138,7 +139,21 @@ func (c *CloudClient) GetProjects() ([]*latest.Project, error) {
 	return c.Projects, nil
 }
 
+// GetClusterUser is a fake implementation for that function
 func (c *CloudClient) GetClusterUser(clusterID int) (*latest.ClusterUser, error) {
+	for _, cluster := range c.Clusters {
+		if cluster.ClusterID == clusterID {
+			if cluster.Owner == nil {
+				cluster.Owner = &latest.Owner{}
+			}
+			return &latest.ClusterUser{
+				ClusterUserID: cluster.Owner.OwnerID,
+				AccountID:     cluster.Owner.OwnerID,
+				ClusterID:     clusterID,
+				IsAdmin:       strings.Contains(cluster.Owner.Name, "admin"),
+			}, nil
+		}
+	}
 	return nil, errors.New("Cluster not found")
 }
 
@@ -214,23 +229,87 @@ func (c *CloudClient) UpdateClusterDomain(clusterID int, domain string) error {
 	return errors.New("Cluster not found")
 }
 
+// DeployIngressController is a fake implementation for that function
 func (c *CloudClient) DeployIngressController(clusterID int, key string, useHostNetwork bool) error {
-	return nil
+	if c.ClusterKeys[clusterID] != key {
+		return errors.New("Wrong key " + key)
+	}
+
+	for _, cluster := range c.Clusters {
+		if cluster.ClusterID == clusterID {
+			cluster.Deployed = append(cluster.Deployed, "IngressController")
+			if useHostNetwork {
+				cluster.Cluster.Server = ptr.String("HostNetwork")
+			}
+			return nil
+		}
+	}
+
+	return errors.New("Cluster not found")
 }
 
+// DeployAdmissionController is a fake implementation for that function
 func (c *CloudClient) DeployAdmissionController(clusterID int, key string) error {
-	return nil
+	if c.ClusterKeys[clusterID] != key {
+		return errors.New("Wrong key")
+	}
+
+	for _, cluster := range c.Clusters {
+		if cluster.ClusterID == clusterID {
+			cluster.Deployed = append(cluster.Deployed, "AdmissionController")
+			return nil
+		}
+	}
+
+	return errors.New("Cluster not found")
 }
+
+// DeployGatekeeper is a fake implementation for that function
 func (c *CloudClient) DeployGatekeeper(clusterID int, key string) error {
-	return nil
+	if c.ClusterKeys[clusterID] != key {
+		return errors.New("Wrong key")
+	}
+
+	for _, cluster := range c.Clusters {
+		if cluster.ClusterID == clusterID {
+			cluster.Deployed = append(cluster.Deployed, "Gatekeeper")
+			return nil
+		}
+	}
+
+	return errors.New("Cluster not found")
 }
 
+// DeployGatekeeperRules is a fake implementation for that function
 func (c *CloudClient) DeployGatekeeperRules(clusterID int, key string) error {
-	return nil
+	if c.ClusterKeys[clusterID] != key {
+		return errors.New("Wrong key")
+	}
+
+	for _, cluster := range c.Clusters {
+		if cluster.ClusterID == clusterID {
+			cluster.Deployed = append(cluster.Deployed, "GatekeeperRules")
+			return nil
+		}
+	}
+
+	return errors.New("Cluster not found")
 }
 
+// DeployCertManager is a fake implementation for that function
 func (c *CloudClient) DeployCertManager(clusterID int, key string) error {
-	return nil
+	if c.ClusterKeys[clusterID] != key {
+		return errors.New("Wrong key")
+	}
+
+	for _, cluster := range c.Clusters {
+		if cluster.ClusterID == clusterID {
+			cluster.Deployed = append(cluster.Deployed, "CertManager")
+			return nil
+		}
+	}
+
+	return errors.New("Cluster not found")
 }
 
 func (c *CloudClient) InitCore(clusterID int, key string, enablePodPolicy bool) error {

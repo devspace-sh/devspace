@@ -13,7 +13,10 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/transport/spdy"
 )
@@ -137,4 +140,37 @@ func (c *Client) NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []st
 // IsLocalKubernetes is a fake implementation of function
 func (c *Client) IsLocalKubernetes() bool {
 	return c.IsKubernetes
+}
+
+// FakeFakeClientset overwrites fake.Clientsets Discovery-function
+type FakeFakeClientset struct {
+	fake.Clientset
+	RBACEnabled bool
+}
+
+// Discovery returns a fake instance of the Discovery-Interface
+func (f *FakeFakeClientset) Discovery() discovery.DiscoveryInterface {
+	return &FakeFakeDiscovery{
+		DiscoveryInterface: f.Clientset.Discovery(),
+		RBACEnabled:        f.RBACEnabled,
+	}
+}
+
+// FakeFakeDiscovery overwrites FakeDiscoverys ServerResources-function
+type FakeFakeDiscovery struct {
+	discovery.DiscoveryInterface
+	RBACEnabled bool
+}
+
+// ServerResources return one RBAC-Resource if it is enabled, else nothing
+func (f *FakeFakeDiscovery) ServerResources() ([]*metav1.APIResourceList, error) {
+	if f.RBACEnabled {
+		return []*metav1.APIResourceList{
+			&metav1.APIResourceList{
+				GroupVersion: "rbac.authorization.k8s.io/v1beta1",
+			},
+		}, nil
+	}
+
+	return []*metav1.APIResourceList{}, nil
 }

@@ -80,7 +80,9 @@ func (p *provider) ConnectCluster(options *ConnectClusterOptions) error {
 	}
 
 	// Check what kube context to use
-	if options.KubeContext == "" {
+	if p.kubeClient != nil {
+		client = p.kubeClient
+	} else if options.KubeContext == "" {
 		allowLocalClusters := true
 		if p.Name == config.DevSpaceCloudProviderName {
 			allowLocalClusters = false
@@ -98,6 +100,7 @@ func (p *provider) ConnectCluster(options *ConnectClusterOptions) error {
 			return errors.Wrap(err, "new kubectl client")
 		}
 	}
+	p.kubeClient = client
 
 	// Check available cluster resources
 	availableResources, err := p.checkResources(client)
@@ -674,12 +677,14 @@ func (p *provider) ResetKey(clusterName string) error {
 	}
 
 	// Get kube context to use
-	client, err := kubectl.NewClientBySelect(false, false, p.log)
-	if err != nil {
-		return err
+	if p.kubeClient == nil {
+		p.kubeClient, err = kubectl.NewClientBySelect(false, false, p.log)
+		if err != nil {
+			return err
+		}
 	}
-	if client.RestConfig().Host != *cluster.Server {
-		return errors.Errorf("Selected context does not point to the correct host. Selected %s <> %s", client.RestConfig().Host, *cluster.Server)
+	if p.kubeClient.RestConfig().Host != *cluster.Server {
+		return errors.Errorf("Selected context does not point to the correct host. Selected %s <> %s", p.kubeClient.RestConfig().Host, *cluster.Server)
 	}
 
 	key, err := p.getKey(true)
@@ -687,7 +692,7 @@ func (p *provider) ResetKey(clusterName string) error {
 		return errors.Wrap(err, "get key")
 	}
 
-	token, _, err := p.getServiceAccountCredentials(client)
+	token, _, err := p.getServiceAccountCredentials(p.kubeClient)
 	if err != nil {
 		return errors.Wrap(err, "get service account credentials")
 	}

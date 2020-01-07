@@ -4,6 +4,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/client"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/browser"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -40,8 +41,9 @@ type provider struct {
 
 	browser browser.Browser
 	client  client.Client
+	kubeClient kubectl.Client
 	loader  config.Loader
-	log     log.Logger
+	log     log.Logger 
 }
 
 // GetProvider returns the current specified cloud provider

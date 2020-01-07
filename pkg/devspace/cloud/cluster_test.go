@@ -6,12 +6,16 @@ import (
 
 	cloudclient "github.com/devspace-cloud/devspace/pkg/devspace/cloud/client"
 	fakeclient "github.com/devspace-cloud/devspace/pkg/devspace/cloud/client/testing"
+	testconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/testing"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
+	fakeBrowser "github.com/devspace-cloud/devspace/pkg/util/browser/testing"
 	log "github.com/devspace-cloud/devspace/pkg/util/log/testing"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	fakesurvey "github.com/devspace-cloud/devspace/pkg/util/survey/testing"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +24,222 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 )
+
+type connectClusterTestCase struct {
+	name string
+
+	options         *ConnectClusterOptions
+	nodes           []*corev1.Node
+	services        []*corev1.Service
+	serviceAccounts []*corev1.ServiceAccount
+	secrets         []*corev1.Secret
+	client          fakeclient.CloudClient
+	answers         []string
+
+	expectedErr         string
+	expectedClientState interface{}
+}
+
+func TestConnectCluster(t *testing.T) {
+	testCases := []connectClusterTestCase{
+		connectClusterTestCase{
+			name: "Successfully connect private cluster",
+			options: &ConnectClusterOptions{
+				ClusterName:             "myCluster",
+				UseDomain:               true,
+				DeployIngressController: true,
+				OpenUI:                  true,
+			},
+			nodes: []*corev1.Node{&corev1.Node{}},
+			serviceAccounts: []*corev1.ServiceAccount{
+				&corev1.ServiceAccount{
+					ObjectMeta: v1.ObjectMeta{
+						Name: DevSpaceServiceAccount,
+					},
+					Secrets: []corev1.ObjectReference{
+						corev1.ObjectReference{
+							Name: "mySecret",
+						},
+					},
+				},
+			},
+			secrets: []*corev1.Secret{
+				&corev1.Secret{
+					ObjectMeta: v1.ObjectMeta{
+						Name: "mySecret",
+					},
+					Data: map[string][]byte{
+						"token":  []byte("mytoken"),
+						"ca.crt": []byte("1234"),
+					},
+				},
+			},
+			client: fakeclient.CloudClient{
+				SettingsArr: []cloudclient.Setting{
+					cloudclient.Setting{
+						ID:    SettingDefaultClusterEncryptToken,
+						Value: "true",
+					},
+				},
+				ClusterKeys: map[int]string{0: "3af21320d022362b98b60808b0e012ef3a1d696e04760018ac40d4cf3ef27c85"},
+			},
+			answers: []string{"typedKey", "typedKey", hostNetworkOption, "someHost"},
+			expectedClientState: fakeclient.CloudClient{
+				Clusters: []*fakeclient.ExtendedCluster{
+					&fakeclient.ExtendedCluster{
+						Cluster: latest.Cluster{
+							Server:       ptr.String("HostNetwork"),
+							Name:         "myCluster",
+							EncryptToken: true,
+						},
+						Domain:   "someHost",
+						Deployed: []string{"IngressController"},
+					},
+				},
+				ClusterKeys: map[int]string{0: "3af21320d022362b98b60808b0e012ef3a1d696e04760018ac40d4cf3ef27c85"},
+				SettingsArr: []cloudclient.Setting{
+					cloudclient.Setting{
+						ID:    SettingDefaultClusterEncryptToken,
+						Value: "true",
+					},
+				},
+			},
+		},
+		connectClusterTestCase{
+			name: "Successfully connect public cluster",
+			options: &ConnectClusterOptions{
+				ClusterName:             "pubCluster",
+				Public:                  true,
+				DeployIngressController: true,
+			},
+			nodes: []*corev1.Node{&corev1.Node{}},
+			services: []*corev1.Service{
+				&corev1.Service{
+					Spec: corev1.ServiceSpec{
+						Type: corev1.ServiceTypeLoadBalancer,
+					},
+					Status: corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{
+								corev1.LoadBalancerIngress{
+									IP: "someIP",
+								},
+							},
+						},
+					},
+				},
+			},
+			serviceAccounts: []*corev1.ServiceAccount{
+				&corev1.ServiceAccount{
+					ObjectMeta: v1.ObjectMeta{
+						Name: DevSpaceServiceAccount,
+					},
+					Secrets: []corev1.ObjectReference{
+						corev1.ObjectReference{
+							Name: "mySecret",
+						},
+					},
+				},
+			},
+			secrets: []*corev1.Secret{
+				&corev1.Secret{
+					ObjectMeta: v1.ObjectMeta{
+						Name: "mySecret",
+					},
+					Data: map[string][]byte{
+						"token":  []byte("mytoken"),
+						"ca.crt": []byte("1234"),
+					},
+				},
+			},
+			client: fakeclient.CloudClient{
+				SettingsArr: []cloudclient.Setting{
+					cloudclient.Setting{
+						ID:    SettingDefaultClusterEncryptToken,
+						Value: "true",
+					},
+				},
+			},
+			//answers: []string{"typedKey", "typedKey", hostNetworkOption, "someHost"},
+			expectedClientState: fakeclient.CloudClient{
+				Clusters: []*fakeclient.ExtendedCluster{
+					&fakeclient.ExtendedCluster{
+						Cluster: latest.Cluster{
+							Server: ptr.String("testHost"),
+							Name:   "pubCluster",
+						},
+						Domain:   "default",
+						Deployed: []string{"IngressController"},
+					},
+				},
+				SettingsArr: []cloudclient.Setting{
+					cloudclient.Setting{
+						ID:    SettingDefaultClusterEncryptToken,
+						Value: "true",
+					},
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		kube := &fakekube.FakeFakeClientset{
+			Clientset:   *fake.NewSimpleClientset(),
+			RBACEnabled: true,
+		}
+		for _, node := range testCase.nodes {
+			kube.CoreV1().Nodes().Create(node)
+		}
+		for _, service := range testCase.services {
+			kube.CoreV1().Services(DevSpaceCloudNamespace).Create(service)
+		}
+		for _, sa := range testCase.serviceAccounts {
+			kube.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(sa)
+		}
+		for _, secret := range testCase.secrets {
+			kube.CoreV1().Secrets(DevSpaceCloudNamespace).Create(secret)
+		}
+		kubeClient := &fakekube.Client{
+			Client: kube,
+		}
+
+		logger := log.NewFakeLogger()
+		for _, answer := range testCase.answers {
+			logger.Survey.SetNextAnswer(answer)
+		}
+
+		provider := &provider{
+			Provider: latest.Provider{
+				ClusterKey: map[int]string{},
+			},
+			log:        logger,
+			kubeClient: kubeClient,
+			client:     &testCase.client,
+			loader:     testconfig.NewLoader(&latest.Config{}),
+			browser: &fakeBrowser.FakeBrowser{
+				StartCallback: func(url string) error { return errors.New("") },
+			},
+		}
+
+		if testCase.options == nil {
+			testCase.options = &ConnectClusterOptions{}
+		}
+
+		err := provider.ConnectCluster(testCase.options)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
+
+		clientAsYaml, err := yaml.Marshal(provider.client)
+		assert.NilError(t, err, "Error parsing client to yaml in testCase %s", testCase.name)
+		expectedAsYaml, err := yaml.Marshal(testCase.expectedClientState)
+		assert.NilError(t, err, "Error parsing client expection to yaml in testCase %s", testCase.name)
+		assert.Equal(t, string(clientAsYaml), string(expectedAsYaml), "Unexpected client state in testCase %s", testCase.name)
+	}
+}
 
 type defaultClusterSpaceDomainTestCase struct {
 	name string
@@ -129,8 +349,8 @@ func TestDefualtClusterSpaceDomain(t *testing.T) {
 	for _, testCase := range testCases {
 
 		client := &fakeclient.CloudClient{
-			Clusters: []*fakeclient.ClusterWithDomain{
-				&fakeclient.ClusterWithDomain{
+			Clusters: []*fakeclient.ExtendedCluster{
+				&fakeclient.ExtendedCluster{
 					Cluster: latest.Cluster{
 						ClusterID: 0,
 					},
@@ -188,8 +408,8 @@ func TestSpecifyDomain(t *testing.T) {
 		}
 
 		client := &fakeclient.CloudClient{
-			Clusters: []*fakeclient.ClusterWithDomain{
-				&fakeclient.ClusterWithDomain{
+			Clusters: []*fakeclient.ExtendedCluster{
+				&fakeclient.ExtendedCluster{
 					Cluster: latest.Cluster{
 						ClusterID: 0,
 					},
@@ -217,6 +437,120 @@ func TestSpecifyDomain(t *testing.T) {
 		}
 		assert.Equal(t, client.Clusters[0].Domain, testCase.expectedDomain, "Unexpected domain in testCase %s", testCase.name)
 	}
+}
+
+type deployServicesTestCase struct {
+	name string
+
+	answers     []string
+	configMaps  []corev1.ConfigMap
+	certManager bool
+	options     *ConnectClusterOptions
+
+	expectedErr                       string
+	expectDeployedIngressController   bool
+	expectDeployedAdmissionController bool
+	expectDeployedGatekeeper          bool
+	expectDeployedGatekeeperRules     bool
+	expectDeployedCertManager         bool
+	expectHostNetwork                 bool
+}
+
+func TestDeployServices(t *testing.T) {
+	testCases := []deployServicesTestCase{
+		deployServicesTestCase{
+			name: "Deploy nothing",
+			configMaps: []corev1.ConfigMap{
+				corev1.ConfigMap{
+					ObjectMeta: v1.ObjectMeta{
+						Name:   "someConfigMap",
+						Labels: map[string]string{"NAME": "devspace-cloud", "OWNER": "TILLER", "STATUS": "DEPLOYED"},
+					},
+				},
+			},
+			options: &ConnectClusterOptions{
+				DeployIngressController: true,
+			},
+		},
+		deployServicesTestCase{
+			name:    "Deploy everything",
+			answers: []string{hostNetworkOption},
+			options: &ConnectClusterOptions{
+				DeployIngressController:   true,
+				DeployAdmissionController: true,
+				DeployGatekeeper:          true,
+				DeployGatekeeperRules:     true,
+				DeployCertManager:         true,
+			},
+			expectDeployedIngressController:   true,
+			expectDeployedAdmissionController: true,
+			expectDeployedGatekeeper:          true,
+			expectDeployedGatekeeperRules:     true,
+			expectDeployedCertManager:         true,
+			expectHostNetwork:                 true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		kube := fake.NewSimpleClientset()
+		for _, configMap := range testCase.configMaps {
+			kube.CoreV1().ConfigMaps(DevSpaceCloudNamespace).Create(&configMap)
+		}
+		kubeClient := &fakekube.Client{
+			Client: kube,
+		}
+
+		client := &fakeclient.CloudClient{
+			Clusters: []*fakeclient.ExtendedCluster{
+				&fakeclient.ExtendedCluster{
+					Cluster: latest.Cluster{
+						ClusterID: 0,
+					},
+				},
+			},
+		}
+
+		logger := &log.FakeLogger{
+			Survey: &fakesurvey.FakeSurvey{},
+		}
+		provider := &provider{
+			client: client,
+			log:    logger,
+		}
+
+		for _, answer := range testCase.answers {
+			logger.Survey.SetNextAnswer(answer)
+		}
+
+		if testCase.options == nil {
+			testCase.options = &ConnectClusterOptions{}
+		}
+
+		err := provider.deployServices(kubeClient, 0, &clusterResources{CertManager: testCase.certManager}, testCase.options)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error getting Key in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from getKey in testCase %s", testCase.name)
+		}
+
+		deployedList := client.Clusters[0].Deployed
+		assert.Equal(t, testCase.expectDeployedIngressController, includes(deployedList, "IngressController"), "IngressController unexpectedly deployed or undeployed in testCase %s", testCase.name)
+		assert.Equal(t, testCase.expectDeployedAdmissionController, includes(deployedList, "AdmissionController"), "AdmissionController unexpectedly deployed or undeployed in testCase %s", testCase.name)
+		assert.Equal(t, testCase.expectDeployedGatekeeper, includes(deployedList, "Gatekeeper"), "Gatekeeper unexpectedly deployed or undeployed in testCase %s", testCase.name)
+		assert.Equal(t, testCase.expectDeployedGatekeeperRules, includes(deployedList, "GatekeeperRules"), "GatekeeperRules unexpectedly deployed or undeployed in testCase %s", testCase.name)
+		assert.Equal(t, testCase.expectDeployedCertManager, includes(deployedList, "CertManager"), "CertManager unexpectedly deployed or undeployed in testCase %s", testCase.name)
+		assert.Equal(t, testCase.expectHostNetwork, client.Clusters[0].Cluster.Server != nil && *client.Clusters[0].Cluster.Server == "HostNetwork", "HostNetwork unexpectedly used or not used in testCase %s", testCase.name)
+	}
+}
+
+func includes(haystack []string, needle string) bool {
+	for _, subject := range haystack {
+		if subject == needle {
+			return true
+		}
+	}
+	return false
 }
 
 type needKeyTestCase struct {
@@ -446,31 +780,62 @@ func TestGetClustername(t *testing.T) {
 }
 
 // Kubectl fake client still missing
-/*type checkResourcesTestCase struct {
-	name         string
-	provider     *provider
-	createdNodes []*k8sv1.Node
+type checkResourcesTestCase struct {
+	name string
+
+	createdNodes []*corev1.Node
+	RBACEnabled  bool
 
 	expectedErr string
 }
 
 func TestCheckResources(t *testing.T) {
-	testCases := []checkResourcesTestCase{}
+	testCases := []checkResourcesTestCase{
+		checkResourcesTestCase{
+			name:        "No nodes",
+			expectedErr: "The cluster specified has no nodes, please choose a cluster where at least one node is up and running",
+		},
+		checkResourcesTestCase{
+			name: "No RBAC",
+			createdNodes: []*corev1.Node{
+				&corev1.Node{},
+			},
+			expectedErr: "Group version rbac.authorization.k8s.io/v1beta1 does not exist in cluster, but is required. Is RBAC enabled?",
+		},
+		checkResourcesTestCase{
+			name: "Successful run",
+			createdNodes: []*corev1.Node{
+				&corev1.Node{},
+			},
+			RBACEnabled: true,
+		},
+	}
 
 	for _, testCase := range testCases {
-		kubeClient := fake.NewSimpleClientset()
+		kube := &fakekube.FakeFakeClientset{
+			Clientset:   *fake.NewSimpleClientset(),
+			RBACEnabled: testCase.RBACEnabled,
+		}
 		for _, node := range testCase.createdNodes {
-			kubeClient.CoreV1().Nodes().Create(node)
+			kube.CoreV1().Nodes().Create(node)
+		}
+		kubeClient := &fakekube.Client{
+			Client: kube,
 		}
 
-		_, err := testCase.provider.checkResources(kubeClient)
+		provider := &provider{
+			log: &log.FakeLogger{},
+		}
+
+		_, err := provider.checkResources(kubeClient)
+
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error checking resources in testCase %s", testCase.name)
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from checking resources in testCase %s", testCase.name)
 		}
 	}
-}*/
+}
 
 type initializeNamespaceTestCase struct {
 	name string
@@ -571,5 +936,113 @@ func TestInitializeNamespace(t *testing.T) {
 		expectedClusterRoleBindingsAsYaml, err := yaml.Marshal(testCase.expectedClusterRoleBindings)
 		assert.NilError(t, err, "Error parsing expected clusterRoleBindings in testCase %s", testCase.name)
 		assert.Equal(t, string(clusterRoleBindingsAsYaml), string(expectedClusterRoleBindingsAsYaml), "Unexpected clusterRoleBindings in testCase %s", testCase.name)
+	}
+}
+
+type resetKeyTestCase struct {
+	name string
+
+	clusterName     string
+	clusters        []*fakeclient.ExtendedCluster
+	answers         []string
+	serviceAccounts []corev1.ServiceAccount
+	secrets         []corev1.Secret
+
+	expectedErr string
+	expectedKey string
+}
+
+func TestResetKey(t *testing.T) {
+	testCases := []resetKeyTestCase{
+		resetKeyTestCase{
+			name:        "Wrong host",
+			clusterName: "testCluster",
+			clusters: []*fakeclient.ExtendedCluster{
+				&fakeclient.ExtendedCluster{
+					Cluster: latest.Cluster{
+						Name:   "testCluster",
+						Server: ptr.String("clusterServer"),
+					},
+				},
+			},
+			expectedErr: "Selected context does not point to the correct host. Selected testHost <> clusterServer",
+		},
+		resetKeyTestCase{
+			name:        "Successful reset",
+			clusterName: "testCluster",
+			clusters: []*fakeclient.ExtendedCluster{
+				&fakeclient.ExtendedCluster{
+					Cluster: latest.Cluster{
+						ClusterID: 0,
+						Name:      "testCluster",
+						Server:    ptr.String("testHost"),
+					},
+				},
+			},
+			answers: []string{"validKey", "validKey"},
+			serviceAccounts: []corev1.ServiceAccount{
+				corev1.ServiceAccount{
+					ObjectMeta: v1.ObjectMeta{
+						Name: DevSpaceServiceAccount,
+					},
+					Secrets: []corev1.ObjectReference{
+						corev1.ObjectReference{
+							Name: "mySecret",
+						},
+					},
+				},
+			},
+			secrets: []corev1.Secret{
+				corev1.Secret{
+					ObjectMeta: v1.ObjectMeta{
+						Name: "mySecret",
+					},
+					Data: map[string][]byte{
+						"token":  []byte("mytoken"),
+						"ca.crt": []byte("1234"),
+					},
+				},
+			},
+			expectedKey: "94363a3c5e8f9f6d18dde3fbff991cb88a1f1ee1b5d8a47ca7cd2b2dcf66be1d",
+		},
+	}
+
+	for _, testCase := range testCases {
+		logger := log.NewFakeLogger()
+		for _, answer := range testCase.answers {
+			logger.Survey.SetNextAnswer(answer)
+		}
+
+		kubeClient := fake.NewSimpleClientset()
+		for _, sa := range testCase.serviceAccounts {
+			kubeClient.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(&sa)
+		}
+		for _, secret := range testCase.secrets {
+			kubeClient.CoreV1().Secrets(DevSpaceCloudNamespace).Create(&secret)
+		}
+
+		provider := &provider{
+			Provider: latest.Provider{
+				ClusterKey: map[int]string{},
+			},
+			client: &fakeclient.CloudClient{
+				Clusters: testCase.clusters,
+			},
+			kubeClient: &fakekube.Client{
+				Client: kubeClient,
+			},
+			log:    logger,
+			loader: testconfig.NewLoader(&latest.Config{}),
+		}
+
+		err := provider.ResetKey(testCase.clusterName)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
+
+		assert.Equal(t, testCase.expectedKey, provider.ClusterKey[0], "Wrong clusterKey in testCase %s", testCase.name)
 	}
 }
