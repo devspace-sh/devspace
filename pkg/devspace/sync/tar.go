@@ -121,6 +121,9 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *Sync) (bo
 		// Set owner & group correctly
 		// TODO: Enable this on supported platforms
 		// _ = os.Chown(outFileName, stat.Sys().(*syscall.Stat).Uid, stat.Sys().(*syscall.Stat_t).Gid)
+	} else {
+		// Set permissions
+		_ = os.Chmod(outFileName, header.FileInfo().Mode())
 	}
 
 	// Set mod time correctly

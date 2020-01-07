@@ -94,6 +94,9 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string) (bool, error) {
 
 		// Set old owner & group correctly
 		_ = Chown(outFileName, stat)
+	} else {
+		// Set permissions
+		_ = os.Chmod(outFileName, header.FileInfo().Mode())
 	}
 
 	// Set mod time from tar header
