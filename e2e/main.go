@@ -9,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/e2e/tests/deploy"
 	"github.com/devspace-cloud/devspace/e2e/tests/enter"
 	"github.com/devspace-cloud/devspace/e2e/tests/examples"
+	"github.com/devspace-cloud/devspace/e2e/tests/initcmd"
 	"github.com/devspace-cloud/devspace/e2e/tests/logs"
 	"github.com/devspace-cloud/devspace/e2e/tests/sync"
 	"github.com/devspace-cloud/devspace/e2e/utils"
@@ -38,10 +39,10 @@ type Test interface {
 var availableTests = map[string]Test{
 	"examples": examples.RunNew,
 	"deploy":   deploy.RunNew,
-	// "init":     initTest.RunNew,
-	"enter": enter.RunNew,
-	"sync":  sync.RunNew,
-	"logs":  logs.RunNew,
+	"init":     initcmd.RunNew,
+	"enter":    enter.RunNew,
+	"sync":     sync.RunNew,
+	"logs":     logs.RunNew,
 	//"create_delete_space":     create_delete_space.RunNew,
 }
 
