@@ -39,23 +39,29 @@ const stableChartRepo = "https://kubernetes-charts.storage.googleapis.com"
 // NewClient creates a new helm v3 client
 func NewClient(kubeClient kubectl.Client, helmDriver string, log log.Logger) (types.Client, error) {
 	getter := genericclioptions.NewConfigFlags(true)
-	getter.Namespace = ptr.String(kubeClient.Namespace())
-	getter.Context = ptr.String(kubeClient.CurrentContext())
 
 	var store *storage.Storage
-	switch helmDriver {
-	case "secret", "secrets", "":
-		d := driver.NewSecrets(kubeClient.KubeClient().CoreV1().Secrets(kubeClient.Namespace()))
-		store = storage.Init(d)
-	case "configmap", "configmaps":
-		d := driver.NewConfigMaps(kubeClient.KubeClient().CoreV1().ConfigMaps(kubeClient.Namespace()))
-		store = storage.Init(d)
-	case "memory":
+	if kubeClient != nil {
+		getter.Namespace = ptr.String(kubeClient.Namespace())
+		getter.Context = ptr.String(kubeClient.CurrentContext())
+
+		switch helmDriver {
+		case "secret", "secrets", "":
+			d := driver.NewSecrets(kubeClient.KubeClient().CoreV1().Secrets(kubeClient.Namespace()))
+			store = storage.Init(d)
+		case "configmap", "configmaps":
+			d := driver.NewConfigMaps(kubeClient.KubeClient().CoreV1().ConfigMaps(kubeClient.Namespace()))
+			store = storage.Init(d)
+		case "memory":
+			d := driver.NewMemory()
+			store = storage.Init(d)
+		default:
+			// Not sure what to do here.
+			return nil, errors.New("Unknown driver in HELM_DRIVER: " + helmDriver)
+		}
+	} else {
 		d := driver.NewMemory()
 		store = storage.Init(d)
-	default:
-		// Not sure what to do here.
-		return nil, errors.New("Unknown driver in HELM_DRIVER: " + helmDriver)
 	}
 
 	return &v3Client{
@@ -131,7 +137,7 @@ func (client *v3Client) InstallChart(releaseName string, releaseNamespace string
 			instClient.Namespace = upgrade.Namespace
 			instClient.Atomic = upgrade.Atomic
 
-			rel, err := client.install(releaseName, releaseNamespace, chartPath, instClient, vals, settings)
+			rel, err := install(releaseName, releaseNamespace, chartPath, instClient, vals, settings)
 			if err != nil {
 				return nil, err
 			}
@@ -169,7 +175,7 @@ func (client *v3Client) InstallChart(releaseName string, releaseNamespace string
 	}, nil
 }
 
-func (client *v3Client) install(releaseName string, releaseNamespace string, chartName string, install *action.Install, values map[string]interface{}, settings *cli.EnvSettings) (*release.Release, error) {
+func install(releaseName string, releaseNamespace string, chartName string, install *action.Install, values map[string]interface{}, settings *cli.EnvSettings) (*release.Release, error) {
 	if install.Version == "" && install.Devel {
 		install.Version = ">0.0.0-0"
 	}

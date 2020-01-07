@@ -2,6 +2,7 @@ package helm
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -63,7 +64,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 
 	// Get HelmClient if necessary
 	if d.Helm == nil {
-		d.Helm, err = helm.NewClient(d.config, d.DeploymentConfig, d.Kube, d.TillerNamespace, false, d.Log)
+		d.Helm, err = helm.NewClient(d.config, d.DeploymentConfig, d.Kube, d.TillerNamespace, false, false, d.Log)
 		if err != nil {
 			return false, errors.Errorf("Error creating helm client: %v", err)
 		}
@@ -87,7 +88,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	}
 
 	// Deploy
-	wasDeployed, err := d.internalDeploy(cache, forceDeploy, builtImages)
+	wasDeployed, err := d.internalDeploy(cache, forceDeploy, builtImages, nil)
 	if err != nil {
 		return false, err
 	}
@@ -104,7 +105,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	return true, nil
 }
 
-func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error) {
+func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string, out io.Writer) (bool, error) {
 	var (
 		releaseName     = d.DeploymentConfig.Name
 		chartPath       = d.DeploymentConfig.Helm.Chart.Name
@@ -163,6 +164,16 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 	// Deployment is not necessary
 	if forceDeploy == false {
 		return false, nil
+	}
+
+	if out != nil {
+		str, err := d.Helm.Template(releaseName, releaseNamespace, overwriteValues, d.DeploymentConfig.Helm)
+		if err != nil {
+			return false, err
+		}
+
+		out.Write([]byte(str))
+		return true, nil
 	}
 
 	d.Log.StartWait(fmt.Sprintf("Deploying chart %s (%s) with helm", d.DeploymentConfig.Helm.Chart.Name, d.DeploymentConfig.Name))

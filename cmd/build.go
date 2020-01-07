@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// BuildCmd is a struct that defines a command call for "up"
+// BuildCmd is a struct that defines a command call for "build"
 type BuildCmd struct {
 	*flags.GlobalFlags
 
@@ -52,6 +52,7 @@ Builds all defined images and pushes them
 	buildCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 	buildCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", false, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 	buildCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
+
 	buildCmd.Flags().StringVarP(&cmd.Tag, "tag", "t", "", "Use the given tag for all built images")
 
 	buildCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
