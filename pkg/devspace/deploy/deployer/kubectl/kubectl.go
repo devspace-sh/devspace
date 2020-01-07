@@ -1,6 +1,7 @@
 package kubectl
 
 import (
+	"io"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -43,11 +44,6 @@ func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.
 		return nil, errors.New("No manifests defined for kubectl deploy")
 	}
 
-	namespace := kubeClient.Namespace()
-	if deployConfig.Namespace != "" {
-		namespace = deployConfig.Namespace
-	}
-
 	cmdPath := "kubectl"
 	if deployConfig.Kubectl.CmdPath != "" {
 		cmdPath = deployConfig.Kubectl.CmdPath
@@ -63,6 +59,24 @@ func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.
 		manifests = append(manifests, manifest)
 	}
 
+	if kubeClient == nil {
+		return &DeployConfig{
+			Name:       deployConfig.Name,
+			KubeClient: kubeClient,
+			CmdPath:    cmdPath,
+			Manifests:  manifests,
+
+			DeploymentConfig: deployConfig,
+			config:           config,
+			Log:              log,
+		}, nil
+	}
+
+	namespace := kubeClient.Namespace()
+	if deployConfig.Namespace != "" {
+		namespace = deployConfig.Namespace
+	}
+
 	return &DeployConfig{
 		Name:       deployConfig.Name,
 		KubeClient: kubeClient,
@@ -75,6 +89,21 @@ func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.
 		config:           config,
 		Log:              log,
 	}, nil
+}
+
+// Render writes the generated manifests to the out stream
+func (d *DeployConfig) Render(cache *generated.CacheConfig, builtImages map[string]string, out io.Writer) error {
+	for _, manifest := range d.Manifests {
+		_, replacedManifest, err := d.getReplacedManifest(manifest, cache, builtImages)
+		if err != nil {
+			return errors.Errorf("%v\nPlease make sure `kubectl apply` does work locally with manifest `%s`", err, manifest)
+		}
+
+		out.Write([]byte(replacedManifest))
+		out.Write([]byte("\n---\n"))
+	}
+
+	return nil
 }
 
 // Status prints the status of all matched manifests from kubernetes

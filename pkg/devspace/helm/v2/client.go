@@ -41,11 +41,15 @@ type client struct {
 }
 
 // NewClient creates a new helm client
-func NewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller bool) (types.Client, error) {
-	return createNewClient(config, kubeClient, tillerNamespace, log, upgradeTiller)
+func NewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller, dryInit bool) (types.Client, error) {
+	return createNewClient(config, kubeClient, tillerNamespace, log, upgradeTiller, dryInit)
 }
 
-func createNewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller bool) (*client, error) {
+func createNewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace string, log log.Logger, upgradeTiller, dryInit bool) (*client, error) {
+	if dryInit {
+		return create(config, tillerNamespace, nil, kubeClient, false, log)
+	}
+
 	// Create tiller if necessary
 	err := ensureTiller(config, kubeClient, tillerNamespace, upgradeTiller, log)
 	if err != nil {
