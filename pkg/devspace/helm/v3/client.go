@@ -124,15 +124,9 @@ func (client *v3Client) InstallChart(releaseName string, releaseNamespace string
 	if upgrade.Install {
 		// If a release does not exist, install it. If another error occurs during
 		// the check, ignore the error and continue with the upgrade.
-		shouldInstall := false
 		histClient := action.NewHistory(client.cfg)
 		histClient.Max = 1
-		_, err := histClient.Run(releaseName)
-		if err == driver.ErrReleaseExists {
-			shouldInstall = true
-		}
-
-		if shouldInstall {
+		if _, err := histClient.Run(releaseName); err == driver.ErrReleaseNotFound {
 			instClient := action.NewInstall(client.cfg)
 			instClient.ChartPathOptions = upgrade.ChartPathOptions
 			instClient.DryRun = upgrade.DryRun
