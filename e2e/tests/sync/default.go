@@ -1,19 +1,20 @@
 package sync
 
 import (
+	"strings"
+	"time"
+
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"strings"
-	"time"
 )
 
 func runDefault(f *customFactory, logger log.Logger) error {
-	log.GetInstance().Info("Run test 'default' of 'sync'")
-	log.GetInstance().SetLevel(logrus.FatalLevel)
+	logger.Info("Run test 'default' of 'sync'")
+	logger.StartWait("Run test...")
+	defer logger.StopWait()
 
 	sc := &cmd.SyncCmd{
 		GlobalFlags: &flags.GlobalFlags{
@@ -35,7 +36,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		Container: "container-0",
 	}
 
-	err := sc.Run(nil, nil)
+	err := sc.Run(f, nil, nil)
 	if err != nil {
 		return err
 	}

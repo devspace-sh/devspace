@@ -127,12 +127,12 @@ func RunProfile(f *customFactory, logger log.Logger) error {
 					return errors.Errorf("built images expected: %v, found: %v", imagesExpected, imagesCount)
 				}
 
-				wasDeployed, err := utils.LookForDeployment(f.client, f.namespace, "sh.helm.release.v1.dependency1.v3")
+				wasDeployed, err := utils.LookForDeployment(f.client, f.namespace, "sh.helm.release.v1.dependency1.v2")
 				if err != nil {
 					return err
 				}
 				if !wasDeployed {
-					return errors.New("expected deployment 'sh.helm.release.v1.dependency1.v3' was not found")
+					return errors.New("expected deployment 'sh.helm.release.v1.dependency1.v2' was not found")
 				}
 
 				return nil

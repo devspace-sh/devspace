@@ -107,7 +107,7 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	rootCmd.AddCommand(NewInitCmd(f))
 	rootCmd.AddCommand(NewDevCmd(globalFlags))
 	rootCmd.AddCommand(NewBuildCmd(globalFlags))
-	rootCmd.AddCommand(NewSyncCmd(globalFlags))
+	rootCmd.AddCommand(NewSyncCmd(f, globalFlags))
 	rootCmd.AddCommand(NewPurgeCmd(f, globalFlags))
 	rootCmd.AddCommand(NewUpgradeCmd())
 	rootCmd.AddCommand(NewDeployCmd(f, globalFlags))
