@@ -2,6 +2,7 @@ package initcmd
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 
 	"github.com/devspace-cloud/devspace/cmd"
@@ -20,11 +21,12 @@ func CreateDockerfile(f *customFactory, logger log.Logger) error {
 	logger.Info("Run sub test 'create_dockerfile' of test 'init'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
-
+	fmt.Println(1)
 	client, err := f.NewKubeClientFromContext("", f.namespace, false)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
+	fmt.Println(2)
 
 	// The client is saved in the factory ONCE for each sub test
 	f.client = client

@@ -15,16 +15,16 @@ import (
 // DevSpaceCloudHostedCluster is the option that is shown during cluster select to select the hosted devspace cloud clusters
 const DevSpaceCloudHostedCluster = "Clusters managed by DevSpace"
 
-type spaceCmd struct {
+type SpaceCmd struct {
 	Active   bool
 	Provider string
 	Cluster  string
 }
 
 func newSpaceCmd() *cobra.Command {
-	cmd := &spaceCmd{}
+	cmd := &SpaceCmd{}
 
-	spaceCmd := &cobra.Command{
+	SpaceCmd := &cobra.Command{
 		Use:   "space",
 		Short: "Create a new cloud space",
 		Long: `
@@ -41,15 +41,15 @@ devspace create space myspace
 		RunE: cmd.RunCreateSpace,
 	}
 
-	spaceCmd.Flags().BoolVar(&cmd.Active, "active", true, "Use the new Space as active Space for the current project")
-	spaceCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
-	spaceCmd.Flags().StringVar(&cmd.Cluster, "cluster", "", "The cluster to create a space in")
+	SpaceCmd.Flags().BoolVar(&cmd.Active, "active", true, "Use the new Space as active Space for the current project")
+	SpaceCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
+	SpaceCmd.Flags().StringVar(&cmd.Cluster, "cluster", "", "The cluster to create a space in")
 
-	return spaceCmd
+	return SpaceCmd
 }
 
 // RunCreateSpace executes the "devspace create space" command logic
-func (cmd *spaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) error {
+func (cmd *SpaceCmd) RunCreateSpace(cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := log.GetInstance()
 	configLoader := loader.NewConfigLoader(nil, log)

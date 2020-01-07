@@ -1,90 +1,115 @@
 package create_delete_space
 
-// import (
-// 	"github.com/devspace-cloud/devspace/e2e/utils"
-// 	"github.com/devspace-cloud/devspace/pkg/util/factory"
-// 	"github.com/devspace-cloud/devspace/pkg/util/log"
-// 	fakelog "github.com/devspace-cloud/devspace/pkg/util/log/testing"
-// 	"github.com/pkg/errors"
-// )
+import (
+	"bytes"
 
-// type customFactory struct {
-// 	*factory.DefaultFactoryImpl
-// 	previousContext string
-// 	pwd             string
-// 	FakeLogger      *fakelog.FakeLogger
-// }
+	"github.com/devspace-cloud/devspace/e2e/utils"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+)
 
-// // GetLog implements interface
-// func (c *customFactory) GetLog() log.Logger {
-// 	return c.FakeLogger
-// }
+type customFactory struct {
+	*factory.DefaultFactoryImpl
+	previousContext string
+	pwd             string
+	cacheLogger     log.Logger
+	namespace       string
+	dirPath         string
+	client          kubectl.Client
+}
 
-// type Runner struct{}
+// GetLog implements interface
+func (c *customFactory) GetLog() log.Logger {
+	return c.cacheLogger
+}
 
-// var RunNew = &Runner{}
+type Runner struct{}
 
-// func (r *Runner) SubTests() []string {
-// 	subTests := []string{}
-// 	for k := range availableSubTests {
-// 		subTests = append(subTests, k)
-// 	}
+var RunNew = &Runner{}
 
-// 	return subTests
-// }
+func (r *Runner) SubTests() []string {
+	subTests := []string{}
+	for k := range availableSubTests {
+		subTests = append(subTests, k)
+	}
 
-// var availableSubTests = map[string]func(factory *customFactory) error{
-// 	"default": runDefault,
-// }
+	return subTests
+}
 
-// func (r *Runner) Run(subTests []string, ns string, pwd string) error {
-// 	// Populates the tests to run with all the available sub tests if no sub tests are specified
-// 	if len(subTests) == 0 {
-// 		for subTestName := range availableSubTests {
-// 			subTests = append(subTests, subTestName)
-// 		}
-// 	}
+var availableSubTests = map[string]func(factory *customFactory, logger log.Logger) error{
+	"default": runDefault,
+}
 
-// 	f := &customFactory{
-// 		pwd: pwd,
-// 	}
-// 	f.FakeLogger = fakelog.NewFakeLogger()
+func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger) error {
+	buff := &bytes.Buffer{}
 
-// 	dirPath, _, err := utils.CreateTempDir()
-// 	if err != nil {
-// 		return err
-// 	}
+	logger.Info("Run test 'create_delete_space'")
 
-// 	err = utils.Copy(f.pwd+"/tests/create_delete_space/testdata", dirPath)
-// 	if err != nil {
-// 		return err
-// 	}
+	// Populates the tests to run with all the available sub tests if no sub tests are specified
+	if len(subTests) == 0 {
+		for subTestName := range availableSubTests {
+			subTests = append(subTests, subTestName)
+		}
+	}
 
-// 	err = utils.ChangeWorkingDir(dirPath)
-// 	if err != nil {
-// 		return err
-// 	}
+	f := &customFactory{
+		pwd:         pwd,
+		cacheLogger: log.NewStreamLogger(buff, logrus.InfoLevel),
+	}
 
-// 	defer utils.DeleteTempAndResetWorkingDir(dirPath, f.pwd)
+	// Create kubectl client
+	client, err := f.NewKubeDefaultClient()
+	if err != nil {
+		return errors.Errorf("Unable to create new kubectl client: %v", err)
+	}
 
-// 	// Create kubectl client
-// 	client, err := f.NewKubeDefaultClient()
-// 	if err != nil {
-// 		return errors.Errorf("Unable to create new kubectl client: %v", err)
-// 	}
+	f.client = client
 
-// 	f.previousContext = client.CurrentContext()
+	f.previousContext = client.CurrentContext()
 
-// 	//defer utils.DeleteNamespaceAndWait(client, f.namespace)
+	// Runs the tests
+	for _, subTestName := range subTests {
+		f.namespace = utils.GenerateNamespaceName("test-create-delete-space-" + subTestName)
 
-// 	// Runs the tests
-// 	for _, subTestName := range subTests {
-// 		err := availableSubTests[subTestName](f)
-// 		utils.PrintTestResult("logs", subTestName, err)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
+		err := beforeTest(f)
+		defer afterTest(f)
+		if err != nil {
+			return errors.Errorf("test 'create_delete_space' failed: %s %v", buff.String(), err)
+		}
 
-// 	return nil
-// }
+		err = availableSubTests[subTestName](f, logger)
+		utils.PrintTestResult("create_delete_space", subTestName, err, logger)
+		if err != nil {
+			return errors.Errorf("test 'create_delete_space' failed: %s %v", buff.String(), err)
+		}
+	}
+
+	return nil
+}
+
+func beforeTest(f *customFactory) error {
+	dirPath, _, err := utils.CreateTempDir()
+	if err != nil {
+		return err
+	}
+
+	err = utils.Copy(f.pwd+"/tests/create_delete_space/testdata", dirPath)
+	if err != nil {
+		return err
+	}
+
+	err = utils.ChangeWorkingDir(dirPath, f.cacheLogger)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func afterTest(f *customFactory) {
+	utils.DeleteTempAndResetWorkingDir(f.dirPath, f.pwd, f.cacheLogger)
+	utils.DeleteNamespace(f.client, f.namespace)
+}

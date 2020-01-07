@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/e2e/tests/create_delete_space"
 	"github.com/devspace-cloud/devspace/e2e/tests/deploy"
 	"github.com/devspace-cloud/devspace/e2e/tests/enter"
 	"github.com/devspace-cloud/devspace/e2e/tests/examples"
@@ -37,13 +38,13 @@ type Test interface {
 }
 
 var availableTests = map[string]Test{
-	"examples": examples.RunNew,
-	"deploy":   deploy.RunNew,
-	"init":     initcmd.RunNew,
-	"enter":    enter.RunNew,
-	"sync":     sync.RunNew,
-	"logs":     logs.RunNew,
-	//"create_delete_space":     create_delete_space.RunNew,
+	"examples":            examples.RunNew,
+	"deploy":              deploy.RunNew,
+	"init":                initcmd.RunNew,
+	"enter":               enter.RunNew,
+	"sync":                sync.RunNew,
+	"logs":                logs.RunNew,
+	"create_delete_space": create_delete_space.RunNew,
 }
 
 var subTests = map[string]*stringList{}

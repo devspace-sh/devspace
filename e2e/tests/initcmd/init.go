@@ -1,6 +1,7 @@
 package initcmd
 
 import (
+	"bytes"
 	"io"
 	"path/filepath"
 	"reflect"
@@ -100,6 +101,8 @@ func (r *Runner) SubTests() []string {
 }
 
 func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger) error {
+	buff := &bytes.Buffer{}
+
 	logger.Info("Run 'init' test")
 
 	// Populates the tests to run with all the available sub tests if no sub tests is specified
@@ -119,7 +122,7 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 		err := availableSubTests[subTestName](f, logger)
 		utils.PrintTestResult("init", subTestName, err, logger)
 		if err != nil {
-			return err
+			return errors.Errorf("test 'init' failed: %s %v", buff.String(), err)
 		}
 	}
 

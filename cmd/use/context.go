@@ -12,10 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type contextCmd struct{}
+type ContextCmd struct{}
 
 func newContextCmd() *cobra.Command {
-	cmd := &contextCmd{}
+	cmd := &ContextCmd{}
 
 	useContext := &cobra.Command{
 		Use:   "context",
@@ -38,7 +38,7 @@ devspace use context my-context
 }
 
 // RunUseContext executes the functionality "devspace use namespace"
-func (cmd *contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) error {
+func (cmd *ContextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) error {
 	// Load kube-config
 	log := log.GetInstance()
 	kubeConfig, err := kubeconfig.LoadRawConfig()
