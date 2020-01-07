@@ -18,7 +18,7 @@ type provider struct {
 // NewFakeProvider creates a new instance of the provider interface
 func NewFakeProvider(config latest.Provider, client client.Client) cloud.Provider {
 	if client == nil {
-		client = testClient.NewFakeClient()
+		client = &testClient.CloudClient{}
 	}
 	return &provider{
 		config: config,
