@@ -17,7 +17,13 @@ func RunQuickstartKubectl(f *customFactory, logger log.Logger) error {
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
-	err := RunTest(f, "quickstart-kubectl", nil)
+	err := beforeTest(f, "../examples/quickstart-kubectl")
+	defer afterTest(f)
+	if err != nil {
+		return errors.Errorf("sub test 'quickstart-kubectl' of 'examples' test failed: %s %v", buff.String(), err)
+	}
+
+	err = RunTest(f, nil)
 	if err != nil {
 		return errors.Errorf("sub test 'quickstart-kubectl' of 'examples' test failed: %s %v", buff.String(), err)
 	}

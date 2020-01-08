@@ -17,7 +17,13 @@ func RunMinikube(f *customFactory, logger log.Logger) error {
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
-	err := RunTest(f, "minikube", nil)
+	err := beforeTest(f, "../examples/minikube")
+	defer afterTest(f)
+	if err != nil {
+		return errors.Errorf("sub test 'minikube' of 'examples' test failed: %s %v", buff.String(), err)
+	}
+
+	err = RunTest(f, nil)
 	if err != nil {
 		return errors.Errorf("sub test 'minikube' of 'examples' test failed: %s %v", buff.String(), err)
 	}

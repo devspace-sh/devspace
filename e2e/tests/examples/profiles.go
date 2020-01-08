@@ -33,9 +33,10 @@ func RunProfiles(f *customFactory, logger log.Logger) error {
 		SkipPush:    true,
 	}
 
-	err := utils.ChangeWorkingDir(f.pwd+"/../examples/profiles", f.cacheLogger)
+	err := beforeTest(f, "../examples/profiles")
+	defer afterTest(f)
 	if err != nil {
-		return err
+		return errors.Errorf("sub test 'profiles' of 'examples' test failed: %s %v", buff.String(), err)
 	}
 
 	// Create kubectl client
@@ -43,9 +44,6 @@ func RunProfiles(f *customFactory, logger log.Logger) error {
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
-
-	// At last, we delete the current namespace
-	defer utils.DeleteNamespace(client, deployConfig.Namespace)
 
 	err = runProfile(f, deployConfig, "dev-service2-only", client, f.namespace, []string{"service-2"}, false)
 	if err != nil {

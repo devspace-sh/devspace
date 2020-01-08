@@ -17,7 +17,13 @@ func RunDependencies(f *customFactory, logger log.Logger) error {
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
-	err := RunTest(f, "dependencies", nil)
+	err := beforeTest(f, "../examples/dependencies")
+	defer afterTest(f)
+	if err != nil {
+		return errors.Errorf("sub test 'dependencies' of 'examples' test failed: %s %v", buff.String(), err)
+	}
+
+	err = RunTest(f, nil)
 	if err != nil {
 		return errors.Errorf("sub test 'dependencies' of 'examples' test failed: %s %v", buff.String(), err)
 	}

@@ -17,7 +17,13 @@ func RunQuickstart(f *customFactory, logger log.Logger) error {
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
-	err := RunTest(f, "quickstart", nil)
+	err := beforeTest(f, "../examples/quickstart")
+	defer afterTest(f)
+	if err != nil {
+		return errors.Errorf("sub test 'quickstart' of 'examples' test failed: %s %v", buff.String(), err)
+	}
+
+	err = RunTest(f, nil)
 	if err != nil {
 		return errors.Errorf("sub test 'quickstart' of 'examples' test failed: %s %v", buff.String(), err)
 	}

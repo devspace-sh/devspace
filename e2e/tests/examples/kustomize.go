@@ -17,7 +17,13 @@ func RunKustomize(f *customFactory, logger log.Logger) error {
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
-	err := RunTest(f, "kustomize", nil)
+	err := beforeTest(f, "../examples/kustomize")
+	defer afterTest(f)
+	if err != nil {
+		return errors.Errorf("sub test 'kustomize' of 'examples' test failed: %s %v", buff.String(), err)
+	}
+
+	err = RunTest(f, nil)
 	if err != nil {
 		return errors.Errorf("sub test 'kustomize' of 'examples' test failed: %s %v", buff.String(), err)
 	}

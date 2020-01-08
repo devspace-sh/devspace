@@ -1,9 +1,12 @@
 package examples
 
 import (
+	"path/filepath"
+
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -15,6 +18,8 @@ type customFactory struct {
 	pwd       string
 
 	cacheLogger log.Logger
+	dirPath     string
+	client      kubectl.Client
 }
 
 // GetLog implements interface
@@ -74,7 +79,7 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	return nil
 }
 
-func RunTest(f *customFactory, dir string, deployConfig *cmd.DeployCmd) error {
+func RunTest(f *customFactory, deployConfig *cmd.DeployCmd) error {
 	if deployConfig == nil {
 		deployConfig = &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
@@ -87,18 +92,13 @@ func RunTest(f *customFactory, dir string, deployConfig *cmd.DeployCmd) error {
 		}
 	}
 
-	err := utils.ChangeWorkingDir(f.pwd+"/../examples/"+dir, f.cacheLogger)
-	if err != nil {
-		return err
-	}
-
 	// Create kubectl client
 	client, err := f.NewKubeClientFromContext(deployConfig.KubeContext, deployConfig.Namespace, deployConfig.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
-	// At last, we delete the current namespace
-	defer utils.DeleteNamespace(client, f.namespace)
+
+	f.client = client
 
 	err = deployConfig.Run(f, nil, nil)
 	if err != nil {
@@ -131,4 +131,34 @@ func RunTest(f *customFactory, dir string, deployConfig *cmd.DeployCmd) error {
 	}
 
 	return nil
+}
+
+func beforeTest(f *customFactory, testDir string) error {
+	testDir = filepath.FromSlash(testDir)
+
+	dirPath, _, err := utils.CreateTempDir()
+	if err != nil {
+		return err
+	}
+
+	f.dirPath = dirPath
+
+	// Copy the testdata into the temp dir
+	err = utils.Copy(testDir, dirPath)
+	if err != nil {
+		return err
+	}
+
+	// Change working directory
+	err = utils.ChangeWorkingDir(dirPath, f.cacheLogger)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func afterTest(f *customFactory) {
+	utils.DeleteTempAndResetWorkingDir(f.dirPath, f.pwd, f.cacheLogger)
+	utils.DeleteNamespace(f.client, f.namespace)
 }

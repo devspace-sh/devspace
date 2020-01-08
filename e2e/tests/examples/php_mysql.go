@@ -17,7 +17,13 @@ func RunPhpMysql(f *customFactory, logger log.Logger) error {
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
-	err := RunTest(f, "php-mysql-example", nil)
+	err := beforeTest(f, "../examples/php-mysql-example")
+	defer afterTest(f)
+	if err != nil {
+		return errors.Errorf("sub test 'php-mysql-example' of 'examples' test failed: %s %v", buff.String(), err)
+	}
+
+	err = RunTest(f, nil)
 	if err != nil {
 		return errors.Errorf("sub test 'php-mysql-example' of 'examples' test failed: %s %v", buff.String(), err)
 	}
