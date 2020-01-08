@@ -16,6 +16,8 @@ import (
 
 type customFactory struct {
 	*factory.DefaultFactoryImpl
+	verbose     bool
+	timeout     int
 	namespace   string
 	pwd         string
 	cacheLogger log.Logger
@@ -45,8 +47,18 @@ var availableSubTests = map[string]func(factory *customFactory, logger log.Logge
 	"default": runDefault,
 }
 
-func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger) error {
+func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error {
 	buff := &bytes.Buffer{}
+	var cacheLogger log.Logger
+	cacheLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
+
+	var buffString string
+	buffString = buff.String()
+
+	if verbose {
+		cacheLogger = logger
+		buffString = ""
+	}
 
 	logger.Info("Run 'sync' test")
 
@@ -60,7 +72,9 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	f := &customFactory{
 		namespace:   ns,
 		pwd:         pwd,
-		cacheLogger: log.NewStreamLogger(buff, logrus.InfoLevel),
+		cacheLogger: cacheLogger,
+		verbose:     verbose,
+		timeout:     timeout,
 	}
 
 	// Runs the tests
@@ -70,13 +84,13 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 		err := beforeTest(f)
 		defer afterTest(f)
 		if err != nil {
-			return errors.Errorf("test 'sync' failed: %s %v", buff.String(), err)
+			return errors.Errorf("test 'sync' failed: %s %v", buffString, err)
 		}
 
 		err = availableSubTests[subTestName](f, logger)
 		utils.PrintTestResult("sync", subTestName, err, logger)
 		if err != nil {
-			return errors.Errorf("test 'sync' failed: %s %v", buff.String(), err)
+			return errors.Errorf("test 'sync' failed: %s %v", buffString, err)
 		}
 	}
 

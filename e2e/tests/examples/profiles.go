@@ -19,6 +19,14 @@ func RunProfiles(f *customFactory, logger log.Logger) error {
 	buff := &bytes.Buffer{}
 	f.cacheLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
 
+	var buffString string
+	buffString = buff.String()
+
+	if f.verbose {
+		f.cacheLogger = logger
+		buffString = ""
+	}
+
 	logger.Info("Run sub test 'profiles' of test 'examples'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
@@ -36,7 +44,7 @@ func RunProfiles(f *customFactory, logger log.Logger) error {
 	err := beforeTest(f, "../examples/profiles")
 	defer afterTest(f)
 	if err != nil {
-		return errors.Errorf("sub test 'profiles' of 'examples' test failed: %s %v", buff.String(), err)
+		return errors.Errorf("sub test 'profiles' of 'examples' test failed: %s %v", buffString, err)
 	}
 
 	// Create kubectl client

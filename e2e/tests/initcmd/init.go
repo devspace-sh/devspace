@@ -34,6 +34,8 @@ type initTestCase struct {
 
 type customFactory struct {
 	*factory.DefaultFactoryImpl
+	verbose     bool
+	timeout     int
 	namespace   string
 	pwd         string
 	cacheLogger *customLogger
@@ -99,7 +101,7 @@ func (r *Runner) SubTests() []string {
 	return subTests
 }
 
-func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger) error {
+func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error {
 	buff := &bytes.Buffer{}
 
 	logger.Info("Run 'init' test")
@@ -112,7 +114,9 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	}
 
 	f := &customFactory{
-		pwd: pwd,
+		pwd:     pwd,
+		verbose: verbose,
+		timeout: timeout,
 	}
 
 	// Runs the tests

@@ -20,6 +20,14 @@ func RunKubectl(f *customFactory, logger log.Logger) error {
 	buff := &bytes.Buffer{}
 	f.cacheLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
 
+	var buffString string
+	buffString = buff.String()
+
+	if f.verbose {
+		f.cacheLogger = logger
+		buffString = ""
+	}
+
 	logger.Info("Run sub test 'kubectl' of test 'deploy'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
@@ -48,21 +56,21 @@ func RunKubectl(f *customFactory, logger log.Logger) error {
 	err = beforeTest(f, logger, "tests/deploy/testdata/kubectl")
 	defer afterTest(f)
 	if err != nil {
-		return errors.Errorf("sub test 'kubectl' of 'deploy' test failed: %s %v", buff.String(), err)
+		return errors.Errorf("sub test 'kubectl' of 'deploy' test failed: %s %v", buffString, err)
 	}
 
 	for _, t := range ts {
 		err := runTest(f, &t)
 		utils.PrintTestResult("kubectl", t.name, err, logger)
 		if err != nil {
-			return errors.Errorf("sub test 'kubectl' of 'deploy' test failed: %s %v", buff.String(), err)
+			return errors.Errorf("sub test 'kubectl' of 'deploy' test failed: %s %v", buffString, err)
 		}
 	}
 
 	err = testPurge(f)
 	utils.PrintTestResult("kubectl", "purge", err, logger)
 	if err != nil {
-		return errors.Errorf("sub test 'kubectl' of 'deploy' test failed: %s %v", buff.String(), err)
+		return errors.Errorf("sub test 'kubectl' of 'deploy' test failed: %s %v", buffString, err)
 	}
 
 	return nil

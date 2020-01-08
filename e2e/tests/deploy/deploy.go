@@ -29,6 +29,8 @@ type customFactory struct {
 	*factory.DefaultFactoryImpl
 	ctrl build.Controller
 
+	verbose     bool
+	timeout     int
 	namespace   string
 	pwd         string
 	builtImages map[string]string
@@ -76,7 +78,7 @@ var availableSubTests = map[string]func(factory *customFactory, logger log.Logge
 	"helm-v2": RunHelmV2,
 }
 
-func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger) error {
+func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error {
 	logger.Info("Run 'deploy' test")
 
 	// Populates the tests to run with all the available sub tests if no sub tests are specified
@@ -89,6 +91,8 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	myFactory := &customFactory{
 		namespace: ns,
 		pwd:       pwd,
+		verbose:   verbose,
+		timeout:   timeout,
 	}
 
 	// Runs the tests

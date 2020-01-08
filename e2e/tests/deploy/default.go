@@ -23,6 +23,14 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 	buff := &bytes.Buffer{}
 	f.cacheLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
 
+	var buffString string
+	buffString = buff.String()
+
+	if f.verbose {
+		f.cacheLogger = logger
+		buffString = ""
+	}
+
 	logger.Info("Run sub test 'default' of test 'deploy'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
@@ -175,14 +183,14 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 	err = beforeTest(f, logger, "tests/deploy/testdata/default")
 	defer afterTest(f)
 	if err != nil {
-		return errors.Errorf("sub test 'default' of 'deploy' test failed: %s %v", buff.String(), err)
+		return errors.Errorf("sub test 'default' of 'deploy' test failed: %s %v", buffString, err)
 	}
 
 	for _, t := range ts {
 		err := runTest(f, &t)
 		utils.PrintTestResult("default", t.name, err, logger)
 		if err != nil {
-			return errors.Errorf("sub test 'default' of 'deploy' test failed: %s %v", buff.String(), err)
+			return errors.Errorf("sub test 'default' of 'deploy' test failed: %s %v", buffString, err)
 		}
 	}
 

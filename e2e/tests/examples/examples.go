@@ -16,6 +16,8 @@ type customFactory struct {
 	*factory.DefaultFactoryImpl
 	namespace string
 	pwd       string
+	verbose   bool
+	timeout   int
 
 	cacheLogger log.Logger
 	dirPath     string
@@ -51,7 +53,7 @@ func (r *Runner) SubTests() []string {
 	return subTests
 }
 
-func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger) error {
+func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error {
 	logger.Info("Run 'examples' test")
 
 	// Populates the tests to run with all the available sub tests if no sub tests in specified
@@ -64,6 +66,8 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	myFactory := &customFactory{
 		namespace: ns,
 		pwd:       pwd,
+		verbose:   verbose,
+		timeout:   timeout,
 	}
 
 	// Runs the tests

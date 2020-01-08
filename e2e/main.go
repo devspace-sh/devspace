@@ -6,12 +6,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/e2e/tests/space"
 	"github.com/devspace-cloud/devspace/e2e/tests/deploy"
 	"github.com/devspace-cloud/devspace/e2e/tests/enter"
 	"github.com/devspace-cloud/devspace/e2e/tests/examples"
 	"github.com/devspace-cloud/devspace/e2e/tests/initcmd"
 	"github.com/devspace-cloud/devspace/e2e/tests/logs"
+	"github.com/devspace-cloud/devspace/e2e/tests/space"
 	"github.com/devspace-cloud/devspace/e2e/tests/sync"
 	"github.com/devspace-cloud/devspace/e2e/utils"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -33,18 +33,18 @@ func (s *stringList) Set(value string) error {
 }
 
 type Test interface {
-	Run(subTests []string, ns string, pwd string, logger log.Logger) error
+	Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error
 	SubTests() []string
 }
 
 var availableTests = map[string]Test{
-	"examples":            examples.RunNew,
-	"deploy":              deploy.RunNew,
-	"init":                initcmd.RunNew,
-	"enter":               enter.RunNew,
-	"sync":                sync.RunNew,
-	"logs":                logs.RunNew,
-	"space": space.RunNew,
+	"examples": examples.RunNew,
+	"deploy":   deploy.RunNew,
+	"init":     initcmd.RunNew,
+	"enter":    enter.RunNew,
+	"sync":     sync.RunNew,
+	"logs":     logs.RunNew,
+	"space":    space.RunNew,
 }
 
 var subTests = map[string]*stringList{}
@@ -67,6 +67,12 @@ func main() {
 
 	var test stringList
 	testCommand.Var(&test, "test", "A comma seperated list of group tests to pass")
+
+	var verbose bool
+	testCommand.BoolVar(&verbose, "verbose", false, "Displays the tests outputs in real time (default: false)")
+
+	var timeout int
+	testCommand.IntVar(&timeout, "timeout", 200, "Sets a timeout limit in seconds for each test (default: 200)")
 
 	var testlist stringList
 	listCommand.Var(&testlist, "test", "A comma seperated list of group tests to list (leave empty to list all group tests)")
@@ -150,7 +156,7 @@ func main() {
 			}
 
 			// We run the actual group tests by passing the sub tests
-			err := testRun.Run(parameterSubTests, testNamespace, pwd, logger)
+			err := testRun.Run(parameterSubTests, testNamespace, pwd, logger, verbose, timeout)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
