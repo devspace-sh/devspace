@@ -73,6 +73,7 @@ var availableSubTests = map[string]func(factory *customFactory, logger log.Logge
 	"profile": RunProfile,
 	"kubectl": RunKubectl,
 	"helm":    RunHelm,
+	"helm-v2": RunHelmV2,
 }
 
 func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger) error {
@@ -159,16 +160,16 @@ func testPurge(f *customFactory) error {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
-	for start := time.Now(); time.Since(start) < time.Second*60; {
+	for start := time.Now(); time.Since(start) < time.Second*30; {
 		p, _ := client.KubeClient().CoreV1().Pods(f.namespace).List(metav1.ListOptions{})
 
-		if len(p.Items) == 0 {
+		if len(p.Items) == 0 || len(p.Items) == 1 && p.Items[0].Status.ContainerStatuses[0].Name == "tiller" {
 			return nil
 		}
 	}
 
 	p, _ := client.KubeClient().CoreV1().Pods(f.namespace).List(metav1.ListOptions{})
-	return errors.Errorf("purge command failed, expected 0 pod but found %v", len(p.Items))
+	return errors.Errorf("purge command failed, expected 1 (tiller) pod but found %v", len(p.Items))
 }
 
 func beforeTest(f *customFactory, logger log.Logger, testDir string) error {
