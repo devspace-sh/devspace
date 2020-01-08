@@ -6,8 +6,8 @@ import (
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -19,7 +19,7 @@ type SpaceCmd struct {
 	All      bool
 }
 
-func newSpaceCmd() *cobra.Command {
+func newSpaceCmd(f factory.Factory) *cobra.Command {
 	cmd := &SpaceCmd{}
 
 	SpaceCmd := &cobra.Command{
@@ -38,7 +38,9 @@ devspace remove space --all
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: cmd.RunRemoveCloudDevSpace,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunRemoveCloudDevSpace(f, cobraCmd, args)
+		},
 	}
 
 	SpaceCmd.Flags().StringVar(&cmd.SpaceID, "id", "", "SpaceID id to use")
@@ -49,9 +51,9 @@ devspace remove space --all
 }
 
 // RunRemoveCloudDevSpace executes the devspace remove cloud devspace functionality
-func (cmd *SpaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []string) error {
+func (cmd *SpaceCmd) RunRemoveCloudDevSpace(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	log := log.GetInstance()
+	log := f.GetLog()
 	configLoader := loader.NewConfigLoader(nil, log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {

@@ -8,7 +8,6 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/use"
 	"github.com/devspace-cloud/devspace/e2e/utils"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/pkg/errors"
 )
 
 func runDefault(f *customFactory, logger log.Logger) error {
@@ -23,30 +22,25 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		SkipPush: true,
 	}
 
-	err := cs.RunCreateSpace(nil, []string{"blabla-test-space"})
+	err := cs.RunCreateSpace(f, nil, []string{"blabla-test-space"})
 
 	err = deployConfig.Run(f, nil, nil)
 	if err != nil {
 		return err
 	}
 
-	client, err := f.NewKubeDefaultClient()
-	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
-	}
-
 	// Checking if pods are running correctly
-	err = utils.AnalyzePods(client, client.Namespace(), f.cacheLogger)
+	err = utils.AnalyzePods(f.client, f.client.Namespace(), f.cacheLogger)
 	if err != nil {
 		return err
 	}
 
-	err = rs.RunRemoveCloudDevSpace(nil, []string{"blabla-test-space"})
+	err = rs.RunRemoveCloudDevSpace(f, nil, []string{"blabla-test-space"})
 	if err != nil {
 		return err
 	}
 
-	err = uc.RunUseContext(nil, []string{f.previousContext})
+	err = uc.RunUseContext(f, nil, []string{f.previousContext})
 	if err != nil {
 		return err
 	}

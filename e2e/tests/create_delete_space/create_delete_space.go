@@ -47,6 +47,8 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	buff := &bytes.Buffer{}
 
 	logger.Info("Run test 'create_delete_space'")
+	logger.StartWait("Run test...")
+	defer logger.StopWait()
 
 	// Populates the tests to run with all the available sub tests if no sub tests are specified
 	if len(subTests) == 0 {
@@ -60,7 +62,6 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 		cacheLogger: log.NewStreamLogger(buff, logrus.InfoLevel),
 	}
 
-	// Create kubectl client
 	client, err := f.NewKubeDefaultClient()
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
@@ -111,5 +112,4 @@ func beforeTest(f *customFactory) error {
 
 func afterTest(f *customFactory) {
 	utils.DeleteTempAndResetWorkingDir(f.dirPath, f.pwd, f.cacheLogger)
-	utils.DeleteNamespace(f.client, f.namespace)
 }
