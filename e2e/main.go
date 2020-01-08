@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/e2e/tests/create_delete_space"
+	"github.com/devspace-cloud/devspace/e2e/tests/space"
 	"github.com/devspace-cloud/devspace/e2e/tests/deploy"
 	"github.com/devspace-cloud/devspace/e2e/tests/enter"
 	"github.com/devspace-cloud/devspace/e2e/tests/examples"
@@ -44,7 +44,7 @@ var availableTests = map[string]Test{
 	"enter":               enter.RunNew,
 	"sync":                sync.RunNew,
 	"logs":                logs.RunNew,
-	"create_delete_space": create_delete_space.RunNew,
+	"space": space.RunNew,
 }
 
 var subTests = map[string]*stringList{}

@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	latestSpace "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
@@ -350,7 +351,7 @@ func lcopy(src, dest string, info os.FileInfo) error {
 // CreateTempDir creates a temp directory in /tmp
 func CreateTempDir() (dirPath string, dirName string, err error) {
 	// Create temp dir in /tmp/
-	dirPath, err = ioutil.TempDir("", "init")
+	dirPath, err = ioutil.TempDir("", "test-e2e")
 	dirName = filepath.Base(dirPath)
 	if err != nil {
 		return
@@ -362,11 +363,11 @@ func CreateTempDir() (dirPath string, dirName string, err error) {
 // DeleteTempDir deletes temp directory
 func DeleteTempDir(dirPath string, log logger.Logger) {
 	// TODO: Needs to be implemented later on (but bugs on windows)
-	// //Delete temp folder
-	// err := os.RemoveAll(dirPath)
-	// if err != nil {
-	// 	log.Fatalf("Error removing dir: %v", err)
-	// }
+	// Delete temp folder
+	err := os.RemoveAll(dirPath)
+	if err != nil {
+		log.Fatalf("Error removing dir: %v", err)
+	}
 }
 
 // Capture replaces os.Stdout with a writer that buffers any data written
@@ -403,6 +404,16 @@ func Capture() func() (string, error) {
 func StringInSlice(str string, list []string) bool {
 	for _, v := range list {
 		if v == str {
+			return true
+		}
+	}
+	return false
+}
+
+// SpaceExists checks if a string is in a slice
+func SpaceExists(str string, list []*latestSpace.Space) bool {
+	for _, v := range list {
+		if v.Name == str {
 			return true
 		}
 	}

@@ -1,4 +1,4 @@
-package create_delete_space
+package space
 
 import (
 	"bytes"
@@ -16,7 +16,6 @@ type customFactory struct {
 	previousContext string
 	pwd             string
 	cacheLogger     log.Logger
-	namespace       string
 	dirPath         string
 	client          kubectl.Client
 }
@@ -46,7 +45,7 @@ var availableSubTests = map[string]func(factory *customFactory, logger log.Logge
 func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger) error {
 	buff := &bytes.Buffer{}
 
-	logger.Info("Run test 'create_delete_space'")
+	logger.Info("Run test 'space'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
@@ -73,18 +72,16 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 	// Runs the tests
 	for _, subTestName := range subTests {
-		f.namespace = utils.GenerateNamespaceName("test-create-delete-space-" + subTestName)
-
 		err := beforeTest(f)
 		defer afterTest(f)
 		if err != nil {
-			return errors.Errorf("test 'create_delete_space' failed: %s %v", buff.String(), err)
+			return errors.Errorf("test 'space' failed: %s %v", buff.String(), err)
 		}
 
 		err = availableSubTests[subTestName](f, logger)
-		utils.PrintTestResult("create_delete_space", subTestName, err, logger)
+		utils.PrintTestResult("space", subTestName, err, logger)
 		if err != nil {
-			return errors.Errorf("test 'create_delete_space' failed: %s %v", buff.String(), err)
+			return errors.Errorf("test 'space' failed: %s %v", buff.String(), err)
 		}
 	}
 
@@ -97,7 +94,7 @@ func beforeTest(f *customFactory) error {
 		return err
 	}
 
-	err = utils.Copy(f.pwd+"/tests/create_delete_space/testdata", dirPath)
+	err = utils.Copy(f.pwd+"/tests/space/testdata", dirPath)
 	if err != nil {
 		return err
 	}
