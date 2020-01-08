@@ -2,6 +2,7 @@ package sync
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -122,7 +123,8 @@ func beforeTest(f *customFactory) error {
 	if err != nil {
 		return err
 	}
-	// time.Sleep(time.Second * 5)
+
+	time.Sleep(time.Second * 5)
 
 	// Checking if pods are running correctly
 	err = utils.AnalyzePods(client, f.namespace, f.cacheLogger)

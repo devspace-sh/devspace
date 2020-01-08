@@ -13,7 +13,6 @@ import (
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/e2e/utils"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -40,7 +39,7 @@ type customFactory struct {
 	cacheLogger *customLogger
 	dirPath     string
 	dirName     string
-	client      kubectl.Client
+	// client      kubectl.Client
 }
 
 type customLogger struct {
@@ -200,5 +199,4 @@ func beforeTest(f *customFactory, logger log.Logger, testDir string) error {
 
 func afterTest(f *customFactory) {
 	utils.DeleteTempAndResetWorkingDir(f.dirPath, f.pwd, f.cacheLogger)
-	utils.DeleteNamespace(f.client, f.namespace)
 }

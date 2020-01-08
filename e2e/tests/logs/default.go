@@ -3,10 +3,11 @@ package logs
 import (
 	"strings"
 	"time"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 
@@ -19,7 +20,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		GlobalFlags: &flags.GlobalFlags{
 			Namespace: f.namespace,
 		},
-		LastAmountOfLines: 1,
+		LastAmountOfLines: 20,
 	}
 
 	done := utils.Capture()
