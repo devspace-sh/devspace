@@ -16,7 +16,7 @@ func RunQuickstart(f *customFactory, logger log.Logger) error {
 	var buffString string
 	buffString = buff.String()
 
-	if f.verbose {
+	if f.Verbose {
 		f.cacheLogger = logger
 		buffString = ""
 	}

@@ -17,7 +17,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 
 	lc := &cmd.LogsCmd{
 		GlobalFlags: &flags.GlobalFlags{
-			Namespace: f.namespace,
+			Namespace: f.Namespace,
 		},
 		LastAmountOfLines: 1,
 	}

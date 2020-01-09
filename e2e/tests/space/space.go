@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -14,13 +13,9 @@ import (
 
 type customFactory struct {
 	*factory.DefaultFactoryImpl
-	verbose         bool
-	timeout         int
+	*utils.BaseCustomFactory
 	previousContext string
-	pwd             string
 	cacheLogger     log.Logger
-	dirPath         string
-	client          kubectl.Client
 }
 
 // GetLog implements interface
@@ -70,10 +65,12 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	}
 
 	f := &customFactory{
-		pwd:         pwd,
+		BaseCustomFactory: &utils.BaseCustomFactory{
+			Pwd:     pwd,
+			Verbose: verbose,
+			Timeout: timeout,
+		},
 		cacheLogger: cacheLogger,
-		verbose:     verbose,
-		timeout:     timeout,
 	}
 
 	client, err := f.NewKubeDefaultClient()
@@ -81,7 +78,7 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
-	f.client = client
+	f.Client = client
 
 	f.previousContext = client.CurrentContext()
 
@@ -127,7 +124,7 @@ func beforeTest(f *customFactory) error {
 		return err
 	}
 
-	err = utils.Copy(f.pwd+"/tests/space/testdata", dirPath)
+	err = utils.Copy(f.Pwd+"/tests/space/testdata", dirPath)
 	if err != nil {
 		return err
 	}
@@ -141,5 +138,5 @@ func beforeTest(f *customFactory) error {
 }
 
 func afterTest(f *customFactory) {
-	utils.DeleteTempAndResetWorkingDir(f.dirPath, f.pwd, f.cacheLogger)
+	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.cacheLogger)
 }

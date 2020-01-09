@@ -23,7 +23,7 @@ func RunHelmV2(f *customFactory, logger log.Logger) error {
 	var buffString string
 	buffString = buff.String()
 
-	if f.verbose {
+	if f.Verbose {
 		f.cacheLogger = logger
 		buffString = ""
 	}
@@ -32,20 +32,20 @@ func RunHelmV2(f *customFactory, logger log.Logger) error {
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
-	client, err := f.NewKubeClientFromContext("", f.namespace, false)
+	client, err := f.NewKubeClientFromContext("", f.Namespace, false)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
 	// The client is saved in the factory ONCE for each sub test
-	f.client = client
+	f.Client = client
 
 	ts := testSuite{
 		test{
 			name: "1. deploy & helm v2 (see quickstart) (v1beta4)",
 			deployConfig: &cmd.DeployCmd{
 				GlobalFlags: &flags.GlobalFlags{
-					Namespace: f.namespace,
+					Namespace: f.Namespace,
 					NoWarn:    true,
 				},
 			},

@@ -32,6 +32,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+type BaseCustomFactory struct {
+	Verbose   bool
+	Timeout   int
+	Namespace string
+	Pwd       string
+	Client    kubectl.Client
+	DirPath   string
+	DirName   string
+}
+
 // ChangeWorkingDir changes the working directory
 func ChangeWorkingDir(pwd string, cachedLogger logger.Logger) error {
 	wd, err := filepath.Abs(pwd)

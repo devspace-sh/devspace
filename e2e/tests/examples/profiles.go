@@ -22,7 +22,7 @@ func RunProfiles(f *customFactory, logger log.Logger) error {
 	var buffString string
 	buffString = buff.String()
 
-	if f.verbose {
+	if f.Verbose {
 		f.cacheLogger = logger
 		buffString = ""
 	}
@@ -33,7 +33,7 @@ func RunProfiles(f *customFactory, logger log.Logger) error {
 
 	var deployConfig = &cmd.DeployCmd{
 		GlobalFlags: &flags.GlobalFlags{
-			Namespace: f.namespace,
+			Namespace: f.Namespace,
 			NoWarn:    true,
 		},
 		ForceBuild:  true,
@@ -53,12 +53,12 @@ func RunProfiles(f *customFactory, logger log.Logger) error {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
-	err = runProfile(f, deployConfig, "dev-service2-only", client, f.namespace, []string{"service-2"}, false)
+	err = runProfile(f, deployConfig, "dev-service2-only", client, f.Namespace, []string{"service-2"}, false)
 	if err != nil {
 		return err
 	}
 
-	err = runProfile(f, deployConfig, "", client, f.namespace, []string{"service-1", "service-2"}, true)
+	err = runProfile(f, deployConfig, "", client, f.Namespace, []string{"service-1", "service-2"}, true)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func runProfile(f *customFactory, deployConfig *cmd.DeployCmd, profile string, c
 	}
 
 	// Checking if pods are running correctly
-	err = utils.AnalyzePods(client, f.namespace, f.cacheLogger)
+	err = utils.AnalyzePods(client, f.Namespace, f.cacheLogger)
 	if err != nil {
 		return err
 	}

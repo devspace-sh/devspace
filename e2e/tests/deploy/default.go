@@ -26,7 +26,7 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 	var buffString string
 	buffString = buff.String()
 
-	if f.verbose {
+	if f.Verbose {
 		f.cacheLogger = logger
 		buffString = ""
 	}
@@ -35,20 +35,20 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
-	client, err := f.NewKubeClientFromContext("", f.namespace, false)
+	client, err := f.NewKubeClientFromContext("", f.Namespace, false)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
 	// The client is saved in the factory ONCE for each sub test
-	f.client = client
+	f.Client = client
 
 	ts := testSuite{
 		test{
 			name: "1. deploy (without profile & var)",
 			deployConfig: &cmd.DeployCmd{
 				GlobalFlags: &flags.GlobalFlags{
-					Namespace: f.namespace,
+					Namespace: f.Namespace,
 					NoWarn:    true,
 				},
 			},
@@ -65,7 +65,7 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 			name: "2. deploy --force-build & check if rebuild",
 			deployConfig: &cmd.DeployCmd{
 				GlobalFlags: &flags.GlobalFlags{
-					Namespace: f.namespace,
+					Namespace: f.Namespace,
 					NoWarn:    true,
 				},
 				ForceBuild: true,
@@ -84,7 +84,7 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 			name: "3. deploy --force-deploy & check NO build but deployed",
 			deployConfig: &cmd.DeployCmd{
 				GlobalFlags: &flags.GlobalFlags{
-					Namespace: f.namespace,
+					Namespace: f.Namespace,
 					NoWarn:    true,
 				},
 				ForceDeploy: true, // Only forces to redeploy deployments
@@ -96,7 +96,7 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 					return errors.Errorf("built images expected: %v, found: %v", imagesExpected, imagesCount)
 				}
 
-				wasDeployed, err := utils.LookForDeployment(f.client, f.namespace, "sh.helm.release.v1.root-app.v2")
+				wasDeployed, err := utils.LookForDeployment(f.Client, f.Namespace, "sh.helm.release.v1.root-app.v2")
 				if err != nil {
 					return err
 				}
@@ -111,7 +111,7 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 			name: "4. deploy --force-dependencies & check NO build & check NO deployment but dependencies are deployed",
 			deployConfig: &cmd.DeployCmd{
 				GlobalFlags: &flags.GlobalFlags{
-					Namespace: f.namespace,
+					Namespace: f.Namespace,
 					NoWarn:    true,
 				},
 				ForceDeploy:       true,
@@ -127,7 +127,7 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 
 				deployedDependencies := []string{"sh.helm.release.v1.dependency1.v2", "sh.helm.release.v1.dependency2.v2"}
 
-				wasDeployed, err := utils.LookForDeployment(f.client, f.namespace, deployedDependencies...)
+				wasDeployed, err := utils.LookForDeployment(f.Client, f.Namespace, deployedDependencies...)
 				if err != nil {
 					return err
 				}
@@ -142,7 +142,7 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 			name: "5. deploy --force-deploy --deployments=default,test2 & check NO build & only deployments deployed",
 			deployConfig: &cmd.DeployCmd{
 				GlobalFlags: &flags.GlobalFlags{
-					Namespace: f.namespace,
+					Namespace: f.Namespace,
 					NoWarn:    true,
 				},
 				ForceDeploy: true,
@@ -159,7 +159,7 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 				shouldBeDeployed := "sh.helm.release.v1.root-app.v4"
 				shouldNotBeDeployed := "sh.helm.release.v1.php-app.v5"
 
-				wasDeployed, err := utils.LookForDeployment(f.client, f.namespace, shouldBeDeployed)
+				wasDeployed, err := utils.LookForDeployment(f.Client, f.Namespace, shouldBeDeployed)
 				if err != nil {
 					return err
 				}
@@ -167,7 +167,7 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 					return errors.Errorf("expected deployment '%v' was not found", shouldBeDeployed)
 				}
 
-				wasDeployed, err = utils.LookForDeployment(f.client, f.namespace, shouldNotBeDeployed)
+				wasDeployed, err = utils.LookForDeployment(f.Client, f.Namespace, shouldNotBeDeployed)
 				if err != nil {
 					return err
 				}
@@ -212,7 +212,7 @@ func checkPortForwarding(f *customFactory, deployConfig *cmd.DeployCmd) error {
 	}
 
 	// Port-forwarding
-	err = utils.PortForwardAndPing(config, generatedConfig, f.client, f.cacheLogger)
+	err = utils.PortForwardAndPing(config, generatedConfig, f.Client, f.cacheLogger)
 	if err != nil {
 		return err
 	}

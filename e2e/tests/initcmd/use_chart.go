@@ -13,12 +13,12 @@ import (
 // UseChart runs init test with "use helm chart" option
 func UseChart(f *customFactory, logger log.Logger) error {
 	buff := &bytes.Buffer{}
-	f.cacheLogger = NewCustomStreamLogger(buff, logrus.InfoLevel, f.verbose)
+	f.cacheLogger = NewCustomStreamLogger(buff, logrus.InfoLevel, f.Verbose)
 
 	var buffString string
 	buffString = buff.String()
 
-	if f.verbose {
+	if f.Verbose {
 		buffString = ""
 	}
 
@@ -39,7 +39,7 @@ func UseChart(f *customFactory, logger log.Logger) error {
 			Version: latest.Version,
 			Deployments: []*latest.DeploymentConfig{
 				&latest.DeploymentConfig{
-					Name: f.dirName,
+					Name: f.DirName,
 					Helm: &latest.HelmConfig{
 						Chart: &latest.ChartConfig{
 							Name: "./chart",

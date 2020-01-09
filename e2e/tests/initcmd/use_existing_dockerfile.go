@@ -14,12 +14,12 @@ import (
 // UseExistingDockerfile runs init test with "create docker file" option
 func UseExistingDockerfile(f *customFactory, logger log.Logger) error {
 	buff := &bytes.Buffer{}
-	f.cacheLogger = NewCustomStreamLogger(buff, logrus.InfoLevel, f.verbose)
+	f.cacheLogger = NewCustomStreamLogger(buff, logrus.InfoLevel, f.Verbose)
 
 	var buffString string
 	buffString = buff.String()
 
-	if f.verbose {
+	if f.Verbose {
 		buffString = ""
 	}
 
@@ -36,23 +36,23 @@ func UseExistingDockerfile(f *customFactory, logger log.Logger) error {
 	port := 8080
 	testCase := &initTestCase{
 		name:    "Enter existing Dockerfile",
-		answers: []string{cmd.UseExistingDockerfileOption, "Use hub.docker.com => you are logged in as user", "user/" + f.dirName, "8080"},
+		answers: []string{cmd.UseExistingDockerfileOption, "Use hub.docker.com => you are logged in as user", "user/" + f.DirName, "8080"},
 		expectedConfig: &latest.Config{
 			Version: latest.Version,
 			Images: map[string]*latest.ImageConfig{
 				"default": &latest.ImageConfig{
-					Image: "user/" + f.dirName,
+					Image: "user/" + f.DirName,
 				},
 			},
 			Deployments: []*latest.DeploymentConfig{
 				&latest.DeploymentConfig{
-					Name: f.dirName,
+					Name: f.DirName,
 					Helm: &latest.HelmConfig{
 						ComponentChart: ptr.Bool(true),
 						Values: map[interface{}]interface{}{
 							"containers": []interface{}{
 								map[interface{}]interface{}{
-									"image": "user/" + f.dirName,
+									"image": "user/" + f.DirName,
 								},
 							},
 							"service": map[interface{}]interface{}{

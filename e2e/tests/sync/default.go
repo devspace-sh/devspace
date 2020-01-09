@@ -18,7 +18,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 
 	sc := &cmd.SyncCmd{
 		GlobalFlags: &flags.GlobalFlags{
-			Namespace: f.namespace,
+			Namespace: f.Namespace,
 			NoWarn:    true,
 			Silent:    true,
 		},
@@ -29,7 +29,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 
 	ec := &cmd.EnterCmd{
 		GlobalFlags: &flags.GlobalFlags{
-			Namespace: f.namespace,
+			Namespace: f.Namespace,
 			NoWarn:    true,
 			Silent:    true,
 		},

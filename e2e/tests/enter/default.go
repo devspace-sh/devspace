@@ -22,12 +22,12 @@ func runDefault(f *customFactory, logger log.Logger) error {
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
-	client, err := f.NewKubeClientFromContext("", f.namespace, false)
+	client, err := f.NewKubeClientFromContext("", f.Namespace, false)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
-	pods, err := client.KubeClient().CoreV1().Pods(f.namespace).List(metav1.ListOptions{})
+	pods, err := client.KubeClient().CoreV1().Pods(f.Namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return errors.Errorf("Unable to list the pods: %v", err)
 	}
@@ -37,7 +37,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 	enterConfigs := []*cmd.EnterCmd{
 		{
 			GlobalFlags: &flags.GlobalFlags{
-				Namespace: f.namespace,
+				Namespace: f.Namespace,
 				NoWarn:    true,
 				Silent:    true,
 			},
@@ -46,7 +46,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		},
 		{
 			GlobalFlags: &flags.GlobalFlags{
-				Namespace: f.namespace,
+				Namespace: f.Namespace,
 				NoWarn:    true,
 				Silent:    true,
 			},
@@ -55,7 +55,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		},
 		{
 			GlobalFlags: &flags.GlobalFlags{
-				Namespace: f.namespace,
+				Namespace: f.Namespace,
 				NoWarn:    true,
 				Silent:    true,
 			},
@@ -64,7 +64,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		},
 		{
 			GlobalFlags: &flags.GlobalFlags{
-				Namespace: f.namespace,
+				Namespace: f.Namespace,
 				NoWarn:    true,
 				Silent:    true,
 			},

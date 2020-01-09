@@ -7,7 +7,6 @@ import (
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -15,14 +14,8 @@ import (
 
 type customFactory struct {
 	*factory.DefaultFactoryImpl
-	namespace string
-	pwd       string
-	verbose   bool
-	timeout   int
-
+	*utils.BaseCustomFactory
 	cacheLogger log.Logger
-	dirPath     string
-	client      kubectl.Client
 }
 
 // GetLog implements interface
@@ -65,10 +58,12 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	}
 
 	myFactory := &customFactory{
-		namespace: ns,
-		pwd:       pwd,
-		verbose:   verbose,
-		timeout:   timeout,
+		BaseCustomFactory: &utils.BaseCustomFactory{
+			Namespace: ns,
+			Pwd:       pwd,
+			Verbose:   verbose,
+			Timeout:   timeout,
+		},
 	}
 
 	// Runs the tests
@@ -77,7 +72,7 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 		go func() {
 			err := func() error {
-				myFactory.namespace = utils.GenerateNamespaceName("test-examples-" + subTestName)
+				myFactory.Namespace = utils.GenerateNamespaceName("test-examples-" + subTestName)
 				err := availableSubTests[subTestName](myFactory, logger)
 				utils.PrintTestResult("examples", subTestName, err, logger)
 				if err != nil {
@@ -106,7 +101,7 @@ func RunTest(f *customFactory, deployConfig *cmd.DeployCmd) error {
 	if deployConfig == nil {
 		deployConfig = &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
-				Namespace: f.namespace,
+				Namespace: f.Namespace,
 				NoWarn:    true,
 			},
 			ForceBuild:  true,
@@ -121,7 +116,7 @@ func RunTest(f *customFactory, deployConfig *cmd.DeployCmd) error {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
-	f.client = client
+	f.Client = client
 
 	err = deployConfig.Run(f, nil, nil)
 	if err != nil {
@@ -129,7 +124,7 @@ func RunTest(f *customFactory, deployConfig *cmd.DeployCmd) error {
 	}
 
 	// Checking if pods are running correctly
-	err = utils.AnalyzePods(client, f.namespace, f.cacheLogger)
+	err = utils.AnalyzePods(client, f.Namespace, f.cacheLogger)
 	if err != nil {
 		return err
 	}
@@ -164,7 +159,7 @@ func beforeTest(f *customFactory, testDir string) error {
 		return err
 	}
 
-	f.dirPath = dirPath
+	f.DirPath = dirPath
 
 	// Copy the testdata into the temp dir
 	err = utils.Copy(testDir, dirPath)
@@ -182,6 +177,6 @@ func beforeTest(f *customFactory, testDir string) error {
 }
 
 func afterTest(f *customFactory) {
-	utils.DeleteTempAndResetWorkingDir(f.dirPath, f.pwd, f.cacheLogger)
-	utils.DeleteNamespace(f.client, f.namespace)
+	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.cacheLogger)
+	utils.DeleteNamespace(f.Client, f.Namespace)
 }

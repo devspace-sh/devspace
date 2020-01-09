@@ -13,12 +13,12 @@ import (
 // UseManifests runs init test with "use kubernetes manifests" option
 func UseManifests(f *customFactory, logger log.Logger) error {
 	buff := &bytes.Buffer{}
-	f.cacheLogger = NewCustomStreamLogger(buff, logrus.InfoLevel, f.verbose)
+	f.cacheLogger = NewCustomStreamLogger(buff, logrus.InfoLevel, f.Verbose)
 
 	var buffString string
 	buffString = buff.String()
 
-	if f.verbose {
+	if f.Verbose {
 		buffString = ""
 	}
 
@@ -39,7 +39,7 @@ func UseManifests(f *customFactory, logger log.Logger) error {
 			Version: latest.Version,
 			Deployments: []*latest.DeploymentConfig{
 				&latest.DeploymentConfig{
-					Name: f.dirName,
+					Name: f.DirName,
 					Kubectl: &latest.KubectlConfig{
 						Manifests: []string{
 							"kube/**",

@@ -27,17 +27,10 @@ type test struct {
 
 type customFactory struct {
 	*factory.DefaultFactoryImpl
-	ctrl build.Controller
-
-	verbose     bool
-	timeout     int
-	namespace   string
-	pwd         string
+	*utils.BaseCustomFactory
+	ctrl        build.Controller
 	builtImages map[string]string
-
-	client      kubectl.Client
 	cacheLogger log.Logger
-	dirPath     string
 }
 
 // GetLog implements interface
@@ -88,11 +81,13 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 		}
 	}
 
-	myFactory := &customFactory{
-		namespace: ns,
-		pwd:       pwd,
-		verbose:   verbose,
-		timeout:   timeout,
+	f := &customFactory{
+		BaseCustomFactory: &utils.BaseCustomFactory{
+			Namespace: ns,
+			Pwd:       pwd,
+			Verbose:   verbose,
+			Timeout:   timeout,
+		},
 	}
 
 	// Runs the tests
@@ -101,8 +96,8 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 		go func() {
 			err := func() error {
-				myFactory.namespace = utils.GenerateNamespaceName("test-deploy-" + subTestName)
-				err := availableSubTests[subTestName](myFactory, logger)
+				f.Namespace = utils.GenerateNamespaceName("test-deploy-" + subTestName)
+				err := availableSubTests[subTestName](f, logger)
 				utils.PrintTestResult("deploy", subTestName, err, logger)
 				if err != nil {
 					return err
@@ -139,7 +134,7 @@ func runTest(f *customFactory, t *test) error {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
-	f.client = client
+	f.Client = client
 
 	// 2. Deploy config
 	err = t.deployConfig.Run(f, nil, nil)
@@ -148,7 +143,7 @@ func runTest(f *customFactory, t *test) error {
 	}
 
 	// 3. Analyze pods
-	err = utils.AnalyzePods(client, f.namespace, f.cacheLogger)
+	err = utils.AnalyzePods(client, f.Namespace, f.cacheLogger)
 	if err != nil {
 		return err
 	}
@@ -167,7 +162,7 @@ func runTest(f *customFactory, t *test) error {
 func testPurge(f *customFactory) error {
 	purgeCmd := &cmd.PurgeCmd{
 		GlobalFlags: &flags.GlobalFlags{
-			Namespace: f.namespace,
+			Namespace: f.Namespace,
 			NoWarn:    true,
 		},
 	}
@@ -177,20 +172,20 @@ func testPurge(f *customFactory) error {
 		return err
 	}
 
-	client, err := f.NewKubeClientFromContext("", f.namespace, false)
+	client, err := f.NewKubeClientFromContext("", f.Namespace, false)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
 	for start := time.Now(); time.Since(start) < time.Second*30; {
-		p, _ := client.KubeClient().CoreV1().Pods(f.namespace).List(metav1.ListOptions{})
+		p, _ := client.KubeClient().CoreV1().Pods(f.Namespace).List(metav1.ListOptions{})
 
 		if len(p.Items) == 0 || len(p.Items) == 1 && p.Items[0].Status.ContainerStatuses[0].Name == "tiller" {
 			return nil
 		}
 	}
 
-	p, _ := client.KubeClient().CoreV1().Pods(f.namespace).List(metav1.ListOptions{})
+	p, _ := client.KubeClient().CoreV1().Pods(f.Namespace).List(metav1.ListOptions{})
 	return errors.Errorf("purge command failed, expected 1 (tiller) pod but found %v", len(p.Items))
 }
 
@@ -202,7 +197,7 @@ func beforeTest(f *customFactory, logger log.Logger, testDir string) error {
 		return err
 	}
 
-	f.dirPath = dirPath
+	f.DirPath = dirPath
 
 	// Copy the testdata into the temp dir
 	err = utils.Copy(testDir, dirPath)
@@ -220,6 +215,6 @@ func beforeTest(f *customFactory, logger log.Logger, testDir string) error {
 }
 
 func afterTest(f *customFactory) {
-	utils.DeleteTempAndResetWorkingDir(f.dirPath, f.pwd, f.cacheLogger)
-	utils.DeleteNamespace(f.client, f.namespace)
+	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.cacheLogger)
+	utils.DeleteNamespace(f.Client, f.Namespace)
 }

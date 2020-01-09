@@ -35,14 +35,8 @@ type initTestCase struct {
 
 type customFactory struct {
 	*factory.DefaultFactoryImpl
-	verbose     bool
-	timeout     int
-	namespace   string
-	pwd         string
+	*utils.BaseCustomFactory
 	cacheLogger *customLogger
-	dirPath     string
-	dirName     string
-	// client      kubectl.Client
 }
 
 type customLogger struct {
@@ -122,9 +116,11 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	}
 
 	f := &customFactory{
-		pwd:     pwd,
-		verbose: verbose,
-		timeout: timeout,
+		BaseCustomFactory: &utils.BaseCustomFactory{
+			Pwd:     pwd,
+			Verbose: verbose,
+			Timeout: timeout,
+		},
 	}
 
 	// Runs the tests
@@ -133,7 +129,7 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 		go func() {
 			err := func() error {
-				f.namespace = utils.GenerateNamespaceName("test-init-" + subTestName)
+				f.Namespace = utils.GenerateNamespaceName("test-init-" + subTestName)
 				err := availableSubTests[subTestName](f, logger)
 				utils.PrintTestResult("init", subTestName, err, logger)
 				if err != nil {
@@ -210,8 +206,8 @@ func beforeTest(f *customFactory, logger log.Logger, testDir string) error {
 		return err
 	}
 
-	f.dirPath = dirPath
-	f.dirName = dirName
+	f.DirPath = dirPath
+	f.DirName = dirName
 
 	// Copy the testdata into the temp dir
 	err = utils.Copy(testDir, dirPath)
@@ -229,5 +225,5 @@ func beforeTest(f *customFactory, logger log.Logger, testDir string) error {
 }
 
 func afterTest(f *customFactory) {
-	utils.DeleteTempAndResetWorkingDir(f.dirPath, f.pwd, f.cacheLogger)
+	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.cacheLogger)
 }
