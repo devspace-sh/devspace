@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-//these functions are detached from the DeployConfig so they can be faked by testers.
+// These functions are detached from the DeployConfig so they can be faked by testers.
 
 type commandExecuter interface {
 	RunCommand(path string, args []string) ([]byte, error)

@@ -119,13 +119,9 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 	// Check if its a local chart
 	_, err := os.Stat(chartValuesPath)
 	if err == nil {
-		// Get values yaml when chart is locally
-		_, err := os.Stat(chartValuesPath)
-		if err == nil {
-			err := yamlutil.ReadYamlFromFile(chartValuesPath, overwriteValues)
-			if err != nil {
-				return false, errors.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartValuesPath, err)
-			}
+		err := yamlutil.ReadYamlFromFile(chartValuesPath, overwriteValues)
+		if err != nil {
+			return false, errors.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartValuesPath, err)
 		}
 	}
 
