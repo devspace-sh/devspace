@@ -164,19 +164,3 @@ func main() {
 		}
 	}
 }
-
-// func runTestWithTimeoutA(testRun Test, parameterSubTests []string, testNamespace string, pwd string, logger log.Logger, verbose bool, timeout int) error {
-// 	c1 := make(chan error, 1)
-
-// 	go func() {
-// 		err := testRun.Run(parameterSubTests, testNamespace, pwd, logger, verbose, timeout)
-// 		c1 <- err
-// 	}()
-
-// 	select {
-// 	case res := <-c1:
-// 		return res
-// 	case <-time.After(time.Duration(timeout) * time.Second):
-// 		return errors.Errorf("Timeout error: the test did not return within the specified timeout of %v seconds", timeout)
-// 	}
-// }
