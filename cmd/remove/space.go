@@ -6,23 +6,23 @@ import (
 	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-type spaceCmd struct {
+type SpaceCmd struct {
 	SpaceID  string
 	Provider string
 	All      bool
 }
 
-func newSpaceCmd() *cobra.Command {
-	cmd := &spaceCmd{}
+func newSpaceCmd(f factory.Factory) *cobra.Command {
+	cmd := &SpaceCmd{}
 
-	spaceCmd := &cobra.Command{
+	SpaceCmd := &cobra.Command{
 		Use:   "space",
 		Short: "Removes a cloud space",
 		Long: `
@@ -38,20 +38,22 @@ devspace remove space --all
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: cmd.RunRemoveCloudDevSpace,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunRemoveCloudDevSpace(f, cobraCmd, args)
+		},
 	}
 
-	spaceCmd.Flags().StringVar(&cmd.SpaceID, "id", "", "SpaceID id to use")
-	spaceCmd.Flags().StringVar(&cmd.Provider, "provider", "", "Cloud Provider to use")
-	spaceCmd.Flags().BoolVar(&cmd.All, "all", false, "Delete all spaces")
+	SpaceCmd.Flags().StringVar(&cmd.SpaceID, "id", "", "SpaceID id to use")
+	SpaceCmd.Flags().StringVar(&cmd.Provider, "provider", "", "Cloud Provider to use")
+	SpaceCmd.Flags().BoolVar(&cmd.All, "all", false, "Delete all spaces")
 
-	return spaceCmd
+	return SpaceCmd
 }
 
 // RunRemoveCloudDevSpace executes the devspace remove cloud devspace functionality
-func (cmd *spaceCmd) RunRemoveCloudDevSpace(cobraCmd *cobra.Command, args []string) error {
+func (cmd *SpaceCmd) RunRemoveCloudDevSpace(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	log := log.GetInstance()
+	log := f.GetLog()
 	configLoader := loader.NewConfigLoader(nil, log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {

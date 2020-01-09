@@ -16,7 +16,7 @@ import (
 //2. purge (check if everything is deleted except namespace)
 
 // RunHelm runs the test for the kubectl test
-func RunHelm(f *customFactory, logger log.Logger) error {
+func RunHelmV2(f *customFactory, logger log.Logger) error {
 	buff := &bytes.Buffer{}
 	f.cacheLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
 
@@ -28,7 +28,7 @@ func RunHelm(f *customFactory, logger log.Logger) error {
 		buffString = ""
 	}
 
-	logger.Info("Run sub test 'helm' of test 'deploy'")
+	logger.Info("Run sub test 'helm-v2' of test 'deploy'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
@@ -42,7 +42,7 @@ func RunHelm(f *customFactory, logger log.Logger) error {
 
 	ts := testSuite{
 		test{
-			name: "1. deploy & helm (see quickstart) (v1beta5 no tiller)",
+			name: "1. deploy & helm v2 (see quickstart) (v1beta4)",
 			deployConfig: &cmd.DeployCmd{
 				GlobalFlags: &flags.GlobalFlags{
 					Namespace: f.namespace,
@@ -53,22 +53,22 @@ func RunHelm(f *customFactory, logger log.Logger) error {
 		},
 	}
 
-	err = beforeTest(f, logger, "tests/deploy/testdata/helm")
+	err = beforeTest(f, logger, "tests/deploy/testdata/helm_v2")
 	defer afterTest(f)
 	if err != nil {
-		return errors.Errorf("sub test 'helm' of 'deploy' test failed: %s %v", buffString, err)
+		return errors.Errorf("sub test 'helm-v2' of 'deploy' test failed: %s %v", buffString, err)
 	}
 
 	for _, t := range ts {
 		err := runTest(f, &t)
 		utils.PrintTestResult("helm", t.name, err, logger)
 		if err != nil {
-			return errors.Errorf("sub test 'helm' of 'deploy' test failed: %s %v", buffString, err)
+			return errors.Errorf("sub test 'helm-v2' of 'deploy' test failed: %s %v", buffString, err)
 		}
 	}
 
 	err = testPurge(f)
-	utils.PrintTestResult("helm", "purge", err, logger)
+	utils.PrintTestResult("helm-v2", "purge", err, logger)
 	if err != nil {
 		return err
 	}

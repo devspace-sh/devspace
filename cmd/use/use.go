@@ -1,11 +1,12 @@
 package use
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/spf13/cobra"
 )
 
 // NewUseCmd creates a new cobra command for the use sub command
-func NewUseCmd() *cobra.Command {
+func NewUseCmd(f factory.Factory) *cobra.Command {
 	useCmd := &cobra.Command{
 		Use:   "use",
 		Short: "Use specific config",
@@ -17,8 +18,8 @@ func NewUseCmd() *cobra.Command {
 		Args: cobra.NoArgs,
 	}
 
-	useCmd.AddCommand(newProfileCmd())
-	useCmd.AddCommand(newContextCmd())
+	useCmd.AddCommand(newProfileCmd(f))
+	useCmd.AddCommand(newContextCmd(f))
 	useCmd.AddCommand(newNamespaceCmd())
 	useCmd.AddCommand(newProviderCmd())
 	useCmd.AddCommand(newSpaceCmd())

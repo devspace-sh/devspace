@@ -3,6 +3,7 @@ package use
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -15,7 +16,7 @@ type ProfileCmd struct {
 	Reset bool
 }
 
-func newProfileCmd() *cobra.Command {
+func newProfileCmd(f factory.Factory) *cobra.Command {
 	cmd := &ProfileCmd{}
 
 	useProfile := &cobra.Command{
@@ -34,7 +35,9 @@ devspace use profile --reset
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: cmd.RunUseProfile,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunUseProfile(f, cobraCmd, args)
+		},
 	}
 
 	useProfile.Flags().BoolVar(&cmd.Reset, "reset", false, "Don't use a profile anymore")
@@ -43,10 +46,10 @@ devspace use profile --reset
 }
 
 // RunUseProfile executes the "devspace use config command" logic
-func (cmd *ProfileCmd) RunUseProfile(cobraCmd *cobra.Command, args []string) error {
+func (cmd *ProfileCmd) RunUseProfile(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	log := logpkg.GetInstance()
-	configLoader := loader.NewConfigLoader(nil, logpkg.Discard)
+	log := f.GetLog()
+	configLoader := f.NewConfigLoader(nil, logpkg.Discard)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err

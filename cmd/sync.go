@@ -2,14 +2,10 @@ package cmd
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -33,7 +29,7 @@ type SyncCmd struct {
 }
 
 // NewSyncCmd creates a new init command
-func NewSyncCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewSyncCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &SyncCmd{GlobalFlags: globalFlags}
 
 	syncCmd := &cobra.Command{
@@ -52,7 +48,9 @@ devspace sync --exclude=node_modules --exclude=test
 devspace sync --pod=my-pod --container=my-container
 devspace sync --container-path=/my-path
 #######################################################`,
-		RunE: cmd.Run,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.Run(f, cobraCmd, args)
+		},
 	}
 
 	syncCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
@@ -71,12 +69,12 @@ devspace sync --container-path=/my-path
 }
 
 // Run executes the command logic
-func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) error {
+func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Load generated config if possible
 	var err error
 	var generatedConfig *generated.Config
-
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	logger := f.GetLog()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
 	if configLoader.Exists() {
 		generatedConfig, err = configLoader.Generated()
 		if err != nil {
@@ -85,24 +83,24 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	err = cmd.UseLastContext(generatedConfig, logger)
 	if err != nil {
 		return err
 	}
 
 	// Get config with adjusted cluster config
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Wrap(err, "new kube client")
 	}
 
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, logger)
 	if err != nil {
 		return err
 	}
 
 	// Signal that we are working on the space if there is any
-	err = resume.NewSpaceResumer(client, log.GetInstance()).ResumeSpace(true)
+	err = f.NewSpaceResumer(client, logger).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
@@ -131,7 +129,7 @@ func (cmd *SyncCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Start terminal
-	servicesClient := services.NewClient(config, generatedConfig, client, selectorParameter, log.GetInstance())
+	servicesClient := f.NewServicesClient(config, generatedConfig, client, selectorParameter, logger)
 	err = servicesClient.StartSyncFromCmd(cmd.LocalPath, cmd.ContainerPath, cmd.Exclude, cmd.Verbose, cmd.DownloadOnInitialSync, cmd.NoWatch)
 	if err != nil {
 		return err
