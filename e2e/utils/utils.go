@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
 
@@ -66,15 +68,37 @@ func DeleteNamespace(client kubectl.Client, namespace string) {
 	if err != nil {
 		fmt.Println(err)
 	}
+}
 
-	// isExists := true
-	// for isExists {
-	// 	_, err = client.KubeClient().CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
-	// 	if err != nil {
-	// 		isExists = false
-	// 	}
-	// }
+func PurgeNamespacesByPrefixes(nsPrefixes []string) error {
+	type customFactory struct {
+		*factory.DefaultFactoryImpl
+		ctrl build.Controller
+	}
 
+	f := &customFactory{}
+
+	client, err := f.NewKubeDefaultClient()
+	if err != nil {
+		return errors.Errorf("Unable to create new kubectl client: %v", err)
+	}
+
+	nsList, err := client.KubeClient().CoreV1().Namespaces().List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, ns := range nsList.Items {
+		name := ns.ObjectMeta.Name
+		for _, p := range nsPrefixes {
+			if strings.HasPrefix(name, p) {
+				fmt.Println("Delete namespace:", name)
+				DeleteNamespace(client, name)
+			}
+		}
+	}
+
+	return nil
 }
 
 // AnalyzePods waits for the pods to be running (if possible) and healthcheck them

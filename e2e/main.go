@@ -58,6 +58,7 @@ func main() {
 	}
 
 	testCommand := flag.NewFlagSet("test", flag.ExitOnError)
+	purgeNamespacesCommand := flag.NewFlagSet("purge-namespaces", flag.ExitOnError)
 	listCommand := flag.NewFlagSet("list", flag.ExitOnError)
 
 	for t := range availableTests {
@@ -94,6 +95,8 @@ func main() {
 		listCommand.Parse(os.Args[2:])
 	case "test":
 		testCommand.Parse(os.Args[2:])
+	case "purge-namespaces":
+		purgeNamespacesCommand.Parse(os.Args[2:])
 	default:
 		flag.PrintDefaults()
 		os.Exit(1)
@@ -161,6 +164,19 @@ func main() {
 				logger.Error(err)
 				os.Exit(1)
 			}
+		}
+	}
+	if purgeNamespacesCommand.Parsed() {
+		var nsPrefixes []string
+
+		for t := range availableTests {
+			nsPrefixes = append(nsPrefixes, "test-"+t)
+		}
+
+		err := utils.PurgeNamespacesByPrefixes(nsPrefixes)
+		if err != nil {
+			logger.Error(err)
+			os.Exit(1)
 		}
 	}
 }
