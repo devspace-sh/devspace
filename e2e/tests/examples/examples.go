@@ -2,6 +2,7 @@ package examples
 
 import (
 	"path/filepath"
+	"time"
 
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -72,11 +73,29 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 	// Runs the tests
 	for _, subTestName := range subTests {
-		myFactory.namespace = utils.GenerateNamespaceName("test-examples-" + subTestName)
-		err := availableSubTests[subTestName](myFactory, logger)
-		utils.PrintTestResult("examples", subTestName, err, logger)
-		if err != nil {
-			return err
+		c1 := make(chan error, 1)
+
+		go func() {
+			err := func() error {
+				myFactory.namespace = utils.GenerateNamespaceName("test-examples-" + subTestName)
+				err := availableSubTests[subTestName](myFactory, logger)
+				utils.PrintTestResult("examples", subTestName, err, logger)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			}()
+			c1 <- err
+		}()
+
+		select {
+		case err := <-c1:
+			if err != nil {
+				return err
+			}
+		case <-time.After(time.Duration(timeout) * time.Second):
+			return errors.Errorf("Timeout error: the test did not return within the specified timeout of %v seconds", timeout)
 		}
 	}
 

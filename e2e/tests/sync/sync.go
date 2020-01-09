@@ -79,18 +79,36 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 	// Runs the tests
 	for _, subTestName := range subTests {
-		f.namespace = utils.GenerateNamespaceName("test-sync-" + subTestName)
+		c1 := make(chan error)
 
-		err := beforeTest(f)
-		defer afterTest(f)
-		if err != nil {
-			return errors.Errorf("test 'sync' failed: %s %v", buffString, err)
-		}
+		go func() {
+			err := func() error {
+				f.namespace = utils.GenerateNamespaceName("test-sync-" + subTestName)
 
-		err = availableSubTests[subTestName](f, logger)
-		utils.PrintTestResult("sync", subTestName, err, logger)
-		if err != nil {
-			return errors.Errorf("test 'sync' failed: %s %v", buffString, err)
+				err := beforeTest(f)
+				defer afterTest(f)
+				if err != nil {
+					return errors.Errorf("test 'sync' failed: %s %v", buffString, err)
+				}
+
+				err = availableSubTests[subTestName](f, logger)
+				utils.PrintTestResult("sync", subTestName, err, logger)
+				if err != nil {
+					return errors.Errorf("test 'sync' failed: %s %v", buffString, err)
+				}
+
+				return nil
+			}()
+			c1 <- err
+		}()
+
+		select {
+		case err := <-c1:
+			if err != nil {
+				return err
+			}
+		case <-time.After(time.Duration(timeout) * time.Second):
+			return errors.Errorf("Timeout error: the test did not return within the specified timeout of %v seconds", timeout)
 		}
 	}
 

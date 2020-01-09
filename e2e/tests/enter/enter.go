@@ -2,6 +2,7 @@ package enter
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -76,18 +77,36 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 	// Runs the tests
 	for _, subTestName := range subTests {
-		f.namespace = utils.GenerateNamespaceName("test-enter-" + subTestName)
+		c1 := make(chan error)
 
-		err := beforeTest(f)
-		defer afterTest(f)
-		if err != nil {
-			return errors.Errorf("test 'enter' failed: %s %v", buffString, err)
-		}
+		go func() {
+			err := func() error {
+				f.namespace = utils.GenerateNamespaceName("test-enter-" + subTestName)
 
-		err = availableSubTests[subTestName](f, logger)
-		utils.PrintTestResult("enter", subTestName, err, logger)
-		if err != nil {
-			return errors.Errorf("test 'enter' failed: %s %v", buffString, err)
+				err := beforeTest(f)
+				defer afterTest(f)
+				if err != nil {
+					return errors.Errorf("test 'enter' failed: %s %v", buffString, err)
+				}
+
+				err = availableSubTests[subTestName](f, logger)
+				utils.PrintTestResult("enter", subTestName, err, logger)
+				if err != nil {
+					return errors.Errorf("test 'enter' failed: %s %v", buffString, err)
+				}
+
+				return nil
+			}()
+			c1 <- err
+		}()
+
+		select {
+		case err := <-c1:
+			if err != nil {
+				return err
+			}
+		case <-time.After(time.Duration(timeout) * time.Second):
+			return errors.Errorf("Timeout error: the test did not return within the specified timeout of %v seconds", timeout)
 		}
 	}
 

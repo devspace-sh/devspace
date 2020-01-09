@@ -2,6 +2,7 @@ package space
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/devspace-cloud/devspace/e2e/utils"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -86,16 +87,34 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 	// Runs the tests
 	for _, subTestName := range subTests {
-		err := beforeTest(f)
-		defer afterTest(f)
-		if err != nil {
-			return errors.Errorf("test 'space' failed: %s %v", buffString, err)
-		}
+		c1 := make(chan error)
 
-		err = availableSubTests[subTestName](f, logger)
-		utils.PrintTestResult("space", subTestName, err, logger)
-		if err != nil {
-			return errors.Errorf("test 'space' failed: %s %v", buffString, err)
+		go func() {
+			err := func() error {
+				err := beforeTest(f)
+				defer afterTest(f)
+				if err != nil {
+					return errors.Errorf("test 'space' failed: %s %v", buffString, err)
+				}
+
+				err = availableSubTests[subTestName](f, logger)
+				utils.PrintTestResult("space", subTestName, err, logger)
+				if err != nil {
+					return errors.Errorf("test 'space' failed: %s %v", buffString, err)
+				}
+
+				return nil
+			}()
+			c1 <- err
+		}()
+
+		select {
+		case err := <-c1:
+			if err != nil {
+				return err
+			}
+		case <-time.After(time.Duration(timeout) * time.Second):
+			return errors.Errorf("Timeout error: the test did not return within the specified timeout of %v seconds", timeout)
 		}
 	}
 

@@ -2,7 +2,6 @@ package logs
 
 import (
 	"strings"
-	"time"
 
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -20,10 +19,10 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		GlobalFlags: &flags.GlobalFlags{
 			Namespace: f.namespace,
 		},
-		LastAmountOfLines: 20,
+		LastAmountOfLines: 1,
 	}
 
-	output := "test123"
+	output := "My Test String"
 
 	done := utils.Capture()
 
@@ -31,8 +30,6 @@ func runDefault(f *customFactory, logger log.Logger) error {
 	if err != nil {
 		return err
 	}
-
-	time.Sleep(time.Second * 10)
 
 	capturedOutput, err := done()
 	if err != nil {

@@ -2,6 +2,7 @@ package logs
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -77,18 +78,36 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 	// Runs the tests
 	for _, subTestName := range subTests {
-		f.namespace = utils.GenerateNamespaceName("test-logs-" + subTestName)
+		c1 := make(chan error, 1)
 
-		err := beforeTest(f)
-		defer afterTest(f)
-		if err != nil {
-			return errors.Errorf("test 'logs' failed: %s %v", buffString, err)
-		}
+		go func() {
+			err := func() error {
+				f.namespace = utils.GenerateNamespaceName("test-logs-" + subTestName)
 
-		err = availableSubTests[subTestName](f, logger)
-		utils.PrintTestResult("logs", subTestName, err, logger)
-		if err != nil {
-			return errors.Errorf("test 'logs' failed: %s %v", buffString, err)
+				err := beforeTest(f)
+				defer afterTest(f)
+				if err != nil {
+					return errors.Errorf("test 'logs' failed: %s %v", buffString, err)
+				}
+
+				err = availableSubTests[subTestName](f, logger)
+				utils.PrintTestResult("logs", subTestName, err, logger)
+				if err != nil {
+					return errors.Errorf("test 'logs' failed: %s %v", buffString, err)
+				}
+
+				return nil
+			}()
+			c1 <- err
+		}()
+
+		select {
+		case err := <-c1:
+			if err != nil {
+				return err
+			}
+		case <-time.After(time.Duration(timeout) * time.Second):
+			return errors.Errorf("Timeout error: the test did not return within the specified timeout of %v seconds", timeout)
 		}
 	}
 
@@ -133,6 +152,8 @@ func beforeTest(f *customFactory) error {
 	if err != nil {
 		return err
 	}
+
+	// time.Sleep(time.Second * 5)
 
 	// Checking if pods are running correctly
 	err = utils.AnalyzePods(client, f.namespace, f.cacheLogger)
