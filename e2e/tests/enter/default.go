@@ -1,7 +1,6 @@
 package enter
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -18,8 +17,10 @@ import (
 //3. enter --label-selector
 //4. enter --pick
 
-func runDefault(f *customFactory) error {
-	log.GetInstance().Info("Run test 'default' of 'enter'")
+func runDefault(f *customFactory, logger log.Logger) error {
+	logger.Info("Run sub test 'default' of test 'enter'")
+	logger.StartWait("Run test...")
+	defer logger.StopWait()
 
 	client, err := f.NewKubeClientFromContext("", f.namespace, false)
 	if err != nil {
@@ -28,7 +29,7 @@ func runDefault(f *customFactory) error {
 
 	pods, err := client.KubeClient().CoreV1().Pods(f.namespace).List(metav1.ListOptions{})
 	if err != nil {
-		return err
+		return errors.Errorf("Unable to list the pods: %v", err)
 	}
 
 	podName := pods.Items[0].Name
@@ -87,10 +88,9 @@ func runDefault(f *customFactory) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(capturedOutput)
 
 		if !strings.HasPrefix(capturedOutput, output) {
-			return errors.New("capturedOutput is different than output for the enter cmd")
+			return errors.Errorf("capturedOutput is different than output for the enter cmd")
 		}
 	}
 

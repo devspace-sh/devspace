@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type spacesCmd struct {
+type SpacesCmd struct {
 	Name     string
 	Provider string
 	All      bool
@@ -16,9 +16,9 @@ type spacesCmd struct {
 }
 
 func newSpacesCmd() *cobra.Command {
-	cmd := &spacesCmd{}
+	cmd := &SpacesCmd{}
 
-	spacesCmd := &cobra.Command{
+	SpacesCmd := &cobra.Command{
 		Use:   "spaces",
 		Short: "Lists all user spaces",
 		Long: `
@@ -37,16 +37,16 @@ devspace list spaces --all
 		RunE: cmd.RunListSpaces,
 	}
 
-	spacesCmd.Flags().StringVar(&cmd.Name, "name", "", "Space name to show (default: all)")
-	spacesCmd.Flags().StringVar(&cmd.Provider, "provider", "", "Cloud Provider to use")
-	spacesCmd.Flags().StringVar(&cmd.Cluster, "cluster", "", "List all spaces in a certain cluster")
-	spacesCmd.Flags().BoolVar(&cmd.All, "all", false, "List all spaces the user has access to in all clusters (not only created by the user)")
+	SpacesCmd.Flags().StringVar(&cmd.Name, "name", "", "Space name to show (default: all)")
+	SpacesCmd.Flags().StringVar(&cmd.Provider, "provider", "", "Cloud Provider to use")
+	SpacesCmd.Flags().StringVar(&cmd.Cluster, "cluster", "", "List all spaces in a certain cluster")
+	SpacesCmd.Flags().BoolVar(&cmd.All, "all", false, "List all spaces the user has access to in all clusters (not only created by the user)")
 
-	return spacesCmd
+	return SpacesCmd
 }
 
 // RunListCloudDevspaces executes the "devspace list spaces" functionality
-func (cmd *spacesCmd) RunListSpaces(cobraCmd *cobra.Command, args []string) error {
+func (cmd *SpacesCmd) RunListSpaces(cobraCmd *cobra.Command, args []string) error {
 	// Get provider
 	provider, err := cloudpkg.GetProvider(cmd.Provider, log.GetInstance())
 	if err != nil {

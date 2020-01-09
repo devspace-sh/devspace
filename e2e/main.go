@@ -3,15 +3,18 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/devspace-cloud/devspace/e2e/tests/deploy"
 	"github.com/devspace-cloud/devspace/e2e/tests/enter"
 	"github.com/devspace-cloud/devspace/e2e/tests/examples"
-	initTest "github.com/devspace-cloud/devspace/e2e/tests/init"
+	"github.com/devspace-cloud/devspace/e2e/tests/initcmd"
 	"github.com/devspace-cloud/devspace/e2e/tests/logs"
+	"github.com/devspace-cloud/devspace/e2e/tests/space"
 	"github.com/devspace-cloud/devspace/e2e/tests/sync"
 	"github.com/devspace-cloud/devspace/e2e/utils"
-	"os"
-	"strings"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
 var testNamespace = "testing-test-namespace"
@@ -30,23 +33,24 @@ func (s *stringList) Set(value string) error {
 }
 
 type Test interface {
-	Run(subTests []string, ns string, pwd string) error
+	Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error
 	SubTests() []string
 }
 
 var availableTests = map[string]Test{
 	"examples": examples.RunNew,
 	"deploy":   deploy.RunNew,
-	"init":     initTest.RunNew,
+	"init":     initcmd.RunNew,
 	"enter":    enter.RunNew,
 	"sync":     sync.RunNew,
 	"logs":     logs.RunNew,
-	//"create_delete_space":     create_delete_space.RunNew,
+	"space":    space.RunNew,
 }
 
 var subTests = map[string]*stringList{}
 
 func main() {
+	logger := log.GetInstance()
 	pwd, err := os.Getwd()
 	if err != nil {
 		fmt.Println(err)
@@ -54,6 +58,7 @@ func main() {
 	}
 
 	testCommand := flag.NewFlagSet("test", flag.ExitOnError)
+	purgeNamespacesCommand := flag.NewFlagSet("purge-namespaces", flag.ExitOnError)
 	listCommand := flag.NewFlagSet("list", flag.ExitOnError)
 
 	for t := range availableTests {
@@ -63,6 +68,12 @@ func main() {
 
 	var test stringList
 	testCommand.Var(&test, "test", "A comma seperated list of group tests to pass")
+
+	var verbose bool
+	testCommand.BoolVar(&verbose, "verbose", false, "Displays the tests outputs in real time (default: false)")
+
+	var timeout int
+	testCommand.IntVar(&timeout, "timeout", 200, "Sets a timeout limit in seconds for each test (default: 200)")
 
 	var testlist stringList
 	listCommand.Var(&testlist, "test", "A comma seperated list of group tests to list (leave empty to list all group tests)")
@@ -84,6 +95,8 @@ func main() {
 		listCommand.Parse(os.Args[2:])
 	case "test":
 		testCommand.Parse(os.Args[2:])
+	case "purge-namespaces":
+		purgeNamespacesCommand.Parse(os.Args[2:])
 	default:
 		flag.PrintDefaults()
 		os.Exit(1)
@@ -146,11 +159,24 @@ func main() {
 			}
 
 			// We run the actual group tests by passing the sub tests
-			err := testRun.Run(parameterSubTests, testNamespace, pwd)
+			err := testRun.Run(parameterSubTests, testNamespace, pwd, logger, verbose, timeout)
 			if err != nil {
-				fmt.Println(err)
+				logger.Error(err)
 				os.Exit(1)
 			}
+		}
+	}
+	if purgeNamespacesCommand.Parsed() {
+		var nsPrefixes []string
+
+		for t := range availableTests {
+			nsPrefixes = append(nsPrefixes, "test-"+t)
+		}
+
+		err := utils.PurgeNamespacesByPrefixes(nsPrefixes)
+		if err != nil {
+			logger.Error(err)
+			os.Exit(1)
 		}
 	}
 }

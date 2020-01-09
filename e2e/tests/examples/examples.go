@@ -1,13 +1,15 @@
 package examples
 
 import (
-	"fmt"
+	"path/filepath"
+	"time"
+
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	fakelog "github.com/devspace-cloud/devspace/pkg/util/log/testing"
 	"github.com/pkg/errors"
 )
 
@@ -15,16 +17,20 @@ type customFactory struct {
 	*factory.DefaultFactoryImpl
 	namespace string
 	pwd       string
+	verbose   bool
+	timeout   int
 
-	FakeLogger *fakelog.FakeLogger
+	cacheLogger log.Logger
+	dirPath     string
+	client      kubectl.Client
 }
 
 // GetLog implements interface
 func (c *customFactory) GetLog() log.Logger {
-	return c.FakeLogger
+	return c.cacheLogger
 }
 
-var availableSubTests = map[string]func(factory *customFactory) error{
+var availableSubTests = map[string]func(factory *customFactory, logger log.Logger) error{
 	"quickstart":         RunQuickstart,
 	"kustomize":          RunKustomize,
 	"profiles":           RunProfiles,
@@ -48,7 +54,9 @@ func (r *Runner) SubTests() []string {
 	return subTests
 }
 
-func (r *Runner) Run(subTests []string, ns string, pwd string) error {
+func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error {
+	logger.Info("Run 'examples' test")
+
 	// Populates the tests to run with all the available sub tests if no sub tests in specified
 	if len(subTests) == 0 {
 		for subTestName := range availableSubTests {
@@ -59,22 +67,42 @@ func (r *Runner) Run(subTests []string, ns string, pwd string) error {
 	myFactory := &customFactory{
 		namespace: ns,
 		pwd:       pwd,
+		verbose:   verbose,
+		timeout:   timeout,
 	}
-	myFactory.FakeLogger = fakelog.NewFakeLogger()
 
 	// Runs the tests
 	for _, subTestName := range subTests {
-		err := availableSubTests[subTestName](myFactory)
-		utils.PrintTestResult("examples", subTestName, err)
-		if err != nil {
-			return err
+		c1 := make(chan error, 1)
+
+		go func() {
+			err := func() error {
+				myFactory.namespace = utils.GenerateNamespaceName("test-examples-" + subTestName)
+				err := availableSubTests[subTestName](myFactory, logger)
+				utils.PrintTestResult("examples", subTestName, err, logger)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			}()
+			c1 <- err
+		}()
+
+		select {
+		case err := <-c1:
+			if err != nil {
+				return err
+			}
+		case <-time.After(time.Duration(timeout) * time.Second):
+			return errors.Errorf("Timeout error: the test did not return within the specified timeout of %v seconds", timeout)
 		}
 	}
 
 	return nil
 }
 
-func RunTest(f *customFactory, dir string, deployConfig *cmd.DeployCmd) error {
+func RunTest(f *customFactory, deployConfig *cmd.DeployCmd) error {
 	if deployConfig == nil {
 		deployConfig = &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
@@ -87,35 +115,24 @@ func RunTest(f *customFactory, dir string, deployConfig *cmd.DeployCmd) error {
 		}
 	}
 
-	err := utils.ChangeWorkingDir(f.pwd + "/../examples/" + dir)
-	if err != nil {
-		return err
-	}
-	fmt.Println("A")
 	// Create kubectl client
 	client, err := f.NewKubeClientFromContext(deployConfig.KubeContext, deployConfig.Namespace, deployConfig.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
-	fmt.Println("B")
 
-	// At last, we delete the current namespace
-	defer utils.DeleteNamespaceAndWait(client, deployConfig.Namespace)
+	f.client = client
 
 	err = deployConfig.Run(f, nil, nil)
-	fmt.Printf("After deployConfig.Run: %v\n", err)
 	if err != nil {
 		return err
 	}
 
 	// Checking if pods are running correctly
-	err = utils.AnalyzePods(client, f.namespace)
+	err = utils.AnalyzePods(client, f.namespace, f.cacheLogger)
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("D")
-
 
 	// Load generated config
 	generatedConfig, err := f.NewConfigLoader(nil, nil).Generated()
@@ -125,16 +142,46 @@ func RunTest(f *customFactory, dir string, deployConfig *cmd.DeployCmd) error {
 
 	// Add current kube context to context
 	configOptions := deployConfig.ToConfigOptions()
-	config, err := f.NewConfigLoader(configOptions, f.GetLog()).Load()
+	config, err := f.NewConfigLoader(configOptions, f.cacheLogger).Load()
 	if err != nil {
 		return err
 	}
 
 	// Port-forwarding
-	err = utils.PortForwardAndPing(config, generatedConfig, client)
+	err = utils.PortForwardAndPing(config, generatedConfig, client, f.cacheLogger)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func beforeTest(f *customFactory, testDir string) error {
+	testDir = filepath.FromSlash(testDir)
+
+	dirPath, _, err := utils.CreateTempDir()
+	if err != nil {
+		return err
+	}
+
+	f.dirPath = dirPath
+
+	// Copy the testdata into the temp dir
+	err = utils.Copy(testDir, dirPath)
+	if err != nil {
+		return err
+	}
+
+	// Change working directory
+	err = utils.ChangeWorkingDir(dirPath, f.cacheLogger)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func afterTest(f *customFactory) {
+	utils.DeleteTempAndResetWorkingDir(f.dirPath, f.pwd, f.cacheLogger)
+	utils.DeleteNamespace(f.client, f.namespace)
 }

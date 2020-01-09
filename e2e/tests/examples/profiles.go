@@ -1,18 +1,35 @@
 package examples
 
 import (
+	"bytes"
+
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/cmd/use"
 	"github.com/devspace-cloud/devspace/e2e/utils"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // RunProfiles runs the test for the kustomize example
-func RunProfiles(f *customFactory) error {
-	f.GetLog().Info("Run Profiles")
+func RunProfiles(f *customFactory, logger log.Logger) error {
+	buff := &bytes.Buffer{}
+	f.cacheLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
+
+	var buffString string
+	buffString = buff.String()
+
+	if f.verbose {
+		f.cacheLogger = logger
+		buffString = ""
+	}
+
+	logger.Info("Run sub test 'profiles' of test 'examples'")
+	logger.StartWait("Run test...")
+	defer logger.StopWait()
 
 	var deployConfig = &cmd.DeployCmd{
 		GlobalFlags: &flags.GlobalFlags{
@@ -24,9 +41,10 @@ func RunProfiles(f *customFactory) error {
 		SkipPush:    true,
 	}
 
-	err := utils.ChangeWorkingDir(f.pwd + "/../examples/profiles")
+	err := beforeTest(f, "../examples/profiles")
+	defer afterTest(f)
 	if err != nil {
-		return err
+		return errors.Errorf("sub test 'profiles' of 'examples' test failed: %s %v", buffString, err)
 	}
 
 	// Create kubectl client
@@ -34,9 +52,6 @@ func RunProfiles(f *customFactory) error {
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
-
-	// At last, we delete the current namespace
-	defer utils.DeleteNamespaceAndWait(client, deployConfig.Namespace)
 
 	err = runProfile(f, deployConfig, "dev-service2-only", client, f.namespace, []string{"service-2"}, false)
 	if err != nil {
@@ -57,18 +72,18 @@ func runProfile(f *customFactory, deployConfig *cmd.DeployCmd, profile string, c
 	}
 
 	if profile == "" {
-		err := profileConfig.RunUseProfile(nil, nil)
+		err := profileConfig.RunUseProfile(f, nil, nil)
 		if err != nil {
 			return err
 		}
 	} else {
-		err := profileConfig.RunUseProfile(nil, []string{profile})
+		err := profileConfig.RunUseProfile(f, nil, []string{profile})
 		if err != nil {
 			return err
 		}
 	}
 
-	err := profileConfig.RunUseProfile(nil, []string{profile})
+	err := profileConfig.RunUseProfile(f, nil, []string{profile})
 	if err != nil {
 		return err
 	}
@@ -79,7 +94,7 @@ func runProfile(f *customFactory, deployConfig *cmd.DeployCmd, profile string, c
 	}
 
 	// Checking if pods are running correctly
-	err = utils.AnalyzePods(client, f.namespace)
+	err = utils.AnalyzePods(client, f.namespace, f.cacheLogger)
 	if err != nil {
 		return err
 	}
@@ -116,7 +131,7 @@ func runProfile(f *customFactory, deployConfig *cmd.DeployCmd, profile string, c
 	}
 
 	// Port-forwarding
-	err = utils.PortForwardAndPing(config, generatedConfig, client)
+	err = utils.PortForwardAndPing(config, generatedConfig, client, f.cacheLogger)
 	if err != nil {
 		return err
 	}

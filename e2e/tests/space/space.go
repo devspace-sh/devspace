@@ -1,11 +1,9 @@
-package sync
+package space
 
 import (
 	"bytes"
 	"time"
 
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
@@ -16,13 +14,13 @@ import (
 
 type customFactory struct {
 	*factory.DefaultFactoryImpl
-	verbose     bool
-	timeout     int
-	namespace   string
-	pwd         string
-	cacheLogger log.Logger
-	dirPath     string
-	client      kubectl.Client
+	verbose         bool
+	timeout         int
+	previousContext string
+	pwd             string
+	cacheLogger     log.Logger
+	dirPath         string
+	client          kubectl.Client
 }
 
 // GetLog implements interface
@@ -60,7 +58,9 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 		buffString = ""
 	}
 
-	logger.Info("Run 'sync' test")
+	logger.Info("Run test 'space'")
+	logger.StartWait("Run test...")
+	defer logger.StopWait()
 
 	// Populates the tests to run with all the available sub tests if no sub tests are specified
 	if len(subTests) == 0 {
@@ -70,12 +70,20 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	}
 
 	f := &customFactory{
-		namespace:   ns,
 		pwd:         pwd,
 		cacheLogger: cacheLogger,
 		verbose:     verbose,
 		timeout:     timeout,
 	}
+
+	client, err := f.NewKubeDefaultClient()
+	if err != nil {
+		return errors.Errorf("Unable to create new kubectl client: %v", err)
+	}
+
+	f.client = client
+
+	f.previousContext = client.CurrentContext()
 
 	// Runs the tests
 	for _, subTestName := range subTests {
@@ -83,18 +91,16 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 		go func() {
 			err := func() error {
-				f.namespace = utils.GenerateNamespaceName("test-sync-" + subTestName)
-
 				err := beforeTest(f)
 				defer afterTest(f)
 				if err != nil {
-					return errors.Errorf("test 'sync' failed: %s %v", buffString, err)
+					return errors.Errorf("test 'space' failed: %s %v", buffString, err)
 				}
 
 				err = availableSubTests[subTestName](f, logger)
-				utils.PrintTestResult("sync", subTestName, err, logger)
+				utils.PrintTestResult("space", subTestName, err, logger)
 				if err != nil {
-					return errors.Errorf("test 'sync' failed: %s %v", buffString, err)
+					return errors.Errorf("test 'space' failed: %s %v", buffString, err)
 				}
 
 				return nil
@@ -116,50 +122,17 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 }
 
 func beforeTest(f *customFactory) error {
-	deployConfig := &cmd.DeployCmd{
-		GlobalFlags: &flags.GlobalFlags{
-			Namespace: f.namespace,
-			NoWarn:    true,
-		},
-		ForceBuild:  true,
-		ForceDeploy: true,
-		SkipPush:    true,
-	}
-
 	dirPath, _, err := utils.CreateTempDir()
 	if err != nil {
 		return err
 	}
 
-	f.dirPath = dirPath
-
-	err = utils.Copy(f.pwd+"/tests/sync/testdata", dirPath)
+	err = utils.Copy(f.pwd+"/tests/space/testdata", dirPath)
 	if err != nil {
 		return err
 	}
 
-	err = utils.ChangeWorkingDir(dirPath+"/quickstart", f.cacheLogger)
-	if err != nil {
-		return err
-	}
-
-	// Create kubectl client
-	client, err := f.NewKubeClientFromContext(deployConfig.KubeContext, deployConfig.Namespace, deployConfig.SwitchContext)
-	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
-	}
-
-	f.client = client
-
-	err = deployConfig.Run(f, nil, nil)
-	if err != nil {
-		return err
-	}
-
-	time.Sleep(time.Second * 5)
-
-	// Checking if pods are running correctly
-	err = utils.AnalyzePods(client, f.namespace, f.cacheLogger)
+	err = utils.ChangeWorkingDir(dirPath, f.cacheLogger)
 	if err != nil {
 		return err
 	}
@@ -169,5 +142,4 @@ func beforeTest(f *customFactory) error {
 
 func afterTest(f *customFactory) {
 	utils.DeleteTempAndResetWorkingDir(f.dirPath, f.pwd, f.cacheLogger)
-	utils.DeleteNamespace(f.client, f.namespace)
 }

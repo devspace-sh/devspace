@@ -2,11 +2,12 @@ package remove
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/spf13/cobra"
 )
 
 // NewRemoveCmd creates a new cobra command
-func NewRemoveCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewRemoveCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	removeCmd := &cobra.Command{
 		Use:   "remove",
 		Short: "Changes devspace configuration",
@@ -24,7 +25,7 @@ func NewRemoveCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	removeCmd.AddCommand(newImageCmd(globalFlags))
 	removeCmd.AddCommand(newPortCmd(globalFlags))
 	removeCmd.AddCommand(newProviderCmd())
-	removeCmd.AddCommand(newSpaceCmd())
+	removeCmd.AddCommand(newSpaceCmd(f))
 	removeCmd.AddCommand(newSyncCmd(globalFlags))
 
 	return removeCmd

@@ -1,12 +1,14 @@
 package deploy
 
 import (
+	"bytes"
+
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"path/filepath"
+	"github.com/sirupsen/logrus"
 )
 
 //Test 1 - default
@@ -17,8 +19,29 @@ import (
 //5. deploy --force-deploy --deployments=default,test2 & check NO build & only deployments deployed
 
 // RunDefault runs the test for the default deploy test
-func RunDefault(f *customFactory) error {
-	log.GetInstance().Info("Run Default")
+func RunDefault(f *customFactory, logger log.Logger) error {
+	buff := &bytes.Buffer{}
+	f.cacheLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
+
+	var buffString string
+	buffString = buff.String()
+
+	if f.verbose {
+		f.cacheLogger = logger
+		buffString = ""
+	}
+
+	logger.Info("Run sub test 'default' of test 'deploy'")
+	logger.StartWait("Run test...")
+	defer logger.StopWait()
+
+	client, err := f.NewKubeClientFromContext("", f.namespace, false)
+	if err != nil {
+		return errors.Errorf("Unable to create new kubectl client: %v", err)
+	}
+
+	// The client is saved in the factory ONCE for each sub test
+	f.client = client
 
 	ts := testSuite{
 		test{
@@ -73,12 +96,7 @@ func RunDefault(f *customFactory) error {
 					return errors.Errorf("built images expected: %v, found: %v", imagesExpected, imagesCount)
 				}
 
-				client, err := f.NewKubeClientFromContext(t.deployConfig.KubeContext, t.deployConfig.Namespace, t.deployConfig.SwitchContext)
-				if err != nil {
-					return errors.Errorf("Unable to create new kubectl client: %v", err)
-				}
-
-				wasDeployed, err := utils.LookForDeployment(client, f.namespace, "sh.helm.release.v1.root-app.v2")
+				wasDeployed, err := utils.LookForDeployment(f.client, f.namespace, "sh.helm.release.v1.root-app.v2")
 				if err != nil {
 					return err
 				}
@@ -108,12 +126,8 @@ func RunDefault(f *customFactory) error {
 				}
 
 				deployedDependencies := []string{"sh.helm.release.v1.dependency1.v2", "sh.helm.release.v1.dependency2.v2"}
-				client, err := f.NewKubeClientFromContext(t.deployConfig.KubeContext, t.deployConfig.Namespace, t.deployConfig.SwitchContext)
-				if err != nil {
-					return errors.Errorf("Unable to create new kubectl client: %v", err)
-				}
 
-				wasDeployed, err := utils.LookForDeployment(client, f.namespace, deployedDependencies...)
+				wasDeployed, err := utils.LookForDeployment(f.client, f.namespace, deployedDependencies...)
 				if err != nil {
 					return err
 				}
@@ -142,15 +156,10 @@ func RunDefault(f *customFactory) error {
 					return errors.Errorf("built images expected: %v, found: %v", imagesExpected, imagesCount)
 				}
 
-				client, err := f.NewKubeClientFromContext(t.deployConfig.KubeContext, t.deployConfig.Namespace, t.deployConfig.SwitchContext)
-				if err != nil {
-					return errors.Errorf("Unable to create new kubectl client: %v", err)
-				}
-
 				shouldBeDeployed := "sh.helm.release.v1.root-app.v4"
 				shouldNotBeDeployed := "sh.helm.release.v1.php-app.v5"
 
-				wasDeployed, err := utils.LookForDeployment(client, f.namespace, shouldBeDeployed)
+				wasDeployed, err := utils.LookForDeployment(f.client, f.namespace, shouldBeDeployed)
 				if err != nil {
 					return err
 				}
@@ -158,7 +167,7 @@ func RunDefault(f *customFactory) error {
 					return errors.Errorf("expected deployment '%v' was not found", shouldBeDeployed)
 				}
 
-				wasDeployed, err = utils.LookForDeployment(client, f.namespace, shouldNotBeDeployed)
+				wasDeployed, err = utils.LookForDeployment(f.client, f.namespace, shouldNotBeDeployed)
 				if err != nil {
 					return err
 				}
@@ -171,40 +180,17 @@ func RunDefault(f *customFactory) error {
 		},
 	}
 
-	client, err := f.NewKubeClientFromContext("", f.namespace, false)
+	err = beforeTest(f, logger, "tests/deploy/testdata/default")
+	defer afterTest(f)
 	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
-	}
-
-	// At last, we delete the current namespace
-	defer utils.DeleteNamespaceAndWait(client, f.namespace)
-
-	testDir := filepath.FromSlash("tests/deploy/testdata/default")
-
-	dirPath, _, err := utils.CreateTempDir()
-	if err != nil {
-		return err
-	}
-
-	defer utils.DeleteTempAndResetWorkingDir(dirPath, f.pwd)
-
-	// Copy the testdata into the temp dir
-	err = utils.Copy(testDir, dirPath)
-	if err != nil {
-		return err
-	}
-
-	// Change working directory
-	err = utils.ChangeWorkingDir(dirPath)
-	if err != nil {
-		return err
+		return errors.Errorf("sub test 'default' of 'deploy' test failed: %s %v", buffString, err)
 	}
 
 	for _, t := range ts {
 		err := runTest(f, &t)
-		utils.PrintTestResult("default", t.name, err)
+		utils.PrintTestResult("default", t.name, err, logger)
 		if err != nil {
-			return err
+			return errors.Errorf("sub test 'default' of 'deploy' test failed: %s %v", buffString, err)
 		}
 	}
 
@@ -212,11 +198,6 @@ func RunDefault(f *customFactory) error {
 }
 
 func checkPortForwarding(f *customFactory, deployConfig *cmd.DeployCmd) error {
-	client, err := f.NewKubeClientFromContext(deployConfig.KubeContext, deployConfig.Namespace, deployConfig.SwitchContext)
-	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
-	}
-
 	// Load generated config
 	generatedConfig, err := f.NewConfigLoader(nil, nil).Generated()
 	if err != nil {
@@ -231,7 +212,7 @@ func checkPortForwarding(f *customFactory, deployConfig *cmd.DeployCmd) error {
 	}
 
 	// Port-forwarding
-	err = utils.PortForwardAndPing(config, generatedConfig, client)
+	err = utils.PortForwardAndPing(config, generatedConfig, f.client, f.cacheLogger)
 	if err != nil {
 		return err
 	}

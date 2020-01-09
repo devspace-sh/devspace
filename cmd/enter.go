@@ -6,7 +6,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
@@ -62,7 +61,8 @@ devspace enter bash -l release=test
 // Run executes the command logic
 func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	logger := f.GetLog()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -78,7 +78,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	err = cmd.UseLastContext(generatedConfig, logger)
 	if err != nil {
 		return err
 	}
@@ -89,13 +89,13 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 		return errors.Wrap(err, "new kube client")
 	}
 
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log.GetInstance())
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, logger)
 	if err != nil {
 		return err
 	}
 
 	// Signal that we are working on the space if there is any
-	err = f.NewSpaceResumer(client, log.GetInstance()).ResumeSpace(true)
+	err = f.NewSpaceResumer(client, logger).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	}
 
 	// Start terminal
-	exitCode, err := f.NewServicesClient(nil, generatedConfig, client, selectorParameter, log.GetInstance()).StartTerminal(args, nil, make(chan error), cmd.Wait)
+	exitCode, err := f.NewServicesClient(nil, generatedConfig, client, selectorParameter, logger).StartTerminal(args, nil, make(chan error), cmd.Wait)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {

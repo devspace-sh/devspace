@@ -3,8 +3,8 @@ package use
 import (
 	"sort"
 
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/mgutz/ansi"
@@ -12,10 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type contextCmd struct{}
+type ContextCmd struct{}
 
-func newContextCmd() *cobra.Command {
-	cmd := &contextCmd{}
+func newContextCmd(f factory.Factory) *cobra.Command {
+	cmd := &ContextCmd{}
 
 	useContext := &cobra.Command{
 		Use:   "context",
@@ -31,16 +31,18 @@ devspace use context my-context
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: cmd.RunUseContext,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunUseContext(f, cobraCmd, args)
+		},
 	}
 
 	return useContext
 }
 
 // RunUseContext executes the functionality "devspace use namespace"
-func (cmd *contextCmd) RunUseContext(cobraCmd *cobra.Command, args []string) error {
+func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Load kube-config
-	log := log.GetInstance()
+	log := f.GetLog()
 	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
 		return errors.Wrap(err, "load kube config")

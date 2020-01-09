@@ -2,10 +2,14 @@ package utils
 
 import (
 	"fmt"
+	"math/rand"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
 
@@ -19,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	latestSpace "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
@@ -28,14 +33,12 @@ import (
 )
 
 // ChangeWorkingDir changes the working directory
-func ChangeWorkingDir(pwd string) error {
-	log := logger.GetInstance()
-
+func ChangeWorkingDir(pwd string, cachedLogger logger.Logger) error {
 	wd, err := filepath.Abs(pwd)
 	if err != nil {
 		return err
 	}
-	fmt.Println("WD:", wd)
+	// fmt.Println("WD:", wd)
 	// Change working directory
 	err = os.Chdir(wd)
 	if err != nil {
@@ -43,46 +46,65 @@ func ChangeWorkingDir(pwd string) error {
 	}
 
 	// Notify user that we are not using the current working directory
-	log.Infof("Using devspace config in %s", filepath.ToSlash(wd))
+	cachedLogger.Infof("Using devspace config in %s", filepath.ToSlash(wd))
 
 	return nil
 }
 
 // PrintTestResult prints a test result with a specific formatting
-func PrintTestResult(testName string, subTestName string, err error) {
+func PrintTestResult(testName string, subTestName string, err error, log logger.Logger) {
 	if err == nil {
 		successIcon := html.UnescapeString("&#" + strconv.Itoa(128513) + ";")
-		fmt.Printf("%v  Test '%v' of group test '%v' successfully passed!\n", successIcon, subTestName, testName)
+		log.Donef("%v  Test '%v' of group test '%v' successfully passed!\n", successIcon, subTestName, testName)
 	} else {
 		failureIcon := html.UnescapeString("&#" + strconv.Itoa(128545) + ";")
-		fmt.Printf("%v  Test '%v' of group test '%v' failed!\n", failureIcon, subTestName, testName)
+		log.Warnf("%v  Test '%v' of group test '%v' failed!\n", failureIcon, subTestName, testName)
 	}
 }
 
-// DeleteNamespaceAndWait deletes a given namespace and waits for the process to finish
-func DeleteNamespaceAndWait(client kubectl.Client, namespace string) {
-	log := logger.GetInstance()
-
-	log.StartWait("Deleting namespace '" + namespace + "'")
+// DeleteNamespace deletes a given namespace and waits for the process to finish
+func DeleteNamespace(client kubectl.Client, namespace string) {
 	err := client.KubeClient().CoreV1().Namespaces().Delete(namespace, nil)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+	}
+}
+
+// PurgeNamespacesByPrefixes deletes the namespaces that were created during testing process
+func PurgeNamespacesByPrefixes(nsPrefixes []string) error {
+	type customFactory struct {
+		*factory.DefaultFactoryImpl
+		ctrl build.Controller
 	}
 
-	isExists := true
-	for isExists {
-		_, err = client.KubeClient().CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
-		if err != nil {
-			isExists = false
+	f := &customFactory{}
+
+	client, err := f.NewKubeDefaultClient()
+	if err != nil {
+		return errors.Errorf("Unable to create new kubectl client: %v", err)
+	}
+
+	nsList, err := client.KubeClient().CoreV1().Namespaces().List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, ns := range nsList.Items {
+		name := ns.ObjectMeta.Name
+		for _, p := range nsPrefixes {
+			if strings.HasPrefix(name, p) {
+				fmt.Println("Delete namespace:", name)
+				DeleteNamespace(client, name)
+			}
 		}
 	}
 
-	defer log.StopWait()
+	return nil
 }
 
 // AnalyzePods waits for the pods to be running (if possible) and healthcheck them
-func AnalyzePods(client kubectl.Client, namespace string) error {
-	err := analyze.NewAnalyzer(client, logger.GetInstance()).Analyze(namespace, false)
+func AnalyzePods(client kubectl.Client, namespace string, cachedLogger logger.Logger) error {
+	err := analyze.NewAnalyzer(client, cachedLogger).Analyze(namespace, false)
 	if err != nil {
 		return err
 	}
@@ -90,7 +112,7 @@ func AnalyzePods(client kubectl.Client, namespace string) error {
 	return nil
 }
 
-func startPortForwarding(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client) ([]*portforward.PortForwarder, error) {
+func startPortForwarding(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, log logger.Logger) ([]*portforward.PortForwarder, error) {
 	if config.Dev == nil {
 		return nil, nil
 	}
@@ -98,7 +120,7 @@ func startPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 	var pf []*portforward.PortForwarder
 
 	for _, portForwarding := range config.Dev.Ports {
-		p, err := startForwarding(portForwarding, generatedConfig, config, client)
+		p, err := startForwarding(portForwarding, generatedConfig, config, client, log)
 		if err != nil {
 			return nil, err
 		}
@@ -109,9 +131,7 @@ func startPortForwarding(config *latest.Config, generatedConfig *generated.Confi
 	return pf, nil
 }
 
-func startForwarding(portForwarding *latest.PortForwardingConfig, generatedConfig *generated.Config, config *latest.Config, client kubectl.Client) (*portforward.PortForwarder, error) {
-	log := logger.GetInstance()
-
+func startForwarding(portForwarding *latest.PortForwardingConfig, generatedConfig *generated.Config, config *latest.Config, client kubectl.Client, log logger.Logger) (*portforward.PortForwarder, error) {
 	var imageSelector []string
 	if portForwarding.ImageName != "" && generatedConfig != nil {
 		imageConfigCache := generatedConfig.GetActive().GetImageCache(portForwarding.ImageName)
@@ -193,10 +213,8 @@ func startForwarding(portForwarding *latest.PortForwardingConfig, generatedConfi
 }
 
 // PortForwardAndPing creates port-forwardings and ping them for a 200 status code
-func PortForwardAndPing(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client) error {
-	log := logger.GetInstance()
-
-	portForwarder, err := startPortForwarding(config, generatedConfig, client)
+func PortForwardAndPing(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, cachedLogger logger.Logger) error {
+	portForwarder, err := startPortForwarding(config, generatedConfig, client, cachedLogger)
 	if err != nil {
 		return err
 	}
@@ -211,11 +229,11 @@ func PortForwardAndPing(config *latest.Config, generatedConfig *generated.Config
 			url := fmt.Sprintf("http://localhost:%v/", p.Local)
 			resp, err := http.Get(url)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 
 			if resp.StatusCode == 200 {
-				log.Donef("Pinging %v: status code 200", url)
+				cachedLogger.Donef("Pinging %v: status code 200", url)
 			} else {
 				return fmt.Errorf("pinging %v: status code %v", url, resp.StatusCode)
 			}
@@ -358,25 +376,23 @@ func lcopy(src, dest string, info os.FileInfo) error {
 // CreateTempDir creates a temp directory in /tmp
 func CreateTempDir() (dirPath string, dirName string, err error) {
 	// Create temp dir in /tmp/
-	dirPath, err = ioutil.TempDir("", "init")
+	dirPath, err = ioutil.TempDir("", "test-e2e")
 	dirName = filepath.Base(dirPath)
 	if err != nil {
 		return
 	}
-	fmt.Println("tempDir created:", dirPath)
+	// fmt.Println("tempDir created:", dirPath)
 	return
 }
 
 // DeleteTempDir deletes temp directory
-func DeleteTempDir(dirPath string) {
-	// log := logger.GetInstance()
-
-	// //Delete temp folder
-	// err := os.RemoveAll(dirPath)
-	// if err != nil {
-	// 	log.Fatalf("Error removing dir: %v", err)
-	// }
-	fmt.Println("Fake deleting temp")
+func DeleteTempDir(dirPath string, log logger.Logger) {
+	// TODO: Needs to be implemented later on (but bugs on windows)
+	// Delete temp folder
+	err := os.RemoveAll(dirPath)
+	if err != nil {
+		log.Fatalf("Error removing dir: %v", err)
+	}
 }
 
 // Capture replaces os.Stdout with a writer that buffers any data written
@@ -419,10 +435,20 @@ func StringInSlice(str string, list []string) bool {
 	return false
 }
 
+// SpaceExists checks if a string is in a slice
+func SpaceExists(str string, list []*latestSpace.Space) bool {
+	for _, v := range list {
+		if v.Name == str {
+			return true
+		}
+	}
+	return false
+}
+
 // DeleteTempAndResetWorkingDir deletes /tmp dir and reinitialize the working dir
-func DeleteTempAndResetWorkingDir(tmpDir string, pwd string) {
-	DeleteTempDir(tmpDir)
-	_ = ChangeWorkingDir(pwd)
+func DeleteTempAndResetWorkingDir(tmpDir string, pwd string, log logger.Logger) {
+	DeleteTempDir(tmpDir, log)
+	_ = ChangeWorkingDir(pwd, log)
 }
 
 // LookForDeployment search for a specific deployment name among the deployments, returns true if found
@@ -446,4 +472,13 @@ func LookForDeployment(client kubectl.Client, namespace string, expectedDeployme
 	}
 
 	return true, nil
+}
+
+// GenerateNamespaceName generates a new Namespace name with the given prefix and a random suffix
+func GenerateNamespaceName(prefix string) string {
+	// Seed the random number generator using the current time (nanoseconds since epoch):
+	rand.Seed(time.Now().UnixNano())
+	r := rand.Intn(1000)
+
+	return fmt.Sprintf("%s-%v", prefix, r)
 }
