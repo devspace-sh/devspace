@@ -70,6 +70,7 @@ func DeleteNamespace(client kubectl.Client, namespace string) {
 	}
 }
 
+// PurgeNamespacesByPrefixes deletes the namespaces that were created during testing process
 func PurgeNamespacesByPrefixes(nsPrefixes []string) error {
 	type customFactory struct {
 		*factory.DefaultFactoryImpl
