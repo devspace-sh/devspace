@@ -15,7 +15,14 @@ import (
 // CreateDockerfile runs init test with "create docker file" option
 func CreateDockerfile(f *customFactory, logger log.Logger) error {
 	buff := &bytes.Buffer{}
-	f.cacheLogger = NewCustomStreamLogger(buff, logrus.InfoLevel)
+	f.cacheLogger = NewCustomStreamLogger(buff, logrus.InfoLevel, f.verbose)
+
+	var buffString string
+	buffString = buff.String()
+
+	if f.verbose {
+		buffString = ""
+	}
 
 	logger.Info("Run sub test 'create_dockerfile' of test 'init'")
 	logger.StartWait("Run test...")
@@ -24,7 +31,7 @@ func CreateDockerfile(f *customFactory, logger log.Logger) error {
 	err := beforeTest(f, f.cacheLogger, "tests/initcmd/testdata/data1")
 	defer afterTest(f)
 	if err != nil {
-		return errors.Errorf("sub test 'create_dockerfile' of 'init' test failed: %s %v", buff.String(), err)
+		return errors.Errorf("sub test 'create_dockerfile' of 'init' test failed: %s %v", buffString, err)
 	}
 
 	port := 8080

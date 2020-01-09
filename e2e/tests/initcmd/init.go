@@ -45,14 +45,21 @@ type customFactory struct {
 }
 
 type customLogger struct {
-	*log.StreamLogger
+	log.Logger
 	*fakesurvey.FakeSurvey
 }
 
-func NewCustomStreamLogger(stream io.Writer, level logrus.Level) *customLogger {
+func NewCustomStreamLogger(stream io.Writer, level logrus.Level, verbose bool) *customLogger {
+	if verbose {
+		return &customLogger{
+			Logger:     log.GetInstance(),
+			FakeSurvey: fakesurvey.NewFakeSurvey(),
+		}
+	}
+
 	return &customLogger{
-		StreamLogger: log.NewStreamLogger(stream, level),
-		FakeSurvey:   fakesurvey.NewFakeSurvey(),
+		Logger:     log.NewStreamLogger(stream, level),
+		FakeSurvey: fakesurvey.NewFakeSurvey(),
 	}
 }
 

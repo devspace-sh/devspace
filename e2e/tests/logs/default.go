@@ -23,6 +23,8 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		LastAmountOfLines: 20,
 	}
 
+	output := "test123"
+
 	done := utils.Capture()
 
 	err := lc.RunLogs(f, nil, nil)
@@ -30,15 +32,15 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		return err
 	}
 
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 10)
 
 	capturedOutput, err := done()
 	if err != nil {
 		return err
 	}
 
-	if strings.Index(capturedOutput, "blabla world") == -1 {
-		return errors.Errorf("capturedOutput '%v' is different than output 'blabla world' for the enter cmd", capturedOutput)
+	if strings.Index(capturedOutput, output) == -1 {
+		return errors.Errorf("capturedOutput '%v' is different than output '%s' for the enter cmd", capturedOutput, output)
 	}
 
 	return nil

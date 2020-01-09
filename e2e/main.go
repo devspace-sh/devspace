@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/devspace-cloud/devspace/e2e/tests/deploy"
 	"github.com/devspace-cloud/devspace/e2e/tests/enter"
@@ -15,6 +16,7 @@ import (
 	"github.com/devspace-cloud/devspace/e2e/tests/sync"
 	"github.com/devspace-cloud/devspace/e2e/utils"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/juju/errors"
 )
 
 var testNamespace = "testing-test-namespace"
@@ -156,11 +158,27 @@ func main() {
 			}
 
 			// We run the actual group tests by passing the sub tests
-			err := testRun.Run(parameterSubTests, testNamespace, pwd, logger, verbose, timeout)
+			err := runTestWithTimeout(testRun, parameterSubTests, testNamespace, pwd, logger, verbose, timeout)
 			if err != nil {
-				fmt.Println(err)
+				logger.Error(err)
 				os.Exit(1)
 			}
 		}
+	}
+}
+
+func runTestWithTimeout(testRun Test, parameterSubTests []string, testNamespace string, pwd string, logger log.Logger, verbose bool, timeout int) error {
+	c1 := make(chan error, 1)
+
+	go func() {
+		err := testRun.Run(parameterSubTests, testNamespace, pwd, logger, verbose, timeout)
+		c1 <- err
+	}()
+
+	select {
+	case res := <-c1:
+		return res
+	case <-time.After(time.Duration(timeout) * time.Second):
+		return errors.Errorf("Timeout error: the test did not return within the specified timeout of %v seconds", timeout)
 	}
 }

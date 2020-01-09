@@ -14,7 +14,14 @@ import (
 // UseExistingDockerfile runs init test with "create docker file" option
 func UseExistingDockerfile(f *customFactory, logger log.Logger) error {
 	buff := &bytes.Buffer{}
-	f.cacheLogger = NewCustomStreamLogger(buff, logrus.InfoLevel)
+	f.cacheLogger = NewCustomStreamLogger(buff, logrus.InfoLevel, f.verbose)
+
+	var buffString string
+	buffString = buff.String()
+
+	if f.verbose {
+		buffString = ""
+	}
 
 	logger.Info("Run sub test 'use_existing_dockerfile' of test 'init'")
 	logger.StartWait("Run test...")
@@ -23,7 +30,7 @@ func UseExistingDockerfile(f *customFactory, logger log.Logger) error {
 	err := beforeTest(f, f.cacheLogger, "tests/initcmd/testdata/data2")
 	defer afterTest(f)
 	if err != nil {
-		return errors.Errorf("sub test 'use_existing_dockerfile' of 'init' test failed: %s %v", buff.String(), err)
+		return errors.Errorf("sub test 'use_existing_dockerfile' of 'init' test failed: %s %v", buffString, err)
 	}
 
 	port := 8080
