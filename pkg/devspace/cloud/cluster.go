@@ -373,10 +373,6 @@ func (p *provider) deployServices(client kubectl.Client, clusterID int, availabl
 
 		err = p.client.DeployAdmissionController(clusterID, options.Key)
 		if err != nil {
-			return errors.Wrap(err, "graphql client")
-		}
-
-		if err != nil {
 			p.log.Warnf("Error deploying admission controller: %v", err)
 		} else {
 			p.log.Done("Deployed admission controller")

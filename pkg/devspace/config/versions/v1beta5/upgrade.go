@@ -17,6 +17,10 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 
 	if len(c.Images) > 0 {
 		for key, config := range c.Images {
+			if config == nil {
+				continue
+			}
+
 			if config.Build != nil && config.Build.Custom != nil && len(config.Build.Custom.Args) > 0 {
 				if nextConfig.Images[key].Build == nil {
 					nextConfig.Images[key].Build = &next.BuildConfig{}

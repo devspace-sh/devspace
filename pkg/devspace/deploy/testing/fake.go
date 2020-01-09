@@ -1,6 +1,8 @@
 package testing
 
 import (
+	"io"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -16,6 +18,11 @@ func NewFakeController(config *latest.Config) deploy.Controller {
 
 // Deploy deploys the deployments
 func (f *FakeController) Deploy(options *deploy.Options, log log.Logger) error {
+	return nil
+}
+
+// Render implements interface
+func (f *FakeController) Render(options *deploy.Options, out io.Writer) error {
 	return nil
 }
 

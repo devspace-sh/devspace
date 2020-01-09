@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
@@ -467,8 +468,12 @@ func (s *Sync) Stop(fatalError error) {
 				s.upstream.writer.Close()
 			}
 			if s.upstream.reader != nil {
-				// Closing the reader is hanging on windows so we skip that
-				// s.upstream.reader.Close()
+				// Closing the reader is sometimes hanging on windows so we skip that
+				if runtime.GOOS != "windows" {
+					s.upstream.reader.Close()
+				} else {
+					go s.upstream.reader.Close()
+				}
 			}
 		}
 
@@ -478,8 +483,12 @@ func (s *Sync) Stop(fatalError error) {
 				s.downstream.writer.Close()
 			}
 			if s.downstream.reader != nil {
-				// Closing the reader is hanging on windows so we skip that
-				// s.downstream.reader.Close()
+				// Closing the reader is sometimes hanging on windows so we skip that
+				if runtime.GOOS != "windows" {
+					s.downstream.reader.Close()
+				} else {
+					go s.downstream.reader.Close()
+				}
 			}
 		}
 

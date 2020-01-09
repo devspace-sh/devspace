@@ -1,6 +1,8 @@
 package deployer
 
 import (
+	"io"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 )
 
@@ -8,6 +10,7 @@ import (
 type Interface interface {
 	Status() (*StatusResult, error)
 	Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error)
+	Render(cache *generated.CacheConfig, builtImages map[string]string, out io.Writer) error
 	Delete(cache *generated.CacheConfig) error
 }
 

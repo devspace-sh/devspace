@@ -272,6 +272,9 @@ func validate(config *latest.Config) error {
 			if imageConfigName == "" {
 				return errors.Errorf("images keys cannot be an empty string")
 			}
+			if imageConf == nil {
+				return errors.Errorf("images.%s is empty and should at least contain an image name", imageConfigName)
+			}
 			if imageConf.Image == "" {
 				return errors.Errorf("images.%s.image is required", imageConfigName)
 			}

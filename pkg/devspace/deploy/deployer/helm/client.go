@@ -34,9 +34,12 @@ type DeployConfig struct {
 
 // New creates a new helm deployment client
 func New(config *latest.Config, helmClient helmtypes.Client, kubeClient kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (deployer.Interface, error) {
-	tillerNamespace := kubeClient.Namespace()
-	if deployConfig.Helm.TillerNamespace != "" {
-		tillerNamespace = deployConfig.Helm.TillerNamespace
+	tillerNamespace := ""
+	if kubeClient != nil {
+		tillerNamespace = kubeClient.Namespace()
+		if deployConfig.Helm.TillerNamespace != "" {
+			tillerNamespace = deployConfig.Helm.TillerNamespace
+		}
 	}
 
 	// Exchange chart
@@ -68,7 +71,7 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 		var err error
 
 		// Get HelmClient
-		d.Helm, err = helm.NewClient(d.config, d.DeploymentConfig, d.Kube, d.TillerNamespace, false, d.Log)
+		d.Helm, err = helm.NewClient(d.config, d.DeploymentConfig, d.Kube, d.TillerNamespace, false, false, d.Log)
 		if err != nil {
 			return errors.Wrap(err, "new helm client")
 		}
