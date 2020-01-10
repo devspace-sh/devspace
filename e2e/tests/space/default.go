@@ -61,7 +61,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 	}
 
 	// Checking if pods are running correctly
-	err = utils.AnalyzePods(f.Client, f.Client.Namespace(), f.cacheLogger)
+	err = utils.AnalyzePods(f.Client, f.Client.Namespace(), f.GetLog())
 	if err != nil {
 		return err
 	}

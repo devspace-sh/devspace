@@ -1,28 +1,14 @@
 package sync
 
 import (
-	"bytes"
 	"time"
 
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
-
-type customFactory struct {
-	*factory.DefaultFactoryImpl
-	*utils.BaseCustomFactory
-	cacheLogger log.Logger
-}
-
-// GetLog implements interface
-func (c *customFactory) GetLog() log.Logger {
-	return c.cacheLogger
-}
 
 type Runner struct{}
 
@@ -37,23 +23,11 @@ func (r *Runner) SubTests() []string {
 	return subTests
 }
 
-var availableSubTests = map[string]func(factory *customFactory, logger log.Logger) error{
+var availableSubTests = map[string]func(factory *utils.BaseCustomFactory, logger log.Logger) error{
 	"default": runDefault,
 }
 
 func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error {
-	buff := &bytes.Buffer{}
-	var cacheLogger log.Logger
-	cacheLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
-
-	var buffString string
-	buffString = buff.String()
-
-	if verbose {
-		cacheLogger = logger
-		buffString = ""
-	}
-
 	logger.Info("Run 'sync' test")
 
 	// Populates the tests to run with all the available sub tests if no sub tests are specified
@@ -63,18 +37,16 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 		}
 	}
 
-	f := &customFactory{
-		BaseCustomFactory: &utils.BaseCustomFactory{
-			Namespace: ns,
-			Pwd:       pwd,
-			Verbose:   verbose,
-			Timeout:   timeout,
-		},
-		cacheLogger: cacheLogger,
+	f := &utils.BaseCustomFactory{
+		Namespace: ns,
+		Pwd:       pwd,
+		Verbose:   verbose,
+		Timeout:   timeout,
 	}
 
 	// Runs the tests
 	for _, subTestName := range subTests {
+		f.ResetLog()
 		c1 := make(chan error)
 
 		go func() {
@@ -84,13 +56,13 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 				err := beforeTest(f)
 				defer afterTest(f)
 				if err != nil {
-					return errors.Errorf("test 'sync' failed: %s %v", buffString, err)
+					return errors.Errorf("test 'sync' failed: %s %v", f.GetLogContents(), err)
 				}
 
 				err = availableSubTests[subTestName](f, logger)
 				utils.PrintTestResult("sync", subTestName, err, logger)
 				if err != nil {
-					return errors.Errorf("test 'sync' failed: %s %v", buffString, err)
+					return errors.Errorf("test 'sync' failed: %s %v", f.GetLogContents(), err)
 				}
 
 				return nil
@@ -104,14 +76,14 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 				return err
 			}
 		case <-time.After(time.Duration(timeout) * time.Second):
-			return errors.Errorf("Timeout error: the test did not return within the specified timeout of %v seconds", timeout)
+			return errors.Errorf("Timeout error - the test did not return within the specified timeout of %v seconds: %s", timeout, f.GetLogContents())
 		}
 	}
 
 	return nil
 }
 
-func beforeTest(f *customFactory) error {
+func beforeTest(f *utils.BaseCustomFactory) error {
 	deployConfig := &cmd.DeployCmd{
 		GlobalFlags: &flags.GlobalFlags{
 			Namespace: f.Namespace,
@@ -134,7 +106,7 @@ func beforeTest(f *customFactory) error {
 		return err
 	}
 
-	err = utils.ChangeWorkingDir(dirPath+"/quickstart", f.cacheLogger)
+	err = utils.ChangeWorkingDir(dirPath+"/quickstart", f.GetLog())
 	if err != nil {
 		return err
 	}
@@ -155,7 +127,7 @@ func beforeTest(f *customFactory) error {
 	time.Sleep(time.Second * 5)
 
 	// Checking if pods are running correctly
-	err = utils.AnalyzePods(client, f.Namespace, f.cacheLogger)
+	err = utils.AnalyzePods(client, f.Namespace, f.GetLog())
 	if err != nil {
 		return err
 	}
@@ -163,7 +135,7 @@ func beforeTest(f *customFactory) error {
 	return nil
 }
 
-func afterTest(f *customFactory) {
-	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.cacheLogger)
+func afterTest(f *utils.BaseCustomFactory) {
+	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.GetLog())
 	utils.DeleteNamespace(f.Client, f.Namespace)
 }

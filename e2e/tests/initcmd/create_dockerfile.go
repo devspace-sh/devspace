@@ -1,7 +1,6 @@
 package initcmd
 
 import (
-	"bytes"
 	"os"
 
 	"github.com/devspace-cloud/devspace/cmd"
@@ -9,29 +8,18 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // CreateDockerfile runs init test with "create docker file" option
 func CreateDockerfile(f *customFactory, logger log.Logger) error {
-	buff := &bytes.Buffer{}
-	f.cacheLogger = NewCustomStreamLogger(buff, logrus.InfoLevel, f.Verbose)
-
-	var buffString string
-	buffString = buff.String()
-
-	if f.Verbose {
-		buffString = ""
-	}
-
 	logger.Info("Run sub test 'create_dockerfile' of test 'init'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
-	err := beforeTest(f, f.cacheLogger, "tests/initcmd/testdata/data1")
+	err := beforeTest(f, f.GetLog(), "tests/initcmd/testdata/data1")
 	defer afterTest(f)
 	if err != nil {
-		return errors.Errorf("sub test 'create_dockerfile' of 'init' test failed: %s %v", buffString, err)
+		return errors.Errorf("sub test 'create_dockerfile' of 'init' test failed: %s %v", f.GetLogContents(), err)
 	}
 
 	port := 8080

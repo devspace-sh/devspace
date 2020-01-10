@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
 
+	"github.com/sirupsen/logrus"
 	"html"
 	"io"
 	"io/ioutil"
@@ -32,14 +34,45 @@ import (
 	"github.com/pkg/errors"
 )
 
+// BaseCustomFactory is a factory override for testing
 type BaseCustomFactory struct {
-	Verbose   bool
-	Timeout   int
-	Namespace string
-	Pwd       string
-	Client    kubectl.Client
-	DirPath   string
-	DirName   string
+	*factory.DefaultFactoryImpl
+
+	CacheLogger logger.Logger
+	Buff        *bytes.Buffer
+	Verbose     bool
+	Timeout     int
+	Namespace   string
+	Pwd         string
+	Client      kubectl.Client
+	DirPath     string
+	DirName     string
+}
+
+func (b *BaseCustomFactory) GetLogContents() string {
+	if b.Buff != nil {
+		return b.Buff.String()
+	}
+
+	return ""
+}
+
+// ResetLog resets the log
+func (b *BaseCustomFactory) ResetLog() {
+	b.Buff = nil
+	b.CacheLogger = nil
+}
+
+// GetLog implements interface
+func (b *BaseCustomFactory) GetLog() logger.Logger {
+	if b.Verbose {
+		return logger.GetInstance()
+	} else if b.CacheLogger == nil {
+		b.Buff = &bytes.Buffer{}
+		b.CacheLogger = logger.NewStreamLogger(b.Buff, logrus.InfoLevel)
+	}
+
+	return b.CacheLogger
 }
 
 // ChangeWorkingDir changes the working directory

@@ -7,20 +7,12 @@ import (
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 
 type customFactory struct {
-	*factory.DefaultFactoryImpl
 	*utils.BaseCustomFactory
-	cacheLogger log.Logger
-}
-
-// GetLog implements interface
-func (c *customFactory) GetLog() log.Logger {
-	return c.cacheLogger
 }
 
 var availableSubTests = map[string]func(factory *customFactory, logger log.Logger) error{
@@ -57,7 +49,7 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 		}
 	}
 
-	myFactory := &customFactory{
+	f := &customFactory{
 		BaseCustomFactory: &utils.BaseCustomFactory{
 			Namespace: ns,
 			Pwd:       pwd,
@@ -72,8 +64,8 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 		go func() {
 			err := func() error {
-				myFactory.Namespace = utils.GenerateNamespaceName("test-examples-" + subTestName)
-				err := availableSubTests[subTestName](myFactory, logger)
+				f.Namespace = utils.GenerateNamespaceName("test-examples-" + subTestName)
+				err := availableSubTests[subTestName](f, logger)
 				utils.PrintTestResult("examples", subTestName, err, logger)
 				if err != nil {
 					return err
@@ -90,7 +82,7 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 				return err
 			}
 		case <-time.After(time.Duration(timeout) * time.Second):
-			return errors.Errorf("Timeout error: the test did not return within the specified timeout of %v seconds", timeout)
+			return errors.Errorf("Timeout error - the test did not return within the specified timeout of %v seconds: %s", timeout, f.GetLogContents())
 		}
 	}
 
@@ -124,7 +116,7 @@ func RunTest(f *customFactory, deployConfig *cmd.DeployCmd) error {
 	}
 
 	// Checking if pods are running correctly
-	err = utils.AnalyzePods(client, f.Namespace, f.cacheLogger)
+	err = utils.AnalyzePods(client, f.Namespace, f.GetLog())
 	if err != nil {
 		return err
 	}
@@ -137,13 +129,13 @@ func RunTest(f *customFactory, deployConfig *cmd.DeployCmd) error {
 
 	// Add current kube context to context
 	configOptions := deployConfig.ToConfigOptions()
-	config, err := f.NewConfigLoader(configOptions, f.cacheLogger).Load()
+	config, err := f.NewConfigLoader(configOptions, f.GetLog()).Load()
 	if err != nil {
 		return err
 	}
 
 	// Port-forwarding
-	err = utils.PortForwardAndPing(config, generatedConfig, client, f.cacheLogger)
+	err = utils.PortForwardAndPing(config, generatedConfig, client, f.GetLog())
 	if err != nil {
 		return err
 	}
@@ -168,7 +160,7 @@ func beforeTest(f *customFactory, testDir string) error {
 	}
 
 	// Change working directory
-	err = utils.ChangeWorkingDir(dirPath, f.cacheLogger)
+	err = utils.ChangeWorkingDir(dirPath, f.GetLog())
 	if err != nil {
 		return err
 	}
@@ -177,6 +169,6 @@ func beforeTest(f *customFactory, testDir string) error {
 }
 
 func afterTest(f *customFactory) {
-	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.cacheLogger)
+	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.GetLog())
 	utils.DeleteNamespace(f.Client, f.Namespace)
 }

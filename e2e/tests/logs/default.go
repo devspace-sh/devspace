@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func runDefault(f *customFactory, logger log.Logger) error {
+func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 	logger.Info("Run sub test 'default' of test 'logs'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()

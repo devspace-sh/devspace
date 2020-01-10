@@ -17,7 +17,7 @@ import (
 //3. enter --label-selector
 //4. enter --pick
 
-func runDefault(f *customFactory, logger log.Logger) error {
+func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 	logger.Info("Run sub test 'default' of test 'enter'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()

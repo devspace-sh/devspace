@@ -1,8 +1,6 @@
 package examples
 
 import (
-	"bytes"
-
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/cmd/use"
@@ -10,23 +8,11 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // RunProfiles runs the test for the kustomize example
 func RunProfiles(f *customFactory, logger log.Logger) error {
-	buff := &bytes.Buffer{}
-	f.cacheLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
-
-	var buffString string
-	buffString = buff.String()
-
-	if f.Verbose {
-		f.cacheLogger = logger
-		buffString = ""
-	}
-
 	logger.Info("Run sub test 'profiles' of test 'examples'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
@@ -44,7 +30,7 @@ func RunProfiles(f *customFactory, logger log.Logger) error {
 	err := beforeTest(f, "../examples/profiles")
 	defer afterTest(f)
 	if err != nil {
-		return errors.Errorf("sub test 'profiles' of 'examples' test failed: %s %v", buffString, err)
+		return errors.Errorf("sub test 'profiles' of 'examples' test failed: %s %v", f.GetLogContents(), err)
 	}
 
 	// Create kubectl client
@@ -94,7 +80,7 @@ func runProfile(f *customFactory, deployConfig *cmd.DeployCmd, profile string, c
 	}
 
 	// Checking if pods are running correctly
-	err = utils.AnalyzePods(client, f.Namespace, f.cacheLogger)
+	err = utils.AnalyzePods(client, f.Namespace, f.GetLog())
 	if err != nil {
 		return err
 	}
@@ -131,7 +117,7 @@ func runProfile(f *customFactory, deployConfig *cmd.DeployCmd, profile string, c
 	}
 
 	// Port-forwarding
-	err = utils.PortForwardAndPing(config, generatedConfig, client, f.cacheLogger)
+	err = utils.PortForwardAndPing(config, generatedConfig, client, f.GetLog())
 	if err != nil {
 		return err
 	}

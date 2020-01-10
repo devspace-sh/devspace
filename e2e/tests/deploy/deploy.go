@@ -11,7 +11,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,16 +25,9 @@ type test struct {
 }
 
 type customFactory struct {
-	*factory.DefaultFactoryImpl
 	*utils.BaseCustomFactory
 	ctrl        build.Controller
 	builtImages map[string]string
-	cacheLogger log.Logger
-}
-
-// GetLog implements interface
-func (c *customFactory) GetLog() log.Logger {
-	return c.cacheLogger
 }
 
 // NewBuildController implements interface
@@ -114,7 +106,7 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 				return err
 			}
 		case <-time.After(time.Duration(timeout) * time.Second):
-			return errors.Errorf("Timeout error: the test did not return within the specified timeout of %v seconds", timeout)
+			return errors.Errorf("Timeout error - the test did not return within the specified timeout of %v seconds: %s", timeout, f.GetLogContents())
 		}
 	}
 
@@ -143,7 +135,7 @@ func runTest(f *customFactory, t *test) error {
 	}
 
 	// 3. Analyze pods
-	err = utils.AnalyzePods(client, f.Namespace, f.cacheLogger)
+	err = utils.AnalyzePods(client, f.Namespace, f.GetLog())
 	if err != nil {
 		return err
 	}
@@ -206,7 +198,7 @@ func beforeTest(f *customFactory, logger log.Logger, testDir string) error {
 	}
 
 	// Change working directory
-	err = utils.ChangeWorkingDir(dirPath, f.cacheLogger)
+	err = utils.ChangeWorkingDir(dirPath, f.GetLog())
 	if err != nil {
 		return err
 	}
@@ -215,6 +207,6 @@ func beforeTest(f *customFactory, logger log.Logger, testDir string) error {
 }
 
 func afterTest(f *customFactory) {
-	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.cacheLogger)
+	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.GetLog())
 	utils.DeleteNamespace(f.Client, f.Namespace)
 }
