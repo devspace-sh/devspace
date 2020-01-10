@@ -24,7 +24,7 @@ type listAvailableComponentsTestCase struct {
 	expectedErr    string
 }
 
-func TestListAvailableComponents(f factory.Factory, t *testing.T) {
+func TestListAvailableComponents(t *testing.T, f factory.Factory) {
 	testCases := []listAvailableComponentsTestCase{
 		listAvailableComponentsTestCase{
 			name:           "List components",

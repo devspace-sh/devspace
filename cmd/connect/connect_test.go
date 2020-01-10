@@ -8,7 +8,7 @@ import (
 	"gotest.tools/assert"
 )
 
-func TestNewConnectCmd(f factory.Factory, t *testing.T) {
+func TestNewConnectCmd(t *testing.T, f factory.Factory) {
 	connectCmd := NewConnectCmd(f)
 	subcommands := connectCmd.Commands()
 

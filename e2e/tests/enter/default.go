@@ -76,7 +76,7 @@ func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 	for _, c := range enterConfigs {
 		done := utils.Capture()
 
-		output := "testblabla"
+		output := "My Test Data"
 		err = c.Run(f, nil, []string{"echo", output})
 		if err != nil {
 			return err
@@ -90,7 +90,7 @@ func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 		}
 
 		if !strings.HasPrefix(capturedOutput, output) {
-			return errors.Errorf("capturedOutput is different than output for the enter cmd")
+			return errors.Errorf("capturedOutput '%s' is different than output '%s' for the enter cmd", capturedOutput, output)
 		}
 	}
 

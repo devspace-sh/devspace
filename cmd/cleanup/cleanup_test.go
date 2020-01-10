@@ -9,7 +9,7 @@ import (
 	"gotest.tools/assert"
 )
 
-func TestNewCleanupCmd(f factory.Factory, t *testing.T) {
+func TestNewCleanupCmd(t *testing.T, f factory.Factory) {
 	cleanupCmd := NewCleanupCmd(f, &flags.GlobalFlags{})
 	subcommands := cleanupCmd.Commands()
 

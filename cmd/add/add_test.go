@@ -10,7 +10,7 @@ import (
 	"gotest.tools/assert"
 )
 
-func TestAdd(f factory.Factory, t *testing.T) {
+func TestAdd(t *testing.T, f factory.Factory) {
 	addCmd := NewAddCmd(f, &flags.GlobalFlags{})
 	subcommands := addCmd.Commands()
 
