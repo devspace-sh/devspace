@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 
 	"gotest.tools/assert"
 )
 
-func TestAdd(t *testing.T) {
-	addCmd := NewAddCmd(&flags.GlobalFlags{})
+func TestAdd(f factory.Factory, t *testing.T) {
+	addCmd := NewAddCmd(f, &flags.GlobalFlags{})
 	subcommands := addCmd.Commands()
 
 	expectedSubcommandNames := []string{"deployment", "image", "port", "provider", "sync"}

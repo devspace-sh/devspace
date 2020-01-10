@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -15,7 +15,7 @@ type portsCmd struct {
 	*flags.GlobalFlags
 }
 
-func newPortsCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newPortsCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &portsCmd{GlobalFlags: globalFlags}
 
 	portsCmd := &cobra.Command{
@@ -29,16 +29,18 @@ Lists the port forwarding configurations
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunListPort,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunListPort(f, cobraCmd, args)
+		}}
 
 	return portsCmd
 }
 
 // RunListPort runs the list port command logic
-func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) error {
+func (cmd *portsCmd) RunListPort(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	logger := f.GetLog()
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -53,7 +55,7 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	if config.Dev.Ports == nil || len(config.Dev.Ports) == 0 {
-		log.GetInstance().Info("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
+		logger.Info("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
 		return nil
 	}
 
@@ -99,6 +101,6 @@ func (cmd *portsCmd) RunListPort(cobraCmd *cobra.Command, args []string) error {
 		})
 	}
 
-	log.PrintTable(log.GetInstance(), headerColumnNames, portForwards)
+	log.PrintTable(logger, headerColumnNames, portForwards)
 	return nil
 }

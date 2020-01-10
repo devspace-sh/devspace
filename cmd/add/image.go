@@ -2,9 +2,8 @@ package add
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -20,7 +19,7 @@ type imageCmd struct {
 	BuildTool      string
 }
 
-func newImageCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newImageCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &imageCmd{GlobalFlags: globalFlags}
 
 	addImageCmd := &cobra.Command{
@@ -42,8 +41,9 @@ devspace add image my-image --image=dockeruser/devspaceimage2 --buildtool=kaniko
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
-		RunE: cmd.RunAddImage,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunAddImage(f, cobraCmd, args)
+		}}
 
 	addImageCmd.Flags().StringVar(&cmd.Name, "image", "", "The image name of the image (e.g. myusername/devspace)")
 	addImageCmd.Flags().StringVar(&cmd.Tag, "tag", "", "The tag of the image")
@@ -56,9 +56,10 @@ devspace add image my-image --image=dockeruser/devspaceimage2 --buildtool=kaniko
 }
 
 // RunAddImage executes the add image command logic
-func (cmd *imageCmd) RunAddImage(cobraCmd *cobra.Command, args []string) error {
+func (cmd *imageCmd) RunAddImage(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	logger := f.GetLog()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -72,7 +73,7 @@ func (cmd *imageCmd) RunAddImage(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = configure.AddImage(config, args[0], cmd.Name, cmd.Tag, cmd.ContextPath, cmd.DockerfilePath, cmd.BuildTool, log.GetInstance())
+	err = configure.AddImage(config, args[0], cmd.Name, cmd.Tag, cmd.ContextPath, cmd.DockerfilePath, cmd.BuildTool, logger)
 	if err != nil {
 		return err
 	}
@@ -82,6 +83,6 @@ func (cmd *imageCmd) RunAddImage(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.GetInstance().Donef("Successfully added image %s", args[0])
+	logger.Donef("Successfully added image %s", args[0])
 	return nil
 }

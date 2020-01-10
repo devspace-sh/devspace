@@ -2,7 +2,7 @@ package connect
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/mgutz/ansi"
 	"github.com/spf13/cobra"
 )
@@ -14,7 +14,7 @@ type clusterCmd struct {
 	Options        *cloud.ConnectClusterOptions
 }
 
-func newClusterCmd() *cobra.Command {
+func newClusterCmd(f factory.Factory) *cobra.Command {
 	cmd := &clusterCmd{
 		Options: &cloud.ConnectClusterOptions{},
 	}
@@ -33,8 +33,9 @@ devspace connect cluster
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunConnectCluster,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunConnectCluster(f, cobraCmd, args)
+		}}
 
 	clusterCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
 
@@ -57,9 +58,10 @@ devspace connect cluster
 }
 
 // RunConnectCluster executes the connect cluster command logic
-func (cmd *clusterCmd) RunConnectCluster(cobraCmd *cobra.Command, args []string) error {
+func (cmd *clusterCmd) RunConnectCluster(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	log := f.GetLog()
 	// Get provider
-	provider, err := cloud.GetProvider(cmd.Provider, log.GetInstance())
+	provider, err := f.GetProvider(cmd.Provider, log)
 	if err != nil {
 		return err
 	}
@@ -75,6 +77,6 @@ func (cmd *clusterCmd) RunConnectCluster(cobraCmd *cobra.Command, args []string)
 		return err
 	}
 
-	log.GetInstance().Donef("Successfully connected cluster to DevSpace Cloud. \n\nYou can now run:\n- `%s` to create a new space\n- `%s` to open the ui and configure cluster access and users\n- `%s` to list all connected clusters", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace list clusters", "white+b"))
+	log.Donef("Successfully connected cluster to DevSpace Cloud. \n\nYou can now run:\n- `%s` to create a new space\n- `%s` to open the ui and configure cluster access and users\n- `%s` to list all connected clusters", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace ui", "white+b"), ansi.Color("devspace list clusters", "white+b"))
 	return nil
 }

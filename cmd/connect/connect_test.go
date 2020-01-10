@@ -4,11 +4,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"gotest.tools/assert"
 )
 
-func TestNewConnectCmd(t *testing.T) {
-	connectCmd := NewConnectCmd()
+func TestNewConnectCmd(f factory.Factory, t *testing.T) {
+	connectCmd := NewConnectCmd(f)
 	subcommands := connectCmd.Commands()
 
 	expectedSubcommandNames := []string{"cluster"}

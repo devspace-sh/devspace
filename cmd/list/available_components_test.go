@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	homedir "github.com/mitchellh/go-homedir"
@@ -23,7 +24,7 @@ type listAvailableComponentsTestCase struct {
 	expectedErr    string
 }
 
-func TestListAvailableComponents(t *testing.T) {
+func TestListAvailableComponents(f factory.Factory, t *testing.T) {
 	testCases := []listAvailableComponentsTestCase{
 		listAvailableComponentsTestCase{
 			name:           "List components",
@@ -78,18 +79,18 @@ func TestListAvailableComponents(t *testing.T) {
 	log.SetInstance(log.Discard)
 
 	for _, testCase := range testCases {
-		testListAvailableComponents(t, testCase)
+		testListAvailableComponents(f, t, testCase)
 	}
 }
 
-func testListAvailableComponents(t *testing.T, testCase listAvailableComponentsTestCase) {
+func testListAvailableComponents(f factory.Factory, t *testing.T, testCase listAvailableComponentsTestCase) {
 	log.SetFakePrintTable(func(s log.Logger, header []string, values [][]string) {
 		assert.Equal(t, reflect.DeepEqual(header, testCase.expectedHeader), true, "Unexpected header in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedHeader, header)
 		assert.Equal(t, reflect.DeepEqual(values, testCase.expectedValues), true, "Unexpected values in testCase %s. Expected:%v\nActual:%v", testCase.name, testCase.expectedValues, values)
 		return
 	})
 
-	err := (&availableComponentsCmd{}).RunListAvailableComponents(nil, []string{})
+	err := (&availableComponentsCmd{}).RunListAvailableComponents(f, nil, []string{})
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Unexpected error in testCase %s.", testCase.name)

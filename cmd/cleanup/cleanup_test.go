@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"gotest.tools/assert"
 )
 
-func TestNewCleanupCmd(t *testing.T) {
-	cleanupCmd := NewCleanupCmd(&flags.GlobalFlags{})
+func TestNewCleanupCmd(f factory.Factory, t *testing.T) {
+	cleanupCmd := NewCleanupCmd(f, &flags.GlobalFlags{})
 	subcommands := cleanupCmd.Commands()
 
 	expectedSubcommandNames := []string{"images"}

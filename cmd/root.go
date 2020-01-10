@@ -91,11 +91,11 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	globalFlags = flags.SetGlobalFlags(persistentFlags)
 
 	// Add sub commands
-	rootCmd.AddCommand(add.NewAddCmd(globalFlags))
-	rootCmd.AddCommand(cleanup.NewCleanupCmd(globalFlags))
-	rootCmd.AddCommand(connect.NewConnectCmd())
+	rootCmd.AddCommand(add.NewAddCmd(f, globalFlags))
+	rootCmd.AddCommand(cleanup.NewCleanupCmd(f, globalFlags))
+	rootCmd.AddCommand(connect.NewConnectCmd(f))
 	rootCmd.AddCommand(create.NewCreateCmd(f))
-	rootCmd.AddCommand(list.NewListCmd(globalFlags))
+	rootCmd.AddCommand(list.NewListCmd(f, globalFlags))
 	rootCmd.AddCommand(remove.NewRemoveCmd(f, globalFlags))
 	rootCmd.AddCommand(reset.NewResetCmd())
 	rootCmd.AddCommand(set.NewSetCmd())
