@@ -112,7 +112,7 @@ func GetProviderWithOptions(useProviderName, key string, relogin bool, loader co
 
 		if key != "" {
 			provider.Key = key
-			provider.client = client.NewClient(providerName, p.Host, key, p.Token)
+			provider.client = client.NewClient(providerName, p.Host, key, "")
 
 			// Check if we got access
 			_, err := provider.client.GetSpaces()
