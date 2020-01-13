@@ -89,8 +89,8 @@ func beforeTest(f *utils.BaseCustomFactory) error {
 			Namespace: f.Namespace,
 			NoWarn:    true,
 		},
-		ForceBuild:  true,
-		ForceDeploy: true,
+		ForceBuild:  false,
+		ForceDeploy: false,
 		SkipPush:    true,
 	}
 
@@ -106,7 +106,7 @@ func beforeTest(f *utils.BaseCustomFactory) error {
 		return err
 	}
 
-	err = utils.ChangeWorkingDir(dirPath+"/quickstart", f.GetLog())
+	err = utils.ChangeWorkingDir(dirPath+"/test", f.GetLog())
 	if err != nil {
 		return err
 	}

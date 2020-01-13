@@ -45,6 +45,7 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 	// Runs the tests
 	for _, subTestName := range subTests {
+		f.ResetLog()
 		c1 := make(chan error, 1)
 
 		go func() {

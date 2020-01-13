@@ -29,6 +29,7 @@ type initTestCase struct {
 	answers []string
 
 	expectedConfig *latest.Config
+	tempLogger     log.Logger
 }
 
 type customFactory struct {
@@ -61,16 +62,18 @@ func (c *customFactory) NewDockerClient(log log.Logger) (docker.Client, error) {
 
 // GetLog implements interface
 func (c *customFactory) GetLog() log.Logger {
-	if c.Verbose {
-		return &customLogger{
-			Logger:     log.GetInstance(),
-			FakeSurvey: fakesurvey.NewFakeSurvey(),
-		}
-	} else if c.CacheLogger == nil {
-		c.Buff = &bytes.Buffer{}
-		c.CacheLogger = &customLogger{
-			Logger:     log.NewStreamLogger(c.Buff, logrus.InfoLevel),
-			FakeSurvey: fakesurvey.NewFakeSurvey(),
+	if c.CacheLogger == nil {
+		if c.Verbose {
+			c.CacheLogger = &customLogger{
+				Logger:     log.GetInstance(),
+				FakeSurvey: fakesurvey.NewFakeSurvey(),
+			}
+		} else {
+			c.Buff = &bytes.Buffer{}
+			c.CacheLogger = &customLogger{
+				Logger:     log.NewStreamLogger(c.Buff, logrus.InfoLevel),
+				FakeSurvey: fakesurvey.NewFakeSurvey(),
+			}
 		}
 	}
 
@@ -143,7 +146,6 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 		case <-time.After(time.Duration(timeout) * time.Second):
 			return errors.Errorf("Timeout error - the test did not return within the specified timeout of %v seconds: %s", timeout, f.GetLogContents())
 		}
-
 	}
 
 	return nil

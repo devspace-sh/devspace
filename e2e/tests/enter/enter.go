@@ -45,6 +45,7 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 	// Runs the tests
 	for _, subTestName := range subTests {
+		f.ResetLog()
 		c1 := make(chan error)
 
 		go func() {
@@ -87,6 +88,9 @@ func beforeTest(f *utils.BaseCustomFactory) error {
 			Namespace: f.Namespace,
 			NoWarn:    true,
 		},
+		ForceBuild: false,
+		SkipBuild:  true,
+		SkipPush:   true,
 	}
 
 	dirPath, _, err := utils.CreateTempDir()
@@ -107,17 +111,18 @@ func beforeTest(f *utils.BaseCustomFactory) error {
 	}
 
 	// Create kubectl client
-	client, err := f.NewKubeDefaultClient()
+	client, err := f.NewKubeClientFromContext(deployConfig.KubeContext, deployConfig.Namespace, deployConfig.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
 	f.Client = client
-
-	err = deployConfig.Run(f, nil, nil)
+	err = deployConfig.Run(f, nil, []string{"/bin/sh sleep 999999"})
 	if err != nil {
 		return errors.Errorf("An error occured while deploying: %v", err)
 	}
+
+	time.Sleep(20 * time.Second)
 
 	// Checking if pods are running correctly
 	err = utils.AnalyzePods(client, f.Namespace, f.GetLog())
