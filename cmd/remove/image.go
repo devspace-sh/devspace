@@ -4,9 +4,8 @@ import (
 	"errors"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/spf13/cobra"
 )
@@ -17,7 +16,7 @@ type imageCmd struct {
 	RemoveAll bool
 }
 
-func newImageCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newImageCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &imageCmd{GlobalFlags: globalFlags}
 
 	imageCmd := &cobra.Command{
@@ -33,8 +32,9 @@ devspace remove image --all
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: cmd.RunRemoveImage,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunRemoveImage(f, cobraCmd, args)
+		}}
 
 	imageCmd.Flags().BoolVar(&cmd.RemoveAll, "all", false, "Remove all images")
 
@@ -42,10 +42,10 @@ devspace remove image --all
 }
 
 // RunRemoveImage executes the remove image command logic
-func (cmd *imageCmd) RunRemoveImage(cobraCmd *cobra.Command, args []string) error {
+func (cmd *imageCmd) RunRemoveImage(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	log := log.GetInstance()
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log)
+	log := f.GetLog()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err

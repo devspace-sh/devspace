@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +13,7 @@ type LoginCmd struct {
 }
 
 // NewLoginCmd creates a new login command
-func NewLoginCmd() *cobra.Command {
+func NewLoginCmd(f factory.Factory) *cobra.Command {
 	cmd := &LoginCmd{}
 
 	loginCmd := &cobra.Command{
@@ -33,7 +32,9 @@ devspace login --key myaccesskey
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunLogin,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunLogin(f, cobraCmd, args)
+		},
 	}
 
 	loginCmd.Flags().StringVar(&cmd.Key, "key", "", "Access key to use")
@@ -43,8 +44,9 @@ devspace login --key myaccesskey
 }
 
 // RunLogin executes the functionality devspace login
-func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) error {
-	loader := cloudconfig.NewLoader()
+func (cmd *LoginCmd) RunLogin(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	log := f.GetLog()
+	loader := f.NewCloudConfigLoader()
 	providerConfig, err := loader.Load()
 	if err != nil {
 		return err
@@ -59,17 +61,17 @@ func (cmd *LoginCmd) RunLogin(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	if cmd.Key != "" {
-		_, err = cloud.GetProviderWithOptions(providerName, cmd.Key, true, loader, log.GetInstance())
+		_, err = f.GetProviderWithOptions(providerName, cmd.Key, true, loader, log)
 		if err != nil {
 			return err
 		}
 	} else {
-		_, err = cloud.GetProviderWithOptions(providerName, "", true, loader, log.GetInstance())
+		_, err = f.GetProviderWithOptions(providerName, "", true, loader, log)
 		if err != nil {
 			return err
 		}
 	}
 
-	log.GetInstance().Infof("Successful logged into %s", providerName)
+	log.Infof("Successful logged into %s", providerName)
 	return nil
 }

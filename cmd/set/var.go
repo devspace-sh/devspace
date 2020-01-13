@@ -6,8 +6,8 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
@@ -18,7 +18,7 @@ import (
 
 type varCmd struct{}
 
-func newVarCmd() *cobra.Command {
+func newVarCmd(f factory.Factory) *cobra.Command {
 	cmd := &varCmd{}
 
 	varsCmd := &cobra.Command{
@@ -35,16 +35,18 @@ devspace set var key=value
 devspace set var key=value key2=value2
 #######################################################
 	`,
-		RunE: cmd.RunSetVar,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunSetVar(f, cobraCmd, args)
+		}}
 
 	return varsCmd
 }
 
 // RunSetVar executes the set var command logic
-func (cmd *varCmd) RunSetVar(cobraCmd *cobra.Command, args []string) error {
+func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(nil, log.GetInstance())
+	log := f.GetLog()
+	configLoader := f.NewConfigLoader(nil, log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -59,7 +61,7 @@ func (cmd *varCmd) RunSetVar(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	allowedVars, err := getPossibleVars(generatedConfig, log.GetInstance())
+	allowedVars, err := getPossibleVars(generatedConfig, log)
 	if err != nil {
 		return errors.Wrap(err, "get possible vars")
 	}
@@ -91,7 +93,7 @@ func (cmd *varCmd) RunSetVar(cobraCmd *cobra.Command, args []string) error {
 		return errors.Errorf("Error saving config: %v", err)
 	}
 
-	log.GetInstance().Done("Successfully changed variables")
+	log.Done("Successfully changed variables")
 	return nil
 }
 

@@ -159,19 +159,18 @@ func runTest(f *customFactory, testCase initTestCase) error {
 		Provider:    "",
 	}
 
-	c, err := f.NewDockerClient(f.GetLog())
-	if err != nil {
-		return err
-	}
-	docker.SetFakeClient(c)
+	// c, err := f.NewDockerClient(f.GetLog())
+	// if err != nil {
+	// 	return err
+	// }
+	// docker.SetFakeClient(c)
 
 	for _, a := range testCase.answers {
-		// fmt.Println("SetNextAnswer:", a)
 		f.GetLog().(*customLogger).SetNextAnswer(a)
 	}
 
 	// runs init cmd
-	err = initConfig.Run(f, nil, nil)
+	err := initConfig.Run(f, nil, nil)
 	if err != nil {
 		return err
 	}

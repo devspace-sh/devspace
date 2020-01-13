@@ -1,8 +1,7 @@
 package reset
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/spf13/cobra"
 )
 
@@ -10,7 +9,7 @@ type keyCmd struct {
 	Provider string
 }
 
-func newKeyCmd() *cobra.Command {
+func newKeyCmd(f factory.Factory) *cobra.Command {
 	cmd := &keyCmd{}
 
 	keyCmd := &cobra.Command{
@@ -28,8 +27,9 @@ devspace reset key my-cluster
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
-		RunE: cmd.RunResetkey,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunResetkey(f, cobraCmd, args)
+		}}
 
 	keyCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
 
@@ -37,9 +37,10 @@ devspace reset key my-cluster
 }
 
 // RunResetkey executes the reset key command logic
-func (cmd *keyCmd) RunResetkey(cobraCmd *cobra.Command, args []string) error {
+func (cmd *keyCmd) RunResetkey(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Get provider
-	provider, err := cloud.GetProvider(cmd.Provider, log.GetInstance())
+	log := f.GetLog()
+	provider, err := f.GetProvider(cmd.Provider, log)
 	if err != nil {
 		return err
 	}
@@ -50,6 +51,6 @@ func (cmd *keyCmd) RunResetkey(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.GetInstance().Donef("Successfully reseted key for cluster %s", args[0])
+	log.Donef("Successfully reseted key for cluster %s", args[0])
 	return nil
 }

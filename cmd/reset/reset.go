@@ -1,9 +1,12 @@
 package reset
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
+	"github.com/spf13/cobra"
+)
 
 // NewResetCmd creates a new cobra command
-func NewResetCmd() *cobra.Command {
+func NewResetCmd(f factory.Factory) *cobra.Command {
 	resetCmd := &cobra.Command{
 		Use:   "reset",
 		Short: "Resets an cluster token",
@@ -15,9 +18,9 @@ func NewResetCmd() *cobra.Command {
 		Args: cobra.NoArgs,
 	}
 
-	resetCmd.AddCommand(newKeyCmd())
-	resetCmd.AddCommand(newVarsCmd())
-	resetCmd.AddCommand(newDependenciesCmd())
+	resetCmd.AddCommand(newKeyCmd(f))
+	resetCmd.AddCommand(newVarsCmd(f))
+	resetCmd.AddCommand(newDependenciesCmd(f))
 
 	return resetCmd
 }

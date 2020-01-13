@@ -3,7 +3,7 @@ package remove
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -12,7 +12,7 @@ type providerCmd struct {
 	Name string
 }
 
-func newProviderCmd() *cobra.Command {
+func newProviderCmd(f factory.Factory) *cobra.Command {
 	cmd := &providerCmd{}
 
 	providerCmd := &cobra.Command{
@@ -29,8 +29,9 @@ devspace remove provider app.devspace.cloud
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
-		RunE: cmd.RunRemoveCloudProvider,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunRemoveCloudProvider(f, cobraCmd, args)
+		}}
 
 	providerCmd.Flags().StringVar(&cmd.Name, "name", "", "Cloud provider name to use")
 
@@ -38,12 +39,12 @@ devspace remove provider app.devspace.cloud
 }
 
 // RunRemoveCloudProvider executes the devspace remove cloud provider functionality
-func (cmd *providerCmd) RunRemoveCloudProvider(cobraCmd *cobra.Command, args []string) error {
+func (cmd *providerCmd) RunRemoveCloudProvider(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	providerName := args[0]
-	log := log.GetInstance()
+	log := f.GetLog()
 
 	// Get provider configuration
-	loader := config.NewLoader()
+	loader := f.NewCloudConfigLoader()
 	providerConfig, err := loader.Load()
 	if err != nil {
 		return errors.Wrap(err, "parse provider config")
