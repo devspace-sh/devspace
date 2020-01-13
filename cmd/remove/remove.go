@@ -19,8 +19,8 @@ func NewRemoveCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Comm
 		Args: cobra.NoArgs,
 	}
 
-	removeCmd.AddCommand(newClusterCmd())
-	removeCmd.AddCommand(newContextCmd())
+	removeCmd.AddCommand(newClusterCmd(f))
+	removeCmd.AddCommand(newContextCmd(f))
 	removeCmd.AddCommand(newDeploymentCmd(globalFlags))
 	removeCmd.AddCommand(newImageCmd(globalFlags))
 	removeCmd.AddCommand(newPortCmd(globalFlags))
