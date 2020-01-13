@@ -3,9 +3,8 @@ package remove
 import (
 	"sort"
 
-	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/mgutz/ansi"
@@ -18,7 +17,7 @@ type contextCmd struct {
 	Provider  string
 }
 
-func newContextCmd() *cobra.Command {
+func newContextCmd(f factory.Factory) *cobra.Command {
 	cmd := &contextCmd{}
 
 	contextCmd := &cobra.Command{
@@ -36,8 +35,9 @@ devspace remove context --all-spaces
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: cmd.RunRemoveContext,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunRemoveContext(f, cobraCmd, args)
+		}}
 
 	contextCmd.Flags().BoolVar(&cmd.AllSpaces, "all-spaces", false, "Remove all kubectl contexts belonging to Spaces")
 	contextCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
@@ -46,12 +46,12 @@ devspace remove context --all-spaces
 }
 
 // RunRemoveContext executes the devspace remove context functionality
-func (cmd *contextCmd) RunRemoveContext(cobraCmd *cobra.Command, args []string) error {
-	log := log.GetInstance()
+func (cmd *contextCmd) RunRemoveContext(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	log := f.GetLog()
 	// Remove all contexts
 	if cmd.AllSpaces {
 		// Get provider
-		provider, err := cloudpkg.GetProvider(cmd.Provider, log)
+		provider, err := f.GetProvider(cmd.Provider, log)
 		if err != nil {
 			return errors.Wrap(err, "log into provider")
 		}

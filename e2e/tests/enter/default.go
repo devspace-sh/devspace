@@ -1,7 +1,6 @@
 package enter
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -75,7 +74,6 @@ func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 	}
 
 	for _, c := range enterConfigs {
-		fmt.Printf("CONFIG TO RUN: %+v", c)
 		done := utils.Capture()
 
 		output := "My Test Data"

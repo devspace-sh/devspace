@@ -3,8 +3,7 @@ package remove
 import (
 	"fmt"
 
-	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -15,7 +14,7 @@ type clusterCmd struct {
 	AllYes   bool
 }
 
-func newClusterCmd() *cobra.Command {
+func newClusterCmd(f factory.Factory) *cobra.Command {
 	cmd := &clusterCmd{}
 
 	clusterCmd := &cobra.Command{
@@ -32,8 +31,9 @@ devspace remove cluster my-cluster
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
-		RunE: cmd.RunRemoveCluster,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunRemoveCluster(f, cobraCmd, args)
+		}}
 
 	clusterCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
 	clusterCmd.Flags().BoolVarP(&cmd.AllYes, "yes", "y", false, "Ignores all questions and deletes the cluster with all services and spaces")
@@ -42,10 +42,10 @@ devspace remove cluster my-cluster
 }
 
 // RunRemoveCluster executes the devspace remove cluster functionality
-func (cmd *clusterCmd) RunRemoveCluster(cobraCmd *cobra.Command, args []string) error {
+func (cmd *clusterCmd) RunRemoveCluster(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Get provider
-	log := log.GetInstance()
-	provider, err := cloudpkg.GetProvider(cmd.Provider, log)
+	log := f.GetLog()
+	provider, err := f.GetProvider(cmd.Provider, log)
 	if err != nil {
 		return errors.Wrap(err, "log into provider")
 	}
