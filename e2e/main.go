@@ -69,6 +69,9 @@ func main() {
 	var test stringList
 	testCommand.Var(&test, "test", "A comma seperated list of group tests to pass")
 
+	var skiptest stringList
+	testCommand.Var(&skiptest, "skip-test", "A comma seperated list of group tests to skip")
+
 	var verbose bool
 	testCommand.BoolVar(&verbose, "verbose", false, "Displays the tests outputs in real time (default: false)")
 
@@ -109,8 +112,13 @@ func main() {
 		fmt.Println("listCommand parsed!")
 	}
 	if testCommand.Parsed() {
-		// We gather all the group tests called with the --test flag. e.g: --test=examples,init
+		if len(test) > 0 && len(skiptest) > 0 {
+			logger.Error("flags '--test' and '--skip-test' cannot be used together")
+			os.Exit(1)
+		}
+
 		var testsToRun = map[string]Test{}
+		// We gather all the group tests called with the --test flag. e.g: --test=examples,init
 		for _, testName := range test {
 			if availableTests[testName] == nil {
 				// arg is not valid
@@ -134,12 +142,26 @@ func main() {
 
 		// If cmd test alone (if no --test flag), we want to run all available tests
 		if len(testsToRun) == 0 {
-
 			for testName := range availableTests {
 				testsToRun[testName] = availableTests[testName]
 			}
 		}
 
+		// --skip-test
+		for _, testName := range skiptest {
+			if availableTests[testName] == nil {
+				// arg is not valid
+				fmt.Printf("'%v' is not a valid argument for --skip-test. Valid arguments are the following: [ ", testName)
+				for key := range availableTests {
+					fmt.Printf("%v ", key)
+				}
+				fmt.Printf("]\n ")
+				os.Exit(1)
+			}
+			delete(testsToRun, testName)
+		}
+
+		// --test-xxx sub command
 		for testName, testRun := range testsToRun {
 			parameterSubTests := []string{}
 			if t, ok := subTests[testName]; ok && t != nil && len(*t) > 0 {
