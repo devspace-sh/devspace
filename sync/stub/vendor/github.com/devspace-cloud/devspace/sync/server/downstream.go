@@ -17,14 +17,21 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+// DownstreamOptions holds the options for the downstream server
+type DownstreamOptions struct {
+	RemotePath   string
+	ExcludePaths []string
+	ExitOnClose  bool
+}
+
 // StartDownstreamServer starts a new downstream server with the given reader and writer
-func StartDownstreamServer(remotePath string, excludePaths []string, reader io.Reader, writer io.Writer, exitOnClose bool) error {
-	pipe := util.NewStdStreamJoint(reader, writer, exitOnClose)
+func StartDownstreamServer(reader io.Reader, writer io.Writer, options *DownstreamOptions) error {
+	pipe := util.NewStdStreamJoint(reader, writer, options.ExitOnClose)
 	lis := util.NewStdinListener()
 	done := make(chan error)
 
 	// Compile ignore paths
-	ignoreMatcher, err := compilePaths(excludePaths)
+	ignoreMatcher, err := compilePaths(options.ExcludePaths)
 	if err != nil {
 		return errors.Wrap(err, "compile paths")
 	}
@@ -33,7 +40,7 @@ func StartDownstreamServer(remotePath string, excludePaths []string, reader io.R
 		s := grpc.NewServer()
 
 		remote.RegisterDownstreamServer(s, &Downstream{
-			RemotePath:    remotePath,
+			options:       options,
 			ignoreMatcher: ignoreMatcher,
 		})
 		reflection.Register(s)
@@ -47,8 +54,7 @@ func StartDownstreamServer(remotePath string, excludePaths []string, reader io.R
 
 // Downstream is the implementation for the downstream server
 type Downstream struct {
-	// RemotePath is the path to watch for changes
-	RemotePath string
+	options *DownstreamOptions
 
 	// ignore matcher is the ignore matcher which matches against excluded files and paths
 	ignoreMatcher gitignore.IgnoreParser
@@ -125,7 +131,7 @@ func (d *Downstream) compress(writer io.WriteCloser, files []string) error {
 	writtenFiles := make(map[string]bool)
 	for _, path := range files {
 		if _, ok := writtenFiles[path]; ok == false {
-			err := recursiveTar(d.RemotePath, path, writtenFiles, tarWriter, true)
+			err := recursiveTar(d.options.RemotePath, path, writtenFiles, tarWriter, true)
 			if err != nil {
 				return errors.Wrap(err, "recursive tar")
 			}
@@ -140,9 +146,9 @@ func (d *Downstream) ChangesCount(context.Context, *remote.Empty) (*remote.Chang
 	newState := make(map[string]*remote.Change)
 
 	// Walk through the dir
-	walkDir(d.RemotePath, d.RemotePath, d.ignoreMatcher, newState)
+	walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState)
 
-	changeAmount, err := streamChanges(d.RemotePath, d.watchedFiles, newState, nil)
+	changeAmount, err := streamChanges(d.options.RemotePath, d.watchedFiles, newState, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "count changes")
 	}
@@ -157,9 +163,9 @@ func (d *Downstream) Changes(empty *remote.Empty, stream remote.Downstream_Chang
 	newState := make(map[string]*remote.Change)
 
 	// Walk through the dir
-	walkDir(d.RemotePath, d.RemotePath, d.ignoreMatcher, newState)
+	walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState)
 
-	_, err := streamChanges(d.RemotePath, d.watchedFiles, newState, stream)
+	_, err := streamChanges(d.options.RemotePath, d.watchedFiles, newState, stream)
 	if err != nil {
 		return errors.Wrap(err, "stream changes")
 	}

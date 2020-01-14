@@ -6,7 +6,10 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/devspace-cloud/devspace/sync/util"
@@ -38,6 +41,45 @@ func untarAll(reader io.Reader, destPath, prefix string, config *Sync) error {
 			config.log.Infof("Downstream - Untared %d files...", fileCounter)
 		}
 	}
+}
+
+func createAllFolders(name string, perm os.FileMode, config *Sync) error {
+	absPath, err := filepath.Abs(name)
+	if err != nil {
+		return err
+	}
+
+	slashPath := filepath.ToSlash(absPath)
+	pathParts := strings.Split(slashPath, "/")
+	for i := 1; i < len(pathParts); i++ {
+		dirToCreate := strings.Join(pathParts[:i+1], "/")
+		err := os.Mkdir(dirToCreate, perm)
+		if err != nil {
+			if os.IsExist(err) {
+				continue
+			}
+
+			return errors.Errorf("Error creating %s: %v", dirToCreate, err)
+		}
+
+		if config.Options.DirCreateCmd != "" {
+			cmdArgs := make([]string, 0, len(config.Options.DirCreateArgs))
+			for _, arg := range config.Options.DirCreateArgs {
+				if arg == "{}" {
+					cmdArgs = append(cmdArgs, dirToCreate)
+				} else {
+					cmdArgs = append(cmdArgs, arg)
+				}
+			}
+
+			out, err := exec.Command(config.Options.DirCreateCmd, cmdArgs...).CombinedOutput()
+			if err != nil {
+				return errors.Errorf("Error executing command '%s %s': %s => %v", config.Options.DirCreateCmd, strings.Join(cmdArgs, " "), string(out), err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func untarNext(tarReader *tar.Reader, destPath, prefix string, config *Sync) (bool, error) {
@@ -76,13 +118,13 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *Sync) (bo
 		}
 	}
 
-	if err := os.MkdirAll(baseName, 0755); err != nil {
-		return false, errors.Wrap(err, "mkdir all base")
+	if err := createAllFolders(baseName, 0755, config); err != nil {
+		return false, err
 	}
 
 	if header.FileInfo().IsDir() {
-		if err := os.MkdirAll(outFileName, 0755); err != nil {
-			return false, errors.Wrap(err, "mkdir all")
+		if err := createAllFolders(outFileName, 0755, config); err != nil {
+			return false, err
 		}
 
 		config.fileIndex.CreateDirInFileMap(relativePath)
@@ -128,6 +170,23 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string, config *Sync) (bo
 
 	// Set mod time correctly
 	_ = os.Chtimes(outFileName, time.Now(), header.ModTime)
+
+	// Execute command if defined
+	if config.Options.FileChangeCmd != "" {
+		cmdArgs := make([]string, 0, len(config.Options.FileChangeArgs))
+		for _, arg := range config.Options.FileChangeArgs {
+			if arg == "{}" {
+				cmdArgs = append(cmdArgs, outFileName)
+			} else {
+				cmdArgs = append(cmdArgs, arg)
+			}
+		}
+
+		out, err := exec.Command(config.Options.FileChangeCmd, cmdArgs...).CombinedOutput()
+		if err != nil {
+			return false, errors.Errorf("Error executing command '%s %s': %s => %v", config.Options.FileChangeCmd, strings.Join(cmdArgs, " "), string(out), err)
+		}
+	}
 
 	// Update fileMap so that upstream does not upload the file
 	config.fileIndex.fileMap[relativePath] = &FileInformation{

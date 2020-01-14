@@ -240,6 +240,15 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		Log:                   customLog,
 	}
 
+	// Add onDownload hooks
+	if syncConfig.OnDownload != nil && syncConfig.OnDownload.ExecLocal != nil {
+		fileCmd, fileArgs, dirCmd, dirArgs := getSyncCommands(syncConfig.OnDownload.ExecLocal)
+		options.FileChangeCmd = fileCmd
+		options.FileChangeArgs = fileArgs
+		options.DirCreateCmd = dirCmd
+		options.DirCreateArgs = dirArgs
+	}
+
 	if len(syncConfig.ExcludePaths) > 0 {
 		options.ExcludePaths = syncConfig.ExcludePaths
 	}
@@ -280,6 +289,22 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 	for _, exclude := range options.DownloadExcludePaths {
 		upstreamArgs = append(upstreamArgs, "--exclude", exclude)
 	}
+	if syncConfig.OnUpload != nil && syncConfig.OnUpload.ExecRemote != nil {
+		fileCmd, fileArgs, dirCmd, dirArgs := getSyncCommands(syncConfig.OnUpload.ExecRemote)
+		if fileCmd != "" {
+			upstreamArgs = append(upstreamArgs, "--filechangecmd", fileCmd)
+			for _, arg := range fileArgs {
+				upstreamArgs = append(upstreamArgs, "--filechangeargs", arg)
+			}
+		}
+		if dirCmd != "" {
+			upstreamArgs = append(upstreamArgs, "--dircreatecmd", dirCmd)
+			for _, arg := range dirArgs {
+				upstreamArgs = append(upstreamArgs, "--dircreateargs", arg)
+			}
+		}
+	}
+
 	upstreamArgs = append(upstreamArgs, containerPath)
 
 	upStdinReader, upStdinWriter, err := os.Pipe()
@@ -498,4 +523,24 @@ func (serviceClient *client) injectSyncHelper(pod *v1.Pod, container string, fil
 	writer.Close()
 
 	return <-errChan
+}
+
+func getSyncCommands(cmd *latest.SyncExecCommand) (string, []string, string, []string) {
+	if cmd.Command != "" {
+		return cmd.Command, cmd.Args, cmd.Command, cmd.Args
+	}
+
+	var (
+		onFileChange = cmd.OnFileChange
+		onDirCreate  = cmd.OnDirCreate
+	)
+
+	if onFileChange == nil {
+		onFileChange = &latest.SyncCommand{}
+	}
+	if onDirCreate == nil {
+		onDirCreate = &latest.SyncCommand{}
+	}
+
+	return onFileChange.Command, onFileChange.Args, onDirCreate.Command, onDirCreate.Args
 }

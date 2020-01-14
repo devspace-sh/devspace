@@ -34,6 +34,12 @@ type Options struct {
 	DownloadExcludePaths []string
 	UploadExcludePaths   []string
 
+	FileChangeCmd  string
+	FileChangeArgs []string
+
+	DirCreateCmd  string
+	DirCreateArgs []string
+
 	UpstreamLimit   int64
 	DownstreamLimit int64
 	Verbose         bool
