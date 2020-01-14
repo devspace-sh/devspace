@@ -78,8 +78,8 @@ func main() {
 	var timeout int
 	testCommand.IntVar(&timeout, "timeout", 200, "Sets a timeout limit in seconds for each test (default: 200)")
 
-	var testlist stringList
-	listCommand.Var(&testlist, "test", "A comma seperated list of group tests to list (leave empty to list all group tests)")
+	var testlist bool
+	testCommand.BoolVar(&testlist, "list", false, "Displays a list of sub commands")
 
 	// Verify that a subcommand has been provided
 	// os.Arg[0] is the main command
@@ -109,9 +109,45 @@ func main() {
 	// If "list" and "test" are used together, only the former will be parsed and recognized, the latter will be ignored
 	if listCommand.Parsed() {
 		// Required Flags
-		fmt.Println("listCommand parsed!")
+		fmt.Println("List of available commands:")
+		fmt.Println("\t - test: \t\tRuns all the tests sequentially (use --list to display a list of sub commands)")
+		fmt.Println("\t - purge-namespaces: \tDeletes namespaces that might have failed to be deleted during previous test runs")
 	}
 	if testCommand.Parsed() {
+		if testlist {
+			// skip-test, verbose, timeout, test
+			fmt.Println("List of available sub commands for the 'test' command:")
+			// --test
+			fmt.Printf("\t --test: A comma seperated list of group tests to pass [ ")
+			for key := range availableTests {
+				fmt.Printf("%v ", key)
+			}
+			fmt.Printf("]\n ")
+
+			// --skip-test
+			fmt.Printf("\t --skip-test: A comma seperated list of group tests to skip [ ")
+			for key := range availableTests {
+				fmt.Printf("%v ", key)
+			}
+			fmt.Printf("]\n ")
+
+			// --test-xxx
+			for testName, testRun := range availableTests {
+				fmt.Printf("\t --test-%s: A comma seperated list of sub tests to pass for the '%s' group test [ ", testName, testName)
+				for _, st := range testRun.SubTests() {
+					fmt.Printf("%v ", st)
+				}
+				fmt.Printf("]\n ")
+			}
+
+			// --verbose
+			fmt.Println("\n\t --verbose: Displays tests output in real time (default: false)")
+			// --timeout
+			fmt.Println("\t --timeout: Sets a timeout limit in seconds for each test (default: 200)")
+
+			return
+		}
+
 		if len(test) > 0 && len(skiptest) > 0 {
 			logger.Error("flags '--test' and '--skip-test' cannot be used together")
 			os.Exit(1)
