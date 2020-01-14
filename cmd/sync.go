@@ -198,6 +198,8 @@ func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 			}
 		}
 
+		loadedSyncConfig.DownloadOnInitialSync = &cmd.DownloadOnInitialSync
+		loadedSyncConfig.WaitInitialSync = &cmd.NoWatch
 		if syncConfig.LocalSubPath != "" {
 			loadedSyncConfig.LocalSubPath = syncConfig.LocalSubPath
 		}
