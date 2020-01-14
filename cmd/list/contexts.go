@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
@@ -13,7 +14,7 @@ import (
 
 type contextsCmd struct{}
 
-func newContextsCmd() *cobra.Command {
+func newContextsCmd(f factory.Factory) *cobra.Command {
 	cmd := &contextsCmd{}
 
 	contextsCmd := &cobra.Command{
@@ -30,14 +31,16 @@ devspace list contexts
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunListContexts,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunListContexts(f, cobraCmd, args)
+		}}
 
 	return contextsCmd
 }
 
 // RunListContexts executes the functionality "devspace list contexts"
-func (cmd *contextsCmd) RunListContexts(cobraCmd *cobra.Command, args []string) error {
+func (cmd *contextsCmd) RunListContexts(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	logger := f.GetLog()
 	// Load kube-config
 	kubeConfig, err := kubeconfig.LoadRawConfig()
 	if err != nil {
@@ -76,6 +79,6 @@ func (cmd *contextsCmd) RunListContexts(cobraCmd *cobra.Command, args []string) 
 		})
 	}
 
-	log.PrintTable(log.GetInstance(), headerColumnNames, contextRows)
+	log.PrintTable(logger, headerColumnNames, contextRows)
 	return nil
 }

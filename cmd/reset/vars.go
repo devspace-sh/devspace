@@ -1,8 +1,7 @@
 package reset
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
 	"github.com/pkg/errors"
@@ -11,7 +10,7 @@ import (
 
 type varsCmd struct{}
 
-func newVarsCmd() *cobra.Command {
+func newVarsCmd(f factory.Factory) *cobra.Command {
 	cmd := &varsCmd{}
 
 	varsCmd := &cobra.Command{
@@ -28,16 +27,18 @@ devspace reset vars
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunResetVars,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunResetVars(f, cobraCmd, args)
+		}}
 
 	return varsCmd
 }
 
 // RunResetVars executes the reset vars command logic
-func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) error {
+func (cmd *varsCmd) RunResetVars(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(nil, log.GetInstance())
+	log := f.GetLog()
+	configLoader := f.NewConfigLoader(nil, log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -61,6 +62,6 @@ func (cmd *varsCmd) RunResetVars(cobraCmd *cobra.Command, args []string) error {
 		return errors.Errorf("Error saving config: %v", err)
 	}
 
-	log.GetInstance().Donef("Successfully deleted all variables")
+	log.Donef("Successfully deleted all variables")
 	return nil
 }

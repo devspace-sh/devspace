@@ -11,25 +11,25 @@ import (
 	"github.com/pkg/errors"
 )
 
-func runDefault(f *customFactory, logger log.Logger) error {
+func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 	logger.Info("Run test 'default' of 'sync'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
 	sc := &cmd.SyncCmd{
 		GlobalFlags: &flags.GlobalFlags{
-			Namespace: f.namespace,
+			Namespace: f.Namespace,
 			NoWarn:    true,
 			Silent:    true,
 		},
-		LocalPath:     "./../bla",
-		ContainerPath: "/app",
+		LocalPath:     "./../foo",
+		ContainerPath: "/home",
 		NoWatch:       true,
 	}
 
 	ec := &cmd.EnterCmd{
 		GlobalFlags: &flags.GlobalFlags{
-			Namespace: f.namespace,
+			Namespace: f.Namespace,
 			NoWarn:    true,
 			Silent:    true,
 		},
@@ -45,7 +45,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 
 	done := utils.Capture()
 
-	err = ec.Run(f, nil, []string{"ls", "foo"})
+	err = ec.Run(f, nil, []string{"ls", "home"})
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 
 	capturedOutput = strings.TrimSpace(capturedOutput)
 
-	if strings.Index(capturedOutput, "foo.go") == -1 {
+	if strings.Index(capturedOutput, "bar.go") == -1 {
 		return errors.Errorf("capturedOutput '%v' is different than output 'foo.go' for the enter cmd", capturedOutput)
 	}
 

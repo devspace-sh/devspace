@@ -2,9 +2,8 @@ package add
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -16,7 +15,7 @@ type portCmd struct {
 	LabelSelector string
 }
 
-func newPortCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newPortCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &portCmd{GlobalFlags: globalFlags}
 
 	addPortCmd := &cobra.Command{
@@ -33,8 +32,9 @@ devspace add port 8080:80,3000
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
-		RunE: cmd.RunAddPort,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunAddPort(f, cobraCmd, args)
+		}}
 
 	addPortCmd.Flags().StringVar(&cmd.LabelSelector, "label-selector", "", "Comma separated key=value label-selector list (e.g. release=test)")
 
@@ -42,9 +42,10 @@ devspace add port 8080:80,3000
 }
 
 // RunAddPort executes the add port command logic
-func (cmd *portCmd) RunAddPort(cobraCmd *cobra.Command, args []string) error {
+func (cmd *portCmd) RunAddPort(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	logger := f.GetLog()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -68,6 +69,6 @@ func (cmd *portCmd) RunAddPort(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.GetInstance().Donef("Successfully added port %v", args[0])
+	logger.Donef("Successfully added port %v", args[0])
 	return nil
 }

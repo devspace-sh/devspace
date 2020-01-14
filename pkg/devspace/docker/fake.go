@@ -16,6 +16,8 @@ var fakeClient Client
 
 // SetFakeClient causes NewClient to return the given fake client. !ONLY FOR TESTING!
 func SetFakeClient(fake Client) {
+	// panic("Set Fake Docker Client")
+
 	fakeClient = fake
 }
 

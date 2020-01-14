@@ -54,6 +54,7 @@ type Factory interface {
 	GetProvider(useProviderName string, log log.Logger) (cloud.Provider, error)
 	GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, log log.Logger) (cloud.Provider, error)
 	NewSpaceResumer(kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer
+	NewCloudConfigLoader() config.Loader
 
 	// Build & Deploy
 	NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller
@@ -69,6 +70,11 @@ type DefaultFactoryImpl struct{}
 // DefaultFactory returns the default factory implementation
 func DefaultFactory() Factory {
 	return &DefaultFactoryImpl{}
+}
+
+// NewCloudConfigLoader creates a new cloud config loader
+func (f *DefaultFactoryImpl) NewCloudConfigLoader() config.Loader {
+	return config.NewLoader()
 }
 
 // NewBuildController implements interface

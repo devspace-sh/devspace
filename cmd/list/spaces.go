@@ -1,8 +1,7 @@
 package list
 
 import (
-	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -15,7 +14,7 @@ type SpacesCmd struct {
 	Cluster  string
 }
 
-func newSpacesCmd() *cobra.Command {
+func newSpacesCmd(f factory.Factory) *cobra.Command {
 	cmd := &SpacesCmd{}
 
 	SpacesCmd := &cobra.Command{
@@ -34,8 +33,9 @@ devspace list spaces --all
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunListSpaces,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunListSpaces(f, cobraCmd, args)
+		}}
 
 	SpacesCmd.Flags().StringVar(&cmd.Name, "name", "", "Space name to show (default: all)")
 	SpacesCmd.Flags().StringVar(&cmd.Provider, "provider", "", "Cloud Provider to use")
@@ -46,9 +46,10 @@ devspace list spaces --all
 }
 
 // RunListCloudDevspaces executes the "devspace list spaces" functionality
-func (cmd *SpacesCmd) RunListSpaces(cobraCmd *cobra.Command, args []string) error {
+func (cmd *SpacesCmd) RunListSpaces(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	logger := f.GetLog()
 	// Get provider
-	provider, err := cloudpkg.GetProvider(cmd.Provider, log.GetInstance())
+	provider, err := f.GetProvider(cmd.Provider, logger)
 	if err != nil {
 		return errors.Wrap(err, "log into provider")
 	}

@@ -2,9 +2,8 @@ package add
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
 	"github.com/pkg/errors"
@@ -20,7 +19,7 @@ type syncCmd struct {
 	ExcludedPaths string
 }
 
-func newSyncCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newSyncCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &syncCmd{GlobalFlags: globalFlags}
 
 	addSyncCmd := &cobra.Command{
@@ -37,7 +36,9 @@ devspace add sync --local=app --container=/app
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunAddSync,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunAddSync(f, cobraCmd, args)
+		},
 	}
 
 	addSyncCmd.Flags().StringVar(&cmd.LabelSelector, "label-selector", "", "Comma separated key=value selector list (e.g. release=test)")
@@ -52,9 +53,10 @@ devspace add sync --local=app --container=/app
 }
 
 // RunAddSync executes the add sync command logic
-func (cmd *syncCmd) RunAddSync(cobraCmd *cobra.Command, args []string) error {
+func (cmd *syncCmd) RunAddSync(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	logger := f.GetLog()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -78,6 +80,6 @@ func (cmd *syncCmd) RunAddSync(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	log.GetInstance().Donef("Successfully added sync between local path %v and container path %v", cmd.LocalPath, cmd.ContainerPath)
+	logger.Donef("Successfully added sync between local path %v and container path %v", cmd.LocalPath, cmd.ContainerPath)
 	return nil
 }

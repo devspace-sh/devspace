@@ -3,7 +3,7 @@ package update
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -15,7 +15,7 @@ type configCmd struct {
 }
 
 // newConfigCmd creates a new command
-func newConfigCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newConfigCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &configCmd{GlobalFlags: globalFlags}
 
 	configCmd := &cobra.Command{
@@ -32,17 +32,18 @@ Note: This does not upgrade the overwrite configs
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunConfig,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunConfig(f, cobraCmd, args)
+		}}
 
 	return configCmd
 }
 
 // RunConfig executes the functionality "devspace update config"
-func (cmd *configCmd) RunConfig(cobraCmd *cobra.Command, args []string) error {
+func (cmd *configCmd) RunConfig(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	log := log.GetInstance()
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log)
+	log := f.GetLog()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err

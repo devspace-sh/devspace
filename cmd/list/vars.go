@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -16,7 +16,7 @@ type varsCmd struct {
 	*flags.GlobalFlags
 }
 
-func newVarsCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newVarsCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &varsCmd{GlobalFlags: globalFlags}
 
 	varsCmd := &cobra.Command{
@@ -31,16 +31,18 @@ values
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunListVars,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunListVars(f, cobraCmd, args)
+		}}
 
 	return varsCmd
 }
 
 // RunListVars runs the list vars command logic
-func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) error {
+func (cmd *varsCmd) RunListVars(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	logger := f.GetLog()
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -81,10 +83,10 @@ func (cmd *varsCmd) RunListVars(cobraCmd *cobra.Command, args []string) error {
 
 	// No variable found
 	if len(varRow) == 0 {
-		log.GetInstance().Info("No variables found")
+		logger.Info("No variables found")
 		return nil
 	}
 
-	log.PrintTable(log.GetInstance(), headerColumnNames, varRow)
+	log.PrintTable(logger, headerColumnNames, varRow)
 	return nil
 }

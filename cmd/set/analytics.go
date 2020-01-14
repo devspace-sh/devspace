@@ -2,7 +2,7 @@ package set
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/util/analytics"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -10,7 +10,7 @@ import (
 
 type analyticsCmd struct{}
 
-func newAnalyticsCmd() *cobra.Command {
+func newAnalyticsCmd(f factory.Factory) *cobra.Command {
 	cmd := &analyticsCmd{}
 
 	return &cobra.Command{
@@ -25,12 +25,15 @@ devspace set analytics disabled true
 #######################################################
 	`,
 		Args: cobra.RangeArgs(1, 2),
-		RunE: cmd.RunAnalyticsConfig,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunAnalyticsConfig(f, cobraCmd, args)
+		},
 	}
 }
 
 // RunAnalyticsConfig executes the "devspace set analytics" logic
-func (*analyticsCmd) RunAnalyticsConfig(cobraCmd *cobra.Command, args []string) error {
+func (*analyticsCmd) RunAnalyticsConfig(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	log := f.GetLog()
 	analytics, err := analytics.GetAnalytics()
 	if err != nil {
 		return errors.Wrap(err, "get analytics config")
@@ -48,6 +51,6 @@ func (*analyticsCmd) RunAnalyticsConfig(cobraCmd *cobra.Command, args []string) 
 		return errors.Wrap(err, "set analytics config")
 	}
 
-	log.GetInstance().Infof("Successfully updated analytics config")
+	log.Infof("Successfully updated analytics config")
 	return nil
 }

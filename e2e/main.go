@@ -69,14 +69,17 @@ func main() {
 	var test stringList
 	testCommand.Var(&test, "test", "A comma seperated list of group tests to pass")
 
+	var skiptest stringList
+	testCommand.Var(&skiptest, "skip-test", "A comma seperated list of group tests to skip")
+
 	var verbose bool
 	testCommand.BoolVar(&verbose, "verbose", false, "Displays the tests outputs in real time (default: false)")
 
 	var timeout int
 	testCommand.IntVar(&timeout, "timeout", 200, "Sets a timeout limit in seconds for each test (default: 200)")
 
-	var testlist stringList
-	listCommand.Var(&testlist, "test", "A comma seperated list of group tests to list (leave empty to list all group tests)")
+	var testlist bool
+	testCommand.BoolVar(&testlist, "list", false, "Displays a list of sub commands")
 
 	// Verify that a subcommand has been provided
 	// os.Arg[0] is the main command
@@ -106,11 +109,52 @@ func main() {
 	// If "list" and "test" are used together, only the former will be parsed and recognized, the latter will be ignored
 	if listCommand.Parsed() {
 		// Required Flags
-		fmt.Println("listCommand parsed!")
+		fmt.Println("List of available commands:")
+		fmt.Println("\t - test: \t\tRuns all the tests sequentially (use --list to display a list of sub commands)")
+		fmt.Println("\t - purge-namespaces: \tDeletes namespaces that might have failed to be deleted during previous test runs")
 	}
 	if testCommand.Parsed() {
-		// We gather all the group tests called with the --test flag. e.g: --test=examples,init
+		if testlist {
+			// skip-test, verbose, timeout, test
+			fmt.Println("List of available sub commands for the 'test' command:")
+			// --test
+			fmt.Printf("\t --test: A comma seperated list of group tests to pass [ ")
+			for key := range availableTests {
+				fmt.Printf("%v ", key)
+			}
+			fmt.Printf("]\n ")
+
+			// --skip-test
+			fmt.Printf("\t --skip-test: A comma seperated list of group tests to skip [ ")
+			for key := range availableTests {
+				fmt.Printf("%v ", key)
+			}
+			fmt.Printf("]\n ")
+
+			// --test-xxx
+			for testName, testRun := range availableTests {
+				fmt.Printf("\t --test-%s: A comma seperated list of sub tests to pass for the '%s' group test [ ", testName, testName)
+				for _, st := range testRun.SubTests() {
+					fmt.Printf("%v ", st)
+				}
+				fmt.Printf("]\n ")
+			}
+
+			// --verbose
+			fmt.Println("\n\t --verbose: Displays tests output in real time (default: false)")
+			// --timeout
+			fmt.Println("\t --timeout: Sets a timeout limit in seconds for each test (default: 200)")
+
+			return
+		}
+
+		if len(test) > 0 && len(skiptest) > 0 {
+			logger.Error("flags '--test' and '--skip-test' cannot be used together")
+			os.Exit(1)
+		}
+
 		var testsToRun = map[string]Test{}
+		// We gather all the group tests called with the --test flag. e.g: --test=examples,init
 		for _, testName := range test {
 			if availableTests[testName] == nil {
 				// arg is not valid
@@ -134,12 +178,26 @@ func main() {
 
 		// If cmd test alone (if no --test flag), we want to run all available tests
 		if len(testsToRun) == 0 {
-
 			for testName := range availableTests {
 				testsToRun[testName] = availableTests[testName]
 			}
 		}
 
+		// --skip-test
+		for _, testName := range skiptest {
+			if availableTests[testName] == nil {
+				// arg is not valid
+				fmt.Printf("'%v' is not a valid argument for --skip-test. Valid arguments are the following: [ ", testName)
+				for key := range availableTests {
+					fmt.Printf("%v ", key)
+				}
+				fmt.Printf("]\n ")
+				os.Exit(1)
+			}
+			delete(testsToRun, testName)
+		}
+
+		// --test-xxx sub command
 		for testName, testRun := range testsToRun {
 			parameterSubTests := []string{}
 			if t, ok := subTests[testName]; ok && t != nil && len(*t) > 0 {

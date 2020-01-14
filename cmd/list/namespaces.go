@@ -5,8 +5,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
@@ -18,7 +17,7 @@ type namespacesCmd struct {
 	*flags.GlobalFlags
 }
 
-func newNamespacesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newNamespacesCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &namespacesCmd{GlobalFlags: globalFlags}
 
 	namespacesCmd := &cobra.Command{
@@ -32,16 +31,18 @@ Lists all namespaces in the selected kube context
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunListNamespaces,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunListNamespaces(f, cobraCmd, args)
+		}}
 
 	return namespacesCmd
 }
 
 // RunListNamespaces runs the list namespaces command logic
-func (cmd *namespacesCmd) RunListNamespaces(cobraCmd *cobra.Command, args []string) error {
+func (cmd *namespacesCmd) RunListNamespaces(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	logger := f.GetLog()
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -57,13 +58,13 @@ func (cmd *namespacesCmd) RunListNamespaces(cobraCmd *cobra.Command, args []stri
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log.GetInstance())
+	err = cmd.UseLastContext(generatedConfig, logger)
 	if err != nil {
 		return err
 	}
 
 	// Get kubectl client
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Wrap(err, "new kube client")
 	}
@@ -102,6 +103,6 @@ func (cmd *namespacesCmd) RunListNamespaces(cobraCmd *cobra.Command, args []stri
 		})
 	}
 
-	log.PrintTable(log.GetInstance(), headerColumnNames, namespaceRows)
+	log.PrintTable(logger, headerColumnNames, namespaceRows)
 	return nil
 }

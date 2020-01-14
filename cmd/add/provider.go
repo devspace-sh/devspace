@@ -3,12 +3,10 @@ package add
 import (
 	"strings"
 
-	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/pkg/errors"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/spf13/cobra"
 )
 
@@ -16,7 +14,7 @@ type providerCmd struct {
 	Host string
 }
 
-func newProviderCmd() *cobra.Command {
+func newProviderCmd(f factory.Factory) *cobra.Command {
 	cmd := &providerCmd{}
 
 	addProviderCmd := &cobra.Command{
@@ -33,7 +31,9 @@ devspace add provider app.devspace.cloud
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
-		RunE: cmd.RunAddProvider,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunAddProvider(f, cobraCmd, args)
+		},
 	}
 
 	addProviderCmd.Flags().StringVar(&cmd.Host, "host", "", "The URL DevSpace should use for this provider")
@@ -42,9 +42,9 @@ devspace add provider app.devspace.cloud
 }
 
 // RunAddProvider executes the "devspace add provider" functionality
-func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) error {
+func (cmd *providerCmd) RunAddProvider(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	providerName := args[0]
-
+	logger := f.GetLog()
 	// Get host name
 	host := "https://" + strings.TrimRight(providerName, "/")
 	if cmd.Host != "" {
@@ -52,7 +52,7 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) e
 	}
 
 	// Get provider configuration
-	loader := config.NewLoader()
+	loader := f.NewCloudConfigLoader()
 	providerConfig, err := loader.Load()
 	if err != nil {
 		return errors.Wrap(err, "parse provider config")
@@ -62,7 +62,10 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) e
 	}
 
 	// Check if provider already exists
-	provider := config.GetProvider(providerConfig, providerName)
+	provider, err := f.GetProvider(providerName, logger)
+	if err != nil {
+		return errors.Wrap(err, "get provider")
+	}
 	if provider != nil {
 		return errors.Errorf("Provider %s does already exist", providerName)
 	}
@@ -74,7 +77,7 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) e
 	})
 
 	// Ensure user is logged in
-	_, err = cloudpkg.GetProviderWithOptions(providerName, "", true, loader, log.GetInstance())
+	_, err = f.GetProviderWithOptions(providerName, "", true, loader, logger)
 	if err != nil {
 		return errors.Wrap(err, "log into provider")
 	}
@@ -87,6 +90,6 @@ func (cmd *providerCmd) RunAddProvider(cobraCmd *cobra.Command, args []string) e
 		return errors.Wrap(err, "save provider config")
 	}
 
-	log.GetInstance().Donef("Successfully added cloud provider %s", providerName)
+	logger.Donef("Successfully added cloud provider %s", providerName)
 	return nil
 }

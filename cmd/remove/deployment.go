@@ -2,11 +2,9 @@ package remove
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
@@ -20,7 +18,7 @@ type deploymentCmd struct {
 	RemoveAll bool
 }
 
-func newDeploymentCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newDeploymentCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &deploymentCmd{GlobalFlags: globalFlags}
 
 	deploymentCmd := &cobra.Command{
@@ -39,8 +37,9 @@ devspace remove deployment --all
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: cmd.RunRemoveDeployment,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunRemoveDeployment(f, cobraCmd, args)
+		}}
 
 	deploymentCmd.Flags().BoolVar(&cmd.RemoveAll, "all", false, "Remove all deployments")
 
@@ -48,10 +47,10 @@ devspace remove deployment --all
 }
 
 // RunRemoveDeployment executes the specified deployment
-func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []string) error {
+func (cmd *deploymentCmd) RunRemoveDeployment(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	log := log.GetInstance()
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log)
+	log := f.GetLog()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -83,7 +82,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(cobraCmd *cobra.Command, args []st
 		return err
 	}
 	if shouldPurgeDeployment == "yes" {
-		client, err := kubectl.NewDefaultClient()
+		client, err := f.NewKubeDefaultClient()
 		if err != nil {
 			return errors.Errorf("Unable to create new kubectl client: %v", err)
 		}

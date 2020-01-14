@@ -4,9 +4,8 @@ import (
 	"errors"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/spf13/cobra"
 )
@@ -18,7 +17,7 @@ type portCmd struct {
 	RemoveAll     bool
 }
 
-func newPortCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newPortCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &portCmd{GlobalFlags: globalFlags}
 
 	portCmd := &cobra.Command{
@@ -35,8 +34,9 @@ devspace remove port --all
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: cmd.RunRemovePort,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunRemovePort(f, cobraCmd, args)
+		}}
 
 	portCmd.Flags().StringVar(&cmd.LabelSelector, "label-selector", "", "Comma separated key=value selector list (e.g. release=test)")
 	portCmd.Flags().BoolVar(&cmd.RemoveAll, "all", false, "Remove all configured ports")
@@ -45,9 +45,10 @@ devspace remove port --all
 }
 
 // RunRemovePort executes the remove port command logic
-func (cmd *portCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) error {
+func (cmd *portCmd) RunRemovePort(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	log := f.GetLog()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -71,6 +72,6 @@ func (cmd *portCmd) RunRemovePort(cobraCmd *cobra.Command, args []string) error 
 		return err
 	}
 
-	log.GetInstance().Done("Successfully removed port")
+	log.Done("Successfully removed port")
 	return nil
 }

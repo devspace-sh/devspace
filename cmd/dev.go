@@ -8,7 +8,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/server"
@@ -19,11 +18,10 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	logutil "github.com/devspace-cloud/devspace/pkg/util/log"
@@ -68,7 +66,7 @@ type DevCmd struct {
 const interactiveDefaultPickerValue = "Open Picker"
 
 // NewDevCmd creates a new devspace dev command
-func NewDevCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewDevCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &DevCmd{
 		GlobalFlags: globalFlags,
 		log:         log.GetInstance(),
@@ -92,7 +90,9 @@ Open terminal instead of logs:
 - Use "devspace dev -t" for opening a terminal
 - Use "devspace dev -i" for opening a terminal and overriding container entrypoint with sleep command
 #######################################################`,
-		RunE: cmd.Run,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.Run(f, cobraCmd, args)
+		},
 	}
 
 	devCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
@@ -123,9 +123,10 @@ Open terminal instead of logs:
 }
 
 // Run executes the command logic
-func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
+func (cmd *DevCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	cmd.configLoader = loader.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
+	cmd.log = f.GetLog()
+	cmd.configLoader = f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
 	configExists, err := cmd.configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -156,7 +157,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Create kubectl client and switch context if specified
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
@@ -183,7 +184,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Signal that we are working on the space if there is any
-	resumer := resume.NewSpaceResumer(client, cmd.log)
+	resumer := f.NewSpaceResumer(client, cmd.log)
 	err = resumer.ResumeSpace(true)
 	if err != nil {
 		return err
@@ -196,7 +197,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Create the image pull secrets and add them to the default service account
-	dockerClient, err := docker.NewClient(cmd.log)
+	dockerClient, err := f.NewDockerClient(cmd.log)
 	if err != nil {
 		dockerClient = nil
 	}
@@ -208,7 +209,7 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Build and deploy images
-	exitCode, err := cmd.buildAndDeploy(config, generatedConfig, client, args, true)
+	exitCode, err := cmd.buildAndDeploy(f, config, generatedConfig, client, args, true)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {
@@ -220,11 +221,11 @@ func (cmd *DevCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
+func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
 	if cmd.SkipPipeline == false {
 
 		// Create Dependencymanager
-		manager, err := dependency.NewManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log)
+		manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log)
 		if err != nil {
 			return 0, errors.Wrap(err, "new manager")
 		}
@@ -245,7 +246,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 		// Build image if necessary
 		builtImages := make(map[string]string)
 		if cmd.SkipBuild == false {
-			builtImages, err = build.NewController(config, generatedConfig.GetActive(), client).Build(&build.Options{
+			builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
 				SkipPush:                 cmd.SkipPush,
 				IsDev:                    true,
 				ForceRebuild:             cmd.ForceBuild,
@@ -281,7 +282,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 			}
 
 			// Deploy all
-			err = deploy.NewController(config, generatedConfig.GetActive(), client).Deploy(&deploy.Options{
+			err = f.NewDeployController(config, generatedConfig.GetActive(), client).Deploy(&deploy.Options{
 				IsDev:       true,
 				ForceDeploy: cmd.ForceDeploy,
 				BuiltImages: builtImages,
@@ -311,7 +312,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 		var err error
 
 		// Start services
-		exitCode, err = cmd.startServices(config, generatedConfig, client, args, cmd.log)
+		exitCode, err = cmd.startServices(f, config, generatedConfig, client, args, cmd.log)
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
@@ -322,7 +323,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 				}
 
 				// Trigger rebuild & redeploy
-				return cmd.buildAndDeploy(config, generatedConfig, client, args, false)
+				return cmd.buildAndDeploy(f, config, generatedConfig, client, args, false)
 			}
 
 			return 0, err
@@ -332,7 +333,7 @@ func (cmd *DevCmd) buildAndDeploy(config *latest.Config, generatedConfig *genera
 	return exitCode, nil
 }
 
-func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, log log.Logger) (int, error) {
+func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, log log.Logger) (int, error) {
 	selectorParameter := &targetselector.SelectorParameter{
 		CmdParameter: targetselector.CmdParameter{
 			Namespace:   cmd.Namespace,
@@ -349,7 +350,7 @@ func (cmd *DevCmd) startServices(config *latest.Config, generatedConfig *generat
 	}
 
 	var (
-		servicesClient  = services.NewClient(config, generatedConfig, client, selectorParameter, log)
+		servicesClient  = f.NewServicesClient(config, generatedConfig, client, selectorParameter, log)
 		exitChan        = make(chan error)
 		autoReloadPaths = GetPaths(config)
 		interactiveMode = config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.DefaultEnabled != nil && *config.Dev.Interactive.DefaultEnabled == true

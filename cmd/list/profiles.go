@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -13,7 +14,7 @@ import (
 
 type profilesCmd struct{}
 
-func newProfilesCmd() *cobra.Command {
+func newProfilesCmd(f factory.Factory) *cobra.Command {
 	cmd := &profilesCmd{}
 
 	profilesCmd := &cobra.Command{
@@ -27,16 +28,18 @@ Lists all DevSpace configuartions for this project
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunListProfiles,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunListProfiles(f, cobraCmd, args)
+		}}
 
 	return profilesCmd
 }
 
 // RunListProfiles runs the list profiles command logic
-func (cmd *profilesCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) error {
+func (cmd *profilesCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	logger := f.GetLog()
 	// Set config root
-	configLoader := loader.NewConfigLoader(nil, log.GetInstance())
+	configLoader := f.NewConfigLoader(nil, logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -71,6 +74,6 @@ func (cmd *profilesCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) 
 		})
 	}
 
-	log.PrintTable(log.GetInstance(), headerColumnNames, configRows)
+	log.PrintTable(logger, headerColumnNames, configRows)
 	return nil
 }

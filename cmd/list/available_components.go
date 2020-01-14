@@ -2,6 +2,7 @@ package list
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/chart"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -9,7 +10,7 @@ import (
 
 type availableComponentsCmd struct{}
 
-func newAvailableComponentsCmd() *cobra.Command {
+func newAvailableComponentsCmd(f factory.Factory) *cobra.Command {
 	cmd := &availableComponentsCmd{}
 
 	availableComponentsCmd := &cobra.Command{
@@ -24,14 +25,17 @@ in devspace
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunListAvailableComponents,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunListAvailableComponents(f, cobraCmd, args)
+		},
 	}
 
 	return availableComponentsCmd
 }
 
 // RunListPackage runs the list available components logic
-func (cmd *availableComponentsCmd) RunListAvailableComponents(cobraCmd *cobra.Command, args []string) error {
+func (cmd *availableComponentsCmd) RunListAvailableComponents(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	logger := f.GetLog()
 	headerColumnNames := []string{
 		"Name",
 		"Description",
@@ -50,6 +54,6 @@ func (cmd *availableComponentsCmd) RunListAvailableComponents(cobraCmd *cobra.Co
 		})
 	}
 
-	log.PrintTable(log.GetInstance(), headerColumnNames, values)
+	log.PrintTable(logger, headerColumnNames, values)
 	return nil
 }

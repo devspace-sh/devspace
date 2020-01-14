@@ -1,6 +1,8 @@
 package registry
 
 import (
+	"strings"
+
 	"github.com/pkg/errors"
 
 	v1 "k8s.io/api/core/v1"
@@ -81,6 +83,11 @@ func (r *client) addPullSecretsToServiceAccount(pullSecrets []string) error {
 	if changed {
 		_, err := r.kubeClient.KubeClient().CoreV1().ServiceAccounts(r.kubeClient.Namespace()).Update(serviceaccount)
 		if err != nil {
+			if strings.Index(err.Error(), "the object has been modified; please apply your changes to the latest version and try again") != -1 {
+				r.log.Infof("Reapplying image pull secrets to service account %s", serviceaccount.Name)
+				return r.addPullSecretsToServiceAccount(pullSecrets)
+			}
+
 			return errors.Wrap(err, "update service account")
 		}
 	}

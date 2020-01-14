@@ -2,9 +2,8 @@ package update
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
 	"github.com/pkg/errors"
@@ -19,7 +18,7 @@ type dependenciesCmd struct {
 }
 
 // newDependenciesCmd creates a new command
-func newDependenciesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newDependenciesCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &dependenciesCmd{GlobalFlags: globalFlags}
 
 	dependenciesCmd := &cobra.Command{
@@ -34,7 +33,9 @@ in the devspace.yaml
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunDependencies,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunDependencies(f, cobraCmd, args)
+		},
 	}
 
 	dependenciesCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
@@ -43,11 +44,11 @@ in the devspace.yaml
 }
 
 // RunDependencies executes the functionality "devspace update dependencies"
-func (cmd *dependenciesCmd) RunDependencies(cobraCmd *cobra.Command, args []string) error {
+func (cmd *dependenciesCmd) RunDependencies(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	log := log.GetInstance()
+	log := f.GetLog()
 	configOptions := cmd.ToConfigOptions()
-	configLoader := loader.NewConfigLoader(configOptions, log)
+	configLoader := f.NewConfigLoader(configOptions, log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
