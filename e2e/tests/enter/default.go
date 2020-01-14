@@ -22,12 +22,7 @@ func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
-	client, err := f.NewKubeClientFromContext("", f.Namespace, false)
-	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
-	}
-
-	pods, err := client.KubeClient().CoreV1().Pods(f.Namespace).List(metav1.ListOptions{})
+	pods, err := f.Client.KubeClient().CoreV1().Pods(f.Namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return errors.Errorf("Unable to list the pods: %v", err)
 	}
