@@ -6,7 +6,9 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -19,7 +21,18 @@ type fileInformation struct {
 	Mtime time.Time
 }
 
-func untarAll(reader io.Reader, destPath, prefix string) error {
+type untarOptions struct {
+	destPath string
+	prefix   string
+
+	FileChangeCmd  string
+	FileChangeArgs []string
+
+	DirCreateCmd  string
+	DirCreateArgs []string
+}
+
+func untarAll(reader io.Reader, options *UpstreamOptions) error {
 	gzr, err := gzip.NewReader(reader)
 	if err != nil {
 		return errors.Errorf("Error decompressing: %v", err)
@@ -29,7 +42,7 @@ func untarAll(reader io.Reader, destPath, prefix string) error {
 	tarReader := tar.NewReader(gzr)
 
 	for {
-		shouldContinue, err := untarNext(tarReader, destPath, prefix)
+		shouldContinue, err := untarNext(tarReader, options)
 		if err != nil {
 			return errors.Wrap(err, "untarNext")
 		} else if shouldContinue == false {
@@ -38,7 +51,46 @@ func untarAll(reader io.Reader, destPath, prefix string) error {
 	}
 }
 
-func untarNext(tarReader *tar.Reader, destPath, prefix string) (bool, error) {
+func createAllFolders(name string, perm os.FileMode, options *UpstreamOptions) error {
+	absPath, err := filepath.Abs(name)
+	if err != nil {
+		return err
+	}
+
+	slashPath := filepath.ToSlash(absPath)
+	pathParts := strings.Split(slashPath, "/")
+	for i := 1; i < len(pathParts); i++ {
+		dirToCreate := strings.Join(pathParts[:i+1], "/")
+		err := os.Mkdir(dirToCreate, perm)
+		if err != nil {
+			if os.IsExist(err) {
+				continue
+			}
+
+			return errors.Errorf("Error creating %s: %v", dirToCreate, err)
+		}
+
+		if options.DirCreateCmd != "" {
+			cmdArgs := make([]string, 0, len(options.DirCreateArgs))
+			for _, arg := range options.DirCreateArgs {
+				if arg == "{}" {
+					cmdArgs = append(cmdArgs, dirToCreate)
+				} else {
+					cmdArgs = append(cmdArgs, arg)
+				}
+			}
+
+			out, err := exec.Command(options.DirCreateCmd, cmdArgs...).CombinedOutput()
+			if err != nil {
+				return errors.Errorf("Error executing command '%s %s': %s => %v", options.DirCreateCmd, strings.Join(cmdArgs, " "), string(out), err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func untarNext(tarReader *tar.Reader, options *UpstreamOptions) (bool, error) {
 	header, err := tarReader.Next()
 	if err != nil {
 		if err != io.EOF {
@@ -48,20 +100,20 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string) (bool, error) {
 		return false, nil
 	}
 
-	relativePath := getRelativeFromFullPath("/"+header.Name, prefix)
-	outFileName := path.Join(destPath, relativePath)
+	relativePath := getRelativeFromFullPath("/"+header.Name, "")
+	outFileName := path.Join(options.UploadPath, relativePath)
 	baseName := path.Dir(outFileName)
 
 	// Check if newer file is there and then don't override?
 	stat, _ := os.Stat(outFileName)
 
-	if err := os.MkdirAll(baseName, 0755); err != nil {
-		return false, errors.Wrap(err, "mkdir all "+baseName)
+	if err := createAllFolders(baseName, 0755, options); err != nil {
+		return false, err
 	}
 
 	if header.FileInfo().IsDir() {
-		if err := os.MkdirAll(outFileName, 0755); err != nil {
-			return false, errors.Wrap(err, "mkdir all "+outFileName)
+		if err := createAllFolders(outFileName, 0755, options); err != nil {
+			return false, err
 		}
 
 		return true, nil
@@ -101,6 +153,23 @@ func untarNext(tarReader *tar.Reader, destPath, prefix string) (bool, error) {
 
 	// Set mod time from tar header
 	_ = os.Chtimes(outFileName, time.Now(), header.FileInfo().ModTime())
+
+	// Execute command if defined
+	if options.FileChangeCmd != "" {
+		cmdArgs := make([]string, 0, len(options.FileChangeArgs))
+		for _, arg := range options.FileChangeArgs {
+			if arg == "{}" {
+				cmdArgs = append(cmdArgs, outFileName)
+			} else {
+				cmdArgs = append(cmdArgs, arg)
+			}
+		}
+
+		out, err := exec.Command(options.FileChangeCmd, cmdArgs...).CombinedOutput()
+		if err != nil {
+			return false, errors.Errorf("Error executing command '%s %s': %s => %v", options.FileChangeCmd, strings.Join(cmdArgs, " "), string(out), err)
+		}
+	}
 
 	return true, nil
 }
