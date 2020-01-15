@@ -1,0 +1,30 @@
+version: v1beta5
+images:
+  php:
+    image: php
+    dockerfile: php/Dockerfile
+    context: php/
+deployments:
+  - name: root-app
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: nginx:latest
+  - name: php-app
+    helm:
+      chart:
+        name: php/chart
+dev:
+  sync:
+    - imageName: php
+      localSubPath: ./foo
+      containerPath: /home
+  autoReload:
+    paths:
+      - ./foo/*
+  ports:
+    - imageName: php
+      forward:
+        - port: 8080
+          remotePort: 80
