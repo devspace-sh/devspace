@@ -21,7 +21,7 @@ func (i *arrayFlags) Set(value string) error {
 }
 
 func printUsage() {
-	fmt.Fprintf(os.Stderr, "Usage: sync [--version] [--upstream] [--downstream] [--exclude] PATH\n")
+	fmt.Fprintf(os.Stderr, "Usage: sync [--version] [--upstream] [--downstream] [--exclude] [--filechangecmd] [--dircreatecmd] PATH\n")
 	os.Exit(1)
 }
 
@@ -34,9 +34,17 @@ func main() {
 		isDownstream = flag.Bool("downstream", false, "Starts the downstream service")
 		isUpstream   = flag.Bool("upstream", false, "Starts the upstream service")
 		showVersion  = flag.Bool("version", false, "Shows the version")
+
+		fileChangeCmd  = flag.String("filechangecmd", "", "Command that should be run during a file create or update")
+		fileChangeArgs arrayFlags
+
+		dirCreateCmd  = flag.String("dircreatecmd", "", "Command that should be run during a directory create")
+		dirCreateArgs arrayFlags
 	)
 
 	flag.Var(&excludePaths, "exclude", "The exclude paths for downstream watching")
+	flag.Var(&fileChangeArgs, "filechangeargs", "Args that should be used for command that is run during a file create or update")
+	flag.Var(&dirCreateArgs, "dircreateargs", "Args that should be used for command that is run during a directory create")
 	flag.Parse()
 
 	// Should we just print the version?
@@ -68,13 +76,29 @@ func main() {
 	}
 
 	if *isDownstream {
-		err := server.StartDownstreamServer(absolutePath, excludePaths, os.Stdin, os.Stdout, true)
+		err := server.StartDownstreamServer(os.Stdin, os.Stdout, &server.DownstreamOptions{
+			RemotePath:   absolutePath,
+			ExcludePaths: excludePaths,
+
+			ExitOnClose: true,
+		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v", err)
 			os.Exit(1)
 		}
 	} else if *isUpstream {
-		err := server.StartUpstreamServer(absolutePath, excludePaths, os.Stdin, os.Stdout, true)
+		err := server.StartUpstreamServer(os.Stdin, os.Stdout, &server.UpstreamOptions{
+			UploadPath:  absolutePath,
+			ExludePaths: excludePaths,
+
+			FileChangeCmd:  *fileChangeCmd,
+			FileChangeArgs: fileChangeArgs,
+
+			DirCreateCmd:  *dirCreateCmd,
+			DirCreateArgs: dirCreateArgs,
+
+			ExitOnClose: true,
+		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v", err)
 			os.Exit(1)

@@ -41,7 +41,11 @@ func TestDownstreamServer(t *testing.T) {
 	serverReader, serverWriter := io.Pipe()
 
 	go func() {
-		err := StartDownstreamServer(fromDir, []string{"emptydir"}, serverReader, clientWriter, false)
+		err := StartDownstreamServer(serverReader, clientWriter, &DownstreamOptions{
+			RemotePath:   fromDir,
+			ExcludePaths: []string{"emptydir"},
+			ExitOnClose:  false,
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -127,7 +131,7 @@ func TestDownstreamServer(t *testing.T) {
 	w.Close()
 	log.Println("Downloaded complete file")
 
-	err = untarAll(r, toDir, "")
+	err = untarAll(r, &UpstreamOptions{UploadPath: toDir})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -297,6 +297,34 @@ type SyncConfig struct {
 	DownloadOnInitialSync *bool             `yaml:"downloadOnInitialSync,omitempty"`
 	WaitInitialSync       *bool             `yaml:"waitInitialSync,omitempty"`
 	BandwidthLimits       *BandwidthLimits  `yaml:"bandwidthLimits,omitempty"`
+
+	OnUpload   *SyncOnUpload   `yaml:"onUpload,omitempty"`
+	OnDownload *SyncOnDownload `yaml:"onDownload,omitempty"`
+}
+
+// SyncOnUpload defines the struct for the command that should be executed when files / folders are uploaded
+type SyncOnUpload struct {
+	ExecRemote *SyncExecCommand `yaml:"execRemote,omitempty"`
+}
+
+// SyncOnDownload defines the struct for the command that should be executed when files / folders are downloaded
+type SyncOnDownload struct {
+	ExecLocal *SyncExecCommand `yaml:"execLocal,omitempty"`
+}
+
+// SyncExecCommand holds the configuration of commands that should be executed when files / folders are change
+type SyncExecCommand struct {
+	Command string   `yaml:"command,omitempty"`
+	Args    []string `yaml:"args,omitempty"`
+
+	OnFileChange *SyncCommand `yaml:"onFileChange,omitempty"`
+	OnDirCreate  *SyncCommand `yaml:"onDirCreate,omitempty"`
+}
+
+// SyncCommand holds a command definition
+type SyncCommand struct {
+	Command string   `yaml:"command,omitempty"`
+	Args    []string `yaml:"args,omitempty"`
 }
 
 // BandwidthLimits defines the struct for specifying the sync bandwidth limits

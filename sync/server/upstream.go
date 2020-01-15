@@ -14,14 +14,28 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+// UpstreamOptions holds the upstream server options
+type UpstreamOptions struct {
+	UploadPath  string
+	ExludePaths []string
+
+	FileChangeCmd  string
+	FileChangeArgs []string
+
+	DirCreateCmd  string
+	DirCreateArgs []string
+
+	ExitOnClose bool
+}
+
 // StartUpstreamServer starts a new upstream server with the given reader and writer
-func StartUpstreamServer(uploadPath string, excludePaths []string, reader io.Reader, writer io.Writer, exitOnClose bool) error {
-	pipe := util.NewStdStreamJoint(reader, writer, exitOnClose)
+func StartUpstreamServer(reader io.Reader, writer io.Writer, options *UpstreamOptions) error {
+	pipe := util.NewStdStreamJoint(reader, writer, options.ExitOnClose)
 	lis := util.NewStdinListener()
 	done := make(chan error)
 
 	// Compile ignore paths
-	ignoreMatcher, err := compilePaths(excludePaths)
+	ignoreMatcher, err := compilePaths(options.ExludePaths)
 	if err != nil {
 		return errors.Wrap(err, "compile paths")
 	}
@@ -30,7 +44,7 @@ func StartUpstreamServer(uploadPath string, excludePaths []string, reader io.Rea
 		s := grpc.NewServer()
 
 		remote.RegisterUpstreamServer(s, &Upstream{
-			UploadPath:    uploadPath,
+			options:       options,
 			ignoreMatcher: ignoreMatcher,
 		})
 		reflection.Register(s)
@@ -44,7 +58,7 @@ func StartUpstreamServer(uploadPath string, excludePaths []string, reader io.Rea
 
 // Upstream is the implementation for the upstream server
 type Upstream struct {
-	UploadPath string
+	options *UpstreamOptions
 
 	// ignore matcher is the ignore matcher which matches against excluded files and paths
 	ignoreMatcher gitignore.IgnoreParser
@@ -58,7 +72,7 @@ func (u *Upstream) Remove(stream remote.Upstream_RemoveServer) error {
 		if paths != nil {
 			for _, path := range paths.Paths {
 				// Just remove everything inside and ignore any errors
-				absolutePath := filepath.Join(u.UploadPath, path)
+				absolutePath := filepath.Join(u.options.UploadPath, path)
 
 				// Stat the path
 				stat, err := os.Stat(absolutePath)
@@ -94,7 +108,7 @@ func (u *Upstream) removeRecursive(absolutePath string) error {
 		absoluteChildPath := filepath.Join(absolutePath, f.Name())
 
 		// Check if ignored
-		if u.ignoreMatcher != nil && util.MatchesPath(u.ignoreMatcher, absolutePath[len(u.UploadPath):], f.IsDir()) {
+		if u.ignoreMatcher != nil && util.MatchesPath(u.ignoreMatcher, absolutePath[len(u.options.UploadPath):], f.IsDir()) {
 			continue
 		}
 
@@ -127,7 +141,7 @@ func (u *Upstream) Upload(stream remote.Upstream_UploadServer) error {
 		writerErrChan <- u.writeTar(writer, stream)
 	}()
 
-	err = untarAll(reader, u.UploadPath, "")
+	err = untarAll(reader, u.options)
 	if err != nil {
 		return errors.Wrap(err, "untar all")
 	}
