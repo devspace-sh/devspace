@@ -1,4 +1,4 @@
-package enter
+package analyze
 
 import (
 	"time"
@@ -24,11 +24,12 @@ func (r *Runner) SubTests() []string {
 }
 
 var availableSubTests = map[string]func(factory *utils.BaseCustomFactory, logger log.Logger) error{
-	"default": runDefault,
+	"failure": runFailure,
+	"success": runSuccess,
 }
 
 func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error {
-	logger.Info("Run test 'enter'")
+	logger.Info("Run test 'analyze'")
 
 	// Populates the tests to run with all the available sub tests if no sub tests are specified
 	if len(subTests) == 0 {
@@ -50,18 +51,12 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 		go func() {
 			err := func() error {
-				f.Namespace = utils.GenerateNamespaceName("test-enter-" + subTestName)
+				f.Namespace = utils.GenerateNamespaceName("test-analyze-" + subTestName)
 
-				err := beforeTest(f)
-				defer afterTest(f)
+				err := availableSubTests[subTestName](f, logger)
+				utils.PrintTestResult("analyze", subTestName, err, logger)
 				if err != nil {
-					return errors.Errorf("test 'enter' failed: %s %v", f.GetLogContents(), err)
-				}
-
-				err = availableSubTests[subTestName](f, logger)
-				utils.PrintTestResult("enter", subTestName, err, logger)
-				if err != nil {
-					return errors.Errorf("test 'enter' failed: %s %v", f.GetLogContents(), err)
+					return errors.Errorf("test 'analyze' failed: %s %v", f.GetLogContents(), err)
 				}
 
 				return nil
@@ -100,7 +95,7 @@ func beforeTest(f *utils.BaseCustomFactory) error {
 
 	f.DirPath = dirPath
 
-	err = utils.Copy(f.Pwd+"/tests/enter/testdata", dirPath)
+	err = utils.Copy(f.Pwd+"/tests/analyze/testdata/"+f.DirName, dirPath)
 	if err != nil {
 		return err
 	}
@@ -117,17 +112,10 @@ func beforeTest(f *utils.BaseCustomFactory) error {
 	}
 
 	f.Client = client
+
 	err = deployConfig.Run(f, nil, nil)
 	if err != nil {
 		return errors.Errorf("An error occured while deploying: %v", err)
-	}
-
-	time.Sleep(5 * time.Second)
-
-	// Checking if pods are running correctly
-	err = utils.AnalyzePods(client, f.Namespace, f.GetLog())
-	if err != nil {
-		return errors.Errorf("An error occured while analyzing pods: %v", err)
 	}
 
 	return nil
