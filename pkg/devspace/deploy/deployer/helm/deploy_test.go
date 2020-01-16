@@ -50,7 +50,7 @@ func TestDeploy(t *testing.T) {
 			},
 		},
 		deployTestCase{
-			name:        "",
+			name:        "Deploy one deployment",
 			deployment:  "deploy2",
 			chart:       "/",
 			valuesFiles: []string{"/"},
@@ -120,5 +120,38 @@ func TestDeploy(t *testing.T) {
 		expectationAsYaml, err := yaml.Marshal(testCase.expectedCache)
 		assert.NilError(t, err, "Error marshaling expected cache in testCase %s", testCase.name)
 		assert.Equal(t, string(cacheAsYaml), string(expectationAsYaml), "Unexpected cache in testCase %s", testCase.name)
+	}
+}
+
+type replaceContainerNamesTestCase struct {
+	name string
+
+	overwriteValues map[interface{}]interface{}
+	cache           *generated.CacheConfig
+	imagesConf      map[string]*latest.ImageConfig
+	builtImages     map[string]string
+
+	expectedShouldRedeploy  bool
+	expectedOverwriteValues map[interface{}]interface{}
+}
+
+//TODO: Finish test
+func TestReplaceContainerNames(t *testing.T) {
+	testCases := []replaceContainerNamesTestCase{
+		replaceContainerNamesTestCase{
+			name: "invalid image name",
+		},
+	}
+
+	for _, testCase := range testCases {
+		shouldRedeploy := replaceContainerNames(testCase.overwriteValues, testCase.cache, testCase.imagesConf, testCase.builtImages)
+
+		assert.Equal(t, shouldRedeploy, testCase.expectedShouldRedeploy, "Unexpected deployed-bool in testCase %s", testCase.name)
+
+		ovAsYaml, err := yaml.Marshal(testCase.overwriteValues)
+		assert.NilError(t, err, "Error marshaling overwriteValues in testCase %s", testCase.name)
+		expectationAsYaml, err := yaml.Marshal(testCase.expectedOverwriteValues)
+		assert.NilError(t, err, "Error marshaling expectation in testCase %s", testCase.name)
+		assert.Equal(t, string(ovAsYaml), string(expectationAsYaml), "Unexpected overwriteValues in testCase %s", testCase.name)
 	}
 }
