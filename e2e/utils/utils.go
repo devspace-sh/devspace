@@ -271,7 +271,6 @@ func PortForwardAndPing(config *latest.Config, generatedConfig *generated.Config
 		for _, p := range ports {
 			url := fmt.Sprintf("http://localhost:%v/", p.Local)
 
-			fmt.Println("Pinging url:", url)
 			resp, err := http.Get(url)
 			if err != nil {
 				return err

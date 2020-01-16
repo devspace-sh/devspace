@@ -39,6 +39,8 @@ func RunProfiles(f *customFactory, logger log.Logger) error {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
+	f.Client = client
+
 	err = runProfile(f, deployConfig, "dev-service2-only", client, f.Namespace, []string{"service-2"}, false)
 	if err != nil {
 		return err
