@@ -71,13 +71,13 @@ type client struct {
 
 // NewDefaultClient creates the new default kube client from the active context @Factory
 func NewDefaultClient() (Client, error) {
-	return NewClientFromContext("", "", false)
+	return NewClientFromContext("", "", false, kubeconfig.NewLoader())
 }
 
 // NewClientFromContext creates a new kubernetes client from given context @Factory
-func NewClientFromContext(context, namespace string, switchContext bool) (Client, error) {
+func NewClientFromContext(context, namespace string, switchContext bool, kubeLoader kubeconfig.Loader) (Client, error) {
 	// Load new raw config
-	kubeConfigOriginal, err := kubeconfig.LoadConfig().RawConfig()
+	kubeConfigOriginal, err := kubeLoader.LoadRawConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func NewClientFromContext(context, namespace string, switchContext bool) (Client
 
 	// Should we save the kube config?
 	if saveConfig {
-		err = kubeconfig.SaveConfig(&kubeConfig)
+		err = kubeLoader.SaveConfig(&kubeConfig)
 		if err != nil {
 			return nil, errors.Errorf("Error saving kube config: %v", err)
 		}
@@ -154,8 +154,8 @@ func NewClientFromContext(context, namespace string, switchContext bool) (Client
 }
 
 // NewClientBySelect creates a new kubernetes client by user select @Factory
-func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (Client, error) {
-	kubeConfig, err := kubeconfig.LoadRawConfig()
+func NewClientBySelect(allowPrivate bool, switchContext bool, kubeLoader kubeconfig.Loader, log log.Logger) (Client, error) {
+	kubeConfig, err := kubeLoader.LoadRawConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (C
 			}
 		}
 
-		return NewClientFromContext(kubeContext, "", switchContext)
+		return NewClientFromContext(kubeContext, "", switchContext, kubeLoader)
 	}
 
 	return nil, errors.New("We should not reach this point")

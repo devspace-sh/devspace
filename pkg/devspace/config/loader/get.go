@@ -16,6 +16,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/helm/merge"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 )
 
@@ -43,6 +44,8 @@ type configLoader struct {
 	generatedLoader generated.ConfigLoader
 	generatedConfig *generated.Config
 
+	kubeConfigLoader kubeconfig.Loader
+
 	options *ConfigOptions
 	log     log.Logger
 }
@@ -57,9 +60,10 @@ func NewConfigLoader(options *ConfigOptions, log log.Logger) ConfigLoader {
 	options.LoadedVars = make(map[string]string)
 
 	return &configLoader{
-		generatedLoader: generated.NewConfigLoader(options.Profile),
-		options:         options,
-		log:             log,
+		generatedLoader:  generated.NewConfigLoader(options.Profile),
+		kubeConfigLoader: kubeconfig.NewLoader(),
+		options:          options,
+		log:              log,
 	}
 }
 

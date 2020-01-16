@@ -18,6 +18,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
@@ -60,6 +61,9 @@ type Factory interface {
 	NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller
 	NewDeployController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) deploy.Controller
 
+	// Kubeconfig
+	NewKubeConfigLoader() kubeconfig.Loader
+	
 	// Log
 	GetLog() log.Logger
 }
@@ -85,6 +89,11 @@ func (f *DefaultFactoryImpl) NewBuildController(config *latest.Config, cache *ge
 // NewDeployController implements interface
 func (f *DefaultFactoryImpl) NewDeployController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) deploy.Controller {
 	return deploy.NewController(config, cache, client)
+}
+
+// NewKubeConfigLoader implements interface
+func (f *DefaultFactoryImpl) NewKubeConfigLoader() kubeconfig.Loader {
+	return kubeconfig.NewLoader()
 }
 
 // GetLog implements interface

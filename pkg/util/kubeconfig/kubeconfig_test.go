@@ -117,12 +117,14 @@ func TestSaveLoadKubeConfig(t *testing.T) {
 		CurrentContext: "testContext",
 	}
 
-	err = SaveConfig(testConfig)
+	loader := NewLoader()
+
+	err = loader.SaveConfig(testConfig)
 	if err != nil {
 		t.Fatalf("Error calling WriteKubeConfig: %v", err)
 	}
 
-	kubeConfig, err := LoadRawConfig()
+	kubeConfig, err := loader.LoadRawConfig()
 	if err != nil {
 		t.Fatalf("Error calling LoadRawConfig: %v", err)
 	}
@@ -162,7 +164,7 @@ func TestSaveLoadKubeConfig(t *testing.T) {
 	assert.Equal(t, string(testConfigAsJSON), string(kubeConfigAsJSON), "Readed Config doesn't match written config")
 
 	//Now test LoadConfigFromContext
-	fromContextConfig, err := LoadConfigFromContext("hello")
+	fromContextConfig, err := loader.LoadConfigFromContext("hello")
 	if err != nil {
 		t.Fatalf("Error calling LoadConfigFromContext: %v", err)
 	}

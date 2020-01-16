@@ -29,7 +29,7 @@ func GetKubeContextNameFromSpace(spaceName string, providerName string) string {
 
 // UpdateKubeConfig updates the kube config and adds the spaceConfig context
 func (p *provider) UpdateKubeConfig(contextName string, serviceAccount *latest.ServiceAccount, spaceID int, setActive bool) error {
-	config, err := kubeconfig.LoadRawConfig()
+	config, err := p.kubeLoader.LoadRawConfig()
 	if err != nil {
 		return err
 	}
@@ -64,5 +64,5 @@ func (p *provider) UpdateKubeConfig(contextName string, serviceAccount *latest.S
 		config.CurrentContext = contextName
 	}
 
-	return kubeconfig.SaveConfig(config)
+	return p.kubeLoader.SaveConfig(config)
 }

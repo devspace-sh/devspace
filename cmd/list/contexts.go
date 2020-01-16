@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
@@ -41,8 +40,9 @@ devspace list contexts
 // RunListContexts executes the functionality "devspace list contexts"
 func (cmd *contextsCmd) RunListContexts(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	logger := f.GetLog()
+	kubeConfigLoader = f.NewKubeConfigLoader()
 	// Load kube-config
-	kubeConfig, err := kubeconfig.LoadRawConfig()
+	kubeConfig, err := kubeconfigLoader.LoadRawConfig()
 	if err != nil {
 		return errors.Wrap(err, "load kube config")
 	}
