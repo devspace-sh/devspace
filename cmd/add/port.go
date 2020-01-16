@@ -2,7 +2,6 @@ package add
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -58,8 +57,9 @@ func (cmd *portCmd) RunAddPort(f factory.Factory, cobraCmd *cobra.Command, args 
 	if err != nil {
 		return err
 	}
+	configureManager := f.NewConfigureManager(config, logger)
 
-	err = configure.AddPort(config, cmd.Namespace, cmd.LabelSelector, args)
+	err = configureManager.AddPort(cmd.Namespace, cmd.LabelSelector, args)
 	if err != nil {
 		return err
 	}

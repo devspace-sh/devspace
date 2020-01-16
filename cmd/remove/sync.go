@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/spf13/cobra"
@@ -69,7 +68,8 @@ func (cmd *syncCmd) RunRemoveSync(f factory.Factory, cobraCmd *cobra.Command, ar
 		return err
 	}
 
-	err = configure.RemoveSyncPath(config, cmd.RemoveAll, cmd.LocalPath, cmd.ContainerPath, cmd.LabelSelector)
+	configureManager := f.NewConfigureManager(config, log)
+	err = configureManager.RemoveSyncPath(cmd.RemoveAll, cmd.LocalPath, cmd.ContainerPath, cmd.LabelSelector)
 	if err != nil {
 		return err
 	}
