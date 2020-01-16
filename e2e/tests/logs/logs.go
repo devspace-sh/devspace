@@ -109,7 +109,7 @@ func beforeTest(f *utils.BaseCustomFactory) error {
 	}
 
 	// Create kubectl client
-	client, err := f.NewKubeClientFromContext(deployConfig.KubeContext, f.Namespace, deployConfig.SwitchContext)
+	client, err := f.NewKubeClientFromContext(deployConfig.KubeContext, f.Namespace, deployConfig.SwitchContext, f.NewKubeConfigLoader())
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}

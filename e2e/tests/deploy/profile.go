@@ -21,7 +21,7 @@ func RunProfile(f *customFactory, logger log.Logger) error {
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
-	client, err := f.NewKubeClientFromContext("", f.Namespace, false)
+	client, err := f.NewKubeClientFromContext("", f.Namespace, false, f.NewKubeConfigLoader())
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
