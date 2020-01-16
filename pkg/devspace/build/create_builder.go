@@ -10,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
@@ -53,7 +52,7 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 
 		kubeContext := ""
 		if c.client == nil {
-			kubeContext, err = kubeconfig.GetCurrentContext()
+			kubeContext, err = c.kubeLoader.GetCurrentContext()
 			if err != nil {
 				return nil, errors.Wrap(err, "get current context")
 			}

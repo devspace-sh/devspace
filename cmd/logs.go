@@ -61,6 +61,7 @@ devspace logs --namespace=mynamespace
 func (cmd *LogsCmd) RunLogs(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
+	kubeLoader := f.NewKubeConfigLoader()
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
@@ -83,7 +84,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, cobraCmd *cobra.Command, args []s
 	}
 
 	// Get kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext, kubeLoader)
 	if err != nil {
 		return errors.Wrap(err, "create kube client")
 	}
@@ -94,7 +95,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, cobraCmd *cobra.Command, args []s
 	}
 
 	// Signal that we are working on the space if there is any
-	err = f.NewSpaceResumer(client, log).ResumeSpace(true)
+	err = f.NewSpaceResumer(kubeLoader, client, log).ResumeSpace(true)
 	if err != nil {
 		return err
 	}

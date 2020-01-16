@@ -41,6 +41,7 @@ Lists all namespaces in the selected kube context
 // RunListNamespaces runs the list namespaces command logic
 func (cmd *namespacesCmd) RunListNamespaces(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	logger := f.GetLog()
+	kubeLoader := f.NewKubeConfigLoader()
 	// Set config root
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
@@ -64,7 +65,7 @@ func (cmd *namespacesCmd) RunListNamespaces(f factory.Factory, cobraCmd *cobra.C
 	}
 
 	// Get kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext, kubeLoader)
 	if err != nil {
 		return errors.Wrap(err, "new kube client")
 	}

@@ -8,6 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
 	"github.com/pkg/errors"
@@ -38,16 +39,18 @@ type controller struct {
 	config *latest.Config
 	cache  *generated.CacheConfig
 
+	kubeLoader kubeconfig.Loader
 	hookExecuter hook.Executer
 	client       kubectl.Client
 }
 
 // NewController creates a new image build controller
-func NewController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) Controller {
+func NewController(config *latest.Config, cache *generated.CacheConfig, kubeLoader kubeconfig.Loader, client kubectl.Client) Controller {
 	return &controller{
 		config: config,
 		cache:  cache,
 
+		kubeLoader: kubeLoader,
 		hookExecuter: hook.NewExecuter(config),
 		client:       client,
 	}

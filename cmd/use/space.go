@@ -8,6 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -24,7 +25,7 @@ type spaceCmd struct {
 	GetToken bool
 }
 
-func newSpaceCmd() *cobra.Command {
+func newSpaceCmd(f factory.Factory) *cobra.Command {
 	cmd := &spaceCmd{}
 
 	useSpace := &cobra.Command{
@@ -41,7 +42,9 @@ devspace use space my-space
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: cmd.RunUseSpace,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunUseSpace(f, cobraCmd, args)
+		},
 	}
 
 	useSpace.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
@@ -52,8 +55,9 @@ devspace use space my-space
 }
 
 // RunUseSpace executes the functionality "devspace use space"
-func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
+func (cmd *spaceCmd) RunUseSpace(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	log := logpkg.GetInstance()
+	kubeLoader := f.NewKubeConfigLoader()
 
 	// Set config root
 	configExists, err := loader.NewConfigLoader(nil, log).SetDevSpaceRoot()
@@ -166,13 +170,13 @@ func (cmd *spaceCmd) RunUseSpace(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := kubectl.NewClientFromContext(kubeContext, "", false)
+	client, err := kubectl.NewClientFromContext(kubeContext, "", false, kubeLoader)
 	if err != nil {
 		return err
 	}
 
 	// Signal that we are working on the space if there is any
-	err = resume.NewSpaceResumer(client, log).ResumeSpace(false)
+	err = resume.NewSpaceResumer(kubeLoader, client, log).ResumeSpace(false)
 	if err != nil {
 		return err
 	}

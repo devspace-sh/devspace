@@ -82,6 +82,7 @@ devspace deploy --kube-context=deploy-context
 func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
+	kubeLoader := f.NewKubeConfigLoader()
 	configOptions := cmd.ToConfigOptions()
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
 	configExists, err := configLoader.SetDevSpaceRoot()
@@ -114,7 +115,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Create kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext, kubeLoader)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
@@ -141,7 +142,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Signal that we are working on the space if there is any
-	err = f.NewSpaceResumer(client, cmd.log).ResumeSpace(true)
+	err = f.NewSpaceResumer(kubeLoader, client, cmd.log).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
@@ -165,7 +166,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Create Dependencymanager
-	manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, configOptions, cmd.log)
+	manager, err := f.NewDependencyManager(config, generatedConfig, kubeLoader, client, cmd.AllowCyclicDependencies, configOptions, cmd.log)
 	if err != nil {
 		return errors.Wrap(err, "new manager")
 	}
@@ -186,7 +187,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	// Build images
 	builtImages := make(map[string]string)
 	if cmd.SkipBuild == false {
-		builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
+		builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), kubeLoader, client).Build(&build.Options{
 			SkipPush:     cmd.SkipPush,
 			ForceRebuild: cmd.ForceBuild,
 			Sequential:   cmd.BuildSequential,

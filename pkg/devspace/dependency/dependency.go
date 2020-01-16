@@ -14,6 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/mgutz/ansi"
@@ -36,8 +37,8 @@ type manager struct {
 }
 
 // NewManager creates a new instance of the interface Manager
-func NewManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (Manager, error) {
-	resolver, err := NewResolver(config, cache, client, allowCyclic, configOptions, logger)
+func NewManager(config *latest.Config, cache *generated.Config, kubeLoader kubeconfig.Loader, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (Manager, error) {
+	resolver, err := NewResolver(config, cache, kubeLoader, client, allowCyclic, configOptions, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "new resolver")
 	}

@@ -4,7 +4,6 @@ import (
 	"sort"
 
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/mgutz/ansi"
@@ -48,6 +47,7 @@ devspace remove context --all-spaces
 // RunRemoveContext executes the devspace remove context functionality
 func (cmd *contextCmd) RunRemoveContext(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	log := f.GetLog()
+	kubeLoader := f.NewKubeConfigLoader()
 	// Remove all contexts
 	if cmd.AllSpaces {
 		// Get provider
@@ -77,7 +77,7 @@ func (cmd *contextCmd) RunRemoveContext(f factory.Factory, cobraCmd *cobra.Comma
 	}
 
 	// Load kube-config
-	kubeConfig, err := kubeconfig.LoadRawConfig()
+	kubeConfig, err := kubeLoader.LoadRawConfig()
 	if err != nil {
 		return errors.Wrap(err, "load kube config")
 	}
@@ -110,13 +110,13 @@ func (cmd *contextCmd) RunRemoveContext(f factory.Factory, cobraCmd *cobra.Comma
 	oldCurrentContext := kubeConfig.CurrentContext
 
 	// Remove the context
-	err = kubeconfig.DeleteKubeContext(kubeConfig, contextName)
+	err = kubeLoader.DeleteKubeContext(kubeConfig, contextName)
 	if err != nil {
 		return errors.Wrap(err, "delete kube context")
 	}
 
 	// Save updated kube-config
-	err = kubeconfig.SaveConfig(kubeConfig)
+	err = kubeLoader.SaveConfig(kubeConfig)
 	if err != nil {
 		return errors.Wrap(err, "save kube config")
 	}

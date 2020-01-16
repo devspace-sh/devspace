@@ -40,9 +40,9 @@ devspace list contexts
 // RunListContexts executes the functionality "devspace list contexts"
 func (cmd *contextsCmd) RunListContexts(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	logger := f.GetLog()
-	kubeConfigLoader = f.NewKubeConfigLoader()
+	kubeLoader := f.NewKubeConfigLoader()
 	// Load kube-config
-	kubeConfig, err := kubeconfigLoader.LoadRawConfig()
+	kubeConfig, err := kubeLoader.LoadRawConfig()
 	if err != nil {
 		return errors.Wrap(err, "load kube config")
 	}

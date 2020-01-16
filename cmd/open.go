@@ -19,7 +19,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
@@ -84,6 +83,7 @@ devspace open
 func (cmd *OpenCmd) RunOpen(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
+	kubeLoader := f.NewKubeConfigLoader()
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
@@ -117,7 +117,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, cobraCmd *cobra.Command, args []s
 	}
 
 	// Get kubernetes client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext, kubeLoader)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, cobraCmd *cobra.Command, args []s
 	}
 
 	// Signal that we are working on the space if there is any
-	err = f.NewSpaceResumer(client, cmd.log).ResumeSpace(true)
+	err = f.NewSpaceResumer(kubeLoader, client, cmd.log).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, cobraCmd *cobra.Command, args []s
 	currentContext := client.CurrentContext()
 
 	// Retrieve space
-	spaceID, currentContextProvider, err := kubeconfig.GetSpaceID(currentContext)
+	spaceID, currentContextProvider, err := kubeLoader.GetSpaceID(currentContext)
 	if err == nil { // Current kube-context is a Space
 		if providerName == "" {
 			providerName = currentContextProvider

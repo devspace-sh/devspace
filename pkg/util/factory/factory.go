@@ -33,14 +33,14 @@ type Factory interface {
 
 	// Kubernetes Clients
 	NewKubeDefaultClient() (kubectl.Client, error)
-	NewKubeClientFromContext(context, namespace string, switchContext bool) (kubectl.Client, error)
-	NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error)
+	NewKubeClientFromContext(context, namespace string, switchContext bool, kubeLoader kubeconfig.Loader) (kubectl.Client, error)
+	NewKubeClientBySelect(allowPrivate bool, switchContext bool, kubeLoader kubeconfig.Loader, log log.Logger) (kubectl.Client, error)
 
 	// Helm
 	NewHelmClient(config *latest.Config, deployConfig *latest.DeploymentConfig, kubeClient kubectl.Client, tillerNamespace string, upgradeTiller bool, dryInit bool, log log.Logger) (types.Client, error)
 
 	// Dependencies
-	NewDependencyManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (dependency.Manager, error)
+	NewDependencyManager(config *latest.Config, cache *generated.Config, kubeLoader kubeconfig.Loader, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (dependency.Manager, error)
 
 	// Hooks
 	NewHookExecutor(config *latest.Config) hook.Executer
@@ -57,17 +57,17 @@ type Factory interface {
 
 	// Cloud
 	GetProvider(useProviderName string, log log.Logger) (cloud.Provider, error)
-	GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, log log.Logger) (cloud.Provider, error)
-	NewSpaceResumer(kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer
+	GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, kubeLoader kubeconfig.Loader, log log.Logger) (cloud.Provider, error)
+	NewSpaceResumer(kubeLoader kubeconfig.Loader, kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer
 	NewCloudConfigLoader() config.Loader
 
 	// Build & Deploy
-	NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller
+	NewBuildController(config *latest.Config, cache *generated.CacheConfig, kubeLoader kubeconfig.Loader, client kubectl.Client) build.Controller
 	NewDeployController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) deploy.Controller
 
 	// Kubeconfig
 	NewKubeConfigLoader() kubeconfig.Loader
-	
+
 	// Log
 	GetLog() log.Logger
 }
@@ -86,8 +86,8 @@ func (f *DefaultFactoryImpl) NewCloudConfigLoader() config.Loader {
 }
 
 // NewBuildController implements interface
-func (f *DefaultFactoryImpl) NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller {
-	return build.NewController(config, cache, client)
+func (f *DefaultFactoryImpl) NewBuildController(config *latest.Config, cache *generated.CacheConfig, kubeLoader kubeconfig.Loader, client kubectl.Client) build.Controller {
+	return build.NewController(config, cache, kubeLoader, client)
 }
 
 // NewDeployController implements interface
@@ -111,8 +111,8 @@ func (f *DefaultFactoryImpl) NewHookExecutor(config *latest.Config) hook.Execute
 }
 
 // NewDependencyManager implements interface
-func (f *DefaultFactoryImpl) NewDependencyManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (dependency.Manager, error) {
-	return dependency.NewManager(config, cache, client, allowCyclic, configOptions, logger)
+func (f *DefaultFactoryImpl) NewDependencyManager(config *latest.Config, cache *generated.Config, kubeLoader kubeconfig.Loader, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (dependency.Manager, error) {
+	return dependency.NewManager(config, cache, kubeLoader, client, allowCyclic, configOptions, logger)
 }
 
 // NewPullSecretClient implements interface
@@ -146,13 +146,13 @@ func (f *DefaultFactoryImpl) NewKubeDefaultClient() (kubectl.Client, error) {
 }
 
 // NewKubeClientFromContext implements interface
-func (f *DefaultFactoryImpl) NewKubeClientFromContext(context, namespace string, switchContext bool) (kubectl.Client, error) {
-	return kubectl.NewClientFromContext(context, namespace, switchContext)
+func (f *DefaultFactoryImpl) NewKubeClientFromContext(context, namespace string, switchContext bool, kubeLoader kubeconfig.Loader) (kubectl.Client, error) {
+	return kubectl.NewClientFromContext(context, namespace, switchContext, kubeLoader)
 }
 
 // NewKubeClientBySelect implements interface
-func (f *DefaultFactoryImpl) NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error) {
-	return kubectl.NewClientBySelect(allowPrivate, switchContext, log)
+func (f *DefaultFactoryImpl) NewKubeClientBySelect(allowPrivate bool, switchContext bool, kubeLoader kubeconfig.Loader, log log.Logger) (kubectl.Client, error) {
+	return kubectl.NewClientBySelect(allowPrivate, switchContext, kubeLoader, log)
 }
 
 // NewHelmClient implements interface
@@ -171,11 +171,11 @@ func (f *DefaultFactoryImpl) GetProvider(useProviderName string, log log.Logger)
 }
 
 // GetProviderWithOptions implements interface
-func (f *DefaultFactoryImpl) GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, log log.Logger) (cloud.Provider, error) {
-	return cloud.GetProviderWithOptions(useProviderName, key, relogin, loader, log)
+func (f *DefaultFactoryImpl) GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, kubeLoader kubeconfig.Loader, log log.Logger) (cloud.Provider, error) {
+	return cloud.GetProviderWithOptions(useProviderName, key, relogin, loader, kubeLoader, log)
 }
 
 // NewSpaceResumer implements interface
-func (f *DefaultFactoryImpl) NewSpaceResumer(kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer {
-	return resume.NewSpaceResumer(kubeClient, log)
+func (f *DefaultFactoryImpl) NewSpaceResumer(kubeLoader kubeconfig.Loader, kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer {
+	return resume.NewSpaceResumer(kubeLoader, kubeClient, log)
 }
