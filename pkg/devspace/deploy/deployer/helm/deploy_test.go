@@ -9,6 +9,7 @@ import (
 	helmtypes "github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
 	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
 	log "github.com/devspace-cloud/devspace/pkg/util/log/testing"
+	yaml "gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -27,6 +28,7 @@ type deployTestCase struct {
 
 	expectedDeployed bool
 	expectedErr      string
+	expectedCache    *generated.CacheConfig
 }
 
 func TestDeploy(t *testing.T) {
@@ -56,6 +58,15 @@ func TestDeploy(t *testing.T) {
 				"val": "fromVal",
 			},
 			expectedDeployed: true,
+			expectedCache: &generated.CacheConfig{
+				Deployments: map[string]*generated.DeploymentCache{
+					"deploy2": &generated.DeploymentCache{
+						DeploymentConfigHash: "913ebc73f6839301b94dbd475d6e2a3cfa04c02072e11cf31e4e3ba60c1fed39",
+						HelmOverridesHash:    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+						HelmChartHash:        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+					},
+				},
+			},
 		},
 	}
 
@@ -90,7 +101,13 @@ func TestDeploy(t *testing.T) {
 			}
 		}
 
+		if testCase.expectedCache == nil {
+			testCase.expectedCache = testCase.cache
+		}
+
 		deployed, err := deployer.Deploy(testCase.cache, testCase.forceDeploy, testCase.builtImages)
+
+		assert.Equal(t, deployed, testCase.expectedDeployed, "Unexpected deployed-bool in testCase %s", testCase.name)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -98,6 +115,10 @@ func TestDeploy(t *testing.T) {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
 
-		assert.Equal(t, deployed, testCase.expectedDeployed, "Unexpected deployed-bool in testCase %s", testCase.name)
+		cacheAsYaml, err := yaml.Marshal(testCase.cache)
+		assert.NilError(t, err, "Error marshaling cache in testCase %s", testCase.name)
+		expectationAsYaml, err := yaml.Marshal(testCase.expectedCache)
+		assert.NilError(t, err, "Error marshaling expected cache in testCase %s", testCase.name)
+		assert.Equal(t, string(cacheAsYaml), string(expectationAsYaml), "Unexpected cache in testCase %s", testCase.name)
 	}
 }
