@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/spf13/cobra"
@@ -59,7 +58,8 @@ func (cmd *imageCmd) RunRemoveImage(f factory.Factory, cobraCmd *cobra.Command, 
 		return err
 	}
 
-	err = configure.RemoveImage(config, cmd.RemoveAll, args)
+	configureManager := f.NewConfigureManager(config, log)
+	err = configureManager.RemoveImage(cmd.RemoveAll, args)
 	if err != nil {
 		return err
 	}

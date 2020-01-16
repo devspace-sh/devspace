@@ -106,7 +106,7 @@ EXPOSE 1012`,
 			survey.SetNextAnswer(answer)
 		}
 
-		imageConfig, deploymentConfig, err := GetDockerfileComponentDeployment(testConfig, generated, testCase.nameParam, testCase.imageName, testCase.dockerfile, testCase.context, log.GetInstance())
+		imageConfig, deploymentConfig, err := NewDockerfileComponentDeployment(testConfig, generated, testCase.nameParam, testCase.imageName, testCase.dockerfile, testCase.context, log.GetInstance())
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -159,7 +159,7 @@ func TestGetImageComponentDeployment(t *testing.T) {
 			survey.SetNextAnswer(answer)
 		}
 
-		imageConfig, deploymentConfig, err := GetImageComponentDeployment(testCase.icdName, testCase.imageName, log.GetInstance())
+		imageConfig, deploymentConfig, err := NewImageComponentDeployment(testCase.icdName, testCase.imageName, log.GetInstance())
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -204,7 +204,7 @@ func TestGetPredefinedComponentDeployment(t *testing.T) {
 			survey.SetNextAnswer(answer)
 		}
 
-		deploymentConfig, err := GetPredefinedComponentDeployment(testCase.deploymentName, testCase.componentName, log.GetInstance())
+		deploymentConfig, err := NewPredefinedComponentDeployment(testCase.deploymentName, testCase.componentName, log.GetInstance())
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -238,7 +238,7 @@ func TestGetKubectlDeployment(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		deploymentConfig, err := GetKubectlDeployment(testCase.deploymentName, testCase.manifests)
+		deploymentConfig, err := NewKubectlDeployment(testCase.deploymentName, testCase.manifests)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -284,7 +284,7 @@ func TestGetHelmDeployment(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		deploymentConfig, err := GetHelmDeployment(testCase.deploymentName, testCase.chartName, testCase.chartRepo, testCase.chartVersion)
+		deploymentConfig, err := NewHelmDeployment(testCase.deploymentName, testCase.chartName, testCase.chartRepo, testCase.chartVersion)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)

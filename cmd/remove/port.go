@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/spf13/cobra"
@@ -62,7 +61,8 @@ func (cmd *portCmd) RunRemovePort(f factory.Factory, cobraCmd *cobra.Command, ar
 		return err
 	}
 
-	err = configure.RemovePort(config, cmd.RemoveAll, cmd.LabelSelector, args)
+	configureManager := f.NewConfigureManager(config, log)
+	err = configureManager.RemovePort(cmd.RemoveAll, cmd.LabelSelector, args)
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -110,25 +109,27 @@ func (cmd *deploymentCmd) RunAddDeployment(f factory.Factory, cobraCmd *cobra.Co
 		config.Deployments = []*latest.DeploymentConfig{}
 	}
 
+	configureManager := f.NewConfigureManager(config, logger)
+
 	var newDeployment *latest.DeploymentConfig
 	var newImage *latest.ImageConfig
 
 	// figure out what kind of deployment to add
 	if cmd.Manifests != "" {
-		newDeployment, err = configure.GetKubectlDeployment(deploymentName, cmd.Manifests)
+		newDeployment, err = configureManager.NewKubectlDeployment(deploymentName, cmd.Manifests)
 	} else if cmd.Chart != "" {
-		newDeployment, err = configure.GetHelmDeployment(deploymentName, cmd.Chart, cmd.ChartRepo, cmd.ChartVersion)
+		newDeployment, err = configureManager.NewHelmDeployment(deploymentName, cmd.Chart, cmd.ChartRepo, cmd.ChartVersion)
 	} else if cmd.Dockerfile != "" {
 		generatedConfig, err := configLoader.Generated()
 		if err != nil {
 			return err
 		}
 
-		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, cmd.Image, cmd.Dockerfile, cmd.Context, logger)
+		newImage, newDeployment, err = configureManager.NewDockerfileComponentDeployment(generatedConfig, deploymentName, cmd.Image, cmd.Dockerfile, cmd.Context)
 	} else if cmd.Image != "" {
-		newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, cmd.Image, logger)
+		newImage, newDeployment, err = configureManager.NewImageComponentDeployment(deploymentName, cmd.Image)
 	} else if cmd.Component != "" {
-		newDeployment, err = configure.GetPredefinedComponentDeployment(deploymentName, cmd.Component, logger)
+		newDeployment, err = configureManager.NewPredefinedComponentDeployment(deploymentName, cmd.Component)
 	} else {
 		return errors.New("Please specifiy one of these parameters:\n--image: A docker image to deploy (e.g. dscr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)\n--manifests: The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)\n--chart: A helm chart to deploy (e.g. ./chart or stable/mysql)\n--component: A predefined component to use (run `devspace list available-components` to see all available components)")
 	}

@@ -121,7 +121,7 @@ func TestGetImageConfigFromDockerfile(t *testing.T) {
 		}
 		fsutil.WriteToFile([]byte(testCase.providersYaml), filepath.Join(dir, "providers.yaml"))
 
-		imageConfig, err := GetImageConfigFromDockerfile(testConfig, testCase.dockerfile, testCase.context, "devspace", log.GetInstance())
+		imageConfig, err := newImageConfigFromDockerfile(testConfig, testCase.dockerfile, testCase.context, "devspace", log.GetInstance())
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 			assert.Equal(t, imageConfig.Image, testCase.expectedImage, "Returned image is unexpected in testCase %s", testCase.name)
@@ -176,7 +176,7 @@ func TestGetImageConfigFromImageName(t *testing.T) {
 			survey.SetNextAnswer(answer)
 		}
 
-		imageConfig := GetImageConfigFromImageName(testCase.imageName, testCase.dockerfile, testCase.context)
+		imageConfig := newImageConfigFromImageName(testCase.imageName, testCase.dockerfile, testCase.context)
 
 		if !testCase.expectedNil {
 			if imageConfig == nil {
