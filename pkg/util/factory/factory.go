@@ -8,6 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
@@ -26,6 +27,9 @@ import (
 type Factory interface {
 	// Config Loader
 	NewConfigLoader(options *loader.ConfigOptions, log log.Logger) loader.ConfigLoader
+
+	// ConfigureManager
+	NewConfigureManager(config *latest.Config, log log.Logger) configure.Manager
 
 	// Kubernetes Clients
 	NewKubeDefaultClient() (kubectl.Client, error)
@@ -119,6 +123,11 @@ func (f *DefaultFactoryImpl) NewPullSecretClient(config *latest.Config, kubeClie
 // NewConfigLoader implements interface
 func (f *DefaultFactoryImpl) NewConfigLoader(options *loader.ConfigOptions, log log.Logger) loader.ConfigLoader {
 	return loader.NewConfigLoader(options, log)
+}
+
+// NewConfigLoader implements interface
+func (f *DefaultFactoryImpl) NewConfigureManager(config *latest.Config, log log.Logger) configure.Manager {
+	return configure.NewManager(config, log)
 }
 
 // NewDockerClient implements interface

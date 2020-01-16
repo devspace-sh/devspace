@@ -2,7 +2,6 @@ package add
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
@@ -69,8 +68,9 @@ func (cmd *syncCmd) RunAddSync(f factory.Factory, cobraCmd *cobra.Command, args 
 	if err != nil {
 		return err
 	}
+	configureManager := f.NewConfigureManager(config, logger)
 
-	err = configure.AddSyncPath(config, cmd.LocalPath, cmd.ContainerPath, cmd.Namespace, cmd.LabelSelector, cmd.ExcludedPaths)
+	err = configureManager.AddSyncPath(cmd.LocalPath, cmd.ContainerPath, cmd.Namespace, cmd.LabelSelector, cmd.ExcludedPaths)
 	if err != nil {
 		return errors.Wrap(err, "add sync path")
 	}

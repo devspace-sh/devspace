@@ -2,7 +2,6 @@ package add
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -72,8 +71,9 @@ func (cmd *imageCmd) RunAddImage(f factory.Factory, cobraCmd *cobra.Command, arg
 	if err != nil {
 		return err
 	}
+	configureManager := f.NewConfigureManager(config, logger)
 
-	err = configure.AddImage(config, args[0], cmd.Name, cmd.Tag, cmd.ContextPath, cmd.DockerfilePath, cmd.BuildTool, logger)
+	err = configureManager.AddImage(args[0], cmd.Name, cmd.Tag, cmd.ContextPath, cmd.DockerfilePath, cmd.BuildTool)
 	if err != nil {
 		return err
 	}

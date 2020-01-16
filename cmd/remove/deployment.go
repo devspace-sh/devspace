@@ -2,7 +2,6 @@ package remove
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -109,7 +108,8 @@ func (cmd *deploymentCmd) RunRemoveDeployment(f factory.Factory, cobraCmd *cobra
 		}
 	}
 
-	found, err := configure.RemoveDeployment(config, cmd.RemoveAll, name)
+	configureManager := f.NewConfigureManager(config, log)
+	found, err := configureManager.RemoveDeployment(cmd.RemoveAll, name)
 	if err != nil {
 		return err
 	}
