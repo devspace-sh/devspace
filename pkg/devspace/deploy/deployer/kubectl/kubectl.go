@@ -160,6 +160,11 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	// Hash the manifests
 	manifestsHash := ""
 	for _, manifest := range d.Manifests {
+		if strings.HasPrefix(manifest, "http://") || strings.HasPrefix(manifest, "https://") {
+			manifestsHash += hash.String(manifest)
+			continue
+		}
+
 		// Check if the chart directory has changed
 		hash, err := hash.Directory(manifest)
 		if err != nil {

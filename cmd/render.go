@@ -111,7 +111,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Create Dependencymanager
-	manager, err := dependency.NewManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log)
+	manager, err := f.NewDependencyManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log)
 	if err != nil {
 		return errors.Wrap(err, "new manager")
 	}
@@ -128,7 +128,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Build images if necessary
-	builtImages, err := build.NewController(config, generatedConfig.GetActive(), nil).Build(&build.Options{
+	builtImages, err := f.NewBuildController(config, generatedConfig.GetActive(), nil).Build(&build.Options{
 		SkipPush:     cmd.SkipPush,
 		IsDev:        true,
 		ForceRebuild: cmd.ForceBuild,

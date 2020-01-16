@@ -3,7 +3,7 @@ package list
 import (
 	"strconv"
 
-	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/mgutz/ansi"
@@ -16,7 +16,7 @@ type clustersCmd struct {
 	All      bool
 }
 
-func newClustersCmd() *cobra.Command {
+func newClustersCmd(f factory.Factory) *cobra.Command {
 	cmd := &clustersCmd{}
 
 	clustersCmd := &cobra.Command{
@@ -33,8 +33,9 @@ devspace list clusters
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunListClusters,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunListClusters(f, cobraCmd, args)
+		}}
 
 	clustersCmd.Flags().StringVar(&cmd.Provider, "provider", "", "Cloud Provider to use")
 	clustersCmd.Flags().BoolVar(&cmd.All, "all", false, "Show all available clusters including hosted DevSpace cloud clusters")
@@ -43,20 +44,20 @@ devspace list clusters
 }
 
 // RunListClusters executes the "devspace list clusters" functionality
-func (cmd *clustersCmd) RunListClusters(cobraCmd *cobra.Command, args []string) error {
+func (cmd *clustersCmd) RunListClusters(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Get provider
-	log := logpkg.GetInstance()
-	provider, err := cloudpkg.GetProvider(cmd.Provider, log)
+	logger := f.GetLog()
+	provider, err := f.GetProvider(cmd.Provider, logger)
 	if err != nil {
 		return errors.Wrap(err, "get provider")
 	}
 
-	log.StartWait("Retrieving clusters")
+	logger.StartWait("Retrieving clusters")
 	clusters, err := provider.Client().GetClusters()
 	if err != nil {
 		return errors.Errorf("Error retrieving clusters: %v", err)
 	}
-	log.StopWait()
+	logger.StopWait()
 
 	headerColumnNames := []string{
 		"ID",
@@ -89,9 +90,9 @@ func (cmd *clustersCmd) RunListClusters(cobraCmd *cobra.Command, args []string) 
 	}
 
 	if len(values) > 0 {
-		logpkg.PrintTable(log, headerColumnNames, values)
+		logpkg.PrintTable(logger, headerColumnNames, values)
 	} else {
-		log.Infof("No clusters found. You can connect a cluster with `%s`", ansi.Color("devspace connect cluster", "white+b"))
+		logger.Infof("No clusters found. You can connect a cluster with `%s`", ansi.Color("devspace connect cluster", "white+b"))
 	}
 
 	return nil

@@ -4,10 +4,9 @@ import (
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -29,7 +28,7 @@ type deploymentCmd struct {
 	Context    string
 }
 
-func newDeploymentCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newDeploymentCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &deploymentCmd{GlobalFlags: globalFlags}
 
 	addDeploymentCmd := &cobra.Command{
@@ -59,7 +58,9 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
-		RunE: cmd.RunAddDeployment,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunAddDeployment(f, cobraCmd, args)
+		},
 	}
 
 	// Kubectl options
@@ -80,9 +81,10 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 }
 
 // RunAddDeployment executes the add deployment command logic
-func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []string) error {
+func (cmd *deploymentCmd) RunAddDeployment(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	logger := f.GetLog()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -122,11 +124,11 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 			return err
 		}
 
-		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, cmd.Image, cmd.Dockerfile, cmd.Context, log.GetInstance())
+		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, cmd.Image, cmd.Dockerfile, cmd.Context, logger)
 	} else if cmd.Image != "" {
-		newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, cmd.Image, log.GetInstance())
+		newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, cmd.Image, logger)
 	} else if cmd.Component != "" {
-		newDeployment, err = configure.GetPredefinedComponentDeployment(deploymentName, cmd.Component, log.GetInstance())
+		newDeployment, err = configure.GetPredefinedComponentDeployment(deploymentName, cmd.Component, logger)
 	} else {
 		return errors.New("Please specifiy one of these parameters:\n--image: A docker image to deploy (e.g. dscr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)\n--manifests: The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)\n--chart: A helm chart to deploy (e.g. ./chart or stable/mysql)\n--component: A predefined component to use (run `devspace list available-components` to see all available components)")
 	}
@@ -200,6 +202,6 @@ func (cmd *deploymentCmd) RunAddDeployment(cobraCmd *cobra.Command, args []strin
 		return errors.Errorf("Couldn't save config file: %s", err.Error())
 	}
 
-	log.GetInstance().Donef("Successfully added %s as new deployment", args[0])
+	logger.Donef("Successfully added %s as new deployment", args[0])
 	return nil
 }

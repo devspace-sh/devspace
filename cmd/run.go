@@ -6,8 +6,8 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/command"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
@@ -23,7 +23,7 @@ type RunCmd struct {
 }
 
 // NewRunCmd creates a new run command
-func NewRunCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewRunCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &RunCmd{GlobalFlags: globalFlags}
 
 	runCmd := &cobra.Command{
@@ -42,16 +42,18 @@ devspace run mycommand2 1 2 3
 #######################################################
 	`,
 		Args: cobra.MinimumNArgs(1),
-		RunE: cmd.RunRun,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunRun(f, cobraCmd, args)
+		},
 	}
 
 	return runCmd
 }
 
 // RunRun executes the functionality "devspace run"
-func (cmd *RunCmd) RunRun(cobraCmd *cobra.Command, args []string) error {
+func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(nil, log.Discard)
+	configLoader := f.NewConfigLoader(nil, log.Discard)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err

@@ -4,10 +4,9 @@ import (
 	"context"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
 	"github.com/docker/docker/api/types/filters"
@@ -19,7 +18,7 @@ type imagesCmd struct {
 	*flags.GlobalFlags
 }
 
-func newImagesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newImagesCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &imagesCmd{GlobalFlags: globalFlags}
 
 	imagesCmd := &cobra.Command{
@@ -33,17 +32,18 @@ Deletes all locally created docker images from docker
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunCleanupImages,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunCleanupImages(f, cobraCmd, args)
+		}}
 
 	return imagesCmd
 }
 
 // RunCleanupImages executes the cleanup images command logic
-func (cmd *imagesCmd) RunCleanupImages(cobraCmd *cobra.Command, args []string) error {
+func (cmd *imagesCmd) RunCleanupImages(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	log := log.GetInstance()
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log)
+	log := f.GetLog()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err

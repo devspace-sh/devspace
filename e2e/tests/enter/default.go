@@ -17,17 +17,12 @@ import (
 //3. enter --label-selector
 //4. enter --pick
 
-func runDefault(f *customFactory, logger log.Logger) error {
+func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 	logger.Info("Run sub test 'default' of test 'enter'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
-	client, err := f.NewKubeClientFromContext("", f.namespace, false)
-	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
-	}
-
-	pods, err := client.KubeClient().CoreV1().Pods(f.namespace).List(metav1.ListOptions{})
+	pods, err := f.Client.KubeClient().CoreV1().Pods(f.Namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return errors.Errorf("Unable to list the pods: %v", err)
 	}
@@ -37,7 +32,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 	enterConfigs := []*cmd.EnterCmd{
 		{
 			GlobalFlags: &flags.GlobalFlags{
-				Namespace: f.namespace,
+				Namespace: f.Namespace,
 				NoWarn:    true,
 				Silent:    true,
 			},
@@ -46,7 +41,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		},
 		{
 			GlobalFlags: &flags.GlobalFlags{
-				Namespace: f.namespace,
+				Namespace: f.Namespace,
 				NoWarn:    true,
 				Silent:    true,
 			},
@@ -55,16 +50,16 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		},
 		{
 			GlobalFlags: &flags.GlobalFlags{
-				Namespace: f.namespace,
+				Namespace: f.Namespace,
 				NoWarn:    true,
 				Silent:    true,
 			},
 			Wait:          true,
-			LabelSelector: "app.kubernetes.io/component=quickstart",
+			LabelSelector: "app=test",
 		},
 		{
 			GlobalFlags: &flags.GlobalFlags{
-				Namespace: f.namespace,
+				Namespace: f.Namespace,
 				NoWarn:    true,
 				Silent:    true,
 			},
@@ -76,7 +71,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 	for _, c := range enterConfigs {
 		done := utils.Capture()
 
-		output := "testblabla"
+		output := "My Test Data"
 		err = c.Run(f, nil, []string{"echo", output})
 		if err != nil {
 			return err
@@ -90,7 +85,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		}
 
 		if !strings.HasPrefix(capturedOutput, output) {
-			return errors.Errorf("capturedOutput is different than output for the enter cmd")
+			return errors.Errorf("capturedOutput '%s' is different than output '%s' for the enter cmd", capturedOutput, output)
 		}
 	}
 

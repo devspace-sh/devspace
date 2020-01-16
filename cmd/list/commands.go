@@ -3,7 +3,7 @@ package list
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -19,7 +19,7 @@ type commandsCmd struct {
 	*flags.GlobalFlags
 }
 
-func newCommandsCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newCommandsCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &commandsCmd{GlobalFlags: globalFlags}
 
 	commandsCmd := &cobra.Command{
@@ -34,16 +34,18 @@ devspace.yaml
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunListProfiles,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunListProfiles(f, cobraCmd, args)
+		}}
 
 	return commandsCmd
 }
 
 // RunListCommands runs the list  command logic
-func (cmd *commandsCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) error {
+func (cmd *commandsCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	logger := f.GetLog()
 	// Set config root
-	configLoader := loader.NewConfigLoader(nil, log.GetInstance())
+	configLoader := f.NewConfigLoader(nil, logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -95,6 +97,6 @@ func (cmd *commandsCmd) RunListProfiles(cobraCmd *cobra.Command, args []string) 
 		})
 	}
 
-	log.PrintTable(log.GetInstance(), headerColumnNames, rows)
+	log.PrintTable(logger, headerColumnNames, rows)
 	return nil
 }

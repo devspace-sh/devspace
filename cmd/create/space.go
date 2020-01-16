@@ -54,21 +54,21 @@ devspace create space myspace
 // RunCreateSpace executes the "devspace create space" command logic
 func (cmd *SpaceCmd) RunCreateSpace(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	log := f.GetLog()
-	configLoader := loader.NewConfigLoader(nil, log)
+	logger := f.GetLog()
+	configLoader := loader.NewConfigLoader(nil, logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
 
 	// Get provider
-	provider, err := cloud.GetProvider(cmd.Provider, log)
+	provider, err := f.GetProvider(cmd.Provider, logger)
 	if err != nil {
 		return err
 	}
 
-	log.StartWait("Retrieving clusters")
-	defer log.StopWait()
+	logger.StartWait("Retrieving clusters")
+	defer logger.StopWait()
 
 	// Get projects
 	projects, err := provider.Client().GetProjects()
@@ -89,7 +89,7 @@ func (cmd *SpaceCmd) RunCreateSpace(f factory.Factory, cobraCmd *cobra.Command, 
 
 	var cluster *latest.Cluster
 	if cmd.Cluster == "" {
-		cluster, err = getCluster(provider)
+		cluster, err = getCluster(provider, logger)
 		if err != nil {
 			return err
 		}
@@ -100,8 +100,8 @@ func (cmd *SpaceCmd) RunCreateSpace(f factory.Factory, cobraCmd *cobra.Command, 
 		}
 	}
 
-	log.StartWait("Creating space " + args[0])
-	defer log.StopWait()
+	logger.StartWait("Creating space " + args[0])
+	defer logger.StopWait()
 
 	key, err := provider.GetClusterKey(cluster)
 	if err != nil {
@@ -139,18 +139,18 @@ func (cmd *SpaceCmd) RunCreateSpace(f factory.Factory, cobraCmd *cobra.Command, 
 		return err
 	}
 
-	log.StopWait()
-	log.Infof("Successfully created space %s", space.Name)
-	log.Infof("Your kubectl context has been updated automatically.")
+	logger.StopWait()
+	logger.Infof("Successfully created space %s", space.Name)
+	logger.Infof("Your kubectl context has been updated automatically.")
 
 	if configExists {
-		log.Infof("\r         \nYou can now run: \n- `%s` to deploy the app to the cloud\n- `%s` to develop the app in the cloud\n", ansi.Color("devspace deploy", "white+b"), ansi.Color("devspace dev", "white+b"))
+		logger.Infof("\r         \nYou can now run: \n- `%s` to deploy the app to the cloud\n- `%s` to develop the app in the cloud\n", ansi.Color("devspace deploy", "white+b"), ansi.Color("devspace dev", "white+b"))
 	}
 
 	return nil
 }
 
-func getCluster(p cloud.Provider) (*latest.Cluster, error) {
+func getCluster(p cloud.Provider, logger log.Logger) (*latest.Cluster, error) {
 	clusters, err := p.Client().GetClusters()
 	if err != nil {
 		return nil, errors.Wrap(err, "get clusters")
@@ -159,7 +159,7 @@ func getCluster(p cloud.Provider) (*latest.Cluster, error) {
 		return nil, errors.New("Cannot create space, because no cluster was found")
 	}
 
-	log.GetInstance().StopWait()
+	logger.StopWait()
 
 	// Check if the user has access to a connected cluster
 	connectedClusters := make([]*latest.Cluster, 0, len(clusters))
@@ -189,7 +189,7 @@ func getCluster(p cloud.Provider) (*latest.Cluster, error) {
 		}
 
 		// Choose cluster
-		chosenCluster, err := log.GetInstance().Question(&survey.QuestionOptions{
+		chosenCluster, err := logger.Question(&survey.QuestionOptions{
 			Question:     "Which cluster should the space created in?",
 			DefaultValue: clusterNames[0],
 			Options:      clusterNames,
@@ -225,7 +225,7 @@ func getCluster(p cloud.Provider) (*latest.Cluster, error) {
 	}
 
 	// Choose cluster
-	chosenCluster, err := log.GetInstance().Question(&survey.QuestionOptions{
+	chosenCluster, err := logger.Question(&survey.QuestionOptions{
 		Question:     "Which hosted DevSpace cluster should the space created in?",
 		DefaultValue: clusterNames[0],
 		Options:      clusterNames,

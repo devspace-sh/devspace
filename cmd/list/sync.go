@@ -2,7 +2,7 @@ package list
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
@@ -14,7 +14,7 @@ type syncCmd struct {
 	*flags.GlobalFlags
 }
 
-func newSyncCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newSyncCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &syncCmd{GlobalFlags: globalFlags}
 
 	syncCmd := &cobra.Command{
@@ -28,16 +28,18 @@ Lists the sync configuration
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunListSync,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunListSync(f, cobraCmd, args)
+		}}
 
 	return syncCmd
 }
 
 // RunListSync runs the list sync command logic
-func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) error {
+func (cmd *syncCmd) RunListSync(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	logger := f.GetLog()
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log.GetInstance())
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -52,7 +54,7 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	if config.Dev.Sync == nil || len(config.Dev.Sync) == 0 {
-		log.GetInstance().Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
+		logger.Info("No sync paths are configured. Run `devspace add sync` to add new sync path\n")
 		return nil
 	}
 
@@ -96,6 +98,6 @@ func (cmd *syncCmd) RunListSync(cobraCmd *cobra.Command, args []string) error {
 		})
 	}
 
-	log.PrintTable(log.GetInstance(), headerColumnNames, syncPaths)
+	log.PrintTable(logger, headerColumnNames, syncPaths)
 	return nil
 }

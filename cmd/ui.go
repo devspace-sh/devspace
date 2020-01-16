@@ -9,10 +9,9 @@ import (
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/server"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
 	"github.com/pkg/errors"
@@ -33,7 +32,7 @@ type UICmd struct {
 }
 
 // NewUICmd creates a new ui command
-func NewUICmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewUICmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &UICmd{
 		GlobalFlags: globalFlags,
 		log:         log.GetInstance(),
@@ -50,7 +49,9 @@ Opens the localhost UI in the browser
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunUI,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunUI(f, cobraCmd, args)
+		},
 	}
 
 	uiCmd.Flags().IntVar(&cmd.Port, "port", 0, "The port to use when opening the server")
@@ -60,9 +61,10 @@ Opens the localhost UI in the browser
 }
 
 // RunUI executes the functionality "devspace ui"
-func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
+func (cmd *UICmd) RunUI(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
+	cmd.log = f.GetLog()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -135,7 +137,7 @@ func (cmd *UICmd) RunUI(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Create kubectl client
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}

@@ -13,13 +13,11 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -52,7 +50,7 @@ type OpenCmd struct {
 }
 
 // NewOpenCmd creates a new open command
-func NewOpenCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewOpenCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &OpenCmd{
 		GlobalFlags: globalFlags,
 		log:         log.GetInstance(),
@@ -72,7 +70,9 @@ devspace open
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunOpen,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunOpen(f, cobraCmd, args)
+		},
 	}
 
 	openCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
@@ -81,9 +81,10 @@ devspace open
 }
 
 // RunOpen executes the functionality "devspace open"
-func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
+func (cmd *OpenCmd) RunOpen(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
+	cmd.log = f.GetLog()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -116,7 +117,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Get kubernetes client
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return err
 	}
@@ -127,7 +128,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Signal that we are working on the space if there is any
-	err = resume.NewSpaceResumer(client, cmd.log).ResumeSpace(true)
+	err = f.NewSpaceResumer(client, cmd.log).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
@@ -153,7 +154,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 		}
 
 		// Get provider
-		provider, err = cloud.GetProvider(providerName, cmd.log)
+		provider, err = f.GetProvider(providerName, cmd.log)
 		if err != nil {
 			return err
 		}
@@ -182,7 +183,7 @@ func (cmd *OpenCmd) RunOpen(cobraCmd *cobra.Command, args []string) error {
 
 	// Check if we should open locally
 	if openingMode == openLocalHostOption {
-		cmd.openLocal(devspaceConfig, nil, client, domain)
+		cmd.openLocal(f, devspaceConfig, nil, client, domain)
 		return nil
 	}
 
@@ -335,7 +336,7 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 	return nil
 }
 
-func (cmd *OpenCmd) openLocal(devspaceConfig *latest.Config, generatedConfig *generated.Config, client kubectl.Client, domain string) error {
+func (cmd *OpenCmd) openLocal(f factory.Factory, devspaceConfig *latest.Config, generatedConfig *generated.Config, client kubectl.Client, domain string) error {
 	_, servicePort, serviceLabels, err := cmd.getService(devspaceConfig, client, client.Namespace(), domain, true)
 	if err != nil {
 		return errors.Errorf("Unable to get service: %v", err)
@@ -375,7 +376,7 @@ func (cmd *OpenCmd) openLocal(devspaceConfig *latest.Config, generatedConfig *ge
 	}
 
 	// start port-forwarding for localhost access
-	servicesClient := services.NewClient(&latest.Config{
+	servicesClient := f.NewServicesClient(&latest.Config{
 		Dev: &latest.DevConfig{
 			Ports: portforwardingConfig,
 		},

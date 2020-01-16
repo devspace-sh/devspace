@@ -2,14 +2,12 @@ package list
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer"
 	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/helm"
 	deployKubectl "github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl"
 	helmtypes "github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
@@ -21,7 +19,7 @@ type deploymentsCmd struct {
 	*flags.GlobalFlags
 }
 
-func newDeploymentsCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func newDeploymentsCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &deploymentsCmd{GlobalFlags: globalFlags}
 
 	return &cobra.Command{
@@ -35,15 +33,16 @@ Shows the status of all deployments
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunDeploymentsStatus,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunDeploymentsStatus(f, cobraCmd, args)
+		}}
 }
 
 // RunDeploymentsStatus executes the devspace status deployments command logic
-func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []string) error {
+func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	log := logpkg.GetInstance()
-	configLoader := loader.NewConfigLoader(cmd.ToConfigOptions(), log)
+	logger := f.GetLog()
+	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -67,19 +66,19 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log)
+	err = cmd.UseLastContext(generatedConfig, logger)
 	if err != nil {
 		return err
 	}
 
 	// Create new kube client
-	client, err := kubectl.NewClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return err
 	}
 
 	// Show warning if the old kube context was different
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log)
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, logger)
 	if err != nil {
 		return err
 	}
@@ -91,7 +90,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 	}
 
 	// Signal that we are working on the space if there is any
-	resumer := resume.NewSpaceResumer(client, log)
+	resumer := f.NewSpaceResumer(client, logger)
 	err = resumer.ResumeSpace(true)
 	if err != nil {
 		return err
@@ -105,31 +104,31 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 
 			// Delete kubectl engine
 			if deployConfig.Kubectl != nil {
-				deployClient, err = deployKubectl.New(config, client, deployConfig, log)
+				deployClient, err = deployKubectl.New(config, client, deployConfig, logger)
 				if err != nil {
-					log.Warnf("Unable to create kubectl deploy config for %s: %v", deployConfig.Name, err)
+					logger.Warnf("Unable to create kubectl deploy config for %s: %v", deployConfig.Name, err)
 					continue
 				}
 			} else if deployConfig.Helm != nil {
-				helmClient, err := deploy.GetCachedHelmClient(config, deployConfig, client, helmV2Clients, false, log)
+				helmClient, err := deploy.GetCachedHelmClient(config, deployConfig, client, helmV2Clients, false, logger)
 				if err != nil {
-					log.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
+					logger.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
 					continue
 				}
 
-				deployClient, err = deployHelm.New(config, helmClient, client, deployConfig, log)
+				deployClient, err = deployHelm.New(config, helmClient, client, deployConfig, logger)
 				if err != nil {
-					log.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
+					logger.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
 					continue
 				}
 			} else {
-				log.Warnf("No deployment method defined for deployment %s", deployConfig.Name)
+				logger.Warnf("No deployment method defined for deployment %s", deployConfig.Name)
 				continue
 			}
 
 			status, err := deployClient.Status()
 			if err != nil {
-				log.Warnf("Error retrieving status for deployment %s: %v", deployConfig.Name, err)
+				logger.Warnf("Error retrieving status for deployment %s: %v", deployConfig.Name, err)
 				continue
 			}
 
@@ -142,6 +141,6 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(cobraCmd *cobra.Command, args []
 		}
 	}
 
-	logpkg.PrintTable(log, headerValues, values)
+	logpkg.PrintTable(logger, headerValues, values)
 	return nil
 }

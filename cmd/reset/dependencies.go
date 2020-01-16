@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -13,7 +13,7 @@ import (
 type dependenciesCmd struct {
 }
 
-func newDependenciesCmd() *cobra.Command {
+func newDependenciesCmd(f factory.Factory) *cobra.Command {
 	cmd := &dependenciesCmd{}
 
 	dependenciesCmd := &cobra.Command{
@@ -30,19 +30,21 @@ devspace reset dependencies
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunResetDependencies,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunResetDependencies(f, cobraCmd, args)
+		}}
 
 	return dependenciesCmd
 }
 
 // RunResetDependencies executes the reset dependencies command logic
-func (cmd *dependenciesCmd) RunResetDependencies(cobraCmd *cobra.Command, args []string) error {
+func (cmd *dependenciesCmd) RunResetDependencies(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	log := f.GetLog()
 	err := os.RemoveAll(dependency.DependencyFolderPath)
 	if err != nil {
 		return errors.Wrapf(err, "delete %s", dependency.DependencyFolderPath)
 	}
 
-	log.GetInstance().Done("Successfully reseted the dependency cache")
+	log.Done("Successfully reseted the dependency cache")
 	return nil
 }

@@ -88,6 +88,10 @@ func (p *provider) Login() error {
 
 		// Check if we got access
 		p.Key = key
+		if p.client == nil {
+			p.client = client.NewClient(p.Name, p.Host, key, "")
+		}
+
 		_, err := p.client.GetSpaces()
 		if err != nil {
 			close(keyChannel)

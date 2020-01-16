@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
@@ -38,7 +38,7 @@ type syncStatus struct {
 
 type syncCmd struct{}
 
-func newSyncCmd() *cobra.Command {
+func newSyncCmd(f factory.Factory) *cobra.Command {
 	cmd := &syncCmd{}
 
 	return &cobra.Command{
@@ -52,14 +52,16 @@ Shows the sync status
 #######################################################
 	`,
 		Args: cobra.NoArgs,
-		RunE: cmd.RunStatusSync,
-	}
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunStatusSync(f, cobraCmd, args)
+		}}
 }
 
 // RunStatusSync executes the devspace status sync commad logic
-func (cmd *syncCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) error {
+func (cmd *syncCmd) RunStatusSync(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := loader.NewConfigLoader(nil, log.GetInstance())
+	logger := f.GetLog()
+	configLoader := f.NewConfigLoader(nil, logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -104,7 +106,7 @@ func (cmd *syncCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) error 
 	}
 
 	if len(syncMap) == 0 {
-		log.GetInstance().Info("No sync activity found. Did you run `devspace dev`?")
+		logger.Info("No sync activity found. Did you run `devspace dev`?")
 		return nil
 	}
 
@@ -158,7 +160,7 @@ func (cmd *syncCmd) RunStatusSync(cobraCmd *cobra.Command, args []string) error 
 		})
 	}
 
-	log.PrintTable(log.GetInstance(), header, values)
+	log.PrintTable(logger, header, values)
 	return nil
 }
 

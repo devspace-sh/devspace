@@ -2,12 +2,10 @@ package initcmd
 
 import (
 	"bytes"
-	"io"
 	"path/filepath"
 	"reflect"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/sirupsen/logrus"
 
@@ -31,37 +29,16 @@ type initTestCase struct {
 	answers []string
 
 	expectedConfig *latest.Config
+	tempLogger     log.Logger
 }
 
 type customFactory struct {
-	*factory.DefaultFactoryImpl
-	verbose     bool
-	timeout     int
-	namespace   string
-	pwd         string
-	cacheLogger *customLogger
-	dirPath     string
-	dirName     string
-	// client      kubectl.Client
+	*utils.BaseCustomFactory
 }
 
 type customLogger struct {
 	log.Logger
 	*fakesurvey.FakeSurvey
-}
-
-func NewCustomStreamLogger(stream io.Writer, level logrus.Level, verbose bool) *customLogger {
-	if verbose {
-		return &customLogger{
-			Logger:     log.GetInstance(),
-			FakeSurvey: fakesurvey.NewFakeSurvey(),
-		}
-	}
-
-	return &customLogger{
-		Logger:     log.NewStreamLogger(stream, level),
-		FakeSurvey: fakesurvey.NewFakeSurvey(),
-	}
 }
 
 func (c *customLogger) Question(params *survey.QuestionOptions) (string, error) {
@@ -85,7 +62,22 @@ func (c *customFactory) NewDockerClient(log log.Logger) (docker.Client, error) {
 
 // GetLog implements interface
 func (c *customFactory) GetLog() log.Logger {
-	return c.cacheLogger
+	if c.CacheLogger == nil {
+		if c.Verbose {
+			c.CacheLogger = &customLogger{
+				Logger:     log.GetInstance(),
+				FakeSurvey: fakesurvey.NewFakeSurvey(),
+			}
+		} else {
+			c.Buff = &bytes.Buffer{}
+			c.CacheLogger = &customLogger{
+				Logger:     log.NewStreamLogger(c.Buff, logrus.InfoLevel),
+				FakeSurvey: fakesurvey.NewFakeSurvey(),
+			}
+		}
+	}
+
+	return c.CacheLogger
 }
 
 var availableSubTests = map[string]func(factory *customFactory, logger log.Logger) error{
@@ -110,8 +102,6 @@ func (r *Runner) SubTests() []string {
 }
 
 func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error {
-	buff := &bytes.Buffer{}
-
 	logger.Info("Run 'init' test")
 
 	// Populates the tests to run with all the available sub tests if no sub tests is specified
@@ -122,22 +112,25 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	}
 
 	f := &customFactory{
-		pwd:     pwd,
-		verbose: verbose,
-		timeout: timeout,
+		BaseCustomFactory: &utils.BaseCustomFactory{
+			Pwd:     pwd,
+			Verbose: verbose,
+			Timeout: timeout,
+		},
 	}
 
 	// Runs the tests
 	for _, subTestName := range subTests {
+		f.ResetLog()
 		c1 := make(chan error)
 
 		go func() {
 			err := func() error {
-				f.namespace = utils.GenerateNamespaceName("test-init-" + subTestName)
+				f.Namespace = utils.GenerateNamespaceName("test-init-" + subTestName)
 				err := availableSubTests[subTestName](f, logger)
 				utils.PrintTestResult("init", subTestName, err, logger)
 				if err != nil {
-					return errors.Errorf("test 'init' failed: %s %v", buff.String(), err)
+					return errors.Errorf("test 'init' failed: %s %v", f.GetLogContents(), err)
 				}
 
 				return nil
@@ -151,9 +144,8 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 				return err
 			}
 		case <-time.After(time.Duration(timeout) * time.Second):
-			return errors.Errorf("Timeout error: the test did not return within the specified timeout of %v seconds", timeout)
+			return errors.Errorf("Timeout error - the test did not return within the specified timeout of %v seconds: %s", timeout, f.GetLogContents())
 		}
-
 	}
 
 	return nil
@@ -167,19 +159,18 @@ func runTest(f *customFactory, testCase initTestCase) error {
 		Provider:    "",
 	}
 
-	c, err := f.NewDockerClient(f.cacheLogger)
-	if err != nil {
-		return err
-	}
-	docker.SetFakeClient(c)
+	// c, err := f.NewDockerClient(f.GetLog())
+	// if err != nil {
+	// 	return err
+	// }
+	// docker.SetFakeClient(c)
 
 	for _, a := range testCase.answers {
-		// fmt.Println("SetNextAnswer:", a)
-		f.cacheLogger.SetNextAnswer(a)
+		f.GetLog().(*customLogger).SetNextAnswer(a)
 	}
 
 	// runs init cmd
-	err = initConfig.Run(f, nil, nil)
+	err := initConfig.Run(f, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -210,8 +201,8 @@ func beforeTest(f *customFactory, logger log.Logger, testDir string) error {
 		return err
 	}
 
-	f.dirPath = dirPath
-	f.dirName = dirName
+	f.DirPath = dirPath
+	f.DirName = dirName
 
 	// Copy the testdata into the temp dir
 	err = utils.Copy(testDir, dirPath)
@@ -220,7 +211,7 @@ func beforeTest(f *customFactory, logger log.Logger, testDir string) error {
 	}
 
 	// Change working directory
-	err = utils.ChangeWorkingDir(dirPath, f.cacheLogger)
+	err = utils.ChangeWorkingDir(dirPath, f.GetLog())
 	if err != nil {
 		return err
 	}
@@ -229,5 +220,5 @@ func beforeTest(f *customFactory, logger log.Logger, testDir string) error {
 }
 
 func afterTest(f *customFactory) {
-	utils.DeleteTempAndResetWorkingDir(f.dirPath, f.pwd, f.cacheLogger)
+	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.GetLog())
 }

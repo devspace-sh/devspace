@@ -5,8 +5,8 @@ import (
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
@@ -31,7 +31,7 @@ type BuildCmd struct {
 }
 
 // NewBuildCmd creates a new devspace build command
-func NewBuildCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewBuildCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &BuildCmd{GlobalFlags: globalFlags}
 
 	buildCmd := &cobra.Command{
@@ -43,7 +43,9 @@ func NewBuildCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 #######################################################
 Builds all defined images and pushes them
 #######################################################`,
-		RunE: cmd.Run,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.Run(f, cobraCmd, args)
+		},
 	}
 
 	buildCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
@@ -61,11 +63,11 @@ Builds all defined images and pushes them
 }
 
 // Run executes the command logic
-func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) error {
+func (cmd *BuildCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	log := logpkg.GetInstance()
+	log := f.GetLog()
 	configOptions := cmd.ToConfigOptions()
-	configLoader := loader.NewConfigLoader(configOptions, log)
+	configLoader := f.NewConfigLoader(configOptions, log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -97,7 +99,7 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Create Dependencymanager
-	manager, err := dependency.NewManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log)
+	manager, err := f.NewDependencyManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log)
 	if err != nil {
 		return errors.Wrap(err, "new manager")
 	}
@@ -114,7 +116,7 @@ func (cmd *BuildCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Build images if necessary
-	builtImages, err := build.NewController(config, generatedConfig.GetActive(), nil).Build(&build.Options{
+	builtImages, err := f.NewBuildController(config, generatedConfig.GetActive(), nil).Build(&build.Options{
 		SkipPush:     cmd.SkipPush,
 		IsDev:        true,
 		ForceRebuild: cmd.ForceBuild,

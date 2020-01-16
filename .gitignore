@@ -25,3 +25,5 @@
 
 ui/node_modules
 ui/build/static/js/*.js.map
+
+e2e/**/.devspace
