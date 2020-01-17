@@ -1,6 +1,8 @@
 ---
 title: What is DevSpace?
 sidebar_label: DevSpace
+id: version-v4.3.4-what-is-devspace-cli
+original_id: what-is-devspace-cli
 ---
 
 DevSpace is an open-source command-line tool that enables your team to:

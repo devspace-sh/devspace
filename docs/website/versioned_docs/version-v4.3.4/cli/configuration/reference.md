@@ -1,6 +1,8 @@
 ---
 title: Configuration Reference for devspace.yaml
 sidebar_label: Config Reference
+id: version-v4.3.4-reference
+original_id: reference
 ---
 
 ## `version`
