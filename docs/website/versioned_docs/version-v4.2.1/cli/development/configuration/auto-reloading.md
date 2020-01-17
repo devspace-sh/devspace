@@ -1,6 +1,8 @@
 ---
 title: Configuring Automatic Reload of Deployments
 sidebar_label: Auto-Reloading
+id: version-v4.2.1-auto-reloading
+original_id: auto-reloading
 ---
 
 There are certain use cases where you want to rebuild and redeploy the whole application instead of using the file synchronization and hot reloading. DevSpace provides you the options to specify special paths that are watched during `devspace dev` and any change to such a path will trigger a redeploy.  
