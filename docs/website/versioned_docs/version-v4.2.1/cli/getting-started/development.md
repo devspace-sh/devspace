@@ -1,5 +1,7 @@
 ---
 title: 3. Develop inside Kubernetes
+id: version-v4.2.1-development
+original_id: development
 ---
 
 DevSpace also allows you to develop applications directly inside a Kubernetes cluster.
