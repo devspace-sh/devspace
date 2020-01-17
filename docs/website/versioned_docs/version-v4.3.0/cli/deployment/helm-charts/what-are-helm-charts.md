@@ -1,6 +1,8 @@
 ---
 title: What are Kubernetes Helm Chart Deployments?
 sidebar_label: Helm Charts
+id: version-v4.3.0-what-are-helm-charts
+original_id: what-are-helm-charts
 ---
 
 [Helm](https://helm.sh/) is the package manager for Kubernetes. Packages in Helm are called Helm charts.

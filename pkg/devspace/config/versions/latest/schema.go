@@ -63,10 +63,10 @@ type BuildConfig struct {
 
 // DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type DockerConfig struct {
-	UseBuildKit     *bool         `yaml:"useBuildKit,omitempty"`
 	PreferMinikube  *bool         `yaml:"preferMinikube,omitempty"`
 	SkipPush        *bool         `yaml:"skipPush,omitempty"`
 	DisableFallback *bool         `yaml:"disableFallback,omitempty"`
+	UseBuildKit     *bool         `yaml:"useBuildKit,omitempty"`
 	Options         *BuildOptions `yaml:"options,omitempty"`
 }
 
@@ -224,12 +224,12 @@ type HelmConfig struct {
 	ValuesFiles      []string                    `yaml:"valuesFiles,omitempty"`
 	ReplaceImageTags *bool                       `yaml:"replaceImageTags,omitempty"`
 	Wait             bool                        `yaml:"wait,omitempty"`
+	Timeout          *int64                      `yaml:"timeout,omitempty"`
+	Force            bool                        `yaml:"force,omitempty"`
 	Atomic           bool                        `yaml:"atomic,omitempty"`
 	CleanupOnFail    bool                        `yaml:"cleanupOnFail,omitempty"`
 	Recreate         bool                        `yaml:"recreate,omitempty"`
 	DisableHooks     bool                        `yaml:"disableHooks,omitempty"`
-	Timeout          *int64                      `yaml:"timeout,omitempty"`
-	Force            bool                        `yaml:"force,omitempty"`
 	Driver           string                      `yaml:"driver,omitempty"`
 	V2               bool                        `yaml:"v2,omitempty"`
 	TillerNamespace  string                      `yaml:"tillerNamespace,omitempty"`

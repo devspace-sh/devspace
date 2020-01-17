@@ -1,5 +1,7 @@
 ---
 title: Workflow & Basics
+id: version-v4.3.0-workflow-basics
+original_id: workflow-basics
 ---
 
 DevSpace lets you build applications directly inside a Kubernetes cluster with this command:

@@ -1,6 +1,8 @@
 ---
 title: Configure Component Deployments
 sidebar_label: Components
+id: version-v4.3.0-overview-specification
+original_id: overview-specification
 ---
 
 To deploy components, you need to configure them within the `deployments` section of the `devspace.yaml`.

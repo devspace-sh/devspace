@@ -1,6 +1,8 @@
 ---
 title: Configuring Build Tools
 sidebar_label: Build Tools
+id: version-v4.3.0-build-tools
+original_id: build-tools
 ---
 
 The `build` option of each image (under `images`) defines which build tool DevSpace uses to build the image. The following build tools are currently supported:
