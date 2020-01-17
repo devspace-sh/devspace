@@ -1,7 +1,8 @@
 package configure
 
 import (
-	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
@@ -27,17 +28,24 @@ type Manager interface {
 	RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector string) error
 }
 
+// Factory defines the factory methods needed by the configure manager to create new configuration
+type Factory interface {
+	NewDockerClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error)
+	GetProvider(useProviderName string, log log.Logger) (cloud.Provider, error)
+	NewCloudConfigLoader() config.Loader
+}
+
 type manager struct {
-	log               log.Logger
-	config            *latest.Config
-	cloudConfigLoader cloudconfig.Loader
-	dockerClient      docker.Client
+	log     log.Logger
+	config  *latest.Config
+	factory Factory
 }
 
 // NewManager creates a new instance of the interface Manager
-func NewManager(config *latest.Config, log log.Logger) Manager {
+func NewManager(factory Factory, config *latest.Config, log log.Logger) Manager {
 	return &manager{
-		log:    log,
-		config: config,
+		log:     log,
+		factory: factory,
+		config:  config,
 	}
 }

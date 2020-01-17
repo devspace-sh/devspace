@@ -32,6 +32,9 @@ func runSuccess(f *utils.BaseCustomFactory, logger log.Logger) error {
 		return errors.Errorf("sub test 'success' of 'analyze' test failed: %s %v", f.GetLogContents(), err)
 	}
 
+	verboseHistory := f.Verbose
+	f.Verbose = false
+
 	err = ac.RunAnalyze(f, nil, nil)
 	if err != nil {
 		return errors.Errorf("err should be nil: %v", err)
@@ -43,6 +46,8 @@ func runSuccess(f *utils.BaseCustomFactory, logger log.Logger) error {
 	if strings.Index(f.GetLogContents(), expectedOutput) == -1 {
 		return errors.Errorf("Expected output '%v' not found in following output: %s", expectedOutput, f.GetLogContents())
 	}
+
+	f.Verbose = verboseHistory
 
 	return nil
 }
