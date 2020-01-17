@@ -46,6 +46,9 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 	}
 
 	err = devConfig.Run(f, nil, nil)
+	defer func() {
+		f.interrupt = make(chan error)
+	}()
 	if err != nil {
 		return errors.Errorf("Error while running dev command: %v", err)
 	}

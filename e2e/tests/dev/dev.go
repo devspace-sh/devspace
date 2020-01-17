@@ -22,6 +22,7 @@ type customFactory struct {
 	*utils.BaseCustomFactory
 	initialRun            bool
 	imageSelectorFirstRun string
+	interrupt             chan error
 }
 
 type fakeServiceClient struct {
@@ -32,11 +33,18 @@ type fakeServiceClient struct {
 
 // NewFakeServiceClient implements
 func (c *customFactory) NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, selectorParameter *targetselector.SelectorParameter, log log.Logger) services.Client {
+	c.interrupt = make(chan error)
+
 	return &fakeServiceClient{
 		Client:            services.NewClient(config, generated, kubeClient, selectorParameter, log),
 		factory:           c,
 		selectorParameter: selectorParameter,
 	}
+}
+
+func (s *fakeServiceClient) StartPortForwarding(interrupt chan error) error {
+	err := s.Client.StartPortForwarding(s.factory.interrupt)
+	return err
 }
 
 func (serviceClient *fakeServiceClient) StartTerminal(args []string, imageSelector []string, interrupt chan error, wait bool) (int, error) {
