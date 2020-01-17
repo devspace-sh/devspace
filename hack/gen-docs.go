@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/cmd"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/spf13/cobra/doc"
 )
 
@@ -49,7 +50,8 @@ func main() {
 		return "../../cli/commands/" + strings.ToLower(base)
 	}
 
-	rootCmd := cmd.NewRootCmd()
+	f := factory.DefaultFactory()
+	rootCmd := cmd.BuildRoot(f)
 
 	err := doc.GenMarkdownTreeCustom(rootCmd, cliDocsDir, filePrepender, linkHandler)
 	if err != nil {
