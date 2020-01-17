@@ -1,6 +1,8 @@
 ---
-title: "Command - devspace"
+title: Command - devspace
 sidebar_label: devspace
+id: version-v4.3.5-devspace
+original_id: devspace
 ---
 
 
