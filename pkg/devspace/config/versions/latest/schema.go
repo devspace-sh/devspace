@@ -295,8 +295,12 @@ type SyncConfig struct {
 	DownloadExcludePaths  []string          `yaml:"downloadExcludePaths,omitempty"`
 	UploadExcludePaths    []string          `yaml:"uploadExcludePaths,omitempty"`
 	DownloadOnInitialSync *bool             `yaml:"downloadOnInitialSync,omitempty"`
-	WaitInitialSync       *bool             `yaml:"waitInitialSync,omitempty"`
-	BandwidthLimits       *BandwidthLimits  `yaml:"bandwidthLimits,omitempty"`
+
+	DisableDownload *bool `yaml:"disableDownload,omitempty"`
+	DisableUpload   *bool `yaml:"disableUpload,omitempty"`
+
+	WaitInitialSync *bool            `yaml:"waitInitialSync,omitempty"`
+	BandwidthLimits *BandwidthLimits `yaml:"bandwidthLimits,omitempty"`
 
 	OnUpload   *SyncOnUpload   `yaml:"onUpload,omitempty"`
 	OnDownload *SyncOnDownload `yaml:"onDownload,omitempty"`

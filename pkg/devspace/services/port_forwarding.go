@@ -14,13 +14,13 @@ import (
 )
 
 // StartPortForwarding starts the port forwarding functionality
-func (serviceClient *client) StartPortForwarding() error {
+func (serviceClient *client) StartPortForwarding(interrupt chan error) error {
 	if serviceClient.config.Dev == nil {
 		return nil
 	}
 
 	for _, portForwarding := range serviceClient.config.Dev.Ports {
-		err := serviceClient.startForwarding(portForwarding, serviceClient.log)
+		err := serviceClient.startForwarding(portForwarding, interrupt, serviceClient.log)
 		if err != nil {
 			return err
 		}
@@ -29,7 +29,7 @@ func (serviceClient *client) StartPortForwarding() error {
 	return nil
 }
 
-func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardingConfig, log logpkg.Logger) error {
+func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardingConfig, interrupt chan error, log logpkg.Logger) error {
 	var imageSelector []string
 	if portForwarding.ImageName != "" && serviceClient.generated != nil {
 		imageConfigCache := serviceClient.generated.GetActive().GetImageCache(portForwarding.ImageName)
@@ -107,23 +107,28 @@ func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardi
 		return errors.Errorf("Timeout waiting for port forwarding to start")
 	}
 
-	go func(portForwarding *latest.PortForwardingConfig) {
-		err := <-errorChan
-		if err != nil {
-			pf.Close()
-			for {
-				err = serviceClient.startForwarding(portForwarding, logpkg.Discard)
-				if err != nil {
-					serviceClient.log.Errorf("Error restarting port-forwarding: %v", err)
-					serviceClient.log.Errorf("Will try again in 3 seconds", err)
-					continue
-				}
+	go func(portForwarding *latest.PortForwardingConfig, interrupt chan error) {
+		select {
+		case err := <-errorChan:
+			if err != nil {
+				pf.Close()
+				for {
+					err = serviceClient.startForwarding(portForwarding, interrupt, logpkg.Discard)
+					if err != nil {
+						serviceClient.log.Errorf("Error restarting port-forwarding: %v", err)
+						serviceClient.log.Errorf("Will try again in 3 seconds", err)
+						continue
+					}
 
-				time.Sleep(time.Second * 3)
-				break
+					time.Sleep(time.Second * 3)
+					break
+				}
 			}
+		case <-interrupt:
+			pf.Close()
 		}
-	}(portForwarding)
+
+	}(portForwarding, interrupt)
 
 	return nil
 }

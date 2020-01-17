@@ -358,7 +358,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 
 	if cmd.Portforwarding {
 		cmd.Portforwarding = false
-		err := servicesClient.StartPortForwarding()
+		err := servicesClient.StartPortForwarding(nil)
 		if err != nil {
 			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
 		}
@@ -366,7 +366,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 
 	if cmd.Sync {
 		cmd.Sync = false
-		err := servicesClient.StartSync(cmd.VerboseSync)
+		err := servicesClient.StartSync(nil, cmd.VerboseSync)
 		if err != nil {
 			return 0, errors.Wrap(err, "start sync")
 		}

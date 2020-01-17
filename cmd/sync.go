@@ -31,6 +31,8 @@ type SyncCmd struct {
 
 	NoWatch               bool
 	DownloadOnInitialSync bool
+	DownloadOnly          bool
+	UploadOnly            bool
 }
 
 // NewSyncCmd creates a new init command
@@ -69,6 +71,9 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().BoolVar(&cmd.DownloadOnInitialSync, "download-on-initial-sync", true, "Downloads all locally non existing remote files in the beginning")
 	syncCmd.Flags().BoolVar(&cmd.NoWatch, "no-watch", false, "Synchronizes local and remote and then stops")
 	syncCmd.Flags().BoolVar(&cmd.Verbose, "verbose", false, "Shows every file that is synced")
+
+	syncCmd.Flags().BoolVar(&cmd.UploadOnly, "upload-only", false, "If set DevSpace will only upload files")
+	syncCmd.Flags().BoolVar(&cmd.DownloadOnly, "download-only", false, "If set DevSpace will only download files")
 
 	return syncCmd
 }
@@ -149,10 +154,16 @@ func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 		CmdParameter: params,
 	}
 
+	if cmd.DownloadOnly && cmd.UploadOnly {
+		return errors.New("--upload-only cannot be used together with --download-only")
+	}
+
 	syncConfig := &latest.SyncConfig{
 		LocalSubPath:          cmd.LocalPath,
 		ContainerPath:         cmd.ContainerPath,
 		DownloadOnInitialSync: &cmd.DownloadOnInitialSync,
+		DisableDownload:       &cmd.UploadOnly,
+		DisableUpload:         &cmd.DownloadOnly,
 		WaitInitialSync:       &cmd.NoWatch,
 		ExcludePaths:          cmd.Exclude,
 	}
@@ -226,5 +237,5 @@ func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 
 	// Start terminal
 	servicesClient := f.NewServicesClient(config, generatedConfig, client, selectorParameter, logger)
-	return servicesClient.StartSyncFromCmd(syncConfig, cmd.Verbose)
+	return servicesClient.StartSyncFromCmd(syncConfig, nil, cmd.Verbose)
 }
