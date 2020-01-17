@@ -55,7 +55,7 @@ deployments:
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install --name database stable/mysql
+helm install database stable/mysql
 ```
 
 ### `deployments[*].helm.chart.version`
@@ -80,7 +80,7 @@ deployments:
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install --name database stable/mysql --version="1.3.1"
+helm install database stable/mysql --version="1.3.1"
 ```
 
 ### `deployments[*].helm.chart.repo`
@@ -105,7 +105,7 @@ deployments:
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install --name database custom-chart --repo "https://my-repo.tld/"
+helm install database custom-chart --repo "https://my-repo.tld/"
 ```
 
 ## Values Overriding
@@ -139,7 +139,7 @@ deployments:
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install --name database stable/mysql --set mysqlRootPassword="$MYSQL_ROOT_PASSWORD" --set mysqlUser="db_user" --set mysqlDatabase="app_database"
+helm install database stable/mysql --set mysqlRootPassword="$MYSQL_ROOT_PASSWORD" --set mysqlUser="db_user" --set mysqlDatabase="app_database"
 ```
 
 ### `deployments[*].helm.valuesFiles`
@@ -170,7 +170,7 @@ deployments:
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install --name database stable/mysql -f mysql/values.yaml -f mysql/values.production.yaml
+helm install database stable/mysql -f mysql/values.yaml -f mysql/values.production.yaml
 ```
 
 
@@ -220,7 +220,7 @@ deployments:
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install --name database stable/mysql --wait
+helm install database stable/mysql --wait
 ```
 
 ### `deployments[*].helm.timeout`
@@ -243,7 +243,7 @@ deployments:
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install --name database stable/mysql --timeout=300
+helm install database stable/mysql --timeout=300
 ```
 
 ### `deployments[*].helm.force`
@@ -266,36 +266,122 @@ deployments:
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install --name database stable/mysql --force
+helm install database stable/mysql --force
 ```
 
-### `deployments[*].helm.rollback`
-The `rollback` option expects a boolean that states if DevSpace should automatically rollback deployments that fail.
+### `deployments[*].helm.recreate`
+The `recreate` option expects a boolean that states if DevSpace should set the Helm flag `--recreate-pods`. It tells Helm to restart all pods for applicable resources (e.g. Deployments).
 
-#### Default Value for `rollback`
+#### Default Value for `recreate`
 ```yaml
-rollback: false
+recreate: false
 ```
 
-#### Example: Enabling Automatic Rollback
+#### Example: Enable Recreate Pods
 ```yaml
 deployments:
 - name: database
   helm:
     chart:
       name: stable/mysql
-    rollback: true
+    recreate: true
+```
+
+### `deployments[*].helm.atomic`
+The `atomic` option expects a boolean that states if DevSpace should pass the `--atomic` flag to Helm. If set, the upgrade process rolls back all changes in case the upgrade fails. This flag also sets the [`--wait` option](#deployments-helmwait).
+
+#### Default Value for `atomic`
+```yaml
+atomic: false
+```
+
+#### Example: Enable Atomic Deployment
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: stable/mysql
+    atomic: true
+```
+
+### `deployments[*].helm.cleanupOnFail`
+The `cleanupOnFail` option expects a boolean that states if DevSpace should set the Helm flag `--cleanup-on-fail`. It allows that Helm deletes newly created resources during a rollback in case the rollback fails.
+
+#### Default Value for `cleanupOnFail`
+```yaml
+cleanupOnFail: false
+```
+
+#### Example: Enable Cleanup On Fail
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: stable/mysql
+    cleanupOnFail: true
+```
+
+### `deployments[*].helm.disableHooks`
+The `disableHooks` option expects a boolean that tells DevSpace to disable hooks when executing Helm commands.
+
+#### Default Value for `disableHooks`
+```yaml
+disableHooks: false
+```
+
+#### Example: Disable Hooks
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: stable/mysql
+    disableHooks: true
+```
+
+### `deployments[*].helm.driver`
+The `driver` option expects a string that states the storage driver that should be used by Helm. By default, Helm 3 uses Kubneretes secrets to store the deployment configuration of a release. Alternative options include `configmaps` or `memory`.
+
+> This option is not compatible with `v2: true`.
+
+#### Default Value for `driver`
+```yaml
+driver: secrets
+```
+
+#### Example: Use Different Driver
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: stable/mysql
+    driver: configmaps
+```
+
+### `deployments[*].helm.v2`
+The `v2` option expects a boolean that tells DevSpace to use the legacy version 2 of Helm instead of Helm v3.
+
+#### Default Value for `v2`
+```yaml
+v2: false
 ```
 
 ### `deployments[*].helm.tillerNamespace`
 The `tillerNamespace` option expects a string that will be used for the [helm flag `--tiller-namespace`](https://helm.sh/docs/using_helm/#helpful-options-for-install-upgrade-rollback).
+
+> This config option is only used when [`v2: true`](#TODO) is configured as well.
+
+> **This config option is deprecated** because Tiller is not necessary anymore since DevSpace supports Helm v3.
 
 #### Default Value for `tillerNamespace`
 ```yaml
 tillerNamespace: "" # defaults to default namespace of current context
 ```
 
-#### Example: Helm Flag Force
+#### Example: Change Tiller Namespace
 ```yaml
 deployments:
 - name: database
@@ -303,6 +389,7 @@ deployments:
     chart:
       name: stable/mysql
     tillerNamespace: my-tiller-ns
+    v2: true
 ```
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:

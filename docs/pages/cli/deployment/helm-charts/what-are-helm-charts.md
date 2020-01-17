@@ -44,7 +44,7 @@ containers:
 The values defined in `values.yaml` are defaults which can be overridden during the deployment of an Helm chart. DevSpace uses value-overriding to update the image tags to the most recently build and pushed tags.
 
 ### templates/
-The `templates/` folder contains all templates for your chart. Tiller will parse all the `.yaml` files defined in this folder and parse them as templates together with the values defined in the `values.yaml`. 
+The `templates/` folder contains all templates for your chart. Helm will parse all the `.yaml` files defined in this folder and parse them as templates together with the values defined in the `values.yaml`. 
 
 The following code snippet shows a simplified version of a template file within a Helm chart:
 ```yaml
@@ -95,7 +95,7 @@ DevSpace provides the convenience command `devspace add package [chart-name]` to
 <summary>
 ### Do I need to install Helm to use DevSpace?
 </summary>
-**No.** DevSpace comes with an in-built Helm client and it will automatically install [Tiller](#what-is-tiller), the server-side Helm component, within your Spaces.
+**No.** DevSpace comes with an in-built Helm client.
 </details>
 
 <details>
@@ -103,12 +103,10 @@ DevSpace provides the convenience command `devspace add package [chart-name]` to
 ### How does DevSpace deploy charts?
 </summary>
 When you run `devspace deploy` or `devspace dev`, DevSpace will deploy your chart. This deployment process involves the following steps:
-1. Installing or upgrading [Tiller](#what-is-tiller) in your Space
-2. Loading the template values from `values.yaml`
-3. Updating the image tags in the template values to the most recently image that has been built and pushed by DevSpace (happens in-memory)
-4. Opening a connection to the [Tiller](#what-is-tiller) server in your Space (via port-forwarding)
-5. Deploying the chart with [Tiller](#what-is-tiller) as new release OR upgrading an existing release
-6. [ON ERROR: rollback release to the latest working version (revision)]
+1. Loading the template values from `values.yaml`
+2. Updating the image tags in the template values to the most recently image that has been built and pushed by DevSpace (happens in-memory)
+3. Deploying the chart with Helm as new release OR upgrading an existing release
+4. [ON ERROR: rollback release to the latest working version (revision)]
 </details>
 
 <details>
@@ -131,18 +129,6 @@ You can, however, manually create ingresses or manually edit any ingress that ha
 kubectl edit ingress [INGRESS_NAME]
 ```
 Use `kubectl get ingress` to list all ingresses in a Space.
-</details>
-
-<details>
-<summary>
-### What is Tiller?
-</summary>
-Tiller is the server-side component of Helm which is responsible for instantiating releases within your Kubernetes namespace and for keeping track of different revisions of a release that you deploy over time. Tiller will likely be removed in the future because a lot of Helm users want Helm to become a client-only tool.
-
-Before deploying your application, DevSpace will start a Tiller deployment within your Space which then deploys your application as defined in your Helm chart. You can actually see the tiller pod by running this kubectl command:
-```bash
-kubectl get po -l name=tiller 
-```
 </details>
 
 <details>

@@ -6,7 +6,7 @@ DevSpace also allows you to develop applications directly inside a Kubernetes cl
 
 The biggest advantages of developing directly inside Kubernetes is that your dev environment will be very similar to your production environment and you can have a much greater confidence that everything will work in production when shipping new features.
 
-## Start Development
+## Start The Development Mode
 Run the following command to start your application in development mode:
 ```bash
 devspace dev
@@ -24,7 +24,30 @@ Running `devspace dev` will do the following:
 
 > It is highly discouraged to run `devspace dev` multiple times in parallel because multiple instances of port-forwarding and file synchronization will disturb each other. Instead:
 > - Run `devspace enter` to open a terminal session without port-forwarding and file synchronization
-> - Run `devspace logs` to open log streaming without port-forwarding and file synchronization
+> - Run `devspace logs` to start log streaming without port-forwarding and file synchronization
+
+## Open The Development UI
+When running `devspace dev`, DevSpace starts a client-only UI for Kubernetes. You can see that in the output of `devspace dev` which should contain a log line similar to this one:
+```bash
+#########################################################
+[info]   DevSpace UI available at: http://localhost:8090
+#########################################################
+```
+
+By default, DevSpace starts the development UI on port `8090` but if the port is already in use, it will use a different port.
+
+You can access the development UI once you:
+- open the link from your `devspace dev` logs in the browser, e.g. [http://localhost:8090](http://localhost:8090)
+- run the command `devspace ui` (e.g. in a separate terminal parallel to `devspace dev`)
+
+Once the UI is open in your browser, it will look similar to this screenshot:
+
+<figure>
+  <img src="/img/localhost-ui/devspace-localhost-ui.png" alt="DevSpace Localhost UI">
+  <figcaption>DevSpace Localhost UI - Overview</figcaption>
+</figure>
+
+[Follow this guide to learn more about the functionalities of the DevSpace UI for Kubernetes development.](https://devspace.cloud/docs/cli/guides/localhost-ui)
 
 ## Access Your Application via Port-Forwarding
 After starting your application, you can access it via `localhost:[PORT]` because the command `devspace dev` will start port-forwarding for all ports specified in the `dev.ports` section of your project's `devspace.yaml`. 

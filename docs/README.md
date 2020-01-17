@@ -2,15 +2,19 @@
 This documentation is created with Docusaurus.
 
 ## Contributing
-To contribute code,
+Follow these steps to contribute to the documentation:
 1. Fork the project
-2. Clone the DevSpace CLI project: `git clone https://github.com/[YOUR_USERNAME]/devspace && cd devspace/docs`
-3. Start a DevSpace for the docs page: `devspace dev`
-4. Make changes
-5. Test your changes on: [http://localhost:3000/docs/introduction](http://localhost:3000/docs/introduction)
-6. Commit changes
-7. Push commits
-8. Open pull request
+2. Clone the DevSpace CLI project: `git clone https://github.com/[YOUR_USERNAME]/devspace`
+3. Switch to this folder: `cd devspace/docs`
+4. Either:
+   1. Create a space: `devspace create space devspace-docs`
+   2. Use an existing space: `devspace use space devspace-docs`
+5. Start development mode: `devspace dev` (wait until the browser opens)
+6. Make changes
+7. Test your changes on: [http://localhost:3000/docs/introduction](http://localhost:3000/docs/introduction)
+8. Commit changes
+9.  Push commits
+10. Open pull request
 
 Docusaurus allows you to use hot reloading when editing the docs pages, so you can now edit any docs page in ./docs and Docusaurus will recompile the markdown and reload the website automatically.
 

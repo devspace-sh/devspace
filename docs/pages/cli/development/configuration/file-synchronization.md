@@ -49,6 +49,8 @@ The following config options are needed to determine the container which the fil
 
 > If you specify multiple these config options, they will be jointly used to select the pod / container (think logical `AND / &&`).
 
+> If the sync is unable to establish a connection to the selected container or loses it after starting the sync, DevSpace will try to restart the sync several times.
+
 
 ### `dev.sync[*].imageName`
 The `imageName` option expects a string with the name of an image from the `images` section of the `devspace.yaml`. Using `imageName` tells DevSpace to select the container based on the referenced image that was last built using DevSpace.

@@ -52,7 +52,7 @@ The `labels` option expects a map with Kubernetes labels.
 By default, the component chart sets a couple of labels following the best practices described in the Kubernetes documentation:
 - `app.kubernetes.io/name: devspace-app`
 - `app.kubernetes.io/component: [DEPLOYMENT_NAME]`
-- `app.kubernetes.io/managed-by: Tiller`
+- `app.kubernetes.io/managed-by: Helm`
 
 > You can specify additional labels using the `labels` option but the default / best practice labels will still be set for the component.
 
@@ -246,20 +246,6 @@ deployments:
       - image: john/appbackend
       podManagementPolicy: Parallel
 ```
-
-
-### `deployments[*].component.options`
-The `options` option provides a way to set several config options that are generally available for Helm deployments because a component is a highly flexible Helm chart where you only provide the `values` such as `containers`.
-
-Available options are:
-- [`replaceImageTags`](../../../../cli/deployment/helm-charts/configuration/overview-specification#deployments-helmreplaceimagetags)
-- [`wait`](../../../../cli/deployment/helm-charts/configuration/overview-specification#deployments-helmwait)
-- [`timeout`](../../../../cli/deployment/helm-charts/configuration/overview-specification#deployments-helmtimeout)
-- [`rollback`](../../../../cli/deployment/helm-charts/configuration/overview-specification#deployments-helmrollback)
-- [`force`](../../../../cli/deployment/helm-charts/configuration/overview-specification#deployments-helmforce)
-- [`tillerNamespace`](../../../../cli/deployment/helm-charts/configuration/overview-specification#deployments-helmtillernamespace)
-
-All options listed above can be configured for components in the same way as for regular Helm charts. Please refer to the [Helm Chart Configuration page](../../../../cli/deployment/helm-charts/configuration/overview-specification) for default values and configuration details.
 
 
 <br>
