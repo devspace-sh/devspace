@@ -1,5 +1,7 @@
 ---
 title: Workflow & Basics
+id: version-v4.3.0-workflow-basics
+original_id: workflow-basics
 ---
 
 DevSpace fully automates the manual work of deploying Kubernetes manifests, Helm charts or components.
