@@ -62,6 +62,16 @@ func main() {
 		printUsage()
 	}
 
+	// Create the directory if it does not exist
+	_, err := os.Stat(args[0])
+	if err != nil && os.IsNotExist(err) {
+		err := os.MkdirAll(args[0], 0755)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v", err)
+			os.Exit(1)
+		}
+	}
+
 	// we have to resolve the real local path, because the watcher gives us the real path always
 	realLocalPath, err := filepath.EvalSymlinks(args[0])
 	if err != nil {
