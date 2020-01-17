@@ -31,8 +31,6 @@ type SyncCmd struct {
 
 	NoWatch               bool
 	DownloadOnInitialSync bool
-
-	Config string
 }
 
 // NewSyncCmd creates a new init command
@@ -72,21 +70,19 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().BoolVar(&cmd.NoWatch, "no-watch", false, "Synchronizes local and remote and then stops")
 	syncCmd.Flags().BoolVar(&cmd.Verbose, "verbose", false, "Shows every file that is synced")
 
-	syncCmd.Flags().StringVar(&cmd.Config, "config", "", "Tells DevSpace to load the sync configuration from the given devspace.yaml. Can be used together with --profile")
-
 	return syncCmd
 }
 
 // Run executes the command logic
 func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Switch working directory
-	if cmd.Config != "" {
-		_, err := os.Stat(cmd.Config)
+	if cmd.GlobalFlags.ConfigPath != "" {
+		_, err := os.Stat(cmd.GlobalFlags.ConfigPath)
 		if err != nil {
-			return errors.Errorf("--config is specified, but config %s cannot be loaded: %v", cmd.Config, err)
+			return errors.Errorf("--config is specified, but config %s cannot be loaded: %v", cmd.GlobalFlags.ConfigPath, err)
 		}
 
-		configPath, _ := filepath.Abs(cmd.Config)
+		configPath, _ := filepath.Abs(cmd.GlobalFlags.ConfigPath)
 		configPath = filepath.Dir(configPath)
 
 		err = os.Chdir(configPath)
@@ -161,7 +157,7 @@ func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 		ExcludePaths:          cmd.Exclude,
 	}
 
-	if cmd.Config != "" && config.Dev != nil && len(config.Dev.Sync) > 0 {
+	if cmd.GlobalFlags.ConfigPath != "" && config.Dev != nil && len(config.Dev.Sync) > 0 {
 		// Check which sync config should be used
 		loadedSyncConfig := config.Dev.Sync[0]
 		if len(config.Dev.Sync) > 1 {
