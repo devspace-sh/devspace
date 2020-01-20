@@ -146,8 +146,10 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 		return errors.Errorf("Error selecting pod: %v", err)
 	}
 
+	syncDone := make(chan bool)
+
 	log.StartWait("Starting sync...")
-	syncClient, err := serviceClient.startSync(pod, container.Name, syncConfig, options.Verbose, options.SyncDone, options.SyncLog)
+	syncClient, err := serviceClient.startSync(pod, container.Name, syncConfig, options.Verbose, syncDone, options.SyncLog)
 	log.StopWait()
 	if err != nil {
 		return errors.Wrap(err, "start sync")
@@ -181,12 +183,13 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 					serviceClient.log.Fatalf("Fatal error in sync: %v", err)
 				}
 
+				options.RestartLog.Info("Restarting sync...")
 				for {
 					time.Sleep(time.Second * 5)
 					err := serviceClient.startSyncClient(options, options.RestartLog)
 					if err != nil {
 						serviceClient.log.Errorf("Error restarting sync: %v", err)
-						serviceClient.log.Errorf("Will try again in 5 seconds", err)
+						serviceClient.log.Errorf("Will try again in 5 seconds")
 						continue
 					}
 
@@ -194,7 +197,10 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 				}
 			case <-options.Interrupt:
 				syncClient.Stop(nil)
-			case <-syncClient.Options.SyncDone:
+			case <-syncDone:
+				if options.SyncDone != nil {
+					close(options.SyncDone)
+				}
 			}
 		}(syncClient, options)
 	}
