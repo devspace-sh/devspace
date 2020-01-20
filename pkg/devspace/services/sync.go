@@ -186,7 +186,7 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 					err := serviceClient.startSyncClient(options, options.RestartLog)
 					if err != nil {
 						serviceClient.log.Errorf("Error restarting sync: %v", err)
-						serviceClient.log.Errorf("Will try again in 5 seconds", err)
+						serviceClient.log.Errorf("Will try again in 5 seconds")
 						continue
 					}
 
