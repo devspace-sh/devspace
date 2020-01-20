@@ -135,11 +135,54 @@ type replaceContainerNamesTestCase struct {
 	expectedOverwriteValues map[interface{}]interface{}
 }
 
-//TODO: Finish test
 func TestReplaceContainerNames(t *testing.T) {
 	testCases := []replaceContainerNamesTestCase{
 		replaceContainerNamesTestCase{
 			name: "invalid image name",
+			overwriteValues: map[interface{}]interface{}{
+				"": "",
+			},
+			cache: &generated.CacheConfig{
+				Images: map[string]*generated.ImageCache{
+					"": &generated.ImageCache{},
+				},
+			},
+			expectedOverwriteValues: map[interface{}]interface{}{
+				"": "",
+			},
+		},
+		replaceContainerNamesTestCase{
+			name: "Image not in cache",
+			overwriteValues: map[interface{}]interface{}{
+				"": "myimage",
+			},
+			cache: &generated.CacheConfig{
+				Images: map[string]*generated.ImageCache{},
+			},
+			expectedOverwriteValues: map[interface{}]interface{}{
+				"": "myimage",
+			},
+		},
+		replaceContainerNamesTestCase{
+			name: "Image in cache",
+			overwriteValues: map[interface{}]interface{}{
+				"": "myimage",
+			},
+			cache: &generated.CacheConfig{
+				Images: map[string]*generated.ImageCache{
+					"": &generated.ImageCache{
+						ImageName: "myimage",
+						Tag:       "someTag",
+					},
+				},
+			},
+			builtImages: map[string]string{
+				"myimage": "",
+			},
+			expectedShouldRedeploy: true,
+			expectedOverwriteValues: map[interface{}]interface{}{
+				"": "myimage:someTag",
+			},
 		},
 	}
 
