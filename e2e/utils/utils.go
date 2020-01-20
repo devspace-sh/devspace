@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -14,7 +15,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
 
-	"github.com/sirupsen/logrus"
 	"html"
 	"io"
 	"io/ioutil"
@@ -24,6 +24,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	latestSpace "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -525,4 +527,45 @@ func GenerateNamespaceName(prefix string) string {
 	r := rand.Intn(1000)
 
 	return fmt.Sprintf("%s-%v", prefix, r)
+}
+
+// IsFileOrFolderExist checks if a file/folder exists
+func IsFileOrFolderExist(path string) error {
+	path = filepath.FromSlash(path)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return errors.New(err.Error())
+	}
+	return nil
+}
+
+// IsFileOrFolderNotExist checks if a file/folder exists
+func IsFileOrFolderNotExist(path string) error {
+	path = filepath.FromSlash(path)
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		return errors.New(err.Error())
+	}
+	return nil
+}
+
+// IsFileOrFolderExistRemotely checks if a file/folder exists remotely
+func IsFileOrFolderExistRemotely(f factory.Factory, ec *cmd.EnterCmd, lsDir string, fileOrDirToCheck string) error {
+	done := Capture()
+
+	err := ec.Run(f, nil, []string{"ls", lsDir})
+	if err != nil {
+		return err
+	}
+
+	capturedOutput, err := done()
+	if err != nil {
+		return err
+	}
+
+	capturedOutput = strings.TrimSpace(capturedOutput)
+
+	if strings.Index(capturedOutput, fileOrDirToCheck) == -1 {
+		return errors.Errorf("file '%s' should have been uploaded to remote", fileOrDirToCheck)
+	}
+
+	return nil
 }

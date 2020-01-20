@@ -66,7 +66,9 @@ func (r *Runner) SubTests() []string {
 }
 
 var availableSubTests = map[string]func(factory *customFactory, logger log.Logger) error{
-	"default": runDefault,
+	"default":       runDefault,
+	"download-only": runDownloadOnly,
+	"upload-only":   runUploadOnly,
 }
 
 func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error {

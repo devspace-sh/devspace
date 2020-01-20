@@ -12,7 +12,7 @@ import (
 )
 
 func runDefault(f *customFactory, logger log.Logger) error {
-	logger.Info("Run test 'default' of 'sync'")
+	logger.Info("Run sub test 'default' of 'sync' test")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 

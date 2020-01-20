@@ -41,7 +41,7 @@ profiles:
       ports:
         - imageName: service-image-1
           forward:
-            - port: 8080
+            - port: 8086
       sync:
         - imageName: service-image-1
           localSubPath: ./service1
@@ -56,7 +56,7 @@ profiles:
       ports:
         - imageName: service-image-2
           forward:
-            - port: 8080
+            - port: 8086
       sync:
         - imageName: service-image-2
           localSubPath: ./service2
