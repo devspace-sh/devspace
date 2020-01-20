@@ -254,11 +254,9 @@ func (s *Sync) startDownstream() {
 }
 
 func (s *Sync) initialSync() error {
-	if s.Options.DownstreamDisabled == false {
-		err := s.downstream.populateFileMap()
-		if err != nil {
-			return errors.Wrap(err, "populate file map")
-		}
+	err := s.downstream.populateFileMap()
+	if err != nil {
+		return errors.Wrap(err, "populate file map")
 	}
 
 	localChanges := make([]*FileInformation, 0, 10)
@@ -274,7 +272,7 @@ func (s *Sync) initialSync() error {
 	}
 	s.fileIndex.fileMapMutex.Unlock()
 
-	err := s.diffServerClient(s.LocalPath, &localChanges, fileMapClone, false)
+	err = s.diffServerClient(s.LocalPath, &localChanges, fileMapClone, false)
 	if err != nil {
 		return errors.Wrap(err, "diff server client")
 	}
@@ -525,7 +523,6 @@ func (s *Sync) Stop(fatalError error) {
 
 			if s.Options.SyncError != nil {
 				s.Options.SyncError <- fatalError
-				close(s.Options.SyncError)
 			}
 		}
 
