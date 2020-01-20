@@ -38,16 +38,14 @@ dev:
 Take a look at the [redeploy-instead-of-hot-reload exmaple](https://github.com/devspace-cloud/devspace/tree/master/examples/redeploy-instead-of-hot-reload) to see how to disable hot reloading at all and enable redeployment on every file change instead.
 
 ## `dev.autoReload.paths`
-The `dev.autoReload.paths` option expects an array of strings with paths that should be watched for changes. If a changes occurs in any of the specified paths, DevSpace will stop the development mode, rebuild the images, redeploy the application and restart the devepment mode afterwards.
+The `dev.autoReload.paths` option expects an array of strings with paths that should be watched for changes. If a changes occurs in any of the specified paths, DevSpace will stop the development mode, rebuild the images (if the context has changed), redeploy the application and restart the development mode (sync, port-forwarding, log streaming etc.) afterwards.
 
 ## `dev.autoReload.images`
-The `dev.autoReload.images` option expects an array of strings with image names from the `images` section of the `devspace.yaml`. If a changes occurs to the `dockerfile` or to one of the files within the `context` of this image, DevSpace will stop the development mode, rebuild the images, redeploy the application and restart the devepment mode afterwards.
+The `dev.autoReload.images` option expects an array of strings with image names from the `images` section of the `devspace.yaml`. If a changes occurs to the `dockerfile` or to one of the files within the `context` of this image (if its context has changed), DevSpace will stop the development mode, rebuild the images, redeploy the application and restart the development mode (sync, port-forwarding, log streaming etc.) afterwards.
 
 ## `dev.autoReload.deployments`
-The `dev.autoReload.deployments` option expects an array of strings with names of deployments from the `deployments` section of the `devspace.yaml`. If a changes occurs to any of the files that belong to this deployment, DevSpace will stop the development mode, rebuild the images, redeploy the application and restart the devepment mode afterwards.
+The `dev.autoReload.deployments` option expects an array of strings with names of deployments from the `deployments` section of the `devspace.yaml`. If a changes occurs to any of the files that belong to this deployment, DevSpace will stop the development mode, rebuild the images (if the context has changed), redeploy the application and restart the development mode (sync, port-forwarding, log streaming etc.) afterwards.
 
 > For `kubectl` deployments, DevSpace watches for all paths configured under `manifests`.
 
 > For `helm` deployments, DevSpace watches for changes in the `valuesFiles` or changes in the chart path of a local chart (configured as `chart.name`).
-
-> For `component` deployments, this option is not doing anything.

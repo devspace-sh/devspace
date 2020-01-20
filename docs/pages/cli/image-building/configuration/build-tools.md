@@ -294,11 +294,11 @@ The image `backend` would be built using the command `./build --arg1=arg-value-1
 
 
 ### `custom.args`
-The `onChange` option expects an array of strings which represent additional flags and arguments that should be passed to the custom build command.
+The `args` option expects an array of strings which represent additional flags and arguments that should be passed to the custom build command.
 
 #### Default Value For `args`
 ```yaml
-onChange: []
+args: []
 ```
 
 #### Example
@@ -322,7 +322,7 @@ images:
       custom:
         command: ./build
         imageFlag: image
-        args:
+        flags:
         - "--arg1"
         - "arg-value-1"
         - "--arg2"

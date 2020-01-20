@@ -8,10 +8,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-// GetNameOfFirstDeployment retrieves the first deployment name
-func GetNameOfFirstDeployment(config *latest.Config) string {
-	if config.Deployments != nil {
-		for _, deploymentConfig := range config.Deployments {
+func (m *manager) getNameOfFirstDeployment() string {
+	if m.config.Deployments != nil {
+		for _, deploymentConfig := range m.config.Deployments {
 			if deploymentConfig.Helm != nil && deploymentConfig.Helm.ComponentChart != nil && *deploymentConfig.Helm.ComponentChart == true {
 				return deploymentConfig.Name
 			}
@@ -22,7 +21,7 @@ func GetNameOfFirstDeployment(config *latest.Config) string {
 }
 
 // AddPort adds a port to the config
-func AddPort(baseConfig *latest.Config, namespace, labelSelector string, args []string) error {
+func (m *manager) AddPort(namespace, labelSelector string, args []string) error {
 	var labelSelectorMap map[string]string
 	var err error
 
@@ -32,18 +31,18 @@ func AddPort(baseConfig *latest.Config, namespace, labelSelector string, args []
 	}
 
 	// Add to first existing port mapping if labelselector and service name are empty
-	if labelSelector == "" && baseConfig.Dev != nil && baseConfig.Dev.Ports != nil && len(baseConfig.Dev.Ports) > 0 {
-		if (baseConfig.Dev.Ports)[0].PortMappings == nil {
-			(baseConfig.Dev.Ports)[0].PortMappings = []*latest.PortMapping{}
+	if labelSelector == "" && m.config.Dev != nil && m.config.Dev.Ports != nil && len(m.config.Dev.Ports) > 0 {
+		if (m.config.Dev.Ports)[0].PortMappings == nil {
+			(m.config.Dev.Ports)[0].PortMappings = []*latest.PortMapping{}
 		}
 
 		for _, portMapping := range portMappings {
-			(baseConfig.Dev.Ports)[0].PortMappings = append((baseConfig.Dev.Ports)[0].PortMappings, portMapping)
+			(m.config.Dev.Ports)[0].PortMappings = append((m.config.Dev.Ports)[0].PortMappings, portMapping)
 		}
 
 		return nil
 	} else if labelSelector == "" {
-		labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(baseConfig)
+		labelSelector = "app.kubernetes.io/component=" + m.getNameOfFirstDeployment()
 	}
 
 	if labelSelectorMap == nil {
@@ -53,12 +52,12 @@ func AddPort(baseConfig *latest.Config, namespace, labelSelector string, args []
 		}
 	}
 
-	insertOrReplacePortMapping(baseConfig, namespace, labelSelectorMap, portMappings)
+	insertOrReplacePortMapping(m.config, namespace, labelSelectorMap, portMappings)
 	return nil
 }
 
 // RemovePort removes a port from the config
-func RemovePort(baseConfig *latest.Config, removeAll bool, labelSelector string, args []string) error {
+func (m *manager) RemovePort(removeAll bool, labelSelector string, args []string) error {
 	labelSelectorMap, err := parseSelectors(labelSelector)
 	if err != nil {
 		return errors.Errorf("Error parsing selectors: %s", err.Error())
@@ -74,10 +73,10 @@ func RemovePort(baseConfig *latest.Config, removeAll bool, labelSelector string,
 	}
 
 	ports := strings.Split(argPorts, ",")
-	if baseConfig.Dev.Ports != nil && len(baseConfig.Dev.Ports) > 0 {
-		newPortForwards := make([]*latest.PortForwardingConfig, 0, len(baseConfig.Dev.Ports)-1)
+	if m.config.Dev.Ports != nil && len(m.config.Dev.Ports) > 0 {
+		newPortForwards := make([]*latest.PortForwardingConfig, 0, len(m.config.Dev.Ports)-1)
 
-		for _, v := range baseConfig.Dev.Ports {
+		for _, v := range m.config.Dev.Ports {
 			if removeAll {
 				continue
 			}
@@ -100,7 +99,7 @@ func RemovePort(baseConfig *latest.Config, removeAll bool, labelSelector string,
 			}
 		}
 
-		baseConfig.Dev.Ports = newPortForwards
+		m.config.Dev.Ports = newPortForwards
 	}
 
 	return nil

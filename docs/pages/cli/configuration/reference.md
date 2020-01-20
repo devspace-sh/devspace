@@ -5,14 +5,16 @@ sidebar_label: Config Reference
 
 ## `version`
 ```yaml
-version: v1beta4                   # string   | Version of the config
+version: v1beta6                   # string   | Version of the config
 ```
 
 <details>
 <summary>
 ### List of supported versions
 </summary>
-- v1beta4   ***latest***
+- v1beta6   ***latest***
+- v1beta5
+- v1beta4
 - v1beta3
 - v1beta2
 - v1beta1
@@ -99,7 +101,6 @@ options:                            # struct   | Options for building images
 deployments:                        # struct[] | Array of deployments
 - name: my-deployment               # string   | Name of the deployment
   namespace: ""                     # string   | Namespace to deploy to (Default: "" = namespace of the active namespace/Space)
-  component: ...                    # struct   | Deploy a DevSpace component chart using helm
   helm: ...                         # struct   | Use Helm as deployment tool and set options for Helm
   kubectl: ...                      # struct   | Use "kubectl apply" as deployment tool and set options for kubectl
 ```
@@ -108,27 +109,31 @@ Notice:
 - You **cannot** use `component`, `helm` and `kubectl` in combination.
 
 ### `deployments[*].component`
+Instead of using `component` directly, the default way of deploying components is to use `helm` as deployment method with `componentChart: true` and with the component config options under `helm.values`. Both methods do exactly the same.
+
 ```yaml
-component:                          # struct   | Options for deploying a DevSpace component
-  containers: ...                   # struct   | Relative path
-  labels: {}                        # map[string]string | Map of Kubernetes labels for labeling the pods of this component
-  annotations: {}                   # map[string]string | Map of Kubernetes annotations for annotating the pods of this component
-  volumes: ...                      # struct   | Component volumes
-  service: ...                      # struct   | Component service
-  serviceName: my-service           # string   | Service name for headless service (for StatefulSets)
-  ingress: ...                      # struct   | Component ingress
-  replicas: 1                       # int      | Number of replicas (Default: 1)
-  autoScaling: ...                  # struct   | AutoScaling configuration
-  rollingUpdate: ...                # struct   | RollingUpdate configuration
-  pullSecrets: ...                  # string[] | Array of PullSecret names
-  podManagementPolicy: OrderedReady # enum     | "OrderedReady" or "Parallel" (for StatefulSets)
-  options: ...                      # struct   | Options for deploying this component with helm
+helm:
+  componentChart: true              # bool     | Use Component chart
+  values:                           # struct   | Options for deploying a component = Deployment/StatefulSet
+    initContainers: ...             # struct[] | Init Containers of this Deployment/StatefulSet
+    containers: ...                 # struct[] | Containers of this Deployment/StatefulSet
+    labels: {}                      # map[string]string | Map of Kubernetes labels for labeling the pods of this component
+    annotations: {}                 # map[string]string | Map of Kubernetes annotations for annotating the pods of this component
+    volumes: ...                    # struct   | Component volumes
+    service: ...                    # struct   | Component service
+    serviceName: my-service         # string   | Service name for headless service (for StatefulSets)
+    ingress: ...                    # struct   | Component ingress
+    replicas: 1                     # int      | Number of replicas (Default: 1)
+    autoScaling: ...                # struct   | AutoScaling configuration
+    rollingUpdate: ...              # struct   | RollingUpdate configuration
+    pullSecrets: ...                # string[] | Array of PullSecret names
+    podManagementPolicy: OrderedReady # enum     | "OrderedReady" or "Parallel" (for StatefulSets)
+    options: ...                    # struct   | Options for deploying this component with helm
 ```
-> Instead of using `component` directly, the default way of deploying components is to use `helm` as deployment method with `componentChart: true` and with the component config options under `helm.values`. Both methods do exactly the same.
 
 [Learn more about configuring component deployments.](../../cli/deployment/components/what-are-components)
 
-### `deployments[*].component.containers`
+### `deployments[*].component.containers/initContainers`
 ```yaml
 containers:                         # struct   | Options for deploying a DevSpace component
 - name: my-container                # string   | Container name (optional)
@@ -205,7 +210,9 @@ autoScaling: 	                      # struct   | Auto-Scaling configuration
   horizontal:                       # struct   | Configuration for horizontal auto-scaling
     maxReplicas: 5                  # int      | Max replicas to deploy
     averageCPU: 800m                # string   | Target value for CPU usage
+    averageRelativeCPU: 50          # int      | Target percentage of CPU relative to CPU limit configured for the container (e.g. 50%)
     averageMemory: 1Gi              # string   | Target value for memory (RAM) usage
+    averageRelativeMemory: 70       # int      | Target percentage of memory relative to memory limit configured for the container
 ```
 
 ### `deployments[*].component.rollingUpdate`
@@ -217,31 +224,25 @@ rollingUpdate: 	                    # struct   | Rolling-Update configuration
   partition: 1                      # int      | For partitioned updates of StatefulSets
 ```
 
-### `deployments[*].component.options`
-```yaml
-options: 	                          # struct   | Component service configuration
-  replaceImageTags: true            # bool     | Enable automated tag replacement (Default: true)
-  wait: false                       # bool     | Wait for pods to start after deployment (Default: false)
-  timeout: 180                      # int      | Timeout to wait for pods to start after deployment (Default: 180)
-  rollback: false                   # bool     | Rollback if deployment failed (Default: false)
-  force: false                      # bool     | Force deleting and re-creating Kubernetes resources during deployment (Default: false)
-  tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in (Default: "" = same a deployment namespace)
-```
-
 ### `deployments[*].helm`
 ```yaml
 helm:                               # struct   | Options for deploying with Helm
   chart: ...                        # struct   | Relative path 
-  componentChart: ...               # bool     | Use the DevSpace component chart instead of a custom `chart` = deployment is a component (Default: false)
+  componentChart: false             # bool     | Use the DevSpace component chart instead of a custom `chart` = deployment is a component (Default: false)
   values: {}                        # struct   | Any object with Helm values to override values.yaml during deployment
   valuesFiles:                      # string[] | Array of paths to values files
   - ./chart/my-values.yaml          # string   | Path to a file to override values.yaml with
   replaceImageTags: true            # bool     | Enable automated tag replacement (Default: true)
   wait: false                       # bool     | Wait for pods to start after deployment (Default: false)
   timeout: 180                      # int      | Timeout to wait for pods to start after deployment (Default: 180)
-  rollback: false                   # bool     | Rollback if deployment failed (Default: false)
   force: false                      # bool     | Force deleting and re-creating Kubernetes resources during deployment (Default: false)
-  tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in (Default: "" = same a deployment namespace)
+  atomic: false                     # bool     | Rollback deployment if it fails (Default: false)
+  cleanupOnFail: false              # bool     | Delete resources if rollback fails (Default: false)
+  recreate: false                   # bool     | Recreate pods for applicable resources, e.g. deployments (Default: false)
+  disableHooks: false               # bool     | Disable hooks (Default: false)
+  driver: secrets|configmaps|memory # enum     | Driver used by Helm v3 to store release configuration (Default: secrets)
+  v2: false                         # bool     | Use legacy Helm v2 (Default: false)
+  tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in when using Helm v2 (Default: "" = same a deployment namespace)
 ```
 [Learn more about configuring deployments with Helm.](../../cli/deployment/helm-charts/what-are-helm-charts)
 

@@ -13,7 +13,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
-	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
@@ -112,6 +111,9 @@ func (cmd *InitCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	// Create config
 	config := configLoader.New()
 
+	//Create ConfigureManager
+	configureManager := f.NewConfigureManager(config, cmd.log)
+
 	// Print DevSpace logo
 	log.PrintLogo()
 
@@ -185,7 +187,7 @@ func (cmd *InitCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 			return err
 		}
 
-		newDeployment, err = configure.GetKubectlDeployment(deploymentName, manifests)
+		newDeployment, err = configureManager.NewKubectlDeployment(deploymentName, manifests)
 		if err != nil {
 			return err
 		}
@@ -198,7 +200,7 @@ func (cmd *InitCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 			return err
 		}
 
-		newDeployment, err = configure.GetHelmDeployment(deploymentName, chartName, "", "")
+		newDeployment, err = configureManager.NewHelmDeployment(deploymentName, chartName, "", "")
 		if err != nil {
 			return err
 		}
@@ -211,7 +213,7 @@ func (cmd *InitCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 			return err
 		}
 
-		newImage, newDeployment, err = configure.GetImageComponentDeployment(deploymentName, existingImageName, cmd.log)
+		newImage, newDeployment, err = configureManager.NewImageComponentDeployment(deploymentName, existingImageName)
 		if err != nil {
 			return err
 		}
@@ -229,7 +231,7 @@ func (cmd *InitCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 			return err
 		}
 
-		newImage, newDeployment, err = configure.GetDockerfileComponentDeployment(config, generatedConfig, deploymentName, "", cmd.Dockerfile, cmd.Context, cmd.log)
+		newImage, newDeployment, err = configureManager.NewDockerfileComponentDeployment(generatedConfig, deploymentName, "", cmd.Dockerfile, cmd.Context)
 		if err != nil {
 			return err
 		}

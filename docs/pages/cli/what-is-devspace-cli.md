@@ -31,7 +31,7 @@ DevSpace allows you to store all your workflows in one declarative config file: 
 DevSpace helps your team to standardize deployment and development workflows without requiring everyone on your team to become a Kubernetes expert.
 - The DevOps and Kubernetes expert on your team can configure DevSpace using `devspace.yaml` and simply commits it via git
 - If other developers on your team check out the project, they only need to run `devspace deploy` to deploy the project (including image building and deployment of dependencies, i.e. other related projects) to get a running instance of the project or they run `devspace dev` to start developing the project with an automated dev workflow
-- The configuration of DevSpace is highly dynamic, so you can configure everything using [config variables](https://devspace.cloud/docs/cli/deployment/advanced/variables) that make it much easier to have one base configuration but still allow differences among developers (e.g. different sub-domains for testing)
+- The configuration of DevSpace is highly dynamic, so you can configure everything using [config variables](https://devspace.cloud/docs/cli/configuration/variables) that make it much easier to have one base configuration but still allow differences among developers (e.g. different sub-domains for testing)
 
 > Giving everyone on your team on-demand access to a Kubernetes cluster is a challenging problem for system administrators and infrastructure managers. DevSpace Cloud, an optional add-on for DevSpace, makes sharing dev clusters much easier and safer. [Learn more about DevSpace Cloud](https://devspace.cloud/docs/cloud/what-is-devspace-cloud). 
 
@@ -90,6 +90,6 @@ DevSpace reads the configuration file `devspace.yaml` which you can simply gener
 - which [dependencies (related projects)](../cli/deployment/advanced/dependencies) need to be deployed (e.g. a microservices from another git repository)
 - [how your application should be developed within Kubernetes](../cli/development/configuration/overview-specification) (e.g. configuring log streaming, terminal access, port fowarding, real-time file synchronization or remote debugging)
 
-> **DevSpace is designed for teams** and its configuration is highly paramterizable, so that you can use dynamic [config variables](https://devspace.cloud/docs/cli/deployment/advanced/variables) within your `devspace.yaml`, commit the config via git together with the rest of your code and share your build, deployment and development workflows with your team mates.
+> **DevSpace is designed for teams** and its configuration is highly paramterizable, so that you can use dynamic [config variables](https://devspace.cloud/docs/cli/configuration/variables) within your `devspace.yaml`, commit the config via git together with the rest of your code and share your build, deployment and development workflows with your team mates.
 
 ![DevSpace Workflow](/img/processes/workflow-devspace.png)

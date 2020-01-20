@@ -9,19 +9,19 @@ import (
 )
 
 // AddSyncPath adds a new sync path to the config
-func AddSyncPath(baseConfig *latest.Config, localPath, containerPath, namespace, labelSelector, excludedPathsString string) error {
-	if baseConfig.Dev == nil {
-		baseConfig.Dev = &latest.DevConfig{}
+func (m *manager) AddSyncPath(localPath, containerPath, namespace, labelSelector, excludedPathsString string) error {
+	if m.config.Dev == nil {
+		m.config.Dev = &latest.DevConfig{}
 	}
-	if baseConfig.Dev.Sync == nil {
-		baseConfig.Dev.Sync = []*latest.SyncConfig{}
+	if m.config.Dev.Sync == nil {
+		m.config.Dev.Sync = []*latest.SyncConfig{}
 	}
 
 	var labelSelectorMap map[string]string
 	var err error
 
 	if labelSelector == "" {
-		labelSelector = "app.kubernetes.io/component=" + GetNameOfFirstDeployment(baseConfig)
+		labelSelector = "app.kubernetes.io/component=" + m.getNameOfFirstDeployment()
 	}
 
 	if labelSelectorMap == nil {
@@ -52,7 +52,7 @@ func AddSyncPath(baseConfig *latest.Config, localPath, containerPath, namespace,
 		return errors.New("ContainerPath (--container) must start with '/'. Info: There is an issue with MINGW based terminals like git bash")
 	}
 
-	Sync := append(baseConfig.Dev.Sync, &latest.SyncConfig{
+	Sync := append(m.config.Dev.Sync, &latest.SyncConfig{
 		LabelSelector: labelSelectorMap,
 		ContainerPath: containerPath,
 		LocalSubPath:  localPath,
@@ -60,12 +60,12 @@ func AddSyncPath(baseConfig *latest.Config, localPath, containerPath, namespace,
 		Namespace:     namespace,
 	})
 
-	baseConfig.Dev.Sync = Sync
+	m.config.Dev.Sync = Sync
 	return nil
 }
 
 // RemoveSyncPath removes a sync path from the config
-func RemoveSyncPath(baseConfig *latest.Config, removeAll bool, localPath, containerPath, labelSelector string) error {
+func (m *manager) RemoveSyncPath(removeAll bool, localPath, containerPath, labelSelector string) error {
 	labelSelectorMap, err := parseSelectors(labelSelector)
 
 	if err != nil {
@@ -76,10 +76,10 @@ func RemoveSyncPath(baseConfig *latest.Config, removeAll bool, localPath, contai
 		return errors.Errorf("You have to specify at least one of the supported flags")
 	}
 
-	if baseConfig.Dev.Sync != nil && len(baseConfig.Dev.Sync) > 0 {
-		newSyncPaths := make([]*latest.SyncConfig, 0, len(baseConfig.Dev.Sync)-1)
+	if m.config.Dev.Sync != nil && len(m.config.Dev.Sync) > 0 {
+		newSyncPaths := make([]*latest.SyncConfig, 0, len(m.config.Dev.Sync)-1)
 
-		for _, v := range baseConfig.Dev.Sync {
+		for _, v := range m.config.Dev.Sync {
 			if removeAll ||
 				localPath == v.LocalSubPath ||
 				containerPath == v.ContainerPath ||
@@ -90,7 +90,7 @@ func RemoveSyncPath(baseConfig *latest.Config, removeAll bool, localPath, contai
 			newSyncPaths = append(newSyncPaths, v)
 		}
 
-		baseConfig.Dev.Sync = newSyncPaths
+		m.config.Dev.Sync = newSyncPaths
 	}
 
 	return nil

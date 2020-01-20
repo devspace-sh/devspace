@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/juju/ratelimit"
@@ -29,6 +30,9 @@ type upstream struct {
 	reader io.ReadCloser
 	writer io.WriteCloser
 	client remote.UpstreamClient
+
+	isBusy      bool
+	isBusyMutex sync.Mutex
 }
 
 const removeFilesBufferSize = 64
@@ -66,6 +70,13 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 	}, nil
 }
 
+func (u *upstream) IsBusy() bool {
+	u.isBusyMutex.Lock()
+	defer u.isBusyMutex.Unlock()
+
+	return u.isBusy
+}
+
 func (u *upstream) mainLoop() error {
 	for {
 		var (
@@ -81,6 +92,10 @@ func (u *upstream) mainLoop() error {
 				if ok == false {
 					return nil
 				}
+
+				u.isBusyMutex.Lock()
+				u.isBusy = true
+				u.isBusyMutex.Unlock()
 
 				events := make([]notify.EventInfo, 0, 10)
 				events = append(events, event)
@@ -103,6 +118,11 @@ func (u *upstream) mainLoop() error {
 				}
 
 				changes = append(changes, fileInformations...)
+				if len(changes) == 0 {
+					u.isBusyMutex.Lock()
+					u.isBusy = false
+					u.isBusyMutex.Unlock()
+				}
 			case <-time.After(time.Millisecond * 600):
 				break
 			}
@@ -119,6 +139,10 @@ func (u *upstream) mainLoop() error {
 		if err != nil {
 			return errors.Wrap(err, "apply changes")
 		}
+
+		u.isBusyMutex.Lock()
+		u.isBusy = false
+		u.isBusyMutex.Unlock()
 	}
 }
 

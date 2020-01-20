@@ -93,16 +93,16 @@ Choose the cluster, you want to deploy your project to. If you are not sure, pic
 <summary><h3 style="margin-bottom: 0;">Hosted Spaces sponsored by DevSpace (managed k8s namespaces)</h3>
 <i>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;
-FREE for one project, includes 1 GB RAM
+FREE for one project, includes 2 GB RAM
 </i>
 </summary>
 
-At DevSpace, we believe everybody should have access to Kubernetes. That's why we sponsor free Kubernetes namespaces with 1GB RAM for everyone. You can simply create such a Space using this command:
+At DevSpace, we believe everybody should have access to Kubernetes. That's why we sponsor one free Kubernetes namespace for everyone (see ["Demo Spaces"](https://devspace.cloud/products/devspace-cloud#pricing) for more info). You can simply create such a Space using this command:
 
 ```bash
 devspace create space my-app # requires login via GitHub or email
 ```
-> DevSpace automatically sets up a kube-context for this space, so you can also access your isolated namespace using `kubectl`, `helm` or any other Kubernetes tool.
+> DevSpace automatically sets up a kube-context for this space, so you can also access your namespace using `kubectl`, `helm` or any other Kubernetes tool.
 
 </details>
 

@@ -10,8 +10,8 @@ Welcome to the DevSpace!
 
 ```
 DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
-
-	devspace init
+	
+		devspace init
 ```
 ## Options
 
@@ -46,6 +46,7 @@ DevSpace accelerates developing, deploying and debugging applications with Docke
 * [devspace open](../../cli/commands/devspace_open)	 - Opens the space in the browser
 * [devspace purge](../../cli/commands/devspace_purge)	 - Delete deployed resources
 * [devspace remove](../../cli/commands/devspace_remove)	 - Changes devspace configuration
+* [devspace render](../../cli/commands/devspace_render)	 - Render builds all defined images and shows the yamls that would be deployed
 * [devspace reset](../../cli/commands/devspace_reset)	 - Resets an cluster token
 * [devspace run](../../cli/commands/devspace_run)	 - Run executes a predefined command
 * [devspace set](../../cli/commands/devspace_set)	 - Make global configuration changes

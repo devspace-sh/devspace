@@ -1,19 +1,19 @@
-version: v1beta3
+version: v1beta6
 images:
   default:
     image: dscr.io/${DEVSPACE_USERNAME}/devspace-docs
     createPullSecret: true
 deployments:
 - name: docs
-  component:
-    containers:
-    - image: dscr.io/${DEVSPACE_USERNAME}/devspace-docs
-    service:
-      ports:
-      - port: 3000
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/devspace-docs
+      service:
+        ports:
+        - port: 3000
 dev:
-  open:
-  - url: http://localhost:3000/docs/next/introduction
   ports:
   - labelSelector:
       app.kubernetes.io/component: docs
@@ -21,9 +21,10 @@ dev:
     - port: 3000
     - port: 9229
     - port: 35729
+  open:
+  - url: http://localhost:3000/docs/next/introduction
   sync:
-  - labelSelector:
-      app.kubernetes.io/component: docs
+  - imageName: default
     containerPath: /app
     excludePaths:
     - '*/node_modules'
