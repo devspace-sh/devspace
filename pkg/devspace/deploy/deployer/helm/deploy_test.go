@@ -62,8 +62,6 @@ func TestDeploy(t *testing.T) {
 				Deployments: map[string]*generated.DeploymentCache{
 					"deploy2": &generated.DeploymentCache{
 						DeploymentConfigHash: "913ebc73f6839301b94dbd475d6e2a3cfa04c02072e11cf31e4e3ba60c1fed39",
-						HelmOverridesHash:    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-						HelmChartHash:        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 					},
 				},
 			},
@@ -115,6 +113,10 @@ func TestDeploy(t *testing.T) {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
 
+		for _, deployment := range testCase.cache.Deployments {
+			deployment.HelmOverridesHash = ""
+			deployment.HelmChartHash = ""
+		}
 		cacheAsYaml, err := yaml.Marshal(testCase.cache)
 		assert.NilError(t, err, "Error marshaling cache in testCase %s", testCase.name)
 		expectationAsYaml, err := yaml.Marshal(testCase.expectedCache)
