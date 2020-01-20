@@ -93,10 +93,10 @@ func TestStatus(t *testing.T) {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
 
-		cacheAsYaml, err := yaml.Marshal(status)
+		statusAsYaml, err := yaml.Marshal(status)
 		assert.NilError(t, err, "Error marshaling status in testCase %s", testCase.name)
 		expectationAsYaml, err := yaml.Marshal(testCase.expectedStatus)
 		assert.NilError(t, err, "Error marshaling expected status in testCase %s", testCase.name)
-		assert.Equal(t, string(cacheAsYaml), string(expectationAsYaml), "Unexpected status in testCase %s", testCase.name)
+		assert.Equal(t, string(statusAsYaml), string(expectationAsYaml), "Unexpected status in testCase %s", testCase.name)
 	}
 }

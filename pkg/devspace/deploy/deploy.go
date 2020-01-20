@@ -249,6 +249,8 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 				if err != nil {
 					return errors.Wrap(err, "create helm client")
 				}
+			} else {
+				return errors.Errorf("Error purging: deployment %s has no deployment method", deployConfig.Name)
 			}
 
 			log.StartWait("Deleting deployment " + deployConfig.Name)
