@@ -116,7 +116,7 @@ func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardi
 					err = serviceClient.startForwarding(portForwarding, interrupt, logpkg.Discard)
 					if err != nil {
 						serviceClient.log.Errorf("Error restarting port-forwarding: %v", err)
-						serviceClient.log.Errorf("Will try again in 3 seconds", err)
+						serviceClient.log.Errorf("Will try again in 3 seconds")
 						continue
 					}
 
