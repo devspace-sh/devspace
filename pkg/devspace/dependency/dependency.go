@@ -224,7 +224,7 @@ func (m *manager) PurgeAll(verbose bool) error {
 
 		err := dependency.Purge(dependencyLogger)
 		if err != nil {
-			return errors.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
+			return errors.Errorf("Error purging dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
 
 		m.log.Donef("Purged dependency %s", dependency.ID)

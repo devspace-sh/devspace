@@ -1,7 +1,5 @@
 package dependency
 
-
-/*
 import (
 	"fmt"
 	"io/ioutil"
@@ -9,13 +7,15 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"gotest.tools/assert"
+	"k8s.io/client-go/kubernetes/fake"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -130,7 +130,6 @@ func TestResolver(t *testing.T) {
 					Source: &latest.SourceConfig{
 						Path: "dependency1",
 					},
-					Namespace: "someNamespace",
 				},
 			},
 			allowCyclic: true,
@@ -178,7 +177,11 @@ func TestResolver(t *testing.T) {
 			Dependencies: testCase.dependencyTasks,
 		}
 		generatedConfig := &generated.Config{}
-		testResolver, err := NewResolver(testConfig, generatedConfig, testCase.allowCyclic, &loader.ConfigOptions{}, log.Discard)
+		kube := fake.NewSimpleClientset()
+		kubeClient := &fakekube.Client{
+			Client: kube,
+		}
+		testResolver, err := NewResolver(testConfig, generatedConfig, kubeClient, testCase.allowCyclic, &loader.ConfigOptions{}, log.Discard)
 		assert.NilError(t, err, "Error creating a resolver in testCase %s", testCase.name)
 
 		dependencies, err := testResolver.Resolve(testCase.updateParam)
@@ -210,4 +213,62 @@ func includes(arr []string, needle string) bool {
 		}
 	}
 	return false
-}*/
+}
+
+type getDependencyIDTestCase struct {
+	name string
+
+	baseBath   string
+	dependency *latest.DependencyConfig
+
+	expectedID string
+}
+
+func TestGetDependencyID(t *testing.T) {
+	testCases := []getDependencyIDTestCase{
+		getDependencyIDTestCase{
+			name: "git with tag",
+			dependency: &latest.DependencyConfig{
+				Source: &latest.SourceConfig{
+					Git: "someTagGit",
+					Tag: "myTag",
+				},
+			},
+			expectedID: "someTagGit@myTag",
+		},
+		getDependencyIDTestCase{
+			name: "git with branch",
+			dependency: &latest.DependencyConfig{
+				Source: &latest.SourceConfig{
+					Git:    "someBranchGit",
+					Branch: "myBranch",
+				},
+			},
+			expectedID: "someBranchGit@myBranch",
+		},
+		getDependencyIDTestCase{
+			name: "git with revision, subpath and profile",
+			dependency: &latest.DependencyConfig{
+				Source: &latest.SourceConfig{
+					Git:      "someRevisionGit",
+					Revision: "myRevision",
+					SubPath:  "mySubPath",
+				},
+				Profile: "myProfile",
+			},
+			expectedID: "someRevisionGit@myRevision:mySubPath - profile myProfile",
+		},
+		getDependencyIDTestCase{
+			name: "empty",
+			dependency: &latest.DependencyConfig{
+				Source: &latest.SourceConfig{},
+			},
+			expectedID: "",
+		},
+	}
+
+	for _, testCase := range testCases {
+		id := (&resolver{}).getDependencyID(testCase.baseBath, testCase.dependency)
+		assert.Equal(t, testCase.expectedID, id, "Dependency has wrong id in testCase %s", testCase.name)
+	}
+}
