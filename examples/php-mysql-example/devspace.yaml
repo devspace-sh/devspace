@@ -39,7 +39,7 @@ dev:
   ports:
   - imageName: default
     forward:
-    - port: 8080
+    - port: 8085
       remotePort: 80
   sync:
   - imageName: default

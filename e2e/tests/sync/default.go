@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
+func runDefault(f *customFactory, logger log.Logger) error {
 	logger.Info("Run test 'default' of 'sync'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
@@ -37,6 +37,7 @@ func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 	}
 
 	err := sc.Run(f, nil, nil)
+	defer close(f.interrupt)
 	if err != nil {
 		return err
 	}
@@ -58,7 +59,7 @@ func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 	capturedOutput = strings.TrimSpace(capturedOutput)
 
 	if strings.Index(capturedOutput, "bar.go") == -1 {
-		return errors.Errorf("capturedOutput '%v' is different than output 'foo.go' for the enter cmd", capturedOutput)
+		return errors.Errorf("capturedOutput '%v' is different than output 'foo.go' for the sync cmd", capturedOutput)
 	}
 
 	return nil

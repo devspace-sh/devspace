@@ -120,6 +120,7 @@ func main() {
 		fmt.Println("\t - purge-namespaces: \tDeletes namespaces that might have failed to be deleted during previous test runs")
 	}
 	if testCommand.Parsed() {
+
 		if testlist {
 			// skip-test, verbose, timeout, test
 			fmt.Println("List of available sub commands for the 'test' command:")

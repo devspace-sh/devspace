@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
+func runDefault(f *customFactory, logger log.Logger) error {
 	logger.Info("Run test 'default' of 'run'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
@@ -35,11 +35,13 @@ func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 	}
 
 	err := sc.Run(f, nil, nil)
+	defer close(f.interrupt)
 	if err != nil {
 		return errors.Errorf("Error while running sync command: %s", err.Error())
 	}
 
 	ns := fmt.Sprintf("--namespace=%s", f.Namespace)
+	time.Sleep(time.Second * 5)
 
 	done := utils.Capture()
 
@@ -47,8 +49,6 @@ func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 	if err != nil {
 		return errors.Errorf("Error while running run command: %s", err.Error())
 	}
-
-	time.Sleep(time.Second * 5)
 
 	capturedOutput, err := done()
 	if err != nil {
@@ -58,7 +58,7 @@ func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 	capturedOutput = strings.TrimSpace(capturedOutput)
 
 	if strings.Index(capturedOutput, "bar.go") == -1 {
-		return errors.Errorf("capturedOutput '%v' is different than output 'foo.go' for the enter cmd", capturedOutput)
+		return errors.Errorf("capturedOutput '%v' is different than output 'foo.go' for the run cmd", capturedOutput)
 	}
 
 	return nil

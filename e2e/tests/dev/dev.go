@@ -47,6 +47,11 @@ func (s *fakeServiceClient) StartPortForwarding(interrupt chan error) error {
 	return err
 }
 
+func (s *fakeServiceClient) StartSync(interrupt chan error, verboseSync bool) error {
+	err := s.Client.StartSync(s.factory.interrupt, verboseSync)
+	return err
+}
+
 func (serviceClient *fakeServiceClient) StartTerminal(args []string, imageSelector []string, interrupt chan error, wait bool) (int, error) {
 	if !serviceClient.factory.initialRun {
 		serviceClient.factory.initialRun = true
