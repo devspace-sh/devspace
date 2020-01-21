@@ -22,7 +22,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -125,7 +124,6 @@ Open terminal instead of logs:
 func (cmd *DevCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
-	kubeLoader := f.NewKubeConfigLoader()
 	cmd.configLoader = f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
 	configExists, err := cmd.configLoader.SetDevSpaceRoot()
 	if err != nil {
@@ -209,7 +207,7 @@ func (cmd *DevCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string
 	}
 
 	// Build and deploy images
-	exitCode, err := cmd.buildAndDeploy(f, config, generatedConfig, kubeLoader, client, args, true)
+	exitCode, err := cmd.buildAndDeploy(f, config, generatedConfig, client, args, true)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {
@@ -221,7 +219,7 @@ func (cmd *DevCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string
 	return nil
 }
 
-func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, generatedConfig *generated.Config, kubeLoader kubeconfig.Loader, client kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
+func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
 	if cmd.SkipPipeline == false {
 
 		// Create Dependencymanager
@@ -246,7 +244,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 		// Build image if necessary
 		builtImages := make(map[string]string)
 		if cmd.SkipBuild == false {
-			builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), kubeLoader, client).Build(&build.Options{
+			builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
 				SkipPush:                 cmd.SkipPush,
 				IsDev:                    true,
 				ForceRebuild:             cmd.ForceBuild,
@@ -323,7 +321,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 				}
 
 				// Trigger rebuild & redeploy
-				return cmd.buildAndDeploy(f, config, generatedConfig, kubeLoader, client, args, false)
+				return cmd.buildAndDeploy(f, config, generatedConfig, client, args, false)
 			}
 
 			return 0, err

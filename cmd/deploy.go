@@ -82,7 +82,6 @@ devspace deploy --kube-context=deploy-context
 func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
-	kubeLoader := f.NewKubeConfigLoader()
 	configOptions := cmd.ToConfigOptions()
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
 	configExists, err := configLoader.SetDevSpaceRoot()
@@ -187,7 +186,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	// Build images
 	builtImages := make(map[string]string)
 	if cmd.SkipBuild == false {
-		builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), kubeLoader, client).Build(&build.Options{
+		builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
 			SkipPush:     cmd.SkipPush,
 			ForceRebuild: cmd.ForceBuild,
 			Sequential:   cmd.BuildSequential,

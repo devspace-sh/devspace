@@ -78,7 +78,6 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 		log = logpkg.Discard
 	}
 
-	kubeLoader := f.NewKubeConfigLoader()
 	configOptions := cmd.ToConfigOptions()
 	configLoader := loader.NewConfigLoader(configOptions, log)
 	configExists, err := configLoader.SetDevSpaceRoot()
@@ -129,7 +128,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Build images if necessary
-	builtImages, err := f.NewBuildController(config, generatedConfig.GetActive(), kubeLoader, nil).Build(&build.Options{
+	builtImages, err := f.NewBuildController(config, generatedConfig.GetActive(), nil).Build(&build.Options{
 		SkipPush:     cmd.SkipPush,
 		IsDev:        true,
 		ForceRebuild: cmd.ForceBuild,

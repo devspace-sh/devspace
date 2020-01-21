@@ -66,7 +66,6 @@ Builds all defined images and pushes them
 func (cmd *BuildCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	kubeLoader := f.NewKubeConfigLoader()
 	configOptions := cmd.ToConfigOptions()
 	configLoader := f.NewConfigLoader(configOptions, log)
 	configExists, err := configLoader.SetDevSpaceRoot()
@@ -117,7 +116,7 @@ func (cmd *BuildCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	}
 
 	// Build images if necessary
-	builtImages, err := f.NewBuildController(config, generatedConfig.GetActive(), kubeLoader, nil).Build(&build.Options{
+	builtImages, err := f.NewBuildController(config, generatedConfig.GetActive(), nil).Build(&build.Options{
 		SkipPush:     cmd.SkipPush,
 		IsDev:        true,
 		ForceRebuild: cmd.ForceBuild,

@@ -62,7 +62,7 @@ type Factory interface {
 	NewCloudConfigLoader() config.Loader
 
 	// Build & Deploy
-	NewBuildController(config *latest.Config, cache *generated.CacheConfig, kubeLoader kubeconfig.Loader, client kubectl.Client) build.Controller
+	NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller
 	NewDeployController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) deploy.Controller
 
 	// Kubeconfig
@@ -86,7 +86,8 @@ func (f *DefaultFactoryImpl) NewCloudConfigLoader() config.Loader {
 }
 
 // NewBuildController implements interface
-func (f *DefaultFactoryImpl) NewBuildController(config *latest.Config, cache *generated.CacheConfig, kubeLoader kubeconfig.Loader, client kubectl.Client) build.Controller {
+func (f *DefaultFactoryImpl) NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller {
+	kubeLoader := f.NewKubeConfigLoader()
 	return build.NewController(config, cache, kubeLoader, client)
 }
 
