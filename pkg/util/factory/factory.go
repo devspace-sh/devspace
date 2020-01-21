@@ -19,6 +19,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
@@ -56,13 +57,16 @@ type Factory interface {
 
 	// Cloud
 	GetProvider(useProviderName string, log log.Logger) (cloud.Provider, error)
-	GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, log log.Logger) (cloud.Provider, error)
+	GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, kubeLoader kubeconfig.Loader, log log.Logger) (cloud.Provider, error)
 	NewSpaceResumer(kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer
 	NewCloudConfigLoader() config.Loader
 
 	// Build & Deploy
 	NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller
 	NewDeployController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) deploy.Controller
+
+	// Kubeconfig
+	NewKubeConfigLoader() kubeconfig.Loader
 
 	// Log
 	GetLog() log.Logger
@@ -91,6 +95,11 @@ func (f *DefaultFactoryImpl) NewDeployController(config *latest.Config, cache *g
 	return deploy.NewController(config, cache, client)
 }
 
+// NewKubeConfigLoader implements interface
+func (f *DefaultFactoryImpl) NewKubeConfigLoader() kubeconfig.Loader {
+	return kubeconfig.NewLoader()
+}
+
 // GetLog implements interface
 func (f *DefaultFactoryImpl) GetLog() log.Logger {
 	return log.GetInstance()
@@ -116,7 +125,7 @@ func (f *DefaultFactoryImpl) NewConfigLoader(options *loader.ConfigOptions, log 
 	return loader.NewConfigLoader(options, log)
 }
 
-// NewConfigLoader implements interface
+// NewConfigureManager implements interface
 func (f *DefaultFactoryImpl) NewConfigureManager(config *latest.Config, log log.Logger) configure.Manager {
 	return configure.NewManager(config, log)
 }
@@ -138,12 +147,14 @@ func (f *DefaultFactoryImpl) NewKubeDefaultClient() (kubectl.Client, error) {
 
 // NewKubeClientFromContext implements interface
 func (f *DefaultFactoryImpl) NewKubeClientFromContext(context, namespace string, switchContext bool) (kubectl.Client, error) {
-	return kubectl.NewClientFromContext(context, namespace, switchContext)
+	kubeLoader := f.NewKubeConfigLoader()
+	return kubectl.NewClientFromContext(context, namespace, switchContext, kubeLoader)
 }
 
 // NewKubeClientBySelect implements interface
 func (f *DefaultFactoryImpl) NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error) {
-	return kubectl.NewClientBySelect(allowPrivate, switchContext, log)
+	kubeLoader := f.NewKubeConfigLoader()
+	return kubectl.NewClientBySelect(allowPrivate, switchContext, kubeLoader, log)
 }
 
 // NewHelmClient implements interface
@@ -162,8 +173,8 @@ func (f *DefaultFactoryImpl) GetProvider(useProviderName string, log log.Logger)
 }
 
 // GetProviderWithOptions implements interface
-func (f *DefaultFactoryImpl) GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, log log.Logger) (cloud.Provider, error) {
-	return cloud.GetProviderWithOptions(useProviderName, key, relogin, loader, log)
+func (f *DefaultFactoryImpl) GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, kubeLoader kubeconfig.Loader, log log.Logger) (cloud.Provider, error) {
+	return cloud.GetProviderWithOptions(useProviderName, key, relogin, loader, kubeLoader, log)
 }
 
 // NewSpaceResumer implements interface

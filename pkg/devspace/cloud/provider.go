@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/browser"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
@@ -43,7 +44,8 @@ type provider struct {
 	client  client.Client
 	kubeClient kubectl.Client
 	loader  config.Loader
-	log     log.Logger 
+	kubeLoader kubeconfig.Loader
+	log     log.Logger
 }
 
 // GetProvider returns the current specified cloud provider
@@ -51,11 +53,11 @@ func GetProvider(useProviderName string, log log.Logger) (Provider, error) {
 	// Get provider configuration
 	loader := config.NewLoader()
 
-	return GetProviderWithOptions(useProviderName, "", false, loader, log)
+	return GetProviderWithOptions(useProviderName, "", false, loader, kubeconfig.NewLoader(), log)
 }
 
 // GetProviderWithOptions returns a provider by options
-func GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, log log.Logger) (Provider, error) {
+func GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, kubeLoader kubeconfig.Loader, log log.Logger) (Provider, error) {
 	var err error
 
 	//Get config
@@ -103,6 +105,7 @@ func GetProviderWithOptions(useProviderName, key string, relogin bool, loader co
 		Provider: *p,
 		browser:  browser.NewBrowser(),
 		loader:   loader,
+		kubeLoader: kubeLoader,
 		log:      log,
 	}
 	if provider.Provider.ClusterKey == nil {

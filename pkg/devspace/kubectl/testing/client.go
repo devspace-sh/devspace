@@ -11,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/portforward"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +25,7 @@ import (
 // Client is a fake implementation of the kubectl.Client interface
 type Client struct {
 	Client       kubernetes.Interface
+	KubeLoader   kubeconfig.Loader
 	IsKubernetes bool
 }
 
@@ -47,6 +49,11 @@ func (c *Client) RestConfig() *rest.Config {
 	return &rest.Config{
 		Host: "testHost",
 	}
+}
+
+// RestConfig is a fake implementation of function
+func (c *Client) KubeConfigLoader() kubeconfig.Loader {
+	return c.KubeLoader
 }
 
 // PrintWarning is a fake implementation of function

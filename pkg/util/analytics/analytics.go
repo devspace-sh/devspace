@@ -62,6 +62,8 @@ type analyticsConfig struct {
 
 	version          string
 	identityProvider *func() string
+
+	kubeLoader kubeconfig.Loader
 }
 
 func (a *analyticsConfig) Enabled() bool {
@@ -157,9 +159,9 @@ func (a *analyticsConfig) SendCommandEvent(commandArgs []string, commandError er
 		commandProperties["error"] = strings.Replace(commandError.Error(), "\n", "\\n", -1)
 	}
 
-	contextName, err := kubeconfig.GetCurrentContext()
+	contextName, err := a.kubeLoader.GetCurrentContext()
 	if contextName != "" && err == nil {
-		spaceID, cloudProvider, _ := kubeconfig.GetSpaceID(contextName)
+		spaceID, cloudProvider, _ := a.kubeLoader.GetSpaceID(contextName)
 
 		if spaceID != 0 {
 			commandProperties["space_id"] = spaceID
@@ -167,7 +169,7 @@ func (a *analyticsConfig) SendCommandEvent(commandArgs []string, commandError er
 			userProperties["has_spaces"] = true
 		}
 
-		kubeConfig, err := kubeconfig.LoadRawConfig()
+		kubeConfig, err := a.kubeLoader.LoadRawConfig()
 		if err == nil {
 			if context, ok := kubeConfig.Contexts[contextName]; ok {
 				if cluster, ok := kubeConfig.Clusters[context.Cluster]; ok {
@@ -433,7 +435,9 @@ func GetAnalytics() (Analytics, error) {
 	var err error
 
 	loadAnalyticsOnce.Do(func() {
-		analyticsInstance = &analyticsConfig{}
+		analyticsInstance = &analyticsConfig{
+			kubeLoader: kubeconfig.NewLoader(),
+		}
 
 		analyticsConfigFilePath, err := analyticsInstance.getAnalyticsConfigFilePath()
 		if err != nil {

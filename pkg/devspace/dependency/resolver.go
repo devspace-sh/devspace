@@ -19,6 +19,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -54,6 +55,7 @@ type resolver struct {
 	ConfigOptions *loader.ConfigOptions
 	AllowCyclic   bool
 
+	kubeLoader     kubeconfig.Loader
 	client         kubectl.Client
 	generatedSaver generated.ConfigLoader
 	log            log.Logger
@@ -62,6 +64,13 @@ type resolver struct {
 // NewResolver creates a new resolver for resolving dependencies
 func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, log log.Logger) (ResolverInterface, error) {
 	var id string
+
+	var kubeLoader kubeconfig.Loader
+	if client == nil {
+		kubeLoader = kubeconfig.NewLoader()
+	} else {
+		kubeLoader = client.KubeConfigLoader()
+	}
 
 	basePath, err := filepath.Abs(".")
 	if err != nil {
@@ -85,8 +94,9 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client 
 		ConfigOptions: configOptions,
 
 		// We only need that for saving
-		generatedSaver: generated.NewConfigLoader(""),
+		kubeLoader:     kubeLoader,
 		client:         client,
+		generatedSaver: generated.NewConfigLoader(""),
 		log:            log,
 	}, nil
 }
@@ -276,7 +286,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	// Recreate client if necessary
 	client := r.client
 	if dependency.Namespace != "" {
-		client, err = kubectl.NewClientFromContext(client.CurrentContext(), dependency.Namespace, false)
+		client, err = kubectl.NewClientFromContext(client.CurrentContext(), dependency.Namespace, false, r.kubeLoader)
 		if err != nil {
 			return nil, errors.Wrap(err, "create new client")
 		}

@@ -73,7 +73,7 @@ func testGetProviderWithOptions(t *testing.T, testCase getCloudProviderWithOptio
 		logger.Survey.SetNextAnswer(answer)
 	}
 
-	provider, err := GetProviderWithOptions(testCase.useProviderName, testCase.key, testCase.relogin, loader, logger)
+	provider, err := GetProviderWithOptions(testCase.useProviderName, testCase.key, testCase.relogin, loader, nil, logger)
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Error in testCase %s", testCase.name)

@@ -66,8 +66,12 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 	)
 
 	if m.dockerClient == nil {
+		if m.kubeLoader == nil {
+			m.kubeLoader = kubeconfig.NewLoader()
+		}
+
 		// Ignore error as context may not be a Space
-		kubeContext, err := kubeconfig.GetCurrentContext()
+		kubeContext, err := m.kubeLoader.GetCurrentContext()
 		if err != nil {
 			return nil, err
 		}
