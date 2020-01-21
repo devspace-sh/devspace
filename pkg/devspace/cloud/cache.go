@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 
 	"github.com/pkg/errors"
 )
@@ -45,7 +44,7 @@ func (p *provider) CacheSpace(space *latest.Space, serviceAccount *latest.Servic
 
 // pruneCache prunes the saved space information
 func (p *provider) pruneCache() error {
-	rawConfig, err := kubeconfig.LoadConfig().RawConfig()
+	rawConfig, err := p.kubeLoader.LoadRawConfig()
 	if err != nil {
 		return errors.Wrap(err, "load config")
 	}

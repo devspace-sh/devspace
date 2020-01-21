@@ -20,7 +20,7 @@ import (
 // PredefinedVars holds all predefined variables that can be used in the config
 var PredefinedVars = map[string]*predefinedVarDefinition{
 	"DEVSPACE_RANDOM": &predefinedVarDefinition{
-		Fill: func(options *ConfigOptions) (*string, error) {
+		Fill: func(kubeLoader kubeconfig.Loader, options *ConfigOptions) (*string, error) {
 			ret, err := randutil.GenerateRandomString(6)
 			if err != nil {
 				return nil, err
@@ -30,13 +30,13 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 		},
 	},
 	"DEVSPACE_TIMESTAMP": &predefinedVarDefinition{
-		Fill: func(options *ConfigOptions) (*string, error) {
+		Fill: func(kubeLoader kubeconfig.Loader, options *ConfigOptions) (*string, error) {
 			return ptr.String(strconv.FormatInt(time.Now().Unix(), 10)), nil
 		},
 	},
 	"DEVSPACE_GIT_COMMIT": &predefinedVarDefinition{
 		ErrorMessage: "No git repository found, but predefined var DEVSPACE_GIT_COMMIT is used",
-		Fill: func(options *ConfigOptions) (*string, error) {
+		Fill: func(kubeLoader kubeconfig.Loader, options *ConfigOptions) (*string, error) {
 			gitRepo := git.NewGitRepository(".", "")
 
 			hash, err := gitRepo.GetHash()
@@ -49,8 +49,8 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 	},
 	"DEVSPACE_SPACE": &predefinedVarDefinition{
 		ErrorMessage: fmt.Sprintf("Current context is not a space, but predefined var DEVSPACE_SPACE is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b")),
-		Fill: func(options *ConfigOptions) (*string, error) {
-			kubeContext, err := kubeconfig.GetCurrentContext()
+		Fill: func(kubeLoader kubeconfig.Loader, options *ConfigOptions) (*string, error) {
+			kubeContext, err := kubeLoader.GetCurrentContext()
 			if err != nil {
 				return nil, nil
 			}
@@ -58,12 +58,12 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 				kubeContext = options.KubeContext
 			}
 
-			isSpace, err := kubeconfig.IsCloudSpace(kubeContext)
+			isSpace, err := kubeLoader.IsCloudSpace(kubeContext)
 			if err != nil || !isSpace {
 				return nil, nil
 			}
 
-			spaceID, providerName, err := kubeconfig.GetSpaceID(kubeContext)
+			spaceID, providerName, err := kubeLoader.GetSpaceID(kubeContext)
 			if err != nil {
 				return nil, err
 			}
@@ -90,8 +90,8 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 	},
 	"DEVSPACE_SPACE_NAMESPACE": &predefinedVarDefinition{
 		ErrorMessage: fmt.Sprintf("Current context is not a space, but predefined var DEVSPACE_SPACE_NAMESPACE is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b")),
-		Fill: func(options *ConfigOptions) (*string, error) {
-			kubeContext, err := kubeconfig.GetCurrentContext()
+		Fill: func(kubeLoader kubeconfig.Loader, options *ConfigOptions) (*string, error) {
+			kubeContext, err := kubeLoader.GetCurrentContext()
 			if err != nil {
 				return nil, nil
 			}
@@ -99,12 +99,12 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 				kubeContext = options.KubeContext
 			}
 
-			isSpace, err := kubeconfig.IsCloudSpace(kubeContext)
+			isSpace, err := kubeLoader.IsCloudSpace(kubeContext)
 			if err != nil || !isSpace {
 				return nil, nil
 			}
 
-			spaceID, providerName, err := kubeconfig.GetSpaceID(kubeContext)
+			spaceID, providerName, err := kubeLoader.GetSpaceID(kubeContext)
 			if err != nil {
 				return nil, err
 			}
@@ -131,8 +131,8 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 	},
 	"DEVSPACE_USERNAME": &predefinedVarDefinition{
 		ErrorMessage: fmt.Sprintf("You are not logged into DevSpace Cloud, but predefined var DEVSPACE_USERNAME is used.\n\nPlease run: \n- `%s` to login into devspace cloud. Alternatively you can also remove the variable ${DEVSPACE_USERNAME} from your config", ansi.Color("devspace login", "white+b")),
-		Fill: func(options *ConfigOptions) (*string, error) {
-			kubeContext, err := kubeconfig.GetCurrentContext()
+		Fill: func(kubeLoader kubeconfig.Loader, options *ConfigOptions) (*string, error) {
+			kubeContext, err := kubeLoader.GetCurrentContext()
 			if err != nil {
 				return nil, err
 			}
@@ -146,7 +146,7 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 				return nil, err
 			}
 
-			_, providerName, err := kubeconfig.GetSpaceID(kubeContext)
+			_, providerName, err := kubeLoader.GetSpaceID(kubeContext)
 			if err != nil {
 				// use global provider config as fallback
 				if cloudConfigData.Default != "" {
@@ -177,12 +177,12 @@ var PredefinedVars = map[string]*predefinedVarDefinition{
 type predefinedVarDefinition struct {
 	Value        *string
 	ErrorMessage string
-	Fill         func(*ConfigOptions) (*string, error)
+	Fill         func(kubeconfig.Loader, *ConfigOptions) (*string, error)
 }
 
-func fillPredefinedVars(options *ConfigOptions) error {
+func fillPredefinedVars(kubeLoader kubeconfig.Loader, options *ConfigOptions) error {
 	for varName, predefinedVariable := range PredefinedVars {
-		val, err := predefinedVariable.Fill(options)
+		val, err := predefinedVariable.Fill(kubeLoader, options)
 		if err != nil {
 			return errors.Wrap(err, "fill predefined var "+varName)
 		}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -50,7 +51,7 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 	defer h.portsMutex.Unlock()
 
 	// Create kubectl client
-	client, err := kubectl.NewClientFromContext(kubeContext, kubeNamespace, false)
+	client, err := kubectl.NewClientFromContext(kubeContext, kubeNamespace, false, kubeconfig.NewLoader())
 	if err != nil {
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

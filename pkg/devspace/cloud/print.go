@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1"
 
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
@@ -26,9 +25,9 @@ func (p *provider) PrintSpaces(cluster, name string, all bool) error {
 
 	activeSpaceID := 0
 	if err == nil {
-		context, _ := kubeconfig.GetCurrentContext()
+		context, _ := p.kubeLoader.GetCurrentContext()
 		if context != "" {
-			activeSpaceID, _, _ = kubeconfig.GetSpaceID(context)
+			activeSpaceID, _, _ = p.kubeLoader.GetSpaceID(context)
 		}
 	}
 

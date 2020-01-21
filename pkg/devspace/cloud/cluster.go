@@ -87,13 +87,13 @@ func (p *provider) ConnectCluster(options *ConnectClusterOptions) error {
 		}
 
 		// Get kube context to use
-		client, err = kubectl.NewClientBySelect(allowLocalClusters, true, p.log)
+		client, err = kubectl.NewClientBySelect(allowLocalClusters, true, p.kubeLoader, p.log)
 		if err != nil {
 			return errors.Wrap(err, "new kubectl client")
 		}
 	} else {
 		// Get kube context to use
-		client, err = kubectl.NewClientFromContext(options.KubeContext, "", false)
+		client, err = kubectl.NewClientFromContext(options.KubeContext, "", false, p.kubeLoader)
 		if err != nil {
 			return errors.Wrap(err, "new kubectl client")
 		}
@@ -669,7 +669,7 @@ func (p *provider) ResetKey(clusterName string) error {
 	}
 
 	// Get kube context to use
-	client, err := kubectl.NewClientBySelect(false, false, p.log)
+	client, err := kubectl.NewClientBySelect(false, false, p.kubeLoader, p.log)
 	if err != nil {
 		return err
 	}

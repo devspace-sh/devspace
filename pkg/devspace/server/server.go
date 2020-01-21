@@ -120,7 +120,7 @@ type forward struct {
 }
 
 func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generatedConfig *generated.Config, defaultContext, defaultNamespace, path string, log log.Logger) (*handler, error) { // Get kube config
-	kubeConfig, err := kubeconfig.LoadConfig().RawConfig()
+	kubeConfig, err := kubeconfig.NewLoader().LoadConfig().RawConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "load kube config")
 	}
@@ -314,7 +314,7 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create kubectl client
-	client, err := kubectl.NewClientFromContext(kubeContext, kubeNamespace, false)
+	client, err := kubectl.NewClientFromContext(kubeContext, kubeNamespace, false, kubeconfig.NewLoader())
 	if err != nil {
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -53,7 +53,7 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 
 		kubeContext := ""
 		if c.client == nil {
-			kubeContext, err = kubeconfig.GetCurrentContext()
+			kubeContext, err = kubeconfig.NewLoader().GetCurrentContext()
 			if err != nil {
 				return nil, errors.Wrap(err, "get current context")
 			}
