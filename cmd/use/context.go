@@ -4,7 +4,6 @@ import (
 	"sort"
 
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/mgutz/ansi"
@@ -43,7 +42,8 @@ devspace use context my-context
 func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Load kube-config
 	log := f.GetLog()
-	kubeConfig, err := kubeconfig.LoadRawConfig()
+	kubeLoader := f.NewKubeConfigLoader()
+	kubeConfig, err := kubeLoader.LoadRawConfig()
 	if err != nil {
 		return errors.Wrap(err, "load kube config")
 	}
@@ -78,7 +78,7 @@ func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command,
 
 	if oldContext != context {
 		// Save updated kube-config
-		kubeconfig.SaveConfig(kubeConfig)
+		kubeLoader.SaveConfig(kubeConfig)
 
 		log.Infof("Your kube-context has been updated to '%s'", ansi.Color(kubeConfig.CurrentContext, "white+b"))
 		log.Infof("\r         To revert this operation, run: %s\n", ansi.Color("devspace use context "+oldContext, "white+b"))

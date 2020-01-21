@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
@@ -33,6 +34,7 @@ type Factory interface {
 	NewDockerClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error)
 	GetProvider(useProviderName string, log log.Logger) (cloud.Provider, error)
 	NewCloudConfigLoader() config.Loader
+	NewKubeConfigLoader() kubeconfig.Loader
 }
 
 type manager struct {

@@ -13,7 +13,6 @@ import (
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
@@ -65,7 +64,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 	)
 
 	// Ignore error as context may not be a Space
-	kubeContext, err := kubeconfig.GetCurrentContext()
+	kubeContext, err := m.factory.NewKubeConfigLoader().GetCurrentContext()
 	if err != nil {
 		return nil, err
 	}

@@ -11,50 +11,38 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
+var loadOnceMutext sync.Mutex
+var loadOnce sync.Once
+var loadedConfig clientcmd.ClientConfig
+
 // AuthCommand is the name of the command used to get auth token for kube-context of Spaces
 const AuthCommand = "devspace"
 
-var loadOnce sync.Once
-var loadOnceMutext sync.Mutex
-var loadedConfig clientcmd.ClientConfig
-
-var fakeConfig clientcmd.ClientConfig
-
-//SetFakeConfig sets loadedConfig to FakeConfig !ONLY FOR TESTING!
-func SetFakeConfig(fake clientcmd.ClientConfig) {
-	loadOnce = sync.Once{}
-	fakeConfig = fake
-}
-
 // ConfigExists checks if a kube config exists
-func ConfigExists() bool {
+func (l *loader) ConfigExists() bool {
 	return clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename() != ""
 }
 
 // NewConfig loads a new kube config
-func NewConfig() clientcmd.ClientConfig {
-	if fakeConfig != nil {
-		return fakeConfig
-	}
-
+func (l *loader) NewConfig() clientcmd.ClientConfig {
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(clientcmd.NewDefaultClientConfigLoadingRules(), &clientcmd.ConfigOverrides{})
 }
 
 // LoadConfig loads the kube config with the default loading rules
-func LoadConfig() clientcmd.ClientConfig {
+func (l *loader) LoadConfig() clientcmd.ClientConfig {
 	loadOnceMutext.Lock()
 	defer loadOnceMutext.Unlock()
 
 	loadOnce.Do(func() {
-		loadedConfig = NewConfig()
+		loadedConfig = l.NewConfig()
 	})
 
 	return loadedConfig
 }
 
 // LoadConfigFromContext loads the kube client config from a certain context
-func LoadConfigFromContext(context string) (clientcmd.ClientConfig, error) {
-	kubeConfig, err := LoadRawConfig()
+func (l *loader) LoadConfigFromContext(context string) (clientcmd.ClientConfig, error) {
+	kubeConfig, err := l.LoadRawConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +51,8 @@ func LoadConfigFromContext(context string) (clientcmd.ClientConfig, error) {
 }
 
 // LoadRawConfig loads the raw kube config with the default loading rules
-func LoadRawConfig() (*api.Config, error) {
-	config, err := LoadConfig().RawConfig()
+func (l *loader) LoadRawConfig() (*api.Config, error) {
+	config, err := l.LoadConfig().RawConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -73,8 +61,8 @@ func LoadRawConfig() (*api.Config, error) {
 }
 
 // GetCurrentContext retrieves the current kube context
-func GetCurrentContext() (string, error) {
-	config, err := LoadRawConfig()
+func (l *loader) GetCurrentContext() (string, error) {
+	config, err := l.LoadRawConfig()
 	if err != nil {
 		return "", err
 	}
@@ -83,8 +71,8 @@ func GetCurrentContext() (string, error) {
 }
 
 // GetCurrentNamespace retrieves the current namespace
-func GetCurrentNamespace() (string, error) {
-	kubeConfig, err := LoadRawConfig()
+func (l *loader) GetCurrentNamespace() (string, error) {
+	kubeConfig, err := l.LoadRawConfig()
 	if err != nil {
 		return "", err
 	}
@@ -99,7 +87,7 @@ func GetCurrentNamespace() (string, error) {
 }
 
 // SaveConfig writes the kube config back to the specified filename
-func SaveConfig(config *api.Config) error {
+func (l *loader) SaveConfig(config *api.Config) error {
 	loadOnceMutext.Lock()
 	defer loadOnceMutext.Unlock()
 
@@ -114,7 +102,7 @@ func SaveConfig(config *api.Config) error {
 }
 
 // LoadNewConfig creates a new config from scratch with the given parameters and loads it
-func LoadNewConfig(contextName, server, caCert, token, namespace string) (clientcmd.ClientConfig, error) {
+func (l *loader) LoadNewConfig(contextName, server, caCert, token, namespace string) (clientcmd.ClientConfig, error) {
 	config := api.NewConfig()
 	decodedCaCert, err := base64.StdEncoding.DecodeString(caCert)
 	if err != nil {
@@ -147,8 +135,8 @@ func LoadNewConfig(contextName, server, caCert, token, namespace string) (client
 }
 
 // IsCloudSpace returns true of this context belongs to a Space created by DevSpace Cloud
-func IsCloudSpace(context string) (bool, error) {
-	kubeConfig, err := LoadRawConfig()
+func (l *loader) IsCloudSpace(context string) (bool, error) {
+	kubeConfig, err := l.LoadRawConfig()
 	if err != nil {
 		return false, err
 	}
@@ -163,8 +151,8 @@ func IsCloudSpace(context string) (bool, error) {
 }
 
 // GetSpaceID returns the id of the Space and the cloud provider URL that belongs to the context with this name
-func GetSpaceID(context string) (int, string, error) {
-	kubeConfig, err := LoadRawConfig()
+func (l *loader) GetSpaceID(context string) (int, string, error) {
+	kubeConfig, err := l.LoadRawConfig()
 	if err != nil {
 		return 0, "", err
 	}
@@ -205,7 +193,7 @@ func getAuthInfo(kubeConfig *api.Config, context string) (*api.AuthInfo, error) 
 }
 
 // DeleteKubeContext removes the specified devspace id from the kube context if it exists
-func DeleteKubeContext(kubeConfig *api.Config, kubeContext string) error {
+func (l *loader) DeleteKubeContext(kubeConfig *api.Config, kubeContext string) error {
 	// Get context
 	contextRaw, ok := kubeConfig.Contexts[kubeContext]
 	if !ok {

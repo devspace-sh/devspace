@@ -7,7 +7,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -54,6 +53,7 @@ devspace remove space --all
 func (cmd *SpaceCmd) RunRemoveCloudDevSpace(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
+	kubeLoader := f.NewKubeConfigLoader()
 	configLoader := loader.NewConfigLoader(nil, log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
@@ -155,7 +155,7 @@ func (cmd *SpaceCmd) RunRemoveCloudDevSpace(f factory.Factory, cobraCmd *cobra.C
 		}
 
 		if generatedConfig.GetActive().LastContext != nil && generatedConfig.GetActive().LastContext.Context != "" {
-			spaceID, _, err := kubeconfig.GetSpaceID(generatedConfig.GetActive().LastContext.Context)
+			spaceID, _, err := kubeLoader.GetSpaceID(generatedConfig.GetActive().LastContext.Context)
 			if err == nil && spaceID == space.SpaceID {
 				// Remove cached namespace from generated config if it belongs to the space that is being deleted
 				generatedConfig.GetActive().LastContext = nil
