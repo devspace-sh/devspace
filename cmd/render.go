@@ -112,7 +112,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Create Dependencymanager
-	manager, err := f.NewDependencyManager(config, generatedConfig, kubeLoader, nil, cmd.AllowCyclicDependencies, configOptions, log)
+	manager, err := f.NewDependencyManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log)
 	if err != nil {
 		return errors.Wrap(err, "new manager")
 	}

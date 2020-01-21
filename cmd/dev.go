@@ -225,7 +225,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 	if cmd.SkipPipeline == false {
 
 		// Create Dependencymanager
-		manager, err := f.NewDependencyManager(config, generatedConfig, kubeLoader, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log)
+		manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log)
 		if err != nil {
 			return 0, errors.Wrap(err, "new manager")
 		}

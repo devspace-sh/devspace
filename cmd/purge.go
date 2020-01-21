@@ -63,7 +63,6 @@ devspace purge -d my-deployment
 func (cmd *PurgeCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
-	kubeLoader := f.NewKubeConfigLoader()
 	configOptions := cmd.ToConfigOptions()
 	configLoader := f.NewConfigLoader(configOptions, cmd.log)
 	configExists, err := configLoader.SetDevSpaceRoot()
@@ -128,7 +127,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	if cmd.PurgeDependencies {
 
 		// Create Dependencymanager
-		manager, err := f.NewDependencyManager(config, generatedConfig, kubeLoader, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log)
+		manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log)
 		if err != nil {
 			return errors.Wrap(err, "new manager")
 		}

@@ -40,7 +40,7 @@ type Factory interface {
 	NewHelmClient(config *latest.Config, deployConfig *latest.DeploymentConfig, kubeClient kubectl.Client, tillerNamespace string, upgradeTiller bool, dryInit bool, log log.Logger) (types.Client, error)
 
 	// Dependencies
-	NewDependencyManager(config *latest.Config, cache *generated.Config, kubeLoader kubeconfig.Loader, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (dependency.Manager, error)
+	NewDependencyManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (dependency.Manager, error)
 
 	// Hooks
 	NewHookExecutor(config *latest.Config) hook.Executer
@@ -111,7 +111,8 @@ func (f *DefaultFactoryImpl) NewHookExecutor(config *latest.Config) hook.Execute
 }
 
 // NewDependencyManager implements interface
-func (f *DefaultFactoryImpl) NewDependencyManager(config *latest.Config, cache *generated.Config, kubeLoader kubeconfig.Loader, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (dependency.Manager, error) {
+func (f *DefaultFactoryImpl) NewDependencyManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (dependency.Manager, error) {
+	kubeLoader := f.NewKubeConfigLoader()
 	return dependency.NewManager(config, cache, kubeLoader, client, allowCyclic, configOptions, logger)
 }
 
@@ -125,7 +126,7 @@ func (f *DefaultFactoryImpl) NewConfigLoader(options *loader.ConfigOptions, log 
 	return loader.NewConfigLoader(options, log)
 }
 
-// NewConfigLoader implements interface
+// NewConfigureManager implements interface
 func (f *DefaultFactoryImpl) NewConfigureManager(config *latest.Config, log log.Logger) configure.Manager {
 	return configure.NewManager(config, log)
 }
