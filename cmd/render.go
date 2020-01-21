@@ -163,8 +163,14 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 		}
 	}
 
+	// Create kubectl client
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	if err != nil {
+		return errors.Errorf("Unable to create new kubectl client: %v", err)
+	}
+
 	// Deploy all defined deployments
-	err = f.NewDeployController(config, generatedConfig.GetActive(), nil).Render(&deploy.Options{
+	err = f.NewDeployController(config, generatedConfig.GetActive(), client).Render(&deploy.Options{
 		BuiltImages: builtImages,
 		Deployments: deployments,
 	}, os.Stdout)
