@@ -1,6 +1,7 @@
 package build
 
 import (
+	"sort"
 	"testing"
 
 	fakebuilder "github.com/devspace-cloud/devspace/pkg/devspace/build/builder/testing"
@@ -124,8 +125,14 @@ func TestBuild(t *testing.T) {
 }
 
 func getKeys(targetMap map[string]string) string {
-	result := ""
+	arr := []string{}
 	for key := range targetMap {
+		arr = append(arr, key)
+	}
+	sort.Strings(arr)
+
+	result := ""
+	for _, key := range arr {
 		result += key + ", "
 	}
 	return result

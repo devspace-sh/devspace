@@ -1,6 +1,7 @@
 package build
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/custom"
@@ -41,6 +42,8 @@ func TestCreateBuilder(t *testing.T) {
 		},
 	}
 
+	fakeBuilder = nil
+
 	for _, testCase := range testCases {
 		controller := &controller{}
 
@@ -53,10 +56,10 @@ func TestCreateBuilder(t *testing.T) {
 		}
 
 		builderAsYaml, err := yaml.Marshal(builder)
-		assert.NilError(t, err, "Error marshaling builder in testCase %s", testCase)
+		assert.NilError(t, err, "Error marshaling builder in testCase %s", testCase.name)
 		expectationAsYaml, err := yaml.Marshal(testCase.expectedBuilder)
-		assert.NilError(t, err, "Error marshaling expected builder in testCase %s", testCase)
-		assert.Equal(t, string(builderAsYaml), string(expectationAsYaml), "Unexpected cache in testCase %s", testCase)
-
+		assert.NilError(t, err, "Error marshaling expected builder in testCase %s", testCase.name)
+		assert.Equal(t, string(builderAsYaml), string(expectationAsYaml), "Unexpected cache in testCase %s", testCase.name)
+		assert.Equal(t, reflect.TypeOf(builder), reflect.TypeOf(testCase.expectedBuilder), "Unexpected cache type in testCase %s", testCase.name)
 	}
 }
