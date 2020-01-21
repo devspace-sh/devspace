@@ -21,10 +21,11 @@ func runUploadOnly(f *customFactory, logger log.Logger) error {
 			NoWarn:    true,
 			Silent:    true,
 		},
-		LocalPath:     "./../foo",
-		ContainerPath: "/home",
-		NoWatch:       true,
-		UploadOnly:    true,
+		LocalPath:             "./../foo",
+		ContainerPath:         "/home",
+		NoWatch:               true,
+		UploadOnly:            true,
+		DownloadOnInitialSync: true,
 	}
 
 	ec := &cmd.EnterCmd{

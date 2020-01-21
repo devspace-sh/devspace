@@ -22,9 +22,10 @@ func runDefault(f *customFactory, logger log.Logger) error {
 			NoWarn:    true,
 			Silent:    true,
 		},
-		LocalPath:     "./../foo",
-		ContainerPath: "/home",
-		NoWatch:       true,
+		LocalPath:             "./../foo",
+		ContainerPath:         "/home",
+		NoWatch:               true,
+		DownloadOnInitialSync: true,
 	}
 
 	ec := &cmd.EnterCmd{
