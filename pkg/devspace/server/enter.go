@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/gorilla/websocket"
 )
 
@@ -38,7 +39,7 @@ func (h *handler) enter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create kubectl client
-	client, err := kubectl.NewClientFromContext(kubeContext, kubeNamespace, false)
+	client, err := kubectl.NewClientFromContext(kubeContext, kubeNamespace, false, kubeconfig.NewLoader())
 	if err != nil {
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

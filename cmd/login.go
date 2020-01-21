@@ -46,6 +46,7 @@ devspace login --key myaccesskey
 // RunLogin executes the functionality devspace login
 func (cmd *LoginCmd) RunLogin(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	log := f.GetLog()
+	kubeLoader := f.NewKubeConfigLoader()
 	loader := f.NewCloudConfigLoader()
 	providerConfig, err := loader.Load()
 	if err != nil {
@@ -61,12 +62,12 @@ func (cmd *LoginCmd) RunLogin(f factory.Factory, cobraCmd *cobra.Command, args [
 	}
 
 	if cmd.Key != "" {
-		_, err = f.GetProviderWithOptions(providerName, cmd.Key, true, loader, log)
+		_, err = f.GetProviderWithOptions(providerName, cmd.Key, true, loader, kubeLoader, log)
 		if err != nil {
 			return err
 		}
 	} else {
-		_, err = f.GetProviderWithOptions(providerName, "", true, loader, log)
+		_, err = f.GetProviderWithOptions(providerName, "", true, loader, kubeLoader, log)
 		if err != nil {
 			return err
 		}

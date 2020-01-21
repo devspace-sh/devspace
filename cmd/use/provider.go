@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/pkg/errors"
 
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/spf13/cobra"
@@ -13,7 +14,7 @@ import (
 
 type providerCmd struct{}
 
-func newProviderCmd() *cobra.Command {
+func newProviderCmd(f factory.Factory) *cobra.Command {
 	cmd := &providerCmd{}
 
 	return &cobra.Command{
@@ -31,14 +32,16 @@ devspace use provider my.domain.com
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: cmd.RunUseProvider,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunUseProvider(f, cobraCmd, args)
+		},
 	}
 }
 
 // RunUseProvider executes the "devspace use provider" command logic
-func (*providerCmd) RunUseProvider(cobraCmd *cobra.Command, args []string) error {
+func (*providerCmd) RunUseProvider(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Get provider configuration
-	loader := config.NewLoader()
+	loader := f.NewCloudConfigLoader()
 	providerConfig, err := loader.Load()
 	if err != nil {
 		return errors.Errorf("Error loading provider config: %v", err)

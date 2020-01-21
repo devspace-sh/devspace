@@ -64,11 +64,16 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 		retImageConfig = &latest.ImageConfig{}
 	)
 
-	// Ignore error as context may not be a Space
-	kubeContext, err := kubeconfig.GetCurrentContext()
-	if err != nil {
-		return nil, err
-	}
+	if m.dockerClient == nil {
+		if m.kubeLoader == nil {
+			m.kubeLoader = kubeconfig.NewLoader()
+		}
+
+		// Ignore error as context may not be a Space
+		kubeContext, err := m.kubeLoader.GetCurrentContext()
+		if err != nil {
+			return nil, err
+		}
 
 	// Get docker client
 	dockerClient, err := m.factory.NewDockerClientWithMinikube(kubeContext, true, m.log)

@@ -3,9 +3,7 @@ package use
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
 	"github.com/mgutz/ansi"
@@ -17,7 +15,7 @@ type namespaceCmd struct {
 	Reset bool
 }
 
-func newNamespaceCmd() *cobra.Command {
+func newNamespaceCmd(f factory.Factory) *cobra.Command {
 	cmd := &namespaceCmd{}
 
 	useNamespace := &cobra.Command{
@@ -34,7 +32,9 @@ devspace use namespace my-namespace
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
-		RunE: cmd.RunUseNamespace,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.RunUseNamespace(f, cobraCmd, args)
+		},
 	}
 
 	useNamespace.Flags().BoolVar(&cmd.Reset, "reset", false, "Resets the default namespace of the current kube-context")
@@ -43,16 +43,17 @@ devspace use namespace my-namespace
 }
 
 // RunUseNamespace executes the functionality "devspace use namespace"
-func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string) error {
+func (cmd *namespaceCmd) RunUseNamespace(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Get default context
-	log := log.GetInstance()
-	client, err := kubectl.NewDefaultClient()
+	log := f.GetLog()
+	client, err := f.NewKubeDefaultClient()
+	kubeLoader := client.KubeConfigLoader()
 	if err != nil {
 		return err
 	}
 
 	// Check if current kube context belongs to a space
-	isSpace, err := kubeconfig.IsCloudSpace(client.CurrentContext())
+	isSpace, err := kubeLoader.IsCloudSpace(client.CurrentContext())
 	if err != nil {
 		return errors.Errorf("Unable to check if context belongs to Space: %v", err)
 	}
@@ -61,7 +62,7 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 	}
 
 	// Load kube-config
-	kubeConfig, err := kubeconfig.LoadRawConfig()
+	kubeConfig, err := kubeLoader.LoadRawConfig()
 	if err != nil {
 		return errors.Errorf("Unable to load kube-config: %v", err)
 	}
@@ -101,7 +102,7 @@ func (cmd *namespaceCmd) RunUseNamespace(cobraCmd *cobra.Command, args []string)
 		kubeConfig.Contexts[client.CurrentContext()].Namespace = namespace
 
 		// Save updated kube-config
-		err = kubeconfig.SaveConfig(kubeConfig)
+		err = kubeLoader.SaveConfig(kubeConfig)
 		if err != nil {
 			return errors.Errorf("Error saving kube config: %v", err)
 		}

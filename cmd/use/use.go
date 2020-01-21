@@ -20,9 +20,9 @@ func NewUseCmd(f factory.Factory) *cobra.Command {
 
 	useCmd.AddCommand(newProfileCmd(f))
 	useCmd.AddCommand(newContextCmd(f))
-	useCmd.AddCommand(newNamespaceCmd())
-	useCmd.AddCommand(newProviderCmd())
-	useCmd.AddCommand(newSpaceCmd())
+	useCmd.AddCommand(newNamespaceCmd(f))
+	useCmd.AddCommand(newProviderCmd(f))
+	useCmd.AddCommand(newSpaceCmd(f))
 
 	return useCmd
 }

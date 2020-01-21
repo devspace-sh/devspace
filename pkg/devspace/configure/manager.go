@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
@@ -36,9 +37,11 @@ type Factory interface {
 }
 
 type manager struct {
-	log     log.Logger
-	config  *latest.Config
-	factory Factory
+	log               log.Logger
+	config            *latest.Config
+	kubeLoader        kubeconfig.Loader
+	cloudConfigLoader cloudconfig.Loader
+	dockerClient      docker.Client
 }
 
 // NewManager creates a new instance of the interface Manager
