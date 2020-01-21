@@ -6,7 +6,6 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
 	"github.com/docker/docker/api/types/filters"
@@ -44,6 +43,7 @@ func (cmd *imagesCmd) RunCleanupImages(f factory.Factory, cobraCmd *cobra.Comman
 	// Set config root
 	log := f.GetLog()
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
+	kubeConfigLoader := f.NewKubeConfigLoader()
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (cmd *imagesCmd) RunCleanupImages(f factory.Factory, cobraCmd *cobra.Comman
 	}
 
 	// Get active context
-	kubeContext, err := kubeconfig.GetCurrentContext()
+	kubeContext, err := kubeConfigLoader.GetCurrentContext()
 	if err != nil {
 		return err
 	}

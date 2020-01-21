@@ -23,8 +23,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
-	logutil "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -60,7 +58,7 @@ type DevCmd struct {
 	Interactive bool
 
 	configLoader loader.ConfigLoader
-	log          logpkg.Logger
+	log          log.Logger
 }
 
 const interactiveDefaultPickerValue = "Open Picker"
@@ -136,7 +134,7 @@ func (cmd *DevCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string
 	}
 
 	// Start file logging
-	logpkg.StartFileLogging()
+	log.StartFileLogging()
 
 	// Validate flags
 	err = cmd.validateFlags()
@@ -333,7 +331,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 	return exitCode, nil
 }
 
-func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, log log.Logger) (int, error) {
+func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, logger log.Logger) (int, error) {
 	selectorParameter := &targetselector.SelectorParameter{
 		CmdParameter: targetselector.CmdParameter{
 			Namespace:   cmd.Namespace,
@@ -350,7 +348,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 	}
 
 	var (
-		servicesClient  = f.NewServicesClient(config, generatedConfig, client, selectorParameter, log)
+		servicesClient  = f.NewServicesClient(config, generatedConfig, client, selectorParameter, logger)
 		exitChan        = make(chan error)
 		autoReloadPaths = GetPaths(config)
 		interactiveMode = config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.DefaultEnabled != nil && *config.Dev.Interactive.DefaultEnabled == true
@@ -378,17 +376,17 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 		watcher, err := watch.New(autoReloadPaths, []string{".devspace/"}, time.Second, func(changed []string, deleted []string) error {
 			once.Do(func() {
 				if interactiveMode {
-					log.Info("Change detected, will reload in 2 seconds")
+					logger.Info("Change detected, will reload in 2 seconds")
 					time.Sleep(time.Second * 2)
 				} else {
-					log.Info("Change detected, will reload")
+					logger.Info("Change detected, will reload")
 				}
 
 				exitChan <- &reloadError{}
 			})
 
 			return nil
-		}, log)
+		}, logger)
 		if err != nil {
 			return 0, err
 		}
@@ -405,11 +403,11 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 		for _, openConfig := range config.Dev.Open {
 			if openConfig.URL != "" {
 				maxWait := 4 * time.Minute
-				log.Infof("Opening '%s' as soon as application will be started (timeout: %s)", openConfig.URL, maxWait)
+				logger.Infof("Opening '%s' as soon as application will be started (timeout: %s)", openConfig.URL, maxWait)
 
 				go func() {
 					// Use DiscardLogger as we do not want to print warnings about failed HTTP requests
-					err := openURL(openConfig.URL, nil, "", logutil.Discard, maxWait)
+					err := openURL(openConfig.URL, nil, "", log.Discard, maxWait)
 					if err != nil {
 						// Use warn instead of fatal to prevent exit
 						// Do not print warning
@@ -423,21 +421,21 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 	// Open UI if configured
 	if cmd.UI {
 		cmd.UI = false
-		log.StartWait("Starting the ui server...")
-		defer log.StopWait()
+		logger.StartWait("Starting the ui server...")
+		defer logger.StopWait()
 
 		// Create server
-		server, err := server.NewServer(cmd.configLoader, config, generatedConfig, false, client.CurrentContext(), client.Namespace(), nil, log)
+		server, err := server.NewServer(cmd.configLoader, config, generatedConfig, false, client.CurrentContext(), client.Namespace(), nil, logger)
 		if err != nil {
-			log.Warnf("Couldn't start UI server: %v", err)
+			logger.Warnf("Couldn't start UI server: %v", err)
 		} else {
 			// Start server
 			go func() { server.ListenAndServe() }()
 
-			log.StopWait()
-			log.WriteString("\n#########################################################\n")
-			log.Infof("DevSpace UI available at: %s", ansi.Color("http://"+server.Server.Addr, "white+b"))
-			log.WriteString("#########################################################\n\n")
+			logger.StopWait()
+			logger.WriteString("\n#########################################################\n")
+			logger.Infof("DevSpace UI available at: %s", ansi.Color("http://"+server.Server.Addr, "white+b"))
+			logger.WriteString("#########################################################\n\n")
 		}
 	}
 
@@ -498,21 +496,21 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 		}
 
 		// Log multiple images at once
-		err := client.LogMultiple(imageSelector, exitChan, &tail, os.Stdout, log)
+		err := client.LogMultiple(imageSelector, exitChan, &tail, os.Stdout, logger)
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
 				return 0, err
 			}
 
-			log.Warnf("Couldn't print logs: %v", err)
+			logger.Warnf("Couldn't print logs: %v", err)
 		}
 
-		log.WriteString("\n")
-		log.Warn("Log streaming service has been terminated")
+		logger.WriteString("\n")
+		logger.Warn("Log streaming service has been terminated")
 	}
 
-	log.Done("Sync and port-forwarding services are running (Press Ctrl+C to abort services)")
+	logger.Done("Sync and port-forwarding services are running (Press Ctrl+C to abort services)")
 	return 0, <-exitChan
 }
 

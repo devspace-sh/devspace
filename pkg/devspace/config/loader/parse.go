@@ -175,7 +175,7 @@ func (l *configLoader) FillVariables(generatedConfig *generated.Config, prepared
 	}
 
 	// Fill predefined vars
-	err = fillPredefinedVars(l.options)
+	err = fillPredefinedVars(l.kubeConfigLoader, l.options)
 	if err != nil {
 		return err
 	}

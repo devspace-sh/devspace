@@ -45,6 +45,7 @@ devspace add provider app.devspace.cloud
 func (cmd *providerCmd) RunAddProvider(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	providerName := args[0]
 	logger := f.GetLog()
+	kubeLoader := f.NewKubeConfigLoader()
 	// Get host name
 	host := "https://" + strings.TrimRight(providerName, "/")
 	if cmd.Host != "" {
@@ -77,7 +78,7 @@ func (cmd *providerCmd) RunAddProvider(f factory.Factory, cobraCmd *cobra.Comman
 	})
 
 	// Ensure user is logged in
-	_, err = f.GetProviderWithOptions(providerName, "", true, loader, logger)
+	_, err = f.GetProviderWithOptions(providerName, "", true, loader, kubeLoader, logger)
 	if err != nil {
 		return errors.Wrap(err, "log into provider")
 	}

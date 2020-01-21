@@ -2,24 +2,23 @@ package cloud
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/pkg/errors"
 )
 
 // DeleteKubeContext removes the specified space from the kube context and providers.yaml
 func (p *provider) DeleteKubeContext(space *latest.Space) error {
 	kubeContext := GetKubeContextNameFromSpace(space.Name, space.ProviderName)
-	kubeConfig, err := kubeconfig.LoadRawConfig()
+	kubeConfig, err := p.kubeLoader.LoadRawConfig()
 	if err != nil {
 		return err
 	}
 
-	err = kubeconfig.DeleteKubeContext(kubeConfig, kubeContext)
+	err = p.kubeLoader.DeleteKubeContext(kubeConfig, kubeContext)
 	if err != nil {
 		return err
 	}
 
-	err = kubeconfig.SaveConfig(kubeConfig)
+	err = p.kubeLoader.SaveConfig(kubeConfig)
 	if err != nil {
 		return errors.Wrap(err, "save kube config")
 	}
