@@ -111,7 +111,7 @@ func TestBuild(t *testing.T) {
 		builtImages, err := controller.Build(&testCase.options, log.Discard)
 
 		if testCase.expectedErr == "" {
-			assert.NilError(t, err, "Error  in testCase %s", testCase.name)
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
