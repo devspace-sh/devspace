@@ -5,7 +5,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -18,15 +17,13 @@ type SpaceResumer interface {
 }
 
 type resumer struct {
-	kubeLoader kubeconfig.Loader
 	kubeClient kubectl.Client
 	log        log.Logger
 }
 
 // NewSpaceResumer creates a new instance of the interface SpaceResumer
-func NewSpaceResumer(kubeLoader kubeconfig.Loader, kubeClient kubectl.Client, log log.Logger) SpaceResumer {
+func NewSpaceResumer(kubeClient kubectl.Client, log log.Logger) SpaceResumer {
 	return &resumer{
-		kubeLoader: kubeLoader,
 		kubeClient: kubeClient,
 		log:        log,
 	}
@@ -34,7 +31,9 @@ func NewSpaceResumer(kubeLoader kubeconfig.Loader, kubeClient kubectl.Client, lo
 
 // ResumeSpace signals the cloud that we are currently working on the space and resumes it if it's currently paused
 func (r *resumer) ResumeSpace(loop bool) error {
-	isSpace, err := r.kubeLoader.IsCloudSpace(r.kubeClient.CurrentContext())
+	kubeLoader := r.kubeClient.KubeConfigLoader()
+
+	isSpace, err := kubeLoader.IsCloudSpace(r.kubeClient.CurrentContext())
 	if err != nil {
 		return errors.Wrap(err, "is cloud space")
 	}
@@ -45,7 +44,7 @@ func (r *resumer) ResumeSpace(loop bool) error {
 	}
 
 	// Retrieve space id and cloud provider
-	spaceID, cloudProvider, err := r.kubeLoader.GetSpaceID(r.kubeClient.CurrentContext())
+	spaceID, cloudProvider, err := kubeLoader.GetSpaceID(r.kubeClient.CurrentContext())
 	if err != nil {
 		return errors.Errorf("Unable to get Space ID for context '%s': %v", r.kubeClient.CurrentContext(), err)
 	}

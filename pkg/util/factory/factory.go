@@ -58,7 +58,7 @@ type Factory interface {
 	// Cloud
 	GetProvider(useProviderName string, log log.Logger) (cloud.Provider, error)
 	GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, kubeLoader kubeconfig.Loader, log log.Logger) (cloud.Provider, error)
-	NewSpaceResumer(kubeLoader kubeconfig.Loader, kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer
+	NewSpaceResumer(kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer
 	NewCloudConfigLoader() config.Loader
 
 	// Build & Deploy
@@ -178,6 +178,6 @@ func (f *DefaultFactoryImpl) GetProviderWithOptions(useProviderName, key string,
 }
 
 // NewSpaceResumer implements interface
-func (f *DefaultFactoryImpl) NewSpaceResumer(kubeLoader kubeconfig.Loader, kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer {
-	return resume.NewSpaceResumer(kubeLoader, kubeClient, log)
+func (f *DefaultFactoryImpl) NewSpaceResumer(kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer {
+	return resume.NewSpaceResumer(kubeClient, log)
 }

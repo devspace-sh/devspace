@@ -56,7 +56,6 @@ devspace attach -n my-namespace
 func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	kubeLoader := f.NewKubeConfigLoader()
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
@@ -90,7 +89,7 @@ func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Signal that we are working on the space if there is any
-	err = f.NewSpaceResumer(kubeLoader, client, log).ResumeSpace(true)
+	err = f.NewSpaceResumer(client, log).ResumeSpace(true)
 	if err != nil {
 		return err
 	}

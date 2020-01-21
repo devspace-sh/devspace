@@ -184,7 +184,7 @@ func (cmd *DevCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string
 	}
 
 	// Signal that we are working on the space if there is any
-	resumer := f.NewSpaceResumer(kubeLoader, client, cmd.log)
+	resumer := f.NewSpaceResumer(client, cmd.log)
 	err = resumer.ResumeSpace(true)
 	if err != nil {
 		return err

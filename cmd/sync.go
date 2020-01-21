@@ -99,7 +99,6 @@ func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	var err error
 	var generatedConfig *generated.Config
 	logger := f.GetLog()
-	kubeLoader := f.NewKubeConfigLoader()
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
 	if configLoader.Exists() {
 		generatedConfig, err = configLoader.Generated()
@@ -126,7 +125,7 @@ func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	}
 
 	// Signal that we are working on the space if there is any
-	err = f.NewSpaceResumer(kubeLoader, client, logger).ResumeSpace(true)
+	err = f.NewSpaceResumer(client, logger).ResumeSpace(true)
 	if err != nil {
 		return err
 	}

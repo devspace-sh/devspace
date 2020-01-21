@@ -176,7 +176,7 @@ func (cmd *spaceCmd) RunUseSpace(f factory.Factory, cobraCmd *cobra.Command, arg
 	}
 
 	// Signal that we are working on the space if there is any
-	err = resume.NewSpaceResumer(kubeLoader, client, log).ResumeSpace(false)
+	err = resume.NewSpaceResumer(client, log).ResumeSpace(false)
 	if err != nil {
 		return err
 	}

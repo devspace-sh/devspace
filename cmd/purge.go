@@ -99,7 +99,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	}
 
 	// Signal that we are working on the space if there is any
-	err = f.NewSpaceResumer(kubeLoader, client, cmd.log).ResumeSpace(true)
+	err = f.NewSpaceResumer(client, cmd.log).ResumeSpace(true)
 	if err != nil {
 		return err
 	}

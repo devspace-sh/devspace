@@ -34,6 +34,7 @@ type Client interface {
 	KubeClient() kubernetes.Interface
 	Namespace() string
 	RestConfig() *rest.Config
+	KubeConfigLoader() kubeconfig.Loader
 
 	PrintWarning(generatedConfig *generated.Config, noWarning, shouldWait bool, log log.Logger) error
 	CopyFromReader(pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error
@@ -64,6 +65,7 @@ type client struct {
 	Client       kubernetes.Interface
 	ClientConfig clientcmd.ClientConfig
 	restConfig   *rest.Config
+	kubeLoader   kubeconfig.Loader
 
 	currentContext string
 	namespace      string
@@ -147,6 +149,7 @@ func NewClientFromContext(context, namespace string, switchContext bool, kubeLoa
 		Client:       kubeClient,
 		ClientConfig: clientConfig,
 		restConfig:   restConfig,
+		kubeLoader:   kubeLoader,
 
 		namespace:      activeNamespace,
 		currentContext: activeContext,
@@ -272,4 +275,8 @@ func (client *client) Namespace() string {
 
 func (client *client) RestConfig() *rest.Config {
 	return client.restConfig
+}
+
+func (client *client) KubeConfigLoader() kubeconfig.Loader {
+	return client.kubeLoader
 }

@@ -62,7 +62,6 @@ devspace enter bash -l release=test
 func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	logger := f.GetLog()
-	kubeLoader := f.NewKubeConfigLoader()
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
@@ -96,7 +95,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	}
 
 	// Signal that we are working on the space if there is any
-	err = f.NewSpaceResumer(kubeLoader, client, logger).ResumeSpace(true)
+	err = f.NewSpaceResumer(client, logger).ResumeSpace(true)
 	if err != nil {
 		return err
 	}
