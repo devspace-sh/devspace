@@ -157,7 +157,7 @@ func (cmd *DevCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string
 	}
 
 	// Create kubectl client and switch context if specified
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext, kubeLoader)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}

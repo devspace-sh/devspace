@@ -117,7 +117,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, cobraCmd *cobra.Command, args []s
 	}
 
 	// Get kubernetes client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext, kubeLoader)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return err
 	}

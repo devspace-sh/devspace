@@ -73,7 +73,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, cobraCmd *cobra.Command, ar
 	}
 
 	// Create kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext, kubeLoader)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return err
 	}

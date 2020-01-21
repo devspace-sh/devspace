@@ -33,8 +33,8 @@ type Factory interface {
 
 	// Kubernetes Clients
 	NewKubeDefaultClient() (kubectl.Client, error)
-	NewKubeClientFromContext(context, namespace string, switchContext bool, kubeLoader kubeconfig.Loader) (kubectl.Client, error)
-	NewKubeClientBySelect(allowPrivate bool, switchContext bool, kubeLoader kubeconfig.Loader, log log.Logger) (kubectl.Client, error)
+	NewKubeClientFromContext(context, namespace string, switchContext bool) (kubectl.Client, error)
+	NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error)
 
 	// Helm
 	NewHelmClient(config *latest.Config, deployConfig *latest.DeploymentConfig, kubeClient kubectl.Client, tillerNamespace string, upgradeTiller bool, dryInit bool, log log.Logger) (types.Client, error)
@@ -146,12 +146,14 @@ func (f *DefaultFactoryImpl) NewKubeDefaultClient() (kubectl.Client, error) {
 }
 
 // NewKubeClientFromContext implements interface
-func (f *DefaultFactoryImpl) NewKubeClientFromContext(context, namespace string, switchContext bool, kubeLoader kubeconfig.Loader) (kubectl.Client, error) {
+func (f *DefaultFactoryImpl) NewKubeClientFromContext(context, namespace string, switchContext bool) (kubectl.Client, error) {
+	kubeLoader := f.NewKubeConfigLoader()
 	return kubectl.NewClientFromContext(context, namespace, switchContext, kubeLoader)
 }
 
 // NewKubeClientBySelect implements interface
-func (f *DefaultFactoryImpl) NewKubeClientBySelect(allowPrivate bool, switchContext bool, kubeLoader kubeconfig.Loader, log log.Logger) (kubectl.Client, error) {
+func (f *DefaultFactoryImpl) NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error) {
+	kubeLoader := f.NewKubeConfigLoader()
 	return kubectl.NewClientBySelect(allowPrivate, switchContext, kubeLoader, log)
 }
 

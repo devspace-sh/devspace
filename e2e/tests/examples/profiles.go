@@ -34,7 +34,7 @@ func RunProfiles(f *customFactory, logger log.Logger) error {
 	}
 
 	// Create kubectl client
-	client, err := f.NewKubeClientFromContext(deployConfig.KubeContext, deployConfig.Namespace, deployConfig.SwitchContext, f.NewKubeConfigLoader())
+	client, err := f.NewKubeClientFromContext(deployConfig.KubeContext, deployConfig.Namespace, deployConfig.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}

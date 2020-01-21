@@ -123,7 +123,7 @@ func runTest(f *customFactory, t *test) error {
 	// 4. Optional - Run the postCheck
 
 	// 1. Create kube client
-	client, err := f.NewKubeClientFromContext(t.deployConfig.KubeContext, t.deployConfig.Namespace, t.deployConfig.SwitchContext, f.NewKubeConfigLoader())
+	client, err := f.NewKubeClientFromContext(t.deployConfig.KubeContext, t.deployConfig.Namespace, t.deployConfig.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
@@ -166,7 +166,7 @@ func testPurge(f *customFactory) error {
 		return err
 	}
 
-	client, err := f.NewKubeClientFromContext("", f.Namespace, false, f.NewKubeConfigLoader())
+	client, err := f.NewKubeClientFromContext("", f.Namespace, false)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}

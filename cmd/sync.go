@@ -115,7 +115,7 @@ func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	}
 
 	// Get config with adjusted cluster config
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext, kubeLoader)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Wrap(err, "new kube client")
 	}

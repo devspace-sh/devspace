@@ -84,7 +84,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, cobraCmd *cobra.Command, args []s
 	}
 
 	// Get kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext, kubeLoader)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Wrap(err, "create kube client")
 	}

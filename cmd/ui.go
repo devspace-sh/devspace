@@ -64,7 +64,6 @@ Opens the localhost UI in the browser
 func (cmd *UICmd) RunUI(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
-	kubeLoader := f.NewKubeConfigLoader()
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
@@ -138,7 +137,7 @@ func (cmd *UICmd) RunUI(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	}
 
 	// Create kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext, kubeLoader)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}

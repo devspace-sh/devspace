@@ -115,7 +115,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Create kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext, kubeLoader)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
