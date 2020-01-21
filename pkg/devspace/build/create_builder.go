@@ -16,12 +16,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+var fakeBuilder builder.Interface
+
 // createBuilder creates a new builder
 func (c *controller) createBuilder(imageConfigName string, imageConf *latest.ImageConfig, imageTag string, options *Options, log log.Logger) (builder.Interface, error) {
 	var (
 		imageBuilder builder.Interface
 		err          error
 	)
+
+	if fakeBuilder != nil {
+		return fakeBuilder, nil
+	}
 
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
 		imageBuilder = custom.NewBuilder(imageConfigName, imageConf, imageTag)

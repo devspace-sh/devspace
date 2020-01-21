@@ -1,242 +1,149 @@
 package build
 
-import ()
+import (
+	"testing"
 
-/*func TestBuild(t *testing.T) {
-	t.Skip("Not yet testable because docker client must be faked")
+	fakebuilder "github.com/devspace-cloud/devspace/pkg/devspace/build/builder/testing"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	fakehook "github.com/devspace-cloud/devspace/pkg/devspace/hook/testing"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"gopkg.in/yaml.v2"
+	"gotest.tools/assert"
+)
 
-	//Create tempDir and go into it
-	dir, err := ioutil.TempDir("", "testDeploy")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
+type buildTestCase struct {
+	name string
 
-	wdBackup, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Error getting current working directory: %v", err)
-	}
-	err = os.Chdir(dir)
-	if err != nil {
-		t.Fatalf("Error changing working directory: %v", err)
-	}
+	options Options
+	cache   *generated.CacheConfig
+	images  map[string]*latest.ImageConfig
 
-	// Delete temp folder after test
-	defer func() {
-		err = os.Chdir(wdBackup)
-		if err != nil {
-			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
-		}
-	}()
+	expectedErr         string
+	expectedBuiltImages map[string]string
+	expectedCache       *generated.CacheConfig
+}
 
-	err = makeTestProject(dir)
-	if err != nil {
-		t.Fatalf("Error creating test project: %v", err)
-	}
-	
-	// Create fake devspace config
-	testConfig := &latest.Config{
-		Deployments: []*latest.DeploymentConfig{
-			&latest.DeploymentConfig{
-				Name:      "test-deployment",
-				Namespace: loader.TestNamespace,
-				Helm: &latest.HelmConfig{
-					Chart: &latest.ChartConfig{
-						Name: "stable/nginx",
+func TestBuild(t *testing.T) {
+	testCases := []buildTestCase{
+		buildTestCase{
+			name: "No images to build",
+		},
+		buildTestCase{
+			name: "Skip build",
+			images: map[string]*latest.ImageConfig{
+				"myImage": &latest.ImageConfig{
+					Build: &latest.BuildConfig{
+						Custom: &latest.CustomConfig{},
+					},
+				},
+			},
+		},
+		buildTestCase{
+			name: "One sequencial build",
+			images: map[string]*latest.ImageConfig{
+				"myImage": &latest.ImageConfig{
+					Image: "myImage",
+				},
+			},
+			options: Options{
+				ForceRebuild: true,
+			},
+			cache: &generated.CacheConfig{
+				Images: map[string]*generated.ImageCache{},
+			},
+			expectedBuiltImages: map[string]string{
+				"myImage": "",
+			},
+			expectedCache: &generated.CacheConfig{
+				Images: map[string]*generated.ImageCache{
+					"myImage": &generated.ImageCache{
+						ImageName: "myImage",
+					},
+				},
+			},
+		},
+		buildTestCase{
+			name: "TWo non-sequencial builds",
+			images: map[string]*latest.ImageConfig{
+				"image1": &latest.ImageConfig{
+					Image: "firstimage",
+				},
+				"image2": &latest.ImageConfig{
+					Image: "secoundimage",
+				},
+			},
+			options: Options{
+				ForceRebuild: true,
+			},
+			cache: &generated.CacheConfig{
+				Images: map[string]*generated.ImageCache{},
+			},
+			expectedBuiltImages: map[string]string{
+				"firstimage":   "",
+				"secoundimage": "",
+			},
+			expectedCache: &generated.CacheConfig{
+				Images: map[string]*generated.ImageCache{
+					"image1": &generated.ImageCache{
+						ImageName: "firstimage",
+					},
+					"image2": &generated.ImageCache{
+						ImageName: "secoundimage",
 					},
 				},
 			},
 		},
 	}
-	loader.SetFakeConfig(testConfig)
 
-	cache := &generated.CacheConfig{
-		Images: make(map[string]*generated.ImageCache) ,
-	}
-	kubeClient := fake.NewSimpleClientset()
+	fakeBuilder = &fakebuilder.Builder{}
 
-	//Test without images
-	go makeAllPodsRunning(t, kubeClient, loader.TestNamespace)
-	images, err := All(testConfig, cache, &kubectl.Client{Client: kubeClient}, true, true, true, true, true, log.GetInstance())
-	if err != nil {
-		t.Fatalf("Error building all 0 images: %v", err)
-	}
-	assert.Equal(t, 0, len(images), "Images returned without any image declared in config")
-
-	//Test with one image
-	testConfig.Images = map[string]*latest.ImageConfig{}
-	testConfig.Images["firstimg"] = &latest.ImageConfig{
-		Image: "firstimg",
-	}
-	images, err = All(testConfig, cache, &kubectl.Client{Client: kubeClient}, true, true, true, false, true, log.GetInstance())
-	if err != nil {
-		t.Fatalf("Error building all 1 images: %v", err)
-	}
-	assert.Equal(t, false, testConfig.Images["firstimg"] == nil, "Images returned without any image declared in config")
-}
-
-func makeAllPodsRunning(t *testing.T, kubeClient *fake.Clientset, namespace string) {
-	time.Sleep(time.Second)
-
-	podList, err := kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		t.Fatalf("Error listing pods of fake kubeClient: %v", err)
-	}
-	for _, pod := range podList.Items {
-		pod.Status.InitContainerStatuses = []v1.ContainerStatus{
-		  v1.ContainerStatus{
-				State: v1.ContainerState{
-					Running: &v1.ContainerStateRunning{},
-				},
+	for _, testCase := range testCases {
+		controller := &controller{
+			config: &latest.Config{
+				Images: testCase.images,
 			},
+			cache:        testCase.cache,
+			hookExecuter: &fakehook.FakeHook{},
 		}
-		kubeClient.CoreV1().Pods(namespace).Update(&pod)
-	}
 
+		builtImages, err := controller.Build(&testCase.options, log.Discard)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error updating all in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from UpdateALl in testCase %s", testCase.name)
+		}
+
+		builtImagesKeys := getKeys(builtImages)
+		expectationKeys := getKeys(testCase.expectedBuiltImages)
+		assert.Equal(t, string(builtImagesKeys), string(expectationKeys), "Unexpected builtImages in testCase %s", testCase.name)
+
+		isCacheEqual(t, testCase.cache, testCase.expectedCache, testCase.name)
+	}
 }
 
-func makeTestProject(dir string) error {
-	file, err := os.Create("package.json")
-	if err != nil {
-		return err
+func getKeys(targetMap map[string]string) string {
+	result := ""
+	for key := range targetMap {
+		result += key + ", "
 	}
-	_, err = file.Write([]byte(`{
-  "name": "node-js-sample",
-  "version": "0.0.1",
-  "description": "A sample Node.js app using Express 4",
-  "main": "index.js",
-  "scripts": {
-    "start": "nodemon index.js"
-  },
-  "dependencies": {
-    "express": "^4.13.3",
-    "nodemon": "^1.18.4",
-    "request": "^2.88.0"
-  },
-  "keywords": [
-    "node",
-    "express"
-  ],
-  "license": "MIT"
-}`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
+	return result
+}
+
+func isCacheEqual(t *testing.T, cache1 *generated.CacheConfig, cache2 *generated.CacheConfig, testCase string) {
+	if cache1 != nil && cache2 != nil && cache1.Images != nil && cache2.Images != nil {
+		for key, imageConfig := range cache2.Images {
+			if cache1ImageConfig, ok := cache1.Images[key]; ok {
+				imageConfig.Tag = cache1ImageConfig.Tag
+			}
+		}
 	}
 
-	file, err = os.Create("index.js")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`var express = require('express');
-var request = require('request');
-var app = express();
+	cache1AsYaml, err := yaml.Marshal(cache1)
+	assert.NilError(t, err, "Error marshaling cache in testCase %s", testCase)
+	cache2AsYaml, err := yaml.Marshal(cache2)
+	assert.NilError(t, err, "Error marshaling expected cache in testCase %s", testCase)
+	assert.Equal(t, string(cache1AsYaml), string(cache2AsYaml), "Unexpected cache in testCase %s", testCase)
 
-app.get('/', async (req, res) => {
-  var body = await new Promise((resolve, reject) => {
-    request('http://php/index.php', (err, res, body) => {
-      if (err) { 
-        reject(err);
-        return;
-      }
-
-      resolve(body);
-    });
-  });
-
-  res.send(body);
-});
-
-app.listen(3000, function () {
-  console.log('Example app listening on port 3000!');
-});`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
-	}
-
-	file, err = os.Create("Dockerfile")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`FROM node:8.11.4
-
-RUN mkdir /app
-WORKDIR /app
-
-COPY package.json .
-RUN npm install
-
-COPY . .
-
-CMD ["npm", "start"]`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
-	}
-
-	file, err = os.Create(".dockerignore")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`Dockerfile
-.devspace/
-chart/
-node_modules/`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
-	}
-
-	fileInfo, err := os.Lstat(".")
-	if err != nil {
-		return err
-	}
-	err = os.Mkdir("kube", fileInfo.Mode())
-	if err != nil {
-		return err
-	}
-
-	file, err = os.Create("kube/deployment.yaml")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-  name: devspace
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        release: devspace-node
-    spec:
-      containers:
-      - name: node
-        image: node`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}*/
+}
