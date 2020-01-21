@@ -47,7 +47,6 @@ in the devspace.yaml
 func (cmd *dependenciesCmd) RunDependencies(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	kubeLoader := f.NewKubeConfigLoader()
 	configOptions := cmd.ToConfigOptions()
 	configLoader := f.NewConfigLoader(configOptions, log)
 	configExists, err := configLoader.SetDevSpaceRoot()
@@ -71,7 +70,7 @@ func (cmd *dependenciesCmd) RunDependencies(f factory.Factory, cobraCmd *cobra.C
 	}
 
 	// Create Dependencymanager
-	manager, err := dependency.NewManager(config, generatedConfig, kubeLoader, nil, cmd.AllowCyclicDependencies, configOptions, log)
+	manager, err := dependency.NewManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log)
 	if err != nil {
 		return errors.Wrap(err, "new manager")
 	}

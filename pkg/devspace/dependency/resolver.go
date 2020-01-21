@@ -302,7 +302,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 		kubeClient: client,
 
-		buildController:  build.NewController(dConfig, dGeneratedConfig.GetActive(), r.kubeLoader, client),
+		buildController:  build.NewController(dConfig, dGeneratedConfig.GetActive(), client),
 		deployController: deploy.NewController(dConfig, dGeneratedConfig.GetActive(), client),
 		generatedSaver:   gLoader,
 	}, nil

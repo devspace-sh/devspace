@@ -87,8 +87,7 @@ func (f *DefaultFactoryImpl) NewCloudConfigLoader() config.Loader {
 
 // NewBuildController implements interface
 func (f *DefaultFactoryImpl) NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller {
-	kubeLoader := f.NewKubeConfigLoader()
-	return build.NewController(config, cache, kubeLoader, client)
+	return build.NewController(config, cache, client)
 }
 
 // NewDeployController implements interface
@@ -113,8 +112,7 @@ func (f *DefaultFactoryImpl) NewHookExecutor(config *latest.Config) hook.Execute
 
 // NewDependencyManager implements interface
 func (f *DefaultFactoryImpl) NewDependencyManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (dependency.Manager, error) {
-	kubeLoader := f.NewKubeConfigLoader()
-	return dependency.NewManager(config, cache, kubeLoader, client, allowCyclic, configOptions, logger)
+	return dependency.NewManager(config, cache, client, allowCyclic, configOptions, logger)
 }
 
 // NewPullSecretClient implements interface
