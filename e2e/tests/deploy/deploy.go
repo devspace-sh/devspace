@@ -11,7 +11,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,8 +31,8 @@ type customFactory struct {
 }
 
 // NewBuildController implements interface
-func (c *customFactory) NewBuildController(config *latest.Config, cache *generated.CacheConfig, kubeLoader kubeconfig.Loader, client kubectl.Client) build.Controller {
-	c.ctrl = build.NewController(config, cache, kubeLoader, client)
+func (c *customFactory) NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller {
+	c.ctrl = build.NewController(config, cache, client)
 	return c
 }
 func (c *customFactory) Build(options *build.Options, log log.Logger) (map[string]string, error) {

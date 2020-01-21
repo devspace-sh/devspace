@@ -5,10 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
@@ -98,7 +97,7 @@ func TestUpdateAll(t *testing.T) {
 			},
 		}
 
-		manager, err := NewManager(testConfig, generatedConfig, kubeconfig.NewLoader(), nil, testCase.allowCyclicParam, &loader.ConfigOptions{}, log.Discard)
+		manager, err := NewManager(testConfig, generatedConfig, nil, testCase.allowCyclicParam, &loader.ConfigOptions{}, log.Discard)
 		assert.NilError(t, err, "Error creating manager in testCase %s", testCase.name)
 
 		err = manager.UpdateAll()
