@@ -1,14 +1,22 @@
 package build
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/custom"
+	dockerbuilder "github.com/devspace-cloud/devspace/pkg/devspace/build/builder/docker"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/kaniko"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	dockertypes "github.com/docker/docker/api/types"
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 type createBuilderTestCase struct {
@@ -18,12 +26,35 @@ type createBuilderTestCase struct {
 	imageConf       *latest.ImageConfig
 	imageTag        string
 	options         Options
+	pingErr         error
 
 	expectedErr     string
 	expectedBuilder interface{}
 }
 
 func TestCreateBuilder(t *testing.T) {
+	fakeBuilder = nil
+	fakeDocker := &docker.FakeClient{
+		AuthConfig: &dockertypes.AuthConfig{},
+	}
+	docker.SetFakeClient(fakeDocker)
+	fakeClient := &fakekube.Client{
+		Client: fake.NewSimpleClientset(),
+	}
+
+	kanikoBuilder, _ := kaniko.NewBuilder(nil, fakeDocker, fakeClient, "imageConfigName2", &latest.ImageConfig{
+		Image: "imagename2",
+		Build: &latest.BuildConfig{
+			Kaniko: &latest.KanikoConfig{},
+		},
+	}, "imagetag2", false, log.Discard)
+	dockerBuilder, _ := dockerbuilder.NewBuilder(nil, fakeDocker, fakeClient, "imageConfigName2", &latest.ImageConfig{
+		Image: "imagename2",
+		Build: &latest.BuildConfig{
+			Kaniko: &latest.KanikoConfig{},
+		},
+	}, "imagetag2", true, false)
+
 	testCases := []createBuilderTestCase{
 		createBuilderTestCase{
 			name:            "Create custom builder",
@@ -40,19 +71,59 @@ func TestCreateBuilder(t *testing.T) {
 				},
 			}, "imageTag"),
 		},
+		createBuilderTestCase{
+			name:            "Create kaniko builder",
+			imageConfigName: "imageConfigName2",
+			imageConf: &latest.ImageConfig{
+				Image: "imagename2",
+				Build: &latest.BuildConfig{
+					Kaniko: &latest.KanikoConfig{},
+				},
+			},
+			imageTag:        "imagetag2",
+			expectedBuilder: kanikoBuilder,
+		},
+		createBuilderTestCase{
+			name:            "Create docker builder",
+			imageConfigName: "imageConfigName3",
+			imageConf: &latest.ImageConfig{
+				Image: "imagename3",
+				Build: &latest.BuildConfig{
+					Docker: &latest.DockerConfig{
+						PreferMinikube: ptr.Bool(false),
+					},
+				},
+			},
+			imageTag:        "imagetag3",
+			expectedBuilder: dockerBuilder,
+		},
+		createBuilderTestCase{
+			name:            "Fallback from docker to kaniko",
+			imageConfigName: "imageConfigName2",
+			imageConf: &latest.ImageConfig{
+				Image: "imagename2",
+				Build: &latest.BuildConfig{
+					Docker: &latest.DockerConfig{},
+				},
+			},
+			pingErr:         errors.New(""),
+			imageTag:        "imagetag2",
+			expectedBuilder: kanikoBuilder,
+		},
 	}
 
-	fakeBuilder = nil
-
 	for _, testCase := range testCases {
-		controller := &controller{}
+		controller := &controller{
+			client: fakeClient,
+		}
+		fakeDocker.PingErr = testCase.pingErr
 
 		builder, err := controller.createBuilder(testCase.imageConfigName, testCase.imageConf, testCase.imageTag, &testCase.options, log.Discard)
 
 		if testCase.expectedErr == "" {
-			assert.NilError(t, err, "Error updating all in testCase %s", testCase.name)
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {
-			assert.Error(t, err, testCase.expectedErr, "Wrong or no error from UpdateALl in testCase %s", testCase.name)
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
 
 		builderAsYaml, err := yaml.Marshal(builder)

@@ -24,11 +24,12 @@ func SetFakeClient(fake Client) {
 // FakeClient is a prototype for a fake docker cient for testing purposes
 type FakeClient struct {
 	AuthConfig *dockertypes.AuthConfig
+	PingErr    error
 }
 
 // Ping is a fake implementation
 func (client *FakeClient) Ping(ctx context.Context) (dockertypes.Ping, error) {
-	return dockertypes.Ping{}, nil
+	return dockertypes.Ping{}, client.PingErr
 }
 
 // NegotiateAPIVersion is a fake implementation
