@@ -60,8 +60,15 @@ type resolver struct {
 }
 
 // NewResolver creates a new resolver for resolving dependencies
-func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, kubeLoader kubeconfig.Loader, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, log log.Logger) (ResolverInterface, error) {
+func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, log log.Logger) (ResolverInterface, error) {
 	var id string
+
+	var kubeLoader kubeconfig.Loader
+	if client == nil {
+		kubeLoader = kubeconfig.NewLoader()
+	} else {
+		kubeLoader = client.KubeConfigLoader()
+	}
 
 	basePath, err := filepath.Abs(".")
 	if err != nil {

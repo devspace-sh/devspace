@@ -435,7 +435,9 @@ func GetAnalytics() (Analytics, error) {
 	var err error
 
 	loadAnalyticsOnce.Do(func() {
-		analyticsInstance = &analyticsConfig{}
+		analyticsInstance = &analyticsConfig{
+			kubeLoader: kubeconfig.NewLoader(),
+		}
 
 		analyticsConfigFilePath, err := analyticsInstance.getAnalyticsConfigFilePath()
 		if err != nil {
@@ -464,8 +466,6 @@ func GetAnalytics() (Analytics, error) {
 				return
 			}
 		}
-
-		analyticsInstance.kubeLoader = kubeconfig.NewLoader()
 
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt)

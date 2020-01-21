@@ -46,8 +46,8 @@ devspace use namespace my-namespace
 func (cmd *namespaceCmd) RunUseNamespace(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Get default context
 	log := f.GetLog()
-	kubeLoader := f.NewKubeConfigLoader()
 	client, err := f.NewKubeDefaultClient()
+	kubeLoader := client.KubeConfigLoader()
 	if err != nil {
 		return err
 	}
