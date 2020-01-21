@@ -39,9 +39,11 @@ var SyncBinaryRegEx = regexp.MustCompile(`href="(\/devspace-cloud\/devspace\/rel
 const SyncHelperContainerPath = "/tmp/sync"
 
 // StartSyncFromCmd starts a new sync from command
-func (serviceClient *client) StartSyncFromCmd(syncConfig *latest.SyncConfig, verbose bool) error {
+func (serviceClient *client) StartSyncFromCmd(syncConfig *latest.SyncConfig, interrupt chan error, verbose bool) error {
 	syncDone := make(chan bool)
 	options := &startClientOptions{
+		Interrupt: interrupt,
+
 		SyncConfig:        syncConfig,
 		SelectorParameter: serviceClient.selectorParameter,
 
@@ -70,7 +72,7 @@ func (serviceClient *client) StartSyncFromCmd(syncConfig *latest.SyncConfig, ver
 }
 
 // StartSync starts the syncing functionality
-func (serviceClient *client) StartSync(verboseSync bool) error {
+func (serviceClient *client) StartSync(interrupt chan error, verboseSync bool) error {
 	if serviceClient.config.Dev == nil {
 		return nil
 	}
@@ -78,6 +80,8 @@ func (serviceClient *client) StartSync(verboseSync bool) error {
 	// Start sync client
 	for _, syncConfig := range serviceClient.config.Dev.Sync {
 		err := serviceClient.startSyncClient(&startClientOptions{
+			Interrupt: interrupt,
+
 			SyncConfig: syncConfig,
 			SelectorParameter: &targetselector.SelectorParameter{
 				ConfigParameter: targetselector.ConfigParameter{
@@ -104,6 +108,8 @@ func (serviceClient *client) StartSync(verboseSync bool) error {
 type startClientOptions struct {
 	SyncConfig        *latest.SyncConfig
 	SelectorParameter *targetselector.SelectorParameter
+
+	Interrupt chan error
 
 	RestartOnError bool
 	RestartLog     logpkg.Logger
@@ -140,8 +146,10 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 		return errors.Errorf("Error selecting pod: %v", err)
 	}
 
+	syncDone := make(chan bool)
+
 	log.StartWait("Starting sync...")
-	syncClient, err := serviceClient.startSync(pod, container.Name, syncConfig, options.Verbose, options.SyncDone, options.SyncLog)
+	syncClient, err := serviceClient.startSync(pod, container.Name, syncConfig, options.Verbose, syncDone, options.SyncLog)
 	log.StopWait()
 	if err != nil {
 		return errors.Wrap(err, "start sync")
@@ -175,18 +183,24 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 					serviceClient.log.Fatalf("Fatal error in sync: %v", err)
 				}
 
+				options.RestartLog.Info("Restarting sync...")
 				for {
 					time.Sleep(time.Second * 5)
 					err := serviceClient.startSyncClient(options, options.RestartLog)
 					if err != nil {
 						serviceClient.log.Errorf("Error restarting sync: %v", err)
-						serviceClient.log.Errorf("Will try again in 5 seconds", err)
+						serviceClient.log.Errorf("Will try again in 5 seconds")
 						continue
 					}
 
 					break
 				}
-			case <-syncClient.Options.SyncDone:
+			case <-options.Interrupt:
+				syncClient.Stop(nil)
+			case <-syncDone:
+				if options.SyncDone != nil {
+					close(options.SyncDone)
+				}
 			}
 		}(syncClient, options)
 	}
@@ -223,11 +237,23 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		downloadOnInitialSync = *syncConfig.DownloadOnInitialSync
 	}
 
+	upstreamDisabled := false
+	if syncConfig.DisableUpload != nil {
+		upstreamDisabled = *syncConfig.DisableUpload
+	}
+
+	downstreamDisabled := false
+	if syncConfig.DisableDownload != nil {
+		downstreamDisabled = *syncConfig.DisableDownload
+	}
+
 	options := &sync.Options{
 		Verbose:               verbose,
 		SyncError:             make(chan error),
 		SyncDone:              syncDone,
 		DownloadOnInitialSync: downloadOnInitialSync,
+		UpstreamDisabled:      upstreamDisabled,
+		DownstreamDisabled:    downstreamDisabled,
 		Log:                   customLog,
 	}
 

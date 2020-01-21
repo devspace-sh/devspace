@@ -43,6 +43,8 @@ The following config options are needed to determine the pod to which the traffi
 
 > If you specify multiple these config options, they will be jointly used to select the pod / container (think logical `AND / &&`).
 
+> If DevSpace is unable to establish a port-forwarding connection to the selected pod or loses it after starting the port-forwarding, DevSpace will try to restart port-forwarding several times.
+
 
 ### `dev.ports[*].imageName`
 The `imageName` option expects a string with the name of an image from the `images` section of the `devspace.yaml`. Using `imageName` tells DevSpace to select the container based on the referenced image that was last built using DevSpace.

@@ -73,10 +73,6 @@ DevSpace iterates over every item in the `deployments` array defined in the `dev
 
 > Deployments with `kubectl` require `kubectl` to be installed.
 
-> For `helm` and `component` deployments, DevSpace will automatically launch Tiller as a server-side component and setup RBAC for Tiller, so that it can only access the namespace it is deployed into.   
->   
-> *We are waiting for Helm v3 to become stable, so we will not need to start a Tiller pod anymore to deploy Helm charts.*
-
 
 ### 5. Start Port-Forwarding
 DevSpace iterates over every item in the `dev.ports` array defined in the `devspace.yaml` and starts port-forwarding for each of the entries and the port mappings they define in the `forward` section.

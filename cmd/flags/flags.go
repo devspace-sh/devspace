@@ -1,8 +1,8 @@
 package flags
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/mgutz/ansi"
@@ -19,6 +19,7 @@ type GlobalFlags struct {
 	Namespace   string
 	KubeContext string
 	Profile     string
+	ConfigPath  string
 	Vars        []string
 
 	SwitchContext bool
@@ -52,6 +53,7 @@ func (gf *GlobalFlags) UseLastContext(generatedConfig *generated.Config, log log
 func (gf *GlobalFlags) ToConfigOptions() *loader.ConfigOptions {
 	return &loader.ConfigOptions{
 		Profile:     gf.Profile,
+		ConfigPath:  gf.ConfigPath,
 		KubeContext: gf.KubeContext,
 		Vars:        gf.Vars,
 	}
@@ -67,6 +69,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.BoolVar(&globalFlags.Debug, "debug", false, "Prints the stack trace if an error occurs")
 	flags.BoolVar(&globalFlags.Silent, "silent", false, "Run in silent mode and prevents any devspace log output except panics & fatals")
 
+	flags.StringVar(&globalFlags.ConfigPath, "config", "", "The devspace config file to use")
 	flags.StringVarP(&globalFlags.Profile, "profile", "p", "", "The devspace profile to use (if there is any)")
 	flags.StringVarP(&globalFlags.Namespace, "namespace", "n", "", "The kubernetes namespace to use")
 	flags.StringVar(&globalFlags.KubeContext, "kube-context", "", "The kubernetes context to use")

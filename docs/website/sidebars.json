@@ -271,9 +271,9 @@
       },
       {
         "type": "subcategory",
-        "label": "devspace sync",
+        "label": "devspace render",
         "ids": [
-          "cli/commands/devspace_sync"
+          "cli/commands/devspace_render"
         ]
       },
       {

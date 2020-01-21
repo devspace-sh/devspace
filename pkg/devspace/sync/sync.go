@@ -44,6 +44,9 @@ type Options struct {
 	DownstreamLimit int64
 	Verbose         bool
 
+	UpstreamDisabled   bool
+	DownstreamDisabled bool
+
 	DownloadOnInitialSync bool
 
 	// These channels can be used to listen for certain sync events
@@ -200,19 +203,22 @@ func (s *Sync) mainLoop() {
 	s.log.Info("Start syncing")
 
 	// Start upstream as early as possible
-	go s.startUpstream()
+	if s.Options.UpstreamDisabled == false {
+		go s.startUpstream()
+	}
 
 	// Start downstream and do initial sync
 	go func() {
-		defer s.Stop(nil)
 		err := s.initialSync()
 		if err != nil {
 			s.Stop(errors.Wrap(err, "initial sync"))
 			return
 		}
 
-		s.log.Info("Initial sync completed")
-		s.startDownstream()
+		if s.Options.DownstreamDisabled == false {
+			s.startDownstream()
+			s.Stop(nil)
+		}
 	}()
 }
 
@@ -274,26 +280,34 @@ func (s *Sync) initialSync() error {
 	// Upstream initial sync
 	go func() {
 		// Remove remote files that are not there locally
-		if s.Options.DownloadOnInitialSync == false && len(fileMapClone) > 0 {
-			remoteChanges := make([]*FileInformation, 0, len(fileMapClone))
-			for _, element := range fileMapClone {
-				remoteChanges = append(remoteChanges, &FileInformation{
-					Name:        element.Name,
-					IsDirectory: element.IsDirectory,
-				})
+		if s.Options.UpstreamDisabled == false {
+			if s.Options.DownloadOnInitialSync == false && len(fileMapClone) > 0 {
+				remoteChanges := make([]*FileInformation, 0, len(fileMapClone))
+				for _, element := range fileMapClone {
+					remoteChanges = append(remoteChanges, &FileInformation{
+						Name:        element.Name,
+						IsDirectory: element.IsDirectory,
+					})
+				}
+
+				s.sendChangesToUpstream(remoteChanges, true)
 			}
 
-			s.sendChangesToUpstream(remoteChanges, true)
+			s.sendChangesToUpstream(localChanges, false)
 		}
 
-		s.sendChangesToUpstream(localChanges, false)
 		if s.Options.UpstreamInitialSyncDone != nil {
+			for len(s.upstream.events) > 0 || s.upstream.IsBusy() {
+				time.Sleep(time.Millisecond * 100)
+			}
+
+			s.log.Info("Upstream - Initial sync completed")
 			close(s.Options.UpstreamInitialSyncDone)
 		}
 	}()
 
 	// Download changes if enabled
-	if s.Options.DownloadOnInitialSync && len(fileMapClone) > 0 {
+	if s.Options.DownstreamDisabled == false && s.Options.DownloadOnInitialSync && len(fileMapClone) > 0 {
 		remoteChanges := make([]*remote.Change, 0, len(fileMapClone))
 		for _, element := range fileMapClone {
 			remoteChanges = append(remoteChanges, &remote.Change{
@@ -313,6 +327,7 @@ func (s *Sync) initialSync() error {
 	}
 
 	if s.Options.DownstreamInitialSyncDone != nil {
+		s.log.Info("Downstream - Initial sync completed")
 		close(s.Options.DownstreamInitialSyncDone)
 	}
 
@@ -508,7 +523,6 @@ func (s *Sync) Stop(fatalError error) {
 
 			if s.Options.SyncError != nil {
 				s.Options.SyncError <- fatalError
-				close(s.Options.SyncError)
 			}
 		}
 
