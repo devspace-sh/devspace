@@ -127,7 +127,6 @@ func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardi
 		case <-interrupt:
 			pf.Close()
 		}
-
 	}(portForwarding, interrupt)
 
 	return nil
