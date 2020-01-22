@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/e2e/tests/analyze"
+	"github.com/devspace-cloud/devspace/e2e/tests/build"
 	"github.com/devspace-cloud/devspace/e2e/tests/deploy"
 	"github.com/devspace-cloud/devspace/e2e/tests/dev"
 	"github.com/devspace-cloud/devspace/e2e/tests/enter"
@@ -44,6 +45,7 @@ type Test interface {
 
 var availableTests = map[string]Test{
 	"analyze":  analyze.RunNew,
+	"build":    build.RunNew,
 	"deploy":   deploy.RunNew,
 	"dev":      dev.RunNew,
 	"enter":    enter.RunNew,
