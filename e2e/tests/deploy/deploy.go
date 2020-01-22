@@ -173,13 +173,13 @@ func testPurge(f *customFactory) error {
 	for start := time.Now(); time.Since(start) < time.Second*30; {
 		p, _ := client.KubeClient().CoreV1().Pods(f.Namespace).List(metav1.ListOptions{})
 
-		if len(p.Items) == 0 || len(p.Items) == 1 && p.Items[0].Status.ContainerStatuses[0].Name == "tiller" {
+		if len(p.Items) == 0 || (len(p.Items) == 1 && p.Items[0].Status.ContainerStatuses[0].Name == "tiller") {
 			return nil
 		}
 	}
 
 	p, _ := client.KubeClient().CoreV1().Pods(f.Namespace).List(metav1.ListOptions{})
-	return errors.Errorf("purge command failed, expected 1 (tiller) pod but found %v", len(p.Items))
+	return errors.Errorf("purge command failed, expected 1 (tiller) pod but found %v (%s)", len(p.Items), p.Items[0].Status.ContainerStatuses[0].Name)
 }
 
 func beforeTest(f *customFactory, logger log.Logger, testDir string) error {

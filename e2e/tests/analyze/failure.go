@@ -32,6 +32,10 @@ func runFailure(f *utils.BaseCustomFactory, logger log.Logger) error {
 		return errors.Errorf("sub test 'failure' of 'analyze' test failed: %s %v", f.GetLogContents(), err)
 	}
 
+	verboseHistory := f.Verbose
+
+	f.Verbose = false
+
 	err = ac.RunAnalyze(f, nil, nil)
 	if err != nil {
 		return errors.Errorf("err should be nil: %v", err)
@@ -46,6 +50,8 @@ func runFailure(f *utils.BaseCustomFactory, logger log.Logger) error {
 			output = append(output, eo)
 		}
 	}
+
+	f.Verbose = verboseHistory
 
 	if len(output) != len(expectedOutput) {
 		return errors.Errorf("expectedOutput '%+v' is different than output '%+v'", expectedOutput, output)

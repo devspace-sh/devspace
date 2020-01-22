@@ -1,4 +1,4 @@
-package sync
+package run
 
 import (
 	"time"
@@ -66,13 +66,11 @@ func (r *Runner) SubTests() []string {
 }
 
 var availableSubTests = map[string]func(factory *customFactory, logger log.Logger) error{
-	"default":       runDefault,
-	"download-only": runDownloadOnly,
-	"upload-only":   runUploadOnly,
+	"default": runDefault,
 }
 
 func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error {
-	logger.Info("Run 'sync' test")
+	logger.Info("Run 'run' test")
 
 	// Populates the tests to run with all the available sub tests if no sub tests are specified
 	if len(subTests) == 0 {
@@ -83,10 +81,9 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 	f := &customFactory{
 		BaseCustomFactory: &utils.BaseCustomFactory{
-			Namespace: ns,
-			Pwd:       pwd,
-			Verbose:   verbose,
-			Timeout:   timeout,
+			Pwd:     pwd,
+			Verbose: verbose,
+			Timeout: timeout,
 		},
 	}
 
@@ -97,18 +94,18 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 
 		go func() {
 			err := func() error {
-				f.Namespace = utils.GenerateNamespaceName("test-sync-" + subTestName)
+				f.Namespace = utils.GenerateNamespaceName("test-run-" + subTestName)
 
 				err := beforeTest(f)
 				defer afterTest(f)
 				if err != nil {
-					return errors.Errorf("test 'sync' failed: %s %v", f.GetLogContents(), err)
+					return errors.Errorf("test 'run' failed: %s %v", f.GetLogContents(), err)
 				}
 
 				err = availableSubTests[subTestName](f, logger)
-				utils.PrintTestResult("sync", subTestName, err, logger)
+				utils.PrintTestResult("run", subTestName, err, logger)
 				if err != nil {
-					return errors.Errorf("test 'sync' failed: %s %v", f.GetLogContents(), err)
+					return errors.Errorf("test 'run' failed: %s %v", f.GetLogContents(), err)
 				}
 
 				return nil
@@ -135,9 +132,6 @@ func beforeTest(f *customFactory) error {
 			Namespace: f.Namespace,
 			NoWarn:    true,
 		},
-		ForceBuild:  false,
-		ForceDeploy: false,
-		SkipPush:    true,
 	}
 
 	dirPath, _, err := utils.CreateTempDir()
@@ -147,7 +141,7 @@ func beforeTest(f *customFactory) error {
 
 	f.DirPath = dirPath
 
-	err = utils.Copy(f.Pwd+"/tests/sync/testdata", dirPath)
+	err = utils.Copy(f.Pwd+"/tests/run/testdata", dirPath)
 	if err != nil {
 		return err
 	}

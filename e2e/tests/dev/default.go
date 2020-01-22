@@ -46,6 +46,8 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 	}
 
 	err = devConfig.Run(f, nil, nil)
+	defer close(f.interruptPortforward)
+	defer close(f.interruptSync)
 	if err != nil {
 		return errors.Errorf("Error while running dev command: %v", err)
 	}

@@ -1,6 +1,7 @@
-package sync
+package run
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 )
 
 func runDefault(f *customFactory, logger log.Logger) error {
-	logger.Info("Run sub test 'default' of 'sync' test")
+	logger.Info("Run test 'default' of 'run'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
@@ -22,34 +23,31 @@ func runDefault(f *customFactory, logger log.Logger) error {
 			NoWarn:    true,
 			Silent:    true,
 		},
-		LocalPath:             "./../foo",
-		ContainerPath:         "/home",
-		NoWatch:               true,
-		DownloadOnInitialSync: true,
+		LocalPath:     "./../foo",
+		ContainerPath: "/home",
+		NoWatch:       true,
 	}
 
-	ec := &cmd.EnterCmd{
+	rc := &cmd.RunCmd{
 		GlobalFlags: &flags.GlobalFlags{
 			Namespace: f.Namespace,
-			NoWarn:    true,
-			Silent:    true,
 		},
-		Container: "container-0",
 	}
 
 	err := sc.Run(f, nil, nil)
 	defer close(f.interrupt)
 	if err != nil {
-		return err
+		return errors.Errorf("Error while running sync command: %s", err.Error())
 	}
 
+	ns := fmt.Sprintf("--namespace=%s", f.Namespace)
 	time.Sleep(time.Second * 5)
 
 	done := utils.Capture()
 
-	err = ec.Run(f, nil, []string{"ls", "home"})
+	err = rc.RunRun(f, nil, []string{"command-test", ns})
 	if err != nil {
-		return err
+		return errors.Errorf("Error while running run command: %s", err.Error())
 	}
 
 	capturedOutput, err := done()
@@ -60,7 +58,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 	capturedOutput = strings.TrimSpace(capturedOutput)
 
 	if strings.Index(capturedOutput, "bar.go") == -1 {
-		return errors.Errorf("capturedOutput '%v' is different than output 'foo.go' for the sync cmd", capturedOutput)
+		return errors.Errorf("capturedOutput '%v' is different than output 'foo.go' for the run cmd", capturedOutput)
 	}
 
 	return nil

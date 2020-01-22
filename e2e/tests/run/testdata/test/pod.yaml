@@ -9,8 +9,6 @@ spec:
   containers:
     - name: test
       image: busybox
-      command:
-        - "sh"
       args:
-        - "-c"
-        - "mkdir /home/first && echo 123 > /home/first/abc.txt && sleep 10000000"
+        - sleep
+        - "1000000"

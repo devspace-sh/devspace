@@ -12,7 +12,14 @@ import (
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/e2e/utils"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
+	cloudconfiglatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 
+	fakecloudclient "github.com/devspace-cloud/devspace/pkg/devspace/cloud/client/testing"
+	fakecloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/testing"
+	fakecloudprovider "github.com/devspace-cloud/devspace/pkg/devspace/cloud/testing"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	fakesurvey "github.com/devspace-cloud/devspace/pkg/util/survey/testing"
@@ -41,16 +48,7 @@ type customLogger struct {
 	*fakesurvey.FakeSurvey
 }
 
-func (c *customLogger) Question(params *survey.QuestionOptions) (string, error) {
-	return c.FakeSurvey.Question(params)
-}
-
-// func (c *customFactory) NewConfigLoader(options *loader.ConfigOptions, log log.Logger) loader.ConfigLoader {
-// 	return fakeconfigloader.NewFakeConfigLoader(c.GeneratedConfig, c.Config, log)
-// }
-
-// NewDockerClient implements interface
-func (c *customFactory) NewDockerClient(log log.Logger) (docker.Client, error) {
+func (c *customFactory) NewDockerClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error) {
 	fakeDockerClient := &docker.FakeClient{
 		AuthConfig: &dockertypes.AuthConfig{
 			Username: "user",
@@ -58,6 +56,25 @@ func (c *customFactory) NewDockerClient(log log.Logger) (docker.Client, error) {
 		},
 	}
 	return fakeDockerClient, nil
+}
+
+func (c *customFactory) GetProvider(useProviderName string, log log.Logger) (cloud.Provider, error) {
+	return fakecloudprovider.NewFakeProvider(cloudconfiglatest.Provider{}, fakecloudclient.NewFakeClient()), nil
+}
+
+func (c *customFactory) NewCloudConfigLoader() config.Loader {
+	return fakecloudconfig.NewLoader(&cloudconfiglatest.Config{
+		Version: cloudconfiglatest.Version,
+		Default: "test-provider",
+	})
+}
+
+func (c *customFactory) NewConfigureManager(config *latest.Config, log log.Logger) configure.Manager {
+	return configure.NewManager(c, config, log)
+}
+
+func (c *customLogger) Question(params *survey.QuestionOptions) (string, error) {
+	return c.FakeSurvey.Question(params)
 }
 
 // GetLog implements interface
@@ -158,12 +175,6 @@ func runTest(f *customFactory, testCase initTestCase) error {
 		Context:     "",
 		Provider:    "",
 	}
-
-	// c, err := f.NewDockerClient(f.GetLog())
-	// if err != nil {
-	// 	return err
-	// }
-	// docker.SetFakeClient(c)
 
 	for _, a := range testCase.answers {
 		f.GetLog().(*customLogger).SetNextAnswer(a)

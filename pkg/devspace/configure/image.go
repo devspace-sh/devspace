@@ -8,13 +8,11 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
@@ -65,26 +63,20 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 		retImageConfig = &latest.ImageConfig{}
 	)
 
-	if m.dockerClient == nil {
-		if m.kubeLoader == nil {
-			m.kubeLoader = kubeconfig.NewLoader()
-		}
+	// Ignore error as context may not be a Space
+	kubeContext, err := m.factory.NewKubeConfigLoader().GetCurrentContext()
+	if err != nil {
+		return nil, err
+	}
 
-		// Ignore error as context may not be a Space
-		kubeContext, err := m.kubeLoader.GetCurrentContext()
-		if err != nil {
-			return nil, err
-		}
-
-		// Get docker client
-		m.dockerClient, err = docker.NewClientWithMinikube(kubeContext, true, m.log)
-		if err != nil {
-			return nil, errors.Errorf("Cannot create docker client: %v", err)
-		}
+	// Get docker client
+	dockerClient, err := m.factory.NewDockerClientWithMinikube(kubeContext, true, m.log)
+	if err != nil {
+		return nil, errors.Errorf("Cannot create docker client: %v", err)
 	}
 
 	// Check if docker is installed
-	_, err := m.dockerClient.Ping(contextpkg.Background())
+	_, err = dockerClient.Ping(contextpkg.Background())
 	if err != nil {
 		// Check if docker cli is installed
 		runErr := exec.Command("docker").Run()
@@ -94,10 +86,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 	}
 
 	// Get cloud provider if context is a space
-	if m.cloudConfigLoader == nil {
-		m.cloudConfigLoader = cloudconfig.NewLoader()
-	}
-	cloudProvider, err := m.cloudConfigLoader.GetDefaultProviderName()
+	cloudProvider, err := m.factory.NewCloudConfigLoader().GetDefaultProviderName()
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +96,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 		return nil, err
 	}
 
-	registryURL, err := m.getRegistryURL(cloudRegistryHostname, &cloudProvider)
+	registryURL, err := m.getRegistryURL(dockerClient, cloudRegistryHostname, &cloudProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +105,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 		imageName = registryURL + "/${DEVSPACE_USERNAME}/" + imageName
 	} else if registryURL == "hub.docker.com" {
 		m.log.StartWait("Checking Docker credentials")
-		dockerAuthConfig, err := m.dockerClient.GetAuthConfig("", true)
+		dockerAuthConfig, err := dockerClient.GetAuthConfig("", true)
 		m.log.StopWait()
 		if err == nil {
 			dockerUsername = dockerAuthConfig.Username
@@ -193,7 +182,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 	return retImageConfig, nil
 }
 
-func (m *manager) getRegistryURL(cloudRegistryHostname string, cloudProvider *string) (string, error) {
+func (m *manager) getRegistryURL(dockerClient docker.Client, cloudRegistryHostname string, cloudProvider *string) (string, error) {
 	var (
 		useDockerHub          = "Use " + dockerHubHostname
 		useDevSpaceRegistry   = "Use " + cloudRegistryHostname + " (free, private Docker registry)"
@@ -203,7 +192,7 @@ func (m *manager) getRegistryURL(cloudRegistryHostname string, cloudProvider *st
 		registryLoginHint     = "Please login via `docker login%s` and try again."
 	)
 
-	authConfig, err := m.dockerClient.GetAuthConfig(dockerHubHostname, true)
+	authConfig, err := dockerClient.GetAuthConfig(dockerHubHostname, true)
 	if err == nil && authConfig.Username != "" {
 		useDockerHub = useDockerHub + fmt.Sprintf(registryUsernameHint, authConfig.Username)
 		registryDefaultOption = useDockerHub
@@ -211,7 +200,7 @@ func (m *manager) getRegistryURL(cloudRegistryHostname string, cloudProvider *st
 
 	registryOptions := []string{useDockerHub, useOtherRegistry}
 	if cloudRegistryHostname != "" {
-		authConfig, err = m.dockerClient.GetAuthConfig(cloudRegistryHostname, true)
+		authConfig, err = dockerClient.GetAuthConfig(cloudRegistryHostname, true)
 		if err == nil && authConfig.Username != "" {
 			useDevSpaceRegistry = useDevSpaceRegistry + fmt.Sprintf(registryUsernameHint, authConfig.Username)
 			registryDefaultOption = useDevSpaceRegistry
@@ -249,7 +238,7 @@ func (m *manager) getRegistryURL(cloudRegistryHostname string, cloudProvider *st
 	}
 
 	m.log.StartWait("Checking registry authentication")
-	authConfig, err = m.dockerClient.Login(registryURL, "", "", true, false, false)
+	authConfig, err = dockerClient.Login(registryURL, "", "", true, false, false)
 	m.log.StopWait()
 	if err != nil || authConfig.Username == "" {
 		if registryURL == dockerHubHostname {
@@ -277,7 +266,7 @@ func (m *manager) getRegistryURL(cloudRegistryHostname string, cloudProvider *st
 					return "", err
 				}
 
-				_, err = m.dockerClient.Login(registryURL, dockerUsername, dockerPassword, false, true, true)
+				_, err = dockerClient.Login(registryURL, dockerUsername, dockerPassword, false, true, true)
 				if err != nil {
 					m.log.Warn(err)
 					continue
@@ -304,7 +293,7 @@ func (m *manager) getCloudRegistryHostname(cloudProvider *string) (string, error
 		registryURL = "dscr.io"
 	} else {
 		// Get default registry
-		provider, err := cloud.GetProvider(ptr.ReverseString(cloudProvider), m.log)
+		provider, err := m.factory.GetProvider(ptr.ReverseString(cloudProvider), m.log)
 		if err != nil {
 			return "", errors.Errorf("Error login into cloud provider: %v", err)
 		}
@@ -323,7 +312,7 @@ func (m *manager) getCloudRegistryHostname(cloudProvider *string) (string, error
 
 func (m *manager) loginDevSpaceCloud(cloudProvider string) error {
 	// Ensure user is logged in
-	_, err := cloud.GetProvider(cloudProvider, m.log)
+	_, err := m.factory.GetProvider(cloudProvider, m.log)
 	return err
 }
 

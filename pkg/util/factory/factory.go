@@ -127,7 +127,7 @@ func (f *DefaultFactoryImpl) NewConfigLoader(options *loader.ConfigOptions, log 
 
 // NewConfigureManager implements interface
 func (f *DefaultFactoryImpl) NewConfigureManager(config *latest.Config, log log.Logger) configure.Manager {
-	return configure.NewManager(config, log)
+	return configure.NewManager(f, config, log)
 }
 
 // NewDockerClient implements interface
