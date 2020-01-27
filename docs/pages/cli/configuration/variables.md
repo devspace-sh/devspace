@@ -5,7 +5,7 @@ sidebar_label: Config Variables
 
 DevSpace allows you to make your configuration dynamic by using variables in `devspace.yaml`.
 
-> DevSpace allows you to use environment variables without explicitly defining them as varaiables. You can simply reference them via `${MY_ENV_VAR}` anywhere in your `devspace.yaml`.
+> DevSpace allows you to use environment variables without explicitly defining them as variables. You can simply reference them via `${MY_ENV_VAR}` anywhere in your `devspace.yaml`.
 
 > DevSpace provides a set of [predefined variables](#predefined-variables) that are prefixed with `DEVSPACE_`.
 
