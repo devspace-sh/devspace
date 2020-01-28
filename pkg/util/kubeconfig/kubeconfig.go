@@ -1,12 +1,10 @@
 package kubeconfig
 
 import (
-	"encoding/base64"
 	"strconv"
 	"sync"
 
 	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -17,11 +15,6 @@ var loadedConfig clientcmd.ClientConfig
 
 // AuthCommand is the name of the command used to get auth token for kube-context of Spaces
 const AuthCommand = "devspace"
-
-// ConfigExists checks if a kube config exists
-func (l *loader) ConfigExists() bool {
-	return clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename() != ""
-}
 
 // NewConfig loads a new kube config
 func (l *loader) NewConfig() clientcmd.ClientConfig {
@@ -38,16 +31,6 @@ func (l *loader) LoadConfig() clientcmd.ClientConfig {
 	})
 
 	return loadedConfig
-}
-
-// LoadConfigFromContext loads the kube client config from a certain context
-func (l *loader) LoadConfigFromContext(context string) (clientcmd.ClientConfig, error) {
-	kubeConfig, err := l.LoadRawConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return clientcmd.NewNonInteractiveClientConfig(*kubeConfig, context, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()), nil
 }
 
 // LoadRawConfig loads the raw kube config with the default loading rules
@@ -70,22 +53,6 @@ func (l *loader) GetCurrentContext() (string, error) {
 	return config.CurrentContext, nil
 }
 
-// GetCurrentNamespace retrieves the current namespace
-func (l *loader) GetCurrentNamespace() (string, error) {
-	kubeConfig, err := l.LoadRawConfig()
-	if err != nil {
-		return "", err
-	}
-
-	// Change context namespace
-	activeNamespace := metav1.NamespaceDefault
-	if kubeConfig.Contexts[kubeConfig.CurrentContext] != nil && kubeConfig.Contexts[kubeConfig.CurrentContext].Namespace != "" {
-		activeNamespace = kubeConfig.Contexts[kubeConfig.CurrentContext].Namespace
-	}
-
-	return activeNamespace, nil
-}
-
 // SaveConfig writes the kube config back to the specified filename
 func (l *loader) SaveConfig(config *api.Config) error {
 	loadOnceMutext.Lock()
@@ -99,39 +66,6 @@ func (l *loader) SaveConfig(config *api.Config) error {
 	// Since the config has changed now we reset the loadOnce
 	loadOnce = sync.Once{}
 	return nil
-}
-
-// LoadNewConfig creates a new config from scratch with the given parameters and loads it
-func (l *loader) LoadNewConfig(contextName, server, caCert, token, namespace string) (clientcmd.ClientConfig, error) {
-	config := api.NewConfig()
-	decodedCaCert, err := base64.StdEncoding.DecodeString(caCert)
-	if err != nil {
-		return nil, err
-	}
-
-	cluster := api.NewCluster()
-	cluster.Server = server
-	cluster.CertificateAuthorityData = decodedCaCert
-
-	authInfo := api.NewAuthInfo()
-	authInfo.Token = token
-
-	config.Clusters[contextName] = cluster
-	config.AuthInfos[contextName] = authInfo
-
-	// Update kube context
-	context := api.NewContext()
-	context.Cluster = contextName
-	context.AuthInfo = contextName
-
-	if namespace != "" {
-		context.Namespace = namespace
-	}
-
-	config.Contexts[contextName] = context
-	config.CurrentContext = contextName
-
-	return clientcmd.NewNonInteractiveClientConfig(*config, contextName, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()), nil
 }
 
 // IsCloudSpace returns true of this context belongs to a Space created by DevSpace Cloud

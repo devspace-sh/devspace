@@ -7,18 +7,13 @@ import (
 
 // Loader loads the kubeconfig
 type Loader interface {
-	ConfigExists() bool
 	NewConfig() clientcmd.ClientConfig
 	LoadConfig() clientcmd.ClientConfig
-	LoadConfigFromContext(context string) (clientcmd.ClientConfig, error)
 	LoadRawConfig() (*api.Config, error)
 
 	GetCurrentContext() (string, error)
-	GetCurrentNamespace() (string, error)
 
 	SaveConfig(config *api.Config) error
-
-	LoadNewConfig(contextName, server, caCert, token, namespace string) (clientcmd.ClientConfig, error)
 
 	IsCloudSpace(context string) (bool, error)
 	GetSpaceID(context string) (int, string, error)

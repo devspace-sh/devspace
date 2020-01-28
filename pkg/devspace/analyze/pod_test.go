@@ -200,49 +200,4 @@ func TestPods(t *testing.T) {
 		}
 		assert.Equal(t, result, expectedString, "Unexpected problem list in testCase %s", testCase.name)
 	}
-
-	/*_, err = kubeClient.Client.CoreV1().Pods("testNS").Update(&k8sv1.Pod{
-		Status: k8sv1.PodStatus{
-			Reason: "Running",
-			ContainerStatuses: []k8sv1.ContainerStatus{
-				k8sv1.ContainerStatus{
-					RestartCount: 1,
-					LastTerminationState: k8sv1.ContainerState{
-						Terminated: &k8sv1.ContainerStateTerminated{
-							FinishedAt: metav1.Time{Time: timeNow},
-							ExitCode:   1,
-							Message:    "This container terminated. Happy debugging!",
-							Reason:     "Stopped",
-						},
-					},
-					Ready: false,
-					State: k8sv1.ContainerState{
-						Waiting: &k8sv1.ContainerStateWaiting{
-							Reason:  "Restarting",
-							Message: "Restarting after this container hit an error.",
-						},
-					},
-				},
-			},
-		},
-	})
-	assert.NilError(t, err, "Error updating pod")
-
-	expectedPodProblem := &podProblem{
-		Status:         "Restarting",
-		ContainerTotal: 1,
-		ContainerProblems: []*containerProblem{
-			&containerProblem{
-				Name:           "",
-				Waiting:        true,
-				Reason:         "Restarting",
-				Message:        "Restarting after this container hit an error.",
-				Restarts:       1,
-				LastRestart:    time.Since(timeNow),
-				LastExitReason: "Stopped",
-				LastExitCode:   1,
-				LastMessage:    "This container terminated. Happy debugging!",
-			},
-		},
-	}*/
 }
