@@ -85,7 +85,7 @@ func (cmd *PrintCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 		}
 	}
 
-	os.Stdout.Write(bsConfig)
+	log.WriteString(string(bsConfig))
 
 	return nil
 }
@@ -140,7 +140,7 @@ func printExtraInfo(configOptions *loader.ConfigOptions, configLoader loader.Con
 		return err
 	}
 
-	os.Stdout.Write([]byte("\n-------------------\n\nVars:\n"))
+	log.WriteString("\n-------------------\n\nVars:\n")
 
 	headerColumnNames := []string{"Name", "Value"}
 	values := [][]string{}
@@ -159,7 +159,7 @@ func printExtraInfo(configOptions *loader.ConfigOptions, configLoader loader.Con
 		log.Info("No vars found")
 	}
 
-	os.Stdout.Write([]byte("\n-------------------\n\nLoaded path: " + absPath + "\n\n-------------------\n\n"))
+	log.WriteString("\n-------------------\n\nLoaded path: " + absPath + "\n\n-------------------\n\n")
 
 	return nil
 }
