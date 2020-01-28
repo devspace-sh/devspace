@@ -22,6 +22,8 @@ type customFactory struct {
 	*utils.BaseCustomFactory
 	initialRun            bool
 	imageSelectorFirstRun string
+	interruptSync         chan error
+	interruptPortforward  chan error
 }
 
 type fakeServiceClient struct {
@@ -32,11 +34,26 @@ type fakeServiceClient struct {
 
 // NewFakeServiceClient implements
 func (c *customFactory) NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, selectorParameter *targetselector.SelectorParameter, log log.Logger) services.Client {
+	if c.interruptSync == nil {
+		c.interruptSync = make(chan error)
+		c.interruptPortforward = make(chan error)
+	}
+
 	return &fakeServiceClient{
 		Client:            services.NewClient(config, generated, kubeClient, selectorParameter, log),
 		factory:           c,
 		selectorParameter: selectorParameter,
 	}
+}
+
+func (s *fakeServiceClient) StartPortForwarding(interrupt chan error) error {
+	err := s.Client.StartPortForwarding(s.factory.interruptPortforward)
+	return err
+}
+
+func (s *fakeServiceClient) StartSync(interrupt chan error, verboseSync bool) error {
+	err := s.Client.StartSync(s.factory.interruptSync, verboseSync)
+	return err
 }
 
 func (serviceClient *fakeServiceClient) StartTerminal(args []string, imageSelector []string, interrupt chan error, wait bool) (int, error) {
@@ -144,6 +161,8 @@ func beforeTest(f *customFactory, logger log.Logger, testDir string) error {
 	}
 
 	f.DirPath = dirPath
+	f.interruptSync = nil
+	f.interruptPortforward = nil
 
 	// Copy the testdata into the temp dir
 	err = utils.Copy(testDir, dirPath)

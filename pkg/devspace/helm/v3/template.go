@@ -16,6 +16,10 @@ import (
 
 // Template runs `helm template`
 func (client *v3Client) Template(releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error) {
+	if releaseNamespace == "" {
+		releaseNamespace = client.kubectl.Namespace()
+	}
+
 	var (
 		settings  = cli.New()
 		chartName = strings.TrimSpace(helmConfig.Chart.Name)

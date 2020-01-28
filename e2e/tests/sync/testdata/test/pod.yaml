@@ -3,12 +3,14 @@ kind: Pod
 metadata:
   name: test
   labels:
-      app: test
+    app: test
 spec:
-  restartPolicy: Never 
+  restartPolicy: Never
   containers:
-  - name: test
-    image: busybox
-    args:
-    - sleep
-    - "1000000"
+    - name: test
+      image: busybox
+      command:
+        - "sh"
+      args:
+        - "-c"
+        - "mkdir /home/first && echo 123 > /home/first/abc.txt && sleep 10000000"

@@ -4,15 +4,19 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/e2e/tests/analyze"
+	"github.com/devspace-cloud/devspace/e2e/tests/build"
 	"github.com/devspace-cloud/devspace/e2e/tests/deploy"
 	"github.com/devspace-cloud/devspace/e2e/tests/dev"
 	"github.com/devspace-cloud/devspace/e2e/tests/enter"
 	"github.com/devspace-cloud/devspace/e2e/tests/examples"
 	"github.com/devspace-cloud/devspace/e2e/tests/initcmd"
 	"github.com/devspace-cloud/devspace/e2e/tests/logs"
+	"github.com/devspace-cloud/devspace/e2e/tests/render"
+	"github.com/devspace-cloud/devspace/e2e/tests/run"
 	"github.com/devspace-cloud/devspace/e2e/tests/space"
 	"github.com/devspace-cloud/devspace/e2e/tests/sync"
 	"github.com/devspace-cloud/devspace/e2e/utils"
@@ -40,15 +44,18 @@ type Test interface {
 }
 
 var availableTests = map[string]Test{
-	"examples": examples.RunNew,
-	"deploy":   deploy.RunNew,
-	"init":     initcmd.RunNew,
-	"enter":    enter.RunNew,
-	"sync":     sync.RunNew,
-	"logs":     logs.RunNew,
-	"space":    space.RunNew,
 	"analyze":  analyze.RunNew,
+	"build":    build.RunNew,
+	"deploy":   deploy.RunNew,
 	"dev":      dev.RunNew,
+	"enter":    enter.RunNew,
+	"examples": examples.RunNew,
+	"init":     initcmd.RunNew,
+	"logs":     logs.RunNew,
+	"render":   render.RunNew,
+	"run":      run.RunNew,
+	"space":    space.RunNew,
+	"sync":     sync.RunNew,
 }
 
 var subTests = map[string]*stringList{}
@@ -118,6 +125,8 @@ func main() {
 		fmt.Println("\t - purge-namespaces: \tDeletes namespaces that might have failed to be deleted during previous test runs")
 	}
 	if testCommand.Parsed() {
+
+		// Handles 'list' command
 		if testlist {
 			// skip-test, verbose, timeout, test
 			fmt.Println("List of available sub commands for the 'test' command:")
@@ -172,19 +181,26 @@ func main() {
 			testsToRun[testName] = availableTests[testName]
 		}
 
+		// If cmd test with --test-xxx
 		if len(testsToRun) == 0 {
 			for testName, args := range subTests {
 				if args != nil && len(*args) > 0 {
+					test = append(test, testName)
 					testsToRun[testName] = availableTests[testName]
 				}
 			}
+			// Sorts tests alphabetically
+			sort.Strings(test)
 		}
 
 		// If cmd test alone (if no --test flag), we want to run all available tests
 		if len(testsToRun) == 0 {
 			for testName := range availableTests {
+				test = append(test, testName)
 				testsToRun[testName] = availableTests[testName]
 			}
+			// Sorts tests alphabetically
+			sort.Strings(test)
 		}
 
 		// --skip-test
@@ -201,27 +217,28 @@ func main() {
 			delete(testsToRun, testName)
 		}
 
-		// --test-xxx sub command
-		for testName, testRun := range testsToRun {
+		for _, tName := range test {
+			// for testName, testRun := range testsToRun {
 			parameterSubTests := []string{}
-			if t, ok := subTests[testName]; ok && t != nil && len(*t) > 0 {
+			// --test-xxx sub command
+			if t, ok := subTests[tName]; ok && t != nil && len(*t) > 0 {
 				for _, s := range *t {
-					if !utils.StringInSlice(s, testRun.SubTests()) {
+					if !utils.StringInSlice(s, testsToRun[tName].SubTests()) {
 						// arg is not valid
-						fmt.Printf("'%v' is not a valid argument for --test-%v. Valid arguments are the following: [ ", s, testName)
-						for _, st := range testRun.SubTests() {
+						fmt.Printf("'%v' is not a valid argument for --test-%v. Valid arguments are the following: [ ", s, tName)
+						for _, st := range testsToRun[tName].SubTests() {
 							fmt.Printf("%v ", st)
 						}
 						fmt.Printf("]\n ")
 						os.Exit(1)
 					}
-
+					// deploy,init,sync,logs,examples,space
 					parameterSubTests = append(parameterSubTests, s)
 				}
 			}
 
 			// We run the actual group tests by passing the sub tests
-			err := testRun.Run(parameterSubTests, testNamespace, pwd, logger, verbose, timeout)
+			err := testsToRun[tName].Run(parameterSubTests, testNamespace, pwd, logger, verbose, timeout)
 			if err != nil {
 				logger.Error(err)
 				os.Exit(1)

@@ -1,0 +1,9 @@
+version: v1beta5
+deployments:
+  - name: testdata
+    kubectl:
+      manifests:
+        - pod.yaml
+commands:
+  - name: command-test
+    command: "devspace enter ls /home"

@@ -296,7 +296,7 @@ func (d *DeployConfig) dryRun(manifest string) ([]byte, error) {
 		args = append(args, "--namespace", d.Namespace)
 	}
 
-	args = append(args, "--dry-run", "--output", "yaml", "--validate=false")
+	args = append(args, "--dry-run", "--save-config", "--output", "yaml", "--validate=false")
 
 	if d.DeploymentConfig.Kubectl.Kustomize != nil && *d.DeploymentConfig.Kubectl.Kustomize == true {
 		args = append(args, "--kustomize")

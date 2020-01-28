@@ -6,9 +6,51 @@ import (
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/services"
+	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
+
+type customFactory struct {
+	*utils.BaseCustomFactory
+	interrupt chan error
+}
+
+type fakeServiceClient struct {
+	services.Client
+	factory           *customFactory
+	selectorParameter *targetselector.SelectorParameter
+}
+
+// NewFakeServiceClient implements
+func (c *customFactory) NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, selectorParameter *targetselector.SelectorParameter, log log.Logger) services.Client {
+	c.interrupt = make(chan error)
+
+	return &fakeServiceClient{
+		Client:            services.NewClient(config, generated, kubeClient, selectorParameter, log),
+		factory:           c,
+		selectorParameter: selectorParameter,
+	}
+}
+
+func (s *fakeServiceClient) StartPortForwarding(interrupt chan error) error {
+	err := s.Client.StartPortForwarding(s.factory.interrupt)
+	return err
+}
+
+func (s *fakeServiceClient) StartSyncFromCmd(syncConfig *latest.SyncConfig, interrupt chan error, verbose bool) error {
+	err := s.Client.StartSyncFromCmd(syncConfig, s.factory.interrupt, verbose)
+	return err
+}
+
+func (s *fakeServiceClient) StartSync(interrupt chan error, verboseSync bool) error {
+	err := s.Client.StartSync(s.factory.interrupt, verboseSync)
+	return err
+}
 
 type Runner struct{}
 
@@ -23,8 +65,10 @@ func (r *Runner) SubTests() []string {
 	return subTests
 }
 
-var availableSubTests = map[string]func(factory *utils.BaseCustomFactory, logger log.Logger) error{
-	"default": runDefault,
+var availableSubTests = map[string]func(factory *customFactory, logger log.Logger) error{
+	"default":       runDefault,
+	"download-only": runDownloadOnly,
+	"upload-only":   runUploadOnly,
 }
 
 func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error {
@@ -37,11 +81,13 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 		}
 	}
 
-	f := &utils.BaseCustomFactory{
-		Namespace: ns,
-		Pwd:       pwd,
-		Verbose:   verbose,
-		Timeout:   timeout,
+	f := &customFactory{
+		BaseCustomFactory: &utils.BaseCustomFactory{
+			Namespace: ns,
+			Pwd:       pwd,
+			Verbose:   verbose,
+			Timeout:   timeout,
+		},
 	}
 
 	// Runs the tests
@@ -83,7 +129,7 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	return nil
 }
 
-func beforeTest(f *utils.BaseCustomFactory) error {
+func beforeTest(f *customFactory) error {
 	deployConfig := &cmd.DeployCmd{
 		GlobalFlags: &flags.GlobalFlags{
 			Namespace: f.Namespace,
@@ -135,7 +181,7 @@ func beforeTest(f *utils.BaseCustomFactory) error {
 	return nil
 }
 
-func afterTest(f *utils.BaseCustomFactory) {
+func afterTest(f *customFactory) {
 	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.GetLog())
 	utils.DeleteNamespace(f.Client, f.Namespace)
 }
