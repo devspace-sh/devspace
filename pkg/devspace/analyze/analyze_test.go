@@ -7,9 +7,11 @@ import (
 
 	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/mgutz/ansi"
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
+	appsv1 "k8s.io/api/apps/v1"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -48,9 +50,11 @@ func TestAnalyze(t *testing.T) {
 type createReportTestCase struct {
 	name string
 
-	kubeNamespaces []string
-	kubePods       map[string][]k8sv1.Pod
-	kubeEvents     map[string][]k8sv1.Event
+	kubeNamespaces   []string
+	kubePods         map[string][]k8sv1.Pod
+	kubeReplicasets  map[string][]appsv1.ReplicaSet
+	kubeStatefulsets map[string][]appsv1.StatefulSet
+	kubeEvents       map[string][]k8sv1.Event
 
 	namespace string
 	noWait    bool
@@ -59,13 +63,23 @@ type createReportTestCase struct {
 	expectedReport []*ReportItem
 }
 
+/*Part of this function is untestable right now because the helper function events uses the RestClient of the KubeClient.
+The fake client returns nil. Therefore it's not possible to let events return problems.*/
 func TestCreateReport(t *testing.T) {
 	testCases := []createReportTestCase{
 		createReportTestCase{
-			name: "Nothing to report",
+			name:           "Nothing to report",
+			kubeNamespaces: []string{"ns1"},
+			kubeReplicasets: map[string][]appsv1.ReplicaSet{
+				"ns1": []appsv1.ReplicaSet{
+					appsv1.ReplicaSet{
+						Spec: appsv1.ReplicaSetSpec{},
+					},
+				},
+			},
 		},
 		createReportTestCase{
-			name:           "",
+			name:           "Error in pods",
 			kubeNamespaces: []string{"ns1"},
 			kubePods: map[string][]k8sv1.Pod{
 				"ns1": []k8sv1.Pod{
@@ -93,6 +107,38 @@ func TestCreateReport(t *testing.T) {
 				},
 			},
 		},
+		createReportTestCase{
+			name:           "Error in replicasets",
+			kubeNamespaces: []string{"ns1"},
+			kubeReplicasets: map[string][]appsv1.ReplicaSet{
+				"ns1": []appsv1.ReplicaSet{
+					appsv1.ReplicaSet{
+						Spec: appsv1.ReplicaSetSpec{
+							Replicas: ptr.Int32(4),
+						},
+						Status: appsv1.ReplicaSetStatus{
+							Replicas: int32(3),
+						},
+					},
+				},
+			},
+		},
+		createReportTestCase{
+			name:           "Error in statefulsets",
+			kubeNamespaces: []string{"ns1"},
+			kubeStatefulsets: map[string][]appsv1.StatefulSet{
+				"ns1": []appsv1.StatefulSet{
+					appsv1.StatefulSet{
+						Spec: appsv1.StatefulSetSpec{
+							Replicas: ptr.Int32(4),
+						},
+						Status: appsv1.StatefulSetStatus{
+							Replicas: int32(3),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -110,6 +156,16 @@ func TestCreateReport(t *testing.T) {
 			for _, pod := range podList {
 				pod.ObjectMeta.CreationTimestamp.Time = time.Now()
 				kubeClient.Client.CoreV1().Pods(namespace).Create(&pod)
+			}
+		}
+		for namespace, replicasetList := range testCase.kubeReplicasets {
+			for _, replicaset := range replicasetList {
+				kubeClient.Client.AppsV1().ReplicaSets(namespace).Create(&replicaset)
+			}
+		}
+		for namespace, statefulsetList := range testCase.kubeStatefulsets {
+			for _, statefulset := range statefulsetList {
+				kubeClient.Client.AppsV1().StatefulSets(namespace).Create(&statefulset)
 			}
 		}
 		for namespace, eventList := range testCase.kubeEvents {
@@ -137,22 +193,40 @@ func TestCreateReport(t *testing.T) {
 
 }
 
-/*func TestReportToString(t *testing.T) {
-	report := []*ReportItem{
-		&ReportItem{
-			Name: "testReport",
-			Problems: []string{
-				"Somethings wrong, I guess...",
+type reportToStringTestCase struct {
+	name string
+
+	report []*ReportItem
+
+	expectedString string
+}
+
+func TestReportToString(t *testing.T) {
+	testCases := []reportToStringTestCase{
+		reportToStringTestCase{
+			name:           "No items",
+			expectedString: fmt.Sprintf("\n%sNo problems found.\n%sRun `%s` if you want show pod logs\n\n", paddingLeft, paddingLeft, ansi.Color("devspace logs --pick", "white+b")),
+		},
+		reportToStringTestCase{
+			name: "testReport",
+			report: []*ReportItem{
+				&ReportItem{
+					Name: "testReport",
+					Problems: []string{
+						"Somethings wrong, I guess...",
+					},
+				},
 			},
+			expectedString: `
+` + ansi.Color(`  ================================================================================
+                         testReport (1 potential issue(s))                        
+  ================================================================================
+`, "green+b") + "Somethings wrong, I guess...\n",
 		},
 	}
 
-	expectedString := `
-` + ansi.Color(`  ================================================================================
-                         testReport (1 potential issue(s))
-  ================================================================================
-`, "green+b")
-	expectedString = expectedString + `Somethings wrong, I guess...
-`
-	assert.Equal(t, expectedString, ReportToString(report), "Report wrong translated")
-}*/
+	for _, testCase := range testCases {
+		result := ReportToString(testCase.report)
+		assert.Equal(t, result, testCase.expectedString, "Unexpected result in testCase %s", testCase.name)
+	}
+}
