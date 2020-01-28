@@ -152,7 +152,7 @@ func (e *fakeExecuter) GetCommand(path string, args []string) command.Interface 
 func (e *fakeExecuter) checkParams(path string, args []string) {
 	if e.t != nil {
 		assert.Equal(e.t, path, e.expectedPath[0], "Unexpected path in testCase %s", e.testCase)
-		assert.Equal(e.t, strings.Join(args, ","), strings.Join(e.expectedArgs[0], ","), "Unexpected args in testCase %s", e.testCase)
+		assert.Equal(e.t, strings.Join(args, ", "), strings.Join(e.expectedArgs[0], ", "), "Unexpected args in testCase %s", e.testCase)
 
 		e.expectedPath = e.expectedPath[1:]
 		e.expectedArgs = e.expectedArgs[1:]
@@ -285,7 +285,7 @@ func TestDelete(t *testing.T) {
 			cmdPath:       "myPath",
 			expectedPaths: []string{"myPath", "myPath"},
 			expectedArgs: [][]string{
-				[]string{"create", "--dry-run", "--output,yaml", "--validate=false", "--filename", "oneManifest"},
+				[]string{"create", "--dry-run", "--save-config", "--output", "yaml", "--validate=false", "--filename", "oneManifest"},
 				[]string{"delete", "--ignore-not-found=true", "-f", "-"},
 			},
 		},
@@ -365,7 +365,7 @@ func TestDeploy(t *testing.T) {
 			expectedDeployed: true,
 			expectedPaths:    []string{"myPath", "myPath"},
 			expectedArgs: [][]string{
-				[]string{"create", "--context", "myContext", "--namespace", "myNamespace", "--dry-run", "--output,yaml", "--validate=false", "--filename", "/"},
+				[]string{"create", "--context", "myContext", "--namespace", "myNamespace", "--dry-run", "--save-config", "--output", "yaml", "--validate=false", "--filename", "/"},
 				[]string{"--context", "myContext", "--namespace", "myNamespace", "apply", "--force", "-f", "-", "someFlag"},
 			},
 		},
@@ -516,7 +516,7 @@ func TestDryRun(t *testing.T) {
 			},
 			expectedErr:  "Test std err",
 			expectedPath: "path1",
-			expectedArgs: []string{"create", "--dry-run", "--output", "yaml", "--validate=false", "--filename", "manifest1"},
+			expectedArgs: []string{"create", "--dry-run", "--save-config", "--output", "yaml", "--validate=false", "--filename", "manifest1"},
 		},
 		dryRunTestCase{
 			name:                 "all args, no error",
@@ -528,7 +528,7 @@ func TestDryRun(t *testing.T) {
 			cmdOutput:            "cmdOutput",
 			expectedStreamOutput: "cmdOutput",
 			expectedPath:         "path2",
-			expectedArgs:         []string{"create", "--context", "mycontext", "--namespace", "mynamespace", "--dry-run", "--output", "yaml", "--validate=false", "--kustomize", "manifest2"},
+			expectedArgs:         []string{"create", "--context", "mycontext", "--namespace", "mynamespace", "--dry-run", "--save-config", "--output", "yaml", "--validate=false", "--kustomize", "manifest2"},
 		},
 	}
 

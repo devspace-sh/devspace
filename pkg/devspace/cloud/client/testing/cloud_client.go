@@ -27,6 +27,11 @@ type CloudClient struct {
 	Token       string
 }
 
+// NewFakeClient creates a test instance of the cloud-client interface
+func NewFakeClient() cloudclient.Client {
+	return &CloudClient{}
+}
+
 // CreatePublicCluster is a fake implementation for that function
 func (c *CloudClient) CreatePublicCluster(name, server, caCert, adminToken string) (int, error) {
 	clusterID := len(c.Clusters)
@@ -157,6 +162,7 @@ func (c *CloudClient) GetClusterUser(clusterID int) (*latest.ClusterUser, error)
 	return nil, errors.New("Cluster not found")
 }
 
+// GetServiceAccount is a fake implementation for that function
 func (c *CloudClient) GetServiceAccount(space *latest.Space, key string) (*latest.ServiceAccount, error) {
 	return &latest.ServiceAccount{}, nil
 }
@@ -312,14 +318,17 @@ func (c *CloudClient) DeployCertManager(clusterID int, key string) error {
 	return errors.New("Cluster not found")
 }
 
+// InitCore is a fake implementation for that function
 func (c *CloudClient) InitCore(clusterID int, key string, enablePodPolicy bool) error {
 	return nil
 }
 
+// UpdateUserClusterUser is a fake implementation for that function
 func (c *CloudClient) UpdateUserClusterUser(clusterUserID int, encryptedToken []byte) error {
 	return nil
 }
 
+// ResumeSpace is a fake implementation for that function
 func (c *CloudClient) ResumeSpace(spaceID int, key string, cluster *latest.Cluster) (bool, error) {
 	return true, nil
 }
