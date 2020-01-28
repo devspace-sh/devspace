@@ -95,7 +95,7 @@ func (p *provider) PrintSpaces(cluster, name string, all bool) error {
 	}
 
 	if len(values) > 0 {
-		log.PrintTable(log.GetInstance(), headerColumnNames, values)
+		log.PrintTable(p.log, headerColumnNames, values)
 	} else {
 		p.log.Info("No spaces found")
 	}
