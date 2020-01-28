@@ -152,7 +152,7 @@ func (l *configLoader) FillVariables(generatedConfig *generated.Config, prepared
 	}
 
 	// Parse cli --var's
-	cmdVars, err := parseVarsFromOptions(l.options)
+	cmdVars, err := ParseVarsFromOptions(l.options)
 	if err != nil {
 		return err
 	}
@@ -182,7 +182,7 @@ func (l *configLoader) FillVariables(generatedConfig *generated.Config, prepared
 
 	// Walk over data and fill in variables
 	err = walk.Walk(preparedConfig, varMatchFn, func(path, value string) (interface{}, error) {
-		return l.varReplaceFn(path, value, generatedConfig, cmdVars)
+		return l.VarReplaceFn(path, value, generatedConfig, cmdVars)
 	})
 	if err != nil {
 		return err
@@ -191,7 +191,7 @@ func (l *configLoader) FillVariables(generatedConfig *generated.Config, prepared
 	return nil
 }
 
-func parseVarsFromOptions(options *ConfigOptions) (map[string]string, error) {
+func ParseVarsFromOptions(options *ConfigOptions) (map[string]string, error) {
 	vars := map[string]string{}
 
 	for _, cmdVar := range options.Vars {
@@ -255,16 +255,16 @@ func (l *configLoader) askQuestions(generatedConfig *generated.Config, vars []*l
 	return nil
 }
 
-func (l *configLoader) varReplaceFn(path, value string, generatedConfig *generated.Config, cmdVars map[string]string) (interface{}, error) {
+func (l *configLoader) VarReplaceFn(path, value string, generatedConfig *generated.Config, cmdVars map[string]string) (interface{}, error) {
 	// Save old value
 	if l.options.LoadedVars != nil {
 		l.options.LoadedVars[path] = value
 	}
 
-	return varspkg.ParseString(value, func(v string) (string, error) { return l.resolveVar(v, generatedConfig, cmdVars) })
+	return varspkg.ParseString(value, func(v string) (string, error) { return l.ResolveVar(v, generatedConfig, cmdVars) })
 }
 
-func (l *configLoader) resolveVar(varName string, generatedConfig *generated.Config, cmdVars map[string]string) (string, error) {
+func (l *configLoader) ResolveVar(varName string, generatedConfig *generated.Config, cmdVars map[string]string) (string, error) {
 	// Is cli variable?
 	if val, ok := cmdVars[varName]; ok {
 		return val, nil
