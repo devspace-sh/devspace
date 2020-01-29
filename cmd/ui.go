@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/server"
@@ -148,12 +149,40 @@ func (cmd *UICmd) RunUI(f factory.Factory, cobraCmd *cobra.Command, args []strin
 		return err
 	}
 
+	// Load config
+	_, err = configLoader.Load()
+	if err != nil {
+		return err
+	}
+
+	configOptions := cmd.ToConfigOptions()
+
+	path := constants.DefaultConfigPath
+	if configOptions.ConfigPath != "" {
+		path = configOptions.ConfigPath
+	}
+
+	values := [][]string{}
+
+	err = fillCurrentVars(configOptions, configLoader, path, &values, cmd.log)
+	if err != nil {
+		return err
+	}
+
+	generatedConfig.Vars = map[string]string{}
+
+	// fills the right vars into the generated config
+	for _, v := range values {
+		generatedConfig.Vars[v[0]] = v[1]
+	}
+
 	if configExists {
 		// Deprecated: Fill DEVSPACE_DOMAIN vars
 		err = fillDevSpaceDomainVars(client, generatedConfig)
 		if err != nil {
 			return err
 		}
+		// fmt.Printf("generatedConfig after: %#v\n", generatedConfig)
 
 		// Add current kube context to context
 		config, err = configLoader.Load()

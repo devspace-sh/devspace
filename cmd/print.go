@@ -101,54 +101,12 @@ func printExtraInfo(configOptions *loader.ConfigOptions, configLoader loader.Con
 	}
 	absPath := filepath.Join(pwd, path)
 
-	rawMap, err := configLoader.LoadRaw(path)
-
-	// Get profile
-	profile, err := versions.ParseProfile(rawMap, configOptions.Profile)
-	if err != nil {
-		return err
-	}
-
-	// Now delete not needed parts from config
-	delete(rawMap, "vars")
-	delete(rawMap, "profiles")
-	delete(rawMap, "commands")
-
-	// Apply profile
-	if profile != nil {
-		// Apply replace
-		err = loader.ApplyReplace(rawMap, profile)
-		if err != nil {
-			return err
-		}
-
-		// Apply patches
-		rawMap, err = loader.ApplyPatches(rawMap, profile)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Parse cli --var's
-	cmdVars, err := loader.ParseVarsFromOptions(configOptions)
-	if err != nil {
-		return err
-	}
-
-	generatedConf, err := configLoader.Generated()
-	if err != nil {
-		return err
-	}
-
 	log.WriteString("\n-------------------\n\nVars:\n")
 
 	headerColumnNames := []string{"Name", "Value"}
 	values := [][]string{}
 
-	// Walk over data and fill in variables
-	err = walk.Walk(rawMap, varMatchFn, func(path, value string) (interface{}, error) {
-		return varReplaceFn(path, value, generatedConf, cmdVars, configLoader, &values, log)
-	})
+	err = fillCurrentVars(configOptions, configLoader, path, &values, log)
 	if err != nil {
 		return err
 	}
@@ -190,4 +148,55 @@ func varReplaceFn(path, value string, generatedConfig *generated.Config, cmdVars
 
 		return x, err
 	})
+}
+
+func fillCurrentVars(configOptions *loader.ConfigOptions, configLoader loader.ConfigLoader, path string, values *[][]string, log logger.Logger) error {
+	rawMap, err := configLoader.LoadRaw(path)
+
+	// Get profile
+	profile, err := versions.ParseProfile(rawMap, configOptions.Profile)
+	if err != nil {
+		return err
+	}
+
+	// Now delete not needed parts from config
+	delete(rawMap, "vars")
+	delete(rawMap, "profiles")
+	delete(rawMap, "commands")
+
+	// Apply profile
+	if profile != nil {
+		// Apply replace
+		err = loader.ApplyReplace(rawMap, profile)
+		if err != nil {
+			return err
+		}
+
+		// Apply patches
+		rawMap, err = loader.ApplyPatches(rawMap, profile)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Parse cli --var's
+	cmdVars, err := loader.ParseVarsFromOptions(configOptions)
+	if err != nil {
+		return err
+	}
+
+	generatedConf, err := configLoader.Generated()
+	if err != nil {
+		return err
+	}
+
+	// Walk over data and fill in variables
+	err = walk.Walk(rawMap, varMatchFn, func(path, value string) (interface{}, error) {
+		return varReplaceFn(path, value, generatedConf, cmdVars, configLoader, values, log)
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
