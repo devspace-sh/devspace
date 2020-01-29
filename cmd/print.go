@@ -39,9 +39,7 @@ func NewPrintCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Comma
 #######################################################
 ################## devspace print #####################
 #######################################################
-Builds all defined images and shows the yamls that would
-be deployed via helm and kubectl, but skips actual 
-deployment.
+
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(f, cobraCmd, args)
@@ -85,7 +83,7 @@ func (cmd *PrintCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 		}
 	}
 
-	log.WriteString(string(bsConfig))
+	os.Stdout.WriteString(string(bsConfig))
 
 	return nil
 }
@@ -101,7 +99,7 @@ func printExtraInfo(configOptions *loader.ConfigOptions, configLoader loader.Con
 	}
 	absPath := filepath.Join(pwd, path)
 
-	log.WriteString("\n-------------------\n\nVars:\n")
+	os.Stdout.WriteString("\n-------------------\n\nVars:\n")
 
 	headerColumnNames := []string{"Name", "Value"}
 	values := [][]string{}
@@ -117,7 +115,7 @@ func printExtraInfo(configOptions *loader.ConfigOptions, configLoader loader.Con
 		log.Info("No vars found")
 	}
 
-	log.WriteString("\n-------------------\n\nLoaded path: " + absPath + "\n\n-------------------\n\n")
+	os.Stdout.WriteString("\n-------------------\n\nLoaded path: " + absPath + "\n\n-------------------\n\n")
 
 	return nil
 }

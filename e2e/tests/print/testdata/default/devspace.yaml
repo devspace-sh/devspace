@@ -1,14 +1,14 @@
 version: v1beta6
 images:
   default:
-    image: dscr.io/${DEVSPACE_USERNAME}/devspaceprinttest
+    image: dscr.io/user/devspaceprinttest
 deployments:
   - name: devspace-print-test
     helm:
       componentChart: true
       values:
         containers:
-          - image: dscr.io/${DEVSPACE_USERNAME}/devspaceprinttest
+          - image: dscr.io/user/devspaceprinttest
             env:
               - name: TEST_ENV
                 value: "development"
@@ -17,7 +17,7 @@ deployments:
             - port: 8080
 dev:
   ports:
-    - imageName: default
+    - imageName: ${MY_IMAGE}
       forward:
         - port: 8080
   open:

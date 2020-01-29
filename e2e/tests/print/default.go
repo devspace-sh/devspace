@@ -23,7 +23,11 @@ func runDefault(f *customFactory, logger log.Logger) error {
 	}
 
 	pc := &cmd.PrintCmd{
-		GlobalFlags: &flags.GlobalFlags{},
+		GlobalFlags: &flags.GlobalFlags{
+			Profile: "production",
+			Vars:    []string{"MY_IMAGE=testimage"},
+		},
+		SkipInfo: true,
 	}
 
 	done := utils.Capture()
