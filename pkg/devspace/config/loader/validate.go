@@ -62,6 +62,8 @@ func validate(config *latest.Config) error {
 	}
 
 	if config.Images != nil {
+		// images lists all the image names in order to check for duplicates
+		images := map[string]bool{}
 		for imageConfigName, imageConf := range config.Images {
 			if imageConfigName == "" {
 				return errors.Errorf("images keys cannot be an empty string")
@@ -78,6 +80,10 @@ func validate(config *latest.Config) error {
 			if imageConf.Image == "" {
 				return fmt.Errorf("images.%s.image is required", imageConfigName)
 			}
+			if images[imageConf.Image] {
+				return errors.Errorf("multiple image definitions with the same image name are not allowed")
+			}
+			images[imageConf.Image] = true
 		}
 	}
 

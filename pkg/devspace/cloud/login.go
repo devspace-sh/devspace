@@ -122,8 +122,8 @@ func startServer(redirectURI string, keyChannel chan string, log log.Logger) *ht
 
 	http.HandleFunc("/key", func(w http.ResponseWriter, r *http.Request) {
 		keys, ok := r.URL.Query()["key"]
-		if !ok || len(keys[0]) < 1 {
-			log.Warn("Bad request")
+		if !ok || len(keys[0]) == 0 {
+			log.Warn("Login: the key used to login is not valid")
 			return
 		}
 
