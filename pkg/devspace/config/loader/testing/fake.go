@@ -45,6 +45,10 @@ func (f *FakeConfigLoader) Load() (*latest.Config, error) {
 	return f.Config, nil
 }
 
+func (f *FakeConfigLoader) ResolveVar(varName string, generatedConfig *generated.Config, cmdVars map[string]string) (string, error) {
+	return "", nil
+}
+
 // LoadFromPath implements interface
 func (f *FakeConfigLoader) LoadFromPath(generatedConfig *generated.Config, path string) (*latest.Config, error) {
 	if f.Config == nil {
