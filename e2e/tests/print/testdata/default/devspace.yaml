@@ -1,0 +1,37 @@
+version: v1beta6
+images:
+  default:
+    image: dscr.io/${DEVSPACE_USERNAME}/devspaceprinttest
+deployments:
+  - name: devspace-print-test
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: dscr.io/${DEVSPACE_USERNAME}/devspaceprinttest
+            env:
+              - name: TEST_ENV
+                value: "development"
+        service:
+          ports:
+            - port: 8080
+dev:
+  ports:
+    - imageName: default
+      forward:
+        - port: 8080
+  open:
+    - url: http://localhost:8080
+  sync:
+    - imageName: default
+      excludePaths:
+        - Dockerfile
+        - devspace.yaml
+profiles:
+  - name: production
+    patches:
+      - op: replace
+        path: deployments[0].helm.values.containers[0].env
+        value:
+          - name: TEST_ENV
+            value: "production"

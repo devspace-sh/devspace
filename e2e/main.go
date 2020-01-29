@@ -15,6 +15,7 @@ import (
 	"github.com/devspace-cloud/devspace/e2e/tests/examples"
 	"github.com/devspace-cloud/devspace/e2e/tests/initcmd"
 	"github.com/devspace-cloud/devspace/e2e/tests/logs"
+	"github.com/devspace-cloud/devspace/e2e/tests/print"
 	"github.com/devspace-cloud/devspace/e2e/tests/render"
 	"github.com/devspace-cloud/devspace/e2e/tests/run"
 	"github.com/devspace-cloud/devspace/e2e/tests/space"
@@ -52,6 +53,7 @@ var availableTests = map[string]Test{
 	"examples": examples.RunNew,
 	"init":     initcmd.RunNew,
 	"logs":     logs.RunNew,
+	"print":    print.RunNew,
 	"render":   render.RunNew,
 	"run":      run.RunNew,
 	"space":    space.RunNew,
