@@ -85,6 +85,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if absolutePath == "/" {
+		fmt.Fprintf(os.Stderr, "Cannot sync the root directory")
+		os.Exit(1)
+	}
+
 	if *isDownstream {
 		err := server.StartDownstreamServer(os.Stdin, os.Stdout, &server.DownstreamOptions{
 			RemotePath:   absolutePath,
