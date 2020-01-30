@@ -63,10 +63,7 @@ func (cmd *providerCmd) RunAddProvider(f factory.Factory, cobraCmd *cobra.Comman
 	}
 
 	// Check if provider already exists
-	provider, err := f.GetProvider(providerName, logger)
-	if err != nil {
-		return errors.Wrap(err, "get provider")
-	}
+	provider, _ := f.GetProvider(providerName, logger)
 	if provider != nil {
 		return errors.Errorf("Provider %s does already exist", providerName)
 	}
