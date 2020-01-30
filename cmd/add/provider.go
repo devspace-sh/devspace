@@ -10,12 +10,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type providerCmd struct {
+type ProviderCmd struct {
 	Host string
 }
 
 func newProviderCmd(f factory.Factory) *cobra.Command {
-	cmd := &providerCmd{}
+	cmd := &ProviderCmd{}
 
 	addProviderCmd := &cobra.Command{
 		Use:   "provider",
@@ -42,7 +42,7 @@ devspace add provider app.devspace.cloud
 }
 
 // RunAddProvider executes the "devspace add provider" functionality
-func (cmd *providerCmd) RunAddProvider(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *ProviderCmd) RunAddProvider(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	providerName := args[0]
 	logger := f.GetLog()
 	kubeLoader := f.NewKubeConfigLoader()

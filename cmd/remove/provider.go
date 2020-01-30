@@ -8,12 +8,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type providerCmd struct {
+type ProviderCmd struct {
 	Name string
 }
 
 func newProviderCmd(f factory.Factory) *cobra.Command {
-	cmd := &providerCmd{}
+	cmd := &ProviderCmd{}
 
 	providerCmd := &cobra.Command{
 		Use:   "provider",
@@ -39,7 +39,7 @@ devspace remove provider app.devspace.cloud
 }
 
 // RunRemoveCloudProvider executes the devspace remove cloud provider functionality
-func (cmd *providerCmd) RunRemoveCloudProvider(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *ProviderCmd) RunRemoveCloudProvider(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	providerName := args[0]
 	log := f.GetLog()
 
