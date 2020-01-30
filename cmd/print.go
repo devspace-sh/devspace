@@ -34,12 +34,13 @@ func NewPrintCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Comma
 
 	printCmd := &cobra.Command{
 		Use:   "print",
-		Short: "Print builds all defined images and shows the yamls that would be deployed",
+		Short: "Print displays the configuration",
 		Long: `
 #######################################################
 ################## devspace print #####################
 #######################################################
-
+Prints the configuration for the current or given 
+profile after all patching and variable substitution
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(f, cobraCmd, args)
@@ -83,7 +84,7 @@ func (cmd *PrintCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 		}
 	}
 
-	os.Stdout.WriteString(string(bsConfig))
+	log.WriteString(string(bsConfig))
 
 	return nil
 }
@@ -99,7 +100,7 @@ func printExtraInfo(configOptions *loader.ConfigOptions, configLoader loader.Con
 	}
 	absPath := filepath.Join(pwd, path)
 
-	os.Stdout.WriteString("\n-------------------\n\nVars:\n")
+	log.WriteString("\n-------------------\n\nVars:\n")
 
 	headerColumnNames := []string{"Name", "Value"}
 	values := [][]string{}
@@ -115,7 +116,7 @@ func printExtraInfo(configOptions *loader.ConfigOptions, configLoader loader.Con
 		log.Info("No vars found")
 	}
 
-	os.Stdout.WriteString("\n-------------------\n\nLoaded path: " + absPath + "\n\n-------------------\n\n")
+	log.WriteString("\n-------------------\n\nLoaded path: " + absPath + "\n\n-------------------\n\n")
 
 	return nil
 }

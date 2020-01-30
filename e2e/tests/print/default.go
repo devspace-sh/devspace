@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func runDefault(f *customFactory, logger log.Logger) error {
+func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 	logger.Info("Run sub test 'default' of test 'print'")
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
@@ -30,16 +30,17 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		SkipInfo: true,
 	}
 
-	done := utils.Capture()
+	wasVerbose := f.Verbose
+	f.Verbose = false
 
 	err = pc.Run(f, nil, nil)
 	if err != nil {
 		return err
 	}
 
-	capturedOutput, err := done()
-	if err != nil {
-		return err
+	if wasVerbose {
+		logger.WriteString(f.GetLogContents())
+		f.Verbose = true
 	}
 
 	_ = utils.ChangeWorkingDir(f.Pwd+"/tests/print", f.GetLog())
@@ -48,7 +49,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		return err
 	}
 
-	if strings.Index(string(expectedOutput), capturedOutput) == -1 {
+	if strings.Index(f.GetLogContents(), string(expectedOutput)) == -1 || len(f.GetLogContents()) < 1 {
 		return errors.Errorf("output does not match expected output")
 	}
 

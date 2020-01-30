@@ -8,10 +8,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type customFactory struct {
-	*utils.BaseCustomFactory
-}
-
 type Runner struct{}
 
 var RunNew = &Runner{}
@@ -25,7 +21,7 @@ func (r *Runner) SubTests() []string {
 	return subTests
 }
 
-var availableSubTests = map[string]func(factory *customFactory, logger log.Logger) error{
+var availableSubTests = map[string]func(factory *utils.BaseCustomFactory, logger log.Logger) error{
 	"default": runDefault,
 }
 
@@ -39,12 +35,10 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 		}
 	}
 
-	f := &customFactory{
-		BaseCustomFactory: &utils.BaseCustomFactory{
-			Pwd:     pwd,
-			Verbose: verbose,
-			Timeout: timeout,
-		},
+	f := &utils.BaseCustomFactory{
+		Pwd:     pwd,
+		Verbose: verbose,
+		Timeout: timeout,
 	}
 
 	// Runs the tests
@@ -80,7 +74,7 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 	return nil
 }
 
-func beforeTest(f *customFactory, testFolder string) error {
+func beforeTest(f *utils.BaseCustomFactory, testFolder string) error {
 	dirPath, _, err := utils.CreateTempDir()
 	if err != nil {
 		return err
@@ -99,6 +93,6 @@ func beforeTest(f *customFactory, testFolder string) error {
 	return nil
 }
 
-func afterTest(f *customFactory) {
+func afterTest(f *utils.BaseCustomFactory) {
 	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.GetLog())
 }
