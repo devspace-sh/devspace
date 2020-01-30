@@ -85,7 +85,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if absolutePath == "/" {
+	if absolutePath == "/" && args[0] != "/" {
 		fmt.Fprintf(os.Stderr, "Cannot sync the root directory")
 		os.Exit(1)
 	}
