@@ -27,6 +27,7 @@ type ConfigLoader interface {
 	LoadRaw(path string) (map[interface{}]interface{}, error)
 	LoadWithoutProfile() (*latest.Config, error)
 
+	ResolveVar(varName string, generatedConfig *generated.Config, cmdVars map[string]string) (string, error)
 	ParseCommands(generatedConfig *generated.Config, data map[interface{}]interface{}) ([]*latest.CommandConfig, error)
 
 	Generated() (*generated.Config, error)
