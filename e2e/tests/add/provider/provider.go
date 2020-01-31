@@ -6,6 +6,8 @@ import (
 	"github.com/devspace-cloud/devspace/e2e/utils"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
+	fakecloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/testing"
+	cloudconfiglatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -13,6 +15,13 @@ import (
 
 type customFactory struct {
 	*utils.BaseCustomFactory
+}
+
+func (c *customFactory) NewCloudConfigLoader() config.Loader {
+	return fakecloudconfig.NewLoader(&cloudconfiglatest.Config{
+		Version: cloudconfiglatest.Version,
+		Default: "test-provider",
+	})
 }
 
 // GetProviderWithOptions implements interface
