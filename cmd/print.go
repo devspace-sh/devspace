@@ -34,14 +34,13 @@ func NewPrintCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Comma
 
 	printCmd := &cobra.Command{
 		Use:   "print",
-		Short: "Print builds all defined images and shows the yamls that would be deployed",
+		Short: "Print displays the configuration",
 		Long: `
 #######################################################
 ################## devspace print #####################
 #######################################################
-Builds all defined images and shows the yamls that would
-be deployed via helm and kubectl, but skips actual 
-deployment.
+Prints the configuration for the current or given 
+profile after all patching and variable substitution
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Run(f, cobraCmd, args)
