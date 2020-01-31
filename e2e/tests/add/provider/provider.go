@@ -7,7 +7,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	fakecloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/testing"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	cloudconfiglatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/testing"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -15,6 +17,7 @@ import (
 
 type customFactory struct {
 	*utils.BaseCustomFactory
+	fakeProvider cloud.Provider
 }
 
 func (c *customFactory) NewCloudConfigLoader() config.Loader {
@@ -24,9 +27,13 @@ func (c *customFactory) NewCloudConfigLoader() config.Loader {
 	})
 }
 
+func (c *customFactory) GetProvider(useProviderName string, log log.Logger) (cloud.Provider, error) {
+	return c.fakeProvider, nil
+}
+
 // GetProviderWithOptions implements interface
 func (f *customFactory) GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, kubeLoader kubeconfig.Loader, log log.Logger) (cloud.Provider, error) {
-	return nil, nil
+	return testing.NewFakeProvider(latest.Provider{}, nil), nil
 }
 
 type Runner struct{}
@@ -62,6 +69,9 @@ func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger
 			Verbose: verbose,
 			Timeout: timeout,
 		},
+		testing.NewFakeProvider(latest.Provider{
+			Host: "app.devspace.cloud",
+		}, nil),
 	}
 
 	// Runs the tests

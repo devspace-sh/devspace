@@ -21,6 +21,8 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		return errors.New("Expected error: 'Provider app.devspace.cloud does already exist', but found no error")
 	}
 
+	f.fakeProvider = nil
+
 	err = ap.RunAddProvider(f, nil, []string{"test-provider.test"})
 	if err != nil {
 		return err
