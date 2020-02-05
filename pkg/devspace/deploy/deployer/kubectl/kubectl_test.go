@@ -83,11 +83,13 @@ func TestNew(t *testing.T) {
 				Context: "testContext",
 			},
 			expectedDeployer: &DeployConfig{
-				Name:       "someDeploy2",
-				KubeClient: &fakekube.Client{},
-				CmdPath:    "someCmdPath2",
-				Context:    "testContext",
-				Namespace:  "overwriteNamespace",
+				Name: "someDeploy2",
+				KubeClient: &fakekube.Client{
+					Context: "testContext",
+				},
+				CmdPath:   "someCmdPath2",
+				Context:   "testContext",
+				Namespace: "overwriteNamespace",
 
 				DeploymentConfig: &latest.DeploymentConfig{
 					Name:      "someDeploy2",
