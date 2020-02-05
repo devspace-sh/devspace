@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/devspace-cloud/devspace/e2e/tests/add/provider"
 	"github.com/devspace-cloud/devspace/e2e/tests/analyze"
 	"github.com/devspace-cloud/devspace/e2e/tests/build"
 	"github.com/devspace-cloud/devspace/e2e/tests/deploy"
@@ -15,6 +16,7 @@ import (
 	"github.com/devspace-cloud/devspace/e2e/tests/examples"
 	"github.com/devspace-cloud/devspace/e2e/tests/initcmd"
 	"github.com/devspace-cloud/devspace/e2e/tests/logs"
+	"github.com/devspace-cloud/devspace/e2e/tests/print"
 	"github.com/devspace-cloud/devspace/e2e/tests/render"
 	"github.com/devspace-cloud/devspace/e2e/tests/run"
 	"github.com/devspace-cloud/devspace/e2e/tests/space"
@@ -44,18 +46,20 @@ type Test interface {
 }
 
 var availableTests = map[string]Test{
-	"analyze":  analyze.RunNew,
-	"build":    build.RunNew,
-	"deploy":   deploy.RunNew,
-	"dev":      dev.RunNew,
-	"enter":    enter.RunNew,
-	"examples": examples.RunNew,
-	"init":     initcmd.RunNew,
-	"logs":     logs.RunNew,
-	"render":   render.RunNew,
-	"run":      run.RunNew,
-	"space":    space.RunNew,
-	"sync":     sync.RunNew,
+	"add-provider": provider.RunNew,
+	"analyze":      analyze.RunNew,
+	"build":        build.RunNew,
+	"deploy":       deploy.RunNew,
+	"dev":          dev.RunNew,
+	"enter":        enter.RunNew,
+	"examples":     examples.RunNew,
+	"init":         initcmd.RunNew,
+	"logs":         logs.RunNew,
+	"print":        print.RunNew,
+	"render":       render.RunNew,
+	"run":          run.RunNew,
+	"space":        space.RunNew,
+	"sync":         sync.RunNew,
 }
 
 var subTests = map[string]*stringList{}

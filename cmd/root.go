@@ -120,6 +120,7 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	rootCmd.AddCommand(NewUICmd(f, globalFlags))
 	rootCmd.AddCommand(NewRunCmd(f, globalFlags))
 	rootCmd.AddCommand(NewAttachCmd(f, globalFlags))
+	rootCmd.AddCommand(NewPrintCmd(f, globalFlags))
 
 	cobra.OnInitialize(func() { initConfig(f.GetLog()) })
 	return rootCmd
