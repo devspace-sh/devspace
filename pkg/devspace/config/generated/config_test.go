@@ -1,76 +1,45 @@
 package generated
 
 import (
-	"testing"
-
-	"gotest.tools/assert"
-)
-
-/*
-import (
 	"io/ioutil"
 	"os"
-	"sync"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	yaml "gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )
 
-func TestLoadConfigFromPath(t *testing.T) {
-	//Create tempDir and go into it
-	dir, err := ioutil.TempDir("", "testDir")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
+type loadTestCase struct {
+	name string
 
-	wdBackup, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Error getting current working directory: %v", err)
-	}
-	err = os.Chdir(dir)
-	if err != nil {
-		t.Fatalf("Error changing working directory: %v", err)
-	}
+	profile string
+	files   map[string]interface{}
 
-	// Delete temp folder after test
-	defer func() {
-		err = os.Chdir(wdBackup)
-		if err != nil {
-			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
-		}
-	}()
-
-	ConfigPath = "NotExistent"
-	loadedConfigOnce = sync.Once{}
-	returnedConfig, err := LoadConfig("")
-	if err != nil {
-		t.Fatalf("Error loading config from non existent path: %v", err)
-	}
-	assert.Equal(t, "", returnedConfig.ActiveProfile, "Wrong initial config returned")
-	assert.Equal(t, 0, len(returnedConfig.Profiles), "Wrong initial config returned")
-	assert.Equal(t, false, returnedConfig.GetActive() == nil, "Active config not initialized")
-
-	ConfigPath = "generated.yaml"
-	loadedConfigOnce = sync.Once{}
-	fsutil.WriteToFile([]byte(""), "generated.yaml")
-	returnedConfig, err = LoadConfig("")
-	if err != nil {
-		t.Fatalf("Error loading config from existent path with empty content: %v", err)
-	}
-	assert.Equal(t, "", returnedConfig.ActiveProfile, "Wrong initial config returned")
-	assert.Equal(t, 0, len(returnedConfig.Profiles), "Wrong initial config returned")
-	assert.Equal(t, false, returnedConfig.GetActive() == nil, "Active config not initialized")
+	expectedConfig *Config
+	expectedErr    string
 }
 
-/*func TestSaveConfig(t *testing.T) {
-	//Create tempDir and go into it
-	dir, err := ioutil.TempDir("", "testDir")
+func TestLoad(t *testing.T) {
+	testCases := []loadTestCase{
+		loadTestCase{
+			name:           "no config file",
+			expectedConfig: &Config{},
+		},
+		loadTestCase{
+			name: "load empty config file",
+			files: map[string]interface{}{
+				".devspace/generated.yaml": struct{}{},
+			},
+			profile: "someprofile",
+			expectedConfig: &Config{
+				OverrideProfile: ptr.String("someprofile"),
+			},
+		},
+	}
+
+	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
 	}
@@ -84,8 +53,8 @@ func TestLoadConfigFromPath(t *testing.T) {
 		t.Fatalf("Error changing working directory: %v", err)
 	}
 
-	// Delete temp folder after test
 	defer func() {
+		//Delete temp folder
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
@@ -96,41 +65,154 @@ func TestLoadConfigFromPath(t *testing.T) {
 		}
 	}()
 
-	testDontSaveConfig = false
-	err = SaveConfig(&Config{
-		ActiveProfile: "SavedActiveConfig",
-		Profiles: map[string]*CacheConfig{
-			"SavedActiveConfig": &CacheConfig{},
+	for _, testCase := range testCases {
+		testLoad(testCase, t)
+	}
+}
+
+func testLoad(testCase loadTestCase, t *testing.T) {
+	defer func() {
+		for _, path := range []string{".devspace/generated.yaml"} {
+			os.Remove(path)
+		}
+	}()
+	for path, data := range testCase.files {
+		dataAsYaml, err := yaml.Marshal(data)
+		assert.NilError(t, err, "Error parsing data of file %s in testCase %s", path, testCase.name)
+		err = fsutil.WriteToFile([]byte(dataAsYaml), path)
+		assert.NilError(t, err, "Error writing file %s in testCase %s", path, testCase.name)
+	}
+
+	loader := NewConfigLoader(testCase.profile)
+
+	config, err := loader.Load()
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Error in testCase %s", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+	}
+
+	configAsYaml, err := yaml.Marshal(config)
+	assert.NilError(t, err, "Error parsing config in testCase %s", testCase.name)
+	expectedAsYaml, err := yaml.Marshal(testCase.expectedConfig)
+	assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+	assert.Equal(t, string(configAsYaml), string(expectedAsYaml), "Unexpected config in testCase %s", testCase.name)
+}
+
+type saveTestCase struct {
+	name string
+
+	config *Config
+
+	expectedConfigFile interface{}
+	expectedErr        string
+}
+
+func TestSave(t *testing.T) {
+	testCases := []saveTestCase{
+		saveTestCase{
+			name: "Save config",
+			config: &Config{
+				OverrideProfile: ptr.String("overrideProf"),
+				ActiveProfile:   "active",
+				Vars: map[string]string{
+					"key": "value",
+				},
+			},
+			expectedConfigFile: Config{
+				OverrideProfile: ptr.String("overrideProf"),
+				ActiveProfile:   "active",
+				Vars: map[string]string{
+					"key": "value",
+				},
+			},
 		},
-	})
-	if err != nil {
-		t.Fatalf("Error saving config: %v", err)
 	}
 
-	returnedConfig, err := LoadConfigFromPath(ConfigPath, "")
+	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
-		t.Fatalf("Error loading config: %v", err)
+		t.Fatalf("Error creating temporary directory: %v", err)
 	}
-	assert.Equal(t, "SavedActiveConfig", returnedConfig.ActiveProfile, "Wrong config saved or returned")
 
-	//Now with testDontSaveConfig set true. Loaded config shouldn't change
-	SetTestConfig(&Config{})
-	err = SaveConfig(&Config{
-		ActiveProfile: "NewActiveConfig",
-		Profiles: map[string]*CacheConfig{
-			"NewActiveConfig": &CacheConfig{},
+	wdBackup, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Error getting current working directory: %v", err)
+	}
+	err = os.Chdir(dir)
+	if err != nil {
+		t.Fatalf("Error changing working directory: %v", err)
+	}
+
+	defer func() {
+		//Delete temp folder
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
+
+	for _, testCase := range testCases {
+		loader := NewConfigLoader("")
+
+		err := loader.Save(testCase.config)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
+
+		fileContent, err := ioutil.ReadFile(".devspace/generated.yaml")
+		assert.NilError(t, err, "Error reading file in testCase %s", testCase.name)
+		expectedAsYaml, err := yaml.Marshal(testCase.expectedConfigFile)
+		assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+		assert.Equal(t, string(fileContent), string(expectedAsYaml), "Unexpected config file in testCase %s", testCase.name)
+	}
+}
+
+type getActiveTestCase struct {
+	name string
+
+	active   string
+	override *string
+	profiles map[string]*CacheConfig
+
+	expectedCache CacheConfig
+}
+
+func TestGetActive(t *testing.T) {
+	testCases := []getActiveTestCase{
+		getActiveTestCase{
+			name:     "Get overriden profile that is not there",
+			active:   "acttive",
+			override: ptr.String("override"),
+			profiles: map[string]*CacheConfig{},
+
+			expectedCache: CacheConfig{},
 		},
-	})
-	if err != nil {
-		t.Fatalf("Error saving config: %v", err)
 	}
 
-	returnedConfig, err = LoadConfigFromPath(ConfigPath, "")
-	if err != nil {
-		t.Fatalf("Error loading config: %v", err)
+	for _, testCase := range testCases {
+		config := &Config{
+			ActiveProfile:   testCase.active,
+			OverrideProfile: testCase.override,
+			Profiles:        testCase.profiles,
+		}
+
+		active := config.GetActive()
+
+		activeAsYaml, err := yaml.Marshal(active)
+		assert.NilError(t, err, "Error parsing active provider in testCase %s", testCase.name)
+		expectedAsYaml, err := yaml.Marshal(testCase.expectedCache)
+		assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+		assert.Equal(t, string(activeAsYaml), string(expectedAsYaml), "Unexpected config file in testCase %s", testCase.name)
 	}
-	assert.Equal(t, "SavedActiveConfig", returnedConfig.ActiveProfile, "Wrong config saved or returned")
-}*/
+}
 
 func TestGetCaches(t *testing.T) {
 	dsConfig := &Config{
