@@ -218,10 +218,6 @@ func TestLoad(t *testing.T) {
 						Key:   "legacyKey1",
 						Token: "legacyToken1",
 					},
-					"someOtherProvider": &legacy.Provider{
-						Key:   "kegacyKey2",
-						Token: "legacyToken2",
-					},
 				},
 			},
 			expectedConfig: &latest.Config{
@@ -232,11 +228,6 @@ func TestLoad(t *testing.T) {
 						Host:  "https://app.devspace.cloud",
 						Key:   "legacyKey1",
 						Token: "legacyToken1",
-					},
-					&latest.Provider{
-						Name:  "someOtherProvider",
-						Key:   "kegacyKey2",
-						Token: "legacyToken2",
 					},
 				},
 			},
