@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"github.com/machinebox/graphql"
@@ -56,16 +57,18 @@ type client struct {
 	accessKey string
 	token     string
 
+	loader config.Loader
 	client *graphql.Client
 }
 
 // NewClient creates a new instance of the  interface Client
-func NewClient(providerName, host, accessKey, token string) Client {
+func NewClient(providerName, host, accessKey, token string, loader config.Loader) Client {
 	return &client{
 		provider:  providerName,
 		host:      host,
 		accessKey: accessKey,
 		token:     token,
+		loader:    loader,
 		client:    graphql.NewClient(host + graphqlEndpoint),
 	}
 }

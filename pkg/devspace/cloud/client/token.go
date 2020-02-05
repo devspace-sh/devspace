@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/pkg/errors"
 )
@@ -49,8 +48,7 @@ func (c *client) GetToken() (string, error) {
 }
 
 func (c *client) saveToken() error {
-	loader := config.NewLoader()
-	providerConfig, err := loader.Load()
+	providerConfig, err := c.loader.Load()
 	if err != nil {
 		return err
 	}
@@ -58,7 +56,7 @@ func (c *client) saveToken() error {
 	for idx, provider := range providerConfig.Providers {
 		if provider.Name == c.provider {
 			providerConfig.Providers[idx].Token = c.token
-			return loader.Save(providerConfig)
+			return c.loader.Save(providerConfig)
 		}
 	}
 

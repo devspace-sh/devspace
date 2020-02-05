@@ -40,12 +40,12 @@ const DevSpaceKubeContextName = "devspace"
 type provider struct {
 	latest.Provider
 
-	browser browser.Browser
-	client  client.Client
+	browser    browser.Browser
+	client     client.Client
 	kubeClient kubectl.Client
-	loader  config.Loader
+	loader     config.Loader
 	kubeLoader kubeconfig.Loader
-	log     log.Logger
+	log        log.Logger
 }
 
 // GetProvider returns the current specified cloud provider
@@ -102,11 +102,11 @@ func GetProviderWithOptions(useProviderName, key string, relogin bool, loader co
 	}
 
 	provider := &provider{
-		Provider: *p,
-		browser:  browser.NewBrowser(),
-		loader:   loader,
+		Provider:   *p,
+		browser:    browser.NewBrowser(),
+		loader:     loader,
 		kubeLoader: kubeLoader,
-		log:      log,
+		log:        log,
 	}
 	if provider.Provider.ClusterKey == nil {
 		provider.Provider.ClusterKey = map[int]string{}
@@ -117,7 +117,7 @@ func GetProviderWithOptions(useProviderName, key string, relogin bool, loader co
 
 		if key != "" {
 			provider.Key = key
-			provider.client = client.NewClient(providerName, p.Host, key, "")
+			provider.client = client.NewClient(providerName, p.Host, key, "", loader)
 
 			// Check if we got access
 			_, err := provider.client.GetSpaces()
@@ -145,7 +145,7 @@ func GetProviderWithOptions(useProviderName, key string, relogin bool, loader co
 			log.Warnf("Error logging into docker registries: %v", err)
 		}
 	} else {
-		provider.client = client.NewClient(providerName, p.Host, p.Key, p.Token)
+		provider.client = client.NewClient(providerName, p.Host, p.Key, p.Token, loader)
 	}
 
 	// Return provider config
