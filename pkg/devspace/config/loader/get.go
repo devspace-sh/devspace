@@ -27,6 +27,7 @@ type ConfigLoader interface {
 	LoadRaw(path string) (map[interface{}]interface{}, error)
 	LoadWithoutProfile() (*latest.Config, error)
 
+	GetProfiles() ([]string, error)
 	ResolveVar(varName string, generatedConfig *generated.Config, cmdVars map[string]string) (string, error)
 	ParseCommands(generatedConfig *generated.Config, data map[interface{}]interface{}) ([]*latest.CommandConfig, error)
 
@@ -78,11 +79,6 @@ func (l *configLoader) Generated() (*generated.Config, error) {
 // SaveGenerated is a convenience method to save the generated config
 func (l *configLoader) SaveGenerated(generatedConfig *generated.Config) error {
 	return l.generatedLoader.Save(generatedConfig)
-}
-
-// LoadGenerated loads the generated config
-func (l *configLoader) LoadGeneratedFromPath(path string) (*generated.Config, error) {
-	return l.generatedLoader.LoadFromPath(path)
 }
 
 // Exists checks whether the yaml file for the config exists or the configs.yaml exists

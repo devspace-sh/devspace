@@ -48,7 +48,7 @@ func (cmd *profilesCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 		return errors.New(message.ConfigNotFound)
 	}
 
-	profiles, err := loader.GetProfiles(".")
+	profiles, err := configLoader.GetProfiles()
 	if err != nil {
 		return err
 	}

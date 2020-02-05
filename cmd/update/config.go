@@ -2,7 +2,6 @@ package update
 
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -52,7 +51,7 @@ func (cmd *configCmd) RunConfig(f factory.Factory, cobraCmd *cobra.Command, args
 	}
 
 	// Get profiles
-	profiles, err := loader.GetProfiles(".")
+	profiles, err := configLoader.GetProfiles()
 	if err != nil {
 		return err
 	}
