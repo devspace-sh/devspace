@@ -27,11 +27,12 @@ type Client struct {
 	Client       kubernetes.Interface
 	KubeLoader   kubeconfig.Loader
 	IsKubernetes bool
+	Context      string
 }
 
 // CurrentContext is a fake implementation of function
 func (c *Client) CurrentContext() string {
-	return "testContext"
+	return c.Context
 }
 
 // KubeClient is a fake implementation of function
@@ -51,7 +52,7 @@ func (c *Client) RestConfig() *rest.Config {
 	}
 }
 
-// RestConfig is a fake implementation of function
+// KubeConfigLoader is a fake implementation of function
 func (c *Client) KubeConfigLoader() kubeconfig.Loader {
 	return c.KubeLoader
 }

@@ -39,7 +39,7 @@ func (l *Loader) SaveConfig(config *api.Config) error {
 
 // IsCloudSpace is a fake implementation of the function
 func (l *Loader) IsCloudSpace(context string) (bool, error) {
-	return l.RawConfig.CurrentContext == "devspace", nil
+	return context == "devspace", nil
 }
 
 // GetSpaceID is a fake implementation of the function

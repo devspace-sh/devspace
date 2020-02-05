@@ -79,7 +79,9 @@ func TestNew(t *testing.T) {
 					Manifests: []string{},
 				},
 			},
-			kubeClient: &fakekube.Client{},
+			kubeClient: &fakekube.Client{
+				Context: "testContext",
+			},
 			expectedDeployer: &DeployConfig{
 				Name:       "someDeploy2",
 				KubeClient: &fakekube.Client{},
