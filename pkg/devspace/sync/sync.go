@@ -259,8 +259,8 @@ func (s *Sync) initialSync() error {
 		return errors.Wrap(err, "populate file map")
 	}
 
-	localChanges := make([]*FileInformation, 0, 10)
-	fileMapClone := make(map[string]*FileInformation)
+	uploadChanges := make([]*FileInformation, 0, 10)
+	downloadChanges := make(map[string]*FileInformation)
 
 	s.fileIndex.fileMapMutex.Lock()
 	for key, element := range s.fileIndex.fileMap {
@@ -268,11 +268,11 @@ func (s *Sync) initialSync() error {
 			continue
 		}
 
-		fileMapClone[key] = element
+		downloadChanges[key] = element
 	}
 	s.fileIndex.fileMapMutex.Unlock()
 
-	err = s.diffServerClient(s.LocalPath, &localChanges, fileMapClone, false)
+	err = s.diffServerClient(s.LocalPath, &uploadChanges, downloadChanges, false)
 	if err != nil {
 		return errors.Wrap(err, "diff server client")
 	}
@@ -281,19 +281,19 @@ func (s *Sync) initialSync() error {
 	go func() {
 		// Remove remote files that are not there locally
 		if s.Options.UpstreamDisabled == false {
-			if s.Options.DownloadOnInitialSync == false && len(fileMapClone) > 0 {
-				remoteChanges := make([]*FileInformation, 0, len(fileMapClone))
-				for _, element := range fileMapClone {
-					remoteChanges = append(remoteChanges, &FileInformation{
+			if s.Options.DownloadOnInitialSync == false && len(downloadChanges) > 0 {
+				deleteRemote := make([]*FileInformation, 0, len(downloadChanges))
+				for _, element := range downloadChanges {
+					deleteRemote = append(deleteRemote, &FileInformation{
 						Name:        element.Name,
 						IsDirectory: element.IsDirectory,
 					})
 				}
 
-				s.sendChangesToUpstream(remoteChanges, true)
+				s.sendChangesToUpstream(deleteRemote, true)
 			}
 
-			s.sendChangesToUpstream(localChanges, false)
+			s.sendChangesToUpstream(uploadChanges, false)
 		}
 
 		if s.Options.UpstreamInitialSyncDone != nil {
@@ -307,9 +307,9 @@ func (s *Sync) initialSync() error {
 	}()
 
 	// Download changes if enabled
-	if s.Options.DownstreamDisabled == false && s.Options.DownloadOnInitialSync && len(fileMapClone) > 0 {
-		remoteChanges := make([]*remote.Change, 0, len(fileMapClone))
-		for _, element := range fileMapClone {
+	if s.Options.DownstreamDisabled == false && s.Options.DownloadOnInitialSync && len(downloadChanges) > 0 {
+		remoteChanges := make([]*remote.Change, 0, len(downloadChanges))
+		for _, element := range downloadChanges {
 			remoteChanges = append(remoteChanges, &remote.Change{
 				ChangeType:    remote.ChangeType_CHANGE,
 				Path:          element.Name,
