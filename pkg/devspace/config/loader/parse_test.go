@@ -250,6 +250,52 @@ profiles:
 				},
 			},
 		},
+		{
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta6
+deployments:
+- name: ${new}
+	helm:
+		componentChart: true
+		values:
+		  containers:
+		  - image: nginx
+commands:
+- name: test
+	command: should not show up
+vars:
+- name: abc
+	default: test
+profiles:
+- name: testprofile
+	patches:
+	- op: replace
+		path: vars[0].name
+		value: new`,
+				options:         &ConfigOptions{Profile: "testprofile"},
+				generatedConfig: &generated.Config{Vars: map[string]string{"new": "newdefault"}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     &latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "newdefault",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "nginx",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	// Execute test cases
@@ -268,8 +314,9 @@ profiles:
 		if !reflect.DeepEqual(newConfig, testCase.expected) {
 			newConfigYaml, _ := yaml.Marshal(newConfig)
 			expectedYaml, _ := yaml.Marshal(testCase.expected)
-
-			t.Fatalf("TestCase %d: Got %s, but expected %s", index, newConfigYaml, expectedYaml)
+			if string(newConfigYaml) != string(expectedYaml) {
+				t.Fatalf("TestCase %d: Got %s, but expected %s", index, newConfigYaml, expectedYaml)
+			}
 		}
 	}
 }
