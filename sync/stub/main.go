@@ -86,7 +86,7 @@ func main() {
 	}
 
 	if absolutePath == "/" && args[0] != "/" {
-		fmt.Fprintf(os.Stderr, "Cannot sync the root directory")
+		fmt.Fprintf(os.Stderr, "You are trying to sync the complete container root (/). By default this is not allowed, because this usually leads to unwanted behaviour. Please specify the correct container directory via the `--container-path` flag or `.containerPath` option")
 		os.Exit(1)
 	}
 
