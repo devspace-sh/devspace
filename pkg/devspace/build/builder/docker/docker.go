@@ -222,8 +222,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		NetworkMode: options.NetworkMode,
 		AuthConfigs: authConfigs,
 	}
-	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && b.helper.ImageConf.Build.Docker.UseBuildKit != nil && *b.helper.ImageConf.Build.Docker.UseBuildKit == true {
-		err = b.client.ImageBuildCLI(true, body, writer, buildOptions)
+	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && (len(b.helper.ImageConf.Build.Docker.Args) > 0 || (b.helper.ImageConf.Build.Docker.UseBuildKit != nil && *b.helper.ImageConf.Build.Docker.UseBuildKit == true)) {
+		err = b.client.ImageBuildCLI(true, body, writer, b.helper.ImageConf.Build.Docker.Args, buildOptions)
 		if err != nil {
 			return err
 		}
