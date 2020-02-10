@@ -249,6 +249,10 @@ exec("npm bin -g || yarn global bin", function(err, stdout, stderr) {
     try {
       fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".cmd"));
     } catch (e) {}
+
+    try {
+      fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".ps1"));
+    } catch (e) {}
   }
 
   if (action == "install" || action == "force-install") {
