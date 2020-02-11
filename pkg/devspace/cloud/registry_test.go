@@ -11,7 +11,7 @@ import (
 	fakeclient "github.com/devspace-cloud/devspace/pkg/devspace/cloud/client/testing"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	fakedocker "github.com/devspace-cloud/devspace/pkg/devspace/docker/testing"
 	log "github.com/devspace-cloud/devspace/pkg/util/log/testing"
 	"gotest.tools/assert"
 )
@@ -48,11 +48,10 @@ func TestLoginIntoRegistries(t *testing.T) {
 
 	for _, testCase := range testCases {
 		provider := &provider{
-			client: testCase.cloudclient,
-			log:    &log.FakeLogger{},
+			client:                testCase.cloudclient,
+			log:                   &log.FakeLogger{},
+			overwriteDockerClient: &fakedocker.FakeClient{},
 		}
-
-		docker.SetFakeClient(&docker.FakeClient{})
 
 		err := provider.loginIntoRegistries()
 

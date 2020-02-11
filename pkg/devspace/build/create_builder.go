@@ -26,13 +26,16 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 	if c.overwriteBuilder != nil {
 		return c.overwriteBuilder, nil
 	}
+	dockerClient := c.overwriteDockerClient
 
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
 		imageBuilder = custom.NewBuilder(imageConfigName, imageConf, imageTag)
 	} else if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
-		dockerClient, err := dockerclient.NewClient(log)
-		if err != nil {
-			return nil, errors.Errorf("Error creating docker client: %v", err)
+		if dockerClient == nil {
+			dockerClient, err = dockerclient.NewClient(log)
+			if err != nil {
+				return nil, errors.Errorf("Error creating docker client: %v", err)
+			}
 		}
 
 		if c.client == nil {
@@ -65,9 +68,11 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 			kubeContext = c.client.CurrentContext()
 		}
 
-		dockerClient, err := dockerclient.NewClientWithMinikube(kubeContext, preferMinikube, log)
-		if err != nil {
-			return nil, errors.Errorf("Error creating docker client: %v", err)
+		if dockerClient == nil {
+			dockerClient, err = dockerclient.NewClientWithMinikube(kubeContext, preferMinikube, log)
+			if err != nil {
+				return nil, errors.Errorf("Error creating docker client: %v", err)
+			}
 		}
 
 		// Check if docker daemon is running

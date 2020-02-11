@@ -14,9 +14,12 @@ func (p *provider) loginIntoRegistries() error {
 	}
 
 	// We don't want the minikube client to login into the registry
-	client, err := docker.NewClient(p.log)
-	if err != nil {
-		return errors.Wrap(err, "new docker client")
+	client := p.overwriteDockerClient
+	if client == nil {
+		client, err = docker.NewClient(p.log)
+		if err != nil {
+			return errors.Wrap(err, "new docker client")
+		}
 	}
 
 	// Get token

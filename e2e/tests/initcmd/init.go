@@ -25,6 +25,7 @@ import (
 	fakesurvey "github.com/devspace-cloud/devspace/pkg/util/survey/testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	fakedocker "github.com/devspace-cloud/devspace/pkg/devspace/docker/testing"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/pkg/errors"
 
@@ -49,7 +50,7 @@ type customLogger struct {
 }
 
 func (c *customFactory) NewDockerClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error) {
-	fakeDockerClient := &docker.FakeClient{
+	fakeDockerClient := &fakedocker.FakeClient{
 		AuthConfig: &dockertypes.AuthConfig{
 			Username: "user",
 			Password: "pass",
