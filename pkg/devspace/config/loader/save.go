@@ -78,10 +78,10 @@ func (l *configLoader) RestoreVars(config *latest.Config) (*latest.Config, error
 	return clonedConfig, nil
 }
 
-var keysNoRestoration = []string{"images", "deployments", "dev"}
+var ignoreConfigKeys = []string{"images", "deployments", "dev"}
 
 func (l *configLoader) shouldRestoreKey(key string) bool {
-	for _, ignoreKey := range keysNoRestoration {
+	for _, ignoreKey := range ignoreConfigKeys {
 		if ignoreKey == key {
 			return false
 		}
