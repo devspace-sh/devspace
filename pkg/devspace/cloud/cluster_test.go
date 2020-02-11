@@ -514,8 +514,9 @@ func TestDeployServices(t *testing.T) {
 			Survey: &fakesurvey.FakeSurvey{},
 		}
 		provider := &provider{
-			client: client,
-			log:    logger,
+			client:     client,
+			log:        logger,
+			kubeClient: kubeClient,
 		}
 
 		for _, answer := range testCase.answers {
@@ -526,7 +527,7 @@ func TestDeployServices(t *testing.T) {
 			testCase.options = &ConnectClusterOptions{}
 		}
 
-		err := provider.deployServices(kubeClient, 0, &clusterResources{CertManager: testCase.certManager}, testCase.options)
+		err := provider.deployServices(0, &clusterResources{CertManager: testCase.certManager}, testCase.options)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error getting Key in testCase %s", testCase.name)
@@ -657,7 +658,8 @@ func TestGetServiceAccountCredentials(t *testing.T) {
 
 	for _, testCase := range testCases {
 		provider := &provider{
-			log: &log.FakeLogger{},
+			log:        &log.FakeLogger{},
+			kubeClient: testCase.kubeClient,
 		}
 
 		if testCase.kubeClient == nil {
@@ -668,7 +670,7 @@ func TestGetServiceAccountCredentials(t *testing.T) {
 
 		getServiceAccountTimeout = testCase.timeout
 
-		token, cert, err := provider.getServiceAccountCredentials(testCase.kubeClient)
+		token, cert, err := provider.getServiceAccountCredentials()
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error getting Key in testCase %s", testCase.name)
@@ -819,15 +821,15 @@ func TestCheckResources(t *testing.T) {
 		for _, node := range testCase.createdNodes {
 			kube.CoreV1().Nodes().Create(node)
 		}
-		kubeClient := &fakekube.Client{
-			Client: kube,
-		}
 
 		provider := &provider{
 			log: &log.FakeLogger{},
+			kubeClient: &fakekube.Client{
+				Client: kube,
+			},
 		}
 
-		_, err := provider.checkResources(kubeClient)
+		_, err := provider.checkResources()
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error checking resources in testCase %s", testCase.name)
@@ -902,10 +904,12 @@ func TestInitializeNamespace(t *testing.T) {
 	for _, testCase := range testCases {
 		provider := &provider{
 			log: &log.FakeLogger{},
+			kubeClient: &fakekube.Client{
+				Client: testCase.client,
+			},
 		}
 
-		client := testCase.client
-		err := provider.initializeNamespace(client)
+		err := provider.initializeNamespace()
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -913,7 +917,7 @@ func TestInitializeNamespace(t *testing.T) {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
 
-		namespaces, err := client.CoreV1().Namespaces().List(v1.ListOptions{})
+		namespaces, err := testCase.client.CoreV1().Namespaces().List(v1.ListOptions{})
 		assert.NilError(t, err, "Error listing namespaces in testCase %s", testCase.name)
 		namespacesAsYaml, err := yaml.Marshal(namespaces)
 		assert.NilError(t, err, "Error parsing namespaces in testCase %s", testCase.name)
@@ -921,7 +925,7 @@ func TestInitializeNamespace(t *testing.T) {
 		assert.NilError(t, err, "Error parsing expected namespaces in testCase %s", testCase.name)
 		assert.Equal(t, string(namespacesAsYaml), string(expectedNamespacesAsYaml), "Unexpected namespaces in testCase %s", testCase.name)
 
-		serviceAccounts, err := client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).List(v1.ListOptions{})
+		serviceAccounts, err := testCase.client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).List(v1.ListOptions{})
 		assert.NilError(t, err, "Error listing serviceAccounts in testCase %s", testCase.name)
 		serviceAccountsAsYaml, err := yaml.Marshal(serviceAccounts)
 		assert.NilError(t, err, "Error parsing serviceAccounts in testCase %s", testCase.name)
@@ -929,7 +933,7 @@ func TestInitializeNamespace(t *testing.T) {
 		assert.NilError(t, err, "Error parsing expected serviceAccounts in testCase %s", testCase.name)
 		assert.Equal(t, string(serviceAccountsAsYaml), string(expectedServiceAccountsAsYaml), "Unexpected serviceAccounts in testCase %s", testCase.name)
 
-		clusterRoleBindings, err := client.RbacV1().ClusterRoleBindings().List(v1.ListOptions{})
+		clusterRoleBindings, err := testCase.client.RbacV1().ClusterRoleBindings().List(v1.ListOptions{})
 		assert.NilError(t, err, "Error listing clusterRoleBindings in testCase %s", testCase.name)
 		clusterRoleBindingsAsYaml, err := yaml.Marshal(clusterRoleBindings)
 		assert.NilError(t, err, "Error parsing clusterRoleBindings in testCase %s", testCase.name)
