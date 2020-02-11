@@ -10,10 +10,12 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	fakekubeconfig "github.com/devspace-cloud/devspace/pkg/util/kubeconfig/testing"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	yaml "gopkg.in/yaml.v2"
 	"gotest.tools/assert"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 type getProfilesTestCase struct {
@@ -112,6 +114,50 @@ func testGetProfiles(testCase getProfilesTestCase, t *testing.T) {
 	}
 
 	assert.Equal(t, strings.Join(profiles, ", "), strings.Join(testCase.expectedProfiles, ", "), "Unexpected profiles in testCase %s", testCase.name)
+}
+
+type parseCommandsTestCase struct {
+	name string
+
+	generatedConfig *generated.Config
+	data            map[interface{}]interface{}
+
+	expectedCommands []*latest.CommandConfig
+	expectedErr      string
+}
+
+// TODO: Finish this test!
+func TestParseCommands(t *testing.T) {
+	testCases := []parseCommandsTestCase{
+		parseCommandsTestCase{
+			data: map[interface{}]interface{}{
+				"version": latest.Version,
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		loader := &configLoader{
+			options: &ConfigOptions{},
+			kubeConfigLoader: &fakekubeconfig.Loader{
+				RawConfig: &api.Config{},
+			},
+		}
+
+		commands, err := loader.ParseCommands(testCase.generatedConfig, testCase.data)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
+
+		commandsAsYaml, err := yaml.Marshal(commands)
+		assert.NilError(t, err, "Error parsing commands in testCase %s", testCase.name)
+		expectedAsYaml, err := yaml.Marshal(testCase.expectedCommands)
+		assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+		assert.Equal(t, string(commandsAsYaml), string(expectedAsYaml), "Unexpected commands in testCase %s", testCase.name)
+	}
 }
 
 type parseTestCase struct {
