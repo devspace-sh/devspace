@@ -97,15 +97,14 @@ func TestBuild(t *testing.T) {
 		},
 	}
 
-	fakeBuilder = &fakebuilder.Builder{}
-
 	for _, testCase := range testCases {
 		controller := &controller{
 			config: &latest.Config{
 				Images: testCase.images,
 			},
-			cache:        testCase.cache,
-			hookExecuter: &fakehook.FakeHook{},
+			cache:            testCase.cache,
+			hookExecuter:     &fakehook.FakeHook{},
+			overwriteBuilder: &fakebuilder.Builder{},
 		}
 
 		builtImages, err := controller.Build(&testCase.options, log.Discard)

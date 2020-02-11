@@ -33,7 +33,6 @@ type createBuilderTestCase struct {
 }
 
 func TestCreateBuilder(t *testing.T) {
-	fakeBuilder = nil
 	fakeDocker := &docker.FakeClient{
 		AuthConfig: &dockertypes.AuthConfig{},
 	}
