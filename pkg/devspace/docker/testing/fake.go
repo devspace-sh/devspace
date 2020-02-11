@@ -12,15 +12,6 @@ import (
 	"github.com/docker/docker/api/types/filters"
 )
 
-var fakeClient Client
-
-// SetFakeClient causes NewClient to return the given fake client. !ONLY FOR TESTING!
-func SetFakeClient(fake Client) {
-	// panic("Set Fake Docker Client")
-
-	fakeClient = fake
-}
-
 // FakeClient is a prototype for a fake docker cient for testing purposes
 type FakeClient struct {
 	AuthConfig *dockertypes.AuthConfig
