@@ -55,8 +55,13 @@ func (l *configLoader) RestoreVars(config *latest.Config) (*latest.Config, error
 
 		// Now merge missing from original into new
 		for key := range originalConfig {
-			if _, ok := configMap[key]; !ok && l.shouldRestoreKey(key) {
-				configMap[key] = originalConfig[key]
+			keyString, isString := key.(string)
+			if !isString {
+				continue
+			}
+
+			if _, ok := configMap[keyString]; !ok && l.shouldRestoreKey(keyString) {
+				configMap[keyString] = originalConfig[keyString]
 			}
 		}
 	}
@@ -75,7 +80,7 @@ func (l *configLoader) RestoreVars(config *latest.Config) (*latest.Config, error
 
 var keysNoRestoration = []string{"images", "deployments", "dev"}
 
-func (l *configLoader) shouldRestoreKey(key interface{}) bool {
+func (l *configLoader) shouldRestoreKey(key string) bool {
 	for _, ignoreKey := range keysNoRestoration {
 		if ignoreKey == key {
 			return false
