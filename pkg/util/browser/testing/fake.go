@@ -15,5 +15,8 @@ func (b *FakeBrowser) Run(url string) error {
 
 // Start is a fake implementation. It calls StartCallback
 func (b *FakeBrowser) Start(url string) error {
-	return b.StartCallback(url)
+	if b.StartCallback != nil {
+		return b.StartCallback(url)
+	}
+	return nil
 }

@@ -23,6 +23,10 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 		err          error
 	)
 
+	if c.overwriteBuilder != nil {
+		return c.overwriteBuilder, nil
+	}
+
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
 		imageBuilder = custom.NewBuilder(imageConfigName, imageConf, imageTag)
 	} else if imageConf.Build != nil && imageConf.Build.Kaniko != nil {

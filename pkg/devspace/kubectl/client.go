@@ -51,7 +51,7 @@ type Client interface {
 	LogMultiple(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, log log.Logger) error
 	Logs(ctx context.Context, namespace, podName, containerName string, lastContainerLog bool, tail *int64, follow bool) (io.ReadCloser, error)
 
-	GetUpgraderWrapper() (http.RoundTripper, *upgraderWrapper, error)
+	GetUpgraderWrapper() (http.RoundTripper, UpgraderWrapper, error)
 
 	EnsureDefaultNamespace(log log.Logger) error
 	EnsureGoogleCloudClusterRoleBinding(log log.Logger) error

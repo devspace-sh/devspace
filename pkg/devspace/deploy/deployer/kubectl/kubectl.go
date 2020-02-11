@@ -33,6 +33,8 @@ type DeployConfig struct {
 	Log              log.Logger
 
 	config *latest.Config
+
+	commandExecuter commandExecuter
 }
 
 // New creates a new deploy config for kubectl
@@ -69,6 +71,8 @@ func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.
 			DeploymentConfig: deployConfig,
 			config:           config,
 			Log:              log,
+
+			commandExecuter: &executer{},
 		}, nil
 	}
 
@@ -88,6 +92,8 @@ func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.
 		DeploymentConfig: deployConfig,
 		config:           config,
 		Log:              log,
+
+		commandExecuter: &executer{},
 	}, nil
 }
 
@@ -136,13 +142,8 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 		args := d.getCmdArgs("delete", "--ignore-not-found=true")
 		stringReader := strings.NewReader(replacedManifest)
 
-		cmd := exec.Command(d.CmdPath, args...)
-
-		cmd.Stdin = stringReader
-		cmd.Stdout = d.Log
-		cmd.Stderr = d.Log
-
-		err = cmd.Run()
+		cmd := d.commandExecuter.GetCommand(d.CmdPath, args)
+		err = cmd.Run(d.Log, d.Log, stringReader)
 		if err != nil {
 			return err
 		}
@@ -206,13 +207,8 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 				}
 			}
 
-			cmd := exec.Command(d.CmdPath, args...)
-
-			cmd.Stdin = stringReader
-			cmd.Stdout = d.Log
-			cmd.Stderr = d.Log
-
-			err = cmd.Run()
+			cmd := d.commandExecuter.GetCommand(d.CmdPath, args)
+			err = cmd.Run(d.Log, d.Log, stringReader)
 			if err != nil {
 				return false, errors.Errorf("%v\nPlease make sure the command `kubectl apply` does work locally with manifest `%s`", err, manifest)
 			}
@@ -311,7 +307,7 @@ func (d *DeployConfig) dryRun(manifest string) ([]byte, error) {
 	args = append(args, manifest)
 
 	// Execute command
-	output, err := exec.Command(d.CmdPath, args...).Output()
+	output, err := d.commandExecuter.RunCommand(d.CmdPath, args)
 	if err != nil {
 		exitError, ok := err.(*exec.ExitError)
 		if ok {

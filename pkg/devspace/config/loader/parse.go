@@ -3,7 +3,6 @@ package loader
 import (
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
@@ -22,8 +21,13 @@ func varMatchFn(path, key, value string) bool {
 }
 
 // GetProfiles retrieves all available profiles
-func GetProfiles(basePath string) ([]string, error) {
-	bytes, err := ioutil.ReadFile(filepath.Join(basePath, constants.DefaultConfigPath))
+func (l *configLoader) GetProfiles() ([]string, error) {
+	path := constants.DefaultConfigPath
+	if l.options.ConfigPath != "" {
+		path = l.options.ConfigPath
+	}
+
+	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

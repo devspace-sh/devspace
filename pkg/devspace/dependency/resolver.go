@@ -13,7 +13,9 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
+	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 
 	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
@@ -290,6 +292,15 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		}
 	}
 
+	// Create docker client
+	dockerClient, err := docker.NewClient(r.log)
+	if err != nil {
+		return nil, errors.Wrap(err, "create docker client")
+	}
+
+	// Create registry client for pull secrets
+	registryClient := registry.NewClient(dConfig, client, dockerClient, r.log)
+
 	return &Dependency{
 		ID:        ID,
 		LocalPath: localPath,
@@ -300,7 +311,8 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		DependencyConfig: dependency,
 		DependencyCache:  r.BaseCache,
 
-		kubeClient: client,
+		kubeClient:     client,
+		registryClient: registryClient,
 
 		buildController:  build.NewController(dConfig, dGeneratedConfig.GetActive(), client),
 		deployController: deploy.NewController(dConfig, dGeneratedConfig.GetActive(), client),

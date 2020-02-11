@@ -1,275 +1,569 @@
 package kubectl
 
 import (
-	"os"
+	"io"
+	"io/ioutil"
+	"os/exec"
+	"strings"
 	"testing"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
+	"github.com/devspace-cloud/devspace/pkg/util/command"
+	log "github.com/devspace-cloud/devspace/pkg/util/log/testing"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/pkg/errors"
+	yaml "gopkg.in/yaml.v2"
+	"gotest.tools/assert"
 )
 
-// Test namespace to create
-const testNamespace = "test-kubectl-deploy"
+type newTestCase struct {
+	name string
 
-// Test namespace to create
-const testKustomizeNamespace = "test-kubectl-kustomize-deploy"
+	config       *latest.Config
+	kubeClient   kubectl.Client
+	deployConfig *latest.DeploymentConfig
 
-// @MoreTests
-//When kubectl is testable, test it
+	expectedDeployer interface{}
+	expectedErr      string
+}
 
-/*func TestKubectlManifests(t *testing.T) {
-	t.Skip("Not yet testable")
-	namespace := "testnamespace"
-	// 1. Create fake config & generated config
-
-	// Create fake devspace config
-	deploymentConfig := &latest.DeploymentConfig{
-		Name: "test-deployment",
-		Kubectl: &latest.KubectlConfig{
-			Manifests: []string{"kube"},
-			Flags:     []string{"--dry-run"},
+func TestNew(t *testing.T) {
+	testCases := []newTestCase{
+		newTestCase{
+			name:        "No kubectl",
+			expectedErr: "Error creating kubectl deploy config: kubectl is nil",
 		},
-	}
-	testConfig := &latest.Config{
-		Deployments: []*latest.DeploymentConfig{
-			deploymentConfig,
+		newTestCase{
+			name: "No manifests",
+			deployConfig: &latest.DeploymentConfig{
+				Kubectl: &latest.KubectlConfig{},
+			},
+			expectedErr: "No manifests defined for kubectl deploy",
 		},
-		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
-		Images: map[string]*latest.ImageConfig{
-			"default": &latest.ImageConfig{
-				Image: "nginx",
+		newTestCase{
+			name: "No kubeClient",
+			deployConfig: &latest.DeploymentConfig{
+				Name: "someDeploy",
+				Kubectl: &latest.KubectlConfig{
+					CmdPath:   "someCmdPath",
+					Manifests: []string{"*someManifestkustomization.yaml"},
+					Kustomize: ptr.Bool(true),
+				},
+			},
+			expectedDeployer: &DeployConfig{
+				Name:      "someDeploy",
+				CmdPath:   "someCmdPath",
+				Manifests: []string{"someManifest"},
+
+				DeploymentConfig: &latest.DeploymentConfig{
+					Name: "someDeploy",
+					Kubectl: &latest.KubectlConfig{
+						CmdPath:   "someCmdPath",
+						Manifests: []string{"*someManifestkustomization.yaml"},
+						Kustomize: ptr.Bool(true),
+					},
+				},
 			},
 		},
-	}
-	loader.SetFakeConfig(testConfig)
+		newTestCase{
+			name: "Everything given",
+			deployConfig: &latest.DeploymentConfig{
+				Name:      "someDeploy2",
+				Namespace: "overwriteNamespace",
+				Kubectl: &latest.KubectlConfig{
+					CmdPath:   "someCmdPath2",
+					Manifests: []string{},
+				},
+			},
+			kubeClient: &fakekube.Client{
+				Context: "testContext",
+			},
+			expectedDeployer: &DeployConfig{
+				Name: "someDeploy2",
+				KubeClient: &fakekube.Client{
+					Context: "testContext",
+				},
+				CmdPath:   "someCmdPath2",
+				Context:   "testContext",
+				Namespace: "overwriteNamespace",
 
-	// Create fake generated config
-	generatedConfig := &generated.Config{
-		ActiveProfile: "default",
-		Profiles: map[string]*generated.CacheConfig{
-			"default": &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{
-					"default": &generated.ImageCache{
-						Tag: "1.15", // This will be appended to nginx during deploy
+				DeploymentConfig: &latest.DeploymentConfig{
+					Name:      "someDeploy2",
+					Namespace: "overwriteNamespace",
+					Kubectl: &latest.KubectlConfig{
+						CmdPath:   "someCmdPath2",
+						Manifests: []string{},
 					},
 				},
 			},
 		},
 	}
-	generated.InitDevSpaceConfig(generatedConfig, "default")
 
-	// 2. Write test manifests into a temp folder
-	dir, err := ioutil.TempDir("", "testFolder")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
-
-	wdBackup, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Error getting current working directory: %v", err)
-	}
-	err = os.Chdir(dir)
-	if err != nil {
-		t.Fatalf("Error changing working directory: %v", err)
-	}
-
-	// 8. Delete temp folder
-	defer func() {
-		err = os.Chdir(wdBackup)
-		if err != nil {
-			t.Fatalf("Error changing dir back: %v", err)
+	for _, testCase := range testCases {
+		if testCase.deployConfig == nil {
+			testCase.deployConfig = &latest.DeploymentConfig{}
 		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
+
+		deployer, err := New(testCase.config, testCase.kubeClient, testCase.deployConfig, nil)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
-	}()
 
-	err = makeTestProject(dir)
-	if err != nil {
-		t.Fatalf("Error creating test project: %v", err)
+		deployerAsYaml, err := yaml.Marshal(deployer)
+		assert.NilError(t, err, "Error marshaling deployer in testCase %s", testCase.name)
+		expectationAsYaml, err := yaml.Marshal(testCase.expectedDeployer)
+		assert.NilError(t, err, "Error marshaling expected deployer in testCase %s", testCase.name)
+		assert.Equal(t, string(deployerAsYaml), string(expectationAsYaml), "Unexpected deployer in testCase %s", testCase.name)
 	}
-
-	// 3. Init kubectl & create test namespace
-	kubeClient := &kubectl.Client{
-		Client: fake.NewSimpleClientset(),
-	}
-	_, err = kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Error creating namespace: %v", err)
-	}
-
-	// 4. Deploy manifests
-	deployConfig, err := New(testConfig, kubeClient, deploymentConfig, log.GetInstance())
-	if err != nil {
-		t.Fatalf("Error creating deployConfig: %v", err)
-	}
-
-	isDeployed, err := deployConfig.Deploy(generatedConfig.Profiles["default"], true, nil)
-	if err != nil {
-		t.Fatalf("Error deploying chart: %v", err)
-	}
-	assert.Equal(t, true, isDeployed, "Manifest is not deployed. No errors returned.")
-	// 5. Validate manifests
-	// 6. Delete manifests
-	// 7. Delete test namespace
-}*/
-
-func TestKubectlManifestsWithKustomize(t *testing.T) {
-	// @MoreTests
-	// 1. Create fake config & generated config
-	// 2. Write test kustomize files (see examples) into a temp folder
-	// 3. Init kubectl & create test namespace
-	// 4. Deploy files
-	// 5. Validate deployed resources
-	// 6. Delete deployed files
-	// 7. Delete test namespace
-	// 8. Delete temp folder
 }
 
-func makeTestProject(dir string) error {
-	file, err := os.Create("package.json")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`{
-  "name": "node-js-sample",
-  "version": "0.0.1",
-  "description": "A sample Node.js app using Express 4",
-  "main": "index.js",
-  "scripts": {
-    "start": "nodemon index.js"
-  },
-  "dependencies": {
-    "express": "^4.13.3",
-    "nodemon": "^1.18.4",
-    "request": "^2.88.0"
-  },
-  "keywords": [
-    "node",
-    "express"
-  ],
-  "license": "MIT"
-}`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
+type fakeExecuter struct {
+	output interface{}
+	err    error
+
+	t            *testing.T
+	expectedPath []string
+	expectedArgs [][]string
+	testCase     string
+}
+
+func (e *fakeExecuter) RunCommand(path string, args []string) ([]byte, error) {
+	e.checkParams(path, args)
+
+	if output, ok := e.output.(string); ok {
+		return []byte(output), e.err
 	}
 
-	file, err = os.Create("index.js")
+	yamlOutput, err := yaml.Marshal(e.output)
 	if err != nil {
-		return err
+		return nil, errors.Wrap(err, "marshal output")
 	}
-	_, err = file.Write([]byte(`var express = require('express');
-var request = require('request');
-var app = express();
+	return yamlOutput, e.err
+}
 
-app.get('/', async (req, res) => {
-  var body = await new Promise((resolve, reject) => {
-    request('http://php/index.php', (err, res, body) => {
-      if (err) { 
-        reject(err);
-        return;
-      }
+func (e *fakeExecuter) GetCommand(path string, args []string) command.Interface {
+	e.checkParams(path, args)
+	return &command.FakeCommand{}
+}
 
-      resolve(body);
-    });
-  });
+func (e *fakeExecuter) checkParams(path string, args []string) {
+	if e.t != nil {
+		assert.Equal(e.t, path, e.expectedPath[0], "Unexpected path in testCase %s", e.testCase)
+		assert.Equal(e.t, strings.Join(args, ", "), strings.Join(e.expectedArgs[0], ", "), "Unexpected args in testCase %s", e.testCase)
 
-  res.send(body);
-});
-
-app.listen(3000, function () {
-  console.log('Example app listening on port 3000!');
-});`))
-	if err != nil {
-		return err
+		e.expectedPath = e.expectedPath[1:]
+		e.expectedArgs = e.expectedArgs[1:]
 	}
-	err = file.Close()
-	if err != nil {
-		return err
-	}
+}
 
-	file, err = os.Create("Dockerfile")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`FROM node:8.11.4
+type renderTestCase struct {
+	name string
 
-RUN mkdir /app
-WORKDIR /app
+	output      string
+	manifests   []string
+	kustomize   bool
+	cache       *generated.CacheConfig
+	builtImages map[string]string
 
-COPY package.json .
-RUN npm install
+	expectedStreamOutput string
+	expectedErr          string
+}
 
-COPY . .
-
-CMD ["npm", "start"]`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
+func TestRender(t *testing.T) {
+	testCases := []renderTestCase{
+		renderTestCase{
+			name:                 "render one empty manifest",
+			manifests:            []string{"mymanifest"},
+			expectedStreamOutput: "\n---\n",
+		},
 	}
 
-	file, err = os.Create(".dockerignore")
-	if err != nil {
-		return err
+	for _, testCase := range testCases {
+		deployer := &DeployConfig{
+			Manifests: testCase.manifests,
+			DeploymentConfig: &latest.DeploymentConfig{
+				Kubectl: &latest.KubectlConfig{
+					Kustomize: &testCase.kustomize,
+				},
+			},
+			commandExecuter: &fakeExecuter{
+				output: testCase.output,
+			},
+		}
+
+		reader, writer := io.Pipe()
+		defer reader.Close()
+
+		go func() {
+			defer writer.Close()
+
+			err := deployer.Render(testCase.cache, testCase.builtImages, writer)
+
+			if testCase.expectedErr == "" {
+				assert.NilError(t, err, "Error in testCase %s", testCase.name)
+			} else {
+				assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+			}
+		}()
+
+		streamOutput, err := ioutil.ReadAll(reader)
+		assert.NilError(t, err, "Error reading stream in testCase %s", testCase.name)
+		assert.Equal(t, string(streamOutput), testCase.expectedStreamOutput, "Unexpected stream output in testCase %s", testCase.name)
 	}
-	_, err = file.Write([]byte(`Dockerfile
-.devspace/
-chart/
-node_modules/`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
+}
+
+type statusTestCase struct {
+	name string
+
+	deployername string
+	manifests    []string
+
+	expectedStatus deployer.StatusResult
+	expectedErr    string
+}
+
+func TestStatus(t *testing.T) {
+	testCases := []statusTestCase{
+		statusTestCase{
+			name:         "Too long manifests",
+			deployername: "longManifestDeployer",
+			manifests:    []string{"ThatIsAVeryLongManifestNameHereJustTooLargeToFitOnAConsole"},
+			expectedStatus: deployer.StatusResult{
+				Name:   "longManifestDeployer",
+				Type:   "Manifests",
+				Target: "ThatIsAVeryLongManif...",
+				Status: "N/A",
+			},
+		},
 	}
 
-	fileInfo, err := os.Lstat(".")
-	if err != nil {
-		return err
+	for _, testCase := range testCases {
+		deployer := &DeployConfig{
+			Name:      testCase.deployername,
+			Manifests: testCase.manifests,
+		}
+
+		status, err := deployer.Status()
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
+
+		statusAsYaml, err := yaml.Marshal(status)
+		assert.NilError(t, err, "Error marshaling status in testCase %s", testCase.name)
+		expectedAsYaml, err := yaml.Marshal(testCase.expectedStatus)
+		assert.NilError(t, err, "Error marshaling expected status in testCase %s", testCase.name)
+		assert.Equal(t, string(statusAsYaml), string(expectedAsYaml), "Unexpected status in testCase %s", testCase.name)
 	}
-	err = os.Mkdir("kube", fileInfo.Mode())
-	if err != nil {
-		return err
+}
+
+type deleteTestCase struct {
+	name string
+
+	output    string
+	cmdPath   string
+	manifests []string
+	kustomize bool
+	cache     *generated.CacheConfig
+
+	expectedDeployments map[string]*generated.DeploymentCache
+	expectedErr         string
+	expectedPaths       []string
+	expectedArgs        [][]string
+}
+
+func TestDelete(t *testing.T) {
+	testCases := []deleteTestCase{
+		deleteTestCase{
+			name:          "delete with one manifest",
+			manifests:     []string{"oneManifest"},
+			cmdPath:       "myPath",
+			expectedPaths: []string{"myPath", "myPath"},
+			expectedArgs: [][]string{
+				[]string{"create", "--dry-run", "--save-config", "--output", "yaml", "--validate=false", "--filename", "oneManifest"},
+				[]string{"delete", "--ignore-not-found=true", "-f", "-"},
+			},
+		},
 	}
 
-	file, err = os.Create("kube/deployment.yaml")
-	if err != nil {
-		return err
+	for _, testCase := range testCases {
+		deployer := &DeployConfig{
+			CmdPath:   testCase.cmdPath,
+			Manifests: testCase.manifests,
+			DeploymentConfig: &latest.DeploymentConfig{
+				Name: "someDeploy",
+				Kubectl: &latest.KubectlConfig{
+					Kustomize: &testCase.kustomize,
+				},
+			},
+			commandExecuter: &fakeExecuter{
+				output:       testCase.output,
+				t:            t,
+				testCase:     testCase.name,
+				expectedPath: testCase.expectedPaths,
+				expectedArgs: testCase.expectedArgs,
+			},
+			Log: &log.FakeLogger{},
+		}
+
+		if testCase.cache == nil {
+			testCase.cache = &generated.CacheConfig{
+				Deployments: map[string]*generated.DeploymentCache{},
+			}
+		}
+
+		err := deployer.Delete(testCase.cache)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
+
+		statusAsYaml, err := yaml.Marshal(testCase.cache.Deployments)
+		assert.NilError(t, err, "Error marshaling status in testCase %s", testCase.name)
+		expectedAsYaml, err := yaml.Marshal(testCase.expectedDeployments)
+		assert.NilError(t, err, "Error marshaling expected status in testCase %s", testCase.name)
+		assert.Equal(t, string(statusAsYaml), string(expectedAsYaml), "Unexpected status in testCase %s", testCase.name)
 	}
-	_, err = file.Write([]byte(`apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: devspace
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      release: devspace-node
-  template:
-    metadata:
-      labels:
-        release: devspace-node
-    spec:
-      containers:
-      - name: node
-        image: node`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
+}
+
+type deployTestCase struct {
+	name string
+
+	output       string
+	cmdPath      string
+	context      string
+	namespace    string
+	manifests    []string
+	kustomize    bool
+	kubectlFlags []string
+	cache        *generated.CacheConfig
+	forceDeploy  bool
+	builtImages  map[string]string
+
+	expectedDeployed bool
+	expectedErr      string
+	expectedPaths    []string
+	expectedArgs     [][]string
+}
+
+func TestDeploy(t *testing.T) {
+	testCases := []deployTestCase{
+		deployTestCase{
+			name:             "deploy one manifest",
+			cmdPath:          "myPath",
+			context:          "myContext",
+			namespace:        "myNamespace",
+			manifests:        []string{"/"},
+			kubectlFlags:     []string{"someFlag"},
+			expectedDeployed: true,
+			expectedPaths:    []string{"myPath", "myPath"},
+			expectedArgs: [][]string{
+				[]string{"create", "--context", "myContext", "--namespace", "myNamespace", "--dry-run", "--save-config", "--output", "yaml", "--validate=false", "--filename", "/"},
+				[]string{"--context", "myContext", "--namespace", "myNamespace", "apply", "--force", "-f", "-", "someFlag"},
+			},
+		},
 	}
 
-	return nil
+	for _, testCase := range testCases {
+		deployer := &DeployConfig{
+			CmdPath:   testCase.cmdPath,
+			Context:   testCase.context,
+			Namespace: testCase.namespace,
+			Manifests: testCase.manifests,
+			DeploymentConfig: &latest.DeploymentConfig{
+				Kubectl: &latest.KubectlConfig{
+					Kustomize: &testCase.kustomize,
+					Flags:     testCase.kubectlFlags,
+				},
+			},
+			commandExecuter: &fakeExecuter{
+				output:       testCase.output,
+				t:            t,
+				testCase:     testCase.name,
+				expectedPath: testCase.expectedPaths,
+				expectedArgs: testCase.expectedArgs,
+			},
+			Log: &log.FakeLogger{},
+		}
+
+		if testCase.cache == nil {
+			testCase.cache = &generated.CacheConfig{
+				Deployments: map[string]*generated.DeploymentCache{},
+			}
+		}
+
+		deployed, err := deployer.Deploy(testCase.cache, testCase.forceDeploy, testCase.builtImages)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
+
+		assert.Equal(t, deployed, testCase.expectedDeployed, "Unexpected deployed-bool in testCase %s", testCase.name)
+	}
+}
+
+type getReplacedManifestTestCase struct {
+	name string
+
+	cmdOutput    interface{}
+	manifest     string
+	kustomize    bool
+	cache        *generated.CacheConfig
+	imageConfigs map[string]*latest.ImageConfig
+	builtImages  map[string]string
+
+	expectedRedeploy bool
+	expectedManifest string
+	expectedErr      string
+}
+
+func TestGetReplacedManifest(t *testing.T) {
+	testCases := []getReplacedManifestTestCase{
+		getReplacedManifestTestCase{
+			name:      "All empty",
+			cmdOutput: "",
+		},
+		getReplacedManifestTestCase{
+			name: "one replaced resource",
+			cmdOutput: map[string]interface{}{
+				"apiVersion": 1,
+				"image":      "myimage",
+			},
+			cache: &generated.CacheConfig{
+				Images: map[string]*generated.ImageCache{
+					"myimage": &generated.ImageCache{
+						ImageName: "myimage",
+						Tag:       "mytag",
+					},
+				},
+			},
+			imageConfigs: map[string]*latest.ImageConfig{
+				"myimage": &latest.ImageConfig{
+					Image: "myimage",
+				},
+			},
+			builtImages: map[string]string{
+				"myimage": "",
+			},
+			expectedRedeploy: true,
+			expectedManifest: "apiVersion: 1\nimage: myimage:mytag\n",
+		},
+	}
+
+	for _, testCase := range testCases {
+		deployer := &DeployConfig{
+			DeploymentConfig: &latest.DeploymentConfig{
+				Kubectl: &latest.KubectlConfig{
+					Kustomize: &testCase.kustomize,
+				},
+			},
+			commandExecuter: &fakeExecuter{
+				output: testCase.cmdOutput,
+			},
+			config: &latest.Config{
+				Images: testCase.imageConfigs,
+			},
+		}
+
+		shouldRedeploy, replacedManifest, err := deployer.getReplacedManifest(testCase.manifest, testCase.cache, testCase.builtImages)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
+
+		assert.Equal(t, shouldRedeploy, testCase.expectedRedeploy, "Unexpected shouldRedeploy-bool in testCase %s", testCase.name)
+		assert.Equal(t, replacedManifest, testCase.expectedManifest, "Unexpected replaced manifest in testCase %s", testCase.name)
+	}
+}
+
+type dryRunTestCase struct {
+	name string
+
+	manifest  string
+	context   string
+	namespace string
+	cmdPath   string
+	kustomize bool
+
+	cmdOutput string
+	cmdErr    error
+
+	expectedStreamOutput string
+	expectedErr          string
+	expectedPath         string
+	expectedArgs         []string
+}
+
+func TestDryRun(t *testing.T) {
+	testCases := []dryRunTestCase{
+		dryRunTestCase{
+			name:     "command returns error",
+			cmdPath:  "path1",
+			manifest: "manifest1",
+			cmdErr: &exec.ExitError{
+				Stderr: []byte("Test std err"),
+			},
+			expectedErr:  "Test std err",
+			expectedPath: "path1",
+			expectedArgs: []string{"create", "--dry-run", "--save-config", "--output", "yaml", "--validate=false", "--filename", "manifest1"},
+		},
+		dryRunTestCase{
+			name:                 "all args, no error",
+			cmdPath:              "path2",
+			manifest:             "manifest2",
+			context:              "mycontext",
+			namespace:            "mynamespace",
+			kustomize:            true,
+			cmdOutput:            "cmdOutput",
+			expectedStreamOutput: "cmdOutput",
+			expectedPath:         "path2",
+			expectedArgs:         []string{"create", "--context", "mycontext", "--namespace", "mynamespace", "--dry-run", "--save-config", "--output", "yaml", "--validate=false", "--kustomize", "manifest2"},
+		},
+	}
+
+	for _, testCase := range testCases {
+		deployer := &DeployConfig{
+			Context:   testCase.context,
+			Namespace: testCase.namespace,
+			CmdPath:   testCase.cmdPath,
+			DeploymentConfig: &latest.DeploymentConfig{
+				Kubectl: &latest.KubectlConfig{
+					Kustomize: &testCase.kustomize,
+				},
+			},
+			commandExecuter: &fakeExecuter{
+				output:       testCase.cmdOutput,
+				err:          testCase.cmdErr,
+				t:            t,
+				expectedPath: []string{testCase.expectedPath},
+				expectedArgs: [][]string{testCase.expectedArgs},
+				testCase:     testCase.name,
+			},
+		}
+
+		output, err := deployer.dryRun(testCase.manifest)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
+
+		assert.Equal(t, string(output), testCase.expectedStreamOutput, "Unexpected output in testCase %s", testCase.name)
+	}
 }

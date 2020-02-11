@@ -1,16 +1,164 @@
 package loader
 
 import (
+	"io/ioutil"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	fakekubeconfig "github.com/devspace-cloud/devspace/pkg/util/kubeconfig/testing"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	yaml "gopkg.in/yaml.v2"
+	"gotest.tools/assert"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
+
+type getProfilesTestCase struct {
+	name string
+
+	files      map[string]interface{}
+	configPath string
+
+	expectedProfiles []string
+	expectedErr      string
+}
+
+func TestGetProfiles(t *testing.T) {
+	testCases := []getProfilesTestCase{
+		getProfilesTestCase{
+			name: "Empty file",
+			files: map[string]interface{}{
+				"devspace.yaml": map[interface{}]interface{}{},
+			},
+		},
+		getProfilesTestCase{
+			name:       "Parse several profiles",
+			configPath: "custom.yaml",
+			files: map[string]interface{}{
+				"custom.yaml": map[interface{}]interface{}{
+					"profiles": []interface{}{
+						"noMap",
+						map[interface{}]interface{}{
+							"description": "Has no name",
+						},
+						map[interface{}]interface{}{
+							"name": "myprofile",
+						},
+					},
+				},
+			},
+			expectedProfiles: []string{"myprofile"},
+		},
+	}
+
+	dir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		t.Fatalf("Error creating temporary directory: %v", err)
+	}
+
+	wdBackup, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Error getting current working directory: %v", err)
+	}
+	err = os.Chdir(dir)
+	if err != nil {
+		t.Fatalf("Error changing working directory: %v", err)
+	}
+
+	defer func() {
+		//Delete temp folder
+		err = os.Chdir(wdBackup)
+		if err != nil {
+			t.Fatalf("Error changing dir back: %v", err)
+		}
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
+		}
+	}()
+
+	for _, testCase := range testCases {
+		testGetProfiles(testCase, t)
+	}
+}
+
+func testGetProfiles(testCase getProfilesTestCase, t *testing.T) {
+	defer func() {
+		for _, path := range []string{".devspace/generated.yaml", "devspace.yaml", "custom.yaml"} {
+			os.Remove(path)
+		}
+	}()
+	for path, data := range testCase.files {
+		dataAsYaml, err := yaml.Marshal(data)
+		assert.NilError(t, err, "Error parsing data of file %s in testCase %s", path, testCase.name)
+		err = fsutil.WriteToFile([]byte(dataAsYaml), path)
+		assert.NilError(t, err, "Error writing file %s in testCase %s", path, testCase.name)
+	}
+
+	loader := &configLoader{
+		options: &ConfigOptions{
+			ConfigPath: testCase.configPath,
+		},
+	}
+	profiles, err := loader.GetProfiles()
+
+	if testCase.expectedErr == "" {
+		assert.NilError(t, err, "Error in testCase %s", testCase.name)
+	} else {
+		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+	}
+
+	assert.Equal(t, strings.Join(profiles, ", "), strings.Join(testCase.expectedProfiles, ", "), "Unexpected profiles in testCase %s", testCase.name)
+}
+
+type parseCommandsTestCase struct {
+	name string
+
+	generatedConfig *generated.Config
+	data            map[interface{}]interface{}
+
+	expectedCommands []*latest.CommandConfig
+	expectedErr      string
+}
+
+// TODO: Finish this test!
+func TestParseCommands(t *testing.T) {
+	testCases := []parseCommandsTestCase{
+		parseCommandsTestCase{
+			data: map[interface{}]interface{}{
+				"version": latest.Version,
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		loader := &configLoader{
+			options: &ConfigOptions{},
+			kubeConfigLoader: &fakekubeconfig.Loader{
+				RawConfig: &api.Config{},
+			},
+		}
+
+		commands, err := loader.ParseCommands(testCase.generatedConfig, testCase.data)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
+
+		commandsAsYaml, err := yaml.Marshal(commands)
+		assert.NilError(t, err, "Error parsing commands in testCase %s", testCase.name)
+		expectedAsYaml, err := yaml.Marshal(testCase.expectedCommands)
+		assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+		assert.Equal(t, string(commandsAsYaml), string(expectedAsYaml), "Unexpected commands in testCase %s", testCase.name)
+	}
+}
 
 type parseTestCase struct {
 	in       *parseTestCaseInput

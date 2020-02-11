@@ -1,8 +1,6 @@
 package use
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
-
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -58,7 +56,7 @@ func (cmd *ProfileCmd) RunUseProfile(f factory.Factory, cobraCmd *cobra.Command,
 		return errors.New(message.ConfigNotFound)
 	}
 
-	profiles, err := loader.GetProfiles(".")
+	profiles, err := configLoader.GetProfiles()
 	if err != nil {
 		return err
 	}

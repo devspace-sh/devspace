@@ -2,12 +2,10 @@ package cloud
 
 import (
 	"context"
-	"io/ioutil"
 	"net/http"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/client"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
@@ -21,42 +19,6 @@ const LoginSuccessEndpoint = "/login-success"
 
 // TokenEndpoint is the endpoint where to get a token from
 const TokenEndpoint = "/auth/token"
-
-// GetToken returns a valid access token to the provider
-func (p *provider) GetToken() (string, error) {
-	if p.Key == "" {
-		return "", errors.New("Provider has no key specified")
-	}
-	if p.Token != "" && token.IsTokenValid(p.Token) {
-		return p.Token, nil
-	}
-
-	resp, err := http.Get(p.Host + TokenEndpoint + "?key=" + p.Key)
-	if err != nil {
-		return "", errors.Wrap(err, "token request")
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", errors.Wrap(err, "read request body")
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", errors.Errorf("Error retrieving token: Code %v => %s. Try to relogin with 'devspace login'", resp.StatusCode, string(body))
-	}
-
-	p.Token = string(body)
-	if token.IsTokenValid(p.Token) == false {
-		return "", errors.New("Received invalid token from provider")
-	}
-
-	err = p.Save()
-	if err != nil {
-		return "", errors.Wrap(err, "token save")
-	}
-
-	return p.Token, nil
-}
 
 // Login logs the user into DevSpace Cloud
 func (p *provider) Login() error {
@@ -89,7 +51,7 @@ func (p *provider) Login() error {
 		// Check if we got access
 		p.Key = key
 		if p.client == nil {
-			p.client = client.NewClient(p.Name, p.Host, key, "")
+			p.client = client.NewClient(p.Name, p.Host, key, "", p.loader)
 		}
 
 		_, err := p.client.GetSpaces()
@@ -113,7 +75,7 @@ func (p *provider) Login() error {
 	}
 
 	p.Key = key
-	p.client = client.NewClient(p.Name, p.Host, key, p.Token)
+	p.client = client.NewClient(p.Name, p.Host, key, p.Token, p.loader)
 	return nil
 }
 

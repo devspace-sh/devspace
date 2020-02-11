@@ -1,482 +1,314 @@
 package deploy
 
 import (
+	"testing"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	fakehelm "github.com/devspace-cloud/devspace/pkg/devspace/helm/testing"
+	helmtypes "github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
+	fakehook "github.com/devspace-cloud/devspace/pkg/devspace/hook/testing"
+	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"gopkg.in/yaml.v2"
+	"gotest.tools/assert"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
-// Test namespace to create
-/*const testNamespace = "test-helm-deploy"
+type renderTestCase struct {
+	name string
 
-func TestHelmDeployment(t *testing.T) {
-	namespace := "testnamespace"
-	valuesFiles := make([]*string, 1)
-	valuesFiles0 := "chart"
-	valuesFiles[0] = &valuesFiles0
+	deployments []*latest.DeploymentConfig
+	options     *Options
 
-	// 1. Create fake config & generated config
+	expectedErr string
+}
 
-	// Create fake devspace config
-	testConfig := &latest.Config{
-		Deployments: []*latest.DeploymentConfig{
-			&latest.DeploymentConfig{
-				Name: "don'tDeploy",
-			},
-			&latest.DeploymentConfig{
-				Name: "test-deployment",
-				Kubectl: &latest.KubectlConfig{
-					Manifests: []string{},
+func TestRender(t *testing.T) {
+	testCases := []renderTestCase{
+		renderTestCase{
+			name: "Skip deployment",
+			deployments: []*latest.DeploymentConfig{
+				&latest.DeploymentConfig{
+					Name: "skippedDeployment",
 				},
 			},
-		},
-		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
-		Images: map[string]*latest.ImageConfig{
-			"default": &latest.ImageConfig{
-				Image: "nginx",
+			options: &Options{
+				Deployments: []string{"unskippedDeployment"},
 			},
 		},
-	}
-	loader.SetFakeConfig(testConfig)
-
-	// Create fake generated config
-	generatedConfig := &generated.Config{
-		ActiveProfile: "default",
-		Profiles: map[string]*generated.CacheConfig{
-			"default": &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{
-					"default": &generated.ImageCache{
-						Tag: "1.15", // This will be appended to nginx during deploy
+		renderTestCase{
+			name: "No deployment method",
+			deployments: []*latest.DeploymentConfig{
+				&latest.DeploymentConfig{
+					Name: "noMethod",
+				},
+			},
+			options: &Options{
+				Deployments: []string{"noMethod"},
+			},
+			expectedErr: "Error render: deployment noMethod has no deployment method",
+		},
+		renderTestCase{
+			name: "Render with kubectl",
+			deployments: []*latest.DeploymentConfig{
+				&latest.DeploymentConfig{
+					Name: "kubectlRender",
+					Kubectl: &latest.KubectlConfig{
+						Manifests: []string{},
 					},
 				},
 			},
 		},
 	}
-	generated.InitDevSpaceConfig(generatedConfig, "default")
 
-	// 2. Write test chart into a temp folder
-	dir, err := ioutil.TempDir("", "testDeploy")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
-
-	wdBackup, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Error getting current working directory: %v", err)
-	}
-	err = os.Chdir(dir)
-	if err != nil {
-		t.Fatalf("Error changing working directory: %v", err)
-	}
-
-	// 8. Delete temp folder
-	defer func() {
-		err = os.Chdir(wdBackup)
-		if err != nil {
-			t.Fatalf("Error changing dir back: %v", err)
+	for _, testCase := range testCases {
+		kube := fake.NewSimpleClientset()
+		kubeClient := &fakekube.Client{
+			Client: kube,
 		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
+		config := &latest.Config{
+			Deployments: testCase.deployments,
 		}
-	}()
+		controller := NewController(config, nil, kubeClient)
 
-	err = makeTestProject(dir)
-	if err != nil {
-		t.Fatalf("Error creating test project: %v", err)
-	}
+		if testCase.options == nil {
+			testCase.options = &Options{}
+		}
 
-	// 3. Init kubectl & create test namespace
-	kubeClient := &kubectl.Client{
-		Client: fake.NewSimpleClientset(),
-	}
-	_, err = kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Error creating namespace: %v", err)
-	}
+		err := controller.Render(testCase.options, nil)
 
-	cache := &generated.CacheConfig{
-		Deployments: make(map[string]*generated.DeploymentCache),
-	}
-
-	// 4. Deploy
-	err = All(testConfig, cache, kubeClient, true, true, map[string]string{"default": "nginx"}, []string{"test-deployment"}, &log.DiscardLogger{})
-	if err != nil {
-		t.Fatalf("Error deploying all: %v", err)
-	}
-
-	testConfig.Deployments = []*latest.DeploymentConfig{
-		&latest.DeploymentConfig{
-			Name:    "test-deployment",
-			Kubectl: &latest.KubectlConfig{},
-		},
-	}
-	err = All(testConfig, cache, kubeClient, true, true, map[string]string{"default": "nginx"}, []string{"test-deployment"}, &log.DiscardLogger{})
-	if err == nil {
-		t.Fatal("No Error deploying with an invalid Kubectl in deployment config.")
-	}
-
-	testConfig.Deployments = []*latest.DeploymentConfig{
-		&latest.DeploymentConfig{
-			Name: "test-deployment",
-		},
-	}
-	err = All(testConfig, cache, kubeClient, true, true, map[string]string{"default": "nginx"}, []string{"test-deployment"}, &log.DiscardLogger{})
-	if err == nil {
-		t.Fatal("No Error deploying with no deployClient in deployment conig.")
-	}
-
-	// 7. Delete test namespace
-	err = kubeClient.Client.CoreV1().Namespaces().Delete(namespace, nil)
-	if err != nil {
-		t.Fatalf("Error deleting namespace: %v", err)
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
 	}
 }
 
-func TestPurgeDeployments(t *testing.T) {
-	namespace := "testnamespace"
-	valuesFiles := make([]*string, 1)
-	valuesFiles0 := "chart"
-	valuesFiles[0] = &valuesFiles0
+type deployTestCase struct {
+	name string
 
-	// 1. Create fake config & generated config
+	cache       *generated.CacheConfig
+	deployments []*latest.DeploymentConfig
+	options     *Options
 
-	// Create fake devspace config
-	testConfig := &latest.Config{
-		Deployments: []*latest.DeploymentConfig{
-			&latest.DeploymentConfig{
-				Name: "test-deployment",
-				Kubectl: &latest.KubectlConfig{
-					Manifests: []string{},
+	expectedErr string
+}
+
+func TestDeploy(t *testing.T) {
+	testCases := []deployTestCase{
+		deployTestCase{
+			name: "Skip deployment",
+			deployments: []*latest.DeploymentConfig{
+				&latest.DeploymentConfig{
+					Name: "skippedDeployment",
 				},
 			},
+			options: &Options{
+				Deployments: []string{"unskippedDeployment"},
+			},
 		},
-		// The images config will tell the deployment method to override the image name used in the component above with the tag defined in the generated config below
-		Images: map[string]*latest.ImageConfig{
-			"default": &latest.ImageConfig{
-				Image: "nginx",
+		deployTestCase{
+			name: "No deployment method",
+			deployments: []*latest.DeploymentConfig{
+				&latest.DeploymentConfig{
+					Name: "noMethod",
+				},
+			},
+			options: &Options{
+				Deployments: []string{"noMethod"},
+			},
+			expectedErr: "Error deploying: deployment noMethod has no deployment method",
+		},
+		deployTestCase{
+			name: "Deploy with kubectl",
+			deployments: []*latest.DeploymentConfig{
+				&latest.DeploymentConfig{
+					Name: "kubectlDeploy",
+					Kubectl: &latest.KubectlConfig{
+						Manifests: []string{},
+					},
+				},
+			},
+			cache: &generated.CacheConfig{
+				Deployments: map[string]*generated.DeploymentCache{},
 			},
 		},
 	}
-	loader.SetFakeConfig(testConfig)
 
-	// Create fake generated config
-	generatedConfig := &generated.Config{
-		ActiveProfile: "default",
-		Profiles: map[string]*generated.CacheConfig{
-			"default": &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{
-					"default": &generated.ImageCache{
-						Tag: "1.15", // This will be appended to nginx during deploy
+	for _, testCase := range testCases {
+		kube := fake.NewSimpleClientset()
+		kubeClient := &fakekube.Client{
+			Client: kube,
+		}
+		config := &latest.Config{
+			Deployments: testCase.deployments,
+		}
+		controller := &controller{
+			config:       config,
+			cache:        testCase.cache,
+			hookExecuter: &fakehook.FakeHook{},
+			client:       kubeClient,
+		}
+
+		if testCase.options == nil {
+			testCase.options = &Options{}
+		}
+
+		err := controller.Deploy(testCase.options, log.Discard)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
+	}
+}
+
+type purgeTestCase struct {
+	name string
+
+	cache             *generated.CacheConfig
+	configDeployments []*latest.DeploymentConfig
+	deployments       []string
+
+	expectedErr string
+}
+
+func TestPurge(t *testing.T) {
+	testCases := []purgeTestCase{
+		purgeTestCase{
+			name: "Skip deployment",
+			configDeployments: []*latest.DeploymentConfig{
+				&latest.DeploymentConfig{
+					Name: "skippedDeployment",
+				},
+			},
+			deployments: []string{"unskippedDeployment"},
+		},
+		purgeTestCase{
+			name: "No deployment method",
+			configDeployments: []*latest.DeploymentConfig{
+				&latest.DeploymentConfig{
+					Name: "noMethod",
+				},
+			},
+			deployments: []string{},
+			expectedErr: "Error purging: deployment noMethod has no deployment method",
+		},
+		purgeTestCase{
+			name: "Purge with kubectl",
+			configDeployments: []*latest.DeploymentConfig{
+				&latest.DeploymentConfig{
+					Name: "kubectlPurge",
+					Kubectl: &latest.KubectlConfig{
+						Manifests: []string{},
+					},
+				},
+			},
+			cache: &generated.CacheConfig{
+				Deployments: map[string]*generated.DeploymentCache{
+					"kubectlPurge": &generated.DeploymentCache{},
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		kube := fake.NewSimpleClientset()
+		kubeClient := &fakekube.Client{
+			Client: kube,
+		}
+		config := &latest.Config{
+			Deployments: testCase.configDeployments,
+		}
+		controller := &controller{
+			config:       config,
+			cache:        testCase.cache,
+			hookExecuter: &fakehook.FakeHook{},
+			client:       kubeClient,
+		}
+
+		err := controller.Purge(testCase.deployments, log.Discard)
+
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
+	}
+}
+
+type getCachedHelmClientTestCase struct {
+	name string
+
+	deployConfig  *latest.DeploymentConfig
+	helmV2Clients map[string]helmtypes.Client
+
+	expectedClient interface{}
+	expectedCache  map[string]interface{}
+	expectedErr    string
+}
+
+func TestGetCachedHelmClient(t *testing.T) {
+	testCases := []getCachedHelmClientTestCase{
+		getCachedHelmClientTestCase{
+			name: "Get cached client",
+			deployConfig: &latest.DeploymentConfig{
+				Helm: &latest.HelmConfig{
+					V2:              true,
+					TillerNamespace: "tillerns",
+				},
+			},
+			helmV2Clients: map[string]helmtypes.Client{
+				"tillerns": &fakehelm.Client{
+					Releases: []*helmtypes.Release{
+						&helmtypes.Release{
+							Name: "predefinedRelease",
+						},
+					},
+				},
+			},
+			expectedClient: &fakehelm.Client{
+				Releases: []*helmtypes.Release{
+					&helmtypes.Release{
+						Name: "predefinedRelease",
 					},
 				},
 			},
 		},
 	}
-	generated.InitDevSpaceConfig(generatedConfig, "default")
 
-	// 2. Write test chart into a temp folder
-	dir, err := ioutil.TempDir("", "testDeploy")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
-
-	wdBackup, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Error getting current working directory: %v", err)
-	}
-	err = os.Chdir(dir)
-	if err != nil {
-		t.Fatalf("Error changing working directory: %v", err)
-	}
-
-	// 8. Delete temp folder
-	defer func() {
-		err = os.Chdir(wdBackup)
-		if err != nil {
-			t.Fatalf("Error changing dir back: %v", err)
+	for _, testCase := range testCases {
+		if testCase.helmV2Clients == nil {
+			testCase.helmV2Clients = map[string]helmtypes.Client{}
 		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
+		if testCase.expectedCache == nil {
+			testCase.expectedCache = map[string]interface{}{}
+			for key, value := range testCase.helmV2Clients {
+				testCase.expectedCache[key] = value
+			}
 		}
-	}()
 
-	err = makeTestProject(dir)
-	if err != nil {
-		t.Fatalf("Error creating test project: %v", err)
-	}
+		client, err := GetCachedHelmClient(nil, testCase.deployConfig, &fakekube.Client{}, testCase.helmV2Clients, true, log.Discard)
 
-	// 3. Init kubectl & create test namespace
-	kubeClient := &kubectl.Client{
-		Client: fake.NewSimpleClientset(),
-	}
-	_, err = kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Error creating namespace: %v", err)
-	}
+		if testCase.expectedErr == "" {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else {
+			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+		}
 
-	cache := &generated.CacheConfig{
-		Deployments: make(map[string]*generated.DeploymentCache),
-	}
-	PurgeDeployments(testConfig, cache, kubeClient, []string{}, &log.DiscardLogger{})
-	testConfig.Deployments = []*latest.DeploymentConfig{
-		&latest.DeploymentConfig{
-			Name: "test-deployment",
-			Kubectl: &latest.KubectlConfig{
-				Manifests: []string{},
-			},
-		},
-		&latest.DeploymentConfig{
-			Name: "NotListed",
-		},
-	}
-	PurgeDeployments(testConfig, cache, kubeClient, []string{"test-deployment"}, &log.DiscardLogger{})
+		clientAsYaml, err := yaml.Marshal(client)
+		assert.NilError(t, err, "Error marshaling client in testCase %s", testCase.name)
+		expectationAsYaml, err := yaml.Marshal(testCase.expectedClient)
+		assert.NilError(t, err, "Error marshaling expected client in testCase %s", testCase.name)
+		assert.Equal(t, string(clientAsYaml), string(expectationAsYaml), "Unexpected client in testCase %s", testCase.name)
 
+		cacheAsYaml, err := yaml.Marshal(testCase.helmV2Clients)
+		assert.NilError(t, err, "Error marshaling cache in testCase %s", testCase.name)
+		expectationAsYaml, err = yaml.Marshal(testCase.expectedCache)
+		assert.NilError(t, err, "Error marshaling expected cache in testCase %s", testCase.name)
+		assert.Equal(t, string(cacheAsYaml), string(expectationAsYaml), "Unexpected cache in testCase %s", testCase.name)
+	}
 }
-
-func makeTestProject(dir string) error {
-	file, err := os.Create("package.json")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`{
-  "name": "node-js-sample",
-  "version": "0.0.1",
-  "description": "A sample Node.js app using Express 4",
-  "main": "index.js",
-  "scripts": {
-    "start": "nodemon index.js"
-  },
-  "dependencies": {
-    "express": "^4.13.3",
-    "nodemon": "^1.18.4",
-    "request": "^2.88.0"
-  },
-  "keywords": [
-    "node",
-    "express"
-  ],
-  "license": "MIT"
-}`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
-	}
-
-	file, err = os.Create("index.js")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`var express = require('express');
-var request = require('request');
-var app = express();
-
-app.get('/', async (req, res) => {
-  var body = await new Promise((resolve, reject) => {
-    request('http://php/index.php', (err, res, body) => {
-      if (err) { 
-        reject(err);
-        return;
-      }
-
-      resolve(body);
-    });
-  });
-
-  res.send(body);
-});
-
-app.listen(3000, function () {
-  console.log('Example app listening on port 3000!');
-});`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
-	}
-
-	file, err = os.Create("Dockerfile")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`FROM node:8.11.4
-
-RUN mkdir /app
-WORKDIR /app
-
-COPY package.json .
-RUN npm install
-
-COPY . .
-
-CMD ["npm", "start"]`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
-	}
-
-	file, err = os.Create(".dockerignore")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`Dockerfile
-.devspace/
-chart/
-node_modules/`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
-	}
-
-	fileInfo, err := os.Lstat(".")
-	if err != nil {
-		return err
-	}
-	err = os.Mkdir("kube", fileInfo.Mode())
-	if err != nil {
-		return err
-	}
-
-	file, err = os.Create("kube/deployment.yaml")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-  name: devspace
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        release: devspace-node
-    spec:
-      containers:
-      - name: node
-        image: node`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
-	}
-	err = os.Mkdir("chart", fileInfo.Mode())
-	if err != nil {
-		return err
-	}
-
-	file, err = os.Create("chart/Chart.yaml")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`name: my-app
-version: v0.0.2
-description: A Kubernetes-Native Application`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
-	}
-
-	file, err = os.Create("chart/values.yaml")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`image: devspace`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
-	}
-
-	err = os.Mkdir("chart/templates", fileInfo.Mode())
-	if err != nil {
-		return err
-	}
-
-	file, err = os.Create("chart/templates/deployment.yaml")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`kind: Deployment
-apiVersion: extensions/v1beta1
-metadata:
-  name: devspace
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/component: {{ $.Release.Name | quote }}
-        app.kubernetes.io/name: devspace-app
-        helm.sh/chart: "{{ $.Chart.Name }}-{{ $.Chart.Version }}"
-    spec:
-      containers:
-        - name: default
-          image: {{ .Values.image }}`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
-	}
-
-	file, err = os.Create("chart/templates/service.yaml")
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte(`apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app.kubernetes.io/name: devspace-app
-  name: external
-spec:
-  ports:
-  - name: port-0
-    port: 80
-    protocol: TCP
-    targetPort: 3000
-  selector:
-    app.kubernetes.io/component: {{ $.Release.Name | quote }}
-    app.kubernetes.io/name: devspace-app
-  type: ClusterIP`))
-	if err != nil {
-		return err
-	}
-	err = file.Close()
-	if err != nil {
-		return err
-	}
-
-	err = fsutil.WriteToFile([]byte(""), "TestManifest.yaml")
-	if err != nil {
-		return err
-	}
-
-	return nil
-}*/

@@ -10,7 +10,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
@@ -224,7 +223,7 @@ func (m *manager) PurgeAll(verbose bool) error {
 
 		err := dependency.Purge(dependencyLogger)
 		if err != nil {
-			return errors.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
+			return errors.Errorf("Error purging dependency %s: %s %v", dependency.ID, buff.String(), err)
 		}
 
 		m.log.Donef("Purged dependency %s", dependency.ID)
@@ -247,6 +246,7 @@ type Dependency struct {
 	DependencyCache  *generated.Config
 
 	kubeClient       kubectl.Client
+	registryClient   registry.Client
 	buildController  build.Controller
 	deployController deploy.Controller
 	generatedSaver   generated.ConfigLoader
@@ -341,15 +341,8 @@ func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, 
 		return errors.Errorf("Unable to create namespace: %v", err)
 	}
 
-	// Create docker client
-	dockerClient, err := docker.NewClient(log)
-	if err != nil {
-		return errors.Wrap(err, "create docker client")
-	}
-
 	// Create pull secrets and private registry if necessary
-	registryClient := registry.NewClient(d.Config, d.kubeClient, dockerClient, log)
-	err = registryClient.CreatePullSecrets()
+	err = d.registryClient.CreatePullSecrets()
 	if err != nil {
 		log.Warn(err)
 	}

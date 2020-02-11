@@ -3,7 +3,6 @@ package list
 import (
 	"strconv"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -48,7 +47,7 @@ func (cmd *profilesCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 		return errors.New(message.ConfigNotFound)
 	}
 
-	profiles, err := loader.GetProfiles(".")
+	profiles, err := configLoader.GetProfiles()
 	if err != nil {
 		return err
 	}

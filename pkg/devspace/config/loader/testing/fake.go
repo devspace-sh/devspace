@@ -87,6 +87,17 @@ func (f *FakeConfigLoader) LoadWithoutProfile() (*latest.Config, error) {
 	return f.Config, nil
 }
 
+// GetProfiles implements interface
+func (f *FakeConfigLoader) GetProfiles() ([]string, error) {
+	profiles := []string{}
+
+	for _, profile := range f.Config.Profiles {
+		profiles = append(profiles, profile.Name)
+	}
+
+	return profiles, nil
+}
+
 // ParseCommands implements interface
 func (f *FakeConfigLoader) ParseCommands(generatedConfig *generated.Config, data map[interface{}]interface{}) ([]*latest.CommandConfig, error) {
 	return loader.NewConfigLoader(nil, f.Log).ParseCommands(generatedConfig, data)

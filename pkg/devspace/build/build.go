@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
@@ -40,6 +41,9 @@ type controller struct {
 
 	hookExecuter hook.Executer
 	client       kubectl.Client
+
+	// Just for testing
+	overwriteBuilder builder.Interface
 }
 
 // NewController creates a new image build controller
