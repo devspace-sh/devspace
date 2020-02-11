@@ -1,0 +1,36 @@
+@import '../../styles/constants.scss';
+
+.stack-configuration-component {
+  display: flex;
+  flex-direction: row !important;
+  justify-content: center;
+
+  .codesnippet {
+    width: 100%;
+    max-width: calc(100% - 450px);
+    min-width: 50%;
+  }
+
+  .no-config {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 600 19px 'Open Sans';
+    opacity: 0.8;
+    text-align: center;
+
+    a {
+      font: 600 19px 'Open Sans';
+    }
+  }
+
+  .info-part {
+    width: 100%;
+    max-width: 450px;
+    margin-left: 30px;
+
+    > div {
+      margin-bottom: 20px;
+    }
+  }
+}

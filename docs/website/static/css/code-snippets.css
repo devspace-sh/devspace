@@ -1,0 +1,49 @@
+.hljs.language-bash .hljs-built_in {
+    color: #abb2bf;
+}
+
+body .hljs {
+    padding-left: 44px;
+    padding-right: 80px;
+}
+
+body .hljs-comment,
+body .hljs-quote {
+    color: #727986;
+}
+
+code.-hide-lines .line {
+    display: none;
+}
+
+.line {
+    display: inline-block;
+    width: 30px;
+    position: absolute;
+    margin-left: -44px;
+    padding-right: 5px;
+    text-align: right;
+    color: #828282;
+    background: #282c34;
+    user-select: none;
+    z-index: 1;
+}
+
+.line:hover {
+    color: #ffffff;
+}
+
+.line:target {
+    color: #282c34;
+}
+
+.line:target::before {
+    height: 1.5em;
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin-top: 1px;
+    background: #FF8A00;
+    content: ' ';
+    z-index: -1;
+}

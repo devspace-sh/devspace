@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  labels:
+    app: test
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test
+      image: busybox
+      command:
+        - "sh"
+      args:
+        - "-c"
+        - "mkdir /home/first && echo 123 > /home/first/abc.txt && sleep 10000000"

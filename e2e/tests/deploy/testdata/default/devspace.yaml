@@ -1,0 +1,22 @@
+version: v1beta5
+images:
+  php:
+    image: php
+    dockerfile: php/Dockerfile
+    context: php/
+deployments:
+- name: root-app
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx:latest
+- name: php-app
+  helm:
+    chart:
+      name: php/chart
+dependencies:
+- source:
+    path: dependency1
+- source:
+    path: dependency2

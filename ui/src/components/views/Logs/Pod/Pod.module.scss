@@ -1,0 +1,72 @@
+@import '../../../../styles/constants.scss';
+
+.pod {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  justify-content: space-between;
+  width: 420px;
+  margin-bottom: 20px;
+
+  &:last-of-type {
+    margin-bottom: 3px;
+  }
+
+  .buttons {
+    display: flex;
+  }
+
+  &.single-container {
+    cursor: pointer;
+    flex-direction: row;
+  }
+
+  &.selected {
+    background-color: $blue-dark;
+    color: white;
+  }
+
+  .status-padding {
+    padding-left: 11px;
+  }
+
+  .status {
+    span {
+      display: flex;
+      align-items: center;
+
+      .warning {
+        margin-left: 8px;
+        img {
+          width: 18px;
+          height: 18px;
+        }
+      }
+    }
+  }
+
+  .pod-name {
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .container-wrapper {
+    .container {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 10px;
+      cursor: pointer;
+      border: 1px solid $gray-2;
+      margin-top: 15px;
+
+      &:first-of-type {
+        margin-top: 0;
+      }
+
+      &.selected {
+        background-color: $blue-dark;
+        color: white;
+      }
+    }
+  }
+}

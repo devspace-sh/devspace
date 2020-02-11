@@ -1,0 +1,12 @@
+@import '../../../../styles/constants';
+
+.status-icon-text {
+  font: 600 14px 'Open Sans';
+  display: flex;
+  align-items: center;
+  margin-right: 17px;
+
+  &.warning {
+    color: $red-2;
+  }
+}

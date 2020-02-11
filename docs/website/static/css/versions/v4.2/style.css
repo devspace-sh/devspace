@@ -1,0 +1,84 @@
+
+
+/* hide category title for DevSpace and DevSpace Cloud */
+body[data-sidebar-version="v4.2"] .toc .navGroups > .navGroup:nth-child(2) .navGroupCategoryTitle,
+.toc .navGroups > .navGroup:nth-child(10) .navGroupCategoryTitle {
+  display: none;
+}
+
+/* hide expansion arrows for DevSpace and DevSpace Cloud */
+body[data-sidebar-version="v4.2"] .toc .navGroups > .navGroup:nth-child(2) .navGroupCategoryTitle .arrow,
+body[data-sidebar-version="v4.2"] .toc .navGroups > .navGroup:nth-child(10) .navGroupCategoryTitle .arrow {
+  display: none;
+}
+
+/* hide nav link for Introduction */
+body[data-sidebar-version="v4.2"] .toc .navGroups > .navGroup:nth-child(1) {
+  display: none;
+}
+
+/* always show What is DevSpace/Cloud? */
+body[data-sidebar-version="v4.2"] .toc .navGroups > .navGroup:nth-child(2) > ul,
+body[data-sidebar-version="v4.2"] .toc .navGroups > .navGroup:nth-child(10) > ul {
+  display: block;
+}
+
+/* hide vertical line for What is DevSpace/Cloud? */
+body[data-sidebar-version="v4.2"] .toc .navGroups > .navGroup:nth-child(2) > ul > .navListItem,
+body[data-sidebar-version="v4.2"] .toc .navGroups > .navGroup:nth-child(10) > ul > .navListItem {
+  border-left: none;
+}
+
+/* hide horizontal line for What is DevSpace/Cloud? */
+body[data-sidebar-version="v4.2"] .toc .navGroups > .navGroup:nth-child(2) > ul > .navListItem::after,
+body[data-sidebar-version="v4.2"] .toc .navGroups > .navGroup:nth-child(10) > ul > .navListItem::after {
+  display: none;
+}
+
+/* large title for DevSpace + DevSpace Cloud */
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(2) > ul > .navListItem > .navItem,
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(10) > ul > .navListItem > .navItem {
+  display: block;
+  margin: 1.8em 0 0.5em -11px;
+  padding: 0.5em 8px 0.4em;
+  border-bottom: 1px solid #ddd;
+  font-size: 20px;
+  font-weight: 400;
+  font-family: "Kanit", sans-serif;
+}
+
+/* move up large title DevSpace*/
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(2) > ul > .navListItem > .navItem {
+  margin-top: -5px;
+}
+
+/* hovering over large title for DevSpace and DevSpace Cloud */
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(2) .navItem:not(:hover),
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(10) .navItem:not(:hover) {
+  color: inherit;
+}
+
+/* move up DevSpace */
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(2) .navItem {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* style when active link is What is DevSpace/Cloud? */
+body[data-sidebar-version="v4.2"] .toc .navGroups > .navGroup:nth-child(2) .navListItem.navListItemActive .navItem,
+body[data-sidebar-version="v4.2"] .toc .navGroups > .navGroup:nth-child(10) .navListItem.navListItemActive .navItem {
+  background-color: transparent;
+  border-top: none;
+}
+
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(6) > ul > .subNavGroup:nth-child(4) .navItem,
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(6) > ul > .subNavGroup:nth-child(5) .navItem,
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(6) > ul > .subNavGroup:nth-child(6) .navItem {
+  text-indent: 15px;
+}
+
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(6) > ul > .subNavGroup:nth-child(4)::after,
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(6) > ul > .subNavGroup:nth-child(5)::after,
+body[data-sidebar-version="v4.2"] .navGroups > .navGroup:nth-child(6) > ul > .subNavGroup:nth-child(6)::after {
+  width: 32px;
+}

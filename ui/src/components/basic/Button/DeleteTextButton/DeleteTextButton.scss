@@ -1,0 +1,10 @@
+@import '../../../../styles/constants.scss';
+
+.delete-text-button {
+  background-color: $red-2;
+
+  &:hover {
+    filter: brightness(110%);
+    background-color: $red-2 !important;
+  }
+}

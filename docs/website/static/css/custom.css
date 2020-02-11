@@ -1,0 +1,127 @@
+/* your custom css */
+
+* {
+    outline: none;
+}
+
+body a, body a:hover {
+    color: #1c65f7;
+}
+
+
+body h1 a,
+body h2 a,
+body h3 a,
+body h4 a,
+body h5 a,
+body blockquote a {
+    color: #000000 !important;
+}
+
+body a:hover {
+    text-decoration: underline;
+}
+
+body h1, 
+body h2 {
+    margin-top: 1.6em;
+    margin-bottom: 0.5em;
+}
+
+body h3 {
+    font-size: 1.28em;
+    margin-top: 2em;
+    margin-bottom: 0.5em;
+}
+
+body h4, 
+body h5, 
+body h6 {
+    font-size: 1em;
+    margin-top: 1.2em;
+    margin-bottom: 0.3em;
+}
+
+body p {
+    margin: 0.5em 0;
+    color: #505050;
+}
+
+body ul, 
+body ol {
+    margin: 0.4em 0 1.5em;
+}
+
+body details,
+.docs-next {
+    box-shadow: 0 0 20px rgba(35,51,102,.2);
+}
+
+body details.active {
+    margin-left: -5px;
+    border-left: solid 5px #1c65f7d3;
+}
+
+small {
+    font-size: 0.8em;
+}
+
+pre {
+    margin-top: 0.4em;
+}
+
+pre .btnIcon {
+    margin-top: 3px;
+    margin-right: -10px;
+    padding-left: 0.4em;
+    padding-right: 15px;
+    background: #282c34;
+    box-shadow: -10px 10px 10px #282c34;
+}
+
+pre .btnIcon * {
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+pre:hover .btnIcon * {
+    opacity: 1;
+}
+
+body blockquote {
+    margin-top: 1em;
+    background-color: rgb(255, 230, 200);
+    border-left-color: #f80;
+    border-radius: 2px;
+}
+
+body blockquote p {
+    color: #6e6e6e;
+}
+
+.docs-next {
+    font-weight: 600;
+    background-color: #00bdff;
+    color: #fff;
+    border: none;
+}
+
+.docLastUpdate {
+    text-align: left;
+}
+
+.post p:empty {
+    display: none;
+}
+
+@media only screen and (min-width: 1024px) {
+  .docsNavContainer {
+    height: unset;
+  }
+}
+
+@media only screen and (min-width: 1400px) {
+}
+
+@media only screen and (min-width: 1500px) {
+}

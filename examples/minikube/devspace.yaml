@@ -1,0 +1,21 @@
+version: v1beta5
+images:
+  default:
+    image: devspace
+deployments:
+- name: default
+  helm:
+    chart:
+      name: ./chart
+dev:
+  ports:
+  - imageName: default
+    forward:
+    - port: 3000
+  sync:
+  - imageName: default
+    excludePaths:
+    - node_modules
+commands:
+- name: dev-minikube
+  command: devspace dev --kube-context=minikube

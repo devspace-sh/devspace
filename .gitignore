@@ -1,0 +1,29 @@
+# Dependencies
+/.vendor-new/
+
+# Created by devspace init
+/.devspace/
+/chart/
+/Dockerfile
+/.dockerignore
+
+# Build files
+*.exe
+*.exe~
+
+# History Plugin for VS Code
+.history/
+
+/devspace
+/debug*
+/__debug*
+.DS_STORE
+.idea
+
+# VS Code
+.vscode/ipch
+
+ui/node_modules
+ui/build/static/js/*.js.map
+
+e2e/**/.devspace

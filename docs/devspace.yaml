@@ -1,0 +1,34 @@
+version: v1beta6
+images:
+  default:
+    image: dscr.io/${DEVSPACE_USERNAME}/devspace-docs
+    createPullSecret: true
+deployments:
+- name: docs
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/devspace-docs
+      service:
+        ports:
+        - port: 3000
+dev:
+  ports:
+  - labelSelector:
+      app.kubernetes.io/component: docs
+    forward:
+    - port: 3000
+    - port: 9229
+    - port: 35729
+  open:
+  - url: http://localhost:3000/docs/next/introduction
+  sync:
+  - imageName: default
+    containerPath: /app
+    excludePaths:
+    - '*/node_modules'
+    - '*.log'
+  autoReload:
+    paths:
+    - website/sidebars.json

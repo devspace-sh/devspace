@@ -1,0 +1,15 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: devspace
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: devspace-default
+        app.kubernetes.io/name: devspace-app
+    spec:
+      containers:
+        - name: default
+          image: devspace

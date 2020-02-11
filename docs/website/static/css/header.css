@@ -1,0 +1,427 @@
+.responsive-hidden {
+  display: none;
+}
+
+.fixedHeaderContainer {
+  padding: 0;
+  position: absolute;
+  box-shadow: 0 3px 8px 0 rgba(116, 129, 141, 0.3);
+}
+
+.fixedHeaderContainer .headerWrapper.wrapper {
+  max-width: 1600px;
+  padding: 30px;
+}
+
+.fixedHeaderContainer .headerWrapper header {
+  /* padding: 0 5% 0 0; */
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fixedHeaderContainer .headerWrapper header a {
+  width: 175px;
+  height: 40px;
+  z-index: 0;
+}
+
+.fixedHeaderContainer .headerWrapper header .logo {
+  width: 170px;
+}
+
+.fixedHeaderContainer .headerWrapper header h3 {
+  margin-top: 5px;
+  color: #00bdff;
+  text-decoration: none;
+}
+
+.fixedHeaderContainer
+  .headerWrapper
+  header
+  .navigationWrapper
+  .slidingNav
+  .nav-site {
+  background-color: #223366;
+}
+
+.hamburger-active {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.navigationSlider .slidingNav ul.responsive-nav {
+  display: flex;
+  width: 45px;
+  height: 35px;
+  align-items: center;
+  margin: 0;
+}
+
+.responsive-nav li {
+  display: none;
+}
+
+.fixedHeaderContainer
+  .headerWrapper
+  header
+  .navigationWrapper
+  .slidingNav
+  .nav-site
+  li
+  a {
+  line-height: normal;
+}
+
+.fixedHeaderContainer
+  .headerWrapper
+  header
+  .navigationWrapper
+  .slidingNav
+  .nav-site
+  li
+  a:hover {
+  background-color: unset;
+}
+
+@media only screen and (max-width: 1023px) {
+  .tocActive .onPageNav {
+    top: 122px;
+  }
+}
+
+@media only screen and (min-width: 801px) {
+  .fixedHeaderContainer
+    .headerWrapper
+    header
+    .navigationWrapper
+    .slidingNav
+    .nav-site
+    li
+    a {
+    font-size: 16px;
+    font-family: "Raleway", sans-serif;
+    font-weight: 400;
+    width: fit-content;
+    height: fit-content;
+    padding: 0;
+    text-decoration: none;
+  }
+
+  /* .fixedHeaderContainer .headerWrapper header .navigationWrapper .slidingNav .nav-site li a:hover {
+    border-bottom: 1px solid white;
+    padding-bottom: 2px;
+    padding-top: 2px;
+  }
+    */
+  .fixedHeaderContainer
+    .headerWrapper
+    header
+    .navigationWrapper
+    .slidingNav
+    .nav-site
+    li {
+    padding: 2px 0;
+    margin: 0 10px;
+  }
+
+  .fixedHeaderContainer
+    .headerWrapper
+    header
+    .navigationWrapper
+    .slidingNav
+    .nav-site
+    li:hover {
+    border-bottom: 1px solid white;
+    border-top: 1px solid #223366;
+  }
+
+  .fixedHeaderContainer
+    .headerWrapper
+    header
+    .navigationWrapper
+    .slidingNav
+    .nav-site
+    li:nth-of-type(6) {
+    display: none;
+  }
+
+  /* GET STARTED BUTTON */
+  .fixedHeaderContainer
+    .headerWrapper
+    header
+    .navigationWrapper
+    .slidingNav
+    .nav-site
+    li:nth-of-type(5)
+    a {
+    /* background-color: #00bdff; */
+    color: #fff;
+    border-radius: 5px;
+    margin-left: 15px;
+    padding: 8px 18px;
+    border: 2px solid white;
+    border-radius: 5px;
+    margin-left: 15px;
+    padding: 7px 20px;
+    color: white !important;
+    font-family: "Raleway", "Play", sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .fixedHeaderContainer
+    .headerWrapper
+    header
+    .navigationWrapper
+    .slidingNav
+    .nav-site
+    li:nth-of-type(5)
+    a:hover {
+    background-color: white;
+    color: #223366 !important;
+  }
+
+  .fixedHeaderContainer
+    .headerWrapper
+    header
+    .navigationWrapper
+    .slidingNav
+    .nav-site
+    li:nth-of-type(5):hover {
+    border: none;
+  }
+
+  .fixedHeaderContainer {
+    padding: 0;
+  }
+
+  .navigationSlider nav.slidingNav {
+    background: none;
+    height: auto;
+    position: relative;
+    right: auto;
+    top: auto;
+    width: auto;
+  }
+
+  .navigationSlider .slidingNav ul {
+    background: none;
+    display: flex;
+    flex-flow: row nowrap;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+    width: auto;
+  }
+
+  .navigationSlider {
+    margin-left: auto;
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+}
+
+@media only screen and (max-width: 800px) {
+  header .navigationWrapper .slidingNav {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  header .navigationSlider {
+    width: 45px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .responsive-nav li.hamburger-active {
+    display: inline;
+  }
+
+  .fixedHeaderContainer
+    .headerWrapper
+    header
+    .navigationWrapper
+    .slidingNav
+    .nav-site
+    .hamburger-active
+    a {
+    background-image: url(/img/hamburger.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    height: 100%;
+    width: 100%;
+  }
+
+  /* .burger-button {
+      background-size: 20px;
+      background-image: url(../../images/cross-close.svg);
+    }
+  } */
+
+  .navigationSlider.burger-open {
+    height: 80vh;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: #233366;
+    padding: 18px 0;
+    box-shadow: 0px 1px 3px 1px #21212194;
+    width: 100%;
+  }
+
+  /* ul */
+  .fixedHeaderContainer
+    .headerWrapper
+    header
+    .navigationWrapper
+    .slidingNav
+    .nav-site {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* li */
+  .fixedHeaderContainer
+    .headerWrapper
+    header
+    .navigationWrapper
+    .slidingNav
+    .nav-site {
+    margin-top: 0;
+    font-size: 24px;
+  }
+
+  .fixedHeaderContainer
+    .headerWrapper
+    header
+    .navigationWrapper
+    .slidingNav
+    .nav-site
+    li:nth-of-type(5) {
+    font-family: "Raleway", "Play", sans-serif;
+    font-weight: 600;
+    border: 2px solid white;
+    border-radius: 5px;
+    padding: 0;
+    margin-top: 1px;
+    margin-bottom: -9px;
+  }
+  .fixedHeaderContainer
+    .headerWrapper
+    header
+    .navigationWrapper
+    .slidingNav
+    .nav-site
+    li:nth-of-type(5)
+    a {
+    color: #233366 !important;
+    background-color: white !important;
+    margin-left: 0;
+    text-transform: uppercase;
+    height: 100%;
+    width: 100%;
+    padding: 7px 20px;
+  }
+
+  header .burger-open nav.slidingNav .responsive-nav .hamburger-active {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    display: block;
+    right: 39px;
+    top: 23px;
+    z-index: 15;
+    padding: 0;
+  }
+
+  .fixedHeaderContainer
+    .headerWrapper
+    header
+    .navigationWrapper.burger-open
+    .slidingNav
+    .nav-site
+    .hamburger-active
+    a {
+    background-image: url(/img/cross-close.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    border: none;
+  }
+  .fixedHeaderContainer
+    .headerWrapper
+    header
+    .navigationWrapper.burger-open
+    .slidingNav
+    .nav-site
+    .hamburger-active
+    a:hover {
+    border: none;
+  }
+
+  header .burger-open .slidingNav ul.responsive-nav {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    top: 0;
+    background: #223366;
+    padding-top: 34px;
+    justify-content: flex-end;
+    padding: 0;
+  }
+
+  header .burger-open .slidingNav ul.responsive-nav li {
+    display: list-item;
+    font-size: 24px;
+    font-family: "Raleway", sans-serif;
+    /* padding: 5px 10px; */
+    flex: none;
+  }
+
+  header .burger-open .slidingNav ul.responsive-nav li a {
+    font-size: 24px;
+    height: 100%;
+    width: 100%;
+    padding: 0;
+    border-bottom: 1px solid transparent;
+    padding-bottom: 2px;
+  }
+  header .burger-open .slidingNav ul.responsive-nav li a:hover {
+    border-bottom: 1px solid white;
+    text-decoration: none;
+  }
+
+  .fixedHeaderContainer .headerWrapper header {
+    position: unset;
+  }
+}
+
+@media screen and (max-width: 550px) {
+  .fixedHeaderContainer .headerWrapper header .navigationSlider {
+    right: 15px;
+    overflow: hidden;
+    position: absolute;
+  }
+
+  header .burger-open nav.slidingNav .responsive-nav .hamburger-active {
+    right: 25px;
+    top: 25px;
+  }
+}
+
+.navigationSlider .slidingNav .nav-site {
+  margin-top: 0;
+}

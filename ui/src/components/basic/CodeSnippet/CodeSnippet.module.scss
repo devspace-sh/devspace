@@ -1,0 +1,82 @@
+@import '../../../styles/constants';
+
+.code-snippet {
+  padding: 15px 40px 15px 30px;
+  position: relative;
+  color: $dark-blue;
+  background-color: $blue-dark;
+  box-shadow: $shadow-button;
+  border-radius: 3px;
+
+  .tooltip-container {
+    display: none;
+    position: absolute;
+    right: 5px;
+    top: 5px;
+  }
+
+  &:hover {
+    > .tooltip-container {
+      display: block;
+      top: 10px;
+    }
+  }
+
+  > .code {
+    display: flex;
+    flex-direction: column;
+    color: $code-color;
+    font: $code;
+    height: 100%;
+
+    > div::-webkit-scrollbar {
+      height: 7px;
+    }
+
+    /* Handle */
+    > div::-webkit-scrollbar-thumb {
+      background: grey;
+      border-radius: 10px;
+    }
+
+    > .code-text {
+      display: flex;
+      flex-direction: column;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 17px 0 10px 0;
+      z-index: 1;
+      height: 100%;
+
+      > .line {
+        padding: 2px 0 2px 0;
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+        width: fit-content;
+        overflow: hidden;
+
+        > .line-number {
+          color: grey;
+          font-weight: bold;
+          font-size: 14px;
+          user-select: none;
+          font-family: 'Roboto Mono';
+          width: 25px;
+          margin-right: 20px;
+          text-align: right;
+        }
+
+        b {
+          color: $primary-orange;
+        }
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 400px) {
+  .code-snippet {
+    padding: 15px 40px 15px 25px;
+  }
+}

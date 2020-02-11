@@ -1,0 +1,381 @@
+{
+  "docs": {
+    "Introduction": [
+      "introduction"
+    ],
+    "DevSpace": [
+      "cli/what-is-devspace-cli"
+    ],
+    "Getting Started": [
+      "cli/getting-started/installation",
+      "cli/getting-started/deployment",
+      "cli/getting-started/development"
+    ],
+    "Guides": [
+      "cli/guides/tutorials",
+      "cli/guides/localhost-ui",
+      "cli/guides/domains-ingresses",
+      "cli/guides/executing-commands",
+      "cli/guides/file-synchronization",
+      "cli/guides/development-staging-production",
+      "cli/guides/ci-cd-integration"
+    ],
+    "Image Building": [
+      "cli/image-building/workflow-basics",
+      {
+        "type": "subcategory",
+        "label": "Configuration",
+        "ids": [
+          "cli/image-building/configuration/overview-specification",
+          "cli/image-building/configuration/build-tools",
+          "cli/image-building/configuration/build-options"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Advanced Topics",
+        "ids": [
+          "cli/image-building/advanced/advanced-topics",
+          "cli/image-building/advanced/best-practices",
+          "cli/image-building/advanced/cleanup"
+        ]
+      }
+    ],
+    "Deployment": [
+      "cli/deployment/workflow-basics",
+      {
+        "type": "subcategory",
+        "label": "Deployment Types",
+        "ids": [
+          "cli/deployment/deployment-types",
+          "cli/deployment/components/what-are-components",
+          "cli/deployment/helm-charts/what-are-helm-charts",
+          "cli/deployment/kubernetes-manifests/what-are-manifests"
+        ]
+      },
+      "cli/deployment/configuration",
+      {
+        "type": "subcategory",
+        "label": "Configuration (Components)",
+        "ids": [
+          "cli/deployment/components/configuration/overview-specification",
+          "cli/deployment/components/configuration/containers",
+          "cli/deployment/components/configuration/volumes",
+          "cli/deployment/components/configuration/service",
+          "cli/deployment/components/configuration/ingress",
+          "cli/deployment/components/configuration/scaling"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Configuration (Helm Charts)",
+        "ids": [
+          "cli/deployment/helm-charts/configuration/overview-specification"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Configuration (Manifests)",
+        "ids": [
+          "cli/deployment/kubernetes-manifests/configuration/overview-specification",
+          "cli/deployment/kubernetes-manifests/configuration/kustomize"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Advanced Topics",
+        "ids": [
+          "cli/deployment/advanced/advanced-topics",
+          "cli/deployment/advanced/dependencies"
+        ]
+      }
+    ],
+    "Development": [
+      "cli/development/workflow-basics",
+      {
+        "type": "subcategory",
+        "label": "Configuration",
+        "ids": [
+          "cli/development/configuration/overview-specification",
+          "cli/development/configuration/port-forwarding",
+          "cli/development/configuration/auto-open",
+          "cli/development/configuration/file-synchronization",
+          "cli/development/configuration/logs-streaming",
+          "cli/development/configuration/auto-reloading",
+          "cli/development/configuration/interactive-mode"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Advanced Topics",
+        "ids": [
+          "cli/development/advanced/advanced-topics",
+          "cli/development/advanced/remote-debuggers"
+        ]
+      }
+    ],
+    "Advanced Configuration": [
+      "cli/configuration/reference",
+      "cli/configuration/variables",
+      "cli/configuration/profiles-patches",
+      "cli/configuration/custom-commands",
+      "cli/configuration/hooks"
+    ],
+    "CLI Reference": [
+      {
+        "type": "subcategory",
+        "label": "devspace add",
+        "ids": [
+          "cli/commands/devspace_add",
+          "cli/commands/devspace_add_deployment",
+          "cli/commands/devspace_add_image",
+          "cli/commands/devspace_add_port",
+          "cli/commands/devspace_add_provider",
+          "cli/commands/devspace_add_sync"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace analyze",
+        "ids": [
+          "cli/commands/devspace_analyze"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace attach",
+        "ids": [
+          "cli/commands/devspace_attach"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace build",
+        "ids": [
+          "cli/commands/devspace_build"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace cleanup",
+        "ids": [
+          "cli/commands/devspace_cleanup",
+          "cli/commands/devspace_cleanup_images"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace connect",
+        "ids": [
+          "cli/commands/devspace_connect",
+          "cli/commands/devspace_connect_cluster"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace create",
+        "ids": [
+          "cli/commands/devspace_create",
+          "cli/commands/devspace_create_space"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace deploy",
+        "ids": [
+          "cli/commands/devspace_deploy"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace dev",
+        "ids": [
+          "cli/commands/devspace_dev"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace enter",
+        "ids": [
+          "cli/commands/devspace_enter"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace init",
+        "ids": [
+          "cli/commands/devspace_init"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace list",
+        "ids": [
+          "cli/commands/devspace_list",
+          "cli/commands/devspace_list_available-components",
+          "cli/commands/devspace_list_clusters",
+          "cli/commands/devspace_list_commands",
+          "cli/commands/devspace_list_contexts",
+          "cli/commands/devspace_list_deployments",
+          "cli/commands/devspace_list_namespaces",
+          "cli/commands/devspace_list_ports",
+          "cli/commands/devspace_list_profiles",
+          "cli/commands/devspace_list_providers",
+          "cli/commands/devspace_list_spaces",
+          "cli/commands/devspace_list_sync",
+          "cli/commands/devspace_list_vars"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace login",
+        "ids": [
+          "cli/commands/devspace_login"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace logs",
+        "ids": [
+          "cli/commands/devspace_logs"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace open",
+        "ids": [
+          "cli/commands/devspace_open"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace purge",
+        "ids": [
+          "cli/commands/devspace_purge"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace remove",
+        "ids": [
+          "cli/commands/devspace_remove",
+          "cli/commands/devspace_remove_cluster",
+          "cli/commands/devspace_remove_context",
+          "cli/commands/devspace_remove_deployment",
+          "cli/commands/devspace_remove_image",
+          "cli/commands/devspace_remove_port",
+          "cli/commands/devspace_remove_provider",
+          "cli/commands/devspace_remove_space",
+          "cli/commands/devspace_remove_sync"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace render",
+        "ids": [
+          "cli/commands/devspace_render"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace reset",
+        "ids": [
+          "cli/commands/devspace_reset",
+          "cli/commands/devspace_reset_dependencies",
+          "cli/commands/devspace_reset_key",
+          "cli/commands/devspace_reset_vars"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace set",
+        "ids": [
+          "cli/commands/devspace_set",
+          "cli/commands/devspace_set_analytics",
+          "cli/commands/devspace_set_var"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace status",
+        "ids": [
+          "cli/commands/devspace_status",
+          "cli/commands/devspace_status_sync"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace sync",
+        "ids": [
+          "cli/commands/devspace_sync"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace ui",
+        "ids": [
+          "cli/commands/devspace_ui"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace update",
+        "ids": [
+          "cli/commands/devspace_update",
+          "cli/commands/devspace_update_config",
+          "cli/commands/devspace_update_dependencies"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace upgrade",
+        "ids": [
+          "cli/commands/devspace_upgrade"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "devspace use",
+        "ids": [
+          "cli/commands/devspace_use",
+          "cli/commands/devspace_use_context",
+          "cli/commands/devspace_use_namespace",
+          "cli/commands/devspace_use_profile",
+          "cli/commands/devspace_use_provider",
+          "cli/commands/devspace_use_space"
+        ]
+      }
+    ],
+    "DevSpace Cloud": [
+      "cloud/what-is-devspace-cloud"
+    ],
+    "Spaces": [
+      "cloud/spaces/what-are-spaces",
+      "cloud/spaces/create-spaces",
+      "cloud/spaces/delete-spaces",
+      "cloud/spaces/networking",
+      "cloud/spaces/resource-limits",
+      "cloud/spaces/pause-spaces"
+    ],
+    "Domains": [
+      "cloud/domains/workflow", 
+      "cloud/domains/certificates"
+    ],
+    "Images": [
+      "cloud/images/dscr-io"
+    ],
+    "Clusters": [
+      "cloud/clusters/connect",
+      "cloud/clusters/users",
+      "cloud/clusters/limits",
+      "cloud/clusters/access"
+    ],
+    "Teams": ["cloud/teams/teams"],
+    "Administration": [
+      "cloud/admin/users",
+      "cloud/admin/authentication",
+      "cloud/admin/registry",
+      "cloud/admin/settings"
+    ]
+  }
+}

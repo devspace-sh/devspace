@@ -1,0 +1,165 @@
+footer {
+    display: none;
+    width: 100%;
+    background-color: #223366;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.footer-container {
+  padding: 50px 0 0px 0;
+  color: white;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.devspace-company {
+  max-width: 400px;
+  position: absolute;
+  right: 40px;
+  top: 55px;
+}
+
+.social-networks {
+  display: flex;
+  flex-wrap: wrap;
+  width: 140px;
+}
+
+.social-networks a {
+    margin: 5px;
+    height: 60px;
+}
+
+.social-networks .fb-icon {
+    margin: 5px;
+    height: 60px;
+}
+
+.social-networks .fb-icon:hover {
+  background-color: #4267b2;
+}
+
+.social-networks .twitter-icon {
+    margin: 5px;
+    height: 60px;
+}
+
+.social-networks .twitter-icon:hover {
+  background-color: #1da1f2;
+}
+
+.social-networks .sof-icon {
+    margin: 5px;
+    height: 60px;
+}
+
+.social-networks .sof-icon:hover{
+  background-color: #F48024;
+}
+
+.social-networks .gh-icon {
+    margin: 5px;
+    height: 60px;
+}
+
+.social-networks .gh-icon:hover {
+  background-color: #24292e;
+}
+
+.doc-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 40px;
+  max-width: 800px;
+}
+
+.doc-links .links {
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+  height: 130px;
+}
+
+.doc-links .links .title {
+  font-size: 1.4em;
+  margin: 0 0 10px 0;
+}
+.doc-links .links .link {
+  color: white;
+  text-decoration: none;
+  line-height: normal;
+}
+
+footer {
+  line-height: normal !important;
+}
+
+@media screen and (max-width: 1100px) {
+  footer .footer-container {
+    flex-direction: column;
+  }
+
+  footer .footer-container .devspace-company {
+    margin: 0 auto;
+    position: relative;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 605px;
+  }
+
+  footer .footer-container .devspace-company img {
+    margin-bottom: 10px;
+    max-width: 100%;
+  }
+
+  footer .footer-container .social-networks {
+      width: 100%;
+      align-items: center;
+      justify-content: center;
+      margin-top: 40px;
+  }
+
+  footer .footer-container .doc-links {
+      max-width: 796px;
+  }
+
+  footer .footer-container .doc-links .links.invisible {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 760px) {
+  footer .footer-container .devspace-company {
+    padding: 0 28px;
+    text-align: center;
+  }
+
+  footer .footer-container .doc-links {
+    margin: 40px 10px 0 10px;
+    text-align: center;
+  }
+
+  footer .footer-container .doc-links .links {
+    max-width: 150px;
+  }
+
+  footer .footer-container .doc-links .links .title {
+    font-size: 1.2em;
+  }
+
+  footer .footer-container .doc-links .links .link {
+    font-size: 0.9em;
+  }
+}

@@ -1,0 +1,19 @@
+@import '../../../../styles/constants.scss';
+
+.logs-multiple {
+  cursor: pointer;
+  margin-bottom: 20px;
+  padding: 15px;
+  font: 600 14px 'Open Sans';
+  width: 420px;
+  height: 60px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &.selected {
+    background-color: $blue-dark;
+    color: white;
+  }
+}
