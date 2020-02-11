@@ -56,8 +56,8 @@ func (p *provider) Login() error {
 
 		_, err := p.client.GetSpaces()
 		if err != nil {
-			close(keyChannel)
 			server.Shutdown(ctx)
+			close(keyChannel)
 			return errors.Wrap(err, "login")
 		}
 	} else {
@@ -68,12 +68,12 @@ func (p *provider) Login() error {
 		key = <-keyChannel
 	}
 
-	close(keyChannel)
 	err = server.Shutdown(ctx)
 	if err != nil {
 		return err
 	}
 
+	close(keyChannel)
 	p.Key = key
 	p.client = client.NewClient(p.Name, p.Host, key, p.Token, p.loader)
 	return nil
