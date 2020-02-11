@@ -31,7 +31,7 @@ func (p *provider) Login() error {
 
 	server := startServer(p.Host+LoginSuccessEndpoint, keyChannel, p.log)
 	err := p.browser.Run(url)
-	if err == nil {
+	if err != nil {
 		p.log.Infof("Unable to open web browser for login page.\n\n Please follow these instructions for manually loggin in:\n\n  1. Open this URL in a browser: %s\n  2. After logging in, click the 'Create Key' button\n  3. Enter a key name (e.g. my-key) and click 'Create Access Key'\n  4. Copy the generated key from the input field", p.Host+"/settings/access-keys")
 
 		key, err = p.log.Question(&survey.QuestionOptions{
