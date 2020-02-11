@@ -36,7 +36,7 @@ func (client *FakeClient) Ping(ctx context.Context) (dockertypes.Ping, error) {
 func (client *FakeClient) NegotiateAPIVersion(ctx context.Context) {}
 
 // ImageBuildCLI builds an image with the docker cli
-func (client *FakeClient) ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Writer, options dockertypes.ImageBuildOptions) error {
+func (client *FakeClient) ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions) error {
 	return nil
 }
 

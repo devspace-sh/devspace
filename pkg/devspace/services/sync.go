@@ -212,6 +212,9 @@ func (serviceClient *client) isFatalSyncError(err error) bool {
 	if strings.Index(err.Error(), "no such file or directory") != -1 {
 		return true
 	}
+	if strings.Index(err.Error(), "You are trying to sync the complete container root") != -1 {
+		return true
+	}
 
 	return false
 }

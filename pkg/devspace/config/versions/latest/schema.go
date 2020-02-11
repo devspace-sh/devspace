@@ -67,6 +67,7 @@ type DockerConfig struct {
 	SkipPush        *bool         `yaml:"skipPush,omitempty"`
 	DisableFallback *bool         `yaml:"disableFallback,omitempty"`
 	UseBuildKit     *bool         `yaml:"useBuildKit,omitempty"`
+	Args            []string      `yaml:"args,omitempty"`
 	Options         *BuildOptions `yaml:"options,omitempty"`
 }
 

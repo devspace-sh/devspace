@@ -92,12 +92,6 @@ func (l *configLoader) ParseCommands(generatedConfig *generated.Config, data map
 
 // parseConfig fills the variables in the data and parses the config
 func (l *configLoader) parseConfig(generatedConfig *generated.Config, data map[interface{}]interface{}) (*latest.Config, error) {
-	// Load defined variables
-	vars, err := versions.ParseVariables(data, l.log)
-	if err != nil {
-		return nil, err
-	}
-
 	// Get profile
 	profile, err := versions.ParseProfile(data, l.options.Profile)
 	if err != nil {
@@ -105,7 +99,6 @@ func (l *configLoader) parseConfig(generatedConfig *generated.Config, data map[i
 	}
 
 	// Now delete not needed parts from config
-	delete(data, "vars")
 	delete(data, "profiles")
 	delete(data, "commands")
 
@@ -123,6 +116,15 @@ func (l *configLoader) parseConfig(generatedConfig *generated.Config, data map[i
 			return nil, err
 		}
 	}
+
+	// Load defined variables
+	vars, err := versions.ParseVariables(data, l.log)
+	if err != nil {
+		return nil, err
+	}
+
+	// Delete vars from config
+	delete(data, "vars")
 
 	// Fill in variables
 	err = l.FillVariables(generatedConfig, data, vars)
@@ -195,6 +197,7 @@ func (l *configLoader) FillVariables(generatedConfig *generated.Config, prepared
 	return nil
 }
 
+// ParseVarsFromOptions returns the variables from the given options
 func ParseVarsFromOptions(options *ConfigOptions) (map[string]string, error) {
 	vars := map[string]string{}
 

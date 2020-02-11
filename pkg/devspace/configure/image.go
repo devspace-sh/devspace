@@ -19,6 +19,7 @@ import (
 )
 
 const dockerHubHostname = "hub.docker.com"
+const noRegistryImage = "devspace"
 
 // newImageConfigFromImageName returns an image config based on the image
 func (m *manager) newImageConfigFromImageName(imageName, dockerfile, context string) *latest.ImageConfig {
@@ -101,7 +102,9 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 		return nil, err
 	}
 
-	if registryURL == cloudRegistryHostname {
+	if registryURL == "" {
+		imageName = noRegistryImage
+	} else if registryURL == cloudRegistryHostname {
 		imageName = registryURL + "/${DEVSPACE_USERNAME}/" + imageName
 	} else if registryURL == "hub.docker.com" {
 		m.log.StartWait("Checking Docker credentials")
@@ -178,6 +181,16 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 	if context != "" && context != helper.DefaultContextPath {
 		retImageConfig.Context = context
 	}
+	if imageName == noRegistryImage {
+		if retImageConfig.Build == nil {
+			retImageConfig.Build = &v1.BuildConfig{}
+		}
+		if retImageConfig.Build.Docker == nil {
+			retImageConfig.Build.Docker = &v1.DockerConfig{}
+		}
+
+		retImageConfig.Build.Docker.SkipPush = ptr.Bool(true)
+	}
 
 	return retImageConfig, nil
 }
@@ -186,6 +199,7 @@ func (m *manager) getRegistryURL(dockerClient docker.Client, cloudRegistryHostna
 	var (
 		useDockerHub          = "Use " + dockerHubHostname
 		useDevSpaceRegistry   = "Use " + cloudRegistryHostname + " (free, private Docker registry)"
+		skipImagePush         = "Skip image push (local cluster e.g. docker-desktop)"
 		useOtherRegistry      = "Use other registry"
 		registryUsernameHint  = " => you are logged in as %s"
 		registryDefaultOption = useDevSpaceRegistry
@@ -209,6 +223,7 @@ func (m *manager) getRegistryURL(dockerClient docker.Client, cloudRegistryHostna
 		registryOptions = []string{useDockerHub, useDevSpaceRegistry, useOtherRegistry}
 	}
 
+	registryOptions = append(registryOptions, skipImagePush)
 	selectedRegistry, err := m.log.Question(&survey.QuestionOptions{
 		Question:     "Which registry do you want to use for storing your Docker images?",
 		DefaultValue: registryDefaultOption,
@@ -219,7 +234,9 @@ func (m *manager) getRegistryURL(dockerClient docker.Client, cloudRegistryHostna
 	}
 
 	var registryURL string
-	if selectedRegistry == useDockerHub {
+	if selectedRegistry == skipImagePush {
+		return "", nil
+	} else if selectedRegistry == useDockerHub {
 		registryURL = dockerHubHostname
 	} else if selectedRegistry == useDevSpaceRegistry {
 		registryURL = cloudRegistryHostname

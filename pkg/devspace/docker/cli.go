@@ -9,7 +9,7 @@ import (
 )
 
 // ImageBuildCLI builds an image with the docker cli
-func (c *client) ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Writer, options dockertypes.ImageBuildOptions) error {
+func (c *client) ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions) error {
 	args := []string{"build"}
 
 	if options.BuildArgs != nil {
@@ -33,6 +33,10 @@ func (c *client) ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Wr
 	}
 	if options.Target != "" {
 		args = append(args, "--target", options.Target)
+	}
+
+	for _, arg := range additionalArgs {
+		args = append(args, arg)
 	}
 
 	args = append(args, "-")
