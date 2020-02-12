@@ -179,17 +179,19 @@ type ServicePortConfig struct {
 
 // IngressConfig holds the configuration of a component ingress
 type IngressConfig struct {
-	Name        string               `yaml:"name,omitempty"`
-	Labels      map[string]string    `yaml:"labels,omitempty"`
-	Annotations map[string]string    `yaml:"annotations,omitempty"`
-	TLS         string               `yaml:"tls,omitempty"`
-	Rules       []*IngressRuleConfig `yaml:"rules,omitempty"`
+	Name             string               `yaml:"name,omitempty"`
+	Labels           map[string]string    `yaml:"labels,omitempty"`
+	Annotations      map[string]string    `yaml:"annotations,omitempty"`
+	TLS              string               `yaml:"tls,omitempty"`
+	TLSClusterIssuer string               `yaml:"tlsClusterIssuer,omitempty"`
+	IngressClass     string               `yaml:"ingressClass,omitempty"`
+	Rules            []*IngressRuleConfig `yaml:"rules,omitempty"`
 }
 
 // IngressRuleConfig holds the port configuration of a component service
 type IngressRuleConfig struct {
 	Host        string `yaml:"host,omitempty"`
-	TLS         string `yaml:"tls,omitempty"`
+	TLS         string `yaml:"tls,omitempty"` // DEPRECATED
 	Path        string `yaml:"path,omitempty"`
 	ServicePort *int   `yaml:"servicePort,omitempty"`
 	ServiceName string `yaml:"serviceName,omitempty"`
