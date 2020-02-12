@@ -31,6 +31,7 @@ in the devspace.yaml
 ### Options inherited from parent commands
 
 ```
+      --config string         The devspace config file to use
       --debug                 Prints the stack trace if an error occurs
       --kube-context string   The kubernetes context to use
   -n, --namespace string      The kubernetes namespace to use

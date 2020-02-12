@@ -33,6 +33,7 @@ devspace sync --container-path=/my-path
   -c, --container string           Container name within pod where to execute command
       --container-path string      Container path to use (Default is working directory)
       --download-on-initial-sync   Downloads all locally non existing remote files in the beginning (default true)
+      --download-only              If set DevSpace will only download files
   -e, --exclude strings            Exclude directory from sync
   -h, --help                       help for sync
   -l, --label-selector string      Comma separated key=value selector list (e.g. release=test)
@@ -40,12 +41,14 @@ devspace sync --container-path=/my-path
       --no-watch                   Synchronizes local and remote and then stops
       --pick                       Select a pod
       --pod string                 Pod to open a shell to
+      --upload-only                If set DevSpace will only upload files
       --verbose                    Shows every file that is synced
 ```
 
 ### Options inherited from parent commands
 
 ```
+      --config string         The devspace config file to use
       --debug                 Prints the stack trace if an error occurs
       --kube-context string   The kubernetes context to use
   -n, --namespace string      The kubernetes namespace to use
