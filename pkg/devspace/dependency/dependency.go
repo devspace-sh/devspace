@@ -25,7 +25,8 @@ type Manager interface {
 	UpdateAll() error
 	BuildAll(options BuildOptions) error
 	DeployAll(options DeployOptions) error
-	PurgeAll(verbose bool) error
+	PurgeAll(options PurgeOptions) error
+	RenderAll(options RenderOptions) error
 }
 
 type manager struct {
@@ -72,127 +73,76 @@ func (m *manager) UpdateAll() error {
 
 // BuildOptions has all options for building all dependencies
 type BuildOptions struct {
-	UpdateDependencies, SkipPush, ForceDeployDependencies, ForceBuild, Verbose bool
+	Dependencies            []string
+	UpdateDependencies      bool
+	SkipPush                bool
+	ForceDeployDependencies bool
+	ForceBuild              bool
+	Verbose                 bool
 }
 
 // BuildAll will build all dependencies if there are any
 func (m *manager) BuildAll(options BuildOptions) error {
-	if m.config == nil || m.config.Dependencies == nil || len(m.config.Dependencies) == 0 {
-		return nil
-	}
-
-	// Resolve all dependencies
-	dependencies, err := m.resolver.Resolve(options.UpdateDependencies)
-	if err != nil {
-		if _, ok := err.(*cyclicError); ok {
-			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
-		}
-
-		return err
-	}
-
-	defer m.log.StopWait()
-
-	if options.Verbose == false {
-		m.log.Infof("To display the complete dependency build run with the '--verbose-dependencies' flag")
-	}
-
-	// Deploy all dependencies
-	for i := 0; i < len(dependencies); i++ {
-		var (
-			dependency       = dependencies[i]
-			buff             = &bytes.Buffer{}
-			dependencyLogger = m.log
-		)
-
-		// If not verbose log to a stream
-		if options.Verbose == false {
-			m.log.StartWait(fmt.Sprintf("Building dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
-			dependencyLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
-		} else {
-			m.log.Infof(fmt.Sprintf("Building dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
-		}
-
-		err := dependency.Build(options.SkipPush, options.ForceDeployDependencies, options.ForceBuild, dependencyLogger)
-		if err != nil {
-			return errors.Errorf("Error building dependency %s: %s %v", dependency.ID, buff.String(), err)
-		}
-
-		m.log.Donef("Built dependency %s", dependency.ID)
-	}
-
-	m.log.StopWait()
-	m.log.Donef("Successfully built %d dependencies", len(dependencies))
-
-	return nil
+	return m.handleDependencies(options.Dependencies, options.UpdateDependencies, options.Verbose, "Build", func(dependency *Dependency, log log.Logger) error {
+		return dependency.Build(options.SkipPush, options.ForceDeployDependencies, options.ForceBuild, log)
+	})
 }
 
 // DeployOptions has all options for deploying all dependencies
 type DeployOptions struct {
-	UpdateDependencies, SkipPush, ForceDeployDependencies, SkipBuild, ForceBuild, ForceDeploy, Verbose bool
+	Dependencies            []string
+	UpdateDependencies      bool
+	SkipPush                bool
+	ForceDeployDependencies bool
+	SkipBuild               bool
+	ForceBuild              bool
+	ForceDeploy             bool
+	Verbose                 bool
 }
 
 // DeployAll will deploy all dependencies if there are any
 func (m *manager) DeployAll(options DeployOptions) error {
-	if m.config == nil || m.config.Dependencies == nil || len(m.config.Dependencies) == 0 {
-		return nil
-	}
+	return m.handleDependencies(options.Dependencies, options.UpdateDependencies, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
+		return dependency.Deploy(options.SkipPush, options.ForceDeployDependencies, options.SkipBuild, options.ForceBuild, options.ForceDeploy, log)
+	})
+}
 
-	// Resolve all dependencies
-	dependencies, err := m.resolver.Resolve(options.UpdateDependencies)
-	if err != nil {
-		if _, ok := err.(*cyclicError); ok {
-			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
-		}
-
-		return err
-	}
-
-	defer m.log.StopWait()
-
-	if options.Verbose == false {
-		m.log.Infof("To display the complete dependency deployment run with the '--verbose-dependencies' flag")
-	}
-
-	// Deploy all dependencies
-	for i := 0; i < len(dependencies); i++ {
-		var (
-			dependency       = dependencies[i]
-			buff             = &bytes.Buffer{}
-			dependencyLogger = m.log
-		)
-
-		// If not verbose log to a stream
-		if options.Verbose == false {
-			m.log.StartWait(fmt.Sprintf("Deploying dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
-			dependencyLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
-		} else {
-			m.log.Infof(fmt.Sprintf("Deploying dependency %d of %d: %s", i+1, len(dependencies), dependency.ID))
-		}
-
-		err := dependency.Deploy(options.SkipPush, options.ForceDeployDependencies, options.SkipBuild, options.ForceBuild, options.ForceDeploy, dependencyLogger)
-		if err != nil {
-			return errors.Errorf("Error deploying dependency %s: %s %v", dependency.ID, buff.String(), err)
-		}
-
-		// Prettify path if its a path deployment
-		m.log.Donef("Deployed dependency %s", dependency.ID)
-	}
-
-	m.log.StopWait()
-	m.log.Donef("Successfully deployed %d dependencies", len(dependencies))
-
-	return nil
+// PurgeOptions has all options for purging all dependencies
+type PurgeOptions struct {
+	Dependencies []string
+	Verbose      bool
 }
 
 // PurgeAll purges all dependencies in reverse order
-func (m *manager) PurgeAll(verbose bool) error {
+func (m *manager) PurgeAll(options PurgeOptions) error {
+	return m.handleDependencies(options.Dependencies, false, options.Verbose, "Purge", func(dependency *Dependency, log log.Logger) error {
+		return dependency.Purge(log)
+	})
+}
+
+// RenderOptions has all options for rendering all dependencies
+type RenderOptions struct {
+	Dependencies       []string
+	Verbose            bool
+	UpdateDependencies bool
+	SkipPush           bool
+	SkipBuild          bool
+	ForceBuild         bool
+}
+
+func (m *manager) RenderAll(options RenderOptions) error {
+	return m.handleDependencies(options.Dependencies, options.UpdateDependencies, options.Verbose, "Render", func(dependency *Dependency, log log.Logger) error {
+		return dependency.Render(options.SkipPush, options.SkipBuild, options.ForceBuild, log)
+	})
+}
+
+func (m *manager) handleDependencies(filterDependencies []string, updateDependencies, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) error {
 	if m.config == nil || m.config.Dependencies == nil || len(m.config.Dependencies) == 0 {
 		return nil
 	}
 
 	// Resolve all dependencies
-	dependencies, err := m.resolver.Resolve(false)
+	dependencies, err := m.resolver.Resolve(updateDependencies)
 	if err != nil {
 		if _, ok := err.(*cyclicError); ok {
 			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
@@ -204,10 +154,10 @@ func (m *manager) PurgeAll(verbose bool) error {
 	defer m.log.StopWait()
 
 	if verbose == false {
-		m.log.Infof("To display the complete dependency deletion run with the '--verbose-dependencies' flag")
+		m.log.Infof("To display the complete dependency execution log run with the '--verbose-dependencies' flag")
 	}
 
-	// Purge all dependencies
+	// Execute all dependencies
 	for i := len(dependencies) - 1; i >= 0; i-- {
 		var (
 			dependency       = dependencies[i]
@@ -215,22 +165,27 @@ func (m *manager) PurgeAll(verbose bool) error {
 			dependencyLogger = m.log
 		)
 
+		// Check if we should act on this dependency
+		if foundDependency(dependency.DependencyConfig.Name, filterDependencies) == false {
+			continue
+		}
+
 		// If not verbose log to a stream
 		if verbose == false {
-			m.log.StartWait(fmt.Sprintf("Purging %d dependencies", i+1))
+			m.log.StartWait(fmt.Sprintf("%s %d dependencies", actionName, i+1))
 			dependencyLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
 		}
 
-		err := dependency.Purge(dependencyLogger)
+		err := action(dependency, dependencyLogger)
 		if err != nil {
-			return errors.Errorf("Error purging dependency %s: %s %v", dependency.ID, buff.String(), err)
+			return errors.Errorf("%s dependency %s error: %s %v", actionName, dependency.ID, buff.String(), err)
 		}
 
-		m.log.Donef("Purged dependency %s", dependency.ID)
+		m.log.Donef("%s dependency %s completed", actionName, dependency.ID)
 	}
 
 	m.log.StopWait()
-	m.log.Donef("Successfully purged %d dependencies", len(dependencies))
+	m.log.Donef("Successfully executed %d dependencies", len(dependencies))
 
 	return nil
 }
@@ -254,52 +209,21 @@ type Dependency struct {
 
 // Build builds and pushes all defined images
 func (d *Dependency) Build(skipPush, forceDependencies, forceBuild bool, log log.Logger) error {
-	// Check if we should redeploy
-	directoryHash, err := hash.DirectoryExcludes(d.LocalPath, []string{".git", ".devspace"}, true)
-	if err != nil {
-		return errors.Wrap(err, "hash directory")
-	}
-
-	// Check if we skip the dependency deploy
-	if forceDependencies == false && directoryHash == d.DependencyCache.GetActive().Dependencies[d.ID] {
-		return nil
-	}
-
-	d.DependencyCache.GetActive().Dependencies[d.ID] = directoryHash
-
 	// Switch current working directory
-	currentWorkingDirectory, err := os.Getwd()
+	currentWorkingDirectory, err := d.prepare(forceDependencies)
 	if err != nil {
-		return errors.Wrap(err, "getwd")
-	}
-
-	err = os.Chdir(d.LocalPath)
-	if err != nil {
-		return errors.Wrap(err, "change working directory")
+		return err
+	} else if currentWorkingDirectory == "" {
+		return nil
 	}
 
 	// Change back to original working directory
 	defer os.Chdir(currentWorkingDirectory)
 
 	// Check if image build is enabled
-	builtImages := make(map[string]string)
-	if d.DependencyConfig.SkipBuild == nil || *d.DependencyConfig.SkipBuild == false {
-		// Build images
-		builtImages, err = d.buildController.Build(&build.Options{
-			SkipPush:     skipPush,
-			ForceRebuild: forceBuild,
-		}, log)
-		if err != nil {
-			return err
-		}
-
-		// Save config if an image was built
-		if len(builtImages) > 0 {
-			err := d.generatedSaver.Save(d.GeneratedConfig)
-			if err != nil {
-				return errors.Errorf("Error saving generated config: %v", err)
-			}
-		}
+	_, err = d.buildImages(false, skipPush, forceBuild, log)
+	if err != nil {
+		return err
 	}
 
 	log.Donef("Built dependency %s", d.ID)
@@ -308,28 +232,12 @@ func (d *Dependency) Build(skipPush, forceDependencies, forceBuild bool, log log
 
 // Deploy deploys the dependency if necessary
 func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, forceDeploy bool, log log.Logger) error {
-	// Check if we should redeploy
-	directoryHash, err := hash.DirectoryExcludes(d.LocalPath, []string{".git", ".devspace"}, true)
-	if err != nil {
-		return errors.Wrap(err, "hash directory")
-	}
-
-	// Check if we skip the dependency deploy
-	if forceDependencies == false && directoryHash == d.DependencyCache.GetActive().Dependencies[d.ID] {
-		return nil
-	}
-
-	d.DependencyCache.GetActive().Dependencies[d.ID] = directoryHash
-
 	// Switch current working directory
-	currentWorkingDirectory, err := os.Getwd()
+	currentWorkingDirectory, err := d.prepare(forceDependencies)
 	if err != nil {
-		return errors.Wrap(err, "getwd")
-	}
-
-	err = os.Chdir(d.LocalPath)
-	if err != nil {
-		return errors.Wrap(err, "change working directory")
+		return err
+	} else if currentWorkingDirectory == "" {
+		return nil
 	}
 
 	// Change back to original working directory
@@ -348,24 +256,9 @@ func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, 
 	}
 
 	// Check if image build is enabled
-	builtImages := make(map[string]string)
-	if skipBuild == false && (d.DependencyConfig.SkipBuild == nil || *d.DependencyConfig.SkipBuild == false) {
-		// Build images
-		builtImages, err = d.buildController.Build(&build.Options{
-			SkipPush:     skipPush,
-			ForceRebuild: forceBuild,
-		}, log)
-		if err != nil {
-			return err
-		}
-
-		// Save config if an image was built
-		if len(builtImages) > 0 {
-			err := d.generatedSaver.Save(d.GeneratedConfig)
-			if err != nil {
-				return errors.Errorf("Error saving generated config: %v", err)
-			}
-		}
+	builtImages, err := d.buildImages(skipBuild, skipPush, forceBuild, log)
+	if err != nil {
+		return err
 	}
 
 	// Deploy all defined deployments
@@ -387,23 +280,37 @@ func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, 
 	return nil
 }
 
-// Purge purges the dependency
-func (d *Dependency) Purge(log log.Logger) error {
+// Render renders the dependency
+func (d *Dependency) Render(skipPush, skipBuild, forceBuild bool, log log.Logger) error {
 	// Switch current working directory
-	currentWorkingDirectory, err := os.Getwd()
+	currentWorkingDirectory, err := d.changeWorkingDirectory()
 	if err != nil {
 		return errors.Wrap(err, "getwd")
 	}
 
-	err = os.Chdir(d.LocalPath)
+	defer os.Chdir(currentWorkingDirectory)
+
+	// Check if image build is enabled
+	builtImages, err := d.buildImages(skipBuild, skipPush, forceBuild, log)
 	if err != nil {
-		return errors.Wrap(err, "change working directory")
+		return err
 	}
 
-	defer func() {
-		// Change back to original working directory
-		os.Chdir(currentWorkingDirectory)
-	}()
+	// Deploy all defined deployments
+	return d.deployController.Render(&deploy.Options{
+		BuiltImages: builtImages,
+	}, os.Stdout)
+}
+
+// Purge purges the dependency
+func (d *Dependency) Purge(log log.Logger) error {
+	// Switch current working directory
+	currentWorkingDirectory, err := d.changeWorkingDirectory()
+	if err != nil {
+		return errors.Wrap(err, "getwd")
+	}
+
+	defer os.Chdir(currentWorkingDirectory)
 
 	// Purge the deployments
 	err = d.deployController.Purge(nil, log)
@@ -419,4 +326,76 @@ func (d *Dependency) Purge(log log.Logger) error {
 	delete(d.DependencyCache.GetActive().Dependencies, d.ID)
 	log.Donef("Purged dependency %s", d.ID)
 	return nil
+}
+
+func (d *Dependency) buildImages(skipBuild, skipPush, forceBuild bool, log log.Logger) (map[string]string, error) {
+	var err error
+
+	// Check if image build is enabled
+	builtImages := make(map[string]string)
+	if skipBuild == false && (d.DependencyConfig.SkipBuild == nil || *d.DependencyConfig.SkipBuild == false) {
+		// Build images
+		builtImages, err = d.buildController.Build(&build.Options{
+			SkipPush:     skipPush,
+			ForceRebuild: forceBuild,
+		}, log)
+		if err != nil {
+			return nil, err
+		}
+
+		// Save config if an image was built
+		if len(builtImages) > 0 {
+			err := d.generatedSaver.Save(d.GeneratedConfig)
+			if err != nil {
+				return nil, errors.Errorf("Error saving generated config: %v", err)
+			}
+		}
+	}
+
+	return builtImages, nil
+}
+
+func (d *Dependency) changeWorkingDirectory() (string, error) {
+	// Switch current working directory
+	currentWorkingDirectory, err := os.Getwd()
+	if err != nil {
+		return "", errors.Wrap(err, "getwd")
+	}
+
+	err = os.Chdir(d.LocalPath)
+	if err != nil {
+		return "", errors.Wrap(err, "change working directory")
+	}
+
+	return currentWorkingDirectory, nil
+}
+
+func (d *Dependency) prepare(forceDependencies bool) (string, error) {
+	// Check if we should redeploy
+	directoryHash, err := hash.DirectoryExcludes(d.LocalPath, []string{".git", ".devspace"}, true)
+	if err != nil {
+		return "", errors.Wrap(err, "hash directory")
+	}
+
+	// Check if we skip the dependency deploy
+	if forceDependencies == false && directoryHash == d.DependencyCache.GetActive().Dependencies[d.ID] {
+		return "", nil
+	}
+
+	d.DependencyCache.GetActive().Dependencies[d.ID] = directoryHash
+	return d.changeWorkingDirectory()
+}
+
+func foundDependency(name string, dependencies []string) bool {
+	if len(dependencies) == 0 {
+		return true
+	}
+
+	for _, n := range dependencies {
+		if n == name {
+			return true
+		}
+	}
+
+	return false
 }

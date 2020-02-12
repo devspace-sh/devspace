@@ -286,7 +286,11 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	// Recreate client if necessary
 	client := r.client
 	if dependency.Namespace != "" {
-		client, err = kubectl.NewClientFromContext(client.CurrentContext(), dependency.Namespace, false, r.kubeLoader)
+		if r.client == nil {
+			client, err = kubectl.NewClientFromContext("", dependency.Namespace, false, r.kubeLoader)
+		} else {
+			client, err = kubectl.NewClientFromContext(client.CurrentContext(), dependency.Namespace, false, r.kubeLoader)
+		}
 		if err != nil {
 			return nil, errors.Wrap(err, "create new client")
 		}

@@ -33,6 +33,7 @@ type DeployCmd struct {
 
 	SkipPush                bool
 	AllowCyclicDependencies bool
+	Dependency              []string
 
 	log logpkg.Logger
 }
@@ -75,6 +76,7 @@ devspace deploy --kube-context=deploy-context
 	deployCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", false, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 	deployCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specifc deployment (You can specify multiple deployments comma-separated")
 
+	deployCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Deploys only the specific named dependencies")
 	return deployCmd
 }
 
@@ -172,6 +174,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 
 	// Dependencies
 	err = manager.DeployAll(dependency.DeployOptions{
+		Dependencies:            cmd.Dependency,
 		SkipPush:                cmd.SkipPush,
 		ForceDeployDependencies: cmd.ForceDependencies,
 		SkipBuild:               cmd.SkipBuild,
@@ -183,48 +186,51 @@ func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 		return errors.Wrap(err, "deploy dependencies")
 	}
 
-	// Build images
-	builtImages := make(map[string]string)
-	if cmd.SkipBuild == false {
-		builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
-			SkipPush:     cmd.SkipPush,
-			ForceRebuild: cmd.ForceBuild,
-			Sequential:   cmd.BuildSequential,
+	// Only deploy if we don't want to deploy a dependency specificly
+	if len(cmd.Dependency) == 0 {
+		// Build images
+		builtImages := make(map[string]string)
+		if cmd.SkipBuild == false {
+			builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
+				SkipPush:     cmd.SkipPush,
+				ForceRebuild: cmd.ForceBuild,
+				Sequential:   cmd.BuildSequential,
+			}, cmd.log)
+			if err != nil {
+				if strings.Index(err.Error(), "no space left on device") != -1 {
+					err = errors.Errorf("%v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
+				}
+
+				return err
+			}
+
+			// Save config if an image was built
+			if len(builtImages) > 0 {
+				err := configLoader.SaveGenerated(generatedConfig)
+				if err != nil {
+					return errors.Errorf("Error saving generated config: %v", err)
+				}
+			}
+		}
+
+		// What deployments should be deployed
+		deployments := []string{}
+		if cmd.Deployments != "" {
+			deployments = strings.Split(cmd.Deployments, ",")
+			for index := range deployments {
+				deployments[index] = strings.TrimSpace(deployments[index])
+			}
+		}
+
+		// Deploy all defined deployments
+		err = f.NewDeployController(config, generatedConfig.GetActive(), client).Deploy(&deploy.Options{
+			ForceDeploy: cmd.ForceDeploy,
+			BuiltImages: builtImages,
+			Deployments: deployments,
 		}, cmd.log)
 		if err != nil {
-			if strings.Index(err.Error(), "no space left on device") != -1 {
-				err = errors.Errorf("%v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
-			}
-
 			return err
 		}
-
-		// Save config if an image was built
-		if len(builtImages) > 0 {
-			err := configLoader.SaveGenerated(generatedConfig)
-			if err != nil {
-				return errors.Errorf("Error saving generated config: %v", err)
-			}
-		}
-	}
-
-	// What deployments should be deployed
-	deployments := []string{}
-	if cmd.Deployments != "" {
-		deployments = strings.Split(cmd.Deployments, ",")
-		for index := range deployments {
-			deployments[index] = strings.TrimSpace(deployments[index])
-		}
-	}
-
-	// Deploy all defined deployments
-	err = f.NewDeployController(config, generatedConfig.GetActive(), client).Deploy(&deploy.Options{
-		ForceDeploy: cmd.ForceDeploy,
-		BuiltImages: builtImages,
-		Deployments: deployments,
-	}, cmd.log)
-	if err != nil {
-		return err
 	}
 
 	// Update last used kube context & save generated yaml
