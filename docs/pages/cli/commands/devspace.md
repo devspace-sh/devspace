@@ -16,6 +16,7 @@ DevSpace accelerates developing, deploying and debugging applications with Docke
 ## Options
 
 ```
+      --config string         The devspace config file to use
       --debug                 Prints the stack trace if an error occurs
   -h, --help                  help for devspace
       --kube-context string   The kubernetes context to use
@@ -44,6 +45,7 @@ DevSpace accelerates developing, deploying and debugging applications with Docke
 * [devspace login](../../cli/commands/devspace_login)	 - Log into DevSpace Cloud
 * [devspace logs](../../cli/commands/devspace_logs)	 - Prints the logs of a pod and attaches to it
 * [devspace open](../../cli/commands/devspace_open)	 - Opens the space in the browser
+* [devspace print](../../cli/commands/devspace_print)	 - Print displays the configuration
 * [devspace purge](../../cli/commands/devspace_purge)	 - Delete deployed resources
 * [devspace remove](../../cli/commands/devspace_remove)	 - Changes devspace configuration
 * [devspace render](../../cli/commands/devspace_render)	 - Render builds all defined images and shows the yamls that would be deployed

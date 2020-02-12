@@ -25,8 +25,8 @@ Using `componentChart: true` is equivalent to the chart definition shown here:
 helm:
   chart:                                # Helm chart to be deployed
     name: component-chart               # DevSpace component chart is a general-purpose Helm chart
-    version: v0.0.6                     # This version is tied to the version of the DevSpace binary (allows to upgrade chart through the CLI)
-    repo: https://charts.devspace.cloud
+    version: 0.1.3                     # This version is tied to the version of the DevSpace binary (allows to upgrade chart through the CLI)
+    repo: https://charts.devspace.sh
 ```
 > The advantage of using `componentChart: true` is that DevSpace will automatically validate your `values` for this deployment and also upgrade these config options if they may change over time in a newer version of the chart.
 

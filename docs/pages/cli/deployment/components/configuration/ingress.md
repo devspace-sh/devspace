@@ -15,9 +15,9 @@ deployments:
         ports:
         - port: 3000
       ingress:
+        tls: true
         rules:
         - host: my-static-host.tld
-          tls: true
         - host: ${DYNAMIC_HOSTNAME}
           path: /login
 ```
@@ -55,38 +55,6 @@ deployments:
 ```
 
 
-### `rules[*].tls`
-The `tls` option expects either:
-- a string stating the name of a Kubernetes secret which contains the TLS certificate to use for SSL
-- a boolean to enable/disable TLS (an auto-generated name of a secret will be created referencing a Kubernetes secret containing the TLS certificate to use for SSL)
-
-> This option takes precedence over the global option `ingress.tls` which sets the TLS option for all hosts.
-
-#### Default Value For `tls`
-```yaml
-tls: false
-```
-
-#### Example: Enabling TLS for Single Hosts
-```yaml
-deployments:
-- name: frontend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
-      service:
-        ports:
-        - port: 3000
-      ingress:
-        rules:
-        - host: my-static-host.tld
-          tls: true
-        - host: my-static-host2.tld
-```
-
-
 ### `rules[*].path`
 The `path` option expects a URL path which is used for routing. Only requests to this `path` will be forwarded to the service of this component.
 
@@ -95,7 +63,7 @@ The `path` option expects a URL path which is used for routing. Only requests to
 path: /
 ```
 
-#### Example: Enabling TLS
+#### Example: Defining Ingress Paths
 ```yaml
 deployments:
 - name: frontend
@@ -146,7 +114,7 @@ The `serviceName` option expects a string stating the name of the Kubernetes ser
 
 > If `serviceName` is defined, `servicePort` must also be defined.
 
-#### Example: Custom Service Port
+#### Example: Custom Service Name
 ```yaml
 deployments:
 - name: frontend
@@ -170,7 +138,7 @@ The `name` option expects a string that will be used as a name for the ingress t
 
 > **The `name` field is optional.** By default, the component chart will name the ingress after the [component `service`](#TODO) it is referencing.
 
-#### Example: Custom Name for Headless Service
+#### Example: Custom Name for Ingress
 ```yaml
 deployments:
 - name: frontend
@@ -280,7 +248,7 @@ The `tls` option expects either:
 tls: false
 ```
 
-#### Example: Enabling TLS for All Hosts
+#### Example: Enabling TLS for Ingress
 ```yaml
 deployments:
 - name: frontend
@@ -293,6 +261,62 @@ deployments:
         ports:
         - port: 3000
       ingress:
+        tls: true
+        rules:
+        - host: my-static-host.tld
+        - host: my-static-host2.tld
+```
+
+### `tlsClusterIssuer`
+The `tlsClusterIssuer` option expects a string with the name of the cluster issuer for cert-manager.
+
+#### Default Value For `tlsClusterIssuer`
+```yaml
+tlsClusterIssuer: lets-encrypt-http-issuer
+```
+
+#### Example: Custom Cluster Issuer
+```yaml
+deployments:
+- name: frontend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+      service:
+        ports:
+        - port: 3000
+      ingress:
+        tls: true
+        tlsClusterIssuer: staging-issuer
+        rules:
+        - host: my-static-host.tld
+        - host: my-static-host2.tld
+```
+
+### `ingressClass`
+The `ingressClass` option expects a string with a Kubernetes ingress class used for a cert-manager annotation.
+
+#### Default Value For `ingressClass`
+```yaml
+ingressClass: nginx
+```
+
+#### Example: Custom Ingress Class
+```yaml
+deployments:
+- name: frontend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+      service:
+        ports:
+        - port: 3000
+      ingress:
+        ingressClass: traefik
         tls: true
         rules:
         - host: my-static-host.tld

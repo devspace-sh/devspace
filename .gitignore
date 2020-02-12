@@ -4,8 +4,6 @@
 # Created by devspace init
 /.devspace/
 /chart/
-/Dockerfile
-/.dockerignore
 
 # Build files
 *.exe
