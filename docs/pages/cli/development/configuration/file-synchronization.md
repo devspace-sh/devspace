@@ -5,6 +5,8 @@ sidebar_label: File Sync
 
 The code synchronization feature of DevSpace allows you to use hot reloading during development. Especially when using programming languages and frameworks that support hot reloading with tools like nodemon, re-building and re-deploying containers is very annoying and time consuming. Therefore, DevSpace uses a smart syncing mechanism that is able to sync local file changes to remote containers directly without the need of rebuilding or restarting the container.
 
+> To only start the file sync without the other functions of the development mode, use `devspace sync` or `devspace sync --config=devspace.yaml` (to load the config).
+
 When starting the development mode, DevSpace starts the file sync as configured in the `dev.sync` section of the `devspace.yaml`.
 ```yaml
 images:
@@ -38,6 +40,7 @@ Additionally, there are several advanced options:
 - [Configuring Exclude Paths via `excludePaths`, `downloadExcludePaths` and `uploadExcludePaths`](#exclude-paths)
 - [Configuring Initial Sync via `waitInitialSync`](#initial-sync)
 - [Configuring Network Bandwith Limits via `bandwidthLimits`](#network-bandwidth-limits)
+- [Configuring Post-Sync Commands via `onDowload` and `onUpload`](#TODO)
 
 
 ## Pod/Container Selection
@@ -198,8 +201,6 @@ excludePaths: [] # Do not exclude anything from file synchronization
 images:
   backend:
     image: john/devbackend
-  backend-debugger:
-    image: john/debugger
 deployments:
 - name: app-backend
   helm:
@@ -207,7 +208,6 @@ deployments:
     values:
       containers:
       - image: john/devbackend
-      - image: john/debugger
 dev:
   sync:
   - imageName: backend
@@ -269,8 +269,6 @@ downloadOnInitialSync: false # Do not download any files during initial sync
 images:
   backend:
     image: john/devbackend
-  backend-debugger:
-    image: john/debugger
 deployments:
 - name: app-backend
   helm:
@@ -278,7 +276,6 @@ deployments:
     values:
       containers:
       - image: john/devbackend
-      - image: john/debugger
 dev:
   sync:
   - imageName: backend
@@ -310,8 +307,6 @@ waitInitialSync: false # Start container terminal or log streaming before initil
 images:
   backend:
     image: john/devbackend
-  backend-debugger:
-    image: john/debugger
 deployments:
 - name: app-backend
   helm:
@@ -319,7 +314,6 @@ deployments:
     values:
       containers:
       - image: john/devbackend
-      - image: john/debugger
 dev:
   sync:
   - imageName: backend
@@ -345,8 +339,6 @@ The `bandwidthLimits.download` option expects an integer representing the max fi
 images:
   backend:
     image: john/devbackend
-  backend-debugger:
-    image: john/debugger
 deployments:
 - name: app-backend
   helm:
@@ -354,7 +346,6 @@ deployments:
     values:
       containers:
       - image: john/devbackend
-      - image: john/debugger
 dev:
   sync:
   - imageName: backend
@@ -373,6 +364,84 @@ The `bandwidthLimits.upload` option expects an integer representing the max file
 
 #### Example
 **See "[Example: Limiting Network Bandwidth](#example-limiting-network-bandwidth)"**
+
+
+## Post-Sync Commands
+Sometimes it is useful to execute commands after the sync downloads or uploads files/directories between container and local filesystem.
+
+> **Warning:** Make sure that post-sync commands will not trigger a new sync process which could lead to an endless loop.
+
+### `dev.sync[*].onDownload`
+The `onDownload` option defines command(s) that should be executed after a file/directory was downloaded from the container to the local filesystem.
+
+#### Example: Post-Download Commands
+```yaml
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    onDownload:
+      executeLocal:       # These post-sync commands will be executed on the local dev machine
+        command: chmod    # Command to execute for files and folders
+        args:
+        - +x
+        - {}              # {} will be replaced with the path of the synced file/directory
+        onFileChange:     # Command to execute ONLY for files
+          command: chmod
+          args:
+          - +x
+          - {}            # {} will be replaced with the path of the synced file/directory
+        onDirCreate:      # Command to execute ONLY for newly created directories
+          command: chmod
+          args:
+          - +x
+          - {}            # {} will be replaced with the path of the synced file/directory
+```
+
+### `dev.sync[*].onUpload`
+The `onUpload` option defines command(s) that should be executed after a file/directory was uploaded from the local filesystem to the container.
+
+#### Example: Post-Upload Commands
+```yaml
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    onUpload:
+      executeRemote:      # These post-sync commands will be executed inside the affected container
+        command: chmod    # Command to execute for files and folders
+        args:
+        - +x
+        - {}              # {} will be replaced with the path of the synced file/directory
+        onFileChange:     # Command to execute ONLY for files
+          command: chmod
+          args:
+          - +x
+          - {}            # {} will be replaced with the path of the synced file/directory
+        onDirCreate:      # Command to execute ONLY for newly created directories
+          command: chmod
+          args:
+          - +x
+          - {}            # {} will be replaced with the path of the synced file/directory
+```
 
 
 <br>
