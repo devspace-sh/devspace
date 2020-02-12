@@ -19,7 +19,7 @@
 
 [![DevSpace Intro](docs/website/static/img/readme/devspace-readme-intro.gif)](https://devspace.sh)
 
-![DevSpace Intro](docs/website/static/img/readme/devspace-cluster-compatibility.png)
+![DevSpace Compatibility](docs/website/static/img/readme/devspace-cluster-compatibility.png)
 
 <br>
 
