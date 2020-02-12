@@ -24,11 +24,9 @@ func (p *provider) PrintSpaces(cluster, name string, all bool) error {
 	}
 
 	activeSpaceID := 0
-	if err == nil {
-		context, _ := p.kubeLoader.GetCurrentContext()
-		if context != "" {
-			activeSpaceID, _, _ = p.kubeLoader.GetSpaceID(context)
-		}
+	context, _ := p.kubeLoader.GetCurrentContext()
+	if context != "" {
+		activeSpaceID, _, _ = p.kubeLoader.GetSpaceID(context)
 	}
 
 	headerColumnNames := []string{}

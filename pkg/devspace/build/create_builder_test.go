@@ -9,7 +9,7 @@ import (
 	dockerbuilder "github.com/devspace-cloud/devspace/pkg/devspace/build/builder/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/kaniko"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
+	fakedocker "github.com/devspace-cloud/devspace/pkg/devspace/docker/testing"
 	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -33,10 +33,9 @@ type createBuilderTestCase struct {
 }
 
 func TestCreateBuilder(t *testing.T) {
-	fakeDocker := &docker.FakeClient{
+	fakeDocker := &fakedocker.FakeClient{
 		AuthConfig: &dockertypes.AuthConfig{},
 	}
-	docker.SetFakeClient(fakeDocker)
 	fakeClient := &fakekube.Client{
 		Client: fake.NewSimpleClientset(),
 	}
@@ -113,7 +112,8 @@ func TestCreateBuilder(t *testing.T) {
 
 	for _, testCase := range testCases {
 		controller := &controller{
-			client: fakeClient,
+			client:       fakeClient,
+			dockerClient: fakeDocker,
 		}
 		fakeDocker.PingErr = testCase.pingErr
 

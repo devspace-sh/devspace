@@ -36,7 +36,7 @@ type Client interface {
 
 //Client is a client for docker
 type client struct {
-	dockerclient.Client
+	dockerclient.CommonAPIClient
 }
 
 // NewClient retrieves a new docker client
@@ -46,10 +46,6 @@ func NewClient(log log.Logger) (Client, error) {
 
 // NewClientWithMinikube creates a new docker client with optionally from the minikube vm
 func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (Client, error) {
-	if fakeClient != nil {
-		return fakeClient, nil
-	}
-
 	var cli Client
 	var err error
 
@@ -79,7 +75,7 @@ func newDockerClient() (Client, error) {
 		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
 
-	return &client{*cli}, nil
+	return &client{cli}, nil
 }
 
 func newDockerClientFromEnvironment() (Client, error) {
@@ -88,7 +84,7 @@ func newDockerClientFromEnvironment() (Client, error) {
 		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
 
-	return &client{*cli}, nil
+	return &client{cli}, nil
 }
 
 func newDockerClientFromMinikube(currentKubeContext string) (Client, error) {
@@ -132,7 +128,7 @@ func newDockerClientFromMinikube(currentKubeContext string) (Client, error) {
 		return nil, err
 	}
 
-	return &client{*cli}, nil
+	return &client{cli}, nil
 }
 
 func getMinikubeEnvironment() (map[string]string, error) {
