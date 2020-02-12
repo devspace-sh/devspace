@@ -96,7 +96,7 @@ The `patches` option expects a patch object which consists of the following prop
 
 > If `value` is defined, it must provide the correct type to be used when adding (`op = add`) or replacing (`op = replace`) the existing value found under `path` using the newly provided `value`.
 
-#### Example: Setting Interactive Mode Images
+#### Example: Using Patches For Profile `production`
 ```yaml
 images:
   backend:
@@ -148,16 +148,14 @@ deployments:
 
 
 ### `profiles[*].replace`
-The `patches` option expects a patch object which consists of the following properties:
-- `op` stating the patch operation (possible values: `replace`, `add`, `remove`)
-- `path` stating a jsonpath or an xpath within the config (e.g. `images.backend.image`, `deployments[0].helm.values.containers[1]`)
-- `value` stating an arbirary value used by the operation (e.g. a string, an integer, a boolean, a yaml object)
+The `replace` option expects an object with the following (optional) fields:
+- `images` which will replace the entire `images` section of the devspace.yaml
+- `deployments` which will replace the entire `deployments` section of the devspace.yaml
+- `dev` which will replace the entire `dev` section of the devspace.yaml
+- `dependencies` which will replace the entire `dependencies` section of the devspace.yaml
+- `hooks` which will replace the entire `hooks` section of the devspace.yaml
 
-> If you use the `replace` or `add` operation, `value` is a mandatory property.
-
-> If `value` is defined, it must provide the correct type to be used when adding (`op = add`) or replacing (`op = replace`) the existing value found under `path` using the newly provided `value`.
-
-#### Example: Setting Interactive Mode Images
+#### Example: Using Config Replace For Profile `production`
 ```yaml
 images:
   backend:
@@ -179,19 +177,16 @@ profiles:
       backend:
         image: john/prodbackend
   patches:
-  - op: replace
-    path: images.backend.image
-    value: john/prodbackend
   - op: remove
     path: deployments[0].helm.values.containers[1]
 ```
 **Explanation:**  
 - The above example defines 1 profile: `production`
-- When using the profile `production`, the config section `images` would be entirely replaced and the additionally, 2 patches would be applied.
+- When using the profile `production`, the config section `images` would be entirely replaced and the additionally, 1 patch would be applied.
 - The resulting config used in-memory when the profile `production` is used would look like this:
 
 ```yaml
-# In-Memory Config After Applying Patches For Profile `production`
+# In-Memory Config After Applying Profile `production`
 images:
   backend:
     image: john/prodbackend
@@ -204,7 +199,7 @@ deployments:
       - image: john/prodbackend
 ```
 
-> As shown in this example, it is possible to use `replace` and `patch` options in combination when defining profiles.
+> As shown in this example, it is possible to use `replace` and `patch` options in combination.
 
 
 
