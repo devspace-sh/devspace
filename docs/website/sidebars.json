@@ -249,6 +249,13 @@
       },
       {
         "type": "subcategory",
+        "label": "devspace print",
+        "ids": [
+          "cli/commands/devspace_print"
+        ]
+      },
+      {
+        "type": "subcategory",
         "label": "devspace purge",
         "ids": [
           "cli/commands/devspace_purge"
