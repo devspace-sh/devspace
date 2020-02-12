@@ -28,12 +28,15 @@ type RenderCmd struct {
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 
-	ForceBuild        bool
-	BuildSequential   bool
-	ForceDependencies bool
+	SkipBuild       bool
+	ForceBuild      bool
+	BuildSequential bool
 
 	ShowLogs    bool
 	Deployments string
+
+	SkipDependencies bool
+	Dependency       []string
 }
 
 // NewRenderCmd creates a new devspace render command
@@ -60,12 +63,15 @@ deployment.
 
 	renderCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	renderCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
-	renderCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", false, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 	renderCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
 	renderCmd.Flags().StringVarP(&cmd.Tag, "tag", "t", "", "Use the given tag for all built images")
 	renderCmd.Flags().BoolVar(&cmd.ShowLogs, "show-logs", false, "Shows the build logs")
 	renderCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
+	renderCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips image building")
 	renderCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specifc deployment (You can specify multiple deployments comma-separated")
+
+	renderCmd.Flags().BoolVar(&cmd.SkipDependencies, "skip-dependencies", false, "Skips rendering the dependencies")
+	renderCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Renders only the specific named dependencies")
 
 	return renderCmd
 }
@@ -110,36 +116,46 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 		}
 	}
 
-	// Create Dependencymanager
-	manager, err := f.NewDependencyManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log)
-	if err != nil {
-		return errors.Wrap(err, "new manager")
+	if cmd.SkipDependencies == false {
+		// Create Dependencymanager
+		manager, err := f.NewDependencyManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log)
+		if err != nil {
+			return errors.Wrap(err, "new manager")
+		}
+
+		// Dependencies
+		err = manager.RenderAll(dependency.RenderOptions{
+			Dependencies: cmd.Dependency,
+			SkipPush:     cmd.SkipPush,
+			SkipBuild:    cmd.SkipBuild,
+			ForceBuild:   cmd.ForceBuild,
+			Verbose:      cmd.VerboseDependencies,
+		})
+		if err != nil {
+			return errors.Wrap(err, "render dependencies")
+		}
 	}
 
-	// Dependencies
-	err = manager.BuildAll(dependency.BuildOptions{
-		SkipPush:                cmd.SkipPush,
-		ForceDeployDependencies: cmd.ForceDependencies,
-		ForceBuild:              cmd.ForceBuild,
-		Verbose:                 cmd.VerboseDependencies,
-	})
-	if err != nil {
-		return errors.Wrap(err, "build dependencies")
+	if len(cmd.Dependency) > 0 {
+		return nil
 	}
 
 	// Build images if necessary
-	builtImages, err := f.NewBuildController(config, generatedConfig.GetActive(), nil).Build(&build.Options{
-		SkipPush:     cmd.SkipPush,
-		IsDev:        true,
-		ForceRebuild: cmd.ForceBuild,
-		Sequential:   cmd.BuildSequential,
-	}, log)
-	if err != nil {
-		if strings.Index(err.Error(), "no space left on device") != -1 {
-			return errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
-		}
+	builtImages := map[string]string{}
+	if cmd.SkipBuild == false {
+		builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), nil).Build(&build.Options{
+			SkipPush:     cmd.SkipPush,
+			IsDev:        true,
+			ForceRebuild: cmd.ForceBuild,
+			Sequential:   cmd.BuildSequential,
+		}, log)
+		if err != nil {
+			if strings.Index(err.Error(), "no space left on device") != -1 {
+				return errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
+			}
 
-		return errors.Wrap(err, "build images")
+			return errors.Wrap(err, "build images")
+		}
 	}
 
 	// Save config if an image was built

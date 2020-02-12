@@ -1,4 +1,4 @@
-version: v1beta5
+version: v1beta6
 deployments:
 - name: root
   helm:
@@ -9,6 +9,7 @@ deployments:
 dependencies:
 - source:
     path: dependency1
+  name: test
 - source:
     path: dependency2
 - source:

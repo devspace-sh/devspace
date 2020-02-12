@@ -201,7 +201,8 @@ func TestBuildAll(t *testing.T) {
 			},
 			resolvedDependencies: []*Dependency{
 				&Dependency{
-					LocalPath: "./",
+					LocalPath:        "./",
+					DependencyConfig: &latest.DependencyConfig{},
 					DependencyCache: &generated.Config{
 						ActiveProfile: "",
 						Profiles: map[string]*generated.CacheConfig{
@@ -302,7 +303,8 @@ func TestDeployAll(t *testing.T) {
 			},
 			resolvedDependencies: []*Dependency{
 				&Dependency{
-					LocalPath: "./",
+					LocalPath:        "./",
+					DependencyConfig: &latest.DependencyConfig{},
 					DependencyCache: &generated.Config{
 						ActiveProfile: "",
 						Profiles: map[string]*generated.CacheConfig{
@@ -406,7 +408,8 @@ func TestPurgeAll(t *testing.T) {
 			},
 			resolvedDependencies: []*Dependency{
 				&Dependency{
-					LocalPath: "./",
+					LocalPath:        "./",
+					DependencyConfig: &latest.DependencyConfig{},
 					DependencyCache: &generated.Config{
 						ActiveProfile: "",
 						Profiles: map[string]*generated.CacheConfig{
@@ -438,7 +441,7 @@ func TestPurgeAll(t *testing.T) {
 			},
 		}
 
-		err = manager.PurgeAll(testCase.verboseParam)
+		err = manager.PurgeAll(PurgeOptions{Verbose: testCase.verboseParam})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error purging all in testCase %s", testCase.name)

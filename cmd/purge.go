@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
+	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -21,6 +22,8 @@ type PurgeCmd struct {
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 	PurgeDependencies       bool
+
+	Dependency []string
 
 	log log.Logger
 }
@@ -55,6 +58,8 @@ devspace purge -d my-deployment
 	purgeCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", false, "When enabled purges the dependencies as well")
 	purgeCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
+
+	purgeCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Purges only the specific named dependencies")
 
 	return purgeCmd
 }
@@ -109,30 +114,35 @@ func (cmd *PurgeCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 		return err
 	}
 
-	deployments := []string{}
-	if cmd.Deployments != "" {
-		deployments = strings.Split(cmd.Deployments, ",")
-		for index := range deployments {
-			deployments[index] = strings.TrimSpace(deployments[index])
+	// Only purge if we don't specify dependency
+	if len(cmd.Dependency) == 0 {
+		deployments := []string{}
+		if cmd.Deployments != "" {
+			deployments = strings.Split(cmd.Deployments, ",")
+			for index := range deployments {
+				deployments[index] = strings.TrimSpace(deployments[index])
+			}
+		}
+
+		// Purge deployments
+		err = f.NewDeployController(config, generatedConfig.GetActive(), client).Purge(deployments, cmd.log)
+		if err != nil {
+			cmd.log.Errorf("Error purging deployments: %v", err)
 		}
 	}
 
-	// Purge deployments
-	err = f.NewDeployController(config, generatedConfig.GetActive(), client).Purge(deployments, cmd.log)
-	if err != nil {
-		cmd.log.Errorf("Error purging deployments: %v", err)
-	}
-
 	// Purge dependencies
-	if cmd.PurgeDependencies {
-
+	if cmd.PurgeDependencies || len(cmd.Dependency) > 0 {
 		// Create Dependencymanager
 		manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log)
 		if err != nil {
 			return errors.Wrap(err, "new manager")
 		}
 
-		err = manager.PurgeAll(cmd.VerboseDependencies)
+		err = manager.PurgeAll(dependency.PurgeOptions{
+			Dependencies: cmd.Dependency,
+			Verbose:      cmd.VerboseDependencies,
+		})
 		if err != nil {
 			cmd.log.Errorf("Error purging dependencies: %v", err)
 		}
