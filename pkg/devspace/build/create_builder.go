@@ -18,21 +18,17 @@ import (
 
 // createBuilder creates a new builder
 func (c *controller) createBuilder(imageConfigName string, imageConf *latest.ImageConfig, imageTag string, options *Options, log log.Logger) (builder.Interface, error) {
-	var (
-		imageBuilder builder.Interface
-		err          error
-	)
+	var err error
 
-	if c.overwriteBuilder != nil {
-		return c.overwriteBuilder, nil
+	if c.builder != nil {
+		return c.builder, nil
 	}
-	dockerClient := c.overwriteDockerClient
 
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
-		imageBuilder = custom.NewBuilder(imageConfigName, imageConf, imageTag)
+		c.builder = custom.NewBuilder(imageConfigName, imageConf, imageTag)
 	} else if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
-		if dockerClient == nil {
-			dockerClient, err = dockerclient.NewClient(log)
+		if c.dockerClient == nil {
+			c.dockerClient, err = dockerclient.NewClient(log)
 			if err != nil {
 				return nil, errors.Errorf("Error creating docker client: %v", err)
 			}
@@ -48,7 +44,7 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 
 		log.StartWait("Creating kaniko builder")
 		defer log.StopWait()
-		imageBuilder, err = kaniko.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTag, options.IsDev, log)
+		c.builder, err = kaniko.NewBuilder(c.config, c.dockerClient, c.client, imageConfigName, imageConf, imageTag, options.IsDev, log)
 		if err != nil {
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
 		}
@@ -68,15 +64,15 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 			kubeContext = c.client.CurrentContext()
 		}
 
-		if dockerClient == nil {
-			dockerClient, err = dockerclient.NewClientWithMinikube(kubeContext, preferMinikube, log)
+		if c.dockerClient == nil {
+			c.dockerClient, err = dockerclient.NewClientWithMinikube(kubeContext, preferMinikube, log)
 			if err != nil {
 				return nil, errors.Errorf("Error creating docker client: %v", err)
 			}
 		}
 
 		// Check if docker daemon is running
-		_, err = dockerClient.Ping(context.Background())
+		_, err = c.dockerClient.Ping(context.Background())
 		if err != nil {
 			if imageConf.Build != nil && imageConf.Build.Docker != nil && imageConf.Build.Docker.DisableFallback != nil && *imageConf.Build.Docker.DisableFallback {
 				return nil, errors.Errorf("Couldn't reach docker daemon: %v. Is the docker daemon running?", err)
@@ -87,13 +83,13 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 			return c.createBuilder(imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTag, options, log)
 		}
 
-		imageBuilder, err = docker.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTag, options.SkipPush, options.IsDev)
+		c.builder, err = docker.NewBuilder(c.config, c.dockerClient, c.client, imageConfigName, imageConf, imageTag, options.SkipPush, options.IsDev)
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker builder: %v", err)
 		}
 	}
 
-	return imageBuilder, nil
+	return c.builder, nil
 }
 
 func convertDockerConfigToKanikoConfig(dockerConfig *latest.ImageConfig) *latest.ImageConfig {

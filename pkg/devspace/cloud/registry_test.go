@@ -48,9 +48,9 @@ func TestLoginIntoRegistries(t *testing.T) {
 
 	for _, testCase := range testCases {
 		provider := &provider{
-			client:                testCase.cloudclient,
-			log:                   &log.FakeLogger{},
-			overwriteDockerClient: &fakedocker.FakeClient{},
+			client:       testCase.cloudclient,
+			log:          &log.FakeLogger{},
+			dockerClient: &fakedocker.FakeClient{},
 		}
 
 		err := provider.loginIntoRegistries()

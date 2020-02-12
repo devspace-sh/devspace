@@ -43,9 +43,8 @@ type controller struct {
 	hookExecuter hook.Executer
 	client       kubectl.Client
 
-	// Just for testing
-	overwriteBuilder      builder.Interface
-	overwriteDockerClient docker.Client
+	builder      builder.Interface
+	dockerClient docker.Client
 }
 
 // NewController creates a new image build controller

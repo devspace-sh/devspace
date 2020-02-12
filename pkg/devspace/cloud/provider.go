@@ -49,7 +49,7 @@ type provider struct {
 	log        log.Logger
 
 	// Only for testing
-	overwriteDockerClient docker.Client
+	dockerClient docker.Client
 }
 
 // GetProvider returns the current specified cloud provider

@@ -112,8 +112,8 @@ func TestCreateBuilder(t *testing.T) {
 
 	for _, testCase := range testCases {
 		controller := &controller{
-			client:                fakeClient,
-			overwriteDockerClient: fakeDocker,
+			client:       fakeClient,
+			dockerClient: fakeDocker,
 		}
 		fakeDocker.PingErr = testCase.pingErr
 
