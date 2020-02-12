@@ -1,193 +1,183 @@
 package v2
 
-/*type checkDependenciesTestCase struct {
+import (
+	"encoding/json"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
+	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
+	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	yaml "gopkg.in/yaml.v2"
+	"gotest.tools/assert"
+	helmchartutil "k8s.io/helm/pkg/chartutil"
+	helmenvironment "k8s.io/helm/pkg/helm/environment"
+	"k8s.io/helm/pkg/helm/helmpath"
+	"k8s.io/helm/pkg/proto/hapi/chart"
+	"k8s.io/helm/pkg/proto/hapi/release"
+	"k8s.io/helm/pkg/repo"
+)
+
+type installChartTestCase struct {
 	name string
 
-	dependenciesInChart        []*chart.Chart
-	dependenciesInRequirements []*helmchartutil.Dependency
+	files            map[string]interface{}
+	releaseName      string
+	releaseNamespace string
+	values           map[interface{}]interface{}
+	helmConfig       *latest.HelmConfig
+	releases         *[]*release.Release
 
-	expectedErr string
-}
-
-func TestCheckDependencies(t *testing.T) {
-	testCases := []checkDependenciesTestCase{
-		checkDependenciesTestCase{
-			name:                       "Matching dependencies in chart and requirements",
-			dependenciesInChart:        []*chart.Chart{&chart.Chart{Metadata: &chart.Metadata{Name: "MatchingDep"}}},
-			dependenciesInRequirements: []*helmchartutil.Dependency{&helmchartutil.Dependency{Name: "MatchingDep"}},
-		},
-	}
-
-	for _, testCase := range testCases {
-		ch := &chart.Chart{
-			Dependencies: testCase.dependenciesInChart,
-		}
-		reqs := &helmchartutil.Requirements{
-			Dependencies: testCase.dependenciesInRequirements,
-		}
-
-		err := checkDependencies(ch, reqs)
-
-		if testCase.expectedErr == "" {
-			assert.NilError(t, err, "Error checking dependencies in testCase %s", testCase.name)
-		} else {
-			assert.Error(t, err, testCase.expectedErr, "Wrong or no error checking dependencies in testCase %s", testCase.name)
-		}
-	}
-}
-
-type expectedInstallTest struct {
-	revision     int32
-	chartName    string
-	chartVersion string
-	values       *chart.Config
+	expectedErr     bool
+	expectedRelease *types.Release
 }
 
 func TestInstallChart(t *testing.T) {
-	installCharts := []*struct {
-		releaseName      string
-		releaseNamespace string
-		values           *map[interface{}]interface{}
-		config           *latest.HelmConfig
-
-		expected expectedInstallTest
-	}{
+	testCases := []installChartTestCase{
 		{
-			releaseName: "my-release",
-			config: &latest.HelmConfig{
+			name: "Relative path to chart not there",
+			helmConfig: &latest.HelmConfig{
 				Chart: &latest.ChartConfig{
-					Name:    "stable/nginx-ingress",
-					Version: "1.24.7",
+					Name: "./notThere",
 				},
 			},
-			expected: expectedInstallTest{
-				revision:     1,
-				chartName:    "nginx-ingress",
-				chartVersion: "1.24.7",
+			expectedErr: true,
+		},
+		{
+			name: "Install dir chart",
+			helmConfig: &latest.HelmConfig{
+				Chart: &latest.ChartConfig{
+					Name: "myChart",
+				},
+			},
+			files: map[string]interface{}{
+				"myChart/Chart.yaml": chart.Metadata{
+					Name: "myChart",
+				},
+			},
+			expectedRelease: &types.Release{
+				Name:         "myChart",
+				Namespace:    "testNamespace",
+				Status:       "12345",
+				Version:      0,
+				LastDeployed: time.Unix(12345, 0),
 			},
 		},
 		{
-			releaseName: "my-release",
-			values: &map[interface{}]interface{}{
-				"test": "test",
-			},
-			config: &latest.HelmConfig{
+			name:        "Install dir chart in repository dir",
+			releaseName: "myRelease",
+			helmConfig: &latest.HelmConfig{
 				Chart: &latest.ChartConfig{
-					Name:    "stable/nginx-ingress",
-					Version: "1.24.7",
+					Name: "myChart",
+				},
+				Timeout: ptr.Int64(time.Now().Add(time.Hour).Unix()),
+			},
+			files: map[string]interface{}{
+				"repository/myChart/Chart.yaml": chart.Metadata{
+					Name: "myChart",
+				},
+				"repository/myChart/requirements.yaml": &helmchartutil.Requirements{
+					Dependencies: []*helmchartutil.Dependency{
+						&helmchartutil.Dependency{
+							Name: "dep1",
+						},
+					},
+				},
+				"repository/repositories.yaml": repo.RepoFile{
+					APIVersion: "a",
+				},
+				"repository/myChart/charts/missingDep/Chart.yaml": chart.Metadata{
+					Name: "dep1",
 				},
 			},
-			expected: expectedInstallTest{
-				revision: 2,
-				values: &chart.Config{
-					Raw: "test: test\n",
+			releases: &[]*release.Release{
+				&release.Release{
+					Name: "myRelease",
 				},
 			},
-		},
-		{
-			releaseName:      "my-release-2",
-			releaseNamespace: "other-namespace",
-			config: &latest.HelmConfig{
-				Chart: &latest.ChartConfig{
-					Name:    "stable/nginx-ingress",
-					Version: "1.24.7",
-				},
-			},
-			expected: expectedInstallTest{
-				revision:     1,
-				chartName:    "nginx-ingress",
-				chartVersion: "1.24.7",
+			expectedRelease: &types.Release{
+				Name:         "myRelease",
+				Namespace:    "myRelease",
+				Status:       "12345",
+				Version:      0,
+				LastDeployed: time.Unix(12345, 0),
 			},
 		},
 	}
 
-	config := createFakeConfig()
-
-	// Create the fake client.
-	kubeClient := &kubectl.Client{
-		Client: fake.NewSimpleClientset(),
+	dir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		t.Fatalf("Error creating temporary directory: %v", err)
 	}
-	helmClient := &helm.FakeClient{}
 
-	client, err := create(config, loader.TestNamespace, helmClient, kubeClient, false, log.GetInstance())
+	wdBackup, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Error getting current working directory: %v", err)
+	}
+	err = os.Chdir(dir)
+	if err != nil {
+		t.Fatalf("Error changing working directory: %v", err)
+	}
+	dir, err = filepath.EvalSymlinks(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = client.UpdateRepos(log.GetInstance())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, i := range installCharts {
-		installResponse, err := client.InstallChart(i.releaseName, i.releaseNamespace, i.values, i.config)
+	defer func() {
+		err = os.Chdir(wdBackup)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("Error changing dir back: %v", err)
 		}
-
-		assert.Equal(t, installResponse.GetName(), i.releaseName)
-		if i.releaseNamespace == "" {
-			assert.Equal(t, installResponse.GetNamespace(), "default")
-		} else {
-			assert.Equal(t, installResponse.GetNamespace(), i.releaseNamespace)
+		err = os.RemoveAll(dir)
+		if err != nil {
+			t.Fatalf("Error removing dir: %v", err)
 		}
-		assert.Equal(t, installResponse.GetVersion(), i.expected.revision)
-		assert.Equal(t, installResponse.GetChart().GetMetadata().GetName(), i.expected.chartName)
-		assert.Equal(t, installResponse.GetChart().GetMetadata().GetVersion(), i.expected.chartVersion)
-		if i.expected.values != nil {
-			assert.DeepEqual(t, installResponse.GetConfig(), i.expected.values)
-		}
-	}
-}
-
-type analyzeErrorTestCase struct {
-	name string
-
-	inputErr    error
-	namespace   string
-	createdPods []*k8sv1.Pod
-
-	expectedErr string
-}
-
-func TestAnalyzeError(t *testing.T) {
-	testCases := []analyzeErrorTestCase{
-		analyzeErrorTestCase{
-			name:        "Test analyze no-timeout error",
-			inputErr:    errors.Errorf("Some error"),
-			expectedErr: "Some error",
-		},
-		analyzeErrorTestCase{
-			name:      "Test analyze timeout error",
-			inputErr:  errors.Errorf("timed out waiting"),
-			namespace: "testNS",
-		},
-	}
+	}()
 
 	for _, testCase := range testCases {
-		config := createFakeConfig()
-
-		// Create the fake client.
-		kubeClient := &kubectl.Client{
-			Client: fake.NewSimpleClientset(),
-		}
-		helmClient := &helm.FakeClient{}
-
-		for _, pod := range testCase.createdPods {
-			_, err := kubeClient.Client.CoreV1().Pods(testCase.namespace).Create(pod)
-			assert.NilError(t, err, "Error creating testPod in testCase %s", testCase.name)
+		for path, content := range testCase.files {
+			asJSON, err := json.Marshal(content)
+			assert.NilError(t, err, "Error parsing content to json in testCase %s", testCase.name)
+			if content == "" {
+				asJSON = []byte{}
+			}
+			err = fsutil.WriteToFile(asJSON, path)
+			assert.NilError(t, err, "Error writing file in testCase %s", testCase.name)
 		}
 
-		client, err := create(config, loader.TestNamespace, helmClient, kubeClient, false, &log.DiscardLogger{})
-		if err != nil {
-			t.Fatal(err)
+		client := &client{
+			Settings: &helmenvironment.EnvSettings{
+				Home: helmpath.Home(dir),
+			},
+			kubectl: &fakekube.Client{},
+			helm: &fakeHelm{
+				releases: testCase.releases,
+			},
 		}
 
-		err = client.analyzeError(testCase.inputErr, testCase.namespace)
-		if testCase.expectedErr == "" {
-			assert.NilError(t, err, "Error analyzing error in testCase %s", testCase.name)
-		} else {
-			assert.Error(t, err, testCase.expectedErr, "Wrong or no error returned in testCase %s", testCase.name)
+		release, err := client.InstallChart(testCase.releaseName, testCase.releaseNamespace, testCase.values, testCase.helmConfig)
+
+		if !testCase.expectedErr {
+			assert.NilError(t, err, "Error in testCase %s", testCase.name)
+		} else if err == nil {
+			t.Fatalf("Unexpected no error in testCase %s", testCase.name)
 		}
+
+		releaseAsYaml, err := yaml.Marshal(release)
+		assert.NilError(t, err, "Error parsing release to yaml in testCase %s", testCase.name)
+		expectedAsYaml, err := yaml.Marshal(testCase.expectedRelease)
+		assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+		assert.Equal(t, string(releaseAsYaml), string(expectedAsYaml), "Unexpected release in testCase %s", testCase.name)
+
+		err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {
+			os.RemoveAll(path)
+			return nil
+		})
+		assert.NilError(t, err, "Error cleaning up in testCase %s", testCase.name)
 	}
-}*/
+}
