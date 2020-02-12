@@ -52,8 +52,8 @@ func TestDeploy(t *testing.T) {
 		deployTestCase{
 			name:        "Deploy one deployment",
 			deployment:  "deploy2",
-			chart:       "/",
-			valuesFiles: []string{"/"},
+			chart:       ".",
+			valuesFiles: []string{"."},
 			values: map[interface{}]interface{}{
 				"val": "fromVal",
 			},
@@ -61,7 +61,7 @@ func TestDeploy(t *testing.T) {
 			expectedCache: &generated.CacheConfig{
 				Deployments: map[string]*generated.DeploymentCache{
 					"deploy2": &generated.DeploymentCache{
-						DeploymentConfigHash: "913ebc73f6839301b94dbd475d6e2a3cfa04c02072e11cf31e4e3ba60c1fed39",
+						DeploymentConfigHash: "2f0fdaa77956604c97de5cb343051fab738ac36052956ae3cb16e8ec529ab154",
 					},
 				},
 			},
