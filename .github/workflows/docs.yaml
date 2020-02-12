@@ -34,6 +34,11 @@ jobs:
           node -e "var versions = require('./versions.all.json'); versions.shift(); console.log(JSON.stringify(versions));" > versions.json
           node ./ci-gen-version.js $LATEST_VERSION
 
+          if [ -z "$NPM_REGISTRY_TOKEN" ]
+          then
+            export NPM_CONFIG_GLOBALCONFIG=""
+          fi
+          
           npm install
           npm run build
         working-directory: ./docs/website

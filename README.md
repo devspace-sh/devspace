@@ -649,8 +649,8 @@ deployments:
   helm:                                 # Deploy using Helm
     chart:                              # Helm chart to be deployed
       name: component-chart             # DevSpace component chart is a general-purpose Helm chart
-      version: v0.0.6
-      repo: https://charts.devspace.cloud
+      version: 0.1.3
+      repo: https://charts.devspace.sh
     values:                             # Override Values for chart (van also be set using valuesFiles option)
       containers:                       # Deploy these containers with this general-purpose Helm chart
       - image: my-registry.tld/image1   # Image of this container

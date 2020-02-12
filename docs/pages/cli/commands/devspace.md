@@ -16,6 +16,7 @@ DevSpace accelerates developing, deploying and debugging applications with Docke
 ## Options
 
 ```
+      --config string         The devspace config file to use
       --debug                 Prints the stack trace if an error occurs
   -h, --help                  help for devspace
       --kube-context string   The kubernetes context to use

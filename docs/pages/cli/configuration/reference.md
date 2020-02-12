@@ -318,6 +318,38 @@ sync:                               # struct[] | Array of file sync settings for
   bandwidthLimits:                  # struct   | Bandwidth limits for the synchronization algorithm
     download: 0                     # int64    | Max file download speed in kilobytes / second (e.g. 100 means 100 KB/s)
     upload: 0                       # int64    | Max file upload speed in kilobytes / second (e.g. 100 means 100 KB/s)
+  onUpload:                         # struct   | After a file/folder has been uploaded to the container...
+    execRemote:                     # struct   | ...execute the following command inside the container:
+      command: chmod                # string   | Command to execute for files and folders
+      args:                         # string[] | Argument list
+      - +x                          # string   | Argument 1
+      - {}                          # string   | Argument 2: {} will be replaced with path of the file/folder
+      onFileChange:                 # struct   | Command to execute ONLY for files
+        command: chmod              # string   | Command
+        args:                       # string[] | Argument list
+        - +x                        # string   | Argument 1
+        - {}                        # string   | Argument 2: {} will be replaced with path of the file/folder
+      onDirCreate:                  # struct   | Command to execute ONLY for newly created directories
+        command: chmod              # string   | Command
+        args:                       # string[] | Argument list
+        - +x                        # string   | Argument 1
+        - {}                        # string   | Argument 2: {} will be replaced with path of the file/folder
+  onDownload:                       # struct   | After a file/folder has been downloaded from the container to the local filesystem...
+    execLocal:                      # struct   | ...execute the following command on the local machine:
+      command: chmod                # string   | Command to execute for files and folders
+      args:                         # string[] | Argument list
+      - +x                          # string   | Argument 1
+      - {}                          # string   | Argument 2: {} will be replaced with path of the file/folder
+      onFileChange:                 # struct   | Command to execute ONLY for files
+        command: chmod              # string   | Command
+        args:                       # string[] | Argument list
+        - +x                        # string   | Argument 1
+        - {}                        # string   | Argument 2: {} will be replaced with path of the file/folder
+      onDirCreate:                  # struct   | Command to execute ONLY for newly created directories
+        command: chmod              # string   | Command
+        args:                       # string[] | Argument list
+        - +x                        # string   | Argument 1
+        - {}                        # string   | Argument 2: {} will be replaced with path of the file/folder
 ```
 [Learn more about confguring the code synchronization.](../../cli/development/configuration/file-synchronization)
 
