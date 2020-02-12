@@ -44,9 +44,9 @@ func TestNew(t *testing.T) {
 				DeploymentConfig: &latest.DeploymentConfig{
 					Helm: &latest.HelmConfig{
 						Chart: &latest.ChartConfig{
-							Name:    "component-chart",
-							Version: "v0.0.8",
-							RepoURL: "https://charts.devspace.cloud",
+							Name:    DevSpaceChartConfig.Name,
+							Version: DevSpaceChartConfig.Version,
+							RepoURL: DevSpaceChartConfig.RepoURL,
 						},
 						TillerNamespace: "overwriteTillerNamespace",
 						ComponentChart:  ptr.Bool(true),
