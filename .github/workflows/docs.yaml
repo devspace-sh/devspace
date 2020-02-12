@@ -48,7 +48,11 @@ jobs:
       - name: Deploy preview site on netlify
         run: |
           npm install -g netlify-cli
-          netlify deploy --auth=$NETLIFY_AUTH_TOKEN --site=$NETLIFY_SITE_ID --dir=$OUT_DIR
+
+          if [ ! -z "$NETLIFY_AUTH_TOKEN" ]
+          then
+            netlify deploy --auth=$NETLIFY_AUTH_TOKEN --site=$NETLIFY_SITE_ID --dir=$OUT_DIR
+          fi
         working-directory: ./docs/website
       - name: Merge docs pages of previous versions with current version
         if: github.ref == 'refs/heads/master'
