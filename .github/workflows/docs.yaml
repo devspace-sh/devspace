@@ -36,11 +36,10 @@ jobs:
 
           if [ -z "$NPM_REGISTRY_TOKEN" ]
           then
-            npm install --no-optional
-          else
-            npm install
+            export NPM_CONFIG_GLOBALCONFIG=""
           fi
           
+          npm install
           npm run build
         working-directory: ./docs/website
         env:
