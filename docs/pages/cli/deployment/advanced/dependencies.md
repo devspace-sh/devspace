@@ -13,7 +13,7 @@ dependencies:
 - source:
     git: https://github.com/my-auth-server
     revision: c967392
-    profile: production
+  profile: production
 - source:
     git: https://github.com/my-database-server
     tag: v3.0.1
