@@ -47,7 +47,7 @@ The `source` option expects either:
 
 > If the `source` is `env`, DevSpace will always prefer to use the value of the environment variable, even if there is a cached value for the variable in `.devspace/generated.yaml`.
 
-> Is the `source` is `env` and the environment variable is **not** defined, DevSpace will use the [`defalut` value](#default) or terminate with a fatal error, if there is **no** [`defalut` value](#default) configured.
+> Is the `source` is `env` and the environment variable is **not** defined, DevSpace will use the [`default` value](#default) or terminate with a fatal error, if there is **no** [`default` value](#default) configured.
 
 #### Default Value For `source`
 ```yaml
@@ -58,7 +58,7 @@ source: all
 ### `default`
 The `default` option expects a string defining the default value for the variable.
 
-> Is the [`source`](#source) is `env` and the environment variable is **not** defined, DevSpace will use the `defalut` value or terminate with a fatal error, if there is **no** `defalut` value configured.
+> Is the [`source`](#source) is `env` and the environment variable is **not** defined, DevSpace will use the `default` value or terminate with a fatal error, if there is **no** `default` value configured.
 
 
 ### `question`
@@ -68,7 +68,7 @@ The `question` option expects a string with a question that will be asked when t
 
 > If [valid `options` for the variable value](#options) are configured, DevSpace will show a picker/selector instead of a regular input field/prompt.
 
-> If a [`defalut` value](#default) is configured for the variable, DevSpace will use this [`defalut` value](#default) as default answer for the question that can be easily selected by pressing enter.
+> If a [`default` value](#default) is configured for the variable, DevSpace will use this [`default` value](#default) as default answer for the question that can be easily selected by pressing enter.
 
 #### Default Value For `question`
 ```yaml
