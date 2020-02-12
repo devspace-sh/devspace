@@ -1,5 +1,7 @@
 ---
 title: Ingress (Domain)
+id: version-v4.5.0-ingress
+original_id: ingress
 ---
 
 To automatically create an ingress for a component, you can configure the `ingress` option for the component within the `devspace.yaml`.
