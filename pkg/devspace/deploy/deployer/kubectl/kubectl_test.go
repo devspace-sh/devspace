@@ -369,7 +369,7 @@ func TestDeploy(t *testing.T) {
 			expectedDeployed: true,
 			expectedPaths:    []string{"myPath", "myPath"},
 			expectedArgs: [][]string{
-				[]string{"create", "--context", "myContext", "--namespace", "myNamespace", "--dry-run", "--save-config", "--output", "yaml", "--validate=false", "--filename", "/"},
+				[]string{"create", "--context", "myContext", "--namespace", "myNamespace", "--dry-run", "--save-config", "--output", "yaml", "--validate=false", "--filename", "."},
 				[]string{"--context", "myContext", "--namespace", "myNamespace", "apply", "--force", "-f", "-", "someFlag"},
 			},
 		},
