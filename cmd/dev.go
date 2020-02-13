@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -131,7 +130,6 @@ func (cmd *DevCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string
 		return err
 	}
 	if !configExists {
-		fmt.Println(cmd.configLoader.ConfigPath())
 		return errors.New(message.ConfigNotFound)
 	}
 
