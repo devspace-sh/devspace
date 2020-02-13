@@ -84,10 +84,7 @@ func (l *configLoader) SaveGenerated(generatedConfig *generated.Config) error {
 
 // Exists checks whether the yaml file for the config exists or the configs.yaml exists
 func (l *configLoader) Exists() bool {
-	path := constants.DefaultConfigPath
-	if l.options.ConfigPath != "" {
-		path = l.options.ConfigPath
-	}
+	path := l.ConfigPath()
 
 	return configExistsInPath(path)
 }
