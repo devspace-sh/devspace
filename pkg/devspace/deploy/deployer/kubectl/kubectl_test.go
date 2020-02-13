@@ -364,7 +364,7 @@ func TestDeploy(t *testing.T) {
 			cmdPath:          "myPath",
 			context:          "myContext",
 			namespace:        "myNamespace",
-			manifests:        []string{"/"},
+			manifests:        []string{"."},
 			kubectlFlags:     []string{"someFlag"},
 			expectedDeployed: true,
 			expectedPaths:    []string{"myPath", "myPath"},
