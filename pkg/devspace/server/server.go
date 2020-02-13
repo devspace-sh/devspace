@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -161,7 +160,7 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 
 	// Load raw config
 	if config != nil {
-		configPath := filepath.Join(cwd, constants.DefaultConfigPath)
+		configPath := configLoader.ConfigPath()
 		handler.rawConfig, err = configLoader.LoadRaw(configPath)
 		if err != nil {
 			return nil, errors.Wrap(err, "load raw config")

@@ -45,6 +45,10 @@ func (f *FakeConfigLoader) Load() (*latest.Config, error) {
 	return f.Config, nil
 }
 
+func (f *FakeConfigLoader) ConfigPath() string {
+	return ""
+}
+
 func (f *FakeConfigLoader) ResolveVar(varName string, generatedConfig *generated.Config, cmdVars map[string]string) (string, error) {
 	return "", nil
 }

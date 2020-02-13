@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -22,11 +21,7 @@ func varMatchFn(path, key, value string) bool {
 
 // GetProfiles retrieves all available profiles
 func (l *configLoader) GetProfiles() ([]string, error) {
-	path := constants.DefaultConfigPath
-	if l.options.ConfigPath != "" {
-		path = l.options.ConfigPath
-	}
-
+	path := l.ConfigPath()
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err

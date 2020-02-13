@@ -4,8 +4,8 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -61,7 +61,7 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 		return err
 	}
 
-	allowedVars, err := getPossibleVars(generatedConfig, log)
+	allowedVars, err := getPossibleVars(generatedConfig, configLoader, log)
 	if err != nil {
 		return errors.Wrap(err, "get possible vars")
 	}
@@ -97,9 +97,9 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 	return nil
 }
 
-func getPossibleVars(generatedConfig *generated.Config, log log.Logger) (map[string]bool, error) {
+func getPossibleVars(generatedConfig *generated.Config, configLoader loader.ConfigLoader, log log.Logger) (map[string]bool, error) {
 	// Load variables
-	bytes, err := ioutil.ReadFile(constants.DefaultConfigPath)
+	bytes, err := ioutil.ReadFile(configLoader.ConfigPath())
 	if err != nil {
 		return nil, err
 	}

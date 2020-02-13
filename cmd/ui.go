@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/server"
@@ -157,11 +156,7 @@ func (cmd *UICmd) RunUI(f factory.Factory, cobraCmd *cobra.Command, args []strin
 
 	configOptions := cmd.ToConfigOptions()
 
-	path := constants.DefaultConfigPath
-	if configOptions.ConfigPath != "" {
-		path = configOptions.ConfigPath
-	}
-
+	path := configLoader.ConfigPath()
 	values := [][]string{}
 
 	err = fillCurrentVars(configOptions, configLoader, path, &values, cmd.log)
