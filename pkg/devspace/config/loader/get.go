@@ -27,6 +27,7 @@ type ConfigLoader interface {
 	LoadRaw(path string) (map[interface{}]interface{}, error)
 	LoadWithoutProfile() (*latest.Config, error)
 
+	ConfigPath() string
 	GetProfiles() ([]string, error)
 	ResolveVar(varName string, generatedConfig *generated.Config, cmdVars map[string]string) (string, error)
 	ParseCommands(generatedConfig *generated.Config, data map[interface{}]interface{}) ([]*latest.CommandConfig, error)
@@ -83,10 +84,7 @@ func (l *configLoader) SaveGenerated(generatedConfig *generated.Config) error {
 
 // Exists checks whether the yaml file for the config exists or the configs.yaml exists
 func (l *configLoader) Exists() bool {
-	path := constants.DefaultConfigPath
-	if l.options.ConfigPath != "" {
-		path = l.options.ConfigPath
-	}
+	path := l.ConfigPath()
 
 	return configExistsInPath(path)
 }
@@ -159,6 +157,15 @@ func (l *configLoader) LoadRaw(configPath string) (map[interface{}]interface{}, 
 	return rawMap, nil
 }
 
+func (l *configLoader) ConfigPath() string {
+	path := constants.DefaultConfigPath
+	if l.options.ConfigPath != "" {
+		path = l.options.ConfigPath
+	}
+
+	return path
+}
+
 // LoadPath loads the config from a given base path
 func (l *configLoader) LoadFromPath(generatedConfig *generated.Config, configPath string) (*latest.Config, error) {
 	// Check devspace.yaml
@@ -202,10 +209,7 @@ func (l *configLoader) loadInternal(allowProfile bool) (*latest.Config, error) {
 	}
 
 	// What path should we use
-	path := constants.DefaultConfigPath
-	if l.options.ConfigPath != "" {
-		path = l.options.ConfigPath
-	}
+	path := l.ConfigPath()
 
 	// Load base config
 	config, err := l.LoadFromPath(generatedConfig, path)

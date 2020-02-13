@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
@@ -94,10 +93,7 @@ func printExtraInfo(configOptions *loader.ConfigOptions, configLoader loader.Con
 	if err != nil {
 		return err
 	}
-	path := constants.DefaultConfigPath
-	if configOptions.ConfigPath != "" {
-		path = configOptions.ConfigPath
-	}
+	path := configLoader.ConfigPath()
 	absPath := filepath.Join(pwd, path)
 
 	log.WriteString("\n-------------------\n\nVars:\n")

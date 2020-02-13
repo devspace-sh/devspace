@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 	"github.com/pkg/errors"
@@ -39,10 +38,11 @@ func (l *configLoader) RestoreVars(config *latest.Config) (*latest.Config, error
 	}
 
 	// Check if config exists
-	_, err = os.Stat(constants.DefaultConfigPath)
+	path := l.ConfigPath()
+	_, err = os.Stat(path)
 	if err == nil {
 		// Shallow merge with config from file to add vars, configs etc.
-		bytes, err := ioutil.ReadFile(constants.DefaultConfigPath)
+		bytes, err := ioutil.ReadFile(path)
 		if err != nil {
 			return nil, err
 		}
@@ -97,11 +97,11 @@ func (l *configLoader) Save(config *latest.Config) error {
 		return errors.Wrap(err, "restore vars")
 	}
 
-	return saveConfig(clonedConfig)
+	return saveConfig(l.ConfigPath(), clonedConfig)
 }
 
 // saveConfig saves the config to file
-func saveConfig(config *latest.Config) error {
+func saveConfig(path string, config *latest.Config) error {
 	// Convert to string
 	configYaml, err := yaml.Marshal(config)
 	if err != nil {
@@ -109,7 +109,7 @@ func saveConfig(config *latest.Config) error {
 	}
 
 	// Path to save the configuration to
-	err = ioutil.WriteFile(constants.DefaultConfigPath, configYaml, os.ModePerm)
+	err = ioutil.WriteFile(path, configYaml, os.ModePerm)
 	if err != nil {
 		return err
 	}

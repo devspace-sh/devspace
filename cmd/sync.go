@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -85,14 +84,6 @@ func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 		_, err := os.Stat(cmd.GlobalFlags.ConfigPath)
 		if err != nil {
 			return errors.Errorf("--config is specified, but config %s cannot be loaded: %v", cmd.GlobalFlags.ConfigPath, err)
-		}
-
-		configPath, _ := filepath.Abs(cmd.GlobalFlags.ConfigPath)
-		configPath = filepath.Dir(configPath)
-
-		err = os.Chdir(configPath)
-		if err != nil {
-			return errors.Wrap(err, "change working directory")
 		}
 	}
 
