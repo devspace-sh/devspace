@@ -2,14 +2,22 @@ package render
 
 import (
 	"io/ioutil"
+	"regexp"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/e2e/utils"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/helm"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
+
+var chartRegEx = regexp.MustCompile(`component-chart-[^\"]+`)
+
+func replaceComponentChart(in string) string {
+	return chartRegEx.ReplaceAllString(in, "component-chart-"+helm.DevSpaceChartConfig.Version)
+}
 
 func runHelmV2(f *customFactory, logger log.Logger) error {
 	logger.Info("Run sub test 'helm_v2' of test 'render'")
@@ -46,8 +54,9 @@ func runHelmV2(f *customFactory, logger log.Logger) error {
 		return err
 	}
 
-	if strings.Index(capturedOutput, string(expectedOutput)) == -1 {
-		return errors.Errorf("output does not match expected output")
+	expectedOutputStr := replaceComponentChart(string(expectedOutput))
+	if strings.Index(capturedOutput, expectedOutputStr) == -1 {
+		return errors.Errorf("output '%s' does not match expected output '%s'", capturedOutput, expectedOutputStr)
 	}
 
 	imagesExpected := 1

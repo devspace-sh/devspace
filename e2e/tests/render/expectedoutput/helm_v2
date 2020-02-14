@@ -1,3 +1,4 @@
+
 ---
 # Source: component-chart/templates/service.yaml
 
@@ -86,3 +87,5 @@ spec:
 
 ---
 # Source: component-chart/templates/volumes.yaml
+
+
