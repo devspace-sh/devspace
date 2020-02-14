@@ -46,7 +46,8 @@ func runHelmV3(f *customFactory, logger log.Logger) error {
 		return err
 	}
 
-	if strings.Index(string(expectedOutput), capturedOutput) == -1 {
+	expectedOutputStr := replaceComponentChart(string(expectedOutput))
+	if strings.Index(expectedOutputStr, capturedOutput) == -1 {
 		return errors.Errorf("output does not match expected output")
 	}
 
@@ -57,6 +58,5 @@ func runHelmV3(f *customFactory, logger log.Logger) error {
 	}
 
 	f.builtImages = map[string]string{}
-
 	return nil
 }

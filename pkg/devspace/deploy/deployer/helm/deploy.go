@@ -168,7 +168,7 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 			return false, err
 		}
 
-		out.Write([]byte(str + "\n"))
+		out.Write([]byte("\n" + str + "\n"))
 		return true, nil
 	}
 
