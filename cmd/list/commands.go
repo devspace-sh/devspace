@@ -7,11 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 
-	"io/ioutil"
-
 	"github.com/spf13/cobra"
-
-	yaml "gopkg.in/yaml.v2"
 )
 
 type commandsCmd struct {
@@ -53,31 +49,14 @@ func (cmd *commandsCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 		return errors.New(message.ConfigNotFound)
 	}
 
-	// Load commands
-	bytes, err := ioutil.ReadFile(configLoader.ConfigPath())
-	if err != nil {
-		return err
-	}
-	rawMap := map[interface{}]interface{}{}
-	err = yaml.Unmarshal(bytes, &rawMap)
-	if err != nil {
-		return err
-	}
-
-	// Load generated config
-	generatedConfig, err := configLoader.Generated()
-	if err != nil {
-		return err
-	}
-
 	// Parse commands
-	commands, err := configLoader.ParseCommands(generatedConfig, rawMap)
+	commands, err := configLoader.ParseCommands()
 	if err != nil {
 		return err
 	}
 
 	// Save variables
-	err = configLoader.SaveGenerated(generatedConfig)
+	err = configLoader.SaveGenerated()
 	if err != nil {
 		return err
 	}

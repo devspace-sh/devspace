@@ -102,7 +102,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(f factory.Factory, cobraCmd *cobra
 			log.Errorf("Error purging deployments: %v", err)
 		}
 
-		err = configLoader.SaveGenerated(generatedConfig)
+		err = configLoader.SaveGenerated()
 		if err != nil {
 			log.Errorf("Error saving generated.yaml: %v", err)
 		}

@@ -261,7 +261,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 
 			// Save config if an image was built
 			if len(builtImages) > 0 {
-				err := cmd.configLoader.SaveGenerated(generatedConfig)
+				err := cmd.configLoader.SaveGenerated()
 				if err != nil {
 					return 0, errors.Errorf("Error saving generated config: %v", err)
 				}
@@ -291,7 +291,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 			}
 
 			// Save Config
-			err = cmd.configLoader.SaveGenerated(generatedConfig)
+			err = cmd.configLoader.SaveGenerated()
 			if err != nil {
 				return 0, errors.Errorf("Error saving generated config: %v", err)
 			}
@@ -678,7 +678,7 @@ func updateLastKubeContext(configLoader loader.ConfigLoader, client kubectl.Clie
 			Namespace: client.Namespace(),
 		}
 
-		err := configLoader.SaveGenerated(generatedConfig)
+		err := configLoader.SaveGenerated()
 		if err != nil {
 			return errors.Wrap(err, "save generated")
 		}

@@ -206,7 +206,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 
 			// Save config if an image was built
 			if len(builtImages) > 0 {
-				err := configLoader.SaveGenerated(generatedConfig)
+				err := configLoader.SaveGenerated()
 				if err != nil {
 					return errors.Errorf("Error saving generated config: %v", err)
 				}

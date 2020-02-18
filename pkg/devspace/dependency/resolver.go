@@ -259,8 +259,17 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	configPath := filepath.Join(localPath, constants.DefaultConfigPath)
 
 	// Load config
+	cloned.GeneratedConfig = r.BaseCache
+	cloned.ConfigPath = configPath
+
+	// Create the config loader
+	var dConfig *latest.Config
 	configLoader := loader.NewConfigLoader(cloned, r.log)
-	dConfig, err := configLoader.LoadFromPath(r.BaseCache, configPath)
+	if cloned.Profile == "" {
+		dConfig, err = configLoader.LoadWithoutProfile()
+	} else {
+		dConfig, err = configLoader.Load()
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", ID))
 	}

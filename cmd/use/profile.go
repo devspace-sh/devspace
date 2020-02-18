@@ -99,7 +99,7 @@ func (cmd *ProfileCmd) RunUseProfile(f factory.Factory, cobraCmd *cobra.Command,
 	generatedConfig.ActiveProfile = profileName
 
 	// Save generated config
-	err = configLoader.SaveGenerated(generatedConfig)
+	err = configLoader.SaveGenerated()
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
@@ -57,7 +56,12 @@ func (l *configLoader) GetProfiles() ([]string, error) {
 }
 
 // ParseCommands fills the variables in the data and parses the commands
-func (l *configLoader) ParseCommands(generatedConfig *generated.Config, data map[interface{}]interface{}) ([]*latest.CommandConfig, error) {
+func (l *configLoader) ParseCommands() ([]*latest.CommandConfig, error) {
+	data, err := l.LoadRaw()
+	if err != nil {
+		return nil, err
+	}
+
 	// Load defined variables
 	vars, err := versions.ParseVariables(data, l.log)
 	if err != nil {
@@ -71,7 +75,7 @@ func (l *configLoader) ParseCommands(generatedConfig *generated.Config, data map
 	}
 
 	// Fill in variables
-	err = l.FillVariables(generatedConfig, preparedConfig, vars)
+	err = l.FillVariables(preparedConfig, vars)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +90,7 @@ func (l *configLoader) ParseCommands(generatedConfig *generated.Config, data map
 }
 
 // parseConfig fills the variables in the data and parses the config
-func (l *configLoader) parseConfig(generatedConfig *generated.Config, data map[interface{}]interface{}) (*latest.Config, error) {
+func (l *configLoader) parseConfig(data map[interface{}]interface{}) (*latest.Config, error) {
 	// Get profile
 	profile, err := versions.ParseProfile(data, l.options.Profile)
 	if err != nil {
@@ -122,7 +126,7 @@ func (l *configLoader) parseConfig(generatedConfig *generated.Config, data map[i
 	delete(data, "vars")
 
 	// Fill in variables
-	err = l.FillVariables(generatedConfig, data, vars)
+	err = l.FillVariables(data, vars)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +141,7 @@ func (l *configLoader) parseConfig(generatedConfig *generated.Config, data map[i
 }
 
 // FillVariables fills in the given vars into the prepared config
-func (l *configLoader) FillVariables(generatedConfig *generated.Config, preparedConfig map[interface{}]interface{}, vars []*latest.Variable) error {
+func (l *configLoader) FillVariables(preparedConfig map[interface{}]interface{}, vars []*latest.Variable) error {
 	// Find out what vars are really used
 	varsUsed := map[string]bool{}
 	err := walk.Walk(preparedConfig, varMatchFn, func(path, value string) (interface{}, error) {
@@ -168,22 +172,17 @@ func (l *configLoader) FillVariables(generatedConfig *generated.Config, prepared
 		}
 
 		if len(newVars) > 0 {
-			err = l.askQuestions(generatedConfig, newVars, cmdVars)
+			err = l.askQuestions(newVars, cmdVars)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	// Fill predefined vars
-	err = fillPredefinedVars(l.kubeConfigLoader, l.options)
-	if err != nil {
-		return err
-	}
-
 	// Walk over data and fill in variables
+	l.resolvedVars = map[string]string{}
 	err = walk.Walk(preparedConfig, varMatchFn, func(path, value string) (interface{}, error) {
-		return l.VarReplaceFn(path, value, generatedConfig, cmdVars)
+		return l.VarReplaceFn(path, value, cmdVars)
 	})
 	if err != nil {
 		return err
@@ -208,7 +207,12 @@ func ParseVarsFromOptions(options *ConfigOptions) (map[string]string, error) {
 	return vars, nil
 }
 
-func (l *configLoader) askQuestions(generatedConfig *generated.Config, vars []*latest.Variable, cmdVars map[string]string) error {
+func (l *configLoader) askQuestions(vars []*latest.Variable, cmdVars map[string]string) error {
+	generatedConfig, err := l.Generated()
+	if err != nil {
+		return err
+	}
+
 	for _, variable := range vars {
 		name := strings.TrimSpace(variable.Name)
 
@@ -257,23 +261,31 @@ func (l *configLoader) askQuestions(generatedConfig *generated.Config, vars []*l
 	return nil
 }
 
-func (l *configLoader) VarReplaceFn(path, value string, generatedConfig *generated.Config, cmdVars map[string]string) (interface{}, error) {
+func (l *configLoader) VarReplaceFn(path, value string, cmdVars map[string]string) (interface{}, error) {
 	// Save old value
 	if l.options.LoadedVars != nil {
 		l.options.LoadedVars[path] = value
 	}
 
-	return varspkg.ParseString(value, func(v string) (string, error) { return l.ResolveVar(v, generatedConfig, cmdVars) })
+	return varspkg.ParseString(value, func(v string) (string, error) {
+		val, err := l.ResolveVar(v, cmdVars)
+		if err != nil {
+			return "", err
+		}
+
+		l.resolvedVars[v] = val
+		return val, nil
+	})
 }
 
-func (l *configLoader) ResolveVar(varName string, generatedConfig *generated.Config, cmdVars map[string]string) (string, error) {
+func (l *configLoader) ResolveVar(varName string, cmdVars map[string]string) (string, error) {
 	// Is cli variable?
 	if val, ok := cmdVars[varName]; ok {
 		return val, nil
 	}
 
 	// Is predefined variable?
-	found, value, err := getPredefinedVar(varName, generatedConfig, l.options)
+	found, value, err := l.resolvePredefinedVar(varName)
 	if err != nil {
 		return "", err
 	} else if found {
@@ -281,6 +293,11 @@ func (l *configLoader) ResolveVar(varName string, generatedConfig *generated.Con
 	}
 
 	// Is in generated config?
+	generatedConfig, err := l.Generated()
+	if err != nil {
+		return "", err
+	}
+
 	if _, ok := generatedConfig.Vars[varName]; ok {
 		return generatedConfig.Vars[varName], nil
 	}

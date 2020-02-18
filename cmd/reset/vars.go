@@ -57,7 +57,7 @@ func (cmd *varsCmd) RunResetVars(f factory.Factory, cobraCmd *cobra.Command, arg
 	generatedConfig.Vars = map[string]string{}
 
 	// Save the config
-	err = configLoader.SaveGenerated(generatedConfig)
+	err = configLoader.SaveGenerated()
 	if err != nil {
 		return errors.Errorf("Error saving config: %v", err)
 	}

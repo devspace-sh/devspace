@@ -133,7 +133,6 @@ func TestUpdateAll(t *testing.T) {
 		assert.NilError(t, err, "Error creating manager in testCase %s", testCase.name)
 
 		err = manager.UpdateAll()
-
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error updating all in testCase %s", testCase.name)
 		} else {

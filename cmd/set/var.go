@@ -1,7 +1,6 @@
 package set
 
 import (
-	"io/ioutil"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
 )
 
 type varCmd struct{}
@@ -88,7 +86,7 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 	}
 
 	// Save the config
-	err = configLoader.SaveGenerated(generatedConfig)
+	err = configLoader.SaveGenerated()
 	if err != nil {
 		return errors.Errorf("Error saving config: %v", err)
 	}
@@ -99,12 +97,7 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 
 func getPossibleVars(generatedConfig *generated.Config, configLoader loader.ConfigLoader, log log.Logger) (map[string]bool, error) {
 	// Load variables
-	bytes, err := ioutil.ReadFile(configLoader.ConfigPath())
-	if err != nil {
-		return nil, err
-	}
-	rawMap := map[interface{}]interface{}{}
-	err = yaml.Unmarshal(bytes, &rawMap)
+	rawMap, err := configLoader.LoadRaw()
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,8 @@
 package testing
 
 import (
+	"fmt"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -31,6 +33,10 @@ func (f *FakeConfigLoader) New() *latest.Config {
 	return f.Config
 }
 
+func (f *FakeConfigLoader) ResolvedVars() map[string]string {
+	return nil
+}
+
 // Exists implements interface
 func (f *FakeConfigLoader) Exists() bool {
 	return f.Config != nil
@@ -49,10 +55,6 @@ func (f *FakeConfigLoader) ConfigPath() string {
 	return ""
 }
 
-func (f *FakeConfigLoader) ResolveVar(varName string, generatedConfig *generated.Config, cmdVars map[string]string) (string, error) {
-	return "", nil
-}
-
 // LoadFromPath implements interface
 func (f *FakeConfigLoader) LoadFromPath(generatedConfig *generated.Config, path string) (*latest.Config, error) {
 	if f.Config == nil {
@@ -63,7 +65,7 @@ func (f *FakeConfigLoader) LoadFromPath(generatedConfig *generated.Config, path 
 }
 
 // LoadRaw implements interface
-func (f *FakeConfigLoader) LoadRaw(path string) (map[interface{}]interface{}, error) {
+func (f *FakeConfigLoader) LoadRaw() (map[interface{}]interface{}, error) {
 	if f.Config == nil {
 		return nil, errors.New("Couldn't load config")
 	}
@@ -103,8 +105,8 @@ func (f *FakeConfigLoader) GetProfiles() ([]string, error) {
 }
 
 // ParseCommands implements interface
-func (f *FakeConfigLoader) ParseCommands(generatedConfig *generated.Config, data map[interface{}]interface{}) ([]*latest.CommandConfig, error) {
-	return loader.NewConfigLoader(nil, f.Log).ParseCommands(generatedConfig, data)
+func (f *FakeConfigLoader) ParseCommands() ([]*latest.CommandConfig, error) {
+	return nil, fmt.Errorf("Unsupported")
 }
 
 // Generated implements interface
@@ -117,7 +119,7 @@ func (f *FakeConfigLoader) Generated() (*generated.Config, error) {
 }
 
 // SaveGenerated implements interface
-func (f *FakeConfigLoader) SaveGenerated(generatedConfig *generated.Config) error {
+func (f *FakeConfigLoader) SaveGenerated() error {
 	return nil
 }
 
