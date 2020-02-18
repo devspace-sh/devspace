@@ -160,8 +160,7 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 
 	// Load raw config
 	if config != nil {
-		configPath := configLoader.ConfigPath()
-		handler.rawConfig, err = configLoader.LoadRaw(configPath)
+		handler.rawConfig, err = configLoader.LoadRaw()
 		if err != nil {
 			return nil, errors.Wrap(err, "load raw config")
 		}

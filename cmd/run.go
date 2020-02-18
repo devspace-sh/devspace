@@ -1,11 +1,8 @@
 package cmd
 
 import (
-	"io/ioutil"
-
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/command"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -13,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
 	"mvdan.cc/sh/v3/interp"
 )
 
@@ -62,31 +58,14 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 		return errors.New(message.ConfigNotFound)
 	}
 
-	// Load commands
-	bytes, err := ioutil.ReadFile(constants.DefaultConfigPath)
-	if err != nil {
-		return err
-	}
-	rawMap := map[interface{}]interface{}{}
-	err = yaml.Unmarshal(bytes, &rawMap)
-	if err != nil {
-		return err
-	}
-
-	// Load generated config
-	generatedConfig, err := configLoader.Generated()
-	if err != nil {
-		return err
-	}
-
 	// Parse commands
-	commands, err := configLoader.ParseCommands(generatedConfig, rawMap)
+	commands, err := configLoader.ParseCommands()
 	if err != nil {
 		return err
 	}
 
 	// Save variables
-	err = configLoader.SaveGenerated(generatedConfig)
+	err = configLoader.SaveGenerated()
 	if err != nil {
 		return err
 	}

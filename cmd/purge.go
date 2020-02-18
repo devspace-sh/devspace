@@ -148,7 +148,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 		}
 	}
 
-	err = configLoader.SaveGenerated(generatedConfig)
+	err = configLoader.SaveGenerated()
 	if err != nil {
 		cmd.log.Errorf("Error saving generated.yaml: %v", err)
 	}

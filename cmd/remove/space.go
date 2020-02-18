@@ -162,7 +162,7 @@ func (cmd *SpaceCmd) RunRemoveCloudDevSpace(f factory.Factory, cobraCmd *cobra.C
 			}
 		}
 
-		err = configLoader.SaveGenerated(generatedConfig)
+		err = configLoader.SaveGenerated()
 		if err != nil {
 			return err
 		}

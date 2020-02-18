@@ -23,20 +23,19 @@ type ConfigLoader interface {
 	Exists() bool
 
 	Load() (*latest.Config, error)
-	LoadFromPath(generatedConfig *generated.Config, path string) (*latest.Config, error)
-	LoadRaw(path string) (map[interface{}]interface{}, error)
+	LoadRaw() (map[interface{}]interface{}, error)
 	LoadWithoutProfile() (*latest.Config, error)
 
 	ConfigPath() string
 	GetProfiles() ([]string, error)
-	ResolveVar(varName string, generatedConfig *generated.Config, cmdVars map[string]string) (string, error)
-	ParseCommands(generatedConfig *generated.Config, data map[interface{}]interface{}) ([]*latest.CommandConfig, error)
+	ParseCommands() ([]*latest.CommandConfig, error)
 
+	ResolvedVars() map[string]string
 	Generated() (*generated.Config, error)
-	SaveGenerated(generatedConfig *generated.Config) error
+	SaveGenerated() error
 
-	Save(config *latest.Config) error
 	RestoreVars(config *latest.Config) (*latest.Config, error)
+	Save(config *latest.Config) error
 	SetDevSpaceRoot() (bool, error)
 }
 
@@ -46,8 +45,9 @@ type configLoader struct {
 
 	kubeConfigLoader kubeconfig.Loader
 
-	options *ConfigOptions
-	log     log.Logger
+	resolvedVars map[string]string
+	options      *ConfigOptions
+	log          log.Logger
 }
 
 // NewConfigLoader creates a new config loader with the given options
@@ -60,6 +60,7 @@ func NewConfigLoader(options *ConfigOptions, log log.Logger) ConfigLoader {
 	options.LoadedVars = make(map[string]string)
 
 	return &configLoader{
+		generatedConfig:  options.GeneratedConfig,
 		generatedLoader:  generated.NewConfigLoader(options.Profile),
 		kubeConfigLoader: kubeconfig.NewLoader(),
 		options:          options,
@@ -78,8 +79,21 @@ func (l *configLoader) Generated() (*generated.Config, error) {
 }
 
 // SaveGenerated is a convenience method to save the generated config
-func (l *configLoader) SaveGenerated(generatedConfig *generated.Config) error {
+func (l *configLoader) SaveGenerated() error {
+	if l.generatedLoader == nil {
+		return nil
+	}
+
+	generatedConfig, err := l.Generated()
+	if err != nil {
+		return err
+	}
+
 	return l.generatedLoader.Save(generatedConfig)
+}
+
+func (l *configLoader) ResolvedVars() map[string]string {
+	return l.resolvedVars
 }
 
 // Exists checks whether the yaml file for the config exists or the configs.yaml exists
@@ -111,8 +125,9 @@ type ConfigOptions struct {
 	KubeContext string
 	ConfigPath  string
 
-	LoadedVars map[string]string
-	Vars       []string
+	GeneratedConfig *generated.Config
+	LoadedVars      map[string]string
+	Vars            []string
 }
 
 // Clone clones the config options
@@ -142,7 +157,14 @@ func (l *configLoader) Load() (*latest.Config, error) {
 }
 
 // GetRawConfig loads the raw config from a given path
-func (l *configLoader) LoadRaw(configPath string) (map[interface{}]interface{}, error) {
+func (l *configLoader) LoadRaw() (map[interface{}]interface{}, error) {
+	// What path should we use
+	configPath := l.ConfigPath()
+	_, err := os.Stat(configPath)
+	if err != nil {
+		return nil, errors.Errorf("Couldn't load '%s': %v", configPath, err)
+	}
+
 	fileContent, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		return nil, err
@@ -166,33 +188,6 @@ func (l *configLoader) ConfigPath() string {
 	return path
 }
 
-// LoadPath loads the config from a given base path
-func (l *configLoader) LoadFromPath(generatedConfig *generated.Config, configPath string) (*latest.Config, error) {
-	// Check devspace.yaml
-	_, err := os.Stat(configPath)
-	if err != nil {
-		return nil, errors.Errorf("Couldn't find '%s': %v", configPath, err)
-	}
-
-	rawMap, err := l.LoadRaw(configPath)
-	if err != nil {
-		return nil, err
-	}
-
-	loadedConfig, err := l.parseConfig(generatedConfig, rawMap)
-	if err != nil {
-		return nil, err
-	}
-
-	// Now we validate the config
-	err = validate(loadedConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return loadedConfig, nil
-}
-
 // loadInternal loads the config internally
 func (l *configLoader) loadInternal(allowProfile bool) (*latest.Config, error) {
 	// Get generated config
@@ -208,19 +203,30 @@ func (l *configLoader) loadInternal(allowProfile bool) (*latest.Config, error) {
 		l.options.Profile = ""
 	}
 
-	// What path should we use
-	path := l.ConfigPath()
+	// Load the raw config
+	rawMap, err := l.LoadRaw()
+	if err != nil {
+		return nil, err
+	}
 
-	// Load base config
-	config, err := l.LoadFromPath(generatedConfig, path)
+	// Parse the config
+	config, err := l.parseConfig(rawMap)
+	if err != nil {
+		return nil, err
+	}
+
+	// Now we validate the config
+	err = validate(config)
 	if err != nil {
 		return nil, err
 	}
 
 	// Save generated config
-	err = l.generatedLoader.Save(generatedConfig)
-	if err != nil {
-		return nil, err
+	if l.generatedLoader != nil {
+		err = l.generatedLoader.Save(generatedConfig)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return config, nil

@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -136,27 +137,50 @@ func TestParseCommands(t *testing.T) {
 		},
 	}
 
-	for _, testCase := range testCases {
-		loader := &configLoader{
-			options: &ConfigOptions{},
-			kubeConfigLoader: &fakekubeconfig.Loader{
-				RawConfig: &api.Config{},
-			},
-		}
+	for idx, testCase := range testCases {
+		t.Run("Test "+strconv.Itoa(idx), func(t *testing.T) {
+			f, err := ioutil.TempFile("", "")
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		commands, err := loader.ParseCommands(testCase.generatedConfig, testCase.data)
+			defer os.Remove(f.Name())
 
-		if testCase.expectedErr == "" {
-			assert.NilError(t, err, "Error in testCase %s", testCase.name)
-		} else {
-			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
-		}
+			out, err := yaml.Marshal(testCase.data)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		commandsAsYaml, err := yaml.Marshal(commands)
-		assert.NilError(t, err, "Error parsing commands in testCase %s", testCase.name)
-		expectedAsYaml, err := yaml.Marshal(testCase.expectedCommands)
-		assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
-		assert.Equal(t, string(commandsAsYaml), string(expectedAsYaml), "Unexpected commands in testCase %s", testCase.name)
+			_, err = f.Write(out)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Close before reading
+			f.Close()
+			loader := &configLoader{
+				options: &ConfigOptions{
+					GeneratedConfig: testCase.generatedConfig,
+					ConfigPath:      f.Name(),
+				},
+				kubeConfigLoader: &fakekubeconfig.Loader{
+					RawConfig: &api.Config{},
+				},
+			}
+
+			commands, err := loader.ParseCommands()
+			if testCase.expectedErr == "" {
+				assert.NilError(t, err, "Error in testCase %s", testCase.name)
+			} else {
+				assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
+			}
+
+			commandsAsYaml, err := yaml.Marshal(commands)
+			assert.NilError(t, err, "Error parsing commands in testCase %s", testCase.name)
+			expectedAsYaml, err := yaml.Marshal(testCase.expectedCommands)
+			assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+			assert.Equal(t, string(commandsAsYaml), string(expectedAsYaml), "Unexpected commands in testCase %s", testCase.name)
+		})
 	}
 }
 
@@ -454,7 +478,8 @@ profiles:
 			t.Fatal(err)
 		}
 
-		newConfig, err := NewConfigLoader(testCase.in.options, log.Discard).(*configLoader).parseConfig(testCase.in.generatedConfig, testMap)
+		testCase.in.options.GeneratedConfig = testCase.in.generatedConfig
+		newConfig, err := NewConfigLoader(testCase.in.options, log.Discard).(*configLoader).parseConfig(testMap)
 		if err != nil {
 			t.Fatal(err)
 		}

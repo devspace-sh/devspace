@@ -154,22 +154,8 @@ func (cmd *UICmd) RunUI(f factory.Factory, cobraCmd *cobra.Command, args []strin
 		return err
 	}
 
-	configOptions := cmd.ToConfigOptions()
-
-	path := configLoader.ConfigPath()
-	values := [][]string{}
-
-	err = fillCurrentVars(configOptions, configLoader, path, &values, cmd.log)
-	if err != nil {
-		return err
-	}
-
-	generatedConfig.Vars = map[string]string{}
-
 	// fills the right vars into the generated config
-	for _, v := range values {
-		generatedConfig.Vars[v[0]] = v[1]
-	}
+	generatedConfig.Vars = configLoader.ResolvedVars()
 
 	if configExists {
 		// Deprecated: Fill DEVSPACE_DOMAIN vars
