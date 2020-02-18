@@ -75,6 +75,9 @@ func TestResolver(t *testing.T) {
 				"dependency1/devspace.yaml": &latest.Config{
 					Version: latest.Version,
 				},
+				"dependency2/devspace.yaml": &latest.Config{
+					Version: latest.Version,
+				},
 			},
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{
@@ -82,11 +85,20 @@ func TestResolver(t *testing.T) {
 						Path: "dependency1",
 					},
 				},
+				&latest.DependencyConfig{
+					Source: &latest.SourceConfig{
+						Path: "dependency2",
+					},
+				},
 			},
 			expectedDependencies: []Dependency{
 				Dependency{
 					ID:        filepath.Join(dir, "dependency1"),
 					LocalPath: filepath.Join(dir, "dependency1"),
+				},
+				Dependency{
+					ID:        filepath.Join(dir, "dependency2"),
+					LocalPath: filepath.Join(dir, "dependency2"),
 				},
 			},
 		},

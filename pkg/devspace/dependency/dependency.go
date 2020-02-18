@@ -83,7 +83,7 @@ type BuildOptions struct {
 
 // BuildAll will build all dependencies if there are any
 func (m *manager) BuildAll(options BuildOptions) error {
-	return m.handleDependencies(options.Dependencies, options.UpdateDependencies, options.Verbose, "Build", func(dependency *Dependency, log log.Logger) error {
+	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, options.Verbose, "Build", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Build(options.SkipPush, options.ForceDeployDependencies, options.ForceBuild, log)
 	})
 }
@@ -102,7 +102,7 @@ type DeployOptions struct {
 
 // DeployAll will deploy all dependencies if there are any
 func (m *manager) DeployAll(options DeployOptions) error {
-	return m.handleDependencies(options.Dependencies, options.UpdateDependencies, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
+	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Deploy(options.SkipPush, options.ForceDeployDependencies, options.SkipBuild, options.ForceBuild, options.ForceDeploy, log)
 	})
 }
@@ -115,7 +115,7 @@ type PurgeOptions struct {
 
 // PurgeAll purges all dependencies in reverse order
 func (m *manager) PurgeAll(options PurgeOptions) error {
-	return m.handleDependencies(options.Dependencies, false, options.Verbose, "Purge", func(dependency *Dependency, log log.Logger) error {
+	return m.handleDependencies(options.Dependencies, true, false, options.Verbose, "Purge", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Purge(log)
 	})
 }
@@ -131,12 +131,12 @@ type RenderOptions struct {
 }
 
 func (m *manager) RenderAll(options RenderOptions) error {
-	return m.handleDependencies(options.Dependencies, options.UpdateDependencies, options.Verbose, "Render", func(dependency *Dependency, log log.Logger) error {
+	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, options.Verbose, "Render", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Render(options.SkipPush, options.SkipBuild, options.ForceBuild, log)
 	})
 }
 
-func (m *manager) handleDependencies(filterDependencies []string, updateDependencies, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) error {
+func (m *manager) handleDependencies(filterDependencies []string, reverse, updateDependencies, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) error {
 	if m.config == nil || m.config.Dependencies == nil || len(m.config.Dependencies) == 0 {
 		return nil
 	}
@@ -158,7 +158,12 @@ func (m *manager) handleDependencies(filterDependencies []string, updateDependen
 	}
 
 	// Execute all dependencies
-	for i := len(dependencies) - 1; i >= 0; i-- {
+	i := 0
+	if reverse {
+		i = len(dependencies) - 1
+	}
+
+	for i >= 0 && i < len(dependencies) {
 		var (
 			dependency       = dependencies[i]
 			buff             = &bytes.Buffer{}
@@ -182,6 +187,12 @@ func (m *manager) handleDependencies(filterDependencies []string, updateDependen
 		}
 
 		m.log.Donef("%s dependency %s completed", actionName, dependency.ID)
+
+		if reverse {
+			i--
+		} else {
+			i++
+		}
 	}
 
 	m.log.StopWait()
