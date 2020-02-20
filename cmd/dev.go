@@ -405,15 +405,15 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 				maxWait := 4 * time.Minute
 				logger.Infof("Opening '%s' as soon as application will be started (timeout: %s)", openConfig.URL, maxWait)
 
-				go func() {
+				go func(url string) {
 					// Use DiscardLogger as we do not want to print warnings about failed HTTP requests
-					err := openURL(openConfig.URL, nil, "", log.Discard, maxWait)
+					err := openURL(url, nil, "", log.Discard, maxWait)
 					if err != nil {
 						// Use warn instead of fatal to prevent exit
 						// Do not print warning
 						// log.Warn(err)
 					}
-				}()
+				}(openConfig.URL)
 			}
 		}
 	}
