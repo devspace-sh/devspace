@@ -16,6 +16,7 @@ about: Create a report to help us reproduce and fix a bug
 
 
 **Local Environment:**  
+- DevSpace Version: [use `devspace --version`]
 - Operating System: windows | linux | mac
 - Deployment method: helm | kubectl apply
 
