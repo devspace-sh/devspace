@@ -160,12 +160,12 @@ module.exports = {
     {
       type: 'link',
       label: '↗️ Component Chart',
-      href: 'https://devspace.sh/docs/component-chart',
+      href: 'https://devspace.sh/docs/component-chart/introduction',
     },
     {
       type: 'link',
       label: '↗️ DevSpace Cloud',
-      href: 'https://devspace.cloud/docs/cloud',
+      href: 'https://devspace.cloud/docs/cloud/introduction',
     },
   ],
 };
