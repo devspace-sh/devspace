@@ -159,6 +159,11 @@ module.exports = {
     },
     {
       type: 'link',
+      label: '↗️ Component Chart',
+      href: 'https://devspace.sh/docs/component-chart',
+    },
+    {
+      type: 'link',
       label: '↗️ DevSpace Cloud',
       href: 'https://devspace.cloud/docs/cloud',
     },
