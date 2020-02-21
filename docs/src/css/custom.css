@@ -1,0 +1,219 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  --ifm-color-primary: #00bdff;
+  --ifm-color-primary-dark: #00aae6;
+  --ifm-color-primary-darker: #0290c0;
+  --ifm-color-primary-darkest: #016d94;
+  --ifm-color-primary-light: #1ac4ff;
+  --ifm-color-primary-lighter: #4dd1ff;
+  --ifm-color-primary-lightest: #a7e7ff;
+  --ifm-table-head-background: var(--ifm-color-primary);
+  --ifm-table-head-color: #fff;
+  --ifm-code-font-size: 95%;
+  --ifm-leading-number: 1.1;
+  --ifm-leading: calc(1em * var(--ifm-leading-number));
+}
+
+table thead > tr {
+  border-top: none;
+}
+
+table th:first-child:empty {
+  opacity: 0;
+  border: none;
+}
+
+.container > .row > .col > div {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Button: Edit this page */
+.container > .row > .col > div > .margin-vert--xl {
+  order: -1;
+  height: 3em;
+  margin: 0 !important;
+  text-align: right;
+}
+
+/* Button: Edit this page */
+.container > .row > .col > div > .margin-vert--xl a {
+  padding: 0.3em 0.5em;
+  background: var(--ifm-color-primary-lighter);
+  color: #fff;
+  font-size: 0.8em;
+  font-weight: 600;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background-color 0.3s;
+}
+
+/* Button: Edit this page */
+.container > .row > .col > div > .margin-vert--xl a:hover {
+  background: var(--ifm-color-primary);
+}
+
+.docusaurus-highlight-code-line {
+  background-color: rgb(72, 77, 91);
+  display: block;
+  margin: 0 calc(-1 * var(--ifm-pre-padding));
+  padding: 0 var(--ifm-pre-padding);
+}
+
+html body pre.prism-code > button {
+  z-index: 1;
+  border: none;
+  background: var(--ifm-color-primary-lighter);
+  color: #fff;
+  text-transform: uppercase;
+  font-size: 0.8em;
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 0.6em 0.8em;
+  margin-top: -0.2em;
+  letter-spacing: 0.1em;
+  transition: background-color 0.3s;
+}
+
+html body pre.prism-code > button:hover {
+  background: var(--ifm-color-primary-darker);
+}
+
+pre.prism-code {
+  margin-top: -0.2em;
+}
+
+code {
+	position: relative;
+	counter-reset: linenumber;
+}
+
+code > .token-line {
+  counter-increment: linenumber;
+}
+
+code > .token-line::before {
+  width: 1em;
+  content: counter(linenumber);
+  color: #fff;
+  display: block;
+  float: left;
+  padding-right: 0.8em;
+  text-align: right;
+  opacity: 0.6;
+
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+code > .token-line:first-child:last-child::before {
+  display: none;
+}
+
+code .token-line {
+  padding-right: 2em;
+}
+
+.tabs {
+  border-bottom: 1px solid var(--ifm-color-primary-lightest);
+}
+
+.tabs > .tab-item {
+  border-radius: 0;
+  padding: 0.6em 1.2em;
+}
+
+.tabs > .tab-item:focus,
+.tabs > .tab-item:hover {
+  background-color: #f2f9fb;
+}
+
+div[role="tabpanel"] {
+  border-bottom: 1px solid var(--ifm-color-primary-lightest);
+}
+
+.admonition-important a {
+  color: var(--ifm-color-primary-darkest);
+}
+
+.admonition-warning a {
+  color: rgb(255, 230, 0);
+}
+
+body .markdown {
+  position: relative;
+  --ifm-h2-vertical-rhythm-top: 1.8;
+}
+
+.markdown figure {
+  margin: 1em 0 2em;
+}
+
+.markdown figure.stretch,
+.markdown figure.stretch img {
+  width: 100%;
+}
+
+.markdown figure.frame img,
+.markdown figure.frame video {
+  box-shadow: 0 0 7px 3px #00000020;
+  border: 1.5px solid #c6cbd1;
+  border-radius: 7px;
+}
+
+.markdown figcaption {
+  position: relative;
+  left: 0;
+  width: 100%;
+  top: 0;
+  margin-top: 5px;
+  outline: 0;
+  text-align: center;
+  z-index: 300;
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+
+video {
+  width: 100%;
+}
+
+.navbar__brand::after {
+  display: block;
+  content: " ";
+  background: #dadde1;
+  width: 1px;
+  height: 60px;
+  margin-left: 20px;
+  transform: skew(-15deg, 0);
+}
+
+.menu > .menu__list > .menu__list-item:last-child {
+  margin-top: 1.5em;
+  padding-top: 1.5em;
+  border-top: 1px solid #e9e9e9;
+}
+
+.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__link,
+.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__list > .menu__list-item:nth-child(n+2) > .menu__link {
+  font-family: var(--ifm-font-family-monospace) !important;
+  background: rgb(233, 233, 233);
+  border-radius: 3px;
+}
+
+.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__list > .menu__list-item:nth-child(1) > .menu__link {
+  background: rgb(218, 218, 218);
+}
+
+.menu__link--active {
+  color: var(--ifm-color-primary) !important;
+}
