@@ -1,0 +1,147 @@
+---
+title: Deployment with DevSpace
+sidebar_label: 3. Build & Deploy
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Step from '../../src/components/Step/Step';
+import SectionTipUseNamespace from '../sections/tip-use-namespace.mdx';
+import SectionNoteCreateSpace from '../sections/note-create-space.mdx';
+
+
+<figure class="frame">
+  <video controls loop autoplay="true">
+    <source src="/img/docs/cli/devspace-deploy.mp4" type="video/mp4" />
+  </video>
+  <figcaption>DevSpace CLI - Deployment</figcaption>
+</figure>
+
+## Prepare Kube-Context
+DevSpace uses your current kube-context to deploy your project.
+
+<Tabs
+  defaultValue="demo"
+  values={[
+    { label: 'Demo Cluster', value: 'demo', },
+    { label: 'Local Cluster', value: 'local', },
+    { label: 'Remote Cluster', value: 'remote', },
+  ]
+}>
+<TabItem value="demo">
+
+:::info Free Demo Namespace
+If you don't have a Kubernetes cluster or simply want to test DevSpace without using your own cluster, choose the free demo namespaces sponsored by DevSpace Cloud. [Learn more about Demo Spaces.](https://devspace.cloud/products/devspace-cloud#pricing)
+:::
+
+Run the following command to create a free Kubernetes namespace:
+```bash
+devspace create space my-app    # requires login via GitHub or email
+```
+
+<SectionNoteCreateSpace/>
+
+</TabItem>
+<TabItem value="local">
+
+:::note Local Clusters
+Local clusters run on your local dev machine and include: minikube, kind, k3s, mikrok8s etc.
+:::
+
+If you want to deploy to a local Kubernetes cluster, make sure your **current kube-context** points to this cluster and tell DevSpace which namespace to use:
+
+```bash
+devspace use namespace my-namespace   # will be automatically created during deployment
+```
+
+<SectionTipUseNamespace/>
+
+</TabItem>
+<TabItem value="remote">
+
+:::note Remote Clusters
+Remote clusters run in a cloud or private data center and include: GKE, EKS, AKS, bare metal etc.
+:::
+
+When using a remote cluster, you can either use it just for yourself or you can share the cluster with your colleagues.
+
+<Tabs
+  defaultValue="alone"
+  values={[
+    { label: 'Use cluster alone', value: 'alone', },
+    { label: 'Share cluster with others', value: 'shared', },
+  ]
+}>
+<TabItem value="alone">
+
+```bash
+devspace use namespace my-namespace   # will be automatically created during deployment
+```
+
+<SectionTipUseNamespace/>
+
+</TabItem>
+<TabItem value="shared">
+
+<br/>
+<Step>1</Step>
+
+Connect cluster to DevSpace Cloud
+```bash
+devspace connect cluster
+```
+Learn more about connecting cluster in the [documentation of DevSpace Cloud](https://devspace.cloud/docs/cloud/admin/getting-started/connect-clusters).
+
+:::info DevSpace Cloud On-Premise
+Instead of using the SaaS edition of DevSpace Cloud, you can also [install the on-premise edition in your own cluster](https://devspace.cloud/docs/cloud/admin/getting-started/setup).
+:::
+
+<br/>
+<Step>2</Step>
+
+Create isolated namespace (= Space)
+
+```bash
+devspace create space my-app    # requires login via GitHub or email
+```
+
+<SectionNoteCreateSpace/>
+
+<br/>
+<Step>3</Step>
+
+Add cluster users and allow them to create Spaces
+
+Learn more about how to do this in the [documentation of DevSpace Cloud](https://devspace.cloud/docs/cloud/admin/getting-started/cluster-users).
+
+</TabItem>
+</Tabs>
+
+</TabItem>
+</Tabs>
+
+## Deploy Project
+Run the local deployment pipeline using this command:
+```bash
+devspace deploy
+```
+
+Running `devspace deploy` will do the following:
+
+1. **Build the Dockerfile(s)** specified in the [`images` section of the `devspace.yaml`](../configuration/images/basics.mdx)
+2. **Tag** the resulting image(s) with an auto-generated tag according to a [customizable tag schema](../configuration/images/basics.mdx)
+3. **Push** the resulting Docker images to the specified registries
+4. **Create image pull secrets** in your Kubernetes namespace (optional, enabled by default)
+5. **Deploy** everything that is defined within the [`deployments` section in the `devspace.yaml`](../configuration/deployments/basics.mdx)
+
+<figure>
+  <img src="/img/docs/cli/deployment-process-devspace.svg" alt="Deployment Workflow" />
+  <figcaption>DevSpace CLI - Deployment Workflow</figcaption>
+</figure>
+
+:::note Image Building Only
+If you only want to build, tag and push all images but not deploy anything, run:
+```bash
+devspace build
+```
+:::

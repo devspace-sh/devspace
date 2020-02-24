@@ -6,6 +6,7 @@
 
 /* You can override the default Infima variables here. */
 :root {
+  --ifm-color-kubernetes: #326de6;
   --ifm-color-primary: #00bdff;
   --ifm-color-primary-dark: #00aae6;
   --ifm-color-primary-darker: #0290c0;
@@ -140,17 +141,24 @@ div[role="tabpanel"] {
   border-bottom: 1px solid var(--ifm-color-primary-lightest);
 }
 
-.admonition-important a {
-  color: var(--ifm-color-primary-darkest);
-}
-
-.admonition-warning a {
-  color: rgb(255, 230, 0);
-}
-
 body .markdown {
   position: relative;
   --ifm-h2-vertical-rhythm-top: 1.8;
+}
+
+.markdown *:not(pre) > code,
+.contents code {
+  white-space: nowrap;
+}
+
+.markdown a,
+.markdown a > code {
+  color: var(--ifm-color-kubernetes);
+}
+
+.admonition-warning a,
+.admonition-info a {
+  color: rgb(255, 251, 0);
 }
 
 .markdown figure {
@@ -204,7 +212,7 @@ video {
 }
 
 .menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__link,
-.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__list > .menu__list-item:nth-child(n+2) > .menu__link {
+.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__list > .menu__list-item:nth-child(n+2) .menu__link {
   font-family: var(--ifm-font-family-monospace) !important;
   background: rgb(233, 233, 233);
   border-radius: 3px;
