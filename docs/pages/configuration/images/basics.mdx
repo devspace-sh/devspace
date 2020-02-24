@@ -3,18 +3,108 @@ title: "Basics: Image Building"
 sidebar_label: Basics
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import SectionFaqImageContext from '../../sections/faq-image-context.mdx';
 
 Images are configured within the `images` section of the `devspace.yaml`.
-```yaml
-images:                 # DevSpace will build these images in parallel and push them to the respective registries
-  {image-a}: ...        # tells DevSpace how to build image-a
-  {image-b}: ...        # tells DevSpace how to build image-b
-  {image-c}: ...        # tells DevSpace how to build image-c
-  ... 
+
+## Examples
+
+<Tabs
+  defaultValue="dockerhub"
+  values={[
+    { label: 'Docker Hub', value: 'dockerhub', },
+    { label: 'Custom Registry', value: 'custom-registry', },
+    { label: 'Custom Tagging', value: 'tagging', },
+    { label: 'kaniko', value: 'kaniko', },
+    { label: 'Build Command', value: 'custom', },
+    { label: 'Disable', value: 'disabled', },
+  ]
+}>
+<TabItem value="dockerhub">
+
+```yaml {3}
+images:
+  backend:
+    image: my-docker-username/appbackend
+  database:
+    image: my-docker-company/appbackend
 ```
 
-:::note
+</TabItem>
+<TabItem value="custom-registry">
+
+```yaml {3}
+images:
+  backend:
+    image: image.company.tld/appbackend
+  database:
+    image: image.company.tld/appbackend
+```
+
+</TabItem>
+<TabItem value="tagging">
+
+```yaml {4}
+images:
+  backend:
+    image: image.company.tld/appbackend
+    tag: dev-${DEVSPACE_GIT_COMMIT}-${DEVSPACE_RANDOM}
+  database:
+    image: image.company.tld/appbackend
+```
+
+</TabItem>
+<TabItem value="kaniko">
+
+```yaml {4-6}
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        cache: true
+```
+
+:::info What is kaniko?
+Kaniko is an open-source tool that lets you build images inside containers that run on top of Kubernetes. DevSpace uses kaniko as automatic fallback if Docker is not installed. To force image building using kaniko, set `build.kaniko.cache: true` as shown above. Learn more about [configuring kaniko builds](../../configuration/images/kaniko.mdx).
+:::
+
+</TabItem>
+<TabItem value="custom">
+
+```yaml {4-11}
+images:
+  backend:
+    image: john/appbackend
+    build:
+      custom:
+        command: ./build
+        args:
+        - "--arg1"
+        - "arg-value-1"
+        - "--arg2"
+        - "arg-value-2"
+```
+
+</TabItem>
+<TabItem value="disabled">
+
+```yaml {5}
+images:
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    build:
+      disabled: true
+  backend:
+    image: john/appbackend
+```
+
+</TabItem>
+</Tabs>
+
+:::note Parallel Image Building
 To speed up the build process, the images you specify under `images` will all be built in parallel (unless you use the `--build-sequential` flag).
 :::
 
@@ -76,7 +166,7 @@ DevSpace uses one of the following [build tools](../../configuration/images/basi
 ### 6. Tag Image
 DevSpace automatically tags all images after building them using a tagging schema that you can customize using the `tag` option. By default, this option is configured to generate a random string consisting of 5 characters. 
 
-[Learn more about defining a custom tagging schema.](../../configuration/images/basics.mdx#tagging-schema)
+[Learn more about defining a custom tagging schema.](../../configuration/images/image-tagging#tag-tagging-schema)
 
 :::info Tag Replacement
 Before deploying your application, DevSpace will use the newly generated image tags and replace them in-memory in the values for your [Helm charts](../../configuration/deployments/helm-charts.mdx) and [Kubernetes manifests](../../configuration/deployments/kubernetes-manifests.mdx), so they will be deployed using the newest image tag.
