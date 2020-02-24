@@ -17,6 +17,7 @@ module.exports = {
       items: [
         'getting-started/installation',
         'getting-started/initialize-project',
+        'getting-started/deployment',
         'getting-started/development',
         'getting-started/next-steps',
       ],
@@ -31,9 +32,20 @@ module.exports = {
           label: 'images',
           items: [
             'configuration/images/basics',
-            'configuration/images/docker',
-            'configuration/images/kaniko',
-            'configuration/images/custom',
+            'configuration/images/image-tagging',
+            'configuration/images/dockerfile-context',
+            'configuration/images/entrypoint-cmd',
+            'configuration/images/pull-secrets',
+            {
+              type: 'category',
+              label: 'build',
+              items: [
+                'configuration/images/docker',
+                'configuration/images/kaniko',
+                'configuration/images/custom',
+                'configuration/images/disabled',
+              ],
+            },
           ],
         },
         {
@@ -51,7 +63,7 @@ module.exports = {
           label: 'dev',
           items: [
             'configuration/development/basics',
-            'configuration/development/open-browser',
+            'configuration/development/open-links',
             'configuration/development/port-forwarding',
             'configuration/development/file-synchronization',
             'configuration/development/auto-reloading',
@@ -98,6 +110,8 @@ module.exports = {
         'guides/basics',
         'guides/localhost-ui',
         'guides/networking-domains',
+        'guides/file-synchronization',
+        'guides/interactive-mode',
         'guides/ci-cd-integration',
       ],
     },
