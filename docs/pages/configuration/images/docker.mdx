@@ -74,6 +74,28 @@ skipPush: false
 **See "[Example: Building Images in Minikube](#example-building-images-in-minikube)"**
 
 
+### `args`
+The `args` option expects an array of strings to be passed as arguments and flags to Docker.
+
+:::warning
+When specifying `args`, DevSpace will invoke your installed Docker CLI via a command-line call instead of using the built-in Docker client. This has negative effects that:
+- The kaniko fallback will not be used anymore.
+- You need to make sure that everyone who is using this configuration has the same version (or a compatible one) of Docker installed.
+:::
+
+#### Example: Docker args
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      docker:
+        args:
+        - "--no-cache"
+        - "--compress"
+```
+
+
 ## `docker.options`
 DevSpace allows you to configure the following build options:
 - `target` defining the build target for multi-stage builds
