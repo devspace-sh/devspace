@@ -172,6 +172,7 @@ body .markdown {
 
 .markdown figure.frame img,
 .markdown figure.frame video {
+  width: 100%;
   box-shadow: 0 0 7px 3px #00000020;
   border: 1.5px solid #c6cbd1;
   border-radius: 7px;

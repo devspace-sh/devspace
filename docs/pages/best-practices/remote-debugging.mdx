@@ -4,6 +4,7 @@ sidebar_label: Remote Debugging
 ---
 
 DevSpace lets you easily [start applications in development mode](../getting-started/development) and connect remote debuggers for your application using the following steps:
+
 1. Configure DevSpace to use a development Dockerfile that:
    - ships with the appropriate tools for debugging your application
    - starts your application together with the debugger, e.g. setting the `ENTRYPOINT` of your Dockerfile to `node --inspect=0.0.0.0:9229 index.js` would start the Node.js remote debugger on port `9229`
