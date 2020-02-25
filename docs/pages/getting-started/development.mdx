@@ -3,6 +3,8 @@ title: Development with DevSpace
 sidebar_label: 4. Develop & Debug
 ---
 
+import SectionWarningMultipleDev from '../sections/warning-multiple-dev.mdx';
+
 DevSpace allows you to develop applications directly inside a Kubernetes cluster.
 
 The biggest advantages of developing directly inside Kubernetes is that your dev environment will be very similar to your production environment and you can have a much greater confidence that everything will work in production when shipping new features.
@@ -20,14 +22,7 @@ devspace dev
   <figcaption>DevSpace CLI - Development Mode</figcaption>
 </figure>
 
-:::warning
-It is highly discouraged to run `devspace dev` multiple times in parallel because multiple instances of port forwarding and file synchronization will disturb each other. Instead:
-
-- Run `devspace enter` to open additional terminal sessions without port forwarding and file sync
-- Run `devspace logs` to start log streaming without port forwarding and file sync
-- Run `devspace sync` to sync files on-demand without starting port forwarding etc.
-- Run [`devspace ui` to open the localhost development UI in the browser](#open-ui-in-the-browser)
-:::
+<SectionWarningMultipleDev/>
 
 Running `devspace dev` will do the following:
 

@@ -5,6 +5,10 @@ sidebar_label: Basics
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import SectionWorkflowDeployDependencies from '../../sections/workflow-deploy-dependencies.mdx';
+import SectionWorkflowBuildImages from '../../sections/workflow-build-images.mdx';
+import SectionWorkflowReplaceTags from '../../sections/workflow-replace-tags.mdx';
+import SectionWorkflowDeployProject from '../../sections/workflow-deploy-project.mdx';
 
 Deployments are configured within the `deployments` section of the `devspace.yaml`.
 
@@ -123,38 +127,20 @@ DevSpace loads the `deployments` configuration from `devspace.yaml` and builds o
 
 
 ### 1. Deploy Dependencies
-DevSpace loads the `dependencies` section from the `devspace.yaml` and creates a dependency tree. The current project will represent the root of this tree. Based on this dependency tree, DevSpace will start from the leaves and run these steps for each dependency:
-- Build images of the dependency as configured in the `images` section of the dependency's `devspace.yaml` (unless `skipBuild: true`)
-- Deploy the dependency as configured in the `deployments` section of the dependency's `devspace.yaml`
 
-[Learn more about configuring dependencies.](../../configuration/dependencies/basics.mdx)
-
-:::note What are Dendencies?
-Dependencies allow you to deploy microservices, that the project you are currently deploying relies on. Dependencies can be located in a subpath of your project or they can be automatically loaded from a different git reporsitory.
-:::
+<SectionWorkflowDeployDependencies/>
 
 
 ### 2. Build, Tag &amp; Push Images
-DevSpace triggers the image building process for the images specified in the `images` section of the `devspace.yaml`.
 
-[Learn more about configuring image building.](../../configuration/dependencies/basics.mdx)
+<SectionWorkflowBuildImages/>
 
 
 ### 3. Tag Replacement
-After finishing the image building process, DevSpace searches your deployments for references to the images that are specified in the `images` section of the `devspace.yaml`. If DevSpace finds that an image is used by one of your deployments and the deployment does not explicitly define a tag for the image, DevSpace will append the tag that has been auto-generated as part of the [automated image tagging](../../configuration/images/basics.mdx#6-tag-image) during the image building process.
 
-:::warning Prevent Hard-Coded Tags
-To use automated tag replacement, make sure you do **not** specify image tags in the deployment configuration.
-:::
-
-Replacing or appending tags to images that are used in your deployments makes sure that your deployments are always started using the most recently pushed image tag. This automated process saves a lot of time compared to manually replacing image tags each time before you deploy something.
+<SectionWorkflowReplaceTags/>
 
 
 ### 4. Deploy Project
-DevSpace iterates over every item in the `deployments` array defined in the `devspace.yaml` and deploy each of the deployments using the respective deployment tool:
-- `kubectl` deployments will be deployed with `kubectl` (optionally using `kustomize` if `kustomize: true`)
-- `helm` deployments will be deployed with the `helm` client that comes in-built with DevSpace
 
-:::info kubectl Required
-Deployments with `kubectl` require `kubectl` to be installed.
-:::
+<SectionWorkflowDeployProject/>
