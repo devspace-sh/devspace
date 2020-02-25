@@ -85,7 +85,6 @@ module.exports = {
           label: 'vars',
           items: [
             'configuration/variables/basics',
-            'configuration/variables/source-all',
             'configuration/variables/source-env',
             'configuration/variables/source-input',
           ],
