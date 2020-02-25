@@ -2,3 +2,62 @@
 title: Deploy Path-Based Local Dependencies
 sidebar_label: "source.path"
 ---
+
+import SectionDependencyProfile from '../../sections/dependency-profile.mdx';
+import SectionDependencySkipBuild from '../../sections/dependency-skipBuild.mdx';
+import SectionDependencyIgnoreDependencies from '../../sections/dependency-ignoreDependencies.mdx';
+import SectionDependencyNamespace from '../../sections/dependency-namespace.mdx';
+
+
+## Example
+```yaml
+dependencies:
+- source:
+    path: ./different/subproject
+- source:
+    path: ./different/another-subproject
+```
+
+:::warning
+Using local projects with `path` option makes the configuration in `devspace.yaml` harder to share compared to [`git` based dependencies](../../configuration/dependencies/git-repository.mdx) and is therefore discouraged.
+:::
+
+## `source`
+
+### `source.path`
+The `source.path` option expects a string with a relative path to a folder that contains a `devspace.yaml` which marks a project that is a dependency of the project referencing it.
+
+#### Example: Local Project as Dependency
+```yaml
+dependencies:
+- source:
+    path: ../other-project
+- source:
+    path: ./different/subproject
+```
+**Explanation:**  
+- Whenever you run `devspace deploy` or `devspace dev`, DevSpace will:
+  - Load the `devspace.yaml` files of both dependencies and resolve their dependencies respectively.
+  - Deploy both projects according to their `devspace.yaml` files.
+
+
+## General Options
+
+### `profile`
+
+<SectionDependencyProfile/>
+
+
+### `skipBuild`
+
+<SectionDependencySkipBuild/>
+
+
+### `ignoreDependencies`
+
+<SectionDependencyIgnoreDependencies/>
+
+
+### `namespace`
+
+<SectionDependencyNamespace/>
