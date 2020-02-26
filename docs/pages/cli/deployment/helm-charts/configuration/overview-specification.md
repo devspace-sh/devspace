@@ -18,7 +18,7 @@ deployments:
   helm:
     chart:
       name: backend-chart
-      repository: https://my-repo.tld/
+      repo: https://my-repo.tld/
 ```
 
 [What are Helm charts?](../../../../cli/deployment/helm-charts/what-are-helm-charts)
