@@ -161,12 +161,12 @@ DevSpace uses one of the following [build tools](../../configuration/images/basi
 - [`docker`](../../configuration/images/docker.mdx) for building images using a Docker daemon (default, prefers Docker daemon of local Kubernetes clusters)
 - [`kaniko`](../../configuration/images/kaniko.mdx) for building images directly inside Kubernetes (automatic fallback for `docker`)
 - [`custom`](../../configuration/images/custom.mdx) for building images with a custom build command (e.g. for using Google Cloud Build)
-- [`disabled`](../../configuration/images/disabled.mdx) if this image should not be built (especially useful for [config `profiles`](configuration/profiles/basics.mdx))
+- [`disabled`](../../configuration/images/disabled.mdx) if this image should not be built (especially useful for [config `profiles`](../../configuration/profiles/basics.mdx))
 
 ### 6. Tag Image
 DevSpace automatically tags all images after building them using a tagging schema that you can customize using the `tag` option. By default, this option is configured to generate a random string consisting of 5 characters. 
 
-[Learn more about defining a custom tagging schema.](../../configuration/images/image-tagging#tag-tagging-schema)
+[Learn more about defining a custom tagging schema.](../../configuration/images/image-tagging.mdx#tag-tagging-schema)
 
 :::info Tag Replacement
 Before deploying your application, DevSpace will use the newly generated image tags and replace them in-memory in the values for your [Helm charts](../../configuration/deployments/helm-charts.mdx) and [Kubernetes manifests](../../configuration/deployments/kubernetes-manifests.mdx), so they will be deployed using the newest image tag.

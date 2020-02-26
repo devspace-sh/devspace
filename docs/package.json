@@ -12,7 +12,7 @@
     "@docusaurus/core": "^2.0.0-alpha.43",
     "@docusaurus/preset-classic": "^2.0.0-alpha.43",
     "classnames": "^2.2.6",
-    "mdx-link-checker": "^0.0.1",
+    "mdx-link-checker": "^0.0.4",
     "react": "^16.8.4",
     "react-dom": "^16.8.4"
   },

@@ -206,6 +206,10 @@ video {
   transform: skew(-15deg, 0);
 }
 
+.menu__link--active {
+  color: var(--ifm-color-primary) !important;
+}
+
 .menu > .menu__list > .menu__list-item:nth-last-child(2) {
   margin-top: 1.5em;
   padding-top: 1.5em;
@@ -221,8 +225,4 @@ video {
 
 .menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__list > .menu__list-item:nth-child(1) > .menu__link {
   background: rgb(218, 218, 218);
-}
-
-.menu__link--active {
-  color: var(--ifm-color-primary) !important;
 }

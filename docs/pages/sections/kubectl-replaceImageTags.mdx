@@ -1,4 +1,4 @@
-The `replaceImageTags` option expects a boolean stating if DevSpace should do [Image Tag Replacement](../../configuration/deployments/basics.mdx#3-tag-replacement).
+The `replaceImageTags` option expects a boolean stating if DevSpace should replace/update all image tags before deploying the project.
 
 By default, DevSpace searches all your manifests for images that are defined in the `images` section of the `devspace.yaml`. If DevSpace finds an image, it replaces or appends the image tag with the tag it created during the image building process. Image tag replacement makes sure that your application will always be started with the most up-to-date image that DevSpace has built for you.
 

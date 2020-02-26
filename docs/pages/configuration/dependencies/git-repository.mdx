@@ -33,10 +33,10 @@ DevSpace is using the git credential store. So, if you are able to clone or pull
 
 ### `source.git`
 The `source.git` option expects a string with the URL of a git repository. DevSpace will use the `master` branch by default and assumes that the `devspace.yaml` is located at the root directory of the git repository. To customize this behavior, use the following, complementary config options:
-- [`branch` for a different git branch](#dependencies-sourcebranch)
-- [`tag` for a specific git tag or release](#dependencies-sourcetag)
-- [`revision` for a specific git commit hash](#dependencies-sourcerevision)
-- [`subPath` for custom location of `devspace.yaml` within the repository](#dependencies-sourcesubpath)
+- [`branch` for a different git branch](#sourcebranch)
+- [`tag` for a specific git tag or release](#sourcetag)
+- [`revision` for a specific git commit hash](#sourcerevision)
+- [`subPath` for custom location of `devspace.yaml` within the repository](#sourcesubpath)
 
 > DevSpace will clone the git repository which is defined as a dependency and cache the project in the global cache folder (i.e. `$HOME/.devspace`). DevSpace will also pull new commits before deploying the dependency.
 

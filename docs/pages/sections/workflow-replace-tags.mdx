@@ -1,4 +1,4 @@
-After finishing the image building process, DevSpace searches your deployments for references to the images that are specified in the `images` section of the `devspace.yaml`. If DevSpace finds that an image is used by one of your deployments and the deployment does not explicitly define a tag for the image, DevSpace will append the tag that has been auto-generated as part of the [automated image tagging](../../configuration/images/basics.mdx#6-tag-image) during the image building process.
+After finishing the image building process, DevSpace searches your deployments for references to the images that are specified in the `images` section of the `devspace.yaml`. If DevSpace finds that an image is used by one of your deployments and the deployment does not explicitly define a tag for the image, DevSpace will append the tag that has been auto-generated as part of the automated image tagging during the image building process.
 
 :::warning Prevent Hard-Coded Tags
 To use automated tag replacement, make sure you do **not** specify image tags in the deployment configuration.

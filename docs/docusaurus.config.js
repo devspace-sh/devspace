@@ -14,8 +14,9 @@ module.exports = {
         src: '/img/docs/cli/logo-devspace.svg',
       },
       links: [
+        {to: 'https://devspace.sh/', label: 'Website', position: 'left'},
         {to: 'docs/introduction', label: 'Docs', position: 'left'},
-        {href: '/blog', label: 'Blog', position: 'left'},
+        {href: 'https://devspace.cloud/blog', label: 'Blog', position: 'left'},
         {
           href: 'https://github.com/devspace-cloud/devspace',
           label: 'GitHub',

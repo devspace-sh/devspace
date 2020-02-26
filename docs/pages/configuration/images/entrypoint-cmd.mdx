@@ -7,8 +7,6 @@ sidebar_label: entrypoint + cmd
 If you are overriding the Dockerfile `ENTRYPOINT` or `CMD`, it only affects the image but <u>**not**</u> the deployment in Kubernetes. If a deployment using this image defines the `command` or `args` options, they will take precedence over the overrides you define for the image.
 :::
 
-[Learn more about how overrides are applied during image building](../../../cli/image-building/workflow-basics#2-apply-entrypoint-override-if-configured).
-
 ### `entrypoint`
 The `entrypoint` option expects an array of strings which tells DevSpace to overrides the `ENTRYPOINT` defined in the `Dockerfile` during the image building process.
 
