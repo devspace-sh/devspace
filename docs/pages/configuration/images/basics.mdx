@@ -5,7 +5,7 @@ sidebar_label: Basics
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import SectionFaqImageContext from '../../sections/faq-image-context.mdx';
+import FragmentFaqImageContext from '@site/pages/fragments/faq-image-context.mdx';
 
 Images are configured within the `images` section of the `devspace.yaml`.
 
@@ -143,7 +143,7 @@ DevSpace loads the the context to build this image as specified in `context` (de
 Context paths used in `context` should be relative to the `devspace.yaml`.
 :::
 
-<SectionFaqImageContext/>
+<FragmentFaqImageContext/>
 
 ### 4. Skip Build & Push (if possible)
 DevSpace tries to speed up image building by skipping images when they have not changed since the last build process. To do this, DevSpace caches the following information after building an image:

@@ -3,7 +3,7 @@ title: Config Profiles
 sidebar_label: Basics
 ---
 
-import SectionInfoPrintConfig from '../../sections/tip-print-config.mdx';
+import FragmentInfoPrintConfig from '@site/pages/fragments/tip-print-config.mdx';
 
 DevSpace allows you to define different profiles for different use cases (e.g. working on different services in the same project, starting certain debugging enviroment) or for different deployment targets (e.g. dev, staging production).
 
@@ -17,7 +17,7 @@ It is possible to use the `replace` and `patches` together within one profile.
 
 :::tip Debug Profiles
 
-<SectionInfoPrintConfig/>
+<FragmentInfoPrintConfig/>
 
 :::
 
@@ -55,7 +55,7 @@ profiles:
 
 ### `devspace print -p [profile]`
 
-<SectionInfoPrintConfig/>
+<FragmentInfoPrintConfig/>
 
 ### `devspace list profiles`
 To get a list of available profiles, you can run this command:

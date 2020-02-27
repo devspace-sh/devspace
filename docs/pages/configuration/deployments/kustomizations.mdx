@@ -3,10 +3,10 @@ title: Deploy Kustomizations
 sidebar_label: kubectl (kustomize)
 ---
 
-import SectionReplaceImageTags from '../../sections/kubectl-replaceImageTags.mdx';
-import SectionKubectlFlags from '../../sections/kubectl-options-flags.mdx';
-import SectionKubectlCmdPath from '../../sections/kubectl-options-cmdPath.mdx';
-import SectionKubectlKustomize from '../../sections/kubectl-kustomize.mdx';
+import FragmentReplaceImageTags from '@site/pages/fragments/kubectl-replaceImageTags.mdx';
+import FragmentKubectlFlags from '@site/pages/fragments/kubectl-options-flags.mdx';
+import FragmentKubectlCmdPath from '@site/pages/fragments/kubectl-options-cmdPath.mdx';
+import FragmentKubectlKustomize from '@site/pages/fragments/kubectl-kustomize.mdx';
 
 To deploy Kustomizations using `kustomize` / `kubectl apply -k`, you need to configure them within the `deployments` section of the `devspace.yaml`.
 
@@ -51,24 +51,24 @@ deployments:
 
 ### `kustomize`
 
-<SectionKubectlKustomize/>
+<FragmentKubectlKustomize/>
 
 
 ### `replaceImageTags`
 
-<SectionReplaceImageTags/>
+<FragmentReplaceImageTags/>
 
 
 ## Kubectl Options
 
 ### `flags`
 
-<SectionKubectlFlags/>
+<FragmentKubectlFlags/>
 
 
 ### `cmdPath`
 
-<SectionKubectlCmdPath/>
+<FragmentKubectlCmdPath/>
 
 
 ## General Options

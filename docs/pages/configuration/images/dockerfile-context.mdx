@@ -3,7 +3,7 @@ title: Configure Dockerfile & Context
 sidebar_label: dockerfile + context
 ---
 
-import SectionFaqImageContext from '../../sections/faq-image-context.mdx';
+import FragmentFaqImageContext from '@site/pages/fragments/faq-image-context.mdx';
 
 ## `dockerfile`
 The `dockerfile` option expects a string with a path to a `Dockerfile`.
@@ -39,7 +39,7 @@ See **[Best Practices for Image Building](../../best-practices/image-building.md
 ### `context`
 The `context` option expects a string with a path to the folder used as context path when building the image. The context path serves as root directory for Dockerfile statements like ADD or COPY.
 
-<SectionFaqImageContext/>
+<FragmentFaqImageContext/>
 
 #### Default Value For `context`
 ```yaml

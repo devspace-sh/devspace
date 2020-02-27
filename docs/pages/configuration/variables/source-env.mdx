@@ -3,7 +3,7 @@ title: Environment Variables
 sidebar_label: "source: env"
 ---
 
-import SectionEnvDefault from '../../sections/env-default.mdx';
+import FragmentEnvDefault from '@site/pages/fragments/env-default.mdx';
 
 If the `source` is `env`, DevSpace will **<u>not</u>** ask the user a question and instead use environment variables to determine the value of the variable.
 ```yaml {3,5-7}
@@ -21,7 +21,7 @@ vars:
 
 ### `default`
 
-<SectionEnvDefault/>
+<FragmentEnvDefault/>
 
 :::info
 Is the `source` is `env` and the environment variable is **not** defined, DevSpace will use the [`default` value](#default) or terminate with a fatal error, if there is **no** [`default` value](#default) configured.

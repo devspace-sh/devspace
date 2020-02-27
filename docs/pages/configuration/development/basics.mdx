@@ -3,13 +3,13 @@ title: Development Mode
 sidebar_label: Basics
 ---
 
-import SectionWarningMultipleDev from '../../sections/warning-multiple-dev.mdx';
-import SectionWorkflowDeployDependencies from '../../sections/workflow-deploy-dependencies.mdx';
-import SectionWorkflowBuildImages from '../../sections/workflow-build-images.mdx';
-import SectionWorkflowReplaceTags from '../../sections/workflow-replace-tags.mdx';
-import SectionWorkflowDeployProject from '../../sections/workflow-deploy-project.mdx';
-import SectionNoteGeneralPurposeCommand from '../../sections/note-general-purpose-command.mdx';
-import SectionWorkflowOpenLinks from '../../sections/workflow-open-links.mdx';
+import FragmentWarningMultipleDev from '@site/pages/fragments/warning-multiple-dev.mdx';
+import FragmentWorkflowDeployDependencies from '@site/pages/fragments/workflow-deploy-dependencies.mdx';
+import FragmentWorkflowBuildImages from '@site/pages/fragments/workflow-build-images.mdx';
+import FragmentWorkflowReplaceTags from '@site/pages/fragments/workflow-replace-tags.mdx';
+import FragmentWorkflowDeployProject from '@site/pages/fragments/workflow-deploy-project.mdx';
+import FragmentNoteGeneralPurposeCommand from '@site/pages/fragments/note-general-purpose-command.mdx';
+import FragmentWorkflowOpenLinks from '@site/pages/fragments/workflow-open-links.mdx';
 
 ## Why?
 The biggest advantages of developing directly inside Kubernetes is that your dev environment will be very similar to your production environment and you can have a much greater confidence that everything will work in production when shipping new features.
@@ -28,7 +28,7 @@ Start the development mode using this command:
 devspace dev
 ```
 
-<SectionWarningMultipleDev/>
+<FragmentWarningMultipleDev/>
 
 ### Important Flags for `devspace dev`
 The following flags are available for all commands that trigger image building:
@@ -43,22 +43,22 @@ The development process first runs the [deployment process](../../configuration/
 
 ### 1. Deploy Dependencies
 
-<SectionWorkflowDeployDependencies/>
+<FragmentWorkflowDeployDependencies/>
 
 
 ### 2. Build, Tag &amp; Push Images
 
-<SectionWorkflowBuildImages/>
+<FragmentWorkflowBuildImages/>
 
 
 ### 3. Tag Replacement
 
-<SectionWorkflowReplaceTags/>
+<FragmentWorkflowReplaceTags/>
 
 
 ### 4. Deploy Project
 
-<SectionWorkflowDeployProject/>
+<FragmentWorkflowDeployProject/>
 
 
 ### 5. Start Port-Forwarding
@@ -109,7 +109,7 @@ Interactive mode works out of the box but is also [customizable using the `dev.i
 ### 8. Open Links (optional)
 DevSpace iterates over every item in the `dev.open` array defined in the `devspace.yaml` and tries to open the URL you provide for each item using the following method:
 
-<SectionWorkflowOpenLinks/>
+<FragmentWorkflowOpenLinks/>
 
 Learn more about [configuring auto-opening links](../../configuration/development/open-links.mdx).
 
@@ -134,7 +134,7 @@ devspace enter
 
 If you do not provide a selector (e.g. pod name, label selector or image selector), DevSpace will show a picker with all available pods and containers.
 
-<SectionNoteGeneralPurposeCommand/>
+<FragmentNoteGeneralPurposeCommand/>
 
 
 ### `devspace logs [-f]`
@@ -149,7 +149,7 @@ devspace logs -f
 
 If you do not provide a selector (e.g. pod name, label selector or image selector), DevSpace will show a picker with all available pods and containers.
 
-<SectionNoteGeneralPurposeCommand/>
+<FragmentNoteGeneralPurposeCommand/>
 
 
 ### `devspace sync`
@@ -162,7 +162,7 @@ devspace sync --pod=my-pod --container=my-container
 
 If you do not provide a selector (e.g. pod name, label selector or image selector), DevSpace will show a picker with all available pods and containers.
 
-<SectionNoteGeneralPurposeCommand/>
+<FragmentNoteGeneralPurposeCommand/>
 
 
 ### `devspace open`

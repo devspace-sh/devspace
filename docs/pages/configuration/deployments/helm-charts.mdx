@@ -5,6 +5,7 @@ sidebar_label: helm
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import FragmentInfoComponentChart from '@site/pages/fragments/info-component-chart.mdx';
 
 To deploy Helm charts, you need to configure them within the `deployments` section of the `devspace.yaml`.
 
@@ -49,9 +50,7 @@ deployments:
         - port: 3000
 ```
 
-:::info Component Chart
-The component chart is a flexible Helm chart for deploying custom applications in a standardized manner. Learn more about [configuring the values for component chart deployments](https://devspace.sh/component-chart/docs/introduction).
-:::
+<FragmentInfoComponentChart/>
 
 </TabItem>
 <TabItem value="remote">
@@ -91,9 +90,7 @@ deployments:
 ### `componentChart`
 The `componentChart` option expects a boolean which states if the Component Helm Chart should be used for deployment. 
 
-:::info Component Chart
-The component chart is a flexible Helm chart for deploying custom applications in a standardized manner. Learn more about [configuring the values for component chart deployments](https://devspace.sh/component-chart/docs/introduction).
-:::
+<FragmentInfoComponentChart/>
 
 :::warning
 If `componentChart: true` is configured, all options under `chart` will be ignored.

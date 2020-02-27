@@ -3,9 +3,9 @@ title: Build Images with kaniko
 sidebar_label: kaniko
 ---
 
-import SectionBuildOptionsTarget from '../../sections/build-option-target.mdx';
-import SectionBuildOptionsNetwork from '../../sections/build-option-network.mdx';
-import SectionBuildOptionsBuildArgs from '../../sections/build-option-buildArgs.mdx';
+import FragmentBuildOptionsTarget from '@site/pages/fragments/build-option-target.mdx';
+import FragmentBuildOptionsNetwork from '@site/pages/fragments/build-option-network.mdx';
+import FragmentBuildOptionsBuildArgs from '@site/pages/fragments/build-option-buildArgs.mdx';
 
 ## `kaniko`
 Using `kaniko` as build tool allows you to build images direclty inside your Kubernetes cluster without a Docker daemon. DevSpace simply starts a build pod and builds the image using `kaniko`.
@@ -183,14 +183,14 @@ DevSpace allows you to configure the following build options:
 
 ### `target`
 
-<SectionBuildOptionsTarget/>
+<FragmentBuildOptionsTarget/>
 
 
 ### `network`
 
-<SectionBuildOptionsNetwork/>
+<FragmentBuildOptionsNetwork/>
 
 
 ### `buildArgs`
 
-<SectionBuildOptionsBuildArgs/>
+<FragmentBuildOptionsBuildArgs/>

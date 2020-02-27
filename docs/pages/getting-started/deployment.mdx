@@ -5,9 +5,9 @@ sidebar_label: 3. Build & Deploy
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import Step from '../../src/components/Step/Step';
-import SectionTipUseNamespace from '../sections/tip-use-namespace.mdx';
-import SectionNoteCreateSpace from '../sections/note-create-space.mdx';
+import Step from '@site/src/components/Step/Step';
+import FragmentTipUseNamespace from '@site/pages/fragments/tip-use-namespace.mdx';
+import FragmentNoteCreateSpace from '@site/pages/fragments/note-create-space.mdx';
 
 
 <figure class="frame">
@@ -39,7 +39,7 @@ Run the following command to create a free Kubernetes namespace:
 devspace create space my-app    # requires login via GitHub or email
 ```
 
-<SectionNoteCreateSpace/>
+<FragmentNoteCreateSpace/>
 
 </TabItem>
 <TabItem value="local">
@@ -54,7 +54,7 @@ If you want to deploy to a local Kubernetes cluster, make sure your **current ku
 devspace use namespace my-namespace   # will be automatically created during deployment
 ```
 
-<SectionTipUseNamespace/>
+<FragmentTipUseNamespace/>
 
 </TabItem>
 <TabItem value="remote">
@@ -78,7 +78,7 @@ When using a remote cluster, you can either use it just for yourself or you can 
 devspace use namespace my-namespace   # will be automatically created during deployment
 ```
 
-<SectionTipUseNamespace/>
+<FragmentTipUseNamespace/>
 
 </TabItem>
 <TabItem value="shared">
@@ -105,7 +105,7 @@ Create isolated namespace (= Space)
 devspace create space my-app    # requires login via GitHub or email
 ```
 
-<SectionNoteCreateSpace/>
+<FragmentNoteCreateSpace/>
 
 <br/>
 <Step>3</Step>

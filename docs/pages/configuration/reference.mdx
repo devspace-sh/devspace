@@ -3,14 +3,14 @@ title: Config Reference
 sidebar_label: devspace.yaml
 ---
 
-import SectionConfigImages from '../sections/config-images.mdx';
-import SectionConfigDeployments from '../sections/config-deployments.mdx';
-import SectionConfigDev from '../sections/config-dev.mdx';
-import SectionConfigDependencies from '../sections/config-dependencies.mdx';
-import SectionConfigVars from '../sections/config-vars.mdx';
-import SectionConfigProfiles from '../sections/config-profiles.mdx';
-import SectionConfigCommands from '../sections/config-commands.mdx';
-import SectionConfigHooks from '../sections/config-hooks.mdx';
+import FragmentConfigImages from '@site/pages/fragments/config-images.mdx';
+import FragmentConfigDeployments from '@site/pages/fragments/config-deployments.mdx';
+import FragmentConfigDev from '@site/pages/fragments/config-dev.mdx';
+import FragmentConfigDependencies from '@site/pages/fragments/config-dependencies.mdx';
+import FragmentConfigVars from '@site/pages/fragments/config-vars.mdx';
+import FragmentConfigProfiles from '@site/pages/fragments/config-profiles.mdx';
+import FragmentConfigCommands from '@site/pages/fragments/config-commands.mdx';
+import FragmentConfigHooks from '@site/pages/fragments/config-hooks.mdx';
 
 ## `version`
 ```yaml
@@ -19,7 +19,7 @@ version: v1beta6                   # string   | Version of the config
 
 ## `images`
 
-<SectionConfigImages/>
+<FragmentConfigImages/>
 
 [Learn more about how to configure image building.](../configuration/images/basics.mdx)
 
@@ -90,7 +90,7 @@ options:                            # struct   | Options for building images
 
 ## `deployments`
 
-<SectionConfigDeployments/>
+<FragmentConfigDeployments/>
 
 :::info
 Using the `helm` or `kubectl` key will define the type of deployment and the deployment tool to be used.
@@ -169,7 +169,7 @@ kubectl:                            # struct   | Options for deploying with "kub
 
 ## `dev`
 
-<SectionConfigDev/>
+<FragmentConfigDev/>
 
 [Learn more about configuring development mode.](../configuration/development/basics.mdx)
 
@@ -282,7 +282,7 @@ interactive:                        # struct   | Options for interactive mode
 
 ## `dependencies`
 
-<SectionConfigDependencies/>
+<FragmentConfigDependencies/>
 
 [Learn more about configuring dependencies.](../configuration/dependencies/basics.mdx)
 
@@ -292,25 +292,25 @@ You **cannot** use `source.git` and `source.path` in combination. You **must** e
 
 ## `hooks`
 
-<SectionConfigHooks/>
+<FragmentConfigHooks/>
 
 
 ## `commands`
 
-<SectionConfigCommands/>
+<FragmentConfigCommands/>
 
 [Learn more about configuring custom commands.](../configuration/commands/basics.mdx)
 
 
 ## `vars`
 
-<SectionConfigVars/>
+<FragmentConfigVars/>
 
 [Learn more about configuring config variables.](../configuration/variables/basics.mdx)
 
 
 ## `profiles`
 
-<SectionConfigProfiles/>
+<FragmentConfigProfiles/>
 
 [Learn more about configuring profiles and patches.](../configuration/profiles/basics.mdx)
