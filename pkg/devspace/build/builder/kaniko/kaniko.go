@@ -25,7 +25,7 @@ import (
 	dockerterm "github.com/docker/docker/pkg/term"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/util/interrupt"
+	"k8s.io/kubectl/pkg/util/interrupt"
 )
 
 // EngineName is the name of the building engine

@@ -15,10 +15,10 @@ require (
 	github.com/containerd/ttrpc v0.0.0-20191028202541-4f1b8fe65a5c // indirect
 	github.com/davidrjenni/reftools v0.0.0-20190827201643-0605d60846fb // indirect
 	github.com/devspace-cloud/penv v0.0.1 // indirect
-	github.com/docker/cli v0.0.0-20190506213505-d88565df0c2d
+	github.com/docker/cli v0.0.0-20200130152716-5d0cf8839492
 	github.com/docker/compose-on-kubernetes v0.4.24 // indirect
 	github.com/docker/distribution v2.7.1+incompatible
-	github.com/docker/docker v1.4.2-0.20181221150755-2cb26cfe9cbf
+	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce
 	github.com/docker/go v1.5.1-1 // indirect
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
@@ -52,7 +52,7 @@ require (
 	github.com/mitchellh/go-ps v0.0.0-20170309133038-4fdf99ab2936 // indirect
 	github.com/otiai10/copy v0.0.0-20180813030456-0046ee23fdbd
 	github.com/otiai10/mint v1.3.0 // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/rhysd/go-github-selfupdate v0.0.0-20180520142321-41c1bbb0804a
 	github.com/rjeczalik/notify v0.0.0-20181126183243-629144ba06a1
 	github.com/rogpeppe/godef v1.1.1 // indirect
@@ -73,11 +73,9 @@ require (
 	github.com/uudashr/gopkgs v2.0.1+incompatible // indirect
 	golang.org/x/lint v0.0.0-20190909230951-414d861bb4ac // indirect
 	golang.org/x/net v0.0.0-20191109021931-daa7c04131f5 // indirect
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/tools v0.0.0-20191025023517-2077df36852e // indirect
 	golang.org/x/tools/gopls v0.1.7 // indirect
-	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
-	google.golang.org/grpc v1.24.0
+	google.golang.org/grpc v1.27.0
 	gopkg.in/AlecAivazis/survey.v1 v1.8.7
 	gopkg.in/gorp.v1 v1.7.2 // indirect
 	gopkg.in/src-d/enry.v1 v1.6.4
@@ -85,14 +83,13 @@ require (
 	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
 	gopkg.in/yaml.v2 v2.2.4
 	gotest.tools v2.2.0+incompatible
-	helm.sh/helm/v3 v3.0.1
-	k8s.io/api v0.0.0
-	k8s.io/apimachinery v0.0.0
-	k8s.io/cli-runtime v0.0.0
-	k8s.io/client-go v0.0.0
+	helm.sh/helm/v3 v3.1.1
+	k8s.io/api v0.17.2
+	k8s.io/apimachinery v0.17.2
+	k8s.io/cli-runtime v0.17.2
+	k8s.io/client-go v0.17.2
 	k8s.io/klog v1.0.0
-	k8s.io/kubectl v0.0.0
-	k8s.io/kubernetes v1.16.2
+	k8s.io/kubectl v0.17.2
 	mvdan.cc/sh/v3 v3.0.0-alpha2
 	vbom.ml/util v0.0.0-20180919145318-efcd4e0f9787 // indirect
 )

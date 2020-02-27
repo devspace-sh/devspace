@@ -18,7 +18,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/transport/spdy"
-	"k8s.io/kubernetes/pkg/util/node"
 )
 
 // ClusterRoleBindingName is the name of the cluster role binding that ensures that the user has enough rights
@@ -340,7 +339,7 @@ func GetPodStatus(pod *k8sv1.Pod) string {
 		}
 	}
 
-	if pod.DeletionTimestamp != nil && pod.Status.Reason == node.NodeUnreachablePodReason {
+	if pod.DeletionTimestamp != nil && pod.Status.Reason == "NodeLost" {
 		reason = "Unknown"
 	} else if pod.DeletionTimestamp != nil {
 		reason = "Terminating"

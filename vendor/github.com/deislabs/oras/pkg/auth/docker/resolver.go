@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/containerd/containerd/remotes"
 	"github.com/containerd/containerd/remotes/docker"
@@ -10,9 +11,11 @@ import (
 )
 
 // Resolver returns a new authenticated resolver.
-func (c *Client) Resolver(_ context.Context) (remotes.Resolver, error) {
+func (c *Client) Resolver(_ context.Context, client *http.Client, plainHTTP bool) (remotes.Resolver, error) {
 	return docker.NewResolver(docker.ResolverOptions{
 		Credentials: c.Credential,
+		Client:      client,
+		PlainHTTP:   plainHTTP,
 	}), nil
 }
 

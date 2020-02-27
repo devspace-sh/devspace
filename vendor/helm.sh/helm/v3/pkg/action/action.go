@@ -66,7 +66,7 @@ var ValidName = regexp.MustCompile("^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])+
 
 // Configuration injects the dependencies that all actions share.
 type Configuration struct {
-	// RESTClientGetter is an interface that loads Kuberbetes clients.
+	// RESTClientGetter is an interface that loads Kubernetes clients.
 	RESTClientGetter RESTClientGetter
 
 	// Releases stores records of releases.
@@ -109,9 +109,19 @@ func (c *Configuration) getCapabilities() (*chartutil.Capabilities, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get server version from Kubernetes")
 	}
+	// Issue #6361:
+	// Client-Go emits an error when an API service is registered but unimplemented.
+	// We trap that error here and print a warning. But since the discovery client continues
+	// building the API object, it is correctly populated with all valid APIs.
+	// See https://github.com/kubernetes/kubernetes/issues/72051#issuecomment-521157642
 	apiVersions, err := GetVersionSet(dc)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get apiVersions from Kubernetes")
+		if discovery.IsGroupDiscoveryFailedError(err) {
+			c.Log("WARNING: The Kubernetes server has an orphaned API service. Server reports: %s", err)
+			c.Log("WARNING: To fix this, kubectl delete apiservice <service-name>")
+		} else {
+			return nil, errors.Wrap(err, "could not get apiVersions from Kubernetes")
+		}
 	}
 
 	c.Capabilities = &chartutil.Capabilities{
@@ -157,8 +167,8 @@ func (c *Configuration) releaseContent(name string, version int) (*release.Relea
 // GetVersionSet retrieves a set of available k8s API versions
 func GetVersionSet(client discovery.ServerResourcesInterface) (chartutil.VersionSet, error) {
 	groups, resources, err := client.ServerGroupsAndResources()
-	if err != nil {
-		return chartutil.DefaultVersionSet, err
+	if err != nil && !discovery.IsGroupDiscoveryFailedError(err) {
+		return chartutil.DefaultVersionSet, errors.Wrap(err, "could not get apiVersions from Kubernetes")
 	}
 
 	// FIXME: The Kubernetes test fixture for cli appears to always return nil
@@ -231,6 +241,7 @@ func (c *Configuration) Init(getter genericclioptions.RESTClientGetter, namespac
 		store = storage.Init(d)
 	case "memory":
 		d := driver.NewMemory()
+		d.SetNamespace(namespace)
 		store = storage.Init(d)
 	default:
 		// Not sure what to do here.
