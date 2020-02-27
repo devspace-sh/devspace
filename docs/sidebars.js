@@ -163,6 +163,7 @@ module.exports = {
         'best-practices/image-building',
         'best-practices/dev-staging-production',
         'best-practices/remote-debugging',
+        'best-practices/community-projects',
       ],
     },
     {
