@@ -3,13 +3,13 @@ name: Documentation
 on:
   push:
     branches:
-      - master
+      - new-docs
     paths:
       - "docs/**"
       - ".github/workflows/docs.yaml"
   pull_request:
     branches:
-      - master
+      - new-docs
     paths:
       - "docs/**"
       - ".github/workflows/docs.yaml"
@@ -46,7 +46,7 @@ jobs:
           fi
         working-directory: ./docs
       - name: Deploy Preview Site
-        if: github.ref != 'refs/heads/master'
+        if: github.ref != 'refs/heads/new-docs'
         run: |
           if [ ! -z "$NETLIFY_ACCESS_TOKEN" ]
           then
@@ -54,7 +54,7 @@ jobs:
           fi
         working-directory: ./docs
       - name: Deploy Production Site
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/new-docs'
         run: |
           if [ ! -z "$NETLIFY_ACCESS_TOKEN" ]
           then
