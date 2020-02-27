@@ -14,6 +14,7 @@ module.exports = {
       logo: {
         alt: 'DevSpace',
         src: '/img/logo-devspace.svg',
+        href: '/',
       },
       links: [
         {to: 'https://devspace.sh/', label: 'Website', position: 'left'},
