@@ -12,7 +12,7 @@ DevSpace is a client-only, open-source developer tool for Kubernetes:
 ## How does it work?
 DevSpace runs as a single binary CLI tool directly on your computer and ideally, you use it straight from the terminal within your IDE. DevSpace does not require a server-side component as it communicates directly to your Kubernetes cluster using your kube-context, just like kubectl.
 
-<img src="/img/docs/cli/workflow-devspace.png" />
+<img src="/cli/img/workflow-devspace.png" />
 
 
 ## Why DevSpace?
@@ -53,4 +53,4 @@ DevSpace is battle tested with many Kubernetes distributions including:
 - **self-managed Kubernetes clusters** (e.g. created with Rancher)
 
 <br/>
-<img src="/img/docs/cli/cluster-compatibility.png" />
+<img src="/cli/img/cluster-compatibility.png" />

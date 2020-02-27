@@ -1,9 +1,11 @@
+__webpack_public_path__ = "/cli/"
+
 module.exports = {
   title: 'DevSpace CLI | Documentation',
   tagline: 'The tagline of my site',
   url: 'https://devspace.sh',
-  baseUrl: '/',
-  favicon: '/img/docs/cli/favicon.png',
+  baseUrl: __webpack_public_path__,
+  favicon: '/img/favicon.png',
   organizationName: 'devspace-cloud', // Usually your GitHub org/user name.
   projectName: 'devspace', // Usually your repo name.
   themeConfig: {
@@ -11,7 +13,7 @@ module.exports = {
     navbar: {
       logo: {
         alt: 'DevSpace',
-        src: '/img/docs/cli/logo-devspace.svg',
+        src: '/img/logo-devspace.svg',
       },
       links: [
         {to: 'https://devspace.sh/', label: 'Website', position: 'left'},
