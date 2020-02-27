@@ -1,0 +1,14 @@
+.new-docs {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  padding: 1rem;
+  background: orange;
+  color: #fff;
+  font-weight: 600;
+  z-index: 99999;
+  text-align: center;
+  cursor: pointer;
+}
