@@ -3,13 +3,13 @@ name: Documentation
 on:
   push:
     branches:
-      - new-docs
+      - master
     paths:
       - "docs/**"
       - ".github/workflows/docs.yaml"
   pull_request:
     branches:
-      - new-docs
+      - master
     paths:
       - "docs/**"
       - ".github/workflows/docs.yaml"
@@ -37,6 +37,7 @@ jobs:
         run: |
           if [ ! -z "$NETLIFY_ACCESS_TOKEN" ]
           then
+            rm -r $OUT_DIR/docs/fragments
             mkdir -p tmp-$TARGET_OUT_DIR
             mv $OUT_DIR/* tmp-$TARGET_OUT_DIR
             mkdir -p $TARGET_OUT_DIR
