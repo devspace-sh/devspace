@@ -445,6 +445,7 @@ const (
 	VariableSourceAll   VariableSource = "all"
 	VariableSourceEnv   VariableSource = "env"
 	VariableSourceInput VariableSource = "input"
+	VariableSourceNone  VariableSource = "none"
 )
 
 // ProfileConfig defines a profile config

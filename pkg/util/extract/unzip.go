@@ -65,7 +65,7 @@ func (e *extractor) UntarGz(src, dest string) error {
 		default:
 			return fmt.Errorf(
 				"ExtractTarGz: uknown type: %s in %s",
-				header.Typeflag,
+				string(header.Typeflag),
 				header.Name)
 		}
 	}

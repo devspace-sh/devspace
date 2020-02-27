@@ -468,6 +468,29 @@ profiles:
 				},
 			},
 		},
+		{
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta6
+deployments:
+- name: ${new}
+vars:
+- name: new
+  source: none
+  default: test`,
+				options:         &ConfigOptions{},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     &latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "test",
+					},
+				},
+			},
+		},
 	}
 
 	// Execute test cases
