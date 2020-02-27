@@ -73,7 +73,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	// Check if redeploying is necessary
 	forceDeploy = forceDeploy || deployCache.HelmOverridesHash != helmOverridesHash || deployCache.HelmChartHash != hash || deployCache.DeploymentConfigHash != deploymentConfigHash
 	if forceDeploy == false {
-		releases, err := d.Helm.ListReleases()
+		releases, err := d.Helm.ListReleases(d.DeploymentConfig.Helm)
 		if err != nil {
 			return false, err
 		}

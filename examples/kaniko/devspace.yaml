@@ -10,6 +10,7 @@ deployments:
   helm:
     chart:
       name: ./chart
+    v2: true
 dev:
   ports:
   - imageName: default

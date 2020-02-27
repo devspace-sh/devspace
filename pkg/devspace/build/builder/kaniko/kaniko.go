@@ -221,13 +221,13 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		// Copy complete context
 		err = b.helper.KubeClient.Copy(buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, contextPath, ignoreRules)
 		if err != nil {
-			return errors.Errorf("Error uploading files to container: %v", err)
+			return errors.Errorf("Error uploading context to container: %v", err)
 		}
 
 		// Copy dockerfile
 		err = b.helper.KubeClient.Copy(buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, dockerfilePath, []string{})
 		if err != nil {
-			return errors.Errorf("Error uploading files to container: %v", err)
+			return errors.Errorf("Error uploading dockerfile to container: %v", err)
 		}
 
 		// Tell init container we are done
