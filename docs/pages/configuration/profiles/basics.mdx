@@ -3,14 +3,22 @@ title: Config Profiles
 sidebar_label: Basics
 ---
 
+import SectionInfoPrintConfig from '../../sections/tip-print-config.mdx';
+
 DevSpace allows you to define different profiles for different use cases (e.g. working on different services in the same project, starting certain debugging enviroment) or for different deployment targets (e.g. dev, staging production).
 
 Profiles allow you to define:
 - [`replace`](../../configuration/profiles/replace.mdx) statements to override entire sections of the config 
 - [`patches`](../../configuration/profiles/patches.mdx) to modify certain parts of the config.
 
-:::tip Combine Replace & Patches
-It is possible to use the `replace` and `patch` together within one profile.
+:::note Combine Replace & Patches
+It is possible to use the `replace` and `patches` together within one profile.
+:::
+
+:::tip Debug Profiles
+
+<SectionInfoPrintConfig/>
+
 :::
 
 A profile has to be configured in the `profiles` section of the `devspace.yaml`.
@@ -45,13 +53,17 @@ profiles:
 
 ## Useful Commands
 
+### `devspace print -p [profile]`
+
+<SectionInfoPrintConfig/>
+
 ### `devspace list profiles`
 To get a list of available profiles, you can run this command:
 ```bash
 devspace list profiles
 ```
 
-### `devspace use profile [NAME]`
+### `devspace use profile [profile]`
 To permanently switch to a different profile, you can run this command:
 ```bash
 devspace use profile [PROFILE_NAME]
@@ -67,7 +79,7 @@ To permanently switch back to the default configuration (no profile replaces and
 devspace use profile --reset
 ```
 
-### `devspace deploy|dev|... --profile=[NAME]`
+### `devspace [deploy] -p [profile]`
 Most DevSpace commands support the `-p / --profile` flag. Using this flag, you can run a single command with a different profile without switching your profile permenantly:
 ```bash
 devspace build -p [PROFILE_NAME]

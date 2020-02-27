@@ -9,6 +9,10 @@ To see help information and a list of all flags for any command, simply use the 
 devspace dev -h
 ```
 
+<br/>
+
+---
+
 
 ## Project-Specific Commands
 
@@ -59,6 +63,70 @@ devspace open
 This command requires that the project has already been deployed.
 :::
 
+
+### Commands
+This command lists all available command:
+```bash
+devspace list commands
+```
+
+Use this command to run one of the custom commands:
+```bash
+devspace run command [command-name]
+```
+
+
+### Profiles
+This command lists all available profiles:
+```bash
+devspace list profiles
+```
+
+Use this command to switch to a different profile:
+```bash
+devspace use profile [optional:profile-name]
+```
+
+Use the `-p` flag to just run a single command with a different profile without switching it permanently:
+```bash
+devspace deploy -p [profile-name]
+```
+
+Use this command to print the config after a profile has been applied:
+```bash
+devspace print -p [profile-name]
+```
+
+
+### Variables
+This command lists all variables as well as their values:
+```bash
+devspace list vars
+```
+
+Use this command to reset all variables, i.e. delete variable values from the variable cache:
+```bash
+devspace reset vars
+```
+
+Use this command to print the config after all variables have been replaced:
+```bash
+devspace print
+```
+
+
+### Dependencies
+Use this command to update git-based dependencies:
+```bash
+devspace update dependencies
+```
+This command performs a `git fetch && git pull` for all git-based dependencies.
+
+Use this command to clear the dependencies cache:
+```bash
+devspace reset dependencies
+```
+
 <br/>
 
 ---
@@ -104,39 +172,9 @@ devspace sync
 If file sync is configured in your project, it automatically starts when running: `devspace dev`
 :::
 
-<br/>
-
----
-
-## Commands
-This command lists all available command:
+Use this command to view the status of the file sync during development mode:
 ```bash
-devspace list commands
-```
-
-Use this command to run one of the custom commands:
-```bash
-devspace run command [command-name]
-```
-
-<br/>
-
----
-
-## Profiles
-This command lists all available profiles:
-```bash
-devspace list profiles
-```
-
-Use this command to switch to a different profile:
-```bash
-devspace use profile [optional:profile-name]
-```
-
-Use the `-p` flag to just run a single command with a different profile without switching it permanently:
-```bash
-devspace deploy -p [profile-name]
+devspace status sync
 ```
 
 

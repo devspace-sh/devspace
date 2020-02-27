@@ -145,6 +145,12 @@ devspace reset vars
 
 DevSpace will fill the variables cache again, once you run the next build or deployment command.
 
+### `devspace print`
+The following command prints the config after all variables have been replaced:
+```bash
+devspace print
+```
+You can optionally add the `-p / --profiles` flag to this command.
 
 ### `export VAR_NAME=value`
 The value for a config variable can also be set by defining an environment variable named `[VAR_NAME]`. Setting the value of a config variable with name `${IMAGE_NAME}` would be possible by setting an environment value `IMAGE_NAME`.

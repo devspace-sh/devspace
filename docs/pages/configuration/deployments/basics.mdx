@@ -144,3 +144,26 @@ DevSpace loads the `deployments` configuration from `devspace.yaml` and builds o
 ### 4. Deploy Project
 
 <SectionWorkflowDeployProject/>
+
+<br/>
+
+---
+
+## Useful Commands
+
+### `devspace list deployments`
+This command lists all deployments and their status:
+```bash
+devspace list deployments
+```
+
+### `devspace render`
+This command prints all Kubernetes manifests that would be created when running `devspace deploy` or `devspace dev` but without actually deploying them to the cluster:
+```bash
+devspace render
+```
+In case of Helm deployments, this command behaves similar to `helm install --dry-run --debug`
+
+:::info Image Building & Tag Replacement
+This command will build images (if necessary) and update the tags within manifests and Helm chart values.
+:::
