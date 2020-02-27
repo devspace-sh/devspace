@@ -28,8 +28,8 @@ module.exports = {
       ],
     },
     algolia: {
-      apiKey: "4339e8c4d6313d53209b996a35e7c0d5",
-      indexName: "devspace",
+      apiKey: "b9533b52dde7e23272dbd4211435c070",
+      indexName: "devspace-cli",
       placeholder: "Search...",
       algoliaOptions: {}
     },
