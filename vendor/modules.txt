@@ -348,7 +348,7 @@ github.com/mattn/go-runewidth
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 github.com/mgutz/ansi
-# github.com/miekg/pkcs11 v0.0.0-20181204074848-79c216b7cb4d
+# github.com/miekg/pkcs11 v1.0.3
 github.com/miekg/pkcs11
 # github.com/mitchellh/copystructure v1.0.0
 github.com/mitchellh/copystructure
@@ -453,9 +453,9 @@ github.com/theupdateframework/notary/tuf/data
 github.com/theupdateframework/notary/tuf/signed
 github.com/theupdateframework/notary/tuf/utils
 github.com/theupdateframework/notary/tuf/validation
-# github.com/toqueteos/trie v0.0.0-20150530104557-56fed4a05683
+# github.com/toqueteos/trie v1.0.0
 github.com/toqueteos/trie
-# github.com/ulikunitz/xz v0.5.5
+# github.com/ulikunitz/xz v0.5.7
 github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash
 github.com/ulikunitz/xz/internal/xlog
@@ -495,7 +495,7 @@ golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/agent
 golang.org/x/crypto/ssh/knownhosts
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.0.0-20191109021931-daa7c04131f5
+# golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
