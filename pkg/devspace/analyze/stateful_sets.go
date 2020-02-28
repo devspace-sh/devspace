@@ -10,9 +10,6 @@ import (
 func (a *analyzer) statefulSets(namespace string) ([]string, error) {
 	problems := []string{}
 
-	a.log.StartWait("Analyzing stateful sets")
-	defer a.log.StopWait()
-
 	// Get all pods
 	statefulSets, err := a.client.KubeClient().AppsV1().StatefulSets(namespace).List(metav1.ListOptions{})
 	if err != nil {

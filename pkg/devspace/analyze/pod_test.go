@@ -20,8 +20,8 @@ import (
 type podTestCase struct {
 	name string
 
-	noWait bool
-	pod    k8sv1.Pod
+	wait bool
+	pod  k8sv1.Pod
 
 	updatedPod *k8sv1.Pod
 
@@ -33,6 +33,7 @@ func TestPods(t *testing.T) {
 	testCases := []podTestCase{
 		podTestCase{
 			name: "Wait for pod in creation",
+			wait: true,
 			pod: k8sv1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "testPod",
@@ -53,6 +54,7 @@ func TestPods(t *testing.T) {
 		},
 		podTestCase{
 			name: "Wait for pod in initialization",
+			wait: true,
 			pod: k8sv1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "testPod",
@@ -73,6 +75,7 @@ func TestPods(t *testing.T) {
 		},
 		podTestCase{
 			name: "Wait for minimalPodAge to pass",
+			wait: true,
 			pod: k8sv1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "testPod",
@@ -93,8 +96,8 @@ func TestPods(t *testing.T) {
 			},
 		},
 		podTestCase{
-			name:   "Analyze pod with many problems",
-			noWait: true,
+			name: "Analyze pod with many problems",
+			wait: false,
 			pod: k8sv1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "testPod",
@@ -181,7 +184,7 @@ func TestPods(t *testing.T) {
 			}
 		}()
 
-		problems, err := analyzer.pods(namespace, testCase.noWait)
+		problems, err := analyzer.pods(namespace, Options{Wait: testCase.wait})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)

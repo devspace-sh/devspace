@@ -149,7 +149,7 @@ func PurgeNamespacesByPrefixes(nsPrefixes []string) error {
 
 // AnalyzePods waits for the pods to be running (if possible) and healthcheck them
 func AnalyzePods(client kubectl.Client, namespace string, cachedLogger logger.Logger) error {
-	err := analyze.NewAnalyzer(client, cachedLogger).Analyze(namespace, false)
+	err := analyze.NewAnalyzer(client, cachedLogger).Analyze(namespace, analyze.Options{Wait: true})
 	if err != nil {
 		return err
 	}

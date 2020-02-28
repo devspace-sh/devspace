@@ -3,6 +3,7 @@ module github.com/devspace-cloud/devspace
 go 1.13
 
 require (
+	github.com/agl/ed25519 v0.0.0-00010101000000-000000000000 // indirect
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bmatcuk/doublestar v1.1.1
 	github.com/docker/cli v0.0.0-20200130152716-5d0cf8839492
@@ -10,7 +11,7 @@ require (
 	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce
 	github.com/docker/go v1.5.1-1 // indirect
 	github.com/docker/go-connections v0.4.0
-	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c
+	github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.3.2
 	github.com/google/go-github v17.0.0+incompatible // indirect
@@ -28,6 +29,7 @@ require (
 	github.com/krishicks/yaml-patch v0.0.10
 	github.com/machinebox/graphql v0.2.2
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
+	github.com/miekg/pkcs11 v1.0.3 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/otiai10/copy v0.0.0-20180813030456-0046ee23fdbd
 	github.com/pkg/errors v0.9.1
@@ -64,7 +66,9 @@ require (
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.0+incompatible
 	github.com/Nvveen/Gotty => github.com/ijc25/Gotty v0.0.0-20170406111628-a8b993ba6abd
-	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20191024225408-dee21c0394b5
-	github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309
+
+	github.com/agl/ed25519 => github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412
+	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20191216044856-a8371794149d
+	github.com/docker/docker => github.com/moby/moby v1.4.2-0.20200203170920-46ec8731fbce
 	golang.org/x/sys => golang.org/x/sys v0.0.0-20190812073006-9eafafc0a87e
 )

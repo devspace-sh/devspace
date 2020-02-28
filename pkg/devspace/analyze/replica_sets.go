@@ -10,9 +10,6 @@ import (
 func (a *analyzer) replicaSets(namespace string) ([]string, error) {
 	problems := []string{}
 
-	a.log.StartWait("Analyzing replica sets")
-	defer a.log.StopWait()
-
 	// Get all pods
 	replicaSets, err := a.client.KubeClient().AppsV1().ReplicaSets(namespace).List(metav1.ListOptions{})
 	if err != nil {

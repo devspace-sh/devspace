@@ -1,6 +1,7 @@
 package factory
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
@@ -65,6 +66,9 @@ type Factory interface {
 	NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller
 	NewDeployController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) deploy.Controller
 
+	// Analyzer
+	NewAnalyzer(client kubectl.Client, log log.Logger) analyze.Analyzer
+
 	// Kubeconfig
 	NewKubeConfigLoader() kubeconfig.Loader
 
@@ -78,6 +82,11 @@ type DefaultFactoryImpl struct{}
 // DefaultFactory returns the default factory implementation
 func DefaultFactory() Factory {
 	return &DefaultFactoryImpl{}
+}
+
+// NewAnalyzer creates a new analyzer
+func (f *DefaultFactoryImpl) NewAnalyzer(client kubectl.Client, log log.Logger) analyze.Analyzer {
+	return analyze.NewAnalyzer(client, log)
 }
 
 // NewCloudConfigLoader creates a new cloud config loader
