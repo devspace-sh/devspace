@@ -79,10 +79,10 @@ func writeTar(writer io.Writer, localPath string, exclude []string) error {
 
 	// When its a file we copy the file to the toplevel of the tar
 	if stat.IsDir() == false {
-		return sync.RecursiveTar(filepath.Dir(absolute), filepath.Base(absolute), make(map[string]*sync.FileInformation), tarWriter, ignoreMatcher)
+		return sync.NewArchiver(filepath.Dir(absolute), tarWriter, ignoreMatcher).AddToArchive(filepath.Base(absolute))
 	}
 
 	// When its a folder we copy the contents and not the folder itself to the
 	// toplevel of the tar
-	return sync.RecursiveTar(absolute, "", make(map[string]*sync.FileInformation), tarWriter, ignoreMatcher)
+	return sync.NewArchiver(absolute, tarWriter, ignoreMatcher).AddToArchive("")
 }

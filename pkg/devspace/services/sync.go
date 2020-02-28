@@ -235,11 +235,6 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		containerPath = syncConfig.ContainerPath
 	}
 
-	downloadOnInitialSync := false
-	if syncConfig.DownloadOnInitialSync != nil {
-		downloadOnInitialSync = *syncConfig.DownloadOnInitialSync
-	}
-
 	upstreamDisabled := false
 	if syncConfig.DisableUpload != nil {
 		upstreamDisabled = *syncConfig.DisableUpload
@@ -250,14 +245,14 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		downstreamDisabled = *syncConfig.DisableDownload
 	}
 
-	options := &sync.Options{
-		Verbose:               verbose,
-		SyncError:             make(chan error),
-		SyncDone:              syncDone,
-		DownloadOnInitialSync: downloadOnInitialSync,
-		UpstreamDisabled:      upstreamDisabled,
-		DownstreamDisabled:    downstreamDisabled,
-		Log:                   customLog,
+	options := sync.Options{
+		Verbose:            verbose,
+		SyncError:          make(chan error),
+		SyncDone:           syncDone,
+		InitialSync:        syncConfig.InitialSync,
+		UpstreamDisabled:   upstreamDisabled,
+		DownstreamDisabled: downstreamDisabled,
+		Log:                customLog,
 	}
 
 	// Add onDownload hooks
