@@ -21,14 +21,17 @@ Updates the git repositories of the dependencies defined
 in the devspace.yaml
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --allow-cyclic   When enabled allows cyclic dependencies
   -h, --help           help for dependencies
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -42,6 +45,3 @@ in the devspace.yaml
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace update](devspace_update.md)	 - Updates the current config

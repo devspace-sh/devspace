@@ -25,7 +25,9 @@ devspace remove space --id=1
 devspace remove space --all
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --all               Delete all spaces
@@ -34,7 +36,8 @@ devspace remove space --all
       --provider string   Cloud Provider to use
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -48,6 +51,3 @@ devspace remove space --all
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace remove](devspace_remove.md)	 - Changes devspace configuration

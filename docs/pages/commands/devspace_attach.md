@@ -25,7 +25,9 @@ devspace attach -c my-container
 devspace attach -n my-namespace
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -c, --container string        Container name within pod where to execute command
@@ -35,7 +37,8 @@ devspace attach -n my-namespace
       --pod string              Pod to open a shell to
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -48,3 +51,4 @@ devspace attach -n my-namespace
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+

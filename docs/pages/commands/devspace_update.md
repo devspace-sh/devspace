@@ -14,13 +14,16 @@ Updates the current config
 ################## devspace update ####################
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for update
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -34,6 +37,3 @@ Updates the current config
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-* [devspace update config](devspace_update_config.md)	 - Converts the active config to the current config version
-* [devspace update dependencies](devspace_update_dependencies.md)	 - Updates the git repositories of the dependencies defined in the devspace.yaml

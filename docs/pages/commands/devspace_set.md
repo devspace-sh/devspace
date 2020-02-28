@@ -14,13 +14,16 @@ Make global configuration changes
 #################### devspace set #####################
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for set
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -34,6 +37,3 @@ Make global configuration changes
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-* [devspace set analytics](devspace_set_analytics.md)	 - Update analytics settings
-* [devspace set var](devspace_set_var.md)	 - Sets a variable

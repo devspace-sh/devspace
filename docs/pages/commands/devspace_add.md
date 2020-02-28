@@ -15,13 +15,16 @@ Convenience command: adds something to devspace.yaml
 #######################################################
 Adds config sections to devspace.yaml
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for add
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -35,9 +38,3 @@ Adds config sections to devspace.yaml
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-* [devspace add deployment](devspace_add_deployment.md)	 - Adds a deployment to devspace.yaml
-* [devspace add image](devspace_add_image.md)	 - Add an image
-* [devspace add port](devspace_add_port.md)	 - Add a new port forward configuration
-* [devspace add provider](devspace_add_provider.md)	 - Adds a new cloud provider to the configuration
-* [devspace add sync](devspace_add_sync.md)	 - Add a sync path

@@ -20,13 +20,16 @@ devspace list namespaces [flags]
 Lists all namespaces in the selected kube context
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for namespaces
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -40,6 +43,3 @@ Lists all namespaces in the selected kube context
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace list](devspace_list.md)	 - Lists configuration

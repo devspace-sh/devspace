@@ -23,13 +23,16 @@ Examples:
 devspace reset vars
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for vars
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -43,6 +46,3 @@ devspace reset vars
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace reset](devspace_reset.md)	 - Resets an cluster token

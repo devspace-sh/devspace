@@ -20,13 +20,16 @@ devspace list ports [flags]
 Lists the port forwarding configurations
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for ports
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -40,6 +43,3 @@ Lists the port forwarding configurations
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace list](devspace_list.md)	 - Lists configuration

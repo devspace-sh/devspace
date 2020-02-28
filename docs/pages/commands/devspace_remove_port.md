@@ -23,7 +23,9 @@ devspace remove port --label-selector=release=test
 devspace remove port --all
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --all                     Remove all configured ports
@@ -31,7 +33,8 @@ devspace remove port --all
       --label-selector string   Comma separated key=value selector list (e.g. release=test)
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -45,6 +48,3 @@ devspace remove port --all
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace remove](devspace_remove.md)	 - Changes devspace configuration

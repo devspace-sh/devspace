@@ -14,13 +14,16 @@ Connect an external cluster to devspace cloud
 ################# devspace connect ####################
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for connect
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -34,5 +37,3 @@ Connect an external cluster to devspace cloud
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-* [devspace connect cluster](devspace_connect_cluster.md)	 - Connects an existing cluster to DevSpace Cloud

@@ -14,13 +14,16 @@ Changes devspace configuration
 ################## devspace remove ####################
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for remove
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -34,12 +37,3 @@ Changes devspace configuration
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-* [devspace remove cluster](devspace_remove_cluster.md)	 - Removes a connected cluster
-* [devspace remove context](devspace_remove_context.md)	 - Removes a kubectl-context
-* [devspace remove deployment](devspace_remove_deployment.md)	 - Removes one or all deployments from devspace configuration
-* [devspace remove image](devspace_remove_image.md)	 - Removes one or all images from the devspace
-* [devspace remove port](devspace_remove_port.md)	 - Removes forwarded ports from a devspace
-* [devspace remove provider](devspace_remove_provider.md)	 - Removes a cloud provider from the configuration
-* [devspace remove space](devspace_remove_space.md)	 - Removes a cloud space
-* [devspace remove sync](devspace_remove_sync.md)	 - Remove sync paths from the devspace

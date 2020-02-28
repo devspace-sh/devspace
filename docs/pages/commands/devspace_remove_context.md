@@ -24,7 +24,9 @@ devspace remove context myspace
 devspace remove context --all-spaces
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --all-spaces        Remove all kubectl contexts belonging to Spaces
@@ -32,7 +34,8 @@ devspace remove context --all-spaces
       --provider string   The cloud provider to use
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -46,6 +49,3 @@ devspace remove context --all-spaces
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace remove](devspace_remove.md)	 - Changes devspace configuration

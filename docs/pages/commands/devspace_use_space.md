@@ -23,7 +23,9 @@ Example:
 devspace use space my-space
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --get-token         Prints the service token to the console
@@ -32,7 +34,8 @@ devspace use space my-space
       --space-id string   The space id to use
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -46,6 +49,3 @@ devspace use space my-space
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace use](devspace_use.md)	 - Use specific config

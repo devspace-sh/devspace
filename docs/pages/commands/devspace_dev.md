@@ -29,7 +29,9 @@ Open terminal instead of logs:
 - Use "devspace dev -i" for opening a terminal and overriding container entrypoint with sleep command
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --allow-cyclic           When enabled allows cyclic dependencies
@@ -53,7 +55,8 @@ Open terminal instead of logs:
       --verbose-sync           When enabled the sync will log every file change
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -66,3 +69,4 @@ Open terminal instead of logs:
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+

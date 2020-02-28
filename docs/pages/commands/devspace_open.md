@@ -23,14 +23,17 @@ Example:
 devspace open
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help              help for open
       --provider string   The cloud provider to use
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -43,3 +46,4 @@ devspace open
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+

@@ -28,7 +28,9 @@ devspace enter bash -n my-namespace
 devspace enter bash -l release=test
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -c, --container string        Container name within pod where to execute command
@@ -39,7 +41,8 @@ devspace enter bash -l release=test
       --wait                    Wait for the pod(s) to start if they are not running
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -52,3 +55,4 @@ devspace enter bash -l release=test
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+

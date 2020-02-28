@@ -21,13 +21,16 @@ Example:
 devspace set analytics disabled true
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for analytics
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -41,6 +44,3 @@ devspace set analytics disabled true
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace set](devspace_set.md)	 - Make global configuration changes

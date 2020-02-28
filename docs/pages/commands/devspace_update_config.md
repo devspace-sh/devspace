@@ -23,13 +23,16 @@ config version
 Note: This does not upgrade the overwrite configs
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for config
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -43,6 +46,3 @@ Note: This does not upgrade the overwrite configs
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace update](devspace_update.md)	 - Updates the current config

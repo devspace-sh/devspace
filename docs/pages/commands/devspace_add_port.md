@@ -23,14 +23,17 @@ Format is port(:remotePort) comma separated, e.g.
 devspace add port 8080:80,3000
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help                    help for port
       --label-selector string   Comma separated key=value label-selector list (e.g. release=test)
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -44,6 +47,3 @@ devspace add port 8080:80,3000
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace add](devspace_add.md)	 - Convenience command: adds something to devspace.yaml

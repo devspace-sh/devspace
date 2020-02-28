@@ -23,14 +23,17 @@ Example:
 devspace add provider app.devspace.cloud
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help          help for provider
       --host string   The URL DevSpace should use for this provider
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -44,6 +47,3 @@ devspace add provider app.devspace.cloud
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace add](devspace_add.md)	 - Convenience command: adds something to devspace.yaml

@@ -25,14 +25,17 @@ devspace analyze
 devspace analyze --namespace=mynamespace
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for analyze
       --wait   Wait for pods to get ready if they are just starting (default true)
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -45,3 +48,4 @@ devspace analyze --namespace=mynamespace
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+

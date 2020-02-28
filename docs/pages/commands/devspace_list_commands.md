@@ -21,13 +21,16 @@ Lists all DevSpace custom commands defined in the
 devspace.yaml
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for commands
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -41,6 +44,3 @@ devspace.yaml
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace list](devspace_list.md)	 - Lists configuration

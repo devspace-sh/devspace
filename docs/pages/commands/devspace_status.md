@@ -14,13 +14,16 @@ Show the current status
 ################## devspace status ####################
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for status
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -34,5 +37,3 @@ Show the current status
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-* [devspace status sync](devspace_status_sync.md)	 - Shows the sync status

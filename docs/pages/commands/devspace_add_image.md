@@ -28,7 +28,9 @@ devspace add image my-image --image=dockeruser/devspaceimage2 --buildtool=docker
 devspace add image my-image --image=dockeruser/devspaceimage2 --buildtool=kaniko
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --buildtool string    Specify which engine should build the file. Should match this regex: docker|kaniko
@@ -39,7 +41,8 @@ devspace add image my-image --image=dockeruser/devspaceimage2 --buildtool=kaniko
       --tag string          The tag of the image
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -53,6 +56,3 @@ devspace add image my-image --image=dockeruser/devspaceimage2 --buildtool=kaniko
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace add](devspace_add.md)	 - Convenience command: adds something to devspace.yaml
