@@ -2,7 +2,7 @@
 
 ### **[Website](https://devspace.sh)** • **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.sh/cli/docs/introduction)** • **[Blog](https://devspace.cloud/blog)** • **[Slack](https://slack.devspace.cloud/)** • **[Twitter](https://twitter.com/devspace)**
 
-![Build Status Passing](![GitHub Workflow Status](https://img.shields.io/github/workflow/status/devspace-cloud/devspace/Test%20%26%20Release%20CLI%20Version?style=for-the-badge))
+![Build Status Passing](https://img.shields.io/travis/devspace-cloud/devspace?style=for-the-badge)
 ![Latest Release](https://img.shields.io/github/v/release/devspace-cloud/devspace?style=for-the-badge&label=Latest%20Release&color=%23007ec6)
 ![License: Apache-2.0](https://img.shields.io/github/license/devspace-cloud/devspace?style=for-the-badge&color=%23007ec6)
 <br>
