@@ -47,7 +47,7 @@ jobs:
           fi
         working-directory: ./docs
       - name: Deploy Preview Site
-        if: github.ref != 'refs/heads/new-docs'
+        if: github.ref != 'refs/heads/master'
         run: |
           if [ ! -z "$NETLIFY_ACCESS_TOKEN" ]
           then
@@ -55,7 +55,7 @@ jobs:
           fi
         working-directory: ./docs
       - name: Deploy Production Site
-        if: github.ref == 'refs/heads/new-docs'
+        if: github.ref == 'refs/heads/master'
         run: |
           if [ ! -z "$NETLIFY_ACCESS_TOKEN" ]
           then
