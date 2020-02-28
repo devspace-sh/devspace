@@ -1,6 +1,8 @@
 package versions
 
 import (
+	"strings"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
@@ -39,8 +41,14 @@ var versionLoader = map[string]*loader{
 }
 
 // ParseProfile loads the base config & a certain profile
-func ParseProfile(data map[interface{}]interface{}, profile string) (map[interface{}]interface{}, error) {
-	return getProfile(data, profile)
+func ParseProfile(data map[interface{}]interface{}, profile string) ([]map[interface{}]interface{}, error) {
+	profiles := []map[interface{}]interface{}{}
+	err := getProfile(data, profile, &profiles)
+	if err != nil {
+		return nil, err
+	}
+
+	return profiles, nil
 }
 
 // ParseCommands parses only the commands from the config
@@ -160,33 +168,57 @@ func getCommands(data map[interface{}]interface{}) (map[interface{}]interface{},
 }
 
 // getProfile loads a certain profile
-func getProfile(data map[interface{}]interface{}, profile string) (map[interface{}]interface{}, error) {
+func getProfile(data map[interface{}]interface{}, profile string, profileChain *[]map[interface{}]interface{}) error {
 	// Convert config
 	retMap := map[interface{}]interface{}{}
 	err := util.Convert(data, &retMap)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Check if a profile is defined
 	if profile == "" {
-		return nil, nil
+		return nil
 	}
 
 	// Convert to array
 	profiles, ok := retMap["profiles"].([]interface{})
 	if !ok {
-		return nil, errors.Errorf("Couldn't load profile '%s': no profiles found", profile)
+		return errors.Errorf("Couldn't load profile '%s': no profiles found", profile)
 	}
 
 	// Search for config
 	for _, profileMap := range profiles {
 		configMap, ok := profileMap.(map[interface{}]interface{})
 		if ok && configMap["name"] == profile {
-			return configMap, nil
+			// check if profile is already in our profile chain
+			for _, p := range *profileChain {
+				if p["name"] == profile {
+					profileLoop := []string{}
+					for _, pc := range *profileChain {
+						profileLoop = append(profileLoop, pc["name"].(string))
+					}
+
+					return errors.Errorf("Loop in profile loading detected %s->%s", strings.Join(profileLoop, "->"), profile)
+				}
+			}
+
+			// Add to profile chain
+			*profileChain = append(*profileChain, configMap)
+
+			// Get parent profile
+			parentObj, ok := configMap["parent"]
+			if ok {
+				parentStr, ok := parentObj.(string)
+				if ok && parentStr != "" {
+					return getProfile(data, parentStr, profileChain)
+				}
+			}
+
+			return nil
 		}
 	}
 
 	// Couldn't find config
-	return nil, errors.Errorf("Couldn't find profile '%s'", profile)
+	return errors.Errorf("Couldn't find profile '%s'", profile)
 }

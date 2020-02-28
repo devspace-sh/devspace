@@ -185,8 +185,9 @@ func TestParseCommands(t *testing.T) {
 }
 
 type parseTestCase struct {
-	in       *parseTestCaseInput
-	expected *latest.Config
+	in          *parseTestCaseInput
+	expected    *latest.Config
+	expectedErr bool
 }
 
 type parseTestCaseInput struct {
@@ -196,8 +197,8 @@ type parseTestCaseInput struct {
 }
 
 func TestParseConfig(t *testing.T) {
-	testCases := []*parseTestCase{
-		{
+	testCases := map[string]*parseTestCase{
+		"Simple": {
 			in: &parseTestCaseInput{
 				config: `
 version: v1alpha1`,
@@ -213,7 +214,7 @@ version: v1alpha1`,
 				},
 			},
 		},
-		{
+		"Simple with deployments": {
 			in: &parseTestCaseInput{
 				config: `
 version: v1beta3
@@ -246,7 +247,7 @@ deployments:
 				},
 			},
 		},
-		{
+		"Variables": {
 			in: &parseTestCaseInput{
 				config: `
 version: v1beta3
@@ -281,7 +282,7 @@ deployments:
 				},
 			},
 		},
-		{
+		"Profile replace with variable": {
 			in: &parseTestCaseInput{
 				config: `
 version: v1beta3
@@ -324,7 +325,7 @@ profiles:
 				},
 			},
 		},
-		{
+		"Profile with patches": {
 			in: &parseTestCaseInput{
 				config: `
 version: v1beta3
@@ -374,7 +375,7 @@ profiles:
 				},
 			},
 		},
-		{
+		"Commands": {
 			in: &parseTestCaseInput{
 				config: `
 version: v1beta3
@@ -422,7 +423,7 @@ profiles:
 				},
 			},
 		},
-		{
+		"Default variables": {
 			in: &parseTestCaseInput{
 				config: `
 version: v1beta6
@@ -468,7 +469,7 @@ profiles:
 				},
 			},
 		},
-		{
+		"Variable source none": {
 			in: &parseTestCaseInput{
 				config: `
 version: v1beta6
@@ -491,6 +492,83 @@ vars:
 				},
 			},
 		},
+		"Profile parent": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta7
+deployments:
+- name: test
+- name: test2
+profiles:
+- name: parent
+	replace: 
+		images:
+			test:
+				image: test
+- name: beforeParent
+	parent: parent
+	patches:
+	- op: replace
+		path: deployments[0].name
+		value: replaced
+- name: test
+	parent: beforeParent
+	patches:
+	- op: replace
+		path: deployments[0].name
+		value: replaced2`,
+				options:         &ConfigOptions{Profile: "test"},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     &latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "replaced2",
+					},
+					{
+						Name: "test2",
+					},
+				},
+				Images: map[string]*latest.ImageConfig{
+					"test": &latest.ImageConfig{
+						Image: "test",
+					},
+				},
+			},
+		},
+		"Profile loop error": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta7
+deployments:
+- name: test
+- name: test2
+profiles:
+- name: parent
+	parent: test
+	replace: 
+		images:
+			test:
+				image: test
+- name: beforeParent
+	parent: parent
+	patches:
+	- op: replace
+		path: deployments[0].name
+		value: replaced
+- name: test
+	parent: beforeParent
+	patches:
+	- op: replace
+		path: deployments[1].name
+		value: replaced2`,
+				options:         &ConfigOptions{Profile: "test"},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expectedErr: true,
+		},
 	}
 
 	// Execute test cases
@@ -503,7 +581,13 @@ vars:
 
 		testCase.in.options.GeneratedConfig = testCase.in.generatedConfig
 		newConfig, err := NewConfigLoader(testCase.in.options, log.Discard).(*configLoader).parseConfig(testMap)
-		if err != nil {
+		if testCase.expectedErr {
+			if err == nil {
+				t.Fatalf("TestCase %s: expected error, but got none", index)
+			} else {
+				continue
+			}
+		} else if err != nil {
 			t.Fatal(err)
 		}
 
@@ -511,7 +595,7 @@ vars:
 			newConfigYaml, _ := yaml.Marshal(newConfig)
 			expectedYaml, _ := yaml.Marshal(testCase.expected)
 			if string(newConfigYaml) != string(expectedYaml) {
-				t.Fatalf("TestCase %d: Got %s, but expected %s", index, newConfigYaml, expectedYaml)
+				t.Fatalf("TestCase %s: Got %s, but expected %s", index, newConfigYaml, expectedYaml)
 			}
 		}
 	}

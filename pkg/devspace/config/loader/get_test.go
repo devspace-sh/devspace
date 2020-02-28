@@ -379,5 +379,4 @@ func testSetDevSpaceRoot(testCase setDevSpaceRootTestCase, t *testing.T) {
 	wd, err := os.Getwd()
 	assert.NilError(t, err, "Error getting wd in testCase %s", testCase.name)
 	assert.Equal(t, wd, testCase.expectedWorkDir, "Unexpected work dir in testCase %s", testCase.name)
-
 }
