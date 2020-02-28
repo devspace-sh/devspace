@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/cobra/doc"
 )
 
-const cliDocsDir = "./docs/pages/cli/commands"
+const cliDocsDir = "./docs/pages/commands"
 const headerTemplate = `---
 title: "%s"
 sidebar_label: %s
@@ -38,8 +38,15 @@ func main() {
 		sidebarLabel := title
 		l := len(command)
 
-		if l > 2 {
-			sidebarLabel = command[l-1]
+		if l > 1 {
+			matches, err := filepath.Glob(cliDocsDir + "/devspace_" + command[1])
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if len(matches) > 2 {
+				sidebarLabel = command[l-1]
+			}
 		}
 
 		return fmt.Sprintf(headerTemplate, "Command - "+title, sidebarLabel)
@@ -47,7 +54,7 @@ func main() {
 
 	linkHandler := func(name string) string {
 		base := strings.TrimSuffix(name, path.Ext(name))
-		return "../../cli/commands/" + strings.ToLower(base)
+		return strings.ToLower(base) + ".md"
 	}
 
 	f := factory.DefaultFactory()

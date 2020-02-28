@@ -560,19 +560,19 @@ Follow these links to more about how to use DevSpace:
 
 | Command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Important Flags / Notes |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| <a href="https://devspace.cloud/docs/cli/commands/devspace_dev">`devspace dev`</a><br> Starts the development mode    | `-b • Rebuild images (force)` <br> `-d • Redeploy everything (force)`  <br> `-i • Interactive mode (overrides ENTRYPOINT with [sleep, 999999] and starts interactive terminal session)`  |
-| <a href="https://devspace.cloud/docs/cli/commands/devspace_ui">`devspace ui`</a><br> Opens the localhost development UI       |  |
-| <a href="https://devspace.cloud/docs/cli/commands/devspace_open">`devspace open`</a><br> Opens your application after starting port-forwarding or generating an ingress   |   |
-| <a href="https://devspace.cloud/docs/cli/commands/devspace_enter">`devspace enter`</a><br> Opens a terminal session for a container       |  |
-| <a href="https://devspace.cloud/docs/cli/commands/devspace_enter">`devspace enter -- [command]`</a><br> Runs a command inside a container    |  |
-| <a href="https://devspace.cloud/docs/cli/commands/devspace_logs">`devspace logs`</a> <br> Prints the logs of a container                 |  `-f • Stream logs (follow/attach)` |
-| <a href="https://devspace.cloud/docs/cli/commands/devspace_analyze">`devspace analyze`</a> <br> Analyzes your namespace for issues        |  |
-| <a href="https://devspace.cloud/docs/cli/commands/devspace_build">`devspace build`</a> <br> Build, tag and push images (no deploy) | `-t [TAG] • Use specified [TAG] to tag all images` |
-| <a href="https://devspace.cloud/docs/cli/commands/devspace_cleanup_images">`devspace cleanup images`</a> <br> Deletes old images (locally, built by DevSpace) | <i>This is very useful after you built a lot of images and your local Docker daemon runs out of space (error: `no space left on device`) </i> |
-| <a href="https://devspace.cloud/docs/cli/commands/devspace_attach">`devspace attach`</a> <br> Attaches to a running container | <i><a href="https://devspace.sh/component-chart/docs/configuration/containers#stdin">Requires `stdin` and `tty` to be `true`</a></i> |
-| <a href="https://devspace.cloud/docs/cli/commands/devspace_attach">`devspace use space [NAME]`</a> <br> Switch into a different (existing) Space | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of all your Spaces.</i> |
-| <a href="https://devspace.cloud/docs/cli/commands/devspace_attach">`devspace use namespace [NAME]`</a> <br> Switch to a different namespace | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of available namespaces.</i> |
-| <a href="https://devspace.cloud/docs/cli/commands/devspace_attach">`devspace use context [NAME]`</a> <br> Switch to a different kube-context | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of available kube-contexts.</i> |
+| <a href="https://devspace.cloud/cli/docs/commands/devspace_dev">`devspace dev`</a><br> Starts the development mode    | `-b • Rebuild images (force)` <br> `-d • Redeploy everything (force)`  <br> `-i • Interactive mode (overrides ENTRYPOINT with [sleep, 999999] and starts interactive terminal session)`  |
+| <a href="https://devspace.cloud/cli/docs/commands/devspace_ui">`devspace ui`</a><br> Opens the localhost development UI       |  |
+| <a href="https://devspace.cloud/cli/docs/commands/devspace_open">`devspace open`</a><br> Opens your application after starting port-forwarding or generating an ingress   |   |
+| <a href="https://devspace.cloud/cli/docs/commands/devspace_enter">`devspace enter`</a><br> Opens a terminal session for a container       |  |
+| <a href="https://devspace.cloud/cli/docs/commands/devspace_enter">`devspace enter -- [command]`</a><br> Runs a command inside a container    |  |
+| <a href="https://devspace.cloud/cli/docs/commands/devspace_logs">`devspace logs`</a> <br> Prints the logs of a container                 |  `-f • Stream logs (follow/attach)` |
+| <a href="https://devspace.cloud/cli/docs/commands/devspace_analyze">`devspace analyze`</a> <br> Analyzes your namespace for issues        |  |
+| <a href="https://devspace.cloud/cli/docs/commands/devspace_build">`devspace build`</a> <br> Build, tag and push images (no deploy) | `-t [TAG] • Use specified [TAG] to tag all images` |
+| <a href="https://devspace.cloud/cli/docs/commands/devspace_cleanup_images">`devspace cleanup images`</a> <br> Deletes old images (locally, built by DevSpace) | <i>This is very useful after you built a lot of images and your local Docker daemon runs out of space (error: `no space left on device`) </i> |
+| <a href="https://devspace.cloud/cli/docs/commands/devspace_attach">`devspace attach`</a> <br> Attaches to a running container | <i><a href="https://devspace.sh/component-chart/docs/configuration/containers#stdin">Requires `stdin` and `tty` to be `true`</a></i> |
+| <a href="https://devspace.cloud/cli/docs/commands/devspace_attach">`devspace use space [NAME]`</a> <br> Switch into a different (existing) Space | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of all your Spaces.</i> |
+| <a href="https://devspace.cloud/cli/docs/commands/devspace_attach">`devspace use namespace [NAME]`</a> <br> Switch to a different namespace | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of available namespaces.</i> |
+| <a href="https://devspace.cloud/cli/docs/commands/devspace_attach">`devspace use context [NAME]`</a> <br> Switch to a different kube-context | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of available kube-contexts.</i> |
 
 <br>
 
