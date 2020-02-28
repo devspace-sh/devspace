@@ -47,6 +47,30 @@ func TestSimple(t *testing.T) {
 				},
 			},
 		},
+		{
+			in: &Config{
+				Images: map[string]*ImageConfig{
+					"test": &ImageConfig{
+						Image: "test",
+						Tag:   "ttt",
+					},
+					"test2": &ImageConfig{
+						Image: "test2",
+					},
+				},
+			},
+			expected: &next.Config{
+				Images: map[string]*next.ImageConfig{
+					"test": &next.ImageConfig{
+						Image: "test",
+						Tags:  []string{"ttt"},
+					},
+					"test2": &next.ImageConfig{
+						Image: "test2",
+					},
+				},
+			},
+		},
 	}
 
 	// Run test cases

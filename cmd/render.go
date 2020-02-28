@@ -22,7 +22,7 @@ import (
 type RenderCmd struct {
 	*flags.GlobalFlags
 
-	Tag string
+	Tags []string
 
 	SkipPush                bool
 	AllowCyclicDependencies bool
@@ -64,7 +64,7 @@ deployment.
 	renderCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	renderCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 	renderCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
-	renderCmd.Flags().StringVarP(&cmd.Tag, "tag", "t", "", "Use the given tag for all built images")
+	renderCmd.Flags().StringSliceVarP(&cmd.Tags, "tag", "t", []string{}, "Use the given tag for all built images")
 	renderCmd.Flags().BoolVar(&cmd.ShowLogs, "show-logs", false, "Shows the build logs")
 	renderCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 	renderCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips image building")
@@ -110,9 +110,9 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Force tag
-	if cmd.Tag != "" {
+	if len(cmd.Tags) > 0 {
 		for _, imageConfig := range config.Images {
-			imageConfig.Tag = cmd.Tag
+			imageConfig.Tags = cmd.Tags
 		}
 	}
 

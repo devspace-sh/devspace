@@ -26,8 +26,8 @@ func NewFakeController(config *latest.Config) build.Controller {
 
 		// Get image tag
 		imageTag, _ := randutil.GenerateRandomString(7)
-		if imageConf.Tag != "" {
-			imageTag = imageConf.Tag
+		if len(imageConf.Tags) > 0 {
+			imageTag = imageConf.Tags[0]
 		}
 
 		builtImages[imageName] = imageTag

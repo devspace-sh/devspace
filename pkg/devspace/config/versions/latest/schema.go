@@ -44,7 +44,7 @@ type Config struct {
 // ImageConfig defines the image specification
 type ImageConfig struct {
 	Image            string       `yaml:"image"`
-	Tag              string       `yaml:"tag,omitempty"`
+	Tags             []string     `yaml:"tags,omitempty"`
 	Dockerfile       string       `yaml:"dockerfile,omitempty"`
 	Context          string       `yaml:"context,omitempty"`
 	Entrypoint       []string     `yaml:"entrypoint,omitempty"`

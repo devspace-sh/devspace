@@ -18,9 +18,23 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 
 	if c.Dev != nil && len(c.Dev.Sync) > 0 {
 		for key, config := range c.Dev.Sync {
+			if config == nil {
+				continue
+			}
+
 			if config.DownloadOnInitialSync != nil && *config.DownloadOnInitialSync == true {
 				nextConfig.Dev.Sync[key].InitialSync = latest.InitialSyncStrategyPreferLocal
 			}
+		}
+	}
+
+	for key, value := range c.Images {
+		if value == nil {
+			continue
+		}
+
+		if value.Tag != "" {
+			nextConfig.Images[key].Tags = []string{value.Tag}
 		}
 	}
 

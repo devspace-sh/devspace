@@ -57,7 +57,14 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 	kanikoArgs := []string{
 		"--dockerfile=" + kanikoContextPath + "/" + filepath.Base(dockerfilePath),
 		"--context=dir://" + kanikoContextPath,
-		"--destination=" + b.FullImageName,
+	}
+
+	if len(b.helper.ImageConf.Tags) == 0 {
+		kanikoArgs = append(kanikoArgs, "--destination="+b.FullImageName)
+	} else {
+		for _, tag := range b.helper.ImageConf.Tags {
+			kanikoArgs = append(kanikoArgs, "--destination="+b.helper.ImageName+":"+tag)
+		}
 	}
 
 	// Set snapshot mode
@@ -128,7 +135,7 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 			Containers: []k8sv1.Container{
 				{
 					Name:            "kaniko",
-					Image:           "gcr.io/kaniko-project/executor:v0.10.0",
+					Image:           "gcr.io/kaniko-project/executor:v0.17.1",
 					ImagePullPolicy: k8sv1.PullIfNotPresent,
 					Args:            kanikoArgs,
 					VolumeMounts: []k8sv1.VolumeMount{

@@ -96,8 +96,8 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		if err != nil {
 			return nil, errors.Errorf("Image building failed: %v", err)
 		}
-		if imageConf.Tag != "" {
-			imageTag = imageConf.Tag
+		if len(imageConf.Tags) > 0 {
+			imageTag = imageConf.Tags[0]
 		}
 
 		// Create new builder

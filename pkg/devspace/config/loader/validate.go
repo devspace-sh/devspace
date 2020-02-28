@@ -39,7 +39,7 @@ func validate(config *latest.Config) error {
 		if config.Dev.Sync != nil {
 			for index, sync := range config.Dev.Sync {
 				if ValidInitialSyncStrategy(sync.InitialSync) == false {
-					return errors.Errorf("Error in config: sync.initialSync is not valid '%s' at index %d", index, sync.InitialSync)
+					return errors.Errorf("Error in config: sync.initialSync is not valid '%s' at index %d", sync.InitialSync, index)
 				}
 			}
 		}

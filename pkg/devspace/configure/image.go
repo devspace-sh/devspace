@@ -39,7 +39,7 @@ func (m *manager) newImageConfigFromImageName(imageName, dockerfile, context str
 	}
 
 	if imageTag != "" {
-		retImageConfig.Tag = imageTag
+		retImageConfig.Tags = []string{imageTag}
 	}
 	if dockerfile == "" {
 		retImageConfig.Build = &latest.BuildConfig{
@@ -340,7 +340,7 @@ func (m *manager) AddImage(nameInConfig, name, tag, contextPath, dockerfilePath,
 	}
 
 	if tag != "" {
-		imageConfig.Tag = tag
+		imageConfig.Tags = []string{tag}
 	}
 	if contextPath != "" {
 		imageConfig.Context = contextPath
