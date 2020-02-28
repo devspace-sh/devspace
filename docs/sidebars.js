@@ -169,7 +169,106 @@ module.exports = {
     {
       type: 'category',
       label: 'CLI Commands',
-      items: [],
+      items: [
+        {
+          type: "category",
+          label: "devspace add",
+          items: [
+            "commands/devspace_add_deployment",
+            "commands/devspace_add_image",
+            "commands/devspace_add_port",
+            "commands/devspace_add_provider",
+            "commands/devspace_add_sync"
+          ]
+        },
+        "commands/devspace_analyze",
+        "commands/devspace_attach",
+        "commands/devspace_build",
+        "commands/devspace_cleanup_images",
+        "commands/devspace_connect_cluster",
+        "commands/devspace_create_space",
+        "commands/devspace_deploy",
+        "commands/devspace_dev",
+        "commands/devspace_enter",
+        "commands/devspace_init",
+        {
+          type: "category",
+          label: "devspace list",
+          items: [
+            "commands/devspace_list_clusters",
+            "commands/devspace_list_commands",
+            "commands/devspace_list_contexts",
+            "commands/devspace_list_deployments",
+            "commands/devspace_list_namespaces",
+            "commands/devspace_list_ports",
+            "commands/devspace_list_profiles",
+            "commands/devspace_list_providers",
+            "commands/devspace_list_spaces",
+            "commands/devspace_list_sync",
+            "commands/devspace_list_vars"
+          ]
+        },
+        "commands/devspace_login",
+        "commands/devspace_logs",
+        "commands/devspace_open",
+        "commands/devspace_print",
+        "commands/devspace_purge",
+        {
+          type: "category",
+          label: "devspace remove",
+          items: [
+            "commands/devspace_remove_cluster",
+            "commands/devspace_remove_context",
+            "commands/devspace_remove_deployment",
+            "commands/devspace_remove_image",
+            "commands/devspace_remove_port",
+            "commands/devspace_remove_provider",
+            "commands/devspace_remove_space",
+            "commands/devspace_remove_sync"
+          ]
+        },
+        "commands/devspace_render",
+        {
+          type: "category",
+          label: "devspace reset",
+          items: [
+            "commands/devspace_reset_dependencies",
+            "commands/devspace_reset_key",
+            "commands/devspace_reset_vars"
+          ]
+        },
+        {
+          type: "category",
+          label: "devspace set",
+          items: [
+            "commands/devspace_set_analytics",
+            "commands/devspace_set_var"
+          ]
+        },
+        "commands/devspace_status_sync",
+        "commands/devspace_sync",
+        "commands/devspace_ui",
+        {
+          type: "category",
+          label: "devspace update",
+          items: [
+            "commands/devspace_update_config",
+            "commands/devspace_update_dependencies"
+          ]
+        },
+        "commands/devspace_upgrade",
+        {
+          type: "category",
+          label: "devspace use",
+          items: [
+            "commands/devspace_use_context",
+            "commands/devspace_use_namespace",
+            "commands/devspace_use_profile",
+            "commands/devspace_use_provider",
+            "commands/devspace_use_space"
+          ]
+        }
+      ],
     },
     {
       type: 'link',

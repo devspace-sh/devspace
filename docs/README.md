@@ -2,6 +2,8 @@
 
 This website is built using [Docusaurus 2](https://v2.docusaurus.io/), a modern static website generator.
 
+## Contributing
+
 ### Installation
 
 ```
@@ -31,3 +33,18 @@ $ GIT_USER=<Your GitHub username> USE_SSH=true yarn deploy
 ```
 
 If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+
+
+## Creating New Versions
+
+### 1. Generate Command Docs 
+```bash
+cd ../ # main project directory
+go run -mod= ./hack/gen-docs.go
+```
+
+### 2. Create Version
+```bash
+cd website
+npm run version v4.0.3
+```
