@@ -3,18 +3,15 @@ package sync
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/sync/remote"
-	"github.com/devspace-cloud/devspace/sync/util"
 
 	"github.com/pkg/errors"
 	"github.com/rjeczalik/notify"
@@ -47,7 +44,7 @@ type Options struct {
 	UpstreamDisabled   bool
 	DownstreamDisabled bool
 
-	DownloadOnInitialSync bool
+	InitialSync latest.InitialSyncStrategy
 
 	// These channels can be used to listen for certain sync events
 	DownstreamInitialSyncDone chan bool
@@ -61,7 +58,7 @@ type Options struct {
 // Sync holds the necessary information for the syncing process
 type Sync struct {
 	LocalPath string
-	Options   *Options
+	Options   Options
 
 	fileIndex *fileIndex
 
@@ -82,7 +79,7 @@ type Sync struct {
 }
 
 // NewSync creates a new sync for the given
-func NewSync(localPath string, options *Options) (*Sync, error) {
+func NewSync(localPath string, options Options) (*Sync, error) {
 	// we have to resolve the real local path, because the watcher gives us the real path always
 	realLocalPath, err := filepath.EvalSymlinks(localPath)
 	if err != nil {
@@ -259,9 +256,7 @@ func (s *Sync) initialSync() error {
 		return errors.Wrap(err, "populate file map")
 	}
 
-	uploadChanges := make([]*FileInformation, 0, 10)
 	downloadChanges := make(map[string]*FileInformation)
-
 	s.fileIndex.fileMapMutex.Lock()
 	for key, element := range s.fileIndex.fileMap {
 		if element.IsSymbolicLink {
@@ -272,179 +267,41 @@ func (s *Sync) initialSync() error {
 	}
 	s.fileIndex.fileMapMutex.Unlock()
 
-	err = s.diffServerClient(s.LocalPath, &uploadChanges, downloadChanges, false)
-	if err != nil {
-		return errors.Wrap(err, "diff server client")
-	}
+	initialSync := newInitialSyncer(&initialSyncOptions{
+		LocalPath: s.LocalPath,
+		Strategy:  s.Options.InitialSync,
 
-	// Upstream initial sync
-	go func() {
-		// Remove remote files that are not there locally
-		if s.Options.UpstreamDisabled == false {
-			if s.Options.DownloadOnInitialSync == false && len(downloadChanges) > 0 {
-				deleteRemote := make([]*FileInformation, 0, len(downloadChanges))
-				for _, element := range downloadChanges {
-					deleteRemote = append(deleteRemote, &FileInformation{
-						Name:        element.Name,
-						IsDirectory: element.IsDirectory,
-					})
+		IgnoreMatcher:       s.ignoreMatcher,
+		UploadIgnoreMatcher: s.uploadIgnoreMatcher,
+
+		UpstreamDisabled:   s.Options.UpstreamDisabled,
+		DownstreamDisabled: s.Options.DownstreamDisabled,
+		FileIndex:          s.fileIndex,
+
+		ApplyRemote: s.sendChangesToUpstream,
+		ApplyLocal:  s.downstream.applyChanges,
+		AddSymlink:  s.upstream.AddSymlink,
+		Log:         s.log,
+
+		UpstreamDone: func() {
+			if s.Options.UpstreamInitialSyncDone != nil {
+				for len(s.upstream.events) > 0 || s.upstream.IsBusy() {
+					time.Sleep(time.Millisecond * 100)
 				}
 
-				s.sendChangesToUpstream(deleteRemote, true)
+				s.log.Info("Upstream - Initial sync completed")
+				close(s.Options.UpstreamInitialSyncDone)
 			}
-
-			s.sendChangesToUpstream(uploadChanges, false)
-		}
-
-		if s.Options.UpstreamInitialSyncDone != nil {
-			for len(s.upstream.events) > 0 || s.upstream.IsBusy() {
-				time.Sleep(time.Millisecond * 100)
+		},
+		DownstreamDone: func() {
+			if s.Options.DownstreamInitialSyncDone != nil {
+				s.log.Info("Downstream - Initial sync completed")
+				close(s.Options.DownstreamInitialSyncDone)
 			}
+		},
+	})
 
-			s.log.Info("Upstream - Initial sync completed")
-			close(s.Options.UpstreamInitialSyncDone)
-		}
-	}()
-
-	// Download changes if enabled
-	if s.Options.DownstreamDisabled == false && s.Options.DownloadOnInitialSync && len(downloadChanges) > 0 {
-		remoteChanges := make([]*remote.Change, 0, len(downloadChanges))
-		for _, element := range downloadChanges {
-			remoteChanges = append(remoteChanges, &remote.Change{
-				ChangeType:    remote.ChangeType_CHANGE,
-				Path:          element.Name,
-				MtimeUnix:     element.Mtime,
-				MtimeUnixNano: element.MtimeNano,
-				Size:          element.Size,
-				IsDir:         element.IsDirectory,
-			})
-		}
-
-		err = s.downstream.applyChanges(remoteChanges)
-		if err != nil {
-			return errors.Wrap(err, "apply changes")
-		}
-	}
-
-	if s.Options.DownstreamInitialSyncDone != nil {
-		s.log.Info("Downstream - Initial sync completed")
-		close(s.Options.DownstreamInitialSyncDone)
-	}
-
-	return nil
-}
-
-func (s *Sync) diffServerClient(absPath string, sendChanges *[]*FileInformation, downloadChanges map[string]*FileInformation, dontSend bool) error {
-	relativePath := getRelativeFromFullPath(absPath, s.LocalPath)
-
-	// We skip files that are suddenly not there anymore
-	stat, err := os.Stat(absPath)
-	if err != nil {
-		return nil
-	}
-
-	delete(downloadChanges, relativePath)
-
-	// Exclude changes on the upload exclude list
-	if s.uploadIgnoreMatcher != nil {
-		if util.MatchesPath(s.uploadIgnoreMatcher, relativePath, stat.IsDir()) {
-			s.fileIndex.fileMapMutex.Lock()
-			// Add to file map and prevent download if local file is newer than the remote one
-			if s.fileIndex.fileMap[relativePath] != nil && s.fileIndex.fileMap[relativePath].Mtime < stat.ModTime().Unix() {
-				// Add it to the fileMap
-				s.fileIndex.fileMap[relativePath] = &FileInformation{
-					Name:        relativePath,
-					Mtime:       stat.ModTime().Unix(),
-					MtimeNano:   stat.ModTime().UnixNano(),
-					Size:        stat.Size(),
-					IsDirectory: stat.IsDir(),
-				}
-			}
-			s.fileIndex.fileMapMutex.Unlock()
-
-			dontSend = true
-		}
-	}
-
-	// Check for symlinks
-	if dontSend == false {
-		// Retrieve the real stat instead of the symlink one
-		lstat, err := os.Lstat(absPath)
-		if err == nil && lstat.Mode()&os.ModeSymlink != 0 {
-			stat, err = s.upstream.AddSymlink(relativePath, absPath)
-			if err != nil {
-				return err
-			}
-			if stat == nil {
-				return nil
-			}
-
-			s.log.Infof("Symlink found at %s", absPath)
-		} else if err != nil {
-			return nil
-		}
-	}
-
-	if stat.IsDir() {
-		return s.diffDir(absPath, stat, sendChanges, downloadChanges, dontSend)
-	}
-
-	if dontSend == false && stat != nil {
-		fileInfo := &FileInformation{
-			Name:           relativePath,
-			Mtime:          stat.ModTime().Unix(),
-			MtimeNano:      stat.ModTime().UnixNano(),
-			Size:           stat.Size(),
-			IsDirectory:    false,
-			IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
-		}
-		s.fileIndex.fileMapMutex.Lock()
-		shouldUpload := shouldUpload(s, fileInfo, true)
-		s.fileIndex.fileMapMutex.Unlock()
-		if shouldUpload {
-			// Add file to upload
-			*sendChanges = append(*sendChanges, fileInfo)
-		}
-	}
-
-	return nil
-}
-
-func (s *Sync) diffDir(filepath string, stat os.FileInfo, sendChanges *[]*FileInformation, downloadChanges map[string]*FileInformation, dontSend bool) error {
-	relativePath := getRelativeFromFullPath(filepath, s.LocalPath)
-	files, err := ioutil.ReadDir(filepath)
-
-	if err != nil {
-		s.log.Infof("Couldn't read dir %s: %v", filepath, err)
-		return nil
-	}
-
-	if len(files) == 0 && relativePath != "" && dontSend == false && stat != nil {
-		fileInfo := &FileInformation{
-			Name:           relativePath,
-			Mtime:          stat.ModTime().Unix(),
-			MtimeNano:      stat.ModTime().UnixNano(),
-			Size:           stat.Size(),
-			IsDirectory:    true,
-			IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
-		}
-
-		s.fileIndex.fileMapMutex.Lock()
-		shouldUpload := shouldUpload(s, fileInfo, true)
-		s.fileIndex.fileMapMutex.Unlock()
-
-		if shouldUpload {
-			*sendChanges = append(*sendChanges, fileInfo)
-		}
-	}
-
-	for _, f := range files {
-		if err := s.diffServerClient(path.Join(filepath, f.Name()), sendChanges, downloadChanges, dontSend); err != nil {
-			return errors.Wrap(err, f.Name())
-		}
-	}
-
-	return nil
+	return initialSync.Run(downloadChanges)
 }
 
 func (s *Sync) sendChangesToUpstream(changes []*FileInformation, remove bool) {

@@ -88,9 +88,11 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 func convertDockerConfigToKanikoConfig(dockerConfig *latest.ImageConfig) *latest.ImageConfig {
 	kanikoConfig := &latest.ImageConfig{
 		Image:            dockerConfig.Image,
-		Tag:              dockerConfig.Tag,
+		Tags:             dockerConfig.Tags,
 		Dockerfile:       dockerConfig.Dockerfile,
 		Context:          dockerConfig.Context,
+		Entrypoint:       dockerConfig.Entrypoint,
+		Cmd:              dockerConfig.Cmd,
 		CreatePullSecret: dockerConfig.CreatePullSecret,
 		Build: &latest.BuildConfig{
 			Kaniko: &latest.KanikoConfig{

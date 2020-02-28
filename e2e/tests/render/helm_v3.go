@@ -25,7 +25,7 @@ func runHelmV3(f *customFactory, logger log.Logger) error {
 	rc := &cmd.RenderCmd{
 		GlobalFlags: &flags.GlobalFlags{},
 		SkipPush:    true,
-		Tag:         "rM5xKXK",
+		Tags:        []string{"rM5xKXK"},
 	}
 
 	done := utils.Capture()

@@ -89,9 +89,15 @@ func (b *Builder) Build(log logpkg.Logger) error {
 	args := []string{}
 
 	if b.imageConf.Build.Custom.ImageFlag != "" {
-		args = append(args, b.imageConf.Build.Custom.ImageFlag, b.imageConf.Image+":"+b.imageTag)
-	} else {
+		args = append(args, b.imageConf.Build.Custom.ImageFlag)
+	}
+
+	if len(b.imageConf.Tags) == 0 {
 		args = append(args, b.imageConf.Image+":"+b.imageTag)
+	} else {
+		for _, tag := range b.imageConf.Tags {
+			args = append(args, b.imageConf.Image+":"+tag)
+		}
 	}
 
 	if b.imageConf.Build.Custom.Args != nil {

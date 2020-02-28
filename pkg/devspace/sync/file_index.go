@@ -16,6 +16,18 @@ func newFileIndex() *fileIndex {
 	}
 }
 
+func (f *fileIndex) Lock() {
+	f.fileMapMutex.Lock()
+}
+
+func (f *fileIndex) Unlock() {
+	f.fileMapMutex.Unlock()
+}
+
+func (f *fileIndex) Set(file *FileInformation) {
+	f.fileMap[file.Name] = file
+}
+
 // Function assumes that fileMap is locked for access
 func (f *fileIndex) CreateDirInFileMap(dirpath string) {
 	if dirpath == "/" {

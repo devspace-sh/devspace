@@ -210,12 +210,23 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 	}
 
+	// Which tags to build
+	var tags []string
+	if len(b.helper.ImageConf.Tags) == 0 {
+		tags = []string{fullImageName}
+	} else {
+		tags = []string{}
+		for _, tag := range b.helper.ImageConf.Tags {
+			tags = append(tags, b.helper.ImageName+":"+tag)
+		}
+	}
+
 	// Setup an upload progress bar
 	outStream := command.NewOutStream(writer)
 	progressOutput := streamformatter.NewProgressOutput(outStream)
 	body := progress.NewProgressReader(buildCtx, progressOutput, 0, "", "Sending build context to Docker daemon")
 	buildOptions := types.ImageBuildOptions{
-		Tags:        []string{fullImageName},
+		Tags:        tags,
 		Dockerfile:  relDockerfile,
 		BuildArgs:   options.BuildArgs,
 		Target:      options.Target,
@@ -252,12 +263,14 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 	// Check if we skip push
 	if b.skipPush == false && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == nil || *b.helper.ImageConf.Build.Docker.SkipPush == false) {
-		err = b.PushImage(writer)
-		if err != nil {
-			return errors.Errorf("Error during image push: %v", err)
-		}
+		for _, tag := range tags {
+			err = b.pushImage(writer, tag)
+			if err != nil {
+				return errors.Errorf("Error during image push: %v", err)
+			}
 
-		log.Info("Image pushed to registry (" + displayRegistryURL + ")")
+			log.Info("Image pushed to registry (" + displayRegistryURL + ")")
+		}
 	} else {
 		log.Infof("Skip image push for %s", b.helper.ImageName)
 	}
@@ -280,9 +293,9 @@ func (b *Builder) Authenticate() (*types.AuthConfig, error) {
 	return b.authConfig, nil
 }
 
-// PushImage pushes an image to the specified registry
-func (b *Builder) PushImage(writer io.Writer) error {
-	ref, err := reference.ParseNormalizedNamed(b.helper.ImageName + ":" + b.helper.ImageTag)
+// pushImage pushes an image to the specified registry
+func (b *Builder) pushImage(writer io.Writer, imageName string) error {
+	ref, err := reference.ParseNormalizedNamed(imageName)
 	if err != nil {
 		return err
 	}

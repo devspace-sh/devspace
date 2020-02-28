@@ -37,7 +37,7 @@ func shouldRemoveRemote(relativePath string, s *Sync) bool {
 }
 
 // s.fileIndex needs to be locked before this function is called
-func shouldUpload(s *Sync, fileInformation *FileInformation, isInitial bool) bool {
+func shouldUpload(s *Sync, fileInformation *FileInformation) bool {
 	// Exclude if stat is nil
 	if fileInformation == nil {
 		return false
@@ -73,16 +73,9 @@ func shouldUpload(s *Sync, fileInformation *FileInformation, isInitial bool) boo
 			return false
 		}
 
-		if isInitial {
-			// File is older locally than remote so don't update remote
-			if fileInformation.Mtime <= s.fileIndex.fileMap[fileInformation.Name].Mtime {
-				return false
-			}
-		} else {
-			// File did not change or was changed by downstream
-			if fileInformation.Mtime == s.fileIndex.fileMap[fileInformation.Name].Mtime && fileInformation.Size == s.fileIndex.fileMap[fileInformation.Name].Size {
-				return false
-			}
+		// File did not change or was changed by downstream
+		if fileInformation.Mtime == s.fileIndex.fileMap[fileInformation.Name].Mtime && fileInformation.Size == s.fileIndex.fileMap[fileInformation.Name].Size {
+			return false
 		}
 	}
 
@@ -119,7 +112,7 @@ func shouldDownload(change *remote.Change, s *Sync) bool {
 // - The file name is present in the d.config.fileMap map
 // - The file did not change in terms of size and mtime in the d.config.fileMap since we started the collecting changes process
 // - The file is present on the filesystem and did not change in terms of size and mtime on the filesystem
-func shouldRemoveLocal(absFilepath string, fileInformation *FileInformation, s *Sync) bool {
+func shouldRemoveLocal(absFilepath string, fileInformation *FileInformation, s *Sync, force bool) bool {
 	if fileInformation == nil {
 		s.log.Infof("Skip %s because change is nil", absFilepath)
 		return false
@@ -137,6 +130,11 @@ func shouldRemoveLocal(absFilepath string, fileInformation *FileInformation, s *
 		}
 
 		return false
+	}
+
+	// Check if deletion is forced
+	if force {
+		return true
 	}
 
 	// We don't delete the file if we haven't tracked it

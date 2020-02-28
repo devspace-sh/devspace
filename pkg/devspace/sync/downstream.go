@@ -22,6 +22,8 @@ type downstream struct {
 	reader io.ReadCloser
 	writer io.WriteCloser
 	client remote.DownstreamClient
+
+	unarchiver *Unarchiver
 }
 
 const downloadFilesBufferSize = 64
@@ -48,11 +50,12 @@ func newDownstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*do
 	}
 
 	return &downstream{
-		interrupt: make(chan bool, 1),
-		sync:      sync,
-		reader:    reader,
-		writer:    writer,
-		client:    remote.NewDownstreamClient(conn),
+		interrupt:  make(chan bool, 1),
+		sync:       sync,
+		reader:     reader,
+		writer:     writer,
+		client:     remote.NewDownstreamClient(conn),
+		unarchiver: NewUnarchiver(sync, false, sync.log),
 	}, nil
 }
 
@@ -122,7 +125,7 @@ func (d *downstream) mainLoop() error {
 				return errors.Wrap(err, "collect changes")
 			}
 
-			err = d.applyChanges(changes)
+			err = d.applyChanges(changes, false)
 			if err != nil {
 				return errors.Wrap(err, "apply changes")
 			}
@@ -142,7 +145,7 @@ func (d *downstream) mainLoop() error {
 func (d *downstream) shouldKeep(change *remote.Change) bool {
 	// Is a delete change?
 	if change.ChangeType == remote.ChangeType_DELETE {
-		return shouldRemoveLocal(filepath.Join(d.sync.LocalPath, change.Path), parseFileInformation(change), d.sync)
+		return shouldRemoveLocal(filepath.Join(d.sync.LocalPath, change.Path), parseFileInformation(change), d.sync, false)
 	}
 
 	// Exclude symlinks
@@ -155,7 +158,7 @@ func (d *downstream) shouldKeep(change *remote.Change) bool {
 	return shouldDownload(change, d.sync)
 }
 
-func (d *downstream) applyChanges(changes []*remote.Change) error {
+func (d *downstream) applyChanges(changes []*remote.Change, force bool) error {
 	var (
 		download = make([]*remote.Change, 0, len(changes)/2)
 		remove   = make([]*remote.Change, 0, len(changes)/2)
@@ -176,12 +179,12 @@ func (d *downstream) applyChanges(changes []*remote.Change) error {
 	}
 
 	// Remove all files and folders that should be deleted first and we ignore errors
-	d.remove(remove)
+	d.remove(remove, force)
 
 	// Extract downloaded archive
 	if len(download) > 0 {
 		for i := 0; i < syncRetries; i++ {
-			err := d.initDownload(download)
+			err := d.initDownload(download, force)
 			if err == nil {
 				break
 			} else if i+1 >= syncRetries {
@@ -215,7 +218,7 @@ func (d *downstream) updateDownloadChanges(download []*remote.Change) []*remote.
 	return newChanges
 }
 
-func (d *downstream) initDownload(download []*remote.Change) error {
+func (d *downstream) initDownload(download []*remote.Change, force bool) error {
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		return errors.Wrap(err, "create pipe")
@@ -231,7 +234,7 @@ func (d *downstream) initDownload(download []*remote.Change) error {
 
 	// Untaring all downloaded files to the right location
 	// this can be a lengthy process when we downloaded a lot of files
-	err = untarAll(reader, d.sync.LocalPath, "", d.sync)
+	err = d.unarchiver.Untar(reader, d.sync.LocalPath)
 	if err != nil {
 		return errors.Wrap(err, "untar files")
 	}
@@ -316,7 +319,7 @@ func (d *downstream) downloadFiles(writer io.WriteCloser, changes []*remote.Chan
 	return nil
 }
 
-func (d *downstream) remove(remove []*remote.Change) {
+func (d *downstream) remove(remove []*remote.Change, force bool) {
 	d.sync.fileIndex.fileMapMutex.Lock()
 	defer d.sync.fileIndex.fileMapMutex.Unlock()
 
@@ -330,13 +333,13 @@ func (d *downstream) remove(remove []*remote.Change) {
 
 	for _, change := range remove {
 		absFilepath := filepath.Join(d.sync.LocalPath, change.Path)
-		if shouldRemoveLocal(absFilepath, parseFileInformation(change), d.sync) {
+		if shouldRemoveLocal(absFilepath, parseFileInformation(change), d.sync, force) {
 			if numRemoveFiles <= 3 || d.sync.Options.Verbose {
 				d.sync.log.Infof("Downstream - Remove %s", change.Path)
 			}
 
 			if change.IsDir {
-				d.deleteSafeRecursive(change.Path, remove)
+				d.deleteSafeRecursive(change.Path, remove, force)
 			} else {
 				err := os.Remove(absFilepath)
 				if err != nil {
@@ -351,7 +354,7 @@ func (d *downstream) remove(remove []*remote.Change) {
 	}
 }
 
-func (d *downstream) deleteSafeRecursive(relativePath string, deleteChanges []*remote.Change) {
+func (d *downstream) deleteSafeRecursive(relativePath string, deleteChanges []*remote.Change, force bool) {
 	absolutePath := filepath.Join(d.sync.LocalPath, relativePath)
 	relativePath = getRelativeFromFullPath(absolutePath, d.sync.LocalPath)
 
@@ -364,9 +367,11 @@ func (d *downstream) deleteSafeRecursive(relativePath string, deleteChanges []*r
 	}
 
 	// We don't delete the folder or the contents if we haven't tracked it
-	if d.sync.fileIndex.fileMap[relativePath] == nil || found == false {
-		d.sync.log.Infof("Downstream - Skip delete directory %s\n", relativePath)
-		return
+	if force == false {
+		if d.sync.fileIndex.fileMap[relativePath] == nil || found == false {
+			d.sync.log.Infof("Downstream - Skip delete directory %s\n", relativePath)
+			return
+		}
 	}
 
 	// Delete directory from fileMap
@@ -380,9 +385,9 @@ func (d *downstream) deleteSafeRecursive(relativePath string, deleteChanges []*r
 	for _, f := range files {
 		childRelativePath := filepath.ToSlash(filepath.Join(relativePath, f.Name()))
 		childAbsFilepath := filepath.Join(d.sync.LocalPath, childRelativePath)
-		if shouldRemoveLocal(childAbsFilepath, d.sync.fileIndex.fileMap[childRelativePath], d.sync) {
+		if shouldRemoveLocal(childAbsFilepath, d.sync.fileIndex.fileMap[childRelativePath], d.sync, force) {
 			if f.IsDir() {
-				d.deleteSafeRecursive(childRelativePath, deleteChanges)
+				d.deleteSafeRecursive(childRelativePath, deleteChanges, force)
 			} else {
 				err = os.Remove(childAbsFilepath)
 				if err != nil {

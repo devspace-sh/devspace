@@ -235,7 +235,7 @@ func (u *upstream) evaluateChange(relativePath, fullpath string) (*FileInformati
 			IsDirectory:    stat.IsDir(),
 			IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
 		}
-		if shouldUpload(u.sync, fileInfo, false) {
+		if shouldUpload(u.sync, fileInfo) {
 			// New Create Task
 			return fileInfo, nil
 		}
@@ -352,7 +352,7 @@ func (u *upstream) updateUploadChanges(files []*FileInformation) []*FileInformat
 
 	newChanges := make([]*FileInformation, 0, len(files))
 	for _, change := range files {
-		if shouldUpload(u.sync, change, false) {
+		if shouldUpload(u.sync, change) {
 			newChanges = append(newChanges, change)
 		}
 	}
@@ -426,18 +426,17 @@ func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ign
 	tarWriter := tar.NewWriter(gw)
 	defer tarWriter.Close()
 
-	writtenFiles := make(map[string]*FileInformation)
+	// Archive the given files
+	archiver := NewArchiver(u.sync.LocalPath, tarWriter, ignoreMatcher)
 	for _, file := range files {
-		if writtenFiles[file.Name] == nil {
-			err := RecursiveTar(u.sync.LocalPath, file.Name, writtenFiles, tarWriter, ignoreMatcher)
-			if err != nil {
-				return errors.Wrap(err, "recursive tar")
-			}
+		err := archiver.AddToArchive(file.Name)
+		if err != nil {
+			return errors.Wrap(err, "recursive tar")
 		}
 	}
 
 	// Update sync filemap
-	for _, element := range writtenFiles {
+	for _, element := range archiver.WrittenFiles() {
 		u.sync.fileIndex.CreateDirInFileMap(path.Dir(element.Name))
 		u.sync.fileIndex.fileMap[element.Name] = element
 	}

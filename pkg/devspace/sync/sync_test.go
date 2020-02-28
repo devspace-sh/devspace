@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/sync/server"
 	"github.com/pkg/errors"
@@ -64,15 +64,15 @@ func createTestSyncClient(testLocalPath string, testCases testCaseList) (*Sync, 
 }
 
 func TestInitialSync(t *testing.T) {
-	for _, downloadOnInitialSync := range []bool{true, false} {
-		t.Log("DownloadOnInitialSync: " + strconv.FormatBool(downloadOnInitialSync))
+	for _, initialSync := range []latest.InitialSyncStrategy{latest.InitialSyncStrategyPreferLocal, latest.InitialSyncStrategyMirrorLocal} {
+		t.Log("InitialSyncStrategy: " + initialSync)
 		remote, local, outside := initTestDirs(t)
 		defer os.RemoveAll(remote)
 		defer os.RemoveAll(local)
 		defer os.RemoveAll(outside)
 
 		filesToCheck, foldersToCheck := makeBasicTestCases()
-		if !downloadOnInitialSync {
+		if initialSync == latest.InitialSyncStrategyMirrorLocal {
 			filesToCheck = disableDownload(filesToCheck)
 			foldersToCheck = disableDownload(foldersToCheck)
 		}
@@ -83,7 +83,7 @@ func TestInitialSync(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer syncClient.Stop(nil)
-		syncClient.Options.DownloadOnInitialSync = downloadOnInitialSync
+		syncClient.Options.InitialSync = initialSync
 
 		// Set bandwidth limits
 		syncClient.Options.DownstreamLimit = 1024
@@ -272,8 +272,8 @@ func TestNormalSync(t *testing.T) {
 	// @Florian TODO: Test upstream symlinks
 }
 
-func getSyncOptions(testCases testCaseList) *Options {
-	options := &Options{
+func getSyncOptions(testCases testCaseList) Options {
+	options := Options{
 		ExcludePaths:         []string{},
 		DownloadExcludePaths: []string{},
 		UploadExcludePaths:   []string{},

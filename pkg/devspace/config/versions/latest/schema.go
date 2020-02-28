@@ -5,7 +5,7 @@ import (
 )
 
 // Version is the current api version
-const Version string = "v1beta6"
+const Version string = "v1beta7"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -44,7 +44,7 @@ type Config struct {
 // ImageConfig defines the image specification
 type ImageConfig struct {
 	Image            string       `yaml:"image"`
-	Tag              string       `yaml:"tag,omitempty"`
+	Tags             []string     `yaml:"tags,omitempty"`
 	Dockerfile       string       `yaml:"dockerfile,omitempty"`
 	Context          string       `yaml:"context,omitempty"`
 	Entrypoint       []string     `yaml:"entrypoint,omitempty"`
@@ -289,16 +289,16 @@ type OpenConfig struct {
 
 // SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
-	ImageName             string            `yaml:"imageName,omitempty"`
-	LabelSelector         map[string]string `yaml:"labelSelector,omitempty"`
-	ContainerName         string            `yaml:"containerName,omitempty"`
-	Namespace             string            `yaml:"namespace,omitempty"`
-	LocalSubPath          string            `yaml:"localSubPath,omitempty"`
-	ContainerPath         string            `yaml:"containerPath,omitempty"`
-	ExcludePaths          []string          `yaml:"excludePaths,omitempty"`
-	DownloadExcludePaths  []string          `yaml:"downloadExcludePaths,omitempty"`
-	UploadExcludePaths    []string          `yaml:"uploadExcludePaths,omitempty"`
-	DownloadOnInitialSync *bool             `yaml:"downloadOnInitialSync,omitempty"`
+	ImageName            string              `yaml:"imageName,omitempty"`
+	LabelSelector        map[string]string   `yaml:"labelSelector,omitempty"`
+	ContainerName        string              `yaml:"containerName,omitempty"`
+	Namespace            string              `yaml:"namespace,omitempty"`
+	LocalSubPath         string              `yaml:"localSubPath,omitempty"`
+	ContainerPath        string              `yaml:"containerPath,omitempty"`
+	ExcludePaths         []string            `yaml:"excludePaths,omitempty"`
+	DownloadExcludePaths []string            `yaml:"downloadExcludePaths,omitempty"`
+	UploadExcludePaths   []string            `yaml:"uploadExcludePaths,omitempty"`
+	InitialSync          InitialSyncStrategy `yaml:"initialSync,omitempty"`
 
 	DisableDownload *bool `yaml:"disableDownload,omitempty"`
 	DisableUpload   *bool `yaml:"disableUpload,omitempty"`
@@ -334,6 +334,19 @@ type SyncCommand struct {
 	Command string   `yaml:"command,omitempty"`
 	Args    []string `yaml:"args,omitempty"`
 }
+
+// InitialSyncStrategy is the type of a initial sync strategy
+type InitialSyncStrategy string
+
+// List of values that source can take
+const (
+	InitialSyncStrategyMirrorLocal  InitialSyncStrategy = "mirrorLocal"
+	InitialSyncStrategyMirrorRemote InitialSyncStrategy = "mirrorRemote"
+	InitialSyncStrategyPreferLocal  InitialSyncStrategy = "preferLocal"
+	InitialSyncStrategyPreferRemote InitialSyncStrategy = "preferRemote"
+	InitialSyncStrategyPreferNewest InitialSyncStrategy = "preferNewest"
+	InitialSyncStrategyKeepAll      InitialSyncStrategy = "keepAll"
+)
 
 // BandwidthLimits defines the struct for specifying the sync bandwidth limits
 type BandwidthLimits struct {

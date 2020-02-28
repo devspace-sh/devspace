@@ -6,6 +6,7 @@ import (
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
@@ -26,7 +27,10 @@ type SyncCmd struct {
 	Exclude       []string
 	ContainerPath string
 	LocalPath     string
-	Verbose       bool
+
+	InitialSync string
+
+	Verbose bool
 
 	NoWatch               bool
 	DownloadOnInitialSync bool
@@ -67,7 +71,10 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().StringSliceVarP(&cmd.Exclude, "exclude", "e", []string{}, "Exclude directory from sync")
 	syncCmd.Flags().StringVar(&cmd.LocalPath, "local-path", "", "Local path to use (Default is current directory")
 	syncCmd.Flags().StringVar(&cmd.ContainerPath, "container-path", "", "Container path to use (Default is working directory)")
-	syncCmd.Flags().BoolVar(&cmd.DownloadOnInitialSync, "download-on-initial-sync", true, "Downloads all locally non existing remote files in the beginning")
+
+	syncCmd.Flags().BoolVar(&cmd.DownloadOnInitialSync, "download-on-initial-sync", true, "DEPRACTED: Downloads all locally non existing remote files in the beginning")
+	syncCmd.Flags().StringVar(&cmd.InitialSync, "initial-sync", "", "The initial sync strategy to use (mirrorLocal, mirrorRemote, preferLocal, preferRemote, preferNewest, keepAll)")
+
 	syncCmd.Flags().BoolVar(&cmd.NoWatch, "no-watch", false, "Synchronizes local and remote and then stops")
 	syncCmd.Flags().BoolVar(&cmd.Verbose, "verbose", false, "Shows every file that is synced")
 
@@ -150,13 +157,25 @@ func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	}
 
 	syncConfig := &latest.SyncConfig{
-		LocalSubPath:          cmd.LocalPath,
-		ContainerPath:         cmd.ContainerPath,
-		DownloadOnInitialSync: &cmd.DownloadOnInitialSync,
-		DisableDownload:       &cmd.UploadOnly,
-		DisableUpload:         &cmd.DownloadOnly,
-		WaitInitialSync:       &cmd.NoWatch,
-		ExcludePaths:          cmd.Exclude,
+		LocalSubPath:    cmd.LocalPath,
+		ContainerPath:   cmd.ContainerPath,
+		DisableDownload: &cmd.UploadOnly,
+		DisableUpload:   &cmd.DownloadOnly,
+		WaitInitialSync: &cmd.NoWatch,
+		ExcludePaths:    cmd.Exclude,
+	}
+
+	if cmd.DownloadOnInitialSync {
+		syncConfig.InitialSync = latest.InitialSyncStrategyPreferLocal
+	} else {
+		syncConfig.InitialSync = latest.InitialSyncStrategyMirrorLocal
+	}
+	if cmd.InitialSync != "" {
+		if loader.ValidInitialSyncStrategy(latest.InitialSyncStrategy(cmd.InitialSync)) == false {
+			return errors.Errorf("--initial-sync is not valid '%s'", cmd.InitialSync)
+		}
+
+		syncConfig.InitialSync = latest.InitialSyncStrategy(cmd.InitialSync)
 	}
 
 	if cmd.GlobalFlags.ConfigPath != "" && config.Dev != nil && len(config.Dev.Sync) > 0 {
@@ -196,7 +215,7 @@ func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 			}
 		}
 
-		loadedSyncConfig.DownloadOnInitialSync = &cmd.DownloadOnInitialSync
+		loadedSyncConfig.InitialSync = syncConfig.InitialSync
 		loadedSyncConfig.WaitInitialSync = &cmd.NoWatch
 		if syncConfig.LocalSubPath != "" {
 			loadedSyncConfig.LocalSubPath = syncConfig.LocalSubPath

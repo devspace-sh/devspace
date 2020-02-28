@@ -12,6 +12,17 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
 )
 
+// ValidInitialSyncStrategy checks if strategy is valid
+func ValidInitialSyncStrategy(strategy latest.InitialSyncStrategy) bool {
+	return strategy == "" ||
+		strategy == latest.InitialSyncStrategyMirrorLocal ||
+		strategy == latest.InitialSyncStrategyMirrorRemote ||
+		strategy == latest.InitialSyncStrategyKeepAll ||
+		strategy == latest.InitialSyncStrategyPreferLocal ||
+		strategy == latest.InitialSyncStrategyPreferRemote ||
+		strategy == latest.InitialSyncStrategyPreferNewest
+}
+
 func validate(config *latest.Config) error {
 	if config.Dev != nil {
 		if config.Dev.Ports != nil {
@@ -25,13 +36,13 @@ func validate(config *latest.Config) error {
 			}
 		}
 
-		// if config.Dev.Sync != nil {
-		// 	for index, sync := range config.Dev.Sync {
-		// 		if sync.ImageName == "" && sync.LabelSelector == nil {
-		// 			return errors.Errorf("Error in config: imageName and label selector are nil in sync config at index %d", index)
-		// 		}
-		// 	}
-		// }
+		if config.Dev.Sync != nil {
+			for index, sync := range config.Dev.Sync {
+				if ValidInitialSyncStrategy(sync.InitialSync) == false {
+					return errors.Errorf("Error in config: sync.initialSync is not valid '%s' at index %d", sync.InitialSync, index)
+				}
+			}
+		}
 
 		if config.Dev.Interactive != nil {
 			for index, imageConf := range config.Dev.Interactive.Images {
