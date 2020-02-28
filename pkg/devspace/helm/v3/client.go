@@ -241,12 +241,12 @@ func isChartInstallable(ch *chart.Chart) (bool, error) {
 	return false, errors.Errorf("%s charts are not installable", ch.Metadata.Type)
 }
 
-func (client *v3Client) DeleteRelease(releaseName string, purge bool) error {
+func (client *v3Client) DeleteRelease(releaseName string, helmConfig *latest.HelmConfig) error {
 	_, err := action.NewUninstall(client.cfg).Run(releaseName)
 	return err
 }
 
-func (client *v3Client) ListReleases() ([]*types.Release, error) {
+func (client *v3Client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, error) {
 	list, err := action.NewList(client.cfg).Run()
 	if err != nil {
 		return nil, err

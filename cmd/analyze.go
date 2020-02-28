@@ -13,7 +13,9 @@ import (
 type AnalyzeCmd struct {
 	*flags.GlobalFlags
 
-	Wait bool
+	Wait    bool
+	Patient bool
+	Timeout int
 }
 
 // NewAnalyzeCmd creates a new analyze command
@@ -42,6 +44,8 @@ devspace analyze --namespace=mynamespace
 	}
 
 	analyzeCmd.Flags().BoolVar(&cmd.Wait, "wait", true, "Wait for pods to get ready if they are just starting")
+	analyzeCmd.Flags().IntVar(&cmd.Timeout, "timeout", 120, "Timeout until analyze should stop waiting")
+	analyzeCmd.Flags().BoolVar(&cmd.Patient, "patient", false, "If true, analyze will ignore failing pods and events until every deployment, statefulset, replicaset and pods are ready or the timeout is reached")
 
 	return analyzeCmd
 }
@@ -95,7 +99,11 @@ func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, cobraCmd *cobra.Command, ar
 		namespace = cmd.Namespace
 	}
 
-	err = analyze.NewAnalyzer(client, log).Analyze(namespace, !cmd.Wait)
+	err = analyze.NewAnalyzer(client, log).Analyze(namespace, analyze.Options{
+		Wait:    cmd.Wait,
+		Timeout: cmd.Timeout,
+		Patient: cmd.Patient,
+	})
 	if err != nil {
 		return errors.Wrap(err, "analyze")
 	}

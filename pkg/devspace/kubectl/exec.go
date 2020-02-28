@@ -6,13 +6,13 @@ import (
 	"net/http"
 
 	"github.com/devspace-cloud/devspace/pkg/util/terminal"
+	corev1 "k8s.io/api/core/v1"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/transport/spdy"
 	kubectlExec "k8s.io/client-go/util/exec"
+	"k8s.io/kubectl/pkg/scheme"
 	"k8s.io/kubectl/pkg/util/term"
-	"k8s.io/kubernetes/pkg/api/legacyscheme"
-	k8sapi "k8s.io/kubernetes/pkg/apis/core"
 )
 
 // SubResource specifies with sub resources should be used for the container connection (exec or attach)
@@ -64,22 +64,22 @@ func (client *client) ExecStreamWithTransport(transport http.RoundTripper, upgra
 	}
 
 	if subResource == SubResourceExec {
-		execRequest.VersionedParams(&k8sapi.PodExecOptions{
+		execRequest.VersionedParams(&corev1.PodExecOptions{
 			Container: container,
 			Command:   command,
 			Stdin:     stdin != nil,
 			Stdout:    stdout != nil,
 			Stderr:    stderr != nil,
 			TTY:       tty,
-		}, legacyscheme.ParameterCodec)
+		}, scheme.ParameterCodec)
 	} else if subResource == SubResourceAttach {
-		execRequest.VersionedParams(&k8sapi.PodAttachOptions{
+		execRequest.VersionedParams(&corev1.PodExecOptions{
 			Container: container,
 			Stdin:     stdin != nil,
 			Stdout:    stdout != nil,
 			Stderr:    stderr != nil,
 			TTY:       tty,
-		}, legacyscheme.ParameterCodec)
+		}, scheme.ParameterCodec)
 	}
 
 	exec, err := remotecommand.NewSPDYExecutorForTransports(transport, upgrader, "POST", execRequest.URL())

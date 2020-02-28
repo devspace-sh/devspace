@@ -37,7 +37,7 @@ func TestAnalyze(t *testing.T) {
 		}
 		analyzer := NewAnalyzer(kubeClient, log.Discard)
 
-		err := analyzer.Analyze(testCase.namespace, testCase.noWait)
+		err := analyzer.Analyze(testCase.namespace, Options{Wait: testCase.noWait})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -57,7 +57,7 @@ type createReportTestCase struct {
 	kubeEvents       map[string][]k8sv1.Event
 
 	namespace string
-	noWait    bool
+	wait      bool
 
 	expectedErr    string
 	expectedReport []*ReportItem
@@ -69,6 +69,7 @@ func TestCreateReport(t *testing.T) {
 	testCases := []createReportTestCase{
 		createReportTestCase{
 			name:           "Nothing to report",
+			wait:           true,
 			kubeNamespaces: []string{"ns1"},
 			kubeReplicasets: map[string][]appsv1.ReplicaSet{
 				"ns1": []appsv1.ReplicaSet{
@@ -80,6 +81,7 @@ func TestCreateReport(t *testing.T) {
 		},
 		createReportTestCase{
 			name:           "Error in pods",
+			wait:           true,
 			kubeNamespaces: []string{"ns1"},
 			kubePods: map[string][]k8sv1.Pod{
 				"ns1": []k8sv1.Pod{
@@ -109,6 +111,7 @@ func TestCreateReport(t *testing.T) {
 		},
 		createReportTestCase{
 			name:           "Error in replicasets",
+			wait:           true,
 			kubeNamespaces: []string{"ns1"},
 			kubeReplicasets: map[string][]appsv1.ReplicaSet{
 				"ns1": []appsv1.ReplicaSet{
@@ -125,6 +128,7 @@ func TestCreateReport(t *testing.T) {
 		},
 		createReportTestCase{
 			name:           "Error in statefulsets",
+			wait:           true,
 			kubeNamespaces: []string{"ns1"},
 			kubeStatefulsets: map[string][]appsv1.StatefulSet{
 				"ns1": []appsv1.StatefulSet{
@@ -176,7 +180,7 @@ func TestCreateReport(t *testing.T) {
 
 		analyzer := NewAnalyzer(kubeClient, log.Discard)
 
-		report, err := analyzer.CreateReport(testCase.namespace, testCase.noWait)
+		report, err := analyzer.CreateReport(testCase.namespace, Options{Wait: testCase.wait})
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)

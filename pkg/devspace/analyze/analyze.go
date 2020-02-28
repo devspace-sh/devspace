@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -28,8 +29,15 @@ var paddingLeft = newString(" ", PaddingLeft)
 
 // Analyzer is the interface for analyzing
 type Analyzer interface {
-	Analyze(namespace string, noWait bool) error
-	CreateReport(namespace string, noWait bool) ([]*ReportItem, error)
+	Analyze(namespace string, options Options) error
+	CreateReport(namespace string, options Options) ([]*ReportItem, error)
+}
+
+// Options is the options to pass to the analyzer
+type Options struct {
+	Wait    bool
+	Timeout int
+	Patient bool
 }
 
 type analyzer struct {
@@ -46,8 +54,8 @@ func NewAnalyzer(client kubectl.Client, log log.Logger) Analyzer {
 }
 
 // Analyze analyses a given
-func (a *analyzer) Analyze(namespace string, noWait bool) error {
-	report, err := a.CreateReport(namespace, noWait)
+func (a *analyzer) Analyze(namespace string, options Options) error {
+	report, err := a.CreateReport(namespace, options)
 	if err != nil {
 		return err
 	}
@@ -59,59 +67,78 @@ func (a *analyzer) Analyze(namespace string, noWait bool) error {
 }
 
 // CreateReport creates a new report about a certain namespace
-func (a *analyzer) CreateReport(namespace string, noWait bool) ([]*ReportItem, error) {
+func (a *analyzer) CreateReport(namespace string, options Options) ([]*ReportItem, error) {
+	a.log.StartWait("Checking status")
+	defer a.log.StopWait()
+
 	report := []*ReportItem{}
-
-	// Analyze pods
-	problems, err := a.pods(namespace, noWait)
-	if err != nil {
-		return nil, errors.Errorf("Error during analyzing pods: %v", err)
-	}
-	if len(problems) > 0 {
-		report = append(report, &ReportItem{
-			Name:     "Pods",
-			Problems: problems,
-		})
+	now := time.Now()
+	timeout := WaitTimeout
+	if options.Timeout > 0 {
+		timeout = time.Duration(options.Timeout) * time.Second
 	}
 
-	// We only check events if we suspect a problem
-	checkEvents := len(report) > 0
+	// Loop as long as we have a timeout
+	for time.Since(now) < timeout {
+		report = []*ReportItem{}
 
-	// Analyze replicasets
-	if checkEvents == false {
-		replicaSetProblems, err := a.replicaSets(namespace)
+		// Analyze pods
+		problems, err := a.pods(namespace, options)
 		if err != nil {
-			return nil, errors.Errorf("Error during analyzing replica sets: %v", err)
-		}
-		if len(replicaSetProblems) > 0 {
-			checkEvents = true
-		}
-	}
-
-	// Analyze statefulsets
-	if checkEvents == false {
-		statefulSetProblems, err := a.statefulSets(namespace)
-		if err != nil {
-			return nil, errors.Errorf("Error during analyzing stateful sets: %v", err)
-		}
-		if len(statefulSetProblems) > 0 {
-			checkEvents = true
-		}
-	}
-
-	if checkEvents {
-		// Analyze events
-		problems, err = a.events(namespace)
-		if err != nil {
-			return nil, errors.Errorf("Error during analyzing events: %v", err)
+			return nil, errors.Errorf("Error during analyzing pods: %v", err)
 		}
 		if len(problems) > 0 {
-			// Prepend to report
-			report = append([]*ReportItem{&ReportItem{
-				Name:     "Events",
+			report = append(report, &ReportItem{
+				Name:     "Pods",
 				Problems: problems,
-			}}, report...)
+			})
 		}
+
+		// We only check events if we suspect a problem
+		checkEvents := len(report) > 0
+
+		// Analyze replicasets
+		if checkEvents == false {
+			replicaSetProblems, err := a.replicaSets(namespace)
+			if err != nil {
+				return nil, errors.Errorf("Error during analyzing replica sets: %v", err)
+			}
+			if len(replicaSetProblems) > 0 {
+				checkEvents = true
+			}
+		}
+
+		// Analyze statefulsets
+		if checkEvents == false {
+			statefulSetProblems, err := a.statefulSets(namespace)
+			if err != nil {
+				return nil, errors.Errorf("Error during analyzing stateful sets: %v", err)
+			}
+			if len(statefulSetProblems) > 0 {
+				checkEvents = true
+			}
+		}
+
+		if checkEvents {
+			// Analyze events
+			problems, err = a.events(namespace)
+			if err != nil {
+				return nil, errors.Errorf("Error during analyzing events: %v", err)
+			}
+			if len(problems) > 0 {
+				// Prepend to report
+				report = append([]*ReportItem{&ReportItem{
+					Name:     "Events",
+					Problems: problems,
+				}}, report...)
+			}
+		}
+
+		if len(report) == 0 || options.Wait == false || options.Patient == false {
+			break
+		}
+
+		time.Sleep(time.Second)
 	}
 
 	return report, nil

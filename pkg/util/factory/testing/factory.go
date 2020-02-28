@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
@@ -18,12 +19,17 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
+// Make sure the test interface implements the interface
+var _ factory.Factory = &Factory{}
+
 // Factory implements the Factory interface
 type Factory struct {
+	Analyzer          analyze.Analyzer
 	CloudConfigLoader config.Loader
 	BuildController   build.Controller
 	DeployController  deploy.Controller
@@ -40,6 +46,11 @@ type Factory struct {
 	ServicesClient    services.Client
 	Provider          cloud.Provider
 	Resumer           resume.SpaceResumer
+}
+
+// NewAnalyzer creates a new analyzer
+func (f *Factory) NewAnalyzer(client kubectl.Client, log log.Logger) analyze.Analyzer {
+	return f.Analyzer
 }
 
 // NewCloudConfigLoader creates a new cloud config loader

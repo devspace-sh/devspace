@@ -7,10 +7,8 @@ import (
 	"strconv"
 
 	"github.com/docker/cli/cli/context/docker"
-	"github.com/docker/cli/cli/context/kubernetes"
 	"github.com/docker/cli/cli/context/store"
 	"github.com/docker/cli/cli/streams"
-	clitypes "github.com/docker/cli/types"
 	"github.com/docker/docker/pkg/term"
 )
 
@@ -84,20 +82,12 @@ func WithContentTrust(enabled bool) DockerCliOption {
 	}
 }
 
-// WithContainerizedClient sets the containerized client constructor on a cli.
-func WithContainerizedClient(containerizedFn func(string) (clitypes.ContainerizedClient, error)) DockerCliOption {
-	return func(cli *DockerCli) error {
-		cli.newContainerizeClient = containerizedFn
-		return nil
-	}
-}
-
 // WithContextEndpointType add support for an additional typed endpoint in the context store
 // Plugins should use this to store additional endpoints configuration in the context store
 func WithContextEndpointType(endpointName string, endpointType store.TypeGetter) DockerCliOption {
 	return func(cli *DockerCli) error {
 		switch endpointName {
-		case docker.DockerEndpoint, kubernetes.KubernetesEndpoint:
+		case docker.DockerEndpoint:
 			return fmt.Errorf("cannot change %q endpoint type", endpointName)
 		}
 		cli.contextStoreConfig.SetEndpoint(endpointName, endpointType)

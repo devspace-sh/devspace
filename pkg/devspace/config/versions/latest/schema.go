@@ -234,6 +234,7 @@ type HelmConfig struct {
 	Recreate         bool                        `yaml:"recreate,omitempty"`
 	DisableHooks     bool                        `yaml:"disableHooks,omitempty"`
 	Driver           string                      `yaml:"driver,omitempty"`
+	Path             string                      `yaml:"path,omitempty"`
 	V2               bool                        `yaml:"v2,omitempty"`
 	TillerNamespace  string                      `yaml:"tillerNamespace,omitempty"`
 }
@@ -444,6 +445,7 @@ const (
 	VariableSourceAll   VariableSource = "all"
 	VariableSourceEnv   VariableSource = "env"
 	VariableSourceInput VariableSource = "input"
+	VariableSourceNone  VariableSource = "none"
 )
 
 // ProfileConfig defines a profile config

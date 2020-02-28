@@ -17,9 +17,6 @@ const EventRelevanceTime = 1800 * time.Second
 func (a *analyzer) events(namespace string) ([]string, error) {
 	problems := []string{}
 
-	a.log.StartWait("Analyzing events")
-	defer a.log.StopWait()
-
 	// Get all events
 	events, err := a.client.KubeClient().CoreV1().Events(namespace).List(metav1.ListOptions{})
 	if err != nil {

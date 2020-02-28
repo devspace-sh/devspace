@@ -47,6 +47,8 @@ func TestGetAllAuthConfigs(t *testing.T) {
 			},
 			expectedAuthConfigs: map[string]types.AuthConfig{
 				"key": types.AuthConfig{
+					Username:      "ValUser",
+					Password:      "ValPass",
 					Email:         "ValEmail",
 					ServerAddress: "key",
 					IdentityToken: "ValIdentityToken",

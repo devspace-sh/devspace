@@ -401,7 +401,7 @@ func constraintLessThanEqual(v *Version, c *constraint) bool {
 
 	if v.Major() > c.con.Major() {
 		return false
-	} else if v.Minor() > c.con.Minor() && !c.minorDirty {
+	} else if v.Major() == c.con.Major() && v.Minor() > c.con.Minor() && !c.minorDirty {
 		return false
 	}
 
@@ -493,6 +493,9 @@ func constraintCaret(v *Version, c *constraint) bool {
 	}
 
 	// ^ when the major is 0 and minor > 0 is >=0.y.z < 0.y+1
+	if c.con.Major() == 0 && v.Major() > 0 {
+		return false
+	}
 	// If the con Minor is > 0 it is not dirty
 	if c.con.Minor() > 0 || c.patchDirty {
 		return v.Minor() == c.con.Minor()

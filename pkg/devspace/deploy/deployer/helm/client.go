@@ -6,7 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 	helmtypes "github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
-	helmv2 "github.com/devspace-cloud/devspace/pkg/devspace/helm/v2"
+	helmv2 "github.com/devspace-cloud/devspace/pkg/devspace/helm/v2cli"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -77,7 +77,7 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 		}
 	}
 
-	err := d.Helm.DeleteRelease(d.DeploymentConfig.Name, true)
+	err := d.Helm.DeleteRelease(d.DeploymentConfig.Name, d.DeploymentConfig.Helm)
 	if err != nil {
 		return err
 	}

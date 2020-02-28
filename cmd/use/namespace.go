@@ -47,12 +47,12 @@ func (cmd *namespaceCmd) RunUseNamespace(f factory.Factory, cobraCmd *cobra.Comm
 	// Get default context
 	log := f.GetLog()
 	client, err := f.NewKubeDefaultClient()
-	kubeLoader := client.KubeConfigLoader()
 	if err != nil {
 		return err
 	}
 
 	// Check if current kube context belongs to a space
+	kubeLoader := client.KubeConfigLoader()
 	isSpace, err := kubeLoader.IsCloudSpace(client.CurrentContext())
 	if err != nil {
 		return errors.Errorf("Unable to check if context belongs to Space: %v", err)

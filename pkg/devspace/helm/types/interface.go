@@ -10,8 +10,8 @@ import (
 type Client interface {
 	InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*Release, error)
 	Template(releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error)
-	DeleteRelease(releaseName string, purge bool) error
-	ListReleases() ([]*Release, error)
+	DeleteRelease(releaseName string, helmConfig *latest.HelmConfig) error
+	ListReleases(helmConfig *latest.HelmConfig) ([]*Release, error)
 }
 
 // Release is the helm release struct

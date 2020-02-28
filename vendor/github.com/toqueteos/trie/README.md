@@ -1,8 +1,7 @@
 # Trie
 
-This is a Go package implementing a trie (prefix tree) over byte slices.
+[![GoDoc](http://godoc.org/github.com/toqueteos/trie?status.png)](http://godoc.org/github.com/toqueteos/trie)
 
-This is a temporary naive implementation that will be replaced with a double-array trie (see
-https://github.com/cespare/go-trie). The API will hopefully remain unchanged.
+This is a fork of https://github.com/cespare/go-trie that adds the `PrefixIndex` method.
 
-Package documentation may be found on [godoc.org](http://godoc.org/github.com/cespare/trie).
+It's required for https://github.com/toqueteos/substring.

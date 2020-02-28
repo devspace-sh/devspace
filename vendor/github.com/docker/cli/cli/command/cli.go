@@ -14,7 +14,6 @@ import (
 	"github.com/docker/cli/cli/config/configfile"
 	dcontext "github.com/docker/cli/cli/context"
 	"github.com/docker/cli/cli/context/docker"
-	kubcontext "github.com/docker/cli/cli/context/kubernetes"
 	"github.com/docker/cli/cli/context/store"
 	"github.com/docker/cli/cli/debug"
 	cliflags "github.com/docker/cli/cli/flags"
@@ -23,9 +22,8 @@ import (
 	"github.com/docker/cli/cli/streams"
 	"github.com/docker/cli/cli/trust"
 	"github.com/docker/cli/cli/version"
-	"github.com/docker/cli/internal/containerizedengine"
 	dopts "github.com/docker/cli/opts"
-	clitypes "github.com/docker/cli/types"
+	"github.com/docker/docker/api"
 	"github.com/docker/docker/api/types"
 	registrytypes "github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/client"
@@ -61,7 +59,6 @@ type Cli interface {
 	ManifestStore() manifeststore.Store
 	RegistryClient(bool) registryclient.RegistryClient
 	ContentTrustEnabled() bool
-	NewContainerizedEngineClient(sockPath string) (clitypes.ContainerizedClient, error)
 	ContextStore() store.Store
 	CurrentContext() string
 	StackOrchestrator(flagValue string) (Orchestrator, error)
@@ -71,24 +68,23 @@ type Cli interface {
 // DockerCli is an instance the docker command line client.
 // Instances of the client can be returned from NewDockerCli.
 type DockerCli struct {
-	configFile            *configfile.ConfigFile
-	in                    *streams.In
-	out                   *streams.Out
-	err                   io.Writer
-	client                client.APIClient
-	serverInfo            ServerInfo
-	clientInfo            ClientInfo
-	contentTrust          bool
-	newContainerizeClient func(string) (clitypes.ContainerizedClient, error)
-	contextStore          store.Store
-	currentContext        string
-	dockerEndpoint        docker.Endpoint
-	contextStoreConfig    store.Config
+	configFile         *configfile.ConfigFile
+	in                 *streams.In
+	out                *streams.Out
+	err                io.Writer
+	client             client.APIClient
+	serverInfo         ServerInfo
+	clientInfo         *ClientInfo
+	contentTrust       bool
+	contextStore       store.Store
+	currentContext     string
+	dockerEndpoint     docker.Endpoint
+	contextStoreConfig store.Config
 }
 
 // DefaultVersion returns api.defaultVersion or DOCKER_API_VERSION if specified.
 func (cli *DockerCli) DefaultVersion() string {
-	return cli.clientInfo.DefaultVersion
+	return cli.ClientInfo().DefaultVersion
 }
 
 // Client returns the APIClient
@@ -127,7 +123,14 @@ func ShowHelp(err io.Writer) func(*cobra.Command, []string) error {
 
 // ConfigFile returns the ConfigFile
 func (cli *DockerCli) ConfigFile() *configfile.ConfigFile {
+	if cli.configFile == nil {
+		cli.loadConfigFile()
+	}
 	return cli.configFile
+}
+
+func (cli *DockerCli) loadConfigFile() {
+	cli.configFile = cliconfig.LoadDefaultConfigFile(cli.err)
 }
 
 // ServerInfo returns the server version details for the host this client is
@@ -138,7 +141,34 @@ func (cli *DockerCli) ServerInfo() ServerInfo {
 
 // ClientInfo returns the client details for the cli
 func (cli *DockerCli) ClientInfo() ClientInfo {
-	return cli.clientInfo
+	if cli.clientInfo == nil {
+		_ = cli.loadClientInfo()
+	}
+	return *cli.clientInfo
+}
+
+func (cli *DockerCli) loadClientInfo() error {
+	var experimentalValue string
+	// Environment variable always overrides configuration
+	if experimentalValue = os.Getenv("DOCKER_CLI_EXPERIMENTAL"); experimentalValue == "" {
+		experimentalValue = cli.ConfigFile().Experimental
+	}
+	hasExperimental, err := isEnabled(experimentalValue)
+	if err != nil {
+		return errors.Wrap(err, "Experimental field")
+	}
+
+	var v string
+	if cli.client != nil {
+		v = cli.client.ClientVersion()
+	} else {
+		v = api.DefaultVersion
+	}
+	cli.clientInfo = &ClientInfo{
+		DefaultVersion:  v,
+		HasExperimental: hasExperimental,
+	}
+	return nil
 }
 
 // ContentTrustEnabled returns whether content trust has been enabled by an
@@ -208,13 +238,13 @@ func (cli *DockerCli) Initialize(opts *cliflags.ClientOptions, ops ...Initialize
 		debug.Enable()
 	}
 
-	cli.configFile = cliconfig.LoadDefaultConfigFile(cli.err)
+	cli.loadConfigFile()
 
-	baseContextSore := store.New(cliconfig.ContextStoreDir(), cli.contextStoreConfig)
+	baseContextStore := store.New(cliconfig.ContextStoreDir(), cli.contextStoreConfig)
 	cli.contextStore = &ContextStoreWithDefault{
-		Store: baseContextSore,
+		Store: baseContextStore,
 		Resolver: func() (*DefaultContext, error) {
-			return resolveDefaultContext(opts.Common, cli.ConfigFile(), cli.Err())
+			return ResolveDefaultContext(opts.Common, cli.ConfigFile(), cli.contextStoreConfig, cli.Err())
 		},
 	}
 	cli.currentContext, err = resolveContextName(opts.Common, cli.configFile, cli.contextStore)
@@ -240,18 +270,9 @@ func (cli *DockerCli) Initialize(opts *cliflags.ClientOptions, ops ...Initialize
 			return err
 		}
 	}
-	var experimentalValue string
-	// Environment variable always overrides configuration
-	if experimentalValue = os.Getenv("DOCKER_CLI_EXPERIMENTAL"); experimentalValue == "" {
-		experimentalValue = cli.configFile.Experimental
-	}
-	hasExperimental, err := isEnabled(experimentalValue)
+	err = cli.loadClientInfo()
 	if err != nil {
-		return errors.Wrap(err, "Experimental field")
-	}
-	cli.clientInfo = ClientInfo{
-		DefaultVersion:  cli.client.ClientVersion(),
-		HasExperimental: hasExperimental,
+		return err
 	}
 	cli.initializeFromClient()
 	return nil
@@ -259,10 +280,11 @@ func (cli *DockerCli) Initialize(opts *cliflags.ClientOptions, ops ...Initialize
 
 // NewAPIClientFromFlags creates a new APIClient from command line flags
 func NewAPIClientFromFlags(opts *cliflags.CommonOptions, configFile *configfile.ConfigFile) (client.APIClient, error) {
+	storeConfig := DefaultContextStoreConfig()
 	store := &ContextStoreWithDefault{
-		Store: store.New(cliconfig.ContextStoreDir(), defaultContextStoreConfig()),
+		Store: store.New(cliconfig.ContextStoreDir(), storeConfig),
 		Resolver: func() (*DefaultContext, error) {
-			return resolveDefaultContext(opts, configFile, ioutil.Discard)
+			return ResolveDefaultContext(opts, configFile, storeConfig, ioutil.Discard)
 		},
 	}
 	contextName, err := resolveContextName(opts, configFile, store)
@@ -381,11 +403,6 @@ func (cli *DockerCli) NotaryClient(imgRefAndAuth trust.ImageRefAndAuth, actions 
 	return trust.GetNotaryRepository(cli.In(), cli.Out(), UserAgent(), imgRefAndAuth.RepoInfo(), imgRefAndAuth.AuthConfig(), actions...)
 }
 
-// NewContainerizedEngineClient returns a containerized engine client
-func (cli *DockerCli) NewContainerizedEngineClient(sockPath string) (clitypes.ContainerizedClient, error) {
-	return cli.newContainerizeClient(sockPath)
-}
-
 // ContextStore returns the ContextStore
 func (cli *DockerCli) ContextStore() store.Store {
 	return cli.contextStore
@@ -445,15 +462,14 @@ type ClientInfo struct {
 }
 
 // NewDockerCli returns a DockerCli instance with all operators applied on it.
-// It applies by default the standard streams, the content trust from
-// environment and the default containerized client constructor operations.
+// It applies by default the standard streams, and the content trust from
+// environment.
 func NewDockerCli(ops ...DockerCliOption) (*DockerCli, error) {
 	cli := &DockerCli{}
 	defaultOps := []DockerCliOption{
 		WithContentTrustFromEnv(),
-		WithContainerizedClient(containerizedengine.NewClient),
 	}
-	cli.contextStoreConfig = defaultContextStoreConfig()
+	cli.contextStoreConfig = DefaultContextStoreConfig()
 	ops = append(defaultOps, ops...)
 	if err := cli.Apply(ops...); err != nil {
 		return nil, err
@@ -526,10 +542,22 @@ func resolveContextName(opts *cliflags.CommonOptions, config *configfile.ConfigF
 	return DefaultContextName, nil
 }
 
-func defaultContextStoreConfig() store.Config {
+var defaultStoreEndpoints = []store.NamedTypeGetter{
+	store.EndpointTypeGetter(docker.DockerEndpoint, func() interface{} { return &docker.EndpointMeta{} }),
+}
+
+// RegisterDefaultStoreEndpoints registers a new named endpoint
+// metadata type with the default context store config, so that
+// endpoint will be supported by stores using the config returned by
+// DefaultContextStoreConfig.
+func RegisterDefaultStoreEndpoints(ep ...store.NamedTypeGetter) {
+	defaultStoreEndpoints = append(defaultStoreEndpoints, ep...)
+}
+
+// DefaultContextStoreConfig returns a new store.Config with the default set of endpoints configured.
+func DefaultContextStoreConfig() store.Config {
 	return store.NewConfig(
 		func() interface{} { return &DockerContext{} },
-		store.EndpointTypeGetter(docker.DockerEndpoint, func() interface{} { return &docker.EndpointMeta{} }),
-		store.EndpointTypeGetter(kubcontext.KubernetesEndpoint, func() interface{} { return &kubcontext.EndpointMeta{} }),
+		defaultStoreEndpoints...,
 	)
 }

@@ -123,9 +123,11 @@ func (configFile *ConfigFile) LoadFromReader(configData io.Reader) error {
 	}
 	var err error
 	for addr, ac := range configFile.AuthConfigs {
-		ac.Username, ac.Password, err = decodeAuth(ac.Auth)
-		if err != nil {
-			return err
+		if ac.Auth != "" {
+			ac.Username, ac.Password, err = decodeAuth(ac.Auth)
+			if err != nil {
+				return err
+			}
 		}
 		ac.Auth = ""
 		ac.ServerAddress = addr
@@ -194,6 +196,9 @@ func (configFile *ConfigFile) Save() error {
 		os.Remove(temp.Name())
 		return err
 	}
+	// Try copying the current config file (if any) ownership and permissions
+	copyFilePermissions(configFile.Filename, temp.Name())
+
 	return os.Rename(temp.Name(), configFile.Filename)
 }
 

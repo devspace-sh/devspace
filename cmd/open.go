@@ -321,7 +321,7 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 
 		if kubectlClient != nil && analyzeNamespace != "" {
 			// Analyze space for issues
-			report, err := analyze.NewAnalyzer(kubectlClient, log).CreateReport(analyzeNamespace, false)
+			report, err := analyze.NewAnalyzer(kubectlClient, log).CreateReport(analyzeNamespace, analyze.Options{Wait: true})
 			if err != nil {
 				return errors.Errorf("Error analyzing space: %v", err)
 			}

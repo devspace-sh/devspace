@@ -20,21 +20,21 @@ const WaitTimeout = 120 * time.Second
 const IgnoreRestartsSince = time.Hour * 2
 
 // Pods analyzes the pods for problems
-func (a *analyzer) pods(namespace string, noWait bool) ([]string, error) {
-	problems := []string{}
-
-	a.log.StartWait("Analyzing pods")
-	defer a.log.StopWait()
-
-	// Get current time
-	now := time.Now()
-
-	var pods *v1.PodList
-	var err error
+func (a *analyzer) pods(namespace string, options Options) ([]string, error) {
+	var (
+		now      = time.Now()
+		timeout  = WaitTimeout
+		pods     *v1.PodList
+		problems = []string{}
+		err      error
+	)
+	if options.Timeout > 0 {
+		timeout = time.Duration(options.Timeout) * time.Second
+	}
 
 	// Waiting for pods to become active
-	if noWait == false {
-		for loop := true; loop && time.Since(now) < WaitTimeout; {
+	if options.Wait == true {
+		for loop := true; loop && time.Since(now) < timeout; {
 			loop = false
 
 			// Get all pods
@@ -49,20 +49,17 @@ func (a *analyzer) pods(namespace string, noWait bool) ([]string, error) {
 					for _, status := range kubectl.WaitStatus {
 						if podStatus == status {
 							loop = true
-							a.log.StartWait("Waiting for pod " + pod.Name + " with status " + podStatus)
 							break
 						}
 					}
 
 					if strings.HasPrefix(podStatus, "Init:") {
 						loop = true
-						a.log.StartWait("Waiting for pod " + pod.Name + " with status " + podStatus)
 						break
 					}
 
 					if podStatus == "Running" && time.Since(pod.Status.StartTime.UTC()) < MinimumPodAge {
 						loop = true
-						a.log.StartWait("Waiting for pod " + pod.Name + " startup")
 						break
 					}
 

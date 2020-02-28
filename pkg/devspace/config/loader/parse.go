@@ -223,18 +223,31 @@ func (l *configLoader) askQuestions(vars []*latest.Variable, cmdVars map[string]
 
 		isInEnv := os.Getenv(name) != ""
 		// Check if variable is defined to be env var (source: env) but not defined
-		if variable.Source != nil && *variable.Source == latest.VariableSourceEnv && isInEnv == false {
-			// Use default value for env variable if it is configured
-			if variable.Default != "" {
-				err := os.Setenv(name, variable.Default)
-				if err != nil {
-					return err
+		if variable.Source != nil {
+			// Environment variable
+			if *variable.Source == latest.VariableSourceEnv && isInEnv == false {
+				// Use default value for env variable if it is configured
+				if variable.Default != "" {
+					err := os.Setenv(name, variable.Default)
+					if err != nil {
+						return err
+					}
+
+					continue
 				}
 
-				continue
+				return errors.Errorf("Couldn't find environment variable %s, but is needed for loading the config", name)
 			}
 
-			return errors.Errorf("Couldn't find environment variable %s, but is needed for loading the config", name)
+			// Source none variable
+			if *variable.Source == latest.VariableSourceNone {
+				if variable.Default != "" {
+					cmdVars[name] = variable.Default
+					continue
+				}
+
+				return errors.Errorf("Couldn't set variable '%s', because source is '%s' but the default value is empty", name, latest.VariableSourceNone)
+			}
 		}
 
 		// Check if variable is in environment
