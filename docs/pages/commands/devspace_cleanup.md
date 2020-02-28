@@ -14,13 +14,16 @@ Cleans up resources
 ################## devspace cleanup ###################
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for cleanup
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -34,5 +37,3 @@ Cleans up resources
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-* [devspace cleanup images](devspace_cleanup_images.md)	 - Deletes all locally created images from docker

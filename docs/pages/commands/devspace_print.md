@@ -21,14 +21,17 @@ Prints the configuration for the current or given
 profile after all patching and variable substitution
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help        help for print
       --skip-info   When enabled, only prints the configuration without additional information
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -41,3 +44,4 @@ profile after all patching and variable substitution
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+

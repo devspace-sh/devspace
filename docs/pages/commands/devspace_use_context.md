@@ -23,13 +23,16 @@ Example:
 devspace use context my-context
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for context
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -43,6 +46,3 @@ devspace use context my-context
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace use](devspace_use.md)	 - Use specific config

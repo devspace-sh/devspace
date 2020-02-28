@@ -14,13 +14,16 @@ Lists configuration
 #################### devspace list ####################
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for list
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -34,16 +37,3 @@ Lists configuration
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-* [devspace list available-components](devspace_list_available-components.md)	 - Lists all available components
-* [devspace list clusters](devspace_list_clusters.md)	 - Lists all connected clusters
-* [devspace list commands](devspace_list_commands.md)	 - Lists all custom DevSpace commands
-* [devspace list contexts](devspace_list_contexts.md)	 - Lists all kube contexts
-* [devspace list deployments](devspace_list_deployments.md)	 - Lists and shows the status of all deployments
-* [devspace list namespaces](devspace_list_namespaces.md)	 - Lists all namespaces in the current context
-* [devspace list ports](devspace_list_ports.md)	 - Lists port forwarding configurations
-* [devspace list profiles](devspace_list_profiles.md)	 - Lists all DevSpace profiles
-* [devspace list providers](devspace_list_providers.md)	 - Lists all providers
-* [devspace list spaces](devspace_list_spaces.md)	 - Lists all user spaces
-* [devspace list sync](devspace_list_sync.md)	 - Lists sync configuration
-* [devspace list vars](devspace_list_vars.md)	 - Lists the vars in the active config

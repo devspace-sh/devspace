@@ -21,13 +21,16 @@ Lists the defined vars in the devspace config with their
 values
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for vars
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -41,6 +44,3 @@ values
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace list](devspace_list.md)	 - Lists configuration

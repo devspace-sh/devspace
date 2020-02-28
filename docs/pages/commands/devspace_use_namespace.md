@@ -23,14 +23,17 @@ Example:
 devspace use namespace my-namespace
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help    help for namespace
       --reset   Resets the default namespace of the current kube-context
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -44,6 +47,3 @@ devspace use namespace my-namespace
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace use](devspace_use.md)	 - Use specific config

@@ -22,7 +22,9 @@ be deployed via helm and kubectl, but skips actual
 deployment.
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --allow-cyclic           When enabled allows cyclic dependencies
@@ -39,7 +41,8 @@ deployment.
       --verbose-dependencies   Builds the dependencies verbosely
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -52,3 +55,4 @@ deployment.
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+

@@ -20,13 +20,16 @@ devspace cleanup images [flags]
 Deletes all locally created docker images from docker
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for images
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -40,6 +43,3 @@ Deletes all locally created docker images from docker
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace cleanup](devspace_cleanup.md)	 - Cleans up resources

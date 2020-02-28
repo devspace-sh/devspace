@@ -25,14 +25,17 @@ devspace remove deployment devspace-default
 devspace remove deployment --all
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --all    Remove all deployments
   -h, --help   help for deployment
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -46,6 +49,3 @@ devspace remove deployment --all
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace remove](devspace_remove.md)	 - Changes devspace configuration

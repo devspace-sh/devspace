@@ -14,13 +14,16 @@ Resets an cluster token
 ################## devspace reset #####################
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for reset
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -34,7 +37,3 @@ Resets an cluster token
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-* [devspace reset dependencies](devspace_reset_dependencies.md)	 - Resets the dependencies cache
-* [devspace reset key](devspace_reset_key.md)	 - Resets a cluster key
-* [devspace reset vars](devspace_reset_vars.md)	 - Resets the current config vars

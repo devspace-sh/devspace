@@ -14,13 +14,16 @@ Create spaces in the cloud
 ################## devspace create ####################
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for create
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -34,5 +37,3 @@ Create spaces in the cloud
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-* [devspace create space](devspace_create_space.md)	 - Create a new cloud space

@@ -23,7 +23,9 @@ Example:
 devspace create space myspace
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --active            Use the new Space as active Space for the current project (default true)
@@ -32,7 +34,8 @@ devspace create space myspace
       --provider string   The cloud provider to use
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -46,6 +49,3 @@ devspace create space myspace
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace create](devspace_create.md)	 - Create spaces in the cloud

@@ -14,13 +14,16 @@ Use specific config
 #################### devspace use #####################
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for use
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -34,9 +37,3 @@ Use specific config
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-* [devspace use context](devspace_use_context.md)	 - Tells DevSpace which kube context to use
-* [devspace use namespace](devspace_use_namespace.md)	 - Tells DevSpace which namespace to use
-* [devspace use profile](devspace_use_profile.md)	 - Use a specific DevSpace profile
-* [devspace use provider](devspace_use_provider.md)	 - Change the default provider
-* [devspace use space](devspace_use_space.md)	 - Use an existing space for the current configuration

@@ -24,7 +24,9 @@ devspace deploy -n some-namespace
 devspace deploy --kube-context=deploy-context
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --allow-cyclic           When enabled allows cyclic dependencies
@@ -40,7 +42,8 @@ devspace deploy --kube-context=deploy-context
       --verbose-dependencies   Deploys the dependencies verbosely
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -53,3 +56,4 @@ devspace deploy --kube-context=deploy-context
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+

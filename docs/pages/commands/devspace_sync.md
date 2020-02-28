@@ -27,7 +27,9 @@ devspace sync --pod=my-pod --container=my-container
 devspace sync --container-path=/my-path
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -c, --container string           Container name within pod where to execute command
@@ -45,7 +47,8 @@ devspace sync --container-path=/my-path
       --verbose                    Shows every file that is synced
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -58,3 +61,4 @@ devspace sync --container-path=/my-path
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+

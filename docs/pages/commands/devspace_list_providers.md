@@ -20,13 +20,16 @@ devspace list providers [flags]
 Lists the providers that exist
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for providers
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -40,6 +43,3 @@ Lists the providers that exist
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace list](devspace_list.md)	 - Lists configuration

@@ -21,7 +21,9 @@ Initializes a new devspace project within the current
 folder. Creates a devspace.yaml with all configuration.
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --context string      Context path to use for intialization
@@ -31,7 +33,8 @@ folder. Creates a devspace.yaml with all configuration.
   -r, --reconfigure         Change existing configuration
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -44,3 +47,4 @@ folder. Creates a devspace.yaml with all configuration.
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+

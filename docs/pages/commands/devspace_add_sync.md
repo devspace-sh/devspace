@@ -23,7 +23,9 @@ Example:
 devspace add sync --local=app --container=/app
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --container string        Absolute container path
@@ -33,7 +35,8 @@ devspace add sync --local=app --container=/app
       --local string            Relative local path
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -47,6 +50,3 @@ devspace add sync --local=app --container=/app
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace add](devspace_add.md)	 - Convenience command: adds something to devspace.yaml

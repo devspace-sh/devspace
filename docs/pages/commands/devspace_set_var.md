@@ -24,13 +24,16 @@ devspace set var key=value
 devspace set var key=value key2=value2
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for var
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -44,6 +47,3 @@ devspace set var key=value key2=value2
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace set](devspace_set.md)	 - Make global configuration changes

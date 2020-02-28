@@ -20,13 +20,16 @@ devspace list sync [flags]
 Lists the sync configuration
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for sync
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -40,6 +43,3 @@ Lists the sync configuration
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace list](devspace_list.md)	 - Lists configuration

@@ -25,7 +25,9 @@ devspace login
 devspace login --key myaccesskey
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help              help for login
@@ -33,7 +35,8 @@ devspace login --key myaccesskey
       --provider string   Provider to use
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -46,3 +49,4 @@ devspace login --key myaccesskey
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+

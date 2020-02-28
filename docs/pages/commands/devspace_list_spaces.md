@@ -25,7 +25,9 @@ devspace list spaces --cluster my-cluster
 devspace list spaces --all
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --all               List all spaces the user has access to in all clusters (not only created by the user)
@@ -35,7 +37,8 @@ devspace list spaces --all
       --provider string   Cloud Provider to use
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -49,6 +52,3 @@ devspace list spaces --all
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace list](devspace_list.md)	 - Lists configuration

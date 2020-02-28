@@ -24,13 +24,16 @@ devspace run mycommand --myarg 123
 devspace run mycommand2 1 2 3
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for run
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -43,3 +46,4 @@ devspace run mycommand2 1 2 3
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+

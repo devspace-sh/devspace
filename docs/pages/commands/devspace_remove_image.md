@@ -22,14 +22,17 @@ devspace remove image default
 devspace remove image --all
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --all    Remove all images
   -h, --help   help for image
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -43,6 +46,3 @@ devspace remove image --all
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace remove](devspace_remove.md)	 - Changes devspace configuration

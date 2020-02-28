@@ -23,7 +23,9 @@ Examples:
 devspace connect cluster 
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --admission-controller   Deploy the admission controller (default true)
@@ -43,7 +45,8 @@ devspace connect cluster
       --use-hostnetwork        Use the host network for the ingress controller instead of a loadbalancer
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -57,6 +60,3 @@ devspace connect cluster
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace connect](devspace_connect.md)	 - Connect an external cluster to devspace cloud

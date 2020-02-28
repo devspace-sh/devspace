@@ -36,7 +36,9 @@ devspace add deployment my-deployment --manifests=kube/pod.yaml
 devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
       --chart string                                   A helm chart to deploy (e.g. ./chart or stable/mysql)
@@ -50,7 +52,8 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
       --manifests string                               The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -64,6 +67,3 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace add](devspace_add.md)	 - Convenience command: adds something to devspace.yaml

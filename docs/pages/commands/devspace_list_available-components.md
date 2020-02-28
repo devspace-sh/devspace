@@ -21,13 +21,16 @@ Lists all the available components that can be used
 in devspace
 #######################################################
 ```
-## Options
+
+
+## Flags
 
 ```
   -h, --help   help for available-components
 ```
 
-### Options inherited from parent commands
+
+## Global & Inherited Flags
 
 ```
       --config string         The devspace config file to use
@@ -41,6 +44,3 @@ in devspace
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
 
-## See Also
-
-* [devspace list](devspace_list.md)	 - Lists configuration
