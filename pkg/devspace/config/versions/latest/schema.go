@@ -464,6 +464,7 @@ const (
 // ProfileConfig defines a profile config
 type ProfileConfig struct {
 	Name    string         `yaml:"name"`
+	Parent  string         `yaml:"parent,omitempty"`
 	Patches []*PatchConfig `yaml:"patches,omitempty"`
 	Replace *ReplaceConfig `yaml:"replace,omitempty"`
 }

@@ -92,7 +92,7 @@ func (l *configLoader) ParseCommands() ([]*latest.CommandConfig, error) {
 // parseConfig fills the variables in the data and parses the config
 func (l *configLoader) parseConfig(data map[interface{}]interface{}) (*latest.Config, error) {
 	// Get profile
-	profile, err := versions.ParseProfile(data, l.options.Profile)
+	profiles, err := versions.ParseProfile(data, l.options.Profile)
 	if err != nil {
 		return nil, err
 	}
@@ -101,16 +101,16 @@ func (l *configLoader) parseConfig(data map[interface{}]interface{}) (*latest.Co
 	delete(data, "profiles")
 	delete(data, "commands")
 
-	// Apply profile
-	if profile != nil {
+	// Apply profiles
+	for i := len(profiles) - 1; i >= 0; i-- {
 		// Apply replace
-		err = ApplyReplace(data, profile)
+		err = ApplyReplace(data, profiles[i])
 		if err != nil {
 			return nil, err
 		}
 
 		// Apply patches
-		data, err = ApplyPatches(data, profile)
+		data, err = ApplyPatches(data, profiles[i])
 		if err != nil {
 			return nil, err
 		}
