@@ -1,0 +1,108 @@
+---
+title: Deploy Kustomizations
+sidebar_label: kubectl (kustomize)
+---
+
+import FragmentReplaceImageTags from '@site/pages/fragments/kubectl-replaceImageTags.mdx';
+import FragmentKubectlFlags from '@site/pages/fragments/kubectl-options-flags.mdx';
+import FragmentKubectlCmdPath from '@site/pages/fragments/kubectl-options-cmdPath.mdx';
+import FragmentKubectlKustomize from '@site/pages/fragments/kubectl-kustomize.mdx';
+
+To deploy Kustomizations using `kustomize` / `kubectl apply -k`, you need to configure them within the `deployments` section of the `devspace.yaml`.
+
+## Example
+```yaml {4}
+deployments:
+- name: my-deployment
+  kubectl:
+    kustomize: true
+    manifests:
+    - my-kustomization/
+    - another-kustomization/
+```
+
+The above example will be executing during the deployment process as follows:
+```bash
+kubectl apply -k my-kustomization/
+kubectl apply -k another-kustomization/
+```
+
+:::warning Kubectl or Kustomize Required
+Kustomization deployments require `kubectl` or `kustomize` to be installed. If both are available, DevSpace will use the `kustomize` binary by default.
+:::
+
+
+## Manifests
+
+### `manifests`
+The `manifests` option is mandatory and expects an array of paths that point to directories containing Kustomizations.
+
+#### Example: Manifests
+```yaml
+deployments:
+- name: backend
+  kubectl:
+    kustomize: true
+    manifests:
+    - my-kustomization/
+    - another-kustomization/
+```
+
+
+### `kustomize`
+
+<FragmentKubectlKustomize/>
+
+
+### `replaceImageTags`
+
+<FragmentReplaceImageTags/>
+
+
+## Kubectl Options
+
+### `flags`
+
+<FragmentKubectlFlags/>
+
+
+### `cmdPath`
+
+<FragmentKubectlCmdPath/>
+
+
+## General Options
+
+### `name`
+The `name` option is required and expects a string to identify this deployment.
+
+#### Example: Deployment Name
+```yaml {2}
+deployments:
+- name: backend
+  kubectl:
+    manifests:
+    - backend/
+    - backend-extra/
+```
+
+### `namespace`
+The `namespace` option is required and expects a string with the namespace used to deploy the manifests.
+
+:::warning
+Only use this option if you really need to. Hard-coding the namespace in `devspace.yaml` makes it harder to share the configuration with your colleagues. It is recommended to set the default namespace of the current context instead using:
+```bash
+devspace use namespace [some-namespace]
+```
+:::
+
+#### Example: Deployment Namespace
+```yaml {3}
+deployments:
+- name: backend
+  namespace: some-namespace
+  kubectl:
+    manifests:
+    - backend/
+    - backend-extra/
+```

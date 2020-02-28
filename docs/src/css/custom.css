@@ -1,0 +1,24 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+@import url("https://devspace.sh/css/docs.css");
+
+.menu > .menu__list > .menu__list-item:nth-last-child(2) {
+  margin-top: 1.5em;
+  padding-top: 1.5em;
+  border-top: 1px solid #e9e9e9;
+}
+
+.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__link,
+.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__list > .menu__list-item:nth-child(n+2) .menu__link {
+  font-family: var(--ifm-font-family-monospace) !important;
+  background: rgb(233, 233, 233);
+  border-radius: 3px;
+}
+
+.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__list > .menu__list-item:nth-child(1) > .menu__link {
+  background: rgb(218, 218, 218);
+}
