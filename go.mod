@@ -70,5 +70,6 @@ replace (
 	github.com/agl/ed25519 => github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412
 	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20191216044856-a8371794149d
 	github.com/docker/docker => github.com/moby/moby v1.4.2-0.20200203170920-46ec8731fbce
-	golang.org/x/sys => golang.org/x/sys v0.0.0-20190812073006-9eafafc0a87e
+
+	golang.org/x/sys => golang.org/x/sys v0.0.0-20191128015809-6d18c012aee9
 )
