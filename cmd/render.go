@@ -89,8 +89,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
-	}
-	if !configExists {
+	} else if !configExists {
 		return errors.New(message.ConfigNotFound)
 	}
 
@@ -106,6 +105,11 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	// Get the config
 	config, err := configLoader.Load()
 	if err != nil {
+		cause := errors.Cause(err)
+		if _, ok := cause.(logpkg.SurveyError); ok {
+			return errors.New("Cannot load config, because questions for variables are not possible in silent mode. Please set '--show-logs' to true to disable silent mode")
+		}
+
 		return err
 	}
 
