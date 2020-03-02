@@ -4,8 +4,11 @@ import (
 	"sort"
 	"testing"
 
+	fakebuilder "github.com/devspace-cloud/devspace/pkg/devspace/build/builder/testing"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	fakehook "github.com/devspace-cloud/devspace/pkg/devspace/hook/testing"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )
@@ -23,7 +26,7 @@ type buildTestCase struct {
 }
 
 func TestBuild(t *testing.T) {
-	/*testCases := []buildTestCase{
+	testCases := []buildTestCase{
 		buildTestCase{
 			name: "No images to build",
 		},
@@ -117,7 +120,7 @@ func TestBuild(t *testing.T) {
 		assert.Equal(t, string(builtImagesKeys), string(expectationKeys), "Unexpected builtImages in testCase %s", testCase.name)
 
 		isCacheEqual(t, testCase.cache, testCase.expectedCache, testCase.name)
-	}*/
+	}
 }
 
 func getKeys(targetMap map[string]string) string {
