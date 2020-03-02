@@ -421,3 +421,222 @@ func TestGetNewestRunningPod(t *testing.T) {
 		assert.Equal(t, string(podAsYaml), string(expectedAsYaml), "Unexpected pod in testCase %s", testCase.name)
 	}
 }
+
+type getPodStatusTestCase struct {
+	name string
+
+	pod k8sv1.Pod
+
+	expectedStatus string
+}
+
+func TestGetPodStatus(t *testing.T) {
+	testCases := []getPodStatusTestCase{
+		{
+			name: "Deleted, reason node lost",
+			pod: k8sv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					DeletionTimestamp: &metav1.Time{Time: time.Now()},
+				},
+				Status: k8sv1.PodStatus{
+					Reason: "NodeLost",
+				},
+			},
+			expectedStatus: "Unknown",
+		},
+		{
+			name: "Deleted",
+			pod: k8sv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					DeletionTimestamp: &metav1.Time{Time: time.Now()},
+				},
+				Status: k8sv1.PodStatus{},
+			},
+			expectedStatus: "Terminating",
+		},
+		{
+			name: "Init Successfully terminated",
+			pod: k8sv1.Pod{
+				Status: k8sv1.PodStatus{
+					InitContainerStatuses: []k8sv1.ContainerStatus{
+						{
+							State: k8sv1.ContainerState{
+								Terminated: &k8sv1.ContainerStateTerminated{
+									ExitCode: 0,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Init Terminated with exitcode",
+			pod: k8sv1.Pod{
+				Status: k8sv1.PodStatus{
+					InitContainerStatuses: []k8sv1.ContainerStatus{
+						{
+							State: k8sv1.ContainerState{
+								Terminated: &k8sv1.ContainerStateTerminated{
+									ExitCode: 1,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedStatus: "Init:ExitCode:1",
+		},
+		{
+			name: "Init Terminated with signal",
+			pod: k8sv1.Pod{
+				Status: k8sv1.PodStatus{
+					InitContainerStatuses: []k8sv1.ContainerStatus{
+						{
+							State: k8sv1.ContainerState{
+								Terminated: &k8sv1.ContainerStateTerminated{
+									ExitCode: 1,
+									Signal:   2,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedStatus: "Init:Signal:2",
+		},
+		{
+			name: "Init Terminated with reason",
+			pod: k8sv1.Pod{
+				Status: k8sv1.PodStatus{
+					InitContainerStatuses: []k8sv1.ContainerStatus{
+						{
+							State: k8sv1.ContainerState{
+								Terminated: &k8sv1.ContainerStateTerminated{
+									ExitCode: 1,
+									Signal:   2,
+									Reason:   "someReason",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedStatus: "Init:someReason",
+		},
+		{
+			name: "Init Waiting with reason",
+			pod: k8sv1.Pod{
+				Status: k8sv1.PodStatus{
+					InitContainerStatuses: []k8sv1.ContainerStatus{
+						{
+							State: k8sv1.ContainerState{
+								Waiting: &k8sv1.ContainerStateWaiting{
+									Reason: "someWaitReason",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedStatus: "Init:someWaitReason",
+		},
+		{
+			name: "pod is initializing",
+			pod: k8sv1.Pod{
+				Status: k8sv1.PodStatus{
+					InitContainerStatuses: []k8sv1.ContainerStatus{
+						{
+							State: k8sv1.ContainerState{
+								Waiting: &k8sv1.ContainerStateWaiting{
+									Reason: "PodInitializing",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedStatus: "Init:0/0",
+		},
+		{
+			name: "Waiting reason is completed",
+			pod: k8sv1.Pod{
+				Status: k8sv1.PodStatus{
+					ContainerStatuses: []k8sv1.ContainerStatus{
+						{
+							State: k8sv1.ContainerState{
+								Waiting: &k8sv1.ContainerStateWaiting{
+									Reason: "Completed",
+								},
+							},
+						},
+						{
+							Ready: true,
+							State: k8sv1.ContainerState{
+								Running: &k8sv1.ContainerStateRunning{},
+							},
+						},
+					},
+				},
+			},
+			expectedStatus: "Running",
+		},
+		{
+			name: "Container terminated with reason",
+			pod: k8sv1.Pod{
+				Status: k8sv1.PodStatus{
+					ContainerStatuses: []k8sv1.ContainerStatus{
+						{
+							State: k8sv1.ContainerState{
+								Terminated: &k8sv1.ContainerStateTerminated{
+									Reason: "terminatedReason",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedStatus: "terminatedReason",
+		},
+		{
+			name: "Container terminated with signal",
+			pod: k8sv1.Pod{
+				Status: k8sv1.PodStatus{
+					ContainerStatuses: []k8sv1.ContainerStatus{
+						{
+							State: k8sv1.ContainerState{
+								Terminated: &k8sv1.ContainerStateTerminated{
+									Signal: 1,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedStatus: "Signal:1",
+		},
+		{
+			name: "Container terminated with exit code",
+			pod: k8sv1.Pod{
+				Status: k8sv1.PodStatus{
+					ContainerStatuses: []k8sv1.ContainerStatus{
+						{
+							State: k8sv1.ContainerState{
+								Terminated: &k8sv1.ContainerStateTerminated{
+									ExitCode: 1,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedStatus: "ExitCode:1",
+		},
+	}
+
+	for _, testCase := range testCases {
+		status := GetPodStatus(&testCase.pod)
+
+		assert.Equal(t, status, testCase.expectedStatus, "Unexpected status in testCase %s", testCase.name)
+	}
+}
