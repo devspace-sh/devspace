@@ -120,9 +120,15 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 		}
 	}
 
+	// Create kubectl client and switch context if specified
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	if err != nil {
+		return errors.Errorf("Unable to create new kubectl client: %v", err)
+	}
+
+	// Create Dependencymanager
 	if cmd.SkipDependencies == false {
-		// Create Dependencymanager
-		manager, err := f.NewDependencyManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log)
+		manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, configOptions, log)
 		if err != nil {
 			return errors.Wrap(err, "new manager")
 		}
@@ -147,7 +153,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	// Build images if necessary
 	builtImages := map[string]string{}
 	if cmd.SkipBuild == false {
-		builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), nil).Build(&build.Options{
+		builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
 			SkipPush:     cmd.SkipPush,
 			IsDev:        true,
 			ForceRebuild: cmd.ForceBuild,
@@ -181,12 +187,6 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 		for index := range deployments {
 			deployments[index] = strings.TrimSpace(deployments[index])
 		}
-	}
-
-	// Create kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
-	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Deploy all defined deployments
