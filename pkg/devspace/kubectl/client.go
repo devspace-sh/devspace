@@ -208,6 +208,8 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, kubeLoader kubecon
 	return nil, errors.New("We should not reach this point")
 }
 
+var second = time.Second
+
 // PrintWarning prints a warning if the last kube context is different than this one
 func (client *client) PrintWarning(generatedConfig *generated.Config, noWarning, shouldWait bool, log log.Logger) error {
 	if generatedConfig != nil && log.GetLevel() >= logrus.InfoLevel && noWarning == false {
@@ -239,7 +241,7 @@ func (client *client) PrintWarning(generatedConfig *generated.Config, noWarning,
 
 			if wait && shouldWait {
 				log.StartWait("Will continue in 10 seconds...")
-				time.Sleep(10 * time.Second)
+				time.Sleep(10 * second)
 				log.StopWait()
 				log.WriteString("\n")
 			}
@@ -249,7 +251,7 @@ func (client *client) PrintWarning(generatedConfig *generated.Config, noWarning,
 		if shouldWait && client.namespace == metav1.NamespaceDefault && (generatedConfig.GetActive().LastContext == nil || generatedConfig.GetActive().LastContext.Namespace != metav1.NamespaceDefault) {
 			log.Warn("Deploying into the 'default' namespace is usually not a good idea as this namespace cannot be deleted\n")
 			log.StartWait("Will continue in 5 seconds...")
-			time.Sleep(5 * time.Second)
+			time.Sleep(5 * second)
 			log.StopWait()
 		}
 	}

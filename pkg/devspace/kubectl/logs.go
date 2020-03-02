@@ -82,11 +82,13 @@ func (client *client) LogMultipleTimeout(imageSelector []string, interrupt chan 
 	for idx, pod := range pods {
 	Outer:
 		for _, container := range pod.Spec.Containers {
+			ImageSelectors:
 			for _, imageName := range imageSelector {
 				if imageName == container.Image {
 					reader, err := client.Logs(ctx, pod.Namespace, pod.Name, container.Name, false, tail, true)
 					if err != nil {
 						log.Warnf("Couldn't log %s/%s: %v", pod.Name, container.Name, err)
+						continue ImageSelectors
 					}
 
 					prefix := pod.Name
