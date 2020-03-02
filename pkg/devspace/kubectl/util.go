@@ -91,8 +91,10 @@ func (client *client) EnsureDefaultNamespace(log log.Logger) error {
 				Name: client.namespace,
 			},
 		})
+		if err == nil {
+			log.Donef("Created namespace: %s", client.Namespace())
+		}
 
-		log.Donef("Created namespace: %s", client.Namespace())
 	}
 
 	return err
@@ -158,8 +160,8 @@ func (client *client) GetRunningPodsWithImage(imageNames []string, namespace str
 		namespace = client.namespace
 	}
 
-	minWait := 60 * time.Second
-	waitingInterval := 1 * time.Second
+	minWait := 60 * second
+	waitingInterval := 1 * second
 	for maxWaiting >= 0 {
 		time.Sleep(waitingInterval)
 
@@ -219,7 +221,7 @@ func (client *client) GetNewestRunningPod(labelSelector string, imageSelector []
 	}
 
 	now := time.Now()
-	waitingInterval := 1 * time.Second
+	waitingInterval := 1 * second
 	for ok := true; ok; ok = maxWaiting > 0 {
 		time.Sleep(waitingInterval)
 
