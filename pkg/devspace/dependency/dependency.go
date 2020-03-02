@@ -163,12 +163,21 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 		i = len(dependencies) - 1
 	}
 
+	executed := 0
+	m.log.StartWait(fmt.Sprintf("%s %d dependencies", actionName, len(dependencies)))
 	for i >= 0 && i < len(dependencies) {
 		var (
 			dependency       = dependencies[i]
 			buff             = &bytes.Buffer{}
 			dependencyLogger = m.log
 		)
+
+		// Increase / Decrease counter
+		if reverse {
+			i--
+		} else {
+			i++
+		}
 
 		// Check if we should act on this dependency
 		if foundDependency(dependency.DependencyConfig.Name, filterDependencies) == false {
@@ -177,7 +186,6 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 
 		// If not verbose log to a stream
 		if verbose == false {
-			m.log.StartWait(fmt.Sprintf("%s %d dependencies", actionName, i+1))
 			dependencyLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
 		}
 
@@ -186,17 +194,16 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 			return errors.Errorf("%s dependency %s error: %s %v", actionName, dependency.ID, buff.String(), err)
 		}
 
+		executed++
 		m.log.Donef("%s dependency %s completed", actionName, dependency.ID)
-
-		if reverse {
-			i--
-		} else {
-			i++
-		}
 	}
-
 	m.log.StopWait()
-	m.log.Donef("Successfully executed %d dependencies", len(dependencies))
+
+	if executed > 0 {
+		m.log.Donef("Successfully processed %d dependencies", executed)
+	} else {
+		m.log.Done("No dependency processed")
+	}
 
 	return nil
 }
