@@ -91,6 +91,10 @@ func NewClientFromContext(context, namespace string, switchContext bool, kubeLoa
 		return nil, err
 	}
 
+	if len(kubeConfig.Clusters) == 0 {
+		return nil, errors.Errorf("kube config is invalid: please make sure you have an existing valid kube config")
+	}
+
 	// If we should use a certain kube context use that
 	var (
 		activeContext   = kubeConfig.CurrentContext

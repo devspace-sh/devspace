@@ -1,7 +1,6 @@
 package log
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -106,5 +105,13 @@ func (d *DiscardLogger) WriteString(message string) {}
 
 // Question asks a new question
 func (d *DiscardLogger) Question(params *survey.QuestionOptions) (string, error) {
-	return "", errors.New("Questions in discard logger not supported")
+	return "", SurveyError{}
+}
+
+// SurveyError is used to identify errors where questions were asked in the discard logger
+type SurveyError struct{}
+
+// Error implements error interface
+func (s SurveyError) Error() string {
+	return "Asking questions is not possible in silenced mode"
 }
