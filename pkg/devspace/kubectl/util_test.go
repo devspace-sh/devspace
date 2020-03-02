@@ -295,7 +295,7 @@ func TestGetRunningPodsWithImage(t *testing.T) {
 	}
 }
 
-type getNewestRunningPodTestCase struct {
+type GetNewestPodOnceRunningTestCase struct {
 	name string
 
 	labelSelector   string
@@ -308,8 +308,8 @@ type getNewestRunningPodTestCase struct {
 	expectedPod *k8sv1.Pod
 }
 
-func TestGetNewestRunningPod(t *testing.T) {
-	testCases := []getNewestRunningPodTestCase{
+func TestGetNewestPodOnceRunning(t *testing.T) {
+	testCases := []GetNewestPodOnceRunningTestCase{
 		{
 			name:        "No pods timeout",
 			expectedErr: true,
@@ -406,7 +406,7 @@ func TestGetNewestRunningPod(t *testing.T) {
 			namespace: testCase.clientNamespace,
 		}
 
-		pod, err := client.GetNewestRunningPod(testCase.labelSelector, testCase.imageSelector, testCase.namespace, time.Second)
+		pod, err := client.GetNewestPodOnceRunning(testCase.labelSelector, testCase.imageSelector, testCase.namespace, time.Second)
 
 		if !testCase.expectedErr {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)

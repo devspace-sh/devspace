@@ -214,8 +214,8 @@ func (client *client) GetRunningPodsWithImage(imageNames []string, namespace str
 	return nil, errors.Errorf("Waiting for pods with image names '%s' in namespace %s timed out", strings.Join(imageNames, ","), namespace)
 }
 
-// GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
-func (client *client) GetNewestRunningPod(labelSelector string, imageSelector []string, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
+// GetNewestPodOnceRunning retrieves the first pod that is found that has the status "Running" using the label selector string
+func (client *client) GetNewestPodOnceRunning(labelSelector string, imageSelector []string, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
 	if namespace == "" {
 		namespace = client.namespace
 	}

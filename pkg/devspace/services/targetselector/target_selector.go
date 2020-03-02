@@ -93,7 +93,7 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 
 			return pod, nil
 		} else if t.labelSelector != "" {
-			pod, err := t.kubeClient.GetNewestRunningPod(t.labelSelector, t.imageSelector, t.namespace, timeout)
+			pod, err := t.kubeClient.GetNewestPodOnceRunning(t.labelSelector, t.imageSelector, t.namespace, timeout)
 			if err != nil {
 				return nil, err
 			}
