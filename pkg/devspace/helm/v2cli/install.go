@@ -92,8 +92,8 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	for {
 		result, err = c.exec(c.helmPath, args).CombinedOutput()
 		if err != nil {
-			if strings.HasSuffix(string(result), "could not find a ready tiller pod") {
-				time.Sleep(time.Second * 2)
+			if strings.Index(string(result), "could not find a ready tiller pod") != -1 {
+				time.Sleep(time.Second * 3)
 				err = c.ensureTiller()
 				if err != nil {
 					return nil, err
