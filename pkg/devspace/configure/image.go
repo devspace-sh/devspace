@@ -199,7 +199,7 @@ func (m *manager) getRegistryURL(dockerClient docker.Client, cloudRegistryHostna
 	var (
 		useDockerHub          = "Use " + dockerHubHostname
 		useDevSpaceRegistry   = "Use " + cloudRegistryHostname + " (free, private Docker registry)"
-		skipImagePush         = "Skip image push (local cluster e.g. docker-desktop)"
+		skipImagePush         = "Always skip image push (advanced, config will not work with remote clusters)"
 		useOtherRegistry      = "Use other registry"
 		registryUsernameHint  = " => you are logged in as %s"
 		registryDefaultOption = useDevSpaceRegistry
