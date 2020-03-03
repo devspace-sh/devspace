@@ -46,5 +46,5 @@ go run -mod= ./hack/gen-docs.go
 ### 2. Create Version
 ```bash
 cd website
-npm run version v4.0.3
+yarn run docusaurus docs:version 4.5
 ```
