@@ -51,14 +51,16 @@ images:
 
 ### `snapshotMode`
 The `snapshotMode` option expects a string that can have the following values:
-- `full` tells kaniko to do a full filesystem snapshot (default)
-- `time` tells kaniko to do a filesystem snapshot based on `mtime`
+- `full` tells kaniko to do a full filesystem snapshot
+- `time` tells kaniko to do a filesystem snapshot based on `mtime` (default)
 
-> See [limitations related to kaniko snapshots using `mtime`](https://github.com/GoogleContainerTools/kaniko#mtime-and-snapshotting).
+:::warning Limitations
+One of the biggest limitations of the `time` mode is that kaniko might **miss** file metadata changes introduced by `RUN` statements, e.g. kaniko might skip a command such as `RUN chown 333:333 -R /app`. In cases where this is not an option, use `full` instead. Learn more about [limitations related to kaniko snapshots using `mtime`](https://github.com/GoogleContainerTools/kaniko#mtime-and-snapshotting).
+:::
 
 #### Default Value For `snapshotMode`
 ```yaml
-snapshotMode: full
+snapshotMode: time
 ```
 
 #### Example: Building Images with kaniko
