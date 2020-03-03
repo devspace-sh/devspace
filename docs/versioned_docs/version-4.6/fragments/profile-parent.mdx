@@ -1,0 +1,42 @@
+The `parent` option is optional and expects the name of another profile which should be applied before this profile. The kind of profile inheritance that the `parent` option provides can help to reduce redundancy when multiple profiles need to change the config in a similar way.
+
+:::info Execution Order
+A parent profile is applied before the profile that defines the parent. A parent profile can have a parent of its own.
+:::
+
+#### Example: Defining a Parent Profile
+```yaml {16}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
+profiles:
+- name: production
+  parent: staging
+  patches:
+  - op: add
+    path: deployments.name=backend.helm.values.containers
+    value:
+      image: john/cache
+- name: staging
+  replace:
+    images:
+      backend:
+        image: john/backendprod
+  patches:
+  - op: replace
+    path: deployments.name=backend.helm.values.container[0].image
+    value: john/backendprod
+  - op: remove
+    path: deployments.name=backend.helm.values.containers[1]
+```
+When the `production` profile is active, the `replace` and `patches` statements configured in `staging` would be applied first because of the `parent: staging` statement in line 16. After applying the `staging` profile, DevSpace would additionally apply the currently active `production` profile. In this example, the `production` profile is based on the `staging` profile and the only difference is that the `production` profile adds another container to the `backend` deployment which is using the image `john/cache`.
