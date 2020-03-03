@@ -92,7 +92,6 @@ images:
     build:
       docker:
         preferMinikube: true
-        skipPush: true
   frontend:
     image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
     build:
@@ -106,7 +105,20 @@ images:
 ### `skipPush`
 The `skipPush` option expects a boolean value stating if pushing the image to a registry should be skipped during the build process.
 
-If DevSpace is using a local Kubernetes cluster (e.g. minikube or Docker Kubernetes), pushing images might not be necessary because the image might already be accessible by Kubernetes via a local Docker daemon. In this case, it can make sense to speed up the process by setting `skipPush` to `true`.
+If DevSpace is using a local Kubernetes cluster, pushing images might not be necessary because the image might already be accessible by Kubernetes via a local Docker daemon. In this case, it can make sense to speed up the process by setting `skipPush` to `true`.
+
+:::info Auto-Enabled for Minikube & Docker Desktop
+DevSpace automatically skips image push for kube-contexts with the following names:
+- `minikube`
+- `docker-desktop`
+- `docker-for-desktop`
+
+This allows to keep `skipPush: false` for these local clusters which helps to keep the configuration reusable and indepent of the kube-context, i.e. it makes it easier to switch between local and remote clusters.
+:::
+
+:::warning Remote Clusters
+Setting this option means that the configuration cannot be used to deploy to remote clusters anymore which makes it harder to switch between clusters and keep the configuration cluster-independent.
+:::
 
 #### Default Value For `skipPush`
 ```yaml
@@ -114,8 +126,24 @@ skipPush: false
 ```
 
 #### Example
-**See "[Example: Building Images in Minikube](#example-building-images-in-minikube)"**
-
+```yaml {7}
+images:
+  backend:
+    image: john/appbackend
+    build:
+      docker:
+        preferMinikube: true
+        skipPush: true
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    build:
+      docker:
+        preferMinikube: false
+```
+The above configration would only push the `frontend` image but not the `backend` image. To manually trigger image building and pushing for all images, run:
+```bash
+devspace build
+```
 
 
 
