@@ -11,9 +11,8 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
@@ -252,7 +251,7 @@ func (d *DeployConfig) getReplacedManifest(manifest string, cache *generated.Cac
 
 		if len(cache.Images) > 0 {
 			if d.DeploymentConfig.Kubectl.ReplaceImageTags == nil || *d.DeploymentConfig.Kubectl.ReplaceImageTags == true {
-				shouldRedeploy = replaceManifest(manifestYaml, cache, d.config.Images, builtImages) || shouldRedeploy
+				shouldRedeploy = util.ReplaceImageNames(manifestYaml, cache, d.config.Images, builtImages, map[string]bool{"image": true}) || shouldRedeploy
 			}
 		}
 
@@ -318,61 +317,4 @@ func (d *DeployConfig) dryRun(manifest string) ([]byte, error) {
 	}
 
 	return output, nil
-}
-
-func replaceManifest(manifest map[interface{}]interface{}, cache *generated.CacheConfig, imagesConf map[string]*latest.ImageConfig, builtImages map[string]string) bool {
-	shouldRedeploy := false
-
-	match := func(path, key, value string) bool {
-		if key == "image" {
-			image, err := registry.GetStrippedDockerImageName(value)
-			if err != nil {
-				return false
-			}
-
-			// Search for image name
-			for _, imageCache := range cache.Images {
-				found := false
-				for _, imageConfig := range imagesConf {
-					if imageConfig.Image == image {
-						found = true
-						break
-					}
-				}
-
-				if found && imageCache.ImageName == image && imageCache.Tag != "" {
-					if builtImages != nil {
-						if _, ok := builtImages[image]; ok {
-							shouldRedeploy = true
-						}
-					}
-
-					return true
-				}
-			}
-		}
-
-		return false
-	}
-
-	replace := func(path, value string) (interface{}, error) {
-		image, err := registry.GetStrippedDockerImageName(value)
-		if err != nil {
-			return false, nil
-		}
-
-		// Search for image name
-		for _, imageCache := range cache.Images {
-			if imageCache.ImageName == image {
-				return image + ":" + imageCache.Tag, nil
-			}
-		}
-
-		return value, nil
-	}
-
-	// We ignore the error here because the replace function can never throw an error
-	_ = walk.Walk(manifest, match, replace)
-
-	return shouldRedeploy
 }
