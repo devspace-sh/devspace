@@ -20,6 +20,7 @@ func NewSetCmd(f factory.Factory) *cobra.Command {
 
 	setCmd.AddCommand(newAnalyticsCmd(f))
 	setCmd.AddCommand(newVarCmd(f))
+	setCmd.AddCommand(newEncryptionKeyCmd(f))
 
 	return setCmd
 }
