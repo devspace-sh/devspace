@@ -1,0 +1,35 @@
+@import '../../../styles/constants.scss';
+
+.warning {
+  height: 42px;
+  width: 100%;
+
+  .wrapper {
+    height: inherit;
+    padding: 0 10px 0 20px;
+    background-color: $red;
+    color: white;
+    display: flex;
+    font-size: 14px;
+    align-items: center;
+    justify-content: space-between;
+
+    a {
+      color: white;
+      font-weight: bold;
+    }
+
+    > div:last-child {
+      justify-self: flex-end;
+    }
+
+    .close {
+      opacity: 0.5;
+
+      &:hover {
+        opacity: 1;
+        background: transparent;
+      }
+    }
+  }
+}

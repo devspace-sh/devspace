@@ -1,0 +1,23 @@
+version: v1beta5
+images:
+  default:
+    image: dscr.io/${DEVSPACE_USERNAME}/devspace
+deployments:
+- name: quickstart
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/devspace
+      service:
+        ports:
+        - port: 3000
+dev:
+  ports:
+  - imageName: default
+    forward:
+    - port: 3000
+  sync:
+  - imageName: default
+    excludePaths:
+    - node_modules

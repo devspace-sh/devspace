@@ -1,0 +1,16 @@
+version: v1beta6
+deployments:
+- name: root
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx:latest
+dependencies:
+- source:
+    path: dependency1
+  name: test
+- source:
+    path: dependency2
+- source:
+    git: https://github.com/devspace-cloud/example-dependency.git

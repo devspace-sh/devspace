@@ -1,0 +1,47 @@
+@import '../../../../styles/constants';
+
+.tab-selector {
+  display: flex;
+  align-items: center;
+  height: 100%;
+
+  > .option {
+    font: $button-text;
+    color: $blue-dark-2;
+    opacity: 0.7;
+    padding: 0 15px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: opacity 0.2s;
+
+    &:hover {
+      opacity: 1;
+    }
+
+    &.disabled {
+      cursor: default;
+
+      &:hover {
+        opacity: 0.7;
+      }
+    }
+
+    &.selected {
+      opacity: 1;
+      position: relative;
+
+      &::after {
+        content: '';
+        display: block;
+        position: absolute;
+        width: calc(100% + 10px);
+        height: 3px;
+        background-color: $blue-highlight;
+        left: -5px;
+        bottom: -1px;
+      }
+    }
+  }
+}

@@ -1,0 +1,119 @@
+@import '../../../styles/constants';
+
+.custom-dropdown-wrapper {
+  display: inline-block;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+  padding: 10px 16px;
+
+  display: flex;
+  align-items: center;
+  background-color: white;
+  box-shadow: $shadow-button;
+  border-bottom: 1px solid $gray-2;
+  border-top: 1px solid transparent;
+
+  &.dropdown-test {
+    height: 40px;
+    max-width: 150px;
+  }
+
+  > :global(.CustomDropDown_selected-value) {
+    width: 100%;
+    font: $button-text;
+    color: $gray-4;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+  }
+
+  &::after {
+    content: '';
+    display: block;
+    position: relative;
+    width: 12px;
+    min-width: 12px;
+    height: 1em;
+    background-image: url(../../../images/handle-dropdown.svg);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    margin: 0;
+  }
+
+  > .list-items {
+    z-index: -999999;
+    position: absolute;
+    background-color: white;
+    color: $dark-blue;
+    width: unset;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    font-size: 16px;
+    overflow: hidden;
+    min-width: 100%;
+    white-space: nowrap;
+    box-shadow: $shadow-button;
+    visibility: hidden;
+    height: 0;
+
+    &.push-left {
+      right: 0;
+    }
+
+    .option {
+      width: 100%;
+      padding: 10px 16px;
+      font: $button-text;
+      color: $gray-4;
+      position: relative;
+      text-overflow: ellipsis;
+      white-space: nowrap;;
+      overflow: hidden;
+
+      &:hover {
+        background: #f1f8fc;
+        color: #0273b5;
+      }
+
+      &.disabled {
+        color: #999999;
+        background: #f5f5f5;
+        cursor: default;
+      }
+    }
+  }
+
+  &.opened {
+    .selected-value {
+      border-radius: 3px 3px 0 0;
+    }
+    &::after {
+      transform: rotate(180deg);
+    }
+    .list-items {
+      z-index: 9;
+      top: 100%;
+      left: 0;
+      right: 0;
+      visibility: visible;
+      max-height: calc(100vh - 300px);
+      overflow-y: auto;
+      height: unset;
+
+      .option {
+        border-bottom: 1px solid rgba(169, 198, 208, 0.25);
+
+        &:last-of-type {
+          border-bottom: none;
+        }
+      }
+    }
+  }
+}

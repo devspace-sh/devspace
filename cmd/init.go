@@ -1,478 +1,407 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/covexo/devspace/pkg/devspace/config"
-	"github.com/covexo/devspace/pkg/devspace/generator"
-	"github.com/covexo/devspace/pkg/util/randutil"
-	"github.com/covexo/devspace/pkg/util/yamlutil"
-
-	"github.com/covexo/devspace/pkg/devspace/config/v1"
-	"github.com/covexo/devspace/pkg/util/stdinutil"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
+	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
+	"github.com/devspace-cloud/devspace/pkg/util/factory"
+	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
+const gitIgnoreFile = ".gitignore"
+const dockerIgnoreFile = ".dockerignore"
+const devspaceFolderGitignore = "\n\n# Ignore DevSpace cache and log folder\n.devspace/\n"
+const configDockerignore = "\n\n# Ignore devspace.yaml file to prevent image rebuilding after config changes\ndevspace.yaml\n"
+
+const (
+	// Dockerfile not found options
+	UseExistingDockerfileOption = "Use the Dockerfile in ./Dockerfile"
+	CreateDockerfileOption      = "Create a Dockerfile for me"
+	EnterDockerfileOption       = "Enter path to your Dockerfile"
+	EnterManifestsOption        = "Enter path to your Kubernetes manifests"
+	EnterHelmChartOption        = "Enter path to your Helm chart"
+	UseExistingImageOption      = "Use existing image (e.g. from Docker Hub)"
+
+	// The default image name in the config
+	defaultImageName = "default"
+)
+
+// InitCmd is a struct that defines a command call for "init"
 type InitCmd struct {
-	flags          *InitCmdFlags
-	dsConfig       *v1.DevSpaceConfig
-	privateConfig  *v1.PrivateConfig
-	appConfig      *v1.AppConfig
-	workdir        string
-	chartGenerator *generator.ChartGenerator
+	// Flags
+	Reconfigure bool
+	Dockerfile  string
+	Context     string
+	Provider    string
+
+	dockerfileGenerator *generator.DockerfileGenerator
+	log                 log.Logger
 }
 
-type InitCmdFlags struct {
-	reconfigure      bool
-	overwrite        bool
-	templateRepoURL  string
-	templateRepoPath string
-	language         string
-}
-
-var InitCmdFlagsDefault = &InitCmdFlags{
-	reconfigure:      false,
-	overwrite:        false,
-	templateRepoURL:  "https://github.com/covexo/devspace-templates.git",
-	templateRepoPath: "",
-	language:         "",
-}
-
-func init() {
+// NewInitCmd creates a new init command
+func NewInitCmd(f factory.Factory) *cobra.Command {
 	cmd := &InitCmd{
-		flags: InitCmdFlagsDefault,
+		log: f.GetLog(),
 	}
-	cobraCmd := &cobra.Command{
+
+	initCmd := &cobra.Command{
 		Use:   "init",
-		Short: "Initializes your DevSpace",
+		Short: "Initializes DevSpace in the current folder",
 		Long: `
 #######################################################
 #################### devspace init ####################
 #######################################################
-Gets your project ready to start a DevSpaces.
-Creates the following files and directories:
-
-YOUR_PROJECT_PATH/
-|
-|-- Dockerfile
-|
-|-- chart/
-|   |-- Chart.yaml
-|   |-- values.yaml
-|   |-- templates/
-|       |-- deployment.yaml
-|       |-- service.yaml
-|       |-- ingress.yaml
-|
-|-- .devspace/
-|   |-- .gitignore
-|   |-- cluster.yaml
-|   |-- config.yaml
-
+Initializes a new devspace project within the current
+folder. Creates a devspace.yaml with all configuration.
 #######################################################
 	`,
-		Run: cmd.Run,
-	}
-	rootCmd.AddCommand(cobraCmd)
-
-	cobraCmd.Flags().BoolVarP(&cmd.flags.reconfigure, "reconfigure", "r", cmd.flags.reconfigure, "Change existing configuration")
-	cobraCmd.Flags().BoolVarP(&cmd.flags.overwrite, "overwrite", "o", cmd.flags.overwrite, "Overwrite existing chart files and Dockerfile")
-	cobraCmd.Flags().StringVar(&cmd.flags.templateRepoURL, "templateRepoUrl", cmd.flags.templateRepoURL, "Git repository for chart templates")
-	cobraCmd.Flags().StringVar(&cmd.flags.templateRepoPath, "templateRepoPath", cmd.flags.templateRepoPath, "Local path for cloning chart template repository (uses temp folder if not specified)")
-	cobraCmd.Flags().StringVarP(&cmd.flags.language, "language", "l", cmd.flags.language, "Programming language of your project")
-}
-
-func (cmd *InitCmd) Run(cobraCmd *cobra.Command, args []string) {
-	workdir, workdirErr := os.Getwd()
-
-	if workdirErr != nil {
-		log.WithError(workdirErr).Panic("Unable to determine current workdir.")
-	}
-	cmd.workdir = workdir
-	cmd.dsConfig = &v1.DevSpaceConfig{
-		Version: "v1",
-	}
-	cmd.privateConfig = &v1.PrivateConfig{
-		Version: "v1",
-		Release: &v1.Release{
-			Namespace: "default",
-		},
-		Cluster: &v1.Cluster{
-			ApiServer: "https://192.168.99.100:8443",
-			User:      &v1.User{},
+		Args: cobra.NoArgs,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.Run(f, cobraCmd, args)
 		},
 	}
-	cmd.appConfig = &v1.AppConfig{
-		Name: filepath.Base(cmd.workdir),
-		Container: &v1.AppContainer{
-			Port: 8080,
-		},
-		External: &v1.AppExternal{
-			Domain: "mydomain.com",
-			Port:   80,
-		},
-	}
-	dsConfigExists, _ := config.ConfigExists(cmd.dsConfig)
-	privateConfigExists, _ := config.ConfigExists(cmd.privateConfig)
 
-	if dsConfigExists || privateConfigExists {
-		cmd.loadExistingConfig()
-	}
-	cmd.initChartGenerator()
+	initCmd.Flags().BoolVarP(&cmd.Reconfigure, "reconfigure", "r", false, "Change existing configuration")
+	initCmd.Flags().StringVar(&cmd.Context, "context", "", "Context path to use for intialization")
+	initCmd.Flags().StringVar(&cmd.Dockerfile, "dockerfile", helper.DefaultDockerfilePath, "Dockerfile to use for initialization")
+	initCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
 
-	createChart := cmd.flags.overwrite
-
-	if !cmd.flags.overwrite {
-		_, dockerfileNotFound := os.Stat(cmd.chartGenerator.Path + "/Dockerfile")
-		_, chartDirNotFound := os.Stat(cmd.chartGenerator.Path + "/chart")
-
-		if dockerfileNotFound == nil || chartDirNotFound == nil {
-			overwriteAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-				Question:               "Do you want to overwrite the Dockerfile and the existing files in /chart? (yes | no)",
-				DefaultValue:           "no",
-				ValidationRegexPattern: "^(yes)|(no)$",
-			})
-			createChart = (strings.Compare(overwriteAnswer, "yes") == 0)
-		} else {
-			createChart = true
-		}
-	}
-
-	if createChart {
-		cmd.determineAppConfig()
-
-		if cmd.privateConfig.Release == nil || len(cmd.privateConfig.Release.Name) == 0 {
-			cmd.privateConfig.Release.Name = cmd.appConfig.Name
-		}
-		cmd.addPortForwarding()
-		cmd.addSyncPath()
-	}
-
-	if cmd.flags.reconfigure || !dsConfigExists || !privateConfigExists {
-		cmd.reconfigure()
-	}
-
-	if createChart {
-		cmd.determineLanguage()
-		cmd.createChart()
-	}
+	return initCmd
 }
 
-func (cmd *InitCmd) loadExistingConfig() {
-	config.LoadConfig(cmd.dsConfig)
-	config.LoadConfig(cmd.privateConfig)
-}
-
-func (cmd *InitCmd) initChartGenerator() {
-	templateRepoPath := cmd.flags.templateRepoPath
-
-	if len(templateRepoPath) == 0 {
-		templateRepoPath, _ = ioutil.TempDir("", "")
-		defer os.RemoveAll(templateRepoPath)
-	}
-	templateRepo := &generator.TemplateRepository{
-		URL:       cmd.flags.templateRepoURL,
-		LocalPath: templateRepoPath,
-	}
-	cmd.chartGenerator = &generator.ChartGenerator{
-		TemplateRepo: templateRepo,
-		Path:         cmd.workdir,
-	}
-}
-
-func (cmd *InitCmd) determineAppConfig() {
-	_, chartDirNotFound := os.Stat(cmd.chartGenerator.Path + "/chart")
-
-	if chartDirNotFound == nil {
-		existingChartYaml := map[interface{}]interface{}{}
-		existingChartValuesYaml := map[interface{}]interface{}{}
-
-		yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/Chart.yaml", existingChartYaml)
-		yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/values.yaml", existingChartValuesYaml)
-
-		cmd.appConfig.Name = existingChartYaml["name"].(string)
-
-		applicationValues, applicationValuesCorrect := existingChartValuesYaml["container"].(map[interface{}]interface{})
-		externalValues, externalValuesCorrect := existingChartValuesYaml["external"].(map[interface{}]interface{})
-
-		if applicationValuesCorrect {
-			value, isCorrect := applicationValues["port"].(int)
-
-			if isCorrect {
-				cmd.appConfig.Container.Port = value
-			}
-		}
-
-		if externalValuesCorrect {
-			value, isCorrect := externalValues["domain"].(string)
-
-			if isCorrect {
-				cmd.appConfig.External.Domain = value
-			}
-		}
-	}
-	cmd.appConfig.Name = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-		Question:               "What is the name of your application?",
-		DefaultValue:           cmd.appConfig.Name,
-		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-	})
-	cmd.appConfig.Container.Port, _ = strconv.Atoi(stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-		Question:               "Which port does your application listen on?",
-		DefaultValue:           strconv.Itoa(cmd.appConfig.Container.Port),
-		ValidationRegexPattern: "^[1-9][0-9]{0,4}$",
-	}))
-	/* TODO
-	cmd.appConfig.External.Domain = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-		Question:               "Which domain do you want to run your application on?",
-		DefaultValue:           cmd.appConfig.External.Domain,
-		ValidationRegexPattern: "^([a-z0-9]([a-z0-9-]{0,120}[a-z0-9])?\\.)+[a-z0-9]{2,}$",
-	})*/
-}
-
-func (cmd *InitCmd) addPortForwarding() {
-	portForwardingMissing := true
-
-OUTER:
-	for _, portForwarding := range cmd.dsConfig.PortForwarding {
-		for _, portMapping := range portForwarding.PortMappings {
-			if portMapping.RemotePort == cmd.appConfig.Container.Port {
-				portForwardingMissing = false
-				break OUTER
-			}
-		}
+// Run executes the command logic
+func (cmd *InitCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	// Check if config already exists
+	cmd.log = f.GetLog()
+	configLoader := f.NewConfigLoader(nil, cmd.log)
+	configExists := configLoader.Exists()
+	if configExists && cmd.Reconfigure == false {
+		cmd.log.Info("Config already exists. If you want to recreate the config please run `devspace init --reconfigure`")
+		cmd.log.Infof("\r         \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
+		return nil
 	}
 
-	if portForwardingMissing {
-		cmd.dsConfig.PortForwarding = append(cmd.dsConfig.PortForwarding, &v1.PortForwarding{
-			PortMappings: []*v1.PortMapping{
-				&v1.PortMapping{
-					LocalPort:  cmd.appConfig.Container.Port,
-					RemotePort: cmd.appConfig.Container.Port,
-				},
-			},
-			ResourceType: "pod",
-			LabelSelector: map[string]string{
-				"release": cmd.privateConfig.Release.Name,
-			},
-		})
-	}
-}
+	// Delete config & overwrite config
+	os.RemoveAll(".devspace")
 
-func (cmd *InitCmd) addSyncPath() {
-	syncPathMissing := true
+	// Delete configs path
+	os.Remove(constants.DefaultConfigsPath)
 
-	for _, syncPath := range cmd.dsConfig.SyncPaths {
-		if strings.Compare(syncPath.LocalSubPath, "./") == 0 || strings.Compare(syncPath.ContainerPath, "/app") == 0 {
-			syncPathMissing = false
-			break
-		}
-	}
+	// Delete config & overwrite config
+	os.Remove(constants.DefaultConfigPath)
 
-	if syncPathMissing {
-		cmd.dsConfig.SyncPaths = append(cmd.dsConfig.SyncPaths, &v1.SyncPath{
-			ContainerPath: "/app",
-			LocalSubPath:  "./",
-			ResourceType:  "pod",
-			LabelSelector: map[string]string{
-				"release": cmd.privateConfig.Release.Name,
-			},
-		})
-	}
-}
+	// Delete config & overwrite config
+	os.Remove(constants.DefaultVarsPath)
 
-func (cmd *InitCmd) reconfigure() {
-	clusterConfig := cmd.privateConfig.Cluster
+	// Create config
+	config := configLoader.New()
 
-	if len(clusterConfig.TillerNamespace) == 0 {
-		clusterConfig.TillerNamespace = cmd.privateConfig.Release.Namespace
-	}
-	cmd.privateConfig.Release.Namespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-		Question:               "Which Kubernetes namespace should your application run in?",
-		DefaultValue:           cmd.privateConfig.Release.Namespace,
-		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-	})
-	clusterConfig.TillerNamespace = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-		Question:               "Which Kubernetes namespace should your tiller server run in?",
-		DefaultValue:           clusterConfig.TillerNamespace,
-		ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-	})
-	kubeClusterConfig := &v1.Cluster{
-		User: &v1.User{},
-	}
-	skipClusterConfig := false
+	//Create ConfigureManager
+	configureManager := f.NewConfigureManager(config, cmd.log)
 
-	config.LoadClusterConfig(kubeClusterConfig, false)
+	// Print DevSpace logo
+	log.PrintLogo()
 
-	if len(kubeClusterConfig.ApiServer) != 0 && len(kubeClusterConfig.CaCert) != 0 && len(kubeClusterConfig.User.ClientCert) != 0 && len(kubeClusterConfig.User.ClientKey) != 0 {
-		skipAnswer := stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-			Question:               "Do you want to use your existing $HOME/.kube/config for Kubernetes access? (yes | no)",
-			DefaultValue:           "yes",
-			ValidationRegexPattern: "^(yes)|(no)$",
-		})
-		skipClusterConfig = (strings.Compare(skipAnswer, "yes") == 0)
-	}
-
-	if skipClusterConfig {
-		clusterConfig.UseKubeConfig = true
-	} else {
-		clusterConfig.ApiServer = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-			Question:               "What is your Kubernetes API Server URL? (e.g. https://127.0.0.1:8443)",
-			DefaultValue:           clusterConfig.ApiServer,
-			ValidationRegexPattern: "^https?://[a-z0-9-.]{0,99}:[0-9]{1,5}$",
-		})
-		clusterConfig.CaCert = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-			Question:               "What is the CA Certificate of your API Server? (PEM)",
-			DefaultValue:           clusterConfig.CaCert,
-			InputTerminationString: "-----END CERTIFICATE-----",
-		})
-		clusterConfig.User.Username = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-			Question:               "What is your Kubernetes username?",
-			DefaultValue:           clusterConfig.User.Username,
-			ValidationRegexPattern: v1.Kubernetes.RegexPatterns.Name,
-		})
-		clusterConfig.User.ClientCert = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-			Question:               "What is your Kubernetes client certificate? (PEM)",
-			DefaultValue:           clusterConfig.User.ClientCert,
-			InputTerminationString: "-----END CERTIFICATE-----",
-		})
-		clusterConfig.User.ClientKey = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-			Question:               "What is your Kubernetes client key? (RSA, PEM)",
-			DefaultValue:           clusterConfig.User.ClientKey,
-			InputTerminationString: "-----END RSA PRIVATE KEY-----",
-		})
-	}
-	cmd.reconfigureRegistry()
-
-	dsConfigErr := config.SaveConfig(cmd.dsConfig)
-
-	if dsConfigErr != nil {
-		log.WithError(dsConfigErr).Panic("Config error")
-	}
-	privateConfigErr := config.SaveConfig(cmd.privateConfig)
-
-	if privateConfigErr != nil {
-		log.WithError(privateConfigErr).Panic("Config error")
-	}
-}
-
-func (cmd *InitCmd) reconfigureRegistry() {
-	registryConfig := cmd.privateConfig.Registry
-
-	enableAutomaticBuilds := stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-		Question:               "Do you want to enable automatic Docker image building?",
-		DefaultValue:           "yes",
-		ValidationRegexPattern: "^(yes)|(no)$",
-	})
-
-	if strings.Compare(enableAutomaticBuilds, "yes") == 0 {
-		if registryConfig == nil {
-			registryConfig = &v1.RegistryAccess{}
-			cmd.privateConfig.Registry = registryConfig
-		}
-		registryConfig.Release = &v1.Release{
-			Name:      "devspace-registry",
-			Namespace: cmd.privateConfig.Release.Namespace,
-		}
-		registryConfig.User = &v1.RegistryUser{}
-
-		if cmd.privateConfig.Cluster.User != nil && len(cmd.privateConfig.Cluster.User.Username) != 0 {
-			registryConfig.User.Username = cmd.privateConfig.Cluster.User.Username
-		}
-
-		if len(registryConfig.User.Username) == 0 {
-			randomUserSuffix, randErr := randutil.GenerateRandomString(5)
-
-			if randErr != nil {
-				log.WithError(randErr).Panic("Error creating random username")
-			}
-			registryConfig.User.Username = "user-" + randomUserSuffix
-		}
-
-		if len(registryConfig.User.Password) == 0 {
-			randomPassword, randErr := randutil.GenerateRandomString(12)
-
-			if randErr != nil {
-				log.WithError(randErr).Panic("Error creating random password")
-			}
-			registryConfig.User.Password = randomPassword
-		}
-
-		if cmd.dsConfig.Registry == nil {
-			cmd.dsConfig.Registry = map[interface{}]interface{}{}
-		}
-		secrets, registryHasSecrets := cmd.dsConfig.Registry["secrets"]
-
-		if !registryHasSecrets {
-			secrets = map[interface{}]interface{}{}
-			cmd.dsConfig.Registry["secrets"] = secrets
-		}
-		secretMap, secretsIsMap := secrets.(map[interface{}]interface{})
-
-		if secretsIsMap {
-			_, registryHasSecretHtpasswd := secretMap["htpasswd"]
-
-			if !registryHasSecretHtpasswd {
-				secretMap["htpasswd"] = ""
-			}
-		}
-	}
-}
-
-func (cmd *InitCmd) determineLanguage() {
-	if len(cmd.flags.language) != 0 {
-		if cmd.chartGenerator.IsSupportedLanguage(cmd.flags.language) {
-			cmd.chartGenerator.Language = cmd.flags.language
-		} else {
-			fmt.Println("Language '" + cmd.flags.language + "' not supported yet. Please open an issue here: https://github.com/covexo/devspace/issues/new?title=Feature%20Request:%20Language%20%22" + cmd.flags.language + "%22")
-		}
-	}
-
-	if len(cmd.chartGenerator.Language) == 0 {
-		cmd.chartGenerator.Language, _ = cmd.chartGenerator.GetLanguage()
-		supportedLanguages, langErr := cmd.chartGenerator.GetSupportedLanguages()
-
-		if langErr != nil {
-			log.WithError(langErr).Panic("Unable to get supported languages")
-		}
-		cmd.chartGenerator.Language = stdinutil.GetFromStdin(&stdinutil.GetFromStdin_params{
-			Question:               "What is the major programming language of your project?\nSupported languages: " + strings.Join(supportedLanguages, ", "),
-			DefaultValue:           cmd.chartGenerator.Language,
-			ValidationRegexPattern: "^(" + strings.Join(supportedLanguages, ")|(") + ")$",
-		})
-	}
-}
-
-func (cmd *InitCmd) createChart() {
-	err := cmd.chartGenerator.CreateChart()
-
+	// Add deployment and image config
+	deploymentName, err := getDeploymentName()
 	if err != nil {
-		log.WithError(err).Panic("Error while creating Helm chart and Dockerfile:")
+		return err
 	}
-	createdChartYaml := map[interface{}]interface{}{}
-	createdChartValuesYaml := map[interface{}]interface{}{}
 
-	yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/Chart.yaml", &createdChartYaml)
-	yamlutil.ReadYamlFromFile(cmd.chartGenerator.Path+"/chart/values.yaml", &createdChartValuesYaml)
+	var (
+		newImage       *latest.ImageConfig
+		newDeployment  *latest.DeploymentConfig
+		selectedOption string
+	)
 
-	createdChartYaml["name"] = cmd.appConfig.Name
+	// Check if dockerfile exists
+	addFromDockerfile := true
 
-	containerValues, chartHasContainerValues := createdChartValuesYaml["container"].(map[interface{}]interface{})
-
-	if !chartHasContainerValues {
-		containerValues["port"] = cmd.appConfig.Container.Port
-		createdChartValuesYaml["container"] = containerValues
+	_, err = os.Stat(cmd.Dockerfile)
+	if err != nil {
+		selectedOption, err = cmd.log.Question(&survey.QuestionOptions{
+			Question:     "This project does not have a Dockerfile. What do you want to do?",
+			DefaultValue: CreateDockerfileOption,
+			Options: []string{
+				CreateDockerfileOption,
+				EnterDockerfileOption,
+				EnterManifestsOption,
+				EnterHelmChartOption,
+				UseExistingImageOption,
+			},
+		})
+		if err != nil {
+			return err
+		}
+	} else {
+		selectedOption, err = cmd.log.Question(&survey.QuestionOptions{
+			Question:     "How do you want to initialize this project?",
+			DefaultValue: UseExistingDockerfileOption,
+			Options: []string{
+				UseExistingDockerfileOption,
+				EnterDockerfileOption,
+				EnterManifestsOption,
+				EnterHelmChartOption,
+				UseExistingImageOption,
+			},
+		})
+		if err != nil {
+			return err
+		}
 	}
-	externalValues, chartHasExternalValues := createdChartValuesYaml["external"].(map[interface{}]interface{})
 
-	if !chartHasExternalValues {
-		externalValues["domain"] = cmd.appConfig.External.Domain
-		createdChartValuesYaml["external"] = externalValues
+	if selectedOption == CreateDockerfileOption {
+		// Containerize application if necessary
+		err = generator.ContainerizeApplication(cmd.Dockerfile, ".", "", cmd.log)
+		if err != nil {
+			return errors.Wrap(err, "containerize application")
+		}
+	} else if selectedOption == EnterDockerfileOption {
+		cmd.Dockerfile, err = cmd.log.Question(&survey.QuestionOptions{
+			Question: "Please enter a path to your Dockerfile (e.g. ./MyDockerfile)",
+		})
+		if err != nil {
+			return err
+		}
+	} else if selectedOption == EnterManifestsOption {
+		addFromDockerfile = false
+		manifests, err := cmd.log.Question(&survey.QuestionOptions{
+			Question: "Please enter Kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. 'manifests/**' or 'kube/pod.yaml')",
+		})
+		if err != nil {
+			return err
+		}
+
+		newDeployment, err = configureManager.NewKubectlDeployment(deploymentName, manifests)
+		if err != nil {
+			return err
+		}
+	} else if selectedOption == EnterHelmChartOption {
+		addFromDockerfile = false
+		chartName, err := cmd.log.Question(&survey.QuestionOptions{
+			Question: "Please enter the path to a helm chart to deploy (e.g. ./chart)",
+		})
+		if err != nil {
+			return err
+		}
+
+		newDeployment, err = configureManager.NewHelmDeployment(deploymentName, chartName, "", "")
+		if err != nil {
+			return err
+		}
+	} else if selectedOption == UseExistingImageOption {
+		addFromDockerfile = false
+		existingImageName, err := cmd.log.Question(&survey.QuestionOptions{
+			Question: "Please enter a docker image to deploy (e.g. gcr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)",
+		})
+		if err != nil {
+			return err
+		}
+
+		newImage, newDeployment, err = configureManager.NewImageComponentDeployment(deploymentName, existingImageName)
+		if err != nil {
+			return err
+		}
 	}
-	yamlutil.WriteYamlToFile(createdChartYaml, cmd.chartGenerator.Path+"/chart/Chart.yaml")
-	yamlutil.WriteYamlToFile(createdChartValuesYaml, cmd.chartGenerator.Path+"/chart/values.yaml")
+
+	// Check if dockerfile exists now
+	if addFromDockerfile {
+		_, err = os.Stat(cmd.Dockerfile)
+		if err != nil {
+			return errors.Errorf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.Dockerfile)
+		}
+
+		generatedConfig, err := configLoader.Generated()
+		if err != nil {
+			return err
+		}
+
+		newImage, newDeployment, err = configureManager.NewDockerfileComponentDeployment(generatedConfig, deploymentName, "", cmd.Dockerfile, cmd.Context)
+		if err != nil {
+			return err
+		}
+
+		// Add devspace.yaml to .dockerignore
+		err = appendToIgnoreFile(dockerIgnoreFile, configDockerignore)
+		if err != nil {
+			cmd.log.Warn(err)
+		}
+	}
+
+	// Add .devspace/ to .gitignore
+	err = appendToIgnoreFile(gitIgnoreFile, devspaceFolderGitignore)
+	if err != nil {
+		cmd.log.Warn(err)
+	}
+
+	if newImage != nil {
+		config.Images[defaultImageName] = newImage
+	}
+	if newDeployment != nil {
+		config.Deployments = []*latest.DeploymentConfig{newDeployment}
+	}
+
+	// Add the development configuration
+	err = cmd.addDevConfig(config)
+	if err != nil {
+		return err
+	}
+
+	// Save config
+	err = configLoader.Save(config)
+	if err != nil {
+		return err
+	}
+
+	cmd.log.WriteString("\n")
+	cmd.log.Done("Project successfully initialized")
+	cmd.log.Infof("\r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
+	return nil
+}
+
+func appendToIgnoreFile(ignoreFile, content string) error {
+	// Check if ignoreFile exists
+	_, err := os.Stat(ignoreFile)
+	if os.IsNotExist(err) {
+		fsutil.WriteToFile([]byte(content), ignoreFile)
+	} else {
+		fileContent, err := ioutil.ReadFile(ignoreFile)
+		if err != nil {
+			return errors.Errorf("Error reading file %s: %v", ignoreFile, err)
+		}
+
+		// append only if not found in file content
+		if strings.Contains(string(fileContent), content) == false {
+			file, err := os.OpenFile(ignoreFile, os.O_APPEND|os.O_WRONLY, 0600)
+			if err != nil {
+				return errors.Errorf("Error writing file %s: %v", ignoreFile, err)
+			}
+
+			defer file.Close()
+			if _, err = file.WriteString(content); err != nil {
+				return errors.Errorf("Error writing file %s: %v", ignoreFile, err)
+			}
+		}
+	}
+	return nil
+}
+
+func getDeploymentName() (string, error) {
+	absPath, err := filepath.Abs(".")
+	if err != nil {
+		return "", err
+	}
+
+	dirname := filepath.Base(absPath)
+	dirname = strings.ToLower(dirname)
+	dirname = regexp.MustCompile("[^a-zA-Z0-9- ]+").ReplaceAllString(dirname, "")
+	dirname = regexp.MustCompile("[^a-zA-Z0-9-]+").ReplaceAllString(dirname, "-")
+	dirname = strings.Trim(dirname, "-")
+
+	if cloud.SpaceNameValidationRegEx.MatchString(dirname) == false || len(dirname) > 42 {
+		dirname = "devspace"
+	}
+
+	return dirname, nil
+}
+
+func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
+	// Forward ports
+	if len(config.Images) > 0 && len(config.Deployments) > 0 && config.Deployments[0].Helm != nil && config.Deployments[0].Helm.ComponentChart != nil && *config.Deployments[0].Helm.ComponentChart == true {
+		componentValues := latest.ComponentConfig{}
+		err := util.Convert(config.Deployments[0].Helm.Values, &componentValues)
+		if err == nil && componentValues.Service != nil && componentValues.Service.Ports != nil && len(componentValues.Service.Ports) > 0 {
+			servicePort := componentValues.Service.Ports[0]
+			if servicePort.Port != nil {
+				localPortPtr := servicePort.Port
+				var remotePortPtr *int
+
+				if *localPortPtr < 1024 {
+					cmd.log.WriteString("\n")
+					cmd.log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
+
+					portString, err := cmd.log.Question(&survey.QuestionOptions{
+						Question:     "Which forwarding port [1024-49151] do you want to use to access your application?",
+						DefaultValue: strconv.Itoa(*localPortPtr + 8000),
+					})
+					if err != nil {
+						return err
+					}
+
+					remotePortPtr = localPortPtr
+
+					localPort, err := strconv.Atoi(portString)
+					if err != nil {
+						return errors.Errorf("Error parsing port '%s'", portString)
+					}
+					localPortPtr = &localPort
+				}
+				portMappings := []*latest.PortMapping{}
+				portMappings = append(portMappings, &latest.PortMapping{
+					LocalPort:  localPortPtr,
+					RemotePort: remotePortPtr,
+				})
+
+				// Add dev.ports config
+				config.Dev.Ports = []*latest.PortForwardingConfig{
+					{
+						ImageName:    defaultImageName,
+						PortMappings: portMappings,
+					},
+				}
+
+				// Add dev.open config
+				config.Dev.Open = []*latest.OpenConfig{
+					&latest.OpenConfig{
+						URL: "http://localhost:" + strconv.Itoa(*localPortPtr),
+					},
+				}
+			}
+		}
+	}
+
+	// Specify sync path
+	if len(config.Images) > 0 {
+		if (config.Images)[defaultImageName].Build == nil || (config.Images)[defaultImageName].Build.Disabled == nil {
+			if config.Dev.Sync == nil {
+				config.Dev.Sync = []*latest.SyncConfig{}
+			}
+
+			dockerignore, err := ioutil.ReadFile(".dockerignore")
+			excludePaths := []string{}
+			if err == nil {
+				dockerignoreRules := strings.Split(string(dockerignore), "\n")
+				for _, ignoreRule := range dockerignoreRules {
+					ignoreRule = strings.TrimSpace(ignoreRule)
+					if len(ignoreRule) > 0 && ignoreRule[0] != "#"[0] {
+						excludePaths = append(excludePaths, ignoreRule)
+					}
+				}
+			}
+
+			syncConfig := append(config.Dev.Sync, &latest.SyncConfig{
+				ImageName:    defaultImageName,
+				ExcludePaths: excludePaths,
+			})
+
+			config.Dev.Sync = syncConfig
+		}
+	}
+
+	return nil
 }

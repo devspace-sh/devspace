@@ -1,0 +1,76 @@
+@import '../../../styles/constants';
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  font-size: 0;
+  padding: 0;
+  background-color: $sky-blue;
+  border-radius: 5px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    filter: brightness(110%);
+  }
+
+  > :global(.icon-container) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 37px;
+    height: 32px;
+
+    img {
+      height: 16px;
+    }
+
+    &.with-border {
+      border-right: 1px solid rgba(255, 255, 255, 0.795);
+    }
+  }
+
+  > :global(.text) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 12px;
+    font: $button-text;
+    white-space: nowrap;
+    color: white;
+  }
+
+  &.-loading {
+    position: relative;
+    filter: grayscale(10%);
+    pointer-events: none;
+
+    > .button-loading-wrapper {
+      > .button-loading-circle {
+        background-image: none;
+        $color: white;
+        width: 16px;
+        height: 16px;
+        border-color: $color $color $color transparent;
+        border-radius: 50%;
+        border-style: solid;
+        border-width: 2px;
+        animation: rotate360 0.8s infinite linear;
+
+        @keyframes rotate360 {
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+      }
+    }
+  }
+
+  &.button-loading-circle-test {
+    .button-loading-circle {
+      animation: none !important;
+    }
+  }
+}

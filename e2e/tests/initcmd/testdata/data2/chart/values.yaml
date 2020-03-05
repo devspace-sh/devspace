@@ -1,0 +1,2 @@
+# Will be overriden during devspace dev / devspace deploy
+image: devspace

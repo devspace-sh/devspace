@@ -1,0 +1,22 @@
+@import '../../../../styles/constants.scss';
+
+.delete-popup-content {
+  .buttons {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+
+    .cancel {
+      background-color: $gray-4;
+      margin-right: 15px;
+    }
+  }
+
+  .error {
+    color: $darkred;
+  }
+
+  + * {
+    margin-top: 40px;
+  }
+}

@@ -1,0 +1,43 @@
+@import '../../../styles/constants';
+
+.button-base {
+  &.-loading {
+    position: relative;
+    filter: grayscale(10%);
+    pointer-events: none;
+
+    > .button-loading-wrapper {
+      > .button-loading-circle {
+        background-image: none;
+        $color: white;
+        width: 16px;
+        height: 16px;
+        border-color: $color $color $color transparent;
+        border-radius: 50%;
+        border-style: solid;
+        border-width: 2px;
+        animation: rotate360 0.8s infinite linear;
+
+        @keyframes rotate360 {
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+      }
+    }
+  }
+
+  :global(.icon-container) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    :global(.img-icon) {
+      height: 16px;
+    }
+
+    &.with-border {
+      border-right: 1px solid rgba(255, 255, 255, 0.795);
+    }
+  }
+}

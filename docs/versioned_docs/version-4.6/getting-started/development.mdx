@@ -1,0 +1,99 @@
+---
+title: Development with DevSpace
+sidebar_label: 4. Develop & Debug
+---
+
+import FragmentWarningMultipleDev from '../fragments/warning-multiple-dev.mdx';
+
+DevSpace allows you to develop applications directly inside a Kubernetes cluster.
+
+The biggest advantages of developing directly inside Kubernetes is that your dev environment will be very similar to your production environment and you can have a much greater confidence that everything will work in production when shipping new features.
+
+## Start Development Mode
+Run the following command to start your application in development mode:
+```bash
+devspace dev
+```
+
+<figure class="frame">
+  <video controls loop autoplay="true">
+    <source src="/cli/img/devspace-dev-ide.mp4" type="video/mp4" />
+  </video>
+  <figcaption>DevSpace CLI - Development Mode</figcaption>
+</figure>
+
+<FragmentWarningMultipleDev/>
+
+Running `devspace dev` will do the following:
+
+1. **Build and deploy** your application similar to using `devspace deploy`
+2. **Forward all ports** specified in the [`dev.ports` section in the `devspace.yaml`](../configuration/development/port-forwarding.mdx)
+3. **Stream logs** of all containers specified in [`dev.logs` section of the `devspace.yaml`](../configuration/development/log-streaming.mdx)
+4. **Sync all file changes** according to the [sync config in `dev.sync`](../configuration/development/file-synchronization.mdx), so you can reload your application without having to redeploy or restart your containers (using hot reloading directly within your containers)
+
+<figure>
+  <img src="/cli/img/deployment-process-devspace.svg" alt="Deployment Workflow" />
+  <figcaption>DevSpace CLI - Deployment Workflow</figcaption>
+</figure>
+
+
+## Open UI (in the browser)
+When running `devspace dev`, DevSpace starts a client-only UI for Kubernetes. You can see that in the output of `devspace dev` which should contain a log line similar to this one:
+```bash
+#########################################################
+[info]   DevSpace UI available at: http://localhost:8090
+#########################################################
+```
+
+By default, DevSpace starts the development UI on port `8090` but if the port is already in use, it will use a different port. If `devspace dev` is running, you can open the link shown in the `devspace dev` logs, e.g. [http://localhost:8090](http://localhost:8090)
+
+You can also start the UI without running `devspace dev` using this command:
+```bash
+devspace dev
+```
+
+[Follow this guide to learn more about the functionalities of the DevSpace UI for Kubernetes development.](../guides/localhost-ui.mdx)
+
+<figure class="frame">
+  <video controls loop autoplay="true">
+    <source src="/cli/img/devspace-ui.mp4" type="video/mp4" />
+  </video>
+  <figcaption>DevSpace CLI - Development UI</figcaption>
+</figure>
+
+:::info Runs on Localhost
+The UI of DevSpace is open-source just like the rest of the CLI and it runs entirely on localhost.
+:::
+
+
+## Use Port Forwarding
+After starting your application, you can access it via `localhost:[PORT]` because the command `devspace dev` will start port forwarding for all ports specified in the `dev.ports` section of your project's `devspace.yaml`.
+
+:::info Port Detection
+When running `devspace init`, DevSpace detects all ports within your Dockerfile (i.e. `EXPOSE [PORT]` lines) and automatically configures forwarding for them when creating the `devspace.yaml`.
+:::
+
+:::note Add Ports
+If you want additional ports to be fowarded, you can add them manually or simply run
+```bash
+devspace add port [port]
+```
+:::
+
+Learn more about how to [configure port forwarding](../configuration/development/port-forwarding.mdx).
+
+## Use File Synchronization
+While `devspace dev` is running, your source code files will be synchronized between your local project folder and your containers running inside Kubernetes. This allows you to code with your favorite IDE or text editor and use hot reloading tools (e.g. `nodemon`) to update the application without having to rebuild your images or redeploy your containers.
+
+:::info
+If you are using one of the quickstart projects, you can see that the ENTRYPOINT in your Dockerfile is already starting the application using hot reloading (see **Option 1** below).
+:::
+
+:::note Configure Hot Reloading
+This step requires your application to start with a hot reloading tool, e.g. nodemon. To do this, you have two options:
+
+- **Option 1: Edit the ENTRYPOINT in your Dockerfile** (easy and simple to share with others but often requires to setup a [separate profile for staging or production-like deployments](../configuration/profiles/basics.mdx))
+- **Option 2:** [**Start interactive mode** using `devspace dev -i`](../guides/interactive-mode.mdx) and run the start command manually after the terminal opens, e.g. `npm run develop` (quick and non-intrusive but hard to share with your team mates)
+:::
+
+After you started your application using hot reloading, you can edit a file, save the file and see how DevSpace uploads it to your containers which triggers your application to reload (see [demo in the video above](#start-development-mode)).

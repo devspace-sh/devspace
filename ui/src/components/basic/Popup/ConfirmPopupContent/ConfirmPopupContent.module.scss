@@ -1,0 +1,23 @@
+@import '../../../../styles/constants.scss';
+
+.confirm-popup-content {
+  .highlighted-area {
+    > .highlighted-area-content {
+      justify-content: flex-end;
+      margin-bottom: -20px;
+    }
+  }
+
+  .buttons {
+    display: flex;
+
+    .button:first-of-type {
+      background-color: $gray-4;
+      margin-right: 10px;
+    }
+  }
+
+  + * {
+    margin-top: 40px;
+  }
+}

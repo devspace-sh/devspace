@@ -1,0 +1,99 @@
+@import '../../../styles/constants';
+
+.popup-container {
+  position: fixed;
+  background-color: $popup-bg;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Open Sans';
+
+  .popup {
+    width: 570px;
+    background: white;
+    box-shadow: 0px 0px 20px $box-shadow;
+    border-radius: 3px;
+    padding: 20px;
+    position: relative;
+    margin-bottom: 0;
+    max-height: 90vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    font: $text;
+    color: $blue-dark-2;
+
+    &.closed {
+      margin-bottom: 103px;
+    }
+
+    .title {
+      > h3 {
+        margin: 0;
+        color: $blue-dark-2;
+        padding-bottom: 20px;
+        font: $portlet-title;
+      }
+    }
+
+    .message-text {
+      padding-bottom: 15px;
+      color: $blue-dark-2;
+    }
+
+    .popup-close {
+      position: absolute;
+      right: 15px;
+      top: 15px;
+
+      &:hover {
+        background-color: unset;
+        filter: brightness(40%);
+      }
+    }
+
+    h2 {
+      font: $portlet-title;
+      margin: 0;
+      color: $blue-dark-2;
+    }
+
+    hr {
+      margin: 0;
+      border: none;
+      height: 1px;
+      background: $box-shadow;
+      opacity: 0.5;
+      border-radius: 0px 0px 5px 5px;
+      margin-bottom: 18px;
+    }
+
+    .status-message {
+      text-align: center;
+      padding-top: 20px;
+      font-size: 14px;
+
+      &:global(.error) {
+        color: $darkred;
+      }
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: flex-end;
+
+      .yes-btn {
+        background-color: $red;
+      }
+
+      .no-btn {
+        margin-left: 10px;
+        background-color: $blue;
+      }
+    }
+  }
+}

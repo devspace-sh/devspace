@@ -1,0 +1,39 @@
+@import '../../../../styles/constants.scss';
+
+.change-namespace {
+  width: 420px;
+  margin-left: 30px;
+  margin-right: 26px;
+  z-index: 11;
+
+  > div {
+    background-color: $blue;
+    padding: 8px 0;
+
+    :global(.top) {
+      height: unset;
+      flex-direction: column;
+      padding: 10px 20px;
+
+      > div {
+        margin-bottom: 5px;
+
+        &:first-of-type {
+          margin-bottom: 10px;
+        }
+
+        label {
+          width: 100%;
+          font: $list-label;
+          font-size: 13px;
+          color: $gray-1;
+
+          .dropdown {
+            margin-top: 5px;
+            border-radius: 2px;
+          }
+        }
+      }
+    }
+  }
+}

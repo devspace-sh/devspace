@@ -1,0 +1,22 @@
+---
+title: File Synchronization
+sidebar_label: File Synchronization
+---
+
+There are two types of file synchronzation processes:
+- on-demand file sync using `devspace dev` and
+- file synchronization during development mode using `devspace dev`. 
+
+
+## Start On-Demand File Sync
+To establish an on-demand file synchronization between your local computer and the containers running inside Kubernetes, use the following command:
+```bash
+devspace sync   # common flags: --local-path=./ --container-path=/app --no-watch --config=./devspace.yaml
+```
+[Learn more about the `devspace sync` command.](https://devspace.cloud/blog/2019/10/18/release-devspace-v4.1.0-kubectl-cp-file-synchronization)
+
+
+## Configure File Sync
+If you want to start file synchronization every time you run `devspace dev`, you can configure it within `devspace.yaml`.
+
+[Learn more about configuring file synchronization using `devspace.yaml`.](../configuration/development/file-synchronization.mdx)

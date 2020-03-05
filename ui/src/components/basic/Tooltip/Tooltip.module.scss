@@ -1,0 +1,197 @@
+@import '../../../styles/constants';
+
+.tooltip-container {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+
+  :global(.tooltip) {
+    font-family: 'Kanit', sans-serif !important;
+    position: absolute;
+    white-space: nowrap;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: white;
+    z-index: 40;
+    height: auto;
+    border-radius: 3px;
+    text-align: left;
+    padding: 3px 10px;
+    color: $gray-4;
+    font-size: 14px !important;
+    text-align: center;
+    font-weight: normal !important;
+
+    opacity: 0;
+    visibility: hidden;
+    -webkit-transition: opacity 0.5s, visibility 0.5s;
+    -moz-transition: opacity 0.5s, visibility 0.5s;
+    -ms-transition: opacity 0.5s, visibility 0.5s;
+    -o-transition: opacity 0.5s, visibility 0.5s;
+    transition: opacity 0.5s, visibility 0.5s;
+
+    h4 {
+      font-size: 16px;
+      color: white;
+      margin-bottom: 15px;
+      -webkit-margin-before: 0;
+      -webkit-margin-after: 0;
+    }
+
+    &.tooltip-shown {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .tooltip-arrow {
+      position: absolute;
+      display: block;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      z-index: 50;
+    }
+  }
+
+  .tooltip-hidden {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  .tooltip-right {
+    top: -33%;
+    left: calc(102% + 13px);
+    box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.25);
+    .tooltip-arrow {
+      border-top: 7px solid rgba(0, 0, 0, 0);
+      border-bottom: 7px solid rgba(0, 0, 0, 0);
+      border-right: 13px solid #7b8287;
+      left: -13px;
+      top: 20px;
+    }
+  }
+
+  .tooltip-left {
+    top: -33%;
+    right: calc(102% + 13px);
+    .tooltip-arrow {
+      z-index: 50;
+      border-top: 7px solid rgba(0, 0, 0, 0);
+      border-bottom: 7px solid rgba(0, 0, 0, 0);
+      border-left: 13px solid #7b8287;
+      right: -13px;
+      top: 20px;
+    }
+  }
+
+  .tooltip-top {
+    bottom: calc(108% + 10px);
+    box-shadow: $shadow-button;
+    .tooltip-arrow {
+      z-index: 50;
+      width: 15px;
+      height: 9px;
+      background-image: url(../../../images/tooltip-arrow.svg);
+      background-repeat: no-repeat;
+      background-position: center;
+      bottom: -9px;
+    }
+  }
+
+  .tooltip-bottom {
+    top: calc(100% + 13px);
+    box-shadow: $shadow-button;
+    .tooltip-arrow {
+      z-index: 50;
+      width: 15px;
+      height: 9px;
+      background-image: url(../../../images/tooltip-arrow.svg);
+      background-repeat: no-repeat;
+      background-position: center;
+      top: -9px;
+      transform: rotate(180deg) translateX(50%);
+    }
+  }
+
+  .tooltip-for-icon {
+    top: calc(100% + 13px);
+    box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.25);
+    .tooltip-arrow {
+      z-index: 50;
+      border-right: 7px solid rgba(0, 0, 0, 0);
+      border-left: 7px solid rgba(0, 0, 0, 0);
+      border-bottom: 13px solid #7b8287;
+      top: -13px;
+    }
+  }
+}
+
+.tooltip-container-for-icon {
+  position: relative;
+  display: inline-block;
+  font-size: 14px;
+
+  .tooltip-for-icon {
+    pointer-events: none;
+    box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.25);
+
+    -webkit-transition: opacity 0.1s, visibility 0.1s;
+    -moz-transition: opacity 0.1s, visibility 0.1s;
+    -ms-transition: opacity 0.1s, visibility 0.1s;
+    -o-transition: opacity 0.1s, visibility 0.1s;
+    transition: opacity 0.1s, visibility 0.1s;
+
+    font-family: 'Play', 'Open Sans', sans-serif;
+    background-color: #7b8287;
+    z-index: 40;
+    border-radius: 3px;
+    opacity: 0;
+    visibility: hidden;
+
+    width: max-content;
+    width: -moz-max-content;
+    color: white;
+    text-align: center;
+    padding: 5px 2px;
+
+    transform: translateX(-50%);
+
+    /* Position the tooltip */
+    position: absolute;
+    top: 145%;
+    left: 50%;
+    //margin-left: -125px;
+
+    .tooltip-arrow {
+      position: absolute;
+      display: block;
+      width: 0;
+      z-index: 50;
+      border-right: 7px solid rgba(0, 0, 0, 0);
+      border-left: 7px solid rgba(0, 0, 0, 0);
+      border-bottom: 13px solid #7b8287;
+      top: -13px;
+      left: calc(50% - 4px);
+    }
+  }
+
+  .tooltip-hidden {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  &:hover {
+    -webkit-transition: opacity 0s, visibility 0s;
+    -moz-transition: opacity 0s, visibility 0s;
+    -ms-transition: opacity 0s, visibility 0s;
+    -o-transition: opacity 0s, visibility 0s;
+    transition: opacity 0s, visibility 0s;
+
+    .tooltip-hidden {
+      visibility: visible;
+      opacity: 1;
+    }
+  }
+}

@@ -1,0 +1,81 @@
+@import '../../../styles/constants';
+
+.page-layout-container {
+  display: flex;
+  height: 100%;
+  max-width: 100%;
+
+  > .app-body {
+    width: 100%;
+    background-color: #f7f9fc;
+    display: flex;
+    flex-direction: column;
+    width: calc(100% - 180px);
+    height: 100%;
+    flex: 1;
+    z-index: 10;
+
+    > .main-content-wrapper {
+      overflow-y: scroll;
+      overflow-x: auto;
+      flex: 1;
+
+      &::-webkit-scrollbar-button {
+        display: none;
+        height: 13px;
+        border-radius: 0px;
+        background-color: transparent;
+      }
+      &::-webkit-scrollbar-button:hover {
+        background-color: transparent;
+      }
+      &::-webkit-scrollbar-thumb {
+        background-color: #aaa;
+      }
+      &::-webkit-scrollbar-track {
+        background-color: transparent;
+      }
+      &::-webkit-scrollbar-track:hover {
+        background-color: transparent;
+      }
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      > .main-content {
+        position: relative;
+        background-color: #f7f9fc;
+        margin: 40px;
+        margin-top: 43px;
+        display: flex;
+        min-height: calc(100% - 83px);
+        flex-direction: column;
+      }
+    }
+  }
+}
+
+@media screen and (max-width: $max-width) {
+  .page-layout-container {
+    > .main-content {
+      border-radius: 5px 0px 0px 0px;
+    }
+  }
+}
+
+@media screen and (max-width: 950px) {
+  .page-layout-container {
+    .app-body {
+      flex: 1 0 100%;
+    }
+  }
+}
+
+@media screen and (max-width: 570px) {
+  .page-layout-container {
+    .main-content {
+      margin: 20px !important;
+      margin-top: 40px !important;
+    }
+  }
+}

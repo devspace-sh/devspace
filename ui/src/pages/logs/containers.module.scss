@@ -1,0 +1,22 @@
+.logs-containers-component {
+  display: flex;
+  flex-direction: row !important;
+  max-height: calc(100% - 83px);
+
+  .info-part {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-right: -25px;
+  }
+
+  .nothing-selected {
+    display: flex;
+    font: 600 19px 'Open Sans';
+    opacity: 0.8;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+}

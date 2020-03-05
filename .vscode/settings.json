@@ -1,5 +1,9 @@
 {
-    "files.insertFinalNewline": true,
-    "files.trimFinalNewlines": true,
-    "go.formatTool": "goreturns"
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "go.autocompleteUnimportedPackages": true,
+  "go.installDependenciesWhenBuilding": false,
+  "go.formatTool": "goimports",
+  "go.coverOnTestPackage": true,
+  "go.useLanguageServer": true
 }

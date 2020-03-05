@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Configure to use minikube docker
+eval $(minikube docker-env 2>/dev/null) || true 
+
+# Build the docker image
+docker build -t $1 . -f custom/Dockerfile

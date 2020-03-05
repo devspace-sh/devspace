@@ -1,0 +1,28 @@
+@import '../../styles/constants';
+
+.spaces-component {
+  .spaces-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font: $portlet-title;
+    color: $gray-4;
+    margin-bottom: 40px;
+
+    button {
+      margin-left: 10px;
+    }
+  }
+}
+
+@media screen and (max-width: 570px) {
+  .spaces-component {
+    .spaces-heading {
+      justify-content: flex-end !important;
+
+      div {
+        display: none;
+      }
+    }
+  }
+}

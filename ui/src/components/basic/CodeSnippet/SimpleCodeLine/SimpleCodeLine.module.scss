@@ -1,0 +1,8 @@
+@import '../../../../styles/constants.scss';
+
+.simple-code-line {
+  font: $code;
+  color: #8fa6b2;
+  word-break: break-all;
+  margin: 1px 0;
+}

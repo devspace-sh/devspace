@@ -1,0 +1,206 @@
+---
+title: Build Images with kaniko
+sidebar_label: kaniko
+---
+
+import FragmentBuildOptionsTarget from '../../fragments/build-option-target.mdx';
+import FragmentBuildOptionsNetwork from '../../fragments/build-option-network.mdx';
+import FragmentBuildOptionsBuildArgs from '../../fragments/build-option-buildArgs.mdx';
+
+## `kaniko`
+Using `kaniko` as build tool allows you to build images direclty inside your Kubernetes cluster without a Docker daemon. DevSpace simply starts a build pod and builds the image using `kaniko`.
+
+:::note Automatic Cleanup
+After the build process completes, the build pod started for the kaniko build process will be deleted again.
+:::
+
+To set `kaniko` as default build tool use the following configuration:
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        cache: true
+```
+
+### `cache`
+The `cache` option expects a boolean that states if kaniko should make use of layer caching by pulling the previously build image and using the layers of this image as cache.
+
+#### Default Value For `cache`
+```yaml
+cache: true
+```
+
+#### Example: Building Images with kaniko
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        cache: true
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    build:
+      kaniko:
+        cache: false
+```
+**Explanation:**  
+- The first image `backend` would be built using kaniko and make use of the build cache.
+- The second image `frontend` would be built using kaniko and **not** use the build cache.
+
+
+### `snapshotMode`
+The `snapshotMode` option expects a string that can have the following values:
+- `full` tells kaniko to do a full filesystem snapshot
+- `time` tells kaniko to do a filesystem snapshot based on `mtime` (default)
+
+:::warning Limitations
+One of the biggest limitations of the `time` mode is that kaniko might **miss** file metadata changes introduced by `RUN` statements, e.g. kaniko might skip a command such as `RUN chown 333:333 -R /app`. In cases where this is not an option, use `full` instead. Learn more about [limitations related to kaniko snapshots using `mtime`](https://github.com/GoogleContainerTools/kaniko#mtime-and-snapshotting).
+:::
+
+#### Default Value For `snapshotMode`
+```yaml
+snapshotMode: time
+```
+
+#### Example: Building Images with kaniko
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        cache: true
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    build:
+      kaniko:
+        snapshotMode: time
+```
+**Explanation:**  
+- The first image `backend` would be built using kaniko and creating full filesystem snapshots.
+- The second image `frontend` would be built using kaniko and calculate filesystem snapthots only based on `mtime`.
+
+
+### `flags`
+The `flags` option expects an array of strings that will be passed as flags and values for these flags when running the kaniko build command.
+
+:::note Kaniko Documentation
+Take a look at the kaniko documentation for a full [list of available flags](https://github.com/GoogleContainerTools/kaniko#additional-flags).
+:::
+
+#### Default Value For `flags`
+```yaml
+flags: []
+```
+
+#### Example: Passing Flags to kaniko
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        flags:
+        - --cache-dir
+        - /tmp
+        - --verbosity
+        - debug
+```
+**Explanation:**  
+The image `backend` would be built using kaniko and the flags `--cache-dir=/tmp --verbosity=debug` would be set when running the build command within the kaniko pod used for image building.
+
+
+### `namespace`
+The `namespace` option expects a string stating a namespace that should be used to start the kaniko build pod in.
+
+#### Default Value For `flags`
+```yaml
+namespace: "" # defaults to the default namespace of the current kube-context
+```
+
+#### Example: Different Namespace For kaniko
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        namespace: build-namespace
+```
+**Explanation:**  
+The image `backend` would be built using kaniko and the build pod started to run the kaniko build process would be created within the namespace `build-namespace` within the cluster that the current kube-context points to.
+
+
+### `insecure`
+The `insecure` option expects a boolean stating if kaniko should allow to push to an insecure (plain HTTP instead of HTTPS) registry.
+
+:::warning
+This option should only be set to `true` for testing purposes.
+:::
+
+#### Default Value For `insecure`
+```yaml
+insecure: false
+```
+
+#### Example: Push to Insecure Registry With kaniko
+```yaml
+images:
+  backend:
+    image: 123.456.789.0:5000/john/appbackend
+    build:
+      kaniko:
+        namespace: build-namespace
+```
+**Explanation:**  
+The image `backend` would be built using kaniko and pushing to the insecure registry `123.456.789.0:5000` would be allowed.
+
+
+### `pullSecret`
+The `pullSecret` option expects a string with the name of a Kubernetes secret which is used by kaniko as pull secret (e.g. for pulling the base image defined in the `FROM` statement of the Dockerfile).
+
+:::info
+In most cases, DevSpace already makes sure that kaniko gets the correct pull secrets to push and pull to registries.
+:::
+
+#### Default Value For `pullSecret`
+```yaml
+pullSecret: ""
+```
+
+#### Example: Pull Secret For kaniko
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        pullSecret: custom-pull-secret
+```
+**Explanation:**  
+The image `backend` would be built using kaniko and kaniko would use the Kubernete secret `custom-pull-secret` to pull images from registries that require authentication.
+
+
+## `kaniko.options`
+DevSpace allows you to configure the following build options:
+- `target` defining the build target for multi-stage builds
+- `network` to define which network to use during building (e.g. `docker build --network=host`)
+- `buildArgs` to pass arguments to the Dockerfile during the build process
+
+
+### `target`
+
+<FragmentBuildOptionsTarget/>
+
+
+### `network`
+
+<FragmentBuildOptionsNetwork/>
+
+
+### `buildArgs`
+
+<FragmentBuildOptionsBuildArgs/>
