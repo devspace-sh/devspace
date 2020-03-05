@@ -384,7 +384,7 @@ works with any remote Kubernetes cluster (GKE, EKS, AKS, bare metal etc.)
 
 <img src="static/img/line.svg" height="1">
 
-#### Option A: You want to use this cluster alone
+#### Option A: You alone want to use this cluster
 If you want to deploy to a remote Kubernetes cluster, make sure your **current kube-context** points to this cluster and tell DevSpace which namespace to use:
 ```bash
 # Tell DevSpace which namespace to use (will be created automatically during deployment)
