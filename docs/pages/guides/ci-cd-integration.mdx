@@ -26,9 +26,3 @@ If you want to use DevSpace Cloud in your CI/CD pipeline as well, you need to ge
 ```bash
 devspace login --key=[YOUR_ACCESS_KEY]
 ```
-
-### Encryption Keys / Using Spaces
-If you are using the SaaS edition of DevSpace Cloud, you need to provide an encryption key to create or use a space in a connected cluster. You can do this by passing the encryption key to stdin like this:
-```bash
-echo $DEVSPACE_CLOUD_ENCRYPTION_KEY >> devspace use space production
-```
