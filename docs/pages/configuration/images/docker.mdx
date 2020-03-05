@@ -34,7 +34,7 @@ images:
 The `args` option expects an array of strings to be passed as arguments and flags to Docker.
 
 :::warning
-When specifying `args`, DevSpace will invoke your installed Docker CLI via a command-line call instead of using the built-in Docker client. This has negative effects that:
+When specifying `args`, DevSpace will invoke your installed Docker CLI via a command-line call instead of using the built-in Docker client. This has the negative effects that:
 - The kaniko fallback will not be used anymore.
 - You need to make sure that everyone who is using this configuration has the same version (or a compatible one) of Docker installed.
 :::
@@ -117,7 +117,7 @@ This allows to keep `skipPush: false` for these local clusters which helps to ke
 :::
 
 :::warning Remote Clusters
-Setting this option means that the configuration cannot be used to deploy to remote clusters anymore which makes it harder to switch between clusters and keep the configuration cluster-independent.
+Setting this option means that the configuration cannot be used to deploy to remote clusters anymore, which makes it harder to switch between clusters and keep the configuration cluster-independent.
 :::
 
 #### Default Value For `skipPush`
