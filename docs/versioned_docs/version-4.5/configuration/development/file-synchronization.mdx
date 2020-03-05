@@ -47,7 +47,7 @@ The following config options are needed to determine the container which the fil
 - [`namespace`](#namespace)
 
 :::info Combine Otions
-If you specify multiple these config options, they will be jointly used to select the pod / container (think logical `AND / &&`).
+If you specify multiple of these config options, they will be jointly used to select the pod / container (think logical `AND / &&`).
 :::
 
 :::info Auto Reconnect
@@ -161,7 +161,7 @@ The `containerName` option is not required if the pod you are selecting using `i
 The `namespace` option expects a string with a Kubernetes namespace used to select the container from.
 
 :::warning
-It is generally **not** needed (nor recommended) to specify the `namespace` option because by default, DevSpace uses the default namespace of your current kube-context which is usually the one that has been used to deploy your containers to.
+It is generally **not** needed (nor recommended) to specify the `namespace` option because, by default, DevSpace uses the default namespace of your current kube-context which is usually the one that has been used to deploy your containers to.
 :::
 
 

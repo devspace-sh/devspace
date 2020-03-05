@@ -8,7 +8,7 @@ If you are overriding the Dockerfile `ENTRYPOINT` or `CMD`, it only affects the 
 :::
 
 ### `entrypoint`
-The `entrypoint` option expects an array of strings which tells DevSpace to overrides the `ENTRYPOINT` defined in the `Dockerfile` during the image building process.
+The `entrypoint` option expects an array of strings which tells DevSpace to override the `ENTRYPOINT` defined in the `Dockerfile` during the image building process.
 
 :::note
 If you are overriding the `ENTRYPOINT`, it is often useful to also [override the `CMD` statement](#cmd). If you want to define `entrypoint: ...` for an image and you do **not** want the `CMD` statement from the Dockerfile, add `cmd: []` to the image configuration in your `devspace.yaml`.
@@ -37,7 +37,7 @@ images:
 
 
 ## `cmd`
-The `cmd` option expects an array of strings which tells DevSpace to overrides the `CMD` defined in the `Dockerfile` during the image building process.
+The `cmd` option expects an array of strings which tells DevSpace to override the `CMD` defined in the `Dockerfile` during the image building process.
 
 :::note
 `CMD` generally defines the arguments for `ENTRYPOINT`.

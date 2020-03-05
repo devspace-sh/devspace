@@ -49,7 +49,7 @@ By default, DevSpace starts the development UI on port `8090` but if the port is
 
 You can also start the UI without running `devspace dev` using this command:
 ```bash
-devspace dev
+devspace ui
 ```
 
 [Follow this guide to learn more about the functionalities of the DevSpace UI for Kubernetes development.](../guides/localhost-ui.mdx)
@@ -93,7 +93,7 @@ If you are using one of the quickstart projects, you can see that the ENTRYPOINT
 This step requires your application to start with a hot reloading tool, e.g. nodemon. To do this, you have two options:
 
 - **Option 1: Edit the ENTRYPOINT in your Dockerfile** (easy and simple to share with others but often requires to setup a [separate profile for staging or production-like deployments](../configuration/profiles/basics.mdx))
-- **Option 2:** [**Start interactive mode** using `devspace dev -i`](../guides/interactive-mode.mdx) and run the start command manually after the terminal opens, e.g. `npm run develop` (quick and non-intrusive but hard to share with your team mates)
+- **Option 2:** [**Start interactive mode** using `devspace dev -i`](../guides/interactive-mode.mdx) and run the start command manually after the terminal opens, e.g. `npm run develop` (quick and non-intrusive but hard to share with your teammates)
 :::
 
 After you started your application using hot reloading, you can edit a file, save the file and see how DevSpace uploads it to your containers which triggers your application to reload (see [demo in the video above](#start-development-mode)).

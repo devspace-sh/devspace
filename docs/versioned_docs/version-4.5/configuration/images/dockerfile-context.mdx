@@ -8,7 +8,7 @@ import FragmentFaqImageContext from '../../fragments/faq-image-context.mdx';
 ## `dockerfile`
 The `dockerfile` option expects a string with a path to a `Dockerfile`.
 - The path in `dockerfile` should be relative to the `devspace.yaml`.
-- When setting the `dockerfile` option it is often useful to set the [`context` option](#context) as well.
+- When setting the `dockerfile` option, it is often useful to set the [`context` option](#context) as well.
 - To share your configuration with team mates, make sure `devspace.yaml` and all `Dockerfiles` used in the `images` section are checked into your code repository.
 
 #### Default Value For `dockerfile`
@@ -33,7 +33,7 @@ images:
 - In this example, it would probably be useful to have a `./.dockerignore` file which ignores the `frontend/` folder when building the first image called `backend`.
 
 :::note
-See **[Best Practices for Image Building](../../best-practices/image-building.mdx)** for details on how to optimize your Dockerfiles and use `.dockerignore` for faster image building.
+See **[Best Practices for Image Building](../../guides/image-building.mdx)** for details on how to optimize your Dockerfiles and use `.dockerignore` for faster image building.
 :::
 
 ### `context`

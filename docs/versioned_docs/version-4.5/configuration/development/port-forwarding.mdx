@@ -44,7 +44,7 @@ The following config options are needed to determine the pod to which the traffi
 - [`namespace`](#namespace)
 
 :::info Combine Options
-If you specify multiple these config options, they will be jointly used to select the pod / container (think logical `AND / &&`).
+If you specify multiple of these config options, they will be jointly used to select the pod / container (think logical `AND / &&`).
 :::
 
 :::info Auto Reconnect
@@ -135,7 +135,7 @@ dev:
 The `namespace` option expects a string with a Kubernetes namespace used to select the pod from.
 
 :::warning 
-It is generally **not** needed (nor recommended) to specify the `namespace` option because by default, DevSpace uses the default namespace of your current kube-context which is usually the one that has been used to deploy your containers to.
+It is generally **not** needed (nor recommended) to specify the `namespace` option because, by default, DevSpace uses the default namespace of your current kube-context which is usually the one that has been used to deploy your containers to.
 :::
 
 ## Port Mapping `forward`
@@ -149,7 +149,7 @@ By default, `remotePort` will take the same value as `port` if `remotePort` is n
 The `port` option is mandatory and expects an integer from the range of user ports [1024 - 49151].
 
 :::warning
-Using a `port` < 1024 will likely to cause problems as these ports are reserved as system ports.
+Using a `port` < 1024 is likely to cause problems as these ports are reserved as system ports.
 :::
 
 #### Example

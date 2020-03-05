@@ -125,7 +125,7 @@ deployments:
 - name: quickstart-nodejs                 # Name of this deployment
   helm:                                   # Deploy using Helm
     componentChart: true                  # Use the Component Helm Chart
-    values:                               # Override Values for chart (van also be set using valuesFiles option)
+    values:                               # Override Values for chart (can also be set using valuesFiles option)
       containers:                         # Defines an array of containers that run in the same pods started by this component
       - image: reg.tld/username/devspace  # Image of this container
       service:                            # Expose this component with a Kubernetes service

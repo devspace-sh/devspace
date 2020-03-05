@@ -23,7 +23,7 @@ Building modern, distributed and highly scalable microservices with Kubernetes i
 DevSpace allows you to store all your workflows in one declarative config file: `devspace.yaml`
 - **Codify workflow knowledge** about building images, deploying your project and its dependencies etc.
 - **Version your workflows together with your code** (i.e. you can get any old version up and running with just a single command) 
-- **Share your workflows** with your team mates
+- **Share your workflows** with your teammates
 
 
 ### Made For Teams
@@ -42,15 +42,15 @@ Instead of rebuilding images and redeploying containers, DevSpace allows you to 
 
 ### Automation
 Deploying and debugging services with Kubernetes requires a lot of knowledge and forces you to repeatedly run commands like `kubectl get pod` and copy pod ids back and forth. Stop wasting time and let DevSpace automate the tedious parts of working with Kubernetes:
-- DevSpace lets you build multiple images in parallel, tag them automatically and and deploy your entire application (including its dependencies) with just a single command
+- DevSpace lets you build multiple images in parallel, tag them automatically and deploy your entire application (including its dependencies) with just a single command
 - Let DevSpace automatically start port-fowarding and log streaming, so you don't have to constantly copy and paste pod ids or run 10 commands to get everything started.
 
 
 ### Compatibility
 DevSpace is battle tested with many Kubernetes distributions including:
-- **local Kubernetes clusters** like minikube, k3s, MikroK8s, kind
-- **managed Kubernetes clusters** in GKE (Google), EKS (aws), AKS (Azure), DOKS (Digital Ocean)
-- **self-managed Kubernetes clusters** (e.g. created with Rancher)
+- **Local Kubernetes clusters** like minikube, k3s, MikroK8s, kind
+- **Managed Kubernetes clusters** in GKE (Google), EKS (aws), AKS (Azure), DOKS (Digital Ocean)
+- **Self-managed Kubernetes clusters** (e.g. created with Rancher)
 
 <br/>
 <img src="/cli/img/cluster-compatibility.png" />
