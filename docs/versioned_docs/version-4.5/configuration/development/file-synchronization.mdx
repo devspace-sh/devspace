@@ -263,6 +263,74 @@ uploadExcludePaths: [] # Do not exclude anything from file synchronization
 **See "[Example: Exclude Paths from Synchronization](#example-exclude-paths-from-synchronization)"**
 
 
+
+## One-Directional Sync
+These flags allow for local or remote container filesystems to be ignored during synchronization.
+
+### `disableDownload`
+The `disableDownload` option expects a boolean which enables/disables all synchronization from the remote container filesystem to the local filesystem.
+
+#### Default Value For `disableDownload`
+```yaml
+disableDownload: false # Do not ignore remote container files during synchronization
+```
+
+#### Example: Synchronize Local Filesystem Only
+```yaml {14-20}
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    disableDownload: true
+    excludePaths:
+    - logs/
+    - more/logs/
+    uploadExcludePaths:
+    - node_modules/
+```
+
+### `disableUpload`
+The `disableUpload` option expects a boolean which enables/disables all synchronization from the local filesystem to the remote container filesystem.
+
+#### Default Value For `disableUpload`
+```yaml
+disableUpload: false # Do not ignore local files during synchronization
+```
+
+#### Example: Synchronize Remote Container Filesystem Only
+```yaml {14-20}
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    disableUpload: true
+    excludePaths:
+    - logs/
+    - more/logs/
+    downloadExcludePaths:
+    - tmp/
+```
+
+
+
 ## Initial Sync
 
 ### `downloadOnInitialSync`
