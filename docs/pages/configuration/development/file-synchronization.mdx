@@ -40,7 +40,7 @@ Every sync configuration consists of two essential parts:
 
 
 ## Pod/Container Selection
-The following config options are needed to determine the container which the file synchronization should be established:
+The following config options are needed to determine the container which the file synchronization should be established to:
 - [`imageName`](#imagename)
 - [`labelSelector`](#labelselector)
 - [`containerName`](#containername)
@@ -147,7 +147,7 @@ dev:
 
 
 ### `containerName`
-The `containerName` option expects a string with a container name. This option is used to decide which container should be selected when using `labelSelector` option because `labelSelector` selects a pod and a pod can have multiple containers.
+The `containerName` option expects a string with a container name. This option is used to decide which container should be selected when using the `labelSelector` option because `labelSelector` selects a pod and a pod can have multiple containers.
 
 :::info
 The `containerName` option is not required if the pod you are selecting using `imageName` or `labelSelector` has only one container.
@@ -231,8 +231,8 @@ dev:
     - tmp/
 ```
 **Explanation:**  
-- Files in `logs/` and in `mode/logs/` would not be synchronized at all.
-- Files in `node_modules/` would only be synchroniyed from the container to the local filesystem but not the other way around.
+- Files in `logs/` and in `more/logs/` would not be synchronized at all.
+- Files in `node_modules/` would only be synchronized from the container to the local filesystem but not the other way around.
 - Files in `tmp/` would only be synchroniyed from the local to the container filesystem but not the other way around.
 
 
@@ -347,21 +347,21 @@ The `initialSync` option expects a string with an initial sync strategy. The fol
 #### • `mirrorRemote` mirrors the container files to the local filesystem: 
 
 1. deletes all files on the local filesystem that are not existing inside the container
-2. downloads all files which are existing on inside the container but are missing on the local filesystem
-3. resolves all file conflicts (different content on local filesystem than in inside the container) by preferring the file within the container (i.e. all files on the local filesystem will be replaced if they are different than inside the container)
+2. downloads all files which are existing inside the container but are missing on the local filesystem
+3. resolves all file conflicts (different content on local filesystem than inside the container) by preferring the file within the container (i.e. all files on the local filesystem will be replaced if they are different than inside the container)
 
 #### • `preferRemote` is like `mirrorRemote` but skips step 1.
 
 #### • `preferNewest` merges local and remote filesystem while resolving all conflicts
 
 1. uploads all files which are existing on the local filesystem but are missing within the container
-2. downloads all files which are existing on inside the container but are missing on the local filesystem
-3. resolves all file conflicts (different content on local filesystem than in inside the container) by preferring the newest file (i.e. compares last modified timestamps and replaces all outdated files)
+2. downloads all files which are existing inside the container but are missing on the local filesystem
+3. resolves all file conflicts (different content on local filesystem than inside the container) by preferring the newest file (i.e. compares last modified timestamps and replaces all outdated files)
 
 #### • `keepAll` merges local and remote filesystem without resolving any conflicts
 
 1. uploads all files which are existing on the local filesystem but are missing within the container
-2. downloads all files which are existing on inside the container but are missing on the local filesystem
+2. downloads all files which are existing inside the container but are missing on the local filesystem
 
 #### Default Value For `initialSync`
 ```yaml
@@ -391,7 +391,7 @@ dev:
     initialSync: preferRemote
 ```
 **Explanation:**  
-With the configuration `devspace dev` would do the following:
+With this configuration, `devspace dev` would do the following:
 - DevSpace would start port-forwarding and file synchronzation.
 - Initial sync would be started automatically.
 - The first sync config section would synchronize all files except files within `node_modules/`. This means that during initial sync, all remote files that are not existing locally would be deleted and other files would be updated to the most recent version.
@@ -403,7 +403,7 @@ The `waitInitialSync` option expects a boolean which defines if DevSpace should 
 
 #### Default Value For `waitInitialSync`
 ```yaml
-waitInitialSync: false # Start container terminal or log streaming before initil sync is completed
+waitInitialSync: false # Start container terminal or log streaming before initial sync is completed
 ```
 
 #### Example: Wait For Initial Sync To Complete
@@ -630,7 +630,7 @@ If synchronization is started, the sync initially compares the remote folder and
 
 <br/>
 
-The sync mechanism is normally very reliable and fast. Syncing several thousand files is usually not a problem. Changes are packed together and compressed during synchronization, which improves performance especially for transferring text files. Transferring large compressed binary files is possible, however can affect performance negatively. Remote changes can sometimes have a delay of 1-2 seconds till they are downloaded, depending on how big the synchronized folder is. It should be generally avoided to sync the complete container filesystem.
+The sync mechanism is normally very reliable and fast. Syncing several thousand files is usually not a problem. Changes are packed together and compressed during synchronization, which improves performance especially for transferring text files. Transferring large compressed binary files is possible, but can affect performance negatively. Remote changes can sometimes have a delay of 1-2 seconds till they are downloaded, depending on how big the synchronized folder is. It should be generally avoided to sync the complete container filesystem.
 
 <br/>
 
