@@ -3,7 +3,7 @@ title: Image Name & Tagging Schema
 sidebar_label: image + tag
 ---
 
-The `images` section in `devspace.yaml` is map with keys representing the name of the image and values representing the image definition including `tag`, `dockerfile` etc.
+The `images` section in `devspace.yaml` is a map with keys representing the name of the image and values representing the image definition including `tag`, `dockerfile` etc.
 ```yaml
 images:                             # map[string]struct | Images to be built and pushed
   image1:                           # string   | Name of the image
@@ -37,11 +37,11 @@ images:
 The `tags` option expects an array of strings, each containing a static tag or a tagging schema used to automatically tag images before pushing them to the registry. The tagging schema can contain [dynamic config variables](../../configuration/variables/basics.mdx). While you can define your own config variables, DevSpace provides a set of pre-defined variables. The most commonly used variables for tagging are:
 - **DEVSPACE_RANDOM**: A random 6 character long string
 - **DEVSPACE_TIMESTAMP** A unix timestamp when the config was loaded
-- **DEVSPACE_GIT_COMMIT**: A short hash of the local repos current git commit
-- **DEVSPACE_USERNAME**: The username currently logged into devspace cloud
+- **DEVSPACE_GIT_COMMIT**: A short hash of the local repo's current git commit
+- **DEVSPACE_USERNAME**: The username currently logged into DevSpace Cloud
 
 :::info Unique Tags For Development
-**Make sure tags are unique** when defining a custom tagging schema for development. Unique tags ensure that when your application gets started with the newly built image instead of using an older, cached version. Therefore, it is highly recommended for non-production tags to either use `DEVSPACE_RANDOM` or `DEVSPACE_TIMESTAMP` as a suffix in your tagging schema (see [example below](#example-custom-tagging-schema)).
+**Make sure tags are unique** when defining a custom tagging schema for development. Unique tags ensure that your application gets started with the newly built image instead of using an older, cached version. Therefore, it is highly recommended for non-production tags to either use `DEVSPACE_RANDOM` or `DEVSPACE_TIMESTAMP` as a suffix in your tagging schema (see [example below](#example-custom-tagging-schema)).
 :::
 
 #### Default Value For `tag`

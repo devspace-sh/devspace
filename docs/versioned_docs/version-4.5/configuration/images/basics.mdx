@@ -120,7 +120,7 @@ The following flags are available for all commands that trigger image building:
 - `-b / --force-build` rebuild all images (even if they could be skipped because context and Dockerfile have not changed since the latest build)
 
 ## Image Building Process
-DevSpace loads the `images` configuration from `devspace.yaml` and builds all images in parallel. The multi-threded, parallel build process of DevSpace speeds up image building drastically, especially when building many images and using remote build methods. 
+DevSpace loads the `images` configuration from `devspace.yaml` and builds all images in parallel. The multi-threaded, parallel build process of DevSpace speeds up image building drastically, especially when building many images and using remote build methods. 
 
 ### 1. Load Dockerfile
 DevSpace loads the contents of the Dockerfile specified in `image[*].dockerfile` (defaults to `./Dockerfile`). 
@@ -137,7 +137,7 @@ Configuring `ENTRYPOINT` overrides can be particularly useful when defining diff
 :::
 
 ### 3. Load Build Context
-DevSpace loads the the context to build this image as specified in `context` (defaults to `./`). The context path serves as root directory for Dockerfile statements like `ADD` or `COPY`. 
+DevSpace loads the context to build this image as specified in `context` (defaults to `./`). The context path serves as root directory for Dockerfile statements like `ADD` or `COPY`. 
 
 :::info Use Relative Paths
 Context paths used in `context` should be relative to the `devspace.yaml`.
@@ -150,7 +150,7 @@ DevSpace tries to speed up image building by skipping images when they have not 
 - a hash of the `Dockerfile` used to build the image (including ENTRYPOINT override)
 - a hash over all files in the `context` used to build this image (excluding files in `.dockerignore`)
 
-Next time you trigger the image building process, DevSpace will generate these hashes again and compare them to the hashes of the last image building process. If all newly generated hashes are equal to the old ones stored during the last image building process, then nothing has changed and DevSpace will skip this image.
+The next time you trigger the image building process, DevSpace will generate these hashes again and compare them to the hashes of the last image building process. If all newly generated hashes are equal to the old ones stored during the last image building process, then nothing has changed and DevSpace will skip this image.
 
 :::note Force Build
 You can use the `-b / --force-build` flag to tell DevSpace to build all images even if nothing has changed.
@@ -196,14 +196,14 @@ Take a look at the `imagePullSecrets` section of the output showing the yaml def
 ## Advanced Topics
 
 ### Authentication (Registry)
-DevSpace uses the same credential store as Docker. So, if you already have Docker installed and you are logged in to a private registry before, DevSpace will be able to push to this registry. So, if you want to push to a registry using DevSpace, simply authenticate using this command:
+DevSpace uses the same credential store as Docker. So, if you already have Docker installed and you have logged in to a private registry before, DevSpace will be able to push to this registry. So, if you want to push to a registry using DevSpace, simply authenticate using this command:
 ```bash
 docker login            # for Docker Hub
 docker login [REGISTRY] # for any other registry (e.g. my-registry.tld)
 ```
 
 :::note
-If you do **<u>not</u>** have Docker installed, DevSpace initializes a Docker credential store for you and store your login information just like Docker would do it.
+If you do **<u>not</u>** have Docker installed, DevSpace initializes a Docker credential store for you and stores your login information just like Docker would do it.
 :::
 
 

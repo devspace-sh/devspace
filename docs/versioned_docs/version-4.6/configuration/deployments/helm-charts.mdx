@@ -145,7 +145,7 @@ version: ""
 ```
 
 :::note Latest Version
-If no version is specified, Helm will be default use the latest version of the chart.
+If no version is specified, Helm will by default use the latest version of the chart.
 :::
 
 #### Example: Custom Chart Version
@@ -192,7 +192,7 @@ helm install database custom-chart --repo "https://my-repo.tld/"
 
 
 ## Values
-Helm chart can be configured by overriding the default values of the chart.
+Helm charts can be configured by overriding the default values of the chart.
 
 ### `values`
 The `values` option expects an object with values that should be overriding the default values of this Helm chart.
@@ -202,7 +202,7 @@ Compared to the `valuesFiles` option, using `values` has the following advantage
 - It allows you to use [dynamic config variables](../../configuration/variables/basics.mdx)
 
 :::info
-Because both, `values` and `valuesFiles`, have advantages and disadvantages, it if often useful to combine them. When setting both, values defined in `values` have precedence over values defined in `valuesFiles`.
+Because both, `values` and `valuesFiles`, have advantages and disadvantages, it is often useful to combine them. When setting both, values defined in `values` have precedence over values defined in `valuesFiles`.
 :::
 
 #### Default Value for `values`
@@ -236,7 +236,7 @@ Compared to the `values` option, using `valuesFiles` has the following advantage
 - It allows you to run Helm commands directly without DevSpace, e.g. `helm upgrade [NAME] -f mysql/values.yaml`
 
 :::info
-Because both, `values` and `valuesFiles`, have advantages and disadvantages, it if often useful to combine them. When setting both, values defined in `values` have precedence over values defined in `valuesFiles`.
+Because both, `values` and `valuesFiles`, have advantages and disadvantages, it is often useful to combine them. When setting both, values defined in `values` have precedence over values defined in `valuesFiles`.
 :::
 
 #### Default Value for `valuesFiles`
@@ -290,7 +290,7 @@ deployments:
 ## Helm Options
 
 ### `wait`
-The `wait` option expects a boolean that will be used for the [helm flag `--wait`](https://helm.sh/docs/using_helm/#helpful-options-for-install-upgrade-rollback).
+The `wait` option expects a boolean that will be used for the [helm flag `--wait`](https://helm.sh/docs/intro/using_helm/#helpful-options-for-installupgraderollback).
 
 #### Default Value for `wait`
 ```yaml
@@ -313,7 +313,7 @@ helm install database stable/mysql --wait
 ```
 
 ### `timeout`
-The `timeout` option expects an integer representing a number of seconds that will be used for the [helm flag `--timeout`](https://helm.sh/docs/using_helm/#helpful-options-for-install-upgrade-rollback).
+The `timeout` option expects an integer representing a number of seconds that will be used for the [helm flag `--timeout`](https://helm.sh/docs/intro/using_helm/#helpful-options-for-installupgraderollback).
 
 #### Default Value for `timeout`
 ```yaml
@@ -336,7 +336,7 @@ helm install database stable/mysql --timeout=300
 ```
 
 ### `force`
-The `force` option expects a boolean that will be used for the [helm flag `--force`](https://helm.sh/docs/helm/#helm-upgrade).
+The `force` option expects a boolean that will be used for the [helm flag `--force`](https://helm.sh/docs/helm/helm_upgrade).
 
 #### Default Value for `force`
 ```yaml
@@ -461,7 +461,7 @@ v2: false
 ```
 
 ### `tillerNamespace`
-The `tillerNamespace` option expects a string that will be used for the [helm flag `--tiller-namespace`](https://helm.sh/docs/using_helm/#helpful-options-for-install-upgrade-rollback).
+The `tillerNamespace` option expects a string that will be used for the [helm flag `--tiller-namespace`](https://helm.sh/docs/intro/using_helm/#helpful-options-for-installupgraderollback).
 
 :::warning Helm 2 Only
 This config option is only used when [`v2: true`](#v2) is configured as well.

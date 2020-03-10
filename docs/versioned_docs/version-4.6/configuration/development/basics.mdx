@@ -79,7 +79,7 @@ For detailed logs about the port-forwarding, take a look at `.devspace/logs/port
 DevSpace iterates over every item in the `dev.sync` array defined in the `devspace.yaml` and starts a bi-directional, real-time code synchronization for each of the entries and the path mappings they define.
 
 :::note Initial Sync
-Right after starting the file synchronization, DevSpace runs the so-called initial sync which quickly computes the differences between your local folders and the remote container filesystems. If DevSpace detects changes, it synchronizes them first to get a clean state before starting the real-time synchronization which gets invokes every time a file changes.
+Right after starting the file synchronization, DevSpace runs the so-called initial sync which quickly computes the differences between your local folders and the remote container filesystems. If DevSpace detects changes, it synchronizes them first to get a clean state before starting the real-time synchronization which is invoked every time a file changes.
 :::
 
 For detailed logs about the file synchronzation, take a look at `.devspace/logs/sync.log` for the current session and `.devspace/logs/sync.log.old` for previous logs.
@@ -127,7 +127,7 @@ Learn more about [using interactive mode](../../guides/interactive-mode.mdx).
 
 
 ### `devspace enter`
-The command `devspace dev -i` starts a terminal but it also starts port-forwarding and file synchronization which can only be opened once. However, often you need additional terminal sessions. To open a simple terminal session without starting port-forwarding and file sync, run the following command:
+The command `devspace dev -i` starts a terminal but it also starts port-forwarding and file synchronization which can only be opened once. However, you often need additional terminal sessions. To open a simple terminal session without starting port-forwarding and file sync, run the following command:
 ```bash
 devspace enter
 ```
@@ -177,7 +177,7 @@ When DevSpace asks you how to open your application, you have two options as sho
 > via localhost (provides private access only on your computer via port-forwarding)
   via domain (makes your application publicly available via ingress)
 ```
-To use the second option, you either need to make sure the DNS of your domain points to your Kubernetes cluster and you have an ingress-controller running in your cluster OR you use [DevSpace Cloud](https://devspace.cloud/docs/cloud/introduction), either in form of Hosted Spaces or by connecting your own cluster using the command `devspace connect cluster`.
+To use the second option, you either need to make sure the DNS of your domain points to your Kubernetes cluster and you have an ingress-controller running in your cluster OR you use [DevSpace Cloud](https://devspace.cloud/cloud/docs/introduction), either in form of Hosted Spaces or by connecting your own cluster using the command `devspace connect cluster`.
 
 :::info Automatic Error Analytics
 If your application does not open as exepected, run [`devspace analyze` and DevSpace will try to identify the issue](#devspace-analyze).

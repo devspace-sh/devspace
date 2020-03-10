@@ -49,7 +49,7 @@ docker:                             # struct   | Options for building images wit
   skipPush: false                   # bool     | Skip pushing image to registry, enabled automatically for minikube and docker-desktop (Default: false)
   disableFallback: false            # bool     | Disable using kaniko as fallback when Docker is not installed (Default: false)
   useBuildKit: true                 # bool     | Enable BuildKit for Docker build process (default: false)
-  options: ...                      # struct   | Set build general build options
+  options: ...                      # struct   | Set general build options
 ```
 
 ### `images[*].build.kaniko`
@@ -61,7 +61,7 @@ kaniko:                             # struct   | Options for building images wit
   namespace: ""                     # string   | Kubernetes namespace to run kaniko build pod in (Default: "" = deployment namespace)
   insecure: false                   # bool     | Allow working with an insecure registry by not validating the SSL certificate (Default: false)
   pullSecret: ""                    # string   | Mount this Kubernetes secret instead of creating one to authenticate to the registry (default: "")
-  options: ...                      # struct   | Set build general build options
+  options: ...                      # struct   | Set general build options
 ```
 
 ### `images[*].build.custom`
@@ -70,7 +70,7 @@ custom:                             # struct   | Options for building images wit
   command: "./scripts/builder"      # string   | Command to be executed for building (e.g. path to build script or executable)
   args: []                          # string[] | Array of arguments for the custom build command
   imageFlag: string                 # string   | Name of the flag that DevSpace uses to pass the image name + tag to the build script
-  onChange: []                      # string[] | Array of paths (glob format) to check for file changes to see if image needs to be rebuild
+  onChange: []                      # string[] | Array of paths (glob format) to check for file changes to see if image needs to be rebuilt
 ```
 
 ### `images[*].build.disabled`
