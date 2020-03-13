@@ -90,6 +90,9 @@ func (client *v3Client) InstallChart(releaseName string, releaseNamespace string
 		chartRepo = helmConfig.Chart.RepoURL
 	)
 
+	// makes sure repos are not being updated
+	settings.RepositoryConfig = ""
+
 	if strings.HasPrefix(chartName, "stable/") && chartRepo == "" {
 		chartName = chartName[7:]
 		chartRepo = stableChartRepo
