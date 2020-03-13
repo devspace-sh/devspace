@@ -17,6 +17,7 @@ module.exports = {
         alt: 'DevSpace',
         src: '/img/logo-devspace.svg',
         href: 'https://devspace.sh/',
+        target: '_self'
       },
       links: [
         {
@@ -25,9 +26,22 @@ module.exports = {
           position: 'left',
           className: 'version-link'
         },
-        {to: 'https://devspace.sh/', label: 'Website', position: 'left'},
-        {to: 'docs/introduction', label: 'Docs', position: 'left'},
-        {href: 'https://devspace.cloud/blog', label: 'Blog', position: 'left'},
+        {
+          href: 'https://devspace.sh/',
+          label: 'Website',
+          position: 'left',
+          target: '_self'
+        },
+        {
+          to: 'docs/introduction',
+          label: 'Docs',
+          position: 'left'
+        },
+        {
+          href: 'https://devspace.cloud/blog',
+          label: 'Blog',
+          position: 'left'
+        },
         {
           href: 'https://github.com/devspace-cloud/devspace',
           label: 'GitHub',
