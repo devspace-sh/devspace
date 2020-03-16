@@ -19,7 +19,7 @@ func (f *Client) UpdateRepos() error {
 }
 
 // DeleteRelease deletes a helm release and optionally purges it
-func (f *Client) DeleteRelease(releaseName string, helmConfig *latest.HelmConfig) error {
+func (f *Client) DeleteRelease(releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error {
 	for i, release := range f.Releases {
 		if release.Name == releaseName {
 			f.Releases = append(f.Releases[:i], f.Releases[i+1:]...)

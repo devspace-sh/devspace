@@ -77,7 +77,7 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 		}
 	}
 
-	err := d.Helm.DeleteRelease(d.DeploymentConfig.Name, d.DeploymentConfig.Helm)
+	err := d.Helm.DeleteRelease(d.DeploymentConfig.Name, d.DeploymentConfig.Namespace, d.DeploymentConfig.Helm)
 	if err != nil {
 		return err
 	}
