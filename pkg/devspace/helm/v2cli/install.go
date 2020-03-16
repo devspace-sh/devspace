@@ -196,7 +196,7 @@ func (c *client) fetch(helmConfig *latest.HelmConfig) (bool, string, error) {
 	return true, filepath.Join(tempFolder, chartName), nil
 }
 
-func (c *client) DeleteRelease(releaseName string, helmConfig *latest.HelmConfig) error {
+func (c *client) DeleteRelease(releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error {
 	err := c.ensureHelmBinary(helmConfig)
 	if err != nil {
 		return err
