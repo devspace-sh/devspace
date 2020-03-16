@@ -4,7 +4,6 @@ images:
     image: dscr.io/${DEVSPACE_USERNAME}/devspace
 deployments:
 - name: quickstart
-  namespace: flyinghigh
   helm:
     componentChart: true
     values:

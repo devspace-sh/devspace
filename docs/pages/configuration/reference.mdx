@@ -3,18 +3,18 @@ title: Config Reference
 sidebar_label: devspace.yaml
 ---
 
-import FragmentConfigImages from '@site/pages/fragments/config-images.mdx';
-import FragmentConfigDeployments from '@site/pages/fragments/config-deployments.mdx';
-import FragmentConfigDev from '@site/pages/fragments/config-dev.mdx';
-import FragmentConfigDependencies from '@site/pages/fragments/config-dependencies.mdx';
-import FragmentConfigVars from '@site/pages/fragments/config-vars.mdx';
-import FragmentConfigProfiles from '@site/pages/fragments/config-profiles.mdx';
-import FragmentConfigCommands from '@site/pages/fragments/config-commands.mdx';
-import FragmentConfigHooks from '@site/pages/fragments/config-hooks.mdx';
+import FragmentConfigImages from '../fragments/config-images.mdx';
+import FragmentConfigDeployments from '../fragments/config-deployments.mdx';
+import FragmentConfigDev from '../fragments/config-dev.mdx';
+import FragmentConfigDependencies from '../fragments/config-dependencies.mdx';
+import FragmentConfigVars from '../fragments/config-vars.mdx';
+import FragmentConfigProfiles from '../fragments/config-profiles.mdx';
+import FragmentConfigCommands from '../fragments/config-commands.mdx';
+import FragmentConfigHooks from '../fragments/config-hooks.mdx';
 
 ## `version`
 ```yaml
-version: v1beta6                   # string   | Version of the config
+version: v1beta7                   # string   | Version of the config
 ```
 
 ## `images`
@@ -46,10 +46,10 @@ You **cannot** use `docker`, `kaniko` and `custom` in combination.
 ```yaml
 docker:                             # struct   | Options for building images with Docker
   preferMinikube: true              # bool     | If available, use minikube's in-built docker daemon instaed of local docker daemon (default: true)
-  skipPush: false                   # bool     | Skip pushing image to registry, recommended for minikube (Default: false)
+  skipPush: false                   # bool     | Skip pushing image to registry, enabled automatically for minikube and docker-desktop (Default: false)
   disableFallback: false            # bool     | Disable using kaniko as fallback when Docker is not installed (Default: false)
   useBuildKit: true                 # bool     | Enable BuildKit for Docker build process (default: false)
-  options: ...                      # struct   | Set build general build options
+  options: ...                      # struct   | Set general build options
 ```
 
 ### `images[*].build.kaniko`
@@ -70,7 +70,7 @@ custom:                             # struct   | Options for building images wit
   command: "./scripts/builder"      # string   | Command to be executed for building (e.g. path to build script or executable)
   args: []                          # string[] | Array of arguments for the custom build command
   imageFlag: string                 # string   | Name of the flag that DevSpace uses to pass the image name + tag to the build script
-  onChange: []                      # string[] | Array of paths (glob format) to check for file changes to see if image needs to be rebuild
+  onChange: []                      # string[] | Array of paths (glob format) to check for file changes to see if image needs to be rebuilt
 ```
 
 ### `images[*].build.disabled`
@@ -205,7 +205,7 @@ sync:                               # struct[] | Array of file sync settings for
   excludePaths: []                  # string[] | Paths to exclude files/folders from sync in .gitignore syntax
   downloadExcludePaths: []          # string[] | Paths to exclude files/folders from download in .gitignore syntax
   uploadExcludePaths: []            # string[] | Paths to exclude files/folders from upload in .gitignore syntax
-  downloadOnInitialSync: false      # bool     | Download files that exist inside the container but not on the local filesystem during initial sync (Default: false)
+  initialSync: mirrorLocal          # enum     | Specifies the initialSync algorithm: mirrorLocal, mirrorRemote, preferLocal, preferRemote, preferNewest, keepAll (Default: mirrorLocal)
   waitInitialSync: false            # bool     | Wait until initial sync is completed before continuing (Default: false)
   bandwidthLimits:                  # struct   | Bandwidth limits for the synchronization algorithm
     download: 0                     # int64    | Max file download speed in kilobytes / second (e.g. 100 means 100 KB/s)

@@ -37,7 +37,7 @@ jobs:
         run: |
           if [ ! -z "$NETLIFY_ACCESS_TOKEN" ]
           then
-            rm -r $OUT_DIR/docs/fragments
+            rm -rf $OUT_DIR/docs/fragments $OUT_DIR/docs/**/fragments
             mkdir -p tmp-$TARGET_OUT_DIR
             mv $OUT_DIR/* tmp-$TARGET_OUT_DIR
             mkdir -p $TARGET_OUT_DIR
