@@ -57,7 +57,7 @@ devspace dev -i
 ### `images`
 The `images` option expects an array of objects having the following properties:
 - `name` stating an image name which references an image in the `images` within `devspace.yaml` (required)
-- `entrypoint` defining an [`ENTRYPOINT` override](../../configuration/images/entrypoint-cmd.mdx)#entrypoint that will be applied only in interactive mode (optional)
+- `entrypoint` defining an [`ENTRYPOINT` override](../../configuration/images/entrypoint-cmd.mdx#entrypoint) that will be applied only in interactive mode (optional)
 - `cmd` defining a [`CMD` override](../../configuration/images/entrypoint-cmd.mdx#cmd) that will be applied only in interactive mode (optional)
 
 :::info In-Memory Image Override
@@ -112,7 +112,7 @@ dev:
 
 
 ### `terminal`
-The `terminal` option expects an objects having the following properties:
+The `terminal` option expects an object having the following properties:
 - `imageName` to select a container based on an image specified in `images`
 - `labelSelector` to select a pod based a Kubernetes label selector
 - `containerName` to select a container based on its name (optional, useful if pod has multiple containers)
@@ -197,4 +197,4 @@ dev:
 **Explanation:**  
 Running `devspace dev` with the above configuration leads to:
 - during image building: the overrides defined in `images`  would be applied
-- after deployment: an interactive terminal session for a container with name `some-container` and with image `ohn/appbackend` would be started
+- after deployment: an interactive terminal session for a container with name `some-container` and with image `john/appbackend` would be started
