@@ -55,14 +55,14 @@ DevSpace is able to work with dependencies from the following sources:
 - [`path` to a local folder]](../../configuration/dependencies/git-repository.mdx) that contains a dependency (path is relative to the current project's root directory)
 
 :::tip 
-Using `git` as dependency source is recommended because it makes it much easier to share the configuration with other developers on your team without forcing everyone to checkout the dependencies and placing them in the same folder structure.
+Using `git` as dependency source is recommended because it makes it much easier to share the configuration with other developers on your team without forcing everyone to check out the dependencies and to place them in the same folder structure.
 :::
 
 
 ## Dependency Resolution
 When a DevSpace project has dependencies, DevSpace will:
 
-1. Resolve all dependencies in a resursive manner
+1. Resolve all dependencies in a recursive manner
 2. Build a non-cyclic dependency tree
 3. Choose a leave node from the dependency tree, build its images (unless skip is defined) and deploy its deployments
 4. Remove the leave node from the tree and repeat step 3 until everything has been deployed
@@ -73,7 +73,7 @@ The algorithm used by DevSpace for building and deploying dependencies ensures t
 If DevSpace detects that two projects within the dependency tree define the same child-dependency (i.e. a redundant dependency), DevSpace will try to resolve this by removing the denepdency that is "higher" (i.e. found first when resolving dependencies) within the tree.
 
 ### Circular Dependencies
-If DevSpace two projects which define each other as dependencies (either directly or via child-dependencies), DevSpace will terminate with an error showing the problematic dependency path within the dependency tree.
+If DevSpace detects two projects which define each other as dependencies (either directly or via child-dependencies), DevSpace will terminate with an error showing the problematic dependency path within the dependency tree.
 
 :::info
 To resolve circular dependencies, DevSpace allows you to ignore dependencies of dependencies by setting `ignoreDependencies: true` for a dependency.

@@ -27,7 +27,7 @@ dependencies:
 ```
 
 :::info Authentication
-DevSpace is using the git credential store. So, if you are able to clone or pull from the specified repository, DevSpace will also be able to clone it or pull from there.
+DevSpace is using the git credential store. So, if you are able to clone or pull from the specified repository, DevSpace will also be able to clone or pul it from there.
 :::
 
 ## `source`
@@ -57,7 +57,7 @@ dependencies:
     tag: v3.0.1
 ```
 **Explanation:**  
-- When you run `devspace deploy` or `devspace dev` for the first time after defining the dependencies, DevSpace will checkout all git projects into the global cache folder `$HOME/.devspace`.
+- When you run `devspace deploy` or `devspace dev` for the first time after defining the dependencies, DevSpace will check out all git projects into the global cache folder `$HOME/.devspace`.
 - Whenever you run `devspace deploy` or `devspace dev` (even the first time), DevSpace will:
   - Run a `git pull` for all cached repositories.
   - Load the `devspace.yaml` files of the dependency projects and resolve their dependencies respectively.
