@@ -1,5 +1,6 @@
 package custom
 
+/*
 import (
 	"io/ioutil"
 	"os"
@@ -76,4 +77,4 @@ func TestBuild(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-}
+}*/

@@ -27,8 +27,6 @@ type Builder struct {
 
 	imageConfigName string
 	imageTag        string
-
-	cmd command.Interface
 }
 
 // NewBuilder creates a new custom builder
@@ -56,7 +54,7 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, igno
 	// Loop over on change globs
 	customFilesHash := ""
 	for _, pattern := range b.imageConf.Build.Custom.OnChange {
-		files, err := doublestar.Glob(*pattern)
+		files, err := doublestar.Glob(pattern)
 		if err != nil {
 			return false, err
 		}
@@ -88,27 +86,32 @@ func (b *Builder) Build(log logpkg.Logger) error {
 	// Build arguments
 	args := []string{}
 
-	if b.imageConf.Build.Custom.ImageFlag != "" {
-		args = append(args, b.imageConf.Build.Custom.ImageFlag)
+	for _, arg := range b.imageConf.Build.Custom.Args {
+		args = append(args, arg)
 	}
 
 	if len(b.imageConf.Tags) == 0 {
+		if b.imageConf.Build.Custom.ImageFlag != "" {
+			args = append(args, b.imageConf.Build.Custom.ImageFlag)
+		}
+
 		args = append(args, b.imageConf.Image+":"+b.imageTag)
 	} else {
 		for _, tag := range b.imageConf.Tags {
+			if b.imageConf.Build.Custom.ImageFlag != "" {
+				args = append(args, b.imageConf.Build.Custom.ImageFlag)
+			}
+
 			args = append(args, b.imageConf.Image+":"+tag)
 		}
 	}
 
-	if b.imageConf.Build.Custom.Args != nil {
-		for _, arg := range b.imageConf.Build.Custom.Args {
-			args = append(args, *arg)
-		}
+	for _, arg := range b.imageConf.Build.Custom.AppendArgs {
+		args = append(args, arg)
 	}
 
-	if b.cmd == nil {
-		b.cmd = command.NewStreamCommand(filepath.FromSlash(b.imageConf.Build.Custom.Command), args)
-	}
+	// Create the command
+	cmd := command.NewStreamCommand(filepath.FromSlash(b.imageConf.Build.Custom.Command), args)
 
 	// Determine output writer
 	var writer io.Writer
@@ -120,7 +123,7 @@ func (b *Builder) Build(log logpkg.Logger) error {
 
 	log.Infof("Build %s:%s with custom command %s %s", b.imageConf.Image, b.imageTag, b.imageConf.Build.Custom.Command, strings.Join(args, " "))
 
-	err := b.cmd.Run(writer, writer, nil)
+	err := cmd.Run(writer, writer, nil)
 	if err != nil {
 		return errors.Errorf("Error building image: %v", err)
 	}
