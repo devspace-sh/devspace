@@ -112,7 +112,7 @@ The image `backend` would be built using kaniko and the flags `--cache-dir=/tmp 
 ### `namespace`
 The `namespace` option expects a string stating a namespace that should be used to start the kaniko build pod in.
 
-#### Default Value For `flags`
+#### Default Value For `namespace`
 ```yaml
 namespace: "" # defaults to the default namespace of the current kube-context
 ```
@@ -147,7 +147,7 @@ images:
     image: 123.456.789.0:5000/john/appbackend
     build:
       kaniko:
-        namespace: build-namespace
+        insecure: false
 ```
 **Explanation:**  
 The image `backend` would be built using kaniko and pushing to the insecure registry `123.456.789.0:5000` would be allowed.

@@ -3,7 +3,7 @@ title: Image Building
 sidebar_label: Image Building
 ---
 
-Take a look at the following best practices to speed up image building and to setup DevSpace for an ideal workflow.
+Take a look at the following best practices to speed up image building and to set up DevSpace for an ideal workflow.
 
 ## Optimize Dockerfiles
 You can drastically speed up image building by optimizing your Dockerfiles with the following tips:
@@ -30,7 +30,7 @@ COPY . .
 DevSpace respects the `.dockerignore` file when defined on the root level of your context directory. This file follows a similar syntax as the `.gitignore` file but instead of excluding files from git, the `.dockerignore` file defines files and folders which should not be included in the context for building an image. 
 
 :::info Skip Image Building
-Adding paths to the `.dockerignore` file makes sure that DevSpace is not forced to rebuild images when files belonging to theses paths change.
+Adding paths to the `.dockerignore` file makes sure that DevSpace is not forced to rebuild images when files belonging to these paths change.
 :::
 
 It can often be useful to:
@@ -53,4 +53,4 @@ Generally, there are several options to achieve this:
 - using one Dockerfile in combination with `BUILD_ARGS` and `ENTRYPOINT` overrides for each environment
 - using one Dockerfile in combination with multi-stage builds with targets for each environment
 
-All options have their benefits and caveats. Which one is the best one for your project depends on your use case and your priorities.
+All options have their benefits and caveats. Which one is the best for your project depends on your use case and your priorities.
