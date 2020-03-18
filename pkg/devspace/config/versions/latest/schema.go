@@ -84,10 +84,11 @@ type KanikoConfig struct {
 
 // CustomConfig tells the DevSpace CLI to build with a custom build script
 type CustomConfig struct {
-	Command   string    `yaml:"command,omitempty"`
-	Args      []*string `yaml:"args,omitempty"`
-	ImageFlag string    `yaml:"imageFlag,omitempty"`
-	OnChange  []*string `yaml:"onChange,omitempty"`
+	Command    string   `yaml:"command,omitempty"`
+	AppendArgs []string `yaml:"appendArgs,omitempty"`
+	Args       []string `yaml:"args,omitempty"`
+	ImageFlag  string   `yaml:"imageFlag,omitempty"`
+	OnChange   []string `yaml:"onChange,omitempty"`
 }
 
 // BuildOptions defines options for building Docker images
