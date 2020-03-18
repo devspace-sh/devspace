@@ -237,6 +237,7 @@ module.exports = {
           label: "devspace set",
           items: [
             "commands/devspace_set_analytics",
+            "commands/devspace_set_encryptionkey",
             "commands/devspace_set_var"
           ]
         },
