@@ -15,16 +15,16 @@ devspace remove sync [flags]
 
 ```
 #######################################################
-	############### devspace remove sync ##################
-	#######################################################
-	Remove sync paths from the devspace
+############### devspace remove sync ##################
+#######################################################
+Remove sync paths from the devspace
 
-	How to use:
-	devspace remove sync --local=app
-	devspace remove sync --container=/app
-	devspace remove sync --label-selector=release=test
-	devspace remove sync --all
-	#######################################################
+How to use:
+devspace remove sync --local=app
+devspace remove sync --container=/app
+devspace remove sync --label-selector=release=test
+devspace remove sync --all
+#######################################################
 ```
 
 
@@ -52,3 +52,4 @@ devspace remove sync [flags]
   -s, --switch-context        Switches and uses the last kube context and namespace that was used to deploy the DevSpace project
       --var strings           Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
 ```
+

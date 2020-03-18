@@ -25,17 +25,17 @@ func newSyncCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Comman
 		Use:   "sync",
 		Short: "Remove sync paths from the devspace",
 		Long: `
-	#######################################################
-	############### devspace remove sync ##################
-	#######################################################
-	Remove sync paths from the devspace
+#######################################################
+############### devspace remove sync ##################
+#######################################################
+Remove sync paths from the devspace
 
-	How to use:
-	devspace remove sync --local=app
-	devspace remove sync --container=/app
-	devspace remove sync --label-selector=release=test
-	devspace remove sync --all
-	#######################################################
+How to use:
+devspace remove sync --local=app
+devspace remove sync --container=/app
+devspace remove sync --label-selector=release=test
+devspace remove sync --all
+#######################################################
 	`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
