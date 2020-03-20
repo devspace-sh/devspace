@@ -275,11 +275,11 @@ func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []str
 func (d *DeployConfig) buildManifests(manifest string) ([]*unstructured.Unstructured, error) {
 	// Check if we should use kustomize or kubectl
 	if d.DeploymentConfig.Kubectl.Kustomize != nil && *d.DeploymentConfig.Kubectl.Kustomize == true && d.isKustomizeInstalled("kustomize")  {
-		return NewKustomizeBuilder("kustomize", d.DeploymentConfig).Build(manifest)
+		return NewKustomizeBuilder("kustomize", d.DeploymentConfig).Build(manifest, d.commandExecuter.RunCommand)
 	}
 
 	// Build with kubectl
-	return NewKubectlBuilder(d.CmdPath, d.DeploymentConfig, d.Context, d.Namespace).Build(manifest)
+	return NewKubectlBuilder(d.CmdPath, d.DeploymentConfig, d.Context, d.Namespace).Build(manifest, d.commandExecuter.RunCommand)
 }
 
 func (d *DeployConfig) isKustomizeInstalled(path string) bool {

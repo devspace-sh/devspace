@@ -12,29 +12,29 @@ import (
 
 // Builder is the manifest builder interface
 type Builder interface {
-	Build(manifest string) ([]*unstructured.Unstructured, error)
+	Build(manifest string, executor RunCommand) ([]*unstructured.Unstructured, error)
 }
+
+type RunCommand func(path string, args []string) ([]byte, error)
 
 type kustomizeBuilder struct {
 	path string
 	config *latest.DeploymentConfig
-	cmd commandExecuter
 }
 
 func NewKustomizeBuilder(path string, config *latest.DeploymentConfig) Builder {
 	return &kustomizeBuilder{
 		path: path,
 		config: config,
-		cmd: &executer{},
 	}
 }
 
-func (k *kustomizeBuilder) Build(manifest string) ([]*unstructured.Unstructured, error) {
+func (k *kustomizeBuilder) Build(manifest string, cmd RunCommand) ([]*unstructured.Unstructured, error) {
 	args := []string{"build", manifest}
 	args = append(args, k.config.Kubectl.KustomizeArgs...)
 
 	// Execute command
-	output, err := k.cmd.RunCommand(k.path, args)
+	output, err := cmd(k.path, args)
 	if err != nil {
 		_, ok := err.(*exec.ExitError)
 		if ok {
@@ -52,7 +52,6 @@ type kubectlBuilder struct {
 	config *latest.DeploymentConfig
 	context string
 	namespace string
-	cmd commandExecuter
 }
 
 // NewKubectlBuilder creates a new kubectl manifest builder
@@ -62,11 +61,10 @@ func NewKubectlBuilder(path string, config *latest.DeploymentConfig, context, na
 		config: config,
 		context: context,
 		namespace: namespace,
-		cmd: &executer{},
 	}
 }
 
-func (k *kubectlBuilder) Build(manifest string) ([]*unstructured.Unstructured, error) {
+func (k *kubectlBuilder) Build(manifest string, cmd RunCommand) ([]*unstructured.Unstructured, error) {
 	args := []string{"create"}
 	if k.context != "" {
 		args = append(args, "--context", k.context)
@@ -86,7 +84,7 @@ func (k *kubectlBuilder) Build(manifest string) ([]*unstructured.Unstructured, e
 	args = append(args, k.config.Kubectl.CreateArgs...)
 
 	// Execute command
-	output, err := k.cmd.RunCommand(k.path, args)
+	output, err := cmd(k.path, args)
 	if err != nil {
 		_, ok := err.(*exec.ExitError)
 		if ok {
