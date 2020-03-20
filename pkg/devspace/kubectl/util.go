@@ -2,6 +2,7 @@ package kubectl
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"net"
 	"net/http"
 	"os/exec"
@@ -158,18 +159,17 @@ func (client *client) GetRunningPodsWithImage(imageNames []string, namespace str
 		namespace = client.namespace
 	}
 
-	minWait := 60 * time.Second
-	waitingInterval := 1 * time.Second
-	for maxWaiting >= 0 {
-		time.Sleep(waitingInterval)
-
+	pods := []*k8sv1.Pod{}
+	now := time.Now()
+	minWait := time.Second * 60
+	err := wait.Poll(time.Second, maxWaiting, func() (bool, error){
 		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{})
 		if err != nil {
-			return nil, err
+			return false, err
 		}
 
 		if len(podList.Items) > 0 {
-			pods := []*k8sv1.Pod{}
+			pods = []*k8sv1.Pod{}
 			wait := false
 
 		PodLoop:
@@ -180,9 +180,9 @@ func (client *client) GetRunningPodsWithImage(imageNames []string, namespace str
 			Outer:
 				for _, container := range currentPod.Spec.Containers {
 					for _, imageName := range imageNames {
-						if imageName == container.Image {
+						if compareImageNames(imageName, container.Image) {
 							if CriticalStatus[podStatus] {
-								return nil, errors.Errorf(message.PodStatusCritical, currentPod.Name, podStatus, currentPod.Name)
+								return false, errors.Errorf(message.PodStatusCritical, currentPod.Name, podStatus, currentPod.Name)
 							} else if podStatus == "Completed" {
 								break Outer
 							} else if podStatus != "Running" {
@@ -198,18 +198,27 @@ func (client *client) GetRunningPodsWithImage(imageNames []string, namespace str
 			}
 
 			if wait == false {
-				if len(pods) > 0 || minWait <= 0 {
-					return pods, nil
+				if len(pods) > 0 || time.Since(now) > minWait {
+					return true, nil
 				}
 			}
 		}
 
-		time.Sleep(waitingInterval)
-		maxWaiting -= waitingInterval * 2
-		minWait -= waitingInterval * 2
+		return false, nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, errors.Errorf("Waiting for pods with image names '%s' in namespace %s timed out", strings.Join(imageNames, ","), namespace)
+	return pods, nil
+}
+
+func compareImageNames(image1 string, image2 string) bool {
+	if strings.Index(image1, ":") > -1 && strings.Index(image2, ":") > -1 {
+		return image1 == image2
+	} else {
+		return strings.Split(image1, ":")[0] == strings.Split(image2, ":")[0]
+	}
 }
 
 // GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string

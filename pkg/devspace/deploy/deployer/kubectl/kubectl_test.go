@@ -3,7 +3,6 @@ package kubectl
 import (
 	"io"
 	"io/ioutil"
-	"os/exec"
 	"strings"
 	"testing"
 
@@ -289,7 +288,7 @@ func TestDelete(t *testing.T) {
 			cmdPath:       "myPath",
 			expectedPaths: []string{"myPath", "myPath"},
 			expectedArgs: [][]string{
-				[]string{"create", "--dry-run", "--save-config", "--output", "yaml", "--validate=false", "--filename", "oneManifest"},
+				[]string{"create", "--dry-run", "--output", "yaml", "--validate=false", "--filename", "oneManifest"},
 				[]string{"delete", "--ignore-not-found=true", "-f", "-"},
 			},
 		},
@@ -369,7 +368,7 @@ func TestDeploy(t *testing.T) {
 			expectedDeployed: true,
 			expectedPaths:    []string{"myPath", "myPath"},
 			expectedArgs: [][]string{
-				[]string{"create", "--context", "myContext", "--namespace", "myNamespace", "--dry-run", "--save-config", "--output", "yaml", "--validate=false", "--filename", "."},
+				[]string{"create", "--context", "myContext", "--namespace", "myNamespace", "--dry-run", "--output", "yaml", "--validate=false", "--filename", "."},
 				[]string{"--context", "myContext", "--namespace", "myNamespace", "apply", "--force", "-f", "-", "someFlag"},
 			},
 		},
@@ -384,7 +383,7 @@ func TestDeploy(t *testing.T) {
 			DeploymentConfig: &latest.DeploymentConfig{
 				Kubectl: &latest.KubectlConfig{
 					Kustomize: &testCase.kustomize,
-					Flags:     testCase.kubectlFlags,
+					ApplyArgs: testCase.kubectlFlags,
 				},
 			},
 			commandExecuter: &fakeExecuter{
@@ -439,8 +438,9 @@ func TestGetReplacedManifest(t *testing.T) {
 		getReplacedManifestTestCase{
 			name: "one replaced resource",
 			cmdOutput: map[string]interface{}{
-				"apiVersion": 1,
-				"image":      "myimage",
+				"apiVersion": "v1",
+				"kind": "Pod",
+				"image": "myimage",
 			},
 			cache: &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
@@ -459,7 +459,7 @@ func TestGetReplacedManifest(t *testing.T) {
 				"myimage": "",
 			},
 			expectedRedeploy: true,
-			expectedManifest: "apiVersion: 1\nimage: myimage:mytag\n",
+			expectedManifest: "apiVersion: v1\nimage: myimage:mytag\nkind: Pod\n",
 		},
 	}
 
@@ -488,82 +488,5 @@ func TestGetReplacedManifest(t *testing.T) {
 
 		assert.Equal(t, shouldRedeploy, testCase.expectedRedeploy, "Unexpected shouldRedeploy-bool in testCase %s", testCase.name)
 		assert.Equal(t, replacedManifest, testCase.expectedManifest, "Unexpected replaced manifest in testCase %s", testCase.name)
-	}
-}
-
-type dryRunTestCase struct {
-	name string
-
-	manifest  string
-	context   string
-	namespace string
-	cmdPath   string
-	kustomize bool
-
-	cmdOutput string
-	cmdErr    error
-
-	expectedStreamOutput string
-	expectedErr          string
-	expectedPath         string
-	expectedArgs         []string
-}
-
-func TestDryRun(t *testing.T) {
-	testCases := []dryRunTestCase{
-		dryRunTestCase{
-			name:     "command returns error",
-			cmdPath:  "path1",
-			manifest: "manifest1",
-			cmdErr: &exec.ExitError{
-				Stderr: []byte("Test std err"),
-			},
-			expectedErr:  "Test std err",
-			expectedPath: "path1",
-			expectedArgs: []string{"create", "--dry-run", "--save-config", "--output", "yaml", "--validate=false", "--filename", "manifest1"},
-		},
-		dryRunTestCase{
-			name:                 "all args, no error",
-			cmdPath:              "path2",
-			manifest:             "manifest2",
-			context:              "mycontext",
-			namespace:            "mynamespace",
-			kustomize:            true,
-			cmdOutput:            "cmdOutput",
-			expectedStreamOutput: "cmdOutput",
-			expectedPath:         "path2",
-			expectedArgs:         []string{"create", "--context", "mycontext", "--namespace", "mynamespace", "--dry-run", "--save-config", "--output", "yaml", "--validate=false", "--kustomize", "manifest2"},
-		},
-	}
-
-	for _, testCase := range testCases {
-		deployer := &DeployConfig{
-			Context:   testCase.context,
-			Namespace: testCase.namespace,
-			CmdPath:   testCase.cmdPath,
-			DeploymentConfig: &latest.DeploymentConfig{
-				Kubectl: &latest.KubectlConfig{
-					Kustomize: &testCase.kustomize,
-				},
-			},
-			commandExecuter: &fakeExecuter{
-				output:       testCase.cmdOutput,
-				err:          testCase.cmdErr,
-				t:            t,
-				expectedPath: []string{testCase.expectedPath},
-				expectedArgs: [][]string{testCase.expectedArgs},
-				testCase:     testCase.name,
-			},
-		}
-
-		output, err := deployer.dryRun(testCase.manifest)
-
-		if testCase.expectedErr == "" {
-			assert.NilError(t, err, "Error in testCase %s", testCase.name)
-		} else {
-			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
-		}
-
-		assert.Equal(t, string(output), testCase.expectedStreamOutput, "Unexpected output in testCase %s", testCase.name)
 	}
 }

@@ -7,8 +7,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 )
 
-// ReplaceImageNames replaces images within a certain manifest with the correct tags from the cache
-func ReplaceImageNames(manifest map[interface{}]interface{}, cache *generated.CacheConfig, imagesConf map[string]*latest.ImageConfig, builtImages map[string]string, keys map[string]bool) bool {
+func replaceImageNames(cache *generated.CacheConfig, imagesConf map[string]*latest.ImageConfig, builtImages map[string]string, keys map[string]bool, action func(walk.MatchFn, walk.ReplaceFn)) bool {
 	if imagesConf == nil {
 		imagesConf = map[string]*latest.ImageConfig{}
 	}
@@ -69,7 +68,20 @@ func ReplaceImageNames(manifest map[interface{}]interface{}, cache *generated.Ca
 	}
 
 	// We ignore the error here because the replace function can never throw an error
-	_ = walk.Walk(manifest, match, replace)
+	action(match, replace)
 
 	return shouldRedeploy
+}
+
+func ReplaceImageNamesStringMap(manifest map[string]interface{}, cache *generated.CacheConfig, imagesConf map[string]*latest.ImageConfig, builtImages map[string]string, keys map[string]bool) bool {
+	return replaceImageNames(cache, imagesConf, builtImages, keys, func(match walk.MatchFn, replace walk.ReplaceFn) {
+		_ = walk.WalkStringMap(manifest, match, replace)
+	})
+}
+
+// ReplaceImageNames replaces images within a certain manifest with the correct tags from the cache
+func ReplaceImageNames(manifest map[interface{}]interface{}, cache *generated.CacheConfig, imagesConf map[string]*latest.ImageConfig, builtImages map[string]string, keys map[string]bool) bool {
+	return replaceImageNames(cache, imagesConf, builtImages, keys, func(match walk.MatchFn, replace walk.ReplaceFn) {
+		_ = walk.Walk(manifest, match, replace)
+	})
 }

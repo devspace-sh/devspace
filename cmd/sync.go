@@ -236,6 +236,12 @@ func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 		if params.Namespace != "" {
 			loadedSyncConfig.Namespace = ""
 		}
+		if *syncConfig.DisableDownload {
+			loadedSyncConfig.DisableDownload = syncConfig.DisableDownload
+		}
+		if *syncConfig.DisableUpload {
+			loadedSyncConfig.DisableUpload = syncConfig.DisableUpload
+		}
 
 		syncConfig = loadedSyncConfig
 		selectorParameter.ConfigParameter = targetselector.ConfigParameter{

@@ -15,6 +15,11 @@ func Walk(d map[interface{}]interface{}, match MatchFn, replace ReplaceFn) error
 	return doWalk(d, "", match, replace)
 }
 
+// WalkStringMap walks over an interface and replaces keys that match the match function with the replace function
+func WalkStringMap(d map[string]interface{}, match MatchFn, replace ReplaceFn) error {
+	return doWalk(d, "", match, replace)
+}
+
 func doWalk(d interface{}, path string, match MatchFn, replace ReplaceFn) error {
 	var err error
 
@@ -34,6 +39,26 @@ func doWalk(d interface{}, path string, match MatchFn, replace ReplaceFn) error 
 
 			if match(path, fmt.Sprintf("[%d]", idx), value) {
 				t[idx], err = replace(newPath, value)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	case map[string]interface{}:
+		for key, v := range t {
+			newPath := fmt.Sprintf("%s.%s", path, key)
+			value, ok := v.(string)
+			if ok == false {
+				err = doWalk(v, newPath, match, replace)
+				if err != nil {
+					return err
+				}
+
+				continue
+			}
+
+			if match(path, key, value) {
+				t[key], err = replace(newPath, value)
 				if err != nil {
 					return err
 				}

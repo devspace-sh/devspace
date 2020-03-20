@@ -461,19 +461,11 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 	if interactiveMode {
 		var imageSelector []string
 		if config.Dev.Interactive.Terminal != nil && config.Dev.Interactive.Terminal.ImageName != "" {
-			imageConfigCache := generatedConfig.GetActive().GetImageCache(config.Dev.Interactive.Terminal.ImageName)
-			if imageConfigCache.ImageName != "" {
-				imageSelector = []string{imageConfigCache.ImageName + ":" + imageConfigCache.Tag}
-			}
+			imageSelector = targetselector.ImageSelectorFromConfig(config.Dev.Interactive.Terminal.ImageName, config, generatedConfig)
 		} else if len(config.Dev.Interactive.Images) > 0 {
 			imageSelector = []string{}
-			cache := generatedConfig.GetActive()
-
 			for _, imageConfig := range config.Dev.Interactive.Images {
-				imageConfigCache := cache.GetImageCache(imageConfig.Name)
-				if imageConfigCache.ImageName != "" {
-					imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
-				}
+				imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(imageConfig.Name, config, generatedConfig)...)
 			}
 		}
 
@@ -481,29 +473,13 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 	} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
 		// Build an image selector
 		imageSelector := []string{}
-		if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.Images != nil {
-			for generatedImageName, imageConfigCache := range generatedConfig.GetActive().Images {
-				if imageConfigCache.ImageName != "" {
-					// Check that they are also in the real config
-					for _, configImageName := range config.Dev.Logs.Images {
-						if configImageName == generatedImageName {
-							imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
-							break
-						}
-					}
-				}
+		if config.Dev != nil && config.Dev.Logs != nil {
+			for _, configImageName := range config.Dev.Logs.Images {
+				imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig)...)
 			}
 		} else {
-			for generatedImageName, imageConfigCache := range generatedConfig.GetActive().Images {
-				if imageConfigCache.ImageName != "" {
-					// Check that they are also in the real config
-					for configImageName := range config.Images {
-						if configImageName == generatedImageName {
-							imageSelector = append(imageSelector, imageConfigCache.ImageName+":"+imageConfigCache.Tag)
-							break
-						}
-					}
-				}
+			for configImageName := range config.Images {
+				imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig)...)
 			}
 		}
 
