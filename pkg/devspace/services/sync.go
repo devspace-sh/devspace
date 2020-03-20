@@ -123,18 +123,10 @@ type startClientOptions struct {
 
 func (serviceClient *client) startSyncClient(options *startClientOptions, log logpkg.Logger) error {
 	var (
-		imageSelector []string
-		syncConfig    = options.SyncConfig
+		syncConfig = options.SyncConfig
 	)
 
-	if syncConfig.ImageName != "" {
-		imageConfigCache := serviceClient.generated.GetActive().GetImageCache(options.SyncConfig.ImageName)
-		if imageConfigCache.ImageName != "" {
-			imageSelector = []string{imageConfigCache.ImageName + ":" + imageConfigCache.Tag}
-		}
-	}
-
-	selector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, options.SelectorParameter, options.AllowPodPick, imageSelector)
+	selector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, options.SelectorParameter, options.AllowPodPick, targetselector.ImageSelectorFromConfig(syncConfig.ImageName, serviceClient.config, serviceClient.generated))
 	if err != nil {
 		return errors.Errorf("Error creating target selector: %v", err)
 	}
