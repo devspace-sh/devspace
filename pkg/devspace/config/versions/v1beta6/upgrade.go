@@ -2,9 +2,8 @@ package v1beta6
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
+	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta7"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
@@ -23,7 +22,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			}
 
 			if config.DownloadOnInitialSync != nil && *config.DownloadOnInitialSync == true {
-				nextConfig.Dev.Sync[key].InitialSync = latest.InitialSyncStrategyPreferLocal
+				nextConfig.Dev.Sync[key].InitialSync = next.InitialSyncStrategyPreferLocal
 			}
 		}
 	}

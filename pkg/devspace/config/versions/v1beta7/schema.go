@@ -1,11 +1,11 @@
-package latest
+package v1beta7
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 )
 
 // Version is the current api version
-const Version string = "v1beta8"
+const Version string = "v1beta7"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -75,7 +75,7 @@ type DockerConfig struct {
 type KanikoConfig struct {
 	Cache        *bool         `yaml:"cache,omitempty"`
 	SnapshotMode string        `yaml:"snapshotMode,omitempty"`
-	Args        []string       `yaml:"args,omitempty"`
+	Flags        []string      `yaml:"flags,omitempty"`
 	Namespace    string        `yaml:"namespace,omitempty"`
 	Insecure     *bool         `yaml:"insecure,omitempty"`
 	PullSecret   string        `yaml:"pullSecret,omitempty"`
@@ -87,7 +87,7 @@ type CustomConfig struct {
 	Command    string   `yaml:"command,omitempty"`
 	AppendArgs []string `yaml:"appendArgs,omitempty"`
 	Args       []string `yaml:"args,omitempty"`
-	ImageArg   string   `yaml:"imageArg,omitempty"`
+	ImageFlag  string   `yaml:"imageFlag,omitempty"`
 	OnChange   []string `yaml:"onChange,omitempty"`
 }
 
@@ -253,11 +253,10 @@ type ChartConfig struct {
 type KubectlConfig struct {
 	Manifests        []string `yaml:"manifests,omitempty"`
 	Kustomize        *bool    `yaml:"kustomize,omitempty"`
-	KustomizeArgs    []string `yaml:"kustomizeArgs,omitempty"`
 	ReplaceImageTags *bool    `yaml:"replaceImageTags,omitempty"`
 	DeleteArgs       []string `yaml:"deleteArgs,omitempty"`
 	CreateArgs       []string `yaml:"createArgs,omitempty"`
-	ApplyArgs        []string `yaml:"applyArgs,omitempty"`
+	Flags            []string `yaml:"flags,omitempty"`
 	CmdPath          string   `yaml:"cmdPath,omitempty"`
 }
 
