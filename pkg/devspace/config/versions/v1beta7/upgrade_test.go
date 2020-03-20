@@ -24,30 +24,6 @@ func TestSimple(t *testing.T) {
 				Images: map[string]*ImageConfig{
 					"test": {
 						Build: &BuildConfig{
-							Custom: &CustomConfig{
-								ImageFlag: "test",
-							},
-						},
-					},
-				},
-			},
-			expected: &next.Config{
-				Images: map[string]*next.ImageConfig{
-					"test": {
-						Build: &next.BuildConfig{
-							Custom: &next.CustomConfig{
-								ImageArg: "test",
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			in: &Config{
-				Images: map[string]*ImageConfig{
-					"test": {
-						Build: &BuildConfig{
 							Kaniko: &KanikoConfig{
 								Flags: []string{"test", "test2"},
 							},

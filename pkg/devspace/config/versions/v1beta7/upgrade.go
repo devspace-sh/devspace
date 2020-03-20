@@ -15,7 +15,6 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		return nil, err
 	}
 
-	// CustomBuilder: imageFlag -> imageArgs
 	// Kaniko: Flags -> Args
 	// Kubectl: Flags -> ApplyArgs
 
@@ -26,16 +25,6 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		}
 
 		if value.Build != nil {
-			if value.Build.Custom != nil && value.Build.Custom.ImageFlag != "" {
-				if nextConfig.Images[key].Build == nil {
-					nextConfig.Images[key].Build = &next.BuildConfig{}
-				}
-				if nextConfig.Images[key].Build.Custom == nil {
-					nextConfig.Images[key].Build.Custom = &next.CustomConfig{}
-				}
-				nextConfig.Images[key].Build.Custom.ImageArg = value.Build.Custom.ImageFlag
-			}
-
 			if value.Build.Kaniko != nil && len(value.Build.Kaniko.Flags) > 0 {
 				if nextConfig.Images[key].Build == nil {
 					nextConfig.Images[key].Build = &next.BuildConfig{}

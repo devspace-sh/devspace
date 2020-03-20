@@ -87,7 +87,7 @@ type CustomConfig struct {
 	Command    string   `yaml:"command,omitempty"`
 	AppendArgs []string `yaml:"appendArgs,omitempty"`
 	Args       []string `yaml:"args,omitempty"`
-	ImageArg   string   `yaml:"imageArg,omitempty"`
+	ImageFlag   string   `yaml:"imageFlag,omitempty"`
 	OnChange   []string `yaml:"onChange,omitempty"`
 }
 
