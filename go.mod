@@ -51,15 +51,15 @@ require (
 	gopkg.in/src-d/enry.v1 v1.6.4
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
-	gopkg.in/yaml.v2 v2.2.4
+	gopkg.in/yaml.v2 v2.2.8
 	gotest.tools v2.2.0+incompatible
-	helm.sh/helm/v3 v3.1.1
-	k8s.io/api v0.17.2
-	k8s.io/apimachinery v0.17.2
-	k8s.io/cli-runtime v0.17.2
-	k8s.io/client-go v0.17.2
+	helm.sh/helm/v3 v3.1.2
+	k8s.io/api v0.17.3
+	k8s.io/apimachinery v0.17.3
+	k8s.io/cli-runtime v0.17.3
+	k8s.io/client-go v0.17.3
 	k8s.io/klog v1.0.0
-	k8s.io/kubectl v0.17.2
+	k8s.io/kubectl v0.17.3
 	mvdan.cc/sh/v3 v3.0.0-alpha2
 )
 
