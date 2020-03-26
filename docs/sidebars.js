@@ -87,6 +87,7 @@ module.exports = {
             'configuration/variables/basics',
             'configuration/variables/source-env',
             'configuration/variables/source-input',
+            'configuration/variables/source-none',
           ],
         },
         {
@@ -104,7 +105,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Guides',
+      label: 'Guides & Best Practices',
       items: [
         'guides/basics',
         'guides/localhost-ui',
@@ -112,6 +113,10 @@ module.exports = {
         'guides/file-synchronization',
         'guides/interactive-mode',
         'guides/ci-cd-integration',
+        'guides/dev-staging-production',
+        'guides/image-building',
+        'guides/remote-debugging',
+        'guides/community-projects',
       ],
     },
     {
@@ -154,16 +159,6 @@ module.exports = {
             },
           ]
         },
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Best Practices',
-      items: [
-        'best-practices/image-building',
-        'best-practices/dev-staging-production',
-        'best-practices/remote-debugging',
-        'best-practices/community-projects',
       ],
     },
     {
@@ -242,6 +237,7 @@ module.exports = {
           label: "devspace set",
           items: [
             "commands/devspace_set_analytics",
+            "commands/devspace_set_encryptionkey",
             "commands/devspace_set_var"
           ]
         },

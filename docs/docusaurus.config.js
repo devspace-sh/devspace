@@ -1,5 +1,7 @@
 __webpack_public_path__ = "/cli/"
 
+const versions = require('./versions.json');
+
 module.exports = {
   title: 'DevSpace CLI | Documentation',
   tagline: 'The tagline of my site',
@@ -15,11 +17,31 @@ module.exports = {
         alt: 'DevSpace',
         src: '/img/logo-devspace.svg',
         href: 'https://devspace.sh/',
+        target: '_self'
       },
       links: [
-        {to: 'https://devspace.sh/', label: 'Website', position: 'left'},
-        {to: 'docs/introduction', label: 'Docs', position: 'left'},
-        {href: 'https://devspace.cloud/blog', label: 'Blog', position: 'left'},
+        {
+          to: 'versions',
+          label: `${versions[0]}`,
+          position: 'left',
+          className: 'version-link'
+        },
+        {
+          href: 'https://devspace.sh/',
+          label: 'Website',
+          position: 'left',
+          target: '_self'
+        },
+        {
+          to: 'docs/introduction',
+          label: 'Docs',
+          position: 'left'
+        },
+        {
+          href: 'https://devspace.cloud/blog',
+          label: 'Blog',
+          position: 'left'
+        },
         {
           href: 'https://github.com/devspace-cloud/devspace',
           label: 'GitHub',
@@ -31,7 +53,7 @@ module.exports = {
       apiKey: "b9533b52dde7e23272dbd4211435c070",
       indexName: "devspace-cli",
       placeholder: "Search...",
-      algoliaOptions: {}
+      algoliaOptions: {},
     },
     footer: {
       style: 'light',

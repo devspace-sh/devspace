@@ -72,7 +72,7 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().StringVar(&cmd.LocalPath, "local-path", "", "Local path to use (Default is current directory")
 	syncCmd.Flags().StringVar(&cmd.ContainerPath, "container-path", "", "Container path to use (Default is working directory)")
 
-	syncCmd.Flags().BoolVar(&cmd.DownloadOnInitialSync, "download-on-initial-sync", true, "DEPRACTED: Downloads all locally non existing remote files in the beginning")
+	syncCmd.Flags().BoolVar(&cmd.DownloadOnInitialSync, "download-on-initial-sync", true, "DEPRECATED: Downloads all locally non existing remote files in the beginning")
 	syncCmd.Flags().StringVar(&cmd.InitialSync, "initial-sync", "", "The initial sync strategy to use (mirrorLocal, mirrorRemote, preferLocal, preferRemote, preferNewest, keepAll)")
 
 	syncCmd.Flags().BoolVar(&cmd.NoWatch, "no-watch", false, "Synchronizes local and remote and then stops")
@@ -235,6 +235,12 @@ func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 		}
 		if params.Namespace != "" {
 			loadedSyncConfig.Namespace = ""
+		}
+		if *syncConfig.DisableDownload {
+			loadedSyncConfig.DisableDownload = syncConfig.DisableDownload
+		}
+		if *syncConfig.DisableUpload {
+			loadedSyncConfig.DisableUpload = syncConfig.DisableUpload
 		}
 
 		syncConfig = loadedSyncConfig

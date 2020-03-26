@@ -256,8 +256,10 @@ func (p *provider) defaultClusterSpaceDomain(client kubectl.Client, useHostNetwo
 			}
 
 			// Check loadbalancer for an ip
+			found := false
 			for _, service := range services.Items {
 				if service.Spec.Type == v1.ServiceTypeLoadBalancer {
+					found = true
 					for _, ingress := range service.Status.LoadBalancer.Ingress {
 						if ingress.Hostname != "" {
 							break Outer
@@ -267,6 +269,9 @@ func (p *provider) defaultClusterSpaceDomain(client kubectl.Client, useHostNetwo
 						}
 					}
 				}
+			}
+			if !found {
+				return nil
 			}
 
 			time.Sleep(5 * time.Second)

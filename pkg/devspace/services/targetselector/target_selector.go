@@ -1,6 +1,7 @@
 package targetselector
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"strings"
 	"time"
 
@@ -297,3 +298,22 @@ func (t *TargetSelector) GetContainer(allowInitContainer bool, log log.Logger) (
 
 	return pod, nil, nil
 }
+
+func ImageSelectorFromConfig(configImageName string, config *latest.Config, generated *generated.Config) []string {
+	var imageSelector []string
+	if configImageName != "" && generated != nil && config != nil {
+		imageConfigCache := generated.GetActive().GetImageCache(configImageName)
+		if imageConfigCache.ImageName != "" {
+			imageSelector = []string{imageConfigCache.ImageName + ":" + imageConfigCache.Tag}
+		} else if config.Images[configImageName] != nil {
+			if len(config.Images[configImageName].Tags) > 0 {
+				imageSelector = []string{config.Images[configImageName].Image + ":" + config.Images[configImageName].Tags[0]}
+			} else {
+				imageSelector = []string{config.Images[configImageName].Image}
+			}
+		}
+	}
+
+	return imageSelector
+}
+

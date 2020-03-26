@@ -384,7 +384,7 @@ works with any remote Kubernetes cluster (GKE, EKS, AKS, bare metal etc.)
 
 <img src="static/img/line.svg" height="1">
 
-#### Option A: You want to use this cluster alone
+#### Option A: You alone want to use this cluster
 If you want to deploy to a remote Kubernetes cluster, make sure your **current kube-context** points to this cluster and tell DevSpace which namespace to use:
 ```bash
 # Tell DevSpace which namespace to use (will be created automatically during deployment)
@@ -442,7 +442,7 @@ DevSpace Cloud makes sure that developers cannot break out of their namespaces b
 <details>
   <summary><b>It it safe to connect my cluster to DevSpace Cloud?</b></summary>
 
-**Yes**. When connecting a cluster to DevSpace Cloud, the CLI tool asks you to define an encrytion key. The cluster access token that the CLI creates will be encrypted with a hashed version of this key before sending it to DevSpace Cloud. That makes sure that no one can access your cluster except you. This key is hashed and stored on your local computer. That means that:
+**Yes**. When connecting a cluster to DevSpace Cloud, the CLI tool asks you to define an encryption key. The cluster access token that the CLI creates will be encrypted with a hashed version of this key before sending it to DevSpace Cloud. That makes sure that no one can access your cluster except you. This key is hashed and stored on your local computer. That means that:
 
 - If you use DevSpace from a different computer, you will have to enter the encryption key again or re-connect the cluster which generates a new access token and encrypts it with a new key.
 - If you add a team member, you will have to send them a secure invite link which makes sure that they also get cluster access. This procedure is very safe and your key is never sent to our platform. After clicking on the invite link, your colleagues will define a separate encryption key for secure access to their namespaces.
@@ -509,7 +509,7 @@ When DevSpace asks you how to open your application, choose the first option **"
 <br>
 
 ### 7. Develop
-After successfully deploying your project one, you can start it in development mode and directly code within your Kubernetes cluster using terminal proxy, port forwarding and real-time code synchronization.
+After successfully deploying your project once, you can start it in development mode and directly code within your Kubernetes cluster using terminal proxy, port forwarding and real-time code synchronization.
 
 ```bash
 devspace dev

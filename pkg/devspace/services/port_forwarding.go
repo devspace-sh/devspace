@@ -30,20 +30,12 @@ func (serviceClient *client) StartPortForwarding(interrupt chan error) error {
 }
 
 func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardingConfig, interrupt chan error, log logpkg.Logger) error {
-	var imageSelector []string
-	if portForwarding.ImageName != "" && serviceClient.generated != nil {
-		imageConfigCache := serviceClient.generated.GetActive().GetImageCache(portForwarding.ImageName)
-		if imageConfigCache.ImageName != "" {
-			imageSelector = []string{imageConfigCache.ImageName + ":" + imageConfigCache.Tag}
-		}
-	}
-
 	selector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, &targetselector.SelectorParameter{
 		ConfigParameter: targetselector.ConfigParameter{
 			Namespace:     portForwarding.Namespace,
 			LabelSelector: portForwarding.LabelSelector,
 		},
-	}, false, imageSelector)
+	}, false, targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, serviceClient.generated))
 	if err != nil {
 		return errors.Errorf("Error creating target selector: %v", err)
 	}

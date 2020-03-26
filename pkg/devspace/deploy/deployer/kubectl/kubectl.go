@@ -2,18 +2,16 @@ package kubectl
 
 import (
 	"io"
-	"os/exec"
-	"regexp"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"strings"
 
+	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
-	yaml "gopkg.in/yaml.v2"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
+	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
@@ -140,8 +138,9 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 		}
 
 		args := d.getCmdArgs("delete", "--ignore-not-found=true")
-		stringReader := strings.NewReader(replacedManifest)
+		args = append(args, d.DeploymentConfig.Kubectl.DeleteArgs...)
 
+		stringReader := strings.NewReader(replacedManifest)
 		cmd := d.commandExecuter.GetCommand(d.CmdPath, args)
 		err = cmd.Run(d.Log, d.Log, stringReader)
 		if err != nil {
@@ -201,11 +200,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 		if shouldRedeploy || forceDeploy {
 			stringReader := strings.NewReader(replacedManifest)
 			args := d.getCmdArgs("apply", "--force")
-			if d.DeploymentConfig.Kubectl.Flags != nil {
-				for _, flag := range d.DeploymentConfig.Kubectl.Flags {
-					args = append(args, flag)
-				}
-			}
+			args = append(args, d.DeploymentConfig.Kubectl.ApplyArgs...)
 
 			cmd := d.commandExecuter.GetCommand(d.CmdPath, args)
 			err = cmd.Run(d.Log, d.Log, stringReader)
@@ -226,37 +221,29 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 }
 
 func (d *DeployConfig) getReplacedManifest(manifest string, cache *generated.CacheConfig, builtImages map[string]string) (bool, string, error) {
-	manifestYamlBytes, err := d.dryRun(manifest)
+	objects, err := d.buildManifests(manifest)
 	if err != nil {
 		return false, "", err
 	}
 
 	// Split output into the yamls
 	var (
-		splitted         = regexp.MustCompile(`(^|\n)apiVersion`).Split(string(manifestYamlBytes), -1)
 		replaceManifests = []string{}
 		shouldRedeploy   = false
 	)
 
-	for _, resource := range splitted {
-		if resource == "" {
+	for _, resource := range objects {
+		if resource.Object == nil {
 			continue
-		}
-
-		// Parse yaml
-		manifestYaml := map[interface{}]interface{}{}
-		err = yaml.Unmarshal([]byte("apiVersion"+resource), &manifestYaml)
-		if err != nil {
-			return false, "", errors.Wrap(err, "unmarshal yaml")
 		}
 
 		if len(cache.Images) > 0 {
 			if d.DeploymentConfig.Kubectl.ReplaceImageTags == nil || *d.DeploymentConfig.Kubectl.ReplaceImageTags == true {
-				shouldRedeploy = replaceManifest(manifestYaml, cache, d.config.Images, builtImages) || shouldRedeploy
+				shouldRedeploy = util.ReplaceImageNamesStringMap(resource.Object, cache, d.config.Images, builtImages, map[string]bool{"image": true}) || shouldRedeploy
 			}
 		}
 
-		replacedManifest, err := yaml.Marshal(manifestYaml)
+		replacedManifest, err := yaml.Marshal(resource)
 		if err != nil {
 			return false, "", errors.Wrap(err, "marshal yaml")
 		}
@@ -269,7 +256,6 @@ func (d *DeployConfig) getReplacedManifest(manifest string, cache *generated.Cac
 
 func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []string {
 	args := []string{}
-
 	if d.Context != "" {
 		args = append(args, "--context", d.Context)
 	}
@@ -286,93 +272,21 @@ func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []str
 	return args
 }
 
-func (d *DeployConfig) dryRun(manifest string) ([]byte, error) {
-	args := []string{"create"}
-
-	if d.Context != "" {
-		args = append(args, "--context", d.Context)
-	}
-	if d.Namespace != "" {
-		args = append(args, "--namespace", d.Namespace)
+func (d *DeployConfig) buildManifests(manifest string) ([]*unstructured.Unstructured, error) {
+	// Check if we should use kustomize or kubectl
+	if d.DeploymentConfig.Kubectl.Kustomize != nil && *d.DeploymentConfig.Kubectl.Kustomize == true && d.isKustomizeInstalled("kustomize")  {
+		return NewKustomizeBuilder("kustomize", d.DeploymentConfig).Build(manifest, d.commandExecuter.RunCommand)
 	}
 
-	args = append(args, "--dry-run", "--save-config", "--output", "yaml", "--validate=false")
-
-	if d.DeploymentConfig.Kubectl.Kustomize != nil && *d.DeploymentConfig.Kubectl.Kustomize == true {
-		args = append(args, "--kustomize")
-	} else {
-		args = append(args, "--filename")
-	}
-
-	args = append(args, manifest)
-
-	// Execute command
-	output, err := d.commandExecuter.RunCommand(d.CmdPath, args)
-	if err != nil {
-		exitError, ok := err.(*exec.ExitError)
-		if ok {
-			return nil, errors.New(string(exitError.Stderr))
-		}
-
-		return nil, err
-	}
-
-	return output, nil
+	// Build with kubectl
+	return NewKubectlBuilder(d.CmdPath, d.DeploymentConfig, d.Context, d.Namespace).Build(manifest, d.commandExecuter.RunCommand)
 }
 
-func replaceManifest(manifest map[interface{}]interface{}, cache *generated.CacheConfig, imagesConf map[string]*latest.ImageConfig, builtImages map[string]string) bool {
-	shouldRedeploy := false
-
-	match := func(path, key, value string) bool {
-		if key == "image" {
-			image, err := registry.GetStrippedDockerImageName(value)
-			if err != nil {
-				return false
-			}
-
-			// Search for image name
-			for _, imageCache := range cache.Images {
-				found := false
-				for _, imageConfig := range imagesConf {
-					if imageConfig.Image == image {
-						found = true
-						break
-					}
-				}
-
-				if found && imageCache.ImageName == image && imageCache.Tag != "" {
-					if builtImages != nil {
-						if _, ok := builtImages[image]; ok {
-							shouldRedeploy = true
-						}
-					}
-
-					return true
-				}
-			}
-		}
-
+func (d *DeployConfig) isKustomizeInstalled(path string) bool {
+	out, err := d.commandExecuter.RunCommand(path, []string{"version"})
+	if err != nil {
 		return false
 	}
 
-	replace := func(path, value string) (interface{}, error) {
-		image, err := registry.GetStrippedDockerImageName(value)
-		if err != nil {
-			return false, nil
-		}
-
-		// Search for image name
-		for _, imageCache := range cache.Images {
-			if imageCache.ImageName == image {
-				return image + ":" + imageCache.Tag, nil
-			}
-		}
-
-		return value, nil
-	}
-
-	// We ignore the error here because the replace function can never throw an error
-	_ = walk.Walk(manifest, match, replace)
-
-	return shouldRedeploy
+	return strings.HasPrefix(string(out), `Version: {Version:kustomize/`)
 }

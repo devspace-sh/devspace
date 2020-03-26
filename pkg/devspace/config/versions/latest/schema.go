@@ -5,7 +5,7 @@ import (
 )
 
 // Version is the current api version
-const Version string = "v1beta7"
+const Version string = "v1beta8"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -75,7 +75,7 @@ type DockerConfig struct {
 type KanikoConfig struct {
 	Cache        *bool         `yaml:"cache,omitempty"`
 	SnapshotMode string        `yaml:"snapshotMode,omitempty"`
-	Flags        []string      `yaml:"flags,omitempty"`
+	Args        []string       `yaml:"args,omitempty"`
 	Namespace    string        `yaml:"namespace,omitempty"`
 	Insecure     *bool         `yaml:"insecure,omitempty"`
 	PullSecret   string        `yaml:"pullSecret,omitempty"`
@@ -84,10 +84,11 @@ type KanikoConfig struct {
 
 // CustomConfig tells the DevSpace CLI to build with a custom build script
 type CustomConfig struct {
-	Command   string    `yaml:"command,omitempty"`
-	Args      []*string `yaml:"args,omitempty"`
-	ImageFlag string    `yaml:"imageFlag,omitempty"`
-	OnChange  []*string `yaml:"onChange,omitempty"`
+	Command    string   `yaml:"command,omitempty"`
+	AppendArgs []string `yaml:"appendArgs,omitempty"`
+	Args       []string `yaml:"args,omitempty"`
+	ImageFlag   string   `yaml:"imageFlag,omitempty"`
+	OnChange   []string `yaml:"onChange,omitempty"`
 }
 
 // BuildOptions defines options for building Docker images
@@ -252,8 +253,11 @@ type ChartConfig struct {
 type KubectlConfig struct {
 	Manifests        []string `yaml:"manifests,omitempty"`
 	Kustomize        *bool    `yaml:"kustomize,omitempty"`
+	KustomizeArgs    []string `yaml:"kustomizeArgs,omitempty"`
 	ReplaceImageTags *bool    `yaml:"replaceImageTags,omitempty"`
-	Flags            []string `yaml:"flags,omitempty"`
+	DeleteArgs       []string `yaml:"deleteArgs,omitempty"`
+	CreateArgs       []string `yaml:"createArgs,omitempty"`
+	ApplyArgs        []string `yaml:"applyArgs,omitempty"`
 	CmdPath          string   `yaml:"cmdPath,omitempty"`
 }
 

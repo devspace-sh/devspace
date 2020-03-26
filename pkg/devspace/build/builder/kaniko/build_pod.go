@@ -86,11 +86,7 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 	}
 
 	// Extra flags
-	if kanikoOptions.Flags != nil {
-		for _, flag := range kanikoOptions.Flags {
-			kanikoArgs = append(kanikoArgs, flag)
-		}
-	}
+	kanikoArgs = append(kanikoArgs, kanikoOptions.Args...)
 
 	// Cache
 	if !options.NoCache {

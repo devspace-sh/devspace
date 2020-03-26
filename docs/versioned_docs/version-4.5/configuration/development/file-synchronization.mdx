@@ -1,0 +1,614 @@
+---
+title: Configure File Synchronization
+sidebar_label: sync
+---
+
+The code synchronization feature of DevSpace allows you to use hot reloading during development. Especially when using programming languages and frameworks that support hot reloading with tools like nodemon, re-building and re-deploying containers is very annoying and time consuming. Therefore, DevSpace uses a smart syncing mechanism that is able to sync local file changes to remote containers directly without the need of rebuilding or restarting the container.
+
+When starting the development mode, DevSpace starts the file sync as configured in the `dev.sync` section of the `devspace.yaml`.
+```yaml {15-21}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
+dev:
+  sync:
+  - imageName: backend
+    localSubPath: ./
+    containerPath: /app
+    excludePaths:
+    - node_modules/
+    - logs/
+```
+
+:::info Start Sync Only
+To only start the file sync without the other functions of the development mode, use `devspace sync` or `devspace sync --config=devspace.yaml` (to load the config).
+:::
+
+Every sync configuration consists of two essential parts:
+- [Pod/Container Selection](#podcontainer-selection)
+- [Sync Path Mapping via `localSubPath` and `containerPath`](#sync-path-mapping)
+
+
+## Pod/Container Selection
+The following config options are needed to determine the container which the file synchronization should be established to:
+- [`imageName`](#imagename)
+- [`labelSelector`](#labelselector)
+- [`containerName`](#containername)
+- [`namespace`](#namespace)
+
+:::info Combine Otions
+If you specify multiple of these config options, they will be jointly used to select the pod / container (think logical `AND / &&`).
+:::
+
+:::info Auto Reconnect
+If the sync is unable to establish a connection to the selected container or loses it after starting the sync, DevSpace will try to restart the sync several times.
+:::
+
+### `imageName`
+The `imageName` option expects a string with the name of an image from the `images` section of the `devspace.yaml`. Using `imageName` tells DevSpace to select the container based on the referenced image that was last built using DevSpace.
+
+:::note
+If `imageName` is specified in any of the sync configurations, `devspace dev` will **not** rebuild this image because DevSpace assumes that instead of rebuilding the image, the user wants to use the much faster file synchronization. If you still want to force rebuilding all images, run `devspace dev -b`.
+:::
+
+:::note
+When multiple `deployments` in your `devspace.yaml` use the same `image`, you generally want to select the right pod using the [`labelSelector`](#labelselector) but you should additionally define the `imageName` option if you want to enable faster image building (see note above).
+:::
+
+#### Example: Select Container by Image Name
+```yaml {2,4,18,22}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: container-0
+        image: john/devbackend
+      - name: container-1
+        image: john/debugger
+dev:
+  sync:
+  - imageName: backend
+    excludePaths:
+    - node_modules/
+    - logs/
+  - imageName: backend-debugger
+    localSubPath: ./debug-logs
+    containerPath: /logs
+```
+**Explanation:**  
+- The above example defines two images that can be used as `imageName`: `backend` and `backend-debugger`
+- The deployment starts two containers and each of them uses an image from the `images` section.
+- The `imageName` option of the first sync configuration in the `dev.sync` section references `backend`. That means DevSpace would select the first container for file synchronzation, as this container uses the `image: john/devbackend` which belongs to the `backend` image as defined in the `images` section.
+- The first sync configuration does not define `localSubPath`, so it defaults to the project's root directory (location of `devspace.yaml`).
+- The first sync configuration does not define `containerPath`, so it defaults to the container's working directory (i.e. `WORKDIR`).
+- The `imageName` option of the second sync configuration in the `dev.sync` section references `backend-debugger`. That means DevSpace would select the second container for file synchronization, as this container uses the `image: john/debugger` which belongs to the `backend-debugger` image as defined in the `images` section.
+
+In consequence, the following sync processes would be started when using the above config example assuming the local project root directoy `/my/project/`:
+
+1. `localhost:/my/project/` forwards to `container-0:$WORKDIR` **\*** 
+2. `localhost:/my/project/debug-logs/` forwards to `container-1:/logs`
+
+**\* Changes on either side (local and container filesystem) that occur within the sub-folders `node_modules/` and `logs/` would be ingored.**
+
+### `labelSelector`
+The `labelSelector` option expects a key-value map of strings with Kubernetes labels.
+
+:::info
+If you are using the `labelSelector` option, you may want to additionally specify the [`imageName` option](#imagename) to speed up the image building process.
+:::
+
+#### Example: Select Container by Label
+```yaml {18-21}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: container-0
+        image: john/devbackend
+      - name: container-1
+        image: john/debugger
+dev:
+  sync:
+  - labelSelector:
+      app.kubernetes.io/name: devspace-app
+      app.kubernetes.io/component: app-backend
+      custom-label: custom-label-value
+    containerName: container-0
+    localSubPath: ./src
+    containerPath: /app/src
+```
+**Explanation:**  
+- The `labelSelector` would select the pod created for the component deployment `app-backend`.
+- Because the selected pod has two containers, we also need to specify the `containerName` option which defines the container that should be used for the file synchronization.
+
+
+### `containerName`
+The `containerName` option expects a string with a container name. This option is used to decide which container should be selected when using the`labelSelector` option because `labelSelector` selects a pod and a pod can have multiple containers.
+
+:::info
+The `containerName` option is not required if the pod you are selecting using `imageName` or `labelSelector` has only one container.
+:::
+
+#### Example
+**See "[Example: Select Container by Label](#example-select-container-by-label)"**
+
+
+### `namespace`
+The `namespace` option expects a string with a Kubernetes namespace used to select the container from.
+
+:::warning
+It is generally **not** needed (nor recommended) to specify the `namespace` option because, by default, DevSpace uses the default namespace of your current kube-context which is usually the one that has been used to deploy your containers to.
+:::
+
+
+## Sync Path Mapping
+
+### `localSubPath`
+The `localSubPath` option expects a string with a path that is relative to the location of `devspace.yaml`.
+
+#### Default Value For `localSubPath`
+```yaml
+localSubPath: ./ # Project root directory (folder containing devspace.yaml)
+```
+
+#### Example
+**See "[Example: Select Container by Image Name](#example-select-container-by-image-name)"**
+
+
+### `containerPath`
+The `containerPath` option expects a string with an absolute path on the container filesystem.
+
+#### Default Value For `containerPath`
+```yaml
+containerPath: $WORKDIR # working directory, set as WORKDIR in the Dockerfile
+```
+
+#### Example
+**See "[Example: Select Container by Image Name](#example-select-container-by-image-name)"**
+
+
+
+## Exclude Paths
+The config options for excluding paths use the same syntax as `.gitignore`.
+
+:::note
+An exclude path that matches a folder recursively excludes all files and sub-folders within this folder.
+:::
+
+### `excludePaths`
+The `excludePaths` option expects an array of strings with paths that should not be synchronized between the local filesystem and the remote container filesystem.
+
+#### Default Value For `excludePaths`
+```yaml
+excludePaths: [] # Do not exclude anything from file synchronization
+```
+
+#### Example: Exclude Paths from Synchronization
+```yaml {14-20}
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    excludePaths:
+    - logs/
+    - more/logs/
+    uploadExcludePaths:
+    - node_modules/
+    downloadExcludePaths:
+    - tmp/
+```
+**Explanation:**  
+- Files in `logs/` and in `more/logs/` would not be synchronized at all.
+- Files in `node_modules/` would only be synchroniyed from the container to the local filesystem but not the other way around.
+- Files in `tmp/` would only be synchronized from the local to the container filesystem but not the other way around.
+
+
+### `downloadExcludePaths`
+The `downloadExcludePaths` option expects an array of strings with paths that should not be synchronized from the remote container filesystem to the local filesystem.
+
+#### Default Value For `downloadExcludePaths`
+```yaml
+downloadExcludePaths: [] # Do not exclude anything from file synchronization
+```
+
+#### Example
+**See "[Example: Exclude Paths from Synchronization](#example-exclude-paths-from-synchronization)"**
+
+### `uploadExcludePaths`
+The `uploadExcludePaths` option expects an array of strings with paths that should not be synchronized from the local filesystem to the remote container filesystem.
+
+:::info
+This option is often useful if you want to download a dependency folder (e.g. `node_modules/`) for code completion but you never want to upload anything from there because of compiled binaries that are not portable between local filesystem and container filesystem (e.g. when your local system is Windows but your containers run Linux).
+:::
+
+#### Default Value For `uploadExcludePaths`
+```yaml
+uploadExcludePaths: [] # Do not exclude anything from file synchronization
+```
+
+#### Example
+**See "[Example: Exclude Paths from Synchronization](#example-exclude-paths-from-synchronization)"**
+
+
+
+## One-Directional Sync
+These flags allow for local or remote container filesystems to be ignored during synchronization.
+
+### `disableDownload`
+The `disableDownload` option expects a boolean which enables/disables all synchronization from the remote container filesystem to the local filesystem.
+
+#### Default Value For `disableDownload`
+```yaml
+disableDownload: false # Do not ignore remote container files during synchronization
+```
+
+#### Example: Synchronize Local Filesystem Only
+```yaml {14-20}
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    disableDownload: true
+    excludePaths:
+    - logs/
+    - more/logs/
+    uploadExcludePaths:
+    - node_modules/
+```
+
+### `disableUpload`
+The `disableUpload` option expects a boolean which enables/disables all synchronization from the local filesystem to the remote container filesystem.
+
+#### Default Value For `disableUpload`
+```yaml
+disableUpload: false # Do not ignore local files during synchronization
+```
+
+#### Example: Synchronize Remote Container Filesystem Only
+```yaml {14-20}
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    disableUpload: true
+    excludePaths:
+    - logs/
+    - more/logs/
+    downloadExcludePaths:
+    - tmp/
+```
+
+
+
+## Initial Sync
+
+### `downloadOnInitialSync`
+The `downloadOnInitialSync` option expects a boolean which defines if DevSpace should (during the initial sync procedure) download files which only exist in the container filesystem but do **not** exist on the local filesystem.
+
+:::info Local File Precedence
+In case of conflicts, DevSpace always uses the local files and updates the files within the containers. If `downloadOnInitialSync: false` (default), DevSpace also removes files in the containers which do not exist on the local filesystem.
+:::
+
+#### Default Value For `downloadOnInitialSync`
+```yaml
+downloadOnInitialSync: false # Do not download any files during initial sync
+```
+
+#### Example: Download Files During Initial Sync
+```yaml {19}
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    excludePaths:
+    - node_modules/*
+  - imageName: backend
+    localSubPath: ./node_modules/
+    containerPath: /app/node_modules/
+    downloadOnInitialSync: true
+```
+**Explanation:**  
+With this configuration, `devspace dev` would do the following:
+- DevSpace would start port-forwarding and file synchronzation.
+- Initial sync would be started automatically.
+- The first sync config section would synchronize all files except files within `node_modules/`. This means that during initial sync, all remote files that are not existing locally would be deleted and other files would be updated to the most recent version.
+- The second sync config section would only synchronize files within `node_modules/` and with defining `downloadOnInitialSync: true`, DevSpace would also download all remote files which are not present on the local filesystem rather than removing them.
+
+
+### `waitInitialSync`
+The `waitInitialSync` option expects a boolean which defines if DevSpace should wait until the initial sync process has terminated before opening the container terminal or the multi-container log streaming.
+
+#### Default Value For `waitInitialSync`
+```yaml
+waitInitialSync: false # Start container terminal or log streaming before initial sync is completed
+```
+
+#### Example: Wait For Initial Sync To Complete
+```yaml {14}
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    waitInitialSync: true
+```
+**Explanation:**  
+With the configuration `devspace dev` would do the following:
+- DevSpace would start port-forwarding and file synchronzation.
+- Initial sync would be started automatically.
+- After the initial sync process is finished, DevSpace starts the multi-container log streaming.
+
+
+## Network Bandwidth Limits
+Sometimes it is useful to throttle the file synchronization, especially when large files or a large number of files are expected to change during development. The following config options provide these capabilities:
+
+### `bandwidthLimits.download`
+The `bandwidthLimits.download` option expects an integer representing the max file download speed in KB/s, e.g. `download: 100` would limit the file sync to a download speed of `100 KB/s`.
+
+:::note
+By default, the file synchronization algorithm uses the maximum bandwidth possible to make the sync process as fast as possible.
+:::
+
+#### Example: Limiting Network Bandwidth
+```yaml {14-16}
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    bandwidthLimits:
+      download: 200
+      upload: 100
+```
+**Explanation:**  
+- Downloading files from the container to the local filesystem would be limited to a transfer speed of `200 KB/s`.
+- Upload files from the local filesystem to the container would be limited to a transfer speed of `100 KB/s`.
+
+### `bandwidthLimits.upload`
+The `bandwidthLimits.upload` option expects an integer representing the max file upload speed in KB/s, e.g. `upload: 100` would limit the file sync to a upload speed of `100 KB/s`.
+
+:::note
+By default, the file synchronization algorithm uses the maximum bandwidth possible to make the sync process as fast as possible.
+:::
+
+#### Example
+**See "[Example: Limiting Network Bandwidth](#example-limiting-network-bandwidth)"**
+
+
+## Post-Sync Commands
+Sometimes it is useful to execute commands after the sync downloads or uploads files/directories between container and local filesystem.
+
+:::warning
+Make sure that post-sync commands will **<u>not</u>** trigger a new sync process which could lead to an **endless loop**.
+:::
+
+### `onDownload`
+The `onDownload` option defines command(s) that should be executed after a file/directory was downloaded from the container to the local filesystem.
+
+#### Example: Post-Download Commands
+```yaml {14-29}
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    onDownload:
+      executeLocal:       # These post-sync commands will be executed on the local dev machine
+        command: chmod    # Command to execute for files and folders
+        args:
+        - +x
+        - {}              # {} will be replaced with the path of the synced file/directory
+        onFileChange:     # Command to execute ONLY for files
+          command: chmod
+          args:
+          - +x
+          - {}            # {} will be replaced with the path of the synced file/directory
+        onDirCreate:      # Command to execute ONLY for newly created directories
+          command: chmod
+          args:
+          - +x
+          - {}            # {} will be replaced with the path of the synced file/directory
+```
+
+### `onUpload`
+The `onUpload` option defines command(s) that should be executed after a file/directory was uploaded from the local filesystem to the container.
+
+#### Example: Post-Upload Commands
+```yaml {14-29}
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    onUpload:
+      executeRemote:      # These post-sync commands will be executed inside the affected container
+        command: chmod    # Command to execute for files and folders
+        args:
+        - +x
+        - {}              # {} will be replaced with the path of the synced file/directory
+        onFileChange:     # Command to execute ONLY for files
+          command: chmod
+          args:
+          - +x
+          - {}            # {} will be replaced with the path of the synced file/directory
+        onDirCreate:      # Command to execute ONLY for newly created directories
+          command: chmod
+          args:
+          - +x
+          - {}            # {} will be replaced with the path of the synced file/directory
+```
+
+
+
+## Useful Commands
+
+### `devspace status sync`
+To get information about current synchronization activities, simply run:
+```bash
+devspace status sync
+```
+Additionally, you can ciew the sync log within `.devspace/logs/sync.log` to get more detailed information.
+
+
+### `devspace sync`
+If you want to start file synchronzation on-demand without having to configure it in `devspace.yaml` and without starting port-forwarding or log streaming etc, you can use the `devspace sync` command as shown in the examples below:
+```bash
+# Select pod with a picker
+devspace sync --local-path=subfolder --container-path=/app
+
+# Select pod and container by name and use current working directory as local-path
+devspace sync --pod=my-pod --container=my-container --container-path=/app
+```
+
+
+
+## FAQ
+
+<details>
+<summary>How does the sync work?</summary>
+
+<br/>
+
+DevSpace establishes a bi-directional code synchronization between the specified local folders and the remote container folders. It automatically recognizes any changes within the specified folders during the session and will update the corresponding files locally and remotely in the background. It uses a small helper binary that is injected into the target container to accomplish this.
+
+The algorithm roughly works like this:
+
+1. Inject a small helper binary via `kubectl cp` into the target container
+2. Download all files that are not found locally
+3. Upload all files that are not found remotely
+4. Watches locally and remotely for changes and uploads or downloads them
+
+<br/>
+
+</details>
+
+<details>
+<summary>Are there any requirements for the sync to work?</summary>
+
+<br/>
+
+The `tar` command has to be present in the container otherwise `kubectl cp` does not work and the helper binary cannot be injected into the container.  
+
+Other than that, no server-side component or special container privileges for code synchronization are required, as the sync algorithm runs completely client-only within DevSpace. The synchronization mechanism works with any container filesystem and no special binaries have to be installed into the containers. File watchers running within the containers like nodemon will also recognize changes made by the synchronization mechanism.
+
+<br/>
+
+</details>
+
+<details>
+<summary>How does the initial sync right after `devspace dev` work?</summary>
+
+<br/>
+
+If synchronization is started, the sync initially compares the remote folder and the local folder and merges the contents with the following rules:
+- If a file or folder exists locally, but not remote, then upload file / folder
+- If a file is newer locally than remote then upload the file (The opposite case is not true, older local files are not overriden by newer remote files)
+- If a file or folder exists on the remote filesystem, but not locally, then remove the remote file / folder (if `downloadOnInitialSync: false` which is the default configuration)
+- If a file or folder exists on the remote filesystem, but not locally, then download the remote file / folder (if `downloadOnInitialSync: true`)
+
+<br/>
+
+</details>
+
+<details>
+<summary>What is the performance impact on using the file sync?</summary>
+
+<br/>
+
+The sync mechanism is normally very reliable and fast. Syncing several thousand files is usually not a problem. Changes are packed together and compressed during synchronization, which improves performance especially for transferring text files. Transferring large compressed binary files is possible, but can affect performance negatively. Remote changes can sometimes have a delay of 1-2 seconds till they are downloaded, depending on how big the synchronized folder is. It should be generally avoided to sync the complete container filesystem.
+
+<br/>
+
+</details>

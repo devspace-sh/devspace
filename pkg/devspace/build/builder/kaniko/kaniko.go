@@ -48,7 +48,7 @@ type Builder struct {
 }
 
 // Wait timeout is the maximum time to wait for the kaniko init and build container to get ready
-const waitTimeout = 2 * time.Minute
+const waitTimeout = 20 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
 func NewBuilder(config *latest.Config, dockerClient docker.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool, log logpkg.Logger) (builder.Interface, error) {
@@ -175,6 +175,10 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	// Delete the build pod when we are done or get interrupted during build
 	deleteBuildPod := func() {
 		gracePeriod := int64(3)
+		if buildPod.Name == "" {
+			return
+		}
+
 		deleteErr := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Delete(buildPod.Name, &metav1.DeleteOptions{
 			GracePeriodSeconds: &gracePeriod,
 		})

@@ -28,8 +28,7 @@ import (
 )
 
 type v3Client struct {
-	cfg *action.Configuration
-
+	helmDriver string
 	kubectl kubectl.Client
 	log     log.Logger
 }
@@ -38,44 +37,52 @@ const stableChartRepo = "https://kubernetes-charts.storage.googleapis.com"
 
 // NewClient creates a new helm v3 client
 func NewClient(kubeClient kubectl.Client, helmDriver string, log log.Logger) (types.Client, error) {
+	return &v3Client{
+		helmDriver: helmDriver,
+		kubectl: kubeClient,
+		log:     log,
+	}, nil
+}
+
+func (client *v3Client) initHelmConfig(namespace string) (*action.Configuration, error) {
 	getter := genericclioptions.NewConfigFlags(true)
 
 	var store *storage.Storage
-	if kubeClient != nil {
-		getter.Namespace = ptr.String(kubeClient.Namespace())
-		getter.Context = ptr.String(kubeClient.CurrentContext())
+	if client.kubectl != nil {
+		if namespace == "" {
+			namespace = client.kubectl.Namespace()
+		}
 
-		switch helmDriver {
+		getter.Namespace = ptr.String(namespace)
+		getter.Context = ptr.String(client.kubectl.CurrentContext())
+
+		switch client.helmDriver {
 		case "secret", "secrets", "":
-			d := driver.NewSecrets(kubeClient.KubeClient().CoreV1().Secrets(kubeClient.Namespace()))
+			d := driver.NewSecrets(client.kubectl.KubeClient().CoreV1().Secrets(namespace))
 			store = storage.Init(d)
 		case "configmap", "configmaps":
-			d := driver.NewConfigMaps(kubeClient.KubeClient().CoreV1().ConfigMaps(kubeClient.Namespace()))
+			d := driver.NewConfigMaps(client.kubectl.KubeClient().CoreV1().ConfigMaps(namespace))
 			store = storage.Init(d)
 		case "memory":
 			d := driver.NewMemory()
 			store = storage.Init(d)
 		default:
 			// Not sure what to do here.
-			return nil, errors.New("Unknown driver in HELM_DRIVER: " + helmDriver)
+			return nil, errors.New("Unknown driver in HELM_DRIVER: " + client.helmDriver)
 		}
 	} else {
 		d := driver.NewMemory()
 		store = storage.Init(d)
 	}
 
-	return &v3Client{
-		cfg: &action.Configuration{
-			RESTClientGetter: getter,
-			Releases:         store,
-			KubeClient:       kube.New(getter),
-			Log: func(msg string, params ...interface{}) {
-				// We don't log helm messages
-				// log.Infof(msg, params...)
-			},
+	return &action.Configuration{
+		RESTClientGetter: getter,
+		Releases:         store,
+		KubeClient:       kube.New(getter),
+		Log: func(msg string, params ...interface{}) {
+			// We don't log helm messages
+			// log.Infof(msg, params...)
 		},
-		kubectl: kubeClient,
-		log:     log,
 	}, nil
 }
 
@@ -84,18 +91,27 @@ func (client *v3Client) InstallChart(releaseName string, releaseNamespace string
 		releaseNamespace = client.kubectl.Namespace()
 	}
 
+	// Init the client
+	cfg, err := client.initHelmConfig(releaseNamespace)
+	if err != nil {
+		return nil, err
+	}
+
 	var (
 		settings  = cli.New()
 		chartName = strings.TrimSpace(helmConfig.Chart.Name)
 		chartRepo = helmConfig.Chart.RepoURL
 	)
 
+	// makes sure repos are not being updated
+	settings.RepositoryConfig = ""
+
 	if strings.HasPrefix(chartName, "stable/") && chartRepo == "" {
 		chartName = chartName[7:]
 		chartRepo = stableChartRepo
 	}
 
-	upgrade := action.NewUpgrade(client.cfg)
+	upgrade := action.NewUpgrade(cfg)
 	upgrade.Install = true
 	upgrade.Namespace = releaseNamespace
 
@@ -124,10 +140,10 @@ func (client *v3Client) InstallChart(releaseName string, releaseNamespace string
 	if upgrade.Install {
 		// If a release does not exist, install it. If another error occurs during
 		// the check, ignore the error and continue with the upgrade.
-		histClient := action.NewHistory(client.cfg)
+		histClient := action.NewHistory(cfg)
 		histClient.Max = 1
 		if _, err := histClient.Run(releaseName); err == driver.ErrReleaseNotFound {
-			instClient := action.NewInstall(client.cfg)
+			instClient := action.NewInstall(cfg)
 			instClient.ChartPathOptions = upgrade.ChartPathOptions
 			instClient.DryRun = upgrade.DryRun
 			instClient.DisableHooks = upgrade.DisableHooks
@@ -241,13 +257,23 @@ func isChartInstallable(ch *chart.Chart) (bool, error) {
 	return false, errors.Errorf("%s charts are not installable", ch.Metadata.Type)
 }
 
-func (client *v3Client) DeleteRelease(releaseName string, helmConfig *latest.HelmConfig) error {
-	_, err := action.NewUninstall(client.cfg).Run(releaseName)
+func (client *v3Client) DeleteRelease(releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error {
+	cfg, err := client.initHelmConfig(releaseNamespace)
+	if err != nil {
+		return err
+	}
+
+	_, err = action.NewUninstall(cfg).Run(releaseName)
 	return err
 }
 
 func (client *v3Client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, error) {
-	list, err := action.NewList(client.cfg).Run()
+	cfg, err := client.initHelmConfig("")
+	if err != nil {
+		return nil, err
+	}
+
+	list, err := action.NewList(cfg).Run()
 	if err != nil {
 		return nil, err
 	}
