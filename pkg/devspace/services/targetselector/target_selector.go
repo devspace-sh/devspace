@@ -1,10 +1,10 @@
 package targetselector
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"strings"
 	"time"
 
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -112,6 +112,10 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 				return pods[0], nil
 			}
 
+			if len(pods) == 0 {
+				return nil, errors.Errorf("Couldn't find a running pod with image selector '%s'", strings.Join(t.imageSelector, ", "))
+			}
+
 			// Show picker if allowed
 			if t.allowPick {
 				podNames := []string{}
@@ -130,10 +134,6 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 				}
 
 				return podMap[podName], nil
-			}
-
-			if len(pods) == 0 {
-				return nil, errors.Errorf("Couldn't find a running pod with image selector '%s'", strings.Join(t.imageSelector, ", "))
 			}
 
 			log.Warnf("Multiple pods with image selector '%s' found. Using first pod found", strings.Join(t.imageSelector, ", "))
@@ -316,4 +316,3 @@ func ImageSelectorFromConfig(configImageName string, config *latest.Config, gene
 
 	return imageSelector
 }
-
