@@ -1,37 +1,75 @@
 package registry
 
 import (
+	"encoding/base64"
+	"reflect"
+	"testing"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	fakedocker "github.com/devspace-cloud/devspace/pkg/devspace/docker/testing"
+	kubectl "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+
+	dockertypes "github.com/docker/docker/api/types"
+	"gotest.tools/assert"
+	k8sv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
-/*type createPullSecretTestCase struct {
+type createPullSecretTestCase struct {
 	name string
 
 	namespace       string
-	serviceAccounts []string
+	serviceAccounts map[string][]string
 	imagesInConfig  map[string]*latest.ImageConfig
 
-	expectedLog string
-	expectedErr string
+	expectedErr                          string
+	expectedPullSecretsInServiceAccounts map[string][]string
+	expectedSecrets                      map[string]k8sv1.Secret
 }
 
 func TestCreatePullSecrets(t *testing.T) {
 	testCases := []createPullSecretTestCase{
 		createPullSecretTestCase{
 			name:            "One simple creation without default service account",
-			namespace:       "testNS",
-			serviceAccounts: []string{"someServiceAccount"},
+			namespace:       "testNamespace",
+			serviceAccounts: map[string][]string{"default": {"secretDefault", "devspace-auth-docker"}},
 			imagesInConfig: map[string]*latest.ImageConfig{
 				"testimage": &latest.ImageConfig{
 					CreatePullSecret: ptr.Bool(true),
 					Image:            "testimage",
 				},
+				"testimage2": &latest.ImageConfig{
+					CreatePullSecret: ptr.Bool(true),
+					Image:            "hub.docker.com/user/myimage",
+				},
 			},
-			expectedLog: `
-StartWait Creating image pull secret for registry: hub.docker.com
-StopWait
-Error Couldn't find service account 'default' in namespace 'testNS': serviceaccounts "default" not found`,
+			expectedPullSecretsInServiceAccounts: map[string][]string{
+				"default": {"secretDefault", "devspace-auth-docker", "devspace-auth-hub-docker-com"},
+			},
+			expectedSecrets: map[string]k8sv1.Secret{
+				"devspace-auth-docker": {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "devspace-auth-docker",
+						Namespace: "testNamespace",
+					},
+					Data: map[string][]byte{
+						k8sv1.DockerConfigJsonKey: []byte(`{
+			"auths": {
+				"https://index.docker.io/v1/": {
+					"auth": "` + base64.StdEncoding.EncodeToString([]byte("user:pass")) + `",
+					"email": "noreply@devspace.cloud"
+				}
+			}
+		}`),
+					},
+					Type: k8sv1.SecretTypeDockerConfigJson,
+				},
+			},
 		},
-		createPullSecretTestCase{
+		/*createPullSecretTestCase{
 			name:            "One simple creation with default service account",
 			namespace:       "testNS",
 			serviceAccounts: []string{"default"},
@@ -41,17 +79,13 @@ Error Couldn't find service account 'default' in namespace 'testNS': serviceacco
 					Image:            "testimage",
 				},
 			},
-			expectedLog: `
-StartWait Creating image pull secret for registry: hub.docker.com
-StopWait`,
-		},
+		},*/
 	}
 
 	for _, testCase := range testCases {
 		//Setting up kubeClient
 		kubeClient := &kubectl.Client{
-			Client:    fake.NewSimpleClientset(),
-			Namespace: testCase.namespace,
+			Client: fake.NewSimpleClientset(),
 		}
 		_, err := kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -59,11 +93,18 @@ StopWait`,
 			},
 		})
 		assert.NilError(t, err, "Error creating namespace in testCase %s", testCase.name)
-		for _, serviceAccount := range testCase.serviceAccounts {
+
+		for name, secrets := range testCase.serviceAccounts {
+			imagePullSecrets := []k8sv1.LocalObjectReference{}
+			for _, secret := range secrets {
+				imagePullSecrets = append(imagePullSecrets, k8sv1.LocalObjectReference{Name: secret})
+			}
 			_, err = kubeClient.Client.CoreV1().ServiceAccounts(testCase.namespace).Create(&k8sv1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: serviceAccount,
+					Name:      name,
+					Namespace: testCase.namespace,
 				},
+				ImagePullSecrets: imagePullSecrets,
 			})
 			assert.NilError(t, err, "Error creating serviceAccount in testCase %s", testCase.name)
 		}
@@ -71,33 +112,44 @@ StopWait`,
 		// Create fake devspace config
 		testConfig := &latest.Config{
 			Images:      testCase.imagesInConfig,
-			Deployments: []*latest.DeploymentConfig{},
+			Deployments: []*latest.DeploymentConfig{{}},
 		}
 
-		//Unfortunately we can't fake dockerClients yet.
-		err = CreatePullSecrets(testConfig, kubeClient, nil, log.Discard)
+		client := &client{
+			config:     testConfig,
+			kubeClient: kubeClient,
+			dockerClient: &fakedocker.FakeClient{
+				AuthConfig: &dockertypes.AuthConfig{
+					Username: "user",
+					Password: "pass",
+				},
+			},
+			log: log.Discard,
+		}
+
+		err = client.CreatePullSecrets()
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error creating pull secrets in testCase %s", testCase.name)
 		} else {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error creating pull secrets in testCase %s", testCase.name)
 		}
+
+		for saName, expectedSecrets := range testCase.expectedPullSecretsInServiceAccounts {
+			sa, err := kubeClient.Client.CoreV1().ServiceAccounts(testCase.namespace).Get(saName, metav1.GetOptions{})
+			assert.NilError(t, err, "Unexpected error getting serviceaccount %s in testCase %s", saName, testCase.name)
+			expectedImagePullSecrets := []k8sv1.LocalObjectReference{}
+			for _, secret := range expectedSecrets {
+				expectedImagePullSecrets = append(expectedImagePullSecrets, k8sv1.LocalObjectReference{Name: secret})
+			}
+			assert.Assert(t, reflect.DeepEqual(sa.ImagePullSecrets, expectedImagePullSecrets), "Unexpected secrets in sericeAccount %s in testCase %s", saName, testCase.name)
+		}
+
+		for expectedSecretName, expectedSecretObj := range testCase.expectedSecrets {
+			secret, err := kubeClient.Client.CoreV1().Secrets(testCase.namespace).Get(expectedSecretName, metav1.GetOptions{})
+			assert.NilError(t, err, "Unexpected error getting secret %s in testCase %s", expectedSecretName, testCase.name)
+			assert.Assert(t, reflect.DeepEqual(*secret, expectedSecretObj), "Unexpected secret %s in testCase %s", expectedSecretName, testCase.name)
+		}
 	}
 
-	//TODO: Fake a dockerClient to make this work
-	/*secretNames := GetPullSecretNames()
-	assert.Equal(t, 1, len(secretNames), "Wrong number of secret names after creating one secret.")
-	assert.Equal(t, "devspace-auth-docker", secretNames[0], "Wrong saved sercet name")
-
-	resultSecret , err := kubeClient.CoreV1().Secrets(namespace).Get(secretNames[0], metav1.GetOptions{})
-	assert.Equal(t, "devspace-auth-docker", resultSecret.ObjectMeta.Name, "Saved secret has wrong name")
-	assert.Equal(t, `{
-			"auths": {
-				"https://index.docker.io/v1/": {
-					"auth": "` + base64.StdEncoding.EncodeToString([]byte("someuser:password")) + `",
-					"email": "someuser@example.com"
-				}
-			}
-		}`, string(resultSecret.Data[k8sv1.DockerConfigJsonKey]), "Saved secret has wrong data")*//*
-
-}*/
+}
