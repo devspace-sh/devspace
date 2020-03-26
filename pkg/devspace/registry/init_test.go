@@ -23,6 +23,7 @@ type createPullSecretTestCase struct {
 
 	namespace       string
 	serviceAccounts map[string][]string
+	secrets         []k8sv1.Secret
 	imagesInConfig  map[string]*latest.ImageConfig
 
 	expectedErr                          string
@@ -35,6 +36,7 @@ func TestCreatePullSecrets(t *testing.T) {
 		createPullSecretTestCase{
 			name:            "One simple creation without default service account",
 			namespace:       "testNamespace",
+			secrets:         []k8sv1.Secret{{ObjectMeta: metav1.ObjectMeta{Name: "devspace-auth-docker"}}},
 			serviceAccounts: map[string][]string{"default": {"secretDefault", "devspace-auth-docker"}},
 			imagesInConfig: map[string]*latest.ImageConfig{
 				"testimage": &latest.ImageConfig{
@@ -67,19 +69,25 @@ func TestCreatePullSecrets(t *testing.T) {
 					},
 					Type: k8sv1.SecretTypeDockerConfigJson,
 				},
-			},
-		},
-		/*createPullSecretTestCase{
-			name:            "One simple creation with default service account",
-			namespace:       "testNS",
-			serviceAccounts: []string{"default"},
-			imagesInConfig: map[string]*latest.ImageConfig{
-				"testimage": &latest.ImageConfig{
-					CreatePullSecret: ptr.Bool(true),
-					Image:            "testimage",
+				"devspace-auth-hub-docker-com": {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "devspace-auth-hub-docker-com",
+						Namespace: "testNamespace",
+					},
+					Data: map[string][]byte{
+						k8sv1.DockerConfigJsonKey: []byte(`{
+			"auths": {
+				"https://index.docker.io/v1/": {
+					"auth": "` + base64.StdEncoding.EncodeToString([]byte("user:pass")) + `",
+					"email": "noreply@devspace.cloud"
+				}
+			}
+		}`),
+					},
+					Type: k8sv1.SecretTypeDockerConfigJson,
 				},
 			},
-		},*/
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -106,7 +114,10 @@ func TestCreatePullSecrets(t *testing.T) {
 				},
 				ImagePullSecrets: imagePullSecrets,
 			})
-			assert.NilError(t, err, "Error creating serviceAccount in testCase %s", testCase.name)
+		}
+
+		for _, obj := range testCase.secrets {
+			_, err = kubeClient.Client.CoreV1().Secrets(testCase.namespace).Create(&obj)
 		}
 
 		// Create fake devspace config
@@ -148,6 +159,8 @@ func TestCreatePullSecrets(t *testing.T) {
 		for expectedSecretName, expectedSecretObj := range testCase.expectedSecrets {
 			secret, err := kubeClient.Client.CoreV1().Secrets(testCase.namespace).Get(expectedSecretName, metav1.GetOptions{})
 			assert.NilError(t, err, "Unexpected error getting secret %s in testCase %s", expectedSecretName, testCase.name)
+			t.Log(string(secret.Data[".dockerconfigjson"]))
+			t.Log(string(expectedSecretObj.Data[".dockerconfigjson"]))
 			assert.Assert(t, reflect.DeepEqual(*secret, expectedSecretObj), "Unexpected secret %s in testCase %s", expectedSecretName, testCase.name)
 		}
 	}
