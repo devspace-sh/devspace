@@ -97,6 +97,8 @@ func TestBuild(t *testing.T) {
 		},
 	}
 
+	defer func() { overwriteBuilder = nil }()
+
 	for _, testCase := range testCases {
 		controller := &controller{
 			config: &latest.Config{
@@ -104,8 +106,8 @@ func TestBuild(t *testing.T) {
 			},
 			cache:        testCase.cache,
 			hookExecuter: &fakehook.FakeHook{},
-			builder:      &fakebuilder.Builder{},
 		}
+		overwriteBuilder = &fakebuilder.Builder{}
 
 		builtImages, err := controller.Build(&testCase.options, log.Discard)
 

@@ -6,7 +6,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -42,8 +41,7 @@ type controller struct {
 
 	hookExecuter hook.Executer
 	client       kubectl.Client
-	
-	builder      builder.Interface
+
 	dockerClient docker.Client
 }
 
