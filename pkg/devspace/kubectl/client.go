@@ -212,6 +212,7 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, kubeLoader kubecon
 	return nil, errors.New("We should not reach this point")
 }
 
+// This constant is used as a variable so it can be overwritten in a test
 var second = time.Second
 
 // PrintWarning prints a warning if the last kube context is different than this one
