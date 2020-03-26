@@ -326,7 +326,8 @@ func GetPodStatus(pod *k8sv1.Pod) string {
 	if !initializing {
 		hasRunning := false
 
-		for _, container := range pod.Status.ContainerStatuses {
+		for i := len(pod.Status.ContainerStatuses) - 1; i >= 0; i-- {
+			container := pod.Status.ContainerStatuses[i]
 
 			if container.State.Waiting != nil && container.State.Waiting.Reason != "" {
 				reason = container.State.Waiting.Reason
