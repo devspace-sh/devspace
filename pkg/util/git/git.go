@@ -78,7 +78,7 @@ func isGitCommandAvailable() bool {
 }
 
 // Update pulls the repository or clones it into the local path
-func (gr *Repository) Update(merge bool) error {
+func (gr *Repository) Update(merge bool, cloneArgs []string) error {
 	// Check if repo already exists
 	_, err := os.Stat(gr.LocalPath + "/.git")
 	if err != nil {
@@ -89,11 +89,18 @@ func (gr *Repository) Update(merge bool) error {
 		}
 
 		if isGitCommandAvailable() {
-			out, err := exec.Command("git", "clone", gr.RemoteURL, gr.LocalPath).CombinedOutput()
+			args := []string{"clone", gr.RemoteURL, gr.LocalPath}
+			args = append(args, cloneArgs...)
+
+			out, err := exec.Command("git", args...).CombinedOutput()
 			if err != nil {
 				return errors.Errorf("Error running 'git clone %s': %v -> %s", gr.RemoteURL, err, string(out))
 			}
 		} else {
+			if len(cloneArgs) > 0 {
+				return fmt.Errorf("git is not installed, but clone arguments are specified for the dependency. Please make sure you have git installed")
+			}
+
 			// Check
 			// Clone into folder
 			_, err = git.PlainClone(gr.LocalPath, false, &git.CloneOptions{

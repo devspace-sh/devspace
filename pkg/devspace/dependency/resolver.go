@@ -222,7 +222,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 				revision = dependency.Source.Revision
 			)
 
-			err = gitRepo.Update(tag == "" && branch == "" && revision == "")
+			err = gitRepo.Update(tag == "" && branch == "" && revision == "", dependency.Source.CloneArgs)
 			if err != nil {
 				return nil, errors.Wrap(err, "pull repo")
 			}
@@ -348,13 +348,14 @@ func (r *resolver) getDependencyID(basePath string, dependency *latest.Dependenc
 		} else if dependency.Source.Revision != "" {
 			id += "@" + dependency.Source.Revision
 		}
-
 		if dependency.Source.SubPath != "" {
 			id += ":" + dependency.Source.SubPath
 		}
-
 		if dependency.Profile != "" {
 			id += " - profile " + dependency.Profile
+		}
+		if len(dependency.Source.CloneArgs) > 0 {
+			id += " - with clone args " + strings.Join(dependency.Source.CloneArgs, " ")
 		}
 
 		return id

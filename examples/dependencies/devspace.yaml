@@ -1,4 +1,4 @@
-version: v1beta6
+version: v1beta8
 deployments:
 - name: root
   helm:

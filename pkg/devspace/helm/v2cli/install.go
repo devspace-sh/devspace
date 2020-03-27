@@ -230,6 +230,12 @@ func (c *client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, 
 	args := []string{"list", "--kube-context", c.kubeClient.CurrentContext(), "--tiller-namespace", c.tillerNamespace, "--output", "json"}
 	out, err := c.exec(c.helmPath, args).CombinedOutput()
 	if err != nil {
+		if strings.Index(string(out), "could not find a ready tiller pod") > -1 {
+			c.log.Info("Couldn't find a ready tiller pod, will wait 3 seconds more")
+			time.Sleep(time.Second * 3)
+			return c.ListReleases(helmConfig)
+		}
+
 		return nil, fmt.Errorf("error listing releases: %s => %v", string(out), err)
 	}
 

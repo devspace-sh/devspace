@@ -20,17 +20,17 @@ func TestGit(t *testing.T) {
 
 	gitRepo := NewGitRepository(tempDir, testRepo)
 
-	err = gitRepo.Update(true)
+	err = gitRepo.Update(true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = gitRepo.Update(false)
+	err = gitRepo.Update(false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = gitRepo.Update(true)
+	err = gitRepo.Update(true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
