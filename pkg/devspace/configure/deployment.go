@@ -8,7 +8,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
 	dockerfileutil "github.com/devspace-cloud/devspace/pkg/util/dockerfile"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
@@ -132,23 +131,6 @@ func (m *manager) NewImageComponentDeployment(name, imageName string) (*latest.I
 	// Check if we should create pull secret
 	retImageConfig := m.newImageConfigFromImageName(imageName, "", "")
 	return retImageConfig, retDeploymentConfig, nil
-}
-
-// NewPredefinedComponentDeployment creates a deployment that uses a predefined component
-func (m *manager) NewPredefinedComponentDeployment(name, component string) (*latest.DeploymentConfig, error) {
-	// Create component generator
-	componentGenerator, err := generator.NewComponentGenerator()
-	if err != nil {
-		return nil, errors.Errorf("Error initializing component generator: %v", err)
-	}
-
-	// Get component template
-	componentTemplate, err := componentGenerator.GetComponentTemplate(component, m.log)
-	if err != nil {
-		return nil, errors.Errorf("Error retrieving template: %v", err)
-	}
-
-	return generateComponentDeployment(name, componentTemplate)
 }
 
 func generateComponentDeployment(name string, componentConfig *latest.ComponentConfig) (*latest.DeploymentConfig, error) {

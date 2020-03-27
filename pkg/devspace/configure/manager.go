@@ -14,7 +14,6 @@ import (
 type Manager interface {
 	NewDockerfileComponentDeployment(generatedConfig *generated.Config, name, imageName, dockerfile, context string) (*latest.ImageConfig, *latest.DeploymentConfig, error)
 	NewImageComponentDeployment(name, imageName string) (*latest.ImageConfig, *latest.DeploymentConfig, error)
-	NewPredefinedComponentDeployment(name, component string) (*latest.DeploymentConfig, error)
 	NewKubectlDeployment(name, manifests string) (*latest.DeploymentConfig, error)
 	NewHelmDeployment(name, chartName, chartRepo, chartVersion string) (*latest.DeploymentConfig, error)
 	RemoveDeployment(removeAll bool, name string) (bool, error)

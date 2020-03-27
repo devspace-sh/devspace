@@ -29,7 +29,7 @@ type DockerfileGenerator struct {
 	Language  string
 	LocalPath string
 
-	gitRepo            *git.Repository
+	gitRepo            *git.GoGitRepository
 	supportedLanguages []string
 }
 
@@ -100,7 +100,7 @@ func NewDockerfileGenerator(localPath string, templateRepoURL *string) (*Dockerf
 		return nil, err
 	}
 
-	gitRepository := git.NewGitRepository(filepath.Join(homedir, DockerfileRepoPath), repoURL)
+	gitRepository := git.NewGoGitRepository(filepath.Join(homedir, DockerfileRepoPath), repoURL)
 
 	return &DockerfileGenerator{
 		LocalPath: localPath,
@@ -134,7 +134,7 @@ func (cg *DockerfileGenerator) IsSupportedLanguage(language string) bool {
 
 // GetSupportedLanguages returns all languages that are available in the local Template Rempository
 func (cg *DockerfileGenerator) GetSupportedLanguages() ([]string, error) {
-	err := cg.gitRepo.Update(true, nil)
+	err := cg.gitRepo.Update(true)
 	if err != nil {
 		return nil, errors.Errorf("Error updating git repo %s: %v", cg.gitRepo.RemoteURL, err)
 	}
@@ -158,7 +158,7 @@ func (cg *DockerfileGenerator) GetSupportedLanguages() ([]string, error) {
 
 // CreateDockerfile creates a dockerfile for a given language
 func (cg *DockerfileGenerator) CreateDockerfile(language string) error {
-	err := cg.gitRepo.Update(true, nil)
+	err := cg.gitRepo.Update(true)
 	if err != nil {
 		return err
 	}

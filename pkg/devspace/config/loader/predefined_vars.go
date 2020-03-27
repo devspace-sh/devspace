@@ -28,8 +28,7 @@ var predefinedVars = map[string]func(loader *configLoader) (string, error){
 		return strconv.FormatInt(time.Now().Unix(), 10), nil
 	},
 	"DEVSPACE_GIT_COMMIT": func(loader *configLoader) (string, error) {
-		gitRepo := git.NewGitRepository(filepath.Dir(loader.ConfigPath()), "")
-		hash, err := gitRepo.GetHash()
+		hash, err := git.GetHash(filepath.Dir(loader.ConfigPath()))
 		if err != nil {
 			return "", fmt.Errorf("No git repository found (%v), but predefined var DEVSPACE_GIT_COMMIT is used", err)
 		}

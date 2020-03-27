@@ -407,12 +407,13 @@ type DependencyConfig struct {
 
 // SourceConfig defines the dependency source
 type SourceConfig struct {
-	Git       string   `yaml:"git,omitempty"`
-	CloneArgs []string `yaml:"cloneArgs,omitempty"`
-	SubPath   string   `yaml:"subPath,omitempty"`
-	Branch    string   `yaml:"branch,omitempty"`
-	Tag       string   `yaml:"tag,omitempty"`
-	Revision  string   `yaml:"revision,omitempty"`
+	Git            string   `yaml:"git,omitempty"`
+	CloneArgs      []string `yaml:"cloneArgs,omitempty"`
+	DisableShallow bool     `yaml:"disableShallow,omitempty"`
+	SubPath        string   `yaml:"subPath,omitempty"`
+	Branch         string   `yaml:"branch,omitempty"`
+	Tag            string   `yaml:"tag,omitempty"`
+	Revision       string   `yaml:"revision,omitempty"`
 
 	Path string `yaml:"path,omitempty"`
 }

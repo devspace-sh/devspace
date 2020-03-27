@@ -11,31 +11,102 @@ const testBranch = "newbr"
 const testTag = "tag1"
 const testRepo = "https://github.com/thockin/test"
 
-func TestGit(t *testing.T) {
+func TestGitCliCommit(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tempDir)
 
-	gitRepo := NewGitRepository(tempDir, testRepo)
-
-	err = gitRepo.Update(true, nil)
+	gitRepo, err := NewGitCLIRepository(tempDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = gitRepo.Update(false, nil)
+	err = gitRepo.Clone(CloneOptions{
+		URL:    testRepo,
+		Commit: testCheckoutHash,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = gitRepo.Update(true, nil)
+	err = gitRepo.Clone(CloneOptions{
+		URL:    testRepo,
+		Commit: testCheckoutHash,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	remote, err := gitRepo.GetRemote()
+	hash, err := GetHash(tempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hash != testCheckoutHash {
+		t.Fatalf("Wrong remote, got %s, expected %s", hash, testCheckoutHash)
+	}
+}
+
+func TestGitCliBranch(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	gitRepo, err := NewGitCLIRepository(tempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = gitRepo.Clone(CloneOptions{
+		URL:    testRepo,
+		Branch: testBranch,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = gitRepo.Clone(CloneOptions{
+		URL:            testRepo,
+		Branch:         testBranch,
+		DisableShallow: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	remote, err := GetRemote(tempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if remote != testRepo {
+		t.Fatalf("Wrong remote, got %s, expected %s", remote, testRepo)
+	}
+}
+
+func TestGoGit(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	gitRepo := NewGoGitRepository(tempDir, testRepo)
+	err = gitRepo.Update(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = gitRepo.Update(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = gitRepo.Update(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	remote, err := GetRemote(tempDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +119,7 @@ func TestGit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	hash, err := gitRepo.GetHash()
+	hash, err := GetHash(tempDir)
 	if err != nil {
 		t.Fatal(err)
 	}
