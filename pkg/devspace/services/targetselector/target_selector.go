@@ -110,6 +110,8 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 			// Take first pod if only one is found
 			if len(pods) == 1 {
 				return pods[0], nil
+			} else if len(pods) == 0 {
+				return nil, errors.Errorf("Couldn't find a running pod with image selector '%s'", strings.Join(t.imageSelector, ", "))
 			}
 
 			// Show picker if allowed
@@ -130,10 +132,6 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 				}
 
 				return podMap[podName], nil
-			}
-
-			if len(pods) == 0 {
-				return nil, errors.Errorf("Couldn't find a running pod with image selector '%s'", strings.Join(t.imageSelector, ", "))
 			}
 
 			log.Warnf("Multiple pods with image selector '%s' found. Using first pod found", strings.Join(t.imageSelector, ", "))
@@ -316,4 +314,3 @@ func ImageSelectorFromConfig(configImageName string, config *latest.Config, gene
 
 	return imageSelector
 }
-

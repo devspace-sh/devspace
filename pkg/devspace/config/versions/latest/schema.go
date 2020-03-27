@@ -75,7 +75,7 @@ type DockerConfig struct {
 type KanikoConfig struct {
 	Cache        *bool         `yaml:"cache,omitempty"`
 	SnapshotMode string        `yaml:"snapshotMode,omitempty"`
-	Args        []string       `yaml:"args,omitempty"`
+	Args         []string      `yaml:"args,omitempty"`
 	Namespace    string        `yaml:"namespace,omitempty"`
 	Insecure     *bool         `yaml:"insecure,omitempty"`
 	PullSecret   string        `yaml:"pullSecret,omitempty"`
@@ -87,7 +87,7 @@ type CustomConfig struct {
 	Command    string   `yaml:"command,omitempty"`
 	AppendArgs []string `yaml:"appendArgs,omitempty"`
 	Args       []string `yaml:"args,omitempty"`
-	ImageFlag   string   `yaml:"imageFlag,omitempty"`
+	ImageFlag  string   `yaml:"imageFlag,omitempty"`
 	OnChange   []string `yaml:"onChange,omitempty"`
 }
 
@@ -407,11 +407,13 @@ type DependencyConfig struct {
 
 // SourceConfig defines the dependency source
 type SourceConfig struct {
-	Git      string `yaml:"git,omitempty"`
-	SubPath  string `yaml:"subPath,omitempty"`
-	Branch   string `yaml:"branch,omitempty"`
-	Tag      string `yaml:"tag,omitempty"`
-	Revision string `yaml:"revision,omitempty"`
+	Git            string   `yaml:"git,omitempty"`
+	CloneArgs      []string `yaml:"cloneArgs,omitempty"`
+	DisableShallow bool     `yaml:"disableShallow,omitempty"`
+	SubPath        string   `yaml:"subPath,omitempty"`
+	Branch         string   `yaml:"branch,omitempty"`
+	Tag            string   `yaml:"tag,omitempty"`
+	Revision       string   `yaml:"revision,omitempty"`
 
 	Path string `yaml:"path,omitempty"`
 }

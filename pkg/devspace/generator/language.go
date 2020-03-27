@@ -29,7 +29,7 @@ type DockerfileGenerator struct {
 	Language  string
 	LocalPath string
 
-	gitRepo            *git.Repository
+	gitRepo            *git.GoGitRepository
 	supportedLanguages []string
 }
 
@@ -100,7 +100,7 @@ func NewDockerfileGenerator(localPath string, templateRepoURL *string) (*Dockerf
 		return nil, err
 	}
 
-	gitRepository := git.NewGitRepository(filepath.Join(homedir, DockerfileRepoPath), repoURL)
+	gitRepository := git.NewGoGitRepository(filepath.Join(homedir, DockerfileRepoPath), repoURL)
 
 	return &DockerfileGenerator{
 		LocalPath: localPath,

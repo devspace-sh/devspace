@@ -18,13 +18,13 @@ type Builder interface {
 type RunCommand func(path string, args []string) ([]byte, error)
 
 type kustomizeBuilder struct {
-	path string
+	path   string
 	config *latest.DeploymentConfig
 }
 
 func NewKustomizeBuilder(path string, config *latest.DeploymentConfig) Builder {
 	return &kustomizeBuilder{
-		path: path,
+		path:   path,
 		config: config,
 	}
 }
@@ -36,9 +36,9 @@ func (k *kustomizeBuilder) Build(manifest string, cmd RunCommand) ([]*unstructur
 	// Execute command
 	output, err := cmd(k.path, args)
 	if err != nil {
-		_, ok := err.(*exec.ExitError)
+		exitError, ok := err.(*exec.ExitError)
 		if ok {
-			return nil, errors.New(string(output))
+			return nil, errors.New(string(exitError.Stderr))
 		}
 
 		return nil, err
@@ -48,18 +48,18 @@ func (k *kustomizeBuilder) Build(manifest string, cmd RunCommand) ([]*unstructur
 }
 
 type kubectlBuilder struct {
-	path string
-	config *latest.DeploymentConfig
-	context string
+	path      string
+	config    *latest.DeploymentConfig
+	context   string
 	namespace string
 }
 
 // NewKubectlBuilder creates a new kubectl manifest builder
 func NewKubectlBuilder(path string, config *latest.DeploymentConfig, context, namespace string) Builder {
 	return &kubectlBuilder{
-		path: path,
-		config: config,
-		context: context,
+		path:      path,
+		config:    config,
+		context:   context,
 		namespace: namespace,
 	}
 }
@@ -86,9 +86,9 @@ func (k *kubectlBuilder) Build(manifest string, cmd RunCommand) ([]*unstructured
 	// Execute command
 	output, err := cmd(k.path, args)
 	if err != nil {
-		_, ok := err.(*exec.ExitError)
+		exitError, ok := err.(*exec.ExitError)
 		if ok {
-			return nil, errors.New(string(output))
+			return nil, errors.New(string(exitError.Stderr))
 		}
 
 		return nil, err
@@ -129,4 +129,3 @@ func stringToUnstructuredArray(out string) ([]*unstructured.Unstructured, error)
 	}
 	return objs, firstErr
 }
-

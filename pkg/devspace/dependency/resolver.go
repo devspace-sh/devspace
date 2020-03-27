@@ -76,8 +76,7 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client 
 	if err != nil {
 		return nil, err
 	}
-	gitRepo := git.NewGitRepository(basePath, "")
-	remote, err := gitRepo.GetRemote()
+	remote, err := git.GetRemote(basePath)
 	if err == nil {
 		id = remote
 	} else {
@@ -215,23 +214,21 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 		// Update dependency
 		if update {
-			var (
-				gitRepo  = git.NewGitRepository(localPath, gitPath)
-				tag      = dependency.Source.Tag
-				branch   = dependency.Source.Branch
-				revision = dependency.Source.Revision
-			)
-
-			err = gitRepo.Update(tag == "" && branch == "" && revision == "")
+			repo, err := git.NewGitCLIRepository(localPath)
 			if err != nil {
-				return nil, errors.Wrap(err, "pull repo")
+				return nil, err
 			}
 
-			if tag != "" || branch != "" || revision != "" {
-				err = gitRepo.Checkout(tag, branch, revision)
-				if err != nil {
-					return nil, errors.Wrap(err, "checkout")
-				}
+			err = repo.Clone(git.CloneOptions{
+				URL:            gitPath,
+				Tag:            dependency.Source.Tag,
+				Branch:         dependency.Source.Branch,
+				Commit:         dependency.Source.Revision,
+				Args:           dependency.Source.CloneArgs,
+				DisableShallow: dependency.Source.DisableShallow,
+			})
+			if err != nil {
+				return nil, errors.Wrap(err, "clone repository")
 			}
 
 			r.log.Donef("Pulled %s", ID)
@@ -348,13 +345,14 @@ func (r *resolver) getDependencyID(basePath string, dependency *latest.Dependenc
 		} else if dependency.Source.Revision != "" {
 			id += "@" + dependency.Source.Revision
 		}
-
 		if dependency.Source.SubPath != "" {
 			id += ":" + dependency.Source.SubPath
 		}
-
 		if dependency.Profile != "" {
 			id += " - profile " + dependency.Profile
+		}
+		if len(dependency.Source.CloneArgs) > 0 {
+			id += " - with clone args " + strings.Join(dependency.Source.CloneArgs, " ")
 		}
 
 		return id
@@ -362,8 +360,7 @@ func (r *resolver) getDependencyID(basePath string, dependency *latest.Dependenc
 		// Check if it's an git repo
 		filePath := filepath.Join(basePath, dependency.Source.Path)
 
-		gitRepo := git.NewGitRepository(filePath, "")
-		remote, err := gitRepo.GetRemote()
+		remote, err := git.GetRemote(filePath)
 		if err == nil {
 			return remote
 		}
