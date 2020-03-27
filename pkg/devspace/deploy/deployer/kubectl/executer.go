@@ -15,7 +15,7 @@ type commandExecuter interface {
 type executer struct{}
 
 func (e *executer) RunCommand(path string, args []string) ([]byte, error) {
-	return exec.Command(path, args...).CombinedOutput()
+	return exec.Command(path, args...).Output()
 }
 
 func (e *executer) GetCommand(path string, args []string) command.Interface {
