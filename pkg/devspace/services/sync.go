@@ -126,6 +126,19 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 		syncConfig = options.SyncConfig
 	)
 
+	// check if local path exists
+	_, err := os.Stat(syncConfig.LocalSubPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+
+		err = os.MkdirAll(syncConfig.LocalSubPath, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
 	selector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, options.SelectorParameter, options.AllowPodPick, targetselector.ImageSelectorFromConfig(syncConfig.ImageName, serviceClient.config, serviceClient.generated))
 	if err != nil {
 		return errors.Errorf("Error creating target selector: %v", err)
