@@ -126,14 +126,19 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 		syncConfig = options.SyncConfig
 	)
 
+	localPath := "."
+	if syncConfig.LocalSubPath != "" {
+		localPath = syncConfig.LocalSubPath
+	}
+
 	// check if local path exists
-	_, err := os.Stat(syncConfig.LocalSubPath)
+	_, err := os.Stat(localPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return err
 		}
 
-		err = os.MkdirAll(syncConfig.LocalSubPath, 0755)
+		err = os.MkdirAll(localPath, os.ModePerm)
 		if err != nil {
 			return err
 		}
