@@ -102,19 +102,15 @@ var diffSeparator = regexp.MustCompile(`\n---`)
 var oldDiffSeparator = regexp.MustCompile(`\napiVersion`)
 
 func prepareResources(out string) string {
-	retStr := ""
 	parts := diffSeparator.Split(out, -1)
-	for _, part := range parts {
+	for i, part := range parts {
 		oldParts := oldDiffSeparator.Split(part, -1)
 		if len(oldParts) > 1 {
-			retStr += strings.Join(oldParts, "\n---\napiVersion")
-		} else {
-			retStr += part
+			parts[i] = strings.Join(oldParts, "\n---\napiVersion")
 		}
 	}
 
-
-	return retStr
+	return strings.Join(parts, "\n---")
 }
 
 // stringToUnstructuredArray splits a YAML file into unstructured objects. Returns a list of all unstructured objects
