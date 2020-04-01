@@ -106,8 +106,8 @@ type handler struct {
 	log              log.Logger
 	mux              *http.ServeMux
 
-	clientCache map[string]kubectl.Client
-	clientCacheMutext sync.Mutex
+	clientCache      map[string]kubectl.Client
+	clientCacheMutex sync.Mutex
 
 	ports      map[string]*forward
 	portsMutex sync.Mutex
@@ -154,9 +154,7 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 		log:              log,
 		generatedConfig:  generatedConfig,
 		ports:            make(map[string]*forward),
-
-		clientCacheMutext: sync.Mutex{},
-		clientCache: make(map[string]kubectl.Client),
+		clientCache:      make(map[string]kubectl.Client),
 	}
 
 	analytics, err := analytics.GetAnalytics()
@@ -342,8 +340,8 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 func (h *handler) getClientFromCache(kubeContext, kubeNamespace string) (kubectl.Client, error) {
 	key := kubeNamespace + ":" + kubeContext
 
-	h.clientCacheMutext.Lock()
-	defer h.clientCacheMutext.Unlock()
+	h.clientCacheMutex.Lock()
+	defer h.clientCacheMutex.Unlock()
 
 	var err error
 	client, ok := h.clientCache[key]
