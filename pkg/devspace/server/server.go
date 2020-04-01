@@ -106,6 +106,9 @@ type handler struct {
 	log              log.Logger
 	mux              *http.ServeMux
 
+	clientCache      map[string]kubectl.Client
+	clientCacheMutex sync.Mutex
+
 	ports      map[string]*forward
 	portsMutex sync.Mutex
 }
@@ -151,6 +154,7 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 		log:              log,
 		generatedConfig:  generatedConfig,
 		ports:            make(map[string]*forward),
+		clientCache:      make(map[string]kubectl.Client),
 	}
 
 	analytics, err := analytics.GetAnalytics()
@@ -311,12 +315,11 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 		options.LabelSelector = labelSelector[0]
 	}
 
-	// Create kubectl client
-	client, err := kubectl.NewClientFromContext(kubeContext, kubeNamespace, false, kubeconfig.NewLoader())
+	// check client cache
+	client, err := h.getClientFromCache(kubeContext, kubeNamespace)
 	if err != nil {
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
 	}
 
 	// Do the request
@@ -332,4 +335,24 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(out))
+}
+
+func (h *handler) getClientFromCache(kubeContext, kubeNamespace string) (kubectl.Client, error) {
+	key := kubeNamespace + ":" + kubeContext
+
+	h.clientCacheMutex.Lock()
+	defer h.clientCacheMutex.Unlock()
+
+	var err error
+	client, ok := h.clientCache[key]
+	if !ok {
+		client, err = kubectl.NewClientFromContext(kubeContext, kubeNamespace, false, kubeconfig.NewLoader())
+		if err != nil {
+			return nil, err
+		}
+
+		h.clientCache[key] = client
+	}
+
+	return client, nil
 }

@@ -69,8 +69,17 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	// Build not in parallel when we only have one image to build
-	if options.Sequential == false && len(c.config.Images) <= 1 {
-		options.Sequential = true
+	if options.Sequential == false {
+		// check if all images are disabled besides one
+		imagesToBuild := 0
+		for _, image := range c.config.Images {
+			if image.Build == nil || image.Build.Disabled == nil || *image.Build.Disabled == false {
+				imagesToBuild++
+			}
+		}
+		if len(c.config.Images) <= 1 || imagesToBuild <= 1 {
+			options.Sequential = true
+		}
 	}
 
 	// Execute before images build hook
