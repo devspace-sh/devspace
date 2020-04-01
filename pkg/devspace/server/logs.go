@@ -67,7 +67,7 @@ func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create kubectl client
-	client, err := kubectl.NewClientFromContext(kubeContext, kubeNamespace, false, kubeconfig.NewLoader())
+	client, err := h.getClientFromCache(kubeContext, kubeNamespace)
 	if err != nil {
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
