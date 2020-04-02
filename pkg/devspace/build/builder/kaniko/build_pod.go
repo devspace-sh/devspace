@@ -1,6 +1,7 @@
 package kaniko
 
 import (
+	"github.com/docker/distribution/reference"
 	"path/filepath"
 
 	"github.com/docker/docker/api/types"
@@ -10,7 +11,6 @@ import (
 	"fmt"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
-	"github.com/docker/distribution/reference"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -85,9 +85,6 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 		kanikoArgs = append(kanikoArgs, "--build-arg", newKanikoArg)
 	}
 
-	// Extra flags
-	kanikoArgs = append(kanikoArgs, kanikoOptions.Args...)
-
 	// Cache
 	if kanikoOptions.Cache == nil || *kanikoOptions.Cache == true {
 		ref, err := reference.ParseNormalizedNamed(b.FullImageName)
@@ -97,6 +94,9 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 
 		kanikoArgs = append(kanikoArgs, "--cache=true", "--cache-repo="+ref.Name())
 	}
+
+	// Extra flags
+	kanikoArgs = append(kanikoArgs, kanikoOptions.Args...)
 
 	// Get available resources
 	availableResources, err := b.getAvailableResources()
