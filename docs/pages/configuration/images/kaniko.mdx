@@ -160,7 +160,7 @@ The image `backend` would be built using kaniko and pushing to the insecure regi
 
 
 ### `pullSecret`
-The `pullSecret` option expects a string with the name of a Kubernetes secret which is used by kaniko as pull secret (e.g. for pulling the base image defined in the `FROM` statement of the Dockerfile).
+The `pullSecret` option expects a string with the name of a Kubernetes secret which is used by kaniko as pull/push secret (e.g. for pulling the base image defined in the `FROM` statement of the Dockerfile and for pushing the newly built image after the kaniko build process).
 
 :::info
 In most cases, DevSpace already makes sure that kaniko gets the correct pull secrets to push and pull to registries.
@@ -182,6 +182,41 @@ images:
 ```
 **Explanation:**  
 The image `backend` would be built using kaniko and kaniko would use the Kubernete secret `custom-pull-secret` to pull images from registries that require authentication.
+
+:::tip Creating Pull Secrets using `hooks`
+If you use the `pullSecret` option, you have to manually create the secret before DevSpace tries to build your images. You can automate this by [defining a hook in devspace.yaml](../../configuration/hooks/basics.mdx) as show in this example:
+```yaml
+hooks:
+- command: kubectl
+  args:
+    - create
+    - secret
+    - generic
+    - custom-pull-secret
+    - --from-literal
+    - config.json='{ "credsStore":"ecr-login" }'
+  when:
+    before:
+      images: all
+```
+:::
+
+:::note Building AWS ECR images on EKS
+If your EKS instance is [configured with access to ECR (see instance role permissions for AWS EKS and ECR)](https://docs.aws.amazon.com/AmazonECR/latest/userguide/ECR_on_EKS.html), your pull secret referenced by the `pullSecret` option, could be created with this kubectl command:
+```yaml
+kubectl create secret generic custom-pull-secret --from-literal config.json='{ "credsStore":"ecr-login" }'
+```
+The resulting Kubernetes secret would look like this:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: custom-pull-secret
+data:
+  config.json: eyAiY3JlZHNTdG9yZSI6ImVjci1sb2dpbiIgfQ==
+```
+If you define `pullSecret: custom-pull-secret` as shown in the example above, DevSpace will automatically mount this secret into the kaniko container and kaniko will be able to pull from and push to ECR.
+:::
 
 
 ## `kaniko.options`
