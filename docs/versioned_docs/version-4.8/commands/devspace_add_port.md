@@ -1,24 +1,26 @@
 ---
-title: "Command - devspace list available-components"
-sidebar_label: devspace list available-components
+title: "Command - devspace add port"
+sidebar_label: devspace add port
 ---
 
 
-Lists all available components
+Add a new port forward configuration
 
 ## Synopsis
 
 
 ```
-devspace list available-components [flags]
+devspace add port [flags]
 ```
 
 ```
 #######################################################
-######### devspace list available-components ##########
+################ devspace add port ####################
 #######################################################
-Lists all the available components that can be used
-in devspace
+Add a new port mapping to this project's devspace.yaml
+
+Format is port(:remotePort) comma separated, e.g.
+devspace add port 8080:80,3000
 #######################################################
 ```
 
@@ -26,7 +28,8 @@ in devspace
 ## Flags
 
 ```
-  -h, --help   help for available-components
+  -h, --help                    help for port
+      --label-selector string   Comma separated key=value label-selector list (e.g. release=test)
 ```
 
 

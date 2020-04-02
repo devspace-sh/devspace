@@ -36,7 +36,7 @@ deployments:
 - name: "deployment-2"      # Name of this deployment
   kubectl:                  # Deploy Kubernetes manifests or Kustomizations
     manifests:
-    - app/manifests/*
+    - app/manifests/
     - db/deployment.yaml
 
 - name: "deployment-3"      # Name of this deployment
@@ -88,7 +88,7 @@ deployments:
 - name: backend             # Name of this deployment
   kubectl:                  # Deploy Kubernetes manifests or Kustomizations
     manifests:
-    - app/manifests/*
+    - app/manifests/
     - db/deployment.yaml
 ```
 

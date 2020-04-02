@@ -26,8 +26,8 @@ deployments:
 
 The above example will be executing during the deployment process as follows:
 ```bash
-kubectl apply -f backend
-kubectl apply -f backend-extra
+kubectl apply -f backend/
+kubectl apply -f backend-extra/
 kubectl apply -f frontend/manifest.yaml
 ```
 
@@ -49,7 +49,7 @@ deployments:
     manifests:
     - backend/
     - backend-extra/
-    - glob/path/to/manifests/*
+    - glob/path/to/manifests/
 ```
 
 

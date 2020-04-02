@@ -232,6 +232,7 @@ module.exports = {
             "commands/devspace_reset_vars"
           ]
         },
+        "commands/devspace_run",
         {
           type: "category",
           label: "devspace set",

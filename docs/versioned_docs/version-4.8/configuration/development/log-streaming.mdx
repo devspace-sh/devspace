@@ -1,0 +1,153 @@
+---
+title: Configure Log Streaming
+sidebar_label: logs
+---
+
+By default, DevSpace streams the logs of all containers that use one of the images defined in the `images` section of the `devspace.yaml`.
+
+To control which container logs should be streamed, you can configure the `dev.logs` section in the `devspace.yaml`.
+```yaml {9-13}
+images:
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+  backend:
+    image: john/appbackend
+  database:
+    image: john/database
+dev:
+  logs:
+    showLast: 200
+    images:
+    - backend
+    - frontend
+```
+
+
+## Configuration
+
+### `images`
+The `images` option expects an array of strings with image names. DevSpace uses this list to determine which containers to use for the multi-container log streaming.
+
+:::info
+By default, DevSpace streams the logs of **all** containers that are created based on images defined in the `images` section of the `devspace.yaml`.
+:::
+
+#### Example: Stream Only Containers Using Specified Images
+```yaml {2,4,35-38}
+images:
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+  backend:
+    image: john/appbackend
+  database:
+    image: john/database
+deployments:
+- name: app-frontend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+      - image: john/appbackend-sidecar
+- name: app-database
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/database
+- name: app-cache
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: redis:5.0.5
+dev:
+  logs:
+    images:
+    - backend
+    - frontend
+```
+**Explanation:**  
+- The above example defines 3 images and 5 deployments.
+- The `images` option defines that only containers using the `image` value of the images `backend` and `frontend` should be streamed.
+- The result would be that DevSpace streams the logs of:
+  - The container of deployment `app-frontend` because the image is `dscr.io/${DEVSPACE_USERNAME}/appfrontend` = `images.frontend.image`
+  - Only the first container of deployment `app-backend` because the image is `john/appbackend` = `images.backend.image`
+  
+:::note
+The **second** container of deployment `app-backend` would **not** be streamed in this example.
+:::
+
+
+### `showLast`
+The `showLast` option expects an integer which defines how many log lines DevSpace will print for each container before starting to stream the container's logs in real-time.
+
+#### Default Value For `showLast`
+```yaml
+showLast: 50
+```
+
+#### Example: Show Last 200 Log Lines
+```yaml {22}
+images:
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+  backend:
+    image: john/appbackend
+deployments:
+- name: app-frontend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+      - image: john/appbackend-sidecar
+dev:
+  logs:
+    showLast: 200
+```
+**Explanation:**  
+- The above example defines 2 images and 2 deployments.
+- DevSpace would stream the logs of:
+  - The container of deployment `app-frontend` because the image is `dscr.io/${DEVSPACE_USERNAME}/appfrontend` = `images.frontend.image`
+  - Only the first container of deployment `app-backend` because the image is `john/appbackend` = `images.backend.image`
+- For each of the two containers, DevSpace would print the last 200 log lines before starting to stream the logs
+
+
+### `disabled`
+The `disabled` option expects a boolean which defines if DevSpace should start multi-container log streaming when running `devspace dev` or if DevSpace should just start other services (e.g. port-forwarding and sync) without starting the log stream.
+
+#### Default Value For `disabled`
+```yaml
+disabled: false
+```
+
+#### Example: Disable Log Streaming
+```yaml {14}
+images:
+  backend:
+    image: john/appbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/appbackend
+      - image: john/appbackend-sidecar
+dev:
+  logs:
+    disabled: true
+```
