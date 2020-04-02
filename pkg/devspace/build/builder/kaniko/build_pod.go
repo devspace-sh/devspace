@@ -89,7 +89,7 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 	kanikoArgs = append(kanikoArgs, kanikoOptions.Args...)
 
 	// Cache
-	if !options.NoCache {
+	if kanikoOptions.Cache == nil || *kanikoOptions.Cache == true {
 		ref, err := reference.ParseNormalizedNamed(b.FullImageName)
 		if err != nil {
 			return nil, err
