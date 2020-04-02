@@ -1,0 +1,18 @@
+The `ignoreDependencies` option expects a boolean that defines if the dependencies of this dependencies should not be resolved and deployed.
+
+:::info
+Using `ignoreDependencies` can be useful to prevent problematic **circular dependencies**.
+:::
+
+#### Default Value For `ignoreDependencies`
+```yaml
+ignoreDependencies: false
+```
+
+#### Example: Ignore Dependencies of Dependency
+```yaml
+dependencies:
+- source:
+    git: https://github.com/my-api-server
+  ignoreDependencies: true
+```
