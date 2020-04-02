@@ -84,30 +84,28 @@ images:
 - The second image `frontend` would be built using kaniko and calculate filesystem snapthots only based on `mtime`.
 
 
-### `flags`
-The `flags` option expects an array of strings that will be passed as flags and values for these flags when running the kaniko build command.
+### `args`
+The `args` option expects an array of strings that will be passed as arguments (and flags) when running the kaniko build command.
 
 :::note Kaniko Documentation
 Take a look at the kaniko documentation for a full [list of available flags](https://github.com/GoogleContainerTools/kaniko#additional-flags).
 :::
 
-#### Default Value For `flags`
+#### Default Value For `args`
 ```yaml
-flags: []
+args: []
 ```
 
-#### Example: Passing Flags to kaniko
+#### Example: Passing Args to kaniko
 ```yaml
 images:
   backend:
     image: john/appbackend
     build:
       kaniko:
-        flags:
-        - --cache-dir
-        - /tmp
-        - --verbosity
-        - debug
+        args:
+        - --cache-dir=/tmp
+        - --verbosity=debug
 ```
 **Explanation:**  
 The image `backend` would be built using kaniko and the flags `--cache-dir=/tmp --verbosity=debug` would be set when running the build command within the kaniko pod used for image building.

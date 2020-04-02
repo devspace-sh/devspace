@@ -4,7 +4,8 @@ sidebar_label: kubectl (manifests)
 ---
 
 import FragmentReplaceImageTags from '../../fragments/kubectl-replaceImageTags.mdx';
-import FragmentKubectlFlags from '../../fragments/kubectl-options-flags.mdx';
+import FragmentKubectlApplyArgs from '../../fragments/kubectl-options-applyArgs.mdx';
+import FragmentKubectlDeleteArgs from '../../fragments/kubectl-options-deleteArgs.mdx';
 import FragmentKubectlCmdPath from '../../fragments/kubectl-options-cmdPath.mdx';
 import FragmentKubectlKustomize from '../../fragments/kubectl-kustomize.mdx';
 
@@ -65,9 +66,41 @@ deployments:
 
 ## Kubectl Options
 
-### `flags`
+### `applyArgs`
 
-<FragmentKubectlFlags/>
+<FragmentKubectlApplyArgs/>
+
+### `createArgs`
+The `createArgs` option expects an array of strings stating additional arguments (and flags) that should be used when calling `kubectl create`.
+
+:::info Kustomize Deployments
+DevSpace only uses `kustomize create` to render the manifests using the default flags `--dry-run --output yaml --validate=false`. The actual deployment will be executed using `kubectl apply` after DevSpace has replaced the image tags within the rendered manifests in memory.
+:::
+
+#### Default Value for `createArgs`
+```yaml
+createArgs: []
+```
+
+#### Example: Custom Kubectl Args & Flags
+```yaml
+deployments:
+- name: backend
+  kubectl:
+    manifests:
+    - backend/
+    createArgs:
+    - "--recursive"
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+kubectl create --dry-run --output yaml --validate=false --recursive -f backend/
+```
+
+### `deleteArgs`
+
+<FragmentKubectlDeleteArgs/>
 
 
 ### `cmdPath`

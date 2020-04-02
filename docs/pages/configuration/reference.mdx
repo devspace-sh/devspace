@@ -14,7 +14,7 @@ import FragmentConfigHooks from '../fragments/config-hooks.mdx';
 
 ## `version`
 ```yaml
-version: v1beta7                   # string   | Version of the config
+version: v1beta8                   # string   | Version of the config
 ```
 
 ## `images`
@@ -57,7 +57,7 @@ docker:                             # struct   | Options for building images wit
 kaniko:                             # struct   | Options for building images with kaniko
   cache: true                       # bool     | Use caching for kaniko build process
   snapshotMode: "time"              # string   | Type of snapshotMode for kaniko build process (compresses layers)
-  flags: []                         # string[] | Array of flags for kaniko build command
+  args: []                          # string[] | Array of args for kaniko build command
   namespace: ""                     # string   | Kubernetes namespace to run kaniko build pod in (Default: "" = deployment namespace)
   insecure: false                   # bool     | Allow working with an insecure registry by not validating the SSL certificate (Default: false)
   pullSecret: ""                    # string   | Mount this Kubernetes secret instead of creating one to authenticate to the registry (default: "")
@@ -161,7 +161,10 @@ kubectl:                            # struct   | Options for deploying with "kub
   manifests: []                     # string[] | Array containing glob patterns for the Kubernetes manifests to deploy using "kubectl apply" (e.g. kube or manifests/service.yaml)
   kustomize: false                  # bool     | Use kustomize when deploying manifests via "kubectl apply" (Default: false)
   replaceImageTags: true            # bool     | Enable automated tag replacement (Default: true)
-  flags: []                         # string[] | Array of flags for the "kubectl apply" command
+  applyArgs: []                     # string[] | Array of args for the "kubectl apply" command during deployment
+  createArgs: []                    # string[] | Array of args for the "kubectl create" command during deployment
+  kustomizeArgs: []                 # string[] | Array of args for the "kustomize build" command during deployment
+  deleteArgs: []                    # string[] | Array of args for the "kubectl delete" command when purging deployments
   cmdPath: ""                       # string   | Path to the kubectl binary (Default: "" = detect automatically)
 ```
 [Learn more about configuring deployments with kubectl.](../configuration/deployments/kubernetes-manifests.mdx)
