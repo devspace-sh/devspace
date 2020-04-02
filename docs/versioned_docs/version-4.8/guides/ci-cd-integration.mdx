@@ -1,0 +1,38 @@
+---
+title: CI/CD Integration
+sidebar_label: CI/CD Integration
+---
+
+DevSpace is designed to work in non-interactive environments the same way it does in interactive environments. To use DevSpace inside a CI/CD pipeline, simply install it as part of your pipeline or start the pipeline with a VM or container image that already contains DevSpace and run any of the DevSpace commands.
+
+## Deployment Tips
+
+### Avoid Pickers
+If you want to run commands such as `devspace enter`, make sure you specify a label selector using `-l`, a container using `-c` etc. to make sure DevSpace can find the right pod/container without having to ask you to select one (which would lead to your pipeline getting stuck).
+
+### `--wait` Flag
+DevSpace is configured to deploy and terminate when you run `devspace deploy`. In CI/CD pipelines, it is common to wait until the deployment is actually up and running before continuing the pipeline. You can achieve this by using `--wait`:
+```bash
+devspace deploy --wait --timeout=120
+```
+The above command will wait until the desired number of pods is created for all ReplicaSets and until none of the pods are failing anymore. If this is not achieved within the number of seconds specified in `--timeout`, DevSpace will exit with a fatal error.
+
+<br/>
+
+## DevSpace Cloud
+
+### Authentication
+If you want to use DevSpace Cloud in your CI/CD pipeline as well, you need to generate an ["Access Key"](https://app.devspace.cloud/settings/access-keys) and use it to login to DevSpace Cloud using the following non-interactive command:
+```bash
+devspace login --key=[YOUR_ACCESS_KEY]
+```
+
+### Encryption Key
+If you are using the SaaS edition of DevSpace Cloud, you will need an encryption key to run commands such as `devspace create space` or `devspace use space`. To set an encryption key in a non-interactive environment, use:
+```bash
+devspace set encryptionkey [ENCRYPTION_KEY] --cluster=[cluster-name] 
+```
+The encryption key is a user-defined password that you defined when connecting your cluster to DevSpace Cloud. You can reset the encryption key for a cluster by running the following command and choosing the appropriate kube-context of the cluster:
+```bash
+devspace reset key
+```
