@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"os/exec"
 	"regexp"
+	"strings"
 )
 
 // Builder is the manifest builder interface
@@ -94,10 +95,23 @@ func (k *kubectlBuilder) Build(manifest string, cmd RunCommand) ([]*unstructured
 		return nil, err
 	}
 
-	return stringToUnstructuredArray(string(output))
+	return stringToUnstructuredArray(prepareResources(string(output)))
 }
 
 var diffSeparator = regexp.MustCompile(`\n---`)
+var oldDiffSeparator = regexp.MustCompile(`\napiVersion`)
+
+func prepareResources(out string) string {
+	parts := diffSeparator.Split(out, -1)
+	for i, part := range parts {
+		oldParts := oldDiffSeparator.Split(part, -1)
+		if len(oldParts) > 1 {
+			parts[i] = strings.Join(oldParts, "\n---\napiVersion")
+		}
+	}
+
+	return strings.Join(parts, "\n---")
+}
 
 // stringToUnstructuredArray splits a YAML file into unstructured objects. Returns a list of all unstructured objects
 func stringToUnstructuredArray(out string) ([]*unstructured.Unstructured, error) {
