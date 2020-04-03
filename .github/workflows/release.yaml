@@ -33,6 +33,7 @@ jobs:
       - name: Test
         run: ./hack/coverage.bash
   test-windows:
+    if: github.ref != 'refs/heads/master'
     runs-on: windows-2019
     steps:
       - name: Set up Go 1.13
