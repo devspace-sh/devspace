@@ -1,0 +1,48 @@
+---
+title: Services, Ingresses & Domains
+sidebar_label: Networking & Domains
+---
+
+import FragmentInfoComponentChart from '../fragments/info-component-chart.mdx';
+
+The easiest way to connect a domain to your deployment is to run the following command within your project directory:
+```bash
+devspace open
+```
+Choose **via domain** to connect a domain or choose **via localhost** to use port-forwarding.
+
+<br/>
+
+## Component Chart
+If you are looking for the documentation of the component chart values that let you configure the ingress and service for a component in `devspace.yaml`, please look into the **[Component Chart Documentation](https://devspace.sh/component-chart/docs/introduction)**.
+
+<FragmentInfoComponentChart/>
+
+<br/>
+
+## Troubleshooting
+Here are some steps to debug issues with your application when your domain is not able to reach your application.
+
+### Listen On All Interfaces
+Make sure your application is running on `0.0.0.0` and not on `localhost`. If you see a log message in your container logs such as `Listening on localhost:PORT` or  `Listening on 127.0.0.1:PORT`, you need to change the configuration of your application, so that it starts listening on `0.0.0.0` instead of `localhost`/`127.0.0.1`.
+
+:::info Only Localhost Works
+This is often the problem when you are able to use `devspace open` with `via localhost` but not with the `via domain` option.
+:::
+
+### Check For Failing Containers
+Make sure none of your containers is constantly restarting (`Restarts` > 0) or unable to starting (`Status` != Running):
+```bash
+kubectl get po
+```
+
+### Check Services and Endpoints
+Make sure you have at least one service for your main application configured:
+```bash
+kubectl get svc
+```
+
+And make sure all your services have at least one endpoint:
+```bash
+kubectl get ep
+```
