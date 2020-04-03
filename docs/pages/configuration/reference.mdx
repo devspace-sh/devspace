@@ -57,10 +57,12 @@ docker:                             # struct   | Options for building images wit
 kaniko:                             # struct   | Options for building images with kaniko
   cache: true                       # bool     | Use caching for kaniko build process
   snapshotMode: "time"              # string   | Type of snapshotMode for kaniko build process (compresses layers)
-  args: []                          # string[] | Array of args for kaniko build command
-  namespace: ""                     # string   | Kubernetes namespace to run kaniko build pod in (Default: "" = deployment namespace)
   insecure: false                   # bool     | Allow working with an insecure registry by not validating the SSL certificate (Default: false)
+  args: []                          # string[] | Array of args for kaniko build command
+  image: ""                         # string   | Allows to change the kaniko image or kaniko version / image tag.
   pullSecret: ""                    # string   | Mount this Kubernetes secret instead of creating one to authenticate to the registry (default: "")
+  additionalMounts: []              # struct[] | Array of mount configurations for Kubernetes Secrets and ConfigMaps that should be mounted into the kaniko build container
+  namespace: ""                     # string   | Kubernetes namespace to run kaniko build pod in (Default: "" = deployment namespace)
   options: ...                      # struct   | Set build general build options
 ```
 
