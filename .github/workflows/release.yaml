@@ -7,6 +7,7 @@ on:
     branches:
       - master
     paths:
+      - "Dockerfile"
       - "**.go"
       - "hack/coverage.bash"
       - ".github/workflows/release.yaml"
@@ -14,6 +15,7 @@ on:
     branches:
       - master
     paths:
+      - "Dockerfile"
       - "**.go"
       - "hack/coverage.bash"
       - ".github/workflows/release.yaml"
@@ -114,6 +116,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - uses: jerray/publish-docker-action@v1.0.3
+        if: github.ref == 'refs/heads/master'
         with:
           tags: next
           repository: devspacesh/devspace
