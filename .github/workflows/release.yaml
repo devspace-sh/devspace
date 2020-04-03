@@ -110,25 +110,29 @@ jobs:
         working-directory: ./dist/npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
-  publish-images:
-    needs: [release]
+  publish-next-image:
+    if: github.ref == 'refs/heads/master'
+    needs: [test-linux]
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
       - uses: jerray/publish-docker-action@v1.0.3
-        if: github.ref == 'refs/heads/master'
         with:
           tags: next
           repository: devspacesh/devspace
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+  publish-release-images:
+    if: startsWith(github.ref, 'refs/tags/v') == true
+    needs: [release]
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
       - id: get_version
-        if: startsWith(github.ref, 'refs/tags/v') == true
         run: |
           RELEASE_VERSION=$(echo $GITHUB_REF | sed -nE 's!refs/tags/!!p')
           echo "::set-output name=release_version::$RELEASE_VERSION"
       - uses: jerray/publish-docker-action@v1.0.3
-        if: startsWith(github.ref, 'refs/tags/v') == true
         with:
           auto_tag: true
           repository: devspacesh/devspace
@@ -136,7 +140,6 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           build_args: RELEASE_VERSION=${{ steps.get_version.outputs.release_version }}
       - uses: jerray/publish-docker-action@v1.0.3
-        if: startsWith(github.ref, 'refs/tags/v') == true
         with:
           tags: latest
           repository: devspacesh/devspace
