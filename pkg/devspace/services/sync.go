@@ -425,7 +425,6 @@ func (serviceClient *client) downloadSyncHelper(filepath, syncBinaryFolder, vers
 	// Check if file exists
 	_, err := os.Stat(filepath)
 	if err == nil {
-
 		// make sure the sha is correct, but skip for latest because that is development
 		if version == "latest" {
 			return nil
@@ -435,17 +434,21 @@ func (serviceClient *client) downloadSyncHelper(filepath, syncBinaryFolder, vers
 		url := fmt.Sprintf("https://github.com/devspace-cloud/devspace/releases/download/%s/sync.sha256", version)
 		resp, err := http.Get(url)
 		if err != nil {
-			return errors.Wrap(err, "get url")
+			serviceClient.log.Warnf("Couldn't retrieve sync sha256: %v", err)
+			return nil
 		}
 
 		shaHash, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return errors.Wrap(err, "read sync sha body")
+			serviceClient.log.Warnf("Couldn't read sync sha256 request: %v", err)
+			return nil
 		}
 
+		// hash the local binary
 		fileHash, err := hash.File(filepath)
 		if err != nil {
-			return errors.Wrap(err, "hash local sync binary")
+			serviceClient.log.Warnf("Couldn't hash local sync binary: %v", err)
+			return nil
 		}
 
 		// the file is correct we skip downloading

@@ -15,6 +15,7 @@ type AttachCmd struct {
 	*flags.GlobalFlags
 
 	LabelSelector string
+	Image         string
 	Container     string
 	Pod           string
 	Pick          bool
@@ -45,6 +46,7 @@ devspace attach -n my-namespace
 
 	attachCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
 	attachCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
+	attachCmd.Flags().StringVar(&cmd.Image, "image", "", "Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage")
 	attachCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 
 	attachCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
@@ -107,8 +109,14 @@ func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 		selectorParameter.CmdParameter.Pick = &cmd.Pick
 	}
 
+	// get imageselector if specified
+	imageSelector, err := getImageSelector(configLoader, cmd.Image)
+	if err != nil {
+		return err
+	}
+
 	servicesClient := f.NewServicesClient(nil, nil, client, selectorParameter, log)
 
 	// Start attach
-	return servicesClient.StartAttach(nil, make(chan error))
+	return servicesClient.StartAttach(imageSelector, make(chan error))
 }
