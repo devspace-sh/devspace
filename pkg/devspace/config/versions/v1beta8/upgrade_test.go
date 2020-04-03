@@ -1,7 +1,7 @@
-package v1beta7
+package v1beta8
 
 import (
-	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta8"
+	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/ghodss/yaml"
 	"reflect"
@@ -22,43 +22,13 @@ func TestSimple(t *testing.T) {
 		{
 			in: &Config{
 				Images: map[string]*ImageConfig{
-					"test": {
-						Build: &BuildConfig{
-							Kaniko: &KanikoConfig{
-								Flags: []string{"test", "test2"},
-							},
-						},
-					},
+					"test": {},
 				},
 			},
 			expected: &next.Config{
 				Images: map[string]*next.ImageConfig{
 					"test": {
-						Build: &next.BuildConfig{
-							Kaniko: &next.KanikoConfig{
-								Args: []string{"test", "test2"},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			in: &Config{
-				Deployments: []*DeploymentConfig{
-					&DeploymentConfig{
-						Kubectl: &KubectlConfig{
-							Flags: []string{"test", "test2"},
-						},
-					},
-				},
-			},
-			expected: &next.Config{
-				Deployments: []*next.DeploymentConfig{
-					&next.DeploymentConfig{
-						Kubectl: &next.KubectlConfig{
-							ApplyArgs: []string{"test", "test2"},
-						},
+						PreferSyncOverRebuild: true,
 					},
 				},
 			},

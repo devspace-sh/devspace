@@ -3,7 +3,7 @@ package v1beta7
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
-	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta8"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
 
