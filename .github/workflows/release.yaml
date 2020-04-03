@@ -19,8 +19,19 @@ on:
       - ".github/workflows/release.yaml"
 
 jobs:
-  test:
+  test-linux:
     runs-on: ubuntu-18.04
+    steps:
+      - name: Set up Go 1.13
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.13
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v1
+      - name: Test
+        run: ./hack/coverage.bash
+  test-windows:
+    runs-on: windows-2019
     steps:
       - name: Set up Go 1.13
         uses: actions/setup-go@v1
@@ -32,7 +43,7 @@ jobs:
         run: ./hack/coverage.bash
   release:
     if: startsWith(github.ref, 'refs/tags/v') == true
-    needs: test
+    needs: [test-linux, test-windows]
     runs-on: macOS-latest
     steps:
       - name: Set up Go 1.13
@@ -54,7 +65,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
   release-ui:
     if: startsWith(github.ref, 'refs/tags/v') == true
-    needs: test
+    needs: [test-linux, test-windows]
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
@@ -97,16 +108,23 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
   publish-images:
-    if: startsWith(github.ref, 'refs/tags/v') == true
     needs: [release]
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
+      - uses: jerray/publish-docker-action@v1.0.3
+        with:
+          tags: next
+          repository: devspacesh/devspace
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
       - id: get_version
+        if: startsWith(github.ref, 'refs/tags/v') == true
         run: |
           RELEASE_VERSION=$(echo $GITHUB_REF | sed -nE 's!refs/tags/!!p')
           echo "::set-output name=release_version::$RELEASE_VERSION"
       - uses: jerray/publish-docker-action@v1.0.3
+        if: startsWith(github.ref, 'refs/tags/v') == true
         with:
           auto_tag: true
           repository: devspacesh/devspace
@@ -114,6 +132,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           build_args: RELEASE_VERSION=${{ steps.get_version.outputs.release_version }}
       - uses: jerray/publish-docker-action@v1.0.3
+        if: startsWith(github.ref, 'refs/tags/v') == true
         with:
           tags: latest
           repository: devspacesh/devspace
