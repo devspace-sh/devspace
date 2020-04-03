@@ -134,7 +134,7 @@ func Upgrade() error {
 		log.Infof("Current binary is the latest version: %s", version)
 	} else {
 		log.Donef("Successfully updated to version %s", latest.Version)
-		log.Infof("Release note: %s", latest.ReleaseNotes)
+		log.Infof("Release note: \n\n%s", latest.ReleaseNotes)
 	}
 
 	return nil
