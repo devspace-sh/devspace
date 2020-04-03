@@ -1,10 +1,26 @@
-version: v1beta7
+version: v1beta8
 images:
   default:
-    image: myuser/myimage
+    image: devspacecloud/myimage
     build:
       kaniko:
         cache: true
+        # custom kaniko image
+        # image: mykaniko/kaniko:latest
+        # additional mounts for the kaniko pod
+        # additionalMounts:
+        #  - configMap:
+        #      name: test
+        #      items:
+        #        - key: key
+        #          path: config.json
+        #    mountPath: /test/test
+        #  - secret:
+        #      name: test2
+        #      items:
+        #        - key: key
+        #          path: config.json
+        #    mountPath: /test/test
 deployments:
 - name: devspace-default
   helm:
