@@ -7,7 +7,6 @@ import FragmentBuildOptionsTarget from '../../fragments/build-option-target.mdx'
 import FragmentBuildOptionsNetwork from '../../fragments/build-option-network.mdx';
 import FragmentBuildOptionsBuildArgs from '../../fragments/build-option-buildArgs.mdx';
 
-## `kaniko`
 Using `kaniko` as build tool allows you to build images direclty inside your Kubernetes cluster without a Docker daemon. DevSpace simply starts a build pod and builds the image using `kaniko`.
 
 :::note Automatic Cleanup
@@ -23,6 +22,8 @@ images:
       kaniko:
         cache: true
 ```
+
+## Flags & Arguments
 
 ### `cache`
 The `cache` option expects a boolean that states if kaniko should make use of layer caching by pulling the previously build image and using the layers of this image as cache.
@@ -111,27 +112,6 @@ images:
 The image `backend` would be built using kaniko and the flags `--cache-dir=/tmp --verbosity=debug` would be set when running the build command within the kaniko pod used for image building.
 
 
-### `namespace`
-The `namespace` option expects a string stating a namespace that should be used to start the kaniko build pod in.
-
-#### Default Value For `namespace`
-```yaml
-namespace: "" # defaults to the default namespace of the current kube-context
-```
-
-#### Example: Different Namespace For kaniko
-```yaml
-images:
-  backend:
-    image: john/appbackend
-    build:
-      kaniko:
-        namespace: build-namespace
-```
-**Explanation:**  
-The image `backend` would be built using kaniko and the build pod started to run the kaniko build process would be created within the namespace `build-namespace` within the cluster that the current kube-context points to.
-
-
 ### `insecure`
 The `insecure` option expects a boolean stating if kaniko should allow to push to an insecure (plain HTTP instead of HTTPS) registry.
 
@@ -155,6 +135,34 @@ images:
 ```
 **Explanation:**  
 The image `backend` would be built using kaniko and pushing to the insecure registry `123.456.789.0:5000` would be allowed.
+
+
+
+<br />
+
+## Build Pod Configuration
+
+### `image`
+The `image` option expects a string stating the image that should be used for the kaniko container within the build pod.
+
+:::warning
+This option should only be set to `true` for testing purposes.
+:::
+
+#### Default Value For `image`
+```yaml
+image: gcr.io/kaniko-project/executor:v0.17.1
+```
+
+#### Example: Use Different Kaniko Image/Version
+```yaml
+images:
+  backend:
+    image: 123.456.789.0:5000/john/appbackend
+    build:
+      kaniko:
+        image: gcr.io/kaniko-project/executor:v0.19.0
+```
 
 
 ### `pullSecret`
@@ -217,23 +225,83 @@ If you define `pullSecret: custom-pull-secret` as shown in the example above, De
 :::
 
 
-## `kaniko.options`
+### `additionalMounts`
+The `additionalMounts` option expects an array of mount options that allow to mount Kubernetes Secrets and ConfigMaps into the kaniko container within the build pod.
+
+#### Default Value For `additionalMounts`
+```yaml
+additionalMounts: []
+```
+
+#### Example: Mount ConfigMaps & Secrets For Kaniko
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        additionalMounts:
+        - mountPath: /some/configmap/dir
+          configMap:
+            name: my-configmap
+        - mountPath: /some/secret/dir
+          secret:
+            name: my-secret
+            items:
+            - key: aws-token
+              path: token.json
+```
+**Explanation:**  
+The above configuration would create a kaniko container which mounts the following volumes:
+- All keys within the ConfigMap `my-configmap` will be mounted as files within the folder `/some/configmap/dir`. The filenames will be the keys within the ConfigMap.
+- The key `aws-token` within the Secret `my-secret` will be mounted as the file `/some/secret/dir/token.json`.
+
+
+### `namespace`
+The `namespace` option expects a string stating a namespace that should be used to start the kaniko build pod in.
+
+:::warning Hard-Coding Namespaces Discouraged
+Unless you really know what you are doing, it is discouraged to hard-code namespaces within devspace.yaml because that makes it harder to share the project and its configuration with others.
+:::
+
+#### Default Value For `namespace`
+```yaml
+namespace: "" # defaults to the default namespace of the current kube-context
+```
+
+#### Example: Different Namespace For kaniko
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        namespace: build-namespace
+```
+**Explanation:**  
+The image `backend` would be built using kaniko and the build pod started to run the kaniko build process would be created within the namespace `build-namespace` within the cluster that the current kube-context points to.
+
+
+
+<br />
+
+## Build Options
 DevSpace allows you to configure the following build options:
 - `target` defining the build target for multi-stage builds
 - `network` to define which network to use during building (e.g. `docker build --network=host`)
 - `buildArgs` to pass arguments to the Dockerfile during the build process
 
 
-### `target`
+### `options.target`
 
 <FragmentBuildOptionsTarget/>
 
 
-### `network`
+### `options.network`
 
 <FragmentBuildOptionsNetwork/>
 
 
-### `buildArgs`
+### `options.buildArgs`
 
 <FragmentBuildOptionsBuildArgs/>

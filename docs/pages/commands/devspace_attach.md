@@ -32,6 +32,7 @@ devspace attach -n my-namespace
 ```
   -c, --container string        Container name within pod where to execute command
   -h, --help                    help for attach
+      --image string            Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage
   -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
       --pick                    Select a pod
       --pod string              Pod to open a shell to

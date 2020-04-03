@@ -33,6 +33,7 @@ devspace logs --namespace=mynamespace
   -c, --container string        Container name within pod where to execute command
   -f, --follow                  Attach to logs afterwards
   -h, --help                    help for logs
+      --image string            Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage
   -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
       --lines int               Max amount of lines to print from the last log (default 200)
       --pick                    Select a pod
