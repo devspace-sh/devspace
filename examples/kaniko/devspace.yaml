@@ -1,7 +1,7 @@
 version: v1beta8
 images:
   default:
-    image: devspacecloud/myimage
+    image: myuser/myimage
     build:
       kaniko:
         cache: true
