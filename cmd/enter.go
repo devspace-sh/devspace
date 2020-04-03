@@ -16,6 +16,7 @@ type EnterCmd struct {
 	*flags.GlobalFlags
 
 	LabelSelector string
+	Image         string
 	Container     string
 	Pod           string
 	Pick          bool
@@ -50,6 +51,7 @@ devspace enter bash -l release=test
 
 	enterCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
 	enterCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
+	enterCmd.Flags().StringVar(&cmd.Image, "image", "", "Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage")
 	enterCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 
 	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
@@ -113,8 +115,14 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 		selectorParameter.CmdParameter.Pick = &cmd.Pick
 	}
 
+	// get imageselector if specified
+	imageSelector, err := getImageSelector(configLoader, cmd.Image)
+	if err != nil {
+		return err
+	}
+
 	// Start terminal
-	exitCode, err := f.NewServicesClient(nil, generatedConfig, client, selectorParameter, logger).StartTerminal(args, nil, make(chan error), cmd.Wait)
+	exitCode, err := f.NewServicesClient(nil, generatedConfig, client, selectorParameter, logger).StartTerminal(args, imageSelector, make(chan error), cmd.Wait)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -424,7 +425,42 @@ func (serviceClient *client) downloadSyncHelper(filepath, syncBinaryFolder, vers
 	// Check if file exists
 	_, err := os.Stat(filepath)
 	if err == nil {
-		return nil
+		// make sure the sha is correct, but skip for latest because that is development
+		if version == "latest" {
+			return nil
+		}
+
+		// download sha256 html
+		url := fmt.Sprintf("https://github.com/devspace-cloud/devspace/releases/download/%s/sync.sha256", version)
+		resp, err := http.Get(url)
+		if err != nil {
+			serviceClient.log.Warnf("Couldn't retrieve sync sha256: %v", err)
+			return nil
+		}
+
+		shaHash, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			serviceClient.log.Warnf("Couldn't read sync sha256 request: %v", err)
+			return nil
+		}
+
+		// hash the local binary
+		fileHash, err := hash.File(filepath)
+		if err != nil {
+			serviceClient.log.Warnf("Couldn't hash local sync binary: %v", err)
+			return nil
+		}
+
+		// the file is correct we skip downloading
+		if fileHash == strings.Split(string(shaHash), " ")[0] {
+			return nil
+		}
+
+		// remove the old binary
+		err = os.Remove(filepath)
+		if err != nil {
+			return errors.Wrap(err, "remove corrupt sync binary")
+		}
 	}
 
 	// Make sync binary

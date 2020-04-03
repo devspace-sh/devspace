@@ -273,7 +273,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		servicesClient := services.NewClient(b.helper.Config, nil, b.helper.KubeClient, &targetselector.SelectorParameter{
 			CmdParameter: targetselector.CmdParameter{PodName: buildPod.Name, ContainerName: buildPod.Spec.Containers[0].Name, Namespace: buildPod.Namespace},
 		}, log)
-		err = servicesClient.StartLogsWithWriter(true, 100, stdoutLogger)
+		err = servicesClient.StartLogsWithWriter(nil, true, 100, stdoutLogger)
 		if err != nil {
 			return errors.Errorf("Error during printling build logs: %v", err)
 		}

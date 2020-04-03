@@ -23,6 +23,23 @@ func Password(password string) (string, error) {
 	return hex.EncodeToString(sha256Bytes[:]), nil
 }
 
+// File creates the hash value of a file
+func File(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+	_, err = io.Copy(hash, file)
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
 // Directory creates the hash value of a directory
 func Directory(path string) (string, error) {
 	hash := sha256.New()

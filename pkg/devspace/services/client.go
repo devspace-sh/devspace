@@ -14,8 +14,8 @@ import (
 type Client interface {
 	StartAttach(imageSelector []string, interrupt chan error) error
 
-	StartLogs(follow bool, tail int64) error
-	StartLogsWithWriter(follow bool, tail int64, writer io.Writer) error
+	StartLogs(imageSelector []string, follow bool, tail int64) error
+	StartLogsWithWriter(imageSelector []string, follow bool, tail int64, writer io.Writer) error
 
 	StartPortForwarding(interrupt chan error) error
 

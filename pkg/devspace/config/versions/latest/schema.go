@@ -73,13 +73,122 @@ type DockerConfig struct {
 
 // KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type KanikoConfig struct {
-	Cache        *bool         `yaml:"cache,omitempty"`
-	SnapshotMode string        `yaml:"snapshotMode,omitempty"`
-	Args         []string      `yaml:"args,omitempty"`
-	Namespace    string        `yaml:"namespace,omitempty"`
-	Insecure     *bool         `yaml:"insecure,omitempty"`
-	PullSecret   string        `yaml:"pullSecret,omitempty"`
-	Options      *BuildOptions `yaml:"options,omitempty"`
+	// if a cache repository should be used. defaults to true
+	Cache *bool `yaml:"cache,omitempty"`
+
+	// the snapshot mode kaniko should use. defaults to time
+	SnapshotMode string `yaml:"snapshotMode,omitempty"`
+
+	// the image name of the kaniko pod to use
+	Image string `yaml:"image,omitempty"`
+
+	// additional arguments that should be passed to kaniko
+	Args []string `yaml:"args,omitempty"`
+
+	// the namespace where the kaniko pod should be run
+	Namespace string `yaml:"namespace,omitempty"`
+
+	// if true pushing to insecure registries is allowed
+	Insecure *bool `yaml:"insecure,omitempty"`
+
+	// the pull secret to mount by default
+	PullSecret string `yaml:"pullSecret,omitempty"`
+
+	// additional mounts that will be added to the build pod
+	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty"`
+
+	// other build options that will be passed to the kaniko pod
+	Options *BuildOptions `yaml:"options,omitempty"`
+}
+
+// KanikoAdditionalMount tells devspace how the additional mount of the kaniko pod should look like
+type KanikoAdditionalMount struct {
+	// The secret that should be mounted
+	Secret *KanikoAdditionalMountSecret `yaml:"secret,omitempty"`
+
+	// The configMap that should be mounted
+	ConfigMap *KanikoAdditionalMountConfigMap `yaml:"configMap,omitempty"`
+
+	// Mounted read-only if true, read-write otherwise (false or unspecified).
+	// Defaults to false.
+	// +optional
+	ReadOnly bool `yaml:"readOnly,omitempty"`
+
+	// Path within the container at which the volume should be mounted.  Must
+	// not contain ':'.
+	MountPath string `yaml:"mountPath,omitempty"`
+
+	// Path within the volume from which the container's volume should be mounted.
+	// Defaults to "" (volume's root).
+	// +optional
+	SubPath string `yaml:"subPath,omitempty"`
+}
+
+type KanikoAdditionalMountConfigMap struct {
+	// Name of the configmap
+	// +optional
+	Name string `yaml:"name,omitempty"`
+
+	// If unspecified, each key-value pair in the Data field of the referenced
+	// ConfigMap will be projected into the volume as a file whose name is the
+	// key and content is the value. If specified, the listed keys will be
+	// projected into the specified paths, and unlisted keys will not be
+	// present. If a key is specified which is not present in the ConfigMap,
+	// the volume setup will error unless it is marked optional. Paths must be
+	// relative and may not contain the '..' path or start with '..'.
+	// +optional
+	Items []KanikoAdditionalMountKeyToPath `yaml:"items,omitempty"`
+
+	// Optional: mode bits to use on created files by default. Must be a
+	// value between 0 and 0777. Defaults to 0644.
+	// Directories within the path are not affected by this setting.
+	// This might be in conflict with other options that affect the file
+	// mode, like fsGroup, and the result can be other mode bits set.
+	// +optional
+	DefaultMode *int32 `yaml:"defaultMode,omitempty"`
+}
+
+type KanikoAdditionalMountSecret struct {
+	// Name of the secret in the pod's namespace to use.
+	// More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+	// +optional
+	Name string `yaml:"name"`
+
+	// If unspecified, each key-value pair in the Data field of the referenced
+	// Secret will be projected into the volume as a file whose name is the
+	// key and content is the value. If specified, the listed keys will be
+	// projected into the specified paths, and unlisted keys will not be
+	// present. If a key is specified which is not present in the Secret,
+	// the volume setup will error unless it is marked optional. Paths must be
+	// relative and may not contain the '..' path or start with '..'.
+	// +optional
+	Items []KanikoAdditionalMountKeyToPath `yaml:"items,omitempty"`
+
+	// Optional: mode bits to use on created files by default. Must be a
+	// value between 0 and 0777. Defaults to 0644.
+	// Directories within the path are not affected by this setting.
+	// This might be in conflict with other options that affect the file
+	// mode, like fsGroup, and the result can be other mode bits set.
+	// +optional
+	DefaultMode *int32 `yaml:"defaultMode,omitempty"`
+}
+
+type KanikoAdditionalMountKeyToPath struct {
+	// The key to project.
+	Key string `yaml:"key"`
+
+	// The relative path of the file to map the key to.
+	// May not be an absolute path.
+	// May not contain the path element '..'.
+	// May not start with the string '..'.
+	Path string `yaml:"path"`
+
+	// Optional: mode bits to use on this file, must be a value between 0
+	// and 0777. If not specified, the volume defaultMode will be used.
+	// This might be in conflict with other options that affect the file
+	// mode, like fsGroup, and the result can be other mode bits set.
+	// +optional
+	Mode *int32 `yaml:"mode,omitempty"`
 }
 
 // CustomConfig tells the DevSpace CLI to build with a custom build script
