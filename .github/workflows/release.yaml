@@ -41,6 +41,7 @@ jobs:
         uses: actions/checkout@v1
       - name: Test
         run: ./hack/coverage.bash
+        shell: bash
   release:
     if: startsWith(github.ref, 'refs/tags/v') == true
     needs: [test-linux, test-windows]
