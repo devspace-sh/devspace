@@ -86,6 +86,18 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 }
 
 func convertDockerConfigToKanikoConfig(dockerConfig *latest.ImageConfig) *latest.ImageConfig {
+	kanikoBuildOptions := &latest.KanikoConfig{
+		Cache: ptr.Bool(true),
+	}
+
+	if dockerConfig.Build != nil && dockerConfig.Build.Kaniko != nil {
+		kanikoBuildOptions = dockerConfig.Build.Kaniko
+	} else {
+		if dockerConfig.Build != nil && dockerConfig.Build.Docker != nil && dockerConfig.Build.Docker.Options != nil {
+			kanikoBuildOptions.Options = dockerConfig.Build.Docker.Options
+		}
+	}
+
 	kanikoConfig := &latest.ImageConfig{
 		Image:            dockerConfig.Image,
 		Tags:             dockerConfig.Tags,
@@ -95,14 +107,8 @@ func convertDockerConfigToKanikoConfig(dockerConfig *latest.ImageConfig) *latest
 		Cmd:              dockerConfig.Cmd,
 		CreatePullSecret: dockerConfig.CreatePullSecret,
 		Build: &latest.BuildConfig{
-			Kaniko: &latest.KanikoConfig{
-				Cache: ptr.Bool(true),
-			},
+			Kaniko: kanikoBuildOptions,
 		},
-	}
-
-	if dockerConfig.Build != nil && dockerConfig.Build.Docker != nil && dockerConfig.Build.Docker.Options != nil {
-		kanikoConfig.Build.Kaniko.Options = dockerConfig.Build.Docker.Options
 	}
 
 	return kanikoConfig
