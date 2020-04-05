@@ -154,13 +154,15 @@ exec("npm bin -g || yarn global bin", function(err, stdout, stderr) {
   if (err || stderr || !stdout || stdout.length === 0) {
     let env = process.env;
     if (env && env.npm_config_prefix) {
-      dir = path.join(env.npm_config_prefix, "bin");
+      dir = env.npm_config_prefix;
     }
   } else {
     dir = stdout.trim();
   }
 
   if (dir == null) callback("Error finding binary installation directory");
+
+  fs.mkdirSync(dir, { recursive: true });
 
   if (platform == "windows") {
     binaryName += ".exe";
@@ -293,6 +295,7 @@ exec("npm bin -g || yarn global bin", function(err, stdout, stderr) {
         .createWriteStream(binaryPath + downloadExtension)
         .on("error", function(err) {
           spinner.stop(true);
+          console.error("Unable to write stream: " + err)
           showRootError();
         });
 
@@ -335,6 +338,7 @@ exec("npm bin -g || yarn global bin", function(err, stdout, stderr) {
             try {
               res.pipe(writeStream);
             } catch (e) {
+              console.error("Unable to write stream: " + e)
               showRootError();
             }
           }
@@ -346,6 +350,7 @@ exec("npm bin -g || yarn global bin", function(err, stdout, stderr) {
           try {
             fs.chmodSync(binaryPath + downloadExtension, 0755);
           } catch (e) {
+            console.error("Unable to chmod: " + e)
             showRootError();
           }
 
