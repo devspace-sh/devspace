@@ -23,7 +23,7 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
 		builder = custom.NewBuilder(imageConfigName, imageConf, imageTag)
-	} else if imageConf.Build != nil && imageConf.Build.Kaniko != nil {
+	} else if imageConf.Build != nil && imageConf.Build.Docker == nil && imageConf.Build.Kaniko != nil {
 		dockerClient, err := dockerclient.NewClient(log)
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker client: %v", err)
