@@ -35,7 +35,7 @@ while true; do
     pid=$!
     echo "$pid" > /devspace-pid
     set +e
-    wait $pgid
+    wait $pid
     exit_code=$?
     set -e
     if [ -f /devspace-pid ]; then
