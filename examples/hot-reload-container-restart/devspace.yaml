@@ -1,0 +1,31 @@
+version: v1beta9
+images:
+  default:
+    image: myusername/devspace
+    # tells devspace to automatically wrap the entrypoint with a
+    # small restart helper script so the process can be restarted
+    # if files are getting synced into the container
+    injectRestartHelper: true
+deployments:
+- name: quickstart
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: myusername/devspace
+      service:
+        ports:
+        - port: 8080
+dev:
+  ports:
+  - imageName: default
+    forward:
+    - port: 8080
+  sync:
+  - imageName: default
+    # tells devspace to restart the container process, if files are uploaded
+    # only works if the restart helper script is present in the container
+    onUpload:
+      restartContainer: true
+    excludePaths:
+    - node_modules
