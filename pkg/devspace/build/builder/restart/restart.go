@@ -15,7 +15,7 @@ const ProcessIDFilePath = "/devspace-pid"
 // HelperScript is the content of the restart script in the container
 const HelperScript = `#!/bin/sh
 #
-# A process wrapper script to simulate a container restart. This file was injected with devspace during the build process
+# A process wrapper script to simulate a container restart. This file was injected by DevSpace during the build process
 #
 
 set -e
@@ -41,6 +41,6 @@ while true; do
     if [ -f /devspace-pid ]; then
         exit $exit_code
     fi
-    echo "Restart container"
+    echo "Restart container..."
 done
 `

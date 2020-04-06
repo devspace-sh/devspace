@@ -5,13 +5,15 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
 	"io"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
+	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/docker/docker/pkg/archive"
@@ -92,7 +94,7 @@ func OverwriteDockerfileInBuildContext(dockerfileCtx io.ReadCloser, buildCtx io.
 
 // RewriteDockerfile rewrites the given dockerfile contents with the new entrypoint cmd and target. It does also inject the restart
 // helper if specified
-func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, target string, injectHelper bool) (string, error) {
+func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, target string, injectHelper bool, log logpkg.Logger) (string, error) {
 	if len(entrypoint) == 0 && len(cmd) == 0 && !injectHelper {
 		return "", nil
 	}
@@ -111,7 +113,11 @@ func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, tar
 
 		if len(entrypoint) == 0 {
 			if len(oldEntrypoint) == 0 {
-				return "", errors.Errorf("cannot inject restart helper into dockerfile because no ENTRYPOINT was found, please make sure your dockerfile has an ENTRYPOINT defined or define it in the devspace.yaml in 'images.*.entrypoint'")
+				if len(oldCmd) == 0 {
+					return "", errors.Errorf("Cannot inject restart helper into Dockerfile because neither ENTRYPOINT nor CMD was found.\n\nHow to fix this:\n- Option A: Define an ENTRYPOINT (or CMD) in your Dockerfile\n- Option B: Set `images.*.entrypoint` option in your devspace.yaml")
+				} else {
+					log.Warn("Using CMD statement for injecting restart helper because ENTRYPOINT is missing in Dockerfile and `images.*.entrypoint` is also not configured")
+				}
 			}
 
 			entrypoint = oldEntrypoint

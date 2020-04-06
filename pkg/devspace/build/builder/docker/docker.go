@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/docker/cli/cli/streams"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/docker/cli/cli/streams"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -173,7 +174,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 	// Check if we should overwrite entrypoint
 	if len(entrypoint) > 0 || len(cmd) > 0 || b.helper.ImageConf.InjectRestartHelper {
-		dockerfilePath, err = helper.RewriteDockerfile(dockerfilePath, entrypoint, cmd, options.Target, b.helper.ImageConf.InjectRestartHelper)
+		dockerfilePath, err = helper.RewriteDockerfile(dockerfilePath, entrypoint, cmd, options.Target, b.helper.ImageConf.InjectRestartHelper, log)
 		if err != nil {
 			return err
 		}
