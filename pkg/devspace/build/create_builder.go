@@ -92,10 +92,8 @@ func convertDockerConfigToKanikoConfig(dockerConfig *latest.ImageConfig) *latest
 
 	if dockerConfig.Build != nil && dockerConfig.Build.Kaniko != nil {
 		kanikoBuildOptions = dockerConfig.Build.Kaniko
-	} else {
-		if dockerConfig.Build != nil && dockerConfig.Build.Docker != nil && dockerConfig.Build.Docker.Options != nil {
-			kanikoBuildOptions.Options = dockerConfig.Build.Docker.Options
-		}
+	} else if dockerConfig.Build != nil && dockerConfig.Build.Docker != nil && dockerConfig.Build.Docker.Options != nil {
+		kanikoBuildOptions.Options = dockerConfig.Build.Docker.Options
 	}
 
 	kanikoConfig := &latest.ImageConfig{
