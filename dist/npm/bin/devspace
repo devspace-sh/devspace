@@ -1,13 +1,15 @@
 #!/usr/bin/env sh
 
-if ! [ -x "$(command -v devspace)" ]; then
-  echo "Finishing installation for DevSpace CLI"
+BINARY=$(command -v devspace)
 
-  BASEDIR=$(dirname "$0")
-  /usr/bin/env node "$BASEDIR/../index.js" force-install;
+if [ -f "$BINARY" ] || [ $(stat --printf="%s" "$BINARY") -lt 10000 ]; then
+    echo "Finishing installation for DevSpace CLI"
 
-  devspace "$@" 2>/dev/null || devspace.exe "$@";
-  exit $?;
+    BASEDIR=$(dirname "$0")
+    /usr/bin/env node "$BASEDIR/../index.js" force-install;
+
+    devspace "$@" 2>/dev/null || devspace.exe "$@";
+    exit $?;
 fi
 
 devspace "$@";

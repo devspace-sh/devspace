@@ -189,27 +189,33 @@ let continueProcess = function(askRemoveGlobalFolder) {
     try {
       fs.unlinkSync(binaryPath + downloadExtension);
     } catch (e) {}
-    
-    try {
-      fs.unlinkSync(binaryPath);
-    } catch (e) {}
 
-    if (platform == "windows") {
-      try {
-        fs.unlinkSync(binaryPath.replace(/\.exe$/i, ""));
-      } catch (e) {}
+    let removeBinaries = function(allBinaries) {
+      if (allBinaries) {
+        try {
+          fs.unlinkSync(binaryPath);
+        } catch (e) {}
+      }
 
-      try {
-        fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".cmd"));
-      } catch (e) {}
+      if (platform == "windows") {
+        try {
+          fs.unlinkSync(binaryPath.replace(/\.exe$/i, ""));
+        } catch (e) {}
 
-      try {
-        fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".ps1"));
-      } catch (e) {}
+        try {
+          fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".cmd"));
+        } catch (e) {}
+
+        try {
+          fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".ps1"));
+        } catch (e) {}
+      }
     }
     
-    if (askRemoveGlobalFolder && action == "uninstall") {
-      if (process.stdout.isTTY) {
+    if (action == "uninstall") {
+      removeBinaries(true);
+
+      if (askRemoveGlobalFolder && process.stdout.isTTY) {
         let removeGlobalFolder = function() {
           try {
             let homedir = require('os').homedir();
@@ -234,8 +240,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
             }
           });
       } else {
-        console.warn("DevSpace will remvove the global ~/.devspace folder without asking because this uninstall call is being executed in a non-interactive environment.")
-        removeGlobalFolder();
+        console.warn("DevSpace will not remove the global ~/.devspace folder without asking. This uninstall call is being executed in a non-interactive environment.")
       }
     } else {
       if (action == "install" || action == "force-install") {
@@ -342,6 +347,8 @@ let continueProcess = function(askRemoveGlobalFolder) {
                 console.error("\nRenaming release binary failed. Please copy file manually:\n from: " + binaryPath + downloadExtension + "\n to: " + binaryPath + "\n");
                 process.exit(1);
               }
+
+              removeBinaries();
             });
         };
 

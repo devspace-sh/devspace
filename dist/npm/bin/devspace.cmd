@@ -7,5 +7,4 @@ echo Finishing installation for DevSpace CLI
 
 for %%F in (%0) do set dirname=%%~dpF
 
-node %dirname%\..\index.js force-install && devspace %*
-exit /b %errorlevel%
+node %dirname%\..\index.js force-install && devspace.exe %*
