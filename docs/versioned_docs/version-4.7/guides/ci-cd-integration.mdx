@@ -13,7 +13,7 @@ If you want to run commands such as `devspace enter`, make sure you specify a la
 ### `--wait` Flag
 DevSpace is configured to deploy and terminate when you run `devspace deploy`. In CI/CD pipelines, it is common to wait until the deployment is actually up and running before continuing the pipeline. You can achieve this by using `--wait`:
 ```bash
-devspace --wait --timeout=120
+devspace deploy --wait --timeout=120
 ```
 The above command will wait until the desired number of pods is created for all ReplicaSets and until none of the pods are failing anymore. If this is not achieved within the number of seconds specified in `--timeout`, DevSpace will exit with a fatal error.
 

@@ -1,0 +1,10 @@
+<details>
+<summary>What does "context" mean in terms of image building?</summary>
+
+<br/>
+
+The context is archived and sent to the Docker daemon before starting to process the Dockerfile. All references of local files within the Dockerfile are relative to the root directory of the context. 
+
+That means that a Dockerfile statement such as `COPY ./src /app` would copy the folder `src/` within the context path into the path `/app` within the container image. So, if the context would be `/my/project/database`, for example, the folder that would be copied into `/app` would have the absolute path `/my/project/database/src` on your local computer.
+
+</details>
