@@ -2,6 +2,7 @@ package kaniko
 
 import (
 	"io"
+	"io/ioutil"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder"
@@ -232,6 +233,33 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		err = b.helper.KubeClient.Copy(buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, dockerfilePath, []string{})
 		if err != nil {
 			return errors.Errorf("Error uploading dockerfile to container: %v", err)
+		}
+
+		// Copy restart helper script
+		if b.helper.ImageConf.InjectRestartHelper {
+			tempDir, err := ioutil.TempDir("", "")
+			if err != nil {
+				return err
+			}
+
+			defer os.RemoveAll(tempDir)
+
+			scriptPath := filepath.Join(tempDir, helper.RestartScriptName)
+			err = ioutil.WriteFile(scriptPath, []byte(helper.RestartHelperScript), 0755)
+			if err != nil {
+				return errors.Wrap(err, "write restart helper script")
+			}
+
+			err = b.helper.KubeClient.Copy(buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, scriptPath, []string{})
+			if err != nil {
+				return errors.Errorf("Error uploading dockerfile to container: %v", err)
+			}
+
+			// this is mostly for windows when its not possible to save the execution permission bits
+			_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"chmod", "+x", filepath.Join(kanikoContextPath, helper.RestartScriptName)}, nil)
+			if err != nil {
+				return errors.Errorf("Error executing command 'chmod +x %s' in init container: %v", filepath.Join(kanikoContextPath, helper.RestartScriptName), err)
+			}
 		}
 
 		// Tell init container we are done
