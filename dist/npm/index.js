@@ -190,6 +190,10 @@ let continueProcess = function(askRemoveGlobalFolder) {
       fs.unlinkSync(binaryPath + downloadExtension);
     } catch (e) {}
 
+    try {
+      fs.unlinkSync(path.join(globalDir, "." + binaryName + ".old"));
+    } catch (e) {}
+
     let removeBinaries = function(allBinaries) {
       if (allBinaries) {
         try {
