@@ -39,7 +39,7 @@ func TestCreateTempDockerfile(t *testing.T) {
 	}()
 
 	err = fsutil.WriteToFile([]byte(""), "Exists")
-	dockerfilepath, err := CreateTempDockerfile("Exists", []string{"echo"}, []string{""}, "")
+	dockerfilepath, err := CreateTempDockerfile("Exists", []string{"echo"}, []string{""}, nil, "")
 	assert.NilError(t, err, "Error when creating a valid temporary Dockerfile")
 	dockerfileContent, err := fsutil.ReadFile(dockerfilepath, -1)
 	assert.NilError(t, err, "Temporary Dockerfile not created.")

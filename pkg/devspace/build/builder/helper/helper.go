@@ -42,7 +42,7 @@ type BuildHelperInterface interface {
 // NewBuildHelper creates a new build helper for a certain engine
 func NewBuildHelper(config *latest.Config, kubeClient kubectl.Client, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) *BuildHelper {
 	var (
-		dockerfilePath, contextPath = GetDockerfileAndContext(config, imageConfigName, imageConf, isDev)
+		dockerfilePath, contextPath = GetDockerfileAndContext(imageConf)
 		imageName                   = imageConf.Image
 	)
 

@@ -155,8 +155,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Check if we should overwrite entrypoint
-	if len(entrypoint) > 0 || len(cmd) > 0 {
-		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint, cmd, options.Target)
+	if len(entrypoint) > 0 || len(cmd) > 0 || b.helper.ImageConf.InjectRestartHelper {
+		dockerfilePath, err = helper.RewriteDockerfile(dockerfilePath, entrypoint, cmd, options.Target, b.helper.ImageConf.InjectRestartHelper)
 		if err != nil {
 			return err
 		}
