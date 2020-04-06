@@ -466,6 +466,13 @@ type SyncConfig struct {
 
 // SyncOnUpload defines the struct for the command that should be executed when files / folders are uploaded
 type SyncOnUpload struct {
+	// If true restart container will try to restart the container after a change has been made. Make sure that
+	// images.*.injectRestartHelper is enabled for the container that should be restarted or the devspace-restart-helper
+	// script is present in the container root folder.
+	RestartContainer bool `yaml:"restartContainer,omitempty"`
+
+	// Defines what commands should be executed on the container side if a change is uploaded and applied in the target
+	// container
 	ExecRemote *SyncExecCommand `yaml:"execRemote,omitempty"`
 }
 
@@ -479,8 +486,18 @@ type SyncExecCommand struct {
 	Command string   `yaml:"command,omitempty"`
 	Args    []string `yaml:"args,omitempty"`
 
+	// OnFileChange is invoked after every file change. DevSpace will wait for the command to successfully finish
+	// and then will continue to upload files & create folders
 	OnFileChange *SyncCommand `yaml:"onFileChange,omitempty"`
-	OnDirCreate  *SyncCommand `yaml:"onDirCreate,omitempty"`
+
+	// OnDirCreate is invoked after every directory that is created. DevSpace will wait for the command to successfully finish
+	// and then will continue to upload files & create folders
+	OnDirCreate *SyncCommand `yaml:"onDirCreate,omitempty"`
+
+	// OnBatch executes the given command after a batch of changes has been processed. DevSpace will wait for the command to finish
+	// and then will continue execution. This is useful for commands
+	// that shouldn't be executed after every single change that may take a little bit longer like recompiling etc.
+	OnBatch *SyncCommand `yaml:"onBatch,omitempty"`
 }
 
 // SyncCommand holds a command definition

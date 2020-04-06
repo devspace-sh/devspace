@@ -279,6 +279,8 @@ func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) er
 	if len(files) == 0 && target.Name != "" {
 		// Case empty directory
 		hdr, _ := tar.FileInfoHeader(targetStat, filepath)
+		hdr.Uid = 0
+		hdr.Gid = 0
 		hdr.Name = target.Name
 		if err := a.writer.WriteHeader(hdr); err != nil {
 			return errors.Wrap(err, "tar write header")
@@ -319,6 +321,8 @@ func (a *Archiver) tarFile(target *FileInformation, targetStat os.FileInfo) erro
 		return errors.Wrap(err, "create tar file info header")
 	}
 	hdr.Name = target.Name
+	hdr.Uid = 0
+	hdr.Gid = 0
 	hdr.ModTime = time.Unix(target.Mtime, 0)
 
 	if err := a.writer.WriteHeader(hdr); err != nil {

@@ -21,17 +21,6 @@ type fileInformation struct {
 	Mtime time.Time
 }
 
-type untarOptions struct {
-	destPath string
-	prefix   string
-
-	FileChangeCmd  string
-	FileChangeArgs []string
-
-	DirCreateCmd  string
-	DirCreateArgs []string
-}
-
 func untarAll(reader io.Reader, options *UpstreamOptions) error {
 	gzr, err := gzip.NewReader(reader)
 	if err != nil {

@@ -343,6 +343,21 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 	}
 
 	u.sync.log.Infof("Upstream - Successfully processed %d change(s)", len(changes))
+
+	// Restart container if needed
+	return u.RestartContainer()
+}
+
+func (u *upstream) RestartContainer() error {
+	if u.sync.Options.RestartContainer {
+		u.sync.log.Info("Upstream - Restarting container")
+
+		_, err := u.client.RestartContainer(context.Background(), &remote.Empty{})
+		if err != nil {
+			return errors.Wrap(err, "restart container")
+		}
+	}
+
 	return nil
 }
 

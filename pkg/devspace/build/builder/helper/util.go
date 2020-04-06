@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
 	"io"
 	"io/ioutil"
 	"path/filepath"
@@ -55,8 +56,8 @@ func InjectBuildScriptInContext(buildCtx io.ReadCloser) (io.ReadCloser, error) {
 	}
 
 	buildCtx = archive.ReplaceFileTarWrapper(buildCtx, map[string]archive.TarModifierFunc{
-		RestartScriptPath: func(_ string, h *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
-			return hdrTmpl, []byte(RestartHelperScript), nil
+		restart.ScriptContextPath: func(_ string, h *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
+			return hdrTmpl, []byte(restart.HelperScript), nil
 		},
 	})
 	return buildCtx, nil
@@ -121,8 +122,8 @@ func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, tar
 			cmd = oldCmd
 		}
 
-		entrypoint = append([]string{RestartScriptPath}, entrypoint...)
-		additionalLines = append(additionalLines, fmt.Sprintf("COPY %s /", RestartScriptPath))
+		entrypoint = append([]string{restart.ScriptPath}, entrypoint...)
+		additionalLines = append(additionalLines, fmt.Sprintf("COPY %s /", restart.ScriptContextPath))
 	}
 
 	return CreateTempDockerfile(dockerfile, entrypoint, cmd, additionalLines, target)

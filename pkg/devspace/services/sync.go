@@ -302,6 +302,11 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		}
 	}
 
+	// check if we should restart the container on upload
+	if syncConfig.OnUpload != nil && syncConfig.OnUpload.RestartContainer {
+		options.RestartContainer = true
+	}
+
 	syncClient, err := sync.NewSync(localPath, options)
 	if err != nil {
 		return nil, errors.Wrap(err, "create sync")
@@ -316,7 +321,8 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		upstreamArgs = append(upstreamArgs, "--exclude", exclude)
 	}
 	if syncConfig.OnUpload != nil && syncConfig.OnUpload.ExecRemote != nil {
-		fileCmd, fileArgs, dirCmd, dirArgs := getSyncCommands(syncConfig.OnUpload.ExecRemote)
+		onUpload := syncConfig.OnUpload.ExecRemote
+		fileCmd, fileArgs, dirCmd, dirArgs := getSyncCommands(onUpload)
 		if fileCmd != "" {
 			upstreamArgs = append(upstreamArgs, "--filechangecmd", fileCmd)
 			for _, arg := range fileArgs {
@@ -327,6 +333,12 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 			upstreamArgs = append(upstreamArgs, "--dircreatecmd", dirCmd)
 			for _, arg := range dirArgs {
 				upstreamArgs = append(upstreamArgs, "--dircreateargs", arg)
+			}
+		}
+		if onUpload.OnBatch != nil && onUpload.OnBatch.Command != "" {
+			upstreamArgs = append(upstreamArgs, "--batchcmd", onUpload.OnBatch.Command)
+			for _, arg := range onUpload.OnBatch.Args {
+				upstreamArgs = append(upstreamArgs, "--batchargs", arg)
 			}
 		}
 	}
@@ -395,7 +407,7 @@ func (serviceClient *client) injectSync(pod *v1.Pod, container string) error {
 	}
 
 	// Check if sync is already in pod
-	stdout, _, err := serviceClient.client.ExecBuffered(pod, container, []string{"/tmp/sync", "--version"}, nil)
+	stdout, _, err := serviceClient.client.ExecBuffered(pod, container, []string{SyncHelperContainerPath, "--version"}, nil)
 	if err != nil || version != string(stdout) {
 		homedir, err := homedir.Dir()
 		if err != nil {
