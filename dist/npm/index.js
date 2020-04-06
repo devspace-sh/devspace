@@ -143,47 +143,92 @@ function rimraf(dir_path) {
   }
 }
 
-let version = packageJson.version;
-let platform = PLATFORM_MAPPING[process.platform];
-let arch = ARCH_MAPPING[process.arch];
-let binaryName = "devspace";
-let downloadExtension = ".dl";
-
-exec("npm bin -g || yarn global bin", function(err, stdout, stderr) {
-  let dir = null;
-  if (err || stderr || !stdout || stdout.length === 0) {
-    let env = process.env;
-    if (env && env.npm_config_prefix) {
-      dir = path.join(env.npm_config_prefix, "bin");
-    }
-  } else {
-    dir = stdout.trim();
+let continueProcess = function(askRemoveGlobalFolder) {
+  // installation will be completed on first call of the binary
+  if (action == "install") {
+    process.exit(0);
   }
 
-  if (dir == null) callback("Error finding binary installation directory");
+  let version = packageJson.version;
+  let platform = PLATFORM_MAPPING[process.platform];
+  let arch = ARCH_MAPPING[process.arch];
+  let downloadExtension = ".dl";
+  let binaryName = "devspace";
 
   if (platform == "windows") {
     binaryName += ".exe";
   }
-
-  let binaryPath = path.join(dir, binaryName);
-
-  if (process.argv.length > 3) {
-    binaryPath = process.argv[3];
+  
+  let checkGlobalDirCommand = "npm bin -g || yarn global bin"
+  
+  if (/((\/)|(\\))yarn((\/)|(\\))/i.test(__filename)) {
+    // prefer Yarn install dir if install is triggered by Yarn
+    checkGlobalDirCommand = "yarn global bin || npm bin -g"
   }
 
-  if (action == "uninstall") {
-    let removeGlobalFolder = function() {
-      try {
-        let homedir = require('os').homedir();
-        rimraf(homedir + path.sep + ".devspace");
-      } catch (e) {
-        console.error(e)
+  exec(checkGlobalDirCommand, function(err, stdout, stderr) {
+    let globalDir = null;
+  
+    if (err || !stdout || stdout.length === 0) {
+      if (process.env && process.env.npm_config_prefix) {
+        globalDir = process.env.npm_config_prefix;
       }
-    };
+    } else {
+      globalDir = stdout.trim();
+    }
+  
+    if (globalDir == null) {
+      console.error("Error finding binary installation directory");
+      process.exit(1)
+    }
+  
+    fs.mkdirSync(globalDir, { recursive: true });
 
-    let checkRemoveGlobalFolder = function() {
-      if (process.stdout.isTTY) {
+    let binaryPath = path.join(globalDir, binaryName);
+
+    try {
+      fs.unlinkSync(binaryPath + downloadExtension);
+    } catch (e) {}
+
+    try {
+      fs.unlinkSync(path.join(globalDir, "." + binaryName + ".old"));
+    } catch (e) {}
+
+    let removeBinaries = function(allBinaries) {
+      if (allBinaries) {
+        try {
+          fs.unlinkSync(binaryPath);
+        } catch (e) {}
+      }
+
+      if (platform == "windows") {
+        try {
+          fs.unlinkSync(binaryPath.replace(/\.exe$/i, ""));
+        } catch (e) {}
+
+        try {
+          fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".cmd"));
+        } catch (e) {}
+
+        try {
+          fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".ps1"));
+        } catch (e) {}
+      }
+    }
+    
+    if (action == "uninstall") {
+      removeBinaries(true);
+
+      if (askRemoveGlobalFolder && process.stdout.isTTY) {
+        let removeGlobalFolder = function() {
+          try {
+            let homedir = require('os').homedir();
+            rimraf(homedir + path.sep + ".devspace");
+          } catch (e) {
+            console.error(e)
+          }
+        };
+
         inquirer
           .prompt([
             {
@@ -199,166 +244,144 @@ exec("npm bin -g || yarn global bin", function(err, stdout, stderr) {
             }
           });
       } else {
-        console.warn("DevSpace will remvove the global ~/.devspace folder without asking because this uninstall call is being executed in a non-interactive environment.")
-        removeGlobalFolder();
+        console.warn("DevSpace will not remove the global ~/.devspace folder without asking. This uninstall call is being executed in a non-interactive environment.")
       }
-    };
-  
-    if (process.ppid > 1) {
-      findProcess('pid', process.ppid)
-        .then(function (list) {
-          if (list.length == 1 && list[0].ppid > 1) {
-            findProcess('pid', list[0].ppid)
-              .then(function (list) {
-                if (list.length == 1 && /npm-cli.js("|')\s+up(date)?\s+(.+\s+)?devspace((\s)|$)/.test(list[0].cmd)) {
-                  // Do not ask to remove global folder because user runs: npm upgrade
-                } else {
-                  checkRemoveGlobalFolder();
-                }
-              }, function () {
-                checkRemoveGlobalFolder();
-              })
-          } else {
-            checkRemoveGlobalFolder();
-          }
-        }, function () {
-          checkRemoveGlobalFolder();
-        })
     } else {
-      checkRemoveGlobalFolder();
-    }
-  }
-
-  if (platform != "windows" && action == "install") {
-    process.exit(0);
-  }
-
-  try {
-    fs.unlinkSync(binaryPath + downloadExtension);
-  } catch (e) {}
-  
-  try {
-    fs.unlinkSync(binaryPath);
-  } catch (e) {}
-
-  if (platform == "windows") {
-    try {
-      fs.unlinkSync(binaryPath.replace(/\.exe$/i, ""));
-    } catch (e) {}
-
-    try {
-      fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".cmd"));
-    } catch (e) {}
-
-    try {
-      fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".ps1"));
-    } catch (e) {}
-  }
-
-  if (action == "install" || action == "force-install") {
-    const showRootError = function() {
-      console.error("\n############################################");
-      console.error(
-        "Failed to download DevSpace CLI due to permission issues!\n"
-      );
-      console.error("There are two options to fix this:");
-      console.error("1. Do not run 'npm install' as root (recommended)");
-      console.error(
-        "2. Run this command: npm install --unsafe-perm=true -g devspace"
-      );
-      console.error("   You may need to run this command using sudo.");
-      console.error("############################################\n");
-      process.exit(1);
-    };
-
-    const downloadRelease = function(version) {
-      let downloadPath = downloadPathTemplate
-        .replace("{{version}}", version)
-        .replace("{{platform}}", platform)
-        .replace("{{arch}}", arch);
-
-      if (platform == "windows") {
-        downloadPath += ".exe";
-      }
-
-      console.log("Download DevSpace CLI release: " + downloadPath + "\n");
-
-      const spinner = new Spinner(
-        "%s Downloading DevSpace CLI... (this may take a minute)"
-      );
-      spinner.setSpinnerString("|/-\\");
-      spinner.start();
-
-      let writeStream = fs
-        .createWriteStream(binaryPath + downloadExtension)
-        .on("error", function(err) {
-          spinner.stop(true);
-          showRootError();
-        });
-
-      request({ uri: downloadPath, headers: requestHeaders, encoding: null })
-        .on("error", function() {
-          spinner.stop(true);
-          console.error("Error requesting URL: " + downloadPath);
+      if (action == "install" || action == "force-install") {
+        const showRootError = function() {
+          console.error("\n############################################");
+          console.error(
+            "Failed to download DevSpace CLI due to permission issues!\n"
+          );
+          console.error("There are two options to fix this:");
+          console.error("1. Do not run 'npm install' as root (recommended)");
+          console.error(
+            "2. Run this command: npm install --unsafe-perm=true -g devspace"
+          );
+          console.error("   You may need to run this command using sudo.");
+          console.error("############################################\n");
           process.exit(1);
-        })
-        .on("response", function(res) {
-          spinner.stop(true);
-          if (res.statusCode != 200) {
-            if (res.statusCode == 404) {
-              console.error("Release version " + version + " not found.\n");
+        };
 
-              getLatestVersion(function(latestVersion) {
-                if (latestVersion != version) {
-                  console.log(
-                    "Downloading latest stable release instead. Latest version is: " +
-                      latestVersion +
-                      "\n"
-                  );
+        const downloadRelease = function(version) {
+          let downloadPath = downloadPathTemplate
+            .replace("{{version}}", version)
+            .replace("{{platform}}", platform)
+            .replace("{{arch}}", arch);
 
-                  downloadRelease(latestVersion);
-                }
-              });
-              return;
-            } else {
-              console.error(
-                "Error requesting URL " +
-                  downloadPath +
-                  " (Status Code: " +
-                  res.statusCode +
-                  ")"
-              );
-              console.error(err);
-              process.exit(1);
-            }
-          } else {
-            try {
-              res.pipe(writeStream);
-            } catch (e) {
+          if (platform == "windows") {
+            downloadPath += ".exe";
+          }
+
+          console.log("Download DevSpace CLI release: " + downloadPath + "\n");
+
+          const spinner = new Spinner(
+            "%s Downloading DevSpace CLI... (this may take a minute)"
+          );
+          spinner.setSpinnerString("|/-\\");
+          spinner.start();
+
+          let writeStream = fs
+            .createWriteStream(binaryPath + downloadExtension)
+            .on("error", function(err) {
+              spinner.stop(true);
+              console.error("Unable to write stream: " + err)
               showRootError();
+            });
+
+          request({ uri: downloadPath, headers: requestHeaders, encoding: null })
+            .on("error", function() {
+              spinner.stop(true);
+              console.error("Error requesting URL: " + downloadPath);
+              process.exit(1);
+            })
+            .on("response", function(res) {
+              spinner.stop(true);
+              if (res.statusCode != 200) {
+                if (res.statusCode == 404) {
+                  console.error("Release version " + version + " not found.\n");
+
+                  getLatestVersion(function(latestVersion) {
+                    if (latestVersion != version) {
+                      console.log(
+                        "Downloading latest stable release instead. Latest version is: " +
+                          latestVersion +
+                          "\n"
+                      );
+
+                      downloadRelease(latestVersion);
+                    }
+                  });
+                  return;
+                } else {
+                  console.error(
+                    "Error requesting URL " +
+                      downloadPath +
+                      " (Status Code: " +
+                      res.statusCode +
+                      ")"
+                  );
+                  console.error(err);
+                  process.exit(1);
+                }
+              } else {
+                try {
+                  res.pipe(writeStream);
+                } catch (e) {
+                  console.error("Unable to write stream: " + e)
+                  showRootError();
+                }
+              }
+            })
+            .on("end", function() {
+              writeStream.end();
+              spinner.stop(true);
+
+              try {
+                fs.chmodSync(binaryPath + downloadExtension, 0755);
+              } catch (e) {
+                console.error("Unable to chmod: " + e)
+                showRootError();
+              }
+
+              try {
+                fs.renameSync(binaryPath + downloadExtension, binaryPath);
+              } catch (e) {
+                console.log(e);
+                console.error("\nRenaming release binary failed. Please copy file manually:\n from: " + binaryPath + downloadExtension + "\n to: " + binaryPath + "\n");
+                process.exit(1);
+              }
+
+              removeBinaries();
+            });
+        };
+
+        downloadRelease(version);
+      }
+    }
+  })
+}
+
+if (process.ppid > 1) {
+  findProcess('pid', process.ppid)
+    .then(function (list) {
+      if (list.length == 1 && list[0].ppid > 1) {
+        findProcess('pid', list[0].ppid)
+          .then(function (list) {
+            if (list.length == 1 && /((npm-cli.js("|')\s+up(date)?)|(yarn.js("|')\s+(global\s+)?upgrade))\s+.*((\/)|(\\)|(\s))devspace((\/)|(\\)|(\s)|$)/.test(list[0].cmd)) {
+              continueProcess(false);
+            } else {
+              continueProcess(true);
             }
-          }
-        })
-        .on("end", function() {
-          writeStream.end();
-          spinner.stop(true);
-
-          try {
-            fs.chmodSync(binaryPath + downloadExtension, 0755);
-          } catch (e) {
-            showRootError();
-          }
-
-          try {
-            fs.renameSync(binaryPath + downloadExtension, binaryPath);
-          } catch (e) {
-            console.log(e);
-            console.error("\nRenaming release binary failed. Please copy file manually:\n from: " + binaryPath + downloadExtension + "\n to: " + binaryPath + "\n");
-            process.exit(1);
-          }
-        });
-    };
-
-    downloadRelease(version);
-  }
-});
+          }, function () {
+            continueProcess(true);
+          })
+      } else {
+        continueProcess(true);
+      }
+    }, function () {
+      continueProcess(true);
+    })
+} else {
+  continueProcess(true);
+}
