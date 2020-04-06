@@ -2,7 +2,10 @@ package helper
 
 import (
 	"archive/tar"
+	"bufio"
+	"encoding/json"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
 	"io"
 	"io/ioutil"
 	"path/filepath"
@@ -22,7 +25,7 @@ const DefaultDockerfilePath = "./Dockerfile"
 const DefaultContextPath = "./"
 
 // GetDockerfileAndContext retrieves the dockerfile and context
-func GetDockerfileAndContext(config *latest.Config, imageConfigName string, imageConf *latest.ImageConfig, isDev bool) (string, string) {
+func GetDockerfileAndContext(imageConf *latest.ImageConfig) (string, string) {
 	var (
 		dockerfilePath = DefaultDockerfilePath
 		contextPath    = DefaultContextPath
@@ -37,6 +40,27 @@ func GetDockerfileAndContext(config *latest.Config, imageConfigName string, imag
 	}
 
 	return dockerfilePath, contextPath
+}
+
+// InjectBuildScriptInContext will add the restart helper script to the build context
+func InjectBuildScriptInContext(buildCtx io.ReadCloser) (io.ReadCloser, error) {
+	now := time.Now()
+	hdrTmpl := &tar.Header{
+		Mode:       0755,
+		Uid:        0,
+		Gid:        0,
+		ModTime:    now,
+		Typeflag:   tar.TypeReg,
+		AccessTime: now,
+		ChangeTime: now,
+	}
+
+	buildCtx = archive.ReplaceFileTarWrapper(buildCtx, map[string]archive.TarModifierFunc{
+		restart.ScriptContextPath: func(_ string, h *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
+			return hdrTmpl, []byte(restart.HelperScript), nil
+		},
+	})
+	return buildCtx, nil
 }
 
 // OverwriteDockerfileInBuildContext will overwrite the dockerfile with the dockerfileCtx
@@ -66,8 +90,47 @@ func OverwriteDockerfileInBuildContext(dockerfileCtx io.ReadCloser, buildCtx io.
 	return buildCtx, nil
 }
 
+// RewriteDockerfile rewrites the given dockerfile contents with the new entrypoint cmd and target. It does also inject the restart
+// helper if specified
+func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, target string, injectHelper bool) (string, error) {
+	if len(entrypoint) == 0 && len(cmd) == 0 && !injectHelper {
+		return "", nil
+	}
+
+	additionalLines := []string{}
+	if injectHelper {
+		data, err := ioutil.ReadFile(dockerfile)
+		if err != nil {
+			return "", err
+		}
+
+		oldEntrypoint, oldCmd, err := getLastestEntrypointAndCmd(string(data), target)
+		if err != nil {
+			return "", err
+		}
+
+		if len(entrypoint) == 0 {
+			if len(oldEntrypoint) == 0 {
+				return "", errors.Errorf("cannot inject restart helper into dockerfile because no ENTRYPOINT was found, please make sure your dockerfile has an ENTRYPOINT defined or define it in the devspace.yaml in 'images.*.entrypoint'")
+			}
+
+			entrypoint = oldEntrypoint
+			if len(cmd) == 0 {
+				cmd = oldCmd
+			}
+		} else if len(cmd) == 0 && len(oldCmd) > 0 {
+			cmd = oldCmd
+		}
+
+		entrypoint = append([]string{restart.ScriptPath}, entrypoint...)
+		additionalLines = append(additionalLines, fmt.Sprintf("COPY %s /", restart.ScriptContextPath))
+	}
+
+	return CreateTempDockerfile(dockerfile, entrypoint, cmd, additionalLines, target)
+}
+
 // CreateTempDockerfile creates a new temporary dockerfile that appends a new entrypoint and cmd
-func CreateTempDockerfile(dockerfile string, entrypoint []string, cmd []string, target string) (string, error) {
+func CreateTempDockerfile(dockerfile string, entrypoint []string, cmd []string, additionalLines []string, target string) (string, error) {
 	if entrypoint == nil && cmd == nil {
 		return "", errors.New("Entrypoint & cmd are empty")
 	}
@@ -84,7 +147,7 @@ func CreateTempDockerfile(dockerfile string, entrypoint []string, cmd []string, 
 	}
 
 	// add the new entrypoint
-	newData, err := addNewEntrypoint(string(data), entrypoint, cmd, target)
+	newData, err := addNewEntrypoint(string(data), entrypoint, cmd, additionalLines, target)
 	if err != nil {
 		return "", errors.Wrap(err, "add entrypoint")
 	}
@@ -99,8 +162,11 @@ func CreateTempDockerfile(dockerfile string, entrypoint []string, cmd []string, 
 
 var nextFromFinder = regexp.MustCompile("(?i)\n\\s*FROM")
 
-func addNewEntrypoint(content string, entrypoint []string, cmd []string, target string) (string, error) {
+func addNewEntrypoint(content string, entrypoint []string, cmd []string, additionalLines []string, target string) (string, error) {
 	entrypointStr := ""
+	if len(additionalLines) > 0 {
+		entrypointStr += "\n" + strings.Join(additionalLines, "\n")
+	}
 	if len(entrypoint) > 0 {
 		entrypointStr += "\n\nENTRYPOINT [\"" + strings.Join(entrypoint, "\",\"") + "\"]\n"
 	} else if entrypoint != nil {
@@ -116,24 +182,89 @@ func addNewEntrypoint(content string, entrypoint []string, cmd []string, target 
 		return content + entrypointStr, nil
 	}
 
-	// Find the target
-	targetFinder, err := regexp.Compile(fmt.Sprintf("(?i)(^|\n)\\s*FROM\\s+([a-zA-Z0-9\\:\\@\\.\\-]+)\\s+AS\\s+%s\\s*($|\n)", target))
+	before, after, err := splitDockerfileAtTarget(content, target)
 	if err != nil {
 		return "", err
 	}
 
+	return before + entrypointStr + after, nil
+}
+
+func splitDockerfileAtTarget(content string, target string) (string, string, error) {
+	// Find the target
+	targetFinder, err := regexp.Compile(fmt.Sprintf("(?i)(^|\n)\\s*FROM\\s+([a-zA-Z0-9\\:\\@\\.\\-]+)\\s+AS\\s+%s\\s*($|\n)", target))
+	if err != nil {
+		return "", "", err
+	}
+
 	matches := targetFinder.FindAllStringIndex(content, -1)
 	if len(matches) == 0 {
-		return "", errors.Errorf("Coulnd't find target '%s' in dockerfile", target)
+		return "", "", errors.Errorf("Coulnd't find target '%s' in dockerfile", target)
 	} else if len(matches) > 1 {
-		return "", errors.Errorf("Multiple matches for target '%s' in dockerfile", target)
+		return "", "", errors.Errorf("Multiple matches for target '%s' in dockerfile", target)
 	}
 
 	// Find the next FROM statement
 	nextFrom := nextFromFinder.FindStringIndex(content[matches[0][1]:])
 	if len(nextFrom) != 2 {
-		return content + entrypointStr, nil
+		return content, "", nil
 	}
 
-	return content[:matches[0][1]+nextFrom[0]] + entrypointStr + content[matches[0][1]+nextFrom[0]:], nil
+	return content[:matches[0][1]+nextFrom[0]], content[matches[0][1]+nextFrom[0]:], nil
+}
+
+var entrypointLinePattern = regexp.MustCompile(`(?i)^[\s]*ENTRYPOINT[\s]+(.+)$`)
+var cmdLinePattern = regexp.MustCompile(`(?i)^[\s]*CMD[\s]+(.+)$`)
+
+func getLastestEntrypointAndCmd(content string, target string) ([]string, []string, error) {
+	if target == "" {
+		return parseLastOccurence(content)
+	}
+
+	before, _, err := splitDockerfileAtTarget(content, target)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return parseLastOccurence(before)
+}
+
+func parseLastOccurence(content string) ([]string, []string, error) {
+	scanner := bufio.NewScanner(strings.NewReader(content))
+
+	var lastOccurenceEntrypoint []string
+	var lastOccurenceCmd []string
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// is ENTRYPOINT?
+		if matches := entrypointLinePattern.FindStringSubmatch(line); len(matches) == 2 {
+			// exec or shell form?
+			if matches[1][0] == '[' {
+				lastOccurenceEntrypoint = []string{}
+				err := json.Unmarshal([]byte(matches[1]), &lastOccurenceEntrypoint)
+				if err != nil {
+					return nil, nil, errors.Errorf("error parsing %s: %v", matches[1], err)
+				}
+			} else {
+				lastOccurenceEntrypoint = []string{"/bin/sh", "-c", matches[1]}
+			}
+
+			// reset CMD
+			lastOccurenceCmd = nil
+		} else if matches := cmdLinePattern.FindStringSubmatch(line); len(matches) == 2 {
+			// exec or shell form?
+			if matches[1][0] == '[' {
+				lastOccurenceCmd = []string{}
+				err := json.Unmarshal([]byte(matches[1]), &lastOccurenceCmd)
+				if err != nil {
+					return nil, nil, errors.Errorf("error parsing %s: %v", matches[1], err)
+				}
+			} else {
+				lastOccurenceCmd = []string{"/bin/sh", "-c", matches[1]}
+			}
+		}
+	}
+
+	return lastOccurenceEntrypoint, lastOccurenceCmd, scanner.Err()
 }

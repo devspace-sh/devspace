@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"github.com/docker/cli/cli/streams"
 	"io"
 	"os"
 	"path/filepath"
@@ -136,7 +137,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	var dockerfileCtx *os.File
 
 	// Dockerfile is out of context
-	if err == nil && strings.HasPrefix(relDockerfile, ".."+string(filepath.Separator)) {
+	if strings.HasPrefix(relDockerfile, ".."+string(filepath.Separator)) {
 		// Dockerfile is outside of build-context; read the Dockerfile and pass it as dockerfileCtx
 		dockerfileCtx, err = os.Open(dockerfilePath)
 		if err != nil {
@@ -171,8 +172,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Check if we should overwrite entrypoint
-	if len(entrypoint) > 0 || len(cmd) > 0 {
-		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint, cmd, options.Target)
+	if len(entrypoint) > 0 || len(cmd) > 0 || b.helper.ImageConf.InjectRestartHelper {
+		dockerfilePath, err = helper.RewriteDockerfile(dockerfilePath, entrypoint, cmd, options.Target, b.helper.ImageConf.InjectRestartHelper)
 		if err != nil {
 			return err
 		}
@@ -200,6 +201,14 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 
 		defer os.RemoveAll(filepath.Dir(dockerfilePath))
+
+		// inject the build script
+		if b.helper.ImageConf.InjectRestartHelper {
+			buildCtx, err = helper.InjectBuildScriptInContext(buildCtx)
+			if err != nil {
+				return errors.Wrap(err, "inject build script into context")
+			}
+		}
 	}
 
 	// replace Dockerfile if it was added from stdin or a file outside the build-context, and there is archive context
@@ -222,7 +231,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Setup an upload progress bar
-	outStream := command.NewOutStream(writer)
+	outStream := streams.NewOut(writer)
 	progressOutput := streamformatter.NewProgressOutput(outStream)
 	body := progress.NewProgressReader(buildCtx, progressOutput, 0, "", "Sending build context to Docker daemon")
 	buildOptions := types.ImageBuildOptions{

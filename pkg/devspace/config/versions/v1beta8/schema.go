@@ -1,11 +1,11 @@
-package latest
+package v1beta8
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 )
 
 // Version is the current api version
-const Version string = "v1beta9"
+const Version string = "v1beta8"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -43,63 +43,22 @@ type Config struct {
 
 // ImageConfig defines the image specification
 type ImageConfig struct {
-	// Image is the complete image name including registry and repository
-	// for example myregistry.com/mynamespace/myimage
-	Image string `yaml:"image"`
-
-	// Tags is an array that specifes all tags that should be build during
-	// the build process. If this is empty, devspace will generate a random tag
-	Tags []string `yaml:"tags,omitempty"`
-
-	// Specifies a path (relative or absolute) to the dockerfile
-	Dockerfile string `yaml:"dockerfile,omitempty"`
-
-	// The context path to build with
-	Context string `yaml:"context,omitempty"`
-
-	// Entrypoint specifies an entrypoint that will be appended to the dockerfile during
-	// image build in memory. Example: ["sleep", "99999"]
-	Entrypoint []string `yaml:"entrypoint,omitempty"`
-
-	// Cmd specifies the arguments for the entrypoint that will be appended
-	// during build in memory to the dockerfile
-	Cmd []string `yaml:"cmd,omitempty"`
-
-	// CreatePullSecret specifies if a pull secret should be created for this image in the
-	// target namespace. Defaults to true
-	CreatePullSecret *bool `yaml:"createPullSecret,omitempty"`
-
-	// If this is true, devspace will not rebuild the image even though files have changed within
-	// the context if a syncpath for this image is defined. This can reduce the number of builds
-	// when running 'devspace dev'
-	PreferSyncOverRebuild bool `yaml:"preferSyncOverRebuild,omitempty"`
-
-	// If true injects a small restart script into the container and wraps the entrypoint of that
-	// container, so that devspace is able to restart the complete container during sync.
-	// Please make sure you either have an Entrypoint defined in the devspace config or in the
-	// dockerfile for this image, otherwise devspace will fail.
-	InjectRestartHelper bool `yaml:"injectRestartHelper,omitempty"`
-
-	// Specific build options how to build the specified image
-	Build *BuildConfig `yaml:"build,omitempty"`
+	Image            string       `yaml:"image"`
+	Tags             []string     `yaml:"tags,omitempty"`
+	Dockerfile       string       `yaml:"dockerfile,omitempty"`
+	Context          string       `yaml:"context,omitempty"`
+	Entrypoint       []string     `yaml:"entrypoint,omitempty"`
+	Cmd              []string     `yaml:"cmd,omitempty"`
+	CreatePullSecret *bool        `yaml:"createPullSecret,omitempty"`
+	Build            *BuildConfig `yaml:"build,omitempty"`
 }
 
-// BuildConfig defines the build process for an image. Only one of the options below
-// can be specified.
+// BuildConfig defines the build process for an image
 type BuildConfig struct {
-	// If docker is specified, devspace will build the image using the local docker daemon
-	Docker *DockerConfig `yaml:"docker,omitempty"`
-
-	// If kaniko is specified, devspace will build the image in-cluster with kaniko
-	Kaniko *KanikoConfig `yaml:"kaniko,omitempty"`
-
-	// If custom is specified, devspace will build the image with the help of
-	// a custom script.
-	Custom *CustomConfig `yaml:"custom,omitempty"`
-
-	// This overrides other options and is able to disable the build for this image.
-	// Useful if you just want to select the image in a sync path or via devspace enter --image
-	Disabled *bool `yaml:"disabled,omitempty"`
+	Docker   *DockerConfig `yaml:"docker,omitempty"`
+	Kaniko   *KanikoConfig `yaml:"kaniko,omitempty"`
+	Custom   *CustomConfig `yaml:"custom,omitempty"`
+	Disabled *bool         `yaml:"disabled,omitempty"`
 }
 
 // DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
@@ -466,13 +425,6 @@ type SyncConfig struct {
 
 // SyncOnUpload defines the struct for the command that should be executed when files / folders are uploaded
 type SyncOnUpload struct {
-	// If true restart container will try to restart the container after a change has been made. Make sure that
-	// images.*.injectRestartHelper is enabled for the container that should be restarted or the devspace-restart-helper
-	// script is present in the container root folder.
-	RestartContainer bool `yaml:"restartContainer,omitempty"`
-
-	// Defines what commands should be executed on the container side if a change is uploaded and applied in the target
-	// container
 	ExecRemote *SyncExecCommand `yaml:"execRemote,omitempty"`
 }
 
@@ -486,18 +438,8 @@ type SyncExecCommand struct {
 	Command string   `yaml:"command,omitempty"`
 	Args    []string `yaml:"args,omitempty"`
 
-	// OnFileChange is invoked after every file change. DevSpace will wait for the command to successfully finish
-	// and then will continue to upload files & create folders
 	OnFileChange *SyncCommand `yaml:"onFileChange,omitempty"`
-
-	// OnDirCreate is invoked after every directory that is created. DevSpace will wait for the command to successfully finish
-	// and then will continue to upload files & create folders
-	OnDirCreate *SyncCommand `yaml:"onDirCreate,omitempty"`
-
-	// OnBatch executes the given command after a batch of changes has been processed. DevSpace will wait for the command to finish
-	// and then will continue execution. This is useful for commands
-	// that shouldn't be executed after every single change that may take a little bit longer like recompiling etc.
-	OnBatch *SyncCommand `yaml:"onBatch,omitempty"`
+	OnDirCreate  *SyncCommand `yaml:"onDirCreate,omitempty"`
 }
 
 // SyncCommand holds a command definition

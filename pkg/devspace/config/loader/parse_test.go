@@ -534,6 +534,7 @@ profiles:
 				Images: map[string]*latest.ImageConfig{
 					"test": &latest.ImageConfig{
 						Image: "test",
+						PreferSyncOverRebuild: true,
 					},
 				},
 			},

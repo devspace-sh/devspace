@@ -2,10 +2,13 @@ package kaniko
 
 import (
 	"io"
+	"io/ioutil"
+	"k8s.io/client-go/util/exec"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
@@ -155,8 +158,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Check if we should overwrite entrypoint
-	if len(entrypoint) > 0 || len(cmd) > 0 {
-		dockerfilePath, err = helper.CreateTempDockerfile(dockerfilePath, entrypoint, cmd, options.Target)
+	if len(entrypoint) > 0 || len(cmd) > 0 || b.helper.ImageConf.InjectRestartHelper {
+		dockerfilePath, err = helper.RewriteDockerfile(dockerfilePath, entrypoint, cmd, options.Target, b.helper.ImageConf.InjectRestartHelper)
 		if err != nil {
 			return err
 		}
@@ -232,6 +235,50 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		err = b.helper.KubeClient.Copy(buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, dockerfilePath, []string{})
 		if err != nil {
 			return errors.Errorf("Error uploading dockerfile to container: %v", err)
+		}
+
+		// Copy restart helper script
+		if b.helper.ImageConf.InjectRestartHelper {
+			tempDir, err := ioutil.TempDir("", "")
+			if err != nil {
+				return err
+			}
+
+			defer os.RemoveAll(tempDir)
+
+			scriptPath := filepath.Join(tempDir, restart.ScriptName)
+			remoteFolder := filepath.Join(kanikoContextPath, ".devspace")
+			err = ioutil.WriteFile(scriptPath, []byte(restart.HelperScript), 0777)
+			if err != nil {
+				return errors.Wrap(err, "write restart helper script")
+			}
+
+			// create the .devspace directory in the container
+			_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"mkdir", remoteFolder}, nil)
+			if err != nil {
+				return errors.Errorf("Error executing command 'mkdir %s' in init container: %v", remoteFolder, err)
+			}
+
+			// copy the helper script into the container
+			err = b.helper.KubeClient.Copy(buildPod, buildPod.Spec.InitContainers[0].Name, remoteFolder, scriptPath, []string{})
+			if err != nil {
+				return errors.Errorf("Error uploading dockerfile to container: %v", err)
+			}
+
+			// this is mostly for windows when its not possible to save the execution permission bits
+			_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"chmod", "+x", filepath.Join(remoteFolder, restart.ScriptName)}, nil)
+			if err != nil {
+				return errors.Errorf("Error executing command 'chmod +x %s' in init container: %v", filepath.Join(kanikoContextPath, restart.ScriptName), err)
+			}
+
+			// remove the .dockerignore since .devspace is usually ignored and we want to sneak our helper script in
+			// this shouldn't be any issue since the context was already pruned in the copy step beforehand
+			_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"rm", filepath.Join(kanikoContextPath, ".dockerignore")}, nil)
+			if err != nil {
+				if _, ok := err.(exec.CodeExitError); !ok {
+					return errors.Errorf("Error executing command 'rm .dockerignore' in init container: %v", err)
+				}
+			}
 		}
 
 		// Tell init container we are done

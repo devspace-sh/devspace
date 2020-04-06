@@ -42,7 +42,7 @@ type BuildHelperInterface interface {
 // NewBuildHelper creates a new build helper for a certain engine
 func NewBuildHelper(config *latest.Config, kubeClient kubectl.Client, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) *BuildHelper {
 	var (
-		dockerfilePath, contextPath = GetDockerfileAndContext(config, imageConfigName, imageConf, isDev)
+		dockerfilePath, contextPath = GetDockerfileAndContext(imageConf)
 		imageName                   = imageConf.Image
 	)
 
@@ -157,7 +157,7 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, 
 	mustRebuild := imageCache.Tag == "" || imageCache.DockerfileHash != dockerfileHash || imageCache.ImageConfigHash != imageConfigHash || imageCache.EntrypointHash != entrypointHash
 
 	// Check if we really should skip context path changes, this is only the case if we find a sync config for the given image name
-	if ignoreContextPathChanges {
+	if b.ImageConf.PreferSyncOverRebuild && ignoreContextPathChanges {
 		ignoreContextPathChanges = false
 		if b.Config.Dev != nil && imageCache.ImageName != "" {
 			for _, syncConfig := range b.Config.Dev.Sync {

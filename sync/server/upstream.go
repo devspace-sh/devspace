@@ -1,23 +1,28 @@
 package server
 
 import (
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-
+	"context"
 	"github.com/devspace-cloud/devspace/sync/remote"
 	"github.com/devspace-cloud/devspace/sync/util"
 	"github.com/pkg/errors"
 	gitignore "github.com/sabhiram/go-gitignore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"io"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
 // UpstreamOptions holds the upstream server options
 type UpstreamOptions struct {
 	UploadPath  string
 	ExludePaths []string
+
+	BatchCmd  string
+	BatchArgs []string
 
 	FileChangeCmd  string
 	FileChangeArgs []string
@@ -64,6 +69,16 @@ type Upstream struct {
 	ignoreMatcher gitignore.IgnoreParser
 }
 
+// RestartContainer implements the server
+func (u *Upstream) RestartContainer(context.Context, *remote.Empty) (*remote.Empty, error) {
+	err := util.NewContainerRestarter().RestartContainer()
+	if err != nil {
+		return nil, err
+	}
+
+	return &remote.Empty{}, nil
+}
+
 // Remove implements the server
 func (u *Upstream) Remove(stream remote.Upstream_RemoveServer) error {
 	// Receive file
@@ -89,6 +104,12 @@ func (u *Upstream) Remove(stream remote.Upstream_RemoveServer) error {
 		}
 
 		if err == io.EOF {
+			// execute a batch command if needed
+			err = u.executeBatchCommand()
+			if err != nil {
+				return err
+			}
+
 			return stream.SendAndClose(&remote.Empty{})
 		}
 		if err != nil {
@@ -151,6 +172,12 @@ func (u *Upstream) Upload(stream remote.Upstream_UploadServer) error {
 		return errors.Wrap(err, "write tar")
 	}
 
+	// execute a batch command if needed
+	err = u.executeBatchCommand()
+	if err != nil {
+		return err
+	}
+
 	return stream.SendAndClose(&remote.Empty{})
 }
 
@@ -177,4 +204,15 @@ func (u *Upstream) writeTar(writer io.WriteCloser, stream remote.Upstream_Upload
 			return err
 		}
 	}
+}
+
+func (u *Upstream) executeBatchCommand() error {
+	if u.options.BatchCmd != "" {
+		out, err := exec.Command(u.options.BatchCmd, u.options.BatchArgs...).CombinedOutput()
+		if err != nil {
+			return errors.Errorf("Error executing command '%s %s': %s => %v", u.options.BatchCmd, strings.Join(u.options.BatchArgs, " "), string(out), err)
+		}
+	}
+
+	return nil
 }

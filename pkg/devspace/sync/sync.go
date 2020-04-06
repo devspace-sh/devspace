@@ -31,6 +31,8 @@ type Options struct {
 	DownloadExcludePaths []string
 	UploadExcludePaths   []string
 
+	RestartContainer bool
+
 	FileChangeCmd  string
 	FileChangeArgs []string
 
@@ -278,10 +280,10 @@ func (s *Sync) initialSync() error {
 		DownstreamDisabled: s.Options.DownstreamDisabled,
 		FileIndex:          s.fileIndex,
 
-		ApplyRemote: s.sendChangesToUpstream,
-		ApplyLocal:  s.downstream.applyChanges,
-		AddSymlink:  s.upstream.AddSymlink,
-		Log:         s.log,
+		ApplyRemote:      s.sendChangesToUpstream,
+		ApplyLocal:       s.downstream.applyChanges,
+		AddSymlink:       s.upstream.AddSymlink,
+		Log:              s.log,
 
 		UpstreamDone: func() {
 			if s.Options.UpstreamInitialSyncDone != nil {

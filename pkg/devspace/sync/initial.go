@@ -30,9 +30,9 @@ type initialSyncOptions struct {
 	DownstreamDisabled bool
 	FileIndex          *fileIndex
 
-	ApplyRemote func(changes []*FileInformation, remove bool)
-	ApplyLocal  func(changes []*remote.Change, force bool) error
-	AddSymlink  func(relativePath, absPath string) (os.FileInfo, error)
+	ApplyRemote      func(changes []*FileInformation, remove bool)
+	ApplyLocal       func(changes []*remote.Change, force bool) error
+	AddSymlink       func(relativePath, absPath string) (os.FileInfo, error)
 
 	UpstreamDone   func()
 	DownstreamDone func()
