@@ -405,8 +405,11 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 			}
 
 			syncConfig := append(config.Dev.Sync, &latest.SyncConfig{
-				ImageName:    defaultImageName,
-				ExcludePaths: excludePaths,
+				ImageName:          defaultImageName,
+				UploadExcludePaths: excludePaths,
+				OnUpload: &latest.SyncOnUpload{
+					RestartContainer: true,
+				},
 			})
 
 			config.Dev.Sync = syncConfig
