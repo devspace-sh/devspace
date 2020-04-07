@@ -17,8 +17,8 @@ module.exports = {
       items: [
         'getting-started/installation',
         'getting-started/initialize-project',
-        'getting-started/deployment',
         'getting-started/development',
+        'getting-started/deployment',
         'getting-started/next-steps',
       ],
     },
@@ -35,6 +35,8 @@ module.exports = {
             'configuration/images/image-tagging',
             'configuration/images/dockerfile-context',
             'configuration/images/entrypoint-cmd',
+            'configuration/images/inject-restart-helper',
+            'configuration/images/prefer-sync-over-rebuild',
             'configuration/images/pull-secrets',
             {
               type: 'category',
