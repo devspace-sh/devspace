@@ -117,10 +117,9 @@ func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, tar
 		if len(entrypoint) == 0 {
 			if len(oldEntrypoint) == 0 {
 				if len(oldCmd) == 0 {
-					return "", errors.Errorf("Cannot inject restart helper into Dockerfile because neither ENTRYPOINT nor CMD was found.\n\nHow to fix this:\n- Option A: Define an ENTRYPOINT (or CMD) in your Dockerfile\n- Option B: Set `images.*.entrypoint` option in your devspace.yaml")
-				} else {
-					log.Warn("Using CMD statement for injecting restart helper because ENTRYPOINT is missing in Dockerfile and `images.*.entrypoint` is also not configured")
+					return "", errors.Errorf("cannot inject restart helper into Dockerfile because neither ENTRYPOINT nor CMD was found.\n\nHow to fix this:\n- Option A: Define an ENTRYPOINT (or CMD) in your Dockerfile\n- Option B: Set `images.*.entrypoint` option in your devspace.yaml")
 				}
+				log.Warn("Using CMD statement for injecting restart helper because ENTRYPOINT is missing in Dockerfile and `images.*.entrypoint` is also not configured")
 			}
 
 			entrypoint = oldEntrypoint
