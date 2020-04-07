@@ -88,6 +88,7 @@ jobs:
         env:
           NPM_CONFIG_GLOBALCONFIG: "dist/npm/config/npmrc"
           NPM_REGISTRY_TOKEN: ${{ secrets.NPM_DEVSPACE_REGISTRY_TOKEN }}
+          CI: "false"
         run: ./hack/build-ui.bash
       - name: Publish
         uses: FabianKramm/release-asset-action@v1
