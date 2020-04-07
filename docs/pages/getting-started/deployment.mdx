@@ -1,13 +1,7 @@
 ---
 title: Deployment with DevSpace
-sidebar_label: 3. Build & Deploy
+sidebar_label: 4. Build & Deploy
 ---
-
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
-import Step from '@site/src/components/Step/Step';
-import FragmentTipUseNamespace from '../fragments/tip-use-namespace.mdx';
-import FragmentNoteCreateSpace from '../fragments/note-create-space.mdx';
 
 
 <figure class="frame">
@@ -17,108 +11,6 @@ import FragmentNoteCreateSpace from '../fragments/note-create-space.mdx';
   <figcaption>DevSpace CLI - Deployment</figcaption>
 </figure>
 
-## Prepare Kube-Context
-DevSpace uses your current kube-context to deploy your project.
-
-<Tabs
-  defaultValue="demo"
-  values={[
-    { label: 'Demo Cluster', value: 'demo', },
-    { label: 'Local Cluster', value: 'local', },
-    { label: 'Remote Cluster', value: 'remote', },
-  ]
-}>
-<TabItem value="demo">
-
-:::info Free Demo Namespace
-If you don't have a Kubernetes cluster or simply want to test DevSpace without using your own cluster, choose the free demo namespaces sponsored by DevSpace Cloud. [Learn more about Demo Spaces.](https://devspace.cloud/products/devspace-cloud#pricing)
-:::
-
-Run the following command to create a free Kubernetes namespace:
-```bash
-devspace create space my-app    # requires login via GitHub or email
-```
-
-<FragmentNoteCreateSpace/>
-
-</TabItem>
-<TabItem value="local">
-
-:::note Local Clusters
-Local clusters run on your local dev machine and include: minikube, kind, k3s, mikrok8s etc.
-:::
-
-If you want to deploy to a local Kubernetes cluster, make sure your **current kube-context** points to this cluster and tell DevSpace which namespace to use:
-
-```bash
-devspace use namespace my-namespace   # will be automatically created during deployment
-```
-
-<FragmentTipUseNamespace/>
-
-</TabItem>
-<TabItem value="remote">
-
-:::note Remote Clusters
-Remote clusters run in a cloud or private data center and include: GKE, EKS, AKS, bare metal etc.
-:::
-
-When using a remote cluster, you can either use it just for yourself or you can share the cluster with your colleagues.
-
-<Tabs
-  defaultValue="alone"
-  values={[
-    { label: 'Use cluster alone', value: 'alone', },
-    { label: 'Share cluster with others', value: 'shared', },
-  ]
-}>
-<TabItem value="alone">
-
-```bash
-devspace use namespace my-namespace   # will be automatically created during deployment
-```
-
-<FragmentTipUseNamespace/>
-
-</TabItem>
-<TabItem value="shared">
-
-<br/>
-<Step>1</Step>
-
-Connect cluster to DevSpace Cloud
-```bash
-devspace connect cluster
-```
-Learn more about connecting cluster in the [documentation of DevSpace Cloud](https://devspace.cloud/cloud/docs/admin/getting-started/connect-clusters).
-
-:::info DevSpace Cloud On-Premise
-Instead of using the SaaS edition of DevSpace Cloud, you can also [install the on-premise edition in your own cluster](https://devspace.cloud/cloud/docs/admin/getting-started/setup#choose-saas-vs-on-premise).
-:::
-
-<br/>
-<Step>2</Step>
-
-Create isolated namespace (= Space)
-
-```bash
-devspace create space my-app    # requires login via GitHub or email
-```
-
-<FragmentNoteCreateSpace/>
-
-<br/>
-<Step>3</Step>
-
-Add cluster users and allow them to create Spaces
-
-Learn more about how to do this in the [documentation of DevSpace Cloud](https://devspace.cloud/cloud/docs/admin/getting-started/cluster-users).
-
-</TabItem>
-</Tabs>
-
-</TabItem>
-</Tabs>
 
 ## Deploy Project
 Run the local deployment pipeline using this command:
@@ -145,3 +37,31 @@ If you only want to build, tag and push all images but not deploy anything, run:
 devspace build
 ```
 :::
+
+
+<br/>
+
+## Deploy to Production
+As shown earlier, DevSpace is by default configured to override your `ENTRYPOINT` to restart your application after files are synchronized into the container. However, in production, we don't want DevSpace to change anything about our Docker image. That's why you see the following section in your devspace.yaml:
+
+```yaml
+profiles:
+- name: production                                  # Name of this profile: production
+  patches:                                          # Patches to change the config for this profile
+  - op: remove                                      # A patch to remove the injectResartHelper option
+    path: images.app.injectRestartHelper
+  - op: remove                                      # Second patch ONLY for multi-stage builds
+    path: images.app.build.docker.options.target    # Remote the build target to build entire Dockerfile
+```
+
+Profiles allow you to modify the config for certain use cases or deployment environment (e.g. your production cluster). You can print the config after applying all patches of this profile using this command:
+```bash
+devspace print -p production
+```
+
+The flag `-p / --profile` is a global flag, so we can also use it to apply this profile during the deployment process:
+```bash
+devspace deploy -p production
+```
+
+Learn more about [integrating DevSpace into your CI/CD pipelines](../guides/ci-cd-integration.mdx).

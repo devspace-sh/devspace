@@ -17,8 +17,8 @@ module.exports = {
       items: [
         'getting-started/installation',
         'getting-started/initialize-project',
-        'getting-started/deployment',
         'getting-started/development',
+        'getting-started/deployment',
         'getting-started/next-steps',
       ],
     },

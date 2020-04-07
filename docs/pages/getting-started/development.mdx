@@ -1,6 +1,6 @@
 ---
 title: Development with DevSpace
-sidebar_label: 4. Develop & Debug
+sidebar_label: 4. Build & Develop
 ---
 
 import FragmentWarningMultipleDev from '../fragments/warning-multiple-dev.mdx';
@@ -22,14 +22,34 @@ devspace dev
   <figcaption>DevSpace CLI - Development Mode</figcaption>
 </figure>
 
-<FragmentWarningMultipleDev/>
+
+When running `devspace dev`, the `dev` section in `devspace.yaml` becomes important:
+```yaml
+dev:
+  ports:                              # Port Forwarding Configuration
+  - imageName: app                    # Select pod & container by image name (reference to images section)
+    forward:                          # List of ports to forward
+    - port: 8080
+  open:                               # Open Browser (after deployment)
+  - url: http://localhost:8080
+  sync:                               # File Sync Configuration
+  - imageName: app                    # Select pod & container by image name (reference to images section)
+    uploadExcludePaths:               # Never upload these files from local filesystem to the container
+    - Dockerfile
+    - .git
+    - devspace.yaml
+    onUpload:                         # Commands to execute after uploading files
+      restartContainer: true          # Restart the container (uses the restart helper)
+```
 
 Running `devspace dev` will do the following:
 
-1. **Build and deploy** your application similar to using `devspace deploy`
-2. **Forward all ports** specified in the [`dev.ports` section in the `devspace.yaml`](../configuration/development/port-forwarding.mdx)
-3. **Stream logs** of all containers specified in [`dev.logs` section of the `devspace.yaml`](../configuration/development/log-streaming.mdx)
-4. **Sync all file changes** according to the [sync config in `dev.sync`](../configuration/development/file-synchronization.mdx), so you can reload your application without having to redeploy or restart your containers (using hot reloading directly within your containers)
+1. **Build and deploy** your application
+2. **Stream the logs** of all containers deployed during the deployment process
+3. **Forward all ports** specified in the [`dev.ports` section in the `devspace.yaml`](../configuration/development/port-forwarding.mdx)
+4. **Sync all file changes** according to the [sync config in `dev.sync`](../configuration/development/file-synchronization.mdx), so you can restart your application inside the running container without having to rebuild images or redeploy anything
+
+<br/>
 
 <figure>
   <img src="/cli/img/deployment-process-devspace.svg" alt="Deployment Workflow" />
@@ -37,7 +57,22 @@ Running `devspace dev` will do the following:
 </figure>
 
 
-## Open UI (in the browser)
+<br/>
+
+## Workflows
+
+### 1. Edit Files & Restart
+While `devspace dev` is running, your source code files will be synchronized between your local project folder and your containers running inside Kubernetes. This allows you to code with your favorite IDE or text editor without having to rebuild your images or redeploy your containers.
+
+**Try it and just edit a file!**
+
+You will see that the logs show how DevSpace restarts your application inside the container:
+```logs
+[app] ############### Restart container ###############
+```
+
+
+### 2. Open UI (in the browser)
 When running `devspace dev`, DevSpace starts a client-only UI for Kubernetes. You can see that in the output of `devspace dev` which should contain a log line similar to this one:
 ```bash
 #########################################################
@@ -66,34 +101,18 @@ The UI of DevSpace is open-source just like the rest of the CLI and it runs enti
 :::
 
 
-## Use Port Forwarding
-After starting your application, you can access it via `localhost:[PORT]` because the command `devspace dev` will start port forwarding for all ports specified in the `dev.ports` section of your project's `devspace.yaml`.
+### 3. Use Port Forwarding
+While `devspace dev` is running, you can access your application via `localhost:[PORT]` because DevSpace starts port forwarding for all ports specified in the `dev.ports` section of your project's `devspace.yaml`.
+
+Port forwarding also allows you to attach to remote debuggers if you package them into your development Docker image. This allows you to set breakpoints in your IDE and the code execution will break inside the remote container while you can debug in your IDE.
 
 :::info Port Detection
 When running `devspace init`, DevSpace detects all ports within your Dockerfile (i.e. `EXPOSE [PORT]` lines) and automatically configures forwarding for them when creating the `devspace.yaml`.
 :::
 
-:::note Add Ports
-If you want additional ports to be fowarded, you can add them manually or simply run
-```bash
-devspace add port [port]
-```
-:::
-
 Learn more about how to [configure port forwarding](../configuration/development/port-forwarding.mdx).
 
-## Use File Synchronization
-While `devspace dev` is running, your source code files will be synchronized between your local project folder and your containers running inside Kubernetes. This allows you to code with your favorite IDE or text editor and use hot reloading tools (e.g. `nodemon`) to update the application without having to rebuild your images or redeploy your containers.
 
-:::info
-If you are using one of the quickstart projects, you can see that the ENTRYPOINT in your Dockerfile is already starting the application using hot reloading (see **Option 1** below).
-:::
+## Notes
 
-:::note Configure Hot Reloading
-This step requires your application to start with a hot reloading tool, e.g. nodemon. To do this, you have two options:
-
-- **Option 1: Edit the ENTRYPOINT in your Dockerfile** (easy and simple to share with others but often requires to setup a [separate profile for staging or production-like deployments](../configuration/profiles/basics.mdx))
-- **Option 2:** [**Start interactive mode** using `devspace dev -i`](../guides/interactive-mode.mdx) and run the start command manually after the terminal opens, e.g. `npm run develop` (quick and non-intrusive but hard to share with your teammates)
-:::
-
-After you started your application using hot reloading, you can edit a file, save the file and see how DevSpace uploads it to your containers which triggers your application to reload (see [demo in the video above](#start-development-mode)).
+<FragmentWarningMultipleDev/>
