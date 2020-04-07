@@ -183,7 +183,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 		targetNone := "[none] (build complete Dockerfile)"
 		targets = append(targets, targetNone)
 		target, err := m.log.Question(&survey.QuestionOptions{
-			Question: "Which target within your Dockerfile do you want to use for development?",
+			Question: "Which build stage (target) within your Dockerfile do you want to use for development?\n  Choose `build` for quickstart projects.",
 			Options:  targets,
 		})
 		if err != nil {
