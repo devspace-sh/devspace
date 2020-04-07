@@ -11,6 +11,7 @@ import FragmentConfigVars from '../fragments/config-vars.mdx';
 import FragmentConfigProfiles from '../fragments/config-profiles.mdx';
 import FragmentConfigCommands from '../fragments/config-commands.mdx';
 import FragmentConfigHooks from '../fragments/config-hooks.mdx';
+import WarningBuildToolPriority from '../fragments/warning-build-tool-priority.mdx';
 
 ## `version`
 ```yaml
@@ -38,9 +39,7 @@ Setting the key `docker`, `kaniko`, `custom` or `disabled` will define the build
 - By default, `docker` will use `kaniko` as fallback when DevSpace is unable to reach the Docker host.
 :::
 
-:::warning
-You **cannot** use `docker`, `kaniko` and `custom` in combination.
-:::
+<WarningBuildToolPriority/>
 
 ### `images[*].build.docker`
 ```yaml

@@ -6,6 +6,7 @@ sidebar_label: Basics
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import FragmentFaqImageContext from '../../fragments/faq-image-context.mdx';
+import WarningBuildToolPriority from '../../fragments/warning-build-tool-priority.mdx';
 
 Images are configured within the `images` section of the `devspace.yaml`.
 
@@ -109,6 +110,9 @@ images:
 :::note Parallel Image Building
 To speed up the build process, the images you specify under `images` will all be built in parallel (unless you use the `--build-sequential` flag).
 :::
+
+<WarningBuildToolPriority/>
+
 
 ## Run Image Building
 When you run one of the following commands, DevSpace will run the image building process:
