@@ -36,8 +36,8 @@ while true; do
       # if the sync is currently active we try to restart instead of exiting
       if [ -f /tmp/sync ]; then
         rm -f /devspace-pid 	
-        printf "\nContainer exited with $exit_code. Will restart in 3 seconds...\n"
-        sleep 3
+        printf "\nContainer exited with $exit_code. Will restart in 7 seconds...\n"
+        sleep 7
       else
         exit $exit_code
       fi
