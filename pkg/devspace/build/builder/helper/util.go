@@ -24,7 +24,7 @@ import (
 const DefaultDockerfilePath = "./Dockerfile"
 
 // DockerfileTargetRegexTemplate is a template for a regex that finds build targets in a Dockerfile
-const DockerfileTargetRegexTemplate = "(?i)(^|\n)\\s*FROM\\s+([a-zA-Z0-9\\:\\@\\.\\-]+)\\s+AS\\s+(%s)\\s*($|\n)"
+const DockerfileTargetRegexTemplate = "(?i)(^|\n)\\s*FROM\\s+([a-zA-Z0-9/\\:\\@\\.\\-]+)\\s+AS\\s+(%s)\\s*($|\n)"
 
 // DefaultContextPath is the default context path to use
 const DefaultContextPath = "./"
