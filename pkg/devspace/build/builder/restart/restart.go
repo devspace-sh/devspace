@@ -43,8 +43,8 @@ while true; do
 
     if [ "$i" -lt 10 ]; then
       rm -f /devspace-pid
-      echo "\nRestart failed. Will retry in 3 seconds..."
-      sleep 3
+      echo "\nRestart failed. Will retry in 5 seconds..."
+      sleep 5
     fi
 
     set +e
