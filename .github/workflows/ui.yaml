@@ -1,0 +1,33 @@
+name: Test UI
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "ui/**"
+      - "hack/build-ui.bash"
+      - ".github/workflows/ui.yaml"
+
+jobs:
+  test-ui:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+      - name: Cache node modules
+        uses: actions/cache@v1
+        with:
+          path: ui/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/ui/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Build UI
+        env:
+          NPM_CONFIG_GLOBALCONFIG: "dist/npm/config/npmrc"
+          NPM_REGISTRY_TOKEN: ${{ secrets.NPM_DEVSPACE_REGISTRY_TOKEN }}
+          CI: "false"
+        run: ./hack/build-ui.bash
