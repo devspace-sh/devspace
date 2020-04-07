@@ -37,10 +37,17 @@ while true; do
     set +e
     wait $pid
     exit_code=$?
-    set -e
     if [ -f /devspace-pid ]; then
-        exit $exit_code
+		# if the sync is currently active we try to restart instead of exiting
+		if [ -f /tmp/sync ]; then
+			rm -f /devspace-pid 	
+			printf "\nContainer exited with $exit_code. Will restart in 3 seconds...\n"
+			sleep 3
+		else
+			exit $exit_code
+		fi
     fi
-    echo "Restart container"
+    set -e
+    printf "\nRestart container\n"
 done
 `
