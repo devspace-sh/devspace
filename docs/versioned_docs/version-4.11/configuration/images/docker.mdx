@@ -1,0 +1,171 @@
+---
+title: Build Images with Docker
+sidebar_label: docker
+---
+
+import FragmentBuildOptionsTarget from '../../fragments/build-option-target.mdx';
+import FragmentBuildOptionsNetwork from '../../fragments/build-option-network.mdx';
+import FragmentBuildOptionsBuildArgs from '../../fragments/build-option-buildArgs.mdx';
+
+## `docker`
+If nothing is specified, DevSpace always tries to build the image using `docker` as build tool.
+
+
+### `useBuildKit`
+The `useBuildKit` option expects a boolean which allows to enable buildkit builds (i.e. `DOCKER_BUILDKIT=1`).
+
+#### Default Value For `useBuildKit`
+```yaml
+useBuildKit: false
+```
+
+#### Example: Docker useBuildKit
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      docker:
+        useBuildKit: true
+```
+
+
+### `args`
+The `args` option expects an array of strings to be passed as arguments and flags to Docker.
+
+:::warning
+When specifying `args`, DevSpace will invoke your installed Docker CLI via a command-line call instead of using the built-in Docker client. This has the negative effects that:
+- The kaniko fallback will not be used anymore.
+- You need to make sure that everyone who is using this configuration has the same version (or a compatible one) of Docker installed.
+:::
+
+#### Example: Docker args
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      docker:
+        args:
+        - "--no-cache"
+        - "--compress"
+```
+
+
+### `disableFallback`
+When using `docker` as build tool, DevSpace checks if Docker is installed and running. If Docker is not installed or not running, DevSpace will use kaniko as fallback to build the image unless the option `disableFallback` is set to `false`.
+
+#### Default Value For `disableFallback`
+```yaml
+disableFallback: false
+```
+
+#### Example: Disabling kaniko Fallback
+```yaml
+images:
+  backend:
+    image: john/appbackend
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    build:
+      docker:
+        disableFallback: true
+```
+**Explanation:**  
+- The first image `backend` would be built using Docker and if Docker is not available, the image would be built using kaniko as a fallback.
+- The second image `frontend` would be built using Docker and if Docker is not available, DevSpace would exit with a fatal error instead of using the kaniko fallback.
+
+
+### `preferMinikube`
+DevSpace preferably uses the Docker daemon running in the virtual machine that belongs to your local Kubernetes cluster instead of your regular Docker daemon. This has the advantage that images do not need to be pushed to a registry because Kubernetes can simply use the images available in the Docker daemon belonging to the kubelet of the local cluster. Using this method is only possible when your current kube-context points to a local Kubernetes cluster and is named `minikube`, `docker-desktop` or `docker-for-desktop`.
+
+#### Default Value For `preferMinikube`
+```yaml
+preferMinikube: true
+```
+
+#### Example: Building Images in Minikube
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      docker:
+        preferMinikube: true
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    build:
+      docker:
+        preferMinikube: false
+```
+**Explanation:**  
+- The first image `backend` would be preferably built with Minikube's Docker daemon and the image would **not** be pushed to a registry.
+- The second image `frontend` would **not** be built with the Docker daemon of Minikube and it would be pushed to a registry after building and tagging the image using Docker (or kaniko as fallback).
+
+### `skipPush`
+The `skipPush` option expects a boolean value stating if pushing the image to a registry should be skipped during the build process.
+
+If DevSpace is using a local Kubernetes cluster, pushing images might not be necessary because the image might already be accessible by Kubernetes via a local Docker daemon. In this case, it can make sense to speed up the process by setting `skipPush` to `true`.
+
+:::info Auto-Enabled for Minikube & Docker Desktop
+DevSpace automatically skips image push for kube-contexts with the following names:
+- `minikube`
+- `docker-desktop`
+- `docker-for-desktop`
+
+This allows to keep `skipPush: false` for these local clusters which helps to keep the configuration reusable and indepent of the kube-context, i.e. it makes it easier to switch between local and remote clusters.
+:::
+
+:::warning Remote Clusters
+Setting this option means that the configuration cannot be used to deploy to remote clusters anymore, which makes it harder to switch between clusters and keep the configuration cluster-independent.
+:::
+
+#### Default Value For `skipPush`
+```yaml
+skipPush: false
+```
+
+#### Example
+```yaml {7}
+images:
+  backend:
+    image: john/appbackend
+    build:
+      docker:
+        preferMinikube: true
+        skipPush: true
+  frontend:
+    image: dscr.io/${DEVSPACE_USERNAME}/appfrontend
+    build:
+      docker:
+        preferMinikube: false
+```
+The above configration would only push the `frontend` image but not the `backend` image. To manually trigger image building and pushing for all images, run:
+```bash
+devspace build
+```
+
+
+
+<br />
+
+## Build Options
+DevSpace allows you to configure the following build options:
+- `target` defining the build target for multi-stage builds
+- `network` to define which network to use during building (e.g. `docker build --network=host`)
+- `buildArgs` to pass arguments to the Dockerfile during the build process
+
+
+### `target`
+
+<FragmentBuildOptionsTarget/>
+
+
+### `network`
+
+<FragmentBuildOptionsNetwork/>
+
+
+### `buildArgs`
+
+<FragmentBuildOptionsBuildArgs/>
