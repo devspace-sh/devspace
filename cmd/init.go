@@ -38,7 +38,10 @@ const (
 	UseExistingImageOption      = "Use existing image (e.g. from Docker Hub)"
 
 	// The default image name in the config
-	defaultImageName = "default"
+	defaultImageName = "app"
+
+	// The default name for the production profile
+	productionProfileName = "production"
 )
 
 // InitCmd is a struct that defines a command call for "init"
@@ -252,12 +255,19 @@ func (cmd *InitCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	if newImage != nil {
 		config.Images[defaultImageName] = newImage
 	}
+
 	if newDeployment != nil {
 		config.Deployments = []*latest.DeploymentConfig{newDeployment}
 	}
 
 	// Add the development configuration
 	err = cmd.addDevConfig(config)
+	if err != nil {
+		return err
+	}
+
+	// Add the profile configuration
+	err = cmd.addProfileConfig(config)
 	if err != nil {
 		return err
 	}
@@ -403,5 +413,33 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 		}
 	}
 
+	return nil
+}
+
+func (cmd *InitCmd) addProfileConfig(config *latest.Config) error {
+	if len(config.Images) > 0 {
+		defaultImageConfig, ok := (config.Images)[defaultImageName]
+		if ok && (defaultImageConfig.Build == nil || defaultImageConfig.Build.Disabled == nil) {
+			patchRemoveOp := "remove"
+			patches := []*latest.PatchConfig{
+				&latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + defaultImageName + ".injectRestartHelper",
+				},
+			}
+
+			if defaultImageConfig.Build != nil && defaultImageConfig.Build.Docker != nil && defaultImageConfig.Build.Docker.Options != nil && defaultImageConfig.Build.Docker.Options.Target != "" {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + defaultImageName + ".build.docker.options.target",
+				})
+			}
+
+			config.Profiles = append(config.Profiles, &latest.ProfileConfig{
+				Name:    productionProfileName,
+				Patches: patches,
+			})
+		}
+	}
 	return nil
 }
