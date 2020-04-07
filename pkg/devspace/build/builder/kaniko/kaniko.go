@@ -3,8 +3,9 @@ package kaniko
 import (
 	"io"
 	"io/ioutil"
-	"k8s.io/client-go/util/exec"
 	"strings"
+
+	"k8s.io/client-go/util/exec"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
@@ -159,7 +160,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 	// Check if we should overwrite entrypoint
 	if len(entrypoint) > 0 || len(cmd) > 0 || b.helper.ImageConf.InjectRestartHelper {
-		dockerfilePath, err = helper.RewriteDockerfile(dockerfilePath, entrypoint, cmd, options.Target, b.helper.ImageConf.InjectRestartHelper)
+		dockerfilePath, err = helper.RewriteDockerfile(dockerfilePath, entrypoint, cmd, options.Target, b.helper.ImageConf.InjectRestartHelper, log)
 		if err != nil {
 			return err
 		}

@@ -17,19 +17,14 @@ const HelperScript = `#!/bin/sh
 #
 # A process wrapper script to simulate a container restart. This file was injected with devspace during the build process
 #
-
 set -e
-
 pid=""
-
 trap quit TERM INT
-
 quit() {
   if [ -n "$pid" ]; then
     kill $pid
   fi
 }
-
 while true; do
     setsid "$@" &
     pid=$!
@@ -38,14 +33,14 @@ while true; do
     wait $pid
     exit_code=$?
     if [ -f /devspace-pid ]; then
-		# if the sync is currently active we try to restart instead of exiting
-		if [ -f /tmp/sync ]; then
-			rm -f /devspace-pid 	
-			printf "\nContainer exited with $exit_code. Will restart in 3 seconds...\n"
-			sleep 3
-		else
-			exit $exit_code
-		fi
+      # if the sync is currently active we try to restart instead of exiting
+      if [ -f /tmp/sync ]; then
+        rm -f /devspace-pid 	
+        printf "\nContainer exited with $exit_code. Will restart in 3 seconds...\n"
+        sleep 3
+      else
+        exit $exit_code
+      fi
     fi
     set -e
     printf "\nRestart container\n"

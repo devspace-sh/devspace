@@ -314,6 +314,7 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 		resp, _ := http.Get(url)
 		if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
 			log.StopWait()
+			time.Sleep(time.Second * 1)
 			open.Start(url)
 			log.Donef("Successfully opened %s", url)
 			return nil
