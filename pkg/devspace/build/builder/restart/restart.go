@@ -43,7 +43,7 @@ while true; do
 
     if [ "$i" -lt 10 ]; then
       rm -f /devspace-pid
-      echo "\nRestart failed. Will retry in 5 seconds..."
+      printf "\nRestart failed. Will retry in 5 seconds..."
       sleep 5
     fi
 
@@ -56,6 +56,6 @@ while true; do
         exit $exit_code
     fi
 
-    echo "\nRestart container..."
+    printf "\nRestart container...\n"
 done
 `
