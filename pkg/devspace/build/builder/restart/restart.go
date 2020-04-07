@@ -15,47 +15,34 @@ const ProcessIDFilePath = "/devspace-pid"
 // HelperScript is the content of the restart script in the container
 const HelperScript = `#!/bin/sh
 #
-# A process wrapper script to simulate a container restart. This file was injected by DevSpace during the build process
+# A process wrapper script to simulate a container restart. This file was injected with devspace during the build process
 #
-
 set -e
-
 pid=""
-
 trap quit TERM INT
-
 quit() {
   if [ -n "$pid" ]; then
     kill $pid
   fi
 }
-
 while true; do
     setsid "$@" &
     pid=$!
-    echo "$pid" >/devspace-pid
-
-    i=0
-    while kill -0 "$pid" >/dev/null 2>&1 && [ "$i" -lt 10 ]; do
-      sleep 0.1
-      i=$((i+1))
-    done
-
-    if [ "$i" -lt 10 ]; then
-      rm -f /devspace-pid
-      printf "\nRestart failed. Will retry in 5 seconds..."
-      sleep 5
-    fi
-
+    echo "$pid" > /devspace-pid
     set +e
     wait $pid
     exit_code=$?
-    set -e
-
     if [ -f /devspace-pid ]; then
+      # if the sync is currently active we try to restart instead of exiting
+      if [ -f /tmp/sync ]; then
+        rm -f /devspace-pid 	
+        printf "\nContainer exited with $exit_code. Will restart in 3 seconds...\n"
+        sleep 3
+      else
         exit $exit_code
+      fi
     fi
-
-    printf "\nRestart container...\n"
+    set -e
+    printf "\nRestart container\n"
 done
 `
