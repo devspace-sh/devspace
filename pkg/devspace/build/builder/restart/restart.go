@@ -33,14 +33,29 @@ quit() {
 while true; do
     setsid "$@" &
     pid=$!
-    echo "$pid" > /devspace-pid
+    echo "$pid" >/devspace-pid
+
+    i=0
+    while kill -0 "$pid" >/dev/null 2>&1 && [ "$i" -lt 10 ]; do
+      sleep 0.1
+      i=$((i+1))
+    done
+
+    if [ "$i" -lt 10 ]; then
+      rm -f /devspace-pid
+      echo "\nRestart failed. Will retry in 3 seconds..."
+      sleep 3
+    fi
+
     set +e
     wait $pid
     exit_code=$?
     set -e
+
     if [ -f /devspace-pid ]; then
         exit $exit_code
     fi
-    echo "Restart container..."
+
+    echo "\nRestart container..."
 done
 `
