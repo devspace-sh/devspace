@@ -477,7 +477,7 @@ dev:
   sync:
   - imageName: backend
     onDownload:
-      executeLocal:       # These post-sync commands will be executed on the local dev machine
+      execLocal:          # These post-sync commands will be executed on the local dev machine
         command: chmod    # Command to execute for files and folders
         args:
         - +x
@@ -513,7 +513,7 @@ dev:
   sync:
   - imageName: backend
     onUpload:
-      executeRemote:      # These post-sync commands will be executed inside the affected container
+      execRemote:         # These post-sync commands will be executed inside the affected container
         command: chmod    # Command to execute for files and folders
         args:
         - +x

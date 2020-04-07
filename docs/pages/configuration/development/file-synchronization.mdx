@@ -165,6 +165,8 @@ It is generally **not** needed (nor recommended) to specify the `namespace` opti
 :::
 
 
+<br/>
+
 ## Sync Path Mapping
 
 ### `localSubPath`
@@ -191,6 +193,7 @@ containerPath: $WORKDIR # working directory, set as WORKDIR in the Dockerfile
 **See "[Example: Select Container by Image Name](#example-select-container-by-image-name)"**
 
 
+<br/>
 
 ## Exclude Paths
 The config options for excluding paths use the same syntax as `.gitignore`.
@@ -263,6 +266,126 @@ uploadExcludePaths: [] # Do not exclude anything from file synchronization
 **See "[Example: Exclude Paths from Synchronization](#example-exclude-paths-from-synchronization)"**
 
 
+<br/>
+
+## Post-Sync Commands
+Sometimes it is useful to execute commands after the sync downloads or uploads files/directories between container and local filesystem.
+
+:::warning
+Make sure that post-sync commands will **<u>not</u>** trigger a new sync process which could lead to an **endless loop**.
+:::
+
+### `onUpload.restartContainer`
+The `restartContainer` option expects a boolean which defines if DevSpace should restart the container every time either a single file or even a batch of files have been uploaded to the container using file sync.
+
+:::caution Restart Helper Required
+Setting `restartContainer: true` requires to set `injectRestartHelper: true` for the image that is used to run the affected container. Otherwise, this option does not have any effect.
+:::
+
+:::note When not to use this option
+Using `restartContainer: true` is most useful if your application runs based on a compiled language and you are **not** using a framework or language specific tool which provides hot reloading capabilities. If you are using tools like nodemon or frameworks like React, Rails or Flask, they allow you to enable hot reloading which may be much faster than restarting the entire container. In this case you should disable `restartContainer`.
+:::
+
+#### Example: Enable Container Restart
+```yaml {4,16}
+images:
+  backend:
+    image: john/devbackend
+    injectRestartHelper: true
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    onUpload:
+      restartContainer: true
+```
+
+
+### `onUpload`
+The `onUpload` option defines command(s) that should be executed after a file/directory was uploaded from the local filesystem to the container.
+
+#### Example: Post-Upload Commands
+```yaml {14-29}
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    onUpload:
+      execRemote:         # These post-sync commands will be executed inside the affected container
+        command: chmod    # Command to execute for files and folders
+        args:
+        - +x
+        - {}              # {} will be replaced with the path of the synced file/directory
+        onFileChange:     # Command to execute ONLY for files
+          command: chmod
+          args:
+          - +x
+          - {}            # {} will be replaced with the path of the synced file/directory
+        onDirCreate:      # Command to execute ONLY for newly created directories
+          command: chmod
+          args:
+          - +x
+          - {}            # {} will be replaced with the path of the synced file/directory
+        onBatch:          # Command to execute after sync has processed a full batch of files and folders
+          command: recompile
+          args:           # NOTE: {} is NOT available for onBatch
+          - assets
+          - --minify
+```
+
+### `onDownload`
+The `onDownload` option defines command(s) that should be executed after a file/directory was downloaded from the container to the local filesystem.
+
+#### Example: Post-Download Commands
+```yaml {14-29}
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageName: backend
+    onDownload:
+      execLocal:          # These post-sync commands will be executed on the local dev machine
+        command: chmod    # Command to execute for files and folders
+        args:
+        - +x
+        - {}              # {} will be replaced with the path of the synced file/directory
+        onFileChange:     # Command to execute ONLY for files
+          command: chmod
+          args:
+          - +x
+          - {}            # {} will be replaced with the path of the synced file/directory
+        onDirCreate:      # Command to execute ONLY for newly created directories
+          command: chmod
+          args:
+          - +x
+          - {}            # {} will be replaced with the path of the synced file/directory
+```
+
+
+<br/>
 
 ## One-Directional Sync
 These flags allow for local or remote container filesystems to be ignored during synchronization.
@@ -330,6 +453,7 @@ dev:
 ```
 
 
+<br/>
 
 ## Initial Sync
 
@@ -430,6 +554,8 @@ With the configuration `devspace dev` would do the following:
 - After the initial sync process is finished, DevSpace starts the multi-container log streaming.
 
 
+<br/>
+
 ## Network Bandwidth Limits
 Sometimes it is useful to throttle the file synchronization, especially when large files or a large number of files are expected to change during development. The following config options provide these capabilities:
 
@@ -474,86 +600,6 @@ By default, the file synchronization algorithm uses the maximum bandwidth possib
 **See "[Example: Limiting Network Bandwidth](#example-limiting-network-bandwidth)"**
 
 
-## Post-Sync Commands
-Sometimes it is useful to execute commands after the sync downloads or uploads files/directories between container and local filesystem.
-
-:::warning
-Make sure that post-sync commands will **<u>not</u>** trigger a new sync process which could lead to an **endless loop**.
-:::
-
-### `onDownload`
-The `onDownload` option defines command(s) that should be executed after a file/directory was downloaded from the container to the local filesystem.
-
-#### Example: Post-Download Commands
-```yaml {14-29}
-images:
-  backend:
-    image: john/devbackend
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/devbackend
-dev:
-  sync:
-  - imageName: backend
-    onDownload:
-      executeLocal:       # These post-sync commands will be executed on the local dev machine
-        command: chmod    # Command to execute for files and folders
-        args:
-        - +x
-        - {}              # {} will be replaced with the path of the synced file/directory
-        onFileChange:     # Command to execute ONLY for files
-          command: chmod
-          args:
-          - +x
-          - {}            # {} will be replaced with the path of the synced file/directory
-        onDirCreate:      # Command to execute ONLY for newly created directories
-          command: chmod
-          args:
-          - +x
-          - {}            # {} will be replaced with the path of the synced file/directory
-```
-
-### `onUpload`
-The `onUpload` option defines command(s) that should be executed after a file/directory was uploaded from the local filesystem to the container.
-
-#### Example: Post-Upload Commands
-```yaml {14-29}
-images:
-  backend:
-    image: john/devbackend
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/devbackend
-dev:
-  sync:
-  - imageName: backend
-    onUpload:
-      executeRemote:      # These post-sync commands will be executed inside the affected container
-        command: chmod    # Command to execute for files and folders
-        args:
-        - +x
-        - {}              # {} will be replaced with the path of the synced file/directory
-        onFileChange:     # Command to execute ONLY for files
-          command: chmod
-          args:
-          - +x
-          - {}            # {} will be replaced with the path of the synced file/directory
-        onDirCreate:      # Command to execute ONLY for newly created directories
-          command: chmod
-          args:
-          - +x
-          - {}            # {} will be replaced with the path of the synced file/directory
-```
-
-
 
 ## Useful Commands
 
@@ -589,9 +635,9 @@ DevSpace establishes a bi-directional code synchronization between the specified
 The algorithm roughly works like this:
 
 1. Inject a small helper binary via `kubectl cp` into the target container
-2. Download all files that are not found locally
-3. Upload all files that are not found remotely
-4. Watches locally and remotely for changes and uploads or downloads them
+2. Run initial sync accoring to the [`initialSync` config option](#initial-sync)
+3. Watch for file changes on both sides (local and remote) and sync them accorind to the [sync path mappings](#sync-path-mapping)
+4. After every sync process, [restart the container](#onuploadrestartcontainer) or run other custom [post-sync commands](#post-sync-commands) (optional)
 
 <br/>
 
@@ -605,21 +651,6 @@ The algorithm roughly works like this:
 The `tar` command has to be present in the container otherwise `kubectl cp` does not work and the helper binary cannot be injected into the container.  
 
 Other than that, no server-side component or special container privileges for code synchronization are required, as the sync algorithm runs completely client-only within DevSpace. The synchronization mechanism works with any container filesystem and no special binaries have to be installed into the containers. File watchers running within the containers like nodemon will also recognize changes made by the synchronization mechanism.
-
-<br/>
-
-</details>
-
-<details>
-<summary>How does the initial sync right after `devspace dev` work?</summary>
-
-<br/>
-
-If synchronization is started, the sync initially compares the remote folder and the local folder and merges the contents with the following rules:
-- If a file or folder exists locally, but not remote, then upload file / folder
-- If a file is newer locally than remote then upload the file (The opposite case is not true, older local files are not overriden by newer remote files)
-- If a file or folder exists on the remote filesystem, but not locally, then remove the remote file / folder (if `downloadOnInitialSync: false` which is the default configuration)
-- If a file or folder exists on the remote filesystem, but not locally, then download the remote file / folder (if `downloadOnInitialSync: true`)
 
 <br/>
 
