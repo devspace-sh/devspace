@@ -61,7 +61,10 @@ func (m *manager) newImageConfigFromImageName(imageName, dockerfile, context str
 func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context string) (*latest.ImageConfig, error) {
 	var (
 		dockerUsername = ""
-		retImageConfig = &latest.ImageConfig{}
+		retImageConfig = &latest.ImageConfig{
+			InjectRestartHelper:   true,
+			PreferSyncOverRebuild: true,
+		}
 	)
 
 	// Ignore error as context may not be a Space
@@ -171,11 +174,38 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 		imageName, _ = registry.GetStrippedDockerImageName(imageName)
 	}
 
+	targets, err := helper.GetDockerfileTargets(dockerfile)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(targets) > 0 {
+		targetNone := "[none] (build complete Dockerfile)"
+		targets = append(targets, targetNone)
+		target, err := m.log.Question(&survey.QuestionOptions{
+			Question: "Which target within your Dockerfile do you want to use for development?",
+			Options:  targets,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		if target != targetNone {
+			retImageConfig.Build = &latest.BuildConfig{
+				Docker: &latest.DockerConfig{
+					Options: &latest.BuildOptions{
+						Target: target,
+					},
+				},
+			}
+		}
+	}
+
 	// Set image name
 	retImageConfig.Image = imageName
 
 	// Set image specifics
-	if dockerfile != "" && dockerfile != helper.DefaultDockerfilePath {
+	if dockerfile != helper.DefaultDockerfilePath {
 		retImageConfig.Dockerfile = dockerfile
 	}
 	if context != "" && context != helper.DefaultContextPath {

@@ -23,6 +23,9 @@ import (
 // DefaultDockerfilePath is the default dockerfile path to use
 const DefaultDockerfilePath = "./Dockerfile"
 
+// DockerfileTargetRegexTemplate is a template for a regex that finds build targets in a Dockerfile
+const DockerfileTargetRegexTemplate = "(?i)(^|\n)\\s*FROM\\s+([a-zA-Z0-9\\:\\@\\.\\-]+)\\s+AS\\s+(%s)\\s*($|\n)"
+
 // DefaultContextPath is the default context path to use
 const DefaultContextPath = "./"
 
@@ -166,6 +169,27 @@ func CreateTempDockerfile(dockerfile string, entrypoint []string, cmd []string, 
 	return tmpfn, nil
 }
 
+// GetDockerfileTargets returns an array of names of all targets defined in a given Dockerfile
+func GetDockerfileTargets(dockerfile string) ([]string, error) {
+	if dockerfile == "" {
+		dockerfile = DefaultDockerfilePath
+	}
+
+	data, err := ioutil.ReadFile(dockerfile)
+	if err != nil {
+		return []string{}, err
+	}
+	content := string(data)
+
+	// Find all targets
+	targetFinder, err := regexp.Compile(fmt.Sprintf(DockerfileTargetRegexTemplate, "\\S+"))
+	if err != nil {
+		return []string{}, err
+	}
+
+	return targetFinder.FindAllString(content, -1), nil
+}
+
 var nextFromFinder = regexp.MustCompile("(?i)\n\\s*FROM")
 
 func addNewEntrypoint(content string, entrypoint []string, cmd []string, additionalLines []string, target string) (string, error) {
@@ -198,7 +222,7 @@ func addNewEntrypoint(content string, entrypoint []string, cmd []string, additio
 
 func splitDockerfileAtTarget(content string, target string) (string, string, error) {
 	// Find the target
-	targetFinder, err := regexp.Compile(fmt.Sprintf("(?i)(^|\n)\\s*FROM\\s+([a-zA-Z0-9\\:\\@\\.\\-]+)\\s+AS\\s+%s\\s*($|\n)", target))
+	targetFinder, err := regexp.Compile(fmt.Sprintf(DockerfileTargetRegexTemplate, target))
 	if err != nil {
 		return "", "", err
 	}
