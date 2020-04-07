@@ -171,23 +171,31 @@ func CreateTempDockerfile(dockerfile string, entrypoint []string, cmd []string, 
 
 // GetDockerfileTargets returns an array of names of all targets defined in a given Dockerfile
 func GetDockerfileTargets(dockerfile string) ([]string, error) {
+	targets := []string{}
+
 	if dockerfile == "" {
 		dockerfile = DefaultDockerfilePath
 	}
 
 	data, err := ioutil.ReadFile(dockerfile)
 	if err != nil {
-		return []string{}, err
+		return targets, err
 	}
 	content := string(data)
 
 	// Find all targets
 	targetFinder, err := regexp.Compile(fmt.Sprintf(DockerfileTargetRegexTemplate, "\\S+"))
 	if err != nil {
-		return []string{}, err
+		return targets, err
 	}
 
-	return targetFinder.FindAllString(content, -1), nil
+	rawTargets := targetFinder.FindAllStringSubmatch(content, -1)
+
+	for _, target := range rawTargets {
+		targets = append(targets, target[3])
+	}
+
+	return targets, nil
 }
 
 var nextFromFinder = regexp.MustCompile("(?i)\n\\s*FROM")
