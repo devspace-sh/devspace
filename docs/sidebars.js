@@ -36,6 +36,7 @@ module.exports = {
             'configuration/images/dockerfile-context',
             'configuration/images/entrypoint-cmd',
             'configuration/images/inject-restart-helper',
+            'configuration/images/prefer-sync-over-rebuild',
             'configuration/images/pull-secrets',
             {
               type: 'category',
