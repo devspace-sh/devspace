@@ -23,16 +23,17 @@ type initialSyncOptions struct {
 
 	Strategy latest.InitialSyncStrategy
 
-	IgnoreMatcher       gitignore.IgnoreParser
-	UploadIgnoreMatcher gitignore.IgnoreParser
+	IgnoreMatcher         gitignore.IgnoreParser
+	DownloadIgnoreMatcher gitignore.IgnoreParser
+	UploadIgnoreMatcher   gitignore.IgnoreParser
 
 	UpstreamDisabled   bool
 	DownstreamDisabled bool
 	FileIndex          *fileIndex
 
-	ApplyRemote      func(changes []*FileInformation, remove bool)
-	ApplyLocal       func(changes []*remote.Change, force bool) error
-	AddSymlink       func(relativePath, absPath string) (os.FileInfo, error)
+	ApplyRemote func(changes []*FileInformation, remove bool)
+	ApplyLocal  func(changes []*remote.Change, force bool) error
+	AddSymlink  func(relativePath, absPath string) (os.FileInfo, error)
 
 	UpstreamDone   func()
 	DownstreamDone func()
@@ -61,9 +62,13 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation) error {
 	go func() {
 		if i.o.UpstreamDisabled == false {
 			// Remove remote if mirror local
-			if i.o.Strategy == latest.InitialSyncStrategyMirrorLocal && len(download) > 0 {
+			if len(download) > 0 && i.o.Strategy == latest.InitialSyncStrategyMirrorLocal {
 				deleteRemote := make([]*FileInformation, 0, len(download))
 				for _, element := range download {
+					if i.o.UploadIgnoreMatcher != nil && util.MatchesPath(i.o.UploadIgnoreMatcher, element.Name, element.IsDirectory) {
+						continue
+					}
+
 					deleteRemote = append(deleteRemote, &FileInformation{
 						Name:        element.Name,
 						IsDirectory: element.IsDirectory,
@@ -74,9 +79,23 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation) error {
 			}
 
 			// Upload remote if not mirror remote
-			if i.o.Strategy != latest.InitialSyncStrategyMirrorRemote && len(upload) > 0 {
-				i.o.ApplyRemote(upload, false)
+			if len(upload) > 0 {
+				if i.o.Strategy == latest.InitialSyncStrategyMirrorRemote {
+					// only apply the ones that match the downstream ignore matcher
+					changes := []*FileInformation{}
+					for _, element := range upload {
+						if i.o.DownloadIgnoreMatcher != nil && util.MatchesPath(i.o.DownloadIgnoreMatcher, element.Name, element.IsDirectory) {
+							changes = append(changes, element)
+						}
+					}
+					if len(changes) > 0 {
+						i.o.ApplyRemote(changes, false)
+					}
+				} else {
+					i.o.ApplyRemote(upload, false)
+				}
 			}
+
 		}
 
 		i.o.UpstreamDone()
@@ -85,9 +104,13 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation) error {
 	// Download changes if enabled
 	if i.o.DownstreamDisabled == false {
 		// Remove local if mirror remote
-		if i.o.Strategy == latest.InitialSyncStrategyMirrorRemote && len(upload) > 0 {
+		if len(upload) > 0 && i.o.Strategy == latest.InitialSyncStrategyMirrorRemote {
 			remoteChanges := make([]*remote.Change, 0, len(upload))
 			for _, element := range upload {
+				if i.o.DownloadIgnoreMatcher != nil && util.MatchesPath(i.o.DownloadIgnoreMatcher, element.Name, element.IsDirectory) {
+					continue
+				}
+
 				remoteChanges = append(remoteChanges, &remote.Change{
 					ChangeType:    remote.ChangeType_DELETE,
 					Path:          element.Name,
@@ -105,22 +128,45 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation) error {
 		}
 
 		// Download local if not mirror local
-		if i.o.Strategy != latest.InitialSyncStrategyMirrorLocal && len(download) > 0 {
-			remoteChanges := make([]*remote.Change, 0, len(download))
-			for _, element := range download {
-				remoteChanges = append(remoteChanges, &remote.Change{
-					ChangeType:    remote.ChangeType_CHANGE,
-					Path:          element.Name,
-					MtimeUnix:     element.Mtime,
-					MtimeUnixNano: element.MtimeNano,
-					Size:          element.Size,
-					IsDir:         element.IsDirectory,
-				})
-			}
+		if len(download) > 0 {
+			if i.o.Strategy == latest.InitialSyncStrategyMirrorLocal {
+				// only apply the ones that match the upstream ignore matcher
+				remoteChanges := make([]*remote.Change, 0, len(download))
+				for _, element := range download {
+					if i.o.UploadIgnoreMatcher != nil && util.MatchesPath(i.o.UploadIgnoreMatcher, element.Name, element.IsDirectory) {
+						remoteChanges = append(remoteChanges, &remote.Change{
+							ChangeType:    remote.ChangeType_CHANGE,
+							Path:          element.Name,
+							MtimeUnix:     element.Mtime,
+							MtimeUnixNano: element.MtimeNano,
+							Size:          element.Size,
+							IsDir:         element.IsDirectory,
+						})
+					}
+				}
+				if len(remoteChanges) > 0 {
+					err = i.o.ApplyLocal(remoteChanges, false)
+					if err != nil {
+						return errors.Wrap(err, "apply changes")
+					}
+				}
+			} else {
+				remoteChanges := make([]*remote.Change, 0, len(download))
+				for _, element := range download {
+					remoteChanges = append(remoteChanges, &remote.Change{
+						ChangeType:    remote.ChangeType_CHANGE,
+						Path:          element.Name,
+						MtimeUnix:     element.Mtime,
+						MtimeUnixNano: element.MtimeNano,
+						Size:          element.Size,
+						IsDir:         element.IsDirectory,
+					})
+				}
 
-			err = i.o.ApplyLocal(remoteChanges, false)
-			if err != nil {
-				return errors.Wrap(err, "apply changes")
+				err = i.o.ApplyLocal(remoteChanges, false)
+				if err != nil {
+					return errors.Wrap(err, "apply changes")
+				}
 			}
 		}
 	}
