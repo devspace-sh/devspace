@@ -18,7 +18,7 @@ jobs:
           node-version: 12
           registry-url: https://registry.npmjs.org/
       - run: |
-          npm install -g devspace
+          npm install -g
           devspace --version
           npm uninstall -g devspace
         working-directory: ./dist/npm
@@ -31,7 +31,7 @@ jobs:
           node-version: 12
           registry-url: https://registry.npmjs.org/
       - run: |
-          npm install -g devspace
+          npm install -g
           devspace --version
           npm uninstall -g devspace
         working-directory: ./dist/npm

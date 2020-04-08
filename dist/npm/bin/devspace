@@ -3,7 +3,7 @@
 BINARY=$(command -v devspace)
 
 if [ -f "$BINARY" ] || [ $(stat --printf="%s" "$BINARY") -lt 10000 ]; then
-    echo "Finishing installation for DevSpace CLI"
+    echo "Finishing installation of DevSpace CLI"
 
     BASEDIR=$(/usr/bin/env npm root -g)
 
