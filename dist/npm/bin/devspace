@@ -6,9 +6,19 @@ if [ -f "$BINARY" ] || [ $(stat --printf="%s" "$BINARY") -lt 10000 ]; then
     echo "Finishing installation of DevSpace CLI"
 
     BASEDIR=$(/usr/bin/env npm root -g)
+    INDEX_FILE="devspace/index.js"
 
-    echo "Running: node $BASEDIR/devspace/index.js force-install"
-    /usr/bin/env node "$BASEDIR/devspace/index.js" force-install;
+    if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
+        BASEDIR=$(/usr/bin/env yarn global dir)/node_modules
+
+        if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
+            echo "Unable to find global npm/yarn dir"
+            exit 1
+        fi
+    fi
+
+    echo "Running: node $BASEDIR/$INDEX_FILE force-install"
+    /usr/bin/env node "$BASEDIR/$INDEX_FILE" force-install;
 
     devspace "$@" 2>/dev/null || devspace.exe "$@";
     exit $?;
