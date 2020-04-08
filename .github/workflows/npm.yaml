@@ -9,7 +9,7 @@ on:
       - ".github/workflows/npm.yaml"
 
 jobs:
-  test-linux:
+  linux:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
@@ -22,7 +22,7 @@ jobs:
           devspace --version
           npm uninstall -g devspace
         working-directory: ./dist/npm
-  test-windows:
+  windows:
     runs-on: windows-2019
     steps:
       - uses: actions/checkout@v1
