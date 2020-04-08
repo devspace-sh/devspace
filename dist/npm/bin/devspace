@@ -5,8 +5,10 @@ BINARY=$(command -v devspace)
 if [ -f "$BINARY" ] || [ $(stat --printf="%s" "$BINARY") -lt 10000 ]; then
     echo "Finishing installation for DevSpace CLI"
 
-    BASEDIR=$(dirname "$0")
-    /usr/bin/env node "$BASEDIR/../index.js" force-install;
+    BASEDIR=$(/usr/bin/env npm root -g)
+
+    echo "Running node $BASEDIR/devspace/index.js force-install"
+    /usr/bin/env node "$BASEDIR/devspace/index.js" force-install;
 
     devspace "$@" 2>/dev/null || devspace.exe "$@";
     exit $?;

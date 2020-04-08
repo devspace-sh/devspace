@@ -5,6 +5,8 @@ IF %ERRORLEVEL% EQU 0 devspace %* && exit /b %errorlevel%
 
 echo Finishing installation for DevSpace CLI
 
-for %%F in (%0) do set dirname=%%~dpF
+FOR /F "tokens=* USEBACKQ" %%F IN (`npm root -g`) DO (
+SET basedir=%%F
+)
 
-node %dirname%\..\index.js force-install && devspace.exe %*
+node %basedir%\devspace\index.js force-install && devspace.exe %*

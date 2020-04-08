@@ -1,0 +1,37 @@
+name: Test NPM Installer
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "dist/npm/**"
+      - ".github/workflows/npm.yaml"
+
+jobs:
+  linux:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+      - run: |
+          npm install -g devspace
+          devspace --version
+          npm uninstall -g devspace
+        working-directory: ./dist/npm
+  windows:
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+      - run: |
+          npm install -g devspace
+          devspace --version
+          npm uninstall -g devspace
+        working-directory: ./dist/npm
