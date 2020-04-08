@@ -22,7 +22,11 @@ jobs:
           npm run prepare
           devspace --version
           npm uninstall -g devspace
-          
+
+          echo $PATH
+          export PATH=$PATH:$(yarn global bin)
+          echo $PATH
+
           yarn global add $PWD
           devspace --version
           yarn global remove devspace
@@ -41,6 +45,11 @@ jobs:
           devspace --version
           npm uninstall -g devspace
           
+          echo $env:PATH
+          $yarnGlobalDir = yarn global bin
+          $env:Path += ";$yarnGlobalDir" 
+          echo $env:PATH
+
           yarn global add $PWD
           devspace --version
           yarn global remove devspace
