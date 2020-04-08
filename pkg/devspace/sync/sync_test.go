@@ -99,6 +99,10 @@ func TestInitialSync(t *testing.T) {
 		defer downServerReader.Close()
 		defer downServerWriter.Close()
 
+		t.Logf("Exclude paths: %#+v", syncClient.Options.ExcludePaths)
+		t.Logf("Upload Exclude paths: %#+v", syncClient.Options.UploadExcludePaths)
+		t.Logf("Download Exclude paths: %#+v", syncClient.Options.DownloadExcludePaths)
+
 		// Build exclude paths
 		excludePaths := []string{}
 		excludePaths = append(excludePaths, syncClient.Options.ExcludePaths...)
@@ -384,7 +388,7 @@ func makeBasicTestCases() (testCaseList, testCaseList) {
 
 func disableDownload(testCases testCaseList) testCaseList {
 	for i, f := range testCases {
-		if !strings.Contains(f.path, "Remote") {
+		if !strings.Contains(f.path, "Remote") || strings.Contains(f.path, "noUpload") {
 			continue
 		}
 		testCases[i].shouldExistInLocal = false

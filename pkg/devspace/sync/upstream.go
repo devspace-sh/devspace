@@ -154,6 +154,7 @@ func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) ([]*Fi
 	for _, event := range events {
 		fileInfo, ok := event.(*FileInformation)
 
+		// if the change is sent from the initial sync don't evaluate it
 		if ok {
 			changes = append(changes, fileInfo)
 		} else {

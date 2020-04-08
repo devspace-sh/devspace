@@ -273,17 +273,18 @@ func (s *Sync) initialSync() error {
 		LocalPath: s.LocalPath,
 		Strategy:  s.Options.InitialSync,
 
-		IgnoreMatcher:       s.ignoreMatcher,
-		UploadIgnoreMatcher: s.uploadIgnoreMatcher,
+		IgnoreMatcher:         s.ignoreMatcher,
+		DownloadIgnoreMatcher: s.downloadIgnoreMatcher,
+		UploadIgnoreMatcher:   s.uploadIgnoreMatcher,
 
 		UpstreamDisabled:   s.Options.UpstreamDisabled,
 		DownstreamDisabled: s.Options.DownstreamDisabled,
 		FileIndex:          s.fileIndex,
 
-		ApplyRemote:      s.sendChangesToUpstream,
-		ApplyLocal:       s.downstream.applyChanges,
-		AddSymlink:       s.upstream.AddSymlink,
-		Log:              s.log,
+		ApplyRemote: s.sendChangesToUpstream,
+		ApplyLocal:  s.downstream.applyChanges,
+		AddSymlink:  s.upstream.AddSymlink,
+		Log:         s.log,
 
 		UpstreamDone: func() {
 			if s.Options.UpstreamInitialSyncDone != nil {
