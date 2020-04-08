@@ -155,7 +155,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
   let downloadExtension = ".dl";
   let binaryName = "devspace";
 
-  if (platform == "windows") {
+  if (platform == PLATFORM_MAPPING.win32) {
     binaryName += ".exe";
   }
   
@@ -168,6 +168,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
 
   exec(checkGlobalDirCommand, function(err, stdout, stderr) {
     let globalDir = null;
+    let fallbackGlobalDir = "/usr/local/bin";
   
     if (err || !stdout || stdout.length === 0) {
       if (process.env && process.env.npm_config_prefix) {
@@ -178,12 +179,28 @@ let continueProcess = function(askRemoveGlobalFolder) {
     }
   
     if (globalDir == null) {
-      console.error("Error finding binary installation directory");
-      process.exit(1)
+      if (platform == PLATFORM_MAPPING.win32) {
+        console.error("Error finding binary installation directory");
+        process.exit(1)
+      }
+      globalDir = fallbackGlobalDir
     }
-  
-    fs.mkdirSync(globalDir, { recursive: true });
 
+    cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, ';').replace(/\\/g, '/')
+    cleanGlobalDir = globalDir.replace(/(^|;)[a-z]:/gi, '').replace(/\\/g, '/')
+
+    if (cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir) == -1) {
+      if (platform == PLATFORM_MAPPING.win32) {
+        console.error("Global binary directory not in $PATH: " + globalDir);
+        process.exit(1)
+      }
+      globalDir = fallbackGlobalDir
+    }
+   
+	  try {
+      fs.mkdirSync(globalDir, { recursive: true });
+    } catch(e) {}
+    
     let binaryPath = path.join(globalDir, binaryName);
 
     try {
@@ -199,9 +216,13 @@ let continueProcess = function(askRemoveGlobalFolder) {
         try {
           fs.unlinkSync(binaryPath);
         } catch (e) {}
+
+        try {
+          fs.unlinkSync(path.join(fallbackGlobalDir, binaryName));
+        } catch (e) {}
       }
 
-      if (platform == "windows") {
+      if (platform == PLATFORM_MAPPING.win32) {
         try {
           fs.unlinkSync(binaryPath.replace(/\.exe$/i, ""));
         } catch (e) {}
@@ -269,7 +290,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
             .replace("{{platform}}", platform)
             .replace("{{arch}}", arch);
 
-          if (platform == "windows") {
+          if (platform == PLATFORM_MAPPING.win32) {
             downloadPath += ".exe";
           }
 
