@@ -18,9 +18,16 @@ jobs:
           node-version: 12
           registry-url: https://registry.npmjs.org/
       - run: |
-          npm install -g devspace
+          npm install -g
+          npm run prepare
           devspace --version
           npm uninstall -g devspace
+
+          export PATH=$PATH:$(yarn global bin)
+
+          yarn global add $PWD
+          devspace --version
+          yarn global remove devspace
         working-directory: ./dist/npm
   windows:
     runs-on: windows-2019
@@ -31,7 +38,15 @@ jobs:
           node-version: 12
           registry-url: https://registry.npmjs.org/
       - run: |
-          npm install -g devspace
+          npm install -g
+          npm run prepare
           devspace --version
           npm uninstall -g devspace
+          
+          $yarnGlobalDir = yarn global bin
+          $env:Path += ";$yarnGlobalDir"
+
+          yarn global add $PWD
+          devspace --version
+          yarn global remove devspace
         working-directory: ./dist/npm
