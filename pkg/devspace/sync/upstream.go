@@ -334,7 +334,7 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 				return errors.Wrap(err, "apply creates")
 			}
 
-			u.sync.log.Infof("Upstream - Retry upload because of error: %v", errors.Cause(err))
+			u.sync.log.Infof("Upstream - Retry upload because of error: %v", err)
 
 			creates = u.updateUploadChanges(creates)
 			if len(creates) == 0 {
@@ -447,7 +447,7 @@ func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ign
 	for _, file := range files {
 		err := archiver.AddToArchive(file.Name)
 		if err != nil {
-			return errors.Wrap(err, "recursive tar")
+			return errors.Wrapf(err, "compress %s", file.Name)
 		}
 	}
 

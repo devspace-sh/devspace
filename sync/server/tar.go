@@ -33,7 +33,7 @@ func untarAll(reader io.Reader, options *UpstreamOptions) error {
 	for {
 		shouldContinue, err := untarNext(tarReader, options)
 		if err != nil {
-			return errors.Wrap(err, "untarNext")
+			return errors.Wrap(err, "decompress")
 		} else if shouldContinue == false {
 			return nil
 		}
@@ -56,7 +56,7 @@ func createAllFolders(name string, perm os.FileMode, options *UpstreamOptions) e
 				continue
 			}
 
-			return errors.Errorf("Error creating %s: %v", dirToCreate, err)
+			return errors.Errorf("error creating %s: %v", dirToCreate, err)
 		}
 
 		if options.DirCreateCmd != "" {
@@ -71,7 +71,7 @@ func createAllFolders(name string, perm os.FileMode, options *UpstreamOptions) e
 
 			out, err := exec.Command(options.DirCreateCmd, cmdArgs...).CombinedOutput()
 			if err != nil {
-				return errors.Errorf("Error executing command '%s %s': %s => %v", options.DirCreateCmd, strings.Join(cmdArgs, " "), string(out), err)
+				return errors.Errorf("error executing command '%s %s': %s => %v", options.DirCreateCmd, strings.Join(cmdArgs, " "), string(out), err)
 			}
 		}
 	}
@@ -115,17 +115,17 @@ func untarNext(tarReader *tar.Reader, options *UpstreamOptions) (bool, error) {
 		time.Sleep(time.Second * 5)
 		outFile, err = os.Create(outFileName)
 		if err != nil {
-			return false, errors.Wrap(err, "create "+outFileName)
+			return false, errors.Wrapf(err, "create %s", outFileName)
 		}
 	}
 
 	defer outFile.Close()
 
 	if _, err := io.Copy(outFile, tarReader); err != nil {
-		return false, errors.Wrap(err, "io copy tar reader")
+		return false, errors.Wrapf(err, "io copy tar reader %s", outFile)
 	}
 	if err := outFile.Close(); err != nil {
-		return false, errors.Wrap(err, "out file close")
+		return false, errors.Wrapf(err, "out file close %s", outFile)
 	}
 
 	// Set old permissions and owner and group
@@ -156,7 +156,7 @@ func untarNext(tarReader *tar.Reader, options *UpstreamOptions) (bool, error) {
 
 		out, err := exec.Command(options.FileChangeCmd, cmdArgs...).CombinedOutput()
 		if err != nil {
-			return false, errors.Errorf("Error executing command '%s %s': %s => %v", options.FileChangeCmd, strings.Join(cmdArgs, " "), string(out), err)
+			return false, errors.Errorf("error executing command '%s %s': %s => %v", options.FileChangeCmd, strings.Join(cmdArgs, " "), string(out), err)
 		}
 	}
 

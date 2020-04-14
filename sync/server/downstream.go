@@ -133,7 +133,7 @@ func (d *Downstream) compress(writer io.WriteCloser, files []string) error {
 		if _, ok := writtenFiles[path]; ok == false {
 			err := recursiveTar(d.options.RemotePath, path, writtenFiles, tarWriter, true)
 			if err != nil {
-				return errors.Wrap(err, "recursive tar")
+				return errors.Wrapf(err, "compress %s", path)
 			}
 		}
 	}
