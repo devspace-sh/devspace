@@ -21,10 +21,35 @@ func TestParse(t *testing.T) {
 			replace: func(value string) (string, error) { return "test", nil },
 			output:  " test abc test ",
 		},
+		"Var Name 2": &testCase{
+			input:   " test abc ${Test} ",
+			replace: func(value string) (string, error) {
+				if value != "Test" {
+					return "", errors.New("unexpected var name")
+				}
+				return "test", nil
+			},
+			output:  " test abc test ",
+		},
+		"Var Name": &testCase{
+			input:   " test abc $!{Test} ",
+			replace: func(value string) (string, error) {
+				if value != "Test" {
+					return "", errors.New("unexpected var name")
+				}
+				return "test", nil
+			},
+			output:  " test abc test ",
+		},
 		"Single Escape": &testCase{
 			input:   " test abc $${Test} ",
 			replace: func(value string) (string, error) { return "", errors.New("Shouldn't match at all") },
 			output:  " test abc ${Test} ",
+		},
+		"Single Escape 2": &testCase{
+			input:   " test abc $$${Test} ",
+			replace: func(value string) (string, error) { return "", errors.New("Shouldn't match at all") },
+			output:  " test abc $${Test} ",
 		},
 		"Multiple Replace": &testCase{
 			input:   " test ${ABC}${Test} abc $${Test}${Test} ",
@@ -55,6 +80,11 @@ func TestParse(t *testing.T) {
 			input:   "Test",
 			replace: func(value string) (string, error) { return "", errors.New("Test Error") },
 			output:  "Test",
+		},
+		"Force String": &testCase{
+			input:   "$!{Test}",
+			replace: func(value string) (string, error) { return "123", nil },
+			output:  "123",
 		},
 	}
 

@@ -6,7 +6,7 @@ import (
 )
 
 // VarMatchRegex is the regex to check if a value matches the devspace var format
-var VarMatchRegex = regexp.MustCompile("(\\$+\\{[^\\}]+\\})")
+var VarMatchRegex = regexp.MustCompile("(\\$+!?\\{[^\\}]+\\})")
 
 // ReplaceVarFn defines the replace function
 type ReplaceVarFn func(value string) (string, error)
@@ -21,6 +21,7 @@ func ParseString(value string, replace ReplaceVarFn) (interface{}, error) {
 	}
 
 	newValue := value[:matches[0][0]]
+	forceString := false
 	for index, match := range matches {
 		var (
 			matchStr    = value[match[0]:match[1]]
@@ -31,7 +32,13 @@ func ParseString(value string, replace ReplaceVarFn) (interface{}, error) {
 		if matchStr[0] == '$' && matchStr[1] == '$' {
 			newMatchStr = matchStr[1:]
 		} else {
-			newMatchStr, err = replace(matchStr[2 : len(matchStr)-1])
+			offset := 2
+			if matchStr[1] == '!' {
+				offset = 3
+				forceString = true
+			}
+
+			newMatchStr, err = replace(matchStr[offset : len(matchStr)-1])
 			if err != nil {
 				return "", err
 			}
@@ -43,6 +50,11 @@ func ParseString(value string, replace ReplaceVarFn) (interface{}, error) {
 		} else {
 			newValue += value[match[1]:matches[index+1][0]]
 		}
+	}
+
+	// Should we force the string
+	if forceString {
+		return newValue, nil
 	}
 
 	// Try to convert new value to boolean or integer
