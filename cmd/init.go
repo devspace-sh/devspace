@@ -398,7 +398,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 				dockerignoreRules := strings.Split(string(dockerignore), "\n")
 				for _, ignoreRule := range dockerignoreRules {
 					ignoreRule = strings.TrimSpace(ignoreRule)
-					if len(ignoreRule) > 0 && ignoreRule[0] != "#"[0] {
+					if len(ignoreRule) > 0 && ignoreRule[0] != "#"[0] && regexp.MustCompile("/?\\.git/?").MatchString(ignoreRule) == false {
 						excludePaths = append(excludePaths, ignoreRule)
 					}
 				}
@@ -407,6 +407,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 			syncConfig := append(config.Dev.Sync, &latest.SyncConfig{
 				ImageName:          defaultImageName,
 				UploadExcludePaths: excludePaths,
+				ExcludePaths:       []string{".git/"},
 				OnUpload: &latest.SyncOnUpload{
 					RestartContainer: true,
 				},
