@@ -1,6 +1,8 @@
 package vars
 
 import (
+	"fmt"
+	"github.com/pkg/errors"
 	"regexp"
 	"strconv"
 )
@@ -9,7 +11,7 @@ import (
 var VarMatchRegex = regexp.MustCompile("(\\$+!?\\{[^\\}]+\\})")
 
 // ReplaceVarFn defines the replace function
-type ReplaceVarFn func(value string) (string, error)
+type ReplaceVarFn func(value string) (interface{}, error)
 
 // ParseString parses a given string, calls replace var on found variables and returns the replaced string
 func ParseString(value string, replace ReplaceVarFn) (interface{}, error) {
@@ -26,7 +28,6 @@ func ParseString(value string, replace ReplaceVarFn) (interface{}, error) {
 		var (
 			matchStr    = value[match[0]:match[1]]
 			newMatchStr string
-			err         error
 		)
 
 		if matchStr[0] == '$' && matchStr[1] == '$' {
@@ -38,9 +39,22 @@ func ParseString(value string, replace ReplaceVarFn) (interface{}, error) {
 				forceString = true
 			}
 
-			newMatchStr, err = replace(matchStr[offset : len(matchStr)-1])
+			replacedValue, err := replace(matchStr[offset : len(matchStr)-1])
 			if err != nil {
 				return "", err
+			}
+
+			switch v := replacedValue.(type) {
+			case string:
+				newMatchStr = v
+			default:
+				if forceString {
+					newMatchStr = fmt.Sprintf("%v", v)
+				} else if len(matchStr) == len(value) {
+					return v, nil
+				} else {
+					return nil, errors.Errorf("variable '%s' output '%v' is not a string, however it is used as part of a string '%s'", matchStr, v, value)
+				}
 			}
 		}
 
