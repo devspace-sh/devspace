@@ -1,6 +1,7 @@
 package use
 
 import (
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
@@ -18,14 +19,15 @@ import (
 )
 
 type spaceCmd struct {
+	*flags.GlobalFlags
 	Provider string
 	SpaceID  string
 
 	GetToken bool
 }
 
-func newSpaceCmd(f factory.Factory) *cobra.Command {
-	cmd := &spaceCmd{}
+func newSpaceCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &spaceCmd{GlobalFlags: globalFlags}
 
 	useSpace := &cobra.Command{
 		Use:   "space",
@@ -182,6 +184,12 @@ func (cmd *spaceCmd) RunUseSpace(f factory.Factory, cobraCmd *cobra.Command, arg
 	log.Donef("Successfully configured DevSpace to use space %s", space.Name)
 	if configExists {
 		log.Infof("\r         \nRun:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
+	}
+
+	// clear project kube context
+	err = ClearProjectKubeContext(f.NewConfigLoader(cmd.ToConfigOptions(), f.GetLog()))
+	if err != nil {
+		return errors.Wrap(err, "clear generated kube context")
 	}
 
 	return nil

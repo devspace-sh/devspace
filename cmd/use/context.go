@@ -1,6 +1,8 @@
 package use
 
 import (
+	"github.com/devspace-cloud/devspace/cmd/flags"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"sort"
 
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
@@ -11,10 +13,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type ContextCmd struct{}
+type ContextCmd struct {
+	*flags.GlobalFlags
+}
 
-func newContextCmd(f factory.Factory) *cobra.Command {
-	cmd := &ContextCmd{}
+func newContextCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &ContextCmd{GlobalFlags: globalFlags}
 
 	useContext := &cobra.Command{
 		Use:   "context",
@@ -84,6 +88,33 @@ func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command,
 		log.Infof("\r         To revert this operation, run: %s\n", ansi.Color("devspace use context "+oldContext, "white+b"))
 	}
 
+	// clear project kube context
+	err = ClearProjectKubeContext(f.NewConfigLoader(cmd.ToConfigOptions(), f.GetLog()))
+	if err != nil {
+		return errors.Wrap(err, "clear generated kube context")
+	}
+
 	log.Donef("Successfully set kube-context to '%s'", ansi.Color(context, "white+b"))
 	return nil
+}
+
+func ClearProjectKubeContext(configLoader loader.ConfigLoader) error {
+	configExists, err := configLoader.SetDevSpaceRoot()
+	if err != nil {
+		return err
+	} else if !configExists {
+		return nil
+	}
+
+	// load config if it exists
+	generatedConfig, err := configLoader.Generated()
+	if err != nil {
+		return err
+	}
+
+	// update last context
+	generatedConfig.GetActive().LastContext = nil
+
+	// save it
+	return configLoader.SaveGenerated()
 }
