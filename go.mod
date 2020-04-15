@@ -22,6 +22,7 @@ require (
 	github.com/haya14busa/goplay v1.0.0 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf // indirect
 	github.com/jmoiron/sqlx v1.2.0 // indirect
+	github.com/joho/godotenv v1.3.0
 	github.com/josharian/impl v0.0.0-20190715203526-f0d59e96e372 // indirect
 	github.com/juju/errors v0.0.0-20180806074554-22422dad46e1
 	github.com/juju/ratelimit v1.0.1

@@ -66,7 +66,6 @@ func (client *client) ExecStreamWithTransport(transport http.RoundTripper, upgra
 	}
 
 	if subResource == SubResourceExec {
-
 		execRequest.VersionedParams(&corev1.PodExecOptions{
 			Container: container,
 			Command:   command,

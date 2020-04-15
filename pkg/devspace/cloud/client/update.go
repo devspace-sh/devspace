@@ -151,7 +151,7 @@ func (c *client) DeployCertManager(clusterID int, key string) error {
 		Deploy bool `json:"manager_deployCertManager"`
 	}{})
 	if err != nil {
-		return errors.Wrap(err, "deploy gatekeeper rules")
+		return err
 	}
 
 	return nil

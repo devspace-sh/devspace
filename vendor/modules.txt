@@ -311,6 +311,8 @@ github.com/inconshreveable/go-update/internal/osext
 github.com/inconshreveable/mousetrap
 # github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99
 github.com/jbenet/go-context/io
+# github.com/joho/godotenv v1.3.0
+github.com/joho/godotenv
 # github.com/json-iterator/go v1.1.8
 github.com/json-iterator/go
 # github.com/juju/errors v0.0.0-20180806074554-22422dad46e1

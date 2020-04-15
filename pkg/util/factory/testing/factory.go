@@ -20,6 +20,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
+	"github.com/devspace-cloud/devspace/pkg/util/flags"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
@@ -46,6 +47,11 @@ type Factory struct {
 	ServicesClient    services.Client
 	Provider          cloud.Provider
 	Resumer           resume.SpaceResumer
+}
+
+// NewEnvironmentFlagsParser implements the interface
+func (f *Factory) NewEnvironmentFlagsParser() flags.Flags {
+	return nil
 }
 
 // NewAnalyzer creates a new analyzer
