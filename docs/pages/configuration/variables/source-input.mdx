@@ -7,6 +7,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import FragmentVarsName from '../../fragments/vars-name.mdx';
 import FragmentVarsDefault from '../../fragments/vars-default.mdx';
+import FragmentVarsForceString from '../../fragments/vars-force-string.mdx';
 
 If `source: all (default) | input`, DevSpace may ask the user a question to determine the value of a config variable.
 
@@ -65,6 +66,9 @@ vars:
 :::tip Ignore Env Variables
 If you want DevSpace to ignore environment variables, you can explicitly define `source: input` to make sure only explict user input will be used to set the value of the variable.
 :::
+
+<FragmentVarsForceString/>
+
 
 ## Configuration
 

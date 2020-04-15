@@ -5,6 +5,7 @@ sidebar_label: "source: env"
 
 import FragmentVarsName from '../../fragments/vars-name.mdx';
 import FragmentVarsDefault from '../../fragments/vars-default.mdx';
+import FragmentVarsForceString from '../../fragments/vars-force-string.mdx';
 
 If the `source` is `env`, DevSpace will **<u>not</u>** ask the user a question and instead use environment variables to determine the value of the variable.
 ```yaml {3,5-7}
@@ -20,6 +21,8 @@ vars:
 :::info
 If `source` is `env` and the environment variable is **not** defined, DevSpace will use the [`default` value](#default) or terminate with a fatal error, if there is **no** [`default` value](#default) configured.
 :::
+
+<FragmentVarsForceString/>
 
 ## Configuration
 
