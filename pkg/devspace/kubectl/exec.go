@@ -41,21 +41,25 @@ func (client *client) ExecStreamWithTransport(transport http.RoundTripper, upgra
 		SubResource(string(subResource))
 
 	if tty {
-		t = terminal.SetupTTY(stdin, stdout)
+		isTerminal, t := terminal.SetupTTY(stdin, stdout)
+		if !isTerminal {
+			tty = false
+		} else {
+			if t.Raw {
+				// this call spawns a goroutine to monitor/update the terminal size
+				sizeQueue = t.MonitorSize(t.GetSize())
+			}
 
-		if t.Raw {
-			// this call spawns a goroutine to monitor/update the terminal size
-			sizeQueue = t.MonitorSize(t.GetSize())
+			streamOptions = remotecommand.StreamOptions{
+				Stdin:             t.In,
+				Stdout:            t.Out,
+				Stderr:            stderr,
+				Tty:               t.Raw,
+				TerminalSizeQueue: sizeQueue,
+			}
 		}
-
-		streamOptions = remotecommand.StreamOptions{
-			Stdin:             t.In,
-			Stdout:            t.Out,
-			Stderr:            stderr,
-			Tty:               t.Raw,
-			TerminalSizeQueue: sizeQueue,
-		}
-	} else {
+	}
+	if !tty {
 		streamOptions = remotecommand.StreamOptions{
 			Stdin:  stdin,
 			Stdout: stdout,

@@ -13,7 +13,7 @@ import (
 
 const waitInterval = time.Millisecond * 150
 
-var tty = terminal.SetupTTY(os.Stdin, os.Stdout)
+var _, tty = terminal.SetupTTY(os.Stdin, os.Stdout)
 
 type loadingText struct {
 	Stream         io.Writer
