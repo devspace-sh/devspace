@@ -41,10 +41,8 @@ func (client *client) ExecStreamWithTransport(transport http.RoundTripper, upgra
 		SubResource(string(subResource))
 
 	if tty {
-		isTerminal, t := terminal.SetupTTY(stdin, stdout)
-		if !isTerminal {
-			tty = false
-		} else {
+		tty, t = terminal.SetupTTY(stdin, stdout)
+		if tty {
 			if t.Raw {
 				// this call spawns a goroutine to monitor/update the terminal size
 				sizeQueue = t.MonitorSize(t.GetSize())
@@ -68,6 +66,7 @@ func (client *client) ExecStreamWithTransport(transport http.RoundTripper, upgra
 	}
 
 	if subResource == SubResourceExec {
+
 		execRequest.VersionedParams(&corev1.PodExecOptions{
 			Container: container,
 			Command:   command,

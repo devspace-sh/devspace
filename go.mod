@@ -54,23 +54,17 @@ require (
 	gopkg.in/yaml.v2 v2.2.8
 	gotest.tools v2.2.0+incompatible
 	helm.sh/helm/v3 v3.1.2
-	k8s.io/api v0.17.3
-	k8s.io/apimachinery v0.17.3
-	k8s.io/cli-runtime v0.17.3
-	k8s.io/client-go v0.17.3
+	k8s.io/api v0.17.4
+	k8s.io/apimachinery v0.17.4
+	k8s.io/cli-runtime v0.17.4
+	k8s.io/client-go v0.17.4
 	k8s.io/klog v1.0.0
-	k8s.io/kubectl v0.17.3
-	k8s.io/utils v0.0.0-20191114184206-e782cd3c129f
+	k8s.io/kubectl v0.17.4
 	mvdan.cc/sh/v3 v3.0.0-alpha2
 )
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.0+incompatible
-	github.com/Nvveen/Gotty => github.com/ijc25/Gotty v0.0.0-20170406111628-a8b993ba6abd
-
 	github.com/agl/ed25519 => github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412
-	github.com/docker/distribution => github.com/docker/distribution v0.0.0-20191216044856-a8371794149d
-	github.com/docker/docker => github.com/moby/moby v1.4.2-0.20200203170920-46ec8731fbce
-
 	golang.org/x/sys => golang.org/x/sys v0.0.0-20191128015809-6d18c012aee9
 )
