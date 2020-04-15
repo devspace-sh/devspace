@@ -23,6 +23,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var gitFolderIgnoreRegex = regexp.MustCompile("/?\\.git/?")
+
 const gitIgnoreFile = ".gitignore"
 const dockerIgnoreFile = ".dockerignore"
 const devspaceFolderGitignore = "\n\n# Ignore DevSpace cache and log folder\n.devspace/\n"
@@ -398,7 +400,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 				dockerignoreRules := strings.Split(string(dockerignore), "\n")
 				for _, ignoreRule := range dockerignoreRules {
 					ignoreRule = strings.TrimSpace(ignoreRule)
-					if len(ignoreRule) > 0 && ignoreRule[0] != "#"[0] && regexp.MustCompile("/?\\.git/?").MatchString(ignoreRule) == false {
+					if len(ignoreRule) > 0 && ignoreRule[0] != "#"[0] && gitFolderIgnoreRegex.MatchString(ignoreRule) == false {
 						excludePaths = append(excludePaths, ignoreRule)
 					}
 				}
