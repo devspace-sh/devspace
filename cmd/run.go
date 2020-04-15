@@ -5,7 +5,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/command"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 
 	"github.com/pkg/errors"
@@ -49,7 +48,7 @@ devspace run mycommand2 1 2 3
 // RunRun executes the functionality "devspace run"
 func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := f.NewConfigLoader(nil, log.Discard)
+	configLoader := f.NewConfigLoader(nil, f.GetLog())
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err

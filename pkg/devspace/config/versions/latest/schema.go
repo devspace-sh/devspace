@@ -613,14 +613,14 @@ type CommandConfig struct {
 
 // Variable describes the var definition
 type Variable struct {
-	Name              string          `yaml:"name"`
-	Question          string          `yaml:"question,omitempty"`
-	Options           []string        `yaml:"options,omitempty"`
-	Password          bool            `yaml:"password,omitempty"`
-	ValidationPattern string          `yaml:"validationPattern,omitempty"`
-	ValidationMessage string          `yaml:"validationMessage,omitempty"`
-	Default           string          `yaml:"default,omitempty"`
-	Source            *VariableSource `yaml:"source,omitempty"`
+	Name              string         `yaml:"name"`
+	Question          string         `yaml:"question,omitempty"`
+	Options           []string       `yaml:"options,omitempty"`
+	Password          bool           `yaml:"password,omitempty"`
+	ValidationPattern string         `yaml:"validationPattern,omitempty"`
+	ValidationMessage string         `yaml:"validationMessage,omitempty"`
+	Default           interface{}    `yaml:"default,omitempty"`
+	Source            VariableSource `yaml:"source,omitempty"`
 }
 
 // VariableSource is type of a variable source
@@ -628,10 +628,11 @@ type VariableSource string
 
 // List of values that source can take
 const (
-	VariableSourceAll   VariableSource = "all"
-	VariableSourceEnv   VariableSource = "env"
-	VariableSourceInput VariableSource = "input"
-	VariableSourceNone  VariableSource = "none"
+	VariableSourceDefault VariableSource = ""
+	VariableSourceAll     VariableSource = "all"
+	VariableSourceEnv     VariableSource = "env"
+	VariableSourceInput   VariableSource = "input"
+	VariableSourceNone    VariableSource = "none"
 )
 
 // ProfileConfig defines a profile config

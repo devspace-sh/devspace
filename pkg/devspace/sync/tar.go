@@ -41,7 +41,7 @@ func (u *Unarchiver) Untar(fromReader io.Reader, toPath string) error {
 	fileCounter := 0
 	gzr, err := gzip.NewReader(fromReader)
 	if err != nil {
-		return errors.Errorf("Error decompressing: %v", err)
+		return errors.Errorf("error decompressing: %v", err)
 	}
 
 	defer gzr.Close()
@@ -50,7 +50,7 @@ func (u *Unarchiver) Untar(fromReader io.Reader, toPath string) error {
 	for {
 		shouldContinue, err := u.untarNext(toPath, tarReader)
 		if err != nil {
-			return errors.Wrap(err, "untarNext")
+			return errors.Wrapf(err, "decompress %s", toPath)
 		} else if shouldContinue == false {
 			return nil
 		}

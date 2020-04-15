@@ -15,7 +15,7 @@ type useLastContextTestCase struct {
 	globalFlags     GlobalFlags
 	generatedConfig *generated.Config
 
-	expectedErr    string
+	expectedErr string
 }
 
 func TestUseLastContext(t *testing.T) {
@@ -35,13 +35,6 @@ func TestUseLastContext(t *testing.T) {
 				SwitchContext: true,
 			},
 			expectedErr: "Flag --namespace cannot be used together with --switch-context",
-		},
-		useLastContextTestCase{
-			name: "Switch context to not existent",
-			globalFlags: GlobalFlags{
-				SwitchContext: true,
-			},
-			expectedErr: "There is no last context to use. Only use the '--switch-context / -s' flag if you already have deployed the project before",
 		},
 		useLastContextTestCase{
 			name: "Switch context to existent",

@@ -245,7 +245,7 @@ func (t *TargetSelector) GetContainer(allowInitContainer bool, log log.Logger) (
 	if pod.Spec.Containers != nil && len(pod.Spec.Containers) == 1 {
 		return pod, &pod.Spec.Containers[0], nil
 	} else if pod.Spec.Containers != nil && len(pod.Spec.Containers) > 1 {
-		if t.pick == false && t.containerName != "" {
+		if t.containerName != "" {
 			// Find container
 			for _, container := range pod.Spec.Containers {
 				if container.Name == t.containerName {

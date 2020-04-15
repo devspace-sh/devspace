@@ -1,6 +1,7 @@
 package use
 
 import (
+	"github.com/devspace-cloud/devspace/cmd/flags"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
@@ -12,11 +13,12 @@ import (
 )
 
 type namespaceCmd struct {
+	*flags.GlobalFlags
 	Reset bool
 }
 
-func newNamespaceCmd(f factory.Factory) *cobra.Command {
-	cmd := &namespaceCmd{}
+func newNamespaceCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+	cmd := &namespaceCmd{GlobalFlags: globalFlags}
 
 	useNamespace := &cobra.Command{
 		Use:   "namespace",
@@ -109,6 +111,12 @@ func (cmd *namespaceCmd) RunUseNamespace(f factory.Factory, cobraCmd *cobra.Comm
 
 		log.Infof("The default namespace of your current kube-context '%s' has been updated to '%s'", ansi.Color(kubeConfig.CurrentContext, "white+b"), ansi.Color(namespace, "white+b"))
 		log.Infof("\r         To revert this operation, run: %s\n", ansi.Color("devspace use namespace "+oldDefaultNamespace, "white+b"))
+	}
+
+	// clear project kube context
+	err = ClearProjectKubeContext(f.NewConfigLoader(cmd.ToConfigOptions(), f.GetLog()))
+	if err != nil {
+		return errors.Wrap(err, "clear generated kube context")
 	}
 
 	log.Donef("Successfully set default namespace to '%s'", ansi.Color(namespace, "white+b"))

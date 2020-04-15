@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/devspace-cloud/devspace/cmd/add"
 	"github.com/devspace-cloud/devspace/cmd/cleanup"
 	"github.com/devspace-cloud/devspace/cmd/connect"
@@ -20,10 +18,13 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/joho/godotenv"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"os"
 )
 
 var cfgFile string
@@ -57,17 +58,32 @@ var globalFlags *flags.GlobalFlags
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	f := factory.DefaultFactory()
-	rootCmd := BuildRoot(f)
-
-	// Set version for --version flag
-	rootCmd.Version = upgrade.GetVersion()
-
-	// Report any panics
+	// report any panics
 	defer cloudanalytics.ReportPanics()
 
-	// Execute command
-	err := rootCmd.Execute()
+	// create a new factory
+	f := factory.DefaultFactory()
+
+	// parse the .env file
+	err := godotenv.Load()
+	if err != nil && os.IsNotExist(err) == false {
+		f.GetLog().Fatal(err)
+	}
+
+	// parse the environment flags
+	err = parseEnvironmentFlags(f)
+	if err != nil {
+		f.GetLog().Fatal(err)
+	}
+
+	// build the root command
+	rootCmd := BuildRoot(f)
+
+	// set version for --version flag
+	rootCmd.Version = upgrade.GetVersion()
+
+	// execute command
+	err = rootCmd.Execute()
 	cloudanalytics.SendCommandEvent(err)
 	if err != nil {
 		// Check if return code error
@@ -100,7 +116,7 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	rootCmd.AddCommand(reset.NewResetCmd(f))
 	rootCmd.AddCommand(set.NewSetCmd(f))
 	rootCmd.AddCommand(status.NewStatusCmd(f))
-	rootCmd.AddCommand(use.NewUseCmd(f))
+	rootCmd.AddCommand(use.NewUseCmd(f, globalFlags))
 	rootCmd.AddCommand(update.NewUpdateCmd(f, globalFlags))
 
 	// Add main commands
@@ -149,4 +165,22 @@ func initConfig(log log.Logger) {
 	if err := viper.ReadInConfig(); err == nil {
 		log.Info("Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+func parseEnvironmentFlags(f factory.Factory) error {
+	// new environment flags parser
+	flagsParser := f.NewEnvironmentFlagsParser()
+
+	// parse other commands
+	supportedCommands := []string{"", "analyze", "attach", "build", "deploy", "dev", "enter", "init", "login", "logs", "open", "print", "purge", "render", "run", "sync", "ui"}
+	for _, command := range supportedCommands {
+		err := flagsParser.Parse(command)
+		if err != nil {
+			return errors.Wrap(err, "parse flags for command "+command)
+		}
+	}
+
+	// apply flags
+	flagsParser.Apply(f.GetLog())
+	return nil
 }

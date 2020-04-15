@@ -20,6 +20,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
+	"github.com/devspace-cloud/devspace/pkg/util/flags"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
@@ -28,6 +29,9 @@ import (
 type Factory interface {
 	// Config Loader
 	NewConfigLoader(options *loader.ConfigOptions, log log.Logger) loader.ConfigLoader
+
+	// Environment flags parser
+	NewEnvironmentFlagsParser() flags.Flags
 
 	// ConfigureManager
 	NewConfigureManager(config *latest.Config, log log.Logger) configure.Manager
@@ -82,6 +86,11 @@ type DefaultFactoryImpl struct{}
 // DefaultFactory returns the default factory implementation
 func DefaultFactory() Factory {
 	return &DefaultFactoryImpl{}
+}
+
+// NewEnvironmentFlagsParser returns a new environemnt flags parser
+func (f *DefaultFactoryImpl) NewEnvironmentFlagsParser() flags.Flags {
+	return flags.New()
 }
 
 // NewAnalyzer creates a new analyzer

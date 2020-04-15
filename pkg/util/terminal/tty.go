@@ -9,14 +9,14 @@ import (
 )
 
 // SetupTTY creates a term.TTY (docker)
-func SetupTTY(stdin io.Reader, stdout io.Writer) term.TTY {
+func SetupTTY(stdin io.Reader, stdout io.Writer) (bool, term.TTY) {
 	t := term.TTY{
 		Out: stdout,
 		In:  stdin,
 	}
 
 	if !t.IsTerminalIn() {
-		return t
+		return false, t
 	}
 
 	// if we get to here, the user wants to attach stdin, wants a TTY, and In is a terminal, so we
@@ -33,5 +33,5 @@ func SetupTTY(stdin io.Reader, stdout io.Writer) term.TTY {
 		t.Out = stdout
 	}
 
-	return t
+	return true, t
 }

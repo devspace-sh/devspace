@@ -1,6 +1,7 @@
 package create
 
 import (
+	"github.com/devspace-cloud/devspace/cmd/use"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
@@ -145,6 +146,12 @@ func (cmd *SpaceCmd) RunCreateSpace(f factory.Factory, cobraCmd *cobra.Command, 
 
 	if configExists {
 		logger.Infof("\r         \nYou can now run: \n- `%s` to deploy the app to the cloud\n- `%s` to develop the app in the cloud\n", ansi.Color("devspace deploy", "white+b"), ansi.Color("devspace dev", "white+b"))
+	}
+
+	// clear project kube context
+	err = use.ClearProjectKubeContext(configLoader)
+	if err != nil {
+		return errors.Wrap(err, "clear generated kube context")
 	}
 
 	return nil
