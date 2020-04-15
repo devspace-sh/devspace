@@ -24,7 +24,7 @@ type fileInformation struct {
 func untarAll(reader io.Reader, options *UpstreamOptions) error {
 	gzr, err := gzip.NewReader(reader)
 	if err != nil {
-		return errors.Errorf("Error decompressing: %v", err)
+		return errors.Errorf("error decompressing: %v", err)
 	}
 
 	defer gzr.Close()
@@ -122,10 +122,10 @@ func untarNext(tarReader *tar.Reader, options *UpstreamOptions) (bool, error) {
 	defer outFile.Close()
 
 	if _, err := io.Copy(outFile, tarReader); err != nil {
-		return false, errors.Wrapf(err, "io copy tar reader %s", outFile)
+		return false, errors.Wrapf(err, "io copy tar reader %s", outFileName)
 	}
 	if err := outFile.Close(); err != nil {
-		return false, errors.Wrapf(err, "out file close %s", outFile)
+		return false, errors.Wrapf(err, "out file close %s", outFileName)
 	}
 
 	// Set old permissions and owner and group

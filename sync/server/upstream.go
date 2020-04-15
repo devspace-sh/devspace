@@ -149,10 +149,7 @@ func (u *Upstream) removeRecursive(absolutePath string) error {
 // Upload implements the server upload interface and writes all the data received to a
 // temporary file
 func (u *Upstream) Upload(stream remote.Upstream_UploadServer) error {
-	reader, writer, err := os.Pipe()
-	if err != nil {
-		return errors.Wrap(err, "pipe")
-	}
+	reader, writer := io.Pipe()
 
 	defer reader.Close()
 	defer writer.Close()
@@ -162,7 +159,7 @@ func (u *Upstream) Upload(stream remote.Upstream_UploadServer) error {
 		writerErrChan <- u.writeTar(writer, stream)
 	}()
 
-	err = untarAll(reader, u.options)
+	err := untarAll(reader, u.options)
 	if err != nil {
 		return errors.Wrap(err, "untar all")
 	}
@@ -192,14 +189,13 @@ func (u *Upstream) writeTar(writer io.WriteCloser, stream remote.Upstream_Upload
 			if err != nil {
 				return err
 			} else if n != len(chunk.Content) {
-				return errors.Errorf("Error writing data: bytes written %d != expected %d", n, len(chunk.Content))
+				return errors.Errorf("error writing data: bytes written %d != expected %d", n, len(chunk.Content))
 			}
 		}
 
 		if err == io.EOF {
 			return nil
-		}
-		if err != nil {
+		} else if err != nil {
 			return err
 		}
 	}

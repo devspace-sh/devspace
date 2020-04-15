@@ -83,10 +83,7 @@ func (d *Downstream) Download(stream remote.Downstream_DownloadServer) error {
 	}
 
 	// Create os pipe
-	reader, writer, err := os.Pipe()
-	if err != nil {
-		return errors.Wrap(err, "create pipe")
-	}
+	reader, writer := io.Pipe()
 
 	// Compress archive and send at the same time
 	errorChan := make(chan error)

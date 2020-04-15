@@ -418,20 +418,36 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 	u.sync.fileIndex.fileMapMutex.Lock()
 	defer u.sync.fileIndex.fileMapMutex.Unlock()
 
+	var archiver *Archiver
 	errorChan := make(chan error)
 	go func() {
-		errorChan <- u.compress(writer, files, ignoreMatcher)
+		var compressErr error
+		archiver, compressErr = u.compress(writer, files, ignoreMatcher)
+		errorChan <- compressErr
 	}()
 
+	// upload the archive
 	err = u.uploadArchive(reader)
 	if err != nil {
 		return errors.Wrap(err, "upload archive")
 	}
 
-	return <-errorChan
+	// check if there was a compressing error
+	err = <-errorChan
+	if err != nil {
+		return errors.Wrap(err, "compress archive")
+	}
+
+	// finally update written files
+	for _, element := range archiver.WrittenFiles() {
+		u.sync.fileIndex.CreateDirInFileMap(path.Dir(element.Name))
+		u.sync.fileIndex.fileMap[element.Name] = element
+	}
+
+	return nil
 }
 
-func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ignoreMatcher gitignore.IgnoreParser) error {
+func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ignoreMatcher gitignore.IgnoreParser) (*Archiver, error) {
 	defer writer.Close()
 
 	// Use compression
@@ -447,17 +463,11 @@ func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ign
 	for _, file := range files {
 		err := archiver.AddToArchive(file.Name)
 		if err != nil {
-			return errors.Wrapf(err, "compress %s", file.Name)
+			return nil, errors.Wrapf(err, "compress %s", file.Name)
 		}
 	}
 
-	// Update sync filemap
-	for _, element := range archiver.WrittenFiles() {
-		u.sync.fileIndex.CreateDirInFileMap(path.Dir(element.Name))
-		u.sync.fileIndex.fileMap[element.Name] = element
-	}
-
-	return nil
+	return archiver, nil
 }
 
 func (u *upstream) uploadArchive(reader io.Reader) error {
@@ -475,6 +485,11 @@ func (u *upstream) uploadArchive(reader io.Reader) error {
 				Content: buf[:n],
 			})
 			if err != nil {
+				_, recvErr := uploadClient.CloseAndRecv()
+				if recvErr != nil {
+					return errors.Wrap(recvErr, "upload send")
+				}
+
 				return errors.Wrap(err, "upload send")
 			}
 		}
