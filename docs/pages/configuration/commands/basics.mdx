@@ -29,12 +29,20 @@ Custom commands can be used for more than just running `devspace` commands, e.g.
 The above example configuration would allow everyone to run the custom command `debug-backend` like this:
 ```bash
 devspace run debug-backend
+devspace run debug-backend --verbose-dependencies
+devspace run debug-backend -- --verbose-dependencies -s
 ```
 
-And `devspace run` would execute the following command internally:
+And `devspace run` would execute the following commands internally:
 ```bash
 devspace dev -i --profile=debug-backend
+devspace dev -i --profile=debug-backend --verbose-dependencies
+devspace dev -i --profile=debug-backend --verbose-dependencies -s
 ```
+
+:::note `--` End of Options Separator
+The `--` between the command name and the additional flags for the command tells your terminal that the arguments and flags that follow after the `--` do not belong to `devspace run` and should not be parsed. It is not required but often helpful to use `--` when executing commands using `devspace run`.
+:::
 
 :::info Interactive Commands
 Custom commands proxy input and output streams, so you can even share interactive commands such as `devspace enter`.
