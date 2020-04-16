@@ -1,0 +1,14 @@
+The `target` option expects a string stating the build target when using multi-stage builds.
+
+#### Example: Defining a Build Target for Docker
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      docker:
+        options:
+          target: production
+```
+**Explanation:**  
+The image `backend` would be built using `docker` and the target `production` would be used for building the image as defined in the `Dockerfile`.
