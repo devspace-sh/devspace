@@ -103,6 +103,7 @@ module.exports = {
         },
         'configuration/commands/basics',
         'configuration/hooks/basics',
+        'configuration/env-file',
       ],
     },
     {

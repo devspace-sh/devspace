@@ -1,0 +1,9 @@
+The `profile` option expects a string with the name of a profile defined in the `devspace.yaml` of this dependency. When configuring this option, this profile will be used to deploy the dependency, i.e. the dependency will be deployed similar to running `devspace deploy -p [profile]` within the folder of the dependency.
+
+#### Example: Use Config Profile for Dependency
+```yaml
+dependencies:
+- source:
+    git: https://github.com/my-api-server
+  profile: production
+```

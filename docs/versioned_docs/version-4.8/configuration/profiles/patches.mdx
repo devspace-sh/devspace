@@ -6,7 +6,7 @@ sidebar_label: patches
 import FragmentInfoPrintConfig from '../../fragments/tip-print-config.mdx';
 import FragmentProfileParent from '../../fragments/profile-parent.mdx';
 
-Patches are a way to perform minor overrides to the configuration without having to create a separate config file.
+Patches are a way to perform minor overrides to the configuration without having to create a separate config file. Patch functionality follows JSON Patch([RFC](https://tools.ietf.org/html/rfc6902)) semantics, as implemented by the [yaml-patch](https://github.com/krishicks/yaml-patch) library.
 
 ## Example
 Patches are ideal for reflecting changes between different environments, e.g. dev, staging and production.
