@@ -302,9 +302,11 @@ $env:Path += ";" + $Env:APPDATA + "\devspace";
 | ------- | --------------------------------------------------------------------------------------- |
 | Node.js | `git clone https://github.com/devspace-cloud/quickstart-nodejs && cd quickstart-nodejs` |
 | Python  | `git clone https://github.com/devspace-cloud/quickstart-python && cd quickstart-python` |
+| Java    | `git clone https://github.com/devspace-cloud/quickstart-java && cd quickstart-java` |
+| Ruby    | `git clone https://github.com/devspace-cloud/quickstart-ruby && cd quickstart-ruby`     |
 | Golang  | `git clone https://github.com/devspace-cloud/quickstart-golang && cd quickstart-golang` |
 | PHP     | `git clone https://github.com/devspace-cloud/quickstart-php && cd quickstart-php`       |
-| Ruby    | `git clone https://github.com/devspace-cloud/quickstart-ruby && cd quickstart-ruby`     |
+| ASP.NET | `git clone https://github.com/devspace-cloud/quickstart-asp-dotnet && cd quickstart-asp-dotnet`       |
 
 
 <details>
@@ -483,33 +485,8 @@ devspace create space my-app
 
 <br>
 
-### 5. Deploy
-Initializing a project will create the configuration file `devspace.yaml` which tells DevSpace how to deploy your project.
-```bash
-devspace deploy
-```
-
-> **Having issues?** Take a look at the **[Troubleshooting Guides](#troubleshooting)** and learn how to fix common issues.
-
-<br>
-
-### 6. Open In Your Browser
-You can now open your application in the browser using the following command:
-```bash
-devspace open
-```
-When DevSpace asks you how to open your application, choose the first option **"via localhost"** because it will work no matter what cluster you are using.
-
-> If you want to connect a domain, check out our guide on [how to connect a domain by creating an ingress with DevSpace](https://devspace.sh/cli/docs/guides/networking-domains).
-
-**Congratulations!** You just deployed your first project to Kubernetes using DevSpace.
-
-<img width="300" src="static/img/congrats.gif">
-
-<br>
-
-### 7. Develop
-After successfully deploying your project once, you can start it in development mode and directly code within your Kubernetes cluster using terminal proxy, port forwarding and real-time code synchronization.
+### 5. Develop
+The most important command in DevSpace starts the development mode and lets you directly code within your Kubernetes cluster using terminal proxy, port forwarding and real-time code synchronization.
 
 ```bash
 devspace dev
@@ -519,13 +496,11 @@ You can now:
 - Edit your source code files and DevSpace will automatically synchronize them to the containers running in Kubernetes 
 - Use a hot reloading tool like `nodemon` and your application will automatically reload when you edit source code files
 
-Quickstart projects work out of the box in development mode because the `ENTRYPOINT` of the provided Dockerfiles start the projects in hot reloading mode. If you want to configure your own application to work well with `devspace dev`, it is highly recommended that you take a look at the documentation, to understand the [workflow and basics of the developing cloud-native software with DevSpace](https://devspace.sh/cli/docs/configuration/development/basics).
-
 > Run `devspace dev -i` to use interactive mode: overrides your Dockerfile `ENTRYPOINT` with `[sleep, 999999]` and opens the terminal proxy, so you can manually run the start command for your application, e.g. `npm start`. Interactive mode is great for debugging containers that keep crashing or starting an application in hot reloading mode when the Dockerfile ENTRYPOINT generally starts a rather production-like version of the application.
 
 <br>
 
-### 8. Open The Development UI
+### 6. Open The Development UI
 When running `devspace dev`, DevSpace starts a client-only UI for Kubernetes. You can see that in the output of `devspace dev` which should contain a log line similar to this one:
 ```bash
 #########################################################
@@ -544,6 +519,33 @@ Once the UI is open in your browser, it will look similar to this screenshot:
 
 [Follow this guide to learn more about the functionalities of the DevSpace UI for Kubernetes development.](https://devspace.sh/cli/docs/guides/localhost-ui)
 
+
+<br>
+
+### 7. Deploy
+Initializing a project will create the configuration file `devspace.yaml` which tells DevSpace how to deploy your project.
+```bash
+devspace deploy -p production
+```
+The `-p / --profile` flag tells DevSpace to apply a certain profile defined in your `devspace.yaml`. A profile changes the base configuration by, for example, applying config patches. This allows you to have one base configuration and adapt it for different deployment targets and environment (e.g. dev as base config and a profile for production).
+
+> **Having issues?** Take a look at the **[Troubleshooting Guides](#troubleshooting)** and learn how to fix common issues.
+
+<br>
+
+### 8. Open Deployed App
+You can now open your application in the browser using the following command:
+```bash
+devspace open
+```
+When DevSpace asks you how to open your application, choose the first option **"via localhost"** because it will work no matter what cluster you are using.
+
+> If you want to connect a domain, check out our guide on [how to connect a domain by creating an ingress with DevSpace](https://devspace.sh/cli/docs/guides/networking-domains).
+
+**Congratulations!** You just deployed your first project to Kubernetes using DevSpace.
+
+<img width="300" src="static/img/congrats.gif">
+
 <br>
 
 ### 9. Learn more
@@ -552,7 +554,6 @@ Follow these links to more about how to use DevSpace:
 - [Onboarding Guide](https://devspace.sh/cli/docs/guides/basics)
 - [How to use the Localhost UI of DevSpace](https://devspace.sh/cli/docs/guides/localhost-ui)
 - [How to connect a domain by creating an ingress](https://devspace.sh/cli/docs/guides/networking-domains)
-- [How to configure differences between development, staging and production](https://devspace.sh/cli/docs/best-practices/dev-staging-production)
 - [How to integrate DevSpace in your CI/CD pipeline](https://devspace.sh/cli/docs/guides/ci-cd-integration)
 - [How to troubleshoot common issues](#troubleshooting)
 
@@ -636,7 +637,7 @@ hooks:                  # Customize all workflows using hooks
 
 ```yaml
 # File: ./devspace.yaml
-version: v1beta2
+version: v1beta9
 
 images:
   backend:                              # Key 'backend' = Name of this image
@@ -727,8 +728,9 @@ images:
     createPullSecret: true
     dockerfile: ./db/Dockerfile                 # Build with --dockerfile=./db/Dockerfile
     context: ./db                               # Build with --context=./db
-    # The following line defines a custom tag schema for this image (default tag schema is: ${DEVSPACE_RANDOM})
-    tag: ${DEVSPACE_USERNAME}-devspace-${DEVSPACE_GIT_COMMIT}-${DEVSPACE_RANDOM}
+    # The following lines define custom tag schemata for this image (default tag schema is: ${DEVSPACE_RANDOM})
+    tags:
+    - ${DEVSPACE_USERNAME}-devspace-${DEVSPACE_GIT_COMMIT}-${DEVSPACE_RANDOM}
 ```
 Take a look at the documentation for more information about [configuring builds with Docker](https://devspace.sh/cli/docs/configuration/images/docker).  <img src="static/img/line.svg" height="1">
 
@@ -921,7 +923,7 @@ dependencies:
     git: https:/my-private-git.tld/my-auth-server 
 - source:
     path: ../my-auth-server
-  config: default
+  profile: production
 ```
 
 Before deploying a project, DevSpace resolves all dependencies and builds a dependency tree which will then be deployed in a buttom-up fashion, i.e. the project which you call `devspace deploy` in will be deployed last.
@@ -1002,7 +1004,9 @@ Use config variables
 images:
   default:
     image: ${DEVSPACE_USERNAME}/image-name
-    tag: ${DEVSPACE_GIT_COMMIT}-${DEVSPACE_TIMESTAMP}
+    tags:
+    - ${DEVSPACE_GIT_COMMIT}-${DEVSPACE_TIMESTAMP}
+    - latest
 ```
 
 DevSpace allows you to use certain pre-defined variables to make the configuration more flexible and easier to share with others. Additionally, you can add your own custom variables.
@@ -1025,10 +1029,12 @@ images:
     image: john/debugger
 deployments:
 - name: app-backend
-  component:
-    containers:
-    - image: john/devbackend
-    - image: john/debugger
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
 profiles:
 - name: production
   patches:
