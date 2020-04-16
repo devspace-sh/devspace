@@ -261,6 +261,15 @@ npm install -g devspace
 </details>
 
 <details>
+<summary>via Yarn</summary>
+
+```
+yarn global add devspace
+```
+
+</details>
+
+<details>
 <summary>via Mac Terminal</summary>
 
 ```
