@@ -6,7 +6,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
 
-	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 )
 
@@ -27,13 +26,7 @@ type GlobalFlags struct {
 
 // UseLastContext uses the last context
 func (gf *GlobalFlags) UseLastContext(generatedConfig *generated.Config, log log.Logger) error {
-	if gf.KubeContext != "" && gf.SwitchContext {
-		return errors.Errorf("Flag --kube-context cannot be used together with --switch-context")
-	} else if gf.Namespace != "" && gf.SwitchContext {
-		return errors.Errorf("Flag --namespace cannot be used together with --switch-context")
-	}
-
-	if gf.SwitchContext == true {
+	if gf.KubeContext == "" && gf.Namespace == "" && gf.SwitchContext == true {
 		if generatedConfig == nil || generatedConfig.GetActive().LastContext == nil {
 			log.Warn("There is no last context to use. Only use the '--switch-context / -s' flag if you already have deployed the project before")
 		} else {

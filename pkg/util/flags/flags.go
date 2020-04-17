@@ -3,13 +3,12 @@ package flags
 import (
 	"errors"
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"os"
 	"strings"
 )
 
 type Flags interface {
-	Apply(log log.Logger)
+	Apply() []string
 	Parse(command string) error
 }
 
@@ -24,16 +23,16 @@ func New() Flags {
 }
 
 // Apply appends the flags to the os.Args
-func (f *flags) Apply(log log.Logger) {
+func (f *flags) Apply() []string {
 	if len(f.args) == 0 {
-		return
+		return nil
 	}
 
-	log.Infof("Applying extra flags from environment: %s", strings.Join(f.args, " "))
 	newArgs := []string{os.Args[0]}
 	newArgs = append(newArgs, f.args...)
 	newArgs = append(newArgs, os.Args[1:]...)
 	os.Args = newArgs
+	return f.args
 }
 
 // Parse args parses the flags for a certain command from the environment variables
