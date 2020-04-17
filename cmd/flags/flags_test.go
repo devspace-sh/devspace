@@ -21,22 +21,6 @@ type useLastContextTestCase struct {
 func TestUseLastContext(t *testing.T) {
 	testCases := []useLastContextTestCase{
 		useLastContextTestCase{
-			name: "Kube-Context and switch-context",
-			globalFlags: GlobalFlags{
-				KubeContext:   " ",
-				SwitchContext: true,
-			},
-			expectedErr: "Flag --kube-context cannot be used together with --switch-context",
-		},
-		useLastContextTestCase{
-			name: "Namespace and switch-context",
-			globalFlags: GlobalFlags{
-				Namespace:     " ",
-				SwitchContext: true,
-			},
-			expectedErr: "Flag --namespace cannot be used together with --switch-context",
-		},
-		useLastContextTestCase{
 			name: "Switch context to existent",
 			globalFlags: GlobalFlags{
 				SwitchContext: true,

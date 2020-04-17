@@ -25,12 +25,29 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
+	"strings"
 )
 
 var cfgFile string
 
 // NewRootCmd returns a new root command
-func NewRootCmd(log log.Logger) *cobra.Command {
+func NewRootCmd(f factory.Factory) *cobra.Command {
+	log := f.GetLog()
+	// we delay the output because we don't want to print things when we are silenced
+	warnings := []string{}
+
+	// parse the .env file
+	err := godotenv.Load()
+	if err != nil && os.IsNotExist(err) == false {
+		warnings = append(warnings, "Error loading .env: " + err.Error())
+	}
+
+	// parse the environment flags
+	extraFlags, err := parseEnvironmentFlags(f)
+	if err != nil {
+		warnings = append(warnings, "Error parsing environment variables: " + err.Error())
+	}
+
 	return &cobra.Command{
 		Use:           "devspace",
 		SilenceUsage:  true,
@@ -39,6 +56,14 @@ func NewRootCmd(log log.Logger) *cobra.Command {
 		PersistentPreRun: func(cobraCmd *cobra.Command, args []string) {
 			if globalFlags.Silent {
 				log.SetLevel(logrus.FatalLevel)
+			}
+
+			if len(extraFlags) > 0 {
+				log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
+			}
+
+			for _, warning := range warnings {
+				log.Warn(warning)
 			}
 
 			// Get version of current binary
@@ -64,18 +89,6 @@ func Execute() {
 	// create a new factory
 	f := factory.DefaultFactory()
 
-	// parse the .env file
-	err := godotenv.Load()
-	if err != nil && os.IsNotExist(err) == false {
-		f.GetLog().Fatal(err)
-	}
-
-	// parse the environment flags
-	err = parseEnvironmentFlags(f)
-	if err != nil {
-		f.GetLog().Fatal(err)
-	}
-
 	// build the root command
 	rootCmd := BuildRoot(f)
 
@@ -83,7 +96,7 @@ func Execute() {
 	rootCmd.Version = upgrade.GetVersion()
 
 	// execute command
-	err = rootCmd.Execute()
+	err := rootCmd.Execute()
 	cloudanalytics.SendCommandEvent(err)
 	if err != nil {
 		// Check if return code error
@@ -102,7 +115,7 @@ func Execute() {
 
 // BuildRoot creates a new root command from the
 func BuildRoot(f factory.Factory) *cobra.Command {
-	rootCmd := NewRootCmd(f.GetLog())
+	rootCmd := NewRootCmd(f)
 	persistentFlags := rootCmd.PersistentFlags()
 	globalFlags = flags.SetGlobalFlags(persistentFlags)
 
@@ -167,7 +180,7 @@ func initConfig(log log.Logger) {
 	}
 }
 
-func parseEnvironmentFlags(f factory.Factory) error {
+func parseEnvironmentFlags(f factory.Factory) ([]string, error) {
 	// new environment flags parser
 	flagsParser := f.NewEnvironmentFlagsParser()
 
@@ -176,11 +189,10 @@ func parseEnvironmentFlags(f factory.Factory) error {
 	for _, command := range supportedCommands {
 		err := flagsParser.Parse(command)
 		if err != nil {
-			return errors.Wrap(err, "parse flags for command "+command)
+			return nil, errors.Wrap(err, "parse flags for command "+command)
 		}
 	}
 
 	// apply flags
-	flagsParser.Apply(f.GetLog())
-	return nil
+	return flagsParser.Apply(), nil
 }
