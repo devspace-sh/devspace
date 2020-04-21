@@ -17,8 +17,8 @@ if [ -f "$BINARY" ] || [ $(stat --printf="%s" "$BINARY") -lt 10000 ]; then
         fi
     fi
 
-    echo "Running: node $BASEDIR/$INDEX_FILE force-install"
-    /usr/bin/env node "$BASEDIR/$INDEX_FILE" force-install;
+    echo "Running: node $BASEDIR/$INDEX_FILE finish-install"
+    /usr/bin/env node "$BASEDIR/$INDEX_FILE" finish-install;
 
     devspace "$@" 2>/dev/null || devspace.exe "$@";
     exit $?;

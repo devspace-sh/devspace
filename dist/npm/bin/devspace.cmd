@@ -3,13 +3,13 @@
 WHERE devspace.exe >nul 2>nul
 IF %ERRORLEVEL% EQU 0 devspace %* && exit /b %errorlevel%
 
-echo "Finishing installation of DevSpace CLI"
+echo Finishing installation of DevSpace CLI
 
 FOR /F "tokens=* USEBACKQ" %%F IN (`npm root -g`) DO (
   SET basedir=%%F
 )
 
-indexFile="devspace\index.js"
+SET indexFile=devspace\index.js
 
 IF NOT EXIST "%basedir%\%indexFile%" (
   FOR /F "tokens=* USEBACKQ" %%F IN (`npm root -g`) DO (
@@ -21,5 +21,5 @@ IF NOT EXIST "%basedir%\%indexFile%" (
   )
 )
 
-echo "Running: node %basedir%\%indexFile% force-install"
-node %basedir%\%indexFile% force-install && devspace.exe %*
+echo Running: node %basedir%\%indexFile% finish-install
+node %basedir%\%indexFile% finish-install && devspace.exe %* && exit /b %errorlevel%
