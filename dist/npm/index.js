@@ -144,11 +144,6 @@ function rimraf(dir_path) {
 }
 
 let continueProcess = function(askRemoveGlobalFolder) {
-  // installation will be completed on first call of the binary
-  if (action == "install") {
-    process.exit(0);
-  }
-
   let version = packageJson.version;
   let platform = PLATFORM_MAPPING[process.platform];
   let arch = ARCH_MAPPING[process.arch];
@@ -211,34 +206,51 @@ let continueProcess = function(askRemoveGlobalFolder) {
       fs.unlinkSync(path.join(globalDir, "." + binaryName + ".old"));
     } catch (e) {}
 
-    let removeBinaries = function(allBinaries) {
-      if (allBinaries) {
-        try {
-          fs.unlinkSync(binaryPath);
-        } catch (e) {}
-
-        try {
-          fs.unlinkSync(path.join(fallbackGlobalDir, binaryName));
-        } catch (e) {}
-      }
-
+    let removeScripts = function(allScripts) {
       if (platform == PLATFORM_MAPPING.win32) {
-        try {
-          fs.unlinkSync(binaryPath.replace(/\.exe$/i, ""));
-        } catch (e) {}
-
-        try {
-          fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".cmd"));
-        } catch (e) {}
-
+        if (allScripts) {
+          try {
+            fs.unlinkSync(binaryPath.replace(/\.exe$/i, ""));
+          } catch (e) {}
+        }
+        
+        // Remove bin/devspace.ps1 file because it can cause issues
         try {
           fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".ps1"));
         } catch (e) {}
       }
     }
     
-    if (action == "uninstall") {
-      removeBinaries(true);
+    if (action == "install") {
+      removeScripts(false);
+
+      if (platform == PLATFORM_MAPPING.win32) {
+        // Remove bin/devspace.cmd file because it can cause issues
+        try {
+          fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".cmd"));
+        } catch (e) {}
+
+        // Copy #PROJECT_DIR/bin/devspace.cmd file to $NPM_GLOBAL/bin/devspace.cmd
+        try {
+          fs.copyFileSync(path.join(__dirname, "bin", "devspace.cmd"), binaryPath.replace(/\.exe$/i, ".cmd"));
+        } catch (e) {}
+      }
+    }
+    else if (action == "uninstall") {
+      try {
+        fs.unlinkSync(binaryPath);
+      } catch (e) {}
+
+      try {
+        fs.unlinkSync(path.join(fallbackGlobalDir, binaryName));
+      } catch (e) {}
+
+      // Remove bin/devspace.cmd
+      try {
+        fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".cmd"));
+      } catch (e) {}
+      
+      removeScripts(true);
 
       if (askRemoveGlobalFolder && process.stdout.isTTY) {
         let removeGlobalFolder = function() {
@@ -268,7 +280,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
         console.warn("DevSpace will not remove the global ~/.devspace folder without asking. This uninstall call is being executed in a non-interactive environment.")
       }
     } else {
-      if (action == "install" || action == "force-install") {
+      if (action == "finish-install") {
         const showRootError = function() {
           console.error("\n############################################");
           console.error(
@@ -317,8 +329,10 @@ let continueProcess = function(askRemoveGlobalFolder) {
               process.exit(1);
             })
             .on("response", function(res) {
-              spinner.stop(true);
               if (res.statusCode != 200) {
+                writeStream.end();
+                spinner.stop(true);
+
                 if (res.statusCode == 404) {
                   console.error("Release version " + version + " not found.\n");
 
@@ -373,7 +387,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
                 process.exit(1);
               }
 
-              removeBinaries();
+              removeScripts(true);
             });
         };
 
