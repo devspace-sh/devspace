@@ -317,7 +317,7 @@ func (d *Dependency) Render(skipPush, skipBuild, forceBuild bool, log log.Logger
 	// Deploy all defined deployments
 	return d.deployController.Render(&deploy.Options{
 		BuiltImages: builtImages,
-	}, os.Stdout)
+	}, os.Stdout, log)
 }
 
 // Purge purges the dependency

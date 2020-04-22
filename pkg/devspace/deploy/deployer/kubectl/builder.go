@@ -3,6 +3,7 @@ package kubectl
 import (
 	"fmt"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -21,12 +22,14 @@ type RunCommand func(path string, args []string) ([]byte, error)
 type kustomizeBuilder struct {
 	path   string
 	config *latest.DeploymentConfig
+	log    log.Logger
 }
 
-func NewKustomizeBuilder(path string, config *latest.DeploymentConfig) Builder {
+func NewKustomizeBuilder(path string, config *latest.DeploymentConfig, log log.Logger) Builder {
 	return &kustomizeBuilder{
 		path:   path,
 		config: config,
+		log:    log,
 	}
 }
 
@@ -35,6 +38,7 @@ func (k *kustomizeBuilder) Build(manifest string, cmd RunCommand) ([]*unstructur
 	args = append(args, k.config.Kubectl.KustomizeArgs...)
 
 	// Execute command
+	k.log.Infof("Render manifests with 'kustomize %s'", strings.Join(args, " "))
 	output, err := cmd(k.path, args)
 	if err != nil {
 		exitError, ok := err.(*exec.ExitError)

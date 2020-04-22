@@ -76,7 +76,7 @@ func TestRender(t *testing.T) {
 			testCase.options = &Options{}
 		}
 
-		err := controller.Render(testCase.options, nil)
+		err := controller.Render(testCase.options, nil, log.Discard)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)

@@ -30,7 +30,7 @@ type Options struct {
 // Controller is the main deploying interface
 type Controller interface {
 	Deploy(options *Options, log log.Logger) error
-	Render(options *Options, out io.Writer) error
+	Render(options *Options, out io.Writer, log log.Logger) error
 	Purge(deployments []string, log log.Logger) error
 }
 
@@ -53,7 +53,7 @@ func NewController(config *latest.Config, cache *generated.CacheConfig, client k
 	}
 }
 
-func (c *controller) Render(options *Options, out io.Writer) error {
+func (c *controller) Render(options *Options, out io.Writer, log log.Logger) error {
 	if c.config.Deployments != nil && len(c.config.Deployments) > 0 {
 		helmV2Clients := map[string]helmtypes.Client{}
 
@@ -79,19 +79,19 @@ func (c *controller) Render(options *Options, out io.Writer) error {
 			)
 
 			if deployConfig.Kubectl != nil {
-				deployClient, err = kubectl.New(c.config, c.client, deployConfig, log.Discard)
+				deployClient, err = kubectl.New(c.config, c.client, deployConfig, log)
 				if err != nil {
 					return errors.Errorf("Error render: deployment %s error: %v", deployConfig.Name, err)
 				}
 
 			} else if deployConfig.Helm != nil {
 				// Get helm client
-				helmClient, err := GetCachedHelmClient(c.config, deployConfig, c.client, helmV2Clients, true, log.Discard)
+				helmClient, err := GetCachedHelmClient(c.config, deployConfig, c.client, helmV2Clients, true, log)
 				if err != nil {
 					return errors.Wrap(err, "get cached helm client")
 				}
 
-				deployClient, err = helm.New(c.config, helmClient, c.client, deployConfig, log.Discard)
+				deployClient, err = helm.New(c.config, helmClient, c.client, deployConfig, log)
 				if err != nil {
 					return errors.Errorf("Error render: deployment %s error: %v", deployConfig.Name, err)
 				}

@@ -23,6 +23,9 @@ func ApplyExtraFlags(cobraCmd *cobra.Command) ([]string, error) {
 	}
 
 	flags = append(flags, commandFlags...)
+	if len(flags) == 0 {
+		return nil, nil
+	}
 
 	err = cobraCmd.ParseFlags(flags)
 	if err != nil {

@@ -47,7 +47,7 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 			// apply extra flags
 			extraFlags, err := flagspkg.ApplyExtraFlags(cobraCmd)
 			if err != nil {
-				log.Fatalf("Error applying extra flags: %v", err)
+				log.Warnf("Error applying extra flags: %v", err)
 			} else if len(extraFlags) > 0 {
 				log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
 			}
