@@ -7,7 +7,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/pkg/errors"
-
 	"github.com/spf13/cobra"
 )
 

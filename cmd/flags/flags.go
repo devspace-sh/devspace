@@ -22,6 +22,8 @@ type GlobalFlags struct {
 	Vars        []string
 
 	SwitchContext bool
+
+	Flags *flag.FlagSet
 }
 
 // UseLastContext uses the last context
@@ -55,7 +57,8 @@ func (gf *GlobalFlags) ToConfigOptions() *loader.ConfigOptions {
 // SetGlobalFlags applies the global flags
 func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	globalFlags := &GlobalFlags{
-		Vars: []string{},
+		Vars:  []string{},
+		Flags: flags,
 	}
 
 	flags.BoolVar(&globalFlags.NoWarn, "no-warn", false, "If true does not show any warning when deploying into a different namespace or kube-context than before")

@@ -3,60 +3,38 @@ package flags
 import (
 	"errors"
 	"fmt"
+	"github.com/spf13/cobra"
 	"os"
 	"strings"
 )
 
-type Flags interface {
-	Apply() []string
-	Parse(command string) error
-}
+// ApplyExtraFlags args parses the flags for a certain command from the environment variables
+func ApplyExtraFlags(cobraCmd *cobra.Command) ([]string, error) {
+	envName := strings.ToUpper(strings.Replace(cobraCmd.CommandPath(), " ", "_", -1) + "_FLAGS")
 
-// flags is a helper struct to parse flags from the environment
-type flags struct {
-	args []string
-}
-
-// New creates a new flag set
-func New() Flags {
-	return &flags{args: []string{}}
-}
-
-// Apply appends the flags to the os.Args
-func (f *flags) Apply() []string {
-	if len(f.args) == 0 {
-		return nil
-	}
-
-	newArgs := []string{os.Args[0]}
-	newArgs = append(newArgs, f.args...)
-	newArgs = append(newArgs, os.Args[1:]...)
-	os.Args = newArgs
-	return f.args
-}
-
-// Parse args parses the flags for a certain command from the environment variables
-func (f *flags) Parse(command string) error {
-	if command != "" && isCommand(command) == false {
-		return nil
-	}
-
-	envName := strings.ToUpper("DEVSPACE_" + command + "_FLAGS")
-	if command == "" {
-		envName = "DEVSPACE_FLAGS"
-	}
-
-	flags, err := parseCommandLine(os.Getenv(envName))
+	flags, err := parseCommandLine(os.Getenv("DEVSPACE_FLAGS"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	f.args = append(f.args, flags...)
-	return nil
-}
+	commandFlags, err := parseCommandLine(os.Getenv(envName))
+	if err != nil {
+		return nil, err
+	}
 
-func isCommand(command string) bool {
-	return len(os.Args) > 1 && os.Args[1] == command
+	flags = append(flags, commandFlags...)
+
+	err = cobraCmd.ParseFlags(flags)
+	if err != nil {
+		return nil, err
+	}
+
+	err = cobraCmd.ParseFlags(os.Args)
+	if err != nil {
+		return nil, err
+	}
+
+	return flags, nil
 }
 
 func parseCommandLine(command string) ([]string, error) {
