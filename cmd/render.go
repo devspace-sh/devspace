@@ -193,7 +193,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	err = f.NewDeployController(config, generatedConfig.GetActive(), client).Render(&deploy.Options{
 		BuiltImages: builtImages,
 		Deployments: deployments,
-	}, os.Stdout)
+	}, os.Stdout, log)
 	if err != nil {
 		return err
 	}

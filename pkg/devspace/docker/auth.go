@@ -132,17 +132,18 @@ func getDefaultAuthConfig(checkCredStore bool, serverAddress string, isDefaultRe
 
 	if checkCredStore {
 		configfile, err := loadDockerConfig()
-
 		if configfile != nil && err == nil {
 			authconfigOrig, err := configfile.GetAuthConfig(serverAddress)
 			if err != nil {
-				return nil, err
+				authconfig.ServerAddress = serverAddress
+				return &authconfig, err
 			}
 
 			// convert
 			err = util.Convert(authconfigOrig, &authconfig)
 			if err != nil {
-				return nil, err
+				authconfig.ServerAddress = serverAddress
+				return &authconfig, err
 			}
 		}
 	}

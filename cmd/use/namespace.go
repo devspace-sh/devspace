@@ -93,6 +93,7 @@ func (cmd *namespaceCmd) RunUseNamespace(f factory.Factory, cobraCmd *cobra.Comm
 		namespace, err = log.Question(&survey.QuestionOptions{
 			Question: "Which namespace do you want to use?",
 			Options:  namespaces,
+			Sort:     true,
 		})
 		if err != nil {
 			return err

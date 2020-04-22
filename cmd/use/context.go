@@ -3,8 +3,6 @@ package use
 import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
-	"sort"
-
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 
@@ -62,12 +60,11 @@ func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command,
 			contexts = append(contexts, ctx)
 		}
 
-		sort.Strings(contexts)
-
 		context, err = log.Question(&survey.QuestionOptions{
 			Question:     "Which context do you want to use?",
 			DefaultValue: kubeConfig.CurrentContext,
 			Options:      contexts,
+			Sort:         true,
 		})
 		if err != nil {
 			return err

@@ -17,53 +17,39 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	flagspkg "github.com/devspace-cloud/devspace/pkg/util/flags"
 	"github.com/joho/godotenv"
-	homedir "github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"os"
 	"strings"
 )
 
-var cfgFile string
-
 // NewRootCmd returns a new root command
 func NewRootCmd(f factory.Factory) *cobra.Command {
-	log := f.GetLog()
-	// we delay the output because we don't want to print things when we are silenced
-	warnings := []string{}
-
-	// parse the .env file
-	err := godotenv.Load()
-	if err != nil && os.IsNotExist(err) == false {
-		warnings = append(warnings, "Error loading .env: " + err.Error())
-	}
-
-	// parse the environment flags
-	extraFlags, err := parseEnvironmentFlags(f)
-	if err != nil {
-		warnings = append(warnings, "Error parsing environment variables: " + err.Error())
-	}
-
 	return &cobra.Command{
 		Use:           "devspace",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Short:         "Welcome to the DevSpace!",
 		PersistentPreRun: func(cobraCmd *cobra.Command, args []string) {
+			log := f.GetLog()
 			if globalFlags.Silent {
 				log.SetLevel(logrus.FatalLevel)
 			}
 
-			if len(extraFlags) > 0 {
-				log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
+			// parse the .env file
+			err := godotenv.Load()
+			if err != nil && os.IsNotExist(err) == false {
+				log.Warnf("Error loading .env: %v", err)
 			}
 
-			for _, warning := range warnings {
-				log.Warn(warning)
+			// apply extra flags
+			extraFlags, err := flagspkg.ApplyExtraFlags(cobraCmd)
+			if err != nil {
+				log.Warnf("Error applying extra flags: %v", err)
+			} else if len(extraFlags) > 0 {
+				log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
 			}
 
 			// Get version of current binary
@@ -151,48 +137,5 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	rootCmd.AddCommand(NewAttachCmd(f, globalFlags))
 	rootCmd.AddCommand(NewPrintCmd(f, globalFlags))
 
-	cobra.OnInitialize(func() { initConfig(f.GetLog()) })
 	return rootCmd
-}
-
-// initConfig reads in config file and ENV variables if set.
-func initConfig(log log.Logger) {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			log.Panic(err)
-		}
-
-		// Search config in home directory with name ".devspace" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".devspace")
-	}
-
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		log.Info("Using config file:", viper.ConfigFileUsed())
-	}
-}
-
-func parseEnvironmentFlags(f factory.Factory) ([]string, error) {
-	// new environment flags parser
-	flagsParser := f.NewEnvironmentFlagsParser()
-
-	// parse other commands
-	supportedCommands := []string{"", "analyze", "attach", "build", "deploy", "dev", "enter", "init", "login", "logs", "open", "print", "purge", "render", "run", "sync", "ui"}
-	for _, command := range supportedCommands {
-		err := flagsParser.Parse(command)
-		if err != nil {
-			return nil, errors.Wrap(err, "parse flags for command "+command)
-		}
-	}
-
-	// apply flags
-	return flagsParser.Apply(), nil
 }

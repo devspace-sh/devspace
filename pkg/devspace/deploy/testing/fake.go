@@ -22,7 +22,7 @@ func (f *FakeController) Deploy(options *deploy.Options, log log.Logger) error {
 }
 
 // Render implements interface
-func (f *FakeController) Render(options *deploy.Options, out io.Writer) error {
+func (f *FakeController) Render(options *deploy.Options, out io.Writer, log log.Logger) error {
 	return nil
 }
 

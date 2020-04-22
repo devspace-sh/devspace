@@ -3,6 +3,7 @@ package survey
 import (
 	"os"
 	"regexp"
+	"sort"
 
 	"github.com/pkg/errors"
 	surveypkg "gopkg.in/AlecAivazis/survey.v1"
@@ -16,6 +17,7 @@ type QuestionOptions struct {
 	ValidationMessage      string
 	ValidationFunc         func(value string) error
 	Options                []string
+	Sort                   bool
 	IsPassword             bool
 }
 
@@ -43,6 +45,11 @@ func (s *survey) Question(params *QuestionOptions) (string, error) {
 	}
 
 	if params.Options != nil {
+		if params.Sort {
+			params.Options = copyStringArray(params.Options)
+			sort.Strings(params.Options)
+		}
+
 		prompt = &surveypkg.Select{
 			Message: params.Question + "\n",
 			Options: params.Options,
@@ -110,4 +117,12 @@ func (s *survey) Question(params *QuestionOptions) (string, error) {
 	}
 
 	return answers.Question, nil
+}
+
+func copyStringArray(strings []string) []string {
+	retStrings := []string{}
+	for _, str := range strings {
+		retStrings = append(retStrings, str)
+	}
+	return retStrings
 }

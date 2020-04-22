@@ -124,6 +124,7 @@ Open terminal instead of logs:
 
 	devCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "If true will wait first for pods to be running or fails after given timeout")
 	devCmd.Flags().IntVar(&cmd.Timeout, "timeout", 120, "Timeout until dev should stop waiting and fail")
+
 	return devCmd
 }
 
