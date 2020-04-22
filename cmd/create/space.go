@@ -8,6 +8,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"sort"
 
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
@@ -182,6 +183,8 @@ func getCluster(p cloud.Provider, logger log.Logger) (*latest.Cluster, error) {
 		for _, cluster := range connectedClusters {
 			clusterNames = append(clusterNames, cluster.Name)
 		}
+
+		sort.Strings(clusterNames)
 
 		// Check if there are non connected clusters
 		for _, cluster := range clusters {

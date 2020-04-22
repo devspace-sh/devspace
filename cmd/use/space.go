@@ -96,6 +96,7 @@ func (cmd *spaceCmd) RunUseSpace(f factory.Factory, cobraCmd *cobra.Command, arg
 		spaceName, err := log.Question(&survey.QuestionOptions{
 			Question: "Please select the Space that you want to use",
 			Options:  names,
+			Sort:     true,
 		})
 		if err != nil {
 			return err

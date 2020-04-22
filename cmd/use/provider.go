@@ -60,6 +60,7 @@ func (*providerCmd) RunUseProvider(f factory.Factory, cobraCmd *cobra.Command, a
 			Question:     "Please select a default provider",
 			DefaultValue: providerConfig.Default,
 			Options:      providerNames,
+			Sort:         true,
 		})
 		if err != nil {
 			return err
