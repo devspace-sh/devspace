@@ -22,4 +22,4 @@ IF NOT EXIST "%basedir%\%indexFile%" (
 )
 
 echo Running: node %basedir%\%indexFile% finish-install
-node %basedir%\%indexFile% finish-install && devspace.exe %* && exit /b %errorlevel%
+node "%basedir%\%indexFile%" finish-install && devspace.exe %* && exit /b %errorlevel%
