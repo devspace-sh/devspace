@@ -37,7 +37,19 @@ func (serviceClient *client) StartAttach(imageSelector []string, interrupt chan 
 	serviceClient.log.Info("If you don't see a command prompt, try pressing enter.")
 
 	go func() {
-		interrupt <- serviceClient.client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container.Name, nil, container.TTY, os.Stdin, os.Stdout, os.Stderr, kubectl.SubResourceAttach)
+		interrupt <- serviceClient.client.ExecStreamWithTransport(&kubectl.ExecStreamWithTransportOptions{
+			ExecStreamOptions: kubectl.ExecStreamOptions{
+				Pod:       pod,
+				Container: container.Name,
+				TTY:       container.TTY,
+				Stdin:     os.Stdin,
+				Stdout:    os.Stdout,
+				Stderr:    os.Stderr,
+			},
+			Transport:   wrapper,
+			Upgrader:    upgradeRoundTripper,
+			SubResource: kubectl.SubResourceAttach,
+		})
 	}()
 
 	err = <-interrupt

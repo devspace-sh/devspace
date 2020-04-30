@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"io"
 	"io/ioutil"
@@ -393,7 +394,14 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 func (serviceClient *client) startStream(syncClient *sync.Sync, pod *v1.Pod, container string, command []string, reader io.Reader, writer io.Writer) {
 	stderrBuffer := &bytes.Buffer{}
 
-	err := serviceClient.client.ExecStream(pod, container, command, false, reader, writer, stderrBuffer)
+	err := serviceClient.client.ExecStream(&kubectl.ExecStreamOptions{
+		Pod:       pod,
+		Container: container,
+		Command:   command,
+		Stdin:     reader,
+		Stdout:    writer,
+		Stderr:    stderrBuffer,
+	})
 	if err != nil {
 		syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %s %v", pod.Namespace, pod.Name, stderrBuffer.String(), err))
 	}

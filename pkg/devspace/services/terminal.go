@@ -50,7 +50,20 @@ func (serviceClient *client) StartTerminal(args []string, imageSelector []string
 	}
 
 	go func() {
-		interrupt <- serviceClient.client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container.Name, command, true, os.Stdin, os.Stdout, os.Stderr, kubectl.SubResourceExec)
+		interrupt <- serviceClient.client.ExecStreamWithTransport(&kubectl.ExecStreamWithTransportOptions{
+			ExecStreamOptions: kubectl.ExecStreamOptions{
+				Pod:       pod,
+				Container: container.Name,
+				Command:   command,
+				TTY:       true,
+				Stdin:     os.Stdin,
+				Stdout:    os.Stdout,
+				Stderr:    os.Stderr,
+			},
+			Transport:   wrapper,
+			Upgrader:    upgradeRoundTripper,
+			SubResource: kubectl.SubResourceExec,
+		})
 	}()
 
 	err = <-interrupt

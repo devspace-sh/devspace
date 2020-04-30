@@ -25,7 +25,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/client-go/transport/spdy"
 )
 
 // Client holds all kubect functions
@@ -40,8 +39,8 @@ type Client interface {
 	CopyFromReader(pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error
 	Copy(pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error
 
-	ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer, subResource SubResource) error
-	ExecStream(pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
+	ExecStreamWithTransport(options *ExecStreamWithTransportOptions) error
+	ExecStream(options *ExecStreamOptions) error
 	ExecBuffered(pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error)
 
 	GenericRequest(options *GenericRequestOptions) (string, error)
