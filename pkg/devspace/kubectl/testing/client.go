@@ -19,7 +19,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/transport/spdy"
 )
 
 // Client is a fake implementation of the kubectl.Client interface
@@ -73,12 +72,12 @@ func (c *Client) Copy(pod *k8sv1.Pod, container, containerPath, localPath string
 }
 
 // ExecStreamWithTransport is a fake implementation of function
-func (c *Client) ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer, subResource kubectl.SubResource) error {
+func (c *Client) ExecStreamWithTransport(options *kubectl.ExecStreamWithTransportOptions) error {
 	return nil
 }
 
 // ExecStream is a fake implementation of function
-func (c *Client) ExecStream(pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func (c *Client) ExecStream(options *kubectl.ExecStreamOptions) error {
 	return nil
 }
 

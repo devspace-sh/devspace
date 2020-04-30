@@ -26,23 +26,34 @@ const (
 	SubResourceAttach SubResource = "attach"
 )
 
+// ExecStreamWithTransportOptions are the options used for executing a stream
+type ExecStreamWithTransportOptions struct {
+	ExecStreamOptions
+
+	Transport   http.RoundTripper
+	Upgrader    spdy.Upgrader
+	SubResource SubResource
+}
+
 // ExecStreamWithTransport executes a kubectl exec with given transport round tripper and upgrader
-func (client *client) ExecStreamWithTransport(transport http.RoundTripper, upgrader spdy.Upgrader, pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer, subResource SubResource) error {
+func (client *client) ExecStreamWithTransport(options *ExecStreamWithTransportOptions) error {
 	var (
 		t             term.TTY
 		sizeQueue     remotecommand.TerminalSizeQueue
 		streamOptions remotecommand.StreamOptions
+		tty           = options.TTY
 	)
 
 	execRequest := client.KubeClient().CoreV1().RESTClient().Post().
 		Resource("pods").
-		Name(pod.Name).
-		Namespace(pod.Namespace).
-		SubResource(string(subResource))
+		Name(options.Pod.Name).
+		Namespace(options.Pod.Namespace).
+		SubResource(string(options.SubResource))
 
 	if tty {
-		tty, t = terminal.SetupTTY(stdin, stdout)
-		if tty {
+		tty, t = terminal.SetupTTY(options.Stdin, options.Stdout)
+		if options.ForceTTY || tty {
+			tty = true
 			if t.Raw {
 				// this call spawns a goroutine to monitor/update the terminal size
 				sizeQueue = t.MonitorSize(t.GetSize())
@@ -51,7 +62,7 @@ func (client *client) ExecStreamWithTransport(transport http.RoundTripper, upgra
 			streamOptions = remotecommand.StreamOptions{
 				Stdin:             t.In,
 				Stdout:            t.Out,
-				Stderr:            stderr,
+				Stderr:            options.Stderr,
 				Tty:               t.Raw,
 				TerminalSizeQueue: sizeQueue,
 			}
@@ -59,32 +70,32 @@ func (client *client) ExecStreamWithTransport(transport http.RoundTripper, upgra
 	}
 	if !tty {
 		streamOptions = remotecommand.StreamOptions{
-			Stdin:  stdin,
-			Stdout: stdout,
-			Stderr: stderr,
+			Stdin:  options.Stdin,
+			Stdout: options.Stdout,
+			Stderr: options.Stderr,
 		}
 	}
 
-	if subResource == SubResourceExec {
+	if options.SubResource == SubResourceExec {
 		execRequest.VersionedParams(&corev1.PodExecOptions{
-			Container: container,
-			Command:   command,
-			Stdin:     stdin != nil,
-			Stdout:    stdout != nil,
-			Stderr:    stderr != nil,
+			Container: options.Container,
+			Command:   options.Command,
+			Stdin:     options.Stdin != nil,
+			Stdout:    options.Stdout != nil,
+			Stderr:    options.Stderr != nil,
 			TTY:       tty,
 		}, scheme.ParameterCodec)
-	} else if subResource == SubResourceAttach {
+	} else if options.SubResource == SubResourceAttach {
 		execRequest.VersionedParams(&corev1.PodExecOptions{
-			Container: container,
-			Stdin:     stdin != nil,
-			Stdout:    stdout != nil,
-			Stderr:    stderr != nil,
+			Container: options.Container,
+			Stdin:     options.Stdin != nil,
+			Stdout:    options.Stdout != nil,
+			Stderr:    options.Stderr != nil,
 			TTY:       tty,
 		}, scheme.ParameterCodec)
 	}
 
-	exec, err := remotecommand.NewSPDYExecutorForTransports(transport, upgrader, "POST", execRequest.URL())
+	exec, err := remotecommand.NewSPDYExecutorForTransports(options.Transport, options.Upgrader, "POST", execRequest.URL())
 	if err != nil {
 		return err
 	}
@@ -94,22 +105,49 @@ func (client *client) ExecStreamWithTransport(transport http.RoundTripper, upgra
 	})
 }
 
+// ExecStreamOptions are the options for ExecStream
+type ExecStreamOptions struct {
+	Pod *k8sv1.Pod
+
+	Container string
+	Command   []string
+
+	ForceTTY bool
+	TTY      bool
+
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
+}
+
 // ExecStream executes a command and streams the output to the given streams
-func (client *client) ExecStream(pod *k8sv1.Pod, container string, command []string, tty bool, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func (client *client) ExecStream(options *ExecStreamOptions) error {
 	wrapper, upgradeRoundTripper, err := client.GetUpgraderWrapper()
 	if err != nil {
 		return err
 	}
 
-	return client.ExecStreamWithTransport(wrapper, upgradeRoundTripper, pod, container, command, tty, stdin, stdout, stderr, SubResourceExec)
+	return client.ExecStreamWithTransport(&ExecStreamWithTransportOptions{
+		ExecStreamOptions: *options,
+		Transport:         wrapper,
+		Upgrader:          upgradeRoundTripper,
+		SubResource:       SubResourceExec,
+	})
 }
 
 // ExecBuffered executes a command for kubernetes and returns the output and error buffers
-func (client *client) ExecBuffered(pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error) {
+func (client *client) ExecBuffered(pod *k8sv1.Pod, container string, command []string, stdin io.Reader) ([]byte, []byte, error) {
 	stdoutBuffer := &bytes.Buffer{}
 	stderrBuffer := &bytes.Buffer{}
 
-	kubeExecError := client.ExecStream(pod, container, command, false, input, stdoutBuffer, stderrBuffer)
+	kubeExecError := client.ExecStream(&ExecStreamOptions{
+		Pod:       pod,
+		Container: container,
+		Command:   command,
+		Stdin:     stdin,
+		Stdout:    stdoutBuffer,
+		Stderr:    stderrBuffer,
+	})
 	if kubeExecError != nil {
 		if _, ok := kubeExecError.(kubectlExec.CodeExitError); ok == false {
 			return nil, nil, kubeExecError
