@@ -164,7 +164,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
   exec(checkGlobalDirCommand, function(err, stdout, stderr) {
     let globalDir = null;
     let fallbackGlobalDir = "/usr/local/bin";
-  
+
     if (process.argv.length > 3 && fs.existsSync(process.argv[3])) {
       globalDir = process.argv[3]
     } else {

@@ -31,5 +31,5 @@ IF NOT EXIST "%basedir%\%indexFile%" (
   )
 )
 
-echo Running: node %basedir%\%indexFile% finish-install %bindir%
-node "%basedir%\%indexFile%" finish-install && devspace.exe %* && exit /b %errorlevel%
+echo Running: node "%basedir%\%indexFile%" finish-install "%bindir%\"
+node "%basedir%\%indexFile%" finish-install "%bindir%\" && devspace.exe %* && exit /b %errorlevel%
