@@ -165,20 +165,24 @@ let continueProcess = function(askRemoveGlobalFolder) {
     let globalDir = null;
     let fallbackGlobalDir = "/usr/local/bin";
   
-    if (err || !stdout || stdout.length === 0) {
-      if (process.env && process.env.npm_config_prefix) {
-        globalDir = process.env.npm_config_prefix;
-      }
+    if (process.argv.length > 3 && fs.existsSync(process.argv[3])) {
+      globalDir = process.argv[3]
     } else {
-      globalDir = stdout.trim();
-    }
-  
-    if (globalDir == null) {
-      if (platform == PLATFORM_MAPPING.win32) {
-        console.error("Error finding binary installation directory");
-        process.exit(1)
+      if (err || !stdout || stdout.length === 0) {
+        if (process.env && process.env.npm_config_prefix) {
+          globalDir = process.env.npm_config_prefix;
+        }
+      } else {
+        globalDir = stdout.trim();
       }
-      globalDir = fallbackGlobalDir
+    
+      if (globalDir == null) {
+        if (platform == PLATFORM_MAPPING.win32) {
+          console.error("Error finding binary installation directory");
+          process.exit(1)
+        }
+        globalDir = fallbackGlobalDir
+      }
     }
 
     cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, ';').replace(/\\/g, '/')
