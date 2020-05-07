@@ -5,21 +5,31 @@ IF %ERRORLEVEL% EQU 0 devspace %* && exit /b %errorlevel%
 
 echo Finishing installation of DevSpace CLI
 
-FOR /F "tokens=* USEBACKQ" %%F IN (`npm root -g`) DO (
-  SET basedir=%%F
-)
+SET bindir=%~dp0
+SET basedir=%~dp0\..
+SET indexFile=\index.js
 
-SET indexFile=devspace\index.js
+echo "%basedir%\%indexFile%"
 
 IF NOT EXIST "%basedir%\%indexFile%" (
-  FOR /F "tokens=* USEBACKQ" %%F IN (`npm root -g`) DO (
-    SET basedir=%%F\node_modules
+  SET basedir=%~dp0\..\lib\node_modules\devspace
+
+  IF NOT EXIST "%basedir%\%indexFile%" (
+    FOR /F "tokens=* USEBACKQ" %%F IN (`npm root -g`) DO (
+      SET basedir=%%F\devspace
+    )
+
     IF NOT EXIST "%basedir%\%indexFile%" (
-      echo "Unable to find global npm/yarn dir"
-      exit /b 1
+      FOR /F "tokens=* USEBACKQ" %%F IN (`yarn global dir`) DO (
+        SET basedir=%%F\node_modules\devspace
+        IF NOT EXIST "%basedir%\%indexFile%" (
+          echo "Unable to find global npm/yarn dir"
+          exit /b 1
+        )
+      )
     )
   )
 )
 
-echo Running: node %basedir%\%indexFile% finish-install
-node "%basedir%\%indexFile%" finish-install && devspace.exe %* && exit /b %errorlevel%
+echo Running: node "%basedir%\%indexFile%" finish-install "%bindir%\"
+node "%basedir%\%indexFile%" finish-install "%bindir%\" && devspace.exe %* && exit /b %errorlevel%

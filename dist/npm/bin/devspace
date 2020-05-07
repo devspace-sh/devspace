@@ -5,20 +5,31 @@ BINARY=$(command -v devspace)
 if [ -f "$BINARY" ] || [ $(stat --printf="%s" "$BINARY") -lt 10000 ]; then
     echo "Finishing installation of DevSpace CLI"
 
-    BASEDIR=$(/usr/bin/env npm root -g)
-    INDEX_FILE="devspace/index.js"
+    BINDIR="$(dirname $0)"
+    BASEDIR="$(dirname $0)/.."
+    INDEX_FILE="/index.js"
 
     if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
-        BASEDIR=$(/usr/bin/env yarn global dir)/node_modules
+        BASEDIR="$(dirname $0)/../lib/node_modules/devspace"
 
         if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
-            echo "Unable to find global npm/yarn dir"
-            exit 1
+            BASEDIR=$(/usr/bin/env npm root -g)/devspace
+
+            if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
+                if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
+                    BASEDIR=$(/usr/bin/env yarn global dir)/node_modules/devspace
+
+                    if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
+                        echo "Unable to find global npm/yarn dir"
+                        exit 1
+                    fi
+                fi
+            fi
         fi
     fi
 
-    echo "Running: node $BASEDIR/$INDEX_FILE finish-install"
-    /usr/bin/env node "$BASEDIR/$INDEX_FILE" finish-install;
+    echo "Running: node $BASEDIR/$INDEX_FILE finish-install $BINDIR"
+    /usr/bin/env node "$BASEDIR/$INDEX_FILE" finish-install $BINDIR;
 
     devspace "$@" 2>/dev/null || devspace.exe "$@";
     exit $?;
