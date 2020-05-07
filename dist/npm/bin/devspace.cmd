@@ -5,6 +5,7 @@ IF %ERRORLEVEL% EQU 0 devspace %* && exit /b %errorlevel%
 
 echo Finishing installation of DevSpace CLI
 
+SET bindir=%~dp0
 SET basedir=%~dp0\..
 SET indexFile=\index.js
 
@@ -30,5 +31,5 @@ IF NOT EXIST "%basedir%\%indexFile%" (
   )
 )
 
-echo Running: node %basedir%\%indexFile% finish-install
+echo Running: node %basedir%\%indexFile% finish-install %bindir%
 node "%basedir%\%indexFile%" finish-install && devspace.exe %* && exit /b %errorlevel%
