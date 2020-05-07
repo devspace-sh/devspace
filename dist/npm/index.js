@@ -164,10 +164,16 @@ let continueProcess = function(askRemoveGlobalFolder) {
   exec(checkGlobalDirCommand, function(err, stdout, stderr) {
     let globalDir = null;
     let fallbackGlobalDir = "/usr/local/bin";
+    let globalInstall = false;
 
-    if (process.argv.length > 3 && fs.existsSync(process.argv[3])) {
-      globalDir = process.argv[3]
+    console.log(fs.existsSync(process.argv[3]))
+    console.log(process.argv[3])
+
+    if (process.argv.length > 2 && fs.existsSync(process.argv[3])) {
+      globalDir = process.argv[3];
     } else {
+      globalInstall = true;
+
       if (err || !stdout || stdout.length === 0) {
         if (process.env && process.env.npm_config_prefix) {
           globalDir = process.env.npm_config_prefix;
@@ -190,10 +196,16 @@ let continueProcess = function(askRemoveGlobalFolder) {
 
     if (cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir) == -1) {
       if (platform == PLATFORM_MAPPING.win32) {
-        console.error("Global binary directory not in $PATH: " + globalDir);
-        process.exit(1)
+        console.error("DevSpace binary directory not in $PATH: " + globalDir);
+
+        if (globalInstall) {
+          process.exit(1)
+        }
       }
-      globalDir = fallbackGlobalDir
+
+      if (globalInstall) {
+        globalDir = fallbackGlobalDir
+      }
     }
    
 	  try {
@@ -201,6 +213,8 @@ let continueProcess = function(askRemoveGlobalFolder) {
     } catch(e) {}
     
     let binaryPath = path.join(globalDir, binaryName);
+
+    console.log(binaryPath)
 
     try {
       fs.unlinkSync(binaryPath + downloadExtension);
