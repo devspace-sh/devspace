@@ -166,8 +166,8 @@ let continueProcess = function(askRemoveGlobalFolder) {
     let fallbackGlobalDir = "/usr/local/bin";
     let globalInstall = false;
 
-    if (process.argv.length > 2 && fs.existsSync(process.argv[3].replace("\\", "\\\\"))) {
-      globalDir = process.argv[3].replace("\\", "\\\\");
+    if (process.argv.length > 3 && fs.existsSync(process.argv[3].replace(/\\/g, "\\\\"))) {
+      globalDir = process.argv[3].replace(/\\/g, "\\\\");
     } else {
       globalInstall = true;
 
@@ -188,12 +188,12 @@ let continueProcess = function(askRemoveGlobalFolder) {
       }
     }
 
-    cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, ';').replace(/\\/g, '/')
-    cleanGlobalDir = globalDir.replace(/(^|;)[a-z]:/gi, '').replace(/\\/g, '/')
+    cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, ';').replace(/(\\)+/g, '/')
+    cleanGlobalDir = globalDir.replace(/(^|;)[a-z]:/gi, '').replace(/(\\)+/g, '/').trimRight("/")
 
     if (cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir) == -1) {
       if (platform == PLATFORM_MAPPING.win32) {
-        console.error("\nERROR: npm binary directory NOT in $PATH environment variable: " + globalDir);
+        console.error("\n\n################################################\nERROR: npm binary directory NOT in $PATH environment variable: " + globalDir + "\n################################################\n\n");
 
         if (globalInstall) {
           process.exit(1)
