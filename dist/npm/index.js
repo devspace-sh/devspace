@@ -166,9 +166,6 @@ let continueProcess = function(askRemoveGlobalFolder) {
     let fallbackGlobalDir = "/usr/local/bin";
     let globalInstall = false;
 
-    console.log(fs.existsSync(process.argv[3]))
-    console.log(process.argv[3])
-
     if (process.argv.length > 2 && fs.existsSync(process.argv[3])) {
       globalDir = process.argv[3];
     } else {
@@ -213,8 +210,6 @@ let continueProcess = function(askRemoveGlobalFolder) {
     } catch(e) {}
     
     let binaryPath = path.join(globalDir, binaryName);
-
-    console.log(binaryPath)
 
     try {
       fs.unlinkSync(binaryPath + downloadExtension);
