@@ -166,11 +166,8 @@ let continueProcess = function(askRemoveGlobalFolder) {
     let fallbackGlobalDir = "/usr/local/bin";
     let globalInstall = false;
 
-    console.log(fs.existsSync(process.argv[3]))
-    console.log(process.argv[3])
-
-    if (process.argv.length > 2 && fs.existsSync(process.argv[3])) {
-      globalDir = process.argv[3];
+    if (process.argv.length > 3 && fs.existsSync(process.argv[3].replace(/\\/g, "\\\\"))) {
+      globalDir = process.argv[3].replace(/\\/g, "\\\\");
     } else {
       globalInstall = true;
 
@@ -191,12 +188,12 @@ let continueProcess = function(askRemoveGlobalFolder) {
       }
     }
 
-    cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, ';').replace(/\\/g, '/')
-    cleanGlobalDir = globalDir.replace(/(^|;)[a-z]:/gi, '').replace(/\\/g, '/')
+    cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, ';').replace(/(\\)+/g, '/')
+    cleanGlobalDir = globalDir.replace(/(^|;)[a-z]:/gi, '').replace(/(\\)+/g, '/').trimRight("/")
 
     if (cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir) == -1) {
       if (platform == PLATFORM_MAPPING.win32) {
-        console.error("DevSpace binary directory not in $PATH: " + globalDir);
+        console.error("\n\n################################################\nERROR: npm binary directory NOT in $PATH environment variable: " + globalDir + "\n################################################\n\n");
 
         if (globalInstall) {
           process.exit(1)
@@ -213,8 +210,6 @@ let continueProcess = function(askRemoveGlobalFolder) {
     } catch(e) {}
     
     let binaryPath = path.join(globalDir, binaryName);
-
-    console.log(binaryPath)
 
     try {
       fs.unlinkSync(binaryPath + downloadExtension);
