@@ -330,14 +330,14 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		for true {
 			time.Sleep(time.Second)
 
-			// Check if build was successfull
+			// Check if build was successful
 			pod, err := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(buildPodCreated.Name, metav1.GetOptions{})
 			if err != nil {
 				return errors.Errorf("Error checking if build was successful: %v", err)
 			}
 
 			// Check if terminated
-			if pod.Status.ContainerStatuses[0].State.Terminated != nil {
+			if len(pod.Status.ContainerStatuses) > 0 && pod.Status.ContainerStatuses[0].State.Terminated != nil {
 				if pod.Status.ContainerStatuses[0].State.Terminated.ExitCode != 0 {
 					return errors.Errorf("Error building image (Exit Code %d)", pod.Status.ContainerStatuses[0].State.Terminated.ExitCode)
 				}
