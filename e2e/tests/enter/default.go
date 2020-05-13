@@ -1,6 +1,7 @@
 package enter
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -22,7 +23,7 @@ func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 	logger.StartWait("Run test...")
 	defer logger.StopWait()
 
-	pods, err := f.Client.KubeClient().CoreV1().Pods(f.Namespace).List(metav1.ListOptions{})
+	pods, err := f.Client.KubeClient().CoreV1().Pods(f.Namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return errors.Errorf("Unable to list the pods: %v", err)
 	}

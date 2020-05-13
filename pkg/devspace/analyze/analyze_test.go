@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -150,31 +151,31 @@ func TestCreateReport(t *testing.T) {
 			Client: fake.NewSimpleClientset(),
 		}
 		for _, namespace := range testCase.kubeNamespaces {
-			kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+			kubeClient.Client.CoreV1().Namespaces().Create(context.TODO(), &k8sv1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 				},
-			})
+			}, metav1.CreateOptions{})
 		}
 		for namespace, podList := range testCase.kubePods {
 			for _, pod := range podList {
 				pod.ObjectMeta.CreationTimestamp.Time = time.Now()
-				kubeClient.Client.CoreV1().Pods(namespace).Create(&pod)
+				kubeClient.Client.CoreV1().Pods(namespace).Create(context.TODO(), &pod, metav1.CreateOptions{})
 			}
 		}
 		for namespace, replicasetList := range testCase.kubeReplicasets {
 			for _, replicaset := range replicasetList {
-				kubeClient.Client.AppsV1().ReplicaSets(namespace).Create(&replicaset)
+				kubeClient.Client.AppsV1().ReplicaSets(namespace).Create(context.TODO(), &replicaset, metav1.CreateOptions{})
 			}
 		}
 		for namespace, statefulsetList := range testCase.kubeStatefulsets {
 			for _, statefulset := range statefulsetList {
-				kubeClient.Client.AppsV1().StatefulSets(namespace).Create(&statefulset)
+				kubeClient.Client.AppsV1().StatefulSets(namespace).Create(context.TODO(), &statefulset, metav1.CreateOptions{})
 			}
 		}
 		for namespace, eventList := range testCase.kubeEvents {
 			for _, pod := range eventList {
-				kubeClient.Client.CoreV1().Events(namespace).Create(&pod)
+				kubeClient.Client.CoreV1().Events(namespace).Create(context.TODO(), &pod, metav1.CreateOptions{})
 			}
 		}
 

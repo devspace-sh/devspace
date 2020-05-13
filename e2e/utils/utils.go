@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math/rand"
 
@@ -109,7 +110,7 @@ func PrintTestResult(testName string, subTestName string, err error, log logger.
 
 // DeleteNamespace deletes a given namespace and waits for the process to finish
 func DeleteNamespace(client kubectl.Client, namespace string) {
-	err := client.KubeClient().CoreV1().Namespaces().Delete(namespace, nil)
+	err := client.KubeClient().CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -129,7 +130,7 @@ func PurgeNamespacesByPrefixes(nsPrefixes []string) error {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
-	nsList, err := client.KubeClient().CoreV1().Namespaces().List(metav1.ListOptions{})
+	nsList, err := client.KubeClient().CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -499,7 +500,7 @@ func DeleteTempAndResetWorkingDir(tmpDir string, pwd string, log logger.Logger) 
 
 // LookForDeployment search for a specific deployment name among the deployments, returns true if found
 func LookForDeployment(client kubectl.Client, namespace string, expectedDeployment ...string) (bool, error) {
-	s, err := client.KubeClient().CoreV1().Secrets(namespace).List(metav1.ListOptions{})
+	s, err := client.KubeClient().CoreV1().Secrets(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return false, err
 	}

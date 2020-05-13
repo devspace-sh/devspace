@@ -1,6 +1,7 @@
 package examples
 
 import (
+	"context"
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/cmd/use"
@@ -87,7 +88,7 @@ func runProfile(f *customFactory, deployConfig *cmd.DeployCmd, profile string, c
 		return err
 	}
 
-	pods, errp := client.KubeClient().CoreV1().Pods(namespace).List(v1.ListOptions{})
+	pods, errp := client.KubeClient().CoreV1().Pods(namespace).List(context.TODO(), v1.ListOptions{})
 	if errp != nil {
 		return err
 	}

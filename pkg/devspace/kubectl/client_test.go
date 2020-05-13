@@ -1,6 +1,7 @@
 package kubectl
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -54,7 +55,7 @@ func createTestResources(client kubernetes.Interface) error {
 			UpdatedReplicas:    1,
 		},
 	}
-	_, err := client.AppsV1().Deployments(testNamespace).Create(deploy)
+	_, err := client.AppsV1().Deployments(testNamespace).Create(context.TODO(), deploy, metav1.CreateOptions{})
 	if err != nil {
 		return errors.Wrap(err, "create deployment")
 	}
@@ -78,7 +79,7 @@ func createTestResources(client kubernetes.Interface) error {
 			},
 		},
 	}
-	_, err = client.CoreV1().Pods(testNamespace).Create(p)
+	_, err = client.CoreV1().Pods(testNamespace).Create(context.TODO(), p, metav1.CreateOptions{})
 	if err != nil {
 		return errors.Wrap(err, "create pod")
 	}
@@ -96,7 +97,7 @@ func TestGetPodStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	podList, err := kubeClient.CoreV1().Pods(testNamespace).List(metav1.ListOptions{})
+	podList, err := kubeClient.CoreV1().Pods(testNamespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		t.Fatalf("error retrieving list: %v", err)
 	}

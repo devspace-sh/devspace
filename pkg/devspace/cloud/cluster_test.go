@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -188,16 +189,16 @@ func TestConnectCluster(t *testing.T) {
 			RBACEnabled: true,
 		}
 		for _, node := range testCase.nodes {
-			kube.CoreV1().Nodes().Create(node)
+			kube.CoreV1().Nodes().Create(context.TODO(), node, v1.CreateOptions{})
 		}
 		for _, service := range testCase.services {
-			kube.CoreV1().Services(DevSpaceCloudNamespace).Create(service)
+			kube.CoreV1().Services(DevSpaceCloudNamespace).Create(context.TODO(), service, v1.CreateOptions{})
 		}
 		for _, sa := range testCase.serviceAccounts {
-			kube.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(sa)
+			kube.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(context.TODO(), sa, v1.CreateOptions{})
 		}
 		for _, secret := range testCase.secrets {
-			kube.CoreV1().Secrets(DevSpaceCloudNamespace).Create(secret)
+			kube.CoreV1().Secrets(DevSpaceCloudNamespace).Create(context.TODO(), secret, v1.CreateOptions{})
 		}
 		kubeClient := &fakekube.Client{
 			Client: kube,
@@ -256,9 +257,9 @@ type defaultClusterSpaceDomainTestCase struct {
 
 func TestDefualtClusterSpaceDomain(t *testing.T) {
 	clientWithEmptyNode := fake.NewSimpleClientset()
-	clientWithEmptyNode.CoreV1().Nodes().Create(&corev1.Node{})
+	clientWithEmptyNode.CoreV1().Nodes().Create(context.TODO(), &corev1.Node{}, v1.CreateOptions{})
 	clientWithPublicNode := fake.NewSimpleClientset()
-	clientWithPublicNode.CoreV1().Nodes().Create(&corev1.Node{
+	clientWithPublicNode.CoreV1().Nodes().Create(context.TODO(), &corev1.Node{
 		Status: corev1.NodeStatus{
 			Addresses: []corev1.NodeAddress{
 				corev1.NodeAddress{
@@ -267,9 +268,9 @@ func TestDefualtClusterSpaceDomain(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, v1.CreateOptions{})
 	clientWithIngressHost := fake.NewSimpleClientset()
-	clientWithIngressHost.CoreV1().Services(constants.DevSpaceCloudNamespace).Create(&corev1.Service{
+	clientWithIngressHost.CoreV1().Services(constants.DevSpaceCloudNamespace).Create(context.TODO(), &corev1.Service{
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeLoadBalancer,
 		},
@@ -282,9 +283,9 @@ func TestDefualtClusterSpaceDomain(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, v1.CreateOptions{})
 	clientWithIngressIP := fake.NewSimpleClientset()
-	clientWithIngressIP.CoreV1().Services(constants.DevSpaceCloudNamespace).Create(&corev1.Service{
+	clientWithIngressIP.CoreV1().Services(constants.DevSpaceCloudNamespace).Create(context.TODO(), &corev1.Service{
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeLoadBalancer,
 		},
@@ -297,7 +298,7 @@ func TestDefualtClusterSpaceDomain(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, v1.CreateOptions{})
 
 	testCases := []defaultClusterSpaceDomainTestCase{
 		defaultClusterSpaceDomainTestCase{
@@ -494,7 +495,7 @@ func TestDeployServices(t *testing.T) {
 	for _, testCase := range testCases {
 		kube := fake.NewSimpleClientset()
 		for _, configMap := range testCase.configMaps {
-			kube.CoreV1().ConfigMaps(DevSpaceCloudNamespace).Create(&configMap)
+			kube.CoreV1().ConfigMaps(DevSpaceCloudNamespace).Create(context.TODO(), &configMap, v1.CreateOptions{})
 		}
 		kubeClient := &fakekube.Client{
 			Client: kube,
@@ -612,7 +613,7 @@ type getServiceAccountCredentialsTestCase struct {
 
 func TestGetServiceAccountCredentials(t *testing.T) {
 	clientWithUserSecret := fake.NewSimpleClientset()
-	clientWithUserSecret.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(&corev1.ServiceAccount{
+	clientWithUserSecret.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(context.TODO(), &corev1.ServiceAccount{
 		ObjectMeta: v1.ObjectMeta{
 			Name: DevSpaceServiceAccount,
 		},
@@ -621,8 +622,8 @@ func TestGetServiceAccountCredentials(t *testing.T) {
 				Name: "mySecret",
 			},
 		},
-	})
-	clientWithUserSecret.CoreV1().Secrets(DevSpaceCloudNamespace).Create(&corev1.Secret{
+	}, v1.CreateOptions{})
+	clientWithUserSecret.CoreV1().Secrets(DevSpaceCloudNamespace).Create(context.TODO(), &corev1.Secret{
 		ObjectMeta: v1.ObjectMeta{
 			Name: "mySecret",
 		},
@@ -630,7 +631,7 @@ func TestGetServiceAccountCredentials(t *testing.T) {
 			"token":  []byte("mytoken"),
 			"ca.crt": []byte("1234"),
 		},
-	})
+	}, v1.CreateOptions{})
 
 	testCases := []getServiceAccountCredentialsTestCase{
 		getServiceAccountCredentialsTestCase{
@@ -819,7 +820,7 @@ func TestCheckResources(t *testing.T) {
 			RBACEnabled: testCase.RBACEnabled,
 		}
 		for _, node := range testCase.createdNodes {
-			kube.CoreV1().Nodes().Create(node)
+			kube.CoreV1().Nodes().Create(context.TODO(), node, v1.CreateOptions{})
 		}
 
 		provider := &provider{
@@ -917,7 +918,7 @@ func TestInitializeNamespace(t *testing.T) {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
 
-		namespaces, err := testCase.client.CoreV1().Namespaces().List(v1.ListOptions{})
+		namespaces, err := testCase.client.CoreV1().Namespaces().List(context.TODO(), v1.ListOptions{})
 		assert.NilError(t, err, "Error listing namespaces in testCase %s", testCase.name)
 		namespacesAsYaml, err := yaml.Marshal(namespaces)
 		assert.NilError(t, err, "Error parsing namespaces in testCase %s", testCase.name)
@@ -925,7 +926,7 @@ func TestInitializeNamespace(t *testing.T) {
 		assert.NilError(t, err, "Error parsing expected namespaces in testCase %s", testCase.name)
 		assert.Equal(t, string(namespacesAsYaml), string(expectedNamespacesAsYaml), "Unexpected namespaces in testCase %s", testCase.name)
 
-		serviceAccounts, err := testCase.client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).List(v1.ListOptions{})
+		serviceAccounts, err := testCase.client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).List(context.TODO(), v1.ListOptions{})
 		assert.NilError(t, err, "Error listing serviceAccounts in testCase %s", testCase.name)
 		serviceAccountsAsYaml, err := yaml.Marshal(serviceAccounts)
 		assert.NilError(t, err, "Error parsing serviceAccounts in testCase %s", testCase.name)
@@ -933,7 +934,7 @@ func TestInitializeNamespace(t *testing.T) {
 		assert.NilError(t, err, "Error parsing expected serviceAccounts in testCase %s", testCase.name)
 		assert.Equal(t, string(serviceAccountsAsYaml), string(expectedServiceAccountsAsYaml), "Unexpected serviceAccounts in testCase %s", testCase.name)
 
-		clusterRoleBindings, err := testCase.client.RbacV1().ClusterRoleBindings().List(v1.ListOptions{})
+		clusterRoleBindings, err := testCase.client.RbacV1().ClusterRoleBindings().List(context.TODO(), v1.ListOptions{})
 		assert.NilError(t, err, "Error listing clusterRoleBindings in testCase %s", testCase.name)
 		clusterRoleBindingsAsYaml, err := yaml.Marshal(clusterRoleBindings)
 		assert.NilError(t, err, "Error parsing clusterRoleBindings in testCase %s", testCase.name)
@@ -1019,10 +1020,10 @@ func TestResetKey(t *testing.T) {
 
 		kubeClient := fake.NewSimpleClientset()
 		for _, sa := range testCase.serviceAccounts {
-			kubeClient.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(&sa)
+			kubeClient.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(context.TODO(), &sa, v1.CreateOptions{})
 		}
 		for _, secret := range testCase.secrets {
-			kubeClient.CoreV1().Secrets(DevSpaceCloudNamespace).Create(&secret)
+			kubeClient.CoreV1().Secrets(DevSpaceCloudNamespace).Create(context.TODO(), &secret, v1.CreateOptions{})
 		}
 
 		provider := &provider{
