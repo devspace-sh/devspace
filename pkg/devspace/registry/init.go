@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"context"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -55,7 +56,7 @@ func (r *client) CreatePullSecrets() error {
 
 func (r *client) addPullSecretsToServiceAccount(pullSecrets []string) error {
 	// Get default service account
-	serviceaccount, err := r.kubeClient.KubeClient().CoreV1().ServiceAccounts(r.kubeClient.Namespace()).Get("default", metav1.GetOptions{})
+	serviceaccount, err := r.kubeClient.KubeClient().CoreV1().ServiceAccounts(r.kubeClient.Namespace()).Get(context.TODO(), "default", metav1.GetOptions{})
 	if err != nil {
 		r.log.Errorf("Couldn't find service account 'default' in namespace '%s': %v", r.kubeClient.Namespace(), err)
 		return nil
@@ -81,7 +82,7 @@ func (r *client) addPullSecretsToServiceAccount(pullSecrets []string) error {
 
 	// Should we update the service account?
 	if changed {
-		_, err := r.kubeClient.KubeClient().CoreV1().ServiceAccounts(r.kubeClient.Namespace()).Update(serviceaccount)
+		_, err := r.kubeClient.KubeClient().CoreV1().ServiceAccounts(r.kubeClient.Namespace()).Update(context.TODO(), serviceaccount, metav1.UpdateOptions{})
 		if err != nil {
 			if strings.Index(err.Error(), "the object has been modified; please apply your changes to the latest version and try again") != -1 {
 				r.log.Infof("Reapplying image pull secrets to service account %s", serviceaccount.Name)

@@ -1,6 +1,7 @@
 package targetselector
 
 import (
+	"context"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"strings"
 	"time"
@@ -82,7 +83,7 @@ func (t *TargetSelector) GetPod(log log.Logger) (*v1.Pod, error) {
 		}
 
 		if t.podName != "" {
-			pod, err := t.kubeClient.KubeClient().CoreV1().Pods(t.namespace).Get(t.podName, metav1.GetOptions{})
+			pod, err := t.kubeClient.KubeClient().CoreV1().Pods(t.namespace).Get(context.TODO(), t.podName, metav1.GetOptions{})
 			if err != nil {
 				return nil, err
 			}

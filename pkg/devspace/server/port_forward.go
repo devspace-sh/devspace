@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -18,9 +19,9 @@ const maxPort = 40000
 func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 	// Kube Context
 	kubeContext := h.defaultContext
-	context, ok := r.URL.Query()["context"]
-	if ok && len(context) == 1 && context[0] != "" {
-		kubeContext = context[0]
+	ctx, ok := r.URL.Query()["context"]
+	if ok && len(ctx) == 1 && ctx[0] != "" {
+		kubeContext = ctx[0]
 	}
 
 	// Namespace
@@ -56,7 +57,7 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pod, err := client.KubeClient().CoreV1().Pods(kubeNamespace).Get(name[0], metav1.GetOptions{})
+	pod, err := client.KubeClient().CoreV1().Pods(kubeNamespace).Get(context.TODO(), name[0], metav1.GetOptions{})
 	if err != nil {
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

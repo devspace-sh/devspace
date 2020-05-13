@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"context"
 	"encoding/base64"
 	"regexp"
 	"strings"
@@ -54,16 +55,16 @@ func (r *client) CreatePullSecret(options *PullSecretOptions) error {
 		Type: k8sv1.SecretTypeDockerConfigJson,
 	}
 
-	secret, err := r.kubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Get(pullSecretName, metav1.GetOptions{})
+	secret, err := r.kubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Get(context.TODO(), pullSecretName, metav1.GetOptions{})
 	if err != nil {
-		_, err = r.kubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Create(registryPullSecret)
+		_, err = r.kubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Create(context.TODO(), registryPullSecret, metav1.CreateOptions{})
 		if err != nil {
 			return errors.Errorf("Unable to create image pull secret: %s", err.Error())
 		}
 
 		r.log.Donef("Created image pull secret %s/%s", options.Namespace, pullSecretName)
 	} else if secret.Data == nil || string(secret.Data[pullSecretDataKey]) != string(pullSecretData[pullSecretDataKey]) {
-		_, err = r.kubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Update(registryPullSecret)
+		_, err = r.kubeClient.KubeClient().CoreV1().Secrets(options.Namespace).Update(context.TODO(), registryPullSecret, metav1.UpdateOptions{})
 		if err != nil {
 			return errors.Errorf("Unable to update image pull secret: %s", err.Error())
 		}

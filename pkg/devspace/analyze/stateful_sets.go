@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,7 +12,7 @@ func (a *analyzer) statefulSets(namespace string) ([]string, error) {
 	problems := []string{}
 
 	// Get all pods
-	statefulSets, err := a.client.KubeClient().AppsV1().StatefulSets(namespace).List(metav1.ListOptions{})
+	statefulSets, err := a.client.KubeClient().AppsV1().StatefulSets(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

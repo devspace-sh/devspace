@@ -1,6 +1,7 @@
 package kubectl
 
 import (
+	"context"
 	"fmt"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"net"
@@ -84,14 +85,14 @@ func IsPrivateIP(ip net.IP) bool {
 
 // EnsureDefaultNamespace makes sure the default namespace exists or will be created
 func (client *client) EnsureDefaultNamespace(log log.Logger) error {
-	_, err := client.KubeClient().CoreV1().Namespaces().Get(client.namespace, metav1.GetOptions{})
+	_, err := client.KubeClient().CoreV1().Namespaces().Get(context.TODO(), client.namespace, metav1.GetOptions{})
 	if err != nil {
 		// Create release namespace
-		_, err = client.KubeClient().CoreV1().Namespaces().Create(&v1.Namespace{
+		_, err = client.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: client.namespace,
 			},
-		})
+		}, metav1.CreateOptions{})
 
 		log.Donef("Created namespace: %s", client.Namespace())
 	}
@@ -105,7 +106,7 @@ func (client *client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 		return nil
 	}
 
-	_, err := client.KubeClient().RbacV1().ClusterRoleBindings().Get(ClusterRoleBindingName, metav1.GetOptions{})
+	_, err := client.KubeClient().RbacV1().ClusterRoleBindings().Get(context.TODO(), ClusterRoleBindingName, metav1.GetOptions{})
 	if err != nil {
 		if client.restConfig != nil && client.restConfig.AuthProvider != nil && client.restConfig.AuthProvider.Name == "gcp" {
 			username := ptr.String("")
@@ -143,7 +144,7 @@ func (client *client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 				},
 			}
 
-			_, err = client.KubeClient().RbacV1().ClusterRoleBindings().Create(rolebinding)
+			_, err = client.KubeClient().RbacV1().ClusterRoleBindings().Create(context.TODO(), rolebinding, metav1.CreateOptions{})
 			if err != nil {
 				return err
 			}
@@ -162,8 +163,8 @@ func (client *client) GetRunningPodsWithImage(imageNames []string, namespace str
 	pods := []*k8sv1.Pod{}
 	now := time.Now()
 	minWait := time.Second * 60
-	err := wait.Poll(time.Second, maxWaiting, func() (bool, error){
-		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{})
+	err := wait.Poll(time.Second, maxWaiting, func() (bool, error) {
+		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -232,7 +233,7 @@ func (client *client) GetNewestRunningPod(labelSelector string, imageSelector []
 	for ok := true; ok; ok = maxWaiting > 0 {
 		time.Sleep(waitingInterval)
 
-		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{
+		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})
 		if err != nil {

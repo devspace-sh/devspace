@@ -1,6 +1,7 @@
 package v2cli
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"time"
@@ -31,7 +32,7 @@ var alreadyExistsRegexp = regexp.MustCompile(".* already exists$")
 
 func (c *client) ensureTiller() error {
 	// If the service account is already there we do not create it or any roles/rolebindings
-	_, err := c.kubeClient.KubeClient().CoreV1().ServiceAccounts(c.tillerNamespace).Get(TillerServiceAccountName, metav1.GetOptions{})
+	_, err := c.kubeClient.KubeClient().CoreV1().ServiceAccounts(c.tillerNamespace).Get(context.TODO(), TillerServiceAccountName, metav1.GetOptions{})
 	if err != nil {
 		err = createTillerRBAC(c.config, c.kubeClient, c.tillerNamespace, c.log)
 		if err != nil {
@@ -50,7 +51,7 @@ func (c *client) ensureTiller() error {
 
 // IsTillerDeployed determines if we could connect to a tiller server
 func IsTillerDeployed(config *latest.Config, client kubectl.Client, tillerNamespace string) bool {
-	deployment, err := client.KubeClient().AppsV1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+	deployment, err := client.KubeClient().AppsV1().Deployments(tillerNamespace).Get(context.TODO(), TillerDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		return false
 	}
@@ -70,7 +71,7 @@ func waitUntilTillerIsStarted(client kubectl.Client, tillerNamespace string, log
 	defer log.StopWait()
 
 	for tillerWaitingTime > 0 {
-		tillerDeployment, err := client.KubeClient().AppsV1().Deployments(tillerNamespace).Get(TillerDeploymentName, metav1.GetOptions{})
+		tillerDeployment, err := client.KubeClient().AppsV1().Deployments(tillerNamespace).Get(context.TODO(), TillerDeploymentName, metav1.GetOptions{})
 		if err != nil {
 			continue
 		}
@@ -115,15 +116,15 @@ func createTillerRBAC(config *latest.Config, client kubectl.Client, tillerNamesp
 	for _, appNamespace := range appNamespaces {
 		if appNamespace != "default" {
 			// Create namespaces if they are not there already
-			_, err := client.KubeClient().CoreV1().Namespaces().Get(appNamespace, metav1.GetOptions{})
+			_, err := client.KubeClient().CoreV1().Namespaces().Get(context.TODO(), appNamespace, metav1.GetOptions{})
 			if err != nil {
 				log.Donef("Create namespace %s", appNamespace)
 
-				_, err = client.KubeClient().CoreV1().Namespaces().Create(&k8sv1.Namespace{
+				_, err = client.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &k8sv1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: appNamespace,
 					},
-				})
+				}, metav1.CreateOptions{})
 				if err != nil {
 					return err
 				}
@@ -140,18 +141,18 @@ func createTillerRBAC(config *latest.Config, client kubectl.Client, tillerNamesp
 }
 
 func createTillerServiceAccount(client kubectl.Client, tillerNamespace string) error {
-	_, err := client.KubeClient().CoreV1().ServiceAccounts(tillerNamespace).Create(&k8sv1.ServiceAccount{
+	_, err := client.KubeClient().CoreV1().ServiceAccounts(tillerNamespace).Create(context.TODO(), &k8sv1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      TillerServiceAccountName,
 			Namespace: tillerNamespace,
 		},
-	})
+	}, metav1.CreateOptions{})
 
 	return err
 }
 
 func addDeployAccessToTiller(client kubectl.Client, tillerNamespace, namespace string) error {
-	_, err := client.KubeClient().RbacV1().Roles(namespace).Create(&rbacv1.Role{
+	_, err := client.KubeClient().RbacV1().Roles(namespace).Create(context.TODO(), &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      TillerRoleName,
 			Namespace: namespace,
@@ -163,12 +164,12 @@ func addDeployAccessToTiller(client kubectl.Client, tillerNamespace, namespace s
 				Verbs:     []string{rbacv1.ResourceAll},
 			},
 		},
-	})
+	}, metav1.CreateOptions{})
 	if err != nil && alreadyExistsRegexp.Match([]byte(err.Error())) == false {
 		return err
 	}
 
-	_, err = client.KubeClient().RbacV1().RoleBindings(namespace).Create(&rbacv1.RoleBinding{
+	_, err = client.KubeClient().RbacV1().RoleBindings(namespace).Create(context.TODO(), &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      TillerRoleName + "-binding",
 			Namespace: namespace,
@@ -185,7 +186,7 @@ func addDeployAccessToTiller(client kubectl.Client, tillerNamespace, namespace s
 			Kind:     "Role",
 			Name:     TillerRoleName,
 		},
-	})
+	}, metav1.CreateOptions{})
 	if err != nil && alreadyExistsRegexp.Match([]byte(err.Error())) == false {
 		return err
 	}

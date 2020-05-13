@@ -21,7 +21,6 @@ require (
 	github.com/hashicorp/go-version v1.0.0 // indirect
 	github.com/haya14busa/goplay v1.0.0 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf // indirect
-	github.com/jmoiron/sqlx v1.2.0 // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/josharian/impl v0.0.0-20190715203526-f0d59e96e372 // indirect
 	github.com/juju/errors v0.0.0-20180806074554-22422dad46e1
@@ -40,9 +39,8 @@ require (
 	github.com/shirou/gopsutil v0.0.0-20190627142359-4c8b404ee5c5
 	github.com/sirupsen/logrus v1.4.2
 	github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
-	github.com/spf13/cobra v0.0.5
+	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.3.2
 	github.com/tcnksm/go-gitconfig v0.1.2 // indirect
 	github.com/theupdateframework/notary v0.6.1 // indirect
 	github.com/toqueteos/trie v1.0.0 // indirect
@@ -54,13 +52,13 @@ require (
 	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 	gotest.tools v2.2.0+incompatible
-	helm.sh/helm/v3 v3.1.2
-	k8s.io/api v0.17.4
-	k8s.io/apimachinery v0.17.4
-	k8s.io/cli-runtime v0.17.4
-	k8s.io/client-go v0.17.4
+	helm.sh/helm/v3 v3.0.0-20200512230853-bf12ae39344a
+	k8s.io/api v0.18.0
+	k8s.io/apimachinery v0.18.0
+	k8s.io/cli-runtime v0.18.0
+	k8s.io/client-go v0.18.0
 	k8s.io/klog v1.0.0
-	k8s.io/kubectl v0.17.4
+	k8s.io/kubectl v0.18.0
 	mvdan.cc/sh/v3 v3.0.0-alpha2
 )
 

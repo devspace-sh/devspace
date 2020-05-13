@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -38,7 +39,7 @@ func (a *analyzer) pods(namespace string, options Options) ([]string, error) {
 			loop = false
 
 			// Get all pods
-			pods, err = a.client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{})
+			pods, err = a.client.KubeClient().CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 			if err != nil {
 				return nil, err
 			}
@@ -73,7 +74,7 @@ func (a *analyzer) pods(namespace string, options Options) ([]string, error) {
 		}
 	} else {
 		// Get all pods
-		pods, err = a.client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{})
+		pods, err = a.client.KubeClient().CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}

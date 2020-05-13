@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,7 +12,7 @@ func (a *analyzer) replicaSets(namespace string) ([]string, error) {
 	problems := []string{}
 
 	// Get all pods
-	replicaSets, err := a.client.KubeClient().AppsV1().ReplicaSets(namespace).List(metav1.ListOptions{})
+	replicaSets, err := a.client.KubeClient().AppsV1().ReplicaSets(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
