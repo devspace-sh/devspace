@@ -54,18 +54,21 @@ func NewServer(configLoader loader.ConfigLoader, config *latest.Config, generate
 	if forcePort != nil {
 		usePort = *forcePort
 
-		unused, _ := port.CheckHostPort("localhost", usePort)
+		unused, err := port.CheckHostPort("localhost", usePort)
 		if unused == false {
-			return nil, errors.Errorf("Port %d already in use", usePort)
+			return nil, errors.Errorf("Port %d already in use: %v", usePort, err)
 		}
 	} else {
-		for {
-			unused, _ := port.CheckHostPort("localhost", usePort)
+		for i := 0; i < 20; i++ {
+			unused, err := port.CheckHostPort("localhost", usePort)
 			if unused {
 				break
 			}
 
 			usePort++
+			if i+1 == 20 {
+				return nil, err
+			}
 		}
 	}
 
