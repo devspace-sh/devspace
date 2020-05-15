@@ -77,9 +77,13 @@ func (cmd *UICmd) RunUI(f factory.Factory, cobraCmd *cobra.Command, args []strin
 			checkPort = cmd.Port
 		}
 
-		for {
-			unused, _ := port.CheckHostPort("localhost", checkPort)
+		for i := 0; i < 20; i++ {
+			unused, err := port.CheckHostPort("localhost", checkPort)
 			if unused == false {
+				if i+1 == 20 {
+					return errors.Wrap(err, "check for open port")
+				}
+
 				domain := fmt.Sprintf("http://localhost:%d", checkPort)
 
 				// Check if DevSpace server

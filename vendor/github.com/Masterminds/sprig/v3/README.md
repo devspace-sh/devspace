@@ -14,6 +14,14 @@ It is inspired by the template functions found in
 [Twig](http://twig.sensiolabs.org/documentation) and in various
 JavaScript libraries, such as [underscore.js](http://underscorejs.org/).
 
+## IMPORTANT NOTES
+
+Sprig leverages [mergo](https://github.com/imdario/mergo) to handle merges. In
+its v0.3.9 release there was a behavior change that impacts merging template
+functions in sprig. It is currently recommended to use v0.3.8 of that package.
+Using v0.3.9 will cause sprig tests to fail. The issue in mergo is tracked at
+https://github.com/imdario/mergo/issues/139.
+
 ## Package Versions
 
 There are two active major versions of the `sprig` package.

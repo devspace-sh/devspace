@@ -164,7 +164,12 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 	}
 
 	executed := 0
-	m.log.StartWait(fmt.Sprintf("%s %d dependencies", actionName, len(dependencies)))
+	numDependencies := len(dependencies)
+	if len(filterDependencies) > 0 {
+		numDependencies = len(filterDependencies)
+	}
+
+	m.log.StartWait(fmt.Sprintf("%s %d dependencies", actionName, numDependencies))
 	for i >= 0 && i < len(dependencies) {
 		var (
 			dependency       = dependencies[i]

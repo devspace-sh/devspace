@@ -1,5 +1,28 @@
 # Changelog
 
+## Release 3.1.0 (2020-04-16)
+
+NOTE: The dependency github.com/imdario/mergo made a behavior change in 0.3.9
+that impacts sprig functionality. Do not use sprig with a version newer than 0.3.8.
+
+### Added
+
+- #225: Added support for generating htpasswd hash (thanks @rustycl0ck)
+- #224: Added duration filter (thanks @frebib)
+- #205: Added `seq` function (thanks @thadc23)
+
+### Changed
+
+- #203: Unlambda functions with correct signature (thanks @muesli)
+- #236: Updated the license formatting for GitHub display purposes
+- #238: Updated package dependency versions. Note, mergo not updated to 0.3.9
+        as it causes a breaking change for sprig. That issue is tracked at
+        https://github.com/imdario/mergo/issues/139
+
+### Fixed
+
+- #229: Fix `seq` example in docs (thanks @kalmant)
+
 ## Release 3.0.2 (2019-12-13)
 
 ### Fixed

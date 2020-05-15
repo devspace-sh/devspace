@@ -160,5 +160,5 @@ func (client *client) Logs(ctx context.Context, namespace, podName, containerNam
 		return nil, errors.New("Request url is empty")
 	}
 
-	return request.Context(ctx).Stream()
+	return request.Stream(ctx)
 }

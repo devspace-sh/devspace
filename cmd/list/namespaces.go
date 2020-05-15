@@ -1,6 +1,7 @@
 package list
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -69,7 +70,7 @@ func (cmd *namespacesCmd) RunListNamespaces(f factory.Factory, cobraCmd *cobra.C
 		return errors.Wrap(err, "new kube client")
 	}
 
-	namespaces, err := client.KubeClient().CoreV1().Namespaces().List(metav1.ListOptions{})
+	namespaces, err := client.KubeClient().CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrap(err, "list namespaces")
 	}

@@ -1,6 +1,7 @@
 package targetselector
 
 import (
+	"context"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
@@ -17,7 +18,7 @@ func SelectPod(client kubectl.Client, namespace string, labelSelector *string, q
 	}
 
 	if labelSelector != nil {
-		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{
+		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
 			LabelSelector: *labelSelector,
 		})
 		if err != nil {
@@ -65,7 +66,7 @@ func SelectPod(client kubectl.Client, namespace string, labelSelector *string, q
 		}
 	}
 
-	podList, err := client.KubeClient().CoreV1().Pods(namespace).List(metav1.ListOptions{})
+	podList, err := client.KubeClient().CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

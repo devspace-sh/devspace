@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"regexp"
@@ -217,7 +218,7 @@ func (p *provider) defaultClusterSpaceDomain(client kubectl.Client, useHostNetwo
 		p.log.StartWait("Waiting for loadbalancer to get an IP address")
 		defer p.log.StopWait()
 
-		nodeList, err := client.KubeClient().CoreV1().Nodes().List(metav1.ListOptions{})
+		nodeList, err := client.KubeClient().CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return errors.Wrap(err, "list nodes")
 		}
@@ -250,7 +251,7 @@ func (p *provider) defaultClusterSpaceDomain(client kubectl.Client, useHostNetwo
 	Outer:
 		for time.Since(now) < waitTimeout {
 			// Get loadbalancer
-			services, err := client.KubeClient().CoreV1().Services(constants.DevSpaceCloudNamespace).List(metav1.ListOptions{})
+			services, err := client.KubeClient().CoreV1().Services(constants.DevSpaceCloudNamespace).List(context.TODO(), metav1.ListOptions{})
 			if err != nil {
 				return errors.Wrap(err, "list services")
 			}
@@ -329,7 +330,7 @@ func (p *provider) deployServices(clusterID int, availableResources *clusterReso
 	defer p.log.StopWait()
 
 	// Check if devspace-cloud is deployed in the namespace
-	configmaps, err := p.kubeClient.KubeClient().CoreV1().ConfigMaps(DevSpaceCloudNamespace).List(metav1.ListOptions{
+	configmaps, err := p.kubeClient.KubeClient().CoreV1().ConfigMaps(DevSpaceCloudNamespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "NAME=devspace-cloud,OWNER=TILLER,STATUS=DEPLOYED",
 	})
 	if err != nil {
@@ -446,7 +447,7 @@ func (p *provider) getServiceAccountCredentials() ([]byte, string, error) {
 	defer p.log.StopWait()
 
 	// Create main service account
-	sa, err := p.kubeClient.KubeClient().CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
+	sa, err := p.kubeClient.KubeClient().CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(context.TODO(), DevSpaceServiceAccount, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", err
 	}
@@ -456,7 +457,7 @@ func (p *provider) getServiceAccountCredentials() ([]byte, string, error) {
 	for len(sa.Secrets) == 0 && time.Since(beginTimeStamp) < getServiceAccountTimeout {
 		time.Sleep(time.Second)
 
-		sa, err = p.kubeClient.KubeClient().CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
+		sa, err = p.kubeClient.KubeClient().CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(context.TODO(), DevSpaceServiceAccount, metav1.GetOptions{})
 		if err != nil {
 			return nil, "", err
 		}
@@ -467,7 +468,7 @@ func (p *provider) getServiceAccountCredentials() ([]byte, string, error) {
 	}
 
 	// Get secret
-	secret, err := p.kubeClient.KubeClient().CoreV1().Secrets(DevSpaceCloudNamespace).Get(sa.Secrets[0].Name, metav1.GetOptions{})
+	secret, err := p.kubeClient.KubeClient().CoreV1().Secrets(DevSpaceCloudNamespace).Get(context.TODO(), sa.Secrets[0].Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", err
 	}
@@ -568,7 +569,7 @@ func (p *provider) checkResources() (*clusterResources, error) {
 	defer p.log.StopWait()
 
 	// Check if cluster has active nodes
-	nodeList, err := p.kubeClient.KubeClient().CoreV1().Nodes().List(metav1.ListOptions{})
+	nodeList, err := p.kubeClient.KubeClient().CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "list cluster nodes")
 	}
@@ -600,16 +601,16 @@ func (p *provider) initializeNamespace() error {
 	client := p.kubeClient.KubeClient()
 
 	// Create devspace-cloud namespace
-	_, err := p.kubeClient.KubeClient().CoreV1().Namespaces().Get(DevSpaceCloudNamespace, metav1.GetOptions{})
+	_, err := p.kubeClient.KubeClient().CoreV1().Namespaces().Get(context.TODO(), DevSpaceCloudNamespace, metav1.GetOptions{})
 	if err != nil {
-		_, err = client.CoreV1().Namespaces().Create(&v1.Namespace{
+		_, err = client.CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: DevSpaceCloudNamespace,
 				Labels: map[string]string{
 					"devspace.cloud/control-plane": "true",
 				},
 			},
-		})
+		}, metav1.CreateOptions{})
 		if err != nil {
 			return errors.Wrap(err, "create namespace")
 		}
@@ -618,13 +619,13 @@ func (p *provider) initializeNamespace() error {
 	}
 
 	// Create serviceaccount
-	_, err = client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(DevSpaceServiceAccount, metav1.GetOptions{})
+	_, err = client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Get(context.TODO(), DevSpaceServiceAccount, metav1.GetOptions{})
 	if err != nil {
-		_, err = client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(&v1.ServiceAccount{
+		_, err = client.CoreV1().ServiceAccounts(DevSpaceCloudNamespace).Create(context.TODO(), &v1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: DevSpaceServiceAccount,
 			},
-		})
+		}, metav1.CreateOptions{})
 		if err != nil {
 			return errors.Wrap(err, "create service account")
 		}
@@ -633,9 +634,9 @@ func (p *provider) initializeNamespace() error {
 	}
 
 	// Create cluster-admin clusterrole binding
-	_, err = client.RbacV1().ClusterRoleBindings().Get(DevSpaceClusterRoleBinding, metav1.GetOptions{})
+	_, err = client.RbacV1().ClusterRoleBindings().Get(context.TODO(), DevSpaceClusterRoleBinding, metav1.GetOptions{})
 	if err != nil {
-		_, err = client.RbacV1().ClusterRoleBindings().Create(&rbacv1.ClusterRoleBinding{
+		_, err = client.RbacV1().ClusterRoleBindings().Create(context.TODO(), &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: DevSpaceClusterRoleBinding,
 			},
@@ -651,7 +652,7 @@ func (p *provider) initializeNamespace() error {
 				Kind:     "ClusterRole",
 				Name:     "cluster-admin",
 			},
-		})
+		}, metav1.CreateOptions{})
 		if err != nil {
 			return errors.Wrap(err, "create cluster role binding")
 		}

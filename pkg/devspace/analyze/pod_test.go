@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -165,12 +166,12 @@ func TestPods(t *testing.T) {
 		kubeClient := &fakekube.Client{
 			Client: fake.NewSimpleClientset(),
 		}
-		kubeClient.Client.CoreV1().Namespaces().Create(&k8sv1.Namespace{
+		kubeClient.Client.CoreV1().Namespaces().Create(context.TODO(), &k8sv1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: namespace,
 			},
-		})
-		kubeClient.Client.CoreV1().Pods(namespace).Create(&testCase.pod)
+		}, metav1.CreateOptions{})
+		kubeClient.Client.CoreV1().Pods(namespace).Create(context.TODO(), &testCase.pod, metav1.CreateOptions{})
 
 		analyzer := &analyzer{
 			client: kubeClient,
@@ -180,7 +181,7 @@ func TestPods(t *testing.T) {
 		go func() {
 			time.Sleep(time.Second / 2)
 			if testCase.updatedPod != nil {
-				kubeClient.Client.CoreV1().Pods(namespace).Update(testCase.updatedPod)
+				kubeClient.Client.CoreV1().Pods(namespace).Update(context.TODO(), testCase.updatedPod, metav1.UpdateOptions{})
 			}
 		}()
 

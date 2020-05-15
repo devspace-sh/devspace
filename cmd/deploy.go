@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"strconv"
 	"strings"
 
@@ -273,7 +274,7 @@ func (cmd *DeployCmd) validateFlags() error {
 }
 
 func fillDevSpaceDomainVars(client kubectl.Client, generatedConfig *generated.Config) error {
-	namespace, err := client.KubeClient().CoreV1().Namespaces().Get(client.Namespace(), metav1.GetOptions{})
+	namespace, err := client.KubeClient().CoreV1().Namespaces().Get(context.TODO(), client.Namespace(), metav1.GetOptions{})
 	if err != nil {
 		return nil
 	}

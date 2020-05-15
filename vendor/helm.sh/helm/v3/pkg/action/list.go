@@ -242,7 +242,7 @@ func filterList(releases []*release.Release) []*release.Release {
 	return list
 }
 
-// setStateMask calculates the state mask based on parameters.
+// SetStateMask calculates the state mask based on parameters.
 func (l *List) SetStateMask() {
 	if l.All {
 		l.StateMask = ListAll

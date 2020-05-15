@@ -1,6 +1,7 @@
 package use
 
 import (
+	"context"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -80,7 +81,7 @@ func (cmd *namespaceCmd) RunUseNamespace(f factory.Factory, cobraCmd *cobra.Comm
 	if len(args) > 0 {
 		namespace = args[0]
 	} else if !cmd.Reset {
-		namespaceList, err := client.KubeClient().CoreV1().Namespaces().List(metav1.ListOptions{})
+		namespaceList, err := client.KubeClient().CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return errors.Errorf("Unable to list namespaces: %v", err)
 		}

@@ -1,6 +1,7 @@
 package kubectl
 
 import (
+	"context"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -68,7 +69,7 @@ func (client *client) GenericRequest(options *GenericRequestOptions) (string, er
 	}
 
 	// Make request
-	out, err := req.DoRaw()
+	out, err := req.DoRaw(context.TODO())
 	if err != nil {
 		return "", errors.Wrap(err, "request")
 	}

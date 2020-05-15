@@ -1,6 +1,7 @@
 package deploy
 
 import (
+	"context"
 	"path/filepath"
 	"time"
 
@@ -171,14 +172,14 @@ func testPurge(f *customFactory) error {
 	}
 
 	for start := time.Now(); time.Since(start) < time.Second*30; {
-		p, _ := client.KubeClient().CoreV1().Pods(f.Namespace).List(metav1.ListOptions{})
+		p, _ := client.KubeClient().CoreV1().Pods(f.Namespace).List(context.TODO(), metav1.ListOptions{})
 
 		if len(p.Items) == 0 || (len(p.Items) == 1 && p.Items[0].Status.ContainerStatuses[0].Name == "tiller") {
 			return nil
 		}
 	}
 
-	p, _ := client.KubeClient().CoreV1().Pods(f.Namespace).List(metav1.ListOptions{})
+	p, _ := client.KubeClient().CoreV1().Pods(f.Namespace).List(context.TODO(), metav1.ListOptions{})
 	return errors.Errorf("purge command failed, expected 1 (tiller) pod but found %v (%s)", len(p.Items), p.Items[0].Status.ContainerStatuses[0].Name)
 }
 

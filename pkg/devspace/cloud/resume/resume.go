@@ -1,6 +1,7 @@
 package resume
 
 import (
+	"context"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
@@ -102,7 +103,7 @@ func (r *resumer) waitForSpaceResume() error {
 	start := time.Now()
 
 	for time.Now().Sub(start) <= maxWait {
-		pods, err := r.kubeClient.KubeClient().CoreV1().Pods(r.kubeClient.Namespace()).List(metav1.ListOptions{})
+		pods, err := r.kubeClient.KubeClient().CoreV1().Pods(r.kubeClient.Namespace()).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return errors.Wrap(err, "list pods")
 		}

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -189,7 +190,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, cobraCmd *cobra.Command, args []s
 
 	// create ingress for public access via domain
 	if space != nil {
-		namespace, err := client.KubeClient().CoreV1().Namespaces().Get(space.Namespace, metav1.GetOptions{})
+		namespace, err := client.KubeClient().CoreV1().Namespaces().Get(context.TODO(), space.Namespace, metav1.GetOptions{})
 		if err != nil {
 			return errors.Wrap(err, "get space namespace")
 		}
@@ -249,7 +250,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, cobraCmd *cobra.Command, args []s
 		domainHash := hash.String(domain)
 
 		ingressName := "devspace-ingress-" + domainHash[:10]
-		_, err = client.KubeClient().ExtensionsV1beta1().Ingresses(namespace).Create(&v1beta1.Ingress{
+		_, err = client.KubeClient().ExtensionsV1beta1().Ingresses(namespace).Create(context.TODO(), &v1beta1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{Name: ingressName},
 			Spec: v1beta1.IngressSpec{
 				Rules: []v1beta1.IngressRule{
@@ -270,7 +271,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, cobraCmd *cobra.Command, args []s
 					},
 				},
 			},
-		})
+		}, metav1.CreateOptions{})
 		if err != nil {
 			cmd.log.WriteString("\n")
 			return errors.Errorf("Unable to create ingress for domain %s: %v", domain, err)
@@ -411,7 +412,7 @@ func (cmd *OpenCmd) getService(config *latest.Config, client kubectl.Client, nam
 	serviceNameList := []string{}
 	serviceLabels := map[string]map[string]string{}
 
-	serviceList, err := client.KubeClient().CoreV1().Services(namespace).List(metav1.ListOptions{})
+	serviceList, err := client.KubeClient().CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return "", 0, nil, errors.Wrap(err, "list services")
 	}
@@ -489,7 +490,7 @@ func (cmd *OpenCmd) findDomain(client kubectl.Client, namespace, host string) (s
 	defer cmd.log.StopWait()
 
 	// List all ingresses and only create one if there is none already
-	ingressList, err := client.KubeClient().ExtensionsV1beta1().Ingresses(namespace).List(metav1.ListOptions{})
+	ingressList, err := client.KubeClient().ExtensionsV1beta1().Ingresses(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return "", false, errors.Errorf("Error listing ingresses: %v", err)
 	}
