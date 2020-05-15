@@ -172,11 +172,16 @@ let continueProcess = function(askRemoveGlobalFolder) {
     let yarnLink = normalizePath(path.join(yarnGlobalDir, packageJson.name));
     let yarnLinkExists = fs.existsSync(yarnLink) && yarnLink == packageDir;
 
+    console.log(packageDir)
+    console.log(yarnGlobalDir)
+
     if (yarnLinkExists || packageDir.startsWith(yarnGlobalDir)) {
       globalDir = normalizePath(execSync('yarn global bin').toString());
       globalInstall = true;
     }
-  } catch(e) {}
+  } catch(e) {
+    console.log(e)
+  }
 
   try {
     let npmGlobalDir = normalizePath(execSync('npm root -g').toString());
