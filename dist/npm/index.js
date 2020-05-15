@@ -155,7 +155,13 @@ let continueProcess = function(askRemoveGlobalFolder) {
   }
 
   let normalizePath = function(p) {
-    return fs.realpathSync(path.normalize(p).replace(/(\r)?\n/g, ""));
+    let re = path.normalize(p).replace(/(\r)?\n/g, "");
+    
+    try {
+      return fs.realpathSync(re);
+    } catch(e) {
+      return re
+    }
   }
 
   let packageDir = normalizePath(__dirname)
@@ -176,12 +182,14 @@ let continueProcess = function(askRemoveGlobalFolder) {
     console.log(yarnGlobalDir)
 
     if (yarnLinkExists || packageDir.startsWith(yarnGlobalDir)) {
-      globalDir = normalizePath(execSync('yarn global bin').toString());
-      globalInstall = true;
+      try {
+        globalDir = normalizePath(execSync('yarn global bin').toString());
+        globalInstall = true;
+      } catch(e) {
+        console.log(e)
+      }
     }
-  } catch(e) {
-    console.log(e)
-  }
+  } catch(e) {}
 
   try {
     let npmGlobalDir = normalizePath(execSync('npm root -g').toString());
@@ -189,8 +197,12 @@ let continueProcess = function(askRemoveGlobalFolder) {
     let npmLinkExists = fs.existsSync(npmLink) && npmLink == packageDir;
 
     if (npmLinkExists || !globalDir || packageDir.startsWith(npmGlobalDir)) {
-      globalDir = normalizePath(execSync('npm bin -g').toString());
-      globalInstall = true;
+      try {
+        globalDir = normalizePath(execSync('npm bin -g').toString());
+        globalInstall = true;
+      } catch(e) {
+        console.log(e)
+      }
     }
   } catch(e) {}
   
