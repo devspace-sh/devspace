@@ -156,11 +156,11 @@ let continueProcess = function(askRemoveGlobalFolder) {
 
   let normalizePath = function(p) {
     let re = path.normalize(p).replace(/(\r)?\n/g, "");
-    
+
     try {
       return fs.realpathSync(re);
     } catch(e) {
-      return re
+      return re;
     }
   }
 
@@ -178,15 +178,12 @@ let continueProcess = function(askRemoveGlobalFolder) {
     let yarnLink = normalizePath(path.join(yarnGlobalDir, packageJson.name));
     let yarnLinkExists = fs.existsSync(yarnLink) && yarnLink == packageDir;
 
-    console.log(packageDir)
-    console.log(yarnGlobalDir)
-
     if (yarnLinkExists || packageDir.startsWith(yarnGlobalDir)) {
       try {
         globalDir = normalizePath(execSync('yarn global bin').toString());
         globalInstall = true;
       } catch(e) {
-        console.log(e)
+        console.log(e);
       }
     }
   } catch(e) {}
@@ -201,7 +198,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
         globalDir = normalizePath(execSync('npm bin -g').toString());
         globalInstall = true;
       } catch(e) {
-        console.log(e)
+        console.error(e);
       }
     }
   } catch(e) {}
@@ -209,13 +206,13 @@ let continueProcess = function(askRemoveGlobalFolder) {
   if (globalDir == null) {
     if (platform == PLATFORM_MAPPING.win32) {
       console.error("Error finding binary installation directory");
-      process.exit(1)
+      process.exit(1);
     }
-    globalDir = fallbackGlobalDir
+    globalDir = fallbackGlobalDir;
   }
 
-  cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, ';').replace(/(\\)+/g, '/')
-  cleanGlobalDir = globalDir.replace(/(^|;)[a-z]:/gi, '').replace(/(\\)+/g, '/').trimRight("/")
+  cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, ';').replace(/(\\)+/g, '/');
+  cleanGlobalDir = globalDir.replace(/(^|;)[a-z]:/gi, '').replace(/(\\)+/g, '/').trimRight("/");
 
   if (cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir) == -1) {
     console.error("\n\n################################################\nWARNING: npm binary directory NOT in $PATH environment variable: " + globalDir + "\n################################################\n\n");
