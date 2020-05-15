@@ -1,8 +1,9 @@
 #!/usr/bin/env sh
 
 BINARY=$(command -v devspace)
+STAT=$(stat --printf="%s" "$BINARY" 2>/dev/null)
 
-if [ -f "$BINARY" ] || [ $(stat --printf="%s" "$BINARY") -lt 10000 ]; then
+if [ ! -f "$BINARY" ] || [ "$STAT" -lt 10000 ]; then
     echo "Finishing installation of DevSpace CLI"
 
     BINDIR="$(dirname $0)"
@@ -31,7 +32,7 @@ if [ -f "$BINARY" ] || [ $(stat --printf="%s" "$BINARY") -lt 10000 ]; then
     echo "Running: node $BASEDIR/$INDEX_FILE finish-install $BINDIR"
     /usr/bin/env node "$BASEDIR/$INDEX_FILE" finish-install $BINDIR;
 
-    devspace "$@" 2>/dev/null || devspace.exe "$@";
+    $BINDIR/devspace "$@" 2>/dev/null || $BINDIR/devspace.exe "$@" || devspace "$@" 2>/dev/null || devspace.exe "$@";
     exit $?;
 fi
 
