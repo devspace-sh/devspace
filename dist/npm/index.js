@@ -171,6 +171,11 @@ let continueProcess = function(askRemoveGlobalFolder) {
 
   if (process.argv.length > 3 && fs.existsSync(normalizePath(process.argv[3]))) {
     globalDir = normalizePath(process.argv[3]);
+    dotBinDir = normalizePath(path.join(globalDir, "..", "..", ".bin"));
+    
+    if (fs.existsSync(dotBinDir + "/devspace")) {
+      globalDir = normalizePath(dotBinDir);
+    }
   }
 
   try {
