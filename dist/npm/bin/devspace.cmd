@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 WHERE devspace.exe >nul 2>nul
-IF %ERRORLEVEL% EQU 0 devspace %* && exit /b %errorlevel%
+IF %ERRORLEVEL% EQU 0 devspace.exe %* && exit /b %errorlevel%
 
 echo Finishing installation of DevSpace CLI
 
@@ -10,22 +10,28 @@ SET bindir=%~dp0
 SET basedir=%~dp0\..
 SET indexFile=\index.js
 
+echo "!basedir!\!indexFile!"
+
 IF NOT EXIST "!basedir!\!indexFile!" (
   SET basedir=%~dp0\..\lib\node_modules\devspace
 
   IF NOT EXIST "!basedir!\!indexFile!" (
-    FOR /F "tokens=* USEBACKQ" %%F IN (`npm root -g`) DO (
-      SET basedir=%%F\devspace
-    )
+    SET basedir=%~dp0\node_modules\devspace
 
     IF NOT EXIST "!basedir!\!indexFile!" (
-      FOR /F "tokens=* USEBACKQ" %%F IN (`yarn global dir`) DO (
-        SET basedir=%%F\node_modules\devspace
+      FOR /F "tokens=* USEBACKQ" %%F IN (`npm root -g`) DO (
+        SET basedir=%%F\devspace
       )
 
       IF NOT EXIST "!basedir!\!indexFile!" (
-        echo "Unable to find global npm/yarn dir"
-        exit /b 1
+        FOR /F "tokens=* USEBACKQ" %%F IN (`yarn global dir`) DO (
+          SET basedir=%%F\node_modules\devspace
+        )
+
+        IF NOT EXIST "!basedir!\!indexFile!" (
+          echo Unable to find global npm/yarn dir
+          exit /b 1
+        )
       )
     )
   )

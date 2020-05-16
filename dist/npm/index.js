@@ -94,7 +94,7 @@ const getLatestVersion = function(callback, includePreReleases) {
       callback(latestVersion);
     } else {
       console.error("Unable to identify latest devspace version");
-      process.exit(1);
+      process.exit(2);
     }
   });
 };
@@ -206,20 +206,9 @@ let continueProcess = function(askRemoveGlobalFolder) {
   if (globalDir == null) {
     if (platform == PLATFORM_MAPPING.win32) {
       console.error("Error finding binary installation directory");
-      process.exit(1);
+      process.exit(3);
     }
     globalDir = fallbackGlobalDir;
-  }
-
-  cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, ';').replace(/(\\)+/g, '/');
-  cleanGlobalDir = globalDir.replace(/(^|;)[a-z]:/gi, '').replace(/(\\)+/g, '/').trimRight("/");
-
-  if (cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir) == -1) {
-    console.error("\n\n################################################\nWARNING: npm binary directory NOT in $PATH environment variable: " + globalDir + "\n################################################\n\n");
-
-    if (globalInstall) {
-      process.exit(1)
-    }
   }
   
   try {
@@ -311,6 +300,17 @@ let continueProcess = function(askRemoveGlobalFolder) {
     }
   } else {
     if (action == "finish-install") {
+      cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, ';').replace(/(\\)+/g, '/');
+      cleanGlobalDir = globalDir.replace(/(^|;)[a-z]:/gi, '').replace(/(\\)+/g, '/').trimRight("/");
+    
+      if (cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir) == -1) {
+        console.error("\n\n################################################\nWARNING: npm binary directory NOT in $PATH environment variable: " + globalDir + "\n################################################\n\n");
+    
+        if (globalInstall) {
+          process.exit(4)
+        }
+      }
+
       const showRootError = function() {
         console.error("\n############################################");
         console.error(
@@ -323,7 +323,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
         );
         console.error("   You may need to run this command using sudo.");
         console.error("############################################\n");
-        process.exit(1);
+        process.exit(5);
       };
 
       const downloadRelease = function(version) {
@@ -356,7 +356,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
           .on("error", function() {
             spinner.stop(true);
             console.error("Error requesting URL: " + downloadPath);
-            process.exit(1);
+            process.exit(6);
           })
           .on("response", function(res) {
             if (res.statusCode != 200) {
@@ -387,7 +387,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
                     ")"
                 );
                 console.error(err);
-                process.exit(1);
+                process.exit(7);
               }
             } else {
               try {
@@ -414,7 +414,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
             } catch (e) {
               console.log(e);
               console.error("\nRenaming release binary failed. Please copy file manually:\n from: " + binaryPath + downloadExtension + "\n to: " + binaryPath + "\n");
-              process.exit(1);
+              process.exit(8);
             }
 
             removeScripts(true);

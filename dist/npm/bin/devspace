@@ -14,15 +14,19 @@ if [ ! -f "$BINARY" ] || [ "$STAT" -lt 10000 ]; then
         BASEDIR="$(dirname $0)/../lib/node_modules/devspace"
 
         if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
-            BASEDIR=$(/usr/bin/env npm root -g)/devspace
+            BASEDIR="$(dirname $0)/node_modules/devspace"
 
             if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
-                if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
-                    BASEDIR=$(/usr/bin/env yarn global dir)/node_modules/devspace
+                BASEDIR=$(/usr/bin/env npm root -g)/devspace
 
+                if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
                     if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
-                        echo "Unable to find global npm/yarn dir"
-                        exit 1
+                        BASEDIR=$(/usr/bin/env yarn global dir)/node_modules/devspace
+
+                        if [ ! -f "$BASEDIR/$INDEX_FILE" ]; then
+                            echo "Unable to find global npm/yarn dir"
+                            exit 1
+                        fi
                     fi
                 fi
             fi
@@ -32,7 +36,7 @@ if [ ! -f "$BINARY" ] || [ "$STAT" -lt 10000 ]; then
     echo "Running: node $BASEDIR/$INDEX_FILE finish-install $BINDIR"
     /usr/bin/env node "$BASEDIR/$INDEX_FILE" finish-install $BINDIR;
 
-    $BINDIR/devspace "$@" 2>/dev/null || $BINDIR/devspace.exe "$@" || devspace "$@" 2>/dev/null || devspace.exe "$@";
+    $BINDIR/devspace.exe "$@" || $BINDIR/devspace "$@" 2>/dev/null || devspace.exe "$@" || devspace "$@" 2>/dev/null;
     exit $?;
 fi
 
