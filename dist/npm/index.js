@@ -249,15 +249,17 @@ let continueProcess = function(askRemoveGlobalFolder) {
     removeScripts(false);
 
     if (platform == PLATFORM_MAPPING.win32) {
-      // Remove bin/devspace.cmd file because it can cause issues
-      try {
-        fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".cmd"));
-      } catch (e) {}
+      if (globalInstall) {
+        // Remove bin/devspace.cmd file because it can cause issues
+        try {
+          fs.unlinkSync(binaryPath.replace(/\.exe$/i, ".cmd"));
+        } catch (e) {}
 
-      // Copy #PROJECT_DIR/bin/devspace.cmd file to $NPM_GLOBAL/bin/devspace.cmd
-      try {
-        fs.copyFileSync(path.join(__dirname, "bin", "devspace.cmd"), binaryPath.replace(/\.exe$/i, ".cmd"));
-      } catch (e) {}
+        // Copy #PROJECT_DIR/bin/devspace.cmd file to $NPM_GLOBAL/bin/devspace.cmd
+        try {
+          fs.copyFileSync(path.join(__dirname, "bin", "devspace.cmd"), binaryPath.replace(/\.exe$/i, ".cmd"));
+        } catch (e) {}
+      }
     }
   }
   else if (action == "uninstall") {
