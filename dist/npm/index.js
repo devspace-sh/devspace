@@ -173,7 +173,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
     globalDir = normalizePath(process.argv[3]);
     dotBinDir = normalizePath(path.join(globalDir, "..", "..", ".bin"));
     
-    if (fs.existsSync(dotBinDir + "/devspace")) {
+    if (fs.existsSync(normalizePath(path.join(dotBinDir, "devspace")))) {
       globalDir = normalizePath(dotBinDir);
     }
   }
