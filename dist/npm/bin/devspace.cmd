@@ -38,4 +38,4 @@ IF NOT EXIST "!basedir!\!indexFile!" (
 )
 
 echo Running: node "!basedir!\!indexFile!" finish-install "!bindir!\"
-node "!basedir!\!indexFile!" finish-install "!bindir!\" && (!bindir!\devspace.exe %* || devspace.exe %*)
+node "!basedir!\!indexFile!" finish-install "!bindir!\" && (!bindir!\devspace.exe %* 2> nul || devspace.exe %*)
