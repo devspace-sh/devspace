@@ -36,7 +36,14 @@ if [ ! -f "$BINARY" ] || [ "$STAT" -lt 10000 ]; then
     echo "Running: node $BASEDIR/$INDEX_FILE finish-install $BINDIR"
     /usr/bin/env node "$BASEDIR/$INDEX_FILE" finish-install $BINDIR;
 
-    $BINDIR/devspace.exe "$@" 2>/dev/null || $BINDIR/devspace "$@" 2>/dev/null || $BINDIR/../../.bin/devspace.exe "$@" 2>/dev/null || $BINDIR/../../.bin/devspace "$@" 2>/dev/null || devspace.exe "$@" 2>/dev/null || devspace "$@";
+    CMD_BIN=$(command -v cmd.exe)
+
+    if [ -f "$CMD_BIN" ] && [ "${CMD_BIN#/mnt/}" == "${CMD_BIN}" ]; then
+        $BINDIR/devspace.exe "$@" 2>/dev/null || $BINDIR/../../.bin/devspace.exe "$@" 2>/dev/null || devspace.exe "$@";
+    else
+        $BINDIR/devspace "$@" 2>/dev/null|| $BINDIR/../../.bin/devspace "$@" 2>/dev/null || devspace "$@";
+    fi
+
     exit $?;
 fi
 
