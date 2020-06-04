@@ -1,4 +1,4 @@
-version: v1beta5
+version: v1beta9
 deployments:
   # This will be filled with a question on `devspace deploy` or `devspace dev`, alternatevly you could also set the
   # environment variable SELECT to avoid the question and fill it automatically
@@ -12,6 +12,7 @@ commands:
 # Use `devspace run auto` to automatically fill the variables
 - name: auto
   command: devspace deploy --var SELECT=deployment-1 --var IMAGE=nginx
+  description: "This command runs devspace deploy and sets some variables automatically"
 vars:
 - name: SELECT
   question: Please choose a deployment name

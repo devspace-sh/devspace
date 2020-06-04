@@ -607,8 +607,9 @@ type HookWhenAtConfig struct {
 
 // CommandConfig defines the command specification
 type CommandConfig struct {
-	Name    string `yaml:"name"`
-	Command string `yaml:"command"`
+	Name        string `yaml:"name"`
+	Command     string `yaml:"command"`
+	Description string `yaml:"description"`
 }
 
 // Variable describes the var definition
