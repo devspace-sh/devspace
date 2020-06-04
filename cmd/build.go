@@ -1,16 +1,15 @@
 package cmd
 
 import (
-	"strings"
-
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
-
 	"github.com/mgutz/ansi"
+	"strings"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -24,6 +23,7 @@ type BuildCmd struct {
 	SkipPush                bool
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
+	Dependency              []string
 
 	ForceBuild        bool
 	BuildSequential   bool
@@ -56,6 +56,7 @@ Builds all defined images and pushes them
 	buildCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
 
 	buildCmd.Flags().StringSliceVarP(&cmd.Tags, "tag", "t", []string{}, "Use the given tag for all built images")
+	buildCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Builds only the specific named dependencies")
 
 	buildCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 
@@ -106,6 +107,7 @@ func (cmd *BuildCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 
 	// Dependencies
 	err = manager.BuildAll(dependency.BuildOptions{
+		Dependencies:            cmd.Dependency,
 		SkipPush:                cmd.SkipPush,
 		ForceDeployDependencies: cmd.ForceDependencies,
 		ForceBuild:              cmd.ForceBuild,
@@ -116,30 +118,34 @@ func (cmd *BuildCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	}
 
 	// Build images if necessary
-	builtImages, err := f.NewBuildController(config, generatedConfig.GetActive(), nil).Build(&build.Options{
-		SkipPush:     cmd.SkipPush,
-		IsDev:        true,
-		ForceRebuild: cmd.ForceBuild,
-		Sequential:   cmd.BuildSequential,
-	}, log)
-	if err != nil {
-		if strings.Index(err.Error(), "no space left on device") != -1 {
-			return errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
-		}
-
-		return errors.Wrap(err, "build images")
-	}
-
-	// Save config if an image was built
-	if len(builtImages) > 0 {
-		err := configLoader.SaveGenerated()
+	if len(cmd.Dependency) == 0 {
+		builtImages, err := f.NewBuildController(config, generatedConfig.GetActive(), nil).Build(&build.Options{
+			SkipPush:     cmd.SkipPush,
+			IsDev:        true,
+			ForceRebuild: cmd.ForceBuild,
+			Sequential:   cmd.BuildSequential,
+		}, log)
 		if err != nil {
-			return err
+			if strings.Index(err.Error(), "no space left on device") != -1 {
+				return errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
+			}
+
+			return errors.Wrap(err, "build images")
 		}
 
-		log.Donef("Successfully built %d images", len(builtImages))
+		// Save config if an image was built
+		if len(builtImages) > 0 {
+			err := configLoader.SaveGenerated()
+			if err != nil {
+				return err
+			}
+
+			log.Donef("Successfully built %d images", len(builtImages))
+		} else {
+			log.Info("No images to rebuild. Run with -b to force rebuilding")
+		}
 	} else {
-		log.Info("No images to rebuild. Run with -b to force rebuilding")
+		log.Donef("Successfully built images for dependencies: %s", strings.Join(cmd.Dependency, " "))
 	}
 
 	return nil
