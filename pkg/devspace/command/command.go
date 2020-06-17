@@ -23,7 +23,7 @@ func ExecuteCommand(commands []*latest.CommandConfig, name string, args []string
 	}
 
 	if shellCommand == "" {
-		return errors.Errorf("Couldn't find command '%s' in devspace.yaml", name)
+		return errors.Errorf("couldn't find command '%s' in devspace config", name)
 	}
 
 	// Append args to shell command

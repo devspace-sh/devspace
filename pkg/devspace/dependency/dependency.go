@@ -3,6 +3,9 @@ package dependency
 import (
 	"bytes"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/command"
+	"github.com/devspace-cloud/devspace/pkg/util/exit"
+	"mvdan.cc/sh/v3/interp"
 	"os"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
@@ -27,6 +30,7 @@ type Manager interface {
 	DeployAll(options DeployOptions) error
 	PurgeAll(options PurgeOptions) error
 	RenderAll(options RenderOptions) error
+	Command(options CommandOptions) error
 }
 
 type manager struct {
@@ -71,6 +75,46 @@ func (m *manager) UpdateAll() error {
 	return nil
 }
 
+// CommandOptions has all options for executing a command from a dependency
+type CommandOptions struct {
+	Dependencies       []string
+	Command            string
+	Args               []string
+	UpdateDependencies bool
+	Verbose            bool
+}
+
+// BuildAll will build all dependencies if there are any
+func (m *manager) Command(options CommandOptions) error {
+	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, true, options.Verbose, "Command", func(dependency *Dependency, log log.Logger) error {
+		return ExecuteCommand(dependency.Commands, options.Command, options.Args)
+	})
+}
+
+// ExecuteCommand executes a given command from the available commands
+func ExecuteCommand(commands []*latest.CommandConfig, cmd string, args []string) error {
+	err := command.ExecuteCommand(commands, cmd, args)
+	if err != nil {
+		shellExitError, ok := err.(interp.ShellExitStatus)
+		if ok {
+			return &exit.ReturnCodeError{
+				ExitCode: int(shellExitError),
+			}
+		}
+
+		exitError, ok := err.(interp.ExitStatus)
+		if ok {
+			return &exit.ReturnCodeError{
+				ExitCode: int(exitError),
+			}
+		}
+
+		return errors.Wrap(err, "execute command")
+	}
+
+	return nil
+}
+
 // BuildOptions has all options for building all dependencies
 type BuildOptions struct {
 	Dependencies            []string
@@ -83,7 +127,7 @@ type BuildOptions struct {
 
 // BuildAll will build all dependencies if there are any
 func (m *manager) BuildAll(options BuildOptions) error {
-	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, options.Verbose, "Build", func(dependency *Dependency, log log.Logger) error {
+	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Build", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Build(options.SkipPush, options.ForceDeployDependencies, options.ForceBuild, log)
 	})
 }
@@ -102,7 +146,7 @@ type DeployOptions struct {
 
 // DeployAll will deploy all dependencies if there are any
 func (m *manager) DeployAll(options DeployOptions) error {
-	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
+	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Deploy(options.SkipPush, options.ForceDeployDependencies, options.SkipBuild, options.ForceBuild, options.ForceDeploy, log)
 	})
 }
@@ -115,7 +159,7 @@ type PurgeOptions struct {
 
 // PurgeAll purges all dependencies in reverse order
 func (m *manager) PurgeAll(options PurgeOptions) error {
-	return m.handleDependencies(options.Dependencies, true, false, options.Verbose, "Purge", func(dependency *Dependency, log log.Logger) error {
+	return m.handleDependencies(options.Dependencies, true, false, false, options.Verbose, "Purge", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Purge(log)
 	})
 }
@@ -131,14 +175,18 @@ type RenderOptions struct {
 }
 
 func (m *manager) RenderAll(options RenderOptions) error {
-	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, options.Verbose, "Render", func(dependency *Dependency, log log.Logger) error {
+	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Render", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Render(options.SkipPush, options.SkipBuild, options.ForceBuild, log)
 	})
 }
 
-func (m *manager) handleDependencies(filterDependencies []string, reverse, updateDependencies, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) error {
+func (m *manager) handleDependencies(filterDependencies []string, reverse, updateDependencies, silent, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) error {
 	if m.config == nil || m.config.Dependencies == nil || len(m.config.Dependencies) == 0 {
 		return nil
+	}
+
+	if silent == false {
+		m.log.Infof("Start resolving dependencies")
 	}
 
 	// Resolve all dependencies
@@ -153,7 +201,10 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 
 	defer m.log.StopWait()
 
-	if verbose == false {
+	if silent == false {
+		m.log.Donef("Resolved %d dependencies", len(dependencies))
+	}
+	if silent == false && verbose == false {
 		m.log.Infof("To display the complete dependency execution log run with the '--verbose-dependencies' flag")
 	}
 
@@ -169,7 +220,9 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 		numDependencies = len(filterDependencies)
 	}
 
-	m.log.StartWait(fmt.Sprintf("%s %d dependencies", actionName, numDependencies))
+	if silent == false {
+		m.log.StartWait(fmt.Sprintf("%s %d dependencies", actionName, numDependencies))
+	}
 	for i >= 0 && i < len(dependencies) {
 		var (
 			dependency       = dependencies[i]
@@ -196,18 +249,22 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 
 		err := action(dependency, dependencyLogger)
 		if err != nil {
-			return errors.Errorf("%s dependency %s error: %s %v", actionName, dependency.ID, buff.String(), err)
+			return errors.Wrapf(err, "%s dependency %s error %s", actionName, dependency.ID, buff.String())
 		}
 
 		executed++
-		m.log.Donef("%s dependency %s completed", actionName, dependency.ID)
+		if silent == false {
+			m.log.Donef("%s dependency %s completed", actionName, dependency.ID)
+		}
 	}
 	m.log.StopWait()
 
-	if executed > 0 {
-		m.log.Donef("Successfully processed %d dependencies", executed)
-	} else {
-		m.log.Done("No dependency processed")
+	if silent == false {
+		if executed > 0 {
+			m.log.Donef("Successfully processed %d dependencies", executed)
+		} else {
+			m.log.Done("No dependency processed")
+		}
 	}
 
 	return nil
@@ -218,6 +275,7 @@ type Dependency struct {
 	ID              string
 	LocalPath       string
 	Config          *latest.Config
+	Commands        []*latest.CommandConfig
 	GeneratedConfig *generated.Config
 
 	DependencyConfig *latest.DependencyConfig

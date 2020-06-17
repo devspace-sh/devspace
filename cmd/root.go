@@ -19,6 +19,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	flagspkg "github.com/devspace-cloud/devspace/pkg/util/flags"
 	"github.com/joho/godotenv"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"os"
@@ -88,7 +89,7 @@ func Execute() {
 	cloudanalytics.SendCommandEvent(err)
 	if err != nil {
 		// Check if return code error
-		retCode, ok := err.(*exit.ReturnCodeError)
+		retCode, ok := errors.Cause(err).(*exit.ReturnCodeError)
 		if ok {
 			os.Exit(retCode.ExitCode)
 		}

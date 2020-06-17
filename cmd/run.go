@@ -3,26 +3,24 @@ package cmd
 import (
 	"fmt"
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/command"
-	"github.com/devspace-cloud/devspace/pkg/util/exit"
+	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	flagspkg "github.com/devspace-cloud/devspace/pkg/util/flags"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
+	"github.com/sirupsen/logrus"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"mvdan.cc/sh/v3/interp"
 )
 
 // RunCmd holds the run cmd flags
 type RunCmd struct {
 	*flags.GlobalFlags
-}
 
-var isFlag = regexp.MustCompile("^--?[a-z-]+$")
+	Dependency string
+}
 
 // NewRunCmd creates a new run command
 func NewRunCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
@@ -49,16 +47,7 @@ devspace run mycommand2 1 2 3
 
 			// get all flags till "run"
 			index := -1
-			skipNext := false
 			for i, v := range os.Args {
-				if skipNext {
-					skipNext = false
-					continue
-				} else if isFlag.MatchString(v) {
-					skipNext = true
-					continue
-				}
-
 				if v == "run" {
 					index = i + 1
 					break
@@ -75,7 +64,11 @@ devspace run mycommand2 1 2 3
 			extraFlags, err := flagspkg.ApplyExtraFlags(cobraCmd, os.Args[:index])
 			if err != nil {
 				return err
-			} else if len(extraFlags) > 0 {
+			} else if cmd.Silent {
+				log.SetLevel(logrus.FatalLevel)
+			}
+
+			if len(extraFlags) > 0 {
 				log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
 			}
 
@@ -83,19 +76,50 @@ devspace run mycommand2 1 2 3
 		},
 	}
 
+	runCmd.Flags().StringVar(&cmd.Dependency, "dependency", "", "Run a command from a specific dependency")
 	return runCmd
 }
 
 // RunRun executes the functionality "devspace run"
 func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), f.GetLog())
+	configOptions := cmd.ToConfigOptions()
+	configLoader := f.NewConfigLoader(configOptions, f.GetLog())
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
 	if !configExists {
 		return errors.New(message.ConfigNotFound)
+	}
+
+	// check if we should execute a dependency command
+	if cmd.Dependency != "" {
+		config, err := configLoader.Load()
+		if err != nil {
+			return err
+		}
+
+		cache, err := configLoader.Generated()
+		if err != nil {
+			return err
+		}
+
+		mgr, err := f.NewDependencyManager(config, cache, nil, false, configOptions, f.GetLog())
+		if err != nil {
+			return err
+		}
+
+		err = mgr.Command(dependency.CommandOptions{
+			Dependencies: []string{cmd.Dependency},
+			Command:      args[0],
+			Args:         args[1:],
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	// Parse commands
@@ -111,24 +135,5 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Execute command
-	err = command.ExecuteCommand(commands, args[0], args[1:])
-	if err != nil {
-		shellExitError, ok := err.(interp.ShellExitStatus)
-		if ok {
-			return &exit.ReturnCodeError{
-				ExitCode: int(shellExitError),
-			}
-		}
-
-		exitError, ok := err.(interp.ExitStatus)
-		if ok {
-			return &exit.ReturnCodeError{
-				ExitCode: int(exitError),
-			}
-		}
-
-		return errors.Wrap(err, "execute command")
-	}
-
-	return nil
+	return dependency.ExecuteCommand(commands, args[0], args[1:])
 }

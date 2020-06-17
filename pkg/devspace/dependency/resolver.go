@@ -102,8 +102,6 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client 
 
 // Resolve implements interface
 func (r *resolver) Resolve(update bool) ([]*Dependency, error) {
-	r.log.Info("Start resolving dependencies")
-
 	currentWorkingDirectory, err := os.Getwd()
 	if err != nil {
 		return nil, errors.Wrap(err, "get current working directory")
@@ -117,8 +115,6 @@ func (r *resolver) Resolve(update bool) ([]*Dependency, error) {
 
 		return nil, errors.Wrap(err, "resolve dependencies recursive")
 	}
-
-	r.log.Donef("Resolved %d dependencies", len(r.DependencyGraph.Nodes)-1)
 
 	// Save generated
 	err = r.generatedSaver.Save(r.BaseCache)
@@ -271,6 +267,12 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		return nil, errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", ID))
 	}
 
+	// parse the commands
+	dCommands, err := configLoader.ParseCommands()
+	if err != nil {
+		return nil, errors.Wrap(err, "parse dependency commands")
+	}
+
 	// Override complete dev config
 	dConfig.Dev = &latest.DevConfig{}
 
@@ -316,6 +318,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		LocalPath: localPath,
 
 		Config:          dConfig,
+		Commands:        dCommands,
 		GeneratedConfig: dGeneratedConfig,
 
 		DependencyConfig: dependency,
