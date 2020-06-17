@@ -39,6 +39,7 @@ Run executes a predefined command from the devspace.yaml
 Examples:
 devspace run mycommand --myarg 123
 devspace run mycommand2 1 2 3
+devspace --dependency my-dependency run any-command --any-flag
 #######################################################
 	`,
 		Args: cobra.MinimumNArgs(1),
