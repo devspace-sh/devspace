@@ -64,7 +64,7 @@ for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
   done
 done
 
-# build sync helper
-echo "Building sync helper"
-GOARCH=386 GOOS=linux go build -ldflags "-s -w -X main.version=${VERSION}" -o "${DEVSPACE_ROOT}/release/sync" sync/cmd/main.go
-shasum -a 256 "${DEVSPACE_ROOT}/release/sync" > "${DEVSPACE_ROOT}/release/sync".sha256
+# build devspace helper
+echo "Building devspace helper"
+GOARCH=386 GOOS=linux go build -ldflags "-s -w -X github.com/devspace-cloud/devspace/helper/cmd.version=${VERSION}" -o "${DEVSPACE_ROOT}/release/devspacehelper" helper/main.go
+shasum -a 256 "${DEVSPACE_ROOT}/release/devspacehelper" > "${DEVSPACE_ROOT}/release/devspacehelper".sha256

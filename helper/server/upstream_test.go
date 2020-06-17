@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/sync/remote"
-	"github.com/devspace-cloud/devspace/sync/util"
+	"github.com/devspace-cloud/devspace/helper/remote"
+	"github.com/devspace-cloud/devspace/helper/util"
 	"github.com/pkg/errors"
 )
 

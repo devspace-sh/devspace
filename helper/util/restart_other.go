@@ -12,4 +12,3 @@ func NewContainerRestarter() ContainerRestarter {
 func (*containerRestarter) RestartContainer() error {
 	panic("not implemented")
 }
-

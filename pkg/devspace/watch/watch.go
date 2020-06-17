@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/bmatcuk/doublestar"
+	"github.com/devspace-cloud/devspace/helper/util"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/sync/util"
 	"github.com/pkg/errors"
 	gitignore "github.com/sabhiram/go-gitignore"
 )
@@ -17,7 +17,7 @@ import (
 type Callback func(changed []string, deleted []string) error
 
 // Watcher watches a folder
-type Watcher interface{
+type Watcher interface {
 	Start()
 	Stop()
 	Update() ([]string, []string, error)

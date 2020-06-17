@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devspace-cloud/devspace/helper/util"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/sync/util"
 
 	"github.com/pkg/errors"
 	gitignore "github.com/sabhiram/go-gitignore"

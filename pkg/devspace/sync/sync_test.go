@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/devspace-cloud/devspace/helper/server"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/sync/server"
 	"github.com/pkg/errors"
 )
 
