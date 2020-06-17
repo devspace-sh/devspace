@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
 	"io"
 	"io/ioutil"
 	"path/filepath"
@@ -12,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -51,16 +51,27 @@ func GetDockerfileAndContext(imageConf *latest.ImageConfig) (string, string) {
 func InjectBuildScriptInContext(buildCtx io.ReadCloser) (io.ReadCloser, error) {
 	now := time.Now()
 	hdrTmpl := &tar.Header{
-		Mode:       0755,
+		Mode:       0777,
 		Uid:        0,
 		Gid:        0,
 		ModTime:    now,
-		Typeflag:   tar.TypeReg,
 		AccessTime: now,
 		ChangeTime: now,
 	}
+	fldTmpl := &tar.Header{
+		Mode:       0777,
+		Uid:        0,
+		Gid:        0,
+		ModTime:    now,
+		AccessTime: now,
+		ChangeTime: now,
+		Typeflag:   tar.TypeDir,
+	}
 
 	buildCtx = archive.ReplaceFileTarWrapper(buildCtx, map[string]archive.TarModifierFunc{
+		"/.devspace/.devspace": func(_ string, h *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
+			return fldTmpl, nil, nil
+		},
 		restart.ScriptContextPath: func(_ string, h *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
 			return hdrTmpl, []byte(restart.HelperScript), nil
 		},
@@ -131,7 +142,7 @@ func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, tar
 		}
 
 		entrypoint = append([]string{restart.ScriptPath}, entrypoint...)
-		additionalLines = append(additionalLines, fmt.Sprintf("COPY %s /", restart.ScriptContextPath))
+		additionalLines = append(additionalLines, "COPY /.devspace /")
 	}
 
 	return CreateTempDockerfile(dockerfile, entrypoint, cmd, additionalLines, target)

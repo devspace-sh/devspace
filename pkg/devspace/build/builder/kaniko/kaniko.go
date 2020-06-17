@@ -249,28 +249,28 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			defer os.RemoveAll(tempDir)
 
 			scriptPath := filepath.Join(tempDir, restart.ScriptName)
-			remoteFolder := filepath.Join(kanikoContextPath, ".devspace")
+			remoteFolder := filepath.Join(kanikoContextPath, ".devspace", ".devspace")
 			err = ioutil.WriteFile(scriptPath, []byte(restart.HelperScript), 0777)
 			if err != nil {
 				return errors.Wrap(err, "write restart helper script")
 			}
 
 			// create the .devspace directory in the container
-			_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"mkdir", remoteFolder}, nil)
+			_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"mkdir", "-p", remoteFolder}, nil)
 			if err != nil {
-				return errors.Errorf("Error executing command 'mkdir %s' in init container: %v", remoteFolder, err)
+				return errors.Errorf("error executing command 'mkdir -p %s' in init container: %v", remoteFolder, err)
 			}
 
 			// copy the helper script into the container
 			err = b.helper.KubeClient.Copy(buildPod, buildPod.Spec.InitContainers[0].Name, remoteFolder, scriptPath, []string{})
 			if err != nil {
-				return errors.Errorf("Error uploading dockerfile to container: %v", err)
+				return errors.Errorf("error uploading dockerfile to container: %v", err)
 			}
 
-			// this is mostly for windows when its not possible to save the execution permission bits
-			_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"chmod", "+x", filepath.Join(remoteFolder, restart.ScriptName)}, nil)
+			// change permissions for the execution script
+			_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"chmod", "-R", "0777", remoteFolder}, nil)
 			if err != nil {
-				return errors.Errorf("Error executing command 'chmod +x %s' in init container: %v", filepath.Join(kanikoContextPath, restart.ScriptName), err)
+				return errors.Errorf("error executing command 'chmod +x %s' in init container: %v", filepath.Join(kanikoContextPath, restart.ScriptName), err)
 			}
 
 			// remove the .dockerignore since .devspace is usually ignored and we want to sneak our helper script in
@@ -278,7 +278,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"rm", filepath.Join(kanikoContextPath, ".dockerignore")}, nil)
 			if err != nil {
 				if _, ok := err.(exec.CodeExitError); !ok {
-					return errors.Errorf("Error executing command 'rm .dockerignore' in init container: %v", err)
+					return errors.Errorf("error executing command 'rm .dockerignore' in init container: %v", err)
 				}
 			}
 		}
