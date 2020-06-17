@@ -1,0 +1,34 @@
+---
+title: Fixed Variables
+sidebar_label: "source: none"
+---
+
+import FragmentVarsName from '../../fragments/vars-name.mdx';
+import FragmentVarsDefault from '../../fragments/vars-default.mdx';
+
+If the `source` is `none`, DevSpace will use the `default` value as value for this config variable.
+```yaml {3,5-7}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  source: none
+  default: "5.5"
+```
+
+
+## Configuration
+
+### `name`
+
+<FragmentVarsName/>
+
+
+### `default`
+
+<FragmentVarsDefault/>
+
+:::info
+If using `source: none`, the default value is the fixed value for this variable. It will only be changed using a [config patch](../../configuration/profiles/patches.mdx).
+:::

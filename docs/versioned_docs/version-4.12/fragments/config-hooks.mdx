@@ -1,0 +1,12 @@
+```yaml
+hooks:                              # struct[]  | Array of hooks to be executed
+- command: "./scripts/my-hook"      # string    | Command to be executed when this hook is triggered
+  args: []                          # string[]  | Array of arguments for the command of this hook
+  when:                             # struct    | Trigger for executing this hook 
+    before:                         # struct    | Run hook before a certain execution step
+      images: "all"                 # string    | Name of the image you want to run this hook before building OR "all" for running hook before building the first image
+      deployments: "all"            # string    | Name of the deployment you want to run this hook before deploying OR "all" for running hook before deploying the first deployment
+    after:                          # struct    | Run hook after a certain execution step
+      images: "all"                 # string    | Name of the image you want to run this hook after building OR "all" for running hook after building the last image
+      deployments: "all"            # string    | Name of the deployment you want to run this hook after deploying OR "all" for running hook after deploying the last deployment
+```
