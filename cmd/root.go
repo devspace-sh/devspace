@@ -45,11 +45,13 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 			}
 
 			// apply extra flags
-			extraFlags, err := flagspkg.ApplyExtraFlags(cobraCmd)
-			if err != nil {
-				log.Warnf("Error applying extra flags: %v", err)
-			} else if len(extraFlags) > 0 {
-				log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
+			if cobraCmd.DisableFlagParsing == false {
+				extraFlags, err := flagspkg.ApplyExtraFlags(cobraCmd, os.Args)
+				if err != nil {
+					log.Warnf("Error applying extra flags: %v", err)
+				} else if len(extraFlags) > 0 {
+					log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
+				}
 			}
 
 			// Get version of current binary
