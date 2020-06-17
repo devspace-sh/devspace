@@ -18,6 +18,7 @@ type Client interface {
 	StartLogsWithWriter(imageSelector []string, follow bool, tail int64, writer io.Writer) error
 
 	StartPortForwarding(interrupt chan error) error
+	StartReversePortForwarding(interrupt chan error) error
 
 	StartSyncFromCmd(syncConfig *latest.SyncConfig, interrupt chan error, verbose bool) error
 	StartSync(interrupt chan error, verboseSync bool) error

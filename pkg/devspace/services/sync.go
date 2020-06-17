@@ -232,7 +232,7 @@ func (serviceClient *client) isFatalSyncError(err error) bool {
 }
 
 func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, syncDone chan bool, customLog logpkg.Logger) (*sync.Sync, error) {
-	err := serviceClient.injectSync(pod, container)
+	err := serviceClient.injectDevSpaceHelper(pod, container)
 	if err != nil {
 		return nil, err
 	}
@@ -355,7 +355,12 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		return nil, errors.Wrap(err, "create pipe")
 	}
 
-	go serviceClient.startStream(syncClient, pod, container, upstreamArgs, upStdinReader, upStdoutWriter)
+	go func() {
+		err := serviceClient.startStream(pod, container, upstreamArgs, upStdinReader, upStdoutWriter)
+		if err != nil {
+			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
+		}
+	}()
 
 	err = syncClient.InitUpstream(upStdoutReader, upStdinWriter)
 	if err != nil {
@@ -381,7 +386,12 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		return nil, errors.Wrap(err, "create pipe")
 	}
 
-	go serviceClient.startStream(syncClient, pod, container, downstreamArgs, downStdinReader, downStdoutWriter)
+	go func() {
+		err := serviceClient.startStream(pod, container, downstreamArgs, downStdinReader, downStdoutWriter)
+		if err != nil {
+			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
+		}
+	}()
 
 	err = syncClient.InitDownstream(downStdoutReader, downStdinWriter)
 	if err != nil {
@@ -391,9 +401,8 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 	return syncClient, nil
 }
 
-func (serviceClient *client) startStream(syncClient *sync.Sync, pod *v1.Pod, container string, command []string, reader io.Reader, writer io.Writer) {
+func (serviceClient *client) startStream(pod *v1.Pod, container string, command []string, reader io.Reader, writer io.Writer) error {
 	stderrBuffer := &bytes.Buffer{}
-
 	err := serviceClient.client.ExecStream(&kubectl.ExecStreamOptions{
 		Pod:       pod,
 		Container: container,
@@ -403,11 +412,12 @@ func (serviceClient *client) startStream(syncClient *sync.Sync, pod *v1.Pod, con
 		Stderr:    stderrBuffer,
 	})
 	if err != nil {
-		syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %s %v", pod.Namespace, pod.Name, stderrBuffer.String(), err))
+		return fmt.Errorf("%s %v", stderrBuffer.String(), err)
 	}
+	return nil
 }
 
-func (serviceClient *client) injectSync(pod *v1.Pod, container string) error {
+func (serviceClient *client) injectDevSpaceHelper(pod *v1.Pod, container string) error {
 	// Compare sync versions
 	version := upgrade.GetRawVersion()
 	if version == "" {

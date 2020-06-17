@@ -45,6 +45,7 @@ require (
 	github.com/theupdateframework/notary v0.6.1 // indirect
 	github.com/toqueteos/trie v1.0.0 // indirect
 	github.com/ulikunitz/xz v0.5.7 // indirect
+	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
 	google.golang.org/grpc v1.27.0
 	gopkg.in/AlecAivazis/survey.v1 v1.8.7
 	gopkg.in/src-d/enry.v1 v1.6.4

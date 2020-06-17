@@ -423,10 +423,12 @@ type DevConfig struct {
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
 type PortForwardingConfig struct {
-	ImageName     string            `yaml:"imageName,omitempty"`
-	LabelSelector map[string]string `yaml:"labelSelector,omitempty"`
-	Namespace     string            `yaml:"namespace,omitempty"`
-	PortMappings  []*PortMapping    `yaml:"forward,omitempty"`
+	ImageName           string            `yaml:"imageName,omitempty"`
+	LabelSelector       map[string]string `yaml:"labelSelector,omitempty"`
+	ContainerName       string            `yaml:"containerName,omitempty"`
+	Namespace           string            `yaml:"namespace,omitempty"`
+	PortMappings        []*PortMapping    `yaml:"forward,omitempty"`
+	PortMappingsReverse []*PortMapping    `yaml:"reverseForward,omitempty"`
 }
 
 // PortMapping defines the ports for a PortMapping

@@ -20,6 +20,10 @@ func (serviceClient *client) StartPortForwarding(interrupt chan error) error {
 	}
 
 	for _, portForwarding := range serviceClient.config.Dev.Ports {
+		if len(portForwarding.PortMappings) == 0 {
+			continue
+		}
+
 		err := serviceClient.startForwarding(portForwarding, interrupt, serviceClient.log)
 		if err != nil {
 			return err
