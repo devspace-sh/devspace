@@ -40,7 +40,7 @@ You can manually trigger a restart through the restart helper by doing the follo
 # 1. Get the PID of your applications process
 PID=$(cat /devspace-pid)
 
-# 2. Remove the PID file to tell the restart helper that this is an intended restart 
+# 2. Remove the PID file to tell the restart helper that this is an intended restart
 # (otherwise the restart helper will terminate as well which will kill the container)
 rm /devspace-pid
 
@@ -72,14 +72,14 @@ quit() {
 while true; do
   setsid "$@" &
   pid=$!
-  echo "$pid" > /devspace-pid
+  echo "$pid" > /.devspace/devspace-pid
   set +e
   wait $pid
   exit_code=$?
-  if [ -f /devspace-pid ]; then
+  if [ -f /.devspace/devspace-pid ]; then
     # if the sync is currently active we try to restart instead of exiting
     if [ -f /tmp/sync ]; then
-      rm -f /devspace-pid 	
+      rm -f /.devspace/devspace-pid
       printf "\nContainer exited with $exit_code. Will restart in 7 seconds...\n"
       sleep 7
     else
