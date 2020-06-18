@@ -18,7 +18,6 @@ package ignore
 
 import (
 	"bufio"
-	"bytes"
 	"io"
 	"log"
 	"os"
@@ -66,18 +65,8 @@ func Parse(file io.Reader) (*Rules, error) {
 	r := &Rules{patterns: []*pattern{}}
 
 	s := bufio.NewScanner(file)
-	currentLine := 0
-	utf8bom := []byte{0xEF, 0xBB, 0xBF}
 	for s.Scan() {
-		scannedBytes := s.Bytes()
-		// We trim UTF8 BOM
-		if currentLine == 0 {
-			scannedBytes = bytes.TrimPrefix(scannedBytes, utf8bom)
-		}
-		line := string(scannedBytes)
-		currentLine++
-
-		if err := r.parseRule(line); err != nil {
+		if err := r.parseRule(s.Text()); err != nil {
 			return r, err
 		}
 	}

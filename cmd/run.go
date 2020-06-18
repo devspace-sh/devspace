@@ -62,7 +62,7 @@ devspace --dependency my-dependency run any-command --any-flag
 			cobraCmd.DisableFlagParsing = false
 
 			// apply extra flags
-			extraFlags, err := flagspkg.ApplyExtraFlags(cobraCmd, os.Args[:index])
+			extraFlags, err := flagspkg.ApplyExtraFlags(cobraCmd, os.Args[:index], true)
 			if err != nil {
 				return err
 			} else if cmd.Silent {
@@ -111,16 +111,11 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 			return err
 		}
 
-		err = mgr.Command(dependency.CommandOptions{
+		return mgr.Command(dependency.CommandOptions{
 			Dependencies: []string{cmd.Dependency},
 			Command:      args[0],
 			Args:         args[1:],
 		})
-		if err != nil {
-			return err
-		}
-
-		return nil
 	}
 
 	// Parse commands

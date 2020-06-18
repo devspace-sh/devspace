@@ -17,9 +17,6 @@ dev:
   - imageName: default
     forward:
     - port: 3000
-    reverseForward:
-    - port: 3000
-      remotePort: 8080
   autoReload:
     paths:
     - package.json

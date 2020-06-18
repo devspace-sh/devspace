@@ -87,6 +87,17 @@ type CommandOptions struct {
 // BuildAll will build all dependencies if there are any
 func (m *manager) Command(options CommandOptions) error {
 	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, true, options.Verbose, "Command", func(dependency *Dependency, log log.Logger) error {
+		// Switch current working directory
+		currentWorkingDirectory, err := dependency.prepare(true)
+		if err != nil {
+			return err
+		} else if currentWorkingDirectory == "" {
+			return nil
+		}
+
+		// Change back to original working directory
+		defer os.Chdir(currentWorkingDirectory)
+
 		return ExecuteCommand(dependency.Commands, options.Command, options.Args)
 	})
 }

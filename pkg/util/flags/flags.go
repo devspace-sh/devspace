@@ -9,7 +9,7 @@ import (
 )
 
 // ApplyExtraFlags args parses the flags for a certain command from the environment variables
-func ApplyExtraFlags(cobraCmd *cobra.Command, osArgs []string) ([]string, error) {
+func ApplyExtraFlags(cobraCmd *cobra.Command, osArgs []string, forceParsing bool) ([]string, error) {
 	envName := strings.ToUpper(strings.Replace(cobraCmd.CommandPath(), " ", "_", -1) + "_FLAGS")
 
 	flags, err := ParseCommandLine(os.Getenv("DEVSPACE_FLAGS"))
@@ -23,7 +23,7 @@ func ApplyExtraFlags(cobraCmd *cobra.Command, osArgs []string) ([]string, error)
 	}
 
 	flags = append(flags, commandFlags...)
-	if len(flags) == 0 {
+	if !forceParsing && len(flags) == 0 {
 		return nil, nil
 	}
 

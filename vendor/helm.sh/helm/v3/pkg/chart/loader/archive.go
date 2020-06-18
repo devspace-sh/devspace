@@ -173,9 +173,7 @@ func LoadArchiveFiles(in io.Reader) ([]*BufferedFile, error) {
 			return nil, err
 		}
 
-		data := bytes.TrimPrefix(b.Bytes(), utf8bom)
-
-		files = append(files, &BufferedFile{Name: n, Data: data})
+		files = append(files, &BufferedFile{Name: n, Data: b.Bytes()})
 		b.Reset()
 	}
 
