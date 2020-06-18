@@ -35,6 +35,7 @@ module.exports = {
             'configuration/images/image-tagging',
             'configuration/images/dockerfile-context',
             'configuration/images/entrypoint-cmd',
+            'configuration/images/append-dockerfile-instructions',
             'configuration/images/inject-restart-helper',
             'configuration/images/prefer-sync-over-rebuild',
             'configuration/images/pull-secrets',
@@ -67,6 +68,7 @@ module.exports = {
             'configuration/development/basics',
             'configuration/development/open-links',
             'configuration/development/port-forwarding',
+            'configuration/development/reverse-port-forwarding',
             'configuration/development/file-synchronization',
             'configuration/development/auto-reloading',
             'configuration/development/log-streaming',
@@ -274,6 +276,11 @@ module.exports = {
       type: 'link',
       label: '↗️ Component Chart',
       href: 'https://devspace.sh/component-chart/docs/introduction',
+    },
+    {
+      type: 'link',
+      label: '↗️ loft',
+      href: 'https://loft.sh/docs/introduction',
     },
     {
       type: 'link',

@@ -32,8 +32,8 @@ devspace connect cluster
       --cert-manager           Deploy a cert manager (default true)
       --context string         The kube context to use
       --domain string          The domain to use
-      --gatekeeper             Deploy the gatekeeper (default true)
-      --gatekeeper-rules       Deploy the gatekeeper default rules (default true)
+      --gatekeeper             Deploy the gatekeeper
+      --gatekeeper-rules       Deploy the gatekeeper default rules
   -h, --help                   help for cluster
       --ingress-controller     Deploy an ingress controller (default true)
       --key string             The encryption key to use

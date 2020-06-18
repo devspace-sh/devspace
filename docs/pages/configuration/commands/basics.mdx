@@ -22,7 +22,7 @@ profiles:
     value: ["npm", "run", "debug"]
 ```
 
-:::note 
+:::note
 Custom commands can be used for more than just running `devspace` commands, e.g. they can run any other script or command, set environment variables etc. If you are familiar with the `scripts` section of the `package.json` for Node.js, you will find that `devspace run [name]` works pretty much the same way as `npm run [name]`
 :::
 
@@ -56,7 +56,7 @@ The `name` option is mandatory and expects a string with name that serves as an 
 
 
 ### `command`
-The `command` option is mandatory and expects a string with an arbitrary terminal command. 
+The `command` option is mandatory and expects a string with an arbitrary terminal command.
 
 While you can run any `devspace` command, you can also run other commands (if installed), set environment variables or use `bash` style expressions such as `&&`, `||` or `;`. To ensure that many of your team mates can run the command on any platform, it is highly recommended to keep your command expressions as simple as possible.
 
@@ -64,6 +64,11 @@ While you can run any `devspace` command, you can also run other commands (if in
 Write all commands in `bash` style. DevSpace is using a library to make them cross-platform executable.
 :::
 
+### `description`
+The `description` option is optional and expects a string with a description of what this command does and when it should be used. This is only used for helping other users to understand the meaning of a command and will be shown when the user runs: `devspace list commands`
+
+
+<br/>
 
 ## Useful Commands
 
@@ -72,3 +77,15 @@ Run this command to list all custom commands that are configured:
 ```bash
 devspace list commands
 ```
+
+
+### `devspace --dependency [x] run ...`
+You can run a command defined in one of the dependencies of the current project like this:
+```bash
+devspace --dependency [name] run [command] [command-flags-and-args]
+```
+**Note that the `--dependency` flag must be placed <u>before</u> the `run` command.**
+
+:::note Working Directory
+When running a command of a dependency, DevSpace will use the root folder of the dependency as current working directory when executing the command.
+:::

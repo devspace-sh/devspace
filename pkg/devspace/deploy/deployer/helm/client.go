@@ -15,7 +15,7 @@ import (
 // DevSpaceChartConfig is the config that holds the devspace chart information
 var DevSpaceChartConfig = &latest.ChartConfig{
 	Name:    "component-chart",
-	Version: "0.3.0",
+	Version: "0.4.0",
 	RepoURL: "https://charts.devspace.sh",
 }
 

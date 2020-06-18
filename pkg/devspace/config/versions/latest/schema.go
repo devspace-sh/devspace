@@ -262,19 +262,23 @@ type DeploymentConfig struct {
 
 // ComponentConfig holds the component information
 type ComponentConfig struct {
-	InitContainers      []*ContainerConfig   `yaml:"initContainers,omitempty"`
-	Containers          []*ContainerConfig   `yaml:"containers,omitempty"`
-	Labels              map[string]string    `yaml:"labels,omitempty"`
-	Annotations         map[string]string    `yaml:"annotations,omitempty"`
-	Volumes             []*VolumeConfig      `yaml:"volumes,omitempty"`
-	Service             *ServiceConfig       `yaml:"service,omitempty"`
-	ServiceName         string               `yaml:"serviceName,omitempty"`
-	Ingress             *IngressConfig       `yaml:"ingress,omitempty"`
-	Replicas            *int                 `yaml:"replicas,omitempty"`
-	Autoscaling         *AutoScalingConfig   `yaml:"autoScaling,omitempty"`
-	RollingUpdate       *RollingUpdateConfig `yaml:"rollingUpdate,omitempty"`
-	PullSecrets         []*string            `yaml:"pullSecrets,omitempty"`
-	PodManagementPolicy string               `yaml:"podManagementPolicy,omitempty"`
+	InitContainers      []*ContainerConfig            `yaml:"initContainers,omitempty"`
+	Containers          []*ContainerConfig            `yaml:"containers,omitempty"`
+	Labels              map[string]string             `yaml:"labels,omitempty"`
+	Annotations         map[string]string             `yaml:"annotations,omitempty"`
+	Volumes             []*VolumeConfig               `yaml:"volumes,omitempty"`
+	Service             *ServiceConfig                `yaml:"service,omitempty"`
+	ServiceName         string                        `yaml:"serviceName,omitempty"`
+	Ingress             *IngressConfig                `yaml:"ingress,omitempty"`
+	Replicas            *int                          `yaml:"replicas,omitempty"`
+	Autoscaling         *AutoScalingConfig            `yaml:"autoScaling,omitempty"`
+	RollingUpdate       *RollingUpdateConfig          `yaml:"rollingUpdate,omitempty"`
+	PullSecrets         []*string                     `yaml:"pullSecrets,omitempty"`
+	Tolerations         []map[interface{}]interface{} `yaml:"tolerations,omitempty"`
+	Affinity            map[interface{}]interface{}   `yaml:"affinity,omitempty"`
+	NodeSelector        map[interface{}]interface{}   `yaml:"nodeSelector,omitempty"`
+	NodeName            string                        `yaml:"nodeName,omitempty"`
+	PodManagementPolicy string                        `yaml:"podManagementPolicy,omitempty"`
 }
 
 // ContainerConfig holds the configurations of a container
@@ -307,12 +311,17 @@ type VolumeMountVolumeConfig struct {
 
 // VolumeConfig holds the configuration for a specific volume
 type VolumeConfig struct {
-	Name        string                      `yaml:"name,omitempty"`
-	Labels      map[string]string           `yaml:"labels,omitempty"`
-	Annotations map[string]string           `yaml:"annotations,omitempty"`
-	Size        string                      `yaml:"size,omitempty"`
-	ConfigMap   map[interface{}]interface{} `yaml:"configMap,omitempty"`
-	Secret      map[interface{}]interface{} `yaml:"secret,omitempty"`
+	Name             string                      `yaml:"name,omitempty"`
+	Labels           map[string]string           `yaml:"labels,omitempty"`
+	Annotations      map[string]string           `yaml:"annotations,omitempty"`
+	Size             string                      `yaml:"size,omitempty"`
+	ConfigMap        map[interface{}]interface{} `yaml:"configMap,omitempty"`
+	Secret           map[interface{}]interface{} `yaml:"secret,omitempty"`
+	StorageClassName string                      `yaml:"storageClassName,omitempty"`
+	VolumeMode       string                      `yaml:"volumeMode,omitempty"`
+	VolumeName       string                      `yaml:"volumeName,omitempty"`
+	DataSource       map[interface{}]interface{} `yaml:"dataSource,omitempty"`
+	AccessModes      []string                    `yaml:"accessModes,omitempty"`
 }
 
 // ServiceConfig holds the configuration of a component service
