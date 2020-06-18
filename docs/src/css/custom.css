@@ -6,7 +6,7 @@
 
 @import url("https://devspace.sh/css/docs.css");
 
-.menu > .menu__list > .menu__list-item:nth-last-child(2) {
+.menu > .menu__list > .menu__list-item:nth-last-child(3) {
   margin-top: 1.5em;
   padding-top: 1.5em;
   border-top: 1px solid #e9e9e9;

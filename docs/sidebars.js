@@ -67,6 +67,7 @@ module.exports = {
             'configuration/development/basics',
             'configuration/development/open-links',
             'configuration/development/port-forwarding',
+            'configuration/development/reverse-port-forwarding',
             'configuration/development/file-synchronization',
             'configuration/development/auto-reloading',
             'configuration/development/log-streaming',
@@ -274,6 +275,11 @@ module.exports = {
       type: 'link',
       label: '↗️ Component Chart',
       href: 'https://devspace.sh/component-chart/docs/introduction',
+    },
+    {
+      type: 'link',
+      label: '↗️ loft',
+      href: 'https://loft.sh/docs/introduction',
     },
     {
       type: 'link',
