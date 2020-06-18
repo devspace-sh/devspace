@@ -1,6 +1,6 @@
 <img src="static/img/devspace-logo.svg">
 
-### **[Website](https://devspace.sh)** • **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.sh/cli/docs/introduction)** • **[Blog](https://devspace.cloud/blog)** • **[Slack](https://slack.devspace.cloud/)** • **[Twitter](https://twitter.com/devspace)**
+### **[Website](https://devspace.sh)** • **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.sh/cli/docs/introduction)** • **[Blog](https://devspace.cloud/blog)** • **[Twitter](https://twitter.com/devspace)** • [![Join us on Slack!](static/img/slack.svg)](https://kubernetes.slack.com/?redir=%2Fmessages%2Fdevspace#/)
 
 ![Build Status Passing](https://img.shields.io/github/workflow/status/devspace-cloud/devspace/Test%20&%20Release%20CLI%20Version/master?style=for-the-badge)
 ![Latest Release](https://img.shields.io/github/v/release/devspace-cloud/devspace?style=for-the-badge&label=Latest%20Release&color=%23007ec6)
@@ -51,7 +51,7 @@ Building modern, distributed and highly scalable microservices with Kubernetes i
 
 DevSpace allows you to store all your workflows in one declarative config file: `devspace.yaml`
 - **Codify workflow knowledge** about building images, deploying your project and its dependencies etc.
-- **Version your workflows together with your code** (i.e. you can get any old version up and running with just a single command) 
+- **Version your workflows together with your code** (i.e. you can get any old version up and running with just a single command)
 - **Share your workflows** with your team mates
 
 <br>
@@ -66,7 +66,7 @@ DevSpace helps your team to standardize deployment and development workflows wit
 - If other developers on your team check out the project, they only need to run `devspace deploy` to deploy the project (including image building and deployment of other related project etc.) and they have a running instance of the project
 - The configuration of DevSpace is highly dynamic, so you can configure everything using [config variables](https://devspace.sh/cli/docs/configuration/variables/basics) that make it much easier to have one base configuration but still allow differences among developers (e.g. different sub-domains for testing)
 
-> Giving everyone on your team on-demand access to a Kubernetes cluster is a challenging problem for system administrators and infrastructure managers. DevSpace Cloud, an optional add-on for DevSpace, makes sharing dev clusters much easier and safer. [Learn more about DevSpace Cloud](https://devspace.cloud/cloud/docs/introduction). 
+> Giving everyone on your team on-demand access to a Kubernetes cluster is a challenging problem for system administrators and infrastructure managers. DevSpace Cloud, an optional add-on for DevSpace, makes sharing dev clusters much easier and safer. [Learn more about DevSpace Cloud](https://devspace.cloud/cloud/docs/introduction).
 
 <br>
 </details>
@@ -128,9 +128,9 @@ Stop wasting time for running the same build and deploy commands over and over a
 <br>
 
 - **Customizable Build Process** supporting Docker, kaniko or even custom scripts
-- **Parallel Image Building** to save time when multiple Dockerfiles have to be built  
-- **Automatic Image Tagging** according to custom tag schema (e.g. using timestamp, commit hash or random strings)  
-- **Automatic Push** to any public or private Docker registry (authorization via `docker login my-registry.tld`)  
+- **Parallel Image Building** to save time when multiple Dockerfiles have to be built
+- **Automatic Image Tagging** according to custom tag schema (e.g. using timestamp, commit hash or random strings)
+- **Automatic Push** to any public or private Docker registry (authorization via `docker login my-registry.tld`)
 - **Automatic Configuration of Pull Secrets** within the Kubernetes cluster
 - **Smart Caching** that skips images which do not need to be rebuilt
 
@@ -186,11 +186,11 @@ Stop wasting time for running the same build and deploy commands over and over a
 <summary><b>Convenience Commands for Kubernetes</b></summary>
 <br>
 
-- **Quick Pod Selection** eliminates the need to copy & paste pod names, namespaces etc.  
+- **Quick Pod Selection** eliminates the need to copy & paste pod names, namespaces etc.
   &raquo; Shows a "dropdown selector" for pods directly in the CLI when running one of these commands:
   - `devspace enter` to open a **Interactive Terminal Session**
   - `devspace logs` / `devspace logs -f` for **Fast, Real-Time Logs** (optionally streaming new logs)
-  - `devspace sync` for quickly starting a **Bi-Directional, Real-Time File Synchronization** on demand 
+  - `devspace sync` for quickly starting a **Bi-Directional, Real-Time File Synchronization** on demand
 - **Automatic Issue Analysis** via `devspace analyze` reporting crashed containers, missing endpoints, scheduling errors, ...
 - **Fast Deletion of Deployments** using `devspace purge` (deletes all helm charts, manifests etc. defined in the config)
 - **Context Management** via:
@@ -238,7 +238,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 - **Advanced Permission System** that automatically enforces user limits via resource quotas, adminission controllers etc.
 - **Fully Automatic Context Configuration** on the machines of all cluster users with secure access token handling
 - **100% Pure Kubernetes** and nothing else! Works with any Kubernetes cluster.
-  
+
 **More info and install intructions for DevSpace Cloud on: [www.github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud)**
 
 </details>
@@ -465,24 +465,24 @@ DevSpace Cloud makes sure that developers cannot break out of their namespaces b
 
 <details>
   <summary><b>Can I run DevSpace Cloud on-premise in my own cluster?</b></summary>
-  
+
   **Yes**. Follow these intructions to run DevSpace Cloud yourself:
 
-  **1. Install DevSpace Cloud**  
+  **1. Install DevSpace Cloud**
   &nbsp;&nbsp;&nbsp;
   See [www.github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud) for instructions.
 
-  **2. Tell DevSpace to use your self-hosted DevSpace Cloud**  
+  **2. Tell DevSpace to use your self-hosted DevSpace Cloud**
 ```bash
 devspace use provider devspace.my-domain.com
 ```
 
-  **3. Connect a Kubernetes cluster to your self-hosted DevSpace Cloud**  
+  **3. Connect a Kubernetes cluster to your self-hosted DevSpace Cloud**
 ```bash
 devspace connect cluster
 ```
 
-  **4. Create an isolated namespace**  
+  **4. Create an isolated namespace**
 ```bash
 devspace create space my-app
 ```
@@ -502,7 +502,7 @@ devspace dev
 ```
 You can now:
 - Access your application via `http://localhost:PORT` in your browser
-- Edit your source code files and DevSpace will automatically synchronize them to the containers running in Kubernetes 
+- Edit your source code files and DevSpace will automatically synchronize them to the containers running in Kubernetes
 - Use a hot reloading tool like `nodemon` and your application will automatically reload when you edit source code files
 
 > Run `devspace dev -i` to use interactive mode: overrides your Dockerfile `ENTRYPOINT` with `[sleep, 999999]` and opens the terminal proxy, so you can manually run the start command for your application, e.g. `npm start`. Interactive mode is great for debugging containers that keep crashing or starting an application in hot reloading mode when the Dockerfile ENTRYPOINT generally starts a rather production-like version of the application.
@@ -597,7 +597,7 @@ version: {config-version}
 images:                 # DevSpace will build these images in parallel and push them to the respective registries
   {image-a}: ...        # tells DevSpace how to build image-a
   {image-b}: ...        # tells DevSpace how to build image-b
-  ... 
+  ...
 
 deployments:            # DevSpace will deploy these [Helm charts | manifests | ... ] one after another
   - {deployment-1}      # could be a Helm chart
@@ -711,7 +711,7 @@ dependencies:
 
 <br>
 
-The following sections show code snippets with example sections of a `devspace.yaml` for certain use cases. 
+The following sections show code snippets with example sections of a `devspace.yaml` for certain use cases.
 
 
 ### Configure Image Building
@@ -819,7 +819,7 @@ deployments:
 ```
 Learn more about:
 - [What are components?](https://devspace.sh/component-chart/docs/introduction)
-- [Configuring Components](https://devspace.sh/component-chart/docs/configuration/reference) 
+- [Configuring Components](https://devspace.sh/component-chart/docs/configuration/reference)
 
  <img src="static/img/line.svg" height="1">
 
@@ -885,7 +885,7 @@ deployments:
     - more-manifests/
     kustomize: true
 ```
-Take a look at the documentation for more information about [deploying manifests with kustomize](https://devspace.sh/cli/docs/configuration/deployments/kustomizations). 
+Take a look at the documentation for more information about [deploying manifests with kustomize](https://devspace.sh/cli/docs/configuration/deployments/kustomizations).
 
 <img src="static/img/line.svg" height="1">
 
@@ -929,7 +929,7 @@ dependencies:
 - source:
     git: https://github.com/my-api-server
 - source:
-    git: https:/my-private-git.tld/my-auth-server 
+    git: https:/my-private-git.tld/my-auth-server
 - source:
     path: ../my-auth-server
   profile: production
@@ -1112,7 +1112,7 @@ devspace analyze
 ```
 
 ##### 2. Check your Dockerfile
-Make sure your Dockerfile works correctly. Use Google to find the best solutions for creating a Dockerfile for your application (often depends on the framework you are using). 
+Make sure your Dockerfile works correctly. Use Google to find the best solutions for creating a Dockerfile for your application (often depends on the framework you are using).
 
 If your pods are crashing, you might have the wrong `ENTRYPOINT` or something is missing within your containers. A great way to debug this is to start the interactive development mode using:
 ```bash
@@ -1145,7 +1145,7 @@ DevSpace tries to open a browser window, so you can login to DevSpace Cloud (eit
 #### Solution A
 Run DevSpace on your local machine where you have a browser installed.
 
-#### Solution B 
+#### Solution B
 Generate an access key and login with the non-interactive login method. Follow these steps:
    1. Open this page: https://app.devspace.cloud/settings/access-keys (for on-premise version: https://[my-devspace-cloud-url]/settings/access-keys)
    2. Click on the button "Create Key".
@@ -1202,11 +1202,11 @@ If you find a bug while working with the DevSpace, please [open an issue on GitH
 
 ### Feedback & Feature Requests
 
-You are more than welcome to open issues in this project to:
+You are more than welcome to open issues in this project and get in touch with the maintainers and other DevSpace users:
 
-- [give feedback](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Ffeedback&title=Feedback:)
-- [suggest new features](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Ffeature&template=feature-request.md&title=Feature%20Request:)
-- [ask a question on Slack](https://devspace.cloud/slack)
+- [Give feedback](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Ffeedback&title=Feedback:)
+- [Suggest new features](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Ffeature&template=feature-request.md&title=Feature%20Request:)
+- [![Join us on Slack!](static/img/slack.svg)](https://kubernetes.slack.com/?redir=%2Fmessages%2Fdevspace#/)
 
 ### Contributing Code
 
