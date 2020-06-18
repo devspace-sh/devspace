@@ -30,7 +30,7 @@ func validate(config *latest.Config) error {
 				if port.ImageName == "" && port.LabelSelector == nil {
 					return errors.Errorf("Error in config: imageName and label selector are nil in port config at index %d", index)
 				}
-				if port.PortMappings == nil {
+				if len(port.PortMappings) == 0 && len(port.PortMappingsReverse) == 0 {
 					return errors.Errorf("Error in config: portMappings is empty in port config at index %d", index)
 				}
 			}

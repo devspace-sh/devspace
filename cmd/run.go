@@ -2,14 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	flagspkg "github.com/devspace-cloud/devspace/pkg/util/flags"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/sirupsen/logrus"
-	"os"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -39,7 +40,7 @@ Run executes a predefined command from the devspace.yaml
 Examples:
 devspace run mycommand --myarg 123
 devspace run mycommand2 1 2 3
-devspace --dependency my-dependency run any-command --any-flag
+devspace --dependency my-dependency run any-command --any-command-flag
 #######################################################
 	`,
 		Args: cobra.MinimumNArgs(1),
@@ -58,11 +59,17 @@ devspace --dependency my-dependency run any-command --any-flag
 				return fmt.Errorf("error parsing command: couldn't find run in command: %v", os.Args)
 			}
 
+			// check if is help command
+			osArgs := os.Args[:index]
+			if len(os.Args) == index+1 && (os.Args[index] == "-h" || os.Args[index] == "--help") {
+				return cobraCmd.Help()
+			}
+
 			// enable flag parsing
 			cobraCmd.DisableFlagParsing = false
 
 			// apply extra flags
-			extraFlags, err := flagspkg.ApplyExtraFlags(cobraCmd, os.Args[:index], true)
+			extraFlags, err := flagspkg.ApplyExtraFlags(cobraCmd, osArgs, true)
 			if err != nil {
 				return err
 			} else if cmd.Silent {
@@ -83,6 +90,10 @@ devspace --dependency my-dependency run any-command --any-flag
 
 // RunRun executes the functionality "devspace run"
 func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("run requires at least one argument")
+	}
+
 	// Set config root
 	configOptions := cmd.ToConfigOptions()
 	configLoader := f.NewConfigLoader(configOptions, f.GetLog())
