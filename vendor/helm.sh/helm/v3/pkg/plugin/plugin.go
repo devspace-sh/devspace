@@ -28,7 +28,7 @@ import (
 	"helm.sh/helm/v3/pkg/cli"
 )
 
-const PluginFileName = "plugin.yaml"
+const pluginFileName = "plugin.yaml"
 
 // Downloaders represents the plugins capability if it can retrieve
 // charts from special sources
@@ -159,7 +159,7 @@ func (p *Plugin) PrepareCommand(extraArgs []string) (string, []string, error) {
 
 // LoadDir loads a plugin from the given directory.
 func LoadDir(dirname string) (*Plugin, error) {
-	data, err := ioutil.ReadFile(filepath.Join(dirname, PluginFileName))
+	data, err := ioutil.ReadFile(filepath.Join(dirname, pluginFileName))
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func LoadDir(dirname string) (*Plugin, error) {
 func LoadAll(basedir string) ([]*Plugin, error) {
 	plugins := []*Plugin{}
 	// We want basedir/*/plugin.yaml
-	scanpath := filepath.Join(basedir, "*", PluginFileName)
+	scanpath := filepath.Join(basedir, "*", pluginFileName)
 	matches, err := filepath.Glob(scanpath)
 	if err != nil {
 		return plugins, err

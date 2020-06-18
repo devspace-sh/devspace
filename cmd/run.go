@@ -39,7 +39,7 @@ Run executes a predefined command from the devspace.yaml
 Examples:
 devspace run mycommand --myarg 123
 devspace run mycommand2 1 2 3
-devspace --dependency my-dependency run any-command --any-flag
+devspace --dependency my-dependency run any-command --any-command-flag
 #######################################################
 	`,
 		Args: cobra.MinimumNArgs(1),
@@ -58,11 +58,17 @@ devspace --dependency my-dependency run any-command --any-flag
 				return fmt.Errorf("error parsing command: couldn't find run in command: %v", os.Args)
 			}
 
+			// check if is help command
+			osArgs := os.Args[:index]
+			if len(os.Args) == index + 1 && (os.Args[index] == "-h" || os.Args[index] == "--help") {
+				return cobraCmd.Help()
+			}
+
 			// enable flag parsing
 			cobraCmd.DisableFlagParsing = false
 
 			// apply extra flags
-			extraFlags, err := flagspkg.ApplyExtraFlags(cobraCmd, os.Args[:index])
+			extraFlags, err := flagspkg.ApplyExtraFlags(cobraCmd, osArgs, true)
 			if err != nil {
 				return err
 			} else if cmd.Silent {
@@ -83,6 +89,10 @@ devspace --dependency my-dependency run any-command --any-flag
 
 // RunRun executes the functionality "devspace run"
 func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("run requires at least one argument")
+	}
+
 	// Set config root
 	configOptions := cmd.ToConfigOptions()
 	configLoader := f.NewConfigLoader(configOptions, f.GetLog())
@@ -111,16 +121,11 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 			return err
 		}
 
-		err = mgr.Command(dependency.CommandOptions{
+		return mgr.Command(dependency.CommandOptions{
 			Dependencies: []string{cmd.Dependency},
 			Command:      args[0],
 			Args:         args[1:],
 		})
-		if err != nil {
-			return err
-		}
-
-		return nil
 	}
 
 	// Parse commands

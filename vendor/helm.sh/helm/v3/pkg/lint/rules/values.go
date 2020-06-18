@@ -28,19 +28,7 @@ import (
 )
 
 // Values lints a chart's values.yaml file.
-//
-// This function is deprecated and will be removed in Helm 4.
 func Values(linter *support.Linter) {
-	ValuesWithOverrides(linter, map[string]interface{}{})
-}
-
-// ValuesWithOverrides tests the values.yaml file.
-//
-// If a schema is present in the chart, values are tested against that. Otherwise,
-// they are only tested for well-formedness.
-//
-// If additional values are supplied, they are coalesced into the values in values.yaml.
-func ValuesWithOverrides(linter *support.Linter, values map[string]interface{}) {
 	file := "values.yaml"
 	vf := filepath.Join(linter.ChartDir, file)
 	fileExists := linter.RunLinterRule(support.InfoSev, file, validateValuesFileExistence(vf))
@@ -49,7 +37,7 @@ func ValuesWithOverrides(linter *support.Linter, values map[string]interface{}) 
 		return
 	}
 
-	linter.RunLinterRule(support.ErrorSev, file, validateValuesFile(vf, values))
+	linter.RunLinterRule(support.ErrorSev, file, validateValuesFile(vf))
 }
 
 func validateValuesFileExistence(valuesPath string) error {
@@ -60,18 +48,11 @@ func validateValuesFileExistence(valuesPath string) error {
 	return nil
 }
 
-func validateValuesFile(valuesPath string, overrides map[string]interface{}) error {
+func validateValuesFile(valuesPath string) error {
 	values, err := chartutil.ReadValuesFile(valuesPath)
 	if err != nil {
 		return errors.Wrap(err, "unable to parse YAML")
 	}
-
-	// Helm 3.0.0 carried over the values linting from Helm 2.x, which only tests the top
-	// level values against the top-level expectations. Subchart values are not linted.
-	// We could change that. For now, though, we retain that strategy, and thus can
-	// coalesce tables (like reuse-values does) instead of doing the full chart
-	// CoalesceValues.
-	values = chartutil.CoalesceTables(values, overrides)
 
 	ext := filepath.Ext(valuesPath)
 	schemaPath := valuesPath[:len(valuesPath)-len(ext)] + ".schema.json"
