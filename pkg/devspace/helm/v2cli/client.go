@@ -2,10 +2,7 @@ package v2cli
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
-	"os"
+	"github.com/devspace-cloud/devspace/pkg/devspace/helm/v2cli/downloader"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -24,14 +21,14 @@ import (
 )
 
 var (
-	helmVersion  = "v2.16.3"
+	helmVersion  = "v2.16.9"
 	helmDownload = "https://get.helm.sh/helm-" + helmVersion + "-" + runtime.GOOS + "-amd64"
 )
 
 type client struct {
-	exec    command.Exec
-	extract extract.Extract
-	httpGet getRequest
+	exec       command.Exec
+	extract    extract.Extract
+	downloader downloader.Downloader
 
 	config *latest.Config
 
@@ -48,7 +45,7 @@ func NewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace
 		tillerNamespace = kubeClient.Namespace()
 	}
 
-	return &client{
+	c := &client{
 		config: config,
 
 		kubeClient:      kubeClient,
@@ -56,10 +53,11 @@ func NewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace
 
 		exec:    command.Command,
 		extract: extract.NewExtractor(),
-		httpGet: http.Get,
 
 		log: log,
-	}, nil
+	}
+	c.downloader = downloader.NewDownloader(c.installHelmClient, c.isValidHelm, log)
+	return c, nil
 }
 
 func (c *client) ensureHelmBinary(helmConfig *latest.HelmConfig) error {
@@ -68,16 +66,14 @@ func (c *client) ensureHelmBinary(helmConfig *latest.HelmConfig) error {
 	}
 
 	if helmConfig != nil && helmConfig.Path != "" {
-		if !c.isValidHelm(helmConfig.Path) {
-			return fmt.Errorf("Helm binary at '%s' is not a valid helm v2 binary", helmConfig.Path)
+		valid, err := c.isValidHelm(helmConfig.Path)
+		if err != nil {
+			return err
+		} else if !valid {
+			return fmt.Errorf("helm binary at '%s' is not a valid helm v2 binary", helmConfig.Path)
 		}
 
 		c.helmPath = helmConfig.Path
-		return nil
-	}
-
-	c.helmPath = "helm"
-	if c.isValidHelm(c.helmPath) {
 		return nil
 	}
 
@@ -86,95 +82,30 @@ func (c *client) ensureHelmBinary(helmConfig *latest.HelmConfig) error {
 		return err
 	}
 
-	c.helmPath = filepath.Join(home, constants.DefaultHomeDevSpaceFolder, "bin", "helm")
-	if c.isValidHelm(c.helmPath) {
-		return nil
-	}
-
-	return c.ensureHelmExecutable(c.helmPath)
-}
-
-func (c *client) isValidHelm(path string) bool {
-	out, err := c.exec(path, []string{"version", "--client"}).CombinedOutput()
-	if err != nil {
-		return false
-	}
-
-	return strings.HasPrefix(string(out), `Client: &version.Version{SemVer:"v2`)
-}
-
-func (c *client) ensureHelmExecutable(path string) error {
-	err := os.MkdirAll(filepath.Dir(path), 0755)
-	if err != nil {
-		return err
-	}
-
+	installPath := filepath.Join(home, constants.DefaultHomeDevSpaceFolder, "bin", "helm")
 	url := helmDownload
 	if runtime.GOOS == "windows" {
 		url += ".zip"
-		path += ".exe"
+		installPath += ".exe"
 	} else {
 		url += ".tar.gz"
 	}
 
-	err = c.downloadFile(path, url)
-	if err != nil {
-		return errors.Wrap(err, "download helm")
-	}
-
-	// make executable
-	err = os.Chmod(path, 0755)
-	if err != nil {
-		return errors.Wrap(err, "cannot make file executable")
-	}
-
-	return nil
+	c.helmPath, err = c.downloader.EnsureCLI("helm", installPath, url)
+	return err
 }
 
-type getRequest func(url string) (*http.Response, error)
-
-func (c *client) downloadFile(target string, url string) error {
-	c.log.StartWait("Downloading helm...")
-	defer c.log.StopWait()
-
-	t, err := ioutil.TempDir("", "")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(t)
-
-	archiveFile := filepath.Join(t, "download")
-	f, err := os.Create(archiveFile)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	resp, err := c.httpGet(url)
-	if err != nil {
-		return errors.Wrap(err, "get url")
-	}
-
-	defer resp.Body.Close()
-
-	_, err = io.Copy(f, resp.Body)
-	if err != nil {
-		return errors.Wrap(err, "download helm archive")
-	}
-
-	err = f.Close()
-	if err != nil {
-		return err
-	}
+func (c *client) installHelmClient(archiveFile, installPath, installFromURL string) error {
+	t := filepath.Dir(archiveFile)
 
 	// Extract the binary
-	if strings.HasSuffix(url, ".tar.gz") {
-		err = c.extract.UntarGz(archiveFile, t)
+	if strings.HasSuffix(installFromURL, ".tar.gz") {
+		err := c.extract.UntarGz(archiveFile, t)
 		if err != nil {
 			return errors.Wrap(err, "extract tar.gz")
 		}
-	} else if strings.HasSuffix(url, ".zip") {
-		err = c.extract.Unzip(archiveFile, t)
+	} else if strings.HasSuffix(installFromURL, ".zip") {
+		err := c.extract.Unzip(archiveFile, t)
 		if err != nil {
 			return errors.Wrap(err, "extract zip")
 		}
@@ -182,8 +113,17 @@ func (c *client) downloadFile(target string, url string) error {
 
 	// Copy file to target location
 	if runtime.GOOS == "windows" {
-		return copy.Copy(filepath.Join(t, runtime.GOOS+"-amd64", "helm.exe"), target)
+		return copy.Copy(filepath.Join(t, runtime.GOOS+"-amd64", "helm.exe"), installPath)
 	}
 
-	return copy.Copy(filepath.Join(t, runtime.GOOS+"-amd64", "helm"), target)
+	return copy.Copy(filepath.Join(t, runtime.GOOS+"-amd64", "helm"), installPath)
+}
+
+func (c *client) isValidHelm(path string) (bool, error) {
+	out, err := c.exec(path, []string{"version", "--client"}).CombinedOutput()
+	if err != nil {
+		return false, nil
+	}
+
+	return strings.HasPrefix(string(out), `Client: &version.Version{SemVer:"v2`), nil
 }
