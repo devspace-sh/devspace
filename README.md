@@ -1,6 +1,6 @@
 <img src="static/img/devspace-logo.svg">
 
-### **[Website](https://devspace.sh)** • **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.sh/cli/docs/introduction)** • **[Blog](https://devspace.cloud/blog)** • **[Twitter](https://twitter.com/devspace)** • [![Join us on Slack!](static/img/slack.svg)](https://kubernetes.slack.com/?redir=%2Fmessages%2Fdevspace#/)
+### **[Website](https://devspace.sh)** • **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.sh/cli/docs/introduction)** • **[Blog](https://devspace.cloud/blog)** • **[Twitter](https://twitter.com/devspace)** • [![Join us on Slack!](docs/static/img/slack.svg)](https://kubernetes.slack.com/?redir=%2Fmessages%2Fdevspace#/)
 
 ![Build Status Passing](https://img.shields.io/github/workflow/status/devspace-cloud/devspace/Test%20&%20Release%20CLI%20Version/master?style=for-the-badge)
 ![Latest Release](https://img.shields.io/github/v/release/devspace-cloud/devspace?style=for-the-badge&label=Latest%20Release&color=%23007ec6)
@@ -1206,7 +1206,7 @@ You are more than welcome to open issues in this project and get in touch with t
 
 - [Give feedback](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Ffeedback&title=Feedback:)
 - [Suggest new features](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Ffeature&template=feature-request.md&title=Feature%20Request:)
-- [![Join us on Slack!](static/img/slack.svg)](https://kubernetes.slack.com/?redir=%2Fmessages%2Fdevspace#/)
+- [![Join us on Slack!](docs/static/img/slack.svg)](https://kubernetes.slack.com/?redir=%2Fmessages%2Fdevspace#/)
 
 ### Contributing Code
 
