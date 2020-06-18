@@ -307,7 +307,7 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 	defer log.StopWait()
 
 	// Make sure the ingress has some time to take effect
-	time.Sleep(time.Second * 2)
+	time.Sleep(time.Second * 5)
 
 	now := time.Now()
 	for time.Since(now) < maxWait {
