@@ -22,6 +22,7 @@ Run executes a predefined command from the devspace.yaml
 Examples:
 devspace run mycommand --myarg 123
 devspace run mycommand2 1 2 3
+devspace --dependency my-dependency run any-command --any-command-flag
 #######################################################
 ```
 
@@ -29,7 +30,8 @@ devspace run mycommand2 1 2 3
 ## Flags
 
 ```
-  -h, --help   help for run
+      --dependency string   Run a command from a specific dependency
+  -h, --help                help for run
 ```
 
 

@@ -27,6 +27,7 @@ Builds all defined images and pushes them
 ```
       --allow-cyclic           When enabled allows cyclic dependencies
       --build-sequential       Builds the images one after another instead of in parallel
+      --dependency strings     Builds only the specific named dependencies
   -b, --force-build            Forces to build every image
       --force-dependencies     Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies) (default true)
   -h, --help                   help for build
