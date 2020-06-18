@@ -32,8 +32,8 @@ kubectl apply -f backend-extra/
 kubectl apply -f frontend/manifest.yaml
 ```
 
-:::warning Kubectl Required
-Deployments with `kubectl` require `kubectl` to be installed. The `kubectl` binary either needs to be found through your `$PATH` variable or by specifying the [`cmdPath` option](#cmdpath).
+:::note Kubectl
+Deployments with `kubectl` require `kubectl` to be installed. If the `kubectl` binary cannot be found within the `$PATH` variable and it is not specified by specifying the [`cmdPath` option](#cmdpath), DevSpace will download the `kubectl` binary into the `$HOME/.devspace/bin` folder.
 :::
 
 
@@ -92,7 +92,7 @@ deployments:
     createArgs:
     - "--recursive"
 ```
-**Explanation:**  
+**Explanation:**
 Deploying the above example would roughly be equivalent to this command:
 ```bash
 kubectl create --dry-run --output yaml --validate=false --recursive -f backend/
