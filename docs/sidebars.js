@@ -35,6 +35,7 @@ module.exports = {
             'configuration/images/image-tagging',
             'configuration/images/dockerfile-context',
             'configuration/images/entrypoint-cmd',
+            'configuration/images/append-dockerfile-instructions',
             'configuration/images/inject-restart-helper',
             'configuration/images/prefer-sync-over-rebuild',
             'configuration/images/pull-secrets',
