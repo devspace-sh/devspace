@@ -428,9 +428,13 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config) error {
 		if ok && (defaultImageConfig.Build == nil || defaultImageConfig.Build.Disabled == nil) {
 			patchRemoveOp := "remove"
 			patches := []*latest.PatchConfig{
-				&latest.PatchConfig{
+				{
 					Operation: patchRemoveOp,
 					Path:      "images." + defaultImageName + ".injectRestartHelper",
+				},
+				{
+					Operation: patchRemoveOp,
+					Path:      "images." + defaultImageName + ".appendDockerfileInstructions",
 				},
 			}
 
