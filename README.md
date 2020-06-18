@@ -1198,18 +1198,19 @@ docker run --net=host --ipc=host --uts=host --pid=host -it --security-opt=seccom
 
 Help us make DevSpace the best tool for developing, deploying and debugging Kubernetes apps.
 
+[![Join us on Slack!](static/img/slack.svg)](https://kubernetes.slack.com/?redir=%2Fmessages%2Fdevspace#/)
+
 ### Reporting Issues
 
 If you find a bug while working with the DevSpace, please [open an issue on GitHub](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Fbug&template=bug-report.md&title=Bug:) and let us know what went wrong. We will try to fix it as quickly as we can.
 
 ### Feedback & Feature Requests
 
-You are more than welcome to open issues in this project and get in touch with the maintainers and other DevSpace users:
+You are more than welcome to open issues in this project to:
 
 - [Give feedback](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Ffeedback&title=Feedback:)
 - [Suggest new features](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Ffeature&template=feature-request.md&title=Feature%20Request:)
-
-[![Join us on Slack!](static/img/slack.svg)](https://kubernetes.slack.com/?redir=%2Fmessages%2Fdevspace#/)
+- [Report Bugs](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Fbug&template=bug-report.md&title=Bug%20Report:)
 
 ### Contributing Code
 
