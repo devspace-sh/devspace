@@ -43,8 +43,15 @@ module.exports = {
           position: 'left'
         },
         {
+          href: 'https://kubernetes.slack.com/?redir=%2Fmessages%2Fdevspace#/',
+          className: 'slack-link',
+          'aria-label': 'Slack',
+          position: 'right',
+        },
+        {
           href: 'https://github.com/devspace-cloud/devspace',
-          label: 'GitHub',
+          className: 'github-link',
+          'aria-label': 'GitHub',
           position: 'right',
         },
       ],
@@ -77,6 +84,14 @@ module.exports = {
         },
       },
     ],
+  ],
+  plugins: [
+    [
+      require.resolve('docusaurus-gtm-plugin'),
+      {
+        id: 'GTM-5KKTMWJ',
+      }
+    ]
   ],
   scripts: [
     {
