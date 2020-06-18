@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
 	"io"
 	"io/ioutil"
 	"path/filepath"
@@ -12,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -51,16 +51,27 @@ func GetDockerfileAndContext(imageConf *latest.ImageConfig) (string, string) {
 func InjectBuildScriptInContext(buildCtx io.ReadCloser) (io.ReadCloser, error) {
 	now := time.Now()
 	hdrTmpl := &tar.Header{
-		Mode:       0755,
+		Mode:       0777,
 		Uid:        0,
 		Gid:        0,
 		ModTime:    now,
-		Typeflag:   tar.TypeReg,
 		AccessTime: now,
 		ChangeTime: now,
 	}
+	fldTmpl := &tar.Header{
+		Mode:       0777,
+		Uid:        0,
+		Gid:        0,
+		ModTime:    now,
+		AccessTime: now,
+		ChangeTime: now,
+		Typeflag:   tar.TypeDir,
+	}
 
 	buildCtx = archive.ReplaceFileTarWrapper(buildCtx, map[string]archive.TarModifierFunc{
+		"/.devspace/.devspace": func(_ string, h *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
+			return fldTmpl, nil, nil
+		},
 		restart.ScriptContextPath: func(_ string, h *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
 			return hdrTmpl, []byte(restart.HelperScript), nil
 		},
@@ -97,12 +108,14 @@ func OverwriteDockerfileInBuildContext(dockerfileCtx io.ReadCloser, buildCtx io.
 
 // RewriteDockerfile rewrites the given dockerfile contents with the new entrypoint cmd and target. It does also inject the restart
 // helper if specified
-func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, target string, injectHelper bool, log logpkg.Logger) (string, error) {
-	if len(entrypoint) == 0 && len(cmd) == 0 && !injectHelper {
+func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, additionalInstructions []string, target string, injectHelper bool, log logpkg.Logger) (string, error) {
+	if len(entrypoint) == 0 && len(cmd) == 0 && !injectHelper && len(additionalInstructions) == 0 {
 		return "", nil
 	}
+	if additionalInstructions == nil {
+		additionalInstructions = []string{}
+	}
 
-	additionalLines := []string{}
 	if injectHelper {
 		data, err := ioutil.ReadFile(dockerfile)
 		if err != nil {
@@ -131,16 +144,16 @@ func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, tar
 		}
 
 		entrypoint = append([]string{restart.ScriptPath}, entrypoint...)
-		additionalLines = append(additionalLines, fmt.Sprintf("COPY %s /", restart.ScriptContextPath))
+		additionalInstructions = append(additionalInstructions, "COPY /.devspace /")
 	}
 
-	return CreateTempDockerfile(dockerfile, entrypoint, cmd, additionalLines, target)
+	return CreateTempDockerfile(dockerfile, entrypoint, cmd, additionalInstructions, target)
 }
 
 // CreateTempDockerfile creates a new temporary dockerfile that appends a new entrypoint and cmd
 func CreateTempDockerfile(dockerfile string, entrypoint []string, cmd []string, additionalLines []string, target string) (string, error) {
-	if entrypoint == nil && cmd == nil {
-		return "", errors.New("Entrypoint & cmd are empty")
+	if entrypoint == nil && cmd == nil && len(additionalLines) == 0 {
+		return "", errors.New("entrypoint, cmd & additional lines are empty")
 	}
 
 	data, err := ioutil.ReadFile(dockerfile)

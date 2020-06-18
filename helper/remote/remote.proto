@@ -3,6 +3,45 @@ syntax = "proto3";
 
 package remote;
 
+service Tunnel {
+    rpc InitTunnel (stream SocketDataRequest) returns (stream SocketDataResponse) {}
+}
+
+enum LogLevel {
+    INFO = 0;
+    VERBOSE = 1;
+    DEBUG = 2;
+    WARNING = 3;
+    ERROR = 4;
+}
+
+enum TunnelScheme {
+    TCP = 0;
+    UDP = 1;
+}
+
+message LogMessage {
+    LogLevel logLevel = 1;
+    string message = 2;
+}
+
+message SocketDataRequest {
+    int32 port = 1;
+    string requestId = 2;
+    LogLevel logLevel = 3;
+    TunnelScheme scheme = 4;
+    bytes data = 5;
+    bool shouldClose = 6;
+}
+
+message SocketDataResponse {
+    bool hasErr = 1;
+    LogMessage logMessage = 2;
+    string requestId = 3;
+    bytes data = 4;
+    bool shouldClose = 5;
+}
+
 service Downstream {
     rpc Download (stream Paths) returns (stream Chunk) {}
     rpc Changes (Empty) returns (stream ChangeChunk) {}

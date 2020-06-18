@@ -379,6 +379,10 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 		if err != nil {
 			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
 		}
+		err = servicesClient.StartReversePortForwarding(nil)
+		if err != nil {
+			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
+		}
 	}
 
 	if cmd.Sync {

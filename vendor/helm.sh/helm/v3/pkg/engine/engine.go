@@ -216,7 +216,6 @@ func (e Engine) renderWithReferences(tpls, referenceTpls map[string]renderable) 
 	// We want to parse the templates in a predictable order. The order favors
 	// higher-level (in file system) templates over deeply nested templates.
 	keys := sortTemplates(tpls)
-	referenceKeys := sortTemplates(referenceTpls)
 
 	for _, filename := range keys {
 		r := tpls[filename]
@@ -227,9 +226,8 @@ func (e Engine) renderWithReferences(tpls, referenceTpls map[string]renderable) 
 
 	// Adding the reference templates to the template context
 	// so they can be referenced in the tpl function
-	for _, filename := range referenceKeys {
+	for filename, r := range referenceTpls {
 		if t.Lookup(filename) == nil {
-			r := referenceTpls[filename]
 			if _, err := t.New(filename).Parse(r.tpl); err != nil {
 				return map[string]string{}, cleanupParseError(filename, err)
 			}

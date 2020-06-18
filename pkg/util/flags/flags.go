@@ -9,21 +9,21 @@ import (
 )
 
 // ApplyExtraFlags args parses the flags for a certain command from the environment variables
-func ApplyExtraFlags(cobraCmd *cobra.Command) ([]string, error) {
+func ApplyExtraFlags(cobraCmd *cobra.Command, osArgs []string, forceParsing bool) ([]string, error) {
 	envName := strings.ToUpper(strings.Replace(cobraCmd.CommandPath(), " ", "_", -1) + "_FLAGS")
 
-	flags, err := parseCommandLine(os.Getenv("DEVSPACE_FLAGS"))
+	flags, err := ParseCommandLine(os.Getenv("DEVSPACE_FLAGS"))
 	if err != nil {
 		return nil, err
 	}
 
-	commandFlags, err := parseCommandLine(os.Getenv(envName))
+	commandFlags, err := ParseCommandLine(os.Getenv(envName))
 	if err != nil {
 		return nil, err
 	}
 
 	flags = append(flags, commandFlags...)
-	if len(flags) == 0 {
+	if !forceParsing && len(flags) == 0 {
 		return nil, nil
 	}
 
@@ -32,7 +32,7 @@ func ApplyExtraFlags(cobraCmd *cobra.Command) ([]string, error) {
 		return nil, err
 	}
 
-	err = cobraCmd.ParseFlags(os.Args)
+	err = cobraCmd.ParseFlags(osArgs)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,8 @@ func ApplyExtraFlags(cobraCmd *cobra.Command) ([]string, error) {
 	return flags, nil
 }
 
-func parseCommandLine(command string) ([]string, error) {
+// ParseCommandLine parses the command line string into an string array
+func ParseCommandLine(command string) ([]string, error) {
 	var args []string
 	state := "start"
 	current := ""

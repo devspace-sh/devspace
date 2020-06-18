@@ -33,17 +33,6 @@ type newTestCase struct {
 func TestNew(t *testing.T) {
 	testCases := []newTestCase{
 		newTestCase{
-			name:        "No kubectl",
-			expectedErr: "Error creating kubectl deploy config: kubectl is nil",
-		},
-		newTestCase{
-			name: "No manifests",
-			deployConfig: &latest.DeploymentConfig{
-				Kubectl: &latest.KubectlConfig{},
-			},
-			expectedErr: "No manifests defined for kubectl deploy",
-		},
-		newTestCase{
 			name: "No kubeClient",
 			deployConfig: &latest.DeploymentConfig{
 				Name: "someDeploy",
@@ -108,7 +97,6 @@ func TestNew(t *testing.T) {
 		}
 
 		deployer, err := New(testCase.config, testCase.kubeClient, testCase.deployConfig, nil)
-
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {
@@ -439,8 +427,8 @@ func TestGetReplacedManifest(t *testing.T) {
 			name: "one replaced resource",
 			cmdOutput: map[string]interface{}{
 				"apiVersion": "v1",
-				"kind": "Pod",
-				"image": "myimage",
+				"kind":       "Pod",
+				"image":      "myimage",
 			},
 			cache: &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{

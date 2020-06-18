@@ -65,6 +65,7 @@ func (cmd *commandsCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 	headerColumnNames := []string{
 		"Name",
 		"Command",
+		"Description",
 	}
 
 	rows := [][]string{}
@@ -72,6 +73,7 @@ func (cmd *commandsCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 		rows = append(rows, []string{
 			command.Name,
 			command.Command,
+			command.Description,
 		})
 	}
 

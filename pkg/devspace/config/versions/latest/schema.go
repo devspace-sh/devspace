@@ -80,6 +80,10 @@ type ImageConfig struct {
 	// dockerfile for this image, otherwise devspace will fail.
 	InjectRestartHelper bool `yaml:"injectRestartHelper,omitempty"`
 
+	// These instructions will be appended to the Dockerfile that is build at the current build target
+	// and are appended before the entrypoint and cmd instructions
+	AppendDockerfileInstructions []string `yaml:"appendDockerfileInstructions,omitempty"`
+
 	// Specific build options how to build the specified image
 	Build *BuildConfig `yaml:"build,omitempty"`
 }
@@ -423,10 +427,12 @@ type DevConfig struct {
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
 type PortForwardingConfig struct {
-	ImageName     string            `yaml:"imageName,omitempty"`
-	LabelSelector map[string]string `yaml:"labelSelector,omitempty"`
-	Namespace     string            `yaml:"namespace,omitempty"`
-	PortMappings  []*PortMapping    `yaml:"forward,omitempty"`
+	ImageName           string            `yaml:"imageName,omitempty"`
+	LabelSelector       map[string]string `yaml:"labelSelector,omitempty"`
+	ContainerName       string            `yaml:"containerName,omitempty"`
+	Namespace           string            `yaml:"namespace,omitempty"`
+	PortMappings        []*PortMapping    `yaml:"forward,omitempty"`
+	PortMappingsReverse []*PortMapping    `yaml:"reverseForward,omitempty"`
 }
 
 // PortMapping defines the ports for a PortMapping
@@ -607,8 +613,9 @@ type HookWhenAtConfig struct {
 
 // CommandConfig defines the command specification
 type CommandConfig struct {
-	Name    string `yaml:"name"`
-	Command string `yaml:"command"`
+	Name        string `yaml:"name"`
+	Command     string `yaml:"command"`
+	Description string `yaml:"description"`
 }
 
 // Variable describes the var definition

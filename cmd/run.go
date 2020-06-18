@@ -1,20 +1,25 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/command"
-	"github.com/devspace-cloud/devspace/pkg/util/exit"
+	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
+	flagspkg "github.com/devspace-cloud/devspace/pkg/util/flags"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
+	"github.com/sirupsen/logrus"
+	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"mvdan.cc/sh/v3/interp"
 )
 
 // RunCmd holds the run cmd flags
 type RunCmd struct {
 	*flags.GlobalFlags
+
+	Dependency string
 }
 
 // NewRunCmd creates a new run command
@@ -34,27 +39,93 @@ Run executes a predefined command from the devspace.yaml
 Examples:
 devspace run mycommand --myarg 123
 devspace run mycommand2 1 2 3
+devspace --dependency my-dependency run any-command --any-command-flag
 #######################################################
 	`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.RunRun(f, cobraCmd, args)
+			log := f.GetLog()
+
+			// get all flags till "run"
+			index := -1
+			for i, v := range os.Args {
+				if v == "run" {
+					index = i + 1
+					break
+				}
+			}
+			if index == -1 {
+				return fmt.Errorf("error parsing command: couldn't find run in command: %v", os.Args)
+			}
+
+			// check if is help command
+			osArgs := os.Args[:index]
+			if len(os.Args) == index + 1 && (os.Args[index] == "-h" || os.Args[index] == "--help") {
+				return cobraCmd.Help()
+			}
+
+			// enable flag parsing
+			cobraCmd.DisableFlagParsing = false
+
+			// apply extra flags
+			extraFlags, err := flagspkg.ApplyExtraFlags(cobraCmd, osArgs, true)
+			if err != nil {
+				return err
+			} else if cmd.Silent {
+				log.SetLevel(logrus.FatalLevel)
+			}
+
+			if len(extraFlags) > 0 {
+				log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
+			}
+
+			return cmd.RunRun(f, cobraCmd, os.Args[index:])
 		},
 	}
 
+	runCmd.Flags().StringVar(&cmd.Dependency, "dependency", "", "Run a command from a specific dependency")
 	return runCmd
 }
 
 // RunRun executes the functionality "devspace run"
 func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("run requires at least one argument")
+	}
+
 	// Set config root
-	configLoader := f.NewConfigLoader(nil, f.GetLog())
+	configOptions := cmd.ToConfigOptions()
+	configLoader := f.NewConfigLoader(configOptions, f.GetLog())
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
 	}
 	if !configExists {
 		return errors.New(message.ConfigNotFound)
+	}
+
+	// check if we should execute a dependency command
+	if cmd.Dependency != "" {
+		config, err := configLoader.Load()
+		if err != nil {
+			return err
+		}
+
+		cache, err := configLoader.Generated()
+		if err != nil {
+			return err
+		}
+
+		mgr, err := f.NewDependencyManager(config, cache, nil, false, configOptions, f.GetLog())
+		if err != nil {
+			return err
+		}
+
+		return mgr.Command(dependency.CommandOptions{
+			Dependencies: []string{cmd.Dependency},
+			Command:      args[0],
+			Args:         args[1:],
+		})
 	}
 
 	// Parse commands
@@ -70,24 +141,5 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Execute command
-	err = command.ExecuteCommand(commands, args[0], args[1:])
-	if err != nil {
-		shellExitError, ok := err.(interp.ShellExitStatus)
-		if ok {
-			return &exit.ReturnCodeError{
-				ExitCode: int(shellExitError),
-			}
-		}
-
-		exitError, ok := err.(interp.ExitStatus)
-		if ok {
-			return &exit.ReturnCodeError{
-				ExitCode: int(exitError),
-			}
-		}
-
-		return errors.Wrap(err, "execute command")
-	}
-
-	return nil
+	return dependency.ExecuteCommand(commands, args[0], args[1:])
 }

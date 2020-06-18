@@ -45,6 +45,7 @@ require (
 	github.com/theupdateframework/notary v0.6.1 // indirect
 	github.com/toqueteos/trie v1.0.0 // indirect
 	github.com/ulikunitz/xz v0.5.7 // indirect
+	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
 	google.golang.org/grpc v1.27.0
 	gopkg.in/AlecAivazis/survey.v1 v1.8.7
 	gopkg.in/src-d/enry.v1 v1.6.4
@@ -52,13 +53,13 @@ require (
 	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 	gotest.tools v2.2.0+incompatible
-	helm.sh/helm/v3 v3.0.0-20200512230853-bf12ae39344a
-	k8s.io/api v0.18.0
-	k8s.io/apimachinery v0.18.0
-	k8s.io/cli-runtime v0.18.0
-	k8s.io/client-go v0.18.0
+	helm.sh/helm/v3 v3.2.4
+	k8s.io/api v0.18.2
+	k8s.io/apimachinery v0.18.2
+	k8s.io/cli-runtime v0.18.2
+	k8s.io/client-go v0.18.2
 	k8s.io/klog v1.0.0
-	k8s.io/kubectl v0.18.0
+	k8s.io/kubectl v0.18.2
 	mvdan.cc/sh/v3 v3.0.0-alpha2
 )
 

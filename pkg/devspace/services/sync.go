@@ -28,17 +28,17 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-// SyncHelperBaseURL is the base url where to look for the sync helper
-const SyncHelperBaseURL = "https://github.com/devspace-cloud/devspace/releases"
+// DevSpaceHelperBaseURL is the base url where to look for the sync helper
+const DevSpaceHelperBaseURL = "https://github.com/devspace-cloud/devspace/releases"
 
-// SyncHelperTempFolder is the local folder where we store the sync helper
-const SyncHelperTempFolder = "sync"
+// DevSpaceHelperTempFolder is the local folder where we store the sync helper
+const DevSpaceHelperTempFolder = "devspacehelper"
 
-// SyncBinaryRegEx is the regexp that finds the correct download link for the sync helper binary
-var SyncBinaryRegEx = regexp.MustCompile(`href="(\/devspace-cloud\/devspace\/releases\/download\/[^\/]*\/sync)"`)
+// HelperBinaryRegEx is the regexp that finds the correct download link for the sync helper binary
+var HelperBinaryRegEx = regexp.MustCompile(`href="(\/devspace-cloud\/devspace\/releases\/download\/[^\/]*\/devspacehelper)"`)
 
-// SyncHelperContainerPath is the path of the sync helper in the container
-const SyncHelperContainerPath = "/tmp/sync"
+// DevSpaceHelperContainerPath is the path of the devspace helper in the container
+const DevSpaceHelperContainerPath = "/tmp/devspacehelper"
 
 // StartSyncFromCmd starts a new sync from command
 func (serviceClient *client) StartSyncFromCmd(syncConfig *latest.SyncConfig, interrupt chan error, verbose bool) error {
@@ -232,7 +232,7 @@ func (serviceClient *client) isFatalSyncError(err error) bool {
 }
 
 func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, syncDone chan bool, customLog logpkg.Logger) (*sync.Sync, error) {
-	err := serviceClient.injectSync(pod, container)
+	err := serviceClient.injectDevSpaceHelper(pod, container)
 	if err != nil {
 		return nil, err
 	}
@@ -314,7 +314,7 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 	}
 
 	// Start upstream
-	upstreamArgs := []string{SyncHelperContainerPath, "--upstream"}
+	upstreamArgs := []string{DevSpaceHelperContainerPath, "sync", "upstream"}
 	for _, exclude := range options.ExcludePaths {
 		upstreamArgs = append(upstreamArgs, "--exclude", exclude)
 	}
@@ -355,7 +355,12 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		return nil, errors.Wrap(err, "create pipe")
 	}
 
-	go serviceClient.startStream(syncClient, pod, container, upstreamArgs, upStdinReader, upStdoutWriter)
+	go func() {
+		err := serviceClient.startStream(pod, container, upstreamArgs, upStdinReader, upStdoutWriter)
+		if err != nil {
+			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
+		}
+	}()
 
 	err = syncClient.InitUpstream(upStdoutReader, upStdinWriter)
 	if err != nil {
@@ -363,7 +368,7 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 	}
 
 	// Start downstream
-	downstreamArgs := []string{SyncHelperContainerPath, "--downstream"}
+	downstreamArgs := []string{DevSpaceHelperContainerPath, "sync", "downstream"}
 	for _, exclude := range options.ExcludePaths {
 		downstreamArgs = append(downstreamArgs, "--exclude", exclude)
 	}
@@ -381,7 +386,12 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		return nil, errors.Wrap(err, "create pipe")
 	}
 
-	go serviceClient.startStream(syncClient, pod, container, downstreamArgs, downStdinReader, downStdoutWriter)
+	go func() {
+		err := serviceClient.startStream(pod, container, downstreamArgs, downStdinReader, downStdoutWriter)
+		if err != nil {
+			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
+		}
+	}()
 
 	err = syncClient.InitDownstream(downStdoutReader, downStdinWriter)
 	if err != nil {
@@ -391,9 +401,8 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 	return syncClient, nil
 }
 
-func (serviceClient *client) startStream(syncClient *sync.Sync, pod *v1.Pod, container string, command []string, reader io.Reader, writer io.Writer) {
+func (serviceClient *client) startStream(pod *v1.Pod, container string, command []string, reader io.Reader, writer io.Writer) error {
 	stderrBuffer := &bytes.Buffer{}
-
 	err := serviceClient.client.ExecStream(&kubectl.ExecStreamOptions{
 		Pod:       pod,
 		Container: container,
@@ -403,11 +412,12 @@ func (serviceClient *client) startStream(syncClient *sync.Sync, pod *v1.Pod, con
 		Stderr:    stderrBuffer,
 	})
 	if err != nil {
-		syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %s %v", pod.Namespace, pod.Name, stderrBuffer.String(), err))
+		return fmt.Errorf("%s %v", stderrBuffer.String(), err)
 	}
+	return nil
 }
 
-func (serviceClient *client) injectSync(pod *v1.Pod, container string) error {
+func (serviceClient *client) injectDevSpaceHelper(pod *v1.Pod, container string) error {
 	// Compare sync versions
 	version := upgrade.GetRawVersion()
 	if version == "" {
@@ -415,26 +425,26 @@ func (serviceClient *client) injectSync(pod *v1.Pod, container string) error {
 	}
 
 	// Check if sync is already in pod
-	stdout, _, err := serviceClient.client.ExecBuffered(pod, container, []string{SyncHelperContainerPath, "--version"}, nil)
+	stdout, _, err := serviceClient.client.ExecBuffered(pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
 	if err != nil || version != string(stdout) {
 		homedir, err := homedir.Dir()
 		if err != nil {
 			return err
 		}
 
-		syncBinaryFolder := filepath.Join(homedir, constants.DefaultHomeDevSpaceFolder, SyncHelperTempFolder, version)
-		filepath := filepath.Join(syncBinaryFolder, "sync")
+		syncBinaryFolder := filepath.Join(homedir, constants.DefaultHomeDevSpaceFolder, DevSpaceHelperTempFolder, version)
+		filepath := filepath.Join(syncBinaryFolder, "devspacehelper")
 
 		// Download sync helper if necessary
 		err = serviceClient.downloadSyncHelper(filepath, syncBinaryFolder, version)
 		if err != nil {
-			return errors.Wrap(err, "download sync helper")
+			return errors.Wrap(err, "download devspace helper")
 		}
 
 		// Inject sync helper
 		err = serviceClient.injectSyncHelper(pod, container, filepath)
 		if err != nil {
-			return errors.Wrap(err, "inject sync helper")
+			return errors.Wrap(err, "inject devspace helper")
 		}
 	}
 
@@ -451,23 +461,23 @@ func (serviceClient *client) downloadSyncHelper(filepath, syncBinaryFolder, vers
 		}
 
 		// download sha256 html
-		url := fmt.Sprintf("https://github.com/devspace-cloud/devspace/releases/download/%s/sync.sha256", version)
+		url := fmt.Sprintf("https://github.com/devspace-cloud/devspace/releases/download/%s/devspacehelper.sha256", version)
 		resp, err := http.Get(url)
 		if err != nil {
-			serviceClient.log.Warnf("Couldn't retrieve sync sha256: %v", err)
+			serviceClient.log.Warnf("Couldn't retrieve helper sha256: %v", err)
 			return nil
 		}
 
 		shaHash, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			serviceClient.log.Warnf("Couldn't read sync sha256 request: %v", err)
+			serviceClient.log.Warnf("Couldn't read helper sha256 request: %v", err)
 			return nil
 		}
 
 		// hash the local binary
 		fileHash, err := hash.File(filepath)
 		if err != nil {
-			serviceClient.log.Warnf("Couldn't hash local sync binary: %v", err)
+			serviceClient.log.Warnf("Couldn't hash local helper binary: %v", err)
 			return nil
 		}
 
@@ -479,14 +489,14 @@ func (serviceClient *client) downloadSyncHelper(filepath, syncBinaryFolder, vers
 		// remove the old binary
 		err = os.Remove(filepath)
 		if err != nil {
-			return errors.Wrap(err, "remove corrupt sync binary")
+			return errors.Wrap(err, "remove corrupt helper binary")
 		}
 	}
 
 	// Make sync binary
 	err = os.MkdirAll(syncBinaryFolder, 0755)
 	if err != nil {
-		return errors.Wrap(err, "mkdir sync binary folder")
+		return errors.Wrap(err, "mkdir helper binary folder")
 	}
 
 	return serviceClient.downloadFile(version, filepath)
@@ -496,9 +506,9 @@ func (serviceClient *client) downloadFile(version string, filepath string) error
 	// Create download url
 	url := ""
 	if version == "latest" {
-		url = fmt.Sprintf("%s/%s", SyncHelperBaseURL, version)
+		url = fmt.Sprintf("%s/%s", DevSpaceHelperBaseURL, version)
 	} else {
-		url = fmt.Sprintf("%s/tag/%s", SyncHelperBaseURL, version)
+		url = fmt.Sprintf("%s/tag/%s", DevSpaceHelperBaseURL, version)
 	}
 
 	// Download html
@@ -512,9 +522,9 @@ func (serviceClient *client) downloadFile(version string, filepath string) error
 		return errors.Wrap(err, "read body")
 	}
 
-	matches := SyncBinaryRegEx.FindStringSubmatch(string(body))
+	matches := HelperBinaryRegEx.FindStringSubmatch(string(body))
 	if len(matches) != 2 {
-		return errors.Errorf("Couldn't find sync helper in github release %s at url %s", version, url)
+		return errors.Errorf("Couldn't find devspace helper in github release %s at url %s", version, url)
 	}
 
 	out, err := os.Create(filepath)
@@ -525,13 +535,13 @@ func (serviceClient *client) downloadFile(version string, filepath string) error
 
 	resp, err = http.Get("https://github.com" + matches[1])
 	if err != nil {
-		return errors.Wrap(err, "download sync helper")
+		return errors.Wrap(err, "download devspace helper")
 	}
 	defer resp.Body.Close()
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return errors.Wrap(err, "download sync helper to file")
+		return errors.Wrap(err, "download devspace helper to file")
 	}
 
 	return nil
@@ -580,7 +590,7 @@ func (serviceClient *client) injectSyncHelper(pod *v1.Pod, container string, fil
 		return errors.Wrap(err, "create tar file info header")
 	}
 
-	hdr.Name = "sync"
+	hdr.Name = "devspacehelper"
 
 	// Set permissions correctly
 	hdr.Mode = 0777

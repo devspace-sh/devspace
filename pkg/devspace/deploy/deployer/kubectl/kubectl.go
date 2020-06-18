@@ -1,11 +1,17 @@
 package kubectl
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/devspace/helm/v2cli/downloader"
+	"github.com/mitchellh/go-homedir"
 	"io"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/ghodss/yaml"
+	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -16,6 +22,11 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+)
+
+var (
+	kubectlVersion  = "v1.18.4"
+	kubectlDownload = "https://storage.googleapis.com/kubernetes-release/release/" + kubectlVersion + "/bin/" + runtime.GOOS + "/amd64/kubectl"
 )
 
 // DeployConfig holds the necessary information for kubectl deployment
@@ -38,15 +49,38 @@ type DeployConfig struct {
 // New creates a new deploy config for kubectl
 func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (deployer.Interface, error) {
 	if deployConfig.Kubectl == nil {
-		return nil, errors.New("Error creating kubectl deploy config: kubectl is nil")
-	}
-	if deployConfig.Kubectl.Manifests == nil {
-		return nil, errors.New("No manifests defined for kubectl deploy")
+		return nil, errors.New("error creating kubectl deploy config: kubectl is nil")
+	} else if deployConfig.Kubectl.Manifests == nil {
+		return nil, errors.New("no manifests defined for kubectl deploy")
 	}
 
-	cmdPath := "kubectl"
+	// make sure kubectl exists
+	var (
+		executer       = &executer{}
+		isValidKubectl = func(command string) (bool, error) {
+			return isValidKubectl(command, executer)
+		}
+		cmdPath = ""
+	)
 	if deployConfig.Kubectl.CmdPath != "" {
 		cmdPath = deployConfig.Kubectl.CmdPath
+	} else {
+		home, err := homedir.Dir()
+		if err != nil {
+			return nil, err
+		}
+
+		installPath := filepath.Join(home, constants.DefaultHomeDevSpaceFolder, "bin", "kubectl")
+		url := kubectlDownload
+		if runtime.GOOS == "windows" {
+			url += ".exe"
+			installPath += ".exe"
+		}
+
+		cmdPath, err = downloader.NewDownloader(installKubectl, isValidKubectl, log).EnsureCLI("kubectl", installPath, url)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	manifests := []string{}
@@ -70,7 +104,7 @@ func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.
 			config:           config,
 			Log:              log,
 
-			commandExecuter: &executer{},
+			commandExecuter: executer,
 		}, nil
 	}
 
@@ -91,8 +125,21 @@ func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.
 		config:           config,
 		Log:              log,
 
-		commandExecuter: &executer{},
+		commandExecuter: executer,
 	}, nil
+}
+
+func isValidKubectl(command string, executer *executer) (bool, error) {
+	out, err := executer.RunCommand(command, []string{"version", "--client"})
+	if err != nil {
+		return false, nil
+	}
+
+	return strings.Index(string(out), `Client Version`) != -1, nil
+}
+
+func installKubectl(downloadedFile, installPath, installFromURL string) error {
+	return copy.Copy(downloadedFile, installPath)
 }
 
 // Render writes the generated manifests to the out stream

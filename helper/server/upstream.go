@@ -2,8 +2,8 @@ package server
 
 import (
 	"context"
-	"github.com/devspace-cloud/devspace/sync/remote"
-	"github.com/devspace-cloud/devspace/sync/util"
+	"github.com/devspace-cloud/devspace/helper/remote"
+	"github.com/devspace-cloud/devspace/helper/util"
 	"github.com/pkg/errors"
 	gitignore "github.com/sabhiram/go-gitignore"
 	"google.golang.org/grpc"

@@ -21,18 +21,26 @@ func NewContainerRestarter() ContainerRestarter {
 }
 
 func (*containerRestarter) RestartContainer() error {
-	// check if restart script is there
-	_, err := os.Stat(restart.ScriptPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("the restart container utility script is not present in the container. Please make sure '%s' is in your container and wrapping the entrypoint", restart.ScriptPath)
-		}
+	pidFilePath := restart.ProcessIDFilePath
 
-		return errors.Wrap(err, "cannot access restart helper script")
+	// check if restart script is there
+	_, err := os.Stat(restart.LegacyScriptPath)
+	if err == nil {
+		pidFilePath = restart.LegacyProcessIDFilePath
+	} else {
+		// check if restart script is there
+		_, err = os.Stat(restart.ScriptPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("the restart container utility script is not present in the container. Please make sure '%s' is in your container and wrapping the entrypoint", restart.ScriptPath)
+			}
+
+			return errors.Wrap(err, "cannot access restart helper script")
+		}
 	}
 
 	// read current active process id
-	pgidBytes, err := ioutil.ReadFile(restart.ProcessIDFilePath)
+	pgidBytes, err := ioutil.ReadFile(pidFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -48,7 +56,7 @@ func (*containerRestarter) RestartContainer() error {
 	}
 
 	// delete the pid file
-	err = os.Remove(restart.ProcessIDFilePath)
+	err = os.Remove(pidFilePath)
 	if err != nil {
 		// someone else was faster than we were
 		if os.IsNotExist(err) {
