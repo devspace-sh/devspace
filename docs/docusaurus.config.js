@@ -33,9 +33,10 @@ module.exports = {
           target: '_self'
         },
         {
-          to: 'docs/introduction',
+          href: __webpack_public_path__ + 'docs/' + (process.env.NODE_ENV == 'production' ? '' : 'next/') + 'introduction',
           label: 'Docs',
-          position: 'left'
+          position: 'left',
+          target: '_self'
         },
         {
           href: 'https://devspace.cloud/blog',
@@ -43,7 +44,7 @@ module.exports = {
           position: 'left'
         },
         {
-          href: 'https://kubernetes.slack.com/?redir=%2Fmessages%2Fdevspace#/',
+          href: 'https://slack.k8s.io/#devspace',
           className: 'slack-link',
           'aria-label': 'Slack',
           position: 'right',

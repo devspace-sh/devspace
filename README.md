@@ -9,7 +9,7 @@
 ![Total Downloads (GitHub Releases)](https://img.shields.io/github/downloads/devspace-cloud/devspace/total?style=for-the-badge&label=Total%20Downloads&color=%23007ec6)
 ![NPM Installs per Month](https://img.shields.io/npm/dm/devspace?label=NPM%20Installs&style=for-the-badge&color=%23007ec6)
 
-[![Join us on Slack!](static/img/slack.svg)](https://kubernetes.slack.com/?redir=%2Fmessages%2Fdevspace#/)
+[![Join us on Slack!](static/img/slack.svg)](https://slack.k8s.io/#devspace)
 
 ### Client-Only Developer Tool for Cloud-Native Development with Kubernetes
 - **Build, test and debug applications directly inside Kubernetes**
@@ -1198,7 +1198,7 @@ docker run --net=host --ipc=host --uts=host --pid=host -it --security-opt=seccom
 
 Help us make DevSpace the best tool for developing, deploying and debugging Kubernetes apps.
 
-[![Join us on Slack!](static/img/slack.svg)](https://kubernetes.slack.com/?redir=%2Fmessages%2Fdevspace#/)
+[![Join us on Slack!](static/img/slack.svg)](https://slack.k8s.io/#devspace)
 
 ### Reporting Issues
 

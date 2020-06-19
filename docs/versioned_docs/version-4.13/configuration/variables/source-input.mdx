@@ -1,0 +1,157 @@
+---
+title: Input-based Variables
+sidebar_label: "source: all | input"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import FragmentVarsName from '../../fragments/vars-name.mdx';
+import FragmentVarsDefault from '../../fragments/vars-default.mdx';
+import FragmentVarsForceString from '../../fragments/vars-force-string.mdx';
+
+If `source: all (default) | input`, DevSpace may ask the user a question to determine the value of a config variable.
+
+<Tabs
+  defaultValue="question"
+  values={[
+    { label: 'Question', value: 'question', },
+    { label: 'Options', value: 'options', },
+    { label: 'Password', value: 'password', },
+  ]
+}>
+<TabItem value="question">
+
+```yaml {3,5-7}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  question: Which mysql version do you want to use?
+  default: "5.7"
+```
+
+</TabItem>
+<TabItem value="options">
+
+```yaml {3,5-10}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  question: Which mysql version do you want to use?
+  options:
+  - "5.5"
+  - "5.6"
+  - "5.7"
+```
+
+</TabItem>
+<TabItem value="password">
+
+```yaml {3,5-7}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  question: Which mysql version do you want to use?
+  password: true
+```
+
+</TabItem>
+</Tabs>
+
+:::tip Ignore Env Variables
+If you want DevSpace to ignore environment variables, you can explicitly define `source: input` to make sure only explict user input will be used to set the value of the variable.
+:::
+
+<FragmentVarsForceString/>
+
+
+## Configuration
+
+### `name`
+
+<FragmentVarsName/>
+
+
+### `default`
+
+<FragmentVarsDefault/>
+
+
+### `question`
+The `question` option expects a string with a question that will be asked when the variable is not defined. DevSpace tries to resolve the variable according to the `source` of the variable and if it is not set via any of the accepted sources, DevSpace will prompt the user to define the value by entering a string.
+
+:::note Question
+- Defining the `question` is optional but often helpful to provide a better usability for other users.
+- If [valid `options` for the variable value](#options) are configured, DevSpace will show a picker/selector instead of a regular input field/prompt.
+- If a [`default` value](#default) is configured for the variable, DevSpace will use this [`default` value](#default) as default answer for the question that can be easily selected by pressing enter.
+:::
+
+#### Default Value For `question`
+```yaml
+question: Please enter a value for [VAR_NAME] # using the variable name
+```
+
+
+### `options`
+The `options` option expects an array of strings with each string stating a allowed value for the variable.
+
+#### Example: Define Variable Options
+```yaml
+vars:
+- name: REGISTRY
+  question: Which registry do you want to push to?
+  source: input
+  options:
+  - hub.docker.com
+  - my.private-registry.tld
+  - dscr.io
+  default: my.private-registry.tld
+```
+**Explanation:**  
+If the variable `REGISTRY` is used for the first time during `devspace deploy`, DevSpace will ask the user to select which value to use by showing this question:
+```bash
+Which registry do you want to push to? (Default: my.private-registry.tld)
+Use the arrows UP/DOWN to select an option and ENTER to choose the selected option.
+  hub.docker.com
+> my.private-registry.tld
+  dscr.io
+```
+
+### `password`
+The `password` option expects a boolean that defines if DevSpace should hide the user input when the user provides the value for this variable by entering a response to the question asked in the command line.
+
+#### Default Value For `password`
+```yaml
+password: false
+```
+
+#### Example: Hide User Response
+```yaml
+vars:
+- name: REGISTRY_TOKEN
+  question: "Please enter your registry token:"
+  source: input
+  password: true
+```
+**Explanation:**  
+If the variable `REGISTRY_TOKEN` is used for the first time during `devspace deploy`, DevSpace will ask the user to provide a value by showing this question:
+```bash
+? Please enter your registry token: *******
+```
+The response the user enters will be hidden as `*******` to protect others from seeing the input while the user is typing.
+
+
+### `validationPattern`
+The `validationPattern` option expects a string stating a regular expression that validates if the value entered by the user is allowed as a value for this variable.
+
+:::info
+If the provided value does **<u>not</u>** match the regex in `validationPattern`, DevSpace will either show a generic error message or the message provided in [`validationMessage`](#validationmessage).
+:::
+
+### `validationMessage`
+The `validationMessage` option expects a string stating an error message that is shown to the user when providing a value for the variable that does not match the regex provided in [`validationPattern`](#validationpattern).

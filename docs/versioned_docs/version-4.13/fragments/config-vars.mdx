@@ -1,0 +1,11 @@
+```yaml
+vars:                               # struct[]  | Array of config variables
+- name: CONFIG_VAR                  # string    | Name of the config variable
+  question: "What is CONFIG_VAR?"   # string    | Question to ask the user if no value is found for variable
+  options: []                       # string[]  | Options for picker (selector) to show to user (to choose a value for variable)
+  password: false                   # bool      | Hide user input when providing value via command-line, i.e. replaces input with `*****` (Default: false)
+  validationPattern: ""             # string    | Regexp to validate user input
+  validationMessage: ""             # string    | Message to show to user for input validation
+  default: ""                       # string    | Default value for variable
+  source: "all"                     # enum      | Source for variable (all = default, env, input)
+```
