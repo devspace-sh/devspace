@@ -1,7 +1,12 @@
 #!/usr/bin/env sh
 
 BINARY=$(command -v devspace)
-STAT=$(stat --printf="%s" "$BINARY" 2>/dev/null)
+
+if echo "${OSTYPE}" | grep -q "darwin.*"; then
+  STAT=$(stat -L -f%z "$BINARY" 2>/dev/null)
+else
+  STAT=$(stat --printf="%s" "$BINARY" 2>/dev/null)
+fi
 
 if [ ! -f "$BINARY" ] || [ "$STAT" -lt 10000 ]; then
     echo "Finishing installation of DevSpace CLI"
@@ -38,7 +43,7 @@ if [ ! -f "$BINARY" ] || [ "$STAT" -lt 10000 ]; then
 
     CMD_BIN=$(command -v cmd.exe)
 
-    if [ -f "$CMD_BIN" ] && [ "${CMD_BIN#/mnt/}" = "${CMD_BIN}" ]; then
+    if [ -f "$CMD_BIN" ] && [ "${CMD_BIN#/mnt/}" == "${CMD_BIN}" ]; then
         $BINDIR/devspace.exe "$@" 2>/dev/null || $BINDIR/../../.bin/devspace.exe "$@" 2>/dev/null || devspace.exe "$@";
     else
         $BINDIR/devspace "$@" 2>/dev/null|| $BINDIR/../../.bin/devspace "$@" 2>/dev/null || devspace "$@";
