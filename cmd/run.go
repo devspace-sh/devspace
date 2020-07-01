@@ -2,14 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	flagspkg "github.com/devspace-cloud/devspace/pkg/util/flags"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/sirupsen/logrus"
-	"os"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -60,7 +61,7 @@ devspace --dependency my-dependency run any-command --any-command-flag
 
 			// check if is help command
 			osArgs := os.Args[:index]
-			if len(os.Args) == index + 1 && (os.Args[index] == "-h" || os.Args[index] == "--help") {
+			if len(os.Args) == index+1 && (os.Args[index] == "-h" || os.Args[index] == "--help") {
 				return cobraCmd.Help()
 			}
 

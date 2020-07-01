@@ -64,6 +64,9 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 		retImageConfig = &latest.ImageConfig{
 			InjectRestartHelper:   true,
 			PreferSyncOverRebuild: true,
+			AppendDockerfileInstructions: []string{
+				"USER root",
+			},
 		}
 	)
 

@@ -1,7 +1,12 @@
 #!/usr/bin/env sh
 
 BINARY=$(command -v devspace)
-STAT=$(stat --printf="%s" "$BINARY" 2>/dev/null)
+
+if echo "${OSTYPE}" | grep -q "darwin.*"; then
+  STAT=$(stat -L -f%z "$BINARY" 2>/dev/null)
+else
+  STAT=$(stat --printf="%s" "$BINARY" 2>/dev/null)
+fi
 
 if [ ! -f "$BINARY" ] || [ "$STAT" -lt 10000 ]; then
     echo "Finishing installation of DevSpace CLI"

@@ -33,9 +33,10 @@ module.exports = {
           target: '_self'
         },
         {
-          to: 'docs/introduction',
+          href: __webpack_public_path__ + 'docs/' + (process.env.NODE_ENV == 'production' ? '' : 'next/') + 'introduction',
           label: 'Docs',
-          position: 'left'
+          position: 'left',
+          target: '_self'
         },
         {
           href: 'https://devspace.cloud/blog',
@@ -43,8 +44,15 @@ module.exports = {
           position: 'left'
         },
         {
+          href: 'https://slack.k8s.io/#devspace',
+          className: 'slack-link',
+          'aria-label': 'Slack',
+          position: 'right',
+        },
+        {
           href: 'https://github.com/devspace-cloud/devspace',
-          label: 'GitHub',
+          className: 'github-link',
+          'aria-label': 'GitHub',
           position: 'right',
         },
       ],
@@ -77,6 +85,14 @@ module.exports = {
         },
       },
     ],
+  ],
+  plugins: [
+    [
+      require.resolve('docusaurus-gtm-plugin'),
+      {
+        id: 'GTM-5KKTMWJ',
+      }
+    ]
   ],
   scripts: [
     {

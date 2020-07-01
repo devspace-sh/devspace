@@ -37,7 +37,7 @@ If you are using GitHub pages for hosting, this command is a convenient way to b
 
 ## Creating New Versions
 
-### 1. Generate Command Docs 
+### 1. Generate Command Docs
 ```bash
 cd ../ # main project directory
 go run -mod= ./hack/gen-docs.go
@@ -45,6 +45,5 @@ go run -mod= ./hack/gen-docs.go
 
 ### 2. Create Version
 ```bash
-cd website
 yarn run docusaurus docs:version 4.5
 ```
