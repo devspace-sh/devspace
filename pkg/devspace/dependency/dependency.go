@@ -336,7 +336,7 @@ func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, 
 	defer os.Chdir(currentWorkingDirectory)
 
 	// Create namespace if necessary
-	err = d.kubeClient.EnsureDefaultNamespace(log)
+	err = d.kubeClient.EnsureDeployNamespaces(d.Config, log)
 	if err != nil {
 		return errors.Errorf("Unable to create namespace: %v", err)
 	}

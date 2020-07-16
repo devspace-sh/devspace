@@ -100,7 +100,7 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
     });
 
     // Open the websocket
-    this.socket = new WebSocket(this.props.url);
+    this.socket = new WebSocket(this.props.url + "&token="+(window as any).token);
     const attachAddon = new AttachAddon(this.socket, {
       bidirectional: this.props.interactive,
       onClose: () => {

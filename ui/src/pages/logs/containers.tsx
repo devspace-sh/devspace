@@ -7,11 +7,11 @@ import LogsList, { SelectedLogs } from 'components/views/Logs/LogsList/LogsList'
 import { V1PodList, V1ServiceList, V1NamespaceList, V1Namespace } from '@kubernetes/client-node';
 import Loading from 'components/basic/Loading/Loading';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
-import { ApiHostname } from 'lib/rest';
 import LogsLinkTabSelector from 'components/basic/LinkTabSelector/LogsLinkTabSelector/LogsLinkTabSelector';
 import TerminalCache from 'components/views/Logs/TerminalCache/TerminalCache';
 import withWarning, { WarningContext } from 'contexts/withWarning/withWarning';
 import ChangeNamespace from 'components/views/Logs/ChangeNamespace/ChangeKubeContext';
+import authFetch from "../../lib/fetch";
 
 interface Props extends DevSpaceConfigContext, PopupContext, WarningContext, RouteComponentProps {}
 
@@ -29,8 +29,8 @@ class LogsContainers extends React.PureComponent<Props, State> {
   };
 
   fetchPods = async () => {
-    const response = await fetch(
-      `http://${ApiHostname()}/api/resource?resource=pods&context=${this.props.devSpaceConfig.kubeContext}&namespace=${
+    const response = await authFetch(
+      `/api/resource?resource=pods&context=${this.props.devSpaceConfig.kubeContext}&namespace=${
         this.props.devSpaceConfig.kubeNamespace
       }`
     );
@@ -47,8 +47,8 @@ class LogsContainers extends React.PureComponent<Props, State> {
   };
 
   fetchServices = async () => {
-    const response = await fetch(
-      `http://${ApiHostname()}/api/resource?resource=services&context=${this.props.devSpaceConfig.kubeContext}&namespace=${
+    const response = await authFetch(
+      `/api/resource?resource=services&context=${this.props.devSpaceConfig.kubeContext}&namespace=${
         this.props.devSpaceConfig.kubeNamespace
       }`
     );
@@ -66,8 +66,8 @@ class LogsContainers extends React.PureComponent<Props, State> {
 
   fetchNamespaces = async () => {
     try {
-      const response = await fetch(
-        `http://${ApiHostname()}/api/resource?resource=namespaces&context=${this.props.devSpaceConfig.kubeContext}`
+      const response = await authFetch(
+        `/api/resource?resource=namespaces&context=${this.props.devSpaceConfig.kubeContext}`
       );
       if (response.status !== 200) {
         throw new Error(await response.text());

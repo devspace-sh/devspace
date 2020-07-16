@@ -235,27 +235,73 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 		},
 	}
 
-	// get available resources
-	availableResources, err := b.getAvailableResources()
-	if err != nil {
-		return nil, err
-	} else if availableResources != nil {
-		pod.Spec.Containers[0].Resources = k8sv1.ResourceRequirements{
-			Limits: k8sv1.ResourceList{
+	// check if we have specific options for the resources part
+	if kanikoOptions.Resources == nil {
+		// get available resources
+		availableResources, err := b.getAvailableResources()
+		if err != nil {
+			return nil, err
+		} else if availableResources != nil {
+			limits := k8sv1.ResourceList{
 				k8sv1.ResourceCPU:              availableResources.CPU,
 				k8sv1.ResourceMemory:           availableResources.Memory,
 				k8sv1.ResourceEphemeralStorage: availableResources.EphemeralStorage,
-			},
-			Requests: k8sv1.ResourceList{
+			}
+			requests := k8sv1.ResourceList{
 				k8sv1.ResourceCPU:              resource.MustParse("0"),
 				k8sv1.ResourceMemory:           resource.MustParse("0"),
 				k8sv1.ResourceEphemeralStorage: resource.MustParse("0"),
-			},
+			}
+			pod.Spec.InitContainers[0].Resources = k8sv1.ResourceRequirements{
+				Limits:   limits,
+				Requests: requests,
+			}
+			pod.Spec.Containers[0].Resources = k8sv1.ResourceRequirements{
+				Limits:   limits,
+				Requests: requests,
+			}
+		}
+	} else {
+		// convert resources
+		limits, err := convertMap(kanikoOptions.Resources.Limits)
+		if err != nil {
+			return nil, errors.Wrap(err, "limits")
+		}
+		requests, err := convertMap(kanikoOptions.Resources.Requests)
+		if err != nil {
+			return nil, errors.Wrap(err, "requests")
+		}
+
+		pod.Spec.InitContainers[0].Resources = k8sv1.ResourceRequirements{
+			Limits:   limits,
+			Requests: requests,
+		}
+		pod.Spec.Containers[0].Resources = k8sv1.ResourceRequirements{
+			Limits:   limits,
+			Requests: requests,
 		}
 	}
 
 	// return the build pod
 	return pod, nil
+}
+
+func convertMap(m map[string]string) (map[k8sv1.ResourceName]resource.Quantity, error) {
+	if m == nil {
+		return nil, nil
+	}
+
+	retMap := map[k8sv1.ResourceName]resource.Quantity{}
+	for k, v := range m {
+		pv, err := resource.ParseQuantity(v)
+		if err != nil {
+			return nil, errors.Wrapf(err, "parse kaniko pod resource quantity %s", k)
+		}
+
+		retMap[k8sv1.ResourceName(k)] = pv
+	}
+
+	return retMap, nil
 }
 
 // Determine available resources (This is only necessary in the devspace cloud)

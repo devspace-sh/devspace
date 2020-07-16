@@ -21,7 +21,7 @@
 # VS Code
 .vscode/ipch
 
-ui/node_modules
-ui/build/static/js/*.js.map
+/ui/node_modules
+/ui/build/static/js/*.js.map
 
 e2e/**/.devspace

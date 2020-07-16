@@ -1,7 +1,10 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
+	"github.com/devspace-cloud/devspace/pkg/util/randutil"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -29,10 +32,6 @@ import (
 type Server struct {
 	Server *http.Server
 	log    log.Logger
-}
-
-func enableCors(w *http.ResponseWriter) {
-	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 }
 
 // DefaultPort is the default port the ui server will listen to
@@ -114,6 +113,8 @@ type handler struct {
 
 	ports      map[string]*forward
 	portsMutex sync.Mutex
+
+	token string
 }
 
 type forward struct {
@@ -173,8 +174,26 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 		}
 	}
 
+	indexHtml := filepath.Join(path, "index.html")
+	stat, err := os.Stat(indexHtml)
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := ioutil.ReadFile(indexHtml)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := randutil.GenerateRandomString(64)
+	if err != nil {
+		return nil, err
+	}
+	handler.token = token
+
+	newOut := strings.Replace(string(out), "###TOKEN###", token, -1)
 	handler.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(path, "index.html"))
+		http.ServeContent(w, r, "index.html", stat.ModTime(), bytes.NewReader([]byte(newOut)))
 	})
 	handler.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(path, "static")))))
 	handler.mux.HandleFunc("/api/version", handler.version)
@@ -189,10 +208,30 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	enableCors(&w)
+	/*w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	if r.Method == "OPTIONS" {
+		return
+	}*/
+
 	if r.Method != "GET" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
+	}
+
+	if strings.HasPrefix(r.URL.Path, "/api/") {
+		// check if we have a header or parameter
+		auth, ok := r.Header["Authorization"]
+		if !ok || len(auth) != 1 || auth[0] != h.token {
+			// check if there is a parameter (used for websockets)
+			token := r.URL.Query().Get("token")
+			if token != h.token {
+				w.WriteHeader(http.StatusUnauthorized)
+				h.log.Infof("%s: unauthorized access from %s", r.URL.Path, r.RemoteAddr)
+				return
+			}
+		}
 	}
 
 	// if r.URL != nil {

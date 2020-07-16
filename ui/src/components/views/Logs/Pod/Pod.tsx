@@ -19,7 +19,7 @@ import withPopup, { PopupContext } from 'contexts/withPopup/withPopup';
 import AlertPopupContent from 'components/basic/Popup/AlertPopupContent/AlertPopupContent';
 import CodeSnippet from 'components/basic/CodeSnippet/CodeSnippet';
 import { PortletSimple } from 'components/basic/Portlet/PortletSimple/PortletSimple';
-import { ApiHostname } from 'lib/rest';
+import authFetch from "../../../../lib/fetch";
 
 interface Props extends DevSpaceConfigContext, PopupContext {
   pod: V1Pod;
@@ -111,8 +111,8 @@ const openYAMLPopup = (props: Props) => {
 
 const startPortForwarding = async (props: Props) => {
   try {
-    const ingressReponse = await fetch(
-      `http://${ApiHostname()}/api/resource?resource=ingresses&apiVersion=extensions/v1beta1&context=${
+    const ingressReponse = await authFetch(
+      `/api/resource?resource=ingresses&apiVersion=extensions/v1beta1&context=${
         props.devSpaceConfig.kubeContext
       }&namespace=${props.devSpaceConfig.kubeNamespace}`
     );
@@ -147,8 +147,8 @@ const startPortForwarding = async (props: Props) => {
       }
     }
 
-    const response = await fetch(
-      `http://${ApiHostname()}/api/forward?context=${props.devSpaceConfig.kubeContext}&namespace=${
+    const response = await authFetch(
+      `/api/forward?context=${props.devSpaceConfig.kubeContext}&namespace=${
         props.devSpaceConfig.kubeNamespace
       }&name=${props.pod.metadata.name}&port=${splittedService[1]}`
     );

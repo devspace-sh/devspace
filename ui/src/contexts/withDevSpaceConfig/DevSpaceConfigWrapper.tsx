@@ -1,9 +1,9 @@
 import React from 'react';
 import { DevSpaceConfig, DevSpaceConfigContextProvider } from './withDevSpaceConfig';
 import ErrorMessage from 'components/basic/ErrorMessage/ErrorMessage';
-import { ApiHostname } from 'lib/rest';
 import Button from 'components/basic/Button/Button';
 import styles from './DevSpaceConfigWrapper.module.scss';
+import authFetch from "../../lib/fetch";
 
 interface Props {}
 
@@ -25,7 +25,7 @@ export default class DevSpaceConfigWrapper extends React.PureComponent<Props, St
 
   async componentDidMount() {
     try {
-      const response = await fetch(`http://${ApiHostname()}/api/config`);
+      const response = await authFetch(`/api/config`);
       if (response.status !== 200) {
         this.setState({
           error: new Error(await response.text()),
