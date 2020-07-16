@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
@@ -174,13 +175,7 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 		}
 	}
 
-	indexHtml := filepath.Join(path, "index.html")
-	stat, err := os.Stat(indexHtml)
-	if err != nil {
-		return nil, err
-	}
-
-	out, err := ioutil.ReadFile(indexHtml)
+	out, err := ioutil.ReadFile(filepath.Join(path, "index.html"))
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +188,7 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 
 	newOut := strings.Replace(string(out), "###TOKEN###", token, -1)
 	handler.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeContent(w, r, "index.html", stat.ModTime(), bytes.NewReader([]byte(newOut)))
+		http.ServeContent(w, r, "index.html", time.Now(), bytes.NewReader([]byte(newOut)))
 	})
 	handler.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(path, "static")))))
 	handler.mux.HandleFunc("/api/version", handler.version)
@@ -228,7 +223,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			token := r.URL.Query().Get("token")
 			if token != h.token {
 				w.WriteHeader(http.StatusUnauthorized)
-				h.log.Infof("%s: unauthorized access from %s", r.URL.Path, r.RemoteAddr)
+				// h.log.Infof("%s: unauthorized access from %s", r.URL.Path, r.RemoteAddr)
 				return
 			}
 		}
