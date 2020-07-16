@@ -142,8 +142,20 @@ type KanikoConfig struct {
 	// additional mounts that will be added to the build pod
 	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty"`
 
+	// the resources that should be set on the kaniko pod
+	Resources *KanikoPodResources `yaml:"resources,omitempty"`
+
 	// other build options that will be passed to the kaniko pod
 	Options *BuildOptions `yaml:"options,omitempty"`
+}
+
+// KanikoPodResources describes the resources section of the started kaniko pod
+type KanikoPodResources struct {
+	// The requests part of the resources
+	Requests map[string]string `yaml:"requests,omitempty"`
+
+	// The limits part of the resources
+	Limits map[string]string `yaml:"limits,omitempty"`
 }
 
 // KanikoAdditionalMount tells devspace how the additional mount of the kaniko pod should look like

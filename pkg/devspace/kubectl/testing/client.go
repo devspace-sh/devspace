@@ -2,6 +2,7 @@ package testing
 
 import (
 	"context"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -20,6 +21,8 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 )
+
+var _ kubectl.Client = &Client{}
 
 // Client is a fake implementation of the kubectl.Client interface
 type Client struct {
@@ -120,7 +123,7 @@ func (c *Client) GetUpgraderWrapper() (http.RoundTripper, kubectl.UpgraderWrappe
 }
 
 // EnsureDefaultNamespace is a fake implementation of function
-func (c *Client) EnsureDefaultNamespace(log log.Logger) error {
+func (c *Client) EnsureDeployNamespaces(config *latest.Config, log log.Logger) error {
 	return nil
 }
 
