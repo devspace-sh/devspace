@@ -2,6 +2,7 @@ package kubectl
 
 import (
 	"context"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"io"
 	"net"
 	"net/http"
@@ -52,7 +53,7 @@ type Client interface {
 
 	GetUpgraderWrapper() (http.RoundTripper, UpgraderWrapper, error)
 
-	EnsureDefaultNamespace(log log.Logger) error
+	EnsureDeployNamespaces(config *latest.Config, log log.Logger) error
 	EnsureGoogleCloudClusterRoleBinding(log log.Logger) error
 	GetRunningPodsWithImage(imageNames []string, namespace string, maxWaiting time.Duration) ([]*k8sv1.Pod, error)
 	GetNewestRunningPod(labelSelector string, imageSelector []string, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error)

@@ -3,6 +3,7 @@ package kubectl
 import (
 	"context"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"net"
 	"net/http"
@@ -84,20 +85,29 @@ func IsPrivateIP(ip net.IP) bool {
 }
 
 // EnsureDefaultNamespace makes sure the default namespace exists or will be created
-func (client *client) EnsureDefaultNamespace(log log.Logger) error {
-	_, err := client.KubeClient().CoreV1().Namespaces().Get(context.TODO(), client.namespace, metav1.GetOptions{})
-	if err != nil {
-		// Create release namespace
-		_, err = client.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: client.namespace,
-			},
-		}, metav1.CreateOptions{})
-
-		log.Donef("Created namespace: %s", client.Namespace())
+func (client *client) EnsureDeployNamespaces(config *latest.Config, log log.Logger) error {
+	namespaces := []string{client.Namespace()}
+	for _, deployConfig := range config.Deployments {
+		if deployConfig.Namespace != "" {
+			namespaces = append(namespaces, deployConfig.Namespace)
+		}
 	}
 
-	return err
+	for _, namespace := range namespaces {
+		_, err := client.KubeClient().CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+		if err != nil {
+			// Create release namespace
+			_, err = client.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
+				},
+			}, metav1.CreateOptions{})
+
+			log.Donef("Created namespace: %s", namespace)
+		}
+	}
+
+	return nil
 }
 
 // EnsureGoogleCloudClusterRoleBinding makes sure the needed cluster role is created in the google cloud or a warning is printed

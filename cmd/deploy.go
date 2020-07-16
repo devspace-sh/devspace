@@ -158,7 +158,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Create namespace if necessary
-	err = client.EnsureDefaultNamespace(cmd.log)
+	err = client.EnsureDeployNamespaces(config, cmd.log)
 	if err != nil {
 		return errors.Errorf("Unable to create namespace: %v", err)
 	}
