@@ -152,16 +152,16 @@ func (cmd *UICmd) RunUI(f factory.Factory, cobraCmd *cobra.Command, args []strin
 		return err
 	}
 
-	// Load config
-	_, err = configLoader.Load()
-	if err != nil {
-		return err
-	}
-
-	// fills the right vars into the generated config
-	generatedConfig.Vars = configLoader.ResolvedVars()
-
 	if configExists {
+		// Load config
+		_, err = configLoader.Load()
+		if err != nil {
+			return err
+		}
+
+		// fills the right vars into the generated config
+		generatedConfig.Vars = configLoader.ResolvedVars()
+
 		// Deprecated: Fill DEVSPACE_DOMAIN vars
 		err = fillDevSpaceDomainVars(client, generatedConfig)
 		if err != nil {
