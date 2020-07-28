@@ -22,6 +22,7 @@ func NewUpdateCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []p
 
 	updateCmd.AddCommand(newConfigCmd(f, globalFlags))
 	updateCmd.AddCommand(newDependenciesCmd(f, globalFlags))
+	updateCmd.AddCommand(newPluginCmd(f))
 
 	// Add plugin commands
 	plugin.AddPluginCommands(updateCmd, plugins, "update")

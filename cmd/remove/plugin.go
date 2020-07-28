@@ -1,4 +1,4 @@
-package add
+package remove
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
@@ -6,21 +6,21 @@ import (
 )
 
 type pluginCmd struct {
-	Version string
+
 }
 
 func newPluginCmd(f factory.Factory) *cobra.Command {
 	cmd := &pluginCmd{}
 	pluginCmd := &cobra.Command{
 		Use:   "plugin",
-		Short: "Add a plugin to devspace",
+		Short: "Removes a devspace plugin",
 		Long: `
 #######################################################
-############### devspace add plugin ###################
+############# devspace remove plugin ##################
 #######################################################
-Adds a new plugin to devspace
+Removes a plugin
 
-devspace add plugin https://github.com/my-plugin/plugin
+devspace remove plugin my-plugin 
 #######################################################
 	`,
 		Args: cobra.ExactArgs(1),
@@ -28,22 +28,20 @@ devspace add plugin https://github.com/my-plugin/plugin
 			return cmd.Run(f, cobraCmd, args)
 		}}
 
-	pluginCmd.Flags().StringVar(&cmd.Version, "version", "", "The git tag to use")
 	return pluginCmd
 }
 
-
 // Run executes the command logic
 func (cmd *pluginCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
-	f.GetLog().StartWait("Installing plugin " + args[0])
+	f.GetLog().StartWait("Removing plugin " + args[0])
 	defer f.GetLog().StopWait()
 
-	err := f.NewPluginManager(f.GetLog()).Add(args[0], cmd.Version)
+	err := f.NewPluginManager(f.GetLog()).Remove(args[0])
 	if err != nil {
 		return err
 	}
 
 	f.GetLog().StopWait()
-	f.GetLog().Donef("Successfully installed plugin %s", args[0])
+	f.GetLog().Donef("Successfully removed plugin %s", args[0])
 	return nil
 }

@@ -27,6 +27,7 @@ func NewRemoveCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []p
 	removeCmd.AddCommand(newPortCmd(f, globalFlags))
 	removeCmd.AddCommand(newProviderCmd(f))
 	removeCmd.AddCommand(newSpaceCmd(f))
+	removeCmd.AddCommand(newPluginCmd(f))
 	removeCmd.AddCommand(newSyncCmd(f, globalFlags))
 
 	// Add plugin commands

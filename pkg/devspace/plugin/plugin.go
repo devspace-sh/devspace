@@ -106,7 +106,7 @@ func (c *client) install(path, version string) error {
 		return err
 	}
 
-	pluginFolder = filepath.Join(pluginFolder, encode(path))
+	pluginFolder = filepath.Join(pluginFolder, Encode(path))
 	err = ioutil.WriteFile(filepath.Join(pluginFolder, pluginYaml), out, 0666)
 	if err != nil {
 		return err
@@ -169,7 +169,7 @@ func (c *client) Remove(name string) error {
 		return err
 	}
 
-	return os.RemoveAll(filepath.Join(pluginFolder, encode(path)))
+	return os.RemoveAll(filepath.Join(pluginFolder, Encode(path)))
 }
 
 func (c *client) List() ([]Metadata, error) {
@@ -245,7 +245,7 @@ func (c *client) GetByName(name string) (string, *Metadata, error) {
 		}
 
 		if metadata.Name == name {
-			decoded, err := decode(plugin.Name())
+			decoded, err := Decode(plugin.Name())
 			if err != nil {
 				return "", nil, errors.Wrap(err, "decode plugin path")
 			}
@@ -263,7 +263,7 @@ func (c *client) Get(path string) (*Metadata, error) {
 		return nil, err
 	}
 
-	out, err := ioutil.ReadFile(filepath.Join(pluginFolder, encode(path), pluginYaml))
+	out, err := ioutil.ReadFile(filepath.Join(pluginFolder, Encode(path), pluginYaml))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -281,11 +281,11 @@ func (c *client) Get(path string) (*Metadata, error) {
 	return &metadata, nil
 }
 
-func encode(path string) string {
+func Encode(path string) string {
 	return encoding.EncodeToString([]byte(path))
 }
 
-func decode(encoded string) ([]byte, error) {
+func Decode(encoded string) ([]byte, error) {
 	return encoding.DecodeString(encoded)
 }
 

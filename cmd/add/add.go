@@ -26,6 +26,7 @@ Adds config sections to devspace.yaml
 	addCmd.AddCommand(newPortCmd(f, globalFlags))
 	addCmd.AddCommand(newImageCmd(f, globalFlags))
 	addCmd.AddCommand(newDeploymentCmd(f, globalFlags))
+	addCmd.AddCommand(newPluginCmd(f))
 
 	// Add plugin commands
 	plugin.AddPluginCommands(addCmd, plugins, "add")

@@ -29,6 +29,7 @@ func NewListCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plu
 	listCmd.AddCommand(newDeploymentsCmd(f, globalFlags))
 	listCmd.AddCommand(newProvidersCmd(f))
 	listCmd.AddCommand(newContextsCmd(f))
+	listCmd.AddCommand(newPluginsCmd(f))
 	listCmd.AddCommand(newCommandsCmd(f, globalFlags))
 	listCmd.AddCommand(newNamespacesCmd(f, globalFlags))
 
