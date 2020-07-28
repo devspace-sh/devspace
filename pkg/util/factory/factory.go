@@ -17,11 +17,14 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/docker/docker/pkg/plugins"
 )
 
 // Factory is the main interface for various client creations
@@ -72,6 +75,9 @@ type Factory interface {
 	// Kubeconfig
 	NewKubeConfigLoader() kubeconfig.Loader
 
+	// Plugin
+	NewPluginManager(log log.Logger) plugin.Interface
+
 	// Log
 	GetLog() log.Logger
 }
@@ -82,6 +88,11 @@ type DefaultFactoryImpl struct{}
 // DefaultFactory returns the default factory implementation
 func DefaultFactory() Factory {
 	return &DefaultFactoryImpl{}
+}
+
+// NewPluginsManager creates a new plugin manager
+func (f *DefaultFactoryImpl) NewPluginManager(log log.Logger) plugin.Interface {
+	return plugin.NewClient(log)
 }
 
 // NewAnalyzer creates a new analyzer

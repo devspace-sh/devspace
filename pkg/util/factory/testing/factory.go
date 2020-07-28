@@ -16,6 +16,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -44,8 +45,14 @@ type Factory struct {
 	KubeClient        kubectl.Client
 	HelmClient        types.Client
 	ServicesClient    services.Client
+	PluginClient      plugin.Interface
 	Provider          cloud.Provider
 	Resumer           resume.SpaceResumer
+}
+
+// NewPluginsManager creates a new plugin manager
+func (f *Factory) NewPluginManager(log log.Logger) plugin.Interface {
+	return f.PluginClient
 }
 
 // NewAnalyzer creates a new analyzer

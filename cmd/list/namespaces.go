@@ -2,6 +2,7 @@ package list
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -31,8 +32,11 @@ func newNamespacesCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.
 Lists all namespaces in the selected kube context
 #######################################################
 	`,
-		Args: cobra.NoArgs,
+		// Args: cobra.NoArgs,
+		DisableFlagParsing: true,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			fmt.Println(args)
+
 			return cmd.RunListNamespaces(f, cobraCmd, args)
 		}}
 

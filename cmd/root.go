@@ -13,6 +13,7 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/status"
 	"github.com/devspace-cloud/devspace/cmd/update"
 	"github.com/devspace-cloud/devspace/cmd/use"
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
@@ -108,18 +109,24 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	persistentFlags := rootCmd.PersistentFlags()
 	globalFlags = flags.SetGlobalFlags(persistentFlags)
 
+	// list plugins
+	plugins, err := f.NewPluginManager(f.GetLog()).List()
+	if err != nil {
+		f.GetLog().Fatal(err)
+	}
+
 	// Add sub commands
-	rootCmd.AddCommand(add.NewAddCmd(f, globalFlags))
-	rootCmd.AddCommand(cleanup.NewCleanupCmd(f, globalFlags))
+	rootCmd.AddCommand(add.NewAddCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(cleanup.NewCleanupCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(connect.NewConnectCmd(f))
 	rootCmd.AddCommand(create.NewCreateCmd(f))
-	rootCmd.AddCommand(list.NewListCmd(f, globalFlags))
-	rootCmd.AddCommand(remove.NewRemoveCmd(f, globalFlags))
-	rootCmd.AddCommand(reset.NewResetCmd(f))
-	rootCmd.AddCommand(set.NewSetCmd(f))
-	rootCmd.AddCommand(status.NewStatusCmd(f))
-	rootCmd.AddCommand(use.NewUseCmd(f, globalFlags))
-	rootCmd.AddCommand(update.NewUpdateCmd(f, globalFlags))
+	rootCmd.AddCommand(list.NewListCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(remove.NewRemoveCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(reset.NewResetCmd(f, plugins))
+	rootCmd.AddCommand(set.NewSetCmd(f, plugins))
+	rootCmd.AddCommand(status.NewStatusCmd(f, plugins))
+	rootCmd.AddCommand(use.NewUseCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(update.NewUpdateCmd(f, globalFlags, plugins))
 
 	// Add main commands
 	rootCmd.AddCommand(NewInitCmd(f))
@@ -140,5 +147,7 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	rootCmd.AddCommand(NewAttachCmd(f, globalFlags))
 	rootCmd.AddCommand(NewPrintCmd(f, globalFlags))
 
+	// Add plugin commands
+	plugin.AddPluginCommands(rootCmd, plugins, "")
 	return rootCmd
 }
