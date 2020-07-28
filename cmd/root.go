@@ -13,6 +13,7 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/status"
 	"github.com/devspace-cloud/devspace/cmd/update"
 	"github.com/devspace-cloud/devspace/cmd/use"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
@@ -149,5 +150,6 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 
 	// Add plugin commands
 	plugin.AddPluginCommands(rootCmd, plugins, "")
+	loader.AddPredefinedVars(plugins)
 	return rootCmd
 }

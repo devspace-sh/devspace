@@ -330,10 +330,10 @@ func (d *DeployConfig) buildManifests(manifest string) ([]*unstructured.Unstruct
 }
 
 func (d *DeployConfig) isKustomizeInstalled(path string) bool {
-	out, err := d.commandExecuter.RunCommand(path, []string{"version"})
+	_, err := d.commandExecuter.RunCommand(path, []string{"version"})
 	if err != nil {
 		return false
 	}
 
-	return strings.Index(string(out), `kustomize`) != -1
+	return true
 }

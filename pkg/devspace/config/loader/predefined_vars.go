@@ -1,7 +1,10 @@
 package loader
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
+	"github.com/pkg/errors"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -160,6 +163,27 @@ var predefinedVars = map[string]func(loader *configLoader) (string, error){
 
 		return accountName, nil
 	},
+}
+
+func AddPredefinedVars(plugins []plugin.Metadata) {
+	for _, p := range plugins {
+		pluginFolder := p.PluginFolder
+		for _, variable := range p.Vars {
+			v := variable
+			predefinedVars[variable.Name] = func(configLoader *configLoader) (string, error) {
+				buffer := &bytes.Buffer{}
+				err := plugin.CallPluginExecutable(filepath.Join(pluginFolder, plugin.PluginBinary), v.BaseArgs, map[string]string{
+					"DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG": configLoader.options.KubeContext,
+					"DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG": configLoader.options.Namespace,
+				}, buffer)
+				if err != nil {
+					return "", errors.Wrapf(err, "executing plugin: %s", buffer.String())
+				}
+
+				return strings.TrimSpace(buffer.String()), nil
+			}
+		}
+	}
 }
 
 func (l *configLoader) resolvePredefinedVar(name string) (bool, string, error) {

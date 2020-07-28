@@ -4,6 +4,7 @@
 # Created by devspace init
 /.devspace/
 /chart/
+/test
 
 # Build files
 *.exe

@@ -11,6 +11,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -22,11 +23,11 @@ var encoding = base32.StdEncoding.WithPadding('0')
 
 const pluginYaml = "plugin.yaml"
 
-var pluginBinary = "binary"
+var PluginBinary = "binary"
 
 func init() {
 	if runtime.GOOS == "windows" {
-		pluginBinary += ".exe"
+		PluginBinary += ".exe"
 	}
 }
 
@@ -96,6 +97,7 @@ func (c *client) install(path, version string) error {
 		return err
 	}
 
+	pluginFolder = filepath.Join(pluginFolder, Encode(path))
 	err = os.MkdirAll(pluginFolder, 0755)
 	if err != nil {
 		return err
@@ -106,13 +108,12 @@ func (c *client) install(path, version string) error {
 		return err
 	}
 
-	pluginFolder = filepath.Join(pluginFolder, Encode(path))
 	err = ioutil.WriteFile(filepath.Join(pluginFolder, pluginYaml), out, 0666)
 	if err != nil {
 		return err
 	}
 
-	outBinaryPath := filepath.Join(pluginFolder, pluginBinary)
+	outBinaryPath := filepath.Join(pluginFolder, PluginBinary)
 	err = c.installer.DownloadBinary(path, version, binaryPath, outBinaryPath)
 	if err != nil {
 		return errors.Wrap(err, "download plugin binary")
@@ -292,7 +293,6 @@ func Decode(encoded string) ([]byte, error) {
 func AddPluginCommands(base *cobra.Command, plugins []Metadata, subCommand string) {
 	for _, plugin := range plugins {
 		pluginFolder := plugin.PluginFolder
-
 		for _, pluginCommand := range plugin.Commands {
 			if pluginCommand.SubCommand == subCommand {
 				md := pluginCommand
@@ -308,7 +308,7 @@ func AddPluginCommands(base *cobra.Command, plugins []Metadata, subCommand strin
 						newArgs := []string{}
 						newArgs = append(newArgs, md.BaseArgs...)
 						newArgs = append(newArgs, args...)
-						return callPluginExecutable(filepath.Join(pluginFolder, pluginBinary), newArgs)
+						return CallPluginExecutable(filepath.Join(pluginFolder, PluginBinary), newArgs, nil, os.Stdout)
 					},
 					// This passes all the flags to the subcommand.
 					DisableFlagParsing: true,
@@ -322,12 +322,16 @@ func AddPluginCommands(base *cobra.Command, plugins []Metadata, subCommand strin
 
 // This function is used to setup the environment for the plugin and then
 // call the executable specified by the parameter 'main'
-func callPluginExecutable(main string, argv []string) error {
+func CallPluginExecutable(main string, argv []string, extraEnvVars map[string]string, out io.Writer) error {
 	env := os.Environ()
+	for k, v := range extraEnvVars {
+		env = append(env, k + "=" + v)
+	}
+
 	prog := exec.Command(main, argv...)
 	prog.Env = env
 	prog.Stdin = os.Stdin
-	prog.Stdout = os.Stdout
+	prog.Stdout = out
 	prog.Stderr = os.Stderr
 	if err := prog.Run(); err != nil {
 		if eerr, ok := err.(*exec.ExitError); ok {
