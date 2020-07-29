@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
-	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
@@ -92,26 +91,13 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 		}
 	}
 
-	// Get cloud provider if context is a space
-	cloudProvider, err := m.factory.NewCloudConfigLoader().GetDefaultProviderName()
-	if err != nil {
-		return nil, err
-	}
-
-	cloudRegistryHostname, err := m.getCloudRegistryHostname(&cloudProvider)
-	if err != nil {
-		return nil, err
-	}
-
-	registryURL, err := m.getRegistryURL(dockerClient, cloudRegistryHostname, &cloudProvider)
+	registryURL, err := m.getRegistryURL(dockerClient)
 	if err != nil {
 		return nil, err
 	}
 
 	if registryURL == "" {
 		imageName = noRegistryImage
-	} else if registryURL == cloudRegistryHostname {
-		imageName = registryURL + "/${DEVSPACE_USERNAME}/" + imageName
 	} else if registryURL == "hub.docker.com" {
 		m.log.StartWait("Checking Docker credentials")
 		dockerAuthConfig, err := dockerClient.GetAuthConfig("", true)
@@ -228,14 +214,13 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 	return retImageConfig, nil
 }
 
-func (m *manager) getRegistryURL(dockerClient docker.Client, cloudRegistryHostname string, cloudProvider *string) (string, error) {
+func (m *manager) getRegistryURL(dockerClient docker.Client) (string, error) {
 	var (
 		useDockerHub          = "Use " + dockerHubHostname
-		useDevSpaceRegistry   = "Use " + cloudRegistryHostname + " (free, private Docker registry)"
 		skipImagePush         = "Always skip image push (advanced, config will not work with remote clusters)"
 		useOtherRegistry      = "Use other registry"
 		registryUsernameHint  = " => you are logged in as %s"
-		registryDefaultOption = useDevSpaceRegistry
+		registryDefaultOption = useDockerHub
 		registryLoginHint     = "Please login via `docker login%s` and try again."
 	)
 
@@ -246,16 +231,6 @@ func (m *manager) getRegistryURL(dockerClient docker.Client, cloudRegistryHostna
 	}
 
 	registryOptions := []string{useDockerHub, useOtherRegistry}
-	if cloudRegistryHostname != "" {
-		authConfig, err = dockerClient.GetAuthConfig(cloudRegistryHostname, true)
-		if err == nil && authConfig.Username != "" {
-			useDevSpaceRegistry = useDevSpaceRegistry + fmt.Sprintf(registryUsernameHint, authConfig.Username)
-			registryDefaultOption = useDevSpaceRegistry
-		}
-
-		registryOptions = []string{useDockerHub, useDevSpaceRegistry, useOtherRegistry}
-	}
-
 	registryOptions = append(registryOptions, skipImagePush)
 	selectedRegistry, err := m.log.Question(&survey.QuestionOptions{
 		Question:     "Which registry do you want to use for storing your Docker images?",
@@ -271,9 +246,6 @@ func (m *manager) getRegistryURL(dockerClient docker.Client, cloudRegistryHostna
 		return "", nil
 	} else if selectedRegistry == useDockerHub {
 		registryURL = dockerHubHostname
-	} else if selectedRegistry == useDevSpaceRegistry {
-		registryURL = cloudRegistryHostname
-		registryLoginHint = fmt.Sprintf(registryLoginHint, " "+cloudRegistryHostname)
 	} else {
 		registryURL, err = m.log.Question(&survey.QuestionOptions{
 			Question:     "Please enter the registry URL without image name:",
@@ -324,46 +296,12 @@ func (m *manager) getRegistryURL(dockerClient docker.Client, cloudRegistryHostna
 
 				break
 			}
-		} else if selectedRegistry == useDevSpaceRegistry {
-			return registryURL, m.loginDevSpaceCloud(*cloudProvider)
 		} else {
 			return "", errors.Errorf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
 		}
 	}
 
 	return registryURL, nil
-}
-
-func (m *manager) getCloudRegistryHostname(cloudProvider *string) (string, error) {
-	var registryURL string
-
-	if cloudProvider == nil || *cloudProvider == "" || *cloudProvider == cloudconfig.DevSpaceCloudProviderName {
-		// prevents EnsureLoggedIn call in GetProvider
-		// TODO: remove this hard-coded exception once the registry URL can be retrieved from DevSpace Cloud without login
-		registryURL = "dscr.io"
-	} else {
-		// Get default registry
-		provider, err := m.factory.GetProvider(ptr.ReverseString(cloudProvider), m.log)
-		if err != nil {
-			return "", errors.Errorf("Error login into cloud provider: %v", err)
-		}
-
-		registries, err := provider.Client().GetRegistries()
-		if err != nil {
-			return "", errors.Errorf("Error retrieving registries: %v", err)
-		}
-		if len(registries) > 0 {
-			registryURL = registries[0].URL
-		}
-	}
-
-	return registryURL, nil
-}
-
-func (m *manager) loginDevSpaceCloud(cloudProvider string) error {
-	// Ensure user is logged in
-	_, err := m.factory.GetProvider(cloudProvider, m.log)
-	return err
 }
 
 // AddImage adds an image to the devspace

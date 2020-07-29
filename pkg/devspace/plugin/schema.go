@@ -20,8 +20,19 @@ type Metadata struct {
 	// Vars are extra variables that can be used in the config
 	Vars []Variable `json:"vars,omitempty"`
 
+	// Hooks are commands that will be executed at specific events
+	Hooks []Hook `json:"hook,omitempty"`
+
 	// This will be filled after parsing the metadata
 	PluginFolder string `json:"pluginFolder,omitempty"`
+}
+
+type Hook struct {
+	// Event is the name of the event when to execute this hook
+	Event string `json:"event"`
+
+	// BaseArgs that will be prepended to all supplied user flags for this plugin command
+	BaseArgs []string `json:"baseArgs,omitempty"`
 }
 
 type Binary struct {

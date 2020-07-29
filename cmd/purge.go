@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
@@ -29,7 +30,7 @@ type PurgeCmd struct {
 }
 
 // NewPurgeCmd creates a new purge command
-func NewPurgeCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewPurgeCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	cmd := &PurgeCmd{
 		GlobalFlags: globalFlags,
 		log:         log.GetInstance(),
@@ -50,7 +51,7 @@ devspace purge -d my-deployment
 #######################################################`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, cobraCmd, args)
+			return cmd.Run(f, plugins, cobraCmd, args)
 		},
 	}
 
@@ -65,7 +66,7 @@ devspace purge -d my-deployment
 }
 
 // Run executes the purge command logic
-func (cmd *PurgeCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
 	configOptions := cmd.ToConfigOptions()
@@ -102,8 +103,8 @@ func (cmd *PurgeCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 		return err
 	}
 
-	// Signal that we are working on the space if there is any
-	err = f.NewSpaceResumer(client, cmd.log).ResumeSpace(true)
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook(plugins, "purge", cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return err
 	}

@@ -20,13 +20,10 @@ func NewRemoveCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []p
 		Args: cobra.NoArgs,
 	}
 
-	removeCmd.AddCommand(newClusterCmd(f))
 	removeCmd.AddCommand(newContextCmd(f))
 	removeCmd.AddCommand(newDeploymentCmd(f, globalFlags))
 	removeCmd.AddCommand(newImageCmd(f, globalFlags))
 	removeCmd.AddCommand(newPortCmd(f, globalFlags))
-	removeCmd.AddCommand(newProviderCmd(f))
-	removeCmd.AddCommand(newSpaceCmd(f))
 	removeCmd.AddCommand(newPluginCmd(f))
 	removeCmd.AddCommand(newSyncCmd(f, globalFlags))
 

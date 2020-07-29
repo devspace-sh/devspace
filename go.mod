@@ -27,7 +27,7 @@ require (
 	github.com/juju/ratelimit v1.0.1
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/krishicks/yaml-patch v0.0.10
-	github.com/machinebox/graphql v0.2.2
+	github.com/machinebox/graphql v0.2.2 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/miekg/pkcs11 v1.0.3 // indirect
 	github.com/mitchellh/go-homedir v1.1.0

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"strconv"
 	"strings"
 
@@ -44,7 +45,7 @@ type DeployCmd struct {
 }
 
 // NewDeployCmd creates a new deploy command
-func NewDeployCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewDeployCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	cmd := &DeployCmd{
 		GlobalFlags: globalFlags,
 		log:         f.GetLog(),
@@ -65,7 +66,7 @@ devspace deploy --kube-context=deploy-context
 #######################################################`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, cobraCmd, args)
+			return cmd.Run(f, plugins, cobraCmd, args)
 		},
 	}
 
@@ -90,7 +91,7 @@ devspace deploy --kube-context=deploy-context
 }
 
 // Run executes the down command logic
-func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
 	configOptions := cmd.ToConfigOptions()
@@ -151,8 +152,8 @@ func (cmd *DeployCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 		return err
 	}
 
-	// Signal that we are working on the space if there is any
-	err = f.NewSpaceResumer(client, cmd.log).ResumeSpace(true)
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook(plugins, "deploy", cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return err
 	}

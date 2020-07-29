@@ -21,7 +21,6 @@ func NewSetCmd(f factory.Factory, plugins []plugin.Metadata) *cobra.Command {
 
 	setCmd.AddCommand(newAnalyticsCmd(f))
 	setCmd.AddCommand(newVarCmd(f))
-	setCmd.AddCommand(newEncryptionKeyCmd(f))
 
 	// Add plugin commands
 	plugin.AddPluginCommands(setCmd, plugins, "set")

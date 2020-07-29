@@ -22,7 +22,6 @@ Adds config sections to devspace.yaml
 	}
 
 	addCmd.AddCommand(newSyncCmd(f, globalFlags))
-	addCmd.AddCommand(newProviderCmd(f))
 	addCmd.AddCommand(newPortCmd(f, globalFlags))
 	addCmd.AddCommand(newImageCmd(f, globalFlags))
 	addCmd.AddCommand(newDeploymentCmd(f, globalFlags))

@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/e2e/tests/add/provider"
 	"github.com/devspace-cloud/devspace/e2e/tests/analyze"
 	"github.com/devspace-cloud/devspace/e2e/tests/build"
 	"github.com/devspace-cloud/devspace/e2e/tests/deploy"
@@ -19,7 +18,6 @@ import (
 	"github.com/devspace-cloud/devspace/e2e/tests/print"
 	"github.com/devspace-cloud/devspace/e2e/tests/render"
 	"github.com/devspace-cloud/devspace/e2e/tests/run"
-	"github.com/devspace-cloud/devspace/e2e/tests/space"
 	"github.com/devspace-cloud/devspace/e2e/tests/sync"
 	"github.com/devspace-cloud/devspace/e2e/utils"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -46,7 +44,6 @@ type Test interface {
 }
 
 var availableTests = map[string]Test{
-	"add-provider": provider.RunNew,
 	"analyze":      analyze.RunNew,
 	"build":        build.RunNew,
 	"deploy":       deploy.RunNew,
@@ -58,7 +55,6 @@ var availableTests = map[string]Test{
 	"print":        print.RunNew,
 	"render":       render.RunNew,
 	"run":          run.RunNew,
-	"space":        space.RunNew,
 	"sync":         sync.RunNew,
 }
 

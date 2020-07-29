@@ -23,8 +23,6 @@ func NewUseCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plug
 	useCmd.AddCommand(newProfileCmd(f))
 	useCmd.AddCommand(newContextCmd(f, globalFlags))
 	useCmd.AddCommand(newNamespaceCmd(f, globalFlags))
-	useCmd.AddCommand(newProviderCmd(f))
-	useCmd.AddCommand(newSpaceCmd(f, globalFlags))
 
 	// Add plugin commands
 	plugin.AddPluginCommands(useCmd, plugins, "use")

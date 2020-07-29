@@ -37,7 +37,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		Container: "container-0",
 	}
 
-	err := sc.Run(f, nil, nil)
+	err := sc.Run(f, nil,nil, nil)
 	defer close(f.interrupt)
 	if err != nil {
 		return err
@@ -47,7 +47,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 
 	done := utils.Capture()
 
-	err = ec.Run(f, nil, []string{"ls", "home"})
+	err = ec.Run(f, nil,nil, []string{"ls", "home"})
 	if err != nil {
 		return err
 	}

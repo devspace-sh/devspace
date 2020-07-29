@@ -4,6 +4,7 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
@@ -31,7 +32,7 @@ type BuildCmd struct {
 }
 
 // NewBuildCmd creates a new devspace build command
-func NewBuildCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewBuildCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	cmd := &BuildCmd{GlobalFlags: globalFlags}
 
 	buildCmd := &cobra.Command{
@@ -44,7 +45,7 @@ func NewBuildCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Comma
 Builds all defined images and pushes them
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, cobraCmd, args)
+			return cmd.Run(f, plugins, cobraCmd, args)
 		},
 	}
 
@@ -64,7 +65,7 @@ Builds all defined images and pushes them
 }
 
 // Run executes the command logic
-func (cmd *BuildCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
 	configOptions := cmd.ToConfigOptions()
@@ -88,6 +89,12 @@ func (cmd *BuildCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 
 	// Get the config
 	config, err := configLoader.Load()
+	if err != nil {
+		return err
+	}
+
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook(plugins, "build", cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return err
 	}

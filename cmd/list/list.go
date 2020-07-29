@@ -21,13 +21,10 @@ func NewListCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plu
 	}
 
 	listCmd.AddCommand(newSyncCmd(f, globalFlags))
-	listCmd.AddCommand(newSpacesCmd(f))
-	listCmd.AddCommand(newClustersCmd(f))
 	listCmd.AddCommand(newPortsCmd(f, globalFlags))
 	listCmd.AddCommand(newProfilesCmd(f))
 	listCmd.AddCommand(newVarsCmd(f, globalFlags))
 	listCmd.AddCommand(newDeploymentsCmd(f, globalFlags))
-	listCmd.AddCommand(newProvidersCmd(f))
 	listCmd.AddCommand(newContextsCmd(f))
 	listCmd.AddCommand(newPluginsCmd(f))
 	listCmd.AddCommand(newCommandsCmd(f, globalFlags))

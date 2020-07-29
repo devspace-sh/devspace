@@ -89,7 +89,7 @@ func (c *client) install(path, version string) error {
 		}
 	}
 	if found == false {
-		return fmt.Errorf("plugin %s does not support %s/%s", runtime.GOOS, runtime.GOARCH)
+		return fmt.Errorf("plugin %s does not support %s/%s", metadata.Name, runtime.GOOS, runtime.GOARCH)
 	}
 
 	pluginFolder, err := c.PluginFolder()
@@ -318,6 +318,25 @@ func AddPluginCommands(base *cobra.Command, plugins []Metadata, subCommand strin
 			}
 		}
 	}
+}
+
+func ExecutePluginHook(plugins []Metadata, event, kubeContext, namespace string) error {
+	for _, plugin := range plugins {
+		pluginFolder := plugin.PluginFolder
+		for _, pluginHook := range plugin.Hooks {
+			if pluginHook.Event == event {
+				 err := CallPluginExecutable(filepath.Join(pluginFolder, PluginBinary), pluginHook.BaseArgs, map[string]string{
+					 "DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG": kubeContext,
+					 "DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG": namespace,
+				 }, os.Stdout)
+				 if err != nil {
+				 	return err
+				 }
+			}
+		}
+	}
+
+	return nil
 }
 
 // This function is used to setup the environment for the plugin and then

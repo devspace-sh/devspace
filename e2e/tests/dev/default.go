@@ -45,7 +45,7 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 		ForceBuild:     true,
 	}
 
-	err = devConfig.Run(f, nil, nil)
+	err = devConfig.Run(f, nil,nil, nil)
 	defer close(f.interruptPortforward)
 	defer close(f.interruptSync)
 	if err != nil {

@@ -19,7 +19,6 @@ func NewResetCmd(f factory.Factory, plugins []plugin.Metadata) *cobra.Command {
 		Args: cobra.NoArgs,
 	}
 
-	resetCmd.AddCommand(newKeyCmd(f))
 	resetCmd.AddCommand(newVarsCmd(f))
 	resetCmd.AddCommand(newDependenciesCmd(f))
 

@@ -34,7 +34,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		},
 	}
 
-	err := sc.Run(f, nil, nil)
+	err := sc.Run(f, nil,nil, nil)
 	defer close(f.interrupt)
 	if err != nil {
 		return errors.Errorf("Error while running sync command: %s", err.Error())

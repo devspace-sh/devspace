@@ -38,7 +38,7 @@ func runDownloadOnly(f *customFactory, logger log.Logger) error {
 		Container: "container-0",
 	}
 
-	err := sc.Run(f, nil, nil)
+	err := sc.Run(f, nil,nil, nil)
 	defer close(f.interrupt)
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func runDownloadOnly(f *customFactory, logger log.Logger) error {
 	// Below checks if bar.go was NOT uploaded to remote
 	done := utils.Capture()
 
-	err = ec.Run(f, nil, []string{"ls", "home"})
+	err = ec.Run(f, nil,nil, []string{"ls", "home"})
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func runDownloadOnly(f *customFactory, logger log.Logger) error {
 		return err
 	}
 
-	err = ec.Run(f, nil, []string{"mkdir", "home/second"})
+	err = ec.Run(f, nil,nil, []string{"mkdir", "home/second"})
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func runDownloadOnly(f *customFactory, logger log.Logger) error {
 		return err
 	}
 
-	err = ec.Run(f, nil, []string{"touch", "home/second/abc.txt"})
+	err = ec.Run(f, nil,nil, []string{"touch", "home/second/abc.txt"})
 	if err != nil {
 		return err
 	}

@@ -37,7 +37,7 @@ func runUploadOnly(f *customFactory, logger log.Logger) error {
 		Container: "container-0",
 	}
 
-	err := sc.Run(f, nil, nil)
+	err := sc.Run(f, nil,nil, nil)
 	defer close(f.interrupt)
 	if err != nil {
 		return err

@@ -26,7 +26,7 @@ func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 
 	done := utils.Capture()
 
-	err := lc.RunLogs(f, nil, nil)
+	err := lc.RunLogs(f, nil, nil, nil)
 	if err != nil {
 		return err
 	}

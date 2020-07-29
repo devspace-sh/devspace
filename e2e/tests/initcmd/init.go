@@ -12,14 +12,8 @@ import (
 	"github.com/devspace-cloud/devspace/cmd"
 	"github.com/devspace-cloud/devspace/e2e/utils"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
-	cloudconfiglatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
 
-	fakecloudclient "github.com/devspace-cloud/devspace/pkg/devspace/cloud/client/testing"
-	fakecloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/testing"
-	fakecloudprovider "github.com/devspace-cloud/devspace/pkg/devspace/cloud/testing"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	fakesurvey "github.com/devspace-cloud/devspace/pkg/util/survey/testing"
@@ -57,17 +51,6 @@ func (c *customFactory) NewDockerClientWithMinikube(currentKubeContext string, p
 		},
 	}
 	return fakeDockerClient, nil
-}
-
-func (c *customFactory) GetProvider(useProviderName string, log log.Logger) (cloud.Provider, error) {
-	return fakecloudprovider.NewFakeProvider(cloudconfiglatest.Provider{}, fakecloudclient.NewFakeClient()), nil
-}
-
-func (c *customFactory) NewCloudConfigLoader() config.Loader {
-	return fakecloudconfig.NewLoader(&cloudconfiglatest.Config{
-		Version: cloudconfiglatest.Version,
-		Default: "test-provider",
-	})
 }
 
 func (c *customFactory) NewConfigureManager(config *latest.Config, log log.Logger) configure.Manager {

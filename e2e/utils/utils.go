@@ -28,7 +28,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	latestSpace "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
@@ -482,16 +481,6 @@ func StringInSlice(str string, list []string) bool {
 	return false
 }
 
-// SpaceExists checks if a string is in a slice
-func SpaceExists(str string, list []*latestSpace.Space) bool {
-	for _, v := range list {
-		if v.Name == str {
-			return true
-		}
-	}
-	return false
-}
-
 // DeleteTempAndResetWorkingDir deletes /tmp dir and reinitialize the working dir
 func DeleteTempAndResetWorkingDir(tmpDir string, pwd string, log logger.Logger) {
 	DeleteTempDir(tmpDir, log)
@@ -552,7 +541,7 @@ func IsFileOrFolderNotExist(path string) error {
 func IsFileOrFolderExistRemotely(f factory.Factory, ec *cmd.EnterCmd, lsDir string, fileOrDirToCheck string) error {
 	done := Capture()
 
-	err := ec.Run(f, nil, []string{"ls", lsDir})
+	err := ec.Run(f, nil, nil, []string{"ls", lsDir})
 	if err != nil {
 		return err
 	}

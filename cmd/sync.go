@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"os"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -39,7 +40,7 @@ type SyncCmd struct {
 }
 
 // NewSyncCmd creates a new init command
-func NewSyncCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewSyncCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	cmd := &SyncCmd{GlobalFlags: globalFlags}
 
 	syncCmd := &cobra.Command{
@@ -59,7 +60,7 @@ devspace sync --pod=my-pod --container=my-container
 devspace sync --container-path=/my-path
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, cobraCmd, args)
+			return cmd.Run(f, plugins, cobraCmd, args)
 		},
 	}
 
@@ -85,7 +86,7 @@ devspace sync --container-path=/my-path
 }
 
 // Run executes the command logic
-func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Switch working directory
 	if cmd.GlobalFlags.ConfigPath != "" {
 		_, err := os.Stat(cmd.GlobalFlags.ConfigPath)
@@ -123,8 +124,8 @@ func (cmd *SyncCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 		return err
 	}
 
-	// Signal that we are working on the space if there is any
-	err = f.NewSpaceResumer(client, logger).ResumeSpace(true)
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook(plugins, "sync", cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return err
 	}
