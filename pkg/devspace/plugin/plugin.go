@@ -48,7 +48,7 @@ type client struct {
 func NewClient(log log.Logger) Interface {
 	return &client{
 		installer: NewInstaller(),
-		log: log,
+		log:       log,
 	}
 }
 
@@ -132,7 +132,7 @@ func (c *client) Update(name, version string) error {
 		return fmt.Errorf("couldn't find plugin %s", name)
 	}
 
-	oldVersion, err := semver.Parse(metadata.Version)
+	oldVersion, err := c.parseVersion(metadata.Version)
 	if err != nil {
 		return errors.Wrap(err, "parse old version")
 	}
@@ -142,7 +142,7 @@ func (c *client) Update(name, version string) error {
 		return err
 	}
 
-	newVersion, err := semver.Parse(newMetadata.Version)
+	newVersion, err := c.parseVersion(newMetadata.Version)
 	if err != nil {
 		return errors.Wrap(err, "parse new version")
 	}
@@ -155,6 +155,17 @@ func (c *client) Update(name, version string) error {
 
 	c.log.Infof("Updating plugin %s to version %s", name, newMetadata.Version)
 	return c.install(path, version)
+}
+
+func (c *client) parseVersion(version string) (semver.Version, error) {
+	if len(version) == 0 {
+		return semver.Version{}, fmt.Errorf("version is empty")
+	}
+	if version[0] == 'v' {
+		version = version[1:]
+	}
+
+	return semver.Parse(version)
 }
 
 func (c *client) Remove(name string) error {
@@ -325,13 +336,13 @@ func ExecutePluginHook(plugins []Metadata, event, kubeContext, namespace string)
 		pluginFolder := plugin.PluginFolder
 		for _, pluginHook := range plugin.Hooks {
 			if pluginHook.Event == event {
-				 err := CallPluginExecutable(filepath.Join(pluginFolder, PluginBinary), pluginHook.BaseArgs, map[string]string{
-					 "DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG": kubeContext,
-					 "DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG": namespace,
-				 }, os.Stdout)
-				 if err != nil {
-				 	return err
-				 }
+				err := CallPluginExecutable(filepath.Join(pluginFolder, PluginBinary), pluginHook.BaseArgs, map[string]string{
+					"DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG":   kubeContext,
+					"DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG": namespace,
+				}, os.Stdout)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -344,7 +355,7 @@ func ExecutePluginHook(plugins []Metadata, event, kubeContext, namespace string)
 func CallPluginExecutable(main string, argv []string, extraEnvVars map[string]string, out io.Writer) error {
 	env := os.Environ()
 	for k, v := range extraEnvVars {
-		env = append(env, k + "=" + v)
+		env = append(env, k+"="+v)
 	}
 
 	prog := exec.Command(main, argv...)
