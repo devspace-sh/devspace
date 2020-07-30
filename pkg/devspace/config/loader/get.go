@@ -123,6 +123,7 @@ func (l *configLoader) New() *latest.Config {
 type ConfigOptions struct {
 	Profile     string
 	KubeContext string
+	Namespace   string
 	ConfigPath  string
 
 	GeneratedConfig *generated.Config

@@ -12,8 +12,6 @@ import (
 )
 
 type contextCmd struct {
-	AllSpaces bool
-	Provider  string
 }
 
 func newContextCmd(f factory.Factory) *cobra.Command {
@@ -30,16 +28,12 @@ Removes a kubectl-context
 
 Example:
 devspace remove context myspace
-devspace remove context --all-spaces
 #######################################################
 	`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.RunRemoveContext(f, cobraCmd, args)
 		}}
-
-	contextCmd.Flags().BoolVar(&cmd.AllSpaces, "all-spaces", false, "Remove all kubectl contexts belonging to Spaces")
-	contextCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
 
 	return contextCmd
 }
@@ -48,33 +42,6 @@ devspace remove context --all-spaces
 func (cmd *contextCmd) RunRemoveContext(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	log := f.GetLog()
 	kubeLoader := f.NewKubeConfigLoader()
-	// Remove all contexts
-	if cmd.AllSpaces {
-		// Get provider
-		provider, err := f.GetProvider(cmd.Provider, log)
-		if err != nil {
-			return errors.Wrap(err, "log into provider")
-		}
-
-		// Retrieve spaces
-		spaces, err := provider.Client().GetSpaces()
-		if err != nil {
-			return err
-		}
-
-		for _, space := range spaces {
-			// Remove kube context
-			err = provider.DeleteKubeContext(space)
-			if err != nil {
-				return errors.Wrap(err, "delete kube context")
-			}
-
-			log.Donef("Removed kubectl context for space %s", space.Name)
-		}
-
-		log.Done("All space kubectl contexts removed")
-		return nil
-	}
 
 	// Load kube-config
 	kubeConfig, err := kubeLoader.LoadRawConfig()

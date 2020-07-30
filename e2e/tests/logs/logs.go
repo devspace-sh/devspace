@@ -116,7 +116,7 @@ func beforeTest(f *utils.BaseCustomFactory) error {
 
 	f.Client = client
 
-	err = deployConfig.Run(f, nil, nil)
+	err = deployConfig.Run(f, nil, nil, nil)
 	if err != nil {
 		return err
 	}

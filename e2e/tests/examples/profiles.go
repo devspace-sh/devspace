@@ -77,7 +77,7 @@ func runProfile(f *customFactory, deployConfig *cmd.DeployCmd, profile string, c
 		return err
 	}
 
-	err = deployConfig.Run(f, nil, nil)
+	err = deployConfig.Run(f, nil,nil, nil)
 	if err != nil {
 		return err
 	}

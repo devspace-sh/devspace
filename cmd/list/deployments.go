@@ -89,13 +89,6 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 		return err
 	}
 
-	// Signal that we are working on the space if there is any
-	resumer := f.NewSpaceResumer(client, logger)
-	err = resumer.ResumeSpace(true)
-	if err != nil {
-		return err
-	}
-
 	if config.Deployments != nil {
 		helmV2Clients := map[string]helmtypes.Client{}
 

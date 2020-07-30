@@ -3,9 +3,6 @@ package testing
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -16,6 +13,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -30,7 +28,6 @@ var _ factory.Factory = &Factory{}
 // Factory implements the Factory interface
 type Factory struct {
 	Analyzer          analyze.Analyzer
-	CloudConfigLoader config.Loader
 	BuildController   build.Controller
 	DeployController  deploy.Controller
 	KubeconfigLoader  kubeconfig.Loader
@@ -44,18 +41,17 @@ type Factory struct {
 	KubeClient        kubectl.Client
 	HelmClient        types.Client
 	ServicesClient    services.Client
-	Provider          cloud.Provider
-	Resumer           resume.SpaceResumer
+	PluginClient      plugin.Interface
+}
+
+// NewPluginsManager creates a new plugin manager
+func (f *Factory) NewPluginManager(log log.Logger) plugin.Interface {
+	return f.PluginClient
 }
 
 // NewAnalyzer creates a new analyzer
 func (f *Factory) NewAnalyzer(client kubectl.Client, log log.Logger) analyze.Analyzer {
 	return f.Analyzer
-}
-
-// NewCloudConfigLoader creates a new cloud config loader
-func (f *Factory) NewCloudConfigLoader() config.Loader {
-	return f.CloudConfigLoader
 }
 
 // NewBuildController implements interface
@@ -136,19 +132,4 @@ func (f *Factory) NewHelmClient(config *latest.Config, deployConfig *latest.Depl
 // NewServicesClient implements interface
 func (f *Factory) NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, selectorParameter *targetselector.SelectorParameter, log log.Logger) services.Client {
 	return f.ServicesClient
-}
-
-// GetProvider implements interface
-func (f *Factory) GetProvider(useProviderName string, log log.Logger) (cloud.Provider, error) {
-	return f.Provider, nil
-}
-
-// GetProviderWithOptions implements interface
-func (f *Factory) GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, kubeLoader kubeconfig.Loader, log log.Logger) (cloud.Provider, error) {
-	return f.Provider, nil
-}
-
-// NewSpaceResumer implements interface
-func (f *Factory) NewSpaceResumer(kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer {
-	return f.Resumer
 }

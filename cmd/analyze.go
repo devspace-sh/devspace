@@ -4,6 +4,7 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -19,7 +20,7 @@ type AnalyzeCmd struct {
 }
 
 // NewAnalyzeCmd creates a new analyze command
-func NewAnalyzeCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewAnalyzeCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	cmd := &AnalyzeCmd{GlobalFlags: globalFlags}
 
 	analyzeCmd := &cobra.Command{
@@ -39,7 +40,7 @@ devspace analyze --namespace=mynamespace
 	`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.RunAnalyze(f, cobraCmd, args)
+			return cmd.RunAnalyze(f, plugins, cobraCmd, args)
 		},
 	}
 
@@ -51,7 +52,7 @@ devspace analyze --namespace=mynamespace
 }
 
 // RunAnalyze executes the functionality "devspace analyze"
-func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
@@ -87,8 +88,8 @@ func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, cobraCmd *cobra.Command, ar
 		return err
 	}
 
-	// Signal that we are working on the space if there is any
-	err = f.NewSpaceResumer(client, log).ResumeSpace(true)
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook(plugins, "analyze", cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return err
 	}

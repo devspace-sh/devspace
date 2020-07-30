@@ -111,7 +111,7 @@ func RunTest(f *customFactory, deployConfig *cmd.DeployCmd) error {
 
 	f.Client = client
 
-	err = deployConfig.Run(f, nil, nil)
+	err = deployConfig.Run(f, nil,nil, nil)
 	if err != nil {
 		return err
 	}

@@ -73,7 +73,7 @@ func runDefault(f *utils.BaseCustomFactory, logger log.Logger) error {
 		done := utils.Capture()
 
 		output := "My Test Data"
-		err = c.Run(f, nil, []string{"echo", output})
+		err = c.Run(f, nil,nil, []string{"echo", output})
 		if err != nil {
 			return err
 		}

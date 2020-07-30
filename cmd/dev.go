@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"os"
 	"strings"
 	"sync"
@@ -68,7 +69,7 @@ type DevCmd struct {
 const interactiveDefaultPickerValue = "Open Picker"
 
 // NewDevCmd creates a new devspace dev command
-func NewDevCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewDevCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	cmd := &DevCmd{
 		GlobalFlags: globalFlags,
 		log:         log.GetInstance(),
@@ -93,7 +94,7 @@ Open terminal instead of logs:
 - Use "devspace dev -i" for opening a terminal and overriding container entrypoint with sleep command
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, cobraCmd, args)
+			return cmd.Run(f, plugins, cobraCmd, args)
 		},
 	}
 
@@ -129,7 +130,7 @@ Open terminal instead of logs:
 }
 
 // Run executes the command logic
-func (cmd *DevCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
 	cmd.configLoader = f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
@@ -189,9 +190,8 @@ func (cmd *DevCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string
 		return err
 	}
 
-	// Signal that we are working on the space if there is any
-	resumer := f.NewSpaceResumer(client, cmd.log)
-	err = resumer.ResumeSpace(true)
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook(plugins, "dev", cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return err
 	}

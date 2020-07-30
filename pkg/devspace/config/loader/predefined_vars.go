@@ -1,17 +1,18 @@
 package loader
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/util"
+	"github.com/pkg/errors"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	cloudconfig "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
-	cloudtoken "github.com/devspace-cloud/devspace/pkg/devspace/cloud/token"
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/randutil"
-	"github.com/mgutz/ansi"
 )
 
 // predefinedVars holds all predefined variables that can be used in the config
@@ -35,131 +36,43 @@ var predefinedVars = map[string]func(loader *configLoader) (string, error){
 
 		return hash[:8], nil
 	},
-	"DEVSPACE_SPACE": func(configLoader *configLoader) (string, error) {
-		retError := fmt.Errorf("Current context is not a space, but predefined var DEVSPACE_SPACE is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
-		kubeLoader := configLoader.kubeConfigLoader
-		options := configLoader.options
-		kubeContext, err := kubeLoader.GetCurrentContext()
-		if err != nil {
-			return "", retError
-		}
-		if options.KubeContext != "" {
-			kubeContext = options.KubeContext
-		}
-
-		isSpace, err := kubeLoader.IsCloudSpace(kubeContext)
-		if err != nil || !isSpace {
-			return "", retError
-		}
-
-		spaceID, providerName, err := kubeLoader.GetSpaceID(kubeContext)
+	"DEVSPACE_CONTEXT": func(loader *configLoader) (string, error) {
+		_, activeContext, _, err := util.NewClientByContext(loader.options.KubeContext, loader.options.Namespace, false, loader.kubeConfigLoader)
 		if err != nil {
 			return "", err
 		}
 
-		loader := cloudconfig.NewLoader()
-		cloudConfigData, err := loader.Load()
-		if err != nil {
-			return "", retError
-		}
-
-		provider := cloudconfig.GetProvider(cloudConfigData, providerName)
-		if provider == nil {
-			return "", retError
-		}
-		if provider.Spaces == nil {
-			return "", retError
-		}
-		if provider.Spaces[spaceID] == nil {
-			return "", retError
-		}
-
-		return provider.Spaces[spaceID].Space.Name, nil
+		return activeContext, nil
 	},
-	"DEVSPACE_SPACE_NAMESPACE": func(configLoader *configLoader) (string, error) {
-		retErr := fmt.Errorf("Current context is not a space, but predefined var DEVSPACE_SPACE_NAMESPACE is used.\n\nPlease run: \n- `%s` to create a new space\n- `%s` to use an existing space\n- `%s` to list existing spaces", ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"), ansi.Color("devspace list spaces", "white+b"))
-		kubeLoader := configLoader.kubeConfigLoader
-		options := configLoader.options
-		kubeContext, err := kubeLoader.GetCurrentContext()
-		if err != nil {
-			return "", retErr
-		}
-		if options.KubeContext != "" {
-			kubeContext = options.KubeContext
-		}
-
-		isSpace, err := kubeLoader.IsCloudSpace(kubeContext)
-		if err != nil || !isSpace {
-			return "", retErr
-		}
-
-		spaceID, providerName, err := kubeLoader.GetSpaceID(kubeContext)
+	"DEVSPACE_NAMESPACE": func(loader *configLoader) (string, error) {
+		_, _, activeNamespace, err := util.NewClientByContext(loader.options.KubeContext, loader.options.Namespace, false, loader.kubeConfigLoader)
 		if err != nil {
 			return "", err
 		}
 
-		loader := cloudconfig.NewLoader()
-		cloudConfigData, err := loader.Load()
-		if err != nil {
-			return "", retErr
-		}
-
-		provider := cloudconfig.GetProvider(cloudConfigData, providerName)
-		if provider == nil {
-			return "", retErr
-		}
-		if provider.Spaces == nil {
-			return "", retErr
-		}
-		if provider.Spaces[spaceID] == nil {
-			return "", retErr
-		}
-
-		return provider.Spaces[spaceID].ServiceAccount.Namespace, nil
+		return activeNamespace, nil
 	},
-	"DEVSPACE_USERNAME": func(configLoader *configLoader) (string, error) {
-		retErr := fmt.Errorf("You are not logged into DevSpace Cloud, but predefined var DEVSPACE_USERNAME is used.\n\nPlease run: \n- `%s` to login into devspace cloud. Alternatively you can also remove the variable ${DEVSPACE_USERNAME} from your config", ansi.Color("devspace login", "white+b"))
-		kubeLoader := configLoader.kubeConfigLoader
-		options := configLoader.options
-		kubeContext, err := kubeLoader.GetCurrentContext()
-		if err != nil {
-			return "", err
-		}
-		if options.KubeContext != "" {
-			kubeContext = options.KubeContext
-		}
+}
 
-		loader := cloudconfig.NewLoader()
-		cloudConfigData, err := loader.Load()
-		if err != nil {
-			return "", err
-		}
+func AddPredefinedVars(plugins []plugin.Metadata) {
+	for _, p := range plugins {
+		pluginFolder := p.PluginFolder
+		for _, variable := range p.Vars {
+			v := variable
+			predefinedVars[variable.Name] = func(configLoader *configLoader) (string, error) {
+				buffer := &bytes.Buffer{}
+				err := plugin.CallPluginExecutable(filepath.Join(pluginFolder, plugin.PluginBinary), v.BaseArgs, map[string]string{
+					"DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG":   configLoader.options.KubeContext,
+					"DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG": configLoader.options.Namespace,
+				}, buffer)
+				if err != nil {
+					return "", errors.Wrapf(err, "executing plugin: %s", buffer.String())
+				}
 
-		_, providerName, err := kubeLoader.GetSpaceID(kubeContext)
-		if err != nil {
-			// use global provider config as fallback
-			if cloudConfigData.Default != "" {
-				providerName = cloudConfigData.Default
-			} else {
-				providerName = cloudconfig.DevSpaceCloudProviderName
+				return strings.TrimSpace(buffer.String()), nil
 			}
 		}
-
-		provider := cloudconfig.GetProvider(cloudConfigData, providerName)
-		if provider == nil {
-			return "", retErr
-		}
-		if provider.Token == "" {
-			return "", retErr
-		}
-
-		accountName, err := cloudtoken.GetAccountName(provider.Token)
-		if err != nil {
-			return "", retErr
-		}
-
-		return accountName, nil
-	},
+	}
 }
 
 func (l *configLoader) resolvePredefinedVar(name string) (bool, string, error) {

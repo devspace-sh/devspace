@@ -22,7 +22,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		GlobalFlags: &flags.GlobalFlags{},
 	}
 
-	err = bc.Run(f, nil, nil)
+	err = bc.Run(f, nil,nil, nil)
 	if err != nil {
 		return err
 	}

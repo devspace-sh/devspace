@@ -35,7 +35,7 @@ func runSuccess(f *utils.BaseCustomFactory, logger log.Logger) error {
 	verboseHistory := f.Verbose
 	f.Verbose = false
 
-	err = ac.RunAnalyze(f, nil, nil)
+	err = ac.RunAnalyze(f, nil,nil, nil)
 	if err != nil {
 		return errors.Errorf("err should be nil: %v", err)
 	}

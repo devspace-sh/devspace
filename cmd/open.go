@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"net/http"
 	"os"
 	"strconv"
@@ -12,8 +13,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	cloudlatest "github.com/devspace-cloud/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -50,7 +49,7 @@ type OpenCmd struct {
 }
 
 // NewOpenCmd creates a new open command
-func NewOpenCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewOpenCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	cmd := &OpenCmd{
 		GlobalFlags: globalFlags,
 		log:         log.GetInstance(),
@@ -71,7 +70,7 @@ devspace open
 	`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.RunOpen(f, cobraCmd, args)
+			return cmd.RunOpen(f, plugins, cobraCmd, args)
 		},
 	}
 
@@ -81,10 +80,9 @@ devspace open
 }
 
 // RunOpen executes the functionality "devspace open"
-func (cmd *OpenCmd) RunOpen(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *OpenCmd) RunOpen(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
-	kubeLoader := f.NewKubeConfigLoader()
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
@@ -92,9 +90,6 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, cobraCmd *cobra.Command, args []s
 	}
 
 	var (
-		providerName             string
-		provider                 cloud.Provider
-		space                    *cloudlatest.Space
 		domain                   string
 		tls                      bool
 		ingressControllerWarning = ""
@@ -128,8 +123,8 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, cobraCmd *cobra.Command, args []s
 		return err
 	}
 
-	// Signal that we are working on the space if there is any
-	err = f.NewSpaceResumer(client, cmd.log).ResumeSpace(true)
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook(plugins, "open", cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return err
 	}
@@ -145,29 +140,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, cobraCmd *cobra.Command, args []s
 	}
 
 	namespace := client.Namespace()
-	currentContext := client.CurrentContext()
-
-	// Retrieve space
-	spaceID, currentContextProvider, err := kubeLoader.GetSpaceID(currentContext)
-	if err == nil { // Current kube-context is a Space
-		if providerName == "" {
-			providerName = currentContextProvider
-		}
-
-		// Get provider
-		provider, err = f.GetProvider(providerName, cmd.log)
-		if err != nil {
-			return err
-		}
-
-		// Get space
-		space, err = provider.Client().GetSpace(spaceID)
-		if err != nil {
-			return err
-		}
-	} else {
-		ingressControllerWarning = ansi.Color(" ! an ingress controller must be installed in your cluster", "red+b")
-	}
+	ingressControllerWarning = ansi.Color(" ! an ingress controller must be installed in your cluster", "red+b")
 
 	openingMode, err := cmd.log.Question(&survey.QuestionOptions{
 		Question:     "How do you want to open your application?",
@@ -189,49 +162,11 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, cobraCmd *cobra.Command, args []s
 	}
 
 	// create ingress for public access via domain
-	if space != nil {
-		namespace, err := client.KubeClient().CoreV1().Namespaces().Get(context.TODO(), space.Namespace, metav1.GetOptions{})
-		if err != nil {
-			return errors.Wrap(err, "get space namespace")
-		}
-
-		// Check if domain there is a domain for the space
-		if namespace.Annotations == nil || namespace.Annotations[allowedIngressHostsAnnotation] == "" {
-			return errors.Errorf("Space %s has no allowed domains", space.Name)
-		}
-
-		// Select domain
-		domains := strings.Split(namespace.Annotations[allowedIngressHostsAnnotation], ",")
-		if len(domains) == 1 {
-			domain = domains[0]
-		} else {
-			domain, err = cmd.log.Question(&survey.QuestionOptions{
-				Question: "Please select a domain to open",
-				Options:  domains,
-			})
-			if err != nil {
-				return err
-			}
-		}
-
-		// Check if domain has wildcard
-		if strings.Index(domain, "*") != -1 {
-			replaceValue, err := cmd.log.Question(&survey.QuestionOptions{
-				Question: fmt.Sprintf("Please enter a value for wildcard in domain '%s'", domain),
-			})
-			if err != nil {
-				return err
-			}
-
-			domain = strings.Replace(domain, "*", replaceValue, -1)
-		}
-	} else {
-		domain, err = cmd.log.Question(&survey.QuestionOptions{
-			Question: "Which domain do you want to use? (must be connected via DNS)",
-		})
-		if err != nil {
-			return err
-		}
+	domain, err = cmd.log.Question(&survey.QuestionOptions{
+		Question: "Which domain do you want to use? (must be connected via DNS)",
+	})
+	if err != nil {
+		return err
 	}
 
 	// Check if ingress for domain already exists

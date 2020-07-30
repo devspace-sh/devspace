@@ -3,9 +3,6 @@ package factory
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/config"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud/resume"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -17,6 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -56,12 +54,6 @@ type Factory interface {
 	// Services
 	NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, selectorParameter *targetselector.SelectorParameter, log log.Logger) services.Client
 
-	// Cloud
-	GetProvider(useProviderName string, log log.Logger) (cloud.Provider, error)
-	GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, kubeLoader kubeconfig.Loader, log log.Logger) (cloud.Provider, error)
-	NewSpaceResumer(kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer
-	NewCloudConfigLoader() config.Loader
-
 	// Build & Deploy
 	NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller
 	NewDeployController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) deploy.Controller
@@ -71,6 +63,9 @@ type Factory interface {
 
 	// Kubeconfig
 	NewKubeConfigLoader() kubeconfig.Loader
+
+	// Plugin
+	NewPluginManager(log log.Logger) plugin.Interface
 
 	// Log
 	GetLog() log.Logger
@@ -84,14 +79,14 @@ func DefaultFactory() Factory {
 	return &DefaultFactoryImpl{}
 }
 
+// NewPluginsManager creates a new plugin manager
+func (f *DefaultFactoryImpl) NewPluginManager(log log.Logger) plugin.Interface {
+	return plugin.NewClient(log)
+}
+
 // NewAnalyzer creates a new analyzer
 func (f *DefaultFactoryImpl) NewAnalyzer(client kubectl.Client, log log.Logger) analyze.Analyzer {
 	return analyze.NewAnalyzer(client, log)
-}
-
-// NewCloudConfigLoader creates a new cloud config loader
-func (f *DefaultFactoryImpl) NewCloudConfigLoader() config.Loader {
-	return config.NewLoader()
 }
 
 // NewBuildController implements interface
@@ -174,19 +169,4 @@ func (f *DefaultFactoryImpl) NewHelmClient(config *latest.Config, deployConfig *
 // NewServicesClient implements interface
 func (f *DefaultFactoryImpl) NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, selectorParameter *targetselector.SelectorParameter, log log.Logger) services.Client {
 	return services.NewClient(config, generated, kubeClient, selectorParameter, log)
-}
-
-// GetProvider implements interface
-func (f *DefaultFactoryImpl) GetProvider(useProviderName string, log log.Logger) (cloud.Provider, error) {
-	return cloud.GetProvider(useProviderName, log)
-}
-
-// GetProviderWithOptions implements interface
-func (f *DefaultFactoryImpl) GetProviderWithOptions(useProviderName, key string, relogin bool, loader config.Loader, kubeLoader kubeconfig.Loader, log log.Logger) (cloud.Provider, error) {
-	return cloud.GetProviderWithOptions(useProviderName, key, relogin, loader, kubeLoader, log)
-}
-
-// NewSpaceResumer implements interface
-func (f *DefaultFactoryImpl) NewSpaceResumer(kubeClient kubectl.Client, log log.Logger) resume.SpaceResumer {
-	return resume.NewSpaceResumer(kubeClient, log)
 }

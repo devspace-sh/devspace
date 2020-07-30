@@ -3,8 +3,6 @@ package cmd
 import (
 	"github.com/devspace-cloud/devspace/cmd/add"
 	"github.com/devspace-cloud/devspace/cmd/cleanup"
-	"github.com/devspace-cloud/devspace/cmd/connect"
-	"github.com/devspace-cloud/devspace/cmd/create"
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/cmd/list"
 	"github.com/devspace-cloud/devspace/cmd/remove"
@@ -13,6 +11,8 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/status"
 	"github.com/devspace-cloud/devspace/cmd/update"
 	"github.com/devspace-cloud/devspace/cmd/use"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
@@ -108,37 +108,43 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	persistentFlags := rootCmd.PersistentFlags()
 	globalFlags = flags.SetGlobalFlags(persistentFlags)
 
+	// list plugins
+	plugins, err := f.NewPluginManager(f.GetLog()).List()
+	if err != nil {
+		f.GetLog().Fatal(err)
+	}
+
 	// Add sub commands
-	rootCmd.AddCommand(add.NewAddCmd(f, globalFlags))
-	rootCmd.AddCommand(cleanup.NewCleanupCmd(f, globalFlags))
-	rootCmd.AddCommand(connect.NewConnectCmd(f))
-	rootCmd.AddCommand(create.NewCreateCmd(f))
-	rootCmd.AddCommand(list.NewListCmd(f, globalFlags))
-	rootCmd.AddCommand(remove.NewRemoveCmd(f, globalFlags))
-	rootCmd.AddCommand(reset.NewResetCmd(f))
-	rootCmd.AddCommand(set.NewSetCmd(f))
-	rootCmd.AddCommand(status.NewStatusCmd(f))
-	rootCmd.AddCommand(use.NewUseCmd(f, globalFlags))
-	rootCmd.AddCommand(update.NewUpdateCmd(f, globalFlags))
+	rootCmd.AddCommand(add.NewAddCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(cleanup.NewCleanupCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(list.NewListCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(remove.NewRemoveCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(reset.NewResetCmd(f, plugins))
+	rootCmd.AddCommand(set.NewSetCmd(f, plugins))
+	rootCmd.AddCommand(status.NewStatusCmd(f, plugins))
+	rootCmd.AddCommand(use.NewUseCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(update.NewUpdateCmd(f, globalFlags, plugins))
 
 	// Add main commands
 	rootCmd.AddCommand(NewInitCmd(f))
-	rootCmd.AddCommand(NewDevCmd(f, globalFlags))
-	rootCmd.AddCommand(NewBuildCmd(f, globalFlags))
-	rootCmd.AddCommand(NewSyncCmd(f, globalFlags))
+	rootCmd.AddCommand(NewDevCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(NewBuildCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(NewSyncCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewRenderCmd(f, globalFlags))
-	rootCmd.AddCommand(NewPurgeCmd(f, globalFlags))
+	rootCmd.AddCommand(NewPurgeCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewUpgradeCmd())
-	rootCmd.AddCommand(NewDeployCmd(f, globalFlags))
-	rootCmd.AddCommand(NewEnterCmd(f, globalFlags))
-	rootCmd.AddCommand(NewLoginCmd(f))
-	rootCmd.AddCommand(NewAnalyzeCmd(f, globalFlags))
-	rootCmd.AddCommand(NewLogsCmd(f, globalFlags))
-	rootCmd.AddCommand(NewOpenCmd(f, globalFlags))
+	rootCmd.AddCommand(NewDeployCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(NewEnterCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(NewAnalyzeCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(NewLogsCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(NewOpenCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewUICmd(f, globalFlags))
 	rootCmd.AddCommand(NewRunCmd(f, globalFlags))
-	rootCmd.AddCommand(NewAttachCmd(f, globalFlags))
+	rootCmd.AddCommand(NewAttachCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewPrintCmd(f, globalFlags))
 
+	// Add plugin commands
+	plugin.AddPluginCommands(rootCmd, plugins, "")
+	loader.AddPredefinedVars(plugins)
 	return rootCmd
 }

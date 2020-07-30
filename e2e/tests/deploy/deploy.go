@@ -131,7 +131,7 @@ func runTest(f *customFactory, t *test) error {
 	f.Client = client
 
 	// 2. Deploy config
-	err = t.deployConfig.Run(f, nil, nil)
+	err = t.deployConfig.Run(f, nil,nil, nil)
 	if err != nil {
 		return err
 	}
@@ -161,7 +161,7 @@ func testPurge(f *customFactory) error {
 		},
 	}
 
-	err := purgeCmd.Run(f, nil, nil)
+	err := purgeCmd.Run(f, nil,nil, nil)
 	if err != nil {
 		return err
 	}

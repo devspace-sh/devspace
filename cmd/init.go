@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
-	"github.com/devspace-cloud/devspace/pkg/devspace/cloud"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
@@ -22,6 +21,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
+
+// SpaceNameValidationRegEx is the sapace name validation regex
+var SpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9-]{1,30}[a-zA-Z0-9]$")
 
 var gitFolderIgnoreRegex = regexp.MustCompile("/?\\.git/?")
 
@@ -325,7 +327,7 @@ func getDeploymentName() (string, error) {
 	dirname = regexp.MustCompile("[^a-zA-Z0-9-]+").ReplaceAllString(dirname, "-")
 	dirname = strings.Trim(dirname, "-")
 
-	if cloud.SpaceNameValidationRegEx.MatchString(dirname) == false || len(dirname) > 42 {
+	if SpaceNameValidationRegEx.MatchString(dirname) == false || len(dirname) > 42 {
 		dirname = "devspace"
 	}
 
