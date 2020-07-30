@@ -3,6 +3,7 @@ package loader
 import (
 	"bytes"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/util"
 	"github.com/pkg/errors"
 	"path/filepath"
 	"strconv"
@@ -35,6 +36,22 @@ var predefinedVars = map[string]func(loader *configLoader) (string, error){
 
 		return hash[:8], nil
 	},
+	"DEVSPACE_CONTEXT": func(loader *configLoader) (string, error) {
+		_, activeContext, _, err := util.NewClientByContext(loader.options.KubeContext, loader.options.Namespace, false, loader.kubeConfigLoader)
+		if err != nil {
+			return "", err
+		}
+
+		return activeContext, nil
+	},
+	"DEVSPACE_NAMESPACE": func(loader *configLoader) (string, error) {
+		_, _, activeNamespace, err := util.NewClientByContext(loader.options.KubeContext, loader.options.Namespace, false, loader.kubeConfigLoader)
+		if err != nil {
+			return "", err
+		}
+
+		return activeNamespace, nil
+	},
 }
 
 func AddPredefinedVars(plugins []plugin.Metadata) {
@@ -45,7 +62,7 @@ func AddPredefinedVars(plugins []plugin.Metadata) {
 			predefinedVars[variable.Name] = func(configLoader *configLoader) (string, error) {
 				buffer := &bytes.Buffer{}
 				err := plugin.CallPluginExecutable(filepath.Join(pluginFolder, plugin.PluginBinary), v.BaseArgs, map[string]string{
-					"DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG": configLoader.options.KubeContext,
+					"DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG":   configLoader.options.KubeContext,
 					"DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG": configLoader.options.Namespace,
 				}, buffer)
 				if err != nil {
