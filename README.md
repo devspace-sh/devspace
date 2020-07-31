@@ -1179,7 +1179,7 @@ docker run --net=host --ipc=host --uts=host --pid=host -it --security-opt=seccom
 <summary>Docker: <code>Error response from daemon: Get https://[registry]/v2/: x509: certificate has expired or is not yet valid</code></summary>
 
 #### Problem
-This might happen when you the VM of your Docker daemon has the wrong date/time.
+This might happen when the VM of your Docker daemon has the wrong date/time.
 
 #### Solution
 Make sure the VM of your Docker daemon has the correct date/time. For Docker Desktop, you can run the following script to fix the issue:
