@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/util"
-	"github.com/pkg/errors"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -56,6 +55,7 @@ var predefinedVars = map[string]func(loader *configLoader) (string, error){
 
 func AddPredefinedVars(plugins []plugin.Metadata) {
 	for _, p := range plugins {
+		pluginName := p.Name
 		pluginFolder := p.PluginFolder
 		for _, variable := range p.Vars {
 			v := variable
@@ -66,7 +66,7 @@ func AddPredefinedVars(plugins []plugin.Metadata) {
 					"DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG": configLoader.options.Namespace,
 				}, buffer)
 				if err != nil {
-					return "", errors.Wrapf(err, "executing plugin: %s", buffer.String())
+					return "", fmt.Errorf("executing plugin %s: %s - %v", pluginName, buffer.String(), err)
 				}
 
 				return strings.TrimSpace(buffer.String()), nil
