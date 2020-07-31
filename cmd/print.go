@@ -54,8 +54,7 @@ func (cmd *PrintCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
-	}
-	if !configExists {
+	} else if !configExists {
 		return errors.New(message.ConfigNotFound)
 	}
 
@@ -71,14 +70,13 @@ func (cmd *PrintCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	}
 
 	if !cmd.SkipInfo {
-		printExtraInfo(configLoader, log)
+		err = printExtraInfo(configLoader, log)
 		if err != nil {
 			return err
 		}
 	}
 
 	log.WriteString(string(bsConfig))
-
 	return nil
 }
 
