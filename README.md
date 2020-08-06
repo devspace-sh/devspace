@@ -414,7 +414,7 @@ To share a cluster with everyone on your team, [install loft](https://loft.sh/),
 devspace add plugin https://github.com/loft-sh/loft-devspace-plugin
 
 # Login to your loft instance via the CLI
-devspace login
+devspace login https://your-loft-instance.tld
 
 # Create an isolated Kubernetes namespace via loft
 devspace create space my-namespace
