@@ -689,7 +689,7 @@ images:
     image: dockerhub-username/my-auth-server    # Push to Docker Hub (no registry hostname required) => uses ./Dockerfile by default
     createPullSecret: true                      # Create a Kubernetes pull secret for this image before deploying anything
   webserver:
-    image: dscr.io/username/my-webserver        # Push to private registry
+    image: myregistry.tld/username/my-webserver # Push to private registry
     createPullSecret: true
     dockerfile: ./webserver/Dockerfile          # Build with --dockerfile=./webserver/Dockerfile
     context: ./webserver                        # Build with --context=./webserver
@@ -721,7 +721,7 @@ images:
         cache: true                             # Enable caching
         insecure: false                         # Allow kaniko to push to an insecure registry (e.g. self-signed SSL certificate)
   webserver:
-    image: dscr.io/username/my-webserver        # This image will be built using Docker with kaniko as fallback if Docker is not running
+    image: myregistry.tld/username/my-webserver # This image will be built using Docker with kaniko as fallback if Docker is not running
     createPullSecret: true
     dockerfile: ./webserver/Dockerfile          # Build with --dockerfile=./webserver/Dockerfile
     context: ./webserver                        # Build with --context=./webserver
@@ -747,7 +747,7 @@ images:
         imageFlag: "image"
         onChange: ["./Dockerfile"]
   webserver:
-    image: dscr.io/username/my-webserver        # This image will be built using Docker with kaniko as fallback if Docker is not running
+    image: myregistry.tld/username/my-webserver # This image will be built using Docker with kaniko as fallback if Docker is not running
     createPullSecret: true
     dockerfile: ./webserver/Dockerfile          # Build with --dockerfile=./webserver/Dockerfile
     context: ./webserver                        # Build with --context=./webserver
