@@ -1,6 +1,6 @@
 <img src="static/img/devspace-logo.svg">
 
-### **[Website](https://devspace.sh)** • **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.sh/cli/docs/introduction)** • **[Blog](https://devspace.cloud/blog)** • **[Twitter](https://twitter.com/devspace)**
+### **[Website](https://devspace.sh)** • **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.sh/cli/docs/introduction)** • **[Blog](https://loft.sh/blog)** • **[Twitter](https://twitter.com/devspace)**
 
 ![Build Status Passing](https://img.shields.io/github/workflow/status/devspace-cloud/devspace/Test%20&%20Release%20CLI%20Version/master?style=for-the-badge)
 ![Latest Release](https://img.shields.io/github/v/release/devspace-cloud/devspace?style=for-the-badge&label=Latest%20Release&color=%23007ec6)
@@ -68,7 +68,7 @@ DevSpace helps your team to standardize deployment and development workflows wit
 - If other developers on your team check out the project, they only need to run `devspace deploy` to deploy the project (including image building and deployment of other related project etc.) and they have a running instance of the project
 - The configuration of DevSpace is highly dynamic, so you can configure everything using [config variables](https://devspace.sh/cli/docs/configuration/variables/basics) that make it much easier to have one base configuration but still allow differences among developers (e.g. different sub-domains for testing)
 
-> Giving everyone on your team on-demand access to a Kubernetes cluster is a challenging problem for system administrators and infrastructure managers. DevSpace Cloud, an optional add-on for DevSpace, makes sharing dev clusters much easier and safer. [Learn more about DevSpace Cloud](https://devspace.cloud/cloud/docs/introduction).
+> Giving everyone on your team on-demand access to a Kubernetes cluster is a challenging problem for system administrators and infrastructure managers. If you want to efficiently share dev clusters for your engineering team, take a look at [www.loft.sh](https://loft.sh/).
 
 <br>
 </details>
@@ -222,7 +222,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 <summary><b>Lightweight & Easy to Setup</b></summary>
 <br>
 
-- **Client-Only Binary** (server-side [DevSpace Cloud](https://devspace.cloud/cloud/docs/introduction) is optional for visual UI and team management)
+- **Client-Only Binary** (optional plugin for [loft.sh](https://github.com/loft-sh/loft-devspace-plugin) for cluster sharing + multi-tenancy)
 - **Standalone Executable for all platforms** with no external dependencies and *fully written in Golang*
 - **Automatic Config Generation** from existing Dockerfiles, Helm chart or Kubernetes manifests (optional)
 - **Automatic Dockerfile Generation** (optional)
@@ -232,16 +232,19 @@ Stop wasting time for running the same build and deploy commands over and over a
 
 
 <details>
-<summary><b>DevSpace Cloud: Server-Side Add-On (optional)</b></summary>
+<summary><b>Loft.sh Plugin for Easy Namespace & Virtual Cluster Provisioning</b></summary>
 <br>
 
+DevSpace provides a plugin for [loft.sh](https://github.com/loft-sh/loft-devspace-plugin) which allows users to run command such as `devspace create space` or `devspace create vcluster` for creating namespaces and virtual Kubernetes clusters in shared dev clusters.
+
+Loft is a server-side solution for Kubernetes multi-tenancy and efficient cluster sharing which provides:
 - **On-Demand Namespace Creation & Isolation** with automatic RBAC, network policies, pod security policies etc.
 - **Graphical UI** for managing clusters, cluster users and user permissions (resource limits etc.)
 - **Advanced Permission System** that automatically enforces user limits via resource quotas, adminission controllers etc.
 - **Fully Automatic Context Configuration** on the machines of all cluster users with secure access token handling
 - **100% Pure Kubernetes** and nothing else! Works with any Kubernetes cluster.
 
-**More info and install intructions for DevSpace Cloud on: [www.github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud)**
+**For more infos and install intructions for loft, see: [www.github.com/loft-sh/loft](https://github.com/loft-sh/loft)**
 
 </details>
 
@@ -405,27 +408,28 @@ devspace use namespace my-namespace
 ```
 
 #### Option B: You want to share this cluster with your team
-To share a cluster, connect it to [DevSpace Cloud](https://devspace.cloud/cloud/docs/introduction) and then create an isolated Kubernetes namespace.
+To share a cluster with everyone on your team, [install loft](https://loft.sh/), then connect your cluster to your loft instance and then create an isolated Kubernetes namespace via the loft plugin for DevSpace.
 ```bash
-# Connect your cluster to DevSpace Cloud
-devspace connect cluster # requires login via GitHub or email
+# Install the loft plugin for DevSpace
+devspace add plugin https://github.com/loft-sh/loft-devspace-plugin
 
-# Create an isolated Kubernetes namespace in your cluster via DevSpace Cloud
+# Login to your loft instance via the CLI
+devspace login https://your-loft-instance.tld
+
+# Create an isolated Kubernetes namespace via loft
 devspace create space my-namespace
 ```
 
-> DevSpace automatically sets up a kube-context for every space you create, so you can also access your isolated namespace using `kubectl`, `helm` or any other Kubernetes tool.
+> The loft plugin for DevSpace will automatically set up a kube-context for every space you create, so you can also access your isolated namespace using `kubectl`, `helm` or any other Kubernetes tool.
 
 <br>
 
 <details>
-  <summary><b>What is DevSpace Cloud?</b></summary>
+  <summary><b>What is loft?</b></summary>
 
-[DevSpace Cloud](https://devspace.cloud/cloud/docs/introduction) is the optional server-side component for DevSpace that allows you to connect any Kubernetes cluster and then share it with your team for development. DevSpace Cloud lets developers create isolated Kubernetes namespaces on-demand and makes sure that developers cannot break out of their namespaces by configuring RBAC, network & pod security policies etc.
+[loft](https://loft.sh/) is a multi-tenancy manager for Kubernetes which allows you to connect clusters that you want to make available for your engineering teams. After connecting a cluster, engineers will be able to create isolated namespaces and even virtual Kubernetes clusters within the cluster whenever they need access to Kubernetes.
 
-> You can either
-> - use the fully managed **[SaaS edition of DevSpace Cloud](https://app.devspace.cloud)**
-> - or run it on your clusters using the **[on-premise edition available on GitHub](https://github.com/devspace-cloud/devspace-cloud)**.
+loft is maintained by the same people who are developing DevSpace.
 
 <br>
 </details>
@@ -433,7 +437,7 @@ devspace create space my-namespace
 <details>
   <summary><b>How are Spaces isolated? Why is it safe to share a cluster?</b></summary>
 
-DevSpace Cloud makes sure that developers cannot break out of their namespaces by configuring RBAC, network policies, pod security policies etc. By default, these restrictions are very strict and do not even allow pods from different namespaces to communicate with eather other. You can configure every security setting that DevSpace Cloud enforces using the UI of DevSpace Cloud and even set custom limits for different members of your team.
+loft makes sure that developers cannot break out of their namespaces by configuring RBAC, network policies, pod security policies etc. By default, these restrictions are very strict and do not even allow pods from different namespaces to communicate with eather other. You can configure every security setting that loft enforces using the UI of loft and even set custom limits for different members of your team.
 
 <br>
 </details>
@@ -441,55 +445,10 @@ DevSpace Cloud makes sure that developers cannot break out of their namespaces b
 <details>
   <summary><b>How can I add my team mates, so we can share this cluster?</b></summary>
 
-1. Connect your cluster to DevSpace Cloud using `devspace connect cluster`
-2. Go to **Clusters** in the UI of DevSpace Cloud: [https://app.devspace.cloud/clusters](https://app.devspace.cloud/clusters)
-3. Click on your cluster
-4. Go to the **Invites** tab
-5. Click on the **Add Invite** button
-6. Click on the invite link in the table and send the link to a team mate
-7. After clicking on the link and defining an encryption key, your team mate will be able to create isolated namespaces.
+Take a look at the [loft documentation](https://loft.sh/docs/auth/users#add-users) for details on [how to add users to a cluster](https://loft.sh/docs/auth/users#add-users) that is connected to loft.
 
 <br>
 </details>
-
-<details>
-  <summary><b>It it safe to connect my cluster to DevSpace Cloud?</b></summary>
-
-**Yes**. When connecting a cluster to DevSpace Cloud, the CLI tool asks you to define an encryption key. The cluster access token that the CLI creates will be encrypted with a hashed version of this key before sending it to DevSpace Cloud. That makes sure that no one can access your cluster except you. This key is hashed and stored on your local computer. That means that:
-
-- If you use DevSpace from a different computer, you will have to enter the encryption key again or re-connect the cluster which generates a new access token and encrypts it with a new key.
-- If you add a team member, you will have to send them a secure invite link which makes sure that they also get cluster access. This procedure is very safe and your key is never sent to our platform. After clicking on the invite link, your colleagues will define a separate encryption key for secure access to their namespaces.
-
-> If you are still hesitant, you can run DevSpace Cloud in your own Kubernetes cluster using the on-premise edition: [https://github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud)
-
-<br>
-</details>
-
-<details>
-  <summary><b>Can I run DevSpace Cloud on-premise in my own cluster?</b></summary>
-
-  **Yes**. Follow these intructions to run DevSpace Cloud yourself:
-
-  **1. Install DevSpace Cloud**
-  &nbsp;&nbsp;&nbsp;
-  See [www.github.com/devspace-cloud/devspace-cloud](https://github.com/devspace-cloud/devspace-cloud) for instructions.
-
-  **2. Tell DevSpace to use your self-hosted DevSpace Cloud**
-```bash
-devspace use provider devspace.my-domain.com
-```
-
-  **3. Connect a Kubernetes cluster to your self-hosted DevSpace Cloud**
-```bash
-devspace connect cluster
-```
-
-  **4. Create an isolated namespace**
-```bash
-devspace create space my-app
-```
-
-  </details>
 
 <img src="static/img/line.svg" height="1">
 </details>
@@ -572,19 +531,19 @@ Follow these links to more about how to use DevSpace:
 
 | Command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Important Flags / Notes |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| <a href="https://devspace.cloud/cli/docs/commands/devspace_dev">`devspace dev`</a><br> Starts the development mode    | `-b • Rebuild images (force)` <br> `-d • Redeploy everything (force)`  <br> `-i • Interactive mode (overrides ENTRYPOINT with [sleep, 999999] and starts interactive terminal session)`  |
-| <a href="https://devspace.cloud/cli/docs/commands/devspace_ui">`devspace ui`</a><br> Opens the localhost development UI       |  |
-| <a href="https://devspace.cloud/cli/docs/commands/devspace_open">`devspace open`</a><br> Opens your application after starting port-forwarding or generating an ingress   |   |
-| <a href="https://devspace.cloud/cli/docs/commands/devspace_enter">`devspace enter`</a><br> Opens a terminal session for a container       |  |
-| <a href="https://devspace.cloud/cli/docs/commands/devspace_enter">`devspace enter -- [command]`</a><br> Runs a command inside a container    |  |
-| <a href="https://devspace.cloud/cli/docs/commands/devspace_logs">`devspace logs`</a> <br> Prints the logs of a container                 |  `-f • Stream logs (follow/attach)` |
-| <a href="https://devspace.cloud/cli/docs/commands/devspace_analyze">`devspace analyze`</a> <br> Analyzes your namespace for issues        |  |
-| <a href="https://devspace.cloud/cli/docs/commands/devspace_build">`devspace build`</a> <br> Build, tag and push images (no deploy) | `-t [TAG] • Use specified [TAG] to tag all images` |
-| <a href="https://devspace.cloud/cli/docs/commands/devspace_cleanup_images">`devspace cleanup images`</a> <br> Deletes old images (locally, built by DevSpace) | <i>This is very useful after you built a lot of images and your local Docker daemon runs out of space (error: `no space left on device`) </i> |
-| <a href="https://devspace.cloud/cli/docs/commands/devspace_attach">`devspace attach`</a> <br> Attaches to a running container | <i><a href="https://devspace.sh/component-chart/docs/configuration/containers#stdin">Requires `stdin` and `tty` to be `true`</a></i> |
-| <a href="https://devspace.cloud/cli/docs/commands/devspace_attach">`devspace use space [NAME]`</a> <br> Switch into a different (existing) Space | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of all your Spaces.</i> |
-| <a href="https://devspace.cloud/cli/docs/commands/devspace_attach">`devspace use namespace [NAME]`</a> <br> Switch to a different namespace | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of available namespaces.</i> |
-| <a href="https://devspace.cloud/cli/docs/commands/devspace_attach">`devspace use context [NAME]`</a> <br> Switch to a different kube-context | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of available kube-contexts.</i> |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_dev">`devspace dev`</a><br> Starts the development mode    | `-b • Rebuild images (force)` <br> `-d • Redeploy everything (force)`  <br> `-i • Interactive mode (overrides ENTRYPOINT with [sleep, 999999] and starts interactive terminal session)`  |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_ui">`devspace ui`</a><br> Opens the localhost development UI       |  |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_open">`devspace open`</a><br> Opens your application after starting port-forwarding or generating an ingress   |   |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_enter">`devspace enter`</a><br> Opens a terminal session for a container       |  |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_enter">`devspace enter -- [command]`</a><br> Runs a command inside a container    |  |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_logs">`devspace logs`</a> <br> Prints the logs of a container                 |  `-f • Stream logs (follow/attach)` |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_analyze">`devspace analyze`</a> <br> Analyzes your namespace for issues        |  |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_build">`devspace build`</a> <br> Build, tag and push images (no deploy) | `-t [TAG] • Use specified [TAG] to tag all images` |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_cleanup_images">`devspace cleanup images`</a> <br> Deletes old images (locally, built by DevSpace) | <i>This is very useful after you built a lot of images and your local Docker daemon runs out of space (error: `no space left on device`) </i> |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_attach">`devspace attach`</a> <br> Attaches to a running container | <i><a href="https://devspace.sh/component-chart/docs/configuration/containers#stdin">Requires `stdin` and `tty` to be `true`</a></i> |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_attach">`devspace use space [NAME]`</a> <br> Switch into a different (existing) Space | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of all your Spaces.</i> |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_attach">`devspace use namespace [NAME]`</a> <br> Switch to a different namespace | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of available namespaces.</i> |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_attach">`devspace use context [NAME]`</a> <br> Switch to a different kube-context | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of available kube-contexts.</i> |
 
 <br>
 
@@ -730,7 +689,7 @@ images:
     image: dockerhub-username/my-auth-server    # Push to Docker Hub (no registry hostname required) => uses ./Dockerfile by default
     createPullSecret: true                      # Create a Kubernetes pull secret for this image before deploying anything
   webserver:
-    image: dscr.io/username/my-webserver        # Push to private registry
+    image: myregistry.tld/username/my-webserver # Push to private registry
     createPullSecret: true
     dockerfile: ./webserver/Dockerfile          # Build with --dockerfile=./webserver/Dockerfile
     context: ./webserver                        # Build with --context=./webserver
@@ -762,7 +721,7 @@ images:
         cache: true                             # Enable caching
         insecure: false                         # Allow kaniko to push to an insecure registry (e.g. self-signed SSL certificate)
   webserver:
-    image: dscr.io/username/my-webserver        # This image will be built using Docker with kaniko as fallback if Docker is not running
+    image: myregistry.tld/username/my-webserver # This image will be built using Docker with kaniko as fallback if Docker is not running
     createPullSecret: true
     dockerfile: ./webserver/Dockerfile          # Build with --dockerfile=./webserver/Dockerfile
     context: ./webserver                        # Build with --context=./webserver
@@ -788,7 +747,7 @@ images:
         imageFlag: "image"
         onChange: ["./Dockerfile"]
   webserver:
-    image: dscr.io/username/my-webserver        # This image will be built using Docker with kaniko as fallback if Docker is not running
+    image: myregistry.tld/username/my-webserver # This image will be built using Docker with kaniko as fallback if Docker is not running
     createPullSecret: true
     dockerfile: ./webserver/Dockerfile          # Build with --dockerfile=./webserver/Dockerfile
     context: ./webserver                        # Build with --context=./webserver
@@ -1139,43 +1098,6 @@ kubectl get ing                 # Make sure there is an ingress for your app
 </details>
 
 <details>
-<summary>DevSpace hangs at <code>[wait] Logging into cloud provider...</code></summary>
-
-#### Problem
-DevSpace tries to open a browser window, so you can login to DevSpace Cloud (either our SaaS platform or the self-hosted version that you installed in your cluster). If you are using a terminal inside a Docker container or VM, DevSpace is not able to open a browser window. You have two options to work around this:
-
-#### Solution A
-Run DevSpace on your local machine where you have a browser installed.
-
-#### Solution B
-Generate an access key and login with the non-interactive login method. Follow these steps:
-   1. Open this page: https://app.devspace.cloud/settings/access-keys (for on-premise version: https://[my-devspace-cloud-url]/settings/access-keys)
-   2. Click on the button "Create Key".
-   3. Enter a name (e.g. my-access-key).
-   4. Click on "Create Access Key".
-   5. Copy the access key displayed within the input field.
-   6. Login via `devspace login --key=[YOUR_ACCESS_KEY]`
-   7. Try the command again that you originally wanted to execute.
-
-<img src="static/img/line.svg" height="1">
-</details>
-
-<details>
-<summary>Cloud Authentication: <code>get token: Received invalid token from provider</code></summary>
-
-#### Problem
-This might happen when you are using an on-premise install of DevSpace Cloud and the VM of your Kubernetes cluster (e.g. Docker VM for Kubernetes in Docker Desktop) has the wrong date/time.
-
-#### Solution
-Make sure the VM of your local Kubernetes cluster has the correct date/time. For local clusters created with Docker Desktop, you can run the following script to fix the issue:
-```bash
-HOST_TIME=$(date -u +"%Y.%m.%d-%H:%M:%S");
-docker run --net=host --ipc=host --uts=host --pid=host -it --security-opt=seccomp=unconfined --privileged --rm -v /:/docker-vm alpine /bin/sh -c "date -s $HOST_TIME"
-```
-
-</details>
-
-<details>
 <summary>Docker: <code>Error response from daemon: Get https://[registry]/v2/: x509: certificate has expired or is not yet valid</code></summary>
 
 #### Problem
@@ -1248,52 +1170,25 @@ DevSpace is an open-source command-line tool that provides everything you need t
 </details>
 
 <details>
-<summary>What is DevSpace Cloud?</summary>
+<summary>What is loft?</summary>
 
-DevSpace Cloud extends DevSpace with a server-side component. It is entirely optional and meant for cluster admins that want to enable their developers to create isolated Kubernetes namespaces on-demand within a development cluster. DevSpace Cloud lets you easily manage cluster users, enforce resource limits and make sure developers can share a dev cluster without getting in the way of each other.
+[loft](https://loft.sh/) is a multi-tenancy manager for Kubernetes which allows you to connect clusters that you want to make available for your engineering teams. After connecting a cluster, engineers will be able to create isolated namespaces and even virtual Kubernetes clusters within the cluster whenever they need access to Kubernetes.
 
-> Even when using DevSpace Cloud, DevSpace directly interacts with the Kubernetes cluster, so you code or commands will never go through DevSpace Cloud.
-
-</details>
-
-<details>
-<summary>Is DevSpace Cloud free?</summary>
-
-**YES.** DevSpace Cloud has a free tier depending on how you use it:
-- You can use the SaaS edition and create 1 Hosted Space for free.
-- You can use the SaaS edition and connect 1 Kubernetes cluster and add up to 3 developers to this cluster for free.
-- You can install the on-premise edition and use it with up to 10 developers for free.
-
-</details>
-
-<details>
-<summary>What is a Space?</summary>
-
-Spaces are isolated Kubernetes namespaces which are managed by DevSpace Cloud and which provide the following features:
-
-- Automatic provisioning via `devspace create space [SPACE_NAME]`
-- Automatic allocation of a subdomain for each Space, e.g. `my-app.devspace.host`
-- Automatic RBAC configuration for better isolation of users
-- Automatic resource limit configuration and enforcement
-- Dynamic resource auto-scaling within the configured limits
+loft is maintained by the same people who are developing DevSpace.
 
 </details>
 
 <details>
 <summary>Do I need a Kubernetes cluster to use DevSpace?</summary>
 
-**No.** You can simply use **the fully managed Hosted Spaces** provided by the SaaS version of DevSpace Cloud. You can create 1 Hosted Space for free.
+**Yes.** You can either use a local cluster such as Docker Desktop Kubernetes, minikube, or Kind, but you can also use a remote cluster such as GKE, EKS, AKS, RKE (Rancher), or DOKS.
 
 </details>
 
 <details>
 <summary>Can I use DevSpace with my existing Kubernetes clusters?</summary>
 
-**Yes.** You have multiple options:
-
-1. Use DevSpace with your current kube-context (not using DevSpace Cloud at all).
-2. Using the SaaS version of DevSpace Cloud and connect your existing Kubernetes clusters to DevSpace Cloud as external clusters (available soon). DevSpace Cloud will then be able to automatically manage cluster users and permissions. This lets you created isolated namespaces (Spaces) within your Kubernetes clusters.
-3. Run DevSpace Cloud on-premise and connect your Kubernetes cluster to it in the same way you would use the SaaS version of DevSpace Cloud.
+**Yes.** DevSpace is using your regular kube-context. As long as you can run `kubectl` commands with a cluster, you can use this cluster with DevSpace as well.
 
 </details>
 

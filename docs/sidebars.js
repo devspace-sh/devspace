@@ -176,6 +176,7 @@ module.exports = {
           items: [
             "commands/devspace_add_deployment",
             "commands/devspace_add_image",
+            "commands/devspace_add_plugin",
             "commands/devspace_add_port",
             "commands/devspace_add_provider",
             "commands/devspace_add_sync"
@@ -200,6 +201,7 @@ module.exports = {
             "commands/devspace_list_contexts",
             "commands/devspace_list_deployments",
             "commands/devspace_list_namespaces",
+            "commands/devspace_list_plugins",
             "commands/devspace_list_ports",
             "commands/devspace_list_profiles",
             "commands/devspace_list_providers",
@@ -221,6 +223,7 @@ module.exports = {
             "commands/devspace_remove_context",
             "commands/devspace_remove_deployment",
             "commands/devspace_remove_image",
+            "commands/devspace_remove_plugin",
             "commands/devspace_remove_port",
             "commands/devspace_remove_provider",
             "commands/devspace_remove_space",
@@ -255,6 +258,7 @@ module.exports = {
           label: "devspace update",
           items: [
             "commands/devspace_update_config",
+            "commands/devspace_update_plugin",
             "commands/devspace_update_dependencies"
           ]
         },
@@ -279,12 +283,12 @@ module.exports = {
     },
     {
       type: 'link',
-      label: '↗️ loft',
+      label: '↗️ loft / DevSpace Cloud v2',
       href: 'https://loft.sh/docs/introduction',
     },
     {
       type: 'link',
-      label: '↗️ DevSpace Cloud',
+      label: '↗️ DevSpace Cloud v1',
       href: 'https://devspace.cloud/cloud/docs/introduction',
     },
   ],
