@@ -5,13 +5,14 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
 	"io"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
 
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 
@@ -24,7 +25,7 @@ import (
 const DefaultDockerfilePath = "./Dockerfile"
 
 // DockerfileTargetRegexTemplate is a template for a regex that finds build targets in a Dockerfile
-const DockerfileTargetRegexTemplate = "(?i)(^|\n)\\s*FROM\\s+([a-zA-Z0-9/\\:\\@\\.\\-]+)\\s+AS\\s+(%s)\\s*($|\n)"
+const DockerfileTargetRegexTemplate = "(?i)(^|\n)\\s*FROM\\s+(\\S+)\\s+AS\\s+(%s)\\s*($|\n)"
 
 // DefaultContextPath is the default context path to use
 const DefaultContextPath = "./"
