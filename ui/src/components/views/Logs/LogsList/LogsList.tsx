@@ -1,10 +1,11 @@
 import React from 'react';
-import { V1PodList, V1ServiceList } from '@kubernetes/client-node';
+import { V1PodList, V1ServiceList, V1Pod } from '@kubernetes/client-node';
 import Pod from '../Pod/Pod';
 import withDevSpaceConfig, { DevSpaceConfigContext } from 'contexts/withDevSpaceConfig/withDevSpaceConfig';
 import LogsMultiple from '../LogsMultiple/LogsMultiple';
 import { getDeployedImageNames } from 'lib/utils';
 import styles from './LogsList.module.scss';
+import inputStyles from '../../../basic/Input/Input.module.scss';
 import { TerminalCacheInterface } from '../TerminalCache/TerminalCache';
 
 export interface SelectedLogs {
@@ -22,7 +23,12 @@ interface Props extends DevSpaceConfigContext {
   selected?: SelectedLogs;
 }
 
-const renderPods = (props: Props) => {
+const renderPods = (props: Props, searchString: string) => {
+  if (searchString !== "") {
+    const podMatches = (pod : V1Pod) => (pod.metadata.name.includes(searchString) || pod.spec.containers.some(container => container.name.includes(searchString)));
+    props.podList.items = props.podList.items.filter(podMatches);
+  }
+
   if (props.podList.items.length === 0) {
     return <div className={styles['nothing-found']}>No pods found in namespace {props.devSpaceConfig.kubeNamespace}</div>;
   }
@@ -73,17 +79,28 @@ const renderPods = (props: Props) => {
   });
 };
 
-const LogsList = (props: Props) => (
-  <div className={styles['logs-list']}>
+const LogsList = (props: Props) => {
+  const [searchString, setSearchString] = React.useState("");
+  console.log(inputStyles);
+
+  return <div className={styles['logs-list']}>
     <div className={styles['logs-list-wrapper']}>
+      <form className={styles['search']}>
+        <input className={inputStyles['input-component']}
+          placeholder="Search pods"
+          value={searchString}
+          onChange={event => setSearchString(event.target.value)}
+        />
+      </form>
+
       {getDeployedImageNames(props.devSpaceConfig).length > 0 &&
         props.devSpaceConfig.kubeNamespace === props.devSpaceConfig.originalKubeNamespace &&
         props.devSpaceConfig.kubeContext === props.devSpaceConfig.originalKubeContext && (
           <LogsMultiple selected={props.selected} onSelect={props.onSelect} />
         )}
-      {renderPods(props)}
+      {renderPods(props, searchString)}
     </div>
   </div>
-);
+};
 
 export default withDevSpaceConfig(LogsList);

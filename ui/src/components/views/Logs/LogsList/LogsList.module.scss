@@ -18,6 +18,18 @@
     right: 2px;
     z-index: 2;
   }
+  
+  .search input {
+    max-width: 420px;
+    height: 56px;
+    margin-bottom: 20px;
+    position: relative;
+    font-family: 'Gotham SSm A', 'Gotham SSm B', sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: normal;
+    
+  }
 
   .logs-list-wrapper {
     overflow-y: auto;
