@@ -81,8 +81,6 @@ const renderPods = (props: Props, searchString: string) => {
 
 const LogsList = (props: Props) => {
   const [searchString, setSearchString] = React.useState("");
-  console.log(inputStyles);
-
   return <div className={styles['logs-list']}>
     <div className={styles['logs-list-wrapper']}>
       <form className={styles['search']}>
