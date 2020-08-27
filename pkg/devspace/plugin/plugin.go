@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 var encoding = base32.StdEncoding.WithPadding('0')
@@ -367,6 +368,8 @@ func CallPluginExecutable(main string, argv []string, extraEnvVars map[string]st
 		if eerr, ok := err.(*exec.ExitError); ok {
 			os.Stderr.Write(eerr.Stderr)
 			return &exit.ReturnCodeError{ExitCode: eerr.ExitCode()}
+		} else if strings.Index(err.Error(), "no such file or directory") != -1 {
+			return fmt.Errorf("the plugin's binary was not found (%v). Please uninstall and reinstall the plugin and make sure there are no other conflicting plugins installed (run 'devspace list plugins' to see all installed plugins)", err)
 		}
 
 		return err
