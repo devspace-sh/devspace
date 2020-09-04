@@ -39,7 +39,7 @@ type Server struct {
 const DefaultPort = 8090
 
 // NewServer creates a new server from the given parameters
-func NewServer(configLoader loader.ConfigLoader, config *latest.Config, generatedConfig *generated.Config, ignoreDownloadError bool, defaultContext, defaultNamespace string, forcePort *int, log log.Logger) (*Server, error) {
+func NewServer(configLoader loader.ConfigLoader, config *latest.Config, generatedConfig *generated.Config, host string, ignoreDownloadError bool, defaultContext, defaultNamespace string, forcePort *int, log log.Logger) (*Server, error) {
 	path, err := downloadUI()
 	if err != nil {
 		if !ignoreDownloadError {
@@ -54,20 +54,24 @@ func NewServer(configLoader loader.ConfigLoader, config *latest.Config, generate
 	if forcePort != nil {
 		usePort = *forcePort
 
-		unused, err := port.CheckHostPort("localhost", usePort)
-		if unused == false {
-			return nil, errors.Errorf("Port %d already in use: %v", usePort, err)
+		if host == "localhost" {
+			unused, err := port.CheckHostPort(host, usePort)
+			if unused == false {
+				return nil, errors.Errorf("Port %d already in use: %v", usePort, err)
+			}
 		}
 	} else {
-		for i := 0; i < 20; i++ {
-			unused, err := port.CheckHostPort("localhost", usePort)
-			if unused {
-				break
-			}
+		if host == "localhost" {
+			for i := 0; i < 20; i++ {
+				unused, err := port.CheckHostPort(host, usePort)
+				if unused {
+					break
+				}
 
-			usePort++
-			if i+1 == 20 {
-				return nil, err
+				usePort++
+				if i+1 == 20 {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -80,7 +84,7 @@ func NewServer(configLoader loader.ConfigLoader, config *latest.Config, generate
 
 	return &Server{
 		Server: &http.Server{
-			Addr:    "localhost:" + strconv.Itoa(usePort),
+			Addr:    host + ":" + strconv.Itoa(usePort),
 			Handler: handler,
 			// ReadTimeout:  5 * time.Second,
 			// WriteTimeout: 10 * time.Second,
@@ -215,23 +219,6 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.HasPrefix(r.URL.Path, "/api/") {
-		// check if we have a header or parameter
-		auth, ok := r.Header["Authorization"]
-		if !ok || len(auth) != 1 || auth[0] != h.token {
-			// check if there is a parameter (used for websockets)
-			token := r.URL.Query().Get("token")
-			if token != h.token {
-				w.WriteHeader(http.StatusUnauthorized)
-				// h.log.Infof("%s: unauthorized access from %s", r.URL.Path, r.RemoteAddr)
-				return
-			}
-		}
-	}
-
-	// if r.URL != nil {
-	//	h.log.Infof("Incoming request at %s", r.URL.String())
-	// }
 	h.mux.ServeHTTP(w, r)
 }
 

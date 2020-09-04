@@ -1,14 +1,14 @@
-version: v1beta5
+version: v1beta9
 images:
   default:
-    image: dscr.io/${DEVSPACE_USERNAME}/devspace
+    image: mydockeruser/devspace
 deployments:
 - name: my-deployment
   helm:
     componentChart: true
     values:
       containers:
-      - image: dscr.io/${DEVSPACE_USERNAME}/devspace
+      - image: mydockeruser/devspace
 hooks:
 - command: echo
   args:

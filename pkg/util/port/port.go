@@ -19,7 +19,7 @@ func CheckHostPort(host string, port int) (status bool, err error) {
 	}
 
 	// close the server
-	server.Close()
+	_ = server.Close()
 
 	// we successfully used and closed the port
 	// so it's now available to be used again

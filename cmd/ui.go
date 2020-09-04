@@ -25,6 +25,7 @@ type UICmd struct {
 
 	Dev bool
 
+	Host        string
 	Port        int
 	ForceServer bool
 
@@ -54,7 +55,8 @@ Opens the localhost UI in the browser
 		},
 	}
 
-	uiCmd.Flags().IntVar(&cmd.Port, "port", 0, "The port to use when opening the server")
+	uiCmd.Flags().StringVar(&cmd.Host, "host", "localhost", "The host to use when opening the ui server")
+	uiCmd.Flags().IntVar(&cmd.Port, "port", 0, "The port to use when opening the ui server")
 	uiCmd.Flags().BoolVar(&cmd.ForceServer, "server", false, "If enabled will force start a server (otherwise an existing UI server is searched)")
 	uiCmd.Flags().BoolVar(&cmd.Dev, "dev", false, "Ignore errors when downloading UI")
 	return uiCmd
@@ -71,20 +73,20 @@ func (cmd *UICmd) RunUI(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	}
 
 	// Search for an already existing server
-	if cmd.ForceServer == false && cmd.Dev == false {
+	if cmd.ForceServer == false && cmd.Dev == false && cmd.Host == "localhost" {
 		checkPort := server.DefaultPort
 		if cmd.Port != 0 {
 			checkPort = cmd.Port
 		}
 
 		for i := 0; i < 20; i++ {
-			unused, err := port.CheckHostPort("localhost", checkPort)
+			unused, err := port.CheckHostPort(cmd.Host, checkPort)
 			if unused == false {
 				if i+1 == 20 {
 					return errors.Wrap(err, "check for open port")
 				}
 
-				domain := fmt.Sprintf("http://localhost:%d", checkPort)
+				domain := fmt.Sprintf("http://%s:%d", cmd.Host, checkPort)
 
 				// Check if DevSpace server
 				response, err := http.Get(domain + "/api/version")
@@ -186,7 +188,7 @@ func (cmd *UICmd) RunUI(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	}
 
 	// Create server
-	server, err := server.NewServer(configLoader, config, generatedConfig, cmd.Dev, client.CurrentContext(), client.Namespace(), forcePort, cmd.log)
+	server, err := server.NewServer(configLoader, config, generatedConfig, cmd.Host, cmd.Dev, client.CurrentContext(), client.Namespace(), forcePort, cmd.log)
 	if err != nil {
 		return err
 	}
@@ -195,7 +197,7 @@ func (cmd *UICmd) RunUI(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	if cmd.Dev == false {
 		go func(domain string) {
 			time.Sleep(time.Second * 2)
-			open.Start("http://" + domain)
+			_ = open.Start("http://" + domain)
 		}(server.Server.Addr)
 	}
 

@@ -1,7 +1,7 @@
-version: v1beta5
+version: v1beta9
 images:
   default:
-    image: dscr.io/yourusername/quickstart
+    image: mydockeruser/quickstart
 deployments:
 - name: devspace-default
   kubectl:

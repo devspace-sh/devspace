@@ -45,7 +45,9 @@ type OpenCmd struct {
 	*flags.GlobalFlags
 
 	Provider string
-	log      log.Logger
+	Port     int
+
+	log log.Logger
 }
 
 // NewOpenCmd creates a new open command
@@ -75,6 +77,7 @@ devspace open
 	}
 
 	openCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
+	openCmd.Flags().IntVar(&cmd.Port, "port", 0, "The port on the localhost to listen on")
 
 	return openCmd
 }
@@ -129,16 +132,6 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, plugins []plugin.Metadata, cobraC
 		return err
 	}
 
-	// Get default namespace
-	var devspaceConfig *latest.Config
-	if configExists {
-		// Get config with adjusted cluster config
-		devspaceConfig, err = configLoader.Load()
-		if err != nil {
-			return err
-		}
-	}
-
 	namespace := client.Namespace()
 	ingressControllerWarning = ansi.Color(" ! an ingress controller must be installed in your cluster", "red+b")
 
@@ -157,7 +150,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, plugins []plugin.Metadata, cobraC
 
 	// Check if we should open locally
 	if openingMode == openLocalHostOption {
-		cmd.openLocal(f, devspaceConfig, nil, client, domain)
+		cmd.openLocal(f, nil, client, domain)
 		return nil
 	}
 
@@ -177,7 +170,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, plugins []plugin.Metadata, cobraC
 
 	// No suitable ingress found => create ingress
 	if existingIngressDomain == "" {
-		serviceName, servicePort, _, err := cmd.getService(devspaceConfig, client, namespace, domain, false)
+		serviceName, servicePort, _, err := cmd.getService(client, namespace, domain, false)
 		if err != nil {
 			return errors.Wrap(err, "get service")
 		}
@@ -273,26 +266,29 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 	return nil
 }
 
-func (cmd *OpenCmd) openLocal(f factory.Factory, devspaceConfig *latest.Config, generatedConfig *generated.Config, client kubectl.Client, domain string) error {
-	_, servicePort, serviceLabels, err := cmd.getService(devspaceConfig, client, client.Namespace(), domain, true)
+func (cmd *OpenCmd) openLocal(f factory.Factory, generatedConfig *generated.Config, client kubectl.Client, domain string) error {
+	_, servicePort, serviceLabels, err := cmd.getService(client, client.Namespace(), domain, true)
 	if err != nil {
 		return errors.Errorf("Unable to get service: %v", err)
 	}
 
 	localPort := servicePort
-	if localPort < 1024 {
-		localPort = localPort + 8000
-	}
+	if cmd.Port != 0 {
+		localPort = cmd.Port
+	} else {
+		if localPort < 1024 {
+			localPort = localPort + 8000
+		}
 
-	// Check if port is open
-	portOpen, _ := port.Check(localPort)
-	for portOpen == false {
-		localPort++
-		portOpen, _ = port.Check(localPort)
+		// Check if port is open
+		portOpen, _ := port.Check(localPort)
+		for portOpen == false {
+			localPort++
+			portOpen, _ = port.Check(localPort)
+		}
 	}
 
 	domain = "http://localhost:" + strconv.Itoa(localPort)
-
 	portMappings := []*latest.PortMapping{
 		&latest.PortMapping{
 			LocalPort:  &localPort,
@@ -331,7 +327,7 @@ func (cmd *OpenCmd) openLocal(f factory.Factory, devspaceConfig *latest.Config, 
 	time.Sleep(time.Second * 2)
 
 	cmd.log.StopWait()
-	open.Start(domain)
+	_ = open.Start(domain)
 	cmd.log.Donef("Successfully opened %s", domain)
 	cmd.log.WriteString("\n")
 	cmd.log.Info("Press ENTER to terminate port-forwarding process")
@@ -342,7 +338,7 @@ func (cmd *OpenCmd) openLocal(f factory.Factory, devspaceConfig *latest.Config, 
 	return nil
 }
 
-func (cmd *OpenCmd) getService(config *latest.Config, client kubectl.Client, namespace, host string, getEndpoints bool) (string, int, *map[string]string, error) {
+func (cmd *OpenCmd) getService(client kubectl.Client, namespace, host string, getEndpoints bool) (string, int, *map[string]string, error) {
 	// Let user select service
 	serviceNameList := []string{}
 	serviceLabels := map[string]map[string]string{}
@@ -365,10 +361,10 @@ func (cmd *OpenCmd) getService(config *latest.Config, client kubectl.Client, nam
 
 			for _, ports := range service.Spec.Ports {
 				port := ports.Port
-
 				if getEndpoints {
 					port = ports.TargetPort.IntVal
 				}
+
 				serviceNameList = append(serviceNameList, service.Name+":"+strconv.Itoa(int(port)))
 			}
 

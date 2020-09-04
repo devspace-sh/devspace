@@ -230,9 +230,13 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 			r.log.Donef("Pulled %s", ID)
 		}
 	} else if dependency.Source.Path != "" {
-		localPath, err = filepath.Abs(filepath.Join(basePath, filepath.FromSlash(dependency.Source.Path)))
-		if err != nil {
-			return nil, errors.Wrap(err, "filepath absolute")
+		if filepath.IsAbs(dependency.Source.Path) {
+			localPath = dependency.Source.Path
+		} else {
+			localPath, err = filepath.Abs(filepath.Join(basePath, filepath.FromSlash(dependency.Source.Path)))
+			if err != nil {
+				return nil, errors.Wrap(err, "filepath absolute")
+			}
 		}
 	}
 
@@ -254,6 +258,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	// Load config
 	cloned.GeneratedConfig = r.BaseCache
 	cloned.ConfigPath = configPath
+	cloned.BasePath = loader.NewConfigLoader(r.ConfigOptions, r.log).ConfigPath()
 
 	// Create the config loader
 	var dConfig *latest.Config
@@ -361,7 +366,10 @@ func (r *resolver) getDependencyID(basePath string, dependency *latest.Dependenc
 		return id
 	} else if dependency.Source.Path != "" {
 		// Check if it's an git repo
-		filePath := filepath.Join(basePath, dependency.Source.Path)
+		filePath := dependency.Source.Path
+		if !filepath.IsAbs(dependency.Source.Path) {
+			filePath = filepath.Join(basePath, dependency.Source.Path)
+		}
 
 		remote, err := git.GetRemote(filePath)
 		if err == nil {

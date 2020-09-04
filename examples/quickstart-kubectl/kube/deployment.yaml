@@ -17,4 +17,4 @@ spec:
       containers:
         - name: default
           # The correct image tag will be inserted during devspace dev / devspace deploy
-          image: dscr.io/yourusername/quickstart
+          image: mydockeruser/quickstart
