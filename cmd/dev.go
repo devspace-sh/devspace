@@ -448,7 +448,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 		defer logger.StopWait()
 
 		// Create server
-		server, err := server.NewServer(cmd.configLoader, config, generatedConfig, false, client.CurrentContext(), client.Namespace(), nil, logger)
+		server, err := server.NewServer(cmd.configLoader, config, generatedConfig, "localhost", false, client.CurrentContext(), client.Namespace(), nil, logger)
 		if err != nil {
 			logger.Warnf("Couldn't start UI server: %v", err)
 		} else {
