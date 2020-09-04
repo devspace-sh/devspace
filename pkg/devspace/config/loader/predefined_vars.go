@@ -24,11 +24,23 @@ var predefinedVars = map[string]func(loader *configLoader) (string, error){
 
 		return ret, nil
 	},
+	"DEVSPACE_PROFILE": func(loader *configLoader) (string, error) {
+		if loader.options == nil {
+			return "", nil
+		}
+
+		return loader.options.Profile, nil
+	},
 	"DEVSPACE_TIMESTAMP": func(loader *configLoader) (string, error) {
 		return strconv.FormatInt(time.Now().Unix(), 10), nil
 	},
 	"DEVSPACE_GIT_COMMIT": func(loader *configLoader) (string, error) {
-		hash, err := git.GetHash(filepath.Dir(loader.ConfigPath()))
+		configPath := loader.options.BasePath
+		if configPath == "" {
+			configPath = loader.ConfigPath()
+		}
+
+		hash, err := git.GetHash(filepath.Dir(configPath))
 		if err != nil {
 			return "", fmt.Errorf("No git repository found (%v), but predefined var DEVSPACE_GIT_COMMIT is used", err)
 		}
