@@ -1,7 +1,7 @@
-version: v1beta5
+version: v1beta9
 images:
   default:
-    image: dscr.io/${DEVSPACE_USERNAME}/devspace
+    image: mydockeruser/devspace
 deployments:
 - name: mysql
   helm:
@@ -31,7 +31,7 @@ deployments:
     componentChart: true
     values:
       containers:
-      - image: dscr.io/${DEVSPACE_USERNAME}/devspace
+      - image: mydockeruser/devspace
       service:
         ports:
         - port: 80

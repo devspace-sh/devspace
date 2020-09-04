@@ -73,7 +73,7 @@ func (cmd *UICmd) RunUI(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	}
 
 	// Search for an already existing server
-	if cmd.ForceServer == false && cmd.Dev == false {
+	if cmd.ForceServer == false && cmd.Dev == false && cmd.Host == "localhost" {
 		checkPort := server.DefaultPort
 		if cmd.Port != 0 {
 			checkPort = cmd.Port

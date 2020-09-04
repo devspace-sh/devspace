@@ -77,7 +77,7 @@ devspace open
 	}
 
 	openCmd.Flags().StringVar(&cmd.Provider, "provider", "", "The cloud provider to use")
-	openCmd.Flags().IntVar(&cmd.Port, "port", 0, "The cloud provider to use")
+	openCmd.Flags().IntVar(&cmd.Port, "port", 0, "The port on the localhost to listen on")
 
 	return openCmd
 }
