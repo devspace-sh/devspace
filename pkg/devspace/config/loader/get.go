@@ -121,10 +121,16 @@ func (l *configLoader) New() *latest.Config {
 
 // ConfigOptions defines options to load the config
 type ConfigOptions struct {
-	Profile     string
 	KubeContext string
 	Namespace   string
-	ConfigPath  string
+
+	// The path the config should be loaded from (e.g. /test/devspace.yaml)
+	ConfigPath string
+	// If the config is loaded from a dependency, this points to the original
+	// path where the base config was loaded from
+	BasePath string
+	// The profile that should be loaded
+	Profile string
 
 	GeneratedConfig *generated.Config
 	LoadedVars      map[string]string

@@ -39,7 +39,7 @@ type Server struct {
 const DefaultPort = 8090
 
 // NewServer creates a new server from the given parameters
-func NewServer(configLoader loader.ConfigLoader, config *latest.Config, generatedConfig *generated.Config, ignoreDownloadError bool, defaultContext, defaultNamespace string, forcePort *int, log log.Logger) (*Server, error) {
+func NewServer(configLoader loader.ConfigLoader, config *latest.Config, generatedConfig *generated.Config, host string, ignoreDownloadError bool, defaultContext, defaultNamespace string, forcePort *int, log log.Logger) (*Server, error) {
 	path, err := downloadUI()
 	if err != nil {
 		if !ignoreDownloadError {
@@ -54,13 +54,13 @@ func NewServer(configLoader loader.ConfigLoader, config *latest.Config, generate
 	if forcePort != nil {
 		usePort = *forcePort
 
-		unused, err := port.CheckHostPort("localhost", usePort)
+		unused, err := port.CheckHostPort(host, usePort)
 		if unused == false {
 			return nil, errors.Errorf("Port %d already in use: %v", usePort, err)
 		}
 	} else {
 		for i := 0; i < 20; i++ {
-			unused, err := port.CheckHostPort("localhost", usePort)
+			unused, err := port.CheckHostPort(host, usePort)
 			if unused {
 				break
 			}
@@ -80,7 +80,7 @@ func NewServer(configLoader loader.ConfigLoader, config *latest.Config, generate
 
 	return &Server{
 		Server: &http.Server{
-			Addr:    "localhost:" + strconv.Itoa(usePort),
+			Addr:    host + ":" + strconv.Itoa(usePort),
 			Handler: handler,
 			// ReadTimeout:  5 * time.Second,
 			// WriteTimeout: 10 * time.Second,

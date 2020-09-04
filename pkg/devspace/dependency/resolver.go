@@ -254,6 +254,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	// Load config
 	cloned.GeneratedConfig = r.BaseCache
 	cloned.ConfigPath = configPath
+	cloned.BasePath = loader.NewConfigLoader(r.ConfigOptions, r.log).ConfigPath()
 
 	// Create the config loader
 	var dConfig *latest.Config
