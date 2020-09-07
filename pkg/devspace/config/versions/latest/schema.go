@@ -306,6 +306,7 @@ type ContainerConfig struct {
 	Resources      map[interface{}]interface{}   `yaml:"resources,omitempty"`
 	LivenessProbe  map[interface{}]interface{}   `yaml:"livenessProbe,omitempty"`
 	ReadinessProbe map[interface{}]interface{}   `yaml:"readinessProbe,omitempty"`
+	StartupProbe   map[interface{}]interface{}   `yaml:"startupProbe,omitempty"`
 }
 
 // VolumeMountConfig holds the configuration for a specific mount path
