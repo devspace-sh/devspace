@@ -34,6 +34,11 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 		SilenceErrors: true,
 		Short:         "Welcome to the DevSpace!",
 		PersistentPreRun: func(cobraCmd *cobra.Command, args []string) {
+			// don't do anything if it is a plugin command
+			if cobraCmd.Annotations != nil && cobraCmd.Annotations[plugin.PluginCommandAnnotation] == "true" {
+				return
+			}
+
 			log := f.GetLog()
 			if globalFlags.Silent {
 				log.SetLevel(logrus.FatalLevel)

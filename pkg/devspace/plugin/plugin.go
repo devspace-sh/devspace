@@ -26,6 +26,8 @@ const pluginYaml = "plugin.yaml"
 
 var PluginBinary = "binary"
 
+const PluginCommandAnnotation = "devspace.sh/is-plugin"
+
 func init() {
 	if runtime.GOOS == "windows" {
 		PluginBinary += ".exe"
@@ -324,6 +326,9 @@ func AddPluginCommands(base *cobra.Command, plugins []Metadata, subCommand strin
 					},
 					// This passes all the flags to the subcommand.
 					DisableFlagParsing: true,
+					Annotations: map[string]string{
+						PluginCommandAnnotation: "true",
+					},
 				}
 
 				base.AddCommand(c)
