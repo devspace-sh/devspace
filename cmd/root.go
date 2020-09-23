@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"flag"
 	"github.com/devspace-cloud/devspace/cmd/add"
 	"github.com/devspace-cloud/devspace/cmd/cleanup"
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -22,6 +23,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"io/ioutil"
+	"k8s.io/klog"
 	"os"
 	"strings"
 )
@@ -59,12 +62,6 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 					log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
 				}
 			}
-
-			// Get version of current binary
-			latestVersion := upgrade.NewerVersionAvailable()
-			if latestVersion != "" {
-				log.Warnf("There is a newer version of DevSpace: v%s. Run `devspace upgrade` to upgrade to the newest version.\n", latestVersion)
-			}
 		},
 		Long: `DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
 	
@@ -77,6 +74,9 @@ var globalFlags *flags.GlobalFlags
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	// disable klog
+	disableKlog()
+
 	// report any panics
 	defer cloudanalytics.ReportPanics()
 
@@ -152,4 +152,11 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	plugin.AddPluginCommands(rootCmd, plugins, "")
 	loader.AddPredefinedVars(plugins)
 	return rootCmd
+}
+
+func disableKlog() {
+	flagSet := &flag.FlagSet{}
+	klog.InitFlags(flagSet)
+	flagSet.Set("logtostderr", "false")
+	klog.SetOutput(ioutil.Discard)
 }

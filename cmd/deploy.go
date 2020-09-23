@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
+	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"strconv"
 	"strings"
 
@@ -66,6 +67,9 @@ devspace deploy --kube-context=deploy-context
 #######################################################`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			// Print upgrade message if new version available
+			upgrade.PrintUpgradeMessage()
+
 			return cmd.Run(f, plugins, cobraCmd, args)
 		},
 	}

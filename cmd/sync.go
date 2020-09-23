@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
+	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"os"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -60,6 +61,9 @@ devspace sync --pod=my-pod --container=my-container
 devspace sync --container-path=/my-path
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			// Print upgrade message if new version available
+			upgrade.PrintUpgradeMessage()
+
 			return cmd.Run(f, plugins, cobraCmd, args)
 		},
 	}

@@ -59,6 +59,7 @@ require (
 	k8s.io/cli-runtime v0.18.2
 	k8s.io/client-go v0.18.2
 	k8s.io/klog v1.0.0
+	k8s.io/klog/v2 v2.3.0 // indirect
 	k8s.io/kubectl v0.18.2
 	mvdan.cc/sh/v3 v3.0.0-alpha2
 )
