@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
+	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"os"
 	"strings"
 	"sync"
@@ -94,6 +95,9 @@ Open terminal instead of logs:
 - Use "devspace dev -i" for opening a terminal and overriding container entrypoint with sleep command
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			// Print upgrade message if new version available
+			upgrade.PrintUpgradeMessage()
+
 			return cmd.Run(f, plugins, cobraCmd, args)
 		},
 	}
