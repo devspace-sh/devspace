@@ -8,6 +8,8 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/list"
 	"github.com/devspace-cloud/devspace/cmd/remove"
 	"github.com/devspace-cloud/devspace/cmd/reset"
+	"github.com/devspace-cloud/devspace/cmd/restore"
+	"github.com/devspace-cloud/devspace/cmd/save"
 	"github.com/devspace-cloud/devspace/cmd/set"
 	"github.com/devspace-cloud/devspace/cmd/status"
 	"github.com/devspace-cloud/devspace/cmd/update"
@@ -129,6 +131,8 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	rootCmd.AddCommand(status.NewStatusCmd(f, plugins))
 	rootCmd.AddCommand(use.NewUseCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(update.NewUpdateCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(save.NewSaveCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(restore.NewRestoreCmd(f, globalFlags, plugins))
 
 	// Add main commands
 	rootCmd.AddCommand(NewInitCmd(f))
