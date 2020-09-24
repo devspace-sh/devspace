@@ -9,6 +9,8 @@ import (
 // DownstreamCmd holds the downstream cmd flags
 type DownstreamCmd struct {
 	Exclude []string
+
+	Throttle int64
 }
 
 // NewDownstreamCmd creates a new downstream command
@@ -22,6 +24,7 @@ func NewDownstreamCmd() *cobra.Command {
 	}
 
 	downstreamCmd.Flags().StringSliceVar(&cmd.Exclude, "exclude", []string{}, "The exclude paths for downstream watching")
+	downstreamCmd.Flags().Int64Var(&cmd.Throttle, "throttle", 5, "The amount of milliseconds to throttle change detection per 100 files")
 	return downstreamCmd
 }
 
@@ -36,6 +39,7 @@ func (cmd *DownstreamCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		RemotePath:   absolutePath,
 		ExcludePaths: cmd.Exclude,
 
+		Throttle:    cmd.Throttle,
 		ExitOnClose: true,
 	})
 }

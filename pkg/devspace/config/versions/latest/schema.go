@@ -487,6 +487,9 @@ type SyncConfig struct {
 	WaitInitialSync *bool            `yaml:"waitInitialSync,omitempty"`
 	BandwidthLimits *BandwidthLimits `yaml:"bandwidthLimits,omitempty"`
 
+	// If greater zero, describes the amount of milliseconds to wait after each checked 100 files
+	ThrottleChangeDetection *int64 `yaml:"throttleChangeDetection,omitempty"`
+
 	OnUpload   *SyncOnUpload   `yaml:"onUpload,omitempty"`
 	OnDownload *SyncOnDownload `yaml:"onDownload,omitempty"`
 }
