@@ -18,6 +18,7 @@ import (
 )
 
 const dockerHubHostname = "hub.docker.com"
+const githubDockerRegistry = "docker.pkg.github.com"
 const noRegistryImage = "devspace"
 
 // newImageConfigFromImageName returns an image config based on the image
@@ -218,6 +219,7 @@ func (m *manager) getRegistryURL(dockerClient docker.Client) (string, error) {
 	var (
 		useDockerHub          = "Use " + dockerHubHostname
 		skipImagePush         = "Always skip image push (advanced, config will not work with remote clusters)"
+		useGithubRegistry     = "Use github docker registry"
 		useOtherRegistry      = "Use other registry"
 		registryUsernameHint  = " => you are logged in as %s"
 		registryDefaultOption = useDockerHub
@@ -230,7 +232,7 @@ func (m *manager) getRegistryURL(dockerClient docker.Client) (string, error) {
 		registryDefaultOption = useDockerHub
 	}
 
-	registryOptions := []string{useDockerHub, useOtherRegistry}
+	registryOptions := []string{useDockerHub, useGithubRegistry, useOtherRegistry}
 	registryOptions = append(registryOptions, skipImagePush)
 	selectedRegistry, err := m.log.Question(&survey.QuestionOptions{
 		Question:     "Which registry do you want to use for storing your Docker images?",
@@ -246,6 +248,9 @@ func (m *manager) getRegistryURL(dockerClient docker.Client) (string, error) {
 		return "", nil
 	} else if selectedRegistry == useDockerHub {
 		registryURL = dockerHubHostname
+	} else if selectedRegistry == useGithubRegistry {
+		registryURL = githubDockerRegistry
+		registryLoginHint = fmt.Sprintf(registryLoginHint, " "+registryURL)
 	} else {
 		registryURL, err = m.log.Question(&survey.QuestionOptions{
 			Question:     "Please enter the registry URL without image name:",

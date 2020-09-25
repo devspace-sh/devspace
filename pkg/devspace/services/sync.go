@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -369,6 +370,9 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 
 	// Start downstream
 	downstreamArgs := []string{DevSpaceHelperContainerPath, "sync", "downstream"}
+	if syncConfig.ThrottleChangeDetection != nil {
+		downstreamArgs = append(downstreamArgs, "--throttle", strconv.FormatInt(*syncConfig.ThrottleChangeDetection, 10))
+	}
 	for _, exclude := range options.ExcludePaths {
 		downstreamArgs = append(downstreamArgs, "--exclude", exclude)
 	}

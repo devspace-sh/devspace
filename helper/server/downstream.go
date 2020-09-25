@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/devspace-cloud/devspace/helper/remote"
 	"github.com/devspace-cloud/devspace/helper/util"
@@ -22,6 +23,7 @@ type DownstreamOptions struct {
 	RemotePath   string
 	ExcludePaths []string
 	ExitOnClose  bool
+	Throttle     int64
 }
 
 // StartDownstreamServer starts a new downstream server with the given reader and writer
@@ -141,11 +143,12 @@ func (d *Downstream) compress(writer io.WriteCloser, files []string) error {
 // ChangesCount returns the amount of changes on the remote side
 func (d *Downstream) ChangesCount(context.Context, *remote.Empty) (*remote.ChangeAmount, error) {
 	newState := make(map[string]*remote.Change)
+	throttle := time.Duration(d.options.Throttle) * time.Millisecond
 
 	// Walk through the dir
-	walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState)
+	walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, throttle)
 
-	changeAmount, err := streamChanges(d.options.RemotePath, d.watchedFiles, newState, nil)
+	changeAmount, err := streamChanges(d.options.RemotePath, d.watchedFiles, newState, nil, throttle)
 	if err != nil {
 		return nil, errors.Wrap(err, "count changes")
 	}
@@ -158,11 +161,12 @@ func (d *Downstream) ChangesCount(context.Context, *remote.Empty) (*remote.Chang
 // Changes retrieves all changes from the watchpath
 func (d *Downstream) Changes(empty *remote.Empty, stream remote.Downstream_ChangesServer) error {
 	newState := make(map[string]*remote.Change)
+	throttle := time.Duration(d.options.Throttle) * time.Millisecond
 
 	// Walk through the dir
-	walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState)
+	walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, throttle)
 
-	_, err := streamChanges(d.options.RemotePath, d.watchedFiles, newState, stream)
+	_, err := streamChanges(d.options.RemotePath, d.watchedFiles, newState, stream, throttle)
 	if err != nil {
 		return errors.Wrap(err, "stream changes")
 	}
@@ -171,7 +175,7 @@ func (d *Downstream) Changes(empty *remote.Empty, stream remote.Downstream_Chang
 	return nil
 }
 
-func streamChanges(basePath string, oldState map[string]*remote.Change, newState map[string]*remote.Change, stream remote.Downstream_ChangesServer) (int64, error) {
+func streamChanges(basePath string, oldState map[string]*remote.Change, newState map[string]*remote.Change, stream remote.Downstream_ChangesServer, throttle time.Duration) (int64, error) {
 	changeAmount := int64(0)
 	if oldState == nil {
 		oldState = make(map[string]*remote.Change)
@@ -179,7 +183,13 @@ func streamChanges(basePath string, oldState map[string]*remote.Change, newState
 
 	// Compare new -> old
 	changes := make([]*remote.Change, 0, 64)
+	counter := int64(0)
 	for _, newFile := range newState {
+		counter++
+		if throttle != 0 && counter%2000 == 0 {
+			time.Sleep(throttle)
+		}
+
 		if oldFile, ok := oldState[newFile.Path]; ok {
 			if oldFile.IsDir != newFile.IsDir || oldFile.Size != newFile.Size || oldFile.MtimeUnix != newFile.MtimeUnix || oldFile.MtimeUnixNano != newFile.MtimeUnixNano {
 				if stream != nil {
@@ -222,6 +232,11 @@ func streamChanges(basePath string, oldState map[string]*remote.Change, newState
 
 	// Compare old -> new
 	for _, oldFile := range oldState {
+		counter++
+		if throttle != 0 && counter%2000 == 0 {
+			time.Sleep(throttle)
+		}
+
 		if _, ok := newState[oldFile.Path]; ok == false {
 			if stream != nil {
 				changes = append(changes, &remote.Change{
@@ -258,7 +273,7 @@ func streamChanges(basePath string, oldState map[string]*remote.Change, newState
 	return changeAmount, nil
 }
 
-func walkDir(basePath string, path string, ignoreMatcher gitignore.IgnoreParser, state map[string]*remote.Change) {
+func walkDir(basePath string, path string, ignoreMatcher gitignore.IgnoreParser, state map[string]*remote.Change, throttle time.Duration) {
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		// We ignore errors here
@@ -281,6 +296,11 @@ func walkDir(basePath string, path string, ignoreMatcher gitignore.IgnoreParser,
 			continue
 		}
 
+		// should throttle?
+		if throttle != 0 && len(state)%100 == 0 {
+			time.Sleep(throttle)
+		}
+
 		// Check if directory
 		if stat.IsDir() {
 			state[absolutePath] = &remote.Change{
@@ -288,7 +308,7 @@ func walkDir(basePath string, path string, ignoreMatcher gitignore.IgnoreParser,
 				IsDir: true,
 			}
 
-			walkDir(basePath, absolutePath, ignoreMatcher, state)
+			walkDir(basePath, absolutePath, ignoreMatcher, state, throttle)
 		} else {
 			state[absolutePath] = &remote.Change{
 				Path:          absolutePath,
