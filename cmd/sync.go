@@ -109,6 +109,8 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		if err != nil {
 			return err
 		}
+	} else {
+		logger.Warnf("You are using `devspace sync` without a devspace.yaml, use the flag `--config` to specify a config")
 	}
 
 	// Use last context if specified

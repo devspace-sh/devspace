@@ -75,14 +75,14 @@ func (serviceClient *client) StartSyncFromCmd(syncConfig *latest.SyncConfig, int
 }
 
 // StartSync starts the syncing functionality
-func (serviceClient *client) StartSync(interrupt chan error, verboseSync bool) error {
+func (serviceClient *client) StartSync(interrupt chan error, printSyncLog bool, verboseSync bool) error {
 	if serviceClient.config.Dev == nil {
 		return nil
 	}
 
 	// Start sync client
-	for _, syncConfig := range serviceClient.config.Dev.Sync {
-		err := serviceClient.startSyncClient(&startClientOptions{
+	for idx, syncConfig := range serviceClient.config.Dev.Sync {
+		options := &startClientOptions{
 			Interrupt: interrupt,
 
 			SyncConfig: syncConfig,
@@ -99,7 +99,16 @@ func (serviceClient *client) StartSync(interrupt chan error, verboseSync bool) e
 
 			AllowPodPick: false,
 			Verbose:      verboseSync,
-		}, serviceClient.log)
+		}
+
+		// should we print the logs?
+		if printSyncLog {
+			logger := logpkg.NewPrefixLogger(fmt.Sprintf("[Sync - %d] ", idx), logpkg.Colors[idx%len(logpkg.Colors)], serviceClient.log)
+			options.SyncLog = logger
+			options.RestartLog = logger
+		}
+
+		err := serviceClient.startSyncClient(options, serviceClient.log)
 		if err != nil {
 			return errors.Errorf("Unable to start sync: %v", err)
 		}
@@ -258,14 +267,20 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		downstreamDisabled = *syncConfig.DisableDownload
 	}
 
+	compareBy := latest.InitialSyncCompareByMTime
+	if syncConfig.InitialSyncCompareBy != "" {
+		compareBy = syncConfig.InitialSyncCompareBy
+	}
+
 	options := sync.Options{
-		Verbose:            verbose,
-		SyncError:          make(chan error),
-		SyncDone:           syncDone,
-		InitialSync:        syncConfig.InitialSync,
-		UpstreamDisabled:   upstreamDisabled,
-		DownstreamDisabled: downstreamDisabled,
-		Log:                customLog,
+		Verbose:              verbose,
+		SyncError:            make(chan error),
+		SyncDone:             syncDone,
+		InitialSyncCompareBy: compareBy,
+		InitialSync:          syncConfig.InitialSync,
+		UpstreamDisabled:     upstreamDisabled,
+		DownstreamDisabled:   downstreamDisabled,
+		Log:                  customLog,
 	}
 
 	// Add onDownload hooks

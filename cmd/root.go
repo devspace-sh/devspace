@@ -136,6 +136,7 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 
 	// Add main commands
 	rootCmd.AddCommand(NewInitCmd(f))
+	rootCmd.AddCommand(NewRestartCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewDevCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewBuildCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewSyncCmd(f, globalFlags, plugins))

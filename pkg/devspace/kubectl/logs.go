@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/mgutz/ansi"
 
@@ -40,18 +40,8 @@ type logLine struct {
 	color string
 }
 
-var colors = []string{
-	"blue",
-	"green",
-	"yellow",
-	"magenta",
-	"cyan",
-	"red",
-	"white+b",
-}
-
 // LogMultipleTimeout will log multiple and wait for a specific time for ready pods until timeout
-func (client *client) LogMultipleTimeout(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, timeout time.Duration, log log.Logger) error {
+func (client *client) LogMultipleTimeout(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, timeout time.Duration, log logpkg.Logger) error {
 	// Get pods
 	log.StartWait("Find running pods...")
 	pods, err := client.GetRunningPodsWithImage(imageSelector, client.namespace, timeout)
@@ -112,7 +102,7 @@ func (client *client) LogMultipleTimeout(imageSelector []string, interrupt chan 
 						}
 
 						wg.Done()
-					}(prefix, reader, colors[idx%len(colors)])
+					}(prefix, reader, logpkg.Colors[idx%len(logpkg.Colors)])
 					break Outer
 				}
 			}
@@ -138,7 +128,7 @@ func (client *client) LogMultipleTimeout(imageSelector []string, interrupt chan 
 }
 
 // LogMultiple will log multiple
-func (client *client) LogMultiple(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, log log.Logger) error {
+func (client *client) LogMultiple(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, log logpkg.Logger) error {
 	return client.LogMultipleTimeout(imageSelector, interrupt, tail, writer, time.Minute*2, log)
 }
 

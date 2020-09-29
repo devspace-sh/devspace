@@ -46,7 +46,8 @@ type Options struct {
 	UpstreamDisabled   bool
 	DownstreamDisabled bool
 
-	InitialSync latest.InitialSyncStrategy
+	InitialSyncCompareBy latest.InitialSyncCompareBy
+	InitialSync          latest.InitialSyncStrategy
 
 	// These channels can be used to listen for certain sync events
 	DownstreamInitialSyncDone chan bool
@@ -272,6 +273,7 @@ func (s *Sync) initialSync() error {
 	initialSync := newInitialSyncer(&initialSyncOptions{
 		LocalPath: s.LocalPath,
 		Strategy:  s.Options.InitialSync,
+		CompareBy: s.Options.InitialSyncCompareBy,
 
 		IgnoreMatcher:         s.ignoreMatcher,
 		DownloadIgnoreMatcher: s.downloadIgnoreMatcher,

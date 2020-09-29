@@ -21,7 +21,7 @@ type Client interface {
 	StartReversePortForwarding(interrupt chan error) error
 
 	StartSyncFromCmd(syncConfig *latest.SyncConfig, interrupt chan error, verbose bool) error
-	StartSync(interrupt chan error, verboseSync bool) error
+	StartSync(interrupt chan error, printSyncLog bool, verboseSync bool) error
 
 	StartTerminal(args []string, imageSelector []string, interrupt chan error, wait bool) (int, error)
 }

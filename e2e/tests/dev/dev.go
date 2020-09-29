@@ -51,8 +51,8 @@ func (s *fakeServiceClient) StartPortForwarding(interrupt chan error) error {
 	return err
 }
 
-func (s *fakeServiceClient) StartSync(interrupt chan error, verboseSync bool) error {
-	err := s.Client.StartSync(s.factory.interruptSync, verboseSync)
+func (s *fakeServiceClient) StartSync(interrupt chan error, printSync, verboseSync bool) error {
+	err := s.Client.StartSync(s.factory.interruptSync, printSync, verboseSync)
 	return err
 }
 

@@ -4,6 +4,8 @@ import (
 	"github.com/devspace-cloud/devspace/cmd/restore"
 	"github.com/devspace-cloud/devspace/cmd/save"
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
+	"github.com/devspace-cloud/devspace/pkg/devspace/server"
+	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"os"
 	"strings"
@@ -15,7 +17,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
-	"github.com/devspace-cloud/devspace/pkg/devspace/server"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
 	"github.com/mgutz/ansi"
@@ -56,6 +57,7 @@ type DevCmd struct {
 	SkipPipeline    bool
 	Portforwarding  bool
 	VerboseSync     bool
+	PrintSyncLog    bool
 
 	UI bool
 
@@ -126,6 +128,7 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVar(&cmd.Open, "open", true, "Open defined URLs in the browser, if defined")
 	devCmd.Flags().BoolVar(&cmd.Sync, "sync", true, "Enable code synchronization")
 	devCmd.Flags().BoolVar(&cmd.VerboseSync, "verbose-sync", false, "When enabled the sync will log every file change")
+	devCmd.Flags().BoolVar(&cmd.PrintSyncLog, "print-sync", false, "If enabled will print the sync log to the terminal")
 
 	devCmd.Flags().BoolVar(&cmd.Portforwarding, "portforwarding", true, "Enable port forwarding")
 
@@ -416,9 +419,30 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 		}
 	}
 
+	// Open UI if configured
+	if cmd.UI {
+		cmd.UI = false
+		logger.StartWait("Starting the ui server...")
+		defer logger.StopWait()
+
+		// Create server
+		server, err := server.NewServer(cmd.configLoader, config, generatedConfig, "localhost", false, client.CurrentContext(), client.Namespace(), nil, logger)
+		if err != nil {
+			logger.Warnf("Couldn't start UI server: %v", err)
+		} else {
+			// Start server
+			go func() { server.ListenAndServe() }()
+
+			logger.StopWait()
+			logger.WriteString("\n#########################################################\n")
+			logger.Infof("DevSpace UI available at: %s", ansi.Color("http://"+server.Server.Addr, "white+b"))
+			logger.WriteString("#########################################################\n\n")
+		}
+	}
+
 	if cmd.Sync {
 		cmd.Sync = false
-		err := servicesClient.StartSync(nil, cmd.VerboseSync)
+		err := servicesClient.StartSync(nil, cmd.PrintSyncLog, cmd.VerboseSync)
 		if err != nil {
 			return 0, errors.Wrap(err, "start sync")
 		}
@@ -472,75 +496,60 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 		}
 	}
 
-	// Open UI if configured
-	if cmd.UI {
-		cmd.UI = false
-		logger.StartWait("Starting the ui server...")
-		defer logger.StopWait()
+	return cmd.startOutput(interactiveMode, config, generatedConfig, client, args, servicesClient, exitChan, logger)
+}
 
-		// Create server
-		server, err := server.NewServer(cmd.configLoader, config, generatedConfig, "localhost", false, client.CurrentContext(), client.Namespace(), nil, logger)
-		if err != nil {
-			logger.Warnf("Couldn't start UI server: %v", err)
-		} else {
-			// Start server
-			go func() { server.ListenAndServe() }()
-
-			logger.StopWait()
-			logger.WriteString("\n#########################################################\n")
-			logger.Infof("DevSpace UI available at: %s", ansi.Color("http://"+server.Server.Addr, "white+b"))
-			logger.WriteString("#########################################################\n\n")
-		}
-	}
-
+func (cmd *DevCmd) startOutput(interactiveMode bool, config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, servicesClient services.Client, exitChan chan error, logger log.Logger) (int, error) {
 	// Check if we should open a terminal or stream logs
-	if interactiveMode {
-		var imageSelector []string
-		if config.Dev.Interactive.Terminal != nil && config.Dev.Interactive.Terminal.ImageName != "" {
-			imageSelector = targetselector.ImageSelectorFromConfig(config.Dev.Interactive.Terminal.ImageName, config, generatedConfig)
-		} else if len(config.Dev.Interactive.Images) > 0 {
-			imageSelector = []string{}
-			for _, imageConfig := range config.Dev.Interactive.Images {
-				imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(imageConfig.Name, config, generatedConfig)...)
-			}
-		}
-
-		return servicesClient.StartTerminal(args, imageSelector, exitChan, true)
-	} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
-		// Build an image selector
-		imageSelector := []string{}
-		if config.Dev != nil && config.Dev.Logs != nil {
-			for _, configImageName := range config.Dev.Logs.Images {
-				imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig)...)
-			}
-		} else {
-			for configImageName := range config.Images {
-				imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig)...)
-			}
-		}
-
-		// Show last log lines
-		tail := int64(50)
-		if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.ShowLast != nil {
-			tail = int64(*config.Dev.Logs.ShowLast)
-		}
-
-		// Log multiple images at once
-		err := client.LogMultiple(imageSelector, exitChan, &tail, os.Stdout, logger)
-		if err != nil {
-			// Check if we should reload
-			if _, ok := err.(*reloadError); ok {
-				return 0, err
+	if cmd.PrintSyncLog == false {
+		if interactiveMode {
+			var imageSelector []string
+			if config.Dev.Interactive.Terminal != nil && config.Dev.Interactive.Terminal.ImageName != "" {
+				imageSelector = targetselector.ImageSelectorFromConfig(config.Dev.Interactive.Terminal.ImageName, config, generatedConfig)
+			} else if len(config.Dev.Interactive.Images) > 0 {
+				imageSelector = []string{}
+				for _, imageConfig := range config.Dev.Interactive.Images {
+					imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(imageConfig.Name, config, generatedConfig)...)
+				}
 			}
 
-			logger.Warnf("Couldn't print logs: %v", err)
+			return servicesClient.StartTerminal(args, imageSelector, exitChan, true)
+		} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
+			// Build an image selector
+			imageSelector := []string{}
+			if config.Dev != nil && config.Dev.Logs != nil {
+				for _, configImageName := range config.Dev.Logs.Images {
+					imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig)...)
+				}
+			} else {
+				for configImageName := range config.Images {
+					imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig)...)
+				}
+			}
+
+			// Show last log lines
+			tail := int64(50)
+			if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.ShowLast != nil {
+				tail = int64(*config.Dev.Logs.ShowLast)
+			}
+
+			// Log multiple images at once
+			err := client.LogMultiple(imageSelector, exitChan, &tail, os.Stdout, logger)
+			if err != nil {
+				// Check if we should reload
+				if _, ok := err.(*reloadError); ok {
+					return 0, err
+				}
+
+				logger.Warnf("Couldn't print logs: %v", err)
+			}
+
+			logger.WriteString("\n")
+			logger.Warn("Log streaming service has been terminated")
 		}
 
-		logger.WriteString("\n")
-		logger.Warn("Log streaming service has been terminated")
+		logger.Done("Sync and port-forwarding services are running (Press Ctrl+C to abort services)")
 	}
-
-	logger.Done("Sync and port-forwarding services are running (Press Ctrl+C to abort services)")
 	return 0, <-exitChan
 }
 
