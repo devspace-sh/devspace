@@ -47,8 +47,8 @@ func (s *fakeServiceClient) StartSyncFromCmd(syncConfig *latest.SyncConfig, inte
 	return err
 }
 
-func (s *fakeServiceClient) StartSync(interrupt chan error, verboseSync bool) error {
-	err := s.Client.StartSync(s.factory.interrupt, verboseSync)
+func (s *fakeServiceClient) StartSync(interrupt chan error, printSync, verboseSync bool) error {
+	err := s.Client.StartSync(s.factory.interrupt, printSync, verboseSync)
 	return err
 }
 
