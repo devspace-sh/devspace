@@ -21,7 +21,8 @@ type initialSyncer struct {
 type initialSyncOptions struct {
 	LocalPath string
 
-	Strategy latest.InitialSyncStrategy
+	CompareBy latest.InitialSyncCompareBy
+	Strategy  latest.InitialSyncStrategy
 
 	IgnoreMatcher         gitignore.IgnoreParser
 	DownloadIgnoreMatcher gitignore.IgnoreParser
@@ -359,8 +360,12 @@ func (i *initialSyncer) decide(fileInformation *FileInformation, strategy latest
 		}
 
 		// File did not change or was changed by downstream
-		if fileInformation.Mtime == i.o.FileIndex.fileMap[fileInformation.Name].Mtime && fileInformation.Size == i.o.FileIndex.fileMap[fileInformation.Name].Size {
-			return noAction
+		if fileInformation.Size == i.o.FileIndex.fileMap[fileInformation.Name].Size {
+			if fileInformation.Mtime == i.o.FileIndex.fileMap[fileInformation.Name].Mtime {
+				return noAction
+			} else if i.o.CompareBy == latest.InitialSyncCompareBySize {
+				return noAction
+			}
 		}
 
 		// Okay we have a conflict so now we decide based on the given strategy

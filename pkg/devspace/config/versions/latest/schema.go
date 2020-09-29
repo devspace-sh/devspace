@@ -470,16 +470,17 @@ type OpenConfig struct {
 
 // SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
-	ImageName            string              `yaml:"imageName,omitempty"`
-	LabelSelector        map[string]string   `yaml:"labelSelector,omitempty"`
-	ContainerName        string              `yaml:"containerName,omitempty"`
-	Namespace            string              `yaml:"namespace,omitempty"`
-	LocalSubPath         string              `yaml:"localSubPath,omitempty"`
-	ContainerPath        string              `yaml:"containerPath,omitempty"`
-	ExcludePaths         []string            `yaml:"excludePaths,omitempty"`
-	DownloadExcludePaths []string            `yaml:"downloadExcludePaths,omitempty"`
-	UploadExcludePaths   []string            `yaml:"uploadExcludePaths,omitempty"`
-	InitialSync          InitialSyncStrategy `yaml:"initialSync,omitempty"`
+	ImageName            string               `yaml:"imageName,omitempty"`
+	LabelSelector        map[string]string    `yaml:"labelSelector,omitempty"`
+	ContainerName        string               `yaml:"containerName,omitempty"`
+	Namespace            string               `yaml:"namespace,omitempty"`
+	LocalSubPath         string               `yaml:"localSubPath,omitempty"`
+	ContainerPath        string               `yaml:"containerPath,omitempty"`
+	ExcludePaths         []string             `yaml:"excludePaths,omitempty"`
+	DownloadExcludePaths []string             `yaml:"downloadExcludePaths,omitempty"`
+	UploadExcludePaths   []string             `yaml:"uploadExcludePaths,omitempty"`
+	InitialSync          InitialSyncStrategy  `yaml:"initialSync,omitempty"`
+	InitialSyncCompareBy InitialSyncCompareBy `yaml:"initialSyncCompareBy,omitempty"`
 
 	DisableDownload *bool `yaml:"disableDownload,omitempty"`
 	DisableUpload   *bool `yaml:"disableUpload,omitempty"`
@@ -547,6 +548,15 @@ const (
 	InitialSyncStrategyPreferRemote InitialSyncStrategy = "preferRemote"
 	InitialSyncStrategyPreferNewest InitialSyncStrategy = "preferNewest"
 	InitialSyncStrategyKeepAll      InitialSyncStrategy = "keepAll"
+)
+
+// InitialSyncCompareBy is the type of how a change should be determined during the initial sync
+type InitialSyncCompareBy string
+
+// List of values that compare by can take
+const (
+	InitialSyncCompareByMTime InitialSyncCompareBy = "mtime"
+	InitialSyncCompareBySize  InitialSyncCompareBy = "size"
 )
 
 // BandwidthLimits defines the struct for specifying the sync bandwidth limits

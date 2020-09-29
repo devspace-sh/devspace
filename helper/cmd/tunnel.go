@@ -9,7 +9,7 @@ import (
 // TunnelCmd holds the tunnel cmd flags
 type TunnelCmd struct{}
 
-// NewTunnelCmd creates a new downstream command
+// NewTunnelCmd creates a new tunnel command
 func NewTunnelCmd() *cobra.Command {
 	cmd := &TunnelCmd{}
 	tunnelCmd := &cobra.Command{

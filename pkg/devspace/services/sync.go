@@ -258,14 +258,20 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		downstreamDisabled = *syncConfig.DisableDownload
 	}
 
+	compareBy := latest.InitialSyncCompareByMTime
+	if syncConfig.InitialSyncCompareBy != "" {
+		compareBy = syncConfig.InitialSyncCompareBy
+	}
+
 	options := sync.Options{
-		Verbose:            verbose,
-		SyncError:          make(chan error),
-		SyncDone:           syncDone,
-		InitialSync:        syncConfig.InitialSync,
-		UpstreamDisabled:   upstreamDisabled,
-		DownstreamDisabled: downstreamDisabled,
-		Log:                customLog,
+		Verbose:              verbose,
+		SyncError:            make(chan error),
+		SyncDone:             syncDone,
+		InitialSyncCompareBy: compareBy,
+		InitialSync:          syncConfig.InitialSync,
+		UpstreamDisabled:     upstreamDisabled,
+		DownstreamDisabled:   downstreamDisabled,
+		Log:                  customLog,
 	}
 
 	// Add onDownload hooks
