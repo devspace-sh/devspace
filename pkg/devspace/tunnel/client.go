@@ -25,8 +25,7 @@ type Message struct {
 	d *[]byte
 }
 
-func ReceiveData(st *remote.Tunnel_InitTunnelClient, closeStream <-chan bool, sessionsOut chan<- *tunnel.Session, port int32, scheme string, log logpkg.Logger) error {
-	stream := *st
+func ReceiveData(stream remote.Tunnel_InitTunnelClient, closeStream <-chan bool, sessionsOut chan<- *tunnel.Session, port int32, scheme string, log logpkg.Logger) error {
 loop:
 	for {
 		select {
@@ -122,7 +121,7 @@ func ReadFromSession(session *tunnel.Session, sessionsOut chan<- *tunnel.Session
 	}
 }
 
-func SendData(stream *remote.Tunnel_InitTunnelClient, sessions <-chan *tunnel.Session, closeChan <-chan bool) error {
+func SendData(stream remote.Tunnel_InitTunnelClient, sessions <-chan *tunnel.Session, closeChan <-chan bool) error {
 	errorChan := make(chan error, 10)
 	for {
 		select {
@@ -132,23 +131,23 @@ func SendData(stream *remote.Tunnel_InitTunnelClient, sessions <-chan *tunnel.Se
 			return nil
 		case session := <-sessions:
 			session.Lock.Lock()
-			st := *stream
+			bys := session.Buf.Len()
+			bytes := make([]byte, bys)
+			_, _ = session.Buf.Read(bytes)
+
 			resp := &remote.SocketDataRequest{
 				RequestId:   session.Id.String(),
-				Data:        session.Buf.Bytes(),
+				Data:        bytes,
 				ShouldClose: false,
 			}
 			if session.Open == false {
 				resp.ShouldClose = true
 			}
-			session.Buf.Reset()
 			session.Lock.Unlock()
-			go func() {
-				err := st.Send(resp)
-				if err != nil {
-					errorChan <- fmt.Errorf("failed sending message to tunnel stream, exiting; %v", err)
-				}
-			}()
+			err := stream.Send(resp)
+			if err != nil {
+				errorChan <- fmt.Errorf("failed sending message to tunnel stream, exiting; %v", err)
+			}
 		}
 	}
 }
@@ -213,13 +212,13 @@ func StartReverseForward(reader io.ReadCloser, writer io.WriteCloser, tunnels []
 
 			sessions := make(chan *tunnel.Session)
 			go func() {
-				err = ReceiveData(&stream, closeStream, sessions, localPort, scheme, logFile)
+				err = ReceiveData(stream, closeStream, sessions, localPort, scheme, logFile)
 				if err != nil {
 					errorsChan <- err
 				}
 			}()
 			go func() {
-				err = SendData(&stream, sessions, closeStream)
+				err = SendData(stream, sessions, closeStream)
 				if err != nil {
 					errorsChan <- err
 				}
