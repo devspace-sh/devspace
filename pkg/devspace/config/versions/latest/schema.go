@@ -335,6 +335,7 @@ type ContainerConfig struct {
 	Resources                map[interface{}]interface{}   `yaml:"resources,omitempty"`
 	LivenessProbe            map[interface{}]interface{}   `yaml:"livenessProbe,omitempty"`
 	ReadinessProbe           map[interface{}]interface{}   `yaml:"readinessProbe,omitempty"`
+	StartupProbe             map[interface{}]interface{}   `yaml:"startupProbe,omitempty"`
 	SecurityContext          map[interface{}]interface{}   `yaml:"securityContext,omitempty"`
 	Lifecycle                map[interface{}]interface{}   `yaml:"lifecycle,omitempty"`
 	VolumeDevices            []map[interface{}]interface{} `yaml:"volumeDevices,omitempty"`
