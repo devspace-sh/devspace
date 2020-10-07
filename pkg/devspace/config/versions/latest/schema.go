@@ -291,21 +291,58 @@ type ComponentConfig struct {
 	NodeSelector        map[interface{}]interface{}   `yaml:"nodeSelector,omitempty"`
 	NodeName            string                        `yaml:"nodeName,omitempty"`
 	PodManagementPolicy string                        `yaml:"podManagementPolicy,omitempty"`
+
+	DNSConfig                     map[interface{}]interface{}   `yaml:"dnsConfig,omitempty"`
+	HostAliases                   []map[interface{}]interface{} `yaml:"hostAliases,omitempty"`
+	Overhead                      map[interface{}]interface{}   `yaml:"overhead,omitempty"`
+	ReadinessGates                []map[interface{}]interface{} `yaml:"readinessGates,omitempty"`
+	SecurityContext               map[interface{}]interface{}   `yaml:"securityContext,omitempty"`
+	TopologySpreadConstraints     []map[interface{}]interface{} `yaml:"topologySpreadConstraints,omitempty"`
+	ActiveDeadlineSeconds         *int                          `yaml:"activeDeadlineSeconds,omitempty"`
+	AutomountServiceAccountToken  *bool                         `yaml:"automountServiceAccountToken,omitempty"`
+	DnsPolicy                     *string                       `yaml:"dnsPolicy,omitempty"`
+	EnableServiceLinks            *bool                         `yaml:"enableServiceLinks,omitempty"`
+	HostIPC                       *bool                         `yaml:"hostIPC,omitempty"`
+	HostNetwork                   *bool                         `yaml:"hostNetwork,omitempty"`
+	HostPID                       *bool                         `yaml:"hostPID,omitempty"`
+	Hostname                      *string                       `yaml:"hostname,omitempty"`
+	PreemptionPolicy              *string                       `yaml:"preemptionPolicy,omitempty"`
+	Priority                      *int                          `yaml:"priority,omitempty"`
+	PriorityClassName             *string                       `yaml:"priorityClassName,omitempty"`
+	RestartPolicy                 *string                       `yaml:"restartPolicy,omitempty"`
+	RuntimeClassName              *string                       `yaml:"runtimeClassName,omitempty"`
+	SchedulerName                 *string                       `yaml:"schedulerName,omitempty"`
+	ServiceAccount                *string                       `yaml:"serviceAccount,omitempty"`
+	ServiceAccountName            *string                       `yaml:"serviceAccountName,omitempty"`
+	SetHostnameAsFQDN             *bool                         `yaml:"setHostnameAsFQDN,omitempty"`
+	ShareProcessNamespace         *bool                         `yaml:"shareProcessNamespace,omitempty"`
+	Subdomain                     *string                       `yaml:"subdomain,omitempty"`
+	TerminationGracePeriodSeconds *int                          `yaml:"terminationGracePeriodSeconds,omitempty"`
+	EphemeralContainers           []map[interface{}]interface{} `yaml:"ephemeralContainers,omitempty"`
 }
 
 // ContainerConfig holds the configurations of a container
 type ContainerConfig struct {
-	Name           string                        `yaml:"name,omitempty"`
-	Image          string                        `yaml:"image,omitempty"`
-	Command        []string                      `yaml:"command,omitempty"`
-	Args           []string                      `yaml:"args,omitempty"`
-	Stdin          bool                          `yaml:"stdin,omitempty"`
-	TTY            bool                          `yaml:"tty,omitempty"`
-	Env            []map[interface{}]interface{} `yaml:"env,omitempty"`
-	VolumeMounts   []*VolumeMountConfig          `yaml:"volumeMounts,omitempty"`
-	Resources      map[interface{}]interface{}   `yaml:"resources,omitempty"`
-	LivenessProbe  map[interface{}]interface{}   `yaml:"livenessProbe,omitempty"`
-	ReadinessProbe map[interface{}]interface{}   `yaml:"readinessProbe,omitempty"`
+	Name                     string                        `yaml:"name,omitempty"`
+	Image                    string                        `yaml:"image,omitempty"`
+	Command                  []string                      `yaml:"command,omitempty"`
+	Args                     []string                      `yaml:"args,omitempty"`
+	Stdin                    bool                          `yaml:"stdin,omitempty"`
+	TTY                      bool                          `yaml:"tty,omitempty"`
+	Env                      []map[interface{}]interface{} `yaml:"env,omitempty"`
+	EnvFrom                  []map[interface{}]interface{} `yaml:"envFrom,omitempty"`
+	VolumeMounts             []*VolumeMountConfig          `yaml:"volumeMounts,omitempty"`
+	Resources                map[interface{}]interface{}   `yaml:"resources,omitempty"`
+	LivenessProbe            map[interface{}]interface{}   `yaml:"livenessProbe,omitempty"`
+	ReadinessProbe           map[interface{}]interface{}   `yaml:"readinessProbe,omitempty"`
+	SecurityContext          map[interface{}]interface{}   `yaml:"securityContext,omitempty"`
+	Lifecycle                map[interface{}]interface{}   `yaml:"lifecycle,omitempty"`
+	VolumeDevices            []map[interface{}]interface{} `yaml:"volumeDevices,omitempty"`
+	ImagePullPolicy          string                        `yaml:"imagePullPolicy,omitempty"`
+	WorkingDir               string                        `yaml:"workingDir,omitempty"`
+	StdinOnce                bool                          `yaml:"stdinOnce,omitempty"`
+	TerminationMessagePath   string                        `yaml:"terminationMessagePath,omitempty"`
+	TerminationMessagePolicy string                        `yaml:"terminationMessagePolicy,omitempty"`
 }
 
 // VolumeMountConfig holds the configuration for a specific mount path
@@ -338,12 +375,23 @@ type VolumeConfig struct {
 
 // ServiceConfig holds the configuration of a component service
 type ServiceConfig struct {
-	Name        string               `yaml:"name,omitempty"`
-	Labels      map[string]string    `yaml:"labels,omitempty"`
-	Annotations map[string]string    `yaml:"annotations,omitempty"`
-	Type        string               `yaml:"type,omitempty"`
-	Ports       []*ServicePortConfig `yaml:"ports,omitempty"`
-	ExternalIPs []string             `yaml:"externalIPs,omitempty"`
+	Name                     string                      `yaml:"name,omitempty"`
+	Labels                   map[string]string           `yaml:"labels,omitempty"`
+	Annotations              map[string]string           `yaml:"annotations,omitempty"`
+	Type                     string                      `yaml:"type,omitempty"`
+	Ports                    []*ServicePortConfig        `yaml:"ports,omitempty"`
+	ExternalIPs              []string                    `yaml:"externalIPs,omitempty"`
+	ClusterIP                string                      `yaml:"clusterIP,omitempty"`
+	ExternalName             string                      `yaml:"externalName,omitempty"`
+	ExternalTrafficPolicy    string                      `yaml:"externalTrafficPolicy,omitempty"`
+	HealthCheckNodePort      int                         `yaml:"healthCheckNodePort,omitempty"`
+	IpFamily                 *string                     `yaml:"ipFamily,omitempty"`
+	LoadBalancerIP           *string                     `yaml:"loadBalancerIP,omitempty"`
+	LoadBalancerSourceRanges []string                    `yaml:"loadBalancerSourceRanges,omitempty"`
+	PublishNotReadyAddresses bool                        `yaml:"publishNotReadyAddresses,omitempty"`
+	SessionAffinity          map[interface{}]interface{} `yaml:"sessionAffinity,omitempty"`
+	SessionAffinityConfig    map[interface{}]interface{} `yaml:"sessionAffinityConfig,omitempty"`
+	TopologyKeys             []string                    `yaml:"topologyKeys,omitempty"`
 }
 
 // ServicePortConfig holds the port configuration of a component service
@@ -355,13 +403,15 @@ type ServicePortConfig struct {
 
 // IngressConfig holds the configuration of a component ingress
 type IngressConfig struct {
-	Name             string               `yaml:"name,omitempty"`
-	Labels           map[string]string    `yaml:"labels,omitempty"`
-	Annotations      map[string]string    `yaml:"annotations,omitempty"`
-	TLS              string               `yaml:"tls,omitempty"`
-	TLSClusterIssuer string               `yaml:"tlsClusterIssuer,omitempty"`
-	IngressClass     string               `yaml:"ingressClass,omitempty"`
-	Rules            []*IngressRuleConfig `yaml:"rules,omitempty"`
+	Name             string                      `yaml:"name,omitempty"`
+	Labels           map[string]string           `yaml:"labels,omitempty"`
+	Annotations      map[string]string           `yaml:"annotations,omitempty"`
+	TLS              string                      `yaml:"tls,omitempty"`
+	TLSClusterIssuer string                      `yaml:"tlsClusterIssuer,omitempty"`
+	IngressClass     string                      `yaml:"ingressClass,omitempty"`
+	Rules            []*IngressRuleConfig        `yaml:"rules,omitempty"`
+	Backend          map[interface{}]interface{} `yaml:"backend,omitempty"`
+	IngressClassName *string                     `yaml:"ingressClassName,omitempty"`
 }
 
 // IngressRuleConfig holds the port configuration of a component service
