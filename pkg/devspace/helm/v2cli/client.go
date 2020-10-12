@@ -1,42 +1,29 @@
 package v2cli
 
 import (
-	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/helm/v2cli/downloader"
-	"path/filepath"
 	"runtime"
-	"strings"
+	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/util/command"
-	"github.com/devspace-cloud/devspace/pkg/util/extract"
+	"github.com/devspace-cloud/devspace/pkg/devspace/helm/abstractcli"
+	"gopkg.in/yaml.v2"
+
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/mitchellh/go-homedir"
-	"github.com/otiai10/copy"
-	"github.com/pkg/errors"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 )
 
 var (
-	helmVersion  = "v2.16.9"
-	helmDownload = "https://get.helm.sh/helm-" + helmVersion + "-" + runtime.GOOS + "-amd64"
+	helmVersionPrefix = "v2"
+	helmVersion       = "v2.16.9"
+	helmDownload      = "https://get.helm.sh/helm-" + helmVersion + "-" + runtime.GOOS + "-amd64"
 )
 
 type client struct {
-	exec       command.Exec
-	extract    extract.Extract
-	downloader downloader.Downloader
+	client abstractcli.Client
 
-	config *latest.Config
-
-	kubeClient      kubectl.Client
-	tillerNamespace string
-
-	helmPath string
-	log      log.Logger
+	log log.Logger
 }
 
 // NewClient creates a new helm client
@@ -45,85 +32,66 @@ func NewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace
 		tillerNamespace = kubeClient.Namespace()
 	}
 
-	c := &client{
-		config: config,
+	c := &client{log: log}
 
-		kubeClient:      kubeClient,
-		tillerNamespace: tillerNamespace,
-
-		exec:    command.Command,
-		extract: extract.NewExtractor(),
-
-		log: log,
+	abstractClient, err := abstractcli.NewClient(config, kubeClient, tillerNamespace, helmVersionPrefix, helmDownload, c.parseReleaseOutput, log)
+	if err != nil {
+		return nil, err
 	}
-	c.downloader = downloader.NewDownloader(c.installHelmClient, c.isValidHelm, log)
+
+	c.client = abstractClient
 	return c, nil
 }
 
-func (c *client) ensureHelmBinary(helmConfig *latest.HelmConfig) error {
-	if c.helmPath != "" {
-		return nil
-	}
-
-	if helmConfig != nil && helmConfig.Path != "" {
-		valid, err := c.isValidHelm(helmConfig.Path)
-		if err != nil {
-			return err
-		} else if !valid {
-			return fmt.Errorf("helm binary at '%s' is not a valid helm v2 binary", helmConfig.Path)
-		}
-
-		c.helmPath = helmConfig.Path
-		return nil
-	}
-
-	home, err := homedir.Dir()
-	if err != nil {
-		return err
-	}
-
-	installPath := filepath.Join(home, constants.DefaultHomeDevSpaceFolder, "bin", "helm")
-	url := helmDownload
-	if runtime.GOOS == "windows" {
-		url += ".zip"
-		installPath += ".exe"
-	} else {
-		url += ".tar.gz"
-	}
-
-	c.helmPath, err = c.downloader.EnsureCLI("helm", installPath, url)
-	return err
+func (c *client) InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
+	return c.client.InstallChart(releaseName, releaseNamespace, values, helmConfig)
 }
 
-func (c *client) installHelmClient(archiveFile, installPath, installFromURL string) error {
-	t := filepath.Dir(archiveFile)
-
-	// Extract the binary
-	if strings.HasSuffix(installFromURL, ".tar.gz") {
-		err := c.extract.UntarGz(archiveFile, t)
-		if err != nil {
-			return errors.Wrap(err, "extract tar.gz")
-		}
-	} else if strings.HasSuffix(installFromURL, ".zip") {
-		err := c.extract.Unzip(archiveFile, t)
-		if err != nil {
-			return errors.Wrap(err, "extract zip")
-		}
+func (c *client) Template(releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error) {
+	getArgs := func(chartDir, releaseNamespace, file, context, tillerNamespace string) []string {
+		return []string{"template", chartDir, "--name", releaseName, "--namespace", releaseNamespace, "--values", file, "--kube-context", context, "--tiller-namespace", tillerNamespace}
 	}
-
-	// Copy file to target location
-	if runtime.GOOS == "windows" {
-		return copy.Copy(filepath.Join(t, runtime.GOOS+"-amd64", "helm.exe"), installPath)
-	}
-
-	return copy.Copy(filepath.Join(t, runtime.GOOS+"-amd64", "helm"), installPath)
+	return c.client.Template(releaseNamespace, values, helmConfig, "fetch", getArgs)
 }
 
-func (c *client) isValidHelm(path string) (bool, error) {
-	out, err := c.exec(path, []string{"version", "--client"}).CombinedOutput()
+func (c *client) DeleteRelease(releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error {
+	return c.client.DeleteRelease(releaseName, releaseNamespace, helmConfig, "delete", []string{"--purge"})
+}
+
+func (c *client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, error) {
+	return c.client.ListReleases(helmConfig)
+}
+
+func (c *client) parseReleaseOutput(out []byte) ([]*types.Release, error) {
+	releases := &struct {
+		Releases []struct {
+			Name      string `yaml:"Name"`
+			Namespace string `yaml:"Namespace"`
+			Status    string `yaml:"Status"`
+			Revision  int32  `yaml:"Revision"`
+			Updated   string `yaml:"Updated"`
+		} `yaml:"Releases"`
+	}{}
+	err := yaml.Unmarshal(out, releases)
 	if err != nil {
-		return false, nil
+		return nil, err
 	}
 
-	return strings.HasPrefix(string(out), `Client: &version.Version{SemVer:"v2`), nil
+	result := []*types.Release{}
+	for _, release := range releases.Releases {
+		t, err := time.ParseInLocation(time.ANSIC, release.Updated, time.Local)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, &types.Release{
+			Name:         release.Name,
+			Namespace:    release.Namespace,
+			Status:       release.Status,
+			Version:      release.Revision,
+			LastDeployed: t,
+		})
+	}
+
+	return result, nil
 }

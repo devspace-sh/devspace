@@ -1,4 +1,4 @@
-package v2cli
+package abstractcli
 
 import (
 	"fmt"
@@ -52,7 +52,10 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	}
 
 	chartName, chartRepo := chartNameAndRepo(helmConfig)
-	args := []string{"upgrade", releaseName, chartName, "--output", "json", "--namespace", releaseNamespace, "--values", f.Name(), "--install", "--kube-context", c.kubeClient.CurrentContext(), "--tiller-namespace", c.tillerNamespace}
+	args := []string{"upgrade", releaseName, chartName, "--output", "json", "--namespace", releaseNamespace, "--values", f.Name(), "--install", "--kube-context", c.kubeClient.CurrentContext()}
+	if c.useTiller {
+		args = append(args, "--tiller-namespace", c.tillerNamespace)
+	}
 
 	// Chart settings
 	if chartRepo != "" {
@@ -92,7 +95,7 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	for {
 		result, err = c.exec(c.helmPath, args).CombinedOutput()
 		if err != nil {
-			if strings.Index(string(result), "could not find a ready tiller pod") != -1 {
+			if c.useTiller && strings.Index(string(result), "could not find a ready tiller pod") != -1 {
 				time.Sleep(time.Second * 3)
 				err = c.ensureTiller()
 				if err != nil {
@@ -122,13 +125,13 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	return nil, nil
 }
 
-func (c *client) Template(releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error) {
+func (c *client) Template(releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig, fetchCmd string, getArgs func(chartDir, releaseNamespace, file, context, tillerNamespace string) []string) (string, error) {
 	err := c.ensureHelmBinary(helmConfig)
 	if err != nil {
 		return "", err
 	}
 
-	cleanup, chartDir, err := c.fetch(helmConfig)
+	cleanup, chartDir, err := c.fetch(fetchCmd, helmConfig)
 	if err != nil {
 		return "", err
 	} else if cleanup {
@@ -156,7 +159,7 @@ func (c *client) Template(releaseName, releaseNamespace string, values map[inter
 		return "", err
 	}
 
-	args := []string{"template", chartDir, "--name", releaseName, "--namespace", releaseNamespace, "--values", f.Name(), "--kube-context", c.kubeClient.CurrentContext(), "--tiller-namespace", c.tillerNamespace}
+	args := getArgs(chartDir, releaseNamespace, f.Name(), c.kubeClient.CurrentContext(), c.tillerNamespace)
 	result, err := c.exec(c.helmPath, args).CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("error during helm template: %s => %v", string(result), err)
@@ -165,7 +168,7 @@ func (c *client) Template(releaseName, releaseNamespace string, values map[inter
 	return string(result), nil
 }
 
-func (c *client) fetch(helmConfig *latest.HelmConfig) (bool, string, error) {
+func (c *client) fetch(fetchCmd string, helmConfig *latest.HelmConfig) (bool, string, error) {
 	chartName, chartRepo := chartNameAndRepo(helmConfig)
 	if chartRepo == "" {
 		return false, chartName, nil
@@ -176,7 +179,7 @@ func (c *client) fetch(helmConfig *latest.HelmConfig) (bool, string, error) {
 		return false, "", err
 	}
 
-	args := []string{"fetch", chartName, "--repo", chartRepo, "--untar", "--untardir", tempFolder}
+	args := []string{fetchCmd, chartName, "--repo", chartRepo, "--untar", "--untardir", tempFolder}
 	if helmConfig.Chart.Version != "" {
 		args = append(args, "--version", helmConfig.Chart.Version)
 	}
@@ -196,7 +199,7 @@ func (c *client) fetch(helmConfig *latest.HelmConfig) (bool, string, error) {
 	return true, filepath.Join(tempFolder, chartName), nil
 }
 
-func (c *client) DeleteRelease(releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error {
+func (c *client) DeleteRelease(releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig, deleteCmd string, extraArgs []string) error {
 	err := c.ensureHelmBinary(helmConfig)
 	if err != nil {
 		return err
@@ -207,7 +210,11 @@ func (c *client) DeleteRelease(releaseName string, releaseNamespace string, helm
 		return err
 	}
 
-	args := []string{"delete", releaseName, "--kube-context", c.kubeClient.CurrentContext(), "--tiller-namespace", c.tillerNamespace, "--purge"}
+	args := []string{deleteCmd, releaseName, "--kube-context", c.kubeClient.CurrentContext()}
+	args = append(args, extraArgs...)
+	if c.useTiller {
+		args = append(args, "--tiller-namespace", c.tillerNamespace)
+	}
 	out, err := c.exec(c.helmPath, args).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("error deleting release: %s => %v", string(out), err)
@@ -227,10 +234,13 @@ func (c *client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, 
 		return nil, err
 	}
 
-	args := []string{"list", "--kube-context", c.kubeClient.CurrentContext(), "--tiller-namespace", c.tillerNamespace, "--output", "json"}
+	args := []string{"list", "--kube-context", c.kubeClient.CurrentContext(), "--output", "json"}
+	if c.useTiller {
+		args = append(args, "--tiller-namespace", c.tillerNamespace)
+	}
 	out, err := c.exec(c.helmPath, args).CombinedOutput()
 	if err != nil {
-		if strings.Index(string(out), "could not find a ready tiller pod") > -1 {
+		if c.useTiller && strings.Index(string(out), "could not find a ready tiller pod") > -1 {
 			c.log.Info("Couldn't find a ready tiller pod, will wait 3 seconds more")
 			time.Sleep(time.Second * 3)
 			return c.ListReleases(helmConfig)
@@ -239,37 +249,7 @@ func (c *client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, 
 		return nil, fmt.Errorf("error listing releases: %s => %v", string(out), err)
 	}
 
-	releases := &struct {
-		Releases []struct {
-			Name      string `yaml:"Name"`
-			Namespace string `yaml:"Namespace"`
-			Status    string `yaml:"Status"`
-			Revision  int32  `yaml:"Revision"`
-			Updated   string `yaml:"Updated"`
-		} `yaml:"Releases"`
-	}{}
-	err = yaml.Unmarshal(out, releases)
-	if err != nil {
-		return nil, err
-	}
-
-	result := []*types.Release{}
-	for _, release := range releases.Releases {
-		t, err := time.Parse(time.ANSIC, release.Updated)
-		if err != nil {
-			return nil, err
-		}
-
-		result = append(result, &types.Release{
-			Name:         release.Name,
-			Namespace:    release.Namespace,
-			Status:       release.Status,
-			Version:      release.Revision,
-			LastDeployed: t,
-		})
-	}
-
-	return result, nil
+	return c.parseReleaseOutput(out)
 }
 
 func chartNameAndRepo(helmConfig *latest.HelmConfig) (string, string) {

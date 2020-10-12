@@ -1,13 +1,14 @@
 package downloader
 
 import (
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 )
 
 type Downloader interface {

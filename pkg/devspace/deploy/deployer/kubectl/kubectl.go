@@ -1,14 +1,15 @@
 package kubectl
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/helm/v2cli/downloader"
-	"github.com/mitchellh/go-homedir"
 	"io"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/devspace/helm/downloader"
+	"github.com/mitchellh/go-homedir"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/ghodss/yaml"
 	"github.com/otiai10/copy"
