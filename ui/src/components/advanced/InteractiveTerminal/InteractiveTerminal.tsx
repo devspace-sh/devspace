@@ -5,6 +5,8 @@ import styles from './InteractiveTerminal.module.scss';
 import MaximizeButton from 'components/basic/IconButton/MaximizeButton/MaximizeButton';
 import IconButton from 'components/basic/IconButton/IconButton';
 import IconTrash from 'images/trash.svg';
+import {uuidv4} from "../../../lib/utils";
+import authFetch from "../../../lib/fetch";
 
 export interface InteractiveTerminalProps {
   className?: string;
@@ -17,6 +19,7 @@ export interface InteractiveTerminalProps {
   closeOnConnectionLost?: boolean;
   closeDelay?: number;
 
+  remoteResize?: boolean;
   onClose?: () => void;
 }
 
@@ -32,6 +35,7 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
     fullscreen: false,
   };
 
+  private resizeId: string = uuidv4();
   private socket: WebSocket;
   private term: Terminal;
 
@@ -77,6 +81,13 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
         this.term.resize(Math.floor(dims.cols), Math.floor(dims.rows));
       }
 
+      // send dims to the server
+      if (this.props.remoteResize) {
+        authFetch(`/api/resize?resize_id=${this.resizeId}&width=${dims.cols}&height=${dims.rows}`).catch(err => {
+          console.error(err);
+        })
+      }
+
       this.needUpdate = false;
     }
   };
@@ -100,7 +111,7 @@ class InteractiveTerminal extends React.PureComponent<InteractiveTerminalProps, 
     });
 
     // Open the websocket
-    this.socket = new WebSocket(this.props.url + "&token="+(window as any).token);
+    this.socket = new WebSocket(this.props.url + (this.props.remoteResize ? "&resize_id="+this.resizeId : ""));
     const attachAddon = new AttachAddon(this.socket, {
       bidirectional: this.props.interactive,
       onClose: () => {

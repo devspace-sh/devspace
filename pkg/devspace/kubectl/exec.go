@@ -54,9 +54,12 @@ func (client *client) ExecStreamWithTransport(options *ExecStreamWithTransportOp
 		tty, t = terminal.SetupTTY(options.Stdin, options.Stdout)
 		if options.ForceTTY || tty {
 			tty = true
-			if t.Raw {
+			if t.Raw && options.TerminalSizeQueue == nil {
 				// this call spawns a goroutine to monitor/update the terminal size
 				sizeQueue = t.MonitorSize(t.GetSize())
+			} else if options.TerminalSizeQueue != nil {
+				sizeQueue = options.TerminalSizeQueue
+				t.Raw = true
 			}
 
 			streamOptions = remotecommand.StreamOptions{
@@ -112,8 +115,9 @@ type ExecStreamOptions struct {
 	Container string
 	Command   []string
 
-	ForceTTY bool
-	TTY      bool
+	ForceTTY          bool
+	TTY               bool
+	TerminalSizeQueue remotecommand.TerminalSizeQueue
 
 	Stdin  io.Reader
 	Stdout io.Writer

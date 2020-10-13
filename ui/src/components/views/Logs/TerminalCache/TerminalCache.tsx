@@ -139,6 +139,7 @@ class TerminalCache extends React.PureComponent<Props, State> {
                 {terminal.pod} -c {terminal.container}
               </AdvancedCodeLine>
             }
+            remoteResize={terminal.interactive}
             closeOnConnectionLost={terminal.interactive}
             closeDelay={5000}
             onClose={() =>

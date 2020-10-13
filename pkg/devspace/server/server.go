@@ -1,18 +1,7 @@
 package server
 
 import (
-	"bytes"
 	"encoding/json"
-	"github.com/devspace-cloud/devspace/pkg/util/randutil"
-	"io/ioutil"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -27,6 +16,12 @@ import (
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
 )
 
 // Server is listens on a given port for the ui functionality
@@ -116,10 +111,11 @@ type handler struct {
 	clientCache      map[string]kubectl.Client
 	clientCacheMutex sync.Mutex
 
+	terminalResizeQueues      map[string]TerminalResizeQueue
+	terminalResizeQueuesMutex sync.Mutex
+
 	ports      map[string]*forward
 	portsMutex sync.Mutex
-
-	token string
 }
 
 type forward struct {
@@ -152,18 +148,19 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 	}
 
 	handler := &handler{
-		mux:              http.NewServeMux(),
-		path:             path,
-		defaultContext:   defaultContext,
-		defaultNamespace: defaultNamespace,
-		kubeContexts:     kubeContexts,
-		workingDirectory: cwd,
-		configLoader:     configLoader,
-		config:           config,
-		log:              log,
-		generatedConfig:  generatedConfig,
-		ports:            make(map[string]*forward),
-		clientCache:      make(map[string]kubectl.Client),
+		mux:                  http.NewServeMux(),
+		path:                 path,
+		defaultContext:       defaultContext,
+		defaultNamespace:     defaultNamespace,
+		kubeContexts:         kubeContexts,
+		workingDirectory:     cwd,
+		configLoader:         configLoader,
+		config:               config,
+		log:                  log,
+		generatedConfig:      generatedConfig,
+		ports:                make(map[string]*forward),
+		clientCache:          make(map[string]kubectl.Client),
+		terminalResizeQueues: make(map[string]TerminalResizeQueue),
 	}
 
 	analytics, err := analytics.GetAnalytics()
@@ -179,20 +176,8 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 		}
 	}
 
-	out, err := ioutil.ReadFile(filepath.Join(path, "index.html"))
-	if err != nil {
-		return nil, err
-	}
-
-	token, err := randutil.GenerateRandomString(64)
-	if err != nil {
-		return nil, err
-	}
-	handler.token = token
-
-	newOut := strings.Replace(string(out), "###TOKEN###", token, -1)
 	handler.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeContent(w, r, "index.html", time.Now(), bytes.NewReader([]byte(newOut)))
+		http.ServeFile(w, r, "index.html")
 	})
 	handler.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(path, "static")))))
 	handler.mux.HandleFunc("/api/version", handler.version)
@@ -201,6 +186,7 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 	handler.mux.HandleFunc("/api/config", handler.returnConfig)
 	handler.mux.HandleFunc("/api/forward", handler.forward)
 	handler.mux.HandleFunc("/api/enter", handler.enter)
+	handler.mux.HandleFunc("/api/resize", handler.resize)
 	handler.mux.HandleFunc("/api/logs", handler.logs)
 	handler.mux.HandleFunc("/api/logs-multiple", handler.logsMultiple)
 	return handler, nil
