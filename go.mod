@@ -18,7 +18,7 @@ require (
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96
 	github.com/ghodss/yaml v1.0.0
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/uuid v1.1.1
@@ -54,7 +54,7 @@ require (
 	github.com/theupdateframework/notary v0.6.1 // indirect
 	github.com/toqueteos/trie v1.0.0 // indirect
 	github.com/ulikunitz/xz v0.5.7 // indirect
-	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
+	golang.org/x/net v0.0.0-20200707034311-ab3426394381
 	google.golang.org/grpc v1.27.0
 	gopkg.in/AlecAivazis/survey.v1 v1.8.7
 	gopkg.in/src-d/enry.v1 v1.6.4
@@ -62,13 +62,13 @@ require (
 	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.18.2
-	k8s.io/apimachinery v0.18.2
-	k8s.io/client-go v0.18.2
+	k8s.io/api v0.19.2
+	k8s.io/apimachinery v0.19.2
+	k8s.io/client-go v0.19.2
 	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.3.0 // indirect
-	k8s.io/kubectl v0.18.2
+	k8s.io/kubectl v0.19.2
 	mvdan.cc/sh/v3 v3.0.0-alpha2
+	sigs.k8s.io/structured-merge-diff/v3 v3.0.0 // indirect
 )
 
 replace (
