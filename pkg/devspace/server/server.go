@@ -177,7 +177,7 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 	}
 
 	handler.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "index.html")
+		http.ServeFile(w, r, filepath.Join(path, "index.html"))
 	})
 	handler.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(path, "static")))))
 	handler.mux.HandleFunc("/api/version", handler.version)
