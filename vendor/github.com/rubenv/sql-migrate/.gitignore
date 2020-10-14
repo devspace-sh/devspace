@@ -1,6 +1,0 @@
-.*.swp
-*.test
-.idea
-
-/sql-migrate/test.db
-/test.db

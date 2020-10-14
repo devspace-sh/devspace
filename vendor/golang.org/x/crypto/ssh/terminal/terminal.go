@@ -113,7 +113,6 @@ func NewTerminal(c io.ReadWriter, prompt string) *Terminal {
 }
 
 const (
-	keyCtrlC     = 3
 	keyCtrlD     = 4
 	keyCtrlU     = 21
 	keyEnter     = '\r'
@@ -152,12 +151,8 @@ func bytesToKey(b []byte, pasteActive bool) (rune, []byte) {
 		switch b[0] {
 		case 1: // ^A
 			return keyHome, b[1:]
-		case 2: // ^B
-			return keyLeft, b[1:]
 		case 5: // ^E
 			return keyEnd, b[1:]
-		case 6: // ^F
-			return keyRight, b[1:]
 		case 8: // ^H
 			return keyBackspace, b[1:]
 		case 11: // ^K
@@ -742,9 +737,6 @@ func (t *Terminal) readLine() (line string, err error) {
 					if len(t.line) == 0 {
 						return "", io.EOF
 					}
-				}
-				if key == keyCtrlC {
-					return "", io.EOF
 				}
 				if key == keyPasteStart {
 					t.pasteActive = true

@@ -464,6 +464,11 @@ type HelmConfig struct {
 	Path             string                      `yaml:"path,omitempty"`
 	V2               bool                        `yaml:"v2,omitempty"`
 	TillerNamespace  string                      `yaml:"tillerNamespace,omitempty"`
+
+	DeleteArgs   []string `yaml:"deleteArgs,omitempty"`
+	TemplateArgs []string `yaml:"templateArgs,omitempty"`
+	UpgradeArgs  []string `yaml:"upgradeArgs,omitempty"`
+	FetchArgs    []string `yaml:"fetchArgs,omitempty"`
 }
 
 // ChartConfig defines the helm chart options
