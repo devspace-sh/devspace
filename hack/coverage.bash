@@ -9,7 +9,7 @@ echo "Building devspace..."
 go build main.go || exit 1
 
 # List packages
-PKGS=$(go list ./... | grep -v /vendor/ | grep -v /examples/)
+PKGS=$(go list ./... | grep -v /vendor/ | grep -v /examples/ | grep -v /e2e)
 
 fail=false
 for pkg in $PKGS; do

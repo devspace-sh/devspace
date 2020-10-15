@@ -1,292 +1,219 @@
 package v3
 
 import (
-	"io/ioutil"
-	"strings"
-	"time"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/helm/generic"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/util/command"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
+	"github.com/ghodss/yaml"
+	"os"
+	"path/filepath"
+	"strconv"
 
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/cli"
-	"helm.sh/helm/v3/pkg/downloader"
-	"helm.sh/helm/v3/pkg/getter"
-	"helm.sh/helm/v3/pkg/kube"
-	"helm.sh/helm/v3/pkg/release"
-	"helm.sh/helm/v3/pkg/storage"
-	"helm.sh/helm/v3/pkg/storage/driver"
-
-	"github.com/pkg/errors"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"runtime"
+	"strings"
 )
 
-type v3Client struct {
-	helmDriver string
-	kubectl kubectl.Client
-	log     log.Logger
-}
+var (
+	helmVersion  = "v3.3.4"
+	helmDownload = "https://get.helm.sh/helm-" + helmVersion + "-" + runtime.GOOS + "-amd64"
+)
 
-const stableChartRepo = "https://kubernetes-charts.storage.googleapis.com"
+type client struct {
+	exec        command.Exec
+	kubeClient  kubectl.Client
+	genericHelm generic.Client
+
+	log log.Logger
+}
 
 // NewClient creates a new helm v3 client
-func NewClient(kubeClient kubectl.Client, helmDriver string, log log.Logger) (types.Client, error) {
-	return &v3Client{
-		helmDriver: helmDriver,
-		kubectl: kubeClient,
-		log:     log,
-	}, nil
-}
-
-func (client *v3Client) initHelmConfig(namespace string) (*action.Configuration, error) {
-	getter := genericclioptions.NewConfigFlags(true)
-
-	var store *storage.Storage
-	if client.kubectl != nil {
-		if namespace == "" {
-			namespace = client.kubectl.Namespace()
-		}
-
-		getter.Namespace = ptr.String(namespace)
-		getter.Context = ptr.String(client.kubectl.CurrentContext())
-
-		switch client.helmDriver {
-		case "secret", "secrets", "":
-			d := driver.NewSecrets(client.kubectl.KubeClient().CoreV1().Secrets(namespace))
-			store = storage.Init(d)
-		case "configmap", "configmaps":
-			d := driver.NewConfigMaps(client.kubectl.KubeClient().CoreV1().ConfigMaps(namespace))
-			store = storage.Init(d)
-		case "memory":
-			d := driver.NewMemory()
-			store = storage.Init(d)
-		default:
-			// Not sure what to do here.
-			return nil, errors.New("Unknown driver in HELM_DRIVER: " + client.helmDriver)
-		}
-	} else {
-		d := driver.NewMemory()
-		store = storage.Init(d)
+func NewClient(kubeClient kubectl.Client, log log.Logger) (types.Client, error) {
+	c := &client{
+		exec:       command.NewStreamCommand,
+		kubeClient: kubeClient,
+		log:        log,
 	}
 
-	return &action.Configuration{
-		RESTClientGetter: getter,
-		Releases:         store,
-		KubeClient:       kube.New(getter),
-		Log: func(msg string, params ...interface{}) {
-			// We don't log helm messages
-			// log.Infof(msg, params...)
-		},
-	}, nil
+	c.genericHelm = generic.NewGenericClient(c, log)
+	return c, nil
 }
 
-func (client *v3Client) InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
+func (c *client) KubeContext() string {
+	return c.kubeClient.CurrentContext()
+}
+
+func (c *client) Command() string {
+	return "helm"
+}
+
+func (c *client) DownloadURL() string {
+	return helmDownload
+}
+
+func (c *client) IsValidHelm(path string) (bool, error) {
+	out, err := c.exec(path, []string{"version"}).Output()
+	if err != nil {
+		return false, nil
+	}
+
+	return strings.Contains(string(out), `:"v3.`), nil
+}
+
+// InstallChart installs the given chart via helm v2
+func (c *client) InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
+	valuesFile, err := c.genericHelm.WriteValues(values)
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(valuesFile)
+
 	if releaseNamespace == "" {
-		releaseNamespace = client.kubectl.Namespace()
+		releaseNamespace = c.kubeClient.Namespace()
 	}
 
-	// Init the client
-	cfg, err := client.initHelmConfig(releaseNamespace)
-	if err != nil {
-		return nil, err
+	chartName, chartRepo := generic.ChartNameAndRepo(helmConfig)
+	args := []string{
+		"upgrade",
+		releaseName,
+		chartName,
+		"--namespace",
+		releaseNamespace,
+		"--values",
+		valuesFile,
+		"--install",
 	}
 
-	var (
-		settings  = cli.New()
-		chartName = strings.TrimSpace(helmConfig.Chart.Name)
-		chartRepo = helmConfig.Chart.RepoURL
-	)
-
-	// makes sure repos are not being updated
-	settings.RepositoryConfig = ""
-
-	if strings.HasPrefix(chartName, "stable/") && chartRepo == "" {
-		chartName = chartName[7:]
-		chartRepo = stableChartRepo
+	// Chart settings
+	if chartRepo != "" {
+		args = append(args, "--repo", chartRepo)
+	}
+	if helmConfig.Chart.Version != "" {
+		args = append(args, "--version", helmConfig.Chart.Version)
+	}
+	if helmConfig.Chart.Username != "" {
+		args = append(args, "--username", helmConfig.Chart.Username)
+	}
+	if helmConfig.Chart.Password != "" {
+		args = append(args, "--password", helmConfig.Chart.Password)
 	}
 
-	upgrade := action.NewUpgrade(cfg)
-	upgrade.Install = true
-	upgrade.Namespace = releaseNamespace
-
-	upgrade.Force = helmConfig.Force
-	upgrade.DisableHooks = helmConfig.DisableHooks
-	upgrade.Recreate = helmConfig.Recreate
-	upgrade.CleanupOnFail = helmConfig.CleanupOnFail
-	upgrade.ReuseValues = false
-	upgrade.Atomic = helmConfig.Atomic
-	upgrade.Wait = helmConfig.Wait || helmConfig.Atomic
+	// Upgrade options
+	if helmConfig.Atomic {
+		args = append(args, "--atomic")
+	}
+	if helmConfig.CleanupOnFail {
+		args = append(args, "--cleanup-on-fail")
+	}
+	if helmConfig.Wait {
+		args = append(args, "--wait")
+	}
 	if helmConfig.Timeout != nil {
-		upgrade.Timeout = time.Duration(*helmConfig.Timeout)
+		args = append(args, "--timeout", strconv.FormatInt(*helmConfig.Timeout, 10))
+	}
+	if helmConfig.Force {
+		args = append(args, "--force")
+	}
+	if helmConfig.DisableHooks {
+		args = append(args, "--no-hooks")
 	}
 
-	upgrade.ChartPathOptions.Version = helmConfig.Chart.Version
-	upgrade.ChartPathOptions.RepoURL = chartRepo
-	upgrade.ChartPathOptions.Username = helmConfig.Chart.Username
-	upgrade.ChartPathOptions.Password = helmConfig.Chart.Password
-
-	chartPath, err := upgrade.ChartPathOptions.LocateChart(chartName, settings)
+	args = append(args, helmConfig.UpgradeArgs...)
+	_, err = c.genericHelm.Exec(args, helmConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	vals := yamlutil.Convert(values).(map[string]interface{})
-	if upgrade.Install {
-		// If a release does not exist, install it. If another error occurs during
-		// the check, ignore the error and continue with the upgrade.
-		histClient := action.NewHistory(cfg)
-		histClient.Max = 1
-		if _, err := histClient.Run(releaseName); err == driver.ErrReleaseNotFound {
-			instClient := action.NewInstall(cfg)
-			instClient.ChartPathOptions = upgrade.ChartPathOptions
-			instClient.DryRun = upgrade.DryRun
-			instClient.DisableHooks = upgrade.DisableHooks
-			instClient.Timeout = upgrade.Timeout
-			instClient.Wait = upgrade.Wait
-			instClient.Devel = upgrade.Devel
-			instClient.Namespace = upgrade.Namespace
-			instClient.Atomic = upgrade.Atomic
+	releases, err := c.ListReleases(helmConfig)
+	if err != nil {
+		return nil, err
+	}
 
-			rel, err := install(releaseName, releaseNamespace, chartPath, instClient, vals, settings)
-			if err != nil {
-				return nil, err
-			}
-
-			return &types.Release{
-				Name:         rel.Name,
-				Namespace:    rel.Namespace,
-				Status:       rel.Info.Status.String(),
-				LastDeployed: rel.Info.LastDeployed.Time,
-			}, nil
+	for _, r := range releases {
+		if r.Name == releaseName && r.Namespace == releaseNamespace {
+			return r, nil
 		}
 	}
 
-	// Check chart dependencies to make sure all are present in /charts
-	ch, err := loader.Load(chartPath)
-	if err != nil {
-		return nil, err
-	}
-	if req := ch.Metadata.Dependencies; req != nil {
-		if err := action.CheckDependencies(ch, req); err != nil {
-			return nil, err
-		}
-	}
-
-	rel, err := upgrade.Run(releaseName, ch, vals)
-	if err != nil {
-		return nil, errors.Wrap(err, "UPGRADE FAILED")
-	}
-
-	return &types.Release{
-		Name:         rel.Name,
-		Namespace:    rel.Namespace,
-		Status:       rel.Info.Status.String(),
-		LastDeployed: rel.Info.LastDeployed.Time,
-	}, nil
+	return nil, nil
 }
 
-func install(releaseName string, releaseNamespace string, chartName string, install *action.Install, values map[string]interface{}, settings *cli.EnvSettings) (*release.Release, error) {
-	if install.Version == "" && install.Devel {
-		install.Version = ">0.0.0-0"
-	}
-
-	name, chart, err := install.NameAndChart([]string{releaseName, chartName})
+func (c *client) Template(releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error) {
+	cleanup, chartDir, err := c.genericHelm.FetchChart(helmConfig)
 	if err != nil {
-		return nil, err
+		return "", err
+	} else if cleanup {
+		defer os.RemoveAll(filepath.Dir(chartDir))
 	}
-	install.ReleaseName = name
 
-	cp, err := install.ChartPathOptions.LocateChart(chart, settings)
+	if releaseNamespace == "" {
+		releaseNamespace = c.kubeClient.Namespace()
+	}
+
+	valuesFile, err := c.genericHelm.WriteValues(values)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
+	defer os.Remove(valuesFile)
 
-	// Check chart dependencies to make sure all are present in /charts
-	chartRequested, err := loader.Load(cp)
+	args := []string{
+		"template",
+		releaseName,
+		chartDir,
+		"--namespace",
+		releaseNamespace,
+		"--values",
+		valuesFile,
+	}
+	args = append(args, helmConfig.TemplateArgs...)
+	result, err := c.genericHelm.Exec(args, helmConfig)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	validInstallableChart, err := isChartInstallable(chartRequested)
-	if !validInstallableChart {
-		return nil, err
-	}
-
-	if req := chartRequested.Metadata.Dependencies; req != nil {
-		// If CheckDependencies returns an error, we have unfulfilled dependencies.
-		// As of Helm 2.4.0, this is treated as a stopping condition:
-		// https://github.com/helm/helm/issues/2209
-		if err := action.CheckDependencies(chartRequested, req); err != nil {
-			if install.DependencyUpdate {
-				man := &downloader.Manager{
-					Out:              ioutil.Discard,
-					ChartPath:        cp,
-					Keyring:          install.ChartPathOptions.Keyring,
-					SkipUpdate:       false,
-					Getters:          getter.All(settings),
-					RepositoryConfig: settings.RepositoryConfig,
-					RepositoryCache:  settings.RepositoryCache,
-				}
-				if err := man.Update(); err != nil {
-					return nil, err
-				}
-			} else {
-				return nil, err
-			}
-		}
-	}
-
-	install.Namespace = releaseNamespace
-	return install.Run(chartRequested, values)
+	return string(result), nil
 }
 
-// isChartInstallable validates if a chart can be installed
-//
-// Application chart type is only installable
-func isChartInstallable(ch *chart.Chart) (bool, error) {
-	switch ch.Metadata.Type {
-	case "", "application":
-		return true, nil
+func (c *client) DeleteRelease(releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error {
+	if releaseNamespace == "" {
+		releaseNamespace = c.kubeClient.Namespace()
 	}
-	return false, errors.Errorf("%s charts are not installable", ch.Metadata.Type)
-}
 
-func (client *v3Client) DeleteRelease(releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error {
-	cfg, err := client.initHelmConfig(releaseNamespace)
+	args := []string{
+		"delete",
+		releaseName,
+		"--namespace",
+		releaseNamespace,
+	}
+	args = append(args, helmConfig.DeleteArgs...)
+	_, err := c.genericHelm.Exec(args, helmConfig)
 	if err != nil {
 		return err
 	}
 
-	_, err = action.NewUninstall(cfg).Run(releaseName)
-	return err
+	return nil
 }
 
-func (client *v3Client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, error) {
-	cfg, err := client.initHelmConfig("")
+func (c *client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, error) {
+	args := []string{
+		"list",
+		"--namespace",
+		c.kubeClient.Namespace(),
+		"--output",
+		"json",
+	}
+	out, err := c.genericHelm.Exec(args, helmConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	list, err := action.NewList(cfg).Run()
+	releases := []*types.Release{}
+	err = yaml.Unmarshal(out, &releases)
 	if err != nil {
 		return nil, err
 	}
 
-	retReleases := make([]*types.Release, len(list))
-	for i, release := range list {
-		retReleases[i] = &types.Release{
-			Name:         release.Name,
-			Namespace:    release.Namespace,
-			Status:       release.Info.Status.String(),
-			LastDeployed: release.Info.LastDeployed.Time,
-		}
-	}
-
-	return retReleases, nil
+	return releases, nil
 }

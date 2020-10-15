@@ -6,7 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 	helmtypes "github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
-	helmv2 "github.com/devspace-cloud/devspace/pkg/devspace/helm/v2cli"
+	helmv2 "github.com/devspace-cloud/devspace/pkg/devspace/helm/v2"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -61,7 +61,7 @@ func New(config *latest.Config, helmClient helmtypes.Client, kubeClient kubectl.
 func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 	// Delete with helm engine
 	if d.DeploymentConfig.Helm.V2 == true {
-		isDeployed := helmv2.IsTillerDeployed(d.config, d.Kube, d.TillerNamespace)
+		isDeployed := helmv2.IsTillerDeployed(d.Kube, d.TillerNamespace)
 		if isDeployed == false {
 			return nil
 		}
