@@ -131,6 +131,8 @@ type ConfigOptions struct {
 	BasePath string
 	// The profile that should be loaded
 	Profile string
+	// If the profile parents that are loaded from other sources should be refreshed
+	ProfileRefresh bool
 
 	GeneratedConfig *generated.Config
 	LoadedVars      map[string]string

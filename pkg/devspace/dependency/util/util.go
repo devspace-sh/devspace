@@ -74,14 +74,15 @@ func DownloadDependency(basePath string, source *latest.SourceConfig, profile st
 			os.MkdirAll(localPath, 0755)
 
 			// Check if dependency exists
-			_, err := os.Stat(localPath)
+			configPath := filepath.Join(localPath, constants.DefaultConfigPath)
+			_, err := os.Stat(configPath)
 			if err != nil {
 				update = true
 			}
 
 			if update {
 				// Create the file
-				out, err := os.Create(filepath.Join(localPath, constants.DefaultConfigPath))
+				out, err := os.Create(configPath)
 				if err != nil {
 					return "", "", err
 				}

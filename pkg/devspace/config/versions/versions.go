@@ -48,9 +48,9 @@ var versionLoader = map[string]*loader{
 }
 
 // ParseProfile loads the base config & a certain profile
-func ParseProfile(basePath string, data map[interface{}]interface{}, profile string, log log.Logger) ([]map[interface{}]interface{}, error) {
+func ParseProfile(basePath string, data map[interface{}]interface{}, profile string, update bool, log log.Logger) ([]map[interface{}]interface{}, error) {
 	profiles := []map[interface{}]interface{}{}
-	err := getProfiles(basePath, data, profile, &profiles, 1, log)
+	err := getProfiles(basePath, data, profile, &profiles, 1, update, log)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func getCommands(data map[interface{}]interface{}) (map[interface{}]interface{},
 }
 
 // getProfiles loads a certain profile
-func getProfiles(basePath string, data map[interface{}]interface{}, profile string, profileChain *[]map[interface{}]interface{}, depth int, log log.Logger) error {
+func getProfiles(basePath string, data map[interface{}]interface{}, profile string, profileChain *[]map[interface{}]interface{}, depth int, update bool, log log.Logger) error {
 	if depth > 50 {
 		return fmt.Errorf("cannot load config with profile %s: max config loading depth reached. Seems like you have a profile cycle somewhere", profile)
 	}
@@ -218,7 +218,7 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 
 			// single parent
 			if profileConfig.Parent != "" {
-				return getProfiles(basePath, data, profileConfig.Parent, profileChain, depth+1, log)
+				return getProfiles(basePath, data, profileConfig.Parent, profileChain, depth+1, update, log)
 			}
 
 			// multiple parents
@@ -229,7 +229,7 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 					}
 
 					if profileConfig.Parents[i].Source != nil {
-						_, localPath, err := dependencyutil.DownloadDependency(basePath, profileConfig.Parents[i].Source, profileConfig.Parents[i].Profile, false, log)
+						_, localPath, err := dependencyutil.DownloadDependency(basePath, profileConfig.Parents[i].Source, profileConfig.Parents[i].Profile, update, log)
 						if err != nil {
 							return err
 						}
@@ -250,12 +250,12 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 							return err
 						}
 
-						err = getProfiles(localPath, rawMap, profileConfig.Parents[i].Profile, profileChain, depth+1, log)
+						err = getProfiles(localPath, rawMap, profileConfig.Parents[i].Profile, profileChain, depth+1, update, log)
 						if err != nil {
 							return errors.Wrapf(err, "load parent profile %s", profileConfig.Parents[i].Profile)
 						}
 					} else {
-						err := getProfiles(basePath, data, profileConfig.Parents[i].Profile, profileChain, depth+1, log)
+						err := getProfiles(basePath, data, profileConfig.Parents[i].Profile, profileChain, depth+1, update, log)
 						if err != nil {
 							return err
 						}
