@@ -1,12 +1,15 @@
 package util
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -66,12 +69,45 @@ func DownloadDependency(basePath string, source *latest.SourceConfig, profile st
 			log.Donef("Pulled %s", ID)
 		}
 	} else if source.Path != "" {
-		if filepath.IsAbs(source.Path) {
-			localPath = source.Path
-		} else {
-			localPath, err = filepath.Abs(filepath.Join(basePath, filepath.FromSlash(source.Path)))
+		if isUrl(source.Path) {
+			localPath = filepath.Join(DependencyFolderPath, hash.String(ID))
+			os.MkdirAll(localPath, 0755)
+
+			// Check if dependency exists
+			_, err := os.Stat(localPath)
 			if err != nil {
-				return "", "", errors.Wrap(err, "filepath absolute")
+				update = true
+			}
+
+			if update {
+				// Create the file
+				out, err := os.Create(filepath.Join(localPath, constants.DefaultConfigPath))
+				if err != nil {
+					return "", "", err
+				}
+				defer out.Close()
+
+				// Get the data
+				resp, err := http.Get(source.Path)
+				if err != nil {
+					return "", "", errors.Wrapf(err, "request %s", source.Path)
+				}
+				defer resp.Body.Close()
+
+				// Write the body to file
+				_, err = io.Copy(out, resp.Body)
+				if err != nil {
+					return "", "", errors.Wrapf(err, "download %s", source.Path)
+				}
+			}
+		} else {
+			if filepath.IsAbs(source.Path) {
+				localPath = source.Path
+			} else {
+				localPath, err = filepath.Abs(filepath.Join(basePath, filepath.FromSlash(source.Path)))
+				if err != nil {
+					return "", "", errors.Wrap(err, "filepath absolute")
+				}
 			}
 		}
 	}
@@ -108,6 +144,16 @@ func GetDependencyID(basePath string, source *latest.SourceConfig, profile strin
 
 		return id
 	} else if source.Path != "" {
+		if isUrl(source.Path) {
+			id := strings.TrimSpace(source.Path)
+
+			if profile != "" {
+				id += " - profile " + profile
+			}
+
+			return id
+		}
+
 		// Check if it's an git repo
 		filePath := source.Path
 		if !filepath.IsAbs(source.Path) {
@@ -127,4 +173,8 @@ func GetDependencyID(basePath string, source *latest.SourceConfig, profile strin
 	}
 
 	return ""
+}
+
+func isUrl(path string) bool {
+	return strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://")
 }

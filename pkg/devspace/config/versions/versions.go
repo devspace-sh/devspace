@@ -3,10 +3,6 @@ package versions
 import (
 	"fmt"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"io/ioutil"
-	"path/filepath"
-	"strings"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
@@ -24,6 +20,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta8"
 	dependencyutil "github.com/devspace-cloud/devspace/pkg/devspace/dependency/util"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"io/ioutil"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
@@ -178,7 +176,7 @@ func getCommands(data map[interface{}]interface{}) (map[interface{}]interface{},
 
 // getProfiles loads a certain profile
 func getProfiles(basePath string, data map[interface{}]interface{}, profile string, profileChain *[]map[interface{}]interface{}, depth int, log log.Logger) error {
-	if depth > 100 {
+	if depth > 50 {
 		return fmt.Errorf("cannot load config with profile %s: max config loading depth reached. Seems like you have a profile cycle somewhere", profile)
 	}
 
@@ -210,18 +208,6 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 
 		configMap, ok := profileMap.(map[interface{}]interface{})
 		if ok && profileConfig.Name == profile {
-			// check if profile is already in our profile chain
-			for _, p := range *profileChain {
-				if p["name"] == profile {
-					profileLoop := []string{}
-					for _, pc := range *profileChain {
-						profileLoop = append(profileLoop, pc["name"].(string))
-					}
-
-					return errors.Errorf("Loop in profile loading detected %s->%s", strings.Join(profileLoop, "->"), profile)
-				}
-			}
-
 			// Add to profile chain
 			*profileChain = append(*profileChain, configMap)
 
@@ -266,7 +252,7 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 
 						err = getProfiles(localPath, rawMap, profileConfig.Parents[i].Profile, profileChain, depth+1, log)
 						if err != nil {
-							return err
+							return errors.Wrapf(err, "load parent profile %s", profileConfig.Parents[i].Profile)
 						}
 					} else {
 						err := getProfiles(basePath, data, profileConfig.Parents[i].Profile, profileChain, depth+1, log)

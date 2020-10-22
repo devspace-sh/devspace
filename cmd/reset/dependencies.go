@@ -1,9 +1,9 @@
 package reset
 
 import (
+	dependencyutil "github.com/devspace-cloud/devspace/pkg/devspace/dependency/util"
 	"os"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 
 	"github.com/pkg/errors"
@@ -40,9 +40,9 @@ devspace reset dependencies
 // RunResetDependencies executes the reset dependencies command logic
 func (cmd *dependenciesCmd) RunResetDependencies(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	log := f.GetLog()
-	err := os.RemoveAll(dependency.DependencyFolderPath)
+	err := os.RemoveAll(dependencyutil.DependencyFolderPath)
 	if err != nil {
-		return errors.Wrapf(err, "delete %s", dependency.DependencyFolderPath)
+		return errors.Wrapf(err, "delete %s", dependencyutil.DependencyFolderPath)
 	}
 
 	log.Done("Successfully reseted the dependency cache")
