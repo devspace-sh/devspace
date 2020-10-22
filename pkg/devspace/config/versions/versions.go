@@ -1,6 +1,10 @@
 package versions
 
 import (
+	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
@@ -18,6 +22,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta6"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta7"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta8"
+	dependencyutil "github.com/devspace-cloud/devspace/pkg/devspace/dependency/util"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
@@ -45,9 +50,9 @@ var versionLoader = map[string]*loader{
 }
 
 // ParseProfile loads the base config & a certain profile
-func ParseProfile(data map[interface{}]interface{}, profile string) ([]map[interface{}]interface{}, error) {
+func ParseProfile(basePath string, data map[interface{}]interface{}, profile string, log log.Logger) ([]map[interface{}]interface{}, error) {
 	profiles := []map[interface{}]interface{}{}
-	err := getProfile(data, profile, &profiles)
+	err := getProfiles(basePath, data, profile, &profiles, 1, log)
 	if err != nil {
 		return nil, err
 	}
@@ -171,8 +176,12 @@ func getCommands(data map[interface{}]interface{}) (map[interface{}]interface{},
 	}, nil
 }
 
-// getProfile loads a certain profile
-func getProfile(data map[interface{}]interface{}, profile string, profileChain *[]map[interface{}]interface{}) error {
+// getProfiles loads a certain profile
+func getProfiles(basePath string, data map[interface{}]interface{}, profile string, profileChain *[]map[interface{}]interface{}, depth int, log log.Logger) error {
+	if depth > 100 {
+		return fmt.Errorf("cannot load config with profile %s: max config loading depth reached. Seems like you have a profile cycle somewhere", profile)
+	}
+
 	// Convert config
 	retMap := map[interface{}]interface{}{}
 	err := util.Convert(data, &retMap)
@@ -193,8 +202,14 @@ func getProfile(data map[interface{}]interface{}, profile string, profileChain *
 
 	// Search for config
 	for _, profileMap := range profiles {
+		profileConfig := &latest.ProfileConfig{}
+		err := util.Convert(profileMap, &profileConfig)
+		if err != nil {
+			return err
+		}
+
 		configMap, ok := profileMap.(map[interface{}]interface{})
-		if ok && configMap["name"] == profile {
+		if ok && profileConfig.Name == profile {
 			// check if profile is already in our profile chain
 			for _, p := range *profileChain {
 				if p["name"] == profile {
@@ -210,12 +225,55 @@ func getProfile(data map[interface{}]interface{}, profile string, profileChain *
 			// Add to profile chain
 			*profileChain = append(*profileChain, configMap)
 
-			// Get parent profile
-			parentObj, ok := configMap["parent"]
-			if ok {
-				parentStr, ok := parentObj.(string)
-				if ok && parentStr != "" {
-					return getProfile(data, parentStr, profileChain)
+			// Get parents profiles
+			if profileConfig.Parent != "" && len(profileConfig.Parents) > 0 {
+				return errors.Errorf("parents and parent cannot be defined at the same time in profile %s. Please choose either one", profile)
+			}
+
+			// single parent
+			if profileConfig.Parent != "" {
+				return getProfiles(basePath, data, profileConfig.Parent, profileChain, depth+1, log)
+			}
+
+			// multiple parents
+			if len(profileConfig.Parents) > 0 {
+				for i := len(profileConfig.Parents) - 1; i >= 0; i-- {
+					if profileConfig.Parents[i].Profile == "" {
+						continue
+					}
+
+					if profileConfig.Parents[i].Source != nil {
+						_, localPath, err := dependencyutil.DownloadDependency(basePath, profileConfig.Parents[i].Source, profileConfig.Parents[i].Profile, false, log)
+						if err != nil {
+							return err
+						}
+
+						configPath := filepath.Join(localPath, constants.DefaultConfigPath)
+						if profileConfig.Parents[i].Source.ConfigName != "" {
+							configPath = filepath.Join(localPath, profileConfig.Parents[i].Source.ConfigName)
+						}
+
+						fileContent, err := ioutil.ReadFile(configPath)
+						if err != nil {
+							return errors.Wrap(err, "read parent config")
+						}
+
+						rawMap := map[interface{}]interface{}{}
+						err = yaml.Unmarshal(fileContent, &rawMap)
+						if err != nil {
+							return err
+						}
+
+						err = getProfiles(localPath, rawMap, profileConfig.Parents[i].Profile, profileChain, depth+1, log)
+						if err != nil {
+							return err
+						}
+					} else {
+						err := getProfiles(basePath, data, profileConfig.Parents[i].Profile, profileChain, depth+1, log)
+						if err != nil {
+							return err
+						}
+					}
 				}
 			}
 

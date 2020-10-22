@@ -677,6 +677,7 @@ type SourceConfig struct {
 	Branch         string   `yaml:"branch,omitempty"`
 	Tag            string   `yaml:"tag,omitempty"`
 	Revision       string   `yaml:"revision,omitempty"`
+	ConfigName     string   `yaml:"configName,omitempty"`
 
 	Path string `yaml:"path,omitempty"`
 }
@@ -734,10 +735,17 @@ const (
 
 // ProfileConfig defines a profile config
 type ProfileConfig struct {
-	Name    string         `yaml:"name"`
-	Parent  string         `yaml:"parent,omitempty"`
-	Patches []*PatchConfig `yaml:"patches,omitempty"`
-	Replace *ReplaceConfig `yaml:"replace,omitempty"`
+	Name    string           `yaml:"name"`
+	Parent  string           `yaml:"parent,omitempty"`
+	Parents []*ProfileParent `yaml:"parents,omitempty"`
+	Patches []*PatchConfig   `yaml:"patches,omitempty"`
+	Replace *ReplaceConfig   `yaml:"replace,omitempty"`
+}
+
+// ProfileParent defines where to load the profile from
+type ProfileParent struct {
+	Source  *SourceConfig `yaml:"source,omitempty"`
+	Profile string        `yaml:"profile"`
 }
 
 // PatchConfig describes a config patch and how it should be applied

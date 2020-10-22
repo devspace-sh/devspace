@@ -2,42 +2,24 @@ package dependency
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strings"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/dependency/util"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
-
 	"github.com/devspace-cloud/devspace/pkg/util/git"
-	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"os"
+	"path/filepath"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 )
-
-// DependencyFolder is the dependency folder in the home directory of the user
-const DependencyFolder = ".devspace/dependencies"
-
-// DependencyFolderPath will be filled during init
-var DependencyFolderPath string
-
-func init() {
-	// Make sure dependency folder exists locally
-	homedir, _ := homedir.Dir()
-
-	DependencyFolderPath = filepath.Join(homedir, filepath.FromSlash(DependencyFolder))
-}
 
 // ResolverInterface defines the resolver interface that takes dependency configs and resolves them
 type ResolverInterface interface {
@@ -147,7 +129,7 @@ func (r *resolver) buildDependencyQueue() ([]*Dependency, error) {
 
 func (r *resolver) resolveRecursive(basePath, parentID string, dependencies []*latest.DependencyConfig, update bool) error {
 	for _, dependencyConfig := range dependencies {
-		ID := r.getDependencyID(basePath, dependencyConfig)
+		ID := util.GetDependencyID(basePath, dependencyConfig.Source, dependencyConfig.Profile)
 
 		// Try to insert new edge
 		if _, ok := r.DependencyGraph.Nodes[ID]; ok {
@@ -189,59 +171,9 @@ func (r *resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 }
 
 func (r *resolver) resolveDependency(basePath string, dependency *latest.DependencyConfig, update bool) (*Dependency, error) {
-	var (
-		ID        = r.getDependencyID(basePath, dependency)
-		localPath string
-		err       error
-	)
-
-	// Resolve source
-	if dependency.Source.Git != "" {
-		gitPath := strings.TrimSpace(dependency.Source.Git)
-
-		os.MkdirAll(DependencyFolderPath, 0755)
-		localPath = filepath.Join(DependencyFolderPath, hash.String(ID))
-
-		// Check if dependency exists
-		_, err := os.Stat(localPath)
-		if err != nil {
-			update = true
-		}
-
-		// Update dependency
-		if update {
-			repo, err := git.NewGitCLIRepository(localPath)
-			if err != nil {
-				return nil, err
-			}
-
-			err = repo.Clone(git.CloneOptions{
-				URL:            gitPath,
-				Tag:            dependency.Source.Tag,
-				Branch:         dependency.Source.Branch,
-				Commit:         dependency.Source.Revision,
-				Args:           dependency.Source.CloneArgs,
-				DisableShallow: dependency.Source.DisableShallow,
-			})
-			if err != nil {
-				return nil, errors.Wrap(err, "clone repository")
-			}
-
-			r.log.Donef("Pulled %s", ID)
-		}
-	} else if dependency.Source.Path != "" {
-		if filepath.IsAbs(dependency.Source.Path) {
-			localPath = dependency.Source.Path
-		} else {
-			localPath, err = filepath.Abs(filepath.Join(basePath, filepath.FromSlash(dependency.Source.Path)))
-			if err != nil {
-				return nil, errors.Wrap(err, "filepath absolute")
-			}
-		}
-	}
-
-	if dependency.Source.SubPath != "" {
-		localPath = filepath.Join(localPath, filepath.FromSlash(dependency.Source.SubPath))
+	ID, localPath, err := util.DownloadDependency(basePath, dependency.Source, dependency.Profile, update, r.log)
+	if err != nil {
+		return nil, err
 	}
 
 	// Clone config options
@@ -254,6 +186,9 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 	// Construct load path
 	configPath := filepath.Join(localPath, constants.DefaultConfigPath)
+	if dependency.Source.ConfigName != "" {
+		configPath = filepath.Join(localPath, dependency.Source.ConfigName)
+	}
 
 	// Load config
 	cloned.GeneratedConfig = r.BaseCache
@@ -336,52 +271,4 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		deployController: deploy.NewController(dConfig, dGeneratedConfig.GetActive(), client),
 		generatedSaver:   gLoader,
 	}, nil
-}
-
-var authRegEx = regexp.MustCompile("^(https?:\\/\\/)[^:]+:[^@]+@(.*)$")
-
-func (r *resolver) getDependencyID(basePath string, dependency *latest.DependencyConfig) string {
-	if dependency.Source.Git != "" {
-		// Erase authentication credentials
-		id := strings.TrimSpace(dependency.Source.Git)
-		id = authRegEx.ReplaceAllString(id, "$1$2")
-
-		if dependency.Source.Tag != "" {
-			id += "@" + dependency.Source.Tag
-		} else if dependency.Source.Branch != "" {
-			id += "@" + dependency.Source.Branch
-		} else if dependency.Source.Revision != "" {
-			id += "@" + dependency.Source.Revision
-		}
-		if dependency.Source.SubPath != "" {
-			id += ":" + dependency.Source.SubPath
-		}
-		if dependency.Profile != "" {
-			id += " - profile " + dependency.Profile
-		}
-		if len(dependency.Source.CloneArgs) > 0 {
-			id += " - with clone args " + strings.Join(dependency.Source.CloneArgs, " ")
-		}
-
-		return id
-	} else if dependency.Source.Path != "" {
-		// Check if it's an git repo
-		filePath := dependency.Source.Path
-		if !filepath.IsAbs(dependency.Source.Path) {
-			filePath = filepath.Join(basePath, dependency.Source.Path)
-		}
-
-		remote, err := git.GetRemote(filePath)
-		if err == nil {
-			return remote
-		}
-
-		if dependency.Profile != "" {
-			filePath += " - profile " + dependency.Profile
-		}
-
-		return filePath
-	}
-
-	return ""
 }

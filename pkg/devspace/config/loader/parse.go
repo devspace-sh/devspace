@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -99,7 +100,7 @@ func (l *configLoader) ParseCommands() ([]*latest.CommandConfig, error) {
 // parseConfig fills the variables in the data and parses the config
 func (l *configLoader) parseConfig(data map[interface{}]interface{}) (*latest.Config, error) {
 	// Get profile
-	profiles, err := versions.ParseProfile(data, l.options.Profile)
+	profiles, err := versions.ParseProfile(filepath.Dir(l.ConfigPath()), data, l.options.Profile, l.log)
 	if err != nil {
 		return nil, err
 	}
