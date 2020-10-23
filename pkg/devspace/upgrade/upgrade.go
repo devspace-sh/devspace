@@ -2,6 +2,7 @@ package upgrade
 
 import (
 	"errors"
+	"os"
 	"regexp"
 	"sync"
 
@@ -33,10 +34,12 @@ func eraseVersionPrefix(version string) (string, error) {
 
 // PrintUpgradeMessage prints an upgrade message if there is a new version available
 func PrintUpgradeMessage() {
-	// Get version of current binary
-	latestVersion := NewerVersionAvailable()
-	if latestVersion != "" {
-		log.GetInstance().Warnf("There is a newer version of DevSpace: v%s. Run `devspace upgrade` to upgrade to the newest version.\n", latestVersion)
+	if os.Getenv("DEVSPACE_SKIP_VERSION_CHECK") != "true" {
+		// Get version of current binary
+		latestVersion := NewerVersionAvailable()
+		if latestVersion != "" {
+			log.GetInstance().Warnf("There is a newer version of DevSpace: v%s. Run `devspace upgrade` to upgrade to the newest version.\n", latestVersion)
+		}
 	}
 }
 

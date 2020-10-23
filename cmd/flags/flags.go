@@ -15,11 +15,12 @@ type GlobalFlags struct {
 	NoWarn bool
 	Debug  bool
 
-	Namespace   string
-	KubeContext string
-	Profile     string
-	ConfigPath  string
-	Vars        []string
+	Namespace      string
+	KubeContext    string
+	Profile        string
+	ProfileRefresh bool
+	ConfigPath     string
+	Vars           []string
 
 	SwitchContext bool
 
@@ -47,11 +48,12 @@ func (gf *GlobalFlags) UseLastContext(generatedConfig *generated.Config, log log
 // ToConfigOptions converts the globalFlags into config options
 func (gf *GlobalFlags) ToConfigOptions() *loader.ConfigOptions {
 	return &loader.ConfigOptions{
-		Profile:     gf.Profile,
-		ConfigPath:  gf.ConfigPath,
-		KubeContext: gf.KubeContext,
-		Namespace:   gf.Namespace,
-		Vars:        gf.Vars,
+		Profile:        gf.Profile,
+		ProfileRefresh: gf.ProfileRefresh,
+		ConfigPath:     gf.ConfigPath,
+		KubeContext:    gf.KubeContext,
+		Namespace:      gf.Namespace,
+		Vars:           gf.Vars,
 	}
 }
 
@@ -68,6 +70,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 
 	flags.StringVar(&globalFlags.ConfigPath, "config", "", "The devspace config file to use")
 	flags.StringVarP(&globalFlags.Profile, "profile", "p", "", "The devspace profile to use (if there is any)")
+	flags.BoolVar(&globalFlags.ProfileRefresh, "profile-refresh", false, "If true will pull and re-download profile parent sources")
 	flags.StringVarP(&globalFlags.Namespace, "namespace", "n", "", "The kubernetes namespace to use")
 	flags.StringVar(&globalFlags.KubeContext, "kube-context", "", "The kubernetes context to use")
 	flags.BoolVarP(&globalFlags.SwitchContext, "switch-context", "s", false, "Switches and uses the last kube context and namespace that was used to deploy the DevSpace project")

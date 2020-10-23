@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -86,13 +87,27 @@ func ApplyPatches(data map[interface{}]interface{}, profile map[interface{}]inte
 var replaceArrayRegEx = regexp.MustCompile("\\[\\\"?([^\\]\\\"]+)\\\"?\\]")
 
 func findPath(path *yamlpatch.OpPath, c interface{}) (interface{}, error) {
+	container := yamlpatch.NewNode(&c).Container()
+	if path.ContainsExtendedSyntax() {
+		paths := yamlpatch.NewPathFinder(container).Find(path.String())
+		if paths == nil {
+			return nil, fmt.Errorf("could not expand pointer: %s", path.String())
+		}
+
+		for _, p := range paths {
+			op := yamlpatch.OpPath(p)
+			return findPath(&op, c)
+		}
+
+		return nil, nil
+	}
+
 	parts, key, err := path.Decompose()
 	if err != nil {
 		return nil, err
 	}
 
 	parts = append(parts, key)
-
 	foundContainer := c
 	for _, part := range parts {
 		// If map
@@ -100,7 +115,7 @@ func findPath(path *yamlpatch.OpPath, c interface{}) (interface{}, error) {
 		if ok {
 			foundContainer, ok = iMap[part]
 			if ok == false {
-				return nil, errors.Errorf("Cannot find key %s in object", part)
+				return nil, errors.Errorf("cannot find key %s in object", part)
 			}
 
 			continue
@@ -114,14 +129,14 @@ func findPath(path *yamlpatch.OpPath, c interface{}) (interface{}, error) {
 			}
 
 			if i >= 0 && i <= len(iArray)-1 {
-				foundContainer = iMap[part]
+				foundContainer = iArray[i]
 				continue
 			}
 
-			return nil, errors.Errorf("Unable to access invalid index: %d", i)
+			return nil, errors.Errorf("unable to access invalid index: %d", i)
 		}
 
-		return nil, errors.Errorf("Cannot access part %s because value is not an object or array", part)
+		return nil, errors.Errorf("cannot access part %s because value is not an object or array", part)
 	}
 
 	return foundContainer, nil

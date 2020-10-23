@@ -2,6 +2,7 @@ package dependency
 
 import (
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/dependency/util"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -51,7 +52,7 @@ func TestResolver(t *testing.T) {
 		t.Fatalf("Error changing working directory: %v", err)
 	}
 
-	DependencyFolderPath = filepath.Join(dir, "dependencyFolder")
+	util.DependencyFolderPath = filepath.Join(dir, "dependencyFolder")
 
 	// Delete temp folder
 	defer func() {
@@ -119,7 +120,7 @@ func TestResolver(t *testing.T) {
 			expectedDependencies: []Dependency{
 				Dependency{
 					ID:        "https://github.com/devspace-cloud/example-dependency.git@f8b2aa8cf8ac03238a28e8f78382b214d619893f:mysubpath",
-					LocalPath: filepath.Join(DependencyFolderPath, "84e3f5121aa5a99b3d26752f40e3935f494312ad82d0e85afc9b6e23c762c705", "mysubpath"),
+					LocalPath: filepath.Join(util.DependencyFolderPath, "84e3f5121aa5a99b3d26752f40e3935f494312ad82d0e85afc9b6e23c762c705", "mysubpath"),
 				},
 			},
 		},
@@ -213,7 +214,7 @@ func TestResolver(t *testing.T) {
 			err = os.Remove(path)
 			assert.NilError(t, err, "Error removing file in testCase %s", testCase.name)
 		}
-		os.RemoveAll(DependencyFolderPath) //No error catch because it doesn't need to exist
+		os.RemoveAll(util.DependencyFolderPath) //No error catch because it doesn't need to exist
 
 	}
 }
@@ -280,7 +281,7 @@ func TestGetDependencyID(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		id := (&resolver{}).getDependencyID(testCase.baseBath, testCase.dependency)
+		id := util.GetDependencyID(testCase.baseBath, testCase.dependency.Source, testCase.dependency.Profile)
 		assert.Equal(t, testCase.expectedID, id, "Dependency has wrong id in testCase %s", testCase.name)
 	}
 }
