@@ -27,7 +27,7 @@ dependencies:
 ```
 
 :::info Authentication
-DevSpace is using the git credential store. So, if you are able to clone or pull from the specified repository, DevSpace will also be able clone or pull this repository.
+DevSpace is using the git credential store. So, if you are able to clone or pull from the specified repository, DevSpace will also be able clone or pull this repository. You can use both HTTPS and SSH, e.g. https://github.com/my-api-server and git@github.com:my-api-server.git
 :::
 
 ## `source`
@@ -40,7 +40,7 @@ The `source.git` option expects a string with the URL of a git repository. DevSp
 - [`subPath` for custom location of `devspace.yaml` within the repository](#sourcesubpath)
 
 :::note Caching
-DevSpace will clone the git repository which is defined as a dependency and cache the project in the global cache folder (i.e. `$HOME/.devspace`). DevSpace will also pull new commits before deploying the dependency.
+DevSpace will clone the git repository which is defined as a dependency and cache the project in the global cache folder (i.e. `$HOME/.devspace`). DevSpace will not pull new commits before deploying the dependency. Run ```devspace update dependencies``` to pull the latest commits.
 :::
 
 #### Example: Git Projects as Dependency
@@ -59,7 +59,6 @@ dependencies:
 **Explanation:**  
 - When you run `devspace deploy` or `devspace dev` for the first time after defining the dependencies, DevSpace will check out all git projects into the global cache folder `$HOME/.devspace`.
 - Whenever you run `devspace deploy` or `devspace dev` (even the first time), DevSpace will:
-  - Run a `git pull` for all cached repositories.
   - Load the `devspace.yaml` files of the dependency projects and resolve their dependencies respectively.
   - Deploy all dependency projects according to their `devspace.yaml` files.
 
