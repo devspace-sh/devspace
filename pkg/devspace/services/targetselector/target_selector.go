@@ -61,6 +61,9 @@ func NewTargetSelector(config *latest.Config, kubeClient kubectl.Client, sp *Sel
 	}
 
 	return &TargetSelector{
+		PodQuestion:       ptr.String("Please select a pod"),
+		ContainerQuestion: ptr.String("Please select a container"),
+
 		namespace:     namespace,
 		labelSelector: labelSelector,
 		imageSelector: imageSelector,
