@@ -289,6 +289,15 @@ deployments:
 
 ## Helm Options
 
+### `upgradeArgs`
+The `upgradeArgs` specifies an array of arguments that will be passed by devspace additionally to the standard arguments to `helm upgrade` during deployment.
+
+### `templateArgs`
+The `templateArgs` specifies an array of arguments that will be passed by devspace additionally to the standard arguments to `helm template` during `devspace render`.
+
+### `deleteArgs`
+The `deleteArgs` specifies an array of arguments that will be passed by devspace additionally to the standard arguments to `helm delete` during `devspace purge`.
+
 ### `wait`
 The `wait` option expects a boolean that will be used for the [helm flag `--wait`](https://helm.sh/docs/intro/using_helm/#helpful-options-for-installupgraderollback).
 
