@@ -70,42 +70,40 @@ func (client *client) LogMultipleTimeout(imageSelector []string, interrupt chan 
 
 	// Loop over pods and open logs connection
 	for idx, pod := range pods {
-	Outer:
-		for _, container := range pod.Spec.Containers {
-			for _, imageName := range imageSelector {
-				if compareImageNames(imageName, container.Image) {
-					reader, err := client.Logs(ctx, pod.Namespace, pod.Name, container.Name, false, tail, true)
-					if err != nil {
-						log.Warnf("Couldn't log %s/%s: %v", pod.Name, container.Name, err)
-						continue
-					}
-
-					prefix := pod.Name
-					if componentLabel, ok := pod.Labels[k8sComponentLabel]; ok {
-						prefix = componentLabel
-					}
-
-					if printInfo {
-						log.Info("Starting log streaming for containers that use images defined in devspace.yaml\n")
-						printInfo = false
-					}
-
-					wg.Add(1)
-					go func(prefix string, reader io.Reader, color string) {
-						scanner := bufio.NewScanner(reader)
-						for scanner.Scan() {
-							lines <- &logLine{
-								line:  scanner.Text(),
-								name:  prefix,
-								color: color,
-							}
-						}
-
-						wg.Done()
-					}(prefix, reader, logpkg.Colors[idx%len(logpkg.Colors)])
-					break Outer
-				}
+		containers := getMatchedContainers(pod, imageSelector)
+		for idx2, container := range containers {
+			reader, err := client.Logs(ctx, pod.Namespace, pod.Name, container.Name, false, tail, true)
+			if err != nil {
+				log.Warnf("Couldn't log %s/%s: %v", pod.Name, container.Name, err)
+				continue
 			}
+
+			prefix := pod.Name
+			if componentLabel, ok := pod.Labels[k8sComponentLabel]; ok {
+				prefix = componentLabel
+			}
+			if len(containers) > 1 {
+				prefix += ":" + container.Name
+			}
+
+			if printInfo {
+				log.Info("Starting log streaming for containers that use images defined in devspace.yaml\n")
+				printInfo = false
+			}
+
+			wg.Add(1)
+			go func(prefix string, reader io.Reader, color string) {
+				scanner := bufio.NewScanner(reader)
+				for scanner.Scan() {
+					lines <- &logLine{
+						line:  scanner.Text(),
+						name:  prefix,
+						color: color,
+					}
+				}
+
+				wg.Done()
+			}(prefix, reader, logpkg.Colors[(idx+idx2)%len(logpkg.Colors)])
 		}
 	}
 
@@ -125,6 +123,19 @@ func (client *client) LogMultipleTimeout(imageSelector []string, interrupt chan 
 			writer.Write([]byte(ansi.Color(fmt.Sprintf("[%s]", line.name), line.color) + " " + line.line + "\n"))
 		}
 	}
+}
+
+func getMatchedContainers(pod *v1.Pod, imageSelector []string) []v1.Container {
+	containers := []v1.Container{}
+	for _, container := range pod.Spec.Containers {
+		for _, imageName := range imageSelector {
+			if compareImageNames(imageName, container.Image) {
+				containers = append(containers, container)
+				break
+			}
+		}
+	}
+	return containers
 }
 
 // LogMultiple will log multiple
