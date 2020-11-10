@@ -249,7 +249,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			defer os.RemoveAll(tempDir)
 
 			scriptPath := filepath.Join(tempDir, restart.ScriptName)
-			remoteFolder := filepath.Join(kanikoContextPath, ".devspace", ".devspace")
+			remoteFolder := filepath.ToSlash(filepath.Join(kanikoContextPath, ".devspace", ".devspace"))
 			err = ioutil.WriteFile(scriptPath, []byte(restart.HelperScript), 0777)
 			if err != nil {
 				return errors.Wrap(err, "write restart helper script")
@@ -264,7 +264,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			// copy the helper script into the container
 			err = b.helper.KubeClient.Copy(buildPod, buildPod.Spec.InitContainers[0].Name, remoteFolder, scriptPath, []string{})
 			if err != nil {
-				return errors.Errorf("error uploading dockerfile to container: %v", err)
+				return errors.Errorf("error uploading helper script to container: %v", err)
 			}
 
 			// change permissions for the execution script
@@ -275,7 +275,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 			// remove the .dockerignore since .devspace is usually ignored and we want to sneak our helper script in
 			// this shouldn't be any issue since the context was already pruned in the copy step beforehand
-			_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"rm", filepath.Join(kanikoContextPath, ".dockerignore")}, nil)
+			_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"rm", filepath.ToSlash(filepath.Join(kanikoContextPath, ".dockerignore"))}, nil)
 			if err != nil {
 				if _, ok := err.(exec.CodeExitError); !ok {
 					return errors.Errorf("error executing command 'rm .dockerignore' in init container: %v", err)

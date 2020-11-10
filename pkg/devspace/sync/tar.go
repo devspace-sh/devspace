@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -281,6 +282,7 @@ func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) er
 		hdr, _ := tar.FileInfoHeader(targetStat, filepath)
 		hdr.Uid = 0
 		hdr.Gid = 0
+		hdr.Mode = fillGo18FileTypeBits(int64(chmodTarEntry(os.FileMode(hdr.Mode))), targetStat)
 		hdr.Name = target.Name
 		if err := a.writer.WriteHeader(hdr); err != nil {
 			return errors.Wrap(err, "tar write header")
@@ -323,6 +325,7 @@ func (a *Archiver) tarFile(target *FileInformation, targetStat os.FileInfo) erro
 	hdr.Name = target.Name
 	hdr.Uid = 0
 	hdr.Gid = 0
+	hdr.Mode = fillGo18FileTypeBits(int64(chmodTarEntry(os.FileMode(hdr.Mode))), targetStat)
 	hdr.ModTime = time.Unix(target.Mtime, 0)
 
 	if err := a.writer.WriteHeader(hdr); err != nil {
@@ -342,6 +345,58 @@ func (a *Archiver) tarFile(target *FileInformation, targetStat os.FileInfo) erro
 
 	a.writtenFiles[target.Name] = target
 	return nil
+}
+
+const (
+	modeISDIR  = 040000  // Directory
+	modeISFIFO = 010000  // FIFO
+	modeISREG  = 0100000 // Regular file
+	modeISLNK  = 0120000 // Symbolic link
+	modeISBLK  = 060000  // Block special file
+	modeISCHR  = 020000  // Character special file
+	modeISSOCK = 0140000 // Socket
+)
+
+// chmodTarEntry is used to adjust the file permissions used in tar header based
+// on the platform the archival is done.
+func chmodTarEntry(perm os.FileMode) os.FileMode {
+	if runtime.GOOS != "windows" {
+		return perm
+	}
+
+	// perm &= 0755 // this 0-ed out tar flags (like link, regular file, directory marker etc.)
+	permPart := perm & os.ModePerm
+	noPermPart := perm &^ os.ModePerm
+	// Add the x bit: make everything +x from windows
+	permPart |= 0111
+	permPart &= 0755
+
+	return noPermPart | permPart
+}
+
+// fillGo18FileTypeBits fills type bits which have been removed on Go 1.9 archive/tar
+// https://github.com/golang/go/commit/66b5a2f
+func fillGo18FileTypeBits(mode int64, fi os.FileInfo) int64 {
+	fm := fi.Mode()
+	switch {
+	case fm.IsRegular():
+		mode |= modeISREG
+	case fi.IsDir():
+		mode |= modeISDIR
+	case fm&os.ModeSymlink != 0:
+		mode |= modeISLNK
+	case fm&os.ModeDevice != 0:
+		if fm&os.ModeCharDevice != 0 {
+			mode |= modeISCHR
+		} else {
+			mode |= modeISBLK
+		}
+	case fm&os.ModeNamedPipe != 0:
+		mode |= modeISFIFO
+	case fm&os.ModeSocket != 0:
+		mode |= modeISSOCK
+	}
+	return mode
 }
 
 func createFileInformationFromStat(relativePath string, stat os.FileInfo) *FileInformation {
