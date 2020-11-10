@@ -17,7 +17,7 @@ import (
 )
 
 // The kaniko build image we use by default
-const kanikoBuildImage = "gcr.io/kaniko-project/executor:v0.17.1"
+const kanikoBuildImage = "gcr.io/kaniko-project/executor:v1.3.0"
 
 // The context path within the kaniko pod
 const kanikoContextPath = "/context"
@@ -75,6 +75,11 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 		for _, tag := range b.helper.ImageConf.Tags {
 			kanikoArgs = append(kanikoArgs, "--destination="+b.helper.ImageName+":"+tag)
 		}
+	}
+
+	// set target
+	if options.Target != "" {
+		kanikoArgs = append(kanikoArgs, "--target="+options.Target)
 	}
 
 	// set snapshot mode
