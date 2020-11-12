@@ -1,0 +1,15 @@
+
+The `network` option expects a string stating the network setting for building the image.
+
+#### Example: Defining a Network for Docker
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      docker:
+        options:
+          network: host
+```
+**Explanation:**  
+The image `backend` would be built using `docker` and `docker build` would be called using the `--network=host` flag.
