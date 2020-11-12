@@ -1,0 +1,10 @@
+The `name` option is optional and expects a string stating the name of this dependency.
+
+:::note
+Adding a `name` for a dependency makes it possible to reference the dependency using flags, e.g.
+```bash
+devspace deploy --dependency=[name]
+devspace purge --dependency=[name]
+devspace render --dependency=[name]
+```
+:::
