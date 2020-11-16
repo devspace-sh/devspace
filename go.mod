@@ -17,6 +17,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96
+	github.com/evanphx/json-patch/v5 v5.1.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github v17.0.0+incompatible // indirect
@@ -45,7 +46,7 @@ require (
 	github.com/rhysd/go-github-selfupdate v0.0.0-20180520142321-41c1bbb0804a
 	github.com/rjeczalik/notify v0.0.0-20181126183243-629144ba06a1
 	github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94
-	github.com/shirou/gopsutil v0.0.0-20190627142359-4c8b404ee5c5
+	github.com/shirou/gopsutil v0.0.0-20190627142359-4c8b404ee5c5 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
 	github.com/spf13/cobra v1.0.0

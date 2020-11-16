@@ -30,123 +30,123 @@ func NewRaw() *Config {
 type Config struct {
 	Version string `yaml:"version"`
 
-	Images       map[string]*ImageConfig `yaml:"images,omitempty"`
-	Deployments  []*DeploymentConfig     `yaml:"deployments,omitempty"`
-	Dev          *DevConfig              `yaml:"dev,omitempty"`
-	Dependencies []*DependencyConfig     `yaml:"dependencies,omitempty"`
-	Hooks        []*HookConfig           `yaml:"hooks,omitempty"`
-	Commands     []*CommandConfig        `yaml:"commands,omitempty"`
+	Images       map[string]*ImageConfig `yaml:"images,omitempty" json:"images,omitempty"`
+	Deployments  []*DeploymentConfig     `yaml:"deployments,omitempty" json:"deployments,omitempty"`
+	Dev          *DevConfig              `yaml:"dev,omitempty" json:"dev,omitempty"`
+	Dependencies []*DependencyConfig     `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
+	Hooks        []*HookConfig           `yaml:"hooks,omitempty" json:"hooks,omitempty"`
+	Commands     []*CommandConfig        `yaml:"commands,omitempty" json:"commands,omitempty"`
 
-	Vars     []*Variable      `yaml:"vars,omitempty"`
-	Profiles []*ProfileConfig `yaml:"profiles,omitempty"`
+	Vars     []*Variable      `yaml:"vars,omitempty" json:"vars,omitempty"`
+	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 }
 
 // ImageConfig defines the image specification
 type ImageConfig struct {
 	// Image is the complete image name including registry and repository
 	// for example myregistry.com/mynamespace/myimage
-	Image string `yaml:"image"`
+	Image string `yaml:"image" json:"image"`
 
 	// Tags is an array that specifes all tags that should be build during
 	// the build process. If this is empty, devspace will generate a random tag
-	Tags []string `yaml:"tags,omitempty"`
+	Tags []string `yaml:"tags,omitempty" json:"tags,omitempty"`
 
 	// Specifies a path (relative or absolute) to the dockerfile
-	Dockerfile string `yaml:"dockerfile,omitempty"`
+	Dockerfile string `yaml:"dockerfile,omitempty" json:"dockerfile,omitempty"`
 
 	// The context path to build with
-	Context string `yaml:"context,omitempty"`
+	Context string `yaml:"context,omitempty" json:"context,omitempty"`
 
 	// Entrypoint specifies an entrypoint that will be appended to the dockerfile during
 	// image build in memory. Example: ["sleep", "99999"]
-	Entrypoint []string `yaml:"entrypoint,omitempty"`
+	Entrypoint []string `yaml:"entrypoint,omitempty" json:"entrypoint,omitempty"`
 
 	// Cmd specifies the arguments for the entrypoint that will be appended
 	// during build in memory to the dockerfile
-	Cmd []string `yaml:"cmd,omitempty"`
+	Cmd []string `yaml:"cmd,omitempty" json:"cmd,omitempty"`
 
 	// CreatePullSecret specifies if a pull secret should be created for this image in the
 	// target namespace. Defaults to true
-	CreatePullSecret *bool `yaml:"createPullSecret,omitempty"`
+	CreatePullSecret *bool `yaml:"createPullSecret,omitempty" json:"createPullSecret,omitempty"`
 
 	// If this is true, devspace will not rebuild the image even though files have changed within
 	// the context if a syncpath for this image is defined. This can reduce the number of builds
 	// when running 'devspace dev'
-	PreferSyncOverRebuild bool `yaml:"preferSyncOverRebuild,omitempty"`
+	PreferSyncOverRebuild bool `yaml:"preferSyncOverRebuild,omitempty" json:"preferSyncOverRebuild,omitempty"`
 
 	// If true injects a small restart script into the container and wraps the entrypoint of that
 	// container, so that devspace is able to restart the complete container during sync.
 	// Please make sure you either have an Entrypoint defined in the devspace config or in the
 	// dockerfile for this image, otherwise devspace will fail.
-	InjectRestartHelper bool `yaml:"injectRestartHelper,omitempty"`
+	InjectRestartHelper bool `yaml:"injectRestartHelper,omitempty" json:"injectRestartHelper,omitempty"`
 
 	// These instructions will be appended to the Dockerfile that is build at the current build target
 	// and are appended before the entrypoint and cmd instructions
-	AppendDockerfileInstructions []string `yaml:"appendDockerfileInstructions,omitempty"`
+	AppendDockerfileInstructions []string `yaml:"appendDockerfileInstructions,omitempty" json:"appendDockerfileInstructions,omitempty"`
 
 	// Specific build options how to build the specified image
-	Build *BuildConfig `yaml:"build,omitempty"`
+	Build *BuildConfig `yaml:"build,omitempty" json:"build,omitempty"`
 }
 
 // BuildConfig defines the build process for an image. Only one of the options below
 // can be specified.
 type BuildConfig struct {
 	// If docker is specified, devspace will build the image using the local docker daemon
-	Docker *DockerConfig `yaml:"docker,omitempty"`
+	Docker *DockerConfig `yaml:"docker,omitempty" json:"docker,omitempty"`
 
 	// If kaniko is specified, devspace will build the image in-cluster with kaniko
-	Kaniko *KanikoConfig `yaml:"kaniko,omitempty"`
+	Kaniko *KanikoConfig `yaml:"kaniko,omitempty" json:"kaniko,omitempty"`
 
 	// If custom is specified, devspace will build the image with the help of
 	// a custom script.
-	Custom *CustomConfig `yaml:"custom,omitempty"`
+	Custom *CustomConfig `yaml:"custom,omitempty" json:"custom,omitempty"`
 
 	// This overrides other options and is able to disable the build for this image.
 	// Useful if you just want to select the image in a sync path or via devspace enter --image
-	Disabled *bool `yaml:"disabled,omitempty"`
+	Disabled *bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 }
 
 // DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type DockerConfig struct {
-	PreferMinikube  *bool         `yaml:"preferMinikube,omitempty"`
-	SkipPush        *bool         `yaml:"skipPush,omitempty"`
-	DisableFallback *bool         `yaml:"disableFallback,omitempty"`
-	UseBuildKit     *bool         `yaml:"useBuildKit,omitempty"`
-	Args            []string      `yaml:"args,omitempty"`
-	Options         *BuildOptions `yaml:"options,omitempty"`
+	PreferMinikube  *bool         `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty"`
+	SkipPush        *bool         `yaml:"skipPush,omitempty" json:"skipPush,omitempty"`
+	DisableFallback *bool         `yaml:"disableFallback,omitempty" json:"disableFallback,omitempty"`
+	UseBuildKit     *bool         `yaml:"useBuildKit,omitempty" json:"useBuildKit,omitempty"`
+	Args            []string      `yaml:"args,omitempty" json:"args,omitempty"`
+	Options         *BuildOptions `yaml:"options,omitempty" json:"options,omitempty"`
 }
 
 // KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type KanikoConfig struct {
 	// if a cache repository should be used. defaults to true
-	Cache *bool `yaml:"cache,omitempty"`
+	Cache *bool `yaml:"cache,omitempty" json:"cache,omitempty"`
 
 	// the snapshot mode kaniko should use. defaults to time
-	SnapshotMode string `yaml:"snapshotMode,omitempty"`
+	SnapshotMode string `yaml:"snapshotMode,omitempty" json:"snapshotMode,omitempty"`
 
 	// the image name of the kaniko pod to use
-	Image string `yaml:"image,omitempty"`
+	Image string `yaml:"image,omitempty" json:"image,omitempty"`
 
 	// additional arguments that should be passed to kaniko
-	Args []string `yaml:"args,omitempty"`
+	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
 
 	// the namespace where the kaniko pod should be run
-	Namespace string `yaml:"namespace,omitempty"`
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 
 	// if true pushing to insecure registries is allowed
-	Insecure *bool `yaml:"insecure,omitempty"`
+	Insecure *bool `yaml:"insecure,omitempty" json:"insecure,omitempty"`
 
 	// the pull secret to mount by default
-	PullSecret string `yaml:"pullSecret,omitempty"`
+	PullSecret string `yaml:"pullSecret,omitempty" json:"pullSecret,omitempty"`
 
 	// additional mounts that will be added to the build pod
-	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty"`
+	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty" json:"additionalMounts,omitempty"`
 
 	// the resources that should be set on the kaniko pod
-	Resources *KanikoPodResources `yaml:"resources,omitempty"`
+	Resources *KanikoPodResources `yaml:"resources,omitempty" json:"resources,omitempty"`
 
 	// other build options that will be passed to the kaniko pod
-	Options *BuildOptions `yaml:"options,omitempty"`
+	Options *BuildOptions `yaml:"options,omitempty" json:"options,omitempty"`
 }
 
 // KanikoPodResources describes the resources section of the started kaniko pod
@@ -735,11 +735,12 @@ const (
 
 // ProfileConfig defines a profile config
 type ProfileConfig struct {
-	Name    string           `yaml:"name"`
-	Parent  string           `yaml:"parent,omitempty"`
-	Parents []*ProfileParent `yaml:"parents,omitempty"`
-	Patches []*PatchConfig   `yaml:"patches,omitempty"`
-	Replace *ReplaceConfig   `yaml:"replace,omitempty"`
+	Name    string                      `yaml:"name"`
+	Parent  string                      `yaml:"parent,omitempty"`
+	Parents []*ProfileParent            `yaml:"parents,omitempty"`
+	Patches []*PatchConfig              `yaml:"patches,omitempty"`
+	Replace *ReplaceConfig              `yaml:"replace,omitempty"`
+	Merge   map[interface{}]interface{} `yaml:"merge,omitempty"`
 }
 
 // ProfileParent defines where to load the profile from

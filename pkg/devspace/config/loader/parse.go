@@ -117,6 +117,12 @@ func (l *configLoader) parseConfig(data map[interface{}]interface{}) (*latest.Co
 			return nil, err
 		}
 
+		// Apply merge
+		data, err = ApplyMerge(data, profiles[i])
+		if err != nil {
+			return nil, err
+		}
+
 		// Apply patches
 		data, err = ApplyPatches(data, profiles[i])
 		if err != nil {
