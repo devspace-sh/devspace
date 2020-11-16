@@ -3,9 +3,46 @@ package loader
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 )
+
+// ApplyStrategicMerge applies the strategic merge patches
+func ApplyStrategicMerge(config map[interface{}]interface{}, profile map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+	if profile == nil || profile["strategicMerge"] == nil {
+		return config, nil
+	}
+
+	mergeMap, ok := profile["strategicMerge"].(map[interface{}]interface{})
+	if !ok {
+		return nil, errors.Errorf("profiles.%v.strategicMerge is not an object", profile["name"])
+	}
+
+	mergeBytes, err := json.Marshal(convertFrom(mergeMap))
+	if err != nil {
+		return nil, errors.Wrap(err, "marshal merge")
+	}
+
+	originalBytes, err := json.Marshal(convertFrom(config))
+	if err != nil {
+		return nil, errors.Wrap(err, "marshal merge")
+	}
+
+	out, err := strategicpatch.StrategicMergePatch(originalBytes, mergeBytes, &latest.Config{})
+	if err != nil {
+		return nil, errors.Wrap(err, "create strategic merge patch")
+	}
+
+	strMap := map[string]interface{}{}
+	err = json.Unmarshal(out, &strMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return convertBack(strMap).(map[interface{}]interface{}), nil
+}
 
 // ApplyMerge applies the merge patches
 func ApplyMerge(config map[interface{}]interface{}, profile map[interface{}]interface{}) (map[interface{}]interface{}, error) {

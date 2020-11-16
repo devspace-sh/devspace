@@ -533,7 +533,7 @@ profiles:
 				},
 				Images: map[string]*latest.ImageConfig{
 					"test": &latest.ImageConfig{
-						Image: "test",
+						Image:                 "test",
 						PreferSyncOverRebuild: true,
 					},
 				},
@@ -569,6 +569,51 @@ profiles:
 				generatedConfig: &generated.Config{Vars: map[string]string{}},
 			},
 			expectedErr: true,
+		},
+		"Profile strategic merge": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta9
+deployments:
+- name: test
+  helm:
+    values:
+      containers:
+      - image: test/test
+- name: test2
+profiles:
+- name: test
+  strategicMerge:
+    deployments:
+    - name: test
+      helm:
+        values:
+          containers:
+          - image: test123/test123`,
+				options:         &ConfigOptions{Profile: "test"},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     &latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "test",
+						Helm: &latest.HelmConfig{
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "test123/test123",
+									},
+								},
+							},
+						},
+					},
+					{
+						Name: "test2",
+					},
+				},
+			},
 		},
 	}
 
