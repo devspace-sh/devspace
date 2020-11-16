@@ -9,7 +9,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/blang/semver"
-	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
 )
 
@@ -65,9 +64,6 @@ func SetVersion(verText string) {
 		version = _version
 		rawVersion = verText
 	}
-
-	// Start analytics
-	cloudanalytics.Start(version)
 }
 
 var (

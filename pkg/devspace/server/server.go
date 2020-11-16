@@ -8,7 +8,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
-	"github.com/devspace-cloud/devspace/pkg/util/analytics"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/port"
@@ -161,11 +160,6 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 		ports:                make(map[string]*forward),
 		clientCache:          make(map[string]kubectl.Client),
 		terminalResizeQueues: make(map[string]TerminalResizeQueue),
-	}
-
-	analytics, err := analytics.GetAnalytics()
-	if err == nil {
-		handler.analyticsEnabled = analytics.Enabled()
 	}
 
 	// Load raw config

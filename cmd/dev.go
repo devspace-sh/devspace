@@ -147,6 +147,10 @@ Open terminal instead of logs:
 
 // Run executes the command logic
 func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+	if cmd.Interactive {
+		cmd.log.Warn("Interactive mode flag is deprecated and will be removed in the future. Please take a look at https://devspace.sh/cli/docs/guides/interactive-mode on how to transition to an interactive profile")
+	}
+
 	// Set config root
 	cmd.log = f.GetLog()
 	cmd.configLoader = f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)

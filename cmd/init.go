@@ -46,6 +46,9 @@ const (
 
 	// The default name for the production profile
 	productionProfileName = "production"
+
+	// The default name for the interactive profile
+	interactiveProfileName = "interactive"
 )
 
 // InitCmd is a struct that defines a command call for "init"
@@ -450,6 +453,28 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config) error {
 			config.Profiles = append(config.Profiles, &latest.ProfileConfig{
 				Name:    productionProfileName,
 				Patches: patches,
+			})
+		}
+		if ok {
+			config.Profiles = append(config.Profiles, &latest.ProfileConfig{
+				Name: interactiveProfileName,
+				Patches: []*latest.PatchConfig{
+					{
+						Operation: "add",
+						Path:      "dev.interactive",
+						Value: map[string]bool{
+							"defaultEnabled": true,
+						},
+					},
+					{
+						Operation: "add",
+						Path:      "images." + defaultImageName + ".entrypoint",
+						Value: []string{
+							"sleep",
+							"9999999999",
+						},
+					},
+				},
 			})
 		}
 	}

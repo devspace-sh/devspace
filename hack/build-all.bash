@@ -25,7 +25,7 @@ if [[ "$(pwd)" != "${DEVSPACE_ROOT}" ]]; then
 fi
 
 GO_BUILD_CMD="go build -a"
-GO_BUILD_LDFLAGS="-s -w -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${DATE} -X main.version=${VERSION} -X github.com/devspace-cloud/devspace/pkg/util/analytics.token=${ANALYTICS_TOKEN} -X github.com/devspace-cloud/devspace/pkg/util/analytics.eventEndpoint=${ANALYTICS_ENDPOINT_EVENT} -X github.com/devspace-cloud/devspace/pkg/util/analytics.userEndpoint=${ANALYTICS_ENDPOINT_USER}"
+GO_BUILD_LDFLAGS="-s -w -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${DATE} -X main.version=${VERSION}"
 
 if [[ -z "${DEVSPACE_BUILD_PLATFORMS}" ]]; then
     DEVSPACE_BUILD_PLATFORMS="linux windows darwin"

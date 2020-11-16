@@ -17,7 +17,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
-	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	flagspkg "github.com/devspace-cloud/devspace/pkg/util/flags"
@@ -79,9 +78,6 @@ func Execute() {
 	// disable klog
 	disableKlog()
 
-	// report any panics
-	defer cloudanalytics.ReportPanics()
-
 	// create a new factory
 	f := factory.DefaultFactory()
 
@@ -93,7 +89,6 @@ func Execute() {
 
 	// execute command
 	err := rootCmd.Execute()
-	cloudanalytics.SendCommandEvent(err)
 	if err != nil {
 		// Check if return code error
 		retCode, ok := errors.Cause(err).(*exit.ReturnCodeError)
