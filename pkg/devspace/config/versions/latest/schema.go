@@ -450,7 +450,7 @@ type RollingUpdateConfig struct {
 type HelmConfig struct {
 	Chart            *ChartConfig                `yaml:"chart,omitempty" json:"chart,omitempty"`
 	ComponentChart   *bool                       `yaml:"componentChart,omitempty" json:"componentChart,omitempty"`
-	Values           map[interface{}]interface{} `yaml:"values,omitempty" json:"values,omitempty" patchStrategy:"replace"`
+	Values           map[interface{}]interface{} `yaml:"values,omitempty" json:"values,omitempty"`
 	ValuesFiles      []string                    `yaml:"valuesFiles,omitempty" json:"valuesFiles,omitempty"`
 	ReplaceImageTags *bool                       `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
 	Wait             bool                        `yaml:"wait,omitempty" json:"wait,omitempty"`
@@ -494,9 +494,9 @@ type KubectlConfig struct {
 
 // DevConfig defines the devspace deployment
 type DevConfig struct {
-	Ports       []*PortForwardingConfig `yaml:"ports,omitempty" json:"ports,omitempty" patchStrategy:"merge" patchMergeKey:"imageName"`
+	Ports       []*PortForwardingConfig `yaml:"ports,omitempty" json:"ports,omitempty"`
 	Open        []*OpenConfig           `yaml:"open,omitempty" json:"open,omitempty"`
-	Sync        []*SyncConfig           `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"imageName"`
+	Sync        []*SyncConfig           `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
 	Logs        *LogsConfig             `yaml:"logs,omitempty" json:"logs,omitempty"`
 	AutoReload  *AutoReloadConfig       `yaml:"autoReload,omitempty" json:"autoReload,omitempty"`
 	Interactive *InteractiveConfig      `yaml:"interactive,omitempty" json:"interactive,omitempty"`

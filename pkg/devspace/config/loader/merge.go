@@ -7,6 +7,7 @@ import (
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	"reflect"
 )
 
 // ApplyStrategicMerge applies the strategic merge patches
@@ -30,7 +31,12 @@ func ApplyStrategicMerge(config map[interface{}]interface{}, profile map[interfa
 		return nil, errors.Wrap(err, "marshal merge")
 	}
 
-	out, err := strategicpatch.StrategicMergePatch(originalBytes, mergeBytes, &latest.Config{})
+	schema, err := strategicpatch.NewPatchMetaFromStruct(&latest.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := strategicpatch.StrategicMergePatchUsingLookupPatchMeta(originalBytes, mergeBytes, PatchMetaFromStruct{PatchMetaFromStruct: schema})
 	if err != nil {
 		return nil, errors.Wrap(err, "create strategic merge patch")
 	}
@@ -128,4 +134,84 @@ func convertFrom(v interface{}) interface{} {
 	}
 
 	return v
+}
+
+type PatchMetaFromStruct struct {
+	strategicpatch.PatchMetaFromStruct
+}
+
+func LookupPatchMetadataForMap(t reflect.Type) (
+	elemType reflect.Type, patchStrategies []string, patchMergeKey string, e error) {
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Map && t.Kind() != reflect.Interface {
+		e = fmt.Errorf("merging an object in json but data type is not map, instead is: %s",
+			t.Kind().String())
+		return
+	}
+	if t.Kind() == reflect.Interface {
+		return t, []string{}, "", nil
+	}
+
+	return t.Elem(), []string{}, "", nil
+}
+
+// we have to override map handling since otherwise it would produce errors
+func (s PatchMetaFromStruct) LookupPatchMetadataForSlice(key string) (strategicpatch.LookupPatchMeta, strategicpatch.PatchMeta, error) {
+	subschema, patchMeta, err := s.LookupPatchMetadataForStruct(key)
+	if err != nil {
+		return nil, strategicpatch.PatchMeta{}, err
+	}
+	elemPatchMetaFromStruct := subschema.(PatchMetaFromStruct)
+	t := elemPatchMetaFromStruct.T
+
+	var elemType reflect.Type
+	switch t.Kind() {
+	// If t is an array or a slice, get the element type.
+	// If element is still an array or a slice, return an error.
+	// Otherwise, return element type.
+	case reflect.Array, reflect.Slice:
+		elemType = t.Elem()
+		if elemType.Kind() == reflect.Array || elemType.Kind() == reflect.Slice {
+			return nil, strategicpatch.PatchMeta{}, errors.New("unexpected slice of slice")
+		}
+	// If t is an pointer, get the underlying element.
+	// If the underlying element is neither an array nor a slice, the pointer is pointing to a slice,
+	// e.g. https://github.com/kubernetes/kubernetes/blob/bc22e206c79282487ea0bf5696d5ccec7e839a76/staging/src/k8s.io/apimachinery/pkg/util/strategicpatch/patch_test.go#L2782-L2822
+	// If the underlying element is either an array or a slice, return its element type.
+	case reflect.Ptr:
+		t = t.Elem()
+		if t.Kind() == reflect.Array || t.Kind() == reflect.Slice || t.Kind() == reflect.Map {
+			t = t.Elem()
+		}
+		elemType = t
+	case reflect.Map:
+		elemType = t.Elem()
+	case reflect.Interface:
+		elemType = t
+	default:
+		return nil, strategicpatch.PatchMeta{}, fmt.Errorf("expected slice or array type, but got: %s", t.Kind().String())
+	}
+
+	return PatchMetaFromStruct{strategicpatch.PatchMetaFromStruct{T: elemType}}, patchMeta, nil
+}
+
+// we have to override map handling since otherwise it would produce errors
+func (s PatchMetaFromStruct) LookupPatchMetadataForStruct(key string) (strategicpatch.LookupPatchMeta, strategicpatch.PatchMeta, error) {
+	fieldType, fieldPatchStrategies, fieldPatchMergeKey, err := LookupPatchMetadataForMap(s.PatchMetaFromStruct.T)
+	if err != nil {
+		l, p, err := s.PatchMetaFromStruct.LookupPatchMetadataForStruct(key)
+		if err != nil {
+			return nil, strategicpatch.PatchMeta{}, err
+		}
+
+		return PatchMetaFromStruct{l.(strategicpatch.PatchMetaFromStruct)}, p, err
+	}
+
+	patchMeta := strategicpatch.PatchMeta{}
+	patchMeta.SetPatchMergeKey(fieldPatchMergeKey)
+	patchMeta.SetPatchStrategies(fieldPatchStrategies)
+	return PatchMetaFromStruct{strategicpatch.PatchMetaFromStruct{T: fieldType}},
+		patchMeta, nil
 }

@@ -578,9 +578,17 @@ deployments:
 - name: test
   helm:
     values:
+      service:
+        ports:
+        - port: 3000
       containers:
       - image: test/test
+      - image: test456/test456
 - name: test2
+  helm:
+    values:
+      containers:
+      - image: test/test
 profiles:
 - name: test
   strategicMerge:
@@ -611,6 +619,15 @@ profiles:
 					},
 					{
 						Name: "test2",
+						Helm: &latest.HelmConfig{
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "test/test",
+									},
+								},
+							},
+						},
 					},
 				},
 			},
