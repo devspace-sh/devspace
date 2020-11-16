@@ -5,14 +5,22 @@ sidebar_label: Basics
 
 import FragmentInfoPrintConfig from '../../fragments/tip-print-config.mdx';
 
-DevSpace allows you to define different profiles for different use cases (e.g. working on different services in the same project, starting certain debugging environments) or for different deployment targets (e.g. dev, staging production).
+DevSpace allows you to define different profiles for different use cases (e.g. working on different services in the same project, starting certain debugging environments) or for different deployment targets (e.g. dev, staging production). 
 
 Profiles allow you to define:
-- [`replace`](../../configuration/profiles/replace.mdx) statements to override entire sections of the config 
-- [`patches`](../../configuration/profiles/patches.mdx) to modify certain parts of the config.
+- [`replace`](../../configuration/profiles/replace.mdx) statements to override entire sections of the config.
+- [`merge`](../../configuration/profiles/merge.mdx) patches ([JSON Merge Patch, RFC 7386](https://tools.ietf.org/html/rfc7386)) to change specific parts of the config.
+- [`strategicMerge`](../../configuration/profiles/strategic-merge.mdx) patches (similar to [kubernetes strategic patches](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/#use-strategic-merge-patch-to-update-a-deployment-using-the-retainkeys-strategy)) to change specific parts of the config.
+- [`patches`](../../configuration/profiles/patches.mdx) ([JSON Patch, RFC 6902](https://tools.ietf.org/html/rfc6902)) to modify certain paths in the config.
 
-:::note Combine Replace & Patches
-It is possible to use the `replace` and `patches` together within one profile.
+:::note Combine several strategies
+It is possible to use several strategies together within one profile. The execution order inside a single profile is:  
+1. `replace`  
+2. `merge`  
+3. `strategicMerge`  
+4. `patches`  
+
+If you want to change the execution order or need multiple patches take a look at [profile parents](../../configuration/profiles/parents.mdx) 
 :::
 
 :::tip Debug Profiles

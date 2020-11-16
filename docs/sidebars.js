@@ -99,8 +99,11 @@ module.exports = {
           label: 'profiles',
           items: [
             'configuration/profiles/basics',
-            'configuration/profiles/patches',
             'configuration/profiles/replace',
+            'configuration/profiles/merge',
+            'configuration/profiles/strategic-merge',
+            'configuration/profiles/patches',
+            'configuration/profiles/parents',
           ],
         },
         'configuration/commands/basics',

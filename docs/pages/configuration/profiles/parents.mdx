@@ -1,3 +1,8 @@
+---
+title: "Profiles: Parents"
+sidebar_label: parents
+---
+
 The `parents` option is optional and expects the names of other profiles which should be applied before this profile.
 The profiles are applied in the order they are specified. It is also possible to apply profiles from distant `devspace.yaml`s. 
 The kind of profile inheritance that the `parents` option provides can help to reduce redundancy when multiple profiles need to change the config in a similar way.
@@ -7,8 +12,7 @@ A parent profile is applied before the profile that defines the parent. A parent
 :::
 
 #### Example: Defining a Parent Profile
-```yaml {16}
-version: v1beta9
+```yaml {16-17}
 images:
   backend:
     image: john/devbackend
