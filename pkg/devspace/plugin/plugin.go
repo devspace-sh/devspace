@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	yaml2 "gopkg.in/yaml.v2"
-	
+
 	"io"
 	"io/ioutil"
 	"os"
@@ -53,8 +53,9 @@ func init() {
 }
 
 type Interface interface {
-	Add(path, version string) error
-	Update(name, version string) error
+	Add(path, version string) (*Metadata, error)
+	GetByName(name string) (string, *Metadata, error)
+	Update(name, version string) (*Metadata, error)
 	Remove(name string) error
 
 	List() ([]Metadata, error)
@@ -82,21 +83,21 @@ func (c *client) PluginFolder() (string, error) {
 	return filepath.Join(dir, constants.DefaultHomeDevSpaceFolder, PluginFolder), nil
 }
 
-func (c *client) Add(path, version string) error {
+func (c *client) Add(path, version string) (*Metadata, error) {
 	metadata, err := c.Get(path)
 	if err != nil {
-		return err
+		return nil, err
 	} else if metadata != nil {
-		return fmt.Errorf("plugin %s already exists", path)
+		return nil, fmt.Errorf("plugin %s already exists", path)
 	}
 
 	return c.install(path, version)
 }
 
-func (c *client) install(path, version string) error {
+func (c *client) install(path, version string) (*Metadata, error) {
 	metadata, err := c.installer.DownloadMetadata(path, version)
 	if err != nil {
-		return errors.Wrap(err, "download metadata")
+		return nil, errors.Wrap(err, "download metadata")
 	}
 
 	// find binary for system
@@ -110,68 +111,68 @@ func (c *client) install(path, version string) error {
 		}
 	}
 	if found == false {
-		return fmt.Errorf("plugin %s does not support %s/%s", metadata.Name, runtime.GOOS, runtime.GOARCH)
+		return nil, fmt.Errorf("plugin %s does not support %s/%s", metadata.Name, runtime.GOOS, runtime.GOARCH)
 	}
 
 	pluginFolder, err := c.PluginFolder()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	pluginFolder = filepath.Join(pluginFolder, Encode(path))
 	err = os.MkdirAll(pluginFolder, 0755)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	out, err := yaml.Marshal(metadata)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = ioutil.WriteFile(filepath.Join(pluginFolder, pluginYaml), out, 0666)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	outBinaryPath := filepath.Join(pluginFolder, PluginBinary)
 	err = c.installer.DownloadBinary(path, version, binaryPath, outBinaryPath)
 	if err != nil {
-		return errors.Wrap(err, "download plugin binary")
+		return nil, errors.Wrap(err, "download plugin binary")
 	}
 
 	// make the file executable
 	_ = os.Chmod(outBinaryPath, 0755)
-	return nil
+	return metadata, nil
 }
 
-func (c *client) Update(name, version string) error {
+func (c *client) Update(name, version string) (*Metadata, error) {
 	path, metadata, err := c.GetByName(name)
 	if err != nil {
-		return err
+		return nil, err
 	} else if metadata == nil {
-		return fmt.Errorf("couldn't find plugin %s", name)
+		return nil, fmt.Errorf("couldn't find plugin %s", name)
 	}
 
 	oldVersion, err := c.parseVersion(metadata.Version)
 	if err != nil {
-		return errors.Wrap(err, "parse old version")
+		return nil, errors.Wrap(err, "parse old version")
 	}
 
 	newMetadata, err := c.installer.DownloadMetadata(path, version)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	newVersion, err := c.parseVersion(newMetadata.Version)
 	if err != nil {
-		return errors.Wrap(err, "parse new version")
+		return nil, errors.Wrap(err, "parse new version")
 	}
 
 	if oldVersion.EQ(newVersion) {
-		return fmt.Errorf("no update for plugin found")
+		return nil, fmt.Errorf("no update for plugin found")
 	} else if oldVersion.GT(newVersion) {
-		return fmt.Errorf("new version is older than existing version")
+		return nil, fmt.Errorf("new version is older than existing version")
 	}
 
 	c.log.Infof("Updating plugin %s to version %s", name, newMetadata.Version)
