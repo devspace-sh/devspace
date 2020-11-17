@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 
 	"github.com/pkg/errors"
@@ -11,7 +12,7 @@ import (
 type UpgradeCmd struct{}
 
 // NewUpgradeCmd creates a new upgrade command
-func NewUpgradeCmd() *cobra.Command {
+func NewUpgradeCmd(plugins []plugin.Metadata) *cobra.Command {
 	cmd := &UpgradeCmd{}
 
 	upgradeCmd := &cobra.Command{
@@ -24,15 +25,23 @@ func NewUpgradeCmd() *cobra.Command {
 Upgrades the DevSpace CLI to the newest version
 #######################################################`,
 		Args: cobra.NoArgs,
-		RunE: cmd.Run,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.Run(plugins, cobraCmd, args)
+		},
 	}
 
 	return upgradeCmd
 }
 
 // Run executes the command logic
-func (cmd *UpgradeCmd) Run(cobraCmd *cobra.Command, args []string) error {
-	err := upgrade.Upgrade()
+func (cmd *UpgradeCmd) Run(plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+	// Execute plugin hook
+	err := plugin.ExecutePluginHook(plugins, cobraCmd, args, "upgrade", "", "", nil)
+	if err != nil {
+		return err
+	}
+
+	err = upgrade.Upgrade()
 	if err != nil {
 		return errors.Errorf("Couldn't upgrade: %v", err)
 	}

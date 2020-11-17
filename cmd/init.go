@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -64,7 +65,7 @@ type InitCmd struct {
 }
 
 // NewInitCmd creates a new init command
-func NewInitCmd(f factory.Factory) *cobra.Command {
+func NewInitCmd(f factory.Factory, plugins []plugin.Metadata) *cobra.Command {
 	cmd := &InitCmd{
 		log: f.GetLog(),
 	}
@@ -82,7 +83,7 @@ folder. Creates a devspace.yaml with all configuration.
 	`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, cobraCmd, args)
+			return cmd.Run(f, plugins, cobraCmd, args)
 		},
 	}
 
@@ -95,7 +96,7 @@ folder. Creates a devspace.yaml with all configuration.
 }
 
 // Run executes the command logic
-func (cmd *InitCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Check if config already exists
 	cmd.log = f.GetLog()
 	configLoader := f.NewConfigLoader(nil, cmd.log)
@@ -118,10 +119,16 @@ func (cmd *InitCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	// Delete config & overwrite config
 	os.Remove(constants.DefaultVarsPath)
 
+	// Execute plugin hook
+	err := plugin.ExecutePluginHook(plugins, cobraCmd, args, "init", "", "", nil)
+	if err != nil {
+		return err
+	}
+
 	// Create config
 	config := configLoader.New()
 
-	//Create ConfigureManager
+	// Create ConfigureManager
 	configureManager := f.NewConfigureManager(config, cmd.log)
 
 	// Print DevSpace logo

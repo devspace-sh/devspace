@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"path/filepath"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -22,7 +23,7 @@ type PrintCmd struct {
 }
 
 // NewPrintCmd creates a new devspace print command
-func NewPrintCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewPrintCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	cmd := &PrintCmd{GlobalFlags: globalFlags}
 
 	printCmd := &cobra.Command{
@@ -36,7 +37,7 @@ Prints the configuration for the current or given
 profile after all patching and variable substitution
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, cobraCmd, args)
+			return cmd.Run(f, plugins, cobraCmd, args)
 		},
 	}
 
@@ -46,7 +47,7 @@ profile after all patching and variable substitution
 }
 
 // Run executes the command logic
-func (cmd *PrintCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *PrintCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
 	configOptions := cmd.ToConfigOptions()
@@ -60,6 +61,12 @@ func (cmd *PrintCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 
 	// Load config
 	loadedConfig, err := configLoader.Load()
+	if err != nil {
+		return err
+	}
+
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "print", "", "", loadedConfig)
 	if err != nil {
 		return err
 	}

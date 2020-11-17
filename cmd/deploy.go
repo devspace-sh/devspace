@@ -184,7 +184,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, "deploy", cmd.KubeContext, cmd.Namespace)
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "deploy", client.CurrentContext(), client.Namespace(), config)
 	if err != nil {
 		return err
 	}

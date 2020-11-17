@@ -21,7 +21,7 @@ type Metadata struct {
 	Vars []Variable `json:"vars,omitempty"`
 
 	// Hooks are commands that will be executed at specific events
-	Hooks []Hook `json:"hook,omitempty"`
+	Hooks []Hook `json:"hooks,omitempty"`
 
 	// This will be filled after parsing the metadata
 	PluginFolder string `json:"pluginFolder,omitempty"`
@@ -31,13 +31,17 @@ type Hook struct {
 	// Event is the name of the event when to execute this hook
 	Event string `json:"event"`
 
+	// Background specifies if the given command should be executed in the background
+	Background bool `json:"background"`
+
 	// BaseArgs that will be prepended to all supplied user flags for this plugin command
 	BaseArgs []string `json:"baseArgs,omitempty"`
 }
 
 type Binary struct {
 	// The current OS
-	OS   string `json:"os"`
+	OS string `json:"os"`
+
 	// The current Arch
 	Arch string `json:"arch"`
 

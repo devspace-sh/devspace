@@ -104,7 +104,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, "purge", cmd.KubeContext, cmd.Namespace)
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "purge", client.CurrentContext(), client.Namespace(), nil)
 	if err != nil {
 		return err
 	}

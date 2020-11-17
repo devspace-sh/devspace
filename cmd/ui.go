@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -33,7 +34,7 @@ type UICmd struct {
 }
 
 // NewUICmd creates a new ui command
-func NewUICmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewUICmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	cmd := &UICmd{
 		GlobalFlags: globalFlags,
 		log:         log.GetInstance(),
@@ -51,7 +52,7 @@ Opens the localhost UI in the browser
 	`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.RunUI(f, cobraCmd, args)
+			return cmd.RunUI(f, plugins, cobraCmd, args)
 		},
 	}
 
@@ -63,7 +64,7 @@ Opens the localhost UI in the browser
 }
 
 // RunUI executes the functionality "devspace ui"
-func (cmd *UICmd) RunUI(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *UICmd) RunUI(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
@@ -180,6 +181,12 @@ func (cmd *UICmd) RunUI(f factory.Factory, cobraCmd *cobra.Command, args []strin
 
 	// Override error runtime handler
 	log.OverrideRuntimeErrorHandler(true)
+
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "ui", client.CurrentContext(), client.Namespace(), config)
+	if err != nil {
+		return err
+	}
 
 	// Check if we should force the port
 	var forcePort *int

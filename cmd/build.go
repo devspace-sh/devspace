@@ -94,7 +94,7 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, "build", cmd.KubeContext, cmd.Namespace)
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "build", cmd.KubeContext, cmd.Namespace, config)
 	if err != nil {
 		return err
 	}
