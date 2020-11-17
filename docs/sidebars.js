@@ -123,6 +123,7 @@ module.exports = {
         'guides/ci-cd-integration',
         'guides/dev-staging-production',
         'guides/image-building',
+        'guides/plugins',
         'guides/remote-debugging',
         'guides/community-projects',
       ],

@@ -143,6 +143,7 @@ func (c *client) install(path, version string) (*Metadata, error) {
 
 	// make the file executable
 	_ = os.Chmod(outBinaryPath, 0755)
+	metadata.PluginFolder = pluginFolder
 	return metadata, nil
 }
 
@@ -284,6 +285,7 @@ func (c *client) GetByName(name string) (string, *Metadata, error) {
 				return "", nil, errors.Wrap(err, "decode plugin path")
 			}
 
+			metadata.PluginFolder = filepath.Join(pluginFolder, plugin.Name())
 			return string(decoded), &metadata, nil
 		}
 	}
