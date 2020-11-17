@@ -574,6 +574,11 @@ profiles:
 			in: &parseTestCaseInput{
 				config: `
 version: v1beta9
+images:
+  test: 
+    image: test/test
+  delete: 
+    image: test/test
 deployments:
 - name: test
   helm:
@@ -592,6 +597,10 @@ deployments:
 profiles:
 - name: test
   strategicMerge:
+    images:
+      test:
+        image: test2/test2
+      delete: null
     deployments:
     - name: test
       helm:
@@ -604,11 +613,23 @@ profiles:
 			expected: &latest.Config{
 				Version: latest.Version,
 				Dev:     &latest.DevConfig{},
+				Images: map[string]*latest.ImageConfig{
+					"test": {
+						Image: "test2/test2",
+					},
+				},
 				Deployments: []*latest.DeploymentConfig{
 					{
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							Values: map[interface{}]interface{}{
+								"service": map[interface{}]interface{}{
+									"ports": []interface{}{
+										map[interface{}]interface{}{
+											"port": 3000,
+										},
+									},
+								},
 								"containers": []interface{}{
 									map[interface{}]interface{}{
 										"image": "test123/test123",
