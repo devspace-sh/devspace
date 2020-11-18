@@ -46,7 +46,7 @@ profiles:
 # In-Memory Config After Applying Patches For Profile `production`
 images:
   backend:
-    image: john/devbackend
+    image: john/prodbackend
   backend-debugger:
     image: john/debugger
 deployments:
@@ -55,7 +55,6 @@ deployments:
     componentChart: true
     values:
       containers:
-      - image: john/prodbackend
       - image: john/cache
 ```
 
