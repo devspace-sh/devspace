@@ -794,5 +794,5 @@ type PullSecretConfig struct {
 	Secret string `yaml:"secret,omitempty" json:"secret,omitempty"`
 
 	// The service account to add the secret to
-	ServiceAccount string `yaml:"serviceAccount,omitempty" json:"serviceAccount,omitempty"`
+	ServiceAccounts []string `yaml:"serviceAccounts,omitempty" json:"serviceAccounts,omitempty"`
 }

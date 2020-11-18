@@ -16,12 +16,17 @@ import (
 
 // CreatePullSecrets creates the image pull secrets
 func (r *client) CreatePullSecrets() error {
-	createPullSecrets := map[string]*latest.PullSecretConfig{}
+	createPullSecrets := []*latest.PullSecretConfig{}
 
 	// execute before pull secrets hooks
 	err := r.hookExecuter.Execute(hook.Before, hook.StagePullSecrets, hook.All, r.log)
 	if err != nil {
 		return err
+	}
+
+	// gather pull secrets from pullSecrets
+	for _, pullSecret := range r.config.PullSecrets {
+		createPullSecrets = append(createPullSecrets, pullSecret)
 	}
 
 	// gather pull secrets from images
@@ -32,27 +37,24 @@ func (r *client) CreatePullSecrets() error {
 				return err
 			}
 
-			createPullSecrets[registryURL] = &latest.PullSecretConfig{
-				Registry: registryURL,
+			if contains(registryURL, createPullSecrets) == false {
+				createPullSecrets = append(createPullSecrets, &latest.PullSecretConfig{
+					Registry: registryURL,
+				})
 			}
 		}
 	}
 
-	// gather pull secrets from pullSecrets
-	for _, pullSecret := range r.config.PullSecrets {
-		createPullSecrets[pullSecret.Registry] = pullSecret
-	}
-
 	// create pull secrets
-	for registryURL, pullSecretConf := range createPullSecrets {
-		displayRegistryURL := registryURL
+	for _, pullSecretConf := range createPullSecrets {
+		displayRegistryURL := pullSecretConf.Registry
 		if displayRegistryURL == "" {
 			displayRegistryURL = "hub.docker.com"
 		}
 		if pullSecretConf.Secret == "" {
-			pullSecretConf.Secret = GetRegistryAuthSecretName(registryURL)
+			pullSecretConf.Secret = GetRegistryAuthSecretName(pullSecretConf.Registry)
 		}
-		
+
 		r.log.StartWait("Creating image pull secret for registry: " + displayRegistryURL)
 		err := r.createPullSecretForRegistry(pullSecretConf)
 		r.log.StopWait()
@@ -60,9 +62,18 @@ func (r *client) CreatePullSecrets() error {
 			return errors.Errorf("failed to create pull secret for registry: %v", err)
 		}
 
-		err = r.addPullSecretsToServiceAccount(pullSecretConf.Secret, pullSecretConf.ServiceAccount)
-		if err != nil {
-			return errors.Wrap(err, "add pull secrets to service account")
+		if len(pullSecretConf.ServiceAccounts) > 0 {
+			for _, serviceAccount := range pullSecretConf.ServiceAccounts {
+				err = r.addPullSecretsToServiceAccount(pullSecretConf.Secret, serviceAccount)
+				if err != nil {
+					return errors.Wrap(err, "add pull secrets to service account")
+				}
+			}
+		} else {
+			err = r.addPullSecretsToServiceAccount(pullSecretConf.Secret, "default")
+			if err != nil {
+				return errors.Wrap(err, "add pull secrets to service account")
+			}
 		}
 	}
 
@@ -73,6 +84,15 @@ func (r *client) CreatePullSecrets() error {
 	}
 
 	return nil
+}
+
+func contains(registryURL string, pullSecrets []*latest.PullSecretConfig) bool {
+	for _, v := range pullSecrets {
+		if v.Registry == registryURL {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *client) addPullSecretsToServiceAccount(pullSecretName string, serviceAccount string) error {
@@ -159,7 +179,7 @@ func (r *client) createPullSecretForRegistry(pullSecret *latest.PullSecretConfig
 			if deployConfig.Namespace == "" || namespaces[deployConfig.Namespace] {
 				continue
 			}
-			
+
 			err := r.CreatePullSecret(&PullSecretOptions{
 				Namespace:       deployConfig.Namespace,
 				RegistryURL:     pullSecret.Registry,

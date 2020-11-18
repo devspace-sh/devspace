@@ -21,6 +21,10 @@ For a complete example take a look at [this example project on GitHub](https://g
 :::
 
 This tells DevSpace to execute the command `echo before image building` before any image will be built. You are able to define hooks for the following life cycle events:
+- **before pull secret creation**: Will be executed before creating any image pull secrets. Value: `when.before.pullSecrets: all`
+- **after pull secret creation**: Will be executed after image pull secrets have been successfully created. Value: `when.after.pullSecrets: all`
+- **before dependency deployment**: Will be executed before deploying any dependencies. Value: `when.before.dependencies: all`
+- **after dependency deployment**: Will be executed after dependencies have been successfully deployed. Value: `when.after.dependencies: all`
 - **before image building**: Will be executed before building any images. Value: `when.before.images: all`
 - **after image building**: Will be executed after images have been successfully built. Value: `when.after.images: all`
 - **before deploying**: Will be executed before any deployment is deployed. Value: `when.before.deployments: all`
@@ -31,3 +35,26 @@ This tells DevSpace to execute the command `echo before image building` before a
 :::info Errors in Hooks
 If any hook returns a non zero exit code, DevSpace will abort and print an error message.
 :::
+
+## Execute hooks only on a certain operating system
+
+Hooks can be executed only on certain operating systems:
+
+```yaml {5,12}
+hooks:
+- command: echo
+  args:
+    - before image building on windows
+  os: windows
+  when:
+    before:
+      images: all
+- command: echo
+  args:
+    - before image building on mac and linux
+  os: darwin,linux
+  when:
+    before:
+      images: all
+```
+

@@ -106,6 +106,7 @@ module.exports = {
             'configuration/profiles/parents',
           ],
         },
+        'configuration/pullSecrets/basics',
         'configuration/commands/basics',
         'configuration/hooks/basics',
         'configuration/env-file',
