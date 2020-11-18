@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/devspace-cloud/devspace/pkg/devspace/command"
+	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"mvdan.cc/sh/v3/interp"
 	"os"
@@ -14,7 +15,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 
@@ -34,9 +35,10 @@ type Manager interface {
 }
 
 type manager struct {
-	config   *latest.Config
-	log      log.Logger
-	resolver ResolverInterface
+	config       *latest.Config
+	log          log.Logger
+	resolver     ResolverInterface
+	hookExecuter hook.Executer
 }
 
 // NewManager creates a new instance of the interface Manager
@@ -47,9 +49,10 @@ func NewManager(config *latest.Config, cache *generated.Config, client kubectl.C
 	}
 
 	return &manager{
-		config:   config,
-		log:      logger,
-		resolver: resolver,
+		config:       config,
+		log:          logger,
+		resolver:     resolver,
+		hookExecuter: hook.NewExecuter(config),
 	}, nil
 }
 
@@ -151,15 +154,31 @@ type DeployOptions struct {
 	ForceDeployDependencies bool
 	SkipBuild               bool
 	ForceBuild              bool
+	SkipDeploy              bool
 	ForceDeploy             bool
 	Verbose                 bool
 }
 
 // DeployAll will deploy all dependencies if there are any
 func (m *manager) DeployAll(options DeployOptions) error {
-	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
-		return dependency.Deploy(options.SkipPush, options.ForceDeployDependencies, options.SkipBuild, options.ForceBuild, options.ForceDeploy, log)
+	err := m.hookExecuter.Execute(hook.Before, hook.StageDependencies, hook.All, m.log)
+	if err != nil {
+		return err
+	}
+
+	err = m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
+		return dependency.Deploy(options.SkipPush, options.ForceDeployDependencies, options.SkipBuild, options.ForceBuild, options.SkipDeploy, options.ForceDeploy, log)
 	})
+	if err != nil {
+		return err
+	}
+
+	err = m.hookExecuter.Execute(hook.After, hook.StageDependencies, hook.All, m.log)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // PurgeOptions has all options for purging all dependencies
@@ -269,7 +288,6 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 		}
 	}
 	m.log.StopWait()
-
 	if silent == false {
 		if executed > 0 {
 			m.log.Donef("Successfully processed %d dependencies", executed)
@@ -293,7 +311,7 @@ type Dependency struct {
 	DependencyCache  *generated.Config
 
 	kubeClient       kubectl.Client
-	registryClient   registry.Client
+	registryClient   pullsecrets.Client
 	buildController  build.Controller
 	deployController deploy.Controller
 	generatedSaver   generated.ConfigLoader
@@ -323,7 +341,7 @@ func (d *Dependency) Build(skipPush, forceDependencies, forceBuild bool, log log
 }
 
 // Deploy deploys the dependency if necessary
-func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, forceDeploy bool, log log.Logger) error {
+func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, skipDeploy, forceDeploy bool, log log.Logger) error {
 	// Switch current working directory
 	currentWorkingDirectory, err := d.prepare(forceDependencies)
 	if err != nil {
@@ -354,12 +372,14 @@ func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, 
 	}
 
 	// Deploy all defined deployments
-	err = d.deployController.Deploy(&deploy.Options{
-		ForceDeploy: forceDeploy,
-		BuiltImages: builtImages,
-	}, log)
-	if err != nil {
-		return err
+	if skipDeploy == false {
+		err = d.deployController.Deploy(&deploy.Options{
+			ForceDeploy: forceDeploy,
+			BuiltImages: builtImages,
+		}, log)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Save Config

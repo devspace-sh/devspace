@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"os"
 	"strings"
 
@@ -40,7 +41,7 @@ type RenderCmd struct {
 }
 
 // NewRenderCmd creates a new devspace render command
-func NewRenderCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewRenderCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	cmd := &RenderCmd{GlobalFlags: globalFlags}
 
 	renderCmd := &cobra.Command{
@@ -55,7 +56,7 @@ be deployed via helm and kubectl, but skips actual
 deployment.
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, cobraCmd, args)
+			return cmd.Run(f, plugins, cobraCmd, args)
 		},
 	}
 
@@ -77,7 +78,7 @@ deployment.
 }
 
 // Run executes the command logic
-func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
 	if cmd.ShowLogs == false {
@@ -124,6 +125,12 @@ func (cmd *RenderCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
+	}
+
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "render", client.CurrentContext(), client.Namespace(), config)
+	if err != nil {
+		return err
 	}
 
 	// Create Dependencymanager

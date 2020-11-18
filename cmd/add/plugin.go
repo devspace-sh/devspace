@@ -1,6 +1,7 @@
 package add
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/spf13/cobra"
 )
@@ -32,18 +33,24 @@ devspace add plugin https://github.com/my-plugin/plugin
 	return pluginCmd
 }
 
-
 // Run executes the command logic
 func (cmd *pluginCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	f.GetLog().StartWait("Installing plugin " + args[0])
 	defer f.GetLog().StopWait()
 
-	err := f.NewPluginManager(f.GetLog()).Add(args[0], cmd.Version)
+	addedPlugin, err := f.NewPluginManager(f.GetLog()).Add(args[0], cmd.Version)
 	if err != nil {
 		return err
 	}
 
 	f.GetLog().StopWait()
 	f.GetLog().Donef("Successfully installed plugin %s", args[0])
+
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook([]plugin.Metadata{*addedPlugin}, cobraCmd, args, "after_install", "", "", nil)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

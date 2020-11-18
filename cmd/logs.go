@@ -100,7 +100,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, "logs", cmd.KubeContext, cmd.Namespace)
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "logs", client.CurrentContext(), client.Namespace(), nil)
 	if err != nil {
 		return err
 	}

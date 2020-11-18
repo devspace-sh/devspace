@@ -1,6 +1,7 @@
 package update
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/spf13/cobra"
 )
@@ -34,15 +35,34 @@ devspace update plugin my-plugin
 
 // Run executes the command logic
 func (cmd *pluginCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	pluginManager := f.NewPluginManager(f.GetLog())
+	_, oldPlugin, err := pluginManager.GetByName(args[0])
+	if err != nil {
+		return err
+	} else if oldPlugin != nil {
+		// Execute plugin hook
+		err = plugin.ExecutePluginHook([]plugin.Metadata{*oldPlugin}, cobraCmd, args, "before_update", "", "", nil)
+		if err != nil {
+			return err
+		}
+	}
+
 	f.GetLog().StartWait("Updating plugin " + args[0])
 	defer f.GetLog().StopWait()
 
-	err := f.NewPluginManager(f.GetLog()).Update(args[0], cmd.Version)
+	updatedPlugin, err := pluginManager.Update(args[0], cmd.Version)
 	if err != nil {
 		return err
 	}
 
 	f.GetLog().StopWait()
 	f.GetLog().Donef("Successfully updated plugin %s", args[0])
+
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook([]plugin.Metadata{*updatedPlugin}, cobraCmd, args, "after_update", "", "", nil)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

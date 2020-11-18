@@ -533,7 +533,7 @@ profiles:
 				},
 				Images: map[string]*latest.ImageConfig{
 					"test": &latest.ImageConfig{
-						Image: "test",
+						Image:                 "test",
 						PreferSyncOverRebuild: true,
 					},
 				},
@@ -569,6 +569,89 @@ profiles:
 				generatedConfig: &generated.Config{Vars: map[string]string{}},
 			},
 			expectedErr: true,
+		},
+		"Profile strategic merge": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta9
+images:
+  test: 
+    image: test/test
+  delete: 
+    image: test/test
+deployments:
+- name: test
+  helm:
+    values:
+      service:
+        ports:
+        - port: 3000
+      containers:
+      - image: test/test
+      - image: test456/test456
+- name: test2
+  helm:
+    values:
+      containers:
+      - image: test/test
+profiles:
+- name: test
+  strategicMerge:
+    images:
+      test:
+        image: test2/test2
+      delete: null
+    deployments:
+    - name: test
+      helm:
+        values:
+          containers:
+          - image: test123/test123`,
+				options:         &ConfigOptions{Profile: "test"},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     &latest.DevConfig{},
+				Images: map[string]*latest.ImageConfig{
+					"test": {
+						Image: "test2/test2",
+					},
+				},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "test",
+						Helm: &latest.HelmConfig{
+							Values: map[interface{}]interface{}{
+								"service": map[interface{}]interface{}{
+									"ports": []interface{}{
+										map[interface{}]interface{}{
+											"port": 3000,
+										},
+									},
+								},
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "test123/test123",
+									},
+								},
+							},
+						},
+					},
+					{
+						Name: "test2",
+						Helm: &latest.HelmConfig{
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "test/test",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 

@@ -4,7 +4,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
-	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
 )
 
 func replaceImageNames(cache *generated.CacheConfig, imagesConf map[string]*latest.ImageConfig, builtImages map[string]string, keys map[string]bool, action func(walk.MatchFn, walk.ReplaceFn)) bool {
@@ -30,7 +30,7 @@ func replaceImageNames(cache *generated.CacheConfig, imagesConf map[string]*late
 		}
 
 		// Strip tag from image
-		image, err := registry.GetStrippedDockerImageName(value)
+		image, err := pullsecrets.GetStrippedDockerImageName(value)
 		if err != nil {
 			return false
 		}
@@ -52,7 +52,7 @@ func replaceImageNames(cache *generated.CacheConfig, imagesConf map[string]*late
 	}
 
 	replace := func(path, value string) (interface{}, error) {
-		image, err := registry.GetStrippedDockerImageName(value)
+		image, err := pullsecrets.GetStrippedDockerImageName(value)
 		if err != nil {
 			return false, nil
 		}

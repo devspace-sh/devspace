@@ -89,7 +89,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, plugins []plugin.Metadata, 
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, "analyze", cmd.KubeContext, cmd.Namespace)
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "analyze", client.CurrentContext(), client.Namespace(), nil)
 	if err != nil {
 		return err
 	}

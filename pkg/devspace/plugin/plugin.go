@@ -1,16 +1,23 @@
 package plugin
 
 import (
+	"bytes"
 	"encoding/base32"
+	"encoding/json"
 	"fmt"
 	"github.com/blang/semver"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/ghodss/yaml"
+
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	yaml2 "gopkg.in/yaml.v2"
+
 	"io"
 	"io/ioutil"
 	"os"
@@ -28,6 +35,17 @@ var PluginBinary = "binary"
 
 const PluginCommandAnnotation = "devspace.sh/is-plugin"
 
+const (
+	KubeContextFlagEnv   = "DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG"
+	KubeNamespaceFlagEnv = "DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG"
+	ConfigEnv            = "DEVSPACE_PLUGIN_CONFIG"
+	OsArgsEnv            = "DEVSPACE_PLUGIN_OS_ARGS"
+	CommandEnv           = "DEVSPACE_PLUGIN_COMMAND"
+	CommandLineEnv       = "DEVSPACE_PLUGIN_COMMAND_LINE"
+	CommandFlagsEnv      = "DEVSPACE_PLUGIN_COMMAND_FLAGS"
+	CommandArgsEnv       = "DEVSPACE_PLUGIN_COMMAND_ARGS"
+)
+
 func init() {
 	if runtime.GOOS == "windows" {
 		PluginBinary += ".exe"
@@ -35,8 +53,9 @@ func init() {
 }
 
 type Interface interface {
-	Add(path, version string) error
-	Update(name, version string) error
+	Add(path, version string) (*Metadata, error)
+	GetByName(name string) (string, *Metadata, error)
+	Update(name, version string) (*Metadata, error)
 	Remove(name string) error
 
 	List() ([]Metadata, error)
@@ -64,21 +83,21 @@ func (c *client) PluginFolder() (string, error) {
 	return filepath.Join(dir, constants.DefaultHomeDevSpaceFolder, PluginFolder), nil
 }
 
-func (c *client) Add(path, version string) error {
+func (c *client) Add(path, version string) (*Metadata, error) {
 	metadata, err := c.Get(path)
 	if err != nil {
-		return err
+		return nil, err
 	} else if metadata != nil {
-		return fmt.Errorf("plugin %s already exists", path)
+		return nil, fmt.Errorf("plugin %s already exists", path)
 	}
 
 	return c.install(path, version)
 }
 
-func (c *client) install(path, version string) error {
+func (c *client) install(path, version string) (*Metadata, error) {
 	metadata, err := c.installer.DownloadMetadata(path, version)
 	if err != nil {
-		return errors.Wrap(err, "download metadata")
+		return nil, errors.Wrap(err, "download metadata")
 	}
 
 	// find binary for system
@@ -92,68 +111,69 @@ func (c *client) install(path, version string) error {
 		}
 	}
 	if found == false {
-		return fmt.Errorf("plugin %s does not support %s/%s", metadata.Name, runtime.GOOS, runtime.GOARCH)
+		return nil, fmt.Errorf("plugin %s does not support %s/%s", metadata.Name, runtime.GOOS, runtime.GOARCH)
 	}
 
 	pluginFolder, err := c.PluginFolder()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	pluginFolder = filepath.Join(pluginFolder, Encode(path))
 	err = os.MkdirAll(pluginFolder, 0755)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	out, err := yaml.Marshal(metadata)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = ioutil.WriteFile(filepath.Join(pluginFolder, pluginYaml), out, 0666)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	outBinaryPath := filepath.Join(pluginFolder, PluginBinary)
 	err = c.installer.DownloadBinary(path, version, binaryPath, outBinaryPath)
 	if err != nil {
-		return errors.Wrap(err, "download plugin binary")
+		return nil, errors.Wrap(err, "download plugin binary")
 	}
 
 	// make the file executable
 	_ = os.Chmod(outBinaryPath, 0755)
-	return nil
+	metadata.PluginFolder = pluginFolder
+	return metadata, nil
 }
 
-func (c *client) Update(name, version string) error {
+func (c *client) Update(name, version string) (*Metadata, error) {
 	path, metadata, err := c.GetByName(name)
 	if err != nil {
-		return err
+		return nil, err
 	} else if metadata == nil {
-		return fmt.Errorf("couldn't find plugin %s", name)
+		return nil, fmt.Errorf("couldn't find plugin %s", name)
 	}
 
 	oldVersion, err := c.parseVersion(metadata.Version)
 	if err != nil {
-		return errors.Wrap(err, "parse old version")
+		return nil, errors.Wrap(err, "parse old version")
 	}
 
 	newMetadata, err := c.installer.DownloadMetadata(path, version)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	newVersion, err := c.parseVersion(newMetadata.Version)
 	if err != nil {
-		return errors.Wrap(err, "parse new version")
+		return nil, errors.Wrap(err, "parse new version")
 	}
 
 	if oldVersion.EQ(newVersion) {
-		return fmt.Errorf("no update for plugin found")
+		return nil, fmt.Errorf("no update for plugin found")
 	} else if oldVersion.GT(newVersion) {
-		return fmt.Errorf("new version is older than existing version")
+		return nil, fmt.Errorf("new version is older than existing version")
 	}
 
 	c.log.Infof("Updating plugin %s to version %s", name, newMetadata.Version)
@@ -265,6 +285,7 @@ func (c *client) GetByName(name string) (string, *Metadata, error) {
 				return "", nil, errors.Wrap(err, "decode plugin path")
 			}
 
+			metadata.PluginFolder = filepath.Join(pluginFolder, plugin.Name())
 			return string(decoded), &metadata, nil
 		}
 	}
@@ -337,15 +358,73 @@ func AddPluginCommands(base *cobra.Command, plugins []Metadata, subCommand strin
 	}
 }
 
-func ExecutePluginHook(plugins []Metadata, event, kubeContext, namespace string) error {
+func ExecutePluginHook(plugins []Metadata, cobraCmd *cobra.Command, args []string, event, kubeContext, namespace string, config *latest.Config) error {
+	configStr := ""
+	if config != nil {
+		configBytes, err := yaml2.Marshal(config)
+		if err != nil {
+			return err
+		}
+
+		configStr = string(configBytes)
+	}
+
+	osArgsBytes, err := json.Marshal(os.Args)
+	if err != nil {
+		return err
+	}
+
+	// build environment variables
+	env := map[string]string{
+		CommandEnv:     cobraCmd.Use,
+		CommandLineEnv: cobraCmd.UseLine(),
+		OsArgsEnv:      string(osArgsBytes),
+	}
+	if kubeContext != "" {
+		env[KubeContextFlagEnv] = kubeContext
+	}
+	if namespace != "" {
+		env[KubeNamespaceFlagEnv] = namespace
+	}
+	if configStr != "" {
+		env[ConfigEnv] = configStr
+	}
+
+	// Flags
+	flags := []string{}
+	cobraCmd.Flags().Visit(func(f *pflag.Flag) {
+		flags = append(flags, "--"+f.Name)
+		flags = append(flags, f.Value.String())
+	})
+	if len(flags) > 0 {
+		flagsStr, err := json.Marshal(flags)
+		if err != nil {
+			return err
+		}
+
+		env[CommandFlagsEnv] = string(flagsStr)
+	}
+
+	// Args
+	if len(args) > 0 {
+		argsStr, err := json.Marshal(args)
+		if err != nil {
+			return err
+		}
+		if string(argsStr) != "" {
+			env[CommandArgsEnv] = string(argsStr)
+		}
+	}
+
 	for _, plugin := range plugins {
 		pluginFolder := plugin.PluginFolder
 		for _, pluginHook := range plugin.Hooks {
-			if pluginHook.Event == event {
-				err := CallPluginExecutable(filepath.Join(pluginFolder, PluginBinary), pluginHook.BaseArgs, map[string]string{
-					"DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG":   kubeContext,
-					"DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG": namespace,
-				}, os.Stdout)
+			if strings.TrimSpace(pluginHook.Event) == event {
+				if pluginHook.Background {
+					err = CallPluginExecutableInBackground(filepath.Join(pluginFolder, PluginBinary), pluginHook.BaseArgs, env)
+				} else {
+					err = CallPluginExecutable(filepath.Join(pluginFolder, PluginBinary), pluginHook.BaseArgs, env, os.Stdout)
+				}
 				if err != nil {
 					return err
 				}
@@ -353,6 +432,35 @@ func ExecutePluginHook(plugins []Metadata, event, kubeContext, namespace string)
 		}
 	}
 
+	return nil
+}
+
+func CallPluginExecutableInBackground(main string, argv []string, extraEnvVars map[string]string) error {
+	env := os.Environ()
+	for k, v := range extraEnvVars {
+		env = append(env, k+"="+v)
+	}
+
+	stderrOut := &bytes.Buffer{}
+	prog := exec.Command(main, argv...)
+	prog.Env = env
+	prog.Stderr = stderrOut
+	if err := prog.Start(); err != nil {
+		if strings.Index(err.Error(), "no such file or directory") != -1 {
+			return fmt.Errorf("the plugin's binary was not found (%v). Please uninstall and reinstall the plugin and make sure there are no other conflicting plugins installed (run 'devspace list plugins' to see all installed plugins)", err)
+		}
+
+		return err
+	}
+
+	go func() {
+		err := prog.Wait()
+		if err != nil {
+			if eerr, ok := err.(*exec.ExitError); ok {
+				os.Stderr.Write([]byte(fmt.Sprintf("Hook %s failed (code: %d): %s", main+" "+strings.Join(argv, " "), eerr.ExitCode(), stderrOut.String())))
+			}
+		}
+	}()
 	return nil
 }
 

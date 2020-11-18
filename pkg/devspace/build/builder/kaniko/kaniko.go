@@ -15,7 +15,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
@@ -110,7 +110,7 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 		return nil
 	}
 
-	registryURL, err := registry.GetRegistryFromImageName(b.FullImageName)
+	registryURL, err := pullsecrets.GetRegistryFromImageName(b.FullImageName)
 	if err != nil {
 		return err
 	}
@@ -130,9 +130,9 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 		password = authConfig.IdentityToken
 	}
 
-	registryClient := registry.NewClient(nil, b.helper.KubeClient, b.dockerClient, log)
+	registryClient := pullsecrets.NewClient(nil, b.helper.KubeClient, b.dockerClient, log)
 
-	return registryClient.CreatePullSecret(&registry.PullSecretOptions{
+	return registryClient.CreatePullSecret(&pullsecrets.PullSecretOptions{
 		Namespace:       b.BuildNamespace,
 		RegistryURL:     registryURL,
 		Username:        username,

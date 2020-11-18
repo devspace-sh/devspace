@@ -19,8 +19,6 @@ github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
 # github.com/Microsoft/hcsshim v0.8.10
 github.com/Microsoft/hcsshim/osversion
-# github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6
-github.com/StackExchange/wmi
 # github.com/agl/ed25519 v0.0.0-00010101000000-000000000000 => github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412
 github.com/agl/ed25519
 github.com/agl/ed25519/edwards25519
@@ -146,13 +144,12 @@ github.com/emirpasic/gods/trees/binaryheap
 github.com/emirpasic/gods/utils
 # github.com/evanphx/json-patch v4.9.0+incompatible
 github.com/evanphx/json-patch
+# github.com/evanphx/json-patch/v5 v5.1.0
+github.com/evanphx/json-patch/v5
 # github.com/ghodss/yaml v1.0.0
 github.com/ghodss/yaml
 # github.com/go-logr/logr v0.2.0
 github.com/go-logr/logr
-# github.com/go-ole/go-ole v1.2.1
-github.com/go-ole/go-ole
-github.com/go-ole/go-ole/oleutil
 # github.com/gogo/protobuf v1.3.1
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
@@ -270,14 +267,6 @@ github.com/rjeczalik/notify
 github.com/sabhiram/go-gitignore
 # github.com/sergi/go-diff v1.0.0
 github.com/sergi/go-diff/diffmatchpatch
-# github.com/shirou/gopsutil v0.0.0-20190627142359-4c8b404ee5c5
-github.com/shirou/gopsutil/cpu
-github.com/shirou/gopsutil/internal/common
-github.com/shirou/gopsutil/mem
-github.com/shirou/gopsutil/net
-github.com/shirou/gopsutil/process
-# github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
-github.com/shirou/w32
 # github.com/sirupsen/logrus v1.6.0
 github.com/sirupsen/logrus
 # github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c

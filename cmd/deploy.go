@@ -33,6 +33,7 @@ type DeployCmd struct {
 	SkipBuild           bool
 	BuildSequential     bool
 	ForceDeploy         bool
+	SkipDeploy          bool
 	Deployments         string
 	ForceDependencies   bool
 	VerboseDependencies bool
@@ -90,6 +91,7 @@ devspace deploy --kube-context=deploy-context
 	deployCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 	deployCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
 	deployCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
+	deployCmd.Flags().BoolVar(&cmd.SkipDeploy, "skip-deploy", false, "Skips deploying and only builds images")
 	deployCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specifc deployment (You can specify multiple deployments comma-separated")
 
 	deployCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Deploys only the specific named dependencies")
@@ -105,7 +107,7 @@ devspace deploy --kube-context=deploy-context
 
 // Run executes the down command logic
 func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
-	// Set config root
+	// set config root
 	cmd.log = f.GetLog()
 	configOptions := cmd.ToConfigOptions()
 	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
@@ -117,43 +119,43 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 		return errors.New(message.ConfigNotFound)
 	}
 
-	// Start file logging
+	// start file logging
 	logpkg.StartFileLogging()
 
-	// Validate flags
+	// validate flags
 	err = cmd.validateFlags()
 	if err != nil {
 		return err
 	}
 
-	// Load generated config
+	// load generated config
 	generatedConfig, err := configLoader.Generated()
 	if err != nil {
 		return errors.Errorf("Error loading generated.yaml: %v", err)
 	}
 
-	// Use last context if specified
+	// use last context if specified
 	err = cmd.UseLastContext(generatedConfig, cmd.log)
 	if err != nil {
 		return err
 	}
 
-	// Create kubectl client
+	// create kubectl client
 	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
-	// Warn the user if we deployed into a different context before
+	// warn the user if we deployed into a different context before
 	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, cmd.log)
 	if err != nil {
 		return err
 	}
 
-	// Clear the dependencies & deployments cache if necessary
+	// clear the dependencies & deployments cache if necessary
 	clearCache(generatedConfig, client)
 
-	// Deprecated: Fill DEVSPACE_DOMAIN vars
+	// deprecated: Fill DEVSPACE_DOMAIN vars
 	err = fillDevSpaceDomainVars(client, generatedConfig)
 	if err != nil {
 		return err
@@ -169,7 +171,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 		generatedConfig.Vars = vars
 	}
 
-	// Add current kube context to context
+	// add current kube context to context
 	config, err := configLoader.Load()
 	if err != nil {
 		return err
@@ -183,43 +185,44 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 		}
 	}
 
-	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, "deploy", cmd.KubeContext, cmd.Namespace)
+	// execute plugin hook
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "deploy", client.CurrentContext(), client.Namespace(), config)
 	if err != nil {
 		return err
 	}
 
-	// Create namespace if necessary
+	// create namespace if necessary
 	err = client.EnsureDeployNamespaces(config, cmd.log)
 	if err != nil {
 		return errors.Errorf("Unable to create namespace: %v", err)
 	}
 
-	// Create docker client
+	// create docker client
 	dockerClient, err := f.NewDockerClient(cmd.log)
 	if err != nil {
 		dockerClient = nil
 	}
 
-	// Create pull secrets and private registry if necessary
+	// create pull secrets if necessary
 	err = f.NewPullSecretClient(config, client, dockerClient, cmd.log).CreatePullSecrets()
 	if err != nil {
 		cmd.log.Warn(err)
 	}
 
-	// Create Dependencymanager
+	// create dependency manager
 	manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, configOptions, cmd.log)
 	if err != nil {
 		return errors.Wrap(err, "new manager")
 	}
 
-	// Dependencies
+	// deploy dependencies
 	err = manager.DeployAll(dependency.DeployOptions{
 		Dependencies:            cmd.Dependency,
 		SkipPush:                cmd.SkipPush,
 		ForceDeployDependencies: cmd.ForceDependencies,
 		SkipBuild:               cmd.SkipBuild,
 		ForceBuild:              cmd.ForceBuild,
+		SkipDeploy:              cmd.SkipDeploy,
 		ForceDeploy:             cmd.ForceDeploy,
 		Verbose:                 cmd.VerboseDependencies,
 	})
@@ -227,9 +230,9 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 		return errors.Wrap(err, "deploy dependencies")
 	}
 
-	// Only deploy if we don't want to deploy a dependency specificly
+	// only deploy if we don't want to deploy a dependency specificly
 	if len(cmd.Dependency) == 0 {
-		// Build images
+		// build images
 		builtImages := make(map[string]string)
 		if cmd.SkipBuild == false {
 			builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
@@ -245,7 +248,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 				return err
 			}
 
-			// Save config if an image was built
+			// save cache if an image was built
 			if len(builtImages) > 0 {
 				err := configLoader.SaveGenerated()
 				if err != nil {
@@ -254,33 +257,35 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 			}
 		}
 
-		// What deployments should be deployed
+		// what deployments should be deployed
 		deployments := []string{}
-		if cmd.Deployments != "" {
-			deployments = strings.Split(cmd.Deployments, ",")
-			for index := range deployments {
-				deployments[index] = strings.TrimSpace(deployments[index])
+		if cmd.SkipDeploy == false {
+			if cmd.Deployments != "" {
+				deployments = strings.Split(cmd.Deployments, ",")
+				for index := range deployments {
+					deployments[index] = strings.TrimSpace(deployments[index])
+				}
 			}
-		}
 
-		// Deploy all defined deployments
-		err = f.NewDeployController(config, generatedConfig.GetActive(), client).Deploy(&deploy.Options{
-			ForceDeploy: cmd.ForceDeploy,
-			BuiltImages: builtImages,
-			Deployments: deployments,
-		}, cmd.log)
-		if err != nil {
-			return err
+			// deploy all defined deployments
+			err = f.NewDeployController(config, generatedConfig.GetActive(), client).Deploy(&deploy.Options{
+				ForceDeploy: cmd.ForceDeploy,
+				BuiltImages: builtImages,
+				Deployments: deployments,
+			}, cmd.log)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
-	// Update last used kube context & save generated yaml
+	// update last used kube context & save generated yaml
 	err = updateLastKubeContext(configLoader, client, generatedConfig)
 	if err != nil {
 		return errors.Wrap(err, "update last kube context")
 	}
 
-	// Wait if necessary
+	// wait if necessary
 	if cmd.Wait {
 		report, err := f.NewAnalyzer(client, f.GetLog()).CreateReport(client.Namespace(), analyze.Options{Wait: true, Patient: true, Timeout: cmd.Timeout})
 		if err != nil {

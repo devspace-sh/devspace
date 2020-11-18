@@ -11,7 +11,7 @@ import (
 
 	"fmt"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -47,12 +47,12 @@ var defaultResources = &availableResources{
 func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
 	kanikoOptions := b.helper.ImageConf.Build.Kaniko
 
-	registryURL, err := registry.GetRegistryFromImageName(b.FullImageName)
+	registryURL, err := pullsecrets.GetRegistryFromImageName(b.FullImageName)
 	if err != nil {
 		return nil, err
 	}
 
-	pullSecretName := registry.GetRegistryAuthSecretName(registryURL)
+	pullSecretName := pullsecrets.GetRegistryAuthSecretName(registryURL)
 	if b.PullSecretName != "" {
 		pullSecretName = b.PullSecretName
 	}

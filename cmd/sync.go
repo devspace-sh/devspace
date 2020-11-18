@@ -130,18 +130,18 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		return err
 	}
 
-	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, "sync", cmd.KubeContext, cmd.Namespace)
-	if err != nil {
-		return err
-	}
-
 	var config *latest.Config
 	if configLoader.Exists() {
 		config, err = configLoader.Load()
 		if err != nil {
 			return err
 		}
+	}
+
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "sync", client.CurrentContext(), client.Namespace(), config)
+	if err != nil {
+		return err
 	}
 
 	// Build params

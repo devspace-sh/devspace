@@ -25,7 +25,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -147,6 +147,10 @@ Open terminal instead of logs:
 
 // Run executes the command logic
 func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+	if cmd.Interactive {
+		cmd.log.Warn("Interactive mode flag is deprecated and will be removed in the future. Please take a look at https://devspace.sh/cli/docs/guides/interactive-mode on how to transition to an interactive profile")
+	}
+
 	// Set config root
 	cmd.log = f.GetLog()
 	cmd.configLoader = f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
@@ -225,7 +229,7 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, "dev", cmd.KubeContext, cmd.Namespace)
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "dev", client.CurrentContext(), client.Namespace(), config)
 	if err != nil {
 		return err
 	}
@@ -242,7 +246,7 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 		dockerClient = nil
 	}
 
-	registryClient := registry.NewClient(config, client, dockerClient, cmd.log)
+	registryClient := pullsecrets.NewClient(config, client, dockerClient, cmd.log)
 	err = registryClient.CreatePullSecrets()
 	if err != nil {
 		cmd.log.Warn(err)

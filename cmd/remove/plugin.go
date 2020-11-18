@@ -1,12 +1,12 @@
 package remove
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/spf13/cobra"
 )
 
 type pluginCmd struct {
-
 }
 
 func newPluginCmd(f factory.Factory) *cobra.Command {
@@ -33,10 +33,22 @@ devspace remove plugin my-plugin
 
 // Run executes the command logic
 func (cmd *pluginCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+	pluginManager := f.NewPluginManager(f.GetLog())
+	_, oldPlugin, err := pluginManager.GetByName(args[0])
+	if err != nil {
+		return err
+	} else if oldPlugin != nil {
+		// Execute plugin hook
+		err = plugin.ExecutePluginHook([]plugin.Metadata{*oldPlugin}, cobraCmd, args, "before_remove", "", "", nil)
+		if err != nil {
+			return err
+		}
+	}
+
 	f.GetLog().StartWait("Removing plugin " + args[0])
 	defer f.GetLog().StopWait()
 
-	err := f.NewPluginManager(f.GetLog()).Remove(args[0])
+	err = pluginManager.Remove(args[0])
 	if err != nil {
 		return err
 	}

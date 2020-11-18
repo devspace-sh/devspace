@@ -3,6 +3,7 @@ package hook
 import (
 	"fmt"
 	"io"
+	"runtime"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -48,6 +49,10 @@ const (
 	StageImages Stage = iota
 	// StageDeployments is the deploying stage
 	StageDeployments
+	// StageDependencies is the dependency stage
+	StageDependencies
+	// StagePullSecrets is the pull secrets stage
+	StagePullSecrets
 )
 
 // All is used to tell devspace to execute a hook before or after all images, deployments
@@ -70,11 +75,19 @@ func (e *executer) Execute(when When, stage Stage, which string, log logpkg.Logg
 						hooksToExecute = append(hooksToExecute, hook)
 					} else if stage == StageImages && hook.When.Before.Images != "" && strings.TrimSpace(hook.When.Before.Images) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
+					} else if stage == StageDependencies && hook.When.Before.Dependencies != "" && strings.TrimSpace(hook.When.Before.Dependencies) == strings.TrimSpace(which) {
+						hooksToExecute = append(hooksToExecute, hook)
+					} else if stage == StagePullSecrets && hook.When.Before.PullSecrets != "" && strings.TrimSpace(hook.When.Before.PullSecrets) == strings.TrimSpace(which) {
+						hooksToExecute = append(hooksToExecute, hook)
 					}
 				} else if when == After && hook.When.After != nil {
 					if stage == StageDeployments && hook.When.After.Deployments != "" && strings.TrimSpace(hook.When.After.Deployments) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
 					} else if stage == StageImages && hook.When.After.Images != "" && strings.TrimSpace(hook.When.After.Images) == strings.TrimSpace(which) {
+						hooksToExecute = append(hooksToExecute, hook)
+					} else if stage == StageDependencies && hook.When.After.Dependencies != "" && strings.TrimSpace(hook.When.After.Dependencies) == strings.TrimSpace(which) {
+						hooksToExecute = append(hooksToExecute, hook)
+					} else if stage == StagePullSecrets && hook.When.After.PullSecrets != "" && strings.TrimSpace(hook.When.After.PullSecrets) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
 					}
 				}
@@ -83,6 +96,22 @@ func (e *executer) Execute(when When, stage Stage, which string, log logpkg.Logg
 
 		// Execute hooks
 		for _, hook := range hooksToExecute {
+			// if the operating system is set and the current is not specified
+			// we skip the hook
+			if hook.OperatingSystem != "" {
+				found := false
+				oss := strings.Split(hook.OperatingSystem, ",")
+				for _, os := range oss {
+					if strings.TrimSpace(os) == runtime.GOOS {
+						found = true
+						break
+					}
+				}
+				if found == false {
+					continue
+				}
+			}
+
 			// Build arguments
 			args := []string{}
 			if hook.Args != nil {

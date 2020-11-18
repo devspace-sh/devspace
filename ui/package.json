@@ -67,9 +67,6 @@
     "whatwg-fetch": "2.0.3",
     "xterm": "4.1.0"
   },
-  "optionalDependencies": {
-    "@devspace/react-components": "0.1.5"
-  },
   "scripts": {
     "start": "cross-env NODE_ENV=development node scripts/start.js",
     "build": "node scripts/build.js"

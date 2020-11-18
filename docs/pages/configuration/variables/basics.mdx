@@ -98,14 +98,19 @@ The `source` option of a config variable expects either:
 - [`input`](../../configuration/variables/source-input.mdx) means to ask the user a question **once** (values will be cached in `.devspace/generated.yaml`)
 :::
 
+:::warning Pass Variables via CLI
+A useful feature in DevSpace is that you can also specify variables as flags, which will override previous values (if there are any):
+```
+devspace deploy --var VAR1=VALUE1 --var VAR2=VALUE2
+```
+:::
+
 :::note Input Caching
 If `source` is either `all` or `input` and the variable is not defined, the user will be asked to provide a value either using a generic question or the one provided via the [`question` option](../../configuration/variables/source-input.mdx#question). The user-provided value will be cached in `.devspace/generated.yaml` and the user will only be asked again after the cache has been cleared first using:
 ```bash
 devspace reset vars
 ```
 :::
-
-
 
 ## Predefined Variables
 DevSpace provides some variables that are filled automatically and can be used within the config. These can be helpful for image tagging and other use cases:

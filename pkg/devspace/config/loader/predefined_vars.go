@@ -2,8 +2,10 @@ package loader
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/util"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -72,10 +74,16 @@ func AddPredefinedVars(plugins []plugin.Metadata) {
 		for _, variable := range p.Vars {
 			v := variable
 			predefinedVars[variable.Name] = func(configLoader *configLoader) (string, error) {
+				args, err := json.Marshal(os.Args)
+				if err != nil {
+					return "", err
+				}
+
 				buffer := &bytes.Buffer{}
-				err := plugin.CallPluginExecutable(filepath.Join(pluginFolder, plugin.PluginBinary), v.BaseArgs, map[string]string{
-					"DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG":   configLoader.options.KubeContext,
-					"DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG": configLoader.options.Namespace,
+				err = plugin.CallPluginExecutable(filepath.Join(pluginFolder, plugin.PluginBinary), v.BaseArgs, map[string]string{
+					plugin.KubeContextFlagEnv:   configLoader.options.KubeContext,
+					plugin.KubeNamespaceFlagEnv: configLoader.options.Namespace,
+					plugin.OsArgsEnv:            string(args),
 				}, buffer)
 				if err != nil {
 					return "", fmt.Errorf("executing plugin %s: %s - %v", pluginName, buffer.String(), err)

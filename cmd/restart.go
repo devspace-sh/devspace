@@ -88,14 +88,14 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 		return err
 	}
 
-	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, "restart", cmd.KubeContext, cmd.Namespace)
+	// Get config with adjusted cluster config
+	config, err := configLoader.Load()
 	if err != nil {
 		return err
 	}
 
-	// Get config with adjusted cluster config
-	config, err := configLoader.Load()
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "restart", client.CurrentContext(), client.Namespace(), config)
 	if err != nil {
 		return err
 	}

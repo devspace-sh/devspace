@@ -127,7 +127,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, plugins []plugin.Metadata, cobraC
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, "open", cmd.KubeContext, cmd.Namespace)
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "open", client.CurrentContext(), client.Namespace(), nil)
 	if err != nil {
 		return err
 	}

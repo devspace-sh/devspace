@@ -4,7 +4,6 @@ sidebar_label: patches
 ---
 
 import FragmentInfoPrintConfig from '../../fragments/tip-print-config.mdx';
-import FragmentProfileParent from '../../fragments/profile-parent.mdx';
 
 Patches are a way to perform minor overrides to the configuration without having to create a separate config file. Patch functionality follows JSON Patch([RFC](https://tools.ietf.org/html/rfc6902)) semantics, as implemented by the [yaml-patch](https://github.com/krishicks/yaml-patch) library.
 
@@ -136,12 +135,6 @@ profiles:
 - Users can use the flag `-p production` to use the `production` profile for a single command execution
 - Users can permanently switch to the `staging` profile using: `devspace use profile staging`
 - Users can permanently switch to the `production` profile using: `devspace use profile production`
-
-
-### `parents`
-
-<FragmentProfileParent/>
-
 
 ## Useful Commands
 

@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -13,7 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	fakedeploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/testing"
 	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
-	fakeregistry "github.com/devspace-cloud/devspace/pkg/devspace/registry/testing"
+	fakeregistry "github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets/testing"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -333,6 +334,9 @@ func TestDeployAll(t *testing.T) {
 			resolver: &fakeResolver{
 				resolvedDependencies: testCase.resolvedDependencies,
 			},
+			hookExecuter: hook.NewExecuter(&latest.Config{
+				Dependencies: testCase.dependencyTasks,
+			}),
 		}
 
 		err = manager.DeployAll(testCase.options)
@@ -579,6 +583,7 @@ type deployTestCase struct {
 	forceDependencies bool
 	skipBuild         bool
 	forceBuild        bool
+	skipDeploy        bool
 	forceDeploy       bool
 
 	expectedErr string
@@ -672,7 +677,7 @@ func TestDeploy(t *testing.T) {
 		}).Resolve(false)
 		dependency := dependencies[0]
 
-		err = dependency.Deploy(testCase.skipPush, testCase.forceDependencies, testCase.skipBuild, testCase.forceBuild, testCase.forceDeploy, log.Discard)
+		err = dependency.Deploy(testCase.skipPush, testCase.forceDependencies, testCase.skipBuild, testCase.forceBuild, testCase.skipDeploy, testCase.forceDeploy, log.Discard)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error purging all in testCase %s", testCase.name)

@@ -17,7 +17,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
-	"github.com/devspace-cloud/devspace/pkg/util/analytics/cloudanalytics"
 	"github.com/devspace-cloud/devspace/pkg/util/exit"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	flagspkg "github.com/devspace-cloud/devspace/pkg/util/flags"
@@ -32,16 +31,16 @@ import (
 )
 
 // NewRootCmd returns a new root command
-func NewRootCmd(f factory.Factory) *cobra.Command {
+func NewRootCmd(f factory.Factory, plugins []plugin.Metadata) *cobra.Command {
 	return &cobra.Command{
 		Use:           "devspace",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Short:         "Welcome to the DevSpace!",
-		PersistentPreRun: func(cobraCmd *cobra.Command, args []string) {
+		PersistentPreRunE: func(cobraCmd *cobra.Command, args []string) error {
 			// don't do anything if it is a plugin command
 			if cobraCmd.Annotations != nil && cobraCmd.Annotations[plugin.PluginCommandAnnotation] == "true" {
-				return
+				return nil
 			}
 
 			log := f.GetLog()
@@ -64,6 +63,14 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 					log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
 				}
 			}
+
+			// call root plugin hook
+			err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "root", "", "", nil)
+			if err != nil {
+				return err
+			}
+
+			return nil
 		},
 		Long: `DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
 	
@@ -79,9 +86,6 @@ func Execute() {
 	// disable klog
 	disableKlog()
 
-	// report any panics
-	defer cloudanalytics.ReportPanics()
-
 	// create a new factory
 	f := factory.DefaultFactory()
 
@@ -93,7 +97,6 @@ func Execute() {
 
 	// execute command
 	err := rootCmd.Execute()
-	cloudanalytics.SendCommandEvent(err)
 	if err != nil {
 		// Check if return code error
 		retCode, ok := errors.Cause(err).(*exit.ReturnCodeError)
@@ -111,15 +114,16 @@ func Execute() {
 
 // BuildRoot creates a new root command from the
 func BuildRoot(f factory.Factory) *cobra.Command {
-	rootCmd := NewRootCmd(f)
-	persistentFlags := rootCmd.PersistentFlags()
-	globalFlags = flags.SetGlobalFlags(persistentFlags)
-
 	// list plugins
 	plugins, err := f.NewPluginManager(f.GetLog()).List()
 	if err != nil {
 		f.GetLog().Fatal(err)
 	}
+
+	// build the root cmd
+	rootCmd := NewRootCmd(f, plugins)
+	persistentFlags := rootCmd.PersistentFlags()
+	globalFlags = flags.SetGlobalFlags(persistentFlags)
 
 	// Add sub commands
 	rootCmd.AddCommand(add.NewAddCmd(f, globalFlags, plugins))
@@ -135,23 +139,23 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	rootCmd.AddCommand(restore.NewRestoreCmd(f, globalFlags, plugins))
 
 	// Add main commands
-	rootCmd.AddCommand(NewInitCmd(f))
+	rootCmd.AddCommand(NewInitCmd(f, plugins))
 	rootCmd.AddCommand(NewRestartCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewDevCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewBuildCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewSyncCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewRenderCmd(f, globalFlags))
+	rootCmd.AddCommand(NewRenderCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewPurgeCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewUpgradeCmd())
+	rootCmd.AddCommand(NewUpgradeCmd(plugins))
 	rootCmd.AddCommand(NewDeployCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewEnterCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewAnalyzeCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewLogsCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewOpenCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewUICmd(f, globalFlags))
+	rootCmd.AddCommand(NewUICmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(NewRunCmd(f, globalFlags))
 	rootCmd.AddCommand(NewAttachCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewPrintCmd(f, globalFlags))
+	rootCmd.AddCommand(NewPrintCmd(f, globalFlags, plugins))
 
 	// Add plugin commands
 	plugin.AddPluginCommands(rootCmd, plugins, "")
