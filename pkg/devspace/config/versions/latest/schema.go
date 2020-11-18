@@ -35,7 +35,9 @@ type Config struct {
 	Dev          *DevConfig              `yaml:"dev,omitempty" json:"dev,omitempty"`
 	Dependencies []*DependencyConfig     `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 	Hooks        []*HookConfig           `yaml:"hooks,omitempty" json:"hooks,omitempty"`
-	Commands     []*CommandConfig        `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	PullSecrets  []*PullSecretConfig     `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+
+	Commands []*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
 	Vars     []*Variable      `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`
@@ -684,8 +686,9 @@ type SourceConfig struct {
 
 // HookConfig defines a hook
 type HookConfig struct {
-	Command string   `yaml:"command" json:"command"`
-	Args    []string `yaml:"args,omitempty" json:"args,omitempty"`
+	Command         string   `yaml:"command" json:"command"`
+	Args            []string `yaml:"args,omitempty" json:"args,omitempty"`
+	OperatingSystem string   `yaml:"os,omitempty" json:"os,omitempty"`
 
 	When *HookWhenConfig `yaml:"when,omitempty" json:"when,omitempty"`
 }
@@ -698,8 +701,10 @@ type HookWhenConfig struct {
 
 // HookWhenAtConfig defines at which stage the hook should be executed
 type HookWhenAtConfig struct {
-	Images      string `yaml:"images,omitempty" json:"images,omitempty"`
-	Deployments string `yaml:"deployments,omitempty" json:"deployments,omitempty"`
+	Images       string `yaml:"images,omitempty" json:"images,omitempty"`
+	Deployments  string `yaml:"deployments,omitempty" json:"deployments,omitempty"`
+	Dependencies string `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
+	PullSecrets  string `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
 }
 
 // CommandConfig defines the command specification
@@ -765,4 +770,29 @@ type ReplaceConfig struct {
 	Dev          *DevConfig              `yaml:"dev,omitempty" json:"dev,omitempty"`
 	Dependencies []*DependencyConfig     `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
 	Hooks        []*HookConfig           `yaml:"hooks,omitempty" json:"hooks,omitempty"`
+	PullSecrets  []*PullSecretConfig     `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
+}
+
+// PullSecretConfig defines a pull secret that should be created by DevSpace
+type PullSecretConfig struct {
+	// The registry to create the image pull secret for.
+	// e.g. gcr.io
+	Registry string `yaml:"registry" json:"registry"`
+
+	// The username of the registry. If this is empty, devspace will try
+	// to receive the auth data from the local docker
+	Username string `yaml:"username,omitempty" json:"username,omitempty"`
+
+	// The password to use for the registry. If this is empty, devspace will
+	// try to receive the auth data from the local docker
+	Password string `yaml:"password,omitempty" json:"password,omitempty"`
+
+	// The optional email to use
+	Email string `yaml:"email,omitempty" json:"email,omitempty"`
+
+	// The secret to create
+	Secret string `yaml:"secret,omitempty" json:"secret,omitempty"`
+
+	// The service account to add the secret to
+	ServiceAccount string `yaml:"serviceAccount,omitempty" json:"serviceAccount,omitempty"`
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
-	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
@@ -34,7 +34,7 @@ type Factory struct {
 	Log               log.Logger
 	HookExecutor      hook.Executer
 	DependencyManager dependency.Manager
-	PullSecretClient  registry.Client
+	PullSecretClient  pullsecrets.Client
 	ConfigLoader      loader.ConfigLoader
 	ConfigureManager  configure.Manager
 	DockerClient      docker.Client
@@ -85,7 +85,7 @@ func (f *Factory) NewDependencyManager(config *latest.Config, cache *generated.C
 }
 
 // NewPullSecretClient implements interface
-func (f *Factory) NewPullSecretClient(config *latest.Config, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) registry.Client {
+func (f *Factory) NewPullSecretClient(config *latest.Config, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client {
 	return f.PullSecretClient
 }
 

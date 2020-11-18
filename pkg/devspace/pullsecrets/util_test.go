@@ -1,12 +1,12 @@
-package registry
+package pullsecrets
 
 import (
 	"testing"
-	
+
 	"gotest.tools/assert"
 )
 
-func TestGetRegistryFromImageName(t *testing.T){
+func TestGetRegistryFromImageName(t *testing.T) {
 	//Test with official repo
 	reg, err := GetRegistryFromImageName("mysql")
 	if err != nil {

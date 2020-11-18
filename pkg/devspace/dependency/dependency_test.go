@@ -13,7 +13,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	fakedeploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/testing"
 	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
-	fakeregistry "github.com/devspace-cloud/devspace/pkg/devspace/registry/testing"
+	fakeregistry "github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets/testing"
 	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"github.com/devspace-cloud/devspace/pkg/util/log"

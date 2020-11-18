@@ -16,7 +16,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/registry"
+	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 
 	"github.com/docker/distribution/reference"
@@ -80,7 +80,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	)
 
 	// Display nice registry name
-	registryURL, err := registry.GetRegistryFromImageName(b.helper.ImageName)
+	registryURL, err := pullsecrets.GetRegistryFromImageName(b.helper.ImageName)
 	if err != nil {
 		return err
 	}
@@ -290,7 +290,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 // Authenticate authenticates the client with a remote registry
 func (b *Builder) Authenticate() (*types.AuthConfig, error) {
-	registryURL, err := registry.GetRegistryFromImageName(b.helper.ImageName + ":" + b.helper.ImageTag)
+	registryURL, err := pullsecrets.GetRegistryFromImageName(b.helper.ImageName + ":" + b.helper.ImageTag)
 	if err != nil {
 		return nil, err
 	}

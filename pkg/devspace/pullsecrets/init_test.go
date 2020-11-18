@@ -1,7 +1,6 @@
-package registry
+package pullsecrets
 
-import (
-)
+import ()
 
 /*type createPullSecretTestCase struct {
 	name string
@@ -98,6 +97,6 @@ StopWait`,
 					"email": "someuser@example.com"
 				}
 			}
-		}`, string(resultSecret.Data[k8sv1.DockerConfigJsonKey]), "Saved secret has wrong data")*//*
+		}`, string(resultSecret.Data[k8sv1.DockerConfigJsonKey]), "Saved secret has wrong data")*/ /*
 
 }*/

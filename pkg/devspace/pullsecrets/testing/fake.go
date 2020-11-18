@@ -1,6 +1,6 @@
 package testing
 
-import "github.com/devspace-cloud/devspace/pkg/devspace/registry"
+import "github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
 
 // Client is a fake implementation of the Client interface
 type Client struct{}
@@ -11,6 +11,6 @@ func (c *Client) CreatePullSecrets() error {
 }
 
 // CreatePullSecret is a fake implementation of the function
-func (c *Client) CreatePullSecret(options *registry.PullSecretOptions) error {
+func (c *Client) CreatePullSecret(options *pullsecrets.PullSecretOptions) error {
 	return nil
 }
