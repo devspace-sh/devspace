@@ -1,27 +1,23 @@
 ---
-title: "Command - devspace deploy"
-sidebar_label: devspace deploy
+title: "Command - devspace build"
+sidebar_label: devspace build
 ---
 
 
-Deploy the project
+Builds all defined images and pushes them
 
 ## Synopsis
 
 
 ```
-devspace deploy [flags]
+devspace build [flags]
 ```
 
 ```
 #######################################################
-################## devspace deploy ####################
+################## devspace build #####################
 #######################################################
-Deploys the current project to a Space or namespace:
-
-devspace deploy
-devspace deploy -n some-namespace
-devspace deploy --kube-context=deploy-context
+Builds all defined images and pushes them
 #######################################################
 ```
 
@@ -31,21 +27,13 @@ devspace deploy --kube-context=deploy-context
 ```
       --allow-cyclic           When enabled allows cyclic dependencies
       --build-sequential       Builds the images one after another instead of in parallel
-      --dependency strings     Deploys only the specific named dependencies
-      --deployments string     Only deploy a specifc deployment (You can specify multiple deployments comma-separated
-  -b, --force-build            Forces to (re-)build every image
+      --dependency strings     Builds only the specific named dependencies
+  -b, --force-build            Forces to build every image
       --force-dependencies     Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies) (default true)
-  -d, --force-deploy           Forces to (re-)deploy every deployment
-  -h, --help                   help for deploy
-      --restore-vars           If true will restore the variables from kubernetes before loading the config
-      --save-vars              If true will save the variables to kubernetes after loading the config
-      --skip-build             Skips building of images
-      --skip-deploy            Skips deploying and only builds images
+  -h, --help                   help for build
       --skip-push              Skips image pushing, useful for minikube deployment
-      --timeout int            Timeout until deploy should stop waiting (default 120)
-      --vars-secret string     The secret to restore/save the variables from/to, if --restore-vars or --save-vars is enabled (default "devspace-vars")
-      --verbose-dependencies   Deploys the dependencies verbosely
-      --wait                   If true will wait for pods to be running or fails after given timeout
+  -t, --tag strings            Use the given tag for all built images
+      --verbose-dependencies   Builds the dependencies verbosely
 ```
 
 

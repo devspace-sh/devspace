@@ -1,0 +1,21 @@
+The `kustomize` option expects a boolean stating if DevSpace should deploy using `kustomize` (or alternatively: `kubectl apply -k`).
+
+:::warning
+If you set `kustomize = true`, all of your `manifests` must be paths to Kustomizations. If you want to deploy some plain manifests and some Kustomizations, create multiple deployments for each of them.
+:::
+
+#### Default Value for `kustomize`
+```yaml
+kustomize: false
+```
+
+#### Example: Kustomize
+```yaml {4}
+deployments:
+- name: backend
+  kubectl:
+    kustomize: true
+    manifests:
+    - kustomization1/
+    - glob/path/to/more/kustomizations/
+```

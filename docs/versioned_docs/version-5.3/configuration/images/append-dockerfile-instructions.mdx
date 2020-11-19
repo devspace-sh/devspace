@@ -1,0 +1,18 @@
+---
+title: Append Build Instructions In-Memory
+sidebar_label: appendDockerfileInstructions
+---
+
+
+## `appendDockerfileInstructions`
+The `appendDockerfileInstructions` expects an array of strings with each string containing a Dockerfile instruction, e.g. `RUN chmod...`, `USER root`.
+
+This option is very useful to add development-specific instructions (installing dev tooling like debuggers, setting a different runtime user for the container etc.) without the need to change the actual Dockerfile.
+
+:::info In-Memory
+DevSpace adds these instructions dynamically to your Dockerfile when building images. However, this happens in-memory and does **not** change the Dockerfile.
+:::
+
+:::tip Combination with Profiles
+It is often useful to create a [profile](../profiles/basics.mdx) `production` with a patch that removes the `appendDockerfileInstructions` entirely. This way, you can also evaluate what you are working on in a more production-like way using a single command: `devspace deploy -p production`
+:::
