@@ -1,27 +1,32 @@
 ---
-title: "Command - devspace deploy"
-sidebar_label: devspace deploy
+title: "Command - devspace dev"
+sidebar_label: devspace dev
 ---
 
 
-Deploy the project
+Starts the development mode
 
 ## Synopsis
 
 
 ```
-devspace deploy [flags]
+devspace dev [flags]
 ```
 
 ```
 #######################################################
-################## devspace deploy ####################
+################### devspace dev ######################
 #######################################################
-Deploys the current project to a Space or namespace:
+Starts your project in development mode:
+1. Builds your Docker images and override entrypoints if specified
+2. Deploys the deployments via helm or kubectl
+3. Forwards container ports to the local computer
+4. Starts the sync client
+5. Streams the logs of deployed containers
 
-devspace deploy
-devspace deploy -n some-namespace
-devspace deploy --kube-context=deploy-context
+Open terminal instead of logs:
+- Use "devspace dev -t" for opening a terminal
+- Use "devspace dev -i" for opening a terminal and overriding container entrypoint with sleep command
 #######################################################
 ```
 
@@ -31,21 +36,29 @@ devspace deploy --kube-context=deploy-context
 ```
       --allow-cyclic           When enabled allows cyclic dependencies
       --build-sequential       Builds the images one after another instead of in parallel
-      --dependency strings     Deploys only the specific named dependencies
       --deployments string     Only deploy a specifc deployment (You can specify multiple deployments comma-separated
-  -b, --force-build            Forces to (re-)build every image
+      --exit-after-deploy      Exits the command after building the images and deploying the project
+  -b, --force-build            Forces to build every image
       --force-dependencies     Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies) (default true)
-  -d, --force-deploy           Forces to (re-)deploy every deployment
-  -h, --help                   help for deploy
+  -d, --force-deploy           Forces to deploy every deployment
+  -h, --help                   help for dev
+  -i, --interactive            Enable interactive mode for images (overrides entrypoint with sleep command) and start terminal proxy
+      --open                   Open defined URLs in the browser, if defined (default true)
+      --portforwarding         Enable port forwarding (default true)
+      --print-sync             If enabled will print the sync log to the terminal
       --restore-vars           If true will restore the variables from kubernetes before loading the config
       --save-vars              If true will save the variables to kubernetes after loading the config
       --skip-build             Skips building of images
-      --skip-deploy            Skips deploying and only builds images
+  -x, --skip-pipeline          Skips build & deployment and only starts sync, portforwarding & terminal
       --skip-push              Skips image pushing, useful for minikube deployment
-      --timeout int            Timeout until deploy should stop waiting (default 120)
+      --sync                   Enable code synchronization (default true)
+  -t, --terminal               Open a terminal instead of showing logs
+      --timeout int            Timeout until dev should stop waiting and fail (default 120)
+      --ui                     Start the ui server (default true)
       --vars-secret string     The secret to restore/save the variables from/to, if --restore-vars or --save-vars is enabled (default "devspace-vars")
       --verbose-dependencies   Deploys the dependencies verbosely
-      --wait                   If true will wait for pods to be running or fails after given timeout
+      --verbose-sync           When enabled the sync will log every file change
+      --wait                   If true will wait first for pods to be running or fails after given timeout
 ```
 
 

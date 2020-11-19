@@ -1,0 +1,30 @@
+---
+title: Environment Variable File
+sidebar_label: .env
+---
+
+Besides reading environment variables available in your terminal session, DevSpace also reads environment variables from the `.env` file inside your project. The syntax of the `.env` file is the [same as for docker-compose](https://docs.docker.com/compose/env-file/):
+
+- Each line should have the format `VAR_NAME=VAR_VALUE`.
+- **There is *no* special handling of quotation marks. This means that they are part of the `VAR_VALUE`.**
+- Lines beginning with # are processed as comments and ignored.
+
+## Precedence
+- Environment variables defined in your terminal session (including system variables) always take precendence over the variables in your `.env` file.
+- Variables defined in your `.env` file take precende over the default values defined for config variables (configured in the `vars` section of `devspace.yaml`).
+
+## Define Default Flags
+A common use case for the `.env` file is to set default flags for the `devspace` commands such as `devspace dev` or `devspace deploy`. You can define the following environment variables to set default flags:
+- `DEVSPACE_FLAGS` for global flags that should be added to each commands (e.g. `DEVSPACE_FLAGS=-s -p dev`)
+- `DEVSPACE_[COMMAND]_FLAGS` to add default flags for single commands (e.g. `DEVSPACE_DEV_FLAGS=-s --verbose-dependencies`)
+
+:::note Overriding Default Flags
+Specifying flags for a command will override the default flags, e.g. if `DEVSPACE_FLAGS=-s -p dev` is configured and you run `devspace dev -p production`, the following command would be executed: `devspace dev -s -p production`
+:::
+
+#### Example: Setting Default Flags for DevSpace
+```bash
+# File: .env
+DEVSPACE_FLAGS=-s -p dev
+DEVSPACE_DEV_FLAGS=-s --verbose-dependencies
+```
