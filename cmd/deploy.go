@@ -287,7 +287,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 
 	// wait if necessary
 	if cmd.Wait {
-		report, err := f.NewAnalyzer(client, f.GetLog()).CreateReport(client.Namespace(), analyze.Options{Wait: true, Patient: true, Timeout: cmd.Timeout})
+		report, err := f.NewAnalyzer(client, f.GetLog()).CreateReport(client.Namespace(), analyze.Options{Wait: true, Patient: true, Timeout: cmd.Timeout, IgnorePodRestarts: true})
 		if err != nil {
 			return errors.Wrap(err, "analyze")
 		}

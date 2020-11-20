@@ -349,7 +349,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 
 	// Wait if necessary
 	if cmd.Wait {
-		report, err := f.NewAnalyzer(client, f.GetLog()).CreateReport(client.Namespace(), analyze.Options{Wait: true, Patient: true, Timeout: cmd.Timeout})
+		report, err := f.NewAnalyzer(client, f.GetLog()).CreateReport(client.Namespace(), analyze.Options{Wait: true, Patient: true, Timeout: cmd.Timeout, IgnorePodRestarts: true})
 		if err != nil {
 			return 0, errors.Wrap(err, "analyze")
 		}
