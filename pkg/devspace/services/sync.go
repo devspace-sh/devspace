@@ -242,7 +242,7 @@ func (serviceClient *client) isFatalSyncError(err error) bool {
 }
 
 func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, syncDone chan bool, customLog logpkg.Logger) (*sync.Sync, error) {
-	err := serviceClient.injectDevSpaceHelper(pod, container)
+	err := InjectDevSpaceHelper(serviceClient.client, pod, container, serviceClient.log)
 	if err != nil {
 		return nil, err
 	}
@@ -436,7 +436,7 @@ func (serviceClient *client) startStream(pod *v1.Pod, container string, command 
 	return nil
 }
 
-func (serviceClient *client) injectDevSpaceHelper(pod *v1.Pod, container string) error {
+func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, log logpkg.Logger) error {
 	// Compare sync versions
 	version := upgrade.GetRawVersion()
 	if version == "" {
@@ -444,7 +444,7 @@ func (serviceClient *client) injectDevSpaceHelper(pod *v1.Pod, container string)
 	}
 
 	// Check if sync is already in pod
-	stdout, _, err := serviceClient.client.ExecBuffered(pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
+	stdout, _, err := client.ExecBuffered(pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
 	if err != nil || version != string(stdout) {
 		homedir, err := homedir.Dir()
 		if err != nil {
@@ -455,13 +455,13 @@ func (serviceClient *client) injectDevSpaceHelper(pod *v1.Pod, container string)
 		filepath := filepath.Join(syncBinaryFolder, "devspacehelper")
 
 		// Download sync helper if necessary
-		err = serviceClient.downloadSyncHelper(filepath, syncBinaryFolder, version)
+		err = downloadSyncHelper(filepath, syncBinaryFolder, version, log)
 		if err != nil {
 			return errors.Wrap(err, "download devspace helper")
 		}
 
 		// Inject sync helper
-		err = serviceClient.injectSyncHelper(pod, container, filepath)
+		err = injectSyncHelper(client, pod, container, filepath)
 		if err != nil {
 			return errors.Wrap(err, "inject devspace helper")
 		}
@@ -470,7 +470,7 @@ func (serviceClient *client) injectDevSpaceHelper(pod *v1.Pod, container string)
 	return nil
 }
 
-func (serviceClient *client) downloadSyncHelper(filepath, syncBinaryFolder, version string) error {
+func downloadSyncHelper(filepath, syncBinaryFolder, version string, log logpkg.Logger) error {
 	// Check if file exists
 	_, err := os.Stat(filepath)
 	if err == nil {
@@ -483,20 +483,20 @@ func (serviceClient *client) downloadSyncHelper(filepath, syncBinaryFolder, vers
 		url := fmt.Sprintf("https://github.com/devspace-cloud/devspace/releases/download/%s/devspacehelper.sha256", version)
 		resp, err := http.Get(url)
 		if err != nil {
-			serviceClient.log.Warnf("Couldn't retrieve helper sha256: %v", err)
+			log.Warnf("Couldn't retrieve helper sha256: %v", err)
 			return nil
 		}
 
 		shaHash, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			serviceClient.log.Warnf("Couldn't read helper sha256 request: %v", err)
+			log.Warnf("Couldn't read helper sha256 request: %v", err)
 			return nil
 		}
 
 		// hash the local binary
 		fileHash, err := hash.File(filepath)
 		if err != nil {
-			serviceClient.log.Warnf("Couldn't hash local helper binary: %v", err)
+			log.Warnf("Couldn't hash local helper binary: %v", err)
 			return nil
 		}
 
@@ -518,10 +518,10 @@ func (serviceClient *client) downloadSyncHelper(filepath, syncBinaryFolder, vers
 		return errors.Wrap(err, "mkdir helper binary folder")
 	}
 
-	return serviceClient.downloadFile(version, filepath)
+	return downloadFile(version, filepath)
 }
 
-func (serviceClient *client) downloadFile(version string, filepath string) error {
+func downloadFile(version string, filepath string) error {
 	// Create download url
 	url := ""
 	if version == "latest" {
@@ -566,7 +566,7 @@ func (serviceClient *client) downloadFile(version string, filepath string) error
 	return nil
 }
 
-func (serviceClient *client) injectSyncHelper(pod *v1.Pod, container string, filepath string) error {
+func injectSyncHelper(client kubectl.Client, pod *v1.Pod, container string, filepath string) error {
 	// Compress the sync helper and then copy it to the container
 	reader, writer, err := os.Pipe()
 	if err != nil {
@@ -579,7 +579,7 @@ func (serviceClient *client) injectSyncHelper(pod *v1.Pod, container string, fil
 	// Start reading on the other end
 	errChan := make(chan error)
 	go func() {
-		errChan <- serviceClient.client.CopyFromReader(pod, container, "/tmp", reader)
+		errChan <- client.CopyFromReader(pod, container, "/tmp", reader)
 	}()
 
 	// Use compression
