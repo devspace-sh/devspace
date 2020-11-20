@@ -17,12 +17,12 @@ import (
 )
 
 // createBuilder creates a new builder
-func (c *controller) createBuilder(imageConfigName string, imageConf *latest.ImageConfig, imageTag string, options *Options, log log.Logger) (builder.Interface, error) {
+func (c *controller) createBuilder(imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, options *Options, log log.Logger) (builder.Interface, error) {
 	var err error
 	var builder builder.Interface
 
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
-		builder = custom.NewBuilder(imageConfigName, imageConf, imageTag)
+		builder = custom.NewBuilder(imageConfigName, imageConf, imageTags)
 	} else if imageConf.Build != nil && imageConf.Build.Docker == nil && imageConf.Build.Kaniko != nil {
 		dockerClient, err := dockerclient.NewClient(log)
 		if err != nil {
@@ -39,7 +39,7 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 
 		log.StartWait("Creating kaniko builder")
 		defer log.StopWait()
-		builder, err = kaniko.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTag, options.IsDev, log)
+		builder, err = kaniko.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTags, options.IsDev, log)
 		if err != nil {
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
 		}
@@ -73,10 +73,10 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 
 			// Fallback to kaniko
 			log.Infof("Couldn't find a running docker daemon. Will fallback to kaniko")
-			return c.createBuilder(imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTag, options, log)
+			return c.createBuilder(imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTags, options, log)
 		}
 
-		builder, err = docker.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTag, options.SkipPush, options.IsDev)
+		builder, err = docker.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTags, options.SkipPush, options.IsDev)
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker builder: %v", err)
 		}

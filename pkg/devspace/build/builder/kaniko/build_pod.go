@@ -69,12 +69,8 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 	}
 
 	// specify destinations
-	if len(b.helper.ImageConf.Tags) == 0 {
-		kanikoArgs = append(kanikoArgs, "--destination="+b.FullImageName)
-	} else {
-		for _, tag := range b.helper.ImageConf.Tags {
-			kanikoArgs = append(kanikoArgs, "--destination="+b.helper.ImageName+":"+tag)
-		}
+	for _, tag := range b.helper.ImageTags {
+		kanikoArgs = append(kanikoArgs, "--destination="+b.helper.ImageName+":"+tag)
 	}
 
 	// set target

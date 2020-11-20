@@ -100,17 +100,32 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		imageName := cImageConf.Image
 		imageConfigName := key
 
-		// Get image tag
-		imageTag, err := randutil.GenerateRandomString(7)
-		if err != nil {
-			return nil, errors.Errorf("Image building failed: %v", err)
-		}
+		// Get image tags
+		imageTags := []string{}
 		if len(imageConf.Tags) > 0 {
-			imageTag = imageConf.Tags[0]
+			if imageConf.TagsAppendRandom {
+				for _, t := range imageConf.Tags {
+					r, err := randutil.GenerateRandomString(5)
+					if err != nil {
+						return nil, errors.Errorf("Image building failed: %v", err)
+					}
+
+					imageTags = append(imageTags, t+"-"+r)
+				}
+			} else {
+				imageTags = append(imageTags, imageConf.Tags...)
+			}
+		} else {
+			imageTag, err := randutil.GenerateRandomString(7)
+			if err != nil {
+				return nil, errors.Errorf("Image building failed: %v", err)
+			}
+
+			imageTags = append(imageTags, imageTag)
 		}
 
 		// Create new builder
-		builder, err := c.createBuilder(imageConfigName, &cImageConf, imageTag, options, log)
+		builder, err := c.createBuilder(imageConfigName, &cImageConf, imageTags, options, log)
 		if err != nil {
 			return nil, errors.Wrap(err, "create builder")
 		}
@@ -136,15 +151,15 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 
 			// Update cache
 			imageCache := c.cache.GetImageCache(imageConfigName)
-			if imageCache.Tag == imageTag {
-				log.Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", imageName, imageTag)
+			if imageCache.Tag == imageTags[0] {
+				log.Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", imageName, imageTags[0])
 			}
 
 			imageCache.ImageName = imageName
-			imageCache.Tag = imageTag
+			imageCache.Tag = imageTags[0]
 
 			// Track built images
-			builtImages[imageName] = imageTag
+			builtImages[imageName] = imageTags[0]
 		} else {
 			imagesToBuild++
 			go func() {
@@ -155,7 +170,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 				// Build the image
 				err := builder.Build(streamLog)
 				if err != nil {
-					errChan <- errors.Errorf("Error building image %s:%s: %s %v", imageName, imageTag, buff.String(), err)
+					errChan <- errors.Errorf("Error building image %s:%s: %s %v", imageName, imageTags[0], buff.String(), err)
 					return
 				}
 
@@ -163,7 +178,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 				cacheChan <- imageNameAndTag{
 					imageConfigName: imageConfigName,
 					imageName:       imageName,
-					imageTag:        imageTag,
+					imageTag:        imageTags[0],
 				}
 			}()
 		}

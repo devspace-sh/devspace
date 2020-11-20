@@ -52,9 +52,9 @@ type Builder struct {
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config *latest.Config, client dockerclient.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, skipPush, isDev bool) (*Builder, error) {
+func NewBuilder(config *latest.Config, client dockerclient.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, isDev bool) (*Builder, error) {
 	return &Builder{
-		helper:   helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTag, isDev),
+		helper:   helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags, isDev),
 		client:   client,
 		skipPush: skipPush,
 	}, nil
@@ -75,7 +75,6 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, igno
 // dockerfilePath is the absolute path to the dockerfile WITHIN the contextPath
 func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, log logpkg.Logger) error {
 	var (
-		fullImageName      = b.helper.ImageName + ":" + b.helper.ImageTag
 		displayRegistryURL = "hub.docker.com"
 	)
 
@@ -221,14 +220,9 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Which tags to build
-	var tags []string
-	if len(b.helper.ImageConf.Tags) == 0 {
-		tags = []string{fullImageName}
-	} else {
-		tags = []string{}
-		for _, tag := range b.helper.ImageConf.Tags {
-			tags = append(tags, b.helper.ImageName+":"+tag)
-		}
+	tags := []string{}
+	for _, tag := range b.helper.ImageTags {
+		tags = append(tags, b.helper.ImageName+":"+tag)
 	}
 
 	// Setup an upload progress bar
@@ -290,7 +284,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 // Authenticate authenticates the client with a remote registry
 func (b *Builder) Authenticate() (*types.AuthConfig, error) {
-	registryURL, err := pullsecrets.GetRegistryFromImageName(b.helper.ImageName + ":" + b.helper.ImageTag)
+	registryURL, err := pullsecrets.GetRegistryFromImageName(b.helper.ImageName + ":" + b.helper.ImageTags[0])
 	if err != nil {
 		return nil, err
 	}
