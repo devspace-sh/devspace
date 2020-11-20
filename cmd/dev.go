@@ -75,8 +75,6 @@ type DevCmd struct {
 	log          log.Logger
 }
 
-const interactiveDefaultPickerValue = "Open Picker"
-
 // NewDevCmd creates a new devspace dev command
 func NewDevCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	cmd := &DevCmd{

@@ -63,6 +63,7 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 		symlinks:  make(map[string]*Symlink),
 		interrupt: make(chan bool, 1),
 		sync:      sync,
+		isBusy:    true,
 
 		reader: reader,
 		writer: writer,
@@ -89,13 +90,12 @@ func (u *upstream) mainLoop() error {
 			case <-u.interrupt:
 				return nil
 			case event, ok := <-u.events:
-				if ok == false {
-					return nil
-				}
-
 				u.isBusyMutex.Lock()
 				u.isBusy = true
 				u.isBusyMutex.Unlock()
+				if ok == false {
+					return nil
+				}
 
 				events := make([]notify.EventInfo, 0, 10)
 				events = append(events, event)
@@ -118,31 +118,27 @@ func (u *upstream) mainLoop() error {
 				}
 
 				changes = append(changes, fileInformations...)
-				if len(changes) == 0 {
-					u.isBusyMutex.Lock()
-					u.isBusy = false
-					u.isBusyMutex.Unlock()
-				}
 			case <-time.After(time.Millisecond * 600):
 				break
 			}
 
-			// We gather changes till there are no more changes for 1 second
+			// We gather changes till there are no more changes
 			if changeAmount == len(changes) && changeAmount > 0 {
 				break
 			}
 
 			changeAmount = len(changes)
+			if changeAmount == 0 {
+				u.isBusyMutex.Lock()
+				u.isBusy = false
+				u.isBusyMutex.Unlock()
+			}
 		}
 
 		err := u.applyChanges(changes)
 		if err != nil {
 			return errors.Wrap(err, "apply changes")
 		}
-
-		u.isBusyMutex.Lock()
-		u.isBusy = false
-		u.isBusyMutex.Unlock()
 	}
 }
 
