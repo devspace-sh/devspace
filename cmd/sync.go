@@ -110,7 +110,7 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 			return err
 		}
 	} else {
-		logger.Warnf("You are using `devspace sync` without a devspace.yaml, use the flag `--config` to specify a config")
+		logger.Warnf("If you want to use the sync paths from `devspace.yaml`, use the `--config=devspace.yaml` flag for this command.")
 	}
 
 	// Use last context if specified
