@@ -129,6 +129,11 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 				return errors.Errorf("Error selecting pod: %v", err)
 			}
 
+			err = services.InjectDevSpaceHelper(client, pod, container.Name, cmd.log)
+			if err != nil {
+				return errors.Wrap(err, "inject devspace helper")
+			}
+
 			stdOut, stdErr, err := client.ExecBuffered(pod, container.Name, []string{services.DevSpaceHelperContainerPath, "restart"}, nil)
 			if err != nil {
 				return fmt.Errorf("error restarting container %s in pod %s/%s: %s %s => %v", container.Name, pod.Namespace, pod.Name, string(stdOut), string(stdErr), err)

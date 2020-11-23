@@ -26,15 +26,15 @@ type Builder struct {
 	imageConf *latest.ImageConfig
 
 	imageConfigName string
-	imageTag        string
+	imageTags       []string
 }
 
 // NewBuilder creates a new custom builder
-func NewBuilder(imageConfigName string, imageConf *latest.ImageConfig, imageTag string) *Builder {
+func NewBuilder(imageConfigName string, imageConf *latest.ImageConfig, imageTags []string) *Builder {
 	return &Builder{
 		imageConfigName: imageConfigName,
 		imageConf:       imageConf,
-		imageTag:        imageTag,
+		imageTags:       imageTags,
 	}
 }
 
@@ -86,24 +86,18 @@ func (b *Builder) Build(log logpkg.Logger) error {
 	// Build arguments
 	args := []string{}
 
+	// add args
 	for _, arg := range b.imageConf.Build.Custom.Args {
 		args = append(args, arg)
 	}
 
-	if len(b.imageConf.Tags) == 0 {
+	// add tags
+	for _, tag := range b.imageConf.Tags {
 		if b.imageConf.Build.Custom.ImageFlag != "" {
 			args = append(args, b.imageConf.Build.Custom.ImageFlag)
 		}
 
-		args = append(args, b.imageConf.Image+":"+b.imageTag)
-	} else {
-		for _, tag := range b.imageConf.Tags {
-			if b.imageConf.Build.Custom.ImageFlag != "" {
-				args = append(args, b.imageConf.Build.Custom.ImageFlag)
-			}
-
-			args = append(args, b.imageConf.Image+":"+tag)
-		}
+		args = append(args, b.imageConf.Image+":"+tag)
 	}
 
 	for _, arg := range b.imageConf.Build.Custom.AppendArgs {
@@ -121,7 +115,7 @@ func (b *Builder) Build(log logpkg.Logger) error {
 		writer = log
 	}
 
-	log.Infof("Build %s:%s with custom command %s %s", b.imageConf.Image, b.imageTag, b.imageConf.Build.Custom.Command, strings.Join(args, " "))
+	log.Infof("Build %s:%s with custom command %s %s", b.imageConf.Image, b.imageTags[0], b.imageConf.Build.Custom.Command, strings.Join(args, " "))
 
 	err := cmd.Run(writer, writer, nil)
 	if err != nil {

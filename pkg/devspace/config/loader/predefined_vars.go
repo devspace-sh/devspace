@@ -36,6 +36,19 @@ var predefinedVars = map[string]func(loader *configLoader) (string, error){
 	"DEVSPACE_TIMESTAMP": func(loader *configLoader) (string, error) {
 		return strconv.FormatInt(time.Now().Unix(), 10), nil
 	},
+	"DEVSPACE_GIT_BRANCH": func(loader *configLoader) (string, error) {
+		configPath := loader.options.BasePath
+		if configPath == "" {
+			configPath = loader.ConfigPath()
+		}
+
+		branch, err := git.GetBranch(filepath.Dir(configPath))
+		if err != nil {
+			return "", fmt.Errorf("Error retrieving git branch: %v, but predefined var DEVSPACE_GIT_BRANCH is used", err)
+		}
+
+		return branch, nil
+	},
 	"DEVSPACE_GIT_COMMIT": func(loader *configLoader) (string, error) {
 		configPath := loader.options.BasePath
 		if configPath == "" {

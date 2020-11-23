@@ -75,8 +75,6 @@ type DevCmd struct {
 	log          log.Logger
 }
 
-const interactiveDefaultPickerValue = "Open Picker"
-
 // NewDevCmd creates a new devspace dev command
 func NewDevCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	cmd := &DevCmd{
@@ -351,7 +349,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 
 	// Wait if necessary
 	if cmd.Wait {
-		report, err := f.NewAnalyzer(client, f.GetLog()).CreateReport(client.Namespace(), analyze.Options{Wait: true, Patient: true, Timeout: cmd.Timeout})
+		report, err := f.NewAnalyzer(client, f.GetLog()).CreateReport(client.Namespace(), analyze.Options{Wait: true, Patient: true, Timeout: cmd.Timeout, IgnorePodRestarts: true})
 		if err != nil {
 			return 0, errors.Wrap(err, "analyze")
 		}

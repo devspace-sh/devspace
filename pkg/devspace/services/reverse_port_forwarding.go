@@ -52,7 +52,7 @@ func (serviceClient *client) startReversePortForwarding(portForwarding *latest.P
 	}
 
 	// make sure the devspace helper binary is injected
-	err = serviceClient.injectDevSpaceHelper(pod, container.Name)
+	err = InjectDevSpaceHelper(serviceClient.client, pod, container.Name, serviceClient.log)
 	if err != nil {
 		return err
 	}

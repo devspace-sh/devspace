@@ -40,6 +40,7 @@ loop:
 			requestId, err := uuid.Parse(m.RequestId)
 			if err != nil {
 				log.Errorf("%s; failed parsing session uuid from stream, skipping", m.RequestId)
+				continue
 			}
 			session, exists := tunnel.GetSession(requestId)
 			if exists == false {
@@ -94,7 +95,6 @@ func ReadFromSession(session *tunnel.Session, sessionsOut chan<- *tunnel.Session
 	conn := session.Conn
 	buff := make([]byte, bufferSize)
 	for {
-		//_ = conn.SetReadDeadline(time.Now().Add(time.Second))
 		br, err := conn.Read(buff)
 		if err != nil {
 			if err != io.EOF {

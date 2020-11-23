@@ -83,7 +83,7 @@ func (a *analyzer) pods(namespace string, options Options) ([]string, error) {
 	// Analyzing pods
 	if pods.Items != nil {
 		for _, pod := range pods.Items {
-			problem := checkPod(a.client, &pod)
+			problem := checkPod(a.client, &pod, options.IgnorePodRestarts)
 			if problem != nil {
 				problems = append(problems, printPodProblem(problem))
 			}
@@ -132,7 +132,7 @@ type containerProblem struct {
 }
 
 // Pod analyzes the pod for potential problems
-func checkPod(client kubectl.Client, pod *v1.Pod) *podProblem {
+func checkPod(client kubectl.Client, pod *v1.Pod, ignoreContainerRestarts bool) *podProblem {
 	hasProblem := false
 	podProblem := &podProblem{
 		Name:                  pod.Name,
@@ -154,7 +154,7 @@ func checkPod(client kubectl.Client, pod *v1.Pod) *podProblem {
 		podProblem.ContainerTotal = len(pod.Status.ContainerStatuses)
 
 		for _, containerStatus := range pod.Status.ContainerStatuses {
-			containerProblem := getContainerProblem(client, pod, &containerStatus)
+			containerProblem := getContainerProblem(client, pod, &containerStatus, ignoreContainerRestarts)
 			if containerProblem != nil {
 				hasProblem = true
 
@@ -172,7 +172,7 @@ func checkPod(client kubectl.Client, pod *v1.Pod) *podProblem {
 		podProblem.InitContainerTotal = len(pod.Status.ContainerStatuses)
 
 		for _, containerStatus := range pod.Status.InitContainerStatuses {
-			containerProblem := getContainerProblem(client, pod, &containerStatus)
+			containerProblem := getContainerProblem(client, pod, &containerStatus, ignoreContainerRestarts)
 			if containerProblem != nil {
 				hasProblem = true
 
@@ -192,7 +192,7 @@ func checkPod(client kubectl.Client, pod *v1.Pod) *podProblem {
 	return nil
 }
 
-func getContainerProblem(client kubectl.Client, pod *v1.Pod, containerStatus *v1.ContainerStatus) *containerProblem {
+func getContainerProblem(client kubectl.Client, pod *v1.Pod, containerStatus *v1.ContainerStatus, ignoreContainerRestarts bool) *containerProblem {
 	tailLines := int64(50)
 	hasProblem := false
 	containerProblem := &containerProblem{
@@ -202,7 +202,7 @@ func getContainerProblem(client kubectl.Client, pod *v1.Pod, containerStatus *v1
 	}
 
 	// Check if restarted
-	if containerStatus.RestartCount > 0 {
+	if containerStatus.RestartCount > 0 && ignoreContainerRestarts == false {
 		if containerStatus.LastTerminationState.Terminated != nil && (time.Since(containerStatus.LastTerminationState.Terminated.FinishedAt.Time) < IgnoreRestartsSince) {
 			hasProblem = true
 

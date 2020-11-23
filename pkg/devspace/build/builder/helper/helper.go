@@ -26,7 +26,7 @@ type BuildHelper struct {
 
 	EngineName string
 	ImageName  string
-	ImageTag   string
+	ImageTags  []string
 	Entrypoint []string
 	Cmd        []string
 
@@ -40,7 +40,7 @@ type BuildHelperInterface interface {
 }
 
 // NewBuildHelper creates a new build helper for a certain engine
-func NewBuildHelper(config *latest.Config, kubeClient kubectl.Client, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTag string, isDev bool) *BuildHelper {
+func NewBuildHelper(config *latest.Config, kubeClient kubectl.Client, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, isDev bool) *BuildHelper {
 	var (
 		dockerfilePath, contextPath = GetDockerfileAndContext(imageConf)
 		imageName                   = imageConf.Image
@@ -78,7 +78,7 @@ func NewBuildHelper(config *latest.Config, kubeClient kubectl.Client, engineName
 		ContextPath:    contextPath,
 
 		ImageName:  imageName,
-		ImageTag:   imageTag,
+		ImageTags:  imageTags,
 		EngineName: engineName,
 
 		Entrypoint: entrypoint,
@@ -103,7 +103,7 @@ func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, log log.Logger) e
 		return errors.Errorf("Couldn't determine absolute path for %s", b.ContextPath)
 	}
 
-	log.Infof("Building image '%s:%s' with engine '%s'", b.ImageName, b.ImageTag, b.EngineName)
+	log.Infof("Building image '%s:%s' with engine '%s'", b.ImageName, b.ImageTags[0], b.EngineName)
 
 	// Build Image
 	err = imageBuilder.BuildImage(absoluteContextPath, absoluteDockerfilePath, b.Entrypoint, b.Cmd, log)

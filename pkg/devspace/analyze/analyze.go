@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -38,6 +39,8 @@ type Options struct {
 	Wait    bool
 	Timeout int
 	Patient bool
+
+	IgnorePodRestarts bool
 }
 
 type analyzer struct {
@@ -72,20 +75,19 @@ func (a *analyzer) CreateReport(namespace string, options Options) ([]*ReportIte
 	defer a.log.StopWait()
 
 	report := []*ReportItem{}
-	now := time.Now()
 	timeout := WaitTimeout
 	if options.Timeout > 0 {
 		timeout = time.Duration(options.Timeout) * time.Second
 	}
 
 	// Loop as long as we have a timeout
-	for time.Since(now) < timeout {
+	err := wait.PollImmediate(time.Second, timeout, func() (bool, error) {
 		report = []*ReportItem{}
 
 		// Analyze pods
 		problems, err := a.pods(namespace, options)
 		if err != nil {
-			return nil, errors.Errorf("Error during analyzing pods: %v", err)
+			return false, errors.Errorf("Error during analyzing pods: %v", err)
 		}
 		if len(problems) > 0 {
 			report = append(report, &ReportItem{
@@ -101,7 +103,7 @@ func (a *analyzer) CreateReport(namespace string, options Options) ([]*ReportIte
 		if checkEvents == false {
 			replicaSetProblems, err := a.replicaSets(namespace)
 			if err != nil {
-				return nil, errors.Errorf("Error during analyzing replica sets: %v", err)
+				return false, errors.Errorf("Error during analyzing replica sets: %v", err)
 			}
 			if len(replicaSetProblems) > 0 {
 				checkEvents = true
@@ -112,7 +114,7 @@ func (a *analyzer) CreateReport(namespace string, options Options) ([]*ReportIte
 		if checkEvents == false {
 			statefulSetProblems, err := a.statefulSets(namespace)
 			if err != nil {
-				return nil, errors.Errorf("Error during analyzing stateful sets: %v", err)
+				return false, errors.Errorf("Error during analyzing stateful sets: %v", err)
 			}
 			if len(statefulSetProblems) > 0 {
 				checkEvents = true
@@ -123,7 +125,7 @@ func (a *analyzer) CreateReport(namespace string, options Options) ([]*ReportIte
 			// Analyze events
 			problems, err = a.events(namespace)
 			if err != nil {
-				return nil, errors.Errorf("Error during analyzing events: %v", err)
+				return false, errors.Errorf("Error during analyzing events: %v", err)
 			}
 			if len(problems) > 0 {
 				// Prepend to report
@@ -134,11 +136,10 @@ func (a *analyzer) CreateReport(namespace string, options Options) ([]*ReportIte
 			}
 		}
 
-		if len(report) == 0 || options.Wait == false || options.Patient == false {
-			break
-		}
-
-		time.Sleep(time.Second)
+		return len(report) == 0 || options.Wait == false || options.Patient == false, nil
+	})
+	if err != nil && len(report) == 0 {
+		return nil, err
 	}
 
 	return report, nil
