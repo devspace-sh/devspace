@@ -8,6 +8,21 @@ import (
 	"strings"
 )
 
+// GetBranch retrieves the current HEADs name
+func GetBranch(localPath string) (string, error) {
+	repo, err := git.PlainOpen(localPath)
+	if err != nil {
+		return "", errors.Wrap(err, "git open")
+	}
+
+	head, err := repo.Head()
+	if err != nil {
+		return "", errors.Wrap(err, "get head")
+	}
+
+	return head.Name().Short(), nil
+}
+
 // GetHash retrieves the current HEADs hash
 func GetHash(localPath string) (string, error) {
 	repo, err := git.PlainOpen(localPath)
