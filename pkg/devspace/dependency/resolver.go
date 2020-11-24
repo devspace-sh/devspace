@@ -2,6 +2,9 @@ package dependency
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -15,8 +18,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"os"
-	"path/filepath"
 
 	"github.com/pkg/errors"
 )

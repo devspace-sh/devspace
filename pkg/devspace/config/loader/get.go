@@ -243,6 +243,20 @@ func (l *configLoader) loadInternal(allowProfile bool) (*latest.Config, error) {
 
 // SetDevSpaceRoot checks the current directory and all parent directories for a .devspace folder with a config and sets the current working directory accordingly
 func (l *configLoader) SetDevSpaceRoot() (bool, error) {
+	configExists, err := l.walkToParentWithConfigYaml()
+	if !configExists || err != nil {
+		return configExists, err
+	}
+
+	err = os.Chdir(filepath.Dir(l.ConfigPath()))
+	if err != nil {
+		return false, err
+	}
+	l.options.ConfigPath = filepath.Base(l.ConfigPath())
+	return true, nil
+}
+
+func (l *configLoader) walkToParentWithConfigYaml() (bool, error) {
 	if l.options.ConfigPath != "" {
 		return configExistsInPath(l.options.ConfigPath), nil
 	}
