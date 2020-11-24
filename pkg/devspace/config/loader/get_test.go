@@ -332,10 +332,9 @@ func TestSetDevSpaceRoot(t *testing.T) {
 			files: map[string]interface{}{
 				"devspace.yaml": "",
 			},
-			startDir:           "subDir",
-			expectedExists:     true,
-			expectedWorkDir:    dir,
-			expectedConfigPath: "devspace.yaml",
+			startDir:        "subDir",
+			expectedExists:  true,
+			expectedWorkDir: dir,
 		},
 		setDevSpaceRootTestCase{
 			name:       "Custom config in subdir exists",
