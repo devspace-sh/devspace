@@ -141,7 +141,10 @@ func getMinikubeEnvironment() (map[string]string, error) {
 	out, err := cmd.Output()
 
 	if err != nil {
-		return nil, err
+		if ee, ok := err.(*exec.ExitError); ok {
+			out = ee.Stderr
+		}
+		return nil, errors.Errorf("error executing 'minikube docker-env --shell none'\nerror: %v\noutput: %s", err, string(out))
 	}
 
 	env := map[string]string{}
