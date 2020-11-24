@@ -17,6 +17,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var notAMinikubeClusterErr = errors.New("Cluster is not a minikube cluster")
+
 // Client contains all functions required to interact with docker
 type Client interface {
 	Ping(ctx context.Context) (dockertypes.Ping, error)
@@ -51,6 +53,9 @@ func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log l
 
 	if preferMinikube {
 		cli, err = newDockerClientFromMinikube(currentKubeContext)
+		if err != nil && err != notAMinikubeClusterErr {
+			log.Warnf("Error creating minikube docker client: %v", err)
+		}
 	}
 	if preferMinikube == false || err != nil {
 		cli, err = newDockerClientFromEnvironment()
@@ -89,12 +94,12 @@ func newDockerClientFromEnvironment() (Client, error) {
 
 func newDockerClientFromMinikube(currentKubeContext string) (Client, error) {
 	if currentKubeContext != "minikube" {
-		return nil, errors.New("Cluster is not a minikube cluster")
+		return nil, notAMinikubeClusterErr
 	}
 
 	env, err := getMinikubeEnvironment()
 	if err != nil {
-		return nil, err
+		return nil, errors.Errorf("can't retrieve minikube docker environment due to error: %v", err)
 	}
 
 	var httpclient *http.Client
