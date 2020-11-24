@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var notAMinikubeClusterErr = errors.New("Cluster is not a minikube cluster")
+var errNotMinikube = errors.New("not a minikube context")
 
 // Client contains all functions required to interact with docker
 type Client interface {
@@ -53,7 +53,7 @@ func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log l
 
 	if preferMinikube {
 		cli, err = newDockerClientFromMinikube(currentKubeContext)
-		if err != nil && err != notAMinikubeClusterErr {
+		if err != nil && err != errNotMinikube {
 			log.Warnf("Error creating minikube docker client: %v", err)
 		}
 	}
@@ -94,7 +94,7 @@ func newDockerClientFromEnvironment() (Client, error) {
 
 func newDockerClientFromMinikube(currentKubeContext string) (Client, error) {
 	if currentKubeContext != "minikube" {
-		return nil, notAMinikubeClusterErr
+		return nil, errNotMinikube
 	}
 
 	env, err := getMinikubeEnvironment()
