@@ -3,6 +3,7 @@ package loader
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -277,9 +278,10 @@ type setDevSpaceRootTestCase struct {
 	startDir   string
 	files      map[string]interface{}
 
-	expectedExists  bool
-	expectedWorkDir string
-	expectedErr     string
+	expectedExists     bool
+	expectedWorkDir    string
+	expectedConfigPath string
+	expectedErr        string
 }
 
 func TestSetDevSpaceRoot(t *testing.T) {
@@ -316,8 +318,9 @@ func TestSetDevSpaceRoot(t *testing.T) {
 			files: map[string]interface{}{
 				"devspace.yaml": "",
 			},
-			expectedExists:  false,
-			expectedWorkDir: dir,
+			expectedExists:     false,
+			expectedWorkDir:    dir,
+			expectedConfigPath: "custom.yaml",
 		},
 		setDevSpaceRootTestCase{
 			name:            "No devspace.yaml",
@@ -332,6 +335,16 @@ func TestSetDevSpaceRoot(t *testing.T) {
 			startDir:        "subDir",
 			expectedExists:  true,
 			expectedWorkDir: dir,
+		},
+		setDevSpaceRootTestCase{
+			name:       "Custom config in subdir exists",
+			configPath: "subdir/custom.yaml",
+			files: map[string]interface{}{
+				"subdir/custom.yaml": "",
+			},
+			expectedExists:     true,
+			expectedWorkDir:    filepath.Join(dir, "subdir"),
+			expectedConfigPath: "custom.yaml",
 		},
 	}
 
@@ -379,4 +392,6 @@ func testSetDevSpaceRoot(testCase setDevSpaceRootTestCase, t *testing.T) {
 	wd, err := os.Getwd()
 	assert.NilError(t, err, "Error getting wd in testCase %s", testCase.name)
 	assert.Equal(t, wd, testCase.expectedWorkDir, "Unexpected work dir in testCase %s", testCase.name)
+
+	assert.Equal(t, loader.options.ConfigPath, testCase.expectedConfigPath, "Unexpected configPath in testCase %s", testCase.name)
 }
