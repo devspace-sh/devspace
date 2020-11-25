@@ -8,6 +8,7 @@ The `images` section in `devspace.yaml` is a map with keys representing the name
 images:                             # map[string]struct | Images to be built and pushed
   image1:                           # string   | Name of the image
     image: gcr.io/username/image    # string   | Image repository and name 
+    tagsAppendRandom: true          # bool     | If true appends a random suffix to each defined image tag
     tags:                           # string[] | Image tags (may be a tagging schema with variables)
     - latest
     - 0.0.1
@@ -35,7 +36,7 @@ images:
 
 ## `tags` *Tagging Schema*
 The `tags` option expects an array of strings, each containing a static tag or a tagging schema used to automatically tag images before pushing them to the registry. The tagging schema can contain [dynamic config variables](../../configuration/variables/basics.mdx). While you can define your own config variables, DevSpace provides a set of pre-defined variables. The most commonly used variables for tagging are:
-- **DEVSPACE_RANDOM**: A random 6 character long string
+- **DEVSPACE_RANDOM**: A random 6 character long string (prefer `tagsAppendRandom`)
 - **DEVSPACE_TIMESTAMP** A unix timestamp when the config was loaded
 - **DEVSPACE_GIT_COMMIT**: A short hash of the local repo's current git commit
 - **DEVSPACE_NAMESPACE**: The default namespace of your current kube-context
@@ -57,7 +58,7 @@ images:
     image: john/appbackend
     tags: 
     - latest
-    - dev-backend-${DEVSPACE_GIT_COMMIT}-${DEVSPACE_RANDOM}
+    - dev-backend-${DEVSPACE_GIT_COMMIT}
 ```
 **Explanation:**  
 The above example would always use the tag `latest` and additionaly generate random tags which could look like this one: `dev-backend-b6caf8a-Jak9i`. This example tag consists of the following substrings defined by the tagging schema:
@@ -66,3 +67,35 @@ The above example would always use the tag `latest` and additionaly generate ran
 - `b6caf8a` latest git commit hash on current local branch
 - `-` static string
 - `Jak9i` auto-generated random string
+
+## `tagsAppendRandom`
+
+This is an additional option that will append a random suffix to each tag during build. The benefit of choosing `tagsAppendRandom` over `${DEVSPACE_RANDOM}` is that `tagsAppendRandom` reduces the amount of image rebuilds.
+Thats because devspace hashes the image config and build context to determine if it should rebuild an image during `devspace dev/build/deploy`. If you use `${DEVSPACE_RANDOM}` in a tag, the variable will be resolved to a random string each time devspace loads the config, which
+ means that the image config is each time different and devspace has to rebuild the image on every `devspace dev/build/deploy`. Using `tagsAppendRandom` prevents this issue, since the image config itself stays the same and only a change in the build context or image config itself will trigger a rebuild.
+ 
+### Example: Tagging Images with Random Suffixes
+```yaml
+images:
+  backend-1:
+    image: john/appbackend
+    # This configuration will tag images in the form of:
+    # john/appbackend:dev-backend-0adwe341-asja1
+    # Since the config stays the same as long as the git commit
+    # stays the same, a rebuild will only occur if a change in the 
+    # build context occurred or the git commit hash changed.
+    tagsAppendRandom: true
+    tags: 
+    - dev-backend-${DEVSPACE_GIT_COMMIT}
+  backend-2:
+    image: john/appbackend
+    # This configuration will tag images in the form of:
+    # john/appbackend:dev-backend-0adwe341-asja1
+    # The image config will look different for every devspace run
+    # because of the random string that will be used for DEVSPACE_RANDOM
+    # which means that devspace will constantly rebuild the image
+    tags: 
+    - dev-backend-${DEVSPACE_GIT_COMMIT}-${DEVSPACE_RANDOM}
+```
+
+
