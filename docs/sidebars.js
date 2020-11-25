@@ -91,6 +91,7 @@ module.exports = {
             'configuration/variables/basics',
             'configuration/variables/source-env',
             'configuration/variables/source-input',
+            'configuration/variables/source-command',
             'configuration/variables/source-none',
           ],
         },

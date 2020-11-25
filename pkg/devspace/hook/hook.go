@@ -106,7 +106,7 @@ func (e *executer) Execute(when When, stage Stage, which string, log logpkg.Logg
 			}
 
 			log.Infof("Execute hook: %s", ansi.Color(fmt.Sprintf("%s '%s'", hook.Command, strings.Join(hook.Args, "' '")), "white+b"))
-			err := command.ExecuteCommand(hook.Command, hook.Args, writer)
+			err := command.ExecuteCommand(hook.Command, hook.Args, writer, writer)
 			if err != nil {
 				return err
 			}

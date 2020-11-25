@@ -109,8 +109,8 @@ func ShouldExecuteOnOS(os string) bool {
 	return true
 }
 
-func ExecuteCommand(cmd string, args []string, writer io.Writer) error {
-	err := NewStreamCommand(cmd, args).Run(writer, writer, nil)
+func ExecuteCommand(cmd string, args []string, stdout io.Writer, stderr io.Writer) error {
+	err := NewStreamCommand(cmd, args).Run(stdout, stderr, nil)
 	if err != nil {
 		if errr, ok := err.(*exec.ExitError); ok {
 			return errors.Errorf("error executing command '%s %s': code: %d, error: %s, %s", cmd, strings.Join(args, " "), errr.ExitCode(), string(errr.Stderr), errr)
