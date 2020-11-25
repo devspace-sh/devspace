@@ -1,8 +1,11 @@
 package command
 
 import (
+	"github.com/pkg/errors"
 	"io"
 	"os/exec"
+	"runtime"
+	"strings"
 
 	goansi "github.com/k0kubun/go-ansi"
 )
@@ -84,4 +87,37 @@ func (s *StreamCommand) Run(stdout io.Writer, stderr io.Writer, stdin io.Reader)
 	}
 
 	return s.cmd.Run()
+}
+
+func ShouldExecuteOnOS(os string) bool {
+	// if the operating system is set and the current is not specified
+	// we skip the hook
+	if os != "" {
+		found := false
+		oss := strings.Split(os, ",")
+		for _, os := range oss {
+			if strings.TrimSpace(os) == runtime.GOOS {
+				found = true
+				break
+			}
+		}
+		if found == false {
+			return false
+		}
+	}
+
+	return true
+}
+
+func ExecuteCommand(cmd string, args []string, stdout io.Writer, stderr io.Writer) error {
+	err := NewStreamCommand(cmd, args).Run(stdout, stderr, nil)
+	if err != nil {
+		if errr, ok := err.(*exec.ExitError); ok {
+			return errors.Errorf("error executing command '%s %s': code: %d, error: %s, %s", cmd, strings.Join(args, " "), errr.ExitCode(), string(errr.Stderr), errr)
+		}
+
+		return errors.Errorf("error executing command: %v", err)
+	}
+
+	return nil
 }

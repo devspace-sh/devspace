@@ -1,7 +1,9 @@
 package loader
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/util/command"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -348,6 +350,10 @@ func (l *configLoader) fillVariable(varName string, definition *latest.Variable)
 
 		return value, nil
 	case latest.VariableSourceDefault, latest.VariableSourceInput, latest.VariableSourceAll:
+		if definition.Command != "" || len(definition.Commands) > 0 {
+			return variableFromCommand(varName, definition)
+		}
+
 		// Check environment
 		value := os.Getenv(varName)
 
@@ -375,9 +381,45 @@ func (l *configLoader) fillVariable(varName string, definition *latest.Variable)
 		}
 
 		return definition.Default, nil
+	case latest.VariableSourceCommand:
+		if definition.Command == "" && len(definition.Commands) == 0 {
+			return nil, errors.Errorf("couldn't set variable '%s', because source is '%s' but no command is specified", varName, latest.VariableSourceCommand)
+		}
+
+		return variableFromCommand(varName, definition)
 	default:
 		return nil, errors.Errorf("unrecognized variable source '%s', please choose one of 'all', 'input', 'env' or 'none'", varName)
 	}
+}
+
+func variableFromCommand(varName string, definition *latest.Variable) (interface{}, error) {
+	writer := &bytes.Buffer{}
+	for _, c := range definition.Commands {
+		if command.ShouldExecuteOnOS(c.OperatingSystem) == false {
+			continue
+		}
+
+		err := command.ExecuteCommand(c.Command, c.Args, writer, nil)
+		if err != nil {
+			return "", errors.Wrapf(err, "fill variable %s", varName)
+		} else if writer.String() == "" {
+			return definition.Default, nil
+		}
+
+		return strings.TrimSpace(writer.String()), nil
+	}
+	if definition.Command == "" {
+		return nil, errors.Errorf("couldn't set variable '%s', because source is '%s' but no command for this operating system is specified", varName, latest.VariableSourceCommand)
+	}
+
+	err := command.ExecuteCommand(definition.Command, definition.Args, writer, nil)
+	if err != nil {
+		return "", errors.Wrapf(err, "fill variable %s", varName)
+	} else if writer.String() == "" {
+		return definition.Default, nil
+	}
+
+	return strings.TrimSpace(writer.String()), nil
 }
 
 func valueByType(value string, defaultValue interface{}) (interface{}, error) {

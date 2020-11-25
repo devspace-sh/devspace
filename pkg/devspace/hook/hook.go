@@ -2,16 +2,13 @@ package hook
 
 import (
 	"fmt"
+	"github.com/mgutz/ansi"
 	"io"
-	"runtime"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/command"
 	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
-	"github.com/pkg/errors"
-
 	dockerterm "github.com/docker/docker/pkg/term"
 )
 
@@ -96,31 +93,9 @@ func (e *executer) Execute(when When, stage Stage, which string, log logpkg.Logg
 
 		// Execute hooks
 		for _, hook := range hooksToExecute {
-			// if the operating system is set and the current is not specified
-			// we skip the hook
-			if hook.OperatingSystem != "" {
-				found := false
-				oss := strings.Split(hook.OperatingSystem, ",")
-				for _, os := range oss {
-					if strings.TrimSpace(os) == runtime.GOOS {
-						found = true
-						break
-					}
-				}
-				if found == false {
-					continue
-				}
+			if command.ShouldExecuteOnOS(hook.OperatingSystem) == false {
+				continue
 			}
-
-			// Build arguments
-			args := []string{}
-			if hook.Args != nil {
-				for _, arg := range hook.Args {
-					args = append(args, arg)
-				}
-			}
-
-			cmd := command.NewStreamCommand(hook.Command, args)
 
 			// Determine output writer
 			var writer io.Writer
@@ -130,10 +105,10 @@ func (e *executer) Execute(when When, stage Stage, which string, log logpkg.Logg
 				writer = log
 			}
 
-			log.Infof("Execute hook: %s", ansi.Color(fmt.Sprintf("%s '%s'", hook.Command, strings.Join(args, "' '")), "white+b"))
-			err := cmd.Run(writer, writer, nil)
+			log.Infof("Execute hook: %s", ansi.Color(fmt.Sprintf("%s '%s'", hook.Command, strings.Join(hook.Args, "' '")), "white+b"))
+			err := command.ExecuteCommand(hook.Command, hook.Args, writer, writer)
 			if err != nil {
-				return errors.Errorf("Error executing hook: %v", err)
+				return err
 			}
 		}
 	}
