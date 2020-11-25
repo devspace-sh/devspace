@@ -728,6 +728,16 @@ type Variable struct {
 	ValidationMessage string         `yaml:"validationMessage,omitempty" json:"validationMessage,omitempty"`
 	Default           interface{}    `yaml:"default,omitempty" json:"default,omitempty"`
 	Source            VariableSource `yaml:"source,omitempty" json:"source,omitempty"`
+
+	Command  string            `yaml:"command,omitempty" json:"command,omitempty"`
+	Args     []string          `yaml:"args,omitempty" json:"args,omitempty"`
+	Commands []VariableCommand `yaml:"commands,omitempty" json:"commands,omitempty"`
+}
+
+type VariableCommand struct {
+	Command         string   `yaml:"command,omitempty" json:"command,omitempty"`
+	Args            []string `yaml:"args,omitempty" json:"args,omitempty"`
+	OperatingSystem string   `yaml:"os,omitempty" json:"os,omitempty"`
 }
 
 // VariableSource is type of a variable source
@@ -739,6 +749,7 @@ const (
 	VariableSourceAll     VariableSource = "all"
 	VariableSourceEnv     VariableSource = "env"
 	VariableSourceInput   VariableSource = "input"
+	VariableSourceCommand VariableSource = "command"
 	VariableSourceNone    VariableSource = "none"
 )
 

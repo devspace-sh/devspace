@@ -1,7 +1,9 @@
 package loader
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/util/command"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -375,6 +377,31 @@ func (l *configLoader) fillVariable(varName string, definition *latest.Variable)
 		}
 
 		return definition.Default, nil
+	case latest.VariableSourceCommand:
+		if definition.Command == "" && len(definition.Commands) == 0 {
+			return nil, errors.Errorf("couldn't set variable '%s', because source is '%s' but no command is specified", varName, latest.VariableSourceCommand)
+		}
+
+		writer := &bytes.Buffer{}
+		for _, c := range definition.Commands {
+			if command.ShouldExecuteOnOS(c.OperatingSystem) == false {
+				continue
+			}
+
+			err = command.ExecuteCommand(c.Command, c.Args, writer)
+			if err != nil {
+				return nil, errors.Wrapf(err, "fill variable %s", varName)
+			}
+
+			return writer.String(), nil
+		}
+
+		err = command.ExecuteCommand(definition.Command, definition.Args, writer)
+		if err != nil {
+			return nil, errors.Wrapf(err, "fill variable %s", varName)
+		}
+
+		return writer.String(), nil
 	default:
 		return nil, errors.Errorf("unrecognized variable source '%s', please choose one of 'all', 'input', 'env' or 'none'", varName)
 	}
