@@ -1,0 +1,7 @@
+DevSpace iterates over every item in the `deployments` array defined in the `devspace.yaml` and deploys each of the deployments using the respective deployment tool:
+- `kubectl` deployments will be deployed with `kubectl` (optionally using `kustomize` if `kustomize: true`)
+- `helm` deployments will be deployed with the `helm` client that comes in-built with DevSpace
+
+:::info kubectl Required
+Deployments with `kubectl` require `kubectl` to be installed.
+:::

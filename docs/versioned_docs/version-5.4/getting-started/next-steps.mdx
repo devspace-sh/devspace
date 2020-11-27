@@ -1,0 +1,38 @@
+---
+title: Next Steps
+sidebar_label: 5. Next Steps
+---
+
+## Loft Plugin For Teams
+If you plan to use DevSpace with your team, make sure to check out [www.loft.sh](https://loft.sh) and the loft plugin for DevSpace which you can install using this command:
+```bash
+devspace add plugin https://github.com/loft-sh/loft-devspace-plugin
+```
+
+Loft allows you to efficiently share Kubernetes clusters with a large number of engineers rather than letting everyone set up their own cluster and having to struggle to manage and administrate it on their own.
+
+Installing the loft plugin will add commands like these to DevSpace:
+```bash
+devspace login                        # to login to loft via DevSpace CLI
+devspace create space my-namespace    # for creating namespace on-demand via loft
+devspace create vcluster my-vcluster  # for creating virtual Kubernetes clusters via loft
+```
+
+## Tutorials
+- **Ruby:** [Deploy Ruby on Rails to Kubernetes using DevSpace](https://devspace.cloud/blog/2019/10/21/deploy-ruby-on-rails-to-kubernetes)
+- **Python:** [Deploy Django Projects to Kubernetes using DevSpace](https://devspace.cloud/blog/2019/10/18/deploy-django-to-kubernetes)
+- **PHP:** [Deploy Laravel Projects to Kubernetes using DevSpace](https://devspace.cloud/blog/2019/10/16/deploy-laravel-to-kubernetes)
+- **Node.js:**
+  - [Deploy an Express.js Server to Kubernetes using DevSpace](https://devspace.cloud/blog/2019/10/15/deploy-express.js-server-to-kubernetes)
+  - [Deploy Vue.js Apps to Kubernetes using DevSpace](https://devspace.cloud/blog/2019/09/30/deploy-vue-js-to-kubernetes)
+  - [Deploy React.js Apps to Kubernetes using DevSpace](https://devspace.cloud/blog/2019/03/07/deploy-react-js-to-kubernetes)
+
+## Guides
+- [Onboarding Guide](../guides/basics.mdx) to share with the rest of your team
+- [Network & Domains Guide](../guides/networking-domains.mdx)
+- [CI/CD Integration Guide](../guides/ci-cd-integration.mdx)
+
+## Best Practices
+- [Image Building](../guides/image-building.mdx)
+- [Dev vs Staging vs Production](../guides/dev-staging-production.mdx)
+- [Remote Debugging](../guides/remote-debugging.mdx)
