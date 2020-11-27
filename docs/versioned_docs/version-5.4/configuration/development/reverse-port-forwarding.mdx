@@ -1,0 +1,189 @@
+---
+title: Configure Reverse Port-Forwarding
+sidebar_label: ports[].reverseForward
+---
+
+Reverse port-forwarding allows you to forward traffic from within your containers to your local machine. This can be useful when:
+- using certain remote debuggers that connect to your IDE instead of the other way around
+- developing a service on localhost which should be accessed from other services that run within the cluster, i.e. using the [Telepresence development model](https://www.telepresence.io/discussion/why-telepresence) but with DevSpace to get better performance and cross-platform support
+
+With reverse port-forwarding, you can access `localhost:[PORT]` inside the container and it will redirect to a program that runs on your local dev machine.
+
+When starting the development mode, DevSpace starts reverse port-forwarding as configured in the `dev.ports` section of the `devspace.yaml`.
+```yaml {20-23}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
+dev:
+  ports:
+  - imageName: backend
+    forward:
+    - port: 8080
+      remotePort: 80
+    reverseForward:
+    - port: 5678
+      remotePort: 5678
+    - port: 3303
+```
+
+:::warning Unique Remote Port
+The `remotePort` option must be unique across your entire `ports` section for all selectors that match the same pods, e.g. you can only use the value `8080` once for the `remotePort` option in your `ports` section unless multiple port mappings target different pods.
+:::
+
+Every reverse port-forwarding configuration consists of two parts:
+- [Pod/Container Selection](#pod-selection)
+- [Port Mapping via `port` (and optionally via `remotePort` and `bindAddress`)](#port-mapping-forward)
+
+
+## Pod Selection
+The following config options are needed to determine the pod from which the traffic should be forwarded to localhost:
+- [`imageName`](#imagename)
+- [`labelSelector`](#labelselector)
+- [`containerName`](#containername)
+- [`namespace`](#namespace)
+
+:::info Combine Options
+If you specify multiple of these config options, they will be jointly used to select the pod / container (think logical `AND / &&`).
+:::
+
+:::info Auto Reconnect
+If DevSpace is unable to establish a reverse port-forwarding connection to the selected pod or loses it after starting the reverse port-forwarding, DevSpace will try to restart reverse port-forwarding several times.
+:::
+
+### `imageName`
+The `imageName` option expects a string with the name of an image from the `images` section of the `devspace.yaml`. Using `imageName` tells DevSpace to select the container/pod based on the referenced image that was last built using DevSpace.
+
+:::warning
+Using `imageName` is not possible if multiple deployments use the same image that belongs to this `imageName` referencing the `images` section of the `devspace.yaml`.
+:::
+
+#### Example: Select Pod by Image Name
+```yaml {2,4,18,22}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: container-0
+        image: john/devbackend
+      - name: container-1
+        image: john/debugger
+dev:
+  ports:
+  - imageName: backend
+    reverseForward:
+    - port: 8080
+      remotePort: 80
+  - imageName: backend-debugger
+    reverseForward:
+    - port: 3000
+```
+**Explanation:**
+- The above example defines two images that can be used as `imageName`: `backend` and `backend-debugger`
+- The deployment starts two containers and each of them uses an image from the `images` section.
+- The `imageName` option of the first reverse port-forwarding configuration in the `dev.ports` section references `backend`. That means DevSpace would select the first container for reverse port-forwarding, as this container uses the `image: john/devbackend` which belongs to the `backend` image as defined in the `images` section.
+- The `imageName` option of the second reverse port-forwarding configuration in the `dev.ports` section references `backend-debugger`. That means DevSpace would select the second container for reverse port-forwarding, as this container uses the `image: john/debugger` which belongs to the `backend-debugger` image as defined in the `images` section.
+
+In consequence, the following reverse port-forwarding processes would be started when using the above config example:
+- `localhost:80` inside the container will forward to `localhost:8080` on your local machine
+- `localhost:3000` inside the container will forward to `localhost:3000` on your local machine
+
+
+### `labelSelector`
+The `labelSelector` option expects a key-value map of strings with Kubernetes labels.
+
+#### Example: Select Pod by Label
+```yaml {18-21}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: container-0
+        image: john/devbackend
+      - name: container-1
+        image: john/debugger
+dev:
+  ports:
+  - labelSelector:
+      app.kubernetes.io/name: devspace-app
+      app.kubernetes.io/component: app-backend
+      custom-label: custom-label-value
+    reverseForward:
+    - port: 8080
+      remotePort: 80
+```
+**Explanation:**
+- The `labelSelector` would select the pod created for the component deployment `app-backend`.
+- Because containers in the same pod share the same network stack, we do not need to specify which container should be selected.
+
+
+### `containerName`
+The `containerName` option expects a string with the name of the container to use within the pod selected by `labelSelector`. This option is not required if `imageName` is used or there is only one container inside the selected pod.
+
+
+### `namespace`
+The `namespace` option expects a string with a Kubernetes namespace used to select the pod from.
+
+:::warning
+It is generally **not** needed (nor recommended) to specify the `namespace` option because, by default, DevSpace uses the default namespace of your current kube-context which is usually the one that has been used to deploy your containers to.
+:::
+
+## Port Mapping `reverseForward`
+The `reverseForward` section defines which `remotePort` inside the selected container should be forwarded to the `port` on your local machine.
+
+:::note
+By default, `remotePort` will take the same value as `port` if `remotePort` is not explicitly defined.
+:::
+
+### `port`
+The `port` option is mandatory and expects an integer from the range of user ports [1024 - 49151].
+
+:::warning
+Using a `port` < 1024 is likely to cause problems as these ports are reserved as system ports.
+:::
+
+#### Example
+**See "[Example: Select Pod by Image Name](#example-select-pod-by-image-name)"**
+
+
+### `remotePort`
+The `remotePort` option expects an integer from the range of valid ports [0 - 65535].
+
+:::info
+By default, `remotePort` has the same value as `port` if `remotePort` is not explictly defined.
+:::
+
+#### Example
+**See "[Example: Select Pod by Image Name](#example-select-pod-by-image-name)"**
+
+
+### `bindAddress`
+The `bindAddress` option expects a valid IP address that the local port should be bound to.
+
+#### Default Value For `bindAddress`
+```yaml
+bindAddress: "0.0.0.0" # listen on all network interfaces
+```

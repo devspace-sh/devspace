@@ -1,0 +1,136 @@
+---
+title: Deploy Git-based Dependencies
+sidebar_label: "source.git"
+---
+
+import FragmentDependencyProfile from '../../fragments/dependency-profile.mdx';
+import FragmentDependencySkipBuild from '../../fragments/dependency-skipBuild.mdx';
+import FragmentDependencyIgnoreDependencies from '../../fragments/dependency-ignoreDependencies.mdx';
+import FragmentDependencyNamespace from '../../fragments/dependency-namespace.mdx';
+import FragmentDependencyName from '../../fragments/dependency-name.mdx';
+
+
+## Example
+```yaml
+dependencies:
+- source:
+    git: https://github.com/my-api-server
+    branch: stable
+- source:
+    git: https://github.com/my-auth-server
+    revision: c967392
+  profile: production
+- source:
+    git: https://github.com/my-database-server
+    tag: v3.0.1
+    subPath: /configuration
+```
+
+:::info Authentication
+DevSpace is using the git credential store. So, if you are able to clone or pull from the specified repository, DevSpace will also be able clone or pull this repository.
+:::
+
+## `source`
+
+### `source.git`
+The `source.git` option expects a string with the URL of a git repository. DevSpace will use the `master` branch by default and assumes that the `devspace.yaml` is located at the root directory of the git repository. To customize this behavior, use the following, complementary config options:
+- [`branch` for a different git branch](#sourcebranch)
+- [`tag` for a specific git tag or release](#sourcetag)
+- [`revision` for a specific git commit hash](#sourcerevision)
+- [`subPath` for custom location of `devspace.yaml` within the repository](#sourcesubpath)
+
+:::note Caching
+DevSpace will clone the git repository which is defined as a dependency and cache the project in the global cache folder (i.e. `$HOME/.devspace`). DevSpace will also pull new commits before deploying the dependency.
+:::
+
+#### Example: Git Projects as Dependency
+```yaml
+dependencies:
+- source:
+    git: https://github.com/my-api-server
+    branch: stable
+- source:
+    git: https://github.com/my-auth-server
+    revision: c967392
+- source:
+    git: https://github.com/my-auth-server
+    tag: v3.0.1
+```
+**Explanation:**  
+- When you run `devspace deploy` or `devspace dev` for the first time after defining the dependencies, DevSpace will check out all git projects into the global cache folder `$HOME/.devspace`.
+- Whenever you run `devspace deploy` or `devspace dev` (even the first time), DevSpace will:
+  - Run a `git pull` for all cached repositories.
+  - Load the `devspace.yaml` files of the dependency projects and resolve their dependencies respectively.
+  - Deploy all dependency projects according to their `devspace.yaml` files.
+
+### `source.branch`
+The `source.branch` option expects a string stating the branch of the git repository referenced via `source.git` that should be used when deploying this dependency.
+
+#### Default Value For `source.branch`
+```yaml
+branch: master
+```
+
+### `source.tag`
+The `source.tag` option expects a string stating a tag of the git repository referenced via `source.git` that should be used when deploying this dependency.
+
+### `source.revision`
+The `source.revision` option expects a string stating a commit hash of the git repository referenced via `source.git` that should be used when deploying this dependency.
+
+### `source.subPath`
+The `source.subPath` option expects a string stating a folder within the git repository referenced via `source.git` that contains the `devspace.yaml` for this dependency.
+
+#### Default Value For `source.subPath`
+```yaml
+subPath: /
+```
+
+
+## Git Options
+
+### `source.disableShallow`
+The `source.disableShallow` option expects a boolean that prevents DevSpace from using shallow clones (git flag `--depth 1`) when retrieving a dependency via git clone.
+
+:::info Shallow Clone By Default
+DevSpace uses shallow clones of git dependencies which reduces the time to retrieve the dependency.
+:::
+
+#### Default Value For `source.disableShallow`
+```yaml
+disableShallow: false
+```
+
+### `source.cloneArgs`
+The `source.cloneArgs` option expects an array of additional arguments that DevSpace will pass when cloning a git dependency using the `git clone` command.
+
+#### Default Value For `source.cloneArgs`
+```yaml
+cloneArgs: []
+```
+
+
+## General Options
+
+### `profile`
+
+<FragmentDependencyProfile/>
+
+
+### `skipBuild`
+
+<FragmentDependencySkipBuild/>
+
+
+### `ignoreDependencies`
+
+<FragmentDependencyIgnoreDependencies/>
+
+
+### `name`
+
+<FragmentDependencyName/>
+
+
+### `namespace`
+
+<FragmentDependencyNamespace/>
