@@ -15,7 +15,7 @@ import WarningBuildToolPriority from '../fragments/warning-build-tool-priority.m
 
 ## `version`
 ```yaml
-version: v1beta8                   # string   | Version of the config
+version: v1beta9                   # string   | Version of the config
 ```
 
 ## `images`
@@ -48,6 +48,8 @@ docker:                             # struct   | Options for building images wit
   skipPush: false                   # bool     | Skip pushing image to registry, enabled automatically for minikube and docker-desktop (Default: false)
   disableFallback: false            # bool     | Disable using kaniko as fallback when Docker is not installed (Default: false)
   useBuildKit: true                 # bool     | Enable BuildKit for Docker build process (default: false)
+  args:                             # []string | Additional arguments that should be used for executing the docker cli
+  - --any-flag    
   options: ...                      # struct   | Set general build options
 ```
 
@@ -70,6 +72,7 @@ kaniko:                             # struct   | Options for building images wit
 custom:                             # struct   | Options for building images with a custom build script
   command: "./scripts/builder"      # string   | Command to be executed for building (e.g. path to build script or executable)
   args: []                          # string[] | Array of arguments for the custom build command
+  appendArgs: []                    # string[] | Args are prepended to the command (before the image tags) and appendArgs are appended
   imageFlag: string                 # string   | Name of the flag that DevSpace uses to pass the image name + tag to the build script
   onChange: []                      # string[] | Array of paths (glob format) to check for file changes to see if image needs to be rebuilt
 ```
@@ -120,6 +123,10 @@ helm:                               # struct   | Options for deploying with Helm
   driver: secrets|configmaps|memory # enum     | Driver used by Helm v3 to store release configuration (Default: secrets)
   v2: false                         # bool     | Use legacy Helm v2 (Default: false)
   tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in when using Helm v2 (Default: "" = same a deployment namespace)
+  deleteArgs: []                    # []string | Extra args for the `helm delete` command during devspace purge
+  templateArgs: []                  # []string | Extra args for the `helm template` command during devspace render
+  upgradeArgs: []                   # []string | Extra args for the `helm upgrade` command during devspace deploy/dev
+  fetchArgs: []                     # []string | Extra args for the `helm fetch` command during devspace render
 ```
 [Learn more about configuring deployments with Helm.](../configuration/deployments/helm-charts.mdx)
 
@@ -205,12 +212,16 @@ sync:                               # struct[] | Array of file sync settings for
   containerName: ""                 # string   | Container name to use after selecting a pod
   namespace: ""                     # string   | Kubernetes namespace to select pods in
   localSubPath: ./                  # string   | Relative path to a local folder that should be synchronized (Default: "./" = entire project)
+  disableDownload: false            # bool     | If true will disable downloading files
+  disableUpload: false              # bool     | If true will disable uploading files
   containerPath: /app               # string   | Path in the container that should be synchronized with localSubPath (Default is working directory of container ("."))
   excludePaths: []                  # string[] | Paths to exclude files/folders from sync in .gitignore syntax
   downloadExcludePaths: []          # string[] | Paths to exclude files/folders from download in .gitignore syntax
   uploadExcludePaths: []            # string[] | Paths to exclude files/folders from upload in .gitignore syntax
   initialSync: mirrorLocal          # enum     | Specifies the initialSync algorithm: mirrorLocal, mirrorRemote, preferLocal, preferRemote, preferNewest, keepAll (Default: mirrorLocal)
+  initialSyncCompareBy: mtime       # enum     | Specifies how the initialSync determines if a file has changed: mtime / size
   waitInitialSync: false            # bool     | Wait until initial sync is completed before continuing (Default: false)
+  throttleChangeDetection: 100      # int      | If greater zero, describes the amount of milliseconds to wait after each checked 100 files on the remote site
   bandwidthLimits:                  # struct   | Bandwidth limits for the synchronization algorithm
     download: 0                     # int64    | Max file download speed in kilobytes / second (e.g. 100 means 100 KB/s)
     upload: 0                       # int64    | Max file upload speed in kilobytes / second (e.g. 100 means 100 KB/s)
