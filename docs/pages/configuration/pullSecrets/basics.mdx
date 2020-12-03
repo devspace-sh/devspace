@@ -27,8 +27,8 @@ Image Pull Secrets are defined in the `pullSecrets` section of the `devspace.yam
 # you can use variables, .env file or save the credentials in the local docker store
 pullSecrets: 
 - registry: my-registry.com:5000 
-  username: my-user
-  password: my-password
+  username: ${REGISTRY_USER}
+  password: ${REGISTRY_PASSWORD}
 ```
 
 </TabItem>
