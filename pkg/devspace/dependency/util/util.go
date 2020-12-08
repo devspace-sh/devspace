@@ -31,8 +31,8 @@ func init() {
 	DependencyFolderPath = filepath.Join(homedir, filepath.FromSlash(DependencyFolder))
 }
 
-func DownloadDependency(basePath string, source *latest.SourceConfig, profile string, update bool, log log.Logger) (ID string, localPath string, err error) {
-	ID = GetDependencyID(basePath, source, profile)
+func DownloadDependency(basePath string, source *latest.SourceConfig, profile string, vars []latest.DependencyVar, update bool, log log.Logger) (ID string, localPath string, err error) {
+	ID = GetDependencyID(basePath, source, profile, vars)
 
 	// Resolve source
 	if source.Git != "" {
@@ -120,7 +120,7 @@ func DownloadDependency(basePath string, source *latest.SourceConfig, profile st
 	return ID, localPath, nil
 }
 
-func GetDependencyID(basePath string, source *latest.SourceConfig, profile string) string {
+func GetDependencyID(basePath string, source *latest.SourceConfig, profile string, vars []latest.DependencyVar) string {
 	if source.Git != "" {
 		// Erase authentication credentials
 		id := strings.TrimSpace(source.Git)
@@ -142,6 +142,9 @@ func GetDependencyID(basePath string, source *latest.SourceConfig, profile strin
 		if len(source.CloneArgs) > 0 {
 			id += " - with clone args " + strings.Join(source.CloneArgs, " ")
 		}
+		for _, v := range vars {
+			id += ";" + v.Name + "=" + v.Value
+		}
 
 		return id
 	} else if source.Path != "" {
@@ -150,6 +153,9 @@ func GetDependencyID(basePath string, source *latest.SourceConfig, profile strin
 
 			if profile != "" {
 				id += " - profile " + profile
+			}
+			for _, v := range vars {
+				id += ";" + v.Name + "=" + v.Value
 			}
 
 			return id
@@ -168,6 +174,9 @@ func GetDependencyID(basePath string, source *latest.SourceConfig, profile strin
 
 		if profile != "" {
 			filePath += " - profile " + profile
+		}
+		for _, v := range vars {
+			filePath += ";" + v.Name + "=" + v.Value
 		}
 
 		return filePath

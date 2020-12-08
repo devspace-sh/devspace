@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/build"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
@@ -130,7 +131,7 @@ func (r *resolver) buildDependencyQueue() ([]*Dependency, error) {
 
 func (r *resolver) resolveRecursive(basePath, parentID string, dependencies []*latest.DependencyConfig, update bool) error {
 	for _, dependencyConfig := range dependencies {
-		ID := util.GetDependencyID(basePath, dependencyConfig.Source, dependencyConfig.Profile)
+		ID := util.GetDependencyID(basePath, dependencyConfig.Source, dependencyConfig.Profile, dependencyConfig.Vars)
 
 		// Try to insert new edge
 		if _, ok := r.DependencyGraph.Nodes[ID]; ok {
@@ -172,7 +173,7 @@ func (r *resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 }
 
 func (r *resolver) resolveDependency(basePath string, dependency *latest.DependencyConfig, update bool) (*Dependency, error) {
-	ID, localPath, err := util.DownloadDependency(basePath, dependency.Source, dependency.Profile, update, r.log)
+	ID, localPath, err := util.DownloadDependency(basePath, dependency.Source, dependency.Profile, dependency.Vars, update, r.log)
 	if err != nil {
 		return nil, err
 	}
@@ -183,6 +184,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		return nil, errors.Wrap(err, "clone config options")
 	}
 
+	// Set dependency profile
 	cloned.Profile = dependency.Profile
 
 	// Construct load path
@@ -195,23 +197,39 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	cloned.GeneratedConfig = r.BaseCache
 	cloned.ConfigPath = configPath
 	cloned.BasePath = loader.NewConfigLoader(r.ConfigOptions, r.log).ConfigPath()
-
-	// Create the config loader
-	var dConfig *latest.Config
-	configLoader := loader.NewConfigLoader(cloned, r.log)
-	if cloned.Profile == "" {
-		dConfig, err = configLoader.LoadWithoutProfile()
-	} else {
-		dConfig, err = configLoader.Load()
+	if cloned.Vars == nil {
+		cloned.Vars = []string{}
 	}
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", ID))
+	for _, v := range dependency.Vars {
+		cloned.Vars = append(cloned.Vars, strings.TrimSpace(v.Name)+"="+strings.TrimSpace(v.Value))
 	}
 
-	// parse the commands
-	dCommands, err := configLoader.ParseCommands()
+	// Load the dependency config
+	var (
+		dConfig   *latest.Config
+		dCommands []*latest.CommandConfig
+	)
+	err = executeInDirectory(filepath.Dir(configPath), func() error {
+		configLoader := loader.NewConfigLoader(cloned, r.log)
+		if cloned.Profile == "" {
+			dConfig, err = configLoader.LoadWithoutProfile()
+		} else {
+			dConfig, err = configLoader.Load()
+		}
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", ID))
+		}
+
+		// parse the commands
+		dCommands, err = configLoader.ParseCommands()
+		if err != nil {
+			return errors.Wrap(err, "parse dependency commands")
+		}
+
+		return nil
+	})
 	if err != nil {
-		return nil, errors.Wrap(err, "parse dependency commands")
+		return nil, err
 	}
 
 	// Override complete dev config
@@ -272,4 +290,19 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		deployController: deploy.NewController(dConfig, dGeneratedConfig.GetActive(), client),
 		generatedSaver:   gLoader,
 	}, nil
+}
+
+func executeInDirectory(dir string, fn func() error) error {
+	oldWorkingDirectory, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	err = os.Chdir(dir)
+	if err != nil {
+		return err
+	}
+
+	defer os.Chdir(oldWorkingDirectory)
+	return fn()
 }

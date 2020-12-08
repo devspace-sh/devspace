@@ -675,12 +675,22 @@ type TerminalConfig struct {
 
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
-	Name               string        `yaml:"name" json:"name"`
-	Source             *SourceConfig `yaml:"source" json:"source"`
-	Profile            string        `yaml:"profile,omitempty" json:"profile,omitempty"`
-	SkipBuild          *bool         `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
-	IgnoreDependencies *bool         `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
-	Namespace          string        `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	Name               string          `yaml:"name" json:"name"`
+	Source             *SourceConfig   `yaml:"source" json:"source"`
+	Profile            string          `yaml:"profile,omitempty" json:"profile,omitempty"`
+	Vars               []DependencyVar `yaml:"vars,omitempty" json:"vars,omitempty"`
+	SkipBuild          *bool           `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
+	IgnoreDependencies *bool           `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
+	Namespace          string          `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+}
+
+// DependencyVar holds an override value for a config variable
+type DependencyVar struct {
+	// Name is the name of the variable
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	// Value is the value to override
+	Value string `yaml:"value,omitempty" json:"value,omitempty"`
 }
 
 // SourceConfig defines the dependency source

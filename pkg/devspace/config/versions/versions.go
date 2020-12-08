@@ -229,7 +229,7 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 					}
 
 					if profileConfig.Parents[i].Source != nil {
-						_, localPath, err := dependencyutil.DownloadDependency(basePath, profileConfig.Parents[i].Source, profileConfig.Parents[i].Profile, update, log)
+						_, localPath, err := dependencyutil.DownloadDependency(basePath, profileConfig.Parents[i].Source, profileConfig.Parents[i].Profile, nil, update, log)
 						if err != nil {
 							return err
 						}
