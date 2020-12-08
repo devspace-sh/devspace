@@ -1,10 +1,12 @@
 package hook
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/mgutz/ansi"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -17,6 +19,7 @@ const (
 	KubeContextEnv   = "DEVSPACE_HOOK_KUBE_CONTEXT"
 	KubeNamespaceEnv = "DEVSPACE_HOOK_KUBE_NAMESPACE"
 	ErrorEnv         = "DEVSPACE_HOOK_ERROR"
+	OsArgsEnv        = "DEVSPACE_HOOK_OS_ARGS"
 )
 
 // Executer executes configured commands locally
@@ -140,7 +143,13 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 		}
 
 		// Create extra env variables
-		extraEnv := map[string]string{}
+		osArgsBytes, err := json.Marshal(os.Args)
+		if err != nil {
+			return err
+		}
+		extraEnv := map[string]string{
+			OsArgsEnv: string(osArgsBytes),
+		}
 		if context.Client != nil {
 			extraEnv[KubeContextEnv] = context.Client.CurrentContext()
 			extraEnv[KubeNamespaceEnv] = context.Client.Namespace()
