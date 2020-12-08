@@ -88,6 +88,8 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: ui-tar
+      - name: install-go-bindata
+        run: go get -u github.com/go-bindata/go-bindata/...
       - name: Compile binaries
         run: ./hack/build-all.bash
         env:
