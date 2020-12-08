@@ -1,9 +1,12 @@
 package hook
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/mgutz/ansi"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -12,9 +15,18 @@ import (
 	dockerterm "github.com/docker/docker/pkg/term"
 )
 
+const (
+	KubeContextEnv   = "DEVSPACE_HOOK_KUBE_CONTEXT"
+	KubeNamespaceEnv = "DEVSPACE_HOOK_KUBE_NAMESPACE"
+	ErrorEnv         = "DEVSPACE_HOOK_ERROR"
+	OsArgsEnv        = "DEVSPACE_HOOK_OS_ARGS"
+)
+
 // Executer executes configured commands locally
 type Executer interface {
-	Execute(when When, stage Stage, which string, log logpkg.Logger) error
+	OnError(stage Stage, whichs []string, context Context, log logpkg.Logger)
+	Execute(when When, stage Stage, which string, context Context, log logpkg.Logger) error
+	ExecuteMultiple(when When, stage Stage, whichs []string, context Context, log logpkg.Logger) error
 }
 
 type executer struct {
@@ -36,6 +48,8 @@ const (
 	Before When = iota
 	// After is used to tell devspace to execute a hook after a certain stage
 	After
+	// OnError is used to tell devspace to execute a hook after a certain error occured
+	OnError
 )
 
 // Stage is the type that defines the stage at when to execute a hook
@@ -59,8 +73,35 @@ var (
 	_, stdout, stderr = dockerterm.StdStreams()
 )
 
+// Context holds hook context information
+type Context struct {
+	Error  error
+	Client kubectl.Client
+}
+
+// ExecuteMultiple executes multiple hooks at a specific time
+func (e *executer) ExecuteMultiple(when When, stage Stage, whichs []string, context Context, log logpkg.Logger) error {
+	for _, which := range whichs {
+		err := e.Execute(when, stage, which, context, log)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// OnError is a convience method to handle the resulting error of a hook execution. Since we mostly return anyways after
+// an error has occured this only prints additonal information why the hook failed
+func (e *executer) OnError(stage Stage, whichs []string, context Context, log logpkg.Logger) {
+	err := e.ExecuteMultiple(OnError, stage, whichs, context, log)
+	if err != nil {
+		log.Warnf("Hook failed: %v", err)
+	}
+}
+
 // Execute executes hooks at a specific time
-func (e *executer) Execute(when When, stage Stage, which string, log logpkg.Logger) error {
+func (e *executer) Execute(when When, stage Stage, which string, context Context, log logpkg.Logger) error {
 	if e.config.Hooks != nil && len(e.config.Hooks) > 0 {
 		hooksToExecute := []*latest.HookConfig{}
 
@@ -87,8 +128,34 @@ func (e *executer) Execute(when When, stage Stage, which string, log logpkg.Logg
 					} else if stage == StagePullSecrets && hook.When.After.PullSecrets != "" && strings.TrimSpace(hook.When.After.PullSecrets) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
 					}
+				} else if when == OnError && hook.When.OnError != nil {
+					if stage == StageDeployments && hook.When.OnError.Deployments != "" && strings.TrimSpace(hook.When.OnError.Deployments) == strings.TrimSpace(which) {
+						hooksToExecute = append(hooksToExecute, hook)
+					} else if stage == StageImages && hook.When.OnError.Images != "" && strings.TrimSpace(hook.When.OnError.Images) == strings.TrimSpace(which) {
+						hooksToExecute = append(hooksToExecute, hook)
+					} else if stage == StageDependencies && hook.When.OnError.Dependencies != "" && strings.TrimSpace(hook.When.OnError.Dependencies) == strings.TrimSpace(which) {
+						hooksToExecute = append(hooksToExecute, hook)
+					} else if stage == StagePullSecrets && hook.When.OnError.PullSecrets != "" && strings.TrimSpace(hook.When.OnError.PullSecrets) == strings.TrimSpace(which) {
+						hooksToExecute = append(hooksToExecute, hook)
+					}
 				}
 			}
+		}
+
+		// Create extra env variables
+		osArgsBytes, err := json.Marshal(os.Args)
+		if err != nil {
+			return err
+		}
+		extraEnv := map[string]string{
+			OsArgsEnv: string(osArgsBytes),
+		}
+		if context.Client != nil {
+			extraEnv[KubeContextEnv] = context.Client.CurrentContext()
+			extraEnv[KubeNamespaceEnv] = context.Client.Namespace()
+		}
+		if when == OnError && context.Error != nil {
+			extraEnv[ErrorEnv] = context.Error.Error()
 		}
 
 		// Execute hooks
@@ -106,7 +173,7 @@ func (e *executer) Execute(when When, stage Stage, which string, log logpkg.Logg
 			}
 
 			log.Infof("Execute hook: %s", ansi.Color(fmt.Sprintf("%s '%s'", hook.Command, strings.Join(hook.Args, "' '")), "white+b"))
-			err := command.ExecuteCommand(hook.Command, hook.Args, writer, writer)
+			err := command.ExecuteCommandWithEnv(hook.Command, hook.Args, writer, writer, extraEnv)
 			if err != nil {
 				return err
 			}

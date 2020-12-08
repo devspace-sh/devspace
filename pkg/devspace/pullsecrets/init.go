@@ -19,7 +19,7 @@ func (r *client) CreatePullSecrets() error {
 	createPullSecrets := []*latest.PullSecretConfig{}
 
 	// execute before pull secrets hooks
-	err := r.hookExecuter.Execute(hook.Before, hook.StagePullSecrets, hook.All, r.log)
+	err := r.hookExecuter.Execute(hook.Before, hook.StagePullSecrets, hook.All, hook.Context{Client: r.kubeClient}, r.log)
 	if err != nil {
 		return err
 	}
@@ -59,6 +59,8 @@ func (r *client) CreatePullSecrets() error {
 		err := r.createPullSecretForRegistry(pullSecretConf)
 		r.log.StopWait()
 		if err != nil {
+			// execute on error pull secrets hooks
+			r.hookExecuter.OnError(hook.StagePullSecrets, []string{hook.All}, hook.Context{Client: r.kubeClient, Error: err}, r.log)
 			return errors.Errorf("failed to create pull secret for registry: %v", err)
 		}
 
@@ -66,19 +68,23 @@ func (r *client) CreatePullSecrets() error {
 			for _, serviceAccount := range pullSecretConf.ServiceAccounts {
 				err = r.addPullSecretsToServiceAccount(pullSecretConf.Secret, serviceAccount)
 				if err != nil {
+					// execute on error pull secrets hooks
+					r.hookExecuter.OnError(hook.StagePullSecrets, []string{hook.All}, hook.Context{Client: r.kubeClient, Error: err}, r.log)
 					return errors.Wrap(err, "add pull secrets to service account")
 				}
 			}
 		} else {
 			err = r.addPullSecretsToServiceAccount(pullSecretConf.Secret, "default")
 			if err != nil {
+				// execute on error pull secrets hooks
+				r.hookExecuter.OnError(hook.StagePullSecrets, []string{hook.All}, hook.Context{Client: r.kubeClient, Error: err}, r.log)
 				return errors.Wrap(err, "add pull secrets to service account")
 			}
 		}
 	}
 
 	// execute after pull secrets hooks
-	err = r.hookExecuter.Execute(hook.After, hook.StagePullSecrets, hook.All, r.log)
+	err = r.hookExecuter.Execute(hook.After, hook.StagePullSecrets, hook.All, hook.Context{Client: r.kubeClient}, r.log)
 	if err != nil {
 		return err
 	}

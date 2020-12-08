@@ -281,7 +281,7 @@ func TestGetDependencyID(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		id := util.GetDependencyID(testCase.baseBath, testCase.dependency.Source, testCase.dependency.Profile)
+		id := util.GetDependencyID(testCase.baseBath, testCase.dependency.Source, testCase.dependency.Profile, nil)
 		assert.Equal(t, testCase.expectedID, id, "Dependency has wrong id in testCase %s", testCase.name)
 	}
 }

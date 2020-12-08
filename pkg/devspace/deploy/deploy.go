@@ -115,7 +115,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 		helmV2Clients := map[string]helmtypes.Client{}
 
 		// Execute before deployments deploy hook
-		err := c.hookExecuter.Execute(hook.Before, hook.StageDeployments, hook.All, log)
+		err := c.hookExecuter.Execute(hook.Before, hook.StageDeployments, hook.All, hook.Context{Client: c.client}, log)
 		if err != nil {
 			return err
 		}
@@ -167,13 +167,14 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 			}
 
 			// Execute before deploment deploy hook
-			err = c.hookExecuter.Execute(hook.Before, hook.StageDeployments, deployConfig.Name, log)
+			err = c.hookExecuter.Execute(hook.Before, hook.StageDeployments, deployConfig.Name, hook.Context{Client: c.client}, log)
 			if err != nil {
 				return err
 			}
 
 			wasDeployed, err := deployClient.Deploy(c.cache, options.ForceDeploy, options.BuiltImages)
 			if err != nil {
+				c.hookExecuter.OnError(hook.StageDeployments, []string{hook.All, deployConfig.Name}, hook.Context{Client: c.client, Error: err}, log)
 				return errors.Errorf("Error deploying %s: %v", deployConfig.Name, err)
 			}
 
@@ -181,7 +182,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 				log.Donef("Successfully deployed %s with %s", deployConfig.Name, method)
 
 				// Execute after deploment deploy hook
-				err = c.hookExecuter.Execute(hook.After, hook.StageDeployments, deployConfig.Name, log)
+				err = c.hookExecuter.Execute(hook.After, hook.StageDeployments, deployConfig.Name, hook.Context{Client: c.client}, log)
 				if err != nil {
 					return err
 				}
@@ -191,7 +192,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 		}
 
 		// Execute after deployments deploy hook
-		err = c.hookExecuter.Execute(hook.After, hook.StageDeployments, hook.All, log)
+		err = c.hookExecuter.Execute(hook.After, hook.StageDeployments, hook.All, hook.Context{Client: c.client}, log)
 		if err != nil {
 			return err
 		}

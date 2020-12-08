@@ -133,6 +133,9 @@ type KanikoConfig struct {
 	// the image name of the kaniko pod to use
 	Image string `yaml:"image,omitempty" json:"image,omitempty"`
 
+	// the image to init the kaniko pod
+	InitImage string `yaml:"initImage,omitempty" json:"initImage,omitempty"`
+
 	// additional arguments that should be passed to kaniko
 	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
 
@@ -144,6 +147,12 @@ type KanikoConfig struct {
 
 	// the pull secret to mount by default
 	PullSecret string `yaml:"pullSecret,omitempty" json:"pullSecret,omitempty"`
+
+	// the node selector to use for the kaniko pod
+	NodeSelector map[string]string `yaml:"nodeSelector,omitempty" json:"nodeSelector,omitempty"`
+
+	// the service account to use for the kaniko pod
+	ServiceAccount string `yaml:"serviceAccount,omitempty" json:"serviceAccount,omitempty"`
 
 	// additional mounts that will be added to the build pod
 	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty" json:"additionalMounts,omitempty"`
@@ -666,12 +675,22 @@ type TerminalConfig struct {
 
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
-	Name               string        `yaml:"name" json:"name"`
-	Source             *SourceConfig `yaml:"source" json:"source"`
-	Profile            string        `yaml:"profile,omitempty" json:"profile,omitempty"`
-	SkipBuild          *bool         `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
-	IgnoreDependencies *bool         `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
-	Namespace          string        `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	Name               string          `yaml:"name" json:"name"`
+	Source             *SourceConfig   `yaml:"source" json:"source"`
+	Profile            string          `yaml:"profile,omitempty" json:"profile,omitempty"`
+	Vars               []DependencyVar `yaml:"vars,omitempty" json:"vars,omitempty"`
+	SkipBuild          *bool           `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
+	IgnoreDependencies *bool           `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
+	Namespace          string          `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+}
+
+// DependencyVar holds an override value for a config variable
+type DependencyVar struct {
+	// Name is the name of the variable
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	// Value is the value to override
+	Value string `yaml:"value,omitempty" json:"value,omitempty"`
 }
 
 // SourceConfig defines the dependency source
@@ -699,8 +718,9 @@ type HookConfig struct {
 
 // HookWhenConfig defines when the hook should be executed
 type HookWhenConfig struct {
-	Before *HookWhenAtConfig `yaml:"before,omitempty" json:"before,omitempty"`
-	After  *HookWhenAtConfig `yaml:"after,omitempty" json:"after,omitempty"`
+	Before  *HookWhenAtConfig `yaml:"before,omitempty" json:"before,omitempty"`
+	After   *HookWhenAtConfig `yaml:"after,omitempty" json:"after,omitempty"`
+	OnError *HookWhenAtConfig `yaml:"onError,omitempty" json:"onError,omitempty"`
 }
 
 // HookWhenAtConfig defines at which stage the hook should be executed
