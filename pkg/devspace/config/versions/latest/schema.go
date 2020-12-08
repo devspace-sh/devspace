@@ -708,8 +708,9 @@ type HookConfig struct {
 
 // HookWhenConfig defines when the hook should be executed
 type HookWhenConfig struct {
-	Before *HookWhenAtConfig `yaml:"before,omitempty" json:"before,omitempty"`
-	After  *HookWhenAtConfig `yaml:"after,omitempty" json:"after,omitempty"`
+	Before  *HookWhenAtConfig `yaml:"before,omitempty" json:"before,omitempty"`
+	After   *HookWhenAtConfig `yaml:"after,omitempty" json:"after,omitempty"`
+	OnError *HookWhenAtConfig `yaml:"onError,omitempty" json:"onError,omitempty"`
 }
 
 // HookWhenAtConfig defines at which stage the hook should be executed
