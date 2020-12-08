@@ -1,4 +1,4 @@
-version: v1beta8
+version: v1beta9
 deployments:
 - name: dependency2
   helm:
