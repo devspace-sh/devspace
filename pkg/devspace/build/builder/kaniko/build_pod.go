@@ -16,6 +16,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// The kaniko init image that we use by default
+const kanikoInitImage = "alpine"
+
 // The kaniko build image we use by default
 const kanikoBuildImage = "gcr.io/kaniko-project/executor:v1.3.0"
 
@@ -60,6 +63,11 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 	kanikoImage := kanikoBuildImage
 	if kanikoOptions.Image != "" {
 		kanikoImage = kanikoOptions.Image
+	}
+
+	kanikoInitImage := kanikoInitImage
+	if kanikoOptions.InitImage != "" {
+		kanikoInitImage = kanikoOptions.InitImage
 	}
 
 	// additional options to pass to kaniko
@@ -210,7 +218,7 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 			InitContainers: []k8sv1.Container{
 				{
 					Name:            "context",
-					Image:           "alpine",
+					Image:           kanikoInitImage,
 					Command:         []string{"sh"},
 					Args:            []string{"-c", "while [ ! -f " + doneFile + " ]; do sleep 2; done"},
 					ImagePullPolicy: k8sv1.PullIfNotPresent,
@@ -231,8 +239,10 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 					VolumeMounts:    volumeMounts,
 				},
 			},
-			Volumes:       volumes,
-			RestartPolicy: k8sv1.RestartPolicyNever,
+			NodeSelector:       kanikoOptions.NodeSelector,
+			ServiceAccountName: kanikoOptions.ServiceAccount,
+			Volumes:            volumes,
+			RestartPolicy:      k8sv1.RestartPolicyNever,
 		},
 	}
 

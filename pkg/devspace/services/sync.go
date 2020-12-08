@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"github.com/devspace-cloud/devspace/assets"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"io"
@@ -446,6 +447,12 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 	// Check if sync is already in pod
 	stdout, _, err := client.ExecBuffered(pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
 	if err != nil || version != string(stdout) {
+		// check if we can find it in the assets
+		helperBytes, err := assets.Asset("release/" + DevSpaceHelperTempFolder)
+		if err == nil {
+			return injectSyncHelperFromBytes(client, pod, container, helperBytes)
+		}
+
 		homedir, err := homedir.Dir()
 		if err != nil {
 			return err
@@ -513,6 +520,7 @@ func downloadSyncHelper(filepath, syncBinaryFolder, version string, log logpkg.L
 	}
 
 	// Make sync binary
+	log.Info("Couldn't find devspacehelper, will try to download it now")
 	err = os.MkdirAll(syncBinaryFolder, 0755)
 	if err != nil {
 		return errors.Wrap(err, "mkdir helper binary folder")
@@ -564,6 +572,81 @@ func downloadFile(version string, filepath string) error {
 	}
 
 	return nil
+}
+
+type helperFileInfo []byte
+
+func (h helperFileInfo) Name() string {
+	return DevSpaceHelperTempFolder
+}
+func (h helperFileInfo) Size() int64 {
+	return int64(len([]byte(h)))
+}
+func (h helperFileInfo) Mode() os.FileMode {
+	return 0777
+}
+func (h helperFileInfo) ModTime() time.Time {
+	return time.Now()
+}
+func (h helperFileInfo) IsDir() bool {
+	return false
+}
+func (h helperFileInfo) Sys() interface{} {
+	return nil
+}
+
+func injectSyncHelperFromBytes(client kubectl.Client, pod *v1.Pod, container string, b []byte) error {
+	// Compress the sync helper and then copy it to the container
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		return errors.Wrap(err, "create pipe")
+	}
+
+	defer reader.Close()
+	defer writer.Close()
+
+	// Start reading on the other end
+	errChan := make(chan error)
+	go func() {
+		errChan <- client.CopyFromReader(pod, container, "/tmp", reader)
+	}()
+
+	// Use compression
+	gw := gzip.NewWriter(writer)
+	defer gw.Close()
+
+	// Create tar writer
+	tarWriter := tar.NewWriter(gw)
+	defer tarWriter.Close()
+
+	hdr, err := tar.FileInfoHeader(helperFileInfo(b), DevSpaceHelperTempFolder)
+	if err != nil {
+		return errors.Wrap(err, "create tar file info header")
+	}
+
+	hdr.Name = "devspacehelper"
+
+	// Set permissions correctly
+	hdr.Mode = 0777
+	hdr.Uid = 0
+	hdr.Uname = "root"
+	hdr.Gid = 0
+	hdr.Gname = "root"
+
+	if err := tarWriter.WriteHeader(hdr); err != nil {
+		return errors.Wrap(err, "tar write header")
+	}
+
+	if _, err := io.Copy(tarWriter, bytes.NewReader(b)); err != nil {
+		return errors.Wrap(err, "tar copy file")
+	}
+
+	// Close all writers and file
+	tarWriter.Close()
+	gw.Close()
+	writer.Close()
+
+	return <-errChan
 }
 
 func injectSyncHelper(client kubectl.Client, pod *v1.Pod, container string, filepath string) error {

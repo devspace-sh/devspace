@@ -133,6 +133,9 @@ type KanikoConfig struct {
 	// the image name of the kaniko pod to use
 	Image string `yaml:"image,omitempty" json:"image,omitempty"`
 
+	// the image to init the kaniko pod
+	InitImage string `yaml:"initImage,omitempty" json:"initImage,omitempty"`
+
 	// additional arguments that should be passed to kaniko
 	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
 
@@ -144,6 +147,12 @@ type KanikoConfig struct {
 
 	// the pull secret to mount by default
 	PullSecret string `yaml:"pullSecret,omitempty" json:"pullSecret,omitempty"`
+
+	// the node selector to use for the kaniko pod
+	NodeSelector map[string]string `yaml:"nodeSelector,omitempty" json:"nodeSelector,omitempty"`
+
+	// the service account to use for the kaniko pod
+	ServiceAccount string `yaml:"serviceAccount,omitempty" json:"serviceAccount,omitempty"`
 
 	// additional mounts that will be added to the build pod
 	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty" json:"additionalMounts,omitempty"`

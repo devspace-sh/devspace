@@ -35,7 +35,24 @@ if [[ -z "${DEVSPACE_BUILD_ARCHS}" ]]; then
     DEVSPACE_BUILD_ARCHS="amd64 386"
 fi
 
+# Install bin data
+go get -mod= -u github.com/go-bindata/go-bindata/...
+
+# Create the release directory
 mkdir -p "${DEVSPACE_ROOT}/release"
+
+# Move ui.tar.gz to releases
+echo "Moving ui"
+mv ui.tar.gz "${DEVSPACE_ROOT}/release/ui.tar.gz"
+shasum -a 256 "${DEVSPACE_ROOT}/release/ui.tar.gz" > "${DEVSPACE_ROOT}/release/ui.tar.gz".sha256
+
+# build devspace helper
+echo "Building devspace helper"
+GOARCH=386 GOOS=linux go build -ldflags "-s -w -X github.com/devspace-cloud/devspace/helper/cmd.version=${VERSION}" -o "${DEVSPACE_ROOT}/release/devspacehelper" helper/main.go
+shasum -a 256 "${DEVSPACE_ROOT}/release/devspacehelper" > "${DEVSPACE_ROOT}/release/devspacehelper".sha256
+
+# build bin data
+cd ${DEVSPACE_ROOT} && go-bindata -o assets/assets.go -pkg assets release/devspacehelper release/ui.tar.gz
 
 for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
   for ARCH in ${DEVSPACE_BUILD_ARCHS[@]}; do
@@ -64,7 +81,4 @@ for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
   done
 done
 
-# build devspace helper
-echo "Building devspace helper"
-GOARCH=386 GOOS=linux go build -ldflags "-s -w -X github.com/devspace-cloud/devspace/helper/cmd.version=${VERSION}" -o "${DEVSPACE_ROOT}/release/devspacehelper" helper/main.go
-shasum -a 256 "${DEVSPACE_ROOT}/release/devspacehelper" > "${DEVSPACE_ROOT}/release/devspacehelper".sha256
+

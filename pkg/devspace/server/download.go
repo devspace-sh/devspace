@@ -2,8 +2,10 @@ package server
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"fmt"
+	"github.com/devspace-cloud/devspace/assets"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -39,10 +41,10 @@ func downloadUI() (string, error) {
 
 	homedir, _ := homedir.Dir()
 
-	// Check if sync is already in pod
+	// Check if ui was already downloaded / extracted
 	uiFolder := filepath.Join(homedir, constants.DefaultHomeDevSpaceFolder, UITempFolder, version)
 
-	// Download sync helper if necessary
+	// Download / extract if necessary
 	err := downloadUITar(uiFolder, version)
 	if err != nil {
 		return "", errors.Wrap(err, "download ui tar ball")
@@ -52,7 +54,7 @@ func downloadUI() (string, error) {
 }
 
 func downloadUITar(uiFolder, version string) error {
-	// Check if folder exists
+	// Check if file exists
 	_, err := os.Stat(filepath.Join(uiFolder, "index.html"))
 	if err == nil {
 		return nil
@@ -69,6 +71,11 @@ func downloadUITar(uiFolder, version string) error {
 }
 
 func downloadFile(version string, folder string) error {
+	uiBytes, err := assets.Asset("release/ui.tar.gz")
+	if err == nil {
+		return untar(bytes.NewReader(uiBytes), folder)
+	}
+
 	// Create download url
 	url := ""
 	if version == "latest" {
