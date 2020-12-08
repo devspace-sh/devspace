@@ -43,6 +43,7 @@ mkdir -p "${DEVSPACE_ROOT}/release"
 
 # Move ui.tar.gz to releases
 echo "Moving ui"
+ls -ls . 
 mv release/ui.tar.gz "${DEVSPACE_ROOT}/release/ui.tar.gz"
 shasum -a 256 "${DEVSPACE_ROOT}/release/ui.tar.gz" > "${DEVSPACE_ROOT}/release/ui.tar.gz".sha256
 
