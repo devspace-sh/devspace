@@ -1,6 +1,9 @@
 package helm
 
 import (
+	"fmt"
+	"github.com/devspace-cloud/devspace/assets"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer"
@@ -9,8 +12,15 @@ import (
 	helmv2 "github.com/devspace-cloud/devspace/pkg/devspace/helm/v2"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 )
+
+// ComponentChartFolder holds the component charts
+const ComponentChartFolder = "component-chart"
 
 // DevSpaceChartConfig is the config that holds the devspace chart information
 var DevSpaceChartConfig = &latest.ChartConfig{
@@ -44,7 +54,33 @@ func New(config *latest.Config, helmClient helmtypes.Client, kubeClient kubectl.
 
 	// Exchange chart
 	if deployConfig.Helm.ComponentChart != nil && *deployConfig.Helm.ComponentChart == true {
-		deployConfig.Helm.Chart = DevSpaceChartConfig
+		// extract component chart if possible
+		filename := "component-chart-" + DevSpaceChartConfig.Version + ".tgz"
+		componentChartBytes, err := assets.Asset(filename)
+		if err == nil {
+			homedir, _ := homedir.Dir()
+			completePath := filepath.Join(homedir, constants.DefaultHomeDevSpaceFolder, ComponentChartFolder, filename)
+			_, err := os.Stat(completePath)
+			if err != nil {
+				// make folder
+				err = os.MkdirAll(filepath.Dir(completePath), 0755)
+				if err != nil {
+					return nil, err
+				}
+
+				// write file
+				err = ioutil.WriteFile(completePath, componentChartBytes, 0666)
+				if err != nil {
+					return nil, fmt.Errorf("error writing component chart to file: %v", err)
+				}
+			}
+
+			deployConfig.Helm.Chart = &latest.ChartConfig{
+				Name: completePath,
+			}
+		} else {
+			deployConfig.Helm.Chart = DevSpaceChartConfig
+		}
 	}
 
 	return &DeployConfig{
