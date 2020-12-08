@@ -18,6 +18,10 @@ COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null)
 DATE=$(date "+%Y-%m-%d")
 BUILD_PLATFORM=$(uname -a | awk '{print tolower($1);}')
 
+echo "Current working directory is $(pwd)"
+echo "PATH is $PATH"
+echo "GOPATH is $GOPATH"
+
 if [[ "$(pwd)" != "${DEVSPACE_ROOT}" ]]; then
   echo "you are not in the root of the repo" 1>&2
   echo "please cd to ${DEVSPACE_ROOT} before running this script" 1>&2
@@ -35,9 +39,6 @@ if [[ -z "${DEVSPACE_BUILD_ARCHS}" ]]; then
     DEVSPACE_BUILD_ARCHS="amd64 386"
 fi
 
-# Install bin data
-go get -mod= -u github.com/go-bindata/go-bindata/...
-
 # Create the release directory
 mkdir -p "${DEVSPACE_ROOT}/release"
 
@@ -52,7 +53,7 @@ GOARCH=386 GOOS=linux go build -ldflags "-s -w -X github.com/devspace-cloud/devs
 shasum -a 256 "${DEVSPACE_ROOT}/release/devspacehelper" > "${DEVSPACE_ROOT}/release/devspacehelper".sha256
 
 # build bin data
-cd ${DEVSPACE_ROOT} && go-bindata -o assets/assets.go -pkg assets release/devspacehelper release/ui.tar.gz
+$GOPATH/bin/go-bindata -o assets/assets.go -pkg assets release/devspacehelper release/ui.tar.gz
 
 for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
   for ARCH in ${DEVSPACE_BUILD_ARCHS[@]}; do
@@ -80,5 +81,3 @@ for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
     fi
   done
 done
-
-
