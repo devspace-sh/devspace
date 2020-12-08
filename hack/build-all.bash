@@ -42,6 +42,14 @@ fi
 # Create the release directory
 mkdir -p "${DEVSPACE_ROOT}/release"
 
+# Install Helm 3
+echo "Installing helm"
+curl -s https://get.helm.sh/helm-v3.3.4-darwin-amd64.tar.gz > helm3.tar.gz && tar -zxvf helm3.tar.gz darwin-amd64/helm && chmod +x darwin-amd64/helm
+
+# Pull the component chart
+COMPONENT_CHART_VERSION=$(cat pkg/devspace/deploy/deployer/helm/client.go | grep 'Version: "' | sed -nE 's/[^"]+"(.+)",\s*/\1/p')
+darwin-amd64/helm pull component-chart --repo https://charts.devspace.sh --version $COMPONENT_CHART_VERSION
+
 # Move ui.tar.gz to releases
 echo "Moving ui"
 mv ui.tar.gz "${DEVSPACE_ROOT}/release/ui.tar.gz"
@@ -53,7 +61,7 @@ GOARCH=386 GOOS=linux go build -ldflags "-s -w -X github.com/devspace-cloud/devs
 shasum -a 256 "${DEVSPACE_ROOT}/release/devspacehelper" > "${DEVSPACE_ROOT}/release/devspacehelper".sha256
 
 # build bin data
-$GOPATH/bin/go-bindata -o assets/assets.go -pkg assets release/devspacehelper release/ui.tar.gz
+$GOPATH/bin/go-bindata -o assets/assets.go -pkg assets release/devspacehelper release/ui.tar.gz component-chart-$COMPONENT_CHART_VERSION.tgz
 
 for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
   for ARCH in ${DEVSPACE_BUILD_ARCHS[@]}; do
