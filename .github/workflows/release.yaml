@@ -91,11 +91,11 @@ jobs:
       - name: install-go-bindata
         run: go get -u github.com/go-bindata/go-bindata/...
         env:
-          GOPATH: /home/runner/work/devspace/go
+          GOPATH: /Users/runner/work/devspace/go
       - name: Compile binaries
         run: ./hack/build-all.bash
         env:
-          GOPATH: /home/runner/work/devspace/go
+          GOPATH: /Users/runner/work/devspace/go
           ANALYTICS_TOKEN: ${{ secrets.ANALYTICS_TOKEN }}
           ANALYTICS_ENDPOINT_EVENT: ${{ secrets.ANALYTICS_ENDPOINT_EVENT }}
           ANALYTICS_ENDPOINT_USER: ${{ secrets.ANALYTICS_ENDPOINT_USER }}
