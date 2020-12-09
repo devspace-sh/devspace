@@ -3,7 +3,6 @@ package targetselector
 import (
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 )
 
@@ -31,7 +30,7 @@ type ConfigParameter struct {
 }
 
 // GetNamespace retrieves the target namespace
-func (t *SelectorParameter) GetNamespace(config *latest.Config, kubeClient kubectl.Client) (string, error) {
+func (t *SelectorParameter) GetNamespace(kubeClient kubectl.Client) (string, error) {
 	if t.CmdParameter.Namespace != "" {
 		return t.CmdParameter.Namespace, nil
 	}
@@ -43,7 +42,7 @@ func (t *SelectorParameter) GetNamespace(config *latest.Config, kubeClient kubec
 }
 
 // GetLabelSelector retrieves the label selector of the target
-func (t *SelectorParameter) GetLabelSelector(config *latest.Config) (string, error) {
+func (t *SelectorParameter) GetLabelSelector() (string, error) {
 	if t.CmdParameter.LabelSelector != "" {
 		return t.CmdParameter.LabelSelector, nil
 	}

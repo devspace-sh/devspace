@@ -123,7 +123,7 @@ func RewriteDockerfile(dockerfile string, entrypoint []string, cmd []string, add
 			return "", err
 		}
 
-		oldEntrypoint, oldCmd, err := getLastestEntrypointAndCmd(string(data), target)
+		oldEntrypoint, oldCmd, err := GetEntrypointAndCmd(string(data), target)
 		if err != nil {
 			return "", err
 		}
@@ -203,8 +203,12 @@ func GetDockerfileTargets(dockerfile string) ([]string, error) {
 	}
 
 	rawTargets := targetFinder.FindAllStringSubmatch(content, -1)
-
 	for _, target := range rawTargets {
+		entrypoint, cmd, err := GetEntrypointAndCmd(content, target[3])
+		if err != nil || (len(entrypoint) == 0 && len(cmd) == 0) {
+			continue
+		}
+
 		targets = append(targets, target[3])
 	}
 
@@ -267,7 +271,7 @@ func splitDockerfileAtTarget(content string, target string) (string, string, err
 var entrypointLinePattern = regexp.MustCompile(`(?i)^[\s]*ENTRYPOINT[\s]+(.+)$`)
 var cmdLinePattern = regexp.MustCompile(`(?i)^[\s]*CMD[\s]+(.+)$`)
 
-func getLastestEntrypointAndCmd(content string, target string) ([]string, []string, error) {
+func GetEntrypointAndCmd(content string, target string) ([]string, []string, error) {
 	if target == "" {
 		return parseLastOccurence(content)
 	}

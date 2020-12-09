@@ -15,7 +15,7 @@ import (
 func (serviceClient *client) StartTerminal(args []string, imageSelector []string, interrupt chan error, wait bool) (int, error) {
 	command := serviceClient.getCommand(args)
 
-	targetSelector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, serviceClient.selectorParameter, true, imageSelector)
+	targetSelector, err := targetselector.NewTargetSelector(serviceClient.client, serviceClient.selectorParameter, true, imageSelector)
 	if err != nil {
 		return 0, err
 	}

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -418,16 +419,22 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 				}
 			}
 
-			syncConfig := append(config.Dev.Sync, &latest.SyncConfig{
+			syncConfig := &latest.SyncConfig{
 				ImageName:          defaultImageName,
 				UploadExcludePaths: excludePaths,
 				ExcludePaths:       []string{".git/"},
-				OnUpload: &latest.SyncOnUpload{
+			}
+			if config.Images[defaultImageName].InjectRestartHelper {
+				syncConfig.OnUpload = &latest.SyncOnUpload{
 					RestartContainer: true,
-				},
-			})
+				}
+			} else {
+				config.Dev.Interactive = &latest.InteractiveConfig{
+					DefaultEnabled: ptr.Bool(true),
+				}
+			}
 
-			config.Dev.Sync = syncConfig
+			config.Dev.Sync = append(config.Dev.Sync, syncConfig)
 		}
 	}
 
@@ -442,14 +449,16 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config) error {
 			patches := []*latest.PatchConfig{
 				{
 					Operation: patchRemoveOp,
-					Path:      "images." + defaultImageName + ".injectRestartHelper",
-				},
-				{
-					Operation: patchRemoveOp,
 					Path:      "images." + defaultImageName + ".appendDockerfileInstructions",
 				},
 			}
 
+			if defaultImageConfig.Build != nil && defaultImageConfig.InjectRestartHelper {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + defaultImageName + ".injectRestartHelper",
+				})
+			}
 			if defaultImageConfig.Build != nil && defaultImageConfig.Build.Docker != nil && defaultImageConfig.Build.Docker.Options != nil && defaultImageConfig.Build.Docker.Options.Target != "" {
 				patches = append(patches, &latest.PatchConfig{
 					Operation: patchRemoveOp,

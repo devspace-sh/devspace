@@ -157,7 +157,7 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 		}
 	}
 
-	selector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, options.SelectorParameter, options.AllowPodPick, targetselector.ImageSelectorFromConfig(syncConfig.ImageName, serviceClient.config, serviceClient.generated))
+	selector, err := targetselector.NewTargetSelector(serviceClient.client, options.SelectorParameter, options.AllowPodPick, targetselector.ImageSelectorFromConfig(syncConfig.ImageName, serviceClient.config, serviceClient.generated))
 	if err != nil {
 		return errors.Errorf("Error creating target selector: %v", err)
 	}

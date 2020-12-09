@@ -3,6 +3,7 @@ package configure
 import (
 	contextpkg "context"
 	"fmt"
+	"io/ioutil"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -169,10 +170,11 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 		return nil, err
 	}
 
+	var target string
 	if len(targets) > 0 {
 		targetNone := "[none] (build complete Dockerfile)"
 		targets = append(targets, targetNone)
-		target, err := m.log.Question(&survey.QuestionOptions{
+		target, err = m.log.Question(&survey.QuestionOptions{
 			Question: "Which build stage (target) within your Dockerfile do you want to use for development?\n  Choose `build` for quickstart projects.",
 			Options:  targets,
 		})
@@ -188,7 +190,20 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 					},
 				},
 			}
+		} else {
+			target = ""
 		}
+	}
+
+	// if we don't have an entrypoint or cmd we don't inject the restart helper
+	content, err := ioutil.ReadFile(dockerfile)
+	if err != nil {
+		return nil, errors.Wrap(err, "read dockerfile")
+	}
+
+	entrypoint, cmd, err := helper.GetEntrypointAndCmd(string(content), target)
+	if err != nil || (len(entrypoint) == 0 && len(cmd) == 0) {
+		retImageConfig.InjectRestartHelper = false
 	}
 
 	// Set image name

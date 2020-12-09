@@ -34,7 +34,7 @@ func (serviceClient *client) StartPortForwarding(interrupt chan error) error {
 }
 
 func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardingConfig, interrupt chan error, log logpkg.Logger) error {
-	selector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, &targetselector.SelectorParameter{
+	selector, err := targetselector.NewTargetSelector(serviceClient.client, &targetselector.SelectorParameter{
 		ConfigParameter: targetselector.ConfigParameter{
 			Namespace:     portForwarding.Namespace,
 			LabelSelector: portForwarding.LabelSelector,

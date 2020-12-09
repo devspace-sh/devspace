@@ -16,7 +16,7 @@ func (serviceClient *client) StartLogs(imageSelector []string, follow bool, tail
 
 // StartLogsWithWriter prints the logs and then attaches to the container with the given stdout and stderr
 func (serviceClient *client) StartLogsWithWriter(imageSelector []string, follow bool, tail int64, writer io.Writer) error {
-	targetSelector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, serviceClient.selectorParameter, true, imageSelector)
+	targetSelector, err := targetselector.NewTargetSelector(serviceClient.client, serviceClient.selectorParameter, true, imageSelector)
 	if err != nil {
 		return err
 	}
