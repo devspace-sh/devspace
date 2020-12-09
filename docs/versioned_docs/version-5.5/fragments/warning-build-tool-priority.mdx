@@ -1,0 +1,7 @@
+:::warning Build Tool Priority
+If you specify multiple build tools, DevSpace will try to use them in the following order:
+1. `disabled`
+2. `custom`
+3. `docker` (uses kaniko as fallback if Docker host not reachable)
+4. `kaniko`
+:::
