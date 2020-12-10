@@ -3,6 +3,7 @@ package build
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -107,7 +108,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 				for _, t := range imageConf.Tags {
 					r, err := randutil.GenerateRandomString(5)
 					if err != nil {
-						return nil, errors.Errorf("Image building failed: %v", err)
+						return nil, errors.Errorf("image building failed: %v", err)
 					}
 
 					imageTags = append(imageTags, t+"-"+r)
@@ -118,10 +119,20 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		} else {
 			imageTag, err := randutil.GenerateRandomString(7)
 			if err != nil {
-				return nil, errors.Errorf("Image building failed: %v", err)
+				return nil, errors.Errorf("image building failed: %v", err)
 			}
 
 			imageTags = append(imageTags, imageTag)
+		}
+
+		// replace the {} in the tags
+		for i, t := range imageTags {
+			r, err := randutil.GenerateRandomString(5)
+			if err != nil {
+				return nil, errors.Wrap(err, "generate random string")
+			}
+
+			imageTags[i] = strings.Replace(t, "{}", r, -1)
 		}
 
 		// Create new builder

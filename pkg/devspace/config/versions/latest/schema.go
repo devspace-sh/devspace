@@ -654,6 +654,7 @@ type AutoReloadConfig struct {
 type InteractiveConfig struct {
 	DefaultEnabled *bool                     `yaml:"defaultEnabled,omitempty" json:"defaultEnabled,omitempty"`
 	Images         []*InteractiveImageConfig `yaml:"images,omitempty" json:"images,omitempty"`
+	LabelSelectors []map[string]string       `yaml:"labelSelectors,omitempty" json:"labelSelectors,omitempty"`
 	Terminal       *TerminalConfig           `yaml:"terminal,omitempty" json:"terminal,omitempty"`
 }
 
