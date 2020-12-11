@@ -62,6 +62,7 @@ func TestDeploy(t *testing.T) {
 				Deployments: map[string]*generated.DeploymentCache{
 					"deploy2": &generated.DeploymentCache{
 						DeploymentConfigHash: "2f0fdaa77956604c97de5cb343051fab738ac36052956ae3cb16e8ec529ab154",
+						HelmReleaseRevision: "1",
 					},
 				},
 			},
