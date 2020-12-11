@@ -125,14 +125,16 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 			imageTags = append(imageTags, imageTag)
 		}
 
-		// replace the {} in the tags
-		for i, t := range imageTags {
-			r, err := randutil.GenerateRandomString(5)
-			if err != nil {
-				return nil, errors.Wrap(err, "generate random string")
-			}
+		// replace the # in the tags
+		for i := range imageTags {
+			for strings.Contains(imageTags[i], "#") {
+				r, err := randutil.GenerateRandomString(1)
+				if err != nil {
+					return nil, errors.Wrap(err, "generate random string")
+				}
 
-			imageTags[i] = strings.Replace(t, "{}", r, -1)
+				imageTags[i] = strings.Replace(imageTags[i], "#", r, 1)
+			}
 		}
 
 		// Create new builder

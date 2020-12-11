@@ -18,5 +18,5 @@ spec:
     spec:
       containers:
         - name: default
-          image: {{ .Values.image }}
+          image: {{ .Values.image }}:{{ .Values.tag }}
           imagePullPolicy: IfNotPresent
