@@ -98,7 +98,6 @@ Starts your project in development mode:
 
 Open terminal instead of logs:
 - Use "devspace dev -t" for opening a terminal
-- Use "devspace dev -i" for opening a terminal and overriding container entrypoint with sleep command
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			// Print upgrade message if new version available
@@ -510,8 +509,8 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 
 func (cmd *DevCmd) startOutput(interactiveMode bool, config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, servicesClient services.Client, exitChan chan error, logger log.Logger) (int, error) {
 	// Check if we should open a terminal or stream logs
-	if cmd.PrintSyncLog == false {
-		if interactiveMode {
+	if interactiveMode {
+		if cmd.PrintSyncLog == false {
 			var imageSelector []string
 			if config.Dev.Interactive.Terminal != nil && config.Dev.Interactive.Terminal.ImageName != "" {
 				imageSelector = targetselector.ImageSelectorFromConfig(config.Dev.Interactive.Terminal.ImageName, config, generatedConfig)
@@ -523,29 +522,29 @@ func (cmd *DevCmd) startOutput(interactiveMode bool, config *latest.Config, gene
 			}
 
 			return servicesClient.StartTerminal(args, imageSelector, exitChan, true)
-		} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
-			// Log multiple images at once
-			manager, err := services.NewLogManager(client, config, generatedConfig, exitChan, logger)
-			if err != nil {
-				return 0, errors.Wrap(err, "starting log manager")
-			}
-
-			err = manager.Start()
-			if err != nil {
-				// Check if we should reload
-				if _, ok := err.(*reloadError); ok {
-					return 0, err
-				}
-
-				logger.Warnf("Couldn't print logs: %v", err)
-			}
-
-			logger.WriteString("\n")
-			logger.Warn("Log streaming service has been terminated")
+		}
+	} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
+		// Log multiple images at once
+		manager, err := services.NewLogManager(client, config, generatedConfig, exitChan, logger)
+		if err != nil {
+			return 0, errors.Wrap(err, "starting log manager")
 		}
 
-		logger.Done("Sync and port-forwarding services are running (Press Ctrl+C to abort services)")
+		err = manager.Start()
+		if err != nil {
+			// Check if we should reload
+			if _, ok := err.(*reloadError); ok {
+				return 0, err
+			}
+
+			logger.Warnf("Couldn't print logs: %v", err)
+		}
+
+		logger.WriteString("\n")
+		logger.Warn("Log streaming service has been terminated")
 	}
+
+	logger.Done("Sync and port-forwarding services are running (Press Ctrl+C to abort services)")
 	return 0, <-exitChan
 }
 
