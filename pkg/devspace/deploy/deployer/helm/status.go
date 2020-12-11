@@ -2,8 +2,6 @@ package helm
 
 import (
 	"fmt"
-	"time"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
 )
@@ -58,7 +56,7 @@ func (d *DeployConfig) Status() (*deployer.StatusResult, error) {
 				Name:   d.DeploymentConfig.Name,
 				Type:   "Helm",
 				Target: deployTargetStr,
-				Status: "Deployed " + time.Since(release.LastDeployed).String() + " ago",
+				Status: "Deployed",
 			}, nil
 		}
 	}

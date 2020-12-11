@@ -2,6 +2,7 @@ package helm
 
 import (
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
 	"io"
 	"os"
 	"path/filepath"
@@ -78,7 +79,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 
 		forceDeploy = true
 		for _, release := range releases {
-			if release.Name == releaseName {
+			if release.Name == releaseName && release.Revision == deployCache.HelmReleaseRevision {
 				forceDeploy = false
 				break
 			}
@@ -86,16 +87,17 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	}
 
 	// Deploy
-	wasDeployed, err := d.internalDeploy(cache, forceDeploy, builtImages, nil)
+	wasDeployed, release, err := d.internalDeploy(cache, forceDeploy, builtImages, nil)
 	if err != nil {
 		return false, err
 	}
 
+	// Update config
 	if wasDeployed {
-		// Update config
-		deployCache.HelmChartHash = hash
 		deployCache.DeploymentConfigHash = deploymentConfigHash
+		deployCache.HelmChartHash = hash
 		deployCache.HelmOverridesHash = helmOverridesHash
+		deployCache.HelmReleaseRevision = release.Revision
 	} else {
 		return false, nil
 	}
@@ -103,7 +105,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	return true, nil
 }
 
-func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string, out io.Writer) (bool, error) {
+func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string, out io.Writer) (bool, *types.Release, error) {
 	var (
 		releaseName     = d.DeploymentConfig.Name
 		chartPath       = d.DeploymentConfig.Helm.Chart.Name
@@ -119,7 +121,7 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 	if err == nil {
 		err := yamlutil.ReadYamlFromFile(chartValuesPath, overwriteValues)
 		if err != nil {
-			return false, errors.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartValuesPath, err)
+			return false, nil, errors.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartValuesPath, err)
 		}
 	}
 
@@ -128,7 +130,7 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 		for _, overridePath := range d.DeploymentConfig.Helm.ValuesFiles {
 			overwriteValuesPath, err := filepath.Abs(overridePath)
 			if err != nil {
-				return false, errors.Errorf("Error retrieving absolute path from %s: %v", overridePath, err)
+				return false, nil, errors.Errorf("Error retrieving absolute path from %s: %v", overridePath, err)
 			}
 
 			overwriteValuesFromPath := map[interface{}]interface{}{}
@@ -157,17 +159,17 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 
 	// Deployment is not necessary
 	if forceDeploy == false {
-		return false, nil
+		return false, nil, nil
 	}
 
 	if out != nil {
 		str, err := d.Helm.Template(releaseName, releaseNamespace, overwriteValues, d.DeploymentConfig.Helm)
 		if err != nil {
-			return false, err
+			return false, nil, err
 		}
 
 		out.Write([]byte("\n" + str + "\n"))
-		return true, nil
+		return true, nil, nil
 	}
 
 	d.Log.StartWait(fmt.Sprintf("Deploying chart %s (%s) with helm", d.DeploymentConfig.Helm.Chart.Name, d.DeploymentConfig.Name))
@@ -176,16 +178,15 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 	// Deploy chart
 	appRelease, err := d.Helm.InstallChart(releaseName, releaseNamespace, overwriteValues, d.DeploymentConfig.Helm)
 	if err != nil {
-		return false, errors.Errorf("Unable to deploy helm chart: %v\nRun `%s` and `%s` to recreate the chart", err, ansi.Color("devspace purge -d "+d.DeploymentConfig.Name, "white+b"), ansi.Color("devspace deploy", "white+b"))
+		return false, nil, errors.Errorf("Unable to deploy helm chart: %v\nRun `%s` and `%s` to recreate the chart", err, ansi.Color("devspace purge -d "+d.DeploymentConfig.Name, "white+b"), ansi.Color("devspace deploy", "white+b"))
 	}
 
 	// Print revision
 	if appRelease != nil {
-		releaseRevision := int(appRelease.Version)
-		d.Log.Donef("Deployed helm chart (Release revision: %d)", releaseRevision)
+		d.Log.Donef("Deployed helm chart (Release revision: %s)", appRelease.Revision)
 	} else {
 		d.Log.Done("Deployed helm chart")
 	}
 
-	return true, nil
+	return true, appRelease, nil
 }

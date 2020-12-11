@@ -8,6 +8,6 @@ import (
 
 // Render runs a `helm template`
 func (d *DeployConfig) Render(cache *generated.CacheConfig, builtImages map[string]string, out io.Writer) error {
-	_, err := d.internalDeploy(cache, true, builtImages, out)
+	_, _, err := d.internalDeploy(cache, true, builtImages, out)
 	return err
 }
