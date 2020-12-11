@@ -2,11 +2,11 @@ package log
 
 import (
 	"fmt"
-	"os"
-	"sync"
-
 	"github.com/mgutz/ansi"
 	"github.com/sirupsen/logrus"
+	"math/rand"
+	"os"
+	"sync"
 )
 
 var Colors = []string{
@@ -17,6 +17,15 @@ var Colors = []string{
 	"cyan",
 	"red",
 	"white+b",
+}
+
+func NewDefaultPrefixLogger(prefix string, base Logger) Logger {
+	return &prefixLogger{
+		Logger: base,
+
+		color:  Colors[rand.Intn(len(Colors))],
+		prefix: prefix,
+	}
 }
 
 func NewPrefixLogger(prefix string, color string, base Logger) Logger {

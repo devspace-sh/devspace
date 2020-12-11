@@ -454,12 +454,19 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 	if cmd.SkipPipeline == false && len(autoReloadPaths) > 0 {
 		var once sync.Once
 		watcher, err := watch.New(autoReloadPaths, []string{".devspace/"}, time.Second, func(changed []string, deleted []string) error {
+			path := ""
+			if len(changed) > 0 {
+				path = changed[0]
+			} else if len(deleted) > 0 {
+				path = deleted[0]
+			}
+
 			once.Do(func() {
 				if interactiveMode {
-					logger.Info("Change detected, will reload in 2 seconds")
+					logger.Infof("Change detected in '%s', will reload in 2 seconds", path)
 					time.Sleep(time.Second * 2)
 				} else {
-					logger.Info("Change detected, will reload")
+					logger.Infof("Change detected in '%s', will reload", path)
 				}
 
 				exitChan <- &reloadError{}
@@ -517,26 +524,13 @@ func (cmd *DevCmd) startOutput(interactiveMode bool, config *latest.Config, gene
 
 			return servicesClient.StartTerminal(args, imageSelector, exitChan, true)
 		} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
-			// Build an image selector
-			imageSelector := []string{}
-			if config.Dev != nil && config.Dev.Logs != nil {
-				for _, configImageName := range config.Dev.Logs.Images {
-					imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig)...)
-				}
-			} else {
-				for configImageName := range config.Images {
-					imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig)...)
-				}
-			}
-
-			// Show last log lines
-			tail := int64(50)
-			if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.ShowLast != nil {
-				tail = int64(*config.Dev.Logs.ShowLast)
-			}
-
 			// Log multiple images at once
-			err := client.LogMultiple(imageSelector, exitChan, &tail, os.Stdout, logger)
+			manager, err := services.NewLogManager(client, config, generatedConfig, exitChan, logger)
+			if err != nil {
+				return 0, errors.Wrap(err, "starting log manager")
+			}
+
+			err = manager.Start()
 			if err != nil {
 				// Check if we should reload
 				if _, ok := err.(*reloadError); ok {
@@ -573,19 +567,39 @@ func GetPaths(config *latest.Config) []string {
 			for _, deployName := range config.Dev.AutoReload.Deployments {
 				for _, deployConf := range config.Deployments {
 					if deployName == deployConf.Name {
-						if deployConf.Helm != nil && deployConf.Helm.Chart.Name != "" {
-							_, err := os.Stat(deployConf.Helm.Chart.Name)
-							if err == nil {
-								chartPath := deployConf.Helm.Chart.Name
-								if chartPath[len(chartPath)-1] != '/' {
-									chartPath += "/"
-								}
+						if deployConf.Helm != nil {
+							// Watch values files
+							for _, p := range deployConf.Helm.ValuesFiles {
+								paths = append(paths, p)
+							}
 
-								paths = append(paths, chartPath+"**")
+							if deployConf.Helm.Chart.Name != "" {
+								_, err := os.Stat(deployConf.Helm.Chart.Name)
+								if err == nil {
+									chartPath := deployConf.Helm.Chart.Name
+									if chartPath[len(chartPath)-1] != '/' {
+										chartPath += "/"
+									}
+
+									paths = append(paths, chartPath+"**")
+								}
 							}
 						} else if deployConf.Kubectl != nil && deployConf.Kubectl.Manifests != nil {
 							for _, manifestPath := range deployConf.Kubectl.Manifests {
-								paths = append(paths, manifestPath)
+								s, err := os.Stat(manifestPath)
+								if err != nil {
+									continue
+								}
+
+								if s.IsDir() {
+									if manifestPath[len(manifestPath)-1] != '/' {
+										manifestPath += "/"
+									}
+
+									paths = append(paths, manifestPath+"**")
+								} else {
+									paths = append(paths, manifestPath)
+								}
 							}
 						}
 					}
@@ -617,7 +631,7 @@ func GetPaths(config *latest.Config) []string {
 		}
 	}
 
-	return paths
+	return removeDuplicates(paths)
 }
 
 type reloadError struct {
@@ -709,6 +723,25 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 	}
 
 	return config, nil
+}
+
+func removeDuplicates(arr []string) []string {
+	newArr := []string{}
+	for _, v := range arr {
+		if contains(newArr, v) == false {
+			newArr = append(newArr, v)
+		}
+	}
+	return newArr
+}
+
+func contains(haystack []string, needle string) bool {
+	for _, v := range haystack {
+		if v == needle {
+			return true
+		}
+	}
+	return false
 }
 
 func updateLastKubeContext(configLoader loader.ConfigLoader, client kubectl.Client, generatedConfig *generated.Config) error {

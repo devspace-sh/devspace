@@ -191,7 +191,7 @@ func (client *client) GetRunningPodsWithImage(imageNames []string, namespace str
 			Outer:
 				for _, container := range currentPod.Spec.Containers {
 					for _, imageName := range imageNames {
-						if compareImageNames(imageName, container.Image) {
+						if CompareImageNames(imageName, container.Image) {
 							if CriticalStatus[podStatus] {
 								return false, errors.Errorf(message.PodStatusCritical, currentPod.Name, podStatus, currentPod.Name)
 							} else if podStatus == "Completed" {
@@ -224,7 +224,7 @@ func (client *client) GetRunningPodsWithImage(imageNames []string, namespace str
 	return pods, nil
 }
 
-func compareImageNames(image1 string, image2 string) bool {
+func CompareImageNames(image1 string, image2 string) bool {
 	if strings.Index(image1, ":") > -1 && strings.Index(image2, ":") > -1 {
 		return image1 == image2
 	} else {

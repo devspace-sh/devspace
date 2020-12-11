@@ -172,7 +172,7 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 				writer = log
 			}
 
-			log.Infof("Execute hook: %s", ansi.Color(fmt.Sprintf("%s '%s'", hook.Command, strings.Join(hook.Args, "' '")), "white+b"))
+			log.Infof("Execute hook: '%s'", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
 			err := command.ExecuteCommandWithEnv(hook.Command, hook.Args, writer, writer, extraEnv)
 			if err != nil {
 				return err

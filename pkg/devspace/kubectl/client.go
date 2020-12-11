@@ -46,8 +46,6 @@ type Client interface {
 	GenericRequest(options *GenericRequestOptions) (string, error)
 
 	ReadLogs(namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error)
-	LogMultipleTimeout(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, timeout time.Duration, log log.Logger) error
-	LogMultiple(imageSelector []string, interrupt chan error, tail *int64, writer io.Writer, log log.Logger) error
 	Logs(ctx context.Context, namespace, podName, containerName string, lastContainerLog bool, tail *int64, follow bool) (io.ReadCloser, error)
 
 	GetUpgraderWrapper() (http.RoundTripper, UpgraderWrapper, error)
