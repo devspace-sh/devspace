@@ -204,6 +204,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 	entrypoint, cmd, err := helper.GetEntrypointAndCmd(string(content), target)
 	if err != nil || (len(entrypoint) == 0 && len(cmd) == 0) {
 		retImageConfig.InjectRestartHelper = false
+		retImageConfig.Entrypoint = []string{"sleep", "9999999999"}
 	}
 
 	// Set image name
