@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	kubectlVersion  = "v1.18.4"
+	kubectlVersion  = "v1.20.0"
 	kubectlDownload = "https://storage.googleapis.com/kubernetes-release/release/" + kubectlVersion + "/bin/" + runtime.GOOS + "/amd64/kubectl"
 )
 
