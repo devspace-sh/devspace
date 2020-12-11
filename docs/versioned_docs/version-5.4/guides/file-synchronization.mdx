@@ -50,5 +50,5 @@ Without file write permission, the sync will not be able to work. If you start y
 - run the containers using a different user during development\*
 
 \* You can achieve this by:
-- Adding a `USER` statement in your Dockerfile: This is especially recommended when you are using multi-stage builds because you can add the `USER` statement for your development/build stage and add another `USER` statment to your production stage. Then, control the build target using the [`options.target` option](../configuration/images/docker.mdx#target) for Docker and kaniko builds and define a profile for removing the build stage for production deployments.
+- Adding a `USER` statement in your Dockerfile: This is especially recommended when you are using multi-stage builds because you can add the `USER` statement for your development/build stage and add another `USER` statement to your production stage. Then, control the build target using the [`options.target` option](../configuration/images/docker.mdx#target) for Docker and kaniko builds and define a profile for removing the build stage for production deployments.
 - Setting `runAsUser` and `runAsGroup` to `0` within the `securityContext` of your Kubernetes pods.
