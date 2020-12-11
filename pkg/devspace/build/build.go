@@ -3,6 +3,7 @@ package build
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -100,6 +101,12 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		imageName := cImageConf.Image
 		imageConfigName := key
 
+		// Execute before images build hook
+		err = c.hookExecuter.Execute(hook.Before, hook.StageImages, imageConfigName, hook.Context{Client: c.client}, log)
+		if err != nil {
+			return nil, err
+		}
+
 		// Get image tags
 		imageTags := []string{}
 		if len(imageConf.Tags) > 0 {
@@ -107,7 +114,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 				for _, t := range imageConf.Tags {
 					r, err := randutil.GenerateRandomString(5)
 					if err != nil {
-						return nil, errors.Errorf("Image building failed: %v", err)
+						return nil, errors.Errorf("image building failed: %v", err)
 					}
 
 					imageTags = append(imageTags, t+"-"+r)
@@ -118,10 +125,22 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		} else {
 			imageTag, err := randutil.GenerateRandomString(7)
 			if err != nil {
-				return nil, errors.Errorf("Image building failed: %v", err)
+				return nil, errors.Errorf("image building failed: %v", err)
 			}
 
 			imageTags = append(imageTags, imageTag)
+		}
+
+		// replace the # in the tags
+		for i := range imageTags {
+			for strings.Contains(imageTags[i], "#") {
+				r, err := randutil.GenerateRandomString(1)
+				if err != nil {
+					return nil, errors.Wrap(err, "generate random string")
+				}
+
+				imageTags[i] = strings.Replace(imageTags[i], "#", r, 1)
+			}
 		}
 
 		// Create new builder
@@ -146,7 +165,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 			// Build the image
 			err = builder.Build(log)
 			if err != nil {
-				c.hookExecuter.OnError(hook.StageImages, []string{hook.All}, hook.Context{Client: c.client, Error: err}, log)
+				c.hookExecuter.OnError(hook.StageImages, []string{hook.All, imageConfigName}, hook.Context{Client: c.client, Error: err}, log)
 				return nil, err
 			}
 
@@ -161,6 +180,12 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 
 			// Track built images
 			builtImages[imageName] = imageTags[0]
+
+			// Execute before images build hook
+			err = c.hookExecuter.Execute(hook.After, hook.StageImages, imageConfigName, hook.Context{Client: c.client}, log)
+			if err != nil {
+				return nil, err
+			}
 		} else {
 			imagesToBuild++
 			go func() {
@@ -171,7 +196,15 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 				// Build the image
 				err := builder.Build(streamLog)
 				if err != nil {
+					c.hookExecuter.OnError(hook.StageImages, []string{imageConfigName}, hook.Context{Client: c.client, Error: err}, log)
 					errChan <- errors.Errorf("Error building image %s:%s: %s %v", imageName, imageTags[0], buff.String(), err)
+					return
+				}
+
+				// Execute before images build hook
+				err = c.hookExecuter.Execute(hook.After, hook.StageImages, imageConfigName, hook.Context{Client: c.client}, log)
+				if err != nil {
+					errChan <- errors.Errorf("Error executing image hook %s:%s: %v", imageName, imageTags[0], err)
 					return
 				}
 

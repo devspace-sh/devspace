@@ -213,17 +213,12 @@ func (c *client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, 
 
 	result := []*types.Release{}
 	for _, release := range releases.Releases {
-		t, err := time.Parse(time.ANSIC, release.Updated)
-		if err != nil {
-			return nil, err
-		}
-
 		result = append(result, &types.Release{
 			Name:         release.Name,
 			Namespace:    release.Namespace,
 			Status:       release.Status,
-			Version:      release.Revision,
-			LastDeployed: t,
+			Revision:     strconv.Itoa(int(release.Revision)),
+			LastDeployed: release.Updated,
 		})
 	}
 

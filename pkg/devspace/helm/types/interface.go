@@ -1,8 +1,6 @@
 package types
 
 import (
-	"time"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 )
 
@@ -16,9 +14,9 @@ type Client interface {
 
 // Release is the helm release struct
 type Release struct {
-	Name         string
-	Namespace    string
-	Status       string
-	Version      int32
-	LastDeployed time.Time
+	Name         string `json:"name"`
+	Namespace    string `json:"namespace"`
+	Status       string `json:"status"`
+	Revision     string `json:"revision"`
+	LastDeployed string `json:"updated"`
 }

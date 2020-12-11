@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -243,12 +244,7 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 			return errors.Errorf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.Dockerfile)
 		}
 
-		generatedConfig, err := configLoader.Generated()
-		if err != nil {
-			return err
-		}
-
-		newImage, newDeployment, err = configureManager.NewDockerfileComponentDeployment(generatedConfig, deploymentName, "", cmd.Dockerfile, cmd.Context)
+		newImage, newDeployment, err = configureManager.NewDockerfileComponentDeployment(deploymentName, "", cmd.Dockerfile, cmd.Context)
 		if err != nil {
 			return err
 		}
@@ -294,7 +290,6 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 
 	cmd.log.WriteString("\n")
 	cmd.log.Done("Project successfully initialized")
-	cmd.log.Infof("\r         \nPlease run: \n- `%s` to tell DevSpace to deploy to this namespace \n- `%s` to create a new space in DevSpace Cloud\n- `%s` to use an existing space\n", ansi.Color("devspace use namespace [NAME]", "white+b"), ansi.Color("devspace create space [NAME]", "white+b"), ansi.Color("devspace use space [NAME]", "white+b"))
 	return nil
 }
 
@@ -391,7 +386,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 
 				// Add dev.open config
 				config.Dev.Open = []*latest.OpenConfig{
-					&latest.OpenConfig{
+					{
 						URL: "http://localhost:" + strconv.Itoa(*localPortPtr),
 					},
 				}
@@ -418,16 +413,22 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 				}
 			}
 
-			syncConfig := append(config.Dev.Sync, &latest.SyncConfig{
+			syncConfig := &latest.SyncConfig{
 				ImageName:          defaultImageName,
 				UploadExcludePaths: excludePaths,
 				ExcludePaths:       []string{".git/"},
-				OnUpload: &latest.SyncOnUpload{
+			}
+			if config.Images[defaultImageName].InjectRestartHelper {
+				syncConfig.OnUpload = &latest.SyncOnUpload{
 					RestartContainer: true,
-				},
-			})
+				}
+			} else {
+				config.Dev.Interactive = &latest.InteractiveConfig{
+					DefaultEnabled: ptr.Bool(true),
+				}
+			}
 
-			config.Dev.Sync = syncConfig
+			config.Dev.Sync = append(config.Dev.Sync, syncConfig)
 		}
 	}
 
@@ -442,14 +443,22 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config) error {
 			patches := []*latest.PatchConfig{
 				{
 					Operation: patchRemoveOp,
-					Path:      "images." + defaultImageName + ".injectRestartHelper",
-				},
-				{
-					Operation: patchRemoveOp,
 					Path:      "images." + defaultImageName + ".appendDockerfileInstructions",
 				},
 			}
 
+			if defaultImageConfig.InjectRestartHelper {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + defaultImageName + ".injectRestartHelper",
+				})
+			}
+			if len(defaultImageConfig.Entrypoint) > 0 {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + defaultImageName + ".entrypoint",
+				})
+			}
 			if defaultImageConfig.Build != nil && defaultImageConfig.Build.Docker != nil && defaultImageConfig.Build.Docker.Options != nil && defaultImageConfig.Build.Docker.Options.Target != "" {
 				patches = append(patches, &latest.PatchConfig{
 					Operation: patchRemoveOp,
@@ -462,7 +471,7 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config) error {
 				Patches: patches,
 			})
 		}
-		if ok {
+		if ok && defaultImageConfig.InjectRestartHelper {
 			config.Profiles = append(config.Profiles, &latest.ProfileConfig{
 				Name: interactiveProfileName,
 				Patches: []*latest.PatchConfig{

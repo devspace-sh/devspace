@@ -33,7 +33,7 @@ func (serviceClient *client) StartReversePortForwarding(interrupt chan error) er
 }
 
 func (serviceClient *client) startReversePortForwarding(portForwarding *latest.PortForwardingConfig, interrupt chan error, log logpkg.Logger) error {
-	selector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, &targetselector.SelectorParameter{
+	selector, err := targetselector.NewTargetSelector(serviceClient.client, &targetselector.SelectorParameter{
 		ConfigParameter: targetselector.ConfigParameter{
 			Namespace:     portForwarding.Namespace,
 			LabelSelector: portForwarding.LabelSelector,

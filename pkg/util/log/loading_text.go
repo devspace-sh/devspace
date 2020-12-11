@@ -120,7 +120,7 @@ func (l *loadingText) render() {
 	if terminalSize != nil && uint16(prefixLength+len(message)+suffixLength) > terminalSize.Width {
 		dots := []byte("...")
 
-		maxMessageLength := int(terminalSize.Width) - (prefixLength + suffixLength + len(dots))
+		maxMessageLength := int(terminalSize.Width) - (prefixLength + suffixLength + len(dots) + 5)
 		if maxMessageLength > 0 {
 			message = append(message[:maxMessageLength], dots...)
 		}
@@ -135,7 +135,6 @@ func (l *loadingText) Stop() {
 	l.Stream.Write([]byte("\r"))
 
 	messageLength := len(l.Message) + 20
-
 	for i := 0; i < messageLength; i++ {
 		l.Stream.Write([]byte(" "))
 	}

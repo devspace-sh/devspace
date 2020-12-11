@@ -41,29 +41,29 @@ func NewExecuter(config *latest.Config) Executer {
 }
 
 // When is the type that is used to tell devspace when relatively to a stage a hook should be executed
-type When int
+type When string
 
 const (
 	// Before is used to tell devspace to execute a hook before a certain stage
-	Before When = iota
+	Before When = "before"
 	// After is used to tell devspace to execute a hook after a certain stage
-	After
+	After When = "after"
 	// OnError is used to tell devspace to execute a hook after a certain error occured
-	OnError
+	OnError When = "onError"
 )
 
 // Stage is the type that defines the stage at when to execute a hook
-type Stage int
+type Stage string
 
 const (
 	// StageImages is the image building stage
-	StageImages Stage = iota
+	StageImages Stage = "images"
 	// StageDeployments is the deploying stage
-	StageDeployments
+	StageDeployments Stage = "deployments"
 	// StageDependencies is the dependency stage
-	StageDependencies
+	StageDependencies Stage = "dependencies"
 	// StagePullSecrets is the pull secrets stage
-	StagePullSecrets
+	StagePullSecrets Stage = "pullSecrets"
 )
 
 // All is used to tell devspace to execute a hook before or after all images, deployments
@@ -172,7 +172,7 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 				writer = log
 			}
 
-			log.Infof("Execute hook: %s", ansi.Color(fmt.Sprintf("%s '%s'", hook.Command, strings.Join(hook.Args, "' '")), "white+b"))
+			log.Infof("Execute hook '%s' '%s' '%s': '%s'", when, stage, which, ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
 			err := command.ExecuteCommandWithEnv(hook.Command, hook.Args, writer, writer, extraEnv)
 			if err != nil {
 				return err

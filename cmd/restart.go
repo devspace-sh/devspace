@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
@@ -9,7 +12,6 @@ import (
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
@@ -18,6 +20,11 @@ import (
 // RestartCmd holds the required data for the cmd
 type RestartCmd struct {
 	*flags.GlobalFlags
+
+	Container     string
+	Pod           string
+	Pick          bool
+	LabelSelector string
 
 	log log.Logger
 }
@@ -47,6 +54,10 @@ devspace restart -n my-namespace
 			return cmd.Run(f, plugins, cobraCmd, args)
 		},
 	}
+	restartCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod to restart")
+	restartCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to restart")
+	restartCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
+	restartCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
 
 	return restartCmd
 }
@@ -60,14 +71,37 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 	configExists, err := configLoader.SetDevSpaceRoot()
 	if err != nil {
 		return err
-	} else if !configExists {
-		return errors.New(message.ConfigNotFound)
+	} else if !configExists || cmd.Pod != "" || cmd.LabelSelector != "" || cmd.Pick {
+		client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+		if err != nil {
+			return errors.Wrap(err, "create kube client")
+		}
+
+		selector, err := targetselector.NewTargetSelector(client, &targetselector.SelectorParameter{
+			CmdParameter: targetselector.CmdParameter{
+				Namespace:     cmd.Namespace,
+				PodName:       cmd.Pod,
+				LabelSelector: cmd.LabelSelector,
+			},
+			ConfigParameter: targetselector.ConfigParameter{},
+		}, true, nil)
+		if err != nil {
+			return errors.Errorf("error creating target selector: %v", err)
+		}
+
+		return restartContainer(client, selector, cmd.log)
 	}
+
+	var (
+		generatedConfig *generated.Config
+		config          *latest.Config
+		client          kubectl.Client
+	)
 
 	log.StartFileLogging()
 
 	// Get config with adjusted cluster config
-	generatedConfig, err := configLoader.Generated()
+	generatedConfig, err = configLoader.Generated()
 	if err != nil {
 		return err
 	}
@@ -78,7 +112,7 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 		return err
 	}
 
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err = f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Wrap(err, "create kube client")
 	}
@@ -89,7 +123,7 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 	}
 
 	// Get config with adjusted cluster config
-	config, err := configLoader.Load()
+	config, err = configLoader.Load()
 	if err != nil {
 		return err
 	}
@@ -108,7 +142,7 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 				continue
 			}
 
-			selector, err := targetselector.NewTargetSelector(config, client, &targetselector.SelectorParameter{
+			selector, err := targetselector.NewTargetSelector(client, &targetselector.SelectorParameter{
 				CmdParameter: targetselector.CmdParameter{
 					Namespace: cmd.Namespace,
 				},
@@ -119,27 +153,13 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 				},
 			}, true, targetselector.ImageSelectorFromConfig(syncPath.ImageName, config, generatedConfig))
 			if err != nil {
-				return errors.Errorf("Error creating target selector: %v", err)
+				return errors.Errorf("error creating target selector: %v", err)
 			}
 
-			cmd.log.StartWait("Restart: Waiting for pods...")
-			pod, container, err := selector.GetContainer(false, cmd.log)
-			cmd.log.StopWait()
+			err = restartContainer(client, selector, cmd.log)
 			if err != nil {
-				return errors.Errorf("Error selecting pod: %v", err)
+				return err
 			}
-
-			err = services.InjectDevSpaceHelper(client, pod, container.Name, cmd.log)
-			if err != nil {
-				return errors.Wrap(err, "inject devspace helper")
-			}
-
-			stdOut, stdErr, err := client.ExecBuffered(pod, container.Name, []string{services.DevSpaceHelperContainerPath, "restart"}, nil)
-			if err != nil {
-				return fmt.Errorf("error restarting container %s in pod %s/%s: %s %s => %v", container.Name, pod.Namespace, pod.Name, string(stdOut), string(stdErr), err)
-			}
-
-			cmd.log.Donef("Successfully restarted container %s in pod %s/%s", container.Name, pod.Namespace, pod.Name)
 			restarts++
 		}
 	}
@@ -152,5 +172,27 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 	if restarts == 0 {
 		cmd.log.Warn("No containers to restart found, please make sure you have set `dev.sync[*].onUpload.restartContainer` to `true` somewhere in your sync path")
 	}
+	return nil
+}
+
+func restartContainer(client kubectl.Client, selector *targetselector.TargetSelector, log log.Logger) error {
+	log.StartWait("Restart: Waiting for pods...")
+	pod, container, err := selector.GetContainer(false, log)
+	log.StopWait()
+	if err != nil {
+		return errors.Errorf("Error selecting pod: %v", err)
+	}
+
+	err = services.InjectDevSpaceHelper(client, pod, container.Name, log)
+	if err != nil {
+		return errors.Wrap(err, "inject devspace helper")
+	}
+
+	stdOut, stdErr, err := client.ExecBuffered(pod, container.Name, []string{services.DevSpaceHelperContainerPath, "restart"}, nil)
+	if err != nil {
+		return fmt.Errorf("error restarting container %s in pod %s/%s: %s %s => %v", container.Name, pod.Namespace, pod.Name, string(stdOut), string(stdErr), err)
+	}
+
+	log.Donef("Successfully restarted container %s in pod %s/%s", container.Name, pod.Namespace, pod.Name)
 	return nil
 }

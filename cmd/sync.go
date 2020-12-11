@@ -68,8 +68,8 @@ devspace sync --container-path=/my-path
 		},
 	}
 
-	syncCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
-	syncCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
+	syncCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to sync to")
+	syncCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to sync to")
 	syncCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	syncCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
 

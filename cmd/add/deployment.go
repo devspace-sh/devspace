@@ -120,12 +120,7 @@ func (cmd *deploymentCmd) RunAddDeployment(f factory.Factory, cobraCmd *cobra.Co
 	} else if cmd.Chart != "" {
 		newDeployment, err = configureManager.NewHelmDeployment(deploymentName, cmd.Chart, cmd.ChartRepo, cmd.ChartVersion)
 	} else if cmd.Dockerfile != "" {
-		generatedConfig, err := configLoader.Generated()
-		if err != nil {
-			return err
-		}
-
-		newImage, newDeployment, err = configureManager.NewDockerfileComponentDeployment(generatedConfig, deploymentName, cmd.Image, cmd.Dockerfile, cmd.Context)
+		newImage, newDeployment, err = configureManager.NewDockerfileComponentDeployment(deploymentName, cmd.Image, cmd.Dockerfile, cmd.Context)
 	} else if cmd.Image != "" {
 		newImage, newDeployment, err = configureManager.NewImageComponentDeployment(deploymentName, cmd.Image)
 	} else {

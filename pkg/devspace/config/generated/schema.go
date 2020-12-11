@@ -40,7 +40,9 @@ type ImageCache struct {
 type DeploymentCache struct {
 	DeploymentConfigHash string `yaml:"deploymentConfigHash,omitempty"`
 
-	HelmOverridesHash    string `yaml:"helmOverridesHash,omitempty"`
-	HelmChartHash        string `yaml:"helmChartHash,omitempty"`
+	HelmOverridesHash   string `yaml:"helmOverridesHash,omitempty"`
+	HelmChartHash       string `yaml:"helmChartHash,omitempty"`
+	HelmReleaseRevision string `yaml:"helmReleaseRevision,omitempty"`
+
 	KubectlManifestsHash string `yaml:"kubectlManifestsHash,omitempty"`
 }

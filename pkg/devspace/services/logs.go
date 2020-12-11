@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"io"
 	"os"
 
@@ -16,7 +18,7 @@ func (serviceClient *client) StartLogs(imageSelector []string, follow bool, tail
 
 // StartLogsWithWriter prints the logs and then attaches to the container with the given stdout and stderr
 func (serviceClient *client) StartLogsWithWriter(imageSelector []string, follow bool, tail int64, writer io.Writer) error {
-	targetSelector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, serviceClient.selectorParameter, true, imageSelector)
+	targetSelector, err := targetselector.NewTargetSelector(serviceClient.client, serviceClient.selectorParameter, true, imageSelector)
 	if err != nil {
 		return err
 	}
@@ -38,4 +40,9 @@ func (serviceClient *client) StartLogsWithWriter(imageSelector []string, follow 
 
 	_, err = io.Copy(writer, reader)
 	return err
+}
+
+// StartLogsFromSelector will continuously observe and start logs for the given selector configuration, until interrupt channel is closed
+func (serviceClient *client) StartLogsFromSelector(selector *latest.LogsConfig, interrupt chan error, log logpkg.Logger) error {
+	return nil
 }

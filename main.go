@@ -1,7 +1,9 @@
 package main
 
 import (
+	"math/rand"
 	"os"
+	"time"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
@@ -12,6 +14,7 @@ import (
 var version string
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
 	upgrade.SetVersion(version)
 
 	cmd.Execute()

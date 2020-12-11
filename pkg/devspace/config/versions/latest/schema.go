@@ -638,9 +638,17 @@ type BandwidthLimits struct {
 
 // LogsConfig specifies the logs options for devspace dev
 type LogsConfig struct {
-	Disabled *bool    `yaml:"disabled,omitempty" json:"disabled,omitempty"`
-	ShowLast *int     `yaml:"showLast,omitempty" json:"showLast,omitempty"`
-	Images   []string `yaml:"images,omitempty" json:"images,omitempty"`
+	Disabled  *bool          `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+	ShowLast  *int           `yaml:"showLast,omitempty" json:"showLast,omitempty"`
+	Images    []string       `yaml:"images,omitempty" json:"images,omitempty"`
+	Selectors []LogsSelector `yaml:"selectors,omitempty" json:"selectors,omitempty"`
+}
+
+// LogsSelector holds configuration how to select a log target
+type LogsSelector struct {
+	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
+	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 }
 
 // AutoReloadConfig defines the struct for auto reloading devspace with additional paths

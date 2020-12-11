@@ -12,7 +12,7 @@ import (
 
 // StartAttach opens a new terminal
 func (serviceClient *client) StartAttach(imageSelector []string, interrupt chan error) error {
-	targetSelector, err := targetselector.NewTargetSelector(serviceClient.config, serviceClient.client, serviceClient.selectorParameter, true, imageSelector)
+	targetSelector, err := targetselector.NewTargetSelector(serviceClient.client, serviceClient.selectorParameter, true, imageSelector)
 	if err != nil {
 		return err
 	}

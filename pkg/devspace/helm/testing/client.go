@@ -2,10 +2,9 @@ package v2
 
 import (
 	"fmt"
-	"time"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
+	"time"
 )
 
 // Client implements Interface
@@ -45,9 +44,9 @@ func (f *Client) InstallChart(releaseName string, releaseNamespace string, value
 	newRelease := &types.Release{
 		Name:         releaseName,
 		Namespace:    releaseNamespace,
-		Version:      1,
+		Revision:     "1",
 		Status:       "testStatus",
-		LastDeployed: time.Now(),
+		LastDeployed: time.Now().String(),
 	}
 
 	f.Releases = append(f.Releases, newRelease)

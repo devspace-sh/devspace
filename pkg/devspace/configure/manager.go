@@ -1,7 +1,6 @@
 package configure
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
@@ -10,7 +9,7 @@ import (
 
 // Manager controls the devspace configuration
 type Manager interface {
-	NewDockerfileComponentDeployment(generatedConfig *generated.Config, name, imageName, dockerfile, context string) (*latest.ImageConfig, *latest.DeploymentConfig, error)
+	NewDockerfileComponentDeployment(name, imageName, dockerfile, context string) (*latest.ImageConfig, *latest.DeploymentConfig, error)
 	NewImageComponentDeployment(name, imageName string) (*latest.ImageConfig, *latest.DeploymentConfig, error)
 	NewKubectlDeployment(name, manifests string) (*latest.DeploymentConfig, error)
 	NewHelmDeployment(name, chartName, chartRepo, chartVersion string) (*latest.DeploymentConfig, error)

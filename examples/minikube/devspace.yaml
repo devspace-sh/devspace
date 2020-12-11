@@ -1,12 +1,17 @@
 version: v1beta9
 images:
   default:
-    image: devspace
+    image: mydockeruser/devspace
+    tags:
+      - my-tag-#####
 deployments:
 - name: default
   helm:
     chart:
       name: ./chart
+    values:
+      image: image:mydockeruser/devspace
+      tag: tag:mydockeruser/devspace
 dev:
   ports:
   - imageName: default

@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"github.com/devspace-cloud/devspace/pkg/devspace/services"
+	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"sync"
@@ -74,12 +76,6 @@ func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	imageSelector, ok := r.URL.Query()["imageSelector"]
-	if !ok || len(imageSelector) == 0 {
-		http.Error(w, "imageSelector is missing", http.StatusBadRequest)
-		return
-	}
-
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		h.log.Errorf("Error upgrading connection in %s: %v", r.URL.String(), err)
@@ -90,7 +86,14 @@ func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
 	defer ws.Close()
 
 	writer := &wsStream{WebSocket: ws}
-	err = client.LogMultipleTimeout(imageSelector, make(chan error), ptr.Int64(100), writer, 0, log.Discard)
+	manager, err := services.NewLogManager(client, h.config, h.generatedConfig, make(chan error), log.NewStreamLogger(writer, logrus.InfoLevel))
+	if err != nil {
+		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+		websocketError(ws, err)
+		return
+	}
+
+	err = manager.Start()
 	if err != nil {
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		websocketError(ws, err)

@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	dockerfileutil "github.com/devspace-cloud/devspace/pkg/util/dockerfile"
@@ -18,7 +17,7 @@ import (
 var imageNameCleaningRegex = regexp.MustCompile("[^a-z0-9]")
 
 // NewDockerfileComponentDeployment returns a new deployment that deploys an image built from a local dockerfile via a component
-func (m *manager) NewDockerfileComponentDeployment(generatedConfig *generated.Config, name, imageName, dockerfile, context string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
+func (m *manager) NewDockerfileComponentDeployment(name, imageName, dockerfile, context string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
 	var imageConfig *latest.ImageConfig
 	var err error
 	if imageName == "" {
