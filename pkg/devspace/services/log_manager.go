@@ -45,7 +45,7 @@ func NewLogManager(client kubectl.Client, config *latest.Config, generatedConfig
 
 	// Build an image selector
 	imageSelector := []string{}
-	if config.Dev != nil && config.Dev.Logs != nil {
+	if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.Images != nil {
 		for _, configImageName := range config.Dev.Logs.Images {
 			imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig.GetActive())...)
 		}
