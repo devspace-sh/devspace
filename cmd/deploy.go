@@ -131,7 +131,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	// load generated config
 	generatedConfig, err := configLoader.Generated()
 	if err != nil {
-		return errors.Errorf("Error loading generated.yaml: %v", err)
+		return errors.Errorf("error loading generated.yaml: %v", err)
 	}
 
 	// use last context if specified
@@ -143,7 +143,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	// create kubectl client
 	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
+		return errors.Errorf("unable to create new kubectl client: %v", err)
 	}
 
 	// warn the user if we deployed into a different context before
@@ -194,7 +194,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	// create namespace if necessary
 	err = client.EnsureDeployNamespaces(config, cmd.log)
 	if err != nil {
-		return errors.Errorf("Unable to create namespace: %v", err)
+		return errors.Errorf("unable to create namespace: %v", err)
 	}
 
 	// create docker client
@@ -204,7 +204,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	}
 
 	// create pull secrets if necessary
-	err = f.NewPullSecretClient(config, client, dockerClient, cmd.log).CreatePullSecrets()
+	err = f.NewPullSecretClient(config, generatedConfig.GetActive(), client, dockerClient, cmd.log).CreatePullSecrets()
 	if err != nil {
 		cmd.log.Warn(err)
 	}
@@ -252,7 +252,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 			if len(builtImages) > 0 {
 				err := configLoader.SaveGenerated()
 				if err != nil {
-					return errors.Errorf("Error saving generated config: %v", err)
+					return errors.Errorf("error saving generated config: %v", err)
 				}
 			}
 		}
@@ -304,7 +304,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 
 func (cmd *DeployCmd) validateFlags() error {
 	if cmd.SkipBuild && cmd.ForceBuild {
-		return errors.New("Flags --skip-build & --force-build cannot be used together")
+		return errors.New("flags --skip-build & --force-build cannot be used together")
 	}
 
 	return nil

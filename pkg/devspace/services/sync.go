@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"github.com/devspace-cloud/devspace/assets"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/hash"
 	"io"
@@ -104,7 +105,12 @@ func (serviceClient *client) StartSync(interrupt chan error, printSyncLog bool, 
 
 		// should we print the logs?
 		if printSyncLog {
-			logger := logpkg.NewPrefixLogger(fmt.Sprintf("[Sync - %d] ", idx), logpkg.Colors[idx%len(logpkg.Colors)], serviceClient.log)
+			prefix := fmt.Sprintf("[%d:sync] ", idx)
+			if syncConfig.ImageName != "" {
+				prefix = fmt.Sprintf("[%d:sync:%s] ", idx, syncConfig.ImageName)
+			}
+
+			logger := logpkg.NewPrefixLogger(prefix, logpkg.Colors[idx%len(logpkg.Colors)], serviceClient.log)
 			options.SyncLog = logger
 			options.RestartLog = logger
 		}
@@ -157,7 +163,12 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 		}
 	}
 
-	selector, err := targetselector.NewTargetSelector(serviceClient.client, options.SelectorParameter, options.AllowPodPick, targetselector.ImageSelectorFromConfig(syncConfig.ImageName, serviceClient.config, serviceClient.generated))
+	var cache *generated.CacheConfig
+	if serviceClient.generated != nil {
+		cache = serviceClient.generated.GetActive()
+	}
+
+	selector, err := targetselector.NewTargetSelector(serviceClient.client, options.SelectorParameter, options.AllowPodPick, targetselector.ImageSelectorFromConfig(syncConfig.ImageName, serviceClient.config, cache))
 	if err != nil {
 		return errors.Errorf("Error creating target selector: %v", err)
 	}

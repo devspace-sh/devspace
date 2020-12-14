@@ -640,6 +640,7 @@ type BandwidthLimits struct {
 type LogsConfig struct {
 	Disabled  *bool          `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 	ShowLast  *int           `yaml:"showLast,omitempty" json:"showLast,omitempty"`
+	Sync      *bool          `yaml:"sync,omitempty" json:"sync,omitempty"`
 	Images    []string       `yaml:"images,omitempty" json:"images,omitempty"`
 	Selectors []LogsSelector `yaml:"selectors,omitempty" json:"selectors,omitempty"`
 }
@@ -721,7 +722,28 @@ type HookConfig struct {
 	Args            []string `yaml:"args,omitempty" json:"args,omitempty"`
 	OperatingSystem string   `yaml:"os,omitempty" json:"os,omitempty"`
 
-	When *HookWhenConfig `yaml:"when,omitempty" json:"when,omitempty"`
+	Background bool `yaml:"background,omitempty" json:"background,omitempty"`
+	Silent     bool `yaml:"silent,omitempty" json:"silent,omitempty"`
+
+	Where HookWhereConfig `yaml:"where,omitempty" json:"where,omitempty"`
+	When  *HookWhenConfig `yaml:"when,omitempty" json:"when,omitempty"`
+}
+
+// HookWhereConfig defines where to execute the hook
+type HookWhereConfig struct {
+	Container *HookContainer `yaml:"container,omitempty" json:"container,omitempty"`
+}
+
+// HookContainer defines how to select one or more containers to execute a hook in
+type HookContainer struct {
+	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
+	Pod           string            `yaml:"pod,omitempty" json:"pod,omitempty"`
+	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
+	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
+
+	Wait    *bool `yaml:"wait,omitempty" json:"wait,omitempty"`
+	Timeout int64 `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 }
 
 // HookWhenConfig defines when the hook should be executed

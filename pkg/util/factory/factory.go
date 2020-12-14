@@ -45,7 +45,7 @@ type Factory interface {
 	NewHookExecutor(config *latest.Config) hook.Executer
 
 	// Pull secrets client
-	NewPullSecretClient(config *latest.Config, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client
+	NewPullSecretClient(config *latest.Config, cache *generated.CacheConfig, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client
 
 	// Docker
 	NewDockerClient(log log.Logger) (docker.Client, error)
@@ -120,8 +120,8 @@ func (f *DefaultFactoryImpl) NewDependencyManager(config *latest.Config, cache *
 }
 
 // NewPullSecretClient implements interface
-func (f *DefaultFactoryImpl) NewPullSecretClient(config *latest.Config, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client {
-	return pullsecrets.NewClient(config, kubeClient, dockerClient, log)
+func (f *DefaultFactoryImpl) NewPullSecretClient(config *latest.Config, cache *generated.CacheConfig, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client {
+	return pullsecrets.NewClient(config, cache, kubeClient, dockerClient, log)
 }
 
 // NewConfigLoader implements interface

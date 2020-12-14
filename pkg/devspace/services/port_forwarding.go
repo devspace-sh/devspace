@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"strconv"
 	"strings"
 	"time"
@@ -34,12 +35,17 @@ func (serviceClient *client) StartPortForwarding(interrupt chan error) error {
 }
 
 func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardingConfig, interrupt chan error, log logpkg.Logger) error {
+	var cache *generated.CacheConfig
+	if serviceClient.generated != nil {
+		cache = serviceClient.generated.GetActive()
+	}
+
 	selector, err := targetselector.NewTargetSelector(serviceClient.client, &targetselector.SelectorParameter{
 		ConfigParameter: targetselector.ConfigParameter{
 			Namespace:     portForwarding.Namespace,
 			LabelSelector: portForwarding.LabelSelector,
 		},
-	}, false, targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, serviceClient.generated))
+	}, false, targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, cache))
 	if err != nil {
 		return errors.Errorf("Error creating target selector: %v", err)
 	}

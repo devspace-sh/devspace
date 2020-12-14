@@ -108,7 +108,7 @@ func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, log log.Logger) e
 	// Build Image
 	err = imageBuilder.BuildImage(absoluteContextPath, absoluteDockerfilePath, b.Entrypoint, b.Cmd, log)
 	if err != nil {
-		return errors.Errorf("Error during image build: %v", err)
+		return err
 	}
 
 	log.Done("Done processing image '" + b.ImageName + "'")

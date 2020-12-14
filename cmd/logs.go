@@ -153,7 +153,7 @@ func getImageSelector(configLoader loader.ConfigLoader, image string) ([]string,
 			return nil, err
 		}
 
-		imageSelector = targetselector.ImageSelectorFromConfig(image, config, generatedConfig)
+		imageSelector = targetselector.ImageSelectorFromConfig(image, config, generatedConfig.GetActive())
 		if len(imageSelector) == 0 {
 			return nil, fmt.Errorf("couldn't find an image with name %s in devspace config", image)
 		}

@@ -151,7 +151,7 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 					Namespace:     syncPath.Namespace,
 					ContainerName: syncPath.ContainerName,
 				},
-			}, true, targetselector.ImageSelectorFromConfig(syncPath.ImageName, config, generatedConfig))
+			}, true, targetselector.ImageSelectorFromConfig(syncPath.ImageName, config, generatedConfig.GetActive()))
 			if err != nil {
 				return errors.Errorf("error creating target selector: %v", err)
 			}

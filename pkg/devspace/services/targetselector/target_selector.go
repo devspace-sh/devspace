@@ -299,10 +299,10 @@ func (t *TargetSelector) GetContainer(allowInitContainer bool, log log.Logger) (
 	return pod, nil, nil
 }
 
-func ImageSelectorFromConfig(configImageName string, config *latest.Config, generated *generated.Config) []string {
+func ImageSelectorFromConfig(configImageName string, config *latest.Config, generated *generated.CacheConfig) []string {
 	var imageSelector []string
 	if configImageName != "" && generated != nil && config != nil {
-		imageConfigCache := generated.GetActive().GetImageCache(configImageName)
+		imageConfigCache := generated.GetImageCache(configImageName)
 		if imageConfigCache.ImageName != "" {
 			imageSelector = []string{imageConfigCache.ImageName + ":" + imageConfigCache.Tag}
 		} else if config.Images[configImageName] != nil {

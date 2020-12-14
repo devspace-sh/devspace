@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/tunnel"
 	"io"
 	"time"
@@ -33,13 +34,18 @@ func (serviceClient *client) StartReversePortForwarding(interrupt chan error) er
 }
 
 func (serviceClient *client) startReversePortForwarding(portForwarding *latest.PortForwardingConfig, interrupt chan error, log logpkg.Logger) error {
+	var cache *generated.CacheConfig
+	if serviceClient.generated != nil {
+		cache = serviceClient.generated.GetActive()
+	}
+
 	selector, err := targetselector.NewTargetSelector(serviceClient.client, &targetselector.SelectorParameter{
 		ConfigParameter: targetselector.ConfigParameter{
 			Namespace:     portForwarding.Namespace,
 			LabelSelector: portForwarding.LabelSelector,
 			ContainerName: portForwarding.ContainerName,
 		},
-	}, false, targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, serviceClient.generated))
+	}, false, targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, cache))
 	if err != nil {
 		return errors.Errorf("Error creating target selector: %v", err)
 	}

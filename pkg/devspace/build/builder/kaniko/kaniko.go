@@ -130,9 +130,7 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 		password = authConfig.IdentityToken
 	}
 
-	registryClient := pullsecrets.NewClient(nil, b.helper.KubeClient, b.dockerClient, log)
-
-	return registryClient.CreatePullSecret(&pullsecrets.PullSecretOptions{
+	return pullsecrets.NewClient(nil, nil, b.helper.KubeClient, b.dockerClient, log).CreatePullSecret(&pullsecrets.PullSecretOptions{
 		Namespace:       b.BuildNamespace,
 		RegistryURL:     registryURL,
 		Username:        username,
@@ -224,7 +222,6 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 
 		ignoreRules = append(ignoreRules, ".devspace/")
-
 		log.StartWait("Uploading files to build container")
 
 		// Copy complete context
