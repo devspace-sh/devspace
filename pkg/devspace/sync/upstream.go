@@ -33,6 +33,8 @@ type upstream struct {
 
 	isBusy      bool
 	isBusyMutex sync.Mutex
+
+	workingDirectory string
 }
 
 const removeFilesBufferSize = 64
@@ -58,6 +60,7 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 		return nil, errors.Wrap(err, "new client connection")
 	}
 
+	workingDirectory, _ := os.Getwd()
 	return &upstream{
 		events:    make(chan notify.EventInfo, 3000), // High buffer size so we don't miss any fsevents if there are a lot of changes
 		symlinks:  make(map[string]*Symlink),
@@ -68,6 +71,8 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 		reader: reader,
 		writer: writer,
 		client: remote.NewUpstreamClient(conn),
+
+		workingDirectory: workingDirectory,
 	}, nil
 }
 
@@ -378,11 +383,11 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 		if c.IsDirectory {
 			// Print changes
 			if u.sync.Options.Verbose || len(files) <= 3 {
-				u.sync.log.Infof("Upstream - Upload Folder %s", c.Name)
+				u.sync.log.Infof("Upstream - Upload Folder %s", u.getRelativeUpstreamPath(c.Name))
 			}
 		} else {
 			if u.sync.Options.Verbose || len(files) <= 3 {
-				u.sync.log.Infof("Upstream - Upload File %s", c.Name)
+				u.sync.log.Infof("Upstream - Upload File %s", u.getRelativeUpstreamPath(c.Name))
 			}
 
 			size += c.Size
@@ -530,7 +535,7 @@ func (u *upstream) applyRemoves(files []*FileInformation) error {
 
 			// Print changes
 			if u.sync.Options.Verbose || len(files) <= 3 {
-				u.sync.log.Infof("Upstream - Remove %s", file.Name)
+				u.sync.log.Infof("Upstream - Remove %s", u.getRelativeUpstreamPath(file.Name))
 			}
 		}
 
@@ -561,4 +566,18 @@ func (u *upstream) applyRemoves(files []*FileInformation) error {
 	}
 
 	return nil
+}
+
+func (u *upstream) getRelativeUpstreamPath(uploadPath string) string {
+	if uploadPath == "" {
+		return uploadPath
+	}
+
+	uploadPath = uploadPath[1:]
+	out, err := filepath.Rel(filepath.FromSlash(u.workingDirectory), filepath.Join(filepath.FromSlash(u.sync.LocalPath), filepath.FromSlash(uploadPath)))
+	if err != nil {
+		return "./" + uploadPath
+	}
+
+	return out
 }

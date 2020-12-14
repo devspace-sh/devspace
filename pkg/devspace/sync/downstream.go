@@ -249,7 +249,7 @@ func (d *downstream) downloadFiles(writer io.WriteCloser, changes []*remote.Chan
 	// Print log message
 	if len(changes) <= 3 || d.sync.Options.Verbose {
 		for _, element := range changes {
-			d.sync.log.Infof("Downstream - Download file %s, size: %d", element.Path, element.Size)
+			d.sync.log.Infof("Downstream - Download file .%s, size: %d", element.Path, element.Size)
 		}
 	} else if len(changes) > 3 {
 		filesize := int64(0)
@@ -335,7 +335,7 @@ func (d *downstream) remove(remove []*remote.Change, force bool) {
 		absFilepath := filepath.Join(d.sync.LocalPath, change.Path)
 		if shouldRemoveLocal(absFilepath, parseFileInformation(change), d.sync, force) {
 			if numRemoveFiles <= 3 || d.sync.Options.Verbose {
-				d.sync.log.Infof("Downstream - Remove %s", change.Path)
+				d.sync.log.Infof("Downstream - Remove .%s", change.Path)
 			}
 
 			if change.IsDir {
