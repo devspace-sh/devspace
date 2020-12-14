@@ -6,6 +6,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
@@ -50,7 +51,7 @@ devspace attach -n my-namespace
 	attachCmd.Flags().StringVar(&cmd.Image, "image", "", "Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage")
 	attachCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 
-	attachCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
+	attachCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
 
 	return attachCmd
 }
@@ -98,17 +99,7 @@ func (cmd *AttachCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	}
 
 	// Build params
-	selectorParameter := &targetselector.SelectorParameter{
-		CmdParameter: targetselector.CmdParameter{
-			ContainerName: cmd.Container,
-			LabelSelector: cmd.LabelSelector,
-			Namespace:     cmd.Namespace,
-			PodName:       cmd.Pod,
-		},
-	}
-	if cmd.Pick != false {
-		selectorParameter.CmdParameter.Pick = &cmd.Pick
-	}
+	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
 	// get imageselector if specified
 	imageSelector, err := getImageSelector(configLoader, cmd.Image)
@@ -116,8 +107,10 @@ func (cmd *AttachCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 		return err
 	}
 
-	servicesClient := f.NewServicesClient(nil, nil, client, selectorParameter, log)
+	// set image selector
+	options.ImageSelector = imageSelector
+	options.Wait = ptr.Bool(false)
 
 	// Start attach
-	return servicesClient.StartAttach(imageSelector, make(chan error))
+	return f.NewServicesClient(nil, nil, client, log).StartAttach(options, make(chan error))
 }

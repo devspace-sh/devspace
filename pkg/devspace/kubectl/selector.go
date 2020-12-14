@@ -6,8 +6,21 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
+	"sort"
+	"strings"
 )
+
+var SortPodsByNewest = func(pods []*k8sv1.Pod, i, j int) bool {
+	return pods[i].CreationTimestamp.Unix() > pods[j].CreationTimestamp.Unix()
+}
+
+var SortContainersByNewest = func(pods []*SelectedPodContainer, i, j int) bool {
+	return pods[i].Pod.CreationTimestamp.Unix() > pods[j].Pod.CreationTimestamp.Unix()
+}
+
+var FilterNonRunningPods = func(p *k8sv1.Pod) bool {
+	return GetPodStatus(p) != "Running"
+}
 
 var FilterNonRunningContainers = func(p *k8sv1.Pod, c *k8sv1.Container) bool {
 	if p.DeletionTimestamp != nil {
@@ -33,17 +46,40 @@ type SelectedPodContainer struct {
 
 type Selector struct {
 	ImageSelector      []string
-	LabelSelector      map[string]string
+	LabelSelector      string
 	Pod                string
 	ContainerName      string
 	Namespace          string
-	FilterPod          FilterPod
-	FilterContainer    FilterContainer
 	SkipInitContainers bool
+
+	FilterPod       FilterPod
+	FilterContainer FilterContainer
+}
+
+func (s Selector) String() string {
+	if len(s.ImageSelector) == 0 && len(s.LabelSelector) == 0 && s.Pod == "" {
+		return "everything selector"
+	}
+
+	strs := []string{}
+	if len(s.ImageSelector) > 0 {
+		strs = append(strs, "image selector: "+strings.Join(s.ImageSelector, ","))
+	}
+	if len(s.LabelSelector) > 0 {
+		strs = append(strs, "label selector: "+s.LabelSelector)
+	}
+	if s.Pod != "" {
+		strs = append(strs, "pod name: "+s.Pod)
+	}
+
+	return strings.Join(strs, ", ")
 }
 
 type FilterPod func(p *k8sv1.Pod) bool
 type FilterContainer func(p *k8sv1.Pod, c *k8sv1.Container) bool
+
+type SortPods func(pods []*k8sv1.Pod, i, j int) bool
+type SortContainers func(containers []*SelectedPodContainer, i, j int) bool
 
 type Filter interface {
 	SelectContainers(ctx context.Context, selectors ...Selector) ([]*SelectedPodContainer, error)
@@ -52,11 +88,22 @@ type Filter interface {
 
 type filter struct {
 	client Client
+
+	sortPods       SortPods
+	sortContainers SortContainers
 }
 
 func NewFilter(client Client) Filter {
 	return &filter{
 		client: client,
+	}
+}
+
+func NewFilterWithSort(client Client, sortPods SortPods, sortContainers SortContainers) Filter {
+	return &filter{
+		client:         client,
+		sortPods:       sortPods,
+		sortContainers: sortContainers,
 	}
 }
 
@@ -66,7 +113,14 @@ func (f *filter) SelectPods(ctx context.Context, selectors ...Selector) ([]*k8sv
 		return nil, err
 	}
 
-	return podsFromPodContainer(retList), nil
+	pods := podsFromPodContainer(retList)
+	if f.sortPods != nil {
+		sort.Slice(pods, func(i, j int) bool {
+			return f.sortPods(pods, i, j)
+		})
+	}
+
+	return pods, nil
 }
 
 func (f *filter) SelectContainers(ctx context.Context, selectors ...Selector) ([]*SelectedPodContainer, error) {
@@ -77,14 +131,18 @@ func (f *filter) SelectContainers(ctx context.Context, selectors ...Selector) ([
 			namespace = s.Namespace
 		}
 
+		if s.LabelSelector != "" || (len(s.ImageSelector) == 0 && s.Pod == "") {
+			containersByLabelSelector, err := byLabelSelector(ctx, f.client, namespace, s.LabelSelector, s.ContainerName, s.FilterPod, s.FilterContainer, s.SkipInitContainers)
+			if err != nil {
+				return nil, errors.Wrap(err, "pods by label selector")
+			}
+
+			retList = append(retList, containersByLabelSelector...)
+		}
+
 		containersByImage, err := byImageName(ctx, f.client, namespace, s.ImageSelector, s.FilterPod, s.FilterContainer, s.SkipInitContainers)
 		if err != nil {
 			return nil, errors.Wrap(err, "pods by image name")
-		}
-
-		containersByLabelSelector, err := byLabelSelector(ctx, f.client, namespace, s.LabelSelector, s.ContainerName, s.FilterPod, s.FilterContainer, s.SkipInitContainers)
-		if err != nil {
-			return nil, errors.Wrap(err, "pods by label selector")
 		}
 
 		containersByName, err := byPodName(ctx, f.client, namespace, s.Pod, s.ContainerName, s.FilterPod, s.FilterContainer, s.SkipInitContainers)
@@ -93,11 +151,17 @@ func (f *filter) SelectContainers(ctx context.Context, selectors ...Selector) ([
 		}
 
 		retList = append(retList, containersByImage...)
-		retList = append(retList, containersByLabelSelector...)
 		retList = append(retList, containersByName...)
 	}
 
-	return deduplicate(retList), nil
+	retList = deduplicate(retList)
+	if f.sortContainers != nil {
+		sort.Slice(retList, func(i, j int) bool {
+			return f.sortContainers(retList, i, j)
+		})
+	}
+
+	return retList, nil
 }
 
 func deduplicate(stack []*SelectedPodContainer) []*SelectedPodContainer {
@@ -194,13 +258,9 @@ func byPodName(ctx context.Context, client Client, namespace string, name string
 	return retPods, nil
 }
 
-func byLabelSelector(ctx context.Context, client Client, namespace string, labelSelector map[string]string, containerName string, skipPod FilterPod, skipContainer FilterContainer, skipInit bool) ([]*SelectedPodContainer, error) {
-	if labelSelector == nil {
-		return nil, nil
-	}
-
+func byLabelSelector(ctx context.Context, client Client, namespace string, labelSelector string, containerName string, skipPod FilterPod, skipContainer FilterContainer, skipInit bool) ([]*SelectedPodContainer, error) {
 	retPods := []*SelectedPodContainer{}
-	podList, err := client.KubeClient().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: labels.SelectorFromSet(labelSelector).String()})
+	podList, err := client.KubeClient().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		return nil, errors.Wrap(err, "list pods")
 	}

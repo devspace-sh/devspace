@@ -9,6 +9,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -56,7 +57,7 @@ devspace logs --namespace=mynamespace
 	logsCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to print the logs of")
 	logsCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	logsCmd.Flags().StringVar(&cmd.Image, "image", "", "Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage")
-	logsCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
+	logsCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
 	logsCmd.Flags().BoolVarP(&cmd.Follow, "follow", "f", false, "Attach to logs afterwards")
 	logsCmd.Flags().IntVar(&cmd.LastAmountOfLines, "lines", 200, "Max amount of lines to print from the last log")
 
@@ -105,20 +106,8 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 		return err
 	}
 
-	// Build params
-	params := targetselector.CmdParameter{
-		ContainerName: cmd.Container,
-		LabelSelector: cmd.LabelSelector,
-		Namespace:     cmd.Namespace,
-		PodName:       cmd.Pod,
-	}
-	if cmd.Pick != false {
-		params.Pick = &cmd.Pick
-	}
-
-	selectorParameter := &targetselector.SelectorParameter{
-		CmdParameter: params,
-	}
+	// Build options
+	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
 	// get imageselector if specified
 	imageSelector, err := getImageSelector(configLoader, cmd.Image)
@@ -126,9 +115,12 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 		return err
 	}
 
+	// set image selector
+	options.ImageSelector = imageSelector
+	options.Wait = ptr.Bool(false)
+
 	// Start terminal
-	servicesClient := f.NewServicesClient(nil, generatedConfig, client, selectorParameter, log)
-	err = servicesClient.StartLogs(imageSelector, cmd.Follow, int64(cmd.LastAmountOfLines))
+	err = f.NewServicesClient(nil, generatedConfig, client, log).StartLogs(options, cmd.Follow, int64(cmd.LastAmountOfLines))
 	if err != nil {
 		return err
 	}

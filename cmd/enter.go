@@ -54,7 +54,7 @@ devspace enter bash -l release=test
 	enterCmd.Flags().StringVar(&cmd.Image, "image", "", "Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage")
 	enterCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 
-	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
+	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod / container if multiple are found")
 	enterCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "Wait for the pod(s) to start if they are not running")
 
 	return enterCmd
@@ -103,26 +103,19 @@ func (cmd *EnterCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	}
 
 	// Build params
-	selectorParameter := &targetselector.SelectorParameter{
-		CmdParameter: targetselector.CmdParameter{
-			ContainerName: cmd.Container,
-			LabelSelector: cmd.LabelSelector,
-			Namespace:     cmd.Namespace,
-			PodName:       cmd.Pod,
-		},
-	}
-	if cmd.Pick != false {
-		selectorParameter.CmdParameter.Pick = &cmd.Pick
-	}
+	selectorOptions := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
-	// get imageselector if specified
+	// get image selector if specified
 	imageSelector, err := getImageSelector(configLoader, cmd.Image)
 	if err != nil {
 		return err
 	}
 
+	// set image selector
+	selectorOptions.ImageSelector = imageSelector
+
 	// Start terminal
-	exitCode, err := f.NewServicesClient(nil, generatedConfig, client, selectorParameter, logger).StartTerminal(args, imageSelector, make(chan error), cmd.Wait)
+	exitCode, err := f.NewServicesClient(nil, generatedConfig, client, logger).StartTerminal(selectorOptions, args, make(chan error), cmd.Wait)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {

@@ -11,6 +11,7 @@ import (
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"io"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
 	"strings"
@@ -295,9 +296,14 @@ func executeInContainer(ctx Context, hook *latest.HookConfig, writer io.Writer, 
 }
 
 func executeInFoundContainer(ctx Context, hook *latest.HookConfig, imageSelector []string, writer io.Writer, log logpkg.Logger) (bool, error) {
+	labelSelector := ""
+	if len(hook.Where.Container.LabelSelector) > 0 {
+		labelSelector = labels.Set(hook.Where.Container.LabelSelector).String()
+	}
+
 	podContainers, err := kubectl.NewFilter(ctx.Client).SelectContainers(context.TODO(), kubectl.Selector{
 		ImageSelector:   imageSelector,
-		LabelSelector:   hook.Where.Container.LabelSelector,
+		LabelSelector:   labelSelector,
 		Pod:             hook.Where.Container.Pod,
 		ContainerName:   hook.Where.Container.ContainerName,
 		Namespace:       hook.Where.Container.Namespace,

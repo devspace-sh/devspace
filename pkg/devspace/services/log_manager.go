@@ -11,6 +11,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	k8sv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"strings"
 	"sync"
 	"time"
@@ -175,8 +176,13 @@ func (l *logManager) gatherPods() ([]podInfo, error) {
 
 	// now gather all pods by label selector
 	for _, s := range l.labelSelectors {
+		labelSelector := ""
+		if s.LabelSelector != nil {
+			labelSelector = labels.Set(s.LabelSelector).String()
+		}
+
 		selectors = append(selectors, kubectl.Selector{
-			LabelSelector:      s.LabelSelector,
+			LabelSelector:      labelSelector,
 			ContainerName:      s.ContainerName,
 			Namespace:          s.Namespace,
 			FilterPod:          filterPod,

@@ -386,23 +386,8 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 }
 
 func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, logger log.Logger) (int, error) {
-	selectorParameter := &targetselector.SelectorParameter{
-		CmdParameter: targetselector.CmdParameter{
-			Namespace:   cmd.Namespace,
-			Interactive: true,
-		},
-	}
-
-	if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil {
-		selectorParameter.ConfigParameter = targetselector.ConfigParameter{
-			Namespace:     config.Dev.Interactive.Terminal.Namespace,
-			LabelSelector: config.Dev.Interactive.Terminal.LabelSelector,
-			ContainerName: config.Dev.Interactive.Terminal.ContainerName,
-		}
-	}
-
 	var (
-		servicesClient  = f.NewServicesClient(config, generatedConfig, client, selectorParameter, logger)
+		servicesClient  = f.NewServicesClient(config, generatedConfig, client, logger)
 		exitChan        = make(chan error)
 		autoReloadPaths = GetPaths(config)
 		interactiveMode = config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.DefaultEnabled != nil && *config.Dev.Interactive.DefaultEnabled == true
@@ -518,6 +503,11 @@ func (cmd *DevCmd) startOutput(interactiveMode bool, config *latest.Config, gene
 	// Check if we should open a terminal or stream logs
 	if cmd.PrintSyncLog == false {
 		if interactiveMode {
+			selectorOptions := targetselector.NewDefaultOptions().ApplyCmdParameter("", "", cmd.Namespace, "")
+			if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil {
+				selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Interactive.Terminal.LabelSelector, config.Dev.Interactive.Terminal.Namespace, config.Dev.Interactive.Terminal.ContainerName, "")
+			}
+
 			var imageSelector []string
 			if config.Dev.Interactive.Terminal != nil && config.Dev.Interactive.Terminal.ImageName != "" {
 				imageSelector = targetselector.ImageSelectorFromConfig(config.Dev.Interactive.Terminal.ImageName, config, generatedConfig.GetActive())
@@ -528,7 +518,8 @@ func (cmd *DevCmd) startOutput(interactiveMode bool, config *latest.Config, gene
 				}
 			}
 
-			return servicesClient.StartTerminal(args, imageSelector, exitChan, true)
+			selectorOptions.ImageSelector = imageSelector
+			return servicesClient.StartTerminal(selectorOptions, args, exitChan, true)
 		} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
 			// Log multiple images at once
 			manager, err := services.NewLogManager(client, config, generatedConfig, exitChan, logger)

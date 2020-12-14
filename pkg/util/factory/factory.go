@@ -17,7 +17,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 )
@@ -52,7 +51,7 @@ type Factory interface {
 	NewDockerClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error)
 
 	// Services
-	NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, selectorParameter *targetselector.SelectorParameter, log log.Logger) services.Client
+	NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, log log.Logger) services.Client
 
 	// Build & Deploy
 	NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller
@@ -167,6 +166,6 @@ func (f *DefaultFactoryImpl) NewHelmClient(config *latest.Config, deployConfig *
 }
 
 // NewServicesClient implements interface
-func (f *DefaultFactoryImpl) NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, selectorParameter *targetselector.SelectorParameter, log log.Logger) services.Client {
-	return services.NewClient(config, generated, kubeClient, selectorParameter, log)
+func (f *DefaultFactoryImpl) NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, log log.Logger) services.Client {
+	return services.NewClient(config, generated, kubeClient, log)
 }

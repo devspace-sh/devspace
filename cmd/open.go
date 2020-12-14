@@ -313,7 +313,7 @@ func (cmd *OpenCmd) openLocal(f factory.Factory, generatedConfig *generated.Conf
 		Dev: &latest.DevConfig{
 			Ports: portforwardingConfig,
 		},
-	}, generatedConfig, client, nil, cmd.log)
+	}, generatedConfig, client, cmd.log)
 	err = servicesClient.StartPortForwarding(nil)
 	if err != nil {
 		return errors.Wrap(err, "start port forwarding")

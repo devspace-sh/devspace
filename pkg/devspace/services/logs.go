@@ -2,8 +2,6 @@ package services
 
 import (
 	"context"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"io"
 	"os"
 
@@ -12,37 +10,26 @@ import (
 )
 
 // StartLogs print the logs and then attaches to the container
-func (serviceClient *client) StartLogs(imageSelector []string, follow bool, tail int64) error {
-	return serviceClient.StartLogsWithWriter(imageSelector, follow, tail, os.Stdout)
+func (serviceClient *client) StartLogs(options targetselector.Options, follow bool, tail int64) error {
+	return serviceClient.StartLogsWithWriter(options, follow, tail, os.Stdout)
 }
 
 // StartLogsWithWriter prints the logs and then attaches to the container with the given stdout and stderr
-func (serviceClient *client) StartLogsWithWriter(imageSelector []string, follow bool, tail int64, writer io.Writer) error {
-	targetSelector, err := targetselector.NewTargetSelector(serviceClient.client, serviceClient.selectorParameter, true, imageSelector)
+func (serviceClient *client) StartLogsWithWriter(options targetselector.Options, follow bool, tail int64, writer io.Writer) error {
+	targetSelector := targetselector.NewTargetSelector(serviceClient.client)
+	options.FilterContainer = nil
+
+	container, err := targetSelector.SelectSingleContainer(context.TODO(), options, serviceClient.log)
 	if err != nil {
 		return err
 	}
 
-	// Allow picking non running pods
-	targetSelector.AllowNonRunning = true
-
-	pod, container, err := targetSelector.GetContainer(true, serviceClient.log)
-	if err != nil {
-		return err
-	}
-
-	serviceClient.log.Infof("Printing logs of pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
-
-	reader, err := serviceClient.client.Logs(context.Background(), pod.Namespace, pod.Name, container.Name, false, &tail, follow)
+	serviceClient.log.Infof("Printing logs of pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
+	reader, err := serviceClient.client.Logs(context.Background(), container.Pod.Namespace, container.Pod.Name, container.Container.Name, false, &tail, follow)
 	if err != nil {
 		return nil
 	}
 
 	_, err = io.Copy(writer, reader)
 	return err
-}
-
-// StartLogsFromSelector will continuously observe and start logs for the given selector configuration, until interrupt channel is closed
-func (serviceClient *client) StartLogsFromSelector(selector *latest.LogsConfig, interrupt chan error, log logpkg.Logger) error {
-	return nil
 }

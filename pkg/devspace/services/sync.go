@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"fmt"
 	"github.com/devspace-cloud/devspace/assets"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
@@ -44,13 +45,13 @@ var HelperBinaryRegEx = regexp.MustCompile(`href="(\/devspace-cloud\/devspace\/r
 const DevSpaceHelperContainerPath = "/tmp/devspacehelper"
 
 // StartSyncFromCmd starts a new sync from command
-func (serviceClient *client) StartSyncFromCmd(syncConfig *latest.SyncConfig, interrupt chan error, verbose bool) error {
+func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Options, syncConfig *latest.SyncConfig, interrupt chan error, verbose bool) error {
 	syncDone := make(chan bool)
 	options := &startClientOptions{
 		Interrupt: interrupt,
 
-		SyncConfig:        syncConfig,
-		SelectorParameter: serviceClient.selectorParameter,
+		SyncConfig:    syncConfig,
+		TargetOptions: targetOptions,
 
 		RestartOnError: true,
 		RestartLog:     serviceClient.log,
@@ -58,8 +59,7 @@ func (serviceClient *client) StartSyncFromCmd(syncConfig *latest.SyncConfig, int
 		SyncDone: syncDone,
 		SyncLog:  serviceClient.log,
 
-		AllowPodPick: true,
-		Verbose:      verbose,
+		Verbose: verbose,
 	}
 
 	err := serviceClient.startSyncClient(options, serviceClient.log)
@@ -84,23 +84,20 @@ func (serviceClient *client) StartSync(interrupt chan error, printSyncLog bool, 
 
 	// Start sync client
 	for idx, syncConfig := range serviceClient.config.Dev.Sync {
+		targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(syncConfig.LabelSelector, syncConfig.Namespace, syncConfig.ContainerName, "")
+		targetOptions.AllowPick = false
+		targetOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
+
+		// set options
 		options := &startClientOptions{
 			Interrupt: interrupt,
 
-			SyncConfig: syncConfig,
-			SelectorParameter: &targetselector.SelectorParameter{
-				ConfigParameter: targetselector.ConfigParameter{
-					Namespace:     syncConfig.Namespace,
-					LabelSelector: syncConfig.LabelSelector,
-					ContainerName: syncConfig.ContainerName,
-				},
-			},
+			SyncConfig:    syncConfig,
+			TargetOptions: targetOptions,
 
 			RestartOnError: true,
 			RestartLog:     logpkg.Discard,
-
-			AllowPodPick: false,
-			Verbose:      verboseSync,
+			Verbose:        verboseSync,
 		}
 
 		// should we print the logs?
@@ -125,8 +122,8 @@ func (serviceClient *client) StartSync(interrupt chan error, printSyncLog bool, 
 }
 
 type startClientOptions struct {
-	SyncConfig        *latest.SyncConfig
-	SelectorParameter *targetselector.SelectorParameter
+	SyncConfig    *latest.SyncConfig
+	TargetOptions targetselector.Options
 
 	Interrupt chan error
 
@@ -136,8 +133,7 @@ type startClientOptions struct {
 	SyncDone chan bool
 	SyncLog  logpkg.Logger
 
-	AllowPodPick bool
-	Verbose      bool
+	Verbose bool
 }
 
 func (serviceClient *client) startSyncClient(options *startClientOptions, log logpkg.Logger) error {
@@ -167,14 +163,10 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 	if serviceClient.generated != nil {
 		cache = serviceClient.generated.GetActive()
 	}
-
-	selector, err := targetselector.NewTargetSelector(serviceClient.client, options.SelectorParameter, options.AllowPodPick, targetselector.ImageSelectorFromConfig(syncConfig.ImageName, serviceClient.config, cache))
-	if err != nil {
-		return errors.Errorf("Error creating target selector: %v", err)
-	}
+	options.TargetOptions.ImageSelector = targetselector.ImageSelectorFromConfig(syncConfig.ImageName, serviceClient.config, cache)
 
 	log.StartWait("Sync: Waiting for pods...")
-	pod, container, err := selector.GetContainer(false, serviceClient.log)
+	container, err := targetselector.NewTargetSelector(serviceClient.client).SelectSingleContainer(context.TODO(), options.TargetOptions, serviceClient.log)
 	log.StopWait()
 	if err != nil {
 		return errors.Errorf("Error selecting pod: %v", err)
@@ -183,7 +175,7 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 	syncDone := make(chan bool)
 
 	log.StartWait("Starting sync...")
-	syncClient, err := serviceClient.startSync(pod, container.Name, syncConfig, options.Verbose, syncDone, options.SyncLog)
+	syncClient, err := serviceClient.startSync(container.Pod, container.Container.Name, syncConfig, options.Verbose, syncDone, options.SyncLog)
 	log.StopWait()
 	if err != nil {
 		return errors.Wrap(err, "start sync")
@@ -199,7 +191,7 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 		containerPath = syncConfig.ContainerPath
 	}
 
-	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, pod.Namespace, pod.Name)
+	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, container.Pod.Namespace, container.Pod.Name)
 
 	if syncConfig.WaitInitialSync != nil && *syncConfig.WaitInitialSync == true {
 		log.StartWait("Sync: waiting for intial sync to complete")

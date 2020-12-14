@@ -8,7 +8,7 @@ import (
 	"gotest.tools/assert"
 )
 
-func TestGetCommend(t *testing.T) {
+func TestGetCommand(t *testing.T) {
 	client := &client{
 		config: &latest.Config{
 			Dev: &latest.DevConfig{
