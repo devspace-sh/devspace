@@ -281,6 +281,8 @@ func executeInContainer(ctx Context, hook *latest.HookConfig, writer io.Writer, 
 
 			return err
 		}
+
+		return nil
 	}
 
 	executed, err := executeInFoundContainer(ctx, hook, imageSelector, writer, log)

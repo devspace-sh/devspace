@@ -2,6 +2,8 @@ package kaniko
 
 import (
 	"context"
+	"github.com/docker/docker/pkg/archive"
+	"github.com/docker/docker/pkg/idtools"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -220,20 +222,33 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		if err != nil {
 			return err
 		}
-
+		if err := build.ValidateContextDirectory(contextPath, ignoreRules); err != nil {
+			return errors.Errorf("error checking context: '%s'", err)
+		}
+		relDockerfile := archive.CanonicalTarNameForPath(dockerfilePath)
+		ignoreRules = build.TrimBuildFilesFromExcludes(ignoreRules, relDockerfile, false)
 		ignoreRules = append(ignoreRules, ".devspace/")
+
 		log.StartWait("Uploading files to build container")
+		buildCtx, err := archive.TarWithOptions(contextPath, &archive.TarOptions{
+			Compression:     archive.Gzip,
+			ExcludePatterns: ignoreRules,
+			ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
+		})
+		if err != nil {
+			return err
+		}
 
 		// Copy complete context
-		err = b.helper.KubeClient.Copy(buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, contextPath, ignoreRules)
+		err = b.helper.KubeClient.CopyFromReader(buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, buildCtx)
 		if err != nil {
-			return errors.Errorf("Error uploading context to container: %v", err)
+			return errors.Errorf("error uploading context to container: %v", err)
 		}
 
 		// Copy dockerfile
 		err = b.helper.KubeClient.Copy(buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, dockerfilePath, []string{})
 		if err != nil {
-			return errors.Errorf("Error uploading dockerfile to container: %v", err)
+			return errors.Errorf("error uploading dockerfile to container: %v", err)
 		}
 
 		// Copy restart helper script

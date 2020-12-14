@@ -162,7 +162,7 @@ func byPodName(ctx context.Context, client Client, namespace string, name string
 
 	if !skipInit {
 		for _, container := range pod.Spec.InitContainers {
-			if skipContainer != nil && !skipContainer(pod, &container) {
+			if skipContainer != nil && skipContainer(pod, &container) {
 				continue
 			}
 			if containerName != "" && container.Name != containerName {
@@ -177,7 +177,7 @@ func byPodName(ctx context.Context, client Client, namespace string, name string
 		}
 	}
 	for _, container := range pod.Spec.Containers {
-		if skipContainer != nil && !skipContainer(pod, &container) {
+		if skipContainer != nil && skipContainer(pod, &container) {
 			continue
 		}
 		if containerName != "" && container.Name != containerName {
@@ -212,7 +212,7 @@ func byLabelSelector(ctx context.Context, client Client, namespace string, label
 
 		if !skipInit {
 			for _, container := range pod.Spec.InitContainers {
-				if skipContainer != nil && !skipContainer(&pod, &container) {
+				if skipContainer != nil && skipContainer(&pod, &container) {
 					continue
 				}
 				if containerName != "" && container.Name != containerName {
@@ -228,7 +228,7 @@ func byLabelSelector(ctx context.Context, client Client, namespace string, label
 			}
 		}
 		for _, container := range pod.Spec.Containers {
-			if skipContainer != nil && !skipContainer(&pod, &container) {
+			if skipContainer != nil && skipContainer(&pod, &container) {
 				continue
 			}
 			if containerName != "" && container.Name != containerName {
@@ -262,7 +262,7 @@ func byImageName(ctx context.Context, client Client, namespace string, imageSele
 			if !skipInit {
 				for _, container := range pod.Spec.InitContainers {
 					for _, imageName := range imageSelector {
-						if skipContainer != nil && !skipContainer(&pod, &container) {
+						if skipContainer != nil && skipContainer(&pod, &container) {
 							continue
 						}
 
@@ -279,7 +279,7 @@ func byImageName(ctx context.Context, client Client, namespace string, imageSele
 			}
 			for _, container := range pod.Spec.Containers {
 				for _, imageName := range imageSelector {
-					if skipContainer != nil && !skipContainer(&pod, &container) {
+					if skipContainer != nil && skipContainer(&pod, &container) {
 						continue
 					}
 
