@@ -132,16 +132,6 @@ func (c *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error {
 	return nil
 }
 
-// GetRunningPodsWithImage is a fake implementation of function
-func (c *Client) GetRunningPodsWithImage(imageNames []string, namespace string, maxWaiting time.Duration) ([]*k8sv1.Pod, error) {
-	return nil, nil
-}
-
-// GetNewestRunningPod is a fake implementation of function
-func (c *Client) GetNewestRunningPod(labelSelector string, imageSelector []string, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
-	return nil, nil
-}
-
 // NewPortForwarder is a fake implementation of function
 func (c *Client) NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}, errorChan chan error) (*portforward.PortForwarder, error) {
 	return nil, nil

@@ -383,11 +383,11 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 		if c.IsDirectory {
 			// Print changes
 			if u.sync.Options.Verbose || len(files) <= 3 {
-				u.sync.log.Infof("Upstream - Upload Folder %s", u.getRelativeUpstreamPath(c.Name))
+				u.sync.log.Infof("Upstream - Upload Folder '%s'", u.getRelativeUpstreamPath(c.Name))
 			}
 		} else {
 			if u.sync.Options.Verbose || len(files) <= 3 {
-				u.sync.log.Infof("Upstream - Upload File %s", u.getRelativeUpstreamPath(c.Name))
+				u.sync.log.Infof("Upstream - Upload File '%s'", u.getRelativeUpstreamPath(c.Name))
 			}
 
 			size += c.Size
@@ -535,7 +535,7 @@ func (u *upstream) applyRemoves(files []*FileInformation) error {
 
 			// Print changes
 			if u.sync.Options.Verbose || len(files) <= 3 {
-				u.sync.log.Infof("Upstream - Remove %s", u.getRelativeUpstreamPath(file.Name))
+				u.sync.log.Infof("Upstream - Remove '%s'", u.getRelativeUpstreamPath(file.Name))
 			}
 		}
 

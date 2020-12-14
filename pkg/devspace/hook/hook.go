@@ -272,7 +272,7 @@ func executeInContainer(ctx Context, hook *latest.HookConfig, writer io.Writer, 
 			timeout = time.Duration(hook.Where.Container.Timeout) * time.Second
 		}
 
-		err := wait.PollImmediate(time.Second, timeout, func() (done bool, err error) {
+		err := wait.Poll(time.Second, timeout, func() (done bool, err error) {
 			return executeInFoundContainer(ctx, hook, imageSelector, writer, log)
 		})
 		if err != nil {
@@ -301,20 +301,27 @@ func executeInFoundContainer(ctx Context, hook *latest.HookConfig, imageSelector
 		labelSelector = labels.Set(hook.Where.Container.LabelSelector).String()
 	}
 
-	podContainers, err := kubectl.NewFilter(ctx.Client).SelectContainers(context.TODO(), kubectl.Selector{
+	podContainers, err := kubectl.NewFilterWithSort(ctx.Client, kubectl.SortPodsByNewest, kubectl.SortContainersByNewest).SelectContainers(context.TODO(), kubectl.Selector{
 		ImageSelector:   imageSelector,
 		LabelSelector:   labelSelector,
 		Pod:             hook.Where.Container.Pod,
 		ContainerName:   hook.Where.Container.ContainerName,
 		Namespace:       hook.Where.Container.Namespace,
-		FilterContainer: kubectl.FilterNonRunningContainers,
 	})
 	if err != nil {
 		return false, err
 	} else if len(podContainers) == 0 {
 		return false, nil
 	}
+	
+	// if any podContainer is not running we wait
+	for _, podContainer := range podContainers {
+		if targetselector.IsContainerRunning(podContainer) == false {
+			return false, nil
+		}
+	}
 
+	// execute the hook in the containers
 	for _, podContainer := range podContainers {
 		cmd := []string{hook.Command}
 		cmd = append(cmd, hook.Args...)

@@ -199,7 +199,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 		buildPodCreated, err := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Create(context.TODO(), buildPod, metav1.CreateOptions{})
 		if err != nil {
-			return errors.Errorf("Unable to create build pod: %s", err.Error())
+			return errors.Errorf("unable to create build pod: %s", err.Error())
 		}
 
 		now := time.Now()
@@ -213,7 +213,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 			time.Sleep(5 * time.Second)
 			if time.Since(now) >= waitTimeout {
-				return errors.Errorf("Timeout waiting for init container")
+				return errors.Errorf("timeout waiting for init container")
 			}
 		}
 
@@ -333,7 +333,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		// Stream the logs
 		err = services.NewClient(b.helper.Config, nil, b.helper.KubeClient, log).StartLogsWithWriter(targetselector.NewOptionsFromFlags(buildPod.Spec.Containers[0].Name, "", buildPod.Namespace, buildPod.Name, false), true, 100, stdoutLogger)
 		if err != nil {
-			return errors.Errorf("Error during printling build logs: %v", err)
+			return errors.Errorf("error printing build logs: %v", err)
 		}
 
 		log.StartWait("Checking build status")
@@ -349,7 +349,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			// Check if terminated
 			if len(pod.Status.ContainerStatuses) > 0 && pod.Status.ContainerStatuses[0].State.Terminated != nil {
 				if pod.Status.ContainerStatuses[0].State.Terminated.ExitCode != 0 {
-					return errors.Errorf("Error building image (Exit Code %d)", pod.Status.ContainerStatuses[0].State.Terminated.ExitCode)
+					return errors.Errorf("error building image (Exit Code %d)", pod.Status.ContainerStatuses[0].State.Terminated.ExitCode)
 				}
 
 				break

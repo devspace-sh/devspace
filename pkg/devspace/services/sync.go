@@ -137,6 +137,7 @@ type startClientOptions struct {
 }
 
 func (serviceClient *client) startSyncClient(options *startClientOptions, log logpkg.Logger) error {
+	options.TargetOptions.SkipInitContainers = true
 	var (
 		syncConfig = options.SyncConfig
 	)

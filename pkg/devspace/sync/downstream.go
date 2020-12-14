@@ -249,7 +249,7 @@ func (d *downstream) downloadFiles(writer io.WriteCloser, changes []*remote.Chan
 	// Print log message
 	if len(changes) <= 3 || d.sync.Options.Verbose {
 		for _, element := range changes {
-			d.sync.log.Infof("Downstream - Download file .%s, size: %d", element.Path, element.Size)
+			d.sync.log.Infof("Downstream - Download file '.%s', size: %d", element.Path, element.Size)
 		}
 	} else if len(changes) > 3 {
 		filesize := int64(0)
@@ -335,7 +335,7 @@ func (d *downstream) remove(remove []*remote.Change, force bool) {
 		absFilepath := filepath.Join(d.sync.LocalPath, change.Path)
 		if shouldRemoveLocal(absFilepath, parseFileInformation(change), d.sync, force) {
 			if numRemoveFiles <= 3 || d.sync.Options.Verbose {
-				d.sync.log.Infof("Downstream - Remove .%s", change.Path)
+				d.sync.log.Infof("Downstream - Remove '.%s'", change.Path)
 			}
 
 			if change.IsDir {
@@ -344,7 +344,7 @@ func (d *downstream) remove(remove []*remote.Change, force bool) {
 				err := os.Remove(absFilepath)
 				if err != nil {
 					if os.IsNotExist(err) == false {
-						d.sync.log.Infof("Downstream - Skip file delete %s: %v", change.Path, err)
+						d.sync.log.Infof("Downstream - Skip file delete '.%s': %v", change.Path, err)
 					}
 				}
 			}
@@ -369,7 +369,7 @@ func (d *downstream) deleteSafeRecursive(relativePath string, deleteChanges []*r
 	// We don't delete the folder or the contents if we haven't tracked it
 	if force == false {
 		if d.sync.fileIndex.fileMap[relativePath] == nil || found == false {
-			d.sync.log.Infof("Downstream - Skip delete directory %s\n", relativePath)
+			d.sync.log.Infof("Downstream - Skip delete directory '.%s'", relativePath)
 			return
 		}
 	}
@@ -391,11 +391,11 @@ func (d *downstream) deleteSafeRecursive(relativePath string, deleteChanges []*r
 			} else {
 				err = os.Remove(childAbsFilepath)
 				if err != nil {
-					d.sync.log.Infof("Downstream - Skip file delete %s: %v", relativePath, err)
+					d.sync.log.Infof("Downstream - Skip file delete '.%s': %v", relativePath, err)
 				}
 			}
 		} else {
-			d.sync.log.Infof("Downstream - Skip delete %s", relativePath)
+			d.sync.log.Infof("Downstream - Skip delete '.%s'", relativePath)
 		}
 
 		delete(d.sync.fileIndex.fileMap, childRelativePath)
@@ -404,6 +404,6 @@ func (d *downstream) deleteSafeRecursive(relativePath string, deleteChanges []*r
 	// This will not remove the directory if there is still a file or directory in it
 	err = os.Remove(absolutePath)
 	if err != nil {
-		d.sync.log.Infof("Downstream - Skip delete directory %s, because %s", relativePath, err.Error())
+		d.sync.log.Infof("Downstream - Skip delete directory '.%s', because %s", relativePath, err.Error())
 	}
 }

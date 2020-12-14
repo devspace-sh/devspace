@@ -36,6 +36,7 @@ func (serviceClient *client) StartReversePortForwarding(interrupt chan error) er
 		newOptions := options.ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, portForwarding.ContainerName, "")
 		newOptions.ImageSelector = targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, cache)
 		newOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
+		newOptions.SkipInitContainers = true
 
 		// start reverse portforwarding
 		err := serviceClient.startReversePortForwarding(newOptions, portForwarding, interrupt, serviceClient.log)
