@@ -243,7 +243,7 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 		dockerClient = nil
 	}
 
-	registryClient := pullsecrets.NewClient(config, client, dockerClient, cmd.log)
+	registryClient := pullsecrets.NewClient(config, generatedConfig.GetActive(), client, dockerClient, cmd.log)
 	err = registryClient.CreatePullSecrets()
 	if err != nil {
 		cmd.log.Warn(err)
@@ -280,7 +280,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 			Verbose:                 cmd.VerboseDependencies,
 		})
 		if err != nil {
-			return 0, errors.Errorf("Error deploying dependencies: %v", err)
+			return 0, errors.Errorf("error deploying dependencies: %v", err)
 		}
 
 		// Build image if necessary
@@ -298,14 +298,14 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 					return 0, errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
 				}
 
-				return 0, errors.Errorf("Error building image: %v", err)
+				return 0, err
 			}
 
 			// Save config if an image was built
 			if len(builtImages) > 0 {
 				err := cmd.configLoader.SaveGenerated()
 				if err != nil {
-					return 0, errors.Errorf("Error saving generated config: %v", err)
+					return 0, errors.Errorf("error saving generated config: %v", err)
 				}
 			}
 		}
@@ -329,13 +329,13 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 				Deployments: deployments,
 			}, cmd.log)
 			if err != nil {
-				return 0, errors.Errorf("Error deploying: %v", err)
+				return 0, errors.Errorf("error deploying: %v", err)
 			}
 
 			// Save Config
 			err = cmd.configLoader.SaveGenerated()
 			if err != nil {
-				return 0, errors.Errorf("Error saving generated config: %v", err)
+				return 0, errors.Errorf("error saving generated config: %v", err)
 			}
 		}
 
@@ -386,23 +386,8 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 }
 
 func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, logger log.Logger) (int, error) {
-	selectorParameter := &targetselector.SelectorParameter{
-		CmdParameter: targetselector.CmdParameter{
-			Namespace:   cmd.Namespace,
-			Interactive: true,
-		},
-	}
-
-	if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil {
-		selectorParameter.ConfigParameter = targetselector.ConfigParameter{
-			Namespace:     config.Dev.Interactive.Terminal.Namespace,
-			LabelSelector: config.Dev.Interactive.Terminal.LabelSelector,
-			ContainerName: config.Dev.Interactive.Terminal.ContainerName,
-		}
-	}
-
 	var (
-		servicesClient  = f.NewServicesClient(config, generatedConfig, client, selectorParameter, logger)
+		servicesClient  = f.NewServicesClient(config, generatedConfig, client, logger)
 		exitChan        = make(chan error)
 		autoReloadPaths = GetPaths(config)
 		interactiveMode = config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.DefaultEnabled != nil && *config.Dev.Interactive.DefaultEnabled == true
@@ -443,7 +428,14 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 
 	if cmd.Sync {
 		cmd.Sync = false
-		err := servicesClient.StartSync(nil, cmd.PrintSyncLog, cmd.VerboseSync)
+		printSyncLog := cmd.PrintSyncLog
+		if interactiveMode == false {
+			if config == nil || config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Sync == nil || *config.Dev.Logs.Sync == true {
+				printSyncLog = true
+			}
+		}
+
+		err := servicesClient.StartSync(nil, printSyncLog, cmd.VerboseSync)
 		if err != nil {
 			return 0, errors.Wrap(err, "start sync")
 		}
@@ -509,42 +501,48 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 
 func (cmd *DevCmd) startOutput(interactiveMode bool, config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, servicesClient services.Client, exitChan chan error, logger log.Logger) (int, error) {
 	// Check if we should open a terminal or stream logs
-	if interactiveMode {
-		if cmd.PrintSyncLog == false {
+	if cmd.PrintSyncLog == false {
+		if interactiveMode {
+			selectorOptions := targetselector.NewDefaultOptions().ApplyCmdParameter("", "", cmd.Namespace, "")
+			if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil {
+				selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Interactive.Terminal.LabelSelector, config.Dev.Interactive.Terminal.Namespace, config.Dev.Interactive.Terminal.ContainerName, "")
+			}
+
 			var imageSelector []string
 			if config.Dev.Interactive.Terminal != nil && config.Dev.Interactive.Terminal.ImageName != "" {
-				imageSelector = targetselector.ImageSelectorFromConfig(config.Dev.Interactive.Terminal.ImageName, config, generatedConfig)
+				imageSelector = targetselector.ImageSelectorFromConfig(config.Dev.Interactive.Terminal.ImageName, config, generatedConfig.GetActive())
 			} else if len(config.Dev.Interactive.Images) > 0 {
 				imageSelector = []string{}
 				for _, imageConfig := range config.Dev.Interactive.Images {
-					imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(imageConfig.Name, config, generatedConfig)...)
+					imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(imageConfig.Name, config, generatedConfig.GetActive())...)
 				}
 			}
 
-			return servicesClient.StartTerminal(args, imageSelector, exitChan, true)
-		}
-	} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
-		// Log multiple images at once
-		manager, err := services.NewLogManager(client, config, generatedConfig, exitChan, logger)
-		if err != nil {
-			return 0, errors.Wrap(err, "starting log manager")
-		}
-
-		err = manager.Start()
-		if err != nil {
-			// Check if we should reload
-			if _, ok := err.(*reloadError); ok {
-				return 0, err
+			selectorOptions.ImageSelector = imageSelector
+			return servicesClient.StartTerminal(selectorOptions, args, exitChan, true)
+		} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
+			// Log multiple images at once
+			manager, err := services.NewLogManager(client, config, generatedConfig, exitChan, logger)
+			if err != nil {
+				return 0, errors.Wrap(err, "starting log manager")
 			}
 
-			logger.Warnf("Couldn't print logs: %v", err)
-		}
+			err = manager.Start()
+			if err != nil {
+				// Check if we should reload
+				if _, ok := err.(*reloadError); ok {
+					return 0, err
+				}
 
-		logger.WriteString("\n")
-		logger.Warn("Log streaming service has been terminated")
+				logger.Warnf("Couldn't print logs: %v", err)
+			}
+
+			logger.WriteString("\n")
+			logger.Warn("Log streaming service has been terminated")
+		}
+		logger.Done("Sync and port-forwarding services are running (Press Ctrl+C to abort services)")
 	}
 
-	logger.Done("Sync and port-forwarding services are running (Press Ctrl+C to abort services)")
 	return 0, <-exitChan
 }
 

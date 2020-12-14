@@ -1,31 +1,31 @@
 package services
 
 import (
+	"context"
 	"os"
+	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
 	"github.com/mgutz/ansi"
 	kubectlExec "k8s.io/client-go/util/exec"
 )
 
 // StartTerminal opens a new terminal
-func (serviceClient *client) StartTerminal(args []string, imageSelector []string, interrupt chan error, wait bool) (int, error) {
+func (serviceClient *client) StartTerminal(options targetselector.Options, args []string, interrupt chan error, wait bool) (int, error) {
 	command := serviceClient.getCommand(args)
-
-	targetSelector, err := targetselector.NewTargetSelector(serviceClient.client, serviceClient.selectorParameter, true, imageSelector)
-	if err != nil {
-		return 0, err
+	targetSelector := targetselector.NewTargetSelector(serviceClient.client)
+	if wait == false {
+		options.Wait = &wait
+	} else {
+		options.FilterPod = nil
+		options.FilterContainer = nil
+		options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
 	}
+	options.Question = "Which pod do you want to open the terminal for?"
 
-	// Allow picking non running pods
-	targetSelector.AllowNonRunning = true
-	targetSelector.SkipWait = !wait
-	targetSelector.PodQuestion = ptr.String("Which pod do you want to open the terminal for?")
-
-	pod, container, err := targetSelector.GetContainer(true, serviceClient.log)
+	container, err := targetSelector.SelectSingleContainer(context.TODO(), options, serviceClient.log)
 	if err != nil {
 		return 0, err
 	}
@@ -35,15 +35,14 @@ func (serviceClient *client) StartTerminal(args []string, imageSelector []string
 		return 0, err
 	}
 
-	serviceClient.log.Infof("Opening shell to pod:container %s:%s", ansi.Color(pod.Name, "white+b"), ansi.Color(container.Name, "white+b"))
-	if serviceClient.selectorParameter.CmdParameter.Interactive == true && len(container.Command) > 0 && serviceClient.config != nil && serviceClient.generated != nil && serviceClient.config.Dev != nil && serviceClient.config.Dev.Interactive != nil && len(serviceClient.config.Dev.Interactive.Images) > 0 {
+	serviceClient.log.Infof("Opening shell to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
+	if len(container.Container.Command) > 0 && serviceClient.config != nil && serviceClient.generated != nil && serviceClient.config.Dev != nil && serviceClient.config.Dev.Interactive != nil && len(serviceClient.config.Dev.Interactive.Images) > 0 {
 		for _, image := range serviceClient.config.Dev.Interactive.Images {
-			imageSelector = []string{}
 			imageConfigCache := serviceClient.generated.GetActive().GetImageCache(image.Name)
 			if imageConfigCache != nil && imageConfigCache.ImageName != "" {
 				imageName := imageConfigCache.ImageName + ":" + imageConfigCache.Tag
-				if imageName == container.Image && (len(image.Entrypoint) > 0 || len(image.Cmd) > 0) {
-					serviceClient.log.Warnf("The container you are entering was started with a Kubernetes `command` option (%s) instead of the original Dockerfile ENTRYPOINT. Interactive mode ENTRYPOINT override does not work for containers started using with Kubernetes command.", container.Command)
+				if imageName == container.Container.Image && (len(image.Entrypoint) > 0 || len(image.Cmd) > 0) {
+					serviceClient.log.Warnf("The container you are entering was started with a Kubernetes `command` option (%s) instead of the original Dockerfile ENTRYPOINT. Interactive mode ENTRYPOINT override does not work for containers started using with Kubernetes command.", container.Container.Command)
 				}
 			}
 		}
@@ -52,8 +51,8 @@ func (serviceClient *client) StartTerminal(args []string, imageSelector []string
 	go func() {
 		interrupt <- serviceClient.client.ExecStreamWithTransport(&kubectl.ExecStreamWithTransportOptions{
 			ExecStreamOptions: kubectl.ExecStreamOptions{
-				Pod:       pod,
-				Container: container.Name,
+				Pod:       container.Pod,
+				Container: container.Container.Name,
 				Command:   command,
 				TTY:       true,
 				Stdin:     os.Stdin,

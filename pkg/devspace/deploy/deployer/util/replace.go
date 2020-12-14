@@ -5,8 +5,21 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
-	"strings"
+	"regexp"
 )
+
+var (
+	imageRegEx = regexp.MustCompile(`^image\("?'?([^)"']+)"?'?\)$`)
+	tagRegEx   = regexp.MustCompile(`^tag\("?'?([^)"']+)"?'?\)$`)
+)
+
+func get(in string, regEx *regexp.Regexp) string {
+	matches := regEx.FindStringSubmatch(in)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return ""
+}
 
 func replaceImageNames(cache *generated.CacheConfig, imagesConf map[string]*latest.ImageConfig, builtImages map[string]string, keys map[string]bool, action func(walk.MatchFn, walk.ReplaceFn)) bool {
 	if imagesConf == nil {
@@ -30,11 +43,15 @@ func replaceImageNames(cache *generated.CacheConfig, imagesConf map[string]*late
 			return false
 		}
 
-		// If we only want to set the tag
-		if strings.HasPrefix(value, "tag:") {
-			value = value[4:]
-		} else if strings.HasPrefix(value, "image:") {
-			value = value[6:]
+		// If we only want to set the tag or image
+		var (
+			onlyImage = get(value, imageRegEx)
+			onlyTag   = get(value, tagRegEx)
+		)
+		if onlyImage != "" {
+			value = onlyImage
+		} else if onlyTag != "" {
+			value = onlyTag
 		}
 
 		// Strip tag from image
@@ -60,14 +77,14 @@ func replaceImageNames(cache *generated.CacheConfig, imagesConf map[string]*late
 	}
 
 	replace := func(path, value string) (interface{}, error) {
-		onlyTag := false
-		onlyImage := false
-		if strings.HasPrefix(value, "tag:") {
-			value = value[4:]
-			onlyTag = true
-		} else if strings.HasPrefix(value, "image:") {
-			value = value[6:]
-			onlyImage = true
+		var (
+			onlyImage = get(value, imageRegEx)
+			onlyTag   = get(value, tagRegEx)
+		)
+		if onlyTag != "" {
+			value = onlyTag
+		} else if onlyImage != "" {
+			value = onlyImage
 		}
 
 		image, err := pullsecrets.GetStrippedDockerImageName(value)
@@ -76,14 +93,14 @@ func replaceImageNames(cache *generated.CacheConfig, imagesConf map[string]*late
 		}
 
 		// only return the image
-		if onlyImage {
+		if onlyImage != "" {
 			return image, nil
 		}
 
 		// Search for image name
 		for _, imageCache := range cache.Images {
 			if imageCache.ImageName == image {
-				if onlyTag {
+				if onlyTag != "" {
 					return imageCache.Tag, nil
 				}
 

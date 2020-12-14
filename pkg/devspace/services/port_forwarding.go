@@ -1,6 +1,8 @@
 package services
 
 import (
+	"context"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"strconv"
 	"strings"
 	"time"
@@ -19,12 +21,26 @@ func (serviceClient *client) StartPortForwarding(interrupt chan error) error {
 		return nil
 	}
 
+	var cache *generated.CacheConfig
+	if serviceClient.generated != nil {
+		cache = serviceClient.generated.GetActive()
+	}
+
+	options := targetselector.NewEmptyOptions()
+	options.AllowPick = false
 	for _, portForwarding := range serviceClient.config.Dev.Ports {
 		if len(portForwarding.PortMappings) == 0 {
 			continue
 		}
 
-		err := serviceClient.startForwarding(portForwarding, interrupt, serviceClient.log)
+		// apply config & set image selector
+		newOptions := options.ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, "", "")
+		newOptions.ImageSelector = targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, cache)
+		newOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
+		newOptions.SkipInitContainers = true
+
+		// start port forwarding
+		err := serviceClient.startForwarding(newOptions, portForwarding, interrupt, serviceClient.log)
 		if err != nil {
 			return err
 		}
@@ -33,19 +49,9 @@ func (serviceClient *client) StartPortForwarding(interrupt chan error) error {
 	return nil
 }
 
-func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardingConfig, interrupt chan error, log logpkg.Logger) error {
-	selector, err := targetselector.NewTargetSelector(serviceClient.client, &targetselector.SelectorParameter{
-		ConfigParameter: targetselector.ConfigParameter{
-			Namespace:     portForwarding.Namespace,
-			LabelSelector: portForwarding.LabelSelector,
-		},
-	}, false, targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, serviceClient.generated))
-	if err != nil {
-		return errors.Errorf("Error creating target selector: %v", err)
-	}
-
+func (serviceClient *client) startForwarding(options targetselector.Options, portForwarding *latest.PortForwardingConfig, interrupt chan error, log logpkg.Logger) error {
 	log.StartWait("Port-Forwarding: Waiting for containers to start...")
-	pod, err := selector.GetPod(log)
+	pod, err := targetselector.NewTargetSelector(serviceClient.client).SelectSinglePod(context.TODO(), options, log)
 	log.StopWait()
 	if err != nil {
 		return errors.Errorf("%s: %s", message.SelectorErrorPod, err.Error())
@@ -55,7 +61,6 @@ func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardi
 
 	ports := make([]string, len(portForwarding.PortMappings))
 	addresses := make([]string, len(portForwarding.PortMappings))
-
 	for index, value := range portForwarding.PortMappings {
 		if value.LocalPort == nil {
 			return errors.Errorf("port is not defined in portmapping %d", index)
@@ -109,7 +114,7 @@ func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardi
 			if err != nil {
 				pf.Close()
 				for {
-					err = serviceClient.startForwarding(portForwarding, interrupt, logpkg.Discard)
+					err = serviceClient.startForwarding(options, portForwarding, interrupt, logpkg.Discard)
 					if err != nil {
 						serviceClient.log.Errorf("Error restarting port-forwarding: %v", err)
 						serviceClient.log.Errorf("Will try again in 3 seconds")

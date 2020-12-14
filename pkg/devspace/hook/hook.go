@@ -1,13 +1,21 @@
 package hook
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 	"io"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/util/command"
@@ -77,6 +85,8 @@ var (
 type Context struct {
 	Error  error
 	Client kubectl.Client
+	Config *latest.Config
+	Cache  *generated.CacheConfig
 }
 
 // ExecuteMultiple executes multiple hooks at a specific time
@@ -142,22 +152,6 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 			}
 		}
 
-		// Create extra env variables
-		osArgsBytes, err := json.Marshal(os.Args)
-		if err != nil {
-			return err
-		}
-		extraEnv := map[string]string{
-			OsArgsEnv: string(osArgsBytes),
-		}
-		if context.Client != nil {
-			extraEnv[KubeContextEnv] = context.Client.CurrentContext()
-			extraEnv[KubeNamespaceEnv] = context.Client.Namespace()
-		}
-		if when == OnError && context.Error != nil {
-			extraEnv[ErrorEnv] = context.Error.Error()
-		}
-
 		// Execute hooks
 		for _, hook := range hooksToExecute {
 			if command.ShouldExecuteOnOS(hook.OperatingSystem) == false {
@@ -172,8 +166,14 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 				writer = log
 			}
 
-			log.Infof("Execute hook '%s' '%s' '%s': '%s'", when, stage, which, ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
-			err := command.ExecuteCommandWithEnv(hook.Command, hook.Args, writer, writer, extraEnv)
+			// Where to execute
+			execute := executeLocally
+			if hook.Where.Container != nil {
+				execute = executeInContainer
+			}
+
+			// Execute the hook
+			err := executeHook(context, hook, writer, log, execute)
 			if err != nil {
 				return err
 			}
@@ -181,4 +181,163 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 	}
 
 	return nil
+}
+
+func executeHook(ctx Context, hook *latest.HookConfig, writer io.Writer, log logpkg.Logger, execute func(Context, *latest.HookConfig, io.Writer, logpkg.Logger) error) error {
+	var (
+		hookLog    logpkg.Logger
+		hookWriter io.Writer
+	)
+	if hook.Silent {
+		hookLog = logpkg.Discard
+		hookWriter = &bytes.Buffer{}
+	} else {
+		hookLog = log
+		hookWriter = writer
+	}
+
+	if hook.Background {
+		log.Infof("Execute hook '%s' in background", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
+		go func() {
+			err := execute(ctx, hook, hookWriter, hookLog)
+			if err != nil {
+				if hook.Silent {
+					log.Warnf("Error executing hook '%s' in background: %s %v", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"), hookWriter.(*bytes.Buffer).String(), err)
+				} else {
+					log.Warnf("Error executing hook '%s' in background: %v", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"), err)
+				}
+			}
+		}()
+
+		return nil
+	}
+
+	log.Infof("Execute hook '%s'", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
+	err := execute(ctx, hook, hookWriter, hookLog)
+	if err != nil {
+		if hook.Silent {
+			return errors.Wrapf(err, "in hook '%s': %s", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"), hookWriter.(*bytes.Buffer).String())
+		} else {
+			return errors.Wrapf(err, "in hook '%s'", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
+		}
+	}
+
+	return nil
+}
+
+func executeLocally(ctx Context, hook *latest.HookConfig, writer io.Writer, log logpkg.Logger) error {
+	// Create extra env variables
+	osArgsBytes, err := json.Marshal(os.Args)
+	if err != nil {
+		return err
+	}
+	extraEnv := map[string]string{
+		OsArgsEnv: string(osArgsBytes),
+	}
+	if ctx.Client != nil {
+		extraEnv[KubeContextEnv] = ctx.Client.CurrentContext()
+		extraEnv[KubeNamespaceEnv] = ctx.Client.Namespace()
+	}
+	if ctx.Error != nil {
+		extraEnv[ErrorEnv] = ctx.Error.Error()
+	}
+
+	err = command.ExecuteCommandWithEnv(hook.Command, hook.Args, writer, writer, extraEnv)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func executeInContainer(ctx Context, hook *latest.HookConfig, writer io.Writer, log logpkg.Logger) error {
+	if ctx.Client == nil {
+		return errors.Errorf("Cannot execute hook '%s': kube client is not initialized", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
+	}
+
+	var imageSelector []string
+	if hook.Where.Container.ImageName != "" {
+		if ctx.Config == nil || ctx.Cache == nil {
+			return errors.Errorf("Cannot execute hook '%s': config is not loaded", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
+		}
+
+		imageSelector = targetselector.ImageSelectorFromConfig(hook.Where.Container.ImageName, ctx.Config, ctx.Cache)
+	}
+
+	if hook.Where.Container.Wait == nil || *hook.Where.Container.Wait == true {
+		log.Infof("Waiting for running containers for hook '%s'", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
+
+		timeout := time.Second * 120
+		if hook.Where.Container.Timeout > 0 {
+			timeout = time.Duration(hook.Where.Container.Timeout) * time.Second
+		}
+
+		err := wait.Poll(time.Second, timeout, func() (done bool, err error) {
+			return executeInFoundContainer(ctx, hook, imageSelector, writer, log)
+		})
+		if err != nil {
+			if err == wait.ErrWaitTimeout {
+				return errors.Errorf("timeout: couldn't find a running container")
+			}
+
+			return err
+		}
+
+		return nil
+	}
+
+	executed, err := executeInFoundContainer(ctx, hook, imageSelector, writer, log)
+	if err != nil {
+		return err
+	} else if executed == false {
+		log.Infof("Skip hook '%s', because no running containers were found", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
+	}
+	return nil
+}
+
+func executeInFoundContainer(ctx Context, hook *latest.HookConfig, imageSelector []string, writer io.Writer, log logpkg.Logger) (bool, error) {
+	labelSelector := ""
+	if len(hook.Where.Container.LabelSelector) > 0 {
+		labelSelector = labels.Set(hook.Where.Container.LabelSelector).String()
+	}
+
+	podContainers, err := kubectl.NewFilterWithSort(ctx.Client, kubectl.SortPodsByNewest, kubectl.SortContainersByNewest).SelectContainers(context.TODO(), kubectl.Selector{
+		ImageSelector:   imageSelector,
+		LabelSelector:   labelSelector,
+		Pod:             hook.Where.Container.Pod,
+		ContainerName:   hook.Where.Container.ContainerName,
+		Namespace:       hook.Where.Container.Namespace,
+	})
+	if err != nil {
+		return false, err
+	} else if len(podContainers) == 0 {
+		return false, nil
+	}
+	
+	// if any podContainer is not running we wait
+	for _, podContainer := range podContainers {
+		if targetselector.IsContainerRunning(podContainer) == false {
+			return false, nil
+		}
+	}
+
+	// execute the hook in the containers
+	for _, podContainer := range podContainers {
+		cmd := []string{hook.Command}
+		cmd = append(cmd, hook.Args...)
+
+		log.Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
+		err = ctx.Client.ExecStream(&kubectl.ExecStreamOptions{
+			Pod:       podContainer.Pod,
+			Container: podContainer.Container.Name,
+			Command:   cmd,
+			Stdout:    writer,
+			Stderr:    writer,
+		})
+		if err != nil {
+			return false, errors.Errorf("error in container '%s/%s/%s': %v", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
+		}
+	}
+
+	return true, nil
 }

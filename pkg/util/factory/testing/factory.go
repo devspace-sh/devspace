@@ -16,7 +16,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -85,7 +84,7 @@ func (f *Factory) NewDependencyManager(config *latest.Config, cache *generated.C
 }
 
 // NewPullSecretClient implements interface
-func (f *Factory) NewPullSecretClient(config *latest.Config, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client {
+func (f *Factory) NewPullSecretClient(config *latest.Config, cache *generated.CacheConfig, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client {
 	return f.PullSecretClient
 }
 
@@ -130,6 +129,6 @@ func (f *Factory) NewHelmClient(config *latest.Config, deployConfig *latest.Depl
 }
 
 // NewServicesClient implements interface
-func (f *Factory) NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, selectorParameter *targetselector.SelectorParameter, log log.Logger) services.Client {
+func (f *Factory) NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, log log.Logger) services.Client {
 	return f.ServicesClient
 }

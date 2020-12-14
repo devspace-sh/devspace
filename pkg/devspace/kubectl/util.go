@@ -4,16 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"net"
-	"net/http"
-	"os/exec"
-	"strings"
-	"time"
-
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
@@ -21,6 +13,10 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/transport/spdy"
+	"net"
+	"net/http"
+	"os/exec"
+	"strings"
 )
 
 // ClusterRoleBindingName is the name of the cluster role binding that ensures that the user has enough rights
@@ -164,134 +160,12 @@ func (client *client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 	return nil
 }
 
-// GetRunningPodsWithImage retrieves the running pods that have at least one of the specified image names
-func (client *client) GetRunningPodsWithImage(imageNames []string, namespace string, maxWaiting time.Duration) ([]*k8sv1.Pod, error) {
-	if namespace == "" {
-		namespace = client.namespace
-	}
-
-	pods := []*k8sv1.Pod{}
-	now := time.Now()
-	minWait := time.Second * 60
-	err := wait.Poll(time.Second, maxWaiting, func() (bool, error) {
-		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			return false, err
-		}
-
-		if len(podList.Items) > 0 {
-			pods = []*k8sv1.Pod{}
-			wait := false
-
-		PodLoop:
-			for _, pod := range podList.Items {
-				currentPod := pod
-				podStatus := GetPodStatus(&currentPod)
-
-			Outer:
-				for _, container := range currentPod.Spec.Containers {
-					for _, imageName := range imageNames {
-						if CompareImageNames(imageName, container.Image) {
-							if CriticalStatus[podStatus] {
-								return false, errors.Errorf(message.PodStatusCritical, currentPod.Name, podStatus, currentPod.Name)
-							} else if podStatus == "Completed" {
-								break Outer
-							} else if podStatus != "Running" {
-								wait = true
-								break PodLoop
-							}
-
-							pods = append(pods, &currentPod)
-							break Outer
-						}
-					}
-				}
-			}
-
-			if wait == false {
-				if len(pods) > 0 || time.Since(now) > minWait {
-					return true, nil
-				}
-			}
-		}
-
-		return false, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return pods, nil
-}
-
 func CompareImageNames(image1 string, image2 string) bool {
 	if strings.Index(image1, ":") > -1 && strings.Index(image2, ":") > -1 {
 		return image1 == image2
 	} else {
 		return strings.Split(image1, ":")[0] == strings.Split(image2, ":")[0]
 	}
-}
-
-// GetNewestRunningPod retrieves the first pod that is found that has the status "Running" using the label selector string
-func (client *client) GetNewestRunningPod(labelSelector string, imageSelector []string, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error) {
-	if namespace == "" {
-		namespace = client.namespace
-	}
-
-	now := time.Now()
-	waitingInterval := 1 * time.Second
-	for ok := true; ok; ok = maxWaiting > 0 {
-		time.Sleep(waitingInterval)
-
-		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
-			LabelSelector: labelSelector,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		if podList.Size() > 0 && len(podList.Items) > 0 {
-			// Get Pod with latest creation timestamp
-			var selectedPod *k8sv1.Pod
-
-			for _, pod := range podList.Items {
-				currentPod := pod
-
-				if selectedPod == nil || currentPod.CreationTimestamp.Time.After(selectedPod.CreationTimestamp.Time) {
-					// Check if image selector is defined
-					if len(imageSelector) > 0 {
-					Outer:
-						for _, container := range currentPod.Spec.Containers {
-							for _, imageName := range imageSelector {
-								if imageName == container.Image {
-									selectedPod = &currentPod
-									break Outer
-								}
-							}
-						}
-					} else {
-						selectedPod = &currentPod
-					}
-				}
-			}
-
-			if selectedPod != nil {
-				podStatus := GetPodStatus(selectedPod)
-				if podStatus == "Running" {
-					return selectedPod, nil
-				} else if podStatus == "Error" || podStatus == "Unknown" || podStatus == "ImagePullBackOff" || podStatus == "CrashLoopBackOff" || podStatus == "RunContainerError" || podStatus == "ErrImagePull" || podStatus == "CreateContainerConfigError" || podStatus == "InvalidImageName" {
-					return nil, errors.Errorf(message.PodStatusCritical, selectedPod.Name, podStatus, selectedPod.Name)
-				}
-			} else if time.Since(now) > time.Minute {
-				return nil, errors.Errorf("Couldn't find a pod with selector %s in namespace %s", labelSelector, namespace)
-			}
-		}
-
-		time.Sleep(waitingInterval)
-		maxWaiting -= waitingInterval * 2
-	}
-
-	return nil, errors.Errorf(message.SelectorLabelNotFound, labelSelector, namespace)
 }
 
 // GetPodStatus returns the pod status as a string

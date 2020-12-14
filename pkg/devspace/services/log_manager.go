@@ -10,8 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"strings"
 	"sync"
@@ -48,11 +47,11 @@ func NewLogManager(client kubectl.Client, config *latest.Config, generatedConfig
 	imageSelector := []string{}
 	if config.Dev != nil && config.Dev.Logs != nil {
 		for _, configImageName := range config.Dev.Logs.Images {
-			imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig)...)
+			imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig.GetActive())...)
 		}
 	} else {
 		for configImageName := range config.Images {
-			imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig)...)
+			imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig.GetActive())...)
 		}
 	}
 
@@ -161,98 +160,62 @@ type podInfo struct {
 
 func (l *logManager) gatherPods() ([]podInfo, error) {
 	returnList := []podInfo{}
-	defaultNamespace := l.client.Namespace()
+	selectors := []kubectl.Selector{}
+	filterPod := func(p *k8sv1.Pod) bool {
+		return kubectl.GetPodStatus(p) != "Running"
+	}
 
 	// first gather all pods by image
 	if len(l.imageNameSelectors) > 0 {
-		podList, err := l.client.KubeClient().CoreV1().Pods(defaultNamespace).List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			return nil, errors.Wrap(err, "list pods")
-		}
-
-		for _, pod := range podList.Items {
-			podStatus := kubectl.GetPodStatus(&pod)
-			if podStatus != "Running" {
-				continue
-			}
-
-			for _, container := range pod.Spec.Containers {
-				for _, imageName := range l.imageNameSelectors {
-					key := key(defaultNamespace, pod.Name, container.Name)
-					if kubectl.CompareImageNames(imageName, container.Image) && !contains(returnList, key) {
-						prefix := pod.Name
-						if componentLabel, ok := pod.Labels[k8sComponentLabel]; ok {
-							prefix = componentLabel
-						}
-						if len(pod.Spec.Containers) > 1 {
-							prefix += ":" + container.Name
-						}
-
-						returnList = append(returnList, podInfo{
-							key:  key,
-							name: prefix,
-						})
-					}
-				}
-			}
-		}
+		selectors = append(selectors, kubectl.Selector{
+			ImageSelector:      l.imageNameSelectors,
+			FilterPod:          filterPod,
+			SkipInitContainers: true,
+		})
 	}
 
 	// now gather all pods by label selector
 	for _, s := range l.labelSelectors {
-		namespace := defaultNamespace
-		if s.Namespace != "" {
-			namespace = s.Namespace
+		labelSelector := ""
+		if s.LabelSelector != nil {
+			labelSelector = labels.Set(s.LabelSelector).String()
 		}
 
-		podList, err := l.client.KubeClient().CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labels.SelectorFromSet(s.LabelSelector).String()})
+		selectors = append(selectors, kubectl.Selector{
+			LabelSelector:      labelSelector,
+			ContainerName:      s.ContainerName,
+			Namespace:          s.Namespace,
+			FilterPod:          filterPod,
+			SkipInitContainers: true,
+		})
+	}
+
+	if len(selectors) > 0 {
+		selectedPodsContainers, err := kubectl.NewFilter(l.client).SelectContainers(context.TODO(), selectors...)
 		if err != nil {
-			return nil, errors.Wrap(err, "list pods")
+			return nil, err
 		}
 
-		for _, pod := range podList.Items {
-			podStatus := kubectl.GetPodStatus(&pod)
-			if podStatus != "Running" {
-				continue
+		for _, podContainer := range selectedPodsContainers {
+			prefix := podContainer.Pod.Name
+			if componentLabel, ok := podContainer.Pod.Labels[k8sComponentLabel]; ok {
+				prefix = componentLabel
+			}
+			if len(podContainer.Pod.Spec.Containers) > 1 {
+				prefix += ":" + podContainer.Container.Name
+			}
+			if podContainer.Pod.Namespace != l.client.Namespace() {
+				prefix = podContainer.Pod.Namespace + ":" + prefix
 			}
 
-			for _, container := range pod.Spec.Containers {
-				if s.ContainerName != "" && s.ContainerName != container.Name {
-					continue
-				}
-
-				key := key(defaultNamespace, pod.Name, container.Name)
-				if !contains(returnList, key) {
-					prefix := pod.Name
-					if componentLabel, ok := pod.Labels[k8sComponentLabel]; ok {
-						prefix = componentLabel
-					}
-					if len(pod.Spec.Containers) > 1 {
-						prefix += ":" + container.Name
-					}
-					if namespace != defaultNamespace {
-						prefix = namespace + ":" + prefix
-					}
-
-					returnList = append(returnList, podInfo{
-						key:  key,
-						name: prefix,
-					})
-				}
-			}
+			returnList = append(returnList, podInfo{
+				key:  key(podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name),
+				name: prefix,
+			})
 		}
 	}
 
 	return returnList, nil
-}
-
-func contains(stack []podInfo, needle string) bool {
-	for _, v := range stack {
-		if v.key == needle {
-			return true
-		}
-	}
-	return false
 }
 
 func key(namespace string, pod string, container string) string {

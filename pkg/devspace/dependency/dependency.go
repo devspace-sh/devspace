@@ -36,6 +36,7 @@ type Manager interface {
 
 type manager struct {
 	config       *latest.Config
+	cache        *generated.CacheConfig
 	log          log.Logger
 	resolver     ResolverInterface
 	hookExecuter hook.Executer
@@ -51,6 +52,7 @@ func NewManager(config *latest.Config, cache *generated.Config, client kubectl.C
 
 	return &manager{
 		config:       config,
+		cache:        cache.GetActive(),
 		log:          logger,
 		resolver:     resolver,
 		hookExecuter: hook.NewExecuter(config),
@@ -163,7 +165,7 @@ type DeployOptions struct {
 
 // DeployAll will deploy all dependencies if there are any
 func (m *manager) DeployAll(options DeployOptions) error {
-	err := m.hookExecuter.Execute(hook.Before, hook.StageDependencies, hook.All, hook.Context{Client: m.client}, m.log)
+	err := m.hookExecuter.Execute(hook.Before, hook.StageDependencies, hook.All, hook.Context{Client: m.client, Config: m.config, Cache: m.cache}, m.log)
 	if err != nil {
 		return err
 	}
@@ -172,11 +174,11 @@ func (m *manager) DeployAll(options DeployOptions) error {
 		return dependency.Deploy(options.SkipPush, options.ForceDeployDependencies, options.SkipBuild, options.ForceBuild, options.SkipDeploy, options.ForceDeploy, log)
 	})
 	if err != nil {
-		m.hookExecuter.OnError(hook.StageDependencies, []string{hook.All}, hook.Context{Client: m.client, Error: err}, m.log)
+		m.hookExecuter.OnError(hook.StageDependencies, []string{hook.All}, hook.Context{Client: m.client, Config: m.config, Cache: m.cache, Error: err}, m.log)
 		return err
 	}
 
-	err = m.hookExecuter.Execute(hook.After, hook.StageDependencies, hook.All, hook.Context{Client: m.client}, m.log)
+	err = m.hookExecuter.Execute(hook.After, hook.StageDependencies, hook.All, hook.Context{Client: m.client, Config: m.config, Cache: m.cache}, m.log)
 	if err != nil {
 		return err
 	}

@@ -270,8 +270,6 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	}
 
 	// Create registry client for pull secrets
-	registryClient := pullsecrets.NewClient(dConfig, client, dockerClient, r.log)
-
 	return &Dependency{
 		ID:        ID,
 		LocalPath: localPath,
@@ -284,11 +282,11 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		DependencyCache:  r.BaseCache,
 
 		kubeClient:     client,
-		registryClient: registryClient,
+		generatedSaver: gLoader,
 
+		registryClient:   pullsecrets.NewClient(dConfig, dGeneratedConfig.GetActive(), client, dockerClient, r.log),
 		buildController:  build.NewController(dConfig, dGeneratedConfig.GetActive(), client),
 		deployController: deploy.NewController(dConfig, dGeneratedConfig.GetActive(), client),
-		generatedSaver:   gLoader,
 	}, nil
 }
 

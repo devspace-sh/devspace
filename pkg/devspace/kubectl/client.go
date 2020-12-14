@@ -52,8 +52,6 @@ type Client interface {
 
 	EnsureDeployNamespaces(config *latest.Config, log log.Logger) error
 	EnsureGoogleCloudClusterRoleBinding(log log.Logger) error
-	GetRunningPodsWithImage(imageNames []string, namespace string, maxWaiting time.Duration) ([]*k8sv1.Pod, error)
-	GetNewestRunningPod(labelSelector string, imageSelector []string, namespace string, maxWaiting time.Duration) (*k8sv1.Pod, error)
 	NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}, errorChan chan error) (*portforward.PortForwarder, error)
 	IsLocalKubernetes() bool
 }

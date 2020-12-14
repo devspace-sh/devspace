@@ -136,7 +136,7 @@ func (cache *CacheConfig) GetDeploymentCache(deploymentName string) *DeploymentC
 
 // InitDevSpaceConfig verifies a given config name is set
 func InitDevSpaceConfig(config *Config, configName string) {
-	if _, ok := config.Profiles[configName]; ok == false {
+	if cache, ok := config.Profiles[configName]; ok == false || cache == nil {
 		config.Profiles[configName] = NewCache()
 		return
 	}

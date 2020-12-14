@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
@@ -9,6 +10,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
@@ -57,7 +59,7 @@ devspace restart -n my-namespace
 	restartCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod to restart")
 	restartCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to restart")
 	restartCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
-	restartCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
+	restartCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
 
 	return restartCmd
 }
@@ -77,19 +79,7 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 			return errors.Wrap(err, "create kube client")
 		}
 
-		selector, err := targetselector.NewTargetSelector(client, &targetselector.SelectorParameter{
-			CmdParameter: targetselector.CmdParameter{
-				Namespace:     cmd.Namespace,
-				PodName:       cmd.Pod,
-				LabelSelector: cmd.LabelSelector,
-			},
-			ConfigParameter: targetselector.ConfigParameter{},
-		}, true, nil)
-		if err != nil {
-			return errors.Errorf("error creating target selector: %v", err)
-		}
-
-		return restartContainer(client, selector, cmd.log)
+		return restartContainer(client, targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick), cmd.log)
 	}
 
 	var (
@@ -142,21 +132,11 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 				continue
 			}
 
-			selector, err := targetselector.NewTargetSelector(client, &targetselector.SelectorParameter{
-				CmdParameter: targetselector.CmdParameter{
-					Namespace: cmd.Namespace,
-				},
-				ConfigParameter: targetselector.ConfigParameter{
-					LabelSelector: syncPath.LabelSelector,
-					Namespace:     syncPath.Namespace,
-					ContainerName: syncPath.ContainerName,
-				},
-			}, true, targetselector.ImageSelectorFromConfig(syncPath.ImageName, config, generatedConfig))
-			if err != nil {
-				return errors.Errorf("error creating target selector: %v", err)
-			}
+			// create target selector options
+			options := targetselector.NewOptionsFromFlags("", "", cmd.Namespace, "", cmd.Pick).ApplyConfigParameter(syncPath.LabelSelector, syncPath.Namespace, syncPath.ContainerName, "")
+			options.ImageSelector = targetselector.ImageSelectorFromConfig(syncPath.ImageName, config, generatedConfig.GetActive())
 
-			err = restartContainer(client, selector, cmd.log)
+			err = restartContainer(client, options, cmd.log)
 			if err != nil {
 				return err
 			}
@@ -175,24 +155,23 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 	return nil
 }
 
-func restartContainer(client kubectl.Client, selector *targetselector.TargetSelector, log log.Logger) error {
-	log.StartWait("Restart: Waiting for pods...")
-	pod, container, err := selector.GetContainer(false, log)
-	log.StopWait()
+func restartContainer(client kubectl.Client, options targetselector.Options, log log.Logger) error {
+	options.Wait = ptr.Bool(false)
+	container, err := targetselector.NewTargetSelector(client).SelectSingleContainer(context.TODO(), options, log)
 	if err != nil {
 		return errors.Errorf("Error selecting pod: %v", err)
 	}
 
-	err = services.InjectDevSpaceHelper(client, pod, container.Name, log)
+	err = services.InjectDevSpaceHelper(client, container.Pod, container.Container.Name, log)
 	if err != nil {
 		return errors.Wrap(err, "inject devspace helper")
 	}
 
-	stdOut, stdErr, err := client.ExecBuffered(pod, container.Name, []string{services.DevSpaceHelperContainerPath, "restart"}, nil)
+	stdOut, stdErr, err := client.ExecBuffered(container.Pod, container.Container.Name, []string{services.DevSpaceHelperContainerPath, "restart"}, nil)
 	if err != nil {
-		return fmt.Errorf("error restarting container %s in pod %s/%s: %s %s => %v", container.Name, pod.Namespace, pod.Name, string(stdOut), string(stdErr), err)
+		return fmt.Errorf("error restarting container %s in pod %s/%s: %s %s => %v", container.Container.Name, container.Pod.Namespace, container.Pod.Name, string(stdOut), string(stdErr), err)
 	}
 
-	log.Donef("Successfully restarted container %s in pod %s/%s", container.Name, pod.Namespace, pod.Name)
+	log.Donef("Successfully restarted container %s in pod %s/%s", container.Container.Name, container.Pod.Namespace, container.Pod.Name)
 	return nil
 }

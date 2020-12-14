@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
+	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"os"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -71,7 +72,7 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to sync to")
 	syncCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to sync to")
 	syncCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
-	syncCmd.Flags().BoolVar(&cmd.Pick, "pick", false, "Select a pod")
+	syncCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
 
 	syncCmd.Flags().StringSliceVarP(&cmd.Exclude, "exclude", "e", []string{}, "Exclude directory from sync")
 	syncCmd.Flags().StringVar(&cmd.LocalPath, "local-path", "", "Local path to use (Default is current directory")
@@ -145,20 +146,8 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	}
 
 	// Build params
-	params := targetselector.CmdParameter{
-		ContainerName: cmd.Container,
-		LabelSelector: cmd.LabelSelector,
-		Namespace:     cmd.Namespace,
-		PodName:       cmd.Pod,
-	}
-	if cmd.Pick != false {
-		params.Pick = &cmd.Pick
-	}
-
-	selectorParameter := &targetselector.SelectorParameter{
-		CmdParameter: params,
-	}
-
+	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
+	options.Wait = ptr.Bool(false)
 	if cmd.DownloadOnly && cmd.UploadOnly {
 		return errors.New("--upload-only cannot be used together with --download-only")
 	}
@@ -235,14 +224,14 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		if len(syncConfig.ExcludePaths) > 0 {
 			loadedSyncConfig.ExcludePaths = syncConfig.ExcludePaths
 		}
-		if params.ContainerName != "" {
-			loadedSyncConfig.ContainerName = params.ContainerName
+		if options.ContainerName != "" {
+			loadedSyncConfig.ContainerName = options.ContainerName
 		}
-		if params.LabelSelector != "" || params.PodName != "" {
+		if options.LabelSelector != "" || options.Pod != "" {
 			loadedSyncConfig.LabelSelector = nil
 			loadedSyncConfig.ImageName = ""
 		}
-		if params.Namespace != "" {
+		if options.Namespace != "" {
 			loadedSyncConfig.Namespace = ""
 		}
 		if *syncConfig.DisableDownload {
@@ -253,14 +242,9 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		}
 
 		syncConfig = loadedSyncConfig
-		selectorParameter.ConfigParameter = targetselector.ConfigParameter{
-			Namespace:     syncConfig.Namespace,
-			LabelSelector: syncConfig.LabelSelector,
-			ContainerName: syncConfig.ContainerName,
-		}
+		options = options.ApplyConfigParameter(syncConfig.LabelSelector, syncConfig.Namespace, syncConfig.ContainerName, "")
 	}
 
 	// Start terminal
-	servicesClient := f.NewServicesClient(config, generatedConfig, client, selectorParameter, logger)
-	return servicesClient.StartSyncFromCmd(syncConfig, nil, cmd.Verbose)
+	return f.NewServicesClient(config, generatedConfig, client, logger).StartSyncFromCmd(options, syncConfig, nil, cmd.Verbose)
 }

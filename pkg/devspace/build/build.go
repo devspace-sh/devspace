@@ -84,7 +84,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	// Execute before images build hook
-	err := c.hookExecuter.Execute(hook.Before, hook.StageImages, hook.All, hook.Context{Client: c.client}, log)
+	err := c.hookExecuter.Execute(hook.Before, hook.StageImages, hook.All, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		imageConfigName := key
 
 		// Execute before images build hook
-		err = c.hookExecuter.Execute(hook.Before, hook.StageImages, imageConfigName, hook.Context{Client: c.client}, log)
+		err = c.hookExecuter.Execute(hook.Before, hook.StageImages, imageConfigName, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
 		if err != nil {
 			return nil, err
 		}
@@ -152,7 +152,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		// Check if rebuild is needed
 		needRebuild, err := builder.ShouldRebuild(c.cache, options.ForceRebuild, options.IgnoreContextPathChanges)
 		if err != nil {
-			return nil, errors.Errorf("Error during shouldRebuild check: %v", err)
+			return nil, errors.Errorf("error during shouldRebuild check: %v", err)
 		}
 
 		if options.ForceRebuild == false && needRebuild == false {
@@ -165,8 +165,8 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 			// Build the image
 			err = builder.Build(log)
 			if err != nil {
-				c.hookExecuter.OnError(hook.StageImages, []string{hook.All, imageConfigName}, hook.Context{Client: c.client, Error: err}, log)
-				return nil, err
+				c.hookExecuter.OnError(hook.StageImages, []string{hook.All, imageConfigName}, hook.Context{Client: c.client, Config: c.config, Cache: c.cache, Error: err}, log)
+				return nil, errors.Wrapf(err, "error building image %s:%s", imageName, imageTags[0])
 			}
 
 			// Update cache
@@ -182,7 +182,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 			builtImages[imageName] = imageTags[0]
 
 			// Execute before images build hook
-			err = c.hookExecuter.Execute(hook.After, hook.StageImages, imageConfigName, hook.Context{Client: c.client}, log)
+			err = c.hookExecuter.Execute(hook.After, hook.StageImages, imageConfigName, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
 			if err != nil {
 				return nil, err
 			}
@@ -196,15 +196,15 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 				// Build the image
 				err := builder.Build(streamLog)
 				if err != nil {
-					c.hookExecuter.OnError(hook.StageImages, []string{imageConfigName}, hook.Context{Client: c.client, Error: err}, log)
-					errChan <- errors.Errorf("Error building image %s:%s: %s %v", imageName, imageTags[0], buff.String(), err)
+					c.hookExecuter.OnError(hook.StageImages, []string{imageConfigName}, hook.Context{Client: c.client, Config: c.config, Cache: c.cache, Error: err}, log)
+					errChan <- errors.Errorf("error building image %s:%s: %s %v", imageName, imageTags[0], buff.String(), err)
 					return
 				}
 
 				// Execute before images build hook
-				err = c.hookExecuter.Execute(hook.After, hook.StageImages, imageConfigName, hook.Context{Client: c.client}, log)
+				err = c.hookExecuter.Execute(hook.After, hook.StageImages, imageConfigName, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
 				if err != nil {
-					errChan <- errors.Errorf("Error executing image hook %s:%s: %v", imageName, imageTags[0], err)
+					errChan <- errors.Errorf("error executing image hook %s:%s: %v", imageName, imageTags[0], err)
 					return
 				}
 
@@ -226,7 +226,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 
 			select {
 			case err := <-errChan:
-				c.hookExecuter.OnError(hook.StageImages, []string{hook.All}, hook.Context{Client: c.client, Error: err}, log)
+				c.hookExecuter.OnError(hook.StageImages, []string{hook.All}, hook.Context{Client: c.client, Config: c.config, Cache: c.cache, Error: err}, log)
 				return nil, err
 			case done := <-cacheChan:
 				imagesToBuild--
@@ -248,7 +248,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	// Execute after images build hook
-	err = c.hookExecuter.Execute(hook.After, hook.StageImages, hook.All, hook.Context{Client: c.client}, log)
+	err = c.hookExecuter.Execute(hook.After, hook.StageImages, hook.All, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
 	if err != nil {
 		return nil, err
 	}
