@@ -47,13 +47,16 @@ images:
 </TabItem>
 <TabItem value="tagging">
 
-```yaml {4-6}
+```yaml {4-9}
 images:
   backend:
     image: image.company.tld/appbackend
     tags:
     - latest
-    - dev-${DEVSPACE_GIT_COMMIT}-${DEVSPACE_RANDOM}
+    # This will be replaced during build time with
+    # something like dev-ads13as1-sA4ve. Each hashtag
+    # represents a random character.
+    - dev-${DEVSPACE_GIT_COMMIT}-#####  
   database:
     image: image.company.tld/appbackend
 ```

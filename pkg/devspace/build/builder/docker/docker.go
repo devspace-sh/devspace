@@ -255,7 +255,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 	}
 	if useDockerCli || useBuildKit || len(cliArgs) > 0 {
-		err = b.client.ImageBuildCLI(useBuildKit, body, writer, cliArgs, buildOptions)
+		err = b.client.ImageBuildCLI(useBuildKit, body, writer, cliArgs, buildOptions, log)
 		if err != nil {
 			return err
 		}

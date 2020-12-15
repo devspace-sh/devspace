@@ -29,6 +29,8 @@ images:
         useBuildKit: true
 ```
 
+### `useCli`
+If `useCli` is true, devspace will use the local docker installation for building and invoke `docker build`. This option is implicitly true, if `useBuildKit` or `args` is specified.
 
 ### `args`
 The `args` option expects an array of strings to be passed as arguments and flags to Docker.

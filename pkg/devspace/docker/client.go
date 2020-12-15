@@ -25,7 +25,7 @@ type Client interface {
 	NegotiateAPIVersion(ctx context.Context)
 
 	ImageBuild(ctx context.Context, context io.Reader, options dockertypes.ImageBuildOptions) (dockertypes.ImageBuildResponse, error)
-	ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions) error
+	ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions, log log.Logger) error
 
 	ImagePush(ctx context.Context, ref string, options dockertypes.ImagePushOptions) (io.ReadCloser, error)
 
