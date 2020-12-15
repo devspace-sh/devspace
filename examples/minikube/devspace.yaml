@@ -10,8 +10,8 @@ deployments:
     chart:
       name: ./chart
     values:
-      image: image:mydockeruser/devspace
-      tag: tag:mydockeruser/devspace
+      image: image(mydockeruser/devspace)
+      tag: tag(mydockeruser/devspace)
 dev:
   ports:
   - imageName: default
