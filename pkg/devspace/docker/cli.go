@@ -1,15 +1,17 @@
 package docker
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	dockertypes "github.com/docker/docker/api/types"
 )
 
 // ImageBuildCLI builds an image with the docker cli
-func (c *client) ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions) error {
+func (c *client) ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions, log log.Logger) error {
 	args := []string{"build"}
 
 	if options.BuildArgs != nil {
@@ -41,6 +43,7 @@ func (c *client) ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Wr
 
 	args = append(args, "-")
 
+	log.Infof("Execute docker cli command with: docker %s", strings.Join(args, " "))
 	cmd := exec.Command("docker", args...)
 	if useBuildkit {
 		cmd.Env = append(os.Environ(), "DOCKER_BUILDKIT=1")

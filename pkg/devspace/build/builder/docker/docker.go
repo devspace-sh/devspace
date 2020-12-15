@@ -246,6 +246,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 	// Should we build with cli?
 	useBuildKit := false
+	useDockerCli := b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && b.helper.ImageConf.Build.Docker.UseCLI == true
 	cliArgs := []string{}
 	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil {
 		cliArgs = b.helper.ImageConf.Build.Docker.Args
@@ -253,8 +254,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			useBuildKit = true
 		}
 	}
-	if useBuildKit || len(cliArgs) > 0 {
-		err = b.client.ImageBuildCLI(useBuildKit, body, writer, cliArgs, buildOptions)
+	if useDockerCli || useBuildKit || len(cliArgs) > 0 {
+		err = b.client.ImageBuildCLI(useBuildKit, body, writer, cliArgs, buildOptions, log)
 		if err != nil {
 			return err
 		}
