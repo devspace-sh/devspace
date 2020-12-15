@@ -105,7 +105,7 @@ func (l *logManager) Start() error {
 			namespace, pod, container := splitted[0], splitted[1], splitted[2]
 
 			logsContext, cancel := context.WithCancel(context.Background())
-			logsLog := log.NewDefaultPrefixLogger("["+t.name+"] ", l.output)
+			logsLog := log.NewPrefixLogger("["+t.name+"] ", log.Colors[(len(log.Colors)-1)-(len(l.activeLogs)%len(log.Colors))], l.output)
 			go func() {
 				logsLog.Infof("Start streaming logs for %s", t.key)
 				reader, err := l.client.Logs(logsContext, namespace, pod, container, false, &l.tail, true)
