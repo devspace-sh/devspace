@@ -2,10 +2,13 @@ package kaniko
 
 import (
 	"context"
+	"fmt"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 	"io"
 	"io/ioutil"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"strings"
 
 	"k8s.io/client-go/util/exec"
@@ -202,19 +205,35 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			return errors.Errorf("unable to create build pod: %s", err.Error())
 		}
 
-		now := time.Now()
 		log.StartWait("Waiting for build init container to start")
+		err = wait.PollImmediate(time.Second, waitTimeout, func() (done bool, err error) {
+			buildPod, err = b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(context.TODO(), buildPodCreated.Name, metav1.GetOptions{})
+			if err != nil {
+				if kerrors.IsNotFound(err) {
+					return false, nil
+				}
 
-		for {
-			buildPod, _ = b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(context.TODO(), buildPodCreated.Name, metav1.GetOptions{})
-			if len(buildPod.Status.InitContainerStatuses) > 0 && buildPod.Status.InitContainerStatuses[0].State.Running != nil {
-				break
+				return false, err
+			} else if len(buildPod.Status.InitContainerStatuses) > 0 && buildPod.Status.InitContainerStatuses[0].State.Terminated != nil {
+				errorLog := ""
+				reader, _ := b.helper.KubeClient.Logs(context.TODO(), b.BuildNamespace, buildPodCreated.Name, buildPod.Spec.InitContainers[0].Name, false, nil, false)
+				if reader != nil {
+					out, err := ioutil.ReadAll(reader)
+					if err == nil {
+						errorLog = string(out)
+					}
+				}
+				if errorLog == "" {
+					errorLog = buildPod.Status.InitContainerStatuses[0].State.Terminated.Message
+				}
+
+				return false, fmt.Errorf("kaniko init container %s/%s has unexpectedly exited with code %d: %s", buildPod.Namespace, buildPod.Name, buildPod.Status.InitContainerStatuses[0].State.Terminated.ExitCode, errorLog)
 			}
 
-			time.Sleep(5 * time.Second)
-			if time.Since(now) >= waitTimeout {
-				return errors.Errorf("timeout waiting for init container")
-			}
+			return len(buildPod.Status.InitContainerStatuses) > 0 && buildPod.Status.InitContainerStatuses[0].State.Running != nil, nil
+		})
+		if err != nil {
+			return errors.Wrap(err, "waiting for kaniko init")
 		}
 
 		// Get ignore rules from docker ignore
@@ -308,18 +327,34 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 		log.Done("Uploaded files to container")
 		log.StartWait("Waiting for kaniko container to start")
+		err = wait.PollImmediate(time.Second, waitTimeout, func() (done bool, err error) {
+			buildPod, err = b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(context.TODO(), buildPodCreated.Name, metav1.GetOptions{})
+			if err != nil {
+				if kerrors.IsNotFound(err) {
+					return false, nil
+				}
 
-		now = time.Now()
-		for true {
-			buildPod, _ = b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(context.TODO(), buildPodCreated.Name, metav1.GetOptions{})
-			if len(buildPod.Status.ContainerStatuses) > 0 && buildPod.Status.ContainerStatuses[0].Ready {
-				break
+				return false, err
+			} else if len(buildPod.Status.ContainerStatuses) > 0 && buildPod.Status.ContainerStatuses[0].State.Terminated != nil {
+				errorLog := ""
+				reader, _ := b.helper.KubeClient.Logs(context.TODO(), b.BuildNamespace, buildPodCreated.Name, buildPod.Spec.Containers[0].Name, false, nil, false)
+				if reader != nil {
+					out, err := ioutil.ReadAll(reader)
+					if err == nil {
+						errorLog = string(out)
+					}
+				}
+				if errorLog == "" {
+					errorLog = buildPod.Status.ContainerStatuses[0].State.Terminated.Message
+				}
+
+				return false, fmt.Errorf("kaniko pod %s/%s has unexpectedly exited with code %d: %s", buildPod.Namespace, buildPod.Name, buildPod.Status.ContainerStatuses[0].State.Terminated.ExitCode, errorLog)
 			}
 
-			time.Sleep(2 * time.Second)
-			if time.Since(now) >= waitTimeout {
-				return errors.Errorf("Timeout waiting for kaniko build pod")
-			}
+			return len(buildPod.Status.ContainerStatuses) > 0 && buildPod.Status.ContainerStatuses[0].Ready, nil
+		})
+		if err != nil {
+			return errors.Wrap(err, "waiting for kaniko")
 		}
 
 		log.StopWait()
@@ -365,7 +400,6 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		log.Done("Done building image")
 		return nil
 	})
-
 	if err != nil {
 		// Delete all build pods on error
 		pods, getErr := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).List(context.TODO(), metav1.ListOptions{

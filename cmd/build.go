@@ -106,8 +106,14 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 		}
 	}
 
+	// create kubectl client
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	if err != nil {
+		log.Warnf("Unable to create new kubectl client: %v", err)
+	}
+
 	// Create Dependencymanager
-	manager, err := f.NewDependencyManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log)
+	manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, configOptions, log)
 	if err != nil {
 		return errors.Wrap(err, "new manager")
 	}
@@ -126,7 +132,7 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 
 	// Build images if necessary
 	if len(cmd.Dependency) == 0 {
-		builtImages, err := f.NewBuildController(config, generatedConfig.GetActive(), nil).Build(&build.Options{
+		builtImages, err := f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
 			SkipPush:     cmd.SkipPush,
 			IsDev:        true,
 			ForceRebuild: cmd.ForceBuild,
