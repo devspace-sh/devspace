@@ -49,7 +49,7 @@ func GetDockerfileAndContext(imageConf *latest.ImageConfig) (string, string) {
 }
 
 // InjectBuildScriptInContext will add the restart helper script to the build context
-func InjectBuildScriptInContext(buildCtx io.ReadCloser) (io.ReadCloser, error) {
+func InjectBuildScriptInContext(helperScript string, buildCtx io.ReadCloser) (io.ReadCloser, error) {
 	now := time.Now()
 	hdrTmpl := &tar.Header{
 		Mode:       0777,
@@ -74,7 +74,7 @@ func InjectBuildScriptInContext(buildCtx io.ReadCloser) (io.ReadCloser, error) {
 			return fldTmpl, nil, nil
 		},
 		restart.ScriptContextPath: func(_ string, h *tar.Header, content io.Reader) (*tar.Header, []byte, error) {
-			return hdrTmpl, []byte(restart.HelperScript), nil
+			return hdrTmpl, []byte(helperScript), nil
 		},
 	})
 	return buildCtx, nil

@@ -86,6 +86,10 @@ type ImageConfig struct {
 	// dockerfile for this image, otherwise devspace will fail.
 	InjectRestartHelper bool `yaml:"injectRestartHelper,omitempty" json:"injectRestartHelper,omitempty"`
 
+	// If specified DevSpace will load the restart helper from this location instead of using the bundled
+	// one within DevSpace. Can be either a local path or an URL where to find the restart helper.
+	RestartHelperPath string `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
+
 	// These instructions will be appended to the Dockerfile that is build at the current build target
 	// and are appended before the entrypoint and cmd instructions
 	AppendDockerfileInstructions []string `yaml:"appendDockerfileInstructions,omitempty" json:"appendDockerfileInstructions,omitempty"`

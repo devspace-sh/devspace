@@ -262,7 +262,12 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 			scriptPath := filepath.Join(tempDir, restart.ScriptName)
 			remoteFolder := filepath.ToSlash(filepath.Join(kanikoContextPath, ".devspace", ".devspace"))
-			err = ioutil.WriteFile(scriptPath, []byte(restart.HelperScript), 0777)
+			helperScript, err := restart.LoadRestartHelper(b.helper.ImageConf.RestartHelperPath)
+			if err != nil {
+				return errors.Wrap(err, "load restart helper")
+			}
+
+			err = ioutil.WriteFile(scriptPath, []byte(helperScript), 0777)
 			if err != nil {
 				return errors.Wrap(err, "write restart helper script")
 			}
