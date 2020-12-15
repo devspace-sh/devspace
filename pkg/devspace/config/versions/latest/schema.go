@@ -154,6 +154,12 @@ type KanikoConfig struct {
 	// the service account to use for the kaniko pod
 	ServiceAccount string `yaml:"serviceAccount,omitempty" json:"serviceAccount,omitempty"`
 
+	// extra annotations that will be added to the build pod
+	Annotations map[string]string `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+
+	// extra labels that will be added to the build pod
+	Labels map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
+
 	// additional mounts that will be added to the build pod
 	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty" json:"additionalMounts,omitempty"`
 
