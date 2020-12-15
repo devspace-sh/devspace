@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
 	"io"
 	"os"
 	"path/filepath"
@@ -204,7 +205,12 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 		// inject the build script
 		if b.helper.ImageConf.InjectRestartHelper {
-			buildCtx, err = helper.InjectBuildScriptInContext(buildCtx)
+			helperScript, err := restart.LoadRestartHelper(b.helper.ImageConf.RestartHelperPath)
+			if err != nil {
+				return errors.Wrap(err, "load restart helper")
+			}
+
+			buildCtx, err = helper.InjectBuildScriptInContext(helperScript, buildCtx)
 			if err != nil {
 				return errors.Wrap(err, "inject build script into context")
 			}

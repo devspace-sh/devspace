@@ -209,6 +209,7 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 	pod := &k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "devspace-build-",
+			Annotations:  map[string]string{},
 			Labels: map[string]string{
 				"devspace-build":    "true",
 				"devspace-build-id": buildID,
@@ -244,6 +245,16 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 			Volumes:            volumes,
 			RestartPolicy:      k8sv1.RestartPolicyNever,
 		},
+	}
+
+	// add extra annotations
+	for k, v := range kanikoOptions.Annotations {
+		pod.Annotations[k] = v
+	}
+
+	// add extra labels
+	for k, v := range kanikoOptions.Labels {
+		pod.Labels[k] = v
 	}
 
 	// check if we have specific options for the resources part

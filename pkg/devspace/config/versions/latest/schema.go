@@ -86,6 +86,10 @@ type ImageConfig struct {
 	// dockerfile for this image, otherwise devspace will fail.
 	InjectRestartHelper bool `yaml:"injectRestartHelper,omitempty" json:"injectRestartHelper,omitempty"`
 
+	// If specified DevSpace will load the restart helper from this location instead of using the bundled
+	// one within DevSpace. Can be either a local path or an URL where to find the restart helper.
+	RestartHelperPath string `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
+
 	// These instructions will be appended to the Dockerfile that is build at the current build target
 	// and are appended before the entrypoint and cmd instructions
 	AppendDockerfileInstructions []string `yaml:"appendDockerfileInstructions,omitempty" json:"appendDockerfileInstructions,omitempty"`
@@ -153,6 +157,12 @@ type KanikoConfig struct {
 
 	// the service account to use for the kaniko pod
 	ServiceAccount string `yaml:"serviceAccount,omitempty" json:"serviceAccount,omitempty"`
+
+	// extra annotations that will be added to the build pod
+	Annotations map[string]string `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+
+	// extra labels that will be added to the build pod
+	Labels map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
 
 	// additional mounts that will be added to the build pod
 	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty" json:"additionalMounts,omitempty"`
