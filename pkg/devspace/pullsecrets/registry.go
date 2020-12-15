@@ -2,7 +2,9 @@ package pullsecrets
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"regexp"
@@ -102,5 +104,13 @@ func GetRegistryAuthSecretName(registryURL string) string {
 		return registryAuthSecretNamePrefix + "docker"
 	}
 
-	return registryAuthSecretNamePrefix + registryNameReplaceRegex.ReplaceAllString(strings.ToLower(registryURL), "-")
+	return SafeName(registryAuthSecretNamePrefix + registryNameReplaceRegex.ReplaceAllString(strings.ToLower(registryURL), "-"))
+}
+
+func SafeName(name string) string {
+	if len(name) > 63 {
+		digest := sha256.Sum256([]byte(name))
+		return name[0:52] + "-" + hex.EncodeToString(digest[0:])[0:10]
+	}
+	return name
 }
