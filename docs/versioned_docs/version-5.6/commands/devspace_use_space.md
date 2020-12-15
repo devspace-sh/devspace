@@ -1,39 +1,26 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace use space"
+sidebar_label: devspace use space
 ---
 
 
-Restarts containers where the sync restart helper is injected
+the "loft" plugin
 
 ## Synopsis
 
+```
+devspace use space [flags]
+```
 
 ```
-devspace restart [flags]
-```
-
-```
-#######################################################
-################## devspace restart ###################
-#######################################################
-Restarts containers where the sync restart helper
-is injected:
-
-devspace restart
-devspace restart -n my-namespace
-#######################################################
+the "loft" plugin
 ```
 
 
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -h, --help   help for space
 ```
 
 
