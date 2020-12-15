@@ -92,7 +92,7 @@ func (b *Builder) Build(log logpkg.Logger) error {
 	}
 
 	// add tags
-	for _, tag := range b.imageConf.Tags {
+	for _, tag := range b.imageTags {
 		if b.imageConf.Build.Custom.ImageFlag != "" {
 			args = append(args, b.imageConf.Build.Custom.ImageFlag)
 		}
