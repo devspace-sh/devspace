@@ -97,7 +97,9 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 		deployCache.DeploymentConfigHash = deploymentConfigHash
 		deployCache.HelmChartHash = hash
 		deployCache.HelmOverridesHash = helmOverridesHash
-		deployCache.HelmReleaseRevision = release.Revision
+		if release != nil {
+			deployCache.HelmReleaseRevision = release.Revision
+		}
 	} else {
 		return false, nil
 	}
