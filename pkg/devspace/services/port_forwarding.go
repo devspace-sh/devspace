@@ -26,21 +26,13 @@ func (serviceClient *client) StartPortForwarding(interrupt chan error) error {
 		cache = serviceClient.generated.GetActive()
 	}
 
-	options := targetselector.NewEmptyOptions()
-	options.AllowPick = false
 	for _, portForwarding := range serviceClient.config.Dev.Ports {
 		if len(portForwarding.PortMappings) == 0 {
 			continue
 		}
 
-		// apply config & set image selector
-		newOptions := options.ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, "", "")
-		newOptions.ImageSelector = targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, cache)
-		newOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
-		newOptions.SkipInitContainers = true
-
 		// start port forwarding
-		err := serviceClient.startForwarding(newOptions, portForwarding, interrupt, serviceClient.log)
+		err := serviceClient.startForwarding(cache, portForwarding, interrupt, serviceClient.log)
 		if err != nil {
 			return err
 		}
@@ -49,7 +41,15 @@ func (serviceClient *client) StartPortForwarding(interrupt chan error) error {
 	return nil
 }
 
-func (serviceClient *client) startForwarding(options targetselector.Options, portForwarding *latest.PortForwardingConfig, interrupt chan error, log logpkg.Logger) error {
+func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portForwarding *latest.PortForwardingConfig, interrupt chan error, log logpkg.Logger) error {
+	// apply config & set image selector
+	options := targetselector.NewEmptyOptions().ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, "", "")
+	options.AllowPick = false
+	options.ImageSelector = targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, cache)
+	options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
+	options.SkipInitContainers = true
+
+	// start port forwarding
 	log.StartWait("Port-Forwarding: Waiting for containers to start...")
 	pod, err := targetselector.NewTargetSelector(serviceClient.client).SelectSinglePod(context.TODO(), options, log)
 	log.StopWait()
@@ -114,7 +114,7 @@ func (serviceClient *client) startForwarding(options targetselector.Options, por
 			if err != nil {
 				pf.Close()
 				for {
-					err = serviceClient.startForwarding(options, portForwarding, interrupt, logpkg.Discard)
+					err = serviceClient.startForwarding(cache, portForwarding, interrupt, logpkg.Discard)
 					if err != nil {
 						serviceClient.log.Errorf("Error restarting port-forwarding: %v", err)
 						serviceClient.log.Errorf("Will try again in 3 seconds")

@@ -25,21 +25,13 @@ func (serviceClient *client) StartReversePortForwarding(interrupt chan error) er
 		cache = serviceClient.generated.GetActive()
 	}
 
-	options := targetselector.NewEmptyOptions()
-	options.AllowPick = false
 	for _, portForwarding := range serviceClient.config.Dev.Ports {
 		if len(portForwarding.PortMappingsReverse) == 0 {
 			continue
 		}
 
-		// apply config & set image selector
-		newOptions := options.ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, portForwarding.ContainerName, "")
-		newOptions.ImageSelector = targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, cache)
-		newOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
-		newOptions.SkipInitContainers = true
-
 		// start reverse portforwarding
-		err := serviceClient.startReversePortForwarding(newOptions, portForwarding, interrupt, serviceClient.log)
+		err := serviceClient.startReversePortForwarding(cache, portForwarding, interrupt, serviceClient.log)
 		if err != nil {
 			return err
 		}
@@ -48,7 +40,14 @@ func (serviceClient *client) StartReversePortForwarding(interrupt chan error) er
 	return nil
 }
 
-func (serviceClient *client) startReversePortForwarding(options targetselector.Options, portForwarding *latest.PortForwardingConfig, interrupt chan error, log logpkg.Logger) error {
+func (serviceClient *client) startReversePortForwarding(cache *generated.CacheConfig, portForwarding *latest.PortForwardingConfig, interrupt chan error, log logpkg.Logger) error {
+	// apply config & set image selector
+	options := targetselector.NewEmptyOptions().ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, portForwarding.ContainerName, "")
+	options.AllowPick = false
+	options.ImageSelector = targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, cache)
+	options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
+	options.SkipInitContainers = true
+
 	log.StartWait("Reverse-Port-Forwarding: Waiting for containers to start...")
 	container, err := targetselector.NewTargetSelector(serviceClient.client).SelectSingleContainer(context.TODO(), options, log)
 	log.StopWait()
@@ -91,7 +90,7 @@ func (serviceClient *client) startReversePortForwarding(options targetselector.O
 				stdoutWriter.Close()
 				logFile.Error(err)
 				for {
-					err = serviceClient.startReversePortForwarding(options, portForwarding, interrupt, logpkg.Discard)
+					err = serviceClient.startReversePortForwarding(cache, portForwarding, interrupt, logpkg.Discard)
 					if err != nil {
 						serviceClient.log.Errorf("Error restarting reverse port-forwarding: %v", err)
 						serviceClient.log.Errorf("Will try again in 3 seconds")
