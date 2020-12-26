@@ -237,6 +237,14 @@ func getContainerProblem(client kubectl.Client, pod *v1.Pod, containerStatus *v1
 			containerProblem.Waiting = true
 			containerProblem.Reason = containerStatus.State.Waiting.Reason
 			containerProblem.Message = containerStatus.State.Waiting.Message
+
+			// when containerStatus=Waiting && RestartCount>0, print LastFaultyExecutionLog
+			if containerStatus.RestartCount > 0 {
+				containerProblem.LastExitCode = int(containerStatus.LastTerminationState.Terminated.ExitCode)
+				if containerProblem.LastExitCode != 0 {
+					containerProblem.LastFaultyExecutionLog, _ = client.ReadLogs(pod.Namespace, pod.Name, containerStatus.Name, true, &tailLines)
+				}
+			}
 		}
 	}
 
