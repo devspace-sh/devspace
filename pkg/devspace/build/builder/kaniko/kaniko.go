@@ -173,7 +173,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Generate the build pod spec
-	randString, _ := randutil.GenerateRandomString(12)
+	randString := randutil.GenerateRandomString(12)
 	buildID := strings.ToLower(randString)
 	buildPod, err := b.getBuildPod(buildID, options, dockerfilePath)
 	if err != nil {

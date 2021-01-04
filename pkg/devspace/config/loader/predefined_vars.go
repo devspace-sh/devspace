@@ -19,12 +19,7 @@ import (
 // predefinedVars holds all predefined variables that can be used in the config
 var predefinedVars = map[string]func(loader *configLoader) (string, error){
 	"DEVSPACE_RANDOM": func(loader *configLoader) (string, error) {
-		ret, err := randutil.GenerateRandomString(6)
-		if err != nil {
-			return "", err
-		}
-
-		return ret, nil
+		return randutil.GenerateRandomString(6), nil
 	},
 	"DEVSPACE_PROFILE": func(loader *configLoader) (string, error) {
 		if loader.options == nil {
