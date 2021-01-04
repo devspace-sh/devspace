@@ -14,9 +14,10 @@ import (
 type AnalyzeCmd struct {
 	*flags.GlobalFlags
 
-	Wait    bool
-	Patient bool
-	Timeout int
+	Wait              bool
+	Patient           bool
+	Timeout           int
+	IgnorePodRestarts bool
 }
 
 // NewAnalyzeCmd creates a new analyze command
@@ -47,6 +48,7 @@ devspace analyze --namespace=mynamespace
 	analyzeCmd.Flags().BoolVar(&cmd.Wait, "wait", true, "Wait for pods to get ready if they are just starting")
 	analyzeCmd.Flags().IntVar(&cmd.Timeout, "timeout", 120, "Timeout until analyze should stop waiting")
 	analyzeCmd.Flags().BoolVar(&cmd.Patient, "patient", false, "If true, analyze will ignore failing pods and events until every deployment, statefulset, replicaset and pods are ready or the timeout is reached")
+	analyzeCmd.Flags().BoolVar(&cmd.IgnorePodRestarts, "ignore-pod-restarts", false, "If true, analyze will ignore the restart events of running pods")
 
 	return analyzeCmd
 }
@@ -101,9 +103,10 @@ func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, plugins []plugin.Metadata, 
 	}
 
 	err = analyze.NewAnalyzer(client, log).Analyze(namespace, analyze.Options{
-		Wait:    cmd.Wait,
-		Timeout: cmd.Timeout,
-		Patient: cmd.Patient,
+		Wait:              cmd.Wait,
+		Timeout:           cmd.Timeout,
+		Patient:           cmd.Patient,
+		IgnorePodRestarts: cmd.IgnorePodRestarts,
 	})
 	if err != nil {
 		return errors.Wrap(err, "analyze")
