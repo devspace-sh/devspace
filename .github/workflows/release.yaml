@@ -82,16 +82,16 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.15
+      - name: install-go-bindata
+        run: go get -u github.com/go-bindata/go-bindata/...
+        env:
+          GOPATH: /Users/runner/work/devspace/go
       - name: Check out code into the Go module directory
         uses: actions/checkout@v1
       - name: Download ui tar
         uses: actions/download-artifact@v2
         with:
           name: ui-tar
-      - name: install-go-bindata
-        run: go get -u github.com/go-bindata/go-bindata/...
-        env:
-          GOPATH: /Users/runner/work/devspace/go
       - name: Compile binaries
         run: ./hack/build-all.bash
         env:
