@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -31,7 +32,7 @@ func getParentDir(localDir string, remoteDir string, outsideDir string, editLoca
 		return filepath.Join(outsideDir, "symlinkTargets"), nil
 	}
 
-	return "", errors.New("CreateLocation " + string(editLocation) + " unknown")
+	return "", errors.New("CreateLocation " + strconv.Itoa(editLocation) + " unknown")
 }
 
 type checkedFileOrFolder struct {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT license that can be
 // found in the LICENSE file.
 
-// +build darwin,kqueue dragonfly freebsd netbsd openbsd
+// +build darwin,kqueue darwin,!cgo dragonfly freebsd netbsd openbsd
 
 package notify
 
@@ -57,6 +57,12 @@ func (k *kq) Close() error {
 func (*kq) NewWatched(p string, fi os.FileInfo) (*watched, error) {
 	fd, err := syscall.Open(p, syscall.O_NONBLOCK|syscall.O_RDONLY, 0)
 	if err != nil {
+		// BSDs can't open symlinks and return an error if the symlink
+		// cannot be followed - ignore it instead of failing. See e.g.
+		// https://github.com/libinotify-kqueue/libinotify-kqueue/blob/a822c8f1d75404fe3132f695a898dcd42fe8afbc/patches/freebsd11-O_SYMLINK.patch
+		if os.IsNotExist(err) && fi.Mode()&os.ModeSymlink == os.ModeSymlink {
+			return nil, errSkip
+		}
 		return nil, err
 	}
 	return &watched{

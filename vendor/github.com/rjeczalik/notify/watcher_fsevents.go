@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT license that can be
 // found in the LICENSE file.
 
-// +build darwin,!kqueue
+// +build darwin,!kqueue,cgo
 
 package notify
 
@@ -258,7 +258,7 @@ func (fse *fsevents) RecursiveUnwatch(path string) error {
 	return fse.unwatch(path)
 }
 
-// RecrusiveRewatch implements RecursiveWatcher interface. It fails:
+// RecursiveRewatch implements RecursiveWatcher interface. It fails:
 //
 //   * with errNotWatched when the given path is not being watched
 //   * with errInvalidEventSet when oldevent does not match the current event set

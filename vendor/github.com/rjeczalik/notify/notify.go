@@ -40,9 +40,9 @@ var defaultTree = newTree()
 // watchpoint expands its event set. The only way to shrink it, is to call
 // Stop on its channel.
 //
-// Calling Watch with empty event list does expand nor shrink watchpoint's event
-// set. If c is the first channel to listen for events on the given path, Watch
-// will seamlessly create a watch on the filesystem.
+// Calling Watch with empty event list does not expand nor shrink watchpoint's
+// event set. If c is the first channel to listen for events on the given path,
+// Watch will seamlessly create a watch on the filesystem.
 //
 // Notify dispatches copies of single filesystem event to all channels registered
 // for each path. If a single filesystem event contains multiple coalesced events,

@@ -112,34 +112,20 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		if len(imageConf.Tags) > 0 {
 			if imageConf.TagsAppendRandom {
 				for _, t := range imageConf.Tags {
-					r, err := randutil.GenerateRandomString(5)
-					if err != nil {
-						return nil, errors.Errorf("image building failed: %v", err)
-					}
-
+					r := randutil.GenerateRandomString(5)
 					imageTags = append(imageTags, t+"-"+r)
 				}
 			} else {
 				imageTags = append(imageTags, imageConf.Tags...)
 			}
 		} else {
-			imageTag, err := randutil.GenerateRandomString(7)
-			if err != nil {
-				return nil, errors.Errorf("image building failed: %v", err)
-			}
-
-			imageTags = append(imageTags, imageTag)
+			imageTags = append(imageTags, randutil.GenerateRandomString(7))
 		}
 
 		// replace the # in the tags
 		for i := range imageTags {
 			for strings.Contains(imageTags[i], "#") {
-				r, err := randutil.GenerateRandomString(1)
-				if err != nil {
-					return nil, errors.Wrap(err, "generate random string")
-				}
-
-				imageTags[i] = strings.Replace(imageTags[i], "#", r, 1)
+				imageTags[i] = strings.Replace(imageTags[i], "#", randutil.GenerateRandomString(1), 1)
 			}
 		}
 

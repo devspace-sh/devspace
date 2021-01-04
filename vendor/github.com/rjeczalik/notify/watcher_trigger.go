@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT license that can be
 // found in the LICENSE file.
 
-// +build darwin,kqueue dragonfly freebsd netbsd openbsd solaris
+// +build darwin,kqueue darwin,!cgo dragonfly freebsd netbsd openbsd solaris illumos
 
 // watcher_trigger is used for FEN and kqueue which behave similarly:
 // only files and dirs can be watched directly, but not files inside dirs.
@@ -151,6 +151,9 @@ func (t *trg) singlewatch(p string, e Event, direct mode, fi os.FileInfo) (err e
 	w, ok := t.pthLkp[p]
 	if !ok {
 		if w, err = t.t.NewWatched(p, fi); err != nil {
+			if err == errSkip {
+				err = nil
+			}
 			return
 		}
 	}

@@ -2,24 +2,16 @@ package randutil
 
 import (
 	"regexp"
+	"strconv"
 	"testing"
 )
 
 func TestGenerateRandomString(t *testing.T) {
-
 	forbiddenCharsRegex := regexp.MustCompile("[^a-zA-Z0-9]")
-
-	for i := 0; i < 10000; i++ {
-
-		randString, err := GenerateRandomString(1)
-
-		if err != nil {
-			t.Error("Unexpected Error Occurred: " + err.Error())
-			t.Fail()
-		}
-
+	for i := 0; i < 1000; i++ {
+		randString := GenerateRandomString(1)
 		if len(randString) != 1 {
-			t.Error("Random String has unexpected length.\nExpected: 1\nActual: " + string(len(randString)))
+			t.Error("Random String has unexpected length.\nExpected: 1\nActual: " + strconv.Itoa(len(randString)))
 			t.Fail()
 		}
 
