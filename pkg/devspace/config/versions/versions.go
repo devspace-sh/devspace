@@ -48,11 +48,24 @@ var versionLoader = map[string]*loader{
 }
 
 // ParseProfile loads the base config & a certain profile
-func ParseProfile(basePath string, data map[interface{}]interface{}, profile string, update bool, log log.Logger) ([]map[interface{}]interface{}, error) {
+func ParseProfile(basePath string, data map[interface{}]interface{}, profile string, profileParents []string, update bool, log log.Logger) ([]map[interface{}]interface{}, error) {
 	profiles := []map[interface{}]interface{}{}
+	if len(profileParents) > 0 && profile == "" {
+		profile = profileParents[len(profileParents)-1]
+		profileParents = profileParents[:len(profileParents)-1]
+	}
+
 	err := getProfiles(basePath, data, profile, &profiles, 1, update, log)
 	if err != nil {
 		return nil, err
+	}
+
+	// check if there are profile parents
+	for i := len(profileParents) - 1; i >= 0; i-- {
+		err := getProfiles(basePath, data, profileParents[i], &profiles, 1, update, log)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return profiles, nil
