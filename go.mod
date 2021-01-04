@@ -1,6 +1,6 @@
 module github.com/devspace-cloud/devspace
 
-go 1.13
+go 1.15
 
 require (
 	github.com/Microsoft/hcsshim v0.8.10 // indirect
@@ -38,13 +38,14 @@ require (
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/miekg/pkcs11 v1.0.3 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/moby/term v0.0.0-20200312100748-672ec06f55cd
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v0.1.1 // indirect
 	github.com/otiai10/copy v0.0.0-20180813030456-0046ee23fdbd
 	github.com/pkg/errors v0.9.1
 	github.com/rhysd/go-github-selfupdate v0.0.0-20180520142321-41c1bbb0804a
-	github.com/rjeczalik/notify v0.0.0-20181126183243-629144ba06a1
+	github.com/rjeczalik/notify v0.9.3-0.20201210012515-e2a77dcc14cf
 	github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94
 	github.com/shirou/gopsutil v0.0.0-20190627142359-4c8b404ee5c5 // indirect
 	github.com/sirupsen/logrus v1.6.0

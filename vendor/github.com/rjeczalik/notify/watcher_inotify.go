@@ -93,20 +93,14 @@ func (i *inotify) watch(path string, e Event) (err error) {
 	if err != nil {
 		return
 	}
-	i.RLock()
-	wd := i.m[int32(iwd)]
-	i.RUnlock()
-	if wd == nil {
-		i.Lock()
-		if i.m[int32(iwd)] == nil {
-			i.m[int32(iwd)] = &watched{path: path, mask: uint32(e)}
-		}
-		i.Unlock()
+	i.Lock()
+	if wd, ok := i.m[int32(iwd)]; !ok {
+		i.m[int32(iwd)] = &watched{path: path, mask: uint32(e)}
 	} else {
-		i.Lock()
+		wd.path = path
 		wd.mask = uint32(e)
-		i.Unlock()
 	}
+	i.Unlock()
 	return nil
 }
 

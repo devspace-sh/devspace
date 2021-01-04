@@ -70,20 +70,12 @@ for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
       NAME="${NAME}.exe"
     fi
 
-    # Enable CGO if building for OS X on OS X; this is required for 
-    # github.com/rjeczalik/notify; see https://github.com/rjeczalik/notify/pull/182
-    if [[ "${OS}" == "darwin" && "${BUILD_PLATFORM}" == "darwin" ]]; then
-      CGO_ENABLED=1
-    else
-      CGO_ENABLED=0
-    fi
-
     if [[ "${ARCH}" == "386" && "${OS}" == "darwin" ]]; then
         # darwin 386 is deprecated and shouldn't be used anymore
         echo "Building for ${OS}/${ARCH} not supported."
     else
-        echo "Building for ${OS}/${ARCH} with CGO_ENABLED=${CGO_ENABLED}"
-        GOARCH=${ARCH} GOOS=${OS} CGO_ENABLED=${CGO_ENABLED} ${GO_BUILD_CMD} -ldflags "${GO_BUILD_LDFLAGS}"\
+        echo "Building for ${OS}/${ARCH}"
+        GOARCH=${ARCH} GOOS=${OS} ${GO_BUILD_CMD} -ldflags "${GO_BUILD_LDFLAGS}"\
             -o "${DEVSPACE_ROOT}/release/${NAME}" .
         shasum -a 256 "${DEVSPACE_ROOT}/release/${NAME}" > "${DEVSPACE_ROOT}/release/${NAME}".sha256
     fi
