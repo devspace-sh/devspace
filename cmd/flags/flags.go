@@ -19,6 +19,7 @@ type GlobalFlags struct {
 	KubeContext    string
 	Profile        string
 	ProfileRefresh bool
+	ProfileParents []string
 	ConfigPath     string
 	Vars           []string
 
@@ -50,6 +51,7 @@ func (gf *GlobalFlags) ToConfigOptions() *loader.ConfigOptions {
 	return &loader.ConfigOptions{
 		Profile:        gf.Profile,
 		ProfileRefresh: gf.ProfileRefresh,
+		ProfileParents: gf.ProfileParents,
 		ConfigPath:     gf.ConfigPath,
 		KubeContext:    gf.KubeContext,
 		Namespace:      gf.Namespace,
@@ -70,6 +72,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 
 	flags.StringVar(&globalFlags.ConfigPath, "config", "", "The devspace config file to use")
 	flags.StringVarP(&globalFlags.Profile, "profile", "p", "", "The devspace profile to use (if there is any)")
+	flags.StringSliceVar(&globalFlags.ProfileParents, "profile-parent", []string{}, "One or more profiles that should be applied before the specified profile (e.g. devspace dev --profile-parent=base1 --profile-parent=base2 --profile=my-profile)")
 	flags.BoolVar(&globalFlags.ProfileRefresh, "profile-refresh", false, "If true will pull and re-download profile parent sources")
 	flags.StringVarP(&globalFlags.Namespace, "namespace", "n", "", "The kubernetes namespace to use")
 	flags.StringVar(&globalFlags.KubeContext, "kube-context", "", "The kubernetes context to use")

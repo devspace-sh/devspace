@@ -698,6 +698,7 @@ type DependencyConfig struct {
 	Name               string          `yaml:"name" json:"name"`
 	Source             *SourceConfig   `yaml:"source" json:"source"`
 	Profile            string          `yaml:"profile,omitempty" json:"profile,omitempty"`
+	ProfileParents     []string        `yaml:"profileParents,omitempty" json:"profileParents,omitempty"`
 	Vars               []DependencyVar `yaml:"vars,omitempty" json:"vars,omitempty"`
 	SkipBuild          *bool           `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
 	IgnoreDependencies *bool           `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`

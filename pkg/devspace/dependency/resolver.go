@@ -186,6 +186,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 	// Set dependency profile
 	cloned.Profile = dependency.Profile
+	cloned.ProfileParents = dependency.ProfileParents
 
 	// Construct load path
 	configPath := filepath.Join(localPath, constants.DefaultConfigPath)
