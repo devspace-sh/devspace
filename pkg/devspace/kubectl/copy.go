@@ -18,7 +18,7 @@ func (client *client) CopyFromReader(pod *k8sv1.Pod, container, containerPath st
 	_, stderr, err := client.ExecBuffered(pod, container, []string{"tar", "xzp", "-C", containerPath + "/."}, reader)
 	if err != nil {
 		if stderr != nil {
-			return errors.Errorf("Error executing tar: %s: %v", string(stderr), err)
+			return errors.Errorf("error executing tar: %s: %v", string(stderr), err)
 		}
 
 		return errors.Wrap(err, "exec")
@@ -29,26 +29,21 @@ func (client *client) CopyFromReader(pod *k8sv1.Pod, container, containerPath st
 
 // Copy copies the specified folder to the container
 func (client *client) Copy(pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error {
-	reader, writer, err := os.Pipe()
-	if err != nil {
-		return errors.Wrap(err, "create pipe")
-	}
-
-	defer reader.Close()
-	defer writer.Close()
-
+	// do the actual copy
+	reader, writer := io.Pipe()
 	errorChan := make(chan error)
 	go func() {
+		defer reader.Close()
 		errorChan <- client.CopyFromReader(pod, container, containerPath, reader)
 	}()
-
-	err = writeTar(writer, localPath, exclude)
-	if err != nil {
-		return errors.Wrap(err, "write tar")
-	}
-
-	writer.Close()
-	return <-errorChan
+	go func() {
+		defer writer.Close()
+		errorChan <- writeTar(writer, localPath, exclude)
+	}()
+	err := <-errorChan
+	// wait for the second goroutine to finish
+	<-errorChan
+	return err
 }
 
 func writeTar(writer io.Writer, localPath string, exclude []string) error {

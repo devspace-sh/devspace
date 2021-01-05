@@ -1,7 +1,9 @@
 package hook
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,9 +13,13 @@ import (
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"io"
+	"io/ioutil"
+	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -205,14 +211,14 @@ func executeHook(ctx Context, hook *latest.HookConfig, writer io.Writer, log log
 	}
 
 	if hook.Background {
-		log.Infof("Execute hook '%s' in background", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
+		log.Infof("Execute hook '%s' in background", ansi.Color(hookName(hook), "white+b"))
 		go func() {
 			err := execute(ctx, hook, hookWriter, hookLog)
 			if err != nil {
 				if hook.Silent {
-					log.Warnf("Error executing hook '%s' in background: %s %v", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"), hookWriter.(*bytes.Buffer).String(), err)
+					log.Warnf("Error executing hook '%s' in background: %s %v", ansi.Color(hookName(hook), "white+b"), hookWriter.(*bytes.Buffer).String(), err)
 				} else {
-					log.Warnf("Error executing hook '%s' in background: %v", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"), err)
+					log.Warnf("Error executing hook '%s' in background: %v", ansi.Color(hookName(hook), "white+b"), err)
 				}
 			}
 		}()
@@ -220,13 +226,13 @@ func executeHook(ctx Context, hook *latest.HookConfig, writer io.Writer, log log
 		return nil
 	}
 
-	log.Infof("Execute hook '%s'", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
+	log.Infof("Execute hook '%s'", ansi.Color(hookName(hook), "white+b"))
 	err := execute(ctx, hook, hookWriter, hookLog)
 	if err != nil {
 		if hook.Silent {
-			return errors.Wrapf(err, "in hook '%s': %s", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"), hookWriter.(*bytes.Buffer).String())
+			return errors.Wrapf(err, "in hook '%s': %s", ansi.Color(hookName(hook), "white+b"), hookWriter.(*bytes.Buffer).String())
 		} else {
-			return errors.Wrapf(err, "in hook '%s'", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
+			return errors.Wrapf(err, "in hook '%s'", ansi.Color(hookName(hook), "white+b"))
 		}
 	}
 
@@ -260,20 +266,20 @@ func executeLocally(ctx Context, hook *latest.HookConfig, writer io.Writer, log 
 
 func executeInContainer(ctx Context, hook *latest.HookConfig, writer io.Writer, log logpkg.Logger) error {
 	if ctx.Client == nil {
-		return errors.Errorf("Cannot execute hook '%s': kube client is not initialized", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
+		return errors.Errorf("Cannot execute hook '%s': kube client is not initialized", ansi.Color(hookName(hook), "white+b"))
 	}
 
 	var imageSelector []string
 	if hook.Where.Container.ImageName != "" {
 		if ctx.Config == nil || ctx.Cache == nil {
-			return errors.Errorf("Cannot execute hook '%s': config is not loaded", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
+			return errors.Errorf("Cannot execute hook '%s': config is not loaded", ansi.Color(hookName(hook), "white+b"))
 		}
 
 		imageSelector = targetselector.ImageSelectorFromConfig(hook.Where.Container.ImageName, ctx.Config, ctx.Cache)
 	}
 
 	if hook.Where.Container.Wait == nil || *hook.Where.Container.Wait == true {
-		log.Infof("Waiting for running containers for hook '%s'", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
+		log.Infof("Waiting for running containers for hook '%s'", ansi.Color(hookName(hook), "white+b"))
 
 		timeout := time.Second * 120
 		if hook.Where.Container.Timeout > 0 {
@@ -298,7 +304,7 @@ func executeInContainer(ctx Context, hook *latest.HookConfig, writer io.Writer, 
 	if err != nil {
 		return err
 	} else if executed == false {
-		log.Infof("Skip hook '%s', because no running containers were found", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"))
+		log.Infof("Skip hook '%s', because no running containers were found", ansi.Color(hookName(hook), "white+b"))
 	}
 	return nil
 }
@@ -331,21 +337,361 @@ func executeInFoundContainer(ctx Context, hook *latest.HookConfig, imageSelector
 
 	// execute the hook in the containers
 	for _, podContainer := range podContainers {
-		cmd := []string{hook.Command}
-		cmd = append(cmd, hook.Args...)
+		log.Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
+		if hook.Download != nil {
+			containerPath := "."
+			if hook.Download.ContainerPath != "" {
+				containerPath = hook.Download.ContainerPath
+			}
+			localPath := "."
+			if hook.Download.LocalPath != "" {
+				localPath = hook.Download.LocalPath
+			}
 
-		log.Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " ")), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
-		err = ctx.Client.ExecStream(&kubectl.ExecStreamOptions{
-			Pod:       podContainer.Pod,
-			Container: podContainer.Container.Name,
-			Command:   cmd,
-			Stdout:    writer,
-			Stderr:    writer,
-		})
-		if err != nil {
-			return false, errors.Errorf("error in container '%s/%s/%s': %v", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
+			log.Infof("Copy container '%s' -> local '%s'", containerPath, localPath)
+			// Make sure the target folder exists
+			destDir := path.Dir(localPath)
+			if len(destDir) > 0 {
+				_ = os.MkdirAll(destDir, 0755)
+			}
+
+			// Download the files
+			err = download(ctx.Client, podContainer.Pod, podContainer.Container.Name, localPath, containerPath, log)
+			if err != nil {
+				return false, errors.Errorf("error in container '%s/%s/%s': %v", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
+			}
+		} else if hook.Upload != nil {
+			containerPath := "."
+			if hook.Upload.ContainerPath != "" {
+				containerPath = hook.Upload.ContainerPath
+			}
+			localPath := "."
+			if hook.Upload.LocalPath != "" {
+				localPath = hook.Upload.LocalPath
+			}
+
+			log.Infof("Copy local '%s' -> container '%s'", localPath, containerPath)
+			// Make sure the target folder exists
+			destDir := path.Dir(containerPath)
+			if len(destDir) > 0 {
+				_, stderr, err := ctx.Client.ExecBuffered(podContainer.Pod, podContainer.Container.Name, []string{"mkdir", "-p", destDir}, nil)
+				if err != nil {
+					return false, errors.Errorf("error in container '%s/%s/%s': %v: %s", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err, string(stderr))
+				}
+			}
+
+			// Upload the files
+			err = upload(ctx.Client, podContainer.Pod, podContainer.Container.Name, localPath, containerPath)
+			if err != nil {
+				return false, errors.Errorf("error in container '%s/%s/%s': %v", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
+			}
+		} else {
+			cmd := []string{hook.Command}
+			cmd = append(cmd, hook.Args...)
+			err = ctx.Client.ExecStream(&kubectl.ExecStreamOptions{
+				Pod:       podContainer.Pod,
+				Container: podContainer.Container.Name,
+				Command:   cmd,
+				Stdout:    writer,
+				Stderr:    writer,
+			})
+			if err != nil {
+				return false, errors.Errorf("error in container '%s/%s/%s': %v", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
+			}
 		}
 	}
 
 	return true, nil
+}
+
+func hookName(hook *latest.HookConfig) string {
+	if hook.Command != "" {
+		return fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " "))
+	}
+	if hook.Upload != nil && hook.Where.Container != nil {
+		localPath := "."
+		if hook.Upload.LocalPath != "" {
+			localPath = hook.Upload.LocalPath
+		}
+		containerPath := "."
+		if hook.Upload.ContainerPath != "" {
+			containerPath = hook.Upload.ContainerPath
+		}
+
+		if hook.Where.Container.Pod != "" {
+			return fmt.Sprintf("copy %s to pod %s", localPath, hook.Where.Container.Pod)
+		}
+		if len(hook.Where.Container.LabelSelector) > 0 {
+			return fmt.Sprintf("copy %s to selector %s", localPath, labels.Set(hook.Where.Container.LabelSelector).String())
+		}
+		if hook.Where.Container.ImageName != "" {
+			return fmt.Sprintf("copy %s to imageName %s", localPath, hook.Where.Container.ImageName)
+		}
+
+		return fmt.Sprintf("copy %s to %s", localPath, containerPath)
+	}
+	return "hook"
+}
+
+func upload(client kubectl.Client, pod *k8sv1.Pod, container string, localPath string, containerPath string) error {
+	// do the actual copy
+	reader, writer := io.Pipe()
+	errorChan := make(chan error)
+	go func() {
+		defer reader.Close()
+		errorChan <- uploadFromReader(client, pod, container, containerPath, reader)
+	}()
+	go func() {
+		defer writer.Close()
+		errorChan <- makeTar(localPath, containerPath, writer)
+	}()
+	err := <-errorChan
+	// wait for the second goroutine to finish
+	<-errorChan
+	return err
+}
+
+func uploadFromReader(client kubectl.Client, pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error {
+	cmd := []string{"tar", "xzp"}
+	destDir := path.Dir(containerPath)
+	if len(destDir) > 0 {
+		cmd = append(cmd, "-C", destDir)
+	}
+
+	_, stderr, err := client.ExecBuffered(pod, container, cmd, reader)
+	if err != nil {
+		if stderr != nil {
+			return errors.Errorf("error executing tar: %s: %v", string(stderr), err)
+		}
+
+		return errors.Wrap(err, "exec")
+	}
+
+	return nil
+}
+
+func makeTar(srcPath, destPath string, writer io.Writer) error {
+	gw := gzip.NewWriter(writer)
+	defer gw.Close()
+	tarWriter := tar.NewWriter(gw)
+	defer tarWriter.Close()
+
+	srcPath = path.Clean(srcPath)
+	destPath = path.Clean(destPath)
+	return recursiveTar(path.Dir(srcPath), path.Base(srcPath), path.Dir(destPath), path.Base(destPath), tarWriter)
+}
+
+func recursiveTar(srcBase, srcFile, destBase, destFile string, tw *tar.Writer) error {
+	srcPath := path.Join(srcBase, srcFile)
+	matchedPaths, err := filepath.Glob(srcPath)
+	if err != nil {
+		return err
+	}
+	for _, fpath := range matchedPaths {
+		stat, err := os.Lstat(fpath)
+		if err != nil {
+			return err
+		}
+		if stat.IsDir() {
+			files, err := ioutil.ReadDir(fpath)
+			if err != nil {
+				return err
+			}
+			if len(files) == 0 {
+				//case empty directory
+				hdr, _ := tar.FileInfoHeader(stat, fpath)
+				hdr.Name = destFile
+				if err := tw.WriteHeader(hdr); err != nil {
+					return err
+				}
+			}
+			for _, f := range files {
+				if err := recursiveTar(srcBase, path.Join(srcFile, f.Name()), destBase, path.Join(destFile, f.Name()), tw); err != nil {
+					return err
+				}
+			}
+			return nil
+		} else if stat.Mode()&os.ModeSymlink != 0 {
+			//case soft link
+			hdr, _ := tar.FileInfoHeader(stat, fpath)
+			target, err := os.Readlink(fpath)
+			if err != nil {
+				return err
+			}
+
+			hdr.Linkname = target
+			hdr.Name = destFile
+			if err := tw.WriteHeader(hdr); err != nil {
+				return err
+			}
+		} else {
+			//case regular file or other file type like pipe
+			hdr, err := tar.FileInfoHeader(stat, fpath)
+			if err != nil {
+				return err
+			}
+			hdr.Name = destFile
+
+			if err := tw.WriteHeader(hdr); err != nil {
+				return err
+			}
+
+			f, err := os.Open(fpath)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			if _, err := io.Copy(tw, f); err != nil {
+				return err
+			}
+			return f.Close()
+		}
+	}
+	return nil
+}
+
+func download(client kubectl.Client, pod *k8sv1.Pod, container string, localPath string, containerPath string, log logpkg.Logger) error {
+	prefix := getPrefix(containerPath)
+	prefix = path.Clean(prefix)
+	// remove extraneous path shortcuts - these could occur if a path contained extra "../"
+	// and attempted to navigate beyond "/" in a remote filesystem
+	prefix = stripPathShortcuts(prefix)
+
+	// do the actual copy
+	reader, writer := io.Pipe()
+	errorChan := make(chan error)
+	go func() {
+		defer writer.Close()
+		errorChan <- downloadFromPod(client, pod, container, containerPath, writer)
+	}()
+	go func() {
+		defer reader.Close()
+		errorChan <- untarAll(reader, localPath, prefix, log)
+	}()
+	err := <-errorChan
+	// wait for the second goroutine to finish
+	<-errorChan
+	return err
+}
+
+func downloadFromPod(client kubectl.Client, pod *k8sv1.Pod, container, containerPath string, writer io.Writer) error {
+	stderr := &bytes.Buffer{}
+	err := client.ExecStream(&kubectl.ExecStreamOptions{
+		Pod:       pod,
+		Container: container,
+		Command:   []string{"tar", "czf", "-", containerPath},
+		Stdout:    writer,
+		Stderr:    stderr,
+	})
+	if err != nil {
+		return errors.Errorf("error executing tar: %s: %v", stderr.String(), err)
+	}
+
+	return nil
+}
+
+func getPrefix(file string) string {
+	// tar strips the leading '/' if it's there, so we will too
+	return strings.TrimLeft(file, "/")
+}
+
+func untarAll(reader io.Reader, destDir, prefix string, log logpkg.Logger) error {
+	gw, err := gzip.NewReader(reader)
+	if err != nil {
+		return err
+	}
+	symlinkWarningPrinted := false
+	tarReader := tar.NewReader(gw)
+	for {
+		header, err := tarReader.Next()
+		if err != nil {
+			if err != io.EOF {
+				return err
+			}
+			break
+		}
+
+		// All the files will start with the prefix, which is the directory where
+		// they were located on the pod, we need to strip down that prefix, but
+		// if the prefix is missing it means the tar was tempered with.
+		// For the case where prefix is empty we need to ensure that the path
+		// is not absolute, which also indicates the tar file was tempered with.
+		if !strings.HasPrefix(header.Name, prefix) {
+			return fmt.Errorf("tar contents corrupted")
+		}
+
+		// basic file information
+		mode := header.FileInfo().Mode()
+		destFileName := filepath.Join(destDir, header.Name[len(prefix):])
+
+		if !isDestRelative(destDir, destFileName) {
+			log.Warnf("warning: file %q is outside target destination, skipping", destFileName)
+			continue
+		}
+
+		baseName := filepath.Dir(destFileName)
+		if err := os.MkdirAll(baseName, 0755); err != nil {
+			return err
+		}
+		if header.FileInfo().IsDir() {
+			if err := os.MkdirAll(destFileName, 0755); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if mode&os.ModeSymlink != 0 {
+			if !symlinkWarningPrinted {
+				symlinkWarningPrinted = true
+				log.Warnf("warning: skipping symlink: %q -> %q\n", destFileName, header.Linkname)
+			}
+			continue
+		}
+		outFile, err := os.Create(destFileName)
+		if err != nil {
+			return err
+		}
+		defer outFile.Close()
+		if _, err := io.Copy(outFile, tarReader); err != nil {
+			return err
+		}
+		if err := outFile.Close(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// isDestRelative returns true if dest is pointing outside the base directory,
+// false otherwise.
+func isDestRelative(base, dest string) bool {
+	relative, err := filepath.Rel(base, dest)
+	if err != nil {
+		return false
+	}
+	return relative == "." || relative == stripPathShortcuts(relative)
+}
+
+// stripPathShortcuts removes any leading or trailing "../" from a given path
+func stripPathShortcuts(p string) string {
+	newPath := path.Clean(p)
+	trimmed := strings.TrimPrefix(newPath, "../")
+
+	for trimmed != newPath {
+		newPath = trimmed
+		trimmed = strings.TrimPrefix(newPath, "../")
+	}
+
+	// trim leftover {".", ".."}
+	if newPath == "." || newPath == ".." {
+		newPath = ""
+	}
+
+	if len(newPath) > 0 && string(newPath[0]) == "/" {
+		return newPath[1:]
+	}
+
+	return newPath
 }

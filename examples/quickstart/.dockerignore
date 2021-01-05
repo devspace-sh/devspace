@@ -2,3 +2,5 @@ Dockerfile
 .devspace/
 chart/
 node_modules/
+test/
+devspace.yaml

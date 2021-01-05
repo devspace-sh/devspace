@@ -731,15 +731,24 @@ type SourceConfig struct {
 
 // HookConfig defines a hook
 type HookConfig struct {
-	Command         string   `yaml:"command" json:"command"`
-	Args            []string `yaml:"args,omitempty" json:"args,omitempty"`
-	OperatingSystem string   `yaml:"os,omitempty" json:"os,omitempty"`
+	Command  string          `yaml:"command" json:"command"`
+	Args     []string        `yaml:"args,omitempty" json:"args,omitempty"`
+	Upload   *HookSyncConfig `yaml:"upload,omitempty" json:"upload,omitempty"`
+	Download *HookSyncConfig `yaml:"download,omitempty" json:"download,omitempty"`
+
+	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
 
 	Background bool `yaml:"background,omitempty" json:"background,omitempty"`
 	Silent     bool `yaml:"silent,omitempty" json:"silent,omitempty"`
 
 	Where HookWhereConfig `yaml:"where,omitempty" json:"where,omitempty"`
 	When  *HookWhenConfig `yaml:"when,omitempty" json:"when,omitempty"`
+}
+
+// HookSyncConfig defines a hook upload config
+type HookSyncConfig struct {
+	LocalPath     string `yaml:"localPath,omitempty" json:"localPath,omitempty"`
+	ContainerPath string `yaml:"containerPath,omitempty" json:"containerPath,omitempty"`
 }
 
 // HookWhereConfig defines where to execute the hook

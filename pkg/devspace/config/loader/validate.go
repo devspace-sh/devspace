@@ -63,8 +63,27 @@ func validate(config *latest.Config) error {
 	}
 
 	for index, hookConfig := range config.Hooks {
-		if hookConfig.Command == "" {
-			return errors.Errorf("hooks[%d].command is required", index)
+		if hookConfig.Command == "" && hookConfig.Upload == nil && hookConfig.Download == nil {
+			return errors.Errorf("hooks[%d].command, hooks[%d].download or hooks[%d].upload is required", index, index, index)
+		}
+		enabled := 0
+		if hookConfig.Command != "" {
+			enabled++
+		}
+		if hookConfig.Download != nil {
+			enabled++
+		}
+		if hookConfig.Upload != nil {
+			enabled++
+		}
+		if enabled > 1 {
+			return errors.Errorf("you can only use one of hooks[%d].command, hooks[%d].upload and hooks[%d].download per hook", index, index, index)
+		}
+		if hookConfig.Upload != nil && hookConfig.Where.Container == nil {
+			return errors.Errorf("hooks[%d].where.container is required if hooks[%d].upload is used", index, index)
+		}
+		if hookConfig.Download != nil && hookConfig.Where.Container == nil {
+			return errors.Errorf("hooks[%d].where.container is required if hooks[%d].download is used", index, index)
 		}
 	}
 

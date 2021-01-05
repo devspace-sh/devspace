@@ -20,12 +20,12 @@ func TestGetCommand(t *testing.T) {
 			},
 		},
 	}
-	command := client.getCommand([]string{"args"})
+	command := client.getCommand([]string{"args"}, "")
 	assert.Equal(t, 1, len(command), "Returned command has wrong length")
 	assert.Equal(t, "args", command[0], "Wrong command returned")
 
 	client.config = &latest.Config{}
-	command = client.getCommand([]string{})
+	command = client.getCommand([]string{}, "")
 	assert.Equal(t, 3, len(command), "Returned command has wrong length")
 	assert.Equal(t, "sh", command[0], "Wrong command returned")
 	assert.Equal(t, "-c", command[1], "Wrong command returned")
