@@ -166,7 +166,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 				return errors.Errorf("Error deploying: deployment %s has no deployment method", deployConfig.Name)
 			}
 
-			// Execute before deploment deploy hook
+			// Execute before deployment deploy hook
 			err = c.hookExecuter.Execute(hook.Before, hook.StageDeployments, deployConfig.Name, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
 			if err != nil {
 				return err
@@ -181,7 +181,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 			if wasDeployed {
 				log.Donef("Successfully deployed %s with %s", deployConfig.Name, method)
 
-				// Execute after deploment deploy hook
+				// Execute after deployment deploy hook
 				err = c.hookExecuter.Execute(hook.After, hook.StageDeployments, deployConfig.Name, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
 				if err != nil {
 					return err
@@ -210,12 +210,18 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 	if c.config.Deployments != nil {
 		helmV2Clients := map[string]helmtypes.Client{}
 
+		// Execute before deployments purge hook
+		err := c.hookExecuter.Execute(hook.Before, hook.StagePurgeDeployments, hook.All, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+		if err != nil {
+			return err
+		}
+
 		// Reverse them
 		for i := len(c.config.Deployments) - 1; i >= 0; i-- {
 			var (
 				err          error
 				deployClient deployer.Interface
-				deployConfig = (c.config.Deployments)[i]
+				deployConfig = c.config.Deployments[i]
 			)
 
 			// Check if we should skip deleting deployment
@@ -254,14 +260,38 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 				return errors.Errorf("Error purging: deployment %s has no deployment method", deployConfig.Name)
 			}
 
+			// Execute before deployment purge hook
+			err = c.hookExecuter.Execute(hook.Before, hook.StagePurgeDeployments, deployConfig.Name, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+			if err != nil {
+				return err
+			}
+
 			log.StartWait("Deleting deployment " + deployConfig.Name)
 			err = deployClient.Delete(c.cache)
 			log.StopWait()
 			if err != nil {
+				// Execute on error deployment purge hook
+				err = c.hookExecuter.Execute(hook.OnError, hook.StagePurgeDeployments, deployConfig.Name, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+				if err != nil {
+					return err
+				}
+
 				log.Warnf("Error deleting deployment %s: %v", deployConfig.Name, err)
+			} else {
+				// Execute after deployment purge hook
+				err = c.hookExecuter.Execute(hook.After, hook.StagePurgeDeployments, deployConfig.Name, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+				if err != nil {
+					return err
+				}
 			}
 
 			log.Donef("Successfully deleted deployment %s", deployConfig.Name)
+		}
+
+		// Execute after deployments purge hook
+		err = c.hookExecuter.Execute(hook.After, hook.StagePurgeDeployments, hook.All, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+		if err != nil {
+			return err
 		}
 	}
 

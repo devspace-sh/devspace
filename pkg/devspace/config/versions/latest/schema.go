@@ -767,10 +767,11 @@ type HookWhenConfig struct {
 
 // HookWhenAtConfig defines at which stage the hook should be executed
 type HookWhenAtConfig struct {
-	Images       string `yaml:"images,omitempty" json:"images,omitempty"`
-	Deployments  string `yaml:"deployments,omitempty" json:"deployments,omitempty"`
-	Dependencies string `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
-	PullSecrets  string `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
+	Images           string `yaml:"images,omitempty" json:"images,omitempty"`
+	PurgeDeployments string `yaml:"purgeDeployments,omitempty" json:"purgeDeployments,omitempty"`
+	Deployments      string `yaml:"deployments,omitempty" json:"deployments,omitempty"`
+	Dependencies     string `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
+	PullSecrets      string `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
 }
 
 // CommandConfig defines the command specification

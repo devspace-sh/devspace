@@ -68,6 +68,8 @@ const (
 	StageImages Stage = "images"
 	// StageDeployments is the deploying stage
 	StageDeployments Stage = "deployments"
+	// StagePurgeDeployments is the purging stage
+	StagePurgeDeployments Stage = "purgeDeployments"
 	// StageDependencies is the dependency stage
 	StageDependencies Stage = "dependencies"
 	// StagePullSecrets is the pull secrets stage
@@ -121,6 +123,8 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 				if when == Before && hook.When.Before != nil {
 					if stage == StageDeployments && hook.When.Before.Deployments != "" && strings.TrimSpace(hook.When.Before.Deployments) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
+					} else if stage == StagePurgeDeployments && hook.When.Before.PurgeDeployments != "" && strings.TrimSpace(hook.When.Before.PurgeDeployments) == strings.TrimSpace(which) {
+						hooksToExecute = append(hooksToExecute, hook)
 					} else if stage == StageImages && hook.When.Before.Images != "" && strings.TrimSpace(hook.When.Before.Images) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
 					} else if stage == StageDependencies && hook.When.Before.Dependencies != "" && strings.TrimSpace(hook.When.Before.Dependencies) == strings.TrimSpace(which) {
@@ -131,6 +135,8 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 				} else if when == After && hook.When.After != nil {
 					if stage == StageDeployments && hook.When.After.Deployments != "" && strings.TrimSpace(hook.When.After.Deployments) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
+					} else if stage == StagePurgeDeployments && hook.When.After.PurgeDeployments != "" && strings.TrimSpace(hook.When.Before.PurgeDeployments) == strings.TrimSpace(which) {
+						hooksToExecute = append(hooksToExecute, hook)
 					} else if stage == StageImages && hook.When.After.Images != "" && strings.TrimSpace(hook.When.After.Images) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
 					} else if stage == StageDependencies && hook.When.After.Dependencies != "" && strings.TrimSpace(hook.When.After.Dependencies) == strings.TrimSpace(which) {
@@ -140,6 +146,8 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 					}
 				} else if when == OnError && hook.When.OnError != nil {
 					if stage == StageDeployments && hook.When.OnError.Deployments != "" && strings.TrimSpace(hook.When.OnError.Deployments) == strings.TrimSpace(which) {
+						hooksToExecute = append(hooksToExecute, hook)
+					} else if stage == StagePurgeDeployments && hook.When.OnError.PurgeDeployments != "" && strings.TrimSpace(hook.When.Before.PurgeDeployments) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
 					} else if stage == StageImages && hook.When.OnError.Images != "" && strings.TrimSpace(hook.When.OnError.Images) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
@@ -302,18 +310,18 @@ func executeInFoundContainer(ctx Context, hook *latest.HookConfig, imageSelector
 	}
 
 	podContainers, err := kubectl.NewFilterWithSort(ctx.Client, kubectl.SortPodsByNewest, kubectl.SortContainersByNewest).SelectContainers(context.TODO(), kubectl.Selector{
-		ImageSelector:   imageSelector,
-		LabelSelector:   labelSelector,
-		Pod:             hook.Where.Container.Pod,
-		ContainerName:   hook.Where.Container.ContainerName,
-		Namespace:       hook.Where.Container.Namespace,
+		ImageSelector: imageSelector,
+		LabelSelector: labelSelector,
+		Pod:           hook.Where.Container.Pod,
+		ContainerName: hook.Where.Container.ContainerName,
+		Namespace:     hook.Where.Container.Namespace,
 	})
 	if err != nil {
 		return false, err
 	} else if len(podContainers) == 0 {
 		return false, nil
 	}
-	
+
 	// if any podContainer is not running we wait
 	for _, podContainer := range podContainers {
 		if targetselector.IsContainerRunning(podContainer) == false {
