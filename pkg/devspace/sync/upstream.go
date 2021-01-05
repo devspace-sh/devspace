@@ -95,9 +95,6 @@ func (u *upstream) mainLoop() error {
 			case <-u.interrupt:
 				return nil
 			case event, ok := <-u.events:
-				u.isBusyMutex.Lock()
-				u.isBusy = true
-				u.isBusyMutex.Unlock()
 				if ok == false {
 					return nil
 				}
@@ -133,9 +130,11 @@ func (u *upstream) mainLoop() error {
 			}
 
 			changeAmount = len(changes)
-			if changeAmount == 0 {
+			if changeAmount == 0 && len(u.events) == 0 {
 				u.isBusyMutex.Lock()
-				u.isBusy = false
+				if len(u.events) == 0 {
+					u.isBusy = false
+				}
 				u.isBusyMutex.Unlock()
 			}
 		}

@@ -331,7 +331,10 @@ func (s *Sync) sendChangesToUpstream(changes []*FileInformation, remove bool) {
 		// We do this out of the fileIndex lock, because otherwise this could cause a deadlock
 		// (Upstream waits in getfileInformationFromEvent and upstream.events buffer is full)
 		for i := 0; i < len(sendBatch); i++ {
+			s.upstream.isBusyMutex.Lock()
+			s.upstream.isBusy = true
 			s.upstream.events <- sendBatch[i]
+			s.upstream.isBusyMutex.Unlock()
 		}
 	}
 }
