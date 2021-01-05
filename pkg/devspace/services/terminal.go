@@ -2,7 +2,9 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
@@ -13,8 +15,8 @@ import (
 )
 
 // StartTerminal opens a new terminal
-func (serviceClient *client) StartTerminal(options targetselector.Options, args []string, interrupt chan error, wait bool) (int, error) {
-	command := serviceClient.getCommand(args)
+func (serviceClient *client) StartTerminal(options targetselector.Options, args []string, workDir string, interrupt chan error, wait bool) (int, error) {
+	command := serviceClient.getCommand(args, workDir)
 	targetSelector := targetselector.NewTargetSelector(serviceClient.client)
 	if wait == false {
 		options.Wait = &wait
@@ -78,27 +80,39 @@ func (serviceClient *client) StartTerminal(options targetselector.Options, args 
 	return 0, nil
 }
 
-func (serviceClient *client) getCommand(args []string) []string {
-	var command []string
-
+func (serviceClient *client) getCommand(args []string, workDir string) []string {
 	config := serviceClient.config
-	if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil && len(config.Dev.Interactive.Terminal.Command) > 0 {
-		for _, cmd := range config.Dev.Interactive.Terminal.Command {
-			command = append(command, cmd)
-		}
-	}
-
-	if len(args) > 0 {
-		command = args
-	} else {
-		if len(command) == 0 {
-			command = []string{
-				"sh",
-				"-c",
-				"command -v bash >/dev/null 2>&1 && exec bash || exec sh",
+	if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil {
+		if len(args) == 0 {
+			for _, cmd := range config.Dev.Interactive.Terminal.Command {
+				args = append(args, cmd)
 			}
 		}
+		if workDir == "" {
+			workDir = config.Dev.Interactive.Terminal.WorkDir
+		}
 	}
 
-	return command
+	workDir = strings.TrimSpace(workDir)
+	if len(args) > 0 {
+		if workDir != "" {
+			return []string{
+				"sh",
+				"-c",
+				fmt.Sprintf("cd %s; %s", workDir, strings.Join(args, " ")),
+			}
+		}
+
+		return args
+	}
+
+	execString := "command -v bash >/dev/null 2>&1 && exec bash || exec sh"
+	if workDir != "" {
+		execString = fmt.Sprintf("cd %s; %s", workDir, execString)
+	}
+	return []string{
+		"sh",
+		"-c",
+		execString,
+	}
 }

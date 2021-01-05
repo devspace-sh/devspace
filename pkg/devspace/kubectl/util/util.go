@@ -35,17 +35,17 @@ func NewClientByContext(context, namespace string, switchContext bool, kubeLoade
 			return nil, "", "", errors.Errorf("kube config is invalid: please make sure you have an existing valid kube config")
 		}
 
-		rawConfig, err := ConvertRestConfigToRawConfig(config)
-		if err != nil {
-			return nil, "", "", errors.Wrap(err, "convert in cluster config")
-		}
-
 		currentNamespace, err := inClusterNamespace()
 		if err != nil {
 			currentNamespace = "default"
 		}
 		if namespace != "" {
 			currentNamespace = namespace
+		}
+
+		rawConfig, err := ConvertRestConfigToRawConfig(config, currentNamespace)
+		if err != nil {
+			return nil, "", "", errors.Wrap(err, "convert in cluster config")
 		}
 
 		return clientcmd.NewNonInteractiveClientConfig(*rawConfig, localContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()), localContext, currentNamespace, nil
@@ -112,13 +112,14 @@ func inClusterNamespace() (string, error) {
 	return string(namespace), nil
 }
 
-func ConvertRestConfigToRawConfig(config *rest.Config) (*clientcmdapi.Config, error) {
+func ConvertRestConfigToRawConfig(config *rest.Config, namespace string) (*clientcmdapi.Config, error) {
 	contextName := localContext
 	kubeConfig := clientcmdapi.NewConfig()
 	kubeConfig.Contexts = map[string]*clientcmdapi.Context{
 		contextName: {
-			Cluster:  contextName,
-			AuthInfo: contextName,
+			Cluster:   contextName,
+			AuthInfo:  contextName,
+			Namespace: namespace,
 		},
 	}
 	kubeConfig.Clusters = map[string]*clientcmdapi.Cluster{

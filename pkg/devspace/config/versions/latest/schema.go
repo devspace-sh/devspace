@@ -691,6 +691,7 @@ type TerminalConfig struct {
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 	Command       []string          `yaml:"command,omitempty" json:"command,omitempty"`
+	WorkDir       string            `yaml:"workDir,omitempty" json:"workDir,omitempty"`
 }
 
 // DependencyConfig defines the devspace dependency

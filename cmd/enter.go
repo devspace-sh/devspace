@@ -21,6 +21,8 @@ type EnterCmd struct {
 	Pod           string
 	Pick          bool
 	Wait          bool
+
+	WorkingDirectory string
 }
 
 // NewEnterCmd creates a new enter command
@@ -53,6 +55,7 @@ devspace enter bash -l release=test
 	enterCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
 	enterCmd.Flags().StringVar(&cmd.Image, "image", "", "Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage")
 	enterCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
+	enterCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
 
 	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod / container if multiple are found")
 	enterCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "Wait for the pod(s) to start if they are not running")
@@ -115,7 +118,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	selectorOptions.ImageSelector = imageSelector
 
 	// Start terminal
-	exitCode, err := f.NewServicesClient(nil, generatedConfig, client, logger).StartTerminal(selectorOptions, args, make(chan error), cmd.Wait)
+	exitCode, err := f.NewServicesClient(nil, generatedConfig, client, logger).StartTerminal(selectorOptions, args, cmd.WorkingDirectory, make(chan error), cmd.Wait)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {

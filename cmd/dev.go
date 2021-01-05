@@ -61,8 +61,9 @@ type DevCmd struct {
 
 	UI bool
 
-	Terminal    bool
-	Interactive bool
+	Terminal         bool
+	WorkingDirectory string
+	Interactive      bool
 
 	Wait    bool
 	Timeout int
@@ -132,6 +133,7 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
 	devCmd.Flags().BoolVarP(&cmd.Interactive, "interactive", "i", false, "Enable interactive mode for images (overrides entrypoint with sleep command) and start terminal proxy")
 	devCmd.Flags().BoolVarP(&cmd.Terminal, "terminal", "t", false, "Open a terminal instead of showing logs")
+	devCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
 
 	devCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "If true will wait first for pods to be running or fails after given timeout")
 	devCmd.Flags().IntVar(&cmd.Timeout, "timeout", 120, "Timeout until dev should stop waiting and fail")
@@ -519,7 +521,7 @@ func (cmd *DevCmd) startOutput(interactiveMode bool, config *latest.Config, gene
 			}
 
 			selectorOptions.ImageSelector = imageSelector
-			return servicesClient.StartTerminal(selectorOptions, args, exitChan, true)
+			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true)
 		} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
 			// Log multiple images at once
 			manager, err := services.NewLogManager(client, config, generatedConfig, exitChan, logger)
