@@ -4,10 +4,12 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
 	"github.com/pkg/errors"
+	"io/ioutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"os"
 )
 
 const localContext = "local"
@@ -38,7 +40,15 @@ func NewClientByContext(context, namespace string, switchContext bool, kubeLoade
 			return nil, "", "", errors.Wrap(err, "convert in cluster config")
 		}
 
-		return clientcmd.NewNonInteractiveClientConfig(*rawConfig, localContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()), localContext, "default", nil
+		currentNamespace, err := inClusterNamespace()
+		if err != nil {
+			currentNamespace = "default"
+		}
+		if namespace != "" {
+			currentNamespace = namespace
+		}
+
+		return clientcmd.NewNonInteractiveClientConfig(*rawConfig, localContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()), localContext, currentNamespace, nil
 	}
 
 	// If we should use a certain kube context use that
@@ -86,6 +96,20 @@ func NewClientByContext(context, namespace string, switchContext bool, kubeLoade
 	}
 
 	return clientConfig, activeContext, activeNamespace, nil
+}
+
+func inClusterNamespace() (string, error) {
+	envNamespace := os.Getenv("KUBE_NAMESPACE")
+	if envNamespace != "" {
+		return envNamespace, nil
+	}
+
+	namespace, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+	if err != nil {
+		return "", err
+	}
+
+	return string(namespace), nil
 }
 
 func ConvertRestConfigToRawConfig(config *rest.Config) (*clientcmdapi.Config, error) {
