@@ -691,6 +691,7 @@ type TerminalConfig struct {
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 	Command       []string          `yaml:"command,omitempty" json:"command,omitempty"`
+	WorkDir       string            `yaml:"workDir,omitempty" json:"workDir,omitempty"`
 }
 
 // DependencyConfig defines the devspace dependency
@@ -730,15 +731,24 @@ type SourceConfig struct {
 
 // HookConfig defines a hook
 type HookConfig struct {
-	Command         string   `yaml:"command" json:"command"`
-	Args            []string `yaml:"args,omitempty" json:"args,omitempty"`
-	OperatingSystem string   `yaml:"os,omitempty" json:"os,omitempty"`
+	Command  string          `yaml:"command" json:"command"`
+	Args     []string        `yaml:"args,omitempty" json:"args,omitempty"`
+	Upload   *HookSyncConfig `yaml:"upload,omitempty" json:"upload,omitempty"`
+	Download *HookSyncConfig `yaml:"download,omitempty" json:"download,omitempty"`
+
+	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
 
 	Background bool `yaml:"background,omitempty" json:"background,omitempty"`
 	Silent     bool `yaml:"silent,omitempty" json:"silent,omitempty"`
 
 	Where HookWhereConfig `yaml:"where,omitempty" json:"where,omitempty"`
 	When  *HookWhenConfig `yaml:"when,omitempty" json:"when,omitempty"`
+}
+
+// HookSyncConfig defines a hook upload config
+type HookSyncConfig struct {
+	LocalPath     string `yaml:"localPath,omitempty" json:"localPath,omitempty"`
+	ContainerPath string `yaml:"containerPath,omitempty" json:"containerPath,omitempty"`
 }
 
 // HookWhereConfig defines where to execute the hook
@@ -767,10 +777,11 @@ type HookWhenConfig struct {
 
 // HookWhenAtConfig defines at which stage the hook should be executed
 type HookWhenAtConfig struct {
-	Images       string `yaml:"images,omitempty" json:"images,omitempty"`
-	Deployments  string `yaml:"deployments,omitempty" json:"deployments,omitempty"`
-	Dependencies string `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
-	PullSecrets  string `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
+	Images           string `yaml:"images,omitempty" json:"images,omitempty"`
+	PurgeDeployments string `yaml:"purgeDeployments,omitempty" json:"purgeDeployments,omitempty"`
+	Deployments      string `yaml:"deployments,omitempty" json:"deployments,omitempty"`
+	Dependencies     string `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
+	PullSecrets      string `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
 }
 
 // CommandConfig defines the command specification

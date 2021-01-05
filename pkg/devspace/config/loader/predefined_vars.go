@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/util"
+	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -18,6 +19,9 @@ import (
 
 // predefinedVars holds all predefined variables that can be used in the config
 var predefinedVars = map[string]func(loader *configLoader) (string, error){
+	"DEVSPACE_VERSION": func(loader *configLoader) (string, error) {
+		return upgrade.GetVersion(), nil
+	},
 	"DEVSPACE_RANDOM": func(loader *configLoader) (string, error) {
 		return randutil.GenerateRandomString(6), nil
 	},
