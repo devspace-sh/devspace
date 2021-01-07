@@ -146,12 +146,18 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 		imageName, _ = pullsecrets.GetStrippedDockerImageName(imageName)
 	} else {
 		if dockerUsername == "" {
-			dockerUsername = "myuser"
+			dockerUsername = "username"
+		}
+
+		repoURL := registryURL + "/" + dockerUsername + "/" + imageName
+
+		if registryURL == githubDockerRegistry {
+			repoURL = repoURL + "/" + "image-name"
 		}
 
 		imageName, err = m.log.Question(&survey.QuestionOptions{
-			Question:          "Which image name do you want to push to?",
-			DefaultValue:      registryURL + "/" + dockerUsername + "/" + imageName,
+			Question:          "Which repository do you want to push your image to?",
+			DefaultValue:      repoURL,
 			ValidationMessage: "Please enter a valid docker image name (e.g. myregistry.com/user/repository)",
 			ValidationFunc: func(name string) error {
 				_, err := pullsecrets.GetStrippedDockerImageName(name)
@@ -234,7 +240,6 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 func (m *manager) getRegistryURL(dockerClient docker.Client) (string, error) {
 	var (
 		useDockerHub          = "Use " + dockerHubHostname
-		skipImagePush         = "Always skip image push (advanced, config will not work with remote clusters)"
 		useGithubRegistry     = "Use github docker registry"
 		useOtherRegistry      = "Use other registry"
 		registryUsernameHint  = " => you are logged in as %s"
@@ -249,7 +254,6 @@ func (m *manager) getRegistryURL(dockerClient docker.Client) (string, error) {
 	}
 
 	registryOptions := []string{useDockerHub, useGithubRegistry, useOtherRegistry}
-	registryOptions = append(registryOptions, skipImagePush)
 	selectedRegistry, err := m.log.Question(&survey.QuestionOptions{
 		Question:     "Which registry do you want to use for storing your Docker images?",
 		DefaultValue: registryDefaultOption,
@@ -260,9 +264,7 @@ func (m *manager) getRegistryURL(dockerClient docker.Client) (string, error) {
 	}
 
 	var registryURL string
-	if selectedRegistry == skipImagePush {
-		return "", nil
-	} else if selectedRegistry == useDockerHub {
+	if selectedRegistry == useDockerHub {
 		registryURL = dockerHubHostname
 	} else if selectedRegistry == useGithubRegistry {
 		registryURL = githubDockerRegistry

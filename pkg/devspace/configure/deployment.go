@@ -175,6 +175,7 @@ func (m *manager) NewHelmDeployment(name, chartName, chartRepo, chartVersion str
 			Chart: &v1.ChartConfig{
 				Name: chartName,
 			},
+			Values: map[interface{}]interface{}{},
 		},
 	}
 
