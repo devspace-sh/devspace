@@ -12,27 +12,27 @@ import (
 	"os"
 )
 
-const localContext = "local"
+const localContext = "incluster"
 
-func NewClientByContext(context, namespace string, switchContext bool, kubeLoader kubeconfig.Loader) (clientcmd.ClientConfig, string, string, error) {
+func NewClientByContext(context, namespace string, switchContext bool, kubeLoader kubeconfig.Loader) (clientcmd.ClientConfig, string, string, bool, error) {
 	// Load new raw config
 	kubeConfigOriginal, err := kubeLoader.LoadRawConfig()
 	if err != nil {
-		return nil, "", "", err
+		return nil, "", "", false, err
 	}
 
 	// We clone the config here to avoid changing the single loaded config
 	kubeConfig := clientcmdapi.Config{}
 	err = util.Convert(&kubeConfigOriginal, &kubeConfig)
 	if err != nil {
-		return nil, "", "", err
+		return nil, "", "", false, err
 	}
 
 	if len(kubeConfig.Clusters) == 0 {
 		// try to load in cluster config
 		config, err := rest.InClusterConfig()
 		if err != nil {
-			return nil, "", "", errors.Errorf("kube config is invalid: please make sure you have an existing valid kube config")
+			return nil, "", "", false, errors.Errorf("kube config is invalid: please make sure you have an existing valid kube config")
 		}
 
 		currentNamespace, err := inClusterNamespace()
@@ -45,10 +45,10 @@ func NewClientByContext(context, namespace string, switchContext bool, kubeLoade
 
 		rawConfig, err := ConvertRestConfigToRawConfig(config, currentNamespace)
 		if err != nil {
-			return nil, "", "", errors.Wrap(err, "convert in cluster config")
+			return nil, "", "", false, errors.Wrap(err, "convert in cluster config")
 		}
 
-		return clientcmd.NewNonInteractiveClientConfig(*rawConfig, localContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()), localContext, currentNamespace, nil
+		return clientcmd.NewNonInteractiveClientConfig(*rawConfig, localContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules()), localContext, currentNamespace, true, nil
 	}
 
 	// If we should use a certain kube context use that
@@ -86,16 +86,16 @@ func NewClientByContext(context, namespace string, switchContext bool, kubeLoade
 	if saveConfig {
 		err = kubeLoader.SaveConfig(&kubeConfig)
 		if err != nil {
-			return nil, "", "", errors.Errorf("Error saving kube config: %v", err)
+			return nil, "", "", false, errors.Errorf("Error saving kube config: %v", err)
 		}
 	}
 
 	clientConfig := clientcmd.NewNonInteractiveClientConfig(kubeConfig, activeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules())
 	if kubeConfig.Contexts[activeContext] == nil {
-		return nil, "", "", errors.Errorf("Error loading kube config, context '%s' doesn't exist", activeContext)
+		return nil, "", "", false, errors.Errorf("Error loading kube config, context '%s' doesn't exist", activeContext)
 	}
 
-	return clientConfig, activeContext, activeNamespace, nil
+	return clientConfig, activeContext, activeNamespace, false, nil
 }
 
 func inClusterNamespace() (string, error) {

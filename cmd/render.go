@@ -103,8 +103,14 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 		return err
 	}
 
+	// Create kubectl client and switch context if specified
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	if err != nil {
+		return errors.Errorf("Unable to create new kubectl client: %v", err)
+	}
+
 	// Get the config
-	config, err := configLoader.Load()
+	config, err := configLoader.RestoreLoadSave(client)
 	if err != nil {
 		cause := errors.Cause(err)
 		if _, ok := cause.(logpkg.SurveyError); ok {
@@ -119,12 +125,6 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 		for _, imageConfig := range config.Images {
 			imageConfig.Tags = cmd.Tags
 		}
-	}
-
-	// Create kubectl client and switch context if specified
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
-	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Execute plugin hook

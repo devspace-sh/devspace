@@ -1,18 +1,12 @@
 package save
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
-
-	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -23,10 +17,6 @@ type varsCmd struct {
 
 	SecretName string
 }
-
-const (
-	SecretVarsKey = "vars"
-)
 
 func newVarsCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &varsCmd{
@@ -108,49 +98,11 @@ func (cmd *varsCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	}
 
 	// save the vars into the kubernetes secret
-	err = SaveVarsInSecret(client, generatedConfig.Vars, cmd.SecretName)
+	err = loader.SaveVarsInSecret(client, generatedConfig.Vars, cmd.SecretName)
 	if err != nil {
 		return err
 	}
 
 	logger.Donef("Successfully written vars to secret %s/%s", client.Namespace(), cmd.SecretName)
 	return nil
-}
-
-// SaveVarsInSecret saves the given variables in the given secret with the kubernetes client
-func SaveVarsInSecret(client kubectl.Client, vars map[string]string, secretName string) error {
-	if vars == nil {
-		vars = map[string]string{}
-	}
-
-	// marshal vars
-	bytes, err := json.Marshal(vars)
-	if err != nil {
-		return err
-	}
-
-	secret, err := client.KubeClient().CoreV1().Secrets(client.Namespace()).Get(context.TODO(), secretName, metav1.GetOptions{})
-	if err != nil {
-		if kerrors.IsNotFound(err) == false {
-			return err
-		}
-
-		_, err = client.KubeClient().CoreV1().Secrets(client.Namespace()).Create(context.TODO(), &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: secretName,
-			},
-			Data: map[string][]byte{
-				SecretVarsKey: bytes,
-			},
-		}, metav1.CreateOptions{})
-		return err
-	}
-
-	if secret.Data == nil {
-		secret.Data = map[string][]byte{}
-	}
-
-	secret.Data[SecretVarsKey] = bytes
-	_, err = client.KubeClient().CoreV1().Secrets(client.Namespace()).Update(context.TODO(), secret, metav1.UpdateOptions{})
-	return err
 }

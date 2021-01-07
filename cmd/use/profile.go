@@ -105,7 +105,7 @@ func (cmd *ProfileCmd) RunUseProfile(f factory.Factory, cobraCmd *cobra.Command,
 	}
 
 	if cmd.Reset {
-		log.Info("Successfully resetted profile")
+		log.Info("Successfully reset profile")
 	} else {
 		log.Infof("Successfully switched to profile '%s'", profileName)
 	}

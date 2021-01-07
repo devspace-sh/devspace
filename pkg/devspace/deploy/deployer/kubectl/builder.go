@@ -53,25 +53,27 @@ func (k *kustomizeBuilder) Build(manifest string, cmd RunCommand) ([]*unstructur
 }
 
 type kubectlBuilder struct {
-	path      string
-	config    *latest.DeploymentConfig
-	context   string
-	namespace string
+	path        string
+	config      *latest.DeploymentConfig
+	context     string
+	namespace   string
+	isInCluster bool
 }
 
 // NewKubectlBuilder creates a new kubectl manifest builder
-func NewKubectlBuilder(path string, config *latest.DeploymentConfig, context, namespace string) Builder {
+func NewKubectlBuilder(path string, config *latest.DeploymentConfig, context, namespace string, isInCluster bool) Builder {
 	return &kubectlBuilder{
-		path:      path,
-		config:    config,
-		context:   context,
-		namespace: namespace,
+		path:        path,
+		config:      config,
+		context:     context,
+		namespace:   namespace,
+		isInCluster: isInCluster,
 	}
 }
 
 func (k *kubectlBuilder) Build(manifest string, cmd RunCommand) ([]*unstructured.Unstructured, error) {
 	args := []string{"create"}
-	if k.context != "" {
+	if k.context != "" && k.isInCluster == false {
 		args = append(args, "--context", k.context)
 	}
 	if k.namespace != "" {

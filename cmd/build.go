@@ -87,8 +87,14 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 		return err
 	}
 
+	// create kubectl client
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	if err != nil {
+		log.Warnf("Unable to create new kubectl client: %v", err)
+	}
+
 	// Get the config
-	config, err := configLoader.Load()
+	config, err := configLoader.RestoreLoadSave(client)
 	if err != nil {
 		return err
 	}
@@ -104,12 +110,6 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 		for _, imageConfig := range config.Images {
 			imageConfig.Tags = cmd.Tags
 		}
-	}
-
-	// create kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
-	if err != nil {
-		log.Warnf("Unable to create new kubectl client: %v", err)
 	}
 
 	// Create Dependencymanager

@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/cmd/restore"
-	"github.com/devspace-cloud/devspace/cmd/save"
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/server"
 	"github.com/devspace-cloud/devspace/pkg/devspace/services"
@@ -138,9 +136,6 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "If true will wait first for pods to be running or fails after given timeout")
 	devCmd.Flags().IntVar(&cmd.Timeout, "timeout", 120, "Timeout until dev should stop waiting and fail")
 
-	devCmd.Flags().BoolVar(&cmd.RestoreVars, "restore-vars", false, "If true will restore the variables from kubernetes before loading the config")
-	devCmd.Flags().BoolVar(&cmd.SaveVars, "save-vars", false, "If true will save the variables to kubernetes after loading the config")
-	devCmd.Flags().StringVar(&cmd.VarsSecretName, "vars-secret", "devspace-vars", "The secret to restore/save the variables from/to, if --restore-vars or --save-vars is enabled")
 	return devCmd
 }
 
@@ -205,7 +200,7 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 
 	// restore vars if wanted
 	if cmd.RestoreVars {
-		vars, _, err := restore.RestoreVarsFromSecret(client, cmd.VarsSecretName)
+		vars, _, err := loader.RestoreVarsFromSecret(client, cmd.VarsSecretName)
 		if err != nil {
 			return errors.Wrap(err, "restore vars")
 		}
@@ -221,7 +216,7 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 
 	// save vars if wanted
 	if cmd.SaveVars {
-		err = save.SaveVarsInSecret(client, generatedConfig.Vars, cmd.VarsSecretName)
+		err = loader.SaveVarsInSecret(client, generatedConfig.Vars, cmd.VarsSecretName)
 		if err != nil {
 			return errors.Wrap(err, "save vars")
 		}

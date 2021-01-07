@@ -157,7 +157,7 @@ func (cmd *UICmd) RunUI(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 
 	if configExists {
 		// Load config
-		_, err = configLoader.Load()
+		_, err = configLoader.RestoreLoadSave(client)
 		if err != nil {
 			return err
 		}

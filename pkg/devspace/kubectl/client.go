@@ -54,6 +54,7 @@ type Client interface {
 	EnsureGoogleCloudClusterRoleBinding(log log.Logger) error
 	NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}, errorChan chan error) (*portforward.PortForwarder, error)
 	IsLocalKubernetes() bool
+	IsInCluster() bool
 }
 
 type client struct {
@@ -64,6 +65,7 @@ type client struct {
 
 	currentContext string
 	namespace      string
+	isInCluster    bool
 }
 
 // NewDefaultClient creates the new default kube client from the active context @Factory
@@ -73,7 +75,7 @@ func NewDefaultClient() (Client, error) {
 
 // NewClientFromContext creates a new kubernetes client from given context @Factory
 func NewClientFromContext(context, namespace string, switchContext bool, kubeLoader kubeconfig.Loader) (Client, error) {
-	clientConfig, activeContext, activeNamespace, err := util.NewClientByContext(context, namespace, switchContext, kubeLoader)
+	clientConfig, activeContext, activeNamespace, isInCluster, err := util.NewClientByContext(context, namespace, switchContext, kubeLoader)
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +98,7 @@ func NewClientFromContext(context, namespace string, switchContext bool, kubeLoa
 
 		namespace:      activeNamespace,
 		currentContext: activeContext,
+		isInCluster:    isInCluster,
 	}, nil
 }
 
@@ -149,6 +152,11 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, kubeLoader kubecon
 	}
 
 	return nil, errors.New("We should not reach this point")
+}
+
+// IsInCluster returns if the kube context is the in cluster context
+func (client *client) IsInCluster() bool {
+	return client.isInCluster
 }
 
 // PrintWarning prints a warning if the last kube context is different than this one
