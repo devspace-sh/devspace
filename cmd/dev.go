@@ -66,10 +66,6 @@ type DevCmd struct {
 	Wait    bool
 	Timeout int
 
-	RestoreVars    bool
-	SaveVars       bool
-	VarsSecretName string
-
 	configLoader loader.ConfigLoader
 	log          log.Logger
 }
@@ -203,9 +199,9 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 		vars, _, err := loader.RestoreVarsFromSecret(client, cmd.VarsSecretName)
 		if err != nil {
 			return errors.Wrap(err, "restore vars")
+		} else if vars != nil {
+			generatedConfig.Vars = vars
 		}
-
-		generatedConfig.Vars = vars
 	}
 
 	// Get the config

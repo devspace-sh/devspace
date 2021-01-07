@@ -41,6 +41,8 @@ github.com/containerd/containerd/errdefs
 ## explicit
 github.com/containerd/continuity/fs
 github.com/containerd/continuity/sysx
+# github.com/cpuguy83/go-md2man/v2 v2.0.0
+github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -310,6 +312,8 @@ github.com/rhysd/go-github-selfupdate/selfupdate
 # github.com/rjeczalik/notify v0.9.3-0.20201210012515-e2a77dcc14cf
 ## explicit
 github.com/rjeczalik/notify
+# github.com/russross/blackfriday/v2 v2.0.1
+github.com/russross/blackfriday/v2
 # github.com/sabhiram/go-gitignore v0.0.0-20180611051255-d3107576ba94
 ## explicit
 github.com/sabhiram/go-gitignore
@@ -317,6 +321,8 @@ github.com/sabhiram/go-gitignore
 github.com/sergi/go-diff/diffmatchpatch
 # github.com/shirou/gopsutil v0.0.0-20190627142359-4c8b404ee5c5
 ## explicit
+# github.com/shurcooL/sanitized_anchor_name v1.0.0
+github.com/shurcooL/sanitized_anchor_name
 # github.com/sirupsen/logrus v1.6.0
 ## explicit
 github.com/sirupsen/logrus
@@ -326,6 +332,7 @@ github.com/skratchdot/open-golang/open
 # github.com/spf13/cobra v1.0.0
 ## explicit
 github.com/spf13/cobra
+github.com/spf13/cobra/doc
 # github.com/spf13/pflag v1.0.5
 ## explicit
 github.com/spf13/pflag

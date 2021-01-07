@@ -22,7 +22,7 @@ func RestoreVarsFromSecret(client kubectl.Client, secretName string) (map[string
 			return nil, false, err
 		}
 
-		return map[string]string{}, false, nil
+		return nil, false, nil
 	} else if secret.Data == nil || len(secret.Data[SecretVarsKey]) == 0 {
 		return map[string]string{}, false, nil
 	}

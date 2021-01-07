@@ -40,10 +40,6 @@ type DeployCmd struct {
 	AllowCyclicDependencies bool
 	Dependency              []string
 
-	RestoreVars    bool
-	SaveVars       bool
-	VarsSecretName string
-
 	Wait    bool
 	Timeout int
 
