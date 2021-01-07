@@ -23,7 +23,10 @@ type GlobalFlags struct {
 	ConfigPath     string
 	Vars           []string
 
-	SwitchContext bool
+	RestoreVars    bool
+	SaveVars       bool
+	VarsSecretName string
+	SwitchContext  bool
 
 	Flags *flag.FlagSet
 }
@@ -56,6 +59,9 @@ func (gf *GlobalFlags) ToConfigOptions() *loader.ConfigOptions {
 		KubeContext:    gf.KubeContext,
 		Namespace:      gf.Namespace,
 		Vars:           gf.Vars,
+		RestoreVars:    gf.RestoreVars,
+		SaveVars:       gf.SaveVars,
+		VarsSecretName: gf.VarsSecretName,
 	}
 }
 
@@ -78,6 +84,10 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.StringVar(&globalFlags.KubeContext, "kube-context", "", "The kubernetes context to use")
 	flags.BoolVarP(&globalFlags.SwitchContext, "switch-context", "s", false, "Switches and uses the last kube context and namespace that was used to deploy the DevSpace project")
 	flags.StringSliceVar(&globalFlags.Vars, "var", []string{}, "Variables to override during execution (e.g. --var=MYVAR=MYVALUE)")
+
+	flags.BoolVar(&globalFlags.RestoreVars, "restore-vars", false, "If true will restore the variables from kubernetes before loading the config")
+	flags.BoolVar(&globalFlags.SaveVars, "save-vars", false, "If true will save the variables to kubernetes after loading the config")
+	flags.StringVar(&globalFlags.VarsSecretName, "vars-secret", "devspace-vars", "The secret to restore/save the variables from/to, if --restore-vars or --save-vars is enabled")
 
 	return globalFlags
 }

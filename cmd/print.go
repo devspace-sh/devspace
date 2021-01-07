@@ -59,8 +59,14 @@ func (cmd *PrintCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 		return errors.New(message.ConfigNotFound)
 	}
 
+	// create kubectl client
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	if err != nil {
+		log.Warnf("Unable to create new kubectl client: %v", err)
+	}
+
 	// Load config
-	loadedConfig, err := configLoader.Load()
+	loadedConfig, err := configLoader.RestoreLoadSave(client)
 	if err != nil {
 		return err
 	}

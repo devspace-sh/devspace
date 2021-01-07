@@ -133,7 +133,7 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 
 	var config *latest.Config
 	if configLoader.Exists() {
-		config, err = configLoader.Load()
+		config, err = configLoader.RestoreLoadSave(client)
 		if err != nil {
 			return err
 		}
