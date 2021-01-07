@@ -62,7 +62,7 @@ func TestDeploy(t *testing.T) {
 				Deployments: map[string]*generated.DeploymentCache{
 					"deploy2": &generated.DeploymentCache{
 						DeploymentConfigHash: "2f0fdaa77956604c97de5cb343051fab738ac36052956ae3cb16e8ec529ab154",
-						HelmReleaseRevision: "1",
+						HelmReleaseRevision:  "1",
 					},
 				},
 			},
@@ -105,9 +105,7 @@ func TestDeploy(t *testing.T) {
 		}
 
 		deployed, err := deployer.Deploy(testCase.cache, testCase.forceDeploy, testCase.builtImages)
-
 		assert.Equal(t, deployed, testCase.expectedDeployed, "Unexpected deployed-bool in testCase %s", testCase.name)
-
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {
