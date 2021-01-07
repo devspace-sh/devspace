@@ -62,7 +62,7 @@ var predefinedVars = map[string]func(loader *configLoader) (string, error){
 		return hash[:8], nil
 	},
 	"DEVSPACE_CONTEXT": func(loader *configLoader) (string, error) {
-		_, activeContext, _, err := util.NewClientByContext(loader.options.KubeContext, loader.options.Namespace, false, loader.kubeConfigLoader)
+		_, activeContext, _, _, err := util.NewClientByContext(loader.options.KubeContext, loader.options.Namespace, false, loader.kubeConfigLoader)
 		if err != nil {
 			return "", err
 		}
@@ -70,7 +70,7 @@ var predefinedVars = map[string]func(loader *configLoader) (string, error){
 		return activeContext, nil
 	},
 	"DEVSPACE_NAMESPACE": func(loader *configLoader) (string, error) {
-		_, _, activeNamespace, err := util.NewClientByContext(loader.options.KubeContext, loader.options.Namespace, false, loader.kubeConfigLoader)
+		_, _, activeNamespace, _, err := util.NewClientByContext(loader.options.KubeContext, loader.options.Namespace, false, loader.kubeConfigLoader)
 		if err != nil {
 			return "", err
 		}
