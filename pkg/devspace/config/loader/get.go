@@ -92,9 +92,9 @@ func (l *configLoader) RestoreLoadSave(client kubectl.Client) (*latest.Config, e
 		vars, _, err := RestoreVarsFromSecret(client, l.options.VarsSecretName)
 		if err != nil {
 			return nil, errors.Wrap(err, "restore vars")
+		} else if vars != nil {
+			generatedConfig.Vars = vars
 		}
-
-		generatedConfig.Vars = vars
 	}
 
 	// add current kube context to context
