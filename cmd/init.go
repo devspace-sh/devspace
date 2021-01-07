@@ -37,11 +37,12 @@ const configDockerignore = "\n\n# Ignore devspace.yaml file to prevent image reb
 const (
 	// Dockerfile not found options
 	UseExistingDockerfileOption = "Use the Dockerfile in ./Dockerfile"
-	CreateDockerfileOption      = "Create a Dockerfile for me"
-	EnterDockerfileOption       = "Enter path to your Dockerfile"
-	EnterManifestsOption        = "Enter path to your Kubernetes manifests"
-	EnterHelmChartOption        = "Enter path to your Helm chart"
-	UseExistingImageOption      = "Use existing image (e.g. from Docker Hub)"
+	CreateDockerfileOption      = "Create a Dockerfile for this project"
+	EnterDockerfileOption       = "Enter path to a different Dockerfile"
+	ComponentChartOption        = "Deploy with the component-chart (https://devspace.sh/component-chart/docs)"
+	ManifestsOption             = "Deploy with existing Kubernetes manifests (e.g. ./kube/deployment.yaml)"
+	LocalHelmChartOption        = "Deploy with a local Helm chart (e.g. ./chart/)"
+	RemoteHelmChartOption       = "Deploy with a remote Helm chart"
 
 	// The default image name in the config
 	defaultImageName = "app"
@@ -147,20 +148,14 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		selectedOption string
 	)
 
-	// Check if dockerfile exists
-	addFromDockerfile := true
-
 	_, err = os.Stat(cmd.Dockerfile)
 	if err != nil {
 		selectedOption, err = cmd.log.Question(&survey.QuestionOptions{
-			Question:     "This project does not have a Dockerfile. What do you want to do?",
+			Question:     "This project does not seem to have a Dockerfile. What do you want to do?",
 			DefaultValue: CreateDockerfileOption,
 			Options: []string{
 				CreateDockerfileOption,
 				EnterDockerfileOption,
-				EnterManifestsOption,
-				EnterHelmChartOption,
-				UseExistingImageOption,
 			},
 		})
 		if err != nil {
@@ -168,14 +163,11 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		}
 	} else {
 		selectedOption, err = cmd.log.Question(&survey.QuestionOptions{
-			Question:     "How do you want to initialize this project?",
+			Question:     "There is a Dockerfile in this project. Do you want to use it?",
 			DefaultValue: UseExistingDockerfileOption,
 			Options: []string{
 				UseExistingDockerfileOption,
 				EnterDockerfileOption,
-				EnterManifestsOption,
-				EnterHelmChartOption,
-				UseExistingImageOption,
 			},
 		})
 		if err != nil {
@@ -191,15 +183,49 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		}
 	} else if selectedOption == EnterDockerfileOption {
 		cmd.Dockerfile, err = cmd.log.Question(&survey.QuestionOptions{
-			Question: "Please enter a path to your Dockerfile (e.g. ./MyDockerfile)",
+			Question: "Please enter a path to your Dockerfile (e.g. ./backend/Dockerfile)",
 		})
 		if err != nil {
 			return err
 		}
-	} else if selectedOption == EnterManifestsOption {
-		addFromDockerfile = false
+	}
+
+	// Check if dockerfile exists now
+	_, err = os.Stat(cmd.Dockerfile)
+	if err != nil {
+		return errors.Errorf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.Dockerfile)
+	}
+
+	newImage, newDeployment, err = configureManager.NewDockerfileComponentDeployment(deploymentName, "", cmd.Dockerfile, cmd.Context)
+	if err != nil {
+		return err
+	}
+
+	// Add devspace.yaml to .dockerignore
+	err = appendToIgnoreFile(dockerIgnoreFile, configDockerignore)
+	if err != nil {
+		cmd.log.Warn(err)
+	}
+
+	selectedOption, err = cmd.log.Question(&survey.QuestionOptions{
+		Question:     "How do you want to deploy this project?",
+		DefaultValue: ComponentChartOption,
+		Options: []string{
+			ComponentChartOption,
+			ManifestsOption,
+			LocalHelmChartOption,
+			RemoteHelmChartOption,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	if selectedOption == ComponentChartOption {
+		// Nothing to do
+	} else if selectedOption == ManifestsOption {
 		manifests, err := cmd.log.Question(&survey.QuestionOptions{
-			Question: "Please enter Kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. 'manifests/**' or 'kube/pod.yaml')",
+			Question: "Please enter the paths to your Kubernetes manifests (comma separated, glob patterns are allowed, e.g. 'manifests/**' or 'kube/pod.yaml')",
 		})
 		if err != nil {
 			return err
@@ -209,10 +235,14 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		if err != nil {
 			return err
 		}
-	} else if selectedOption == EnterHelmChartOption {
-		addFromDockerfile = false
+	} else if selectedOption == LocalHelmChartOption || selectedOption == RemoteHelmChartOption {
+		question := "Please enter the path to your Helm chart (e.g. ./chart)"
+		if selectedOption == RemoteHelmChartOption {
+			question = "Please enter the URL  your Helm chart (e.g. https://company.tld/mychart.tgz)"
+		}
+
 		chartName, err := cmd.log.Question(&survey.QuestionOptions{
-			Question: "Please enter the path to a helm chart to deploy (e.g. ./chart)",
+			Question: question,
 		})
 		if err != nil {
 			return err
@@ -221,38 +251,6 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		newDeployment, err = configureManager.NewHelmDeployment(deploymentName, chartName, "", "")
 		if err != nil {
 			return err
-		}
-	} else if selectedOption == UseExistingImageOption {
-		addFromDockerfile = false
-		existingImageName, err := cmd.log.Question(&survey.QuestionOptions{
-			Question: "Please enter a docker image to deploy (e.g. gcr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)",
-		})
-		if err != nil {
-			return err
-		}
-
-		newImage, newDeployment, err = configureManager.NewImageComponentDeployment(deploymentName, existingImageName)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Check if dockerfile exists now
-	if addFromDockerfile {
-		_, err = os.Stat(cmd.Dockerfile)
-		if err != nil {
-			return errors.Errorf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.Dockerfile)
-		}
-
-		newImage, newDeployment, err = configureManager.NewDockerfileComponentDeployment(deploymentName, "", cmd.Dockerfile, cmd.Context)
-		if err != nil {
-			return err
-		}
-
-		// Add devspace.yaml to .dockerignore
-		err = appendToIgnoreFile(dockerIgnoreFile, configDockerignore)
-		if err != nil {
-			cmd.log.Warn(err)
 		}
 	}
 
@@ -290,6 +288,8 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 
 	cmd.log.WriteString("\n")
 	cmd.log.Done("Project successfully initialized")
+	cmd.log.Info("Check devspace.yaml for your configuration and make adjustments as needed")
+	cmd.log.Infof("\r         \nYou can now run:\n- `%s` to pick which Kubernetes namespace to work in\n- `%s` to start developing your project in Kubernetes\n- `%s` to deploy your project to Kubernetes\n- `%s` to get a list of available commands", ansi.Color("devspace use namespace", "blue+b"), ansi.Color("devspace dev", "blue+b"), ansi.Color("devspace deploy", "blue+b"), ansi.Color("devspace -h", "blue+b"))
 	return nil
 }
 

@@ -2,14 +2,15 @@ package kubectl
 
 import (
 	"context"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/util"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"sort"
 	"time"
+
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/util"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/portforward"
@@ -198,8 +199,8 @@ func (client *client) PrintWarning(generatedConfig *generated.Config, noWarning,
 	}
 
 	// Info messages
-	log.Infof("Using kube context '%s'", ansi.Color(client.currentContext, "white+b"))
 	log.Infof("Using namespace '%s'", ansi.Color(client.namespace, "white+b"))
+	log.Infof("Using kube context '%s'", ansi.Color(client.currentContext, "white+b"))
 
 	return nil
 }
