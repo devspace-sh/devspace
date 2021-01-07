@@ -110,7 +110,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	}
 
 	// Get config with adjusted cluster config
-	config, err := configLoader.Load()
+	config, err := configLoader.RestoreLoadSave(client)
 	if err != nil {
 		return err
 	}

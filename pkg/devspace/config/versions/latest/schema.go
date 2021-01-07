@@ -476,7 +476,7 @@ type RollingUpdateConfig struct {
 type HelmConfig struct {
 	Chart            *ChartConfig                `yaml:"chart,omitempty" json:"chart,omitempty"`
 	ComponentChart   *bool                       `yaml:"componentChart,omitempty" json:"componentChart,omitempty"`
-	Values           map[interface{}]interface{} `yaml:"values" json:"values"`
+	Values           map[interface{}]interface{} `yaml:"values,omitempty" json:"values,omitempty"`
 	ValuesFiles      []string                    `yaml:"valuesFiles,omitempty" json:"valuesFiles,omitempty"`
 	ReplaceImageTags *bool                       `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
 	Wait             bool                        `yaml:"wait,omitempty" json:"wait,omitempty"`

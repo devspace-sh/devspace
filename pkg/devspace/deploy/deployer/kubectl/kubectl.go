@@ -31,12 +31,13 @@ var (
 
 // DeployConfig holds the necessary information for kubectl deployment
 type DeployConfig struct {
-	KubeClient kubectl.Client // This is not used yet, however the plan is to use it instead of calling kubectl via cmd
-	Name       string
-	CmdPath    string
-	Context    string
-	Namespace  string
-	Manifests  []string
+	KubeClient  kubectl.Client // This is not used yet, however the plan is to use it instead of calling kubectl via cmd
+	Name        string
+	CmdPath     string
+	Context     string
+	Namespace   string
+	IsInCluster bool
+	Manifests   []string
 
 	DeploymentConfig *latest.DeploymentConfig
 	Log              log.Logger
@@ -114,12 +115,13 @@ func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.
 	}
 
 	return &DeployConfig{
-		Name:       deployConfig.Name,
-		KubeClient: kubeClient,
-		CmdPath:    cmdPath,
-		Context:    kubeClient.CurrentContext(),
-		Namespace:  namespace,
-		Manifests:  manifests,
+		Name:        deployConfig.Name,
+		KubeClient:  kubeClient,
+		CmdPath:     cmdPath,
+		Context:     kubeClient.CurrentContext(),
+		Namespace:   namespace,
+		Manifests:   manifests,
+		IsInCluster: kubeClient.IsInCluster(),
 
 		DeploymentConfig: deployConfig,
 		config:           config,
@@ -303,7 +305,7 @@ func (d *DeployConfig) getReplacedManifest(manifest string, cache *generated.Cac
 
 func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []string {
 	args := []string{}
-	if d.Context != "" {
+	if d.Context != "" && d.IsInCluster == false {
 		args = append(args, "--context", d.Context)
 	}
 	if d.Namespace != "" {
@@ -326,7 +328,7 @@ func (d *DeployConfig) buildManifests(manifest string) ([]*unstructured.Unstruct
 	}
 
 	// Build with kubectl
-	return NewKubectlBuilder(d.CmdPath, d.DeploymentConfig, d.Context, d.Namespace).Build(manifest, d.commandExecuter.RunCommand)
+	return NewKubectlBuilder(d.CmdPath, d.DeploymentConfig, d.Context, d.Namespace, d.IsInCluster).Build(manifest, d.commandExecuter.RunCommand)
 }
 
 func (d *DeployConfig) isKustomizeInstalled(path string) bool {

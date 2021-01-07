@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -23,6 +24,7 @@ type ConfigLoader interface {
 	Exists() bool
 
 	Load() (*latest.Config, error)
+	RestoreLoadSave(client kubectl.Client) (*latest.Config, error)
 	LoadRaw() (map[interface{}]interface{}, error)
 	LoadWithoutProfile() (*latest.Config, error)
 
@@ -76,6 +78,40 @@ func (l *configLoader) Generated() (*generated.Config, error) {
 	}
 
 	return l.generatedConfig, err
+}
+
+// RestoreLoadSave restores variables from the cluster (if wanted), loads the config and then saves them to the cluster again
+func (l *configLoader) RestoreLoadSave(client kubectl.Client) (*latest.Config, error) {
+	generatedConfig, err := l.Generated()
+	if err != nil {
+		return nil, err
+	}
+
+	// restore vars if wanted
+	if client != nil && l.options.RestoreVars {
+		vars, _, err := RestoreVarsFromSecret(client, l.options.VarsSecretName)
+		if err != nil {
+			return nil, errors.Wrap(err, "restore vars")
+		} else if vars != nil {
+			generatedConfig.Vars = vars
+		}
+	}
+
+	// add current kube context to context
+	config, err := l.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	// save vars if wanted
+	if client != nil && l.options.SaveVars {
+		err = SaveVarsInSecret(client, generatedConfig.Vars, l.options.VarsSecretName)
+		if err != nil {
+			return nil, errors.Wrap(err, "save vars")
+		}
+	}
+
+	return config, nil
 }
 
 // SaveGenerated is a convenience method to save the generated config
@@ -139,6 +175,10 @@ type ConfigOptions struct {
 	GeneratedConfig *generated.Config
 	LoadedVars      map[string]string
 	Vars            []string
+
+	RestoreVars    bool
+	SaveVars       bool
+	VarsSecretName string
 }
 
 // Clone clones the config options

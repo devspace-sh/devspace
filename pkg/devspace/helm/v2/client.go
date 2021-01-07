@@ -47,6 +47,10 @@ func NewClient(config *latest.Config, kubeClient kubectl.Client, tillerNamespace
 	return c, nil
 }
 
+func (c *client) IsInCluster() bool {
+	return c.kubeClient.IsInCluster()
+}
+
 func (c *client) KubeContext() string {
 	return c.kubeClient.CurrentContext()
 }

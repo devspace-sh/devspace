@@ -41,6 +41,10 @@ func NewClient(kubeClient kubectl.Client, log log.Logger) (types.Client, error) 
 	return c, nil
 }
 
+func (c *client) IsInCluster() bool {
+	return c.kubeClient.IsInCluster()
+}
+
 func (c *client) KubeContext() string {
 	return c.kubeClient.CurrentContext()
 }

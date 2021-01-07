@@ -26,15 +26,21 @@ var _ kubectl.Client = &Client{}
 
 // Client is a fake implementation of the kubectl.Client interface
 type Client struct {
-	Client       kubernetes.Interface
-	KubeLoader   kubeconfig.Loader
-	IsKubernetes bool
-	Context      string
+	Client             kubernetes.Interface
+	KubeLoader         kubeconfig.Loader
+	IsKubernetes       bool
+	Context            string
+	IsInClusterContext bool
 }
 
 // CurrentContext is a fake implementation of function
 func (c *Client) CurrentContext() string {
 	return c.Context
+}
+
+// IsInCluster is a fake implementation of function
+func (c *Client) IsInCluster() bool {
+	return c.IsInClusterContext
 }
 
 // KubeClient is a fake implementation of function

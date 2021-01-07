@@ -1,18 +1,13 @@
 package restore
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/cmd/save"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
 	"github.com/devspace-cloud/devspace/pkg/util/factory"
 	"github.com/devspace-cloud/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type varsCmd struct {
@@ -86,7 +81,7 @@ func (cmd *varsCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 		return err
 	}
 
-	vars, restored, err := RestoreVarsFromSecret(client, cmd.SecretName)
+	vars, restored, err := loader.RestoreVarsFromSecret(client, cmd.SecretName)
 	if err != nil {
 		return err
 	} else if restored == false {
@@ -105,26 +100,4 @@ func (cmd *varsCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 
 	logger.Donef("Successfully restored vars from secret %s/%s", client.Namespace(), cmd.SecretName)
 	return nil
-}
-
-// RestoreVarsFromSecret reads the previously saved vars from a secret in kubernetes
-func RestoreVarsFromSecret(client kubectl.Client, secretName string) (map[string]string, bool, error) {
-	secret, err := client.KubeClient().CoreV1().Secrets(client.Namespace()).Get(context.TODO(), secretName, metav1.GetOptions{})
-	if err != nil {
-		if kerrors.IsNotFound(err) == false {
-			return nil, false, err
-		}
-
-		return map[string]string{}, false, nil
-	} else if secret.Data == nil || len(secret.Data[save.SecretVarsKey]) == 0 {
-		return map[string]string{}, false, nil
-	}
-
-	vars := map[string]string{}
-	err = json.Unmarshal(secret.Data[save.SecretVarsKey], &vars)
-	if err != nil {
-		return nil, false, errors.Wrap(err, "unmarshal vars")
-	}
-
-	return vars, true, nil
 }

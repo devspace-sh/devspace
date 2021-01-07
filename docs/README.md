@@ -40,10 +40,10 @@ If you are using GitHub pages for hosting, this command is a convenient way to b
 ### 1. Generate Command Docs
 ```bash
 cd ../ # main project directory
-go run -mod= ./hack/gen-docs.go
+go run -mod=vendor ./hack/gen-docs.go
 ```
 
 ### 2. Create Version
 ```bash
-yarn run docusaurus docs:version 5.6
+yarn run docusaurus docs:version 5.7
 ```

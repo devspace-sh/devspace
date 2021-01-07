@@ -26,6 +26,7 @@ const stableChartRepo = "https://kubernetes-charts.storage.googleapis.com"
 
 type VersionedClient interface {
 	IsValidHelm(path string) (bool, error)
+	IsInCluster() bool
 	KubeContext() string
 	Command() string
 	DownloadURL() string
@@ -82,7 +83,9 @@ func (c *client) Exec(args []string, helmConfig *latest.HelmConfig) ([]byte, err
 		return nil, err
 	}
 
-	args = append(args, "--kube-context", c.versionedClient.KubeContext())
+	if c.versionedClient.IsInCluster() == false {
+		args = append(args, "--kube-context", c.versionedClient.KubeContext())
+	}
 	result, err := c.exec(c.helmPath, args).Output()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {

@@ -2,6 +2,7 @@ package testing
 
 import (
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
@@ -61,6 +62,10 @@ func (f *FakeConfigLoader) LoadFromPath(generatedConfig *generated.Config, path 
 		return nil, errors.New("Couldn't load config")
 	}
 
+	return f.Config, nil
+}
+
+func (f *FakeConfigLoader) RestoreLoadSave(client kubectl.Client) (*latest.Config, error) {
 	return f.Config, nil
 }
 
