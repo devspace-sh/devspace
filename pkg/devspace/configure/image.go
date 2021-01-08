@@ -240,7 +240,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 func (m *manager) getRegistryURL(dockerClient docker.Client) (string, error) {
 	var (
 		useDockerHub          = "Use " + dockerHubHostname
-		useGithubRegistry     = "Use github docker registry"
+		useGithubRegistry     = "Use GitHub image registry"
 		useOtherRegistry      = "Use other registry"
 		registryUsernameHint  = " => you are logged in as %s"
 		registryDefaultOption = useDockerHub

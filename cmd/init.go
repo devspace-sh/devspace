@@ -416,7 +416,10 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 			syncConfig := &latest.SyncConfig{
 				ImageName:          defaultImageName,
 				UploadExcludePaths: excludePaths,
-				ExcludePaths:       []string{".git/"},
+				ExcludePaths:       []string{
+					".git/",
+					".devspace/",
+				},
 			}
 			if config.Images[defaultImageName].InjectRestartHelper {
 				syncConfig.OnUpload = &latest.SyncOnUpload{
