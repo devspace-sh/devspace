@@ -418,7 +418,6 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 				UploadExcludePaths: excludePaths,
 				ExcludePaths:       []string{
 					".git/",
-					".devspace/",
 				},
 			}
 			if config.Images[defaultImageName].InjectRestartHelper {

@@ -72,6 +72,12 @@ func (l *configLoader) ParseCommands() ([]*latest.CommandConfig, error) {
 		return nil, err
 	}
 
+	// apply the profiles
+	data, err = l.applyProfiles(data)
+	if err != nil {
+		return nil, err
+	}
+
 	// Load defined variables
 	vars, err := versions.ParseVariables(data, l.log)
 	if err != nil {
@@ -99,8 +105,7 @@ func (l *configLoader) ParseCommands() ([]*latest.CommandConfig, error) {
 	return parsedConfig.Commands, nil
 }
 
-// parseConfig fills the variables in the data and parses the config
-func (l *configLoader) parseConfig(data map[interface{}]interface{}) (*latest.Config, error) {
+func (l *configLoader) applyProfiles(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
 	// Get profile
 	profiles, err := versions.ParseProfile(filepath.Dir(l.ConfigPath()), data, l.options.Profile, l.options.ProfileParents, l.options.ProfileRefresh, l.log)
 	if err != nil {
@@ -109,7 +114,6 @@ func (l *configLoader) parseConfig(data map[interface{}]interface{}) (*latest.Co
 
 	// Now delete not needed parts from config
 	delete(data, "profiles")
-	delete(data, "commands")
 
 	// Apply profiles
 	for i := len(profiles) - 1; i >= 0; i-- {
@@ -137,6 +141,20 @@ func (l *configLoader) parseConfig(data map[interface{}]interface{}) (*latest.Co
 			return nil, err
 		}
 	}
+
+	return data, nil
+}
+
+// parseConfig fills the variables in the data and parses the config
+func (l *configLoader) parseConfig(data map[interface{}]interface{}) (*latest.Config, error) {
+	// apply the profiles
+	data, err := l.applyProfiles(data)
+	if err != nil {
+		return nil, err
+	}
+
+	// delete the commands section
+	delete(data, "commands")
 
 	// Load defined variables
 	vars, err := versions.ParseVariables(data, l.log)
