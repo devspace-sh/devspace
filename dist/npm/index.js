@@ -307,10 +307,10 @@ let continueProcess = function(askRemoveGlobalFolder) {
     }
   } else {
     if (action == "finish-install") {
-      cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, ';').replace(/(\\)+/g, '/');
+      cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, '').replace(/(\\)+/g, '/');
       cleanGlobalDir = globalDir.replace(/(^|;)[a-z]:/gi, '').replace(/(\\)+/g, '/').trimRight("/");
     
-      if (cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir) == -1) {
+      if (cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir) == -1 && cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir + "/") == -1) {
         console.error("\n\n################################################\nWARNING: npm binary directory NOT in $PATH environment variable: " + globalDir + "\n################################################\n\n");
     
         if (globalInstall) {
