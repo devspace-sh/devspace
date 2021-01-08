@@ -832,7 +832,7 @@ type ProfileConfig struct {
 	Parent         string                      `yaml:"parent,omitempty" json:"parent,omitempty"`
 	Parents        []*ProfileParent            `yaml:"parents,omitempty" json:"parents,omitempty"`
 	Patches        []*PatchConfig              `yaml:"patches,omitempty" json:"patches,omitempty"`
-	Replace        *ReplaceConfig              `yaml:"replace,omitempty" json:"replace,omitempty"`
+	Replace        map[interface{}]interface{} `yaml:"replace,omitempty" json:"replace,omitempty"`
 	Merge          map[interface{}]interface{} `yaml:"merge,omitempty" json:"merge,omitempty"`
 	StrategicMerge map[interface{}]interface{} `yaml:"strategicMerge,omitempty" json:"strategicMerge,omitempty"`
 }
@@ -849,16 +849,6 @@ type PatchConfig struct {
 	Path      string      `yaml:"path" json:"path"`
 	Value     interface{} `yaml:"value,omitempty" json:"value,omitempty"`
 	From      string      `yaml:"from,omitempty" json:"from,omitempty"`
-}
-
-// ReplaceConfig defines a replace config that can override certain parts of the config completely
-type ReplaceConfig struct {
-	Images       map[string]*ImageConfig `yaml:"images,omitempty" json:"images,omitempty"`
-	Deployments  []*DeploymentConfig     `yaml:"deployments,omitempty" json:"deployments,omitempty"`
-	Dev          *DevConfig              `yaml:"dev,omitempty" json:"dev,omitempty"`
-	Dependencies []*DependencyConfig     `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
-	Hooks        []*HookConfig           `yaml:"hooks,omitempty" json:"hooks,omitempty"`
-	PullSecrets  []*PullSecretConfig     `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
 }
 
 // PullSecretConfig defines a pull secret that should be created by DevSpace
