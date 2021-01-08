@@ -73,7 +73,7 @@ func (l *configLoader) ParseCommands() ([]*latest.CommandConfig, error) {
 	}
 
 	// apply the profiles
-	err = l.applyProfiles(data)
+	data, err = l.applyProfiles(data)
 	if err != nil {
 		return nil, err
 	}
@@ -105,11 +105,11 @@ func (l *configLoader) ParseCommands() ([]*latest.CommandConfig, error) {
 	return parsedConfig.Commands, nil
 }
 
-func (l *configLoader) applyProfiles(data map[interface{}]interface{}) error {
+func (l *configLoader) applyProfiles(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
 	// Get profile
 	profiles, err := versions.ParseProfile(filepath.Dir(l.ConfigPath()), data, l.options.Profile, l.options.ProfileParents, l.options.ProfileRefresh, l.log)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Now delete not needed parts from config
@@ -120,35 +120,35 @@ func (l *configLoader) applyProfiles(data map[interface{}]interface{}) error {
 		// Apply replace
 		err = ApplyReplace(data, profiles[i])
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Apply merge
 		data, err = ApplyMerge(data, profiles[i])
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Apply strategic merge
 		data, err = ApplyStrategicMerge(data, profiles[i])
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Apply patches
 		data, err = ApplyPatches(data, profiles[i])
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return data, nil
 }
 
 // parseConfig fills the variables in the data and parses the config
 func (l *configLoader) parseConfig(data map[interface{}]interface{}) (*latest.Config, error) {
 	// apply the profiles
-	err := l.applyProfiles(data)
+	data, err := l.applyProfiles(data)
 	if err != nil {
 		return nil, err
 	}

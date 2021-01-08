@@ -175,7 +175,9 @@ func (m *manager) NewHelmDeployment(name, chartName, chartRepo, chartVersion str
 			Chart: &v1.ChartConfig{
 				Name: chartName,
 			},
-			Values: map[interface{}]interface{}{},
+			Values: map[interface{}]interface{}{
+				"someChartValue": "Add values for your chart here via `values` or `valuesFiles`",
+			},
 		},
 	}
 
