@@ -288,8 +288,10 @@ func (s *Sync) initialSync() error {
 
 		UpstreamDone: func() {
 			if s.Options.UpstreamInitialSyncDone != nil {
-				for len(s.upstream.events) > 0 || s.upstream.IsBusy() {
-					time.Sleep(time.Millisecond * 100)
+				if s.Options.UpstreamDisabled == false {
+					for len(s.upstream.events) > 0 || s.upstream.IsBusy() {
+						time.Sleep(time.Millisecond * 100)
+					}
 				}
 
 				s.log.Info("Upstream - Initial sync completed")
