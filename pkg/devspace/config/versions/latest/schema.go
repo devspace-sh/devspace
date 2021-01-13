@@ -144,6 +144,9 @@ type KanikoConfig struct {
 	// additional arguments that should be passed to kaniko
 	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
 
+	// replace the starting command for the kaniko container
+	Command []string `yaml:"command,omitempty" json:"command,omitempty"`
+
 	// the namespace where the kaniko pod should be run
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 
@@ -152,6 +155,9 @@ type KanikoConfig struct {
 
 	// the pull secret to mount by default
 	PullSecret string `yaml:"pullSecret,omitempty" json:"pullSecret,omitempty"`
+
+	// If true will skip mounting the pull secret
+	SkipPullSecretMount bool `yaml:"skipPullSecretMount,omitempty" json:"skipPullSecretMount,omitempty"`
 
 	// the node selector to use for the kaniko pod
 	NodeSelector map[string]string `yaml:"nodeSelector,omitempty" json:"nodeSelector,omitempty"`
@@ -164,6 +170,12 @@ type KanikoConfig struct {
 
 	// extra labels that will be added to the build pod
 	Labels map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
+
+	// extra environment variables that will be added to the build init container
+	InitEnv map[string]string `yaml:"initEnv,omitempty" json:"initEnv,omitempty"`
+
+	// extra environment variables that will be added to the build kaniko container
+	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 
 	// additional mounts that will be added to the build pod
 	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty" json:"additionalMounts,omitempty"`
