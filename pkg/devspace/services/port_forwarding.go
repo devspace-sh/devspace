@@ -103,7 +103,7 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 	// Wait till forwarding is ready
 	select {
 	case <-readyChan:
-		log.Donef("Port forwarding started on %s", strings.Join(ports, ", "))
+		log.Donef("Port forwarding started on %s (%s/%s)", strings.Join(ports, ", "), pod.Namespace, pod.Name)
 	case <-time.After(20 * time.Second):
 		return errors.Errorf("Timeout waiting for port forwarding to start")
 	}

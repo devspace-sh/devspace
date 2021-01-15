@@ -120,6 +120,20 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 	// build the volumes
 	volumes := []k8sv1.Volume{
 		{
+			Name: "context",
+			VolumeSource: k8sv1.VolumeSource{
+				EmptyDir: &k8sv1.EmptyDirVolumeSource{},
+			},
+		},
+	}
+	volumeMounts := []k8sv1.VolumeMount{
+		{
+			Name:      "context",
+			MountPath: kanikoContextPath,
+		},
+	}
+	if !kanikoOptions.SkipPullSecretMount {
+		volumes = append(volumes, k8sv1.Volume{
 			Name: pullSecretName,
 			VolumeSource: k8sv1.VolumeSource{
 				Secret: &k8sv1.SecretVolumeSource{
@@ -132,23 +146,11 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 					},
 				},
 			},
-		},
-		{
-			Name: "context",
-			VolumeSource: k8sv1.VolumeSource{
-				EmptyDir: &k8sv1.EmptyDirVolumeSource{},
-			},
-		},
-	}
-	volumeMounts := []k8sv1.VolumeMount{
-		{
+		})
+		volumeMounts = append(volumeMounts, k8sv1.VolumeMount{
 			Name:      pullSecretName,
 			MountPath: "/kaniko/.docker",
-		},
-		{
-			Name:      "context",
-			MountPath: kanikoContextPath,
-		},
+		})
 	}
 
 	// add additional mounts
@@ -236,6 +238,7 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 					Name:            "kaniko",
 					Image:           kanikoImage,
 					ImagePullPolicy: k8sv1.PullIfNotPresent,
+					Command:         kanikoOptions.Command,
 					Args:            kanikoArgs,
 					VolumeMounts:    volumeMounts,
 				},
@@ -255,6 +258,30 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 	// add extra labels
 	for k, v := range kanikoOptions.Labels {
 		pod.Labels[k] = v
+	}
+
+	// add extra init env vars
+	for k, v := range kanikoOptions.InitEnv {
+		if len(pod.Spec.InitContainers[0].Env) == 0 {
+			pod.Spec.InitContainers[0].Env = []k8sv1.EnvVar{}
+		}
+
+		pod.Spec.InitContainers[0].Env = append(pod.Spec.InitContainers[0].Env, k8sv1.EnvVar{
+			Name:  k,
+			Value: v,
+		})
+	}
+
+	// add extra env vars
+	for k, v := range kanikoOptions.Env {
+		if len(pod.Spec.Containers[0].Env) == 0 {
+			pod.Spec.Containers[0].Env = []k8sv1.EnvVar{}
+		}
+
+		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, k8sv1.EnvVar{
+			Name:  k,
+			Value: v,
+		})
 	}
 
 	// check if we have specific options for the resources part
