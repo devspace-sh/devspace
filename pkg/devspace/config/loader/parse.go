@@ -498,6 +498,5 @@ func (l *configLoader) askQuestion(variable *latest.Variable) (string, error) {
 		return "", err
 	}
 
-	fmt.Println(answer)
 	return answer, nil
 }
