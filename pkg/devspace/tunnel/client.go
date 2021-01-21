@@ -152,7 +152,7 @@ func SendData(stream remote.Tunnel_InitTunnelClient, sessions <-chan *tunnel.Ses
 	}
 }
 
-func StartReverseForward(reader io.ReadCloser, writer io.WriteCloser, tunnels []*latest.PortMapping, stopChan chan error, log logpkg.Logger) error {
+func StartReverseForward(reader io.ReadCloser, writer io.WriteCloser, tunnels []*latest.PortMapping, stopChan chan error, namespace string, name string, log logpkg.Logger) error {
 	scheme := "TCP"
 	closeStreams := make([]chan bool, len(tunnels))
 	go func() {
@@ -225,7 +225,7 @@ func StartReverseForward(reader io.ReadCloser, writer io.WriteCloser, tunnels []
 			}()
 
 			// wait until close
-			log.Donef("Reverse port forwarding started at %d:%d", remotePort, localPort)
+			log.Donef("Reverse port forwarding started at %d:%d (%s/%s)", remotePort, localPort, namespace, name)
 			<-closeStream
 		}(c, int32(localPort), int32(remotePort))
 		closeStreams[i] = c

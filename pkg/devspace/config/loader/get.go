@@ -267,7 +267,7 @@ func (l *configLoader) loadInternal(allowProfile bool) (*latest.Config, error) {
 	}
 
 	// Now we validate the config
-	err = validate(config)
+	err = validate(config, l.log)
 	if err != nil {
 		return nil, err
 	}

@@ -840,13 +840,25 @@ const (
 
 // ProfileConfig defines a profile config
 type ProfileConfig struct {
-	Name           string                      `yaml:"name" json:"name"`
-	Parent         string                      `yaml:"parent,omitempty" json:"parent,omitempty"`
-	Parents        []*ProfileParent            `yaml:"parents,omitempty" json:"parents,omitempty"`
-	Patches        []*PatchConfig              `yaml:"patches,omitempty" json:"patches,omitempty"`
-	Replace        map[interface{}]interface{} `yaml:"replace,omitempty" json:"replace,omitempty"`
-	Merge          map[interface{}]interface{} `yaml:"merge,omitempty" json:"merge,omitempty"`
-	StrategicMerge map[interface{}]interface{} `yaml:"strategicMerge,omitempty" json:"strategicMerge,omitempty"`
+	Name           string                  `yaml:"name" json:"name"`
+	Parent         string                  `yaml:"parent,omitempty" json:"parent,omitempty"`
+	Parents        []*ProfileParent        `yaml:"parents,omitempty" json:"parents,omitempty"`
+	Patches        []*PatchConfig          `yaml:"patches,omitempty" json:"patches,omitempty"`
+	Replace        *ProfileConfigStructure `yaml:"replace,omitempty" json:"replace,omitempty"`
+	Merge          *ProfileConfigStructure `yaml:"merge,omitempty" json:"merge,omitempty"`
+	StrategicMerge *ProfileConfigStructure `yaml:"strategicMerge,omitempty" json:"strategicMerge,omitempty"`
+}
+
+// ProfileConfigStructure is the base structure used to validate profiles
+type ProfileConfigStructure struct {
+	Images       map[interface{}]interface{} `yaml:"images,omitempty" json:"images,omitempty"`
+	Deployments  []interface{}               `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Dev          map[interface{}]interface{} `yaml:"dev,omitempty" json:"dev,omitempty"`
+	Dependencies []interface{}               `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Hooks        []interface{}               `yaml:"hooks,omitempty" json:"hooks,omitempty"`
+	PullSecrets  []interface{}               `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+	Commands     []interface{}               `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Vars         []interface{}               `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // ProfileParent defines where to load the profile from

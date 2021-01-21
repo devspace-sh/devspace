@@ -212,11 +212,15 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 	}
 
 	// Search for config
-	for _, profileMap := range profiles {
+	for i, profileMap := range profiles {
 		profileConfig := &latest.ProfileConfig{}
-		err := util.Convert(profileMap, &profileConfig)
+		o, err := yaml.Marshal(profileMap)
 		if err != nil {
 			return err
+		}
+		err = yaml.UnmarshalStrict(o, profileConfig)
+		if err != nil {
+			return fmt.Errorf("error parsing profile at profiles[%d]: %v", i, err)
 		}
 
 		configMap, ok := profileMap.(map[interface{}]interface{})
