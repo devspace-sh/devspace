@@ -89,9 +89,11 @@ func NewBuilder(config *latest.Config, dockerClient docker.Client, kubeClient ku
 	}
 
 	// create pull secret
-	err := builder.createPullSecret(log)
-	if err != nil {
-		return nil, errors.Wrap(err, "create pull secret")
+	if !imageConf.Build.Kaniko.SkipPullSecretMount {
+		err := builder.createPullSecret(log)
+		if err != nil {
+			return nil, errors.Wrap(err, "create pull secret")
+		}
 	}
 
 	return builder, nil
