@@ -62,7 +62,8 @@ kaniko:                             # struct   | Options for building images wit
   labels: {}                        # map      | Extra labels for the kaniko build pod
   snapshotMode: "time"              # string   | Type of snapshotMode for kaniko build process (compresses layers)
   insecure: false                   # bool     | Allow working with an insecure registry by not validating the SSL certificate (Default: false)
-  args: []                          # string[] | Array of args for kaniko build command
+  command: []                       # string[] | Array of strings for the kaniko pod
+  args: []                          # string[] | Array of additional args for kaniko build command
   image: ""                         # string   | Allows to change the kaniko image or kaniko version / image tag.
   initImage: ""                     # string   | Allows to change the init container kaniko image (defaults to alpine)
   serviceAccount: ""                # string   | The service account to use for this build pod
@@ -71,6 +72,9 @@ kaniko:                             # struct   | Options for building images wit
   additionalMounts: []              # struct[] | Array of mount configurations for Kubernetes Secrets and ConfigMaps that should be mounted into the kaniko build container
   namespace: ""                     # string   | Kubernetes namespace to run kaniko build pod in (Default: "" = deployment namespace)
   options: ...                      # struct   | Set build general build options
+  skipPullSecretMount: true         # bool     | If true devspace will not mount and create any image pull secret for the kaniko pod
+  env: {}                           # map      | Key value pairs of environment variables that should be added to the kaniko pod
+  initEnv: {}                       # map      | Key value pairs of enviroment variables that should be added to the kaniko init pod
 ```
 
 ### `images[*].build.custom`
