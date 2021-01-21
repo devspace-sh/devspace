@@ -56,7 +56,9 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 	}
 
 	// make sure the devspace helper binary is injected
+	log.StartWait("Reverse-Port-Forwarding: Upload devspace helper...")
 	err = InjectDevSpaceHelper(serviceClient.client, container.Pod, container.Container.Name, serviceClient.log)
+	log.StopWait()
 	if err != nil {
 		return err
 	}
@@ -74,7 +76,7 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 	}()
 
 	go func() {
-		err := tunnel.StartReverseForward(stdoutReader, stdinWriter, portForwarding.PortMappingsReverse, closeChan, log)
+		err := tunnel.StartReverseForward(stdoutReader, stdinWriter, portForwarding.PortMappingsReverse, closeChan, container.Pod.Namespace, container.Pod.Name, log)
 		if err != nil {
 			errorChan <- err
 		}
