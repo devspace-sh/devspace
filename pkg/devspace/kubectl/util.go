@@ -18,6 +18,7 @@ import (
 	"net"
 	"net/http"
 	"os/exec"
+	"regexp"
 	"strings"
 )
 
@@ -163,7 +164,10 @@ func (client *client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 }
 
 func CompareImageNames(image1 string, image2 string) bool {
-	tagStrippedImage1, err := GetStrippedDockerImageName(image1)
+	// we replace possible # with a's here to avoid an parsing error
+	// since the tag is stripped anyways it doesn't really matter if we lose
+	// information where the # were
+	tagStrippedImage1, err := GetStrippedDockerImageName(strings.Replace(image1, "#", "a", -1))
 	if err != nil {
 		tagStrippedImage1 = image1
 	}
@@ -172,7 +176,16 @@ func CompareImageNames(image1 string, image2 string) bool {
 		tagStrippedImage2 = image2
 	}
 
-	if tagStrippedImage1 != image1 && tagStrippedImage2 != image2 {
+	if tagStrippedImage1 != image1 {
+		// if the tag consists of a # we build a regex
+		if strings.Index(image1, "#") != -1 {
+			regex := "^" + strings.Replace(image1, "#", "[a-zA-Z]", -1) + "$"
+			exp, err := regexp.Compile(regex)
+			if err == nil {
+				return exp.MatchString(image2)
+			}
+		}
+
 		return image1 == image2
 	} else {
 		return tagStrippedImage1 == tagStrippedImage2
