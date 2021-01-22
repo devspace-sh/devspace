@@ -3,6 +3,7 @@ package configure
 import (
 	contextpkg "context"
 	"fmt"
+	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
 	"io/ioutil"
 	"os/exec"
 	"regexp"
@@ -12,7 +13,6 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
@@ -113,7 +113,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 			DefaultValue:      dockerUsername + "/" + imageName,
 			ValidationMessage: "Please enter a valid image name for Docker Hub (e.g. myregistry.com/user/repository | allowed charaters: /, a-z, 0-9)",
 			ValidationFunc: func(name string) error {
-				_, err := pullsecrets.GetStrippedDockerImageName(name)
+				_, err := kubectl.GetStrippedDockerImageName(name)
 				return err
 			},
 		})
@@ -121,7 +121,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 			return nil, err
 		}
 
-		imageName, _ = pullsecrets.GetStrippedDockerImageName(imageName)
+		imageName, _ = kubectl.GetStrippedDockerImageName(imageName)
 	} else if regexp.MustCompile("^(.+\\.)?gcr.io$").Match([]byte(registryURL)) { // Is google registry?
 		project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
 		gcloudProject := "myGCloudProject"
@@ -135,7 +135,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 			DefaultValue:      registryURL + "/" + gcloudProject + "/" + imageName,
 			ValidationMessage: "Please enter a valid Docker image name (e.g. myregistry.com/user/repository | allowed charaters: /, a-z, 0-9)",
 			ValidationFunc: func(name string) error {
-				_, err := pullsecrets.GetStrippedDockerImageName(name)
+				_, err := kubectl.GetStrippedDockerImageName(name)
 				return err
 			},
 		})
@@ -143,7 +143,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 			return nil, err
 		}
 
-		imageName, _ = pullsecrets.GetStrippedDockerImageName(imageName)
+		imageName, _ = kubectl.GetStrippedDockerImageName(imageName)
 	} else {
 		if dockerUsername == "" {
 			dockerUsername = "username"
@@ -160,7 +160,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 			DefaultValue:      repoURL,
 			ValidationMessage: "Please enter a valid docker image name (e.g. myregistry.com/user/repository)",
 			ValidationFunc: func(name string) error {
-				_, err := pullsecrets.GetStrippedDockerImageName(name)
+				_, err := kubectl.GetStrippedDockerImageName(name)
 				return err
 			},
 		})
@@ -168,7 +168,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 			return nil, err
 		}
 
-		imageName, _ = pullsecrets.GetStrippedDockerImageName(imageName)
+		imageName, _ = kubectl.GetStrippedDockerImageName(imageName)
 	}
 
 	targets, err := helper.GetDockerfileTargets(dockerfile)

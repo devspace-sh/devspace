@@ -7,6 +7,8 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/docker/distribution/reference"
+	dockerregistry "github.com/docker/docker/registry"
 	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -161,10 +163,19 @@ func (client *client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 }
 
 func CompareImageNames(image1 string, image2 string) bool {
-	if strings.Index(image1, ":") > -1 && strings.Index(image2, ":") > -1 {
+	tagStrippedImage1, err := GetStrippedDockerImageName(image1)
+	if err != nil {
+		tagStrippedImage1 = image1
+	}
+	tagStrippedImage2, err := GetStrippedDockerImageName(image2)
+	if err != nil {
+		tagStrippedImage2 = image2
+	}
+
+	if tagStrippedImage1 != image1 && tagStrippedImage2 != image2 {
 		return image1 == image2
 	} else {
-		return strings.Split(image1, ":")[0] == strings.Split(image2, ":")[0]
+		return tagStrippedImage1 == tagStrippedImage2
 	}
 }
 
@@ -275,4 +286,27 @@ func (client *client) IsLocalKubernetes() bool {
 // IsLocalKubernetes returns true if the context belongs to a local Kubernetes cluster
 func IsLocalKubernetes(context string) bool {
 	return context == minikubeContext || context == dockerDesktopContext || context == dockerForDesktopContext
+}
+
+// GetStrippedDockerImageName returns a tag stripped image name and checks if it's a valid image name
+func GetStrippedDockerImageName(imageName string) (string, error) {
+	imageName = strings.TrimSpace(imageName)
+
+	// Check if we can parse the name
+	ref, err := reference.ParseNormalizedNamed(imageName)
+	if err != nil {
+		return "", err
+	}
+
+	repoInfo, err := dockerregistry.ParseRepositoryInfo(ref)
+	if err != nil {
+		return "", err
+	}
+
+	if repoInfo.Index.Official {
+		// strip docker.io and library from image
+		return strings.TrimPrefix(strings.TrimPrefix(reference.TrimNamed(ref).Name(), repoInfo.Index.Name+"/library/"), repoInfo.Index.Name+"/"), nil
+	}
+
+	return reference.TrimNamed(ref).Name(), nil
 }
