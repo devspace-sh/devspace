@@ -196,8 +196,6 @@ func validateDev(config *latest.Config) error {
 				// Validate imageName and label selector
 				if port.ImageName == "" && len(port.LabelSelector) == 0 {
 					return errors.Errorf("Error in config: imageName and label selector are nil in ports config at index %d", index)
-				} else if port.ImageName != "" && len(port.LabelSelector) > 0 {
-					return errors.Errorf("Error in config: imageName and label selector are both set in ports config at index %d. Please only use either one", index)
 				} else if port.ImageName != "" && findImageName(config, port.ImageName) == false {
 					return errors.Errorf("Error in config: dev.ports[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, port.ImageName)
 				}
@@ -213,8 +211,6 @@ func validateDev(config *latest.Config) error {
 				// Validate imageName and label selector
 				if sync.ImageName == "" && len(sync.LabelSelector) == 0 {
 					return errors.Errorf("Error in config: imageName and label selector are nil in sync config at index %d", index)
-				} else if sync.ImageName != "" && len(sync.LabelSelector) > 0 {
-					return errors.Errorf("Error in config: imageName and label selector are both set in sync config at index %d. Please only use either one", index)
 				} else if sync.ImageName != "" && findImageName(config, sync.ImageName) == false {
 					return errors.Errorf("Error in config: dev.sync[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, sync.ImageName)
 				}

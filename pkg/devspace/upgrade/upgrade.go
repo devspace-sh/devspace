@@ -55,6 +55,10 @@ func GetRawVersion() string {
 // SetVersion sets the application version
 func SetVersion(verText string) {
 	if len(verText) > 0 {
+		if verText[0] != 'v' {
+			verText = "v" + verText
+		}
+
 		_version, err := eraseVersionPrefix(verText)
 		if err != nil {
 			log.GetInstance().Errorf("Error parsing version: %v", err)

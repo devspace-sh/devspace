@@ -5,6 +5,7 @@ import (
 	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
 	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"k8s.io/apimachinery/pkg/labels"
 	"os"
 
 	"github.com/devspace-cloud/devspace/cmd/flags"
@@ -191,7 +192,14 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 					remotePath = "."
 				}
 
-				syncConfigNames = append(syncConfigNames, fmt.Sprintf("%d: Sync %s (local) <-> %s (container)", idx, localPath, remotePath))
+				selector := ""
+				if sc.ImageName != "" {
+					selector = "image: " + sc.ImageName
+				} else if len(sc.LabelSelector) > 0 {
+					selector = "selector: " + labels.Set(sc.LabelSelector).String()
+				}
+
+				syncConfigNames = append(syncConfigNames, fmt.Sprintf("%d: Sync %s: %s <-> %s ", idx, selector, localPath, remotePath))
 			}
 
 			answer, err := logger.Question(&survey.QuestionOptions{
