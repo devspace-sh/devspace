@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/sirupsen/logrus"
 )
 

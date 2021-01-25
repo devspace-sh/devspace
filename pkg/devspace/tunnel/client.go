@@ -2,12 +2,12 @@ package tunnel
 
 import (
 	"fmt"
-	"github.com/devspace-cloud/devspace/helper/remote"
-	"github.com/devspace-cloud/devspace/helper/tunnel"
-	"github.com/devspace-cloud/devspace/helper/util"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/google/uuid"
+	"github.com/loft-sh/devspace/helper/remote"
+	"github.com/loft-sh/devspace/helper/tunnel"
+	"github.com/loft-sh/devspace/helper/util"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"io"

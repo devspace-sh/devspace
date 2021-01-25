@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
-	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"

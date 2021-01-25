@@ -3,8 +3,8 @@ package hook
 import (
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
 func TestHookWithoutExecution(t *testing.T) {

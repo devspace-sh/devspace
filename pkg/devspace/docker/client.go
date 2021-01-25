@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"

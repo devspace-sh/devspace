@@ -2,7 +2,7 @@ package sync
 
 import (
 	"fmt"
-	"github.com/devspace-cloud/devspace/helper/server"
+	"github.com/loft-sh/devspace/helper/server"
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"

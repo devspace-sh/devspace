@@ -5,8 +5,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 )

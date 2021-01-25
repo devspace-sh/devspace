@@ -1,7 +1,7 @@
 package latest
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 )
 
 // Version is the current api version

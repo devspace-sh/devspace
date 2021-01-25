@@ -7,9 +7,9 @@ import (
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/homedir"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 )
 
 const dockerFileFolder = ".docker"

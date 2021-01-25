@@ -3,10 +3,10 @@ package cleanup
 import (
 	"context"
 
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/message"
 
 	"github.com/docker/docker/api/types/filters"
 	"github.com/pkg/errors"

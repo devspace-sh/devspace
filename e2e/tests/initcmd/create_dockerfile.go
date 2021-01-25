@@ -3,10 +3,10 @@ package initcmd
 import (
 	"os"
 
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 )
 

@@ -3,8 +3,8 @@ package loader
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	jsonpatch "github.com/evanphx/json-patch/v5"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"reflect"

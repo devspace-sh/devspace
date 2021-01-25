@@ -1,7 +1,7 @@
 package downloader
 
 import (
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"

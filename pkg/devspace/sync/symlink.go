@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/watch"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/rjeczalik/notify"
 )
 
@@ -50,7 +50,7 @@ func NewSymlink(upstream *upstream, symlinkPath, targetPath string, isDir bool) 
 		watchPath += "/**"
 	}
 
-	watcher, err := watch.New([]string{watchPath}, []string{}, time.Millisecond * 500, symlink.handleChange, log.Discard)
+	watcher, err := watch.New([]string{watchPath}, []string{}, time.Millisecond*500, symlink.handleChange, log.Discard)
 	if err != nil {
 		return nil, err
 	}

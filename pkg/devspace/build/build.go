@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/randutil"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )

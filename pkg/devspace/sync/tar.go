@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/helper/util"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/helper/util"
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
 	gitignore "github.com/sabhiram/go-gitignore"

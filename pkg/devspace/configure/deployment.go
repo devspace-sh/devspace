@@ -5,12 +5,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	dockerfileutil "github.com/devspace-cloud/devspace/pkg/util/dockerfile"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
-	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	v1 "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	dockerfileutil "github.com/loft-sh/devspace/pkg/util/dockerfile"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/util/survey"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
 )
 

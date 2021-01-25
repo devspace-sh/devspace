@@ -4,17 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/util"
-	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/util"
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
-	"github.com/devspace-cloud/devspace/pkg/util/git"
-	"github.com/devspace-cloud/devspace/pkg/util/randutil"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/util/git"
+	"github.com/loft-sh/devspace/pkg/util/randutil"
 )
 
 // predefinedVars holds all predefined variables that can be used in the config

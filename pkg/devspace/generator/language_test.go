@@ -5,10 +5,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	fakelogger "github.com/devspace-cloud/devspace/pkg/util/log/testing"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	fakelogger "github.com/loft-sh/devspace/pkg/util/log/testing"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 
 	"gotest.tools/assert"
 )

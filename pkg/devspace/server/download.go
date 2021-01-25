@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"github.com/devspace-cloud/devspace/assets"
+	"github.com/loft-sh/devspace/assets"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -16,18 +16,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 )
 
 // UIDownloadBaseURL is the base url where to look for the ui
-const UIDownloadBaseURL = "https://github.com/devspace-cloud/devspace/releases"
+const UIDownloadBaseURL = "https://github.com/loft-sh/devspace/releases"
 
 // UIDownloadRegEx is the regexp that finds the correct download link for the ui
-var UIDownloadRegEx = regexp.MustCompile(`href="(\/devspace-cloud\/devspace\/releases\/download\/[^\/]*\/ui.tar.gz)"`)
+var UIDownloadRegEx = regexp.MustCompile(`href="(\/loft-sh\/devspace\/releases\/download\/[^\/]*\/ui.tar.gz)"`)
 
 // UITempFolder is the temp folder to cache the ui in
 const UITempFolder = "ui"

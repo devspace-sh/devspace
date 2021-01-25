@@ -3,16 +3,16 @@ package build
 import (
 	"context"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/custom"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/kaniko"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/custom"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 )
 

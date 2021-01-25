@@ -1,9 +1,9 @@
 package dev
 
 import (
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 
@@ -45,7 +45,7 @@ func RunDefault(f *customFactory, logger log.Logger) error {
 		ForceBuild:     true,
 	}
 
-	err = devConfig.Run(f, nil,nil, nil)
+	err = devConfig.Run(f, nil, nil, nil)
 	defer close(f.interruptPortforward)
 	defer close(f.interruptSync)
 	if err != nil {

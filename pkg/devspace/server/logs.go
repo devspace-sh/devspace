@@ -2,18 +2,18 @@ package server
 
 import (
 	"context"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services"
+	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
 	"github.com/gorilla/websocket"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 )
 
 var upgrader = websocket.Upgrader{

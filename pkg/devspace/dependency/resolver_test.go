@@ -2,18 +2,18 @@ package dependency
 
 import (
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/dependency/util"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
-	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"gotest.tools/assert"
 	"k8s.io/client-go/kubernetes/fake"

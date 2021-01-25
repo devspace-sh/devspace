@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 	"io"
 	"os"
 	"path/filepath"
@@ -12,13 +12,13 @@ import (
 
 	"github.com/docker/cli/cli/streams"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/docker/distribution/reference"
 

@@ -3,8 +3,8 @@ package remove
 import (
 	"sort"
 
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/survey"
 
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"

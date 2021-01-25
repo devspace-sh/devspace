@@ -3,8 +3,8 @@ package testing
 import (
 	"fmt"
 
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
-	fakesurvey "github.com/devspace-cloud/devspace/pkg/util/survey/testing"
+	"github.com/loft-sh/devspace/pkg/util/survey"
+	fakesurvey "github.com/loft-sh/devspace/pkg/util/survey/testing"
 	"github.com/sirupsen/logrus"
 )
 

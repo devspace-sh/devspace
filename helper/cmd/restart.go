@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/helper/util"
+	"github.com/loft-sh/devspace/helper/util"
 	"github.com/spf13/cobra"
 )
 

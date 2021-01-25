@@ -1,9 +1,9 @@
 package v1beta8
 
 import (
-	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/ghodss/yaml"
+	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"reflect"
 	"testing"
 )

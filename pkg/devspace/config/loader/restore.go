@@ -3,7 +3,7 @@ package loader
 import (
 	"context"
 	"encoding/json"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"

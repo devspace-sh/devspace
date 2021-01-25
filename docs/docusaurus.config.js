@@ -50,7 +50,7 @@ module.exports = {
           position: 'right',
         },
         {
-          href: 'https://github.com/devspace-cloud/devspace',
+          href: 'https://github.com/loft-sh/devspace',
           className: 'github-link',
           'aria-label': 'GitHub',
           position: 'right',
@@ -78,7 +78,7 @@ module.exports = {
           routeBasePath: 'docs',
           sidebarPath: require.resolve('./sidebars.js'),
           editUrl:
-            'https://github.com/devspace-cloud/devspace/edit/master/docs/',
+            'https://github.com/loft-sh/devspace/edit/master/docs/',
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),

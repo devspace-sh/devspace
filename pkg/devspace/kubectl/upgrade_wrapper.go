@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/transport"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/transport"
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/transport/spdy"
 )

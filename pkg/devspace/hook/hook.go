@@ -7,9 +7,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"io"
@@ -23,10 +23,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/command"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
 	dockerterm "github.com/docker/docker/pkg/term"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/command"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 )
 
 const (

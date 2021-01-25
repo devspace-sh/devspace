@@ -278,7 +278,7 @@ yarn global add devspace
 <summary>via Mac Terminal</summary>
 
 ```
-curl -s -L "https://github.com/devspace-cloud/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-darwin-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
+curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-darwin-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
 sudo mv devspace /usr/local/bin;
 ```
 
@@ -288,7 +288,7 @@ sudo mv devspace /usr/local/bin;
 <summary>via Linux Bash</summary>
 
 ```
-curl -s -L "https://github.com/devspace-cloud/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
+curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
 sudo install devspace /usr/local/bin
 ```
 
@@ -299,7 +299,7 @@ sudo install devspace /usr/local/bin
 
 ```
 md -Force "$Env:APPDATA\devspace"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
-Invoke-WebRequest -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/devspace-cloud/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe;
+Invoke-WebRequest -UseBasicParsing ((Invoke-WebRequest -URI "https://github.com/loft-sh/devspace/releases/latest" -UseBasicParsing).Content -replace "(?ms).*`"([^`"]*devspace-windows-amd64.exe)`".*","https://github.com/`$1") -o $Env:APPDATA\devspace\devspace.exe;
 $env:Path += ";" + $Env:APPDATA + "\devspace";
 [Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User);
 ```
@@ -1124,15 +1124,15 @@ Help us make DevSpace the best tool for developing, deploying and debugging Kube
 
 ### Reporting Issues
 
-If you find a bug while working with the DevSpace, please [open an issue on GitHub](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Fbug&template=bug-report.md&title=Bug:) and let us know what went wrong. We will try to fix it as quickly as we can.
+If you find a bug while working with the DevSpace, please [open an issue on GitHub](https://github.com/loft-sh/devspace/issues/new?labels=kind%2Fbug&template=bug-report.md&title=Bug:) and let us know what went wrong. We will try to fix it as quickly as we can.
 
 ### Feedback & Feature Requests
 
 You are more than welcome to open issues in this project to:
 
-- [Give feedback](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Ffeedback&title=Feedback:)
-- [Suggest new features](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Ffeature&template=feature-request.md&title=Feature%20Request:)
-- [Report Bugs](https://github.com/devspace-cloud/devspace/issues/new?labels=kind%2Fbug&template=bug-report.md&title=Bug%20Report:)
+- [Give feedback](https://github.com/loft-sh/devspace/issues/new?labels=kind%2Ffeedback&title=Feedback:)
+- [Suggest new features](https://github.com/loft-sh/devspace/issues/new?labels=kind%2Ffeature&template=feature-request.md&title=Feature%20Request:)
+- [Report Bugs](https://github.com/loft-sh/devspace/issues/new?labels=kind%2Fbug&template=bug-report.md&title=Bug%20Report:)
 
 ### Contributing Code
 
@@ -1144,7 +1144,7 @@ This project is mainly written in Golang. If you want to contribute code:
    GO111MODULE=on
    GOFLAGS=-mod=vendor
    ```
-3. Check-out the project: `git clone https://github.com/devspace-cloud/devspace && cd devspace`
+3. Check-out the project: `git clone https://github.com/loft-sh/devspace && cd devspace`
 4. Make changes to the code
 5. Build the project, e.g. via `go build -o devspace[.exe]`
 6. Evaluate and test your changes `./devspace [SOME_COMMAND]`

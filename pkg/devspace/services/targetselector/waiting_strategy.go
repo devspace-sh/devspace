@@ -1,8 +1,8 @@
 package targetselector
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	v1 "k8s.io/api/core/v1"
 	"sort"
 	"time"

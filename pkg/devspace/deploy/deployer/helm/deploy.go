@@ -2,19 +2,19 @@ package helm
 
 import (
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
+	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	"io"
 	"os"
 	"path/filepath"
 
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/helm/merge"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/util"
-	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
-	hashpkg "github.com/devspace-cloud/devspace/pkg/util/hash"
-	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm/merge"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
+	"github.com/loft-sh/devspace/pkg/devspace/helm"
+	hashpkg "github.com/loft-sh/devspace/pkg/util/hash"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 )

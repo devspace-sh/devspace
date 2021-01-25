@@ -7,7 +7,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	fakeloader "github.com/devspace-cloud/devspace/pkg/devspace/config/loader/testing"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	fakefactory "github.com/devspace-cloud/devspace/pkg/util/factory/testing"
-	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	log "github.com/devspace-cloud/devspace/pkg/util/log/testing"
+	fakeloader "github.com/loft-sh/devspace/pkg/devspace/config/loader/testing"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	fakefactory "github.com/loft-sh/devspace/pkg/util/factory/testing"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	log "github.com/loft-sh/devspace/pkg/util/log/testing"
 
 	"gotest.tools/assert"
 )

@@ -1,8 +1,8 @@
 package hook
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
 // FakeHook is a fake implementation of the interface Hook

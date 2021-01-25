@@ -7,15 +7,15 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 
-	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/e2e/utils"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/services"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 )
 
 type customFactory struct {

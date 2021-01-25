@@ -1,8 +1,7 @@
 package util
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
+	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,12 +21,7 @@ func NewClientByContext(context, namespace string, switchContext bool, kubeLoade
 	}
 
 	// We clone the config here to avoid changing the single loaded config
-	kubeConfig := clientcmdapi.Config{}
-	err = util.Convert(&kubeConfigOriginal, &kubeConfig)
-	if err != nil {
-		return nil, "", "", false, err
-	}
-
+	kubeConfig := kubeConfigOriginal.DeepCopy()
 	if len(kubeConfig.Clusters) == 0 {
 		// try to load in cluster config
 		config, err := rest.InClusterConfig()
@@ -84,13 +78,13 @@ func NewClientByContext(context, namespace string, switchContext bool, kubeLoade
 
 	// Should we save the kube config?
 	if saveConfig {
-		err = kubeLoader.SaveConfig(&kubeConfig)
+		err = kubeLoader.SaveConfig(kubeConfig)
 		if err != nil {
 			return nil, "", "", false, errors.Errorf("Error saving kube config: %v", err)
 		}
 	}
 
-	clientConfig := clientcmd.NewNonInteractiveClientConfig(kubeConfig, activeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules())
+	clientConfig := clientcmd.NewNonInteractiveClientConfig(*kubeConfig, activeContext, &clientcmd.ConfigOverrides{}, clientcmd.NewDefaultClientConfigLoadingRules())
 	if kubeConfig.Contexts[activeContext] == nil {
 		return nil, "", "", false, errors.Errorf("Error loading kube config, context '%s' doesn't exist", activeContext)
 	}

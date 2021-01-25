@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/devspace-cloud/devspace/helper/remote"
-	"github.com/devspace-cloud/devspace/helper/util"
+	"github.com/loft-sh/devspace/helper/remote"
+	"github.com/loft-sh/devspace/helper/util"
 	"github.com/pkg/errors"
 	gitignore "github.com/sabhiram/go-gitignore"
 	"google.golang.org/grpc"

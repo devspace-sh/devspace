@@ -3,8 +3,8 @@ package sync
 import (
 	"os"
 
-	"github.com/devspace-cloud/devspace/helper/remote"
-	"github.com/devspace-cloud/devspace/helper/util"
+	"github.com/loft-sh/devspace/helper/remote"
+	"github.com/loft-sh/devspace/helper/util"
 )
 
 // s.fileIndex needs to be locked before this function is called

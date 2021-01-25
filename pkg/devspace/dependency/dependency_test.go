@@ -1,23 +1,23 @@
 package dependency
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
-	fakebuild "github.com/devspace-cloud/devspace/pkg/devspace/build/testing"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	fakegeneratedloader "github.com/devspace-cloud/devspace/pkg/devspace/config/generated/testing"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	fakedeploy "github.com/devspace-cloud/devspace/pkg/devspace/deploy/testing"
-	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
-	fakeregistry "github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets/testing"
-	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/hash"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	fakebuild "github.com/loft-sh/devspace/pkg/devspace/build/testing"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	fakegeneratedloader "github.com/loft-sh/devspace/pkg/devspace/config/generated/testing"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	fakedeploy "github.com/loft-sh/devspace/pkg/devspace/deploy/testing"
+	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
+	fakeregistry "github.com/loft-sh/devspace/pkg/devspace/pullsecrets/testing"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	"github.com/loft-sh/devspace/pkg/util/hash"
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"gotest.tools/assert"
 )

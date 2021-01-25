@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 
 	v1beta1 "k8s.io/api/apps/v1"

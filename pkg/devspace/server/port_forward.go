@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/util/port"
+	"github.com/loft-sh/devspace/pkg/util/port"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

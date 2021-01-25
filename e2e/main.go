@@ -7,20 +7,20 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/e2e/tests/analyze"
-	"github.com/devspace-cloud/devspace/e2e/tests/build"
-	"github.com/devspace-cloud/devspace/e2e/tests/deploy"
-	"github.com/devspace-cloud/devspace/e2e/tests/dev"
-	"github.com/devspace-cloud/devspace/e2e/tests/enter"
-	"github.com/devspace-cloud/devspace/e2e/tests/examples"
-	"github.com/devspace-cloud/devspace/e2e/tests/initcmd"
-	"github.com/devspace-cloud/devspace/e2e/tests/logs"
-	"github.com/devspace-cloud/devspace/e2e/tests/print"
-	"github.com/devspace-cloud/devspace/e2e/tests/render"
-	"github.com/devspace-cloud/devspace/e2e/tests/run"
-	"github.com/devspace-cloud/devspace/e2e/tests/sync"
-	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/e2e/tests/analyze"
+	"github.com/loft-sh/devspace/e2e/tests/build"
+	"github.com/loft-sh/devspace/e2e/tests/deploy"
+	"github.com/loft-sh/devspace/e2e/tests/dev"
+	"github.com/loft-sh/devspace/e2e/tests/enter"
+	"github.com/loft-sh/devspace/e2e/tests/examples"
+	"github.com/loft-sh/devspace/e2e/tests/initcmd"
+	"github.com/loft-sh/devspace/e2e/tests/logs"
+	"github.com/loft-sh/devspace/e2e/tests/print"
+	"github.com/loft-sh/devspace/e2e/tests/render"
+	"github.com/loft-sh/devspace/e2e/tests/run"
+	"github.com/loft-sh/devspace/e2e/tests/sync"
+	"github.com/loft-sh/devspace/e2e/utils"
+	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
 var testNamespace = "testing-test-namespace"
@@ -44,18 +44,18 @@ type Test interface {
 }
 
 var availableTests = map[string]Test{
-	"analyze":      analyze.RunNew,
-	"build":        build.RunNew,
-	"deploy":       deploy.RunNew,
-	"dev":          dev.RunNew,
-	"enter":        enter.RunNew,
-	"examples":     examples.RunNew,
-	"init":         initcmd.RunNew,
-	"logs":         logs.RunNew,
-	"print":        print.RunNew,
-	"render":       render.RunNew,
-	"run":          run.RunNew,
-	"sync":         sync.RunNew,
+	"analyze":  analyze.RunNew,
+	"build":    build.RunNew,
+	"deploy":   deploy.RunNew,
+	"dev":      dev.RunNew,
+	"enter":    enter.RunNew,
+	"examples": examples.RunNew,
+	"init":     initcmd.RunNew,
+	"logs":     logs.RunNew,
+	"print":    print.RunNew,
+	"render":   render.RunNew,
+	"run":      run.RunNew,
+	"sync":     sync.RunNew,
 }
 
 var subTests = map[string]*stringList{}

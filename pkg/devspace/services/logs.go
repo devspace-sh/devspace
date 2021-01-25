@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/mgutz/ansi"
 )
 

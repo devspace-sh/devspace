@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/mgutz/ansi"
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"

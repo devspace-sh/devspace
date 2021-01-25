@@ -3,11 +3,11 @@ package v1beta3
 import (
 	"regexp"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
-	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta4"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
+	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta4"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 )
 
 // Upgrade upgrades the config

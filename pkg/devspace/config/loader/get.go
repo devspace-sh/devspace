@@ -1,7 +1,7 @@
 package loader
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,12 +10,12 @@ import (
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/log"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 )
 
 // ConfigLoader is the base interface for the main config loader

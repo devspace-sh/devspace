@@ -3,7 +3,7 @@ package helm
 import (
 	"io"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 )
 
 // Render runs a `helm template`

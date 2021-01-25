@@ -1,14 +1,13 @@
 package list
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
 	"strconv"
 )
 
 type pluginsCmd struct {
-
 }
 
 func newPluginsCmd(f factory.Factory) *cobra.Command {

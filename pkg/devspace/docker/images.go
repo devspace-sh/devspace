@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"

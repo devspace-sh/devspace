@@ -2,10 +2,10 @@ package loader
 
 import (
 	fmt "fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/helm/merge"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm/merge"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	"path/filepath"

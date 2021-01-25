@@ -3,18 +3,18 @@ package configure
 import (
 	contextpkg "context"
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"io/ioutil"
 	"os/exec"
 	"regexp"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	v1 "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
 )
 

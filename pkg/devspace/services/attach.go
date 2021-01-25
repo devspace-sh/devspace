@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/mgutz/ansi"
 )
 

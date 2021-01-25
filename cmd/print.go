@@ -1,14 +1,14 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"path/filepath"
 
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	logger "github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	logger "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 

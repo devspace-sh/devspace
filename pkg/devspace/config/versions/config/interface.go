@@ -1,6 +1,6 @@
 package config
 
-import "github.com/devspace-cloud/devspace/pkg/util/log"
+import "github.com/loft-sh/devspace/pkg/util/log"
 
 // Config is the interface for each config version
 type Config interface {

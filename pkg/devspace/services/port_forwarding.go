@@ -2,16 +2,16 @@ package services
 
 import (
 	"context"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
-	"github.com/devspace-cloud/devspace/pkg/util/port"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/message"
+	"github.com/loft-sh/devspace/pkg/util/port"
 	"github.com/pkg/errors"
 )
 

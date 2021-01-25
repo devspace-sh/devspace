@@ -1,8 +1,8 @@
 package plugin
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/util/git"
 	"github.com/ghodss/yaml"
+	"github.com/loft-sh/devspace/pkg/util/git"
 	"github.com/otiai10/copy"
 	"io"
 	"io/ioutil"
@@ -17,7 +17,7 @@ type Installer interface {
 	DownloadBinary(metadataPath, version, binaryPath, outFile string) error
 }
 
-type installer struct {}
+type installer struct{}
 
 func NewInstaller() Installer {
 	return &installer{}
@@ -123,8 +123,8 @@ func (i *installer) DownloadMetadata(path, version string) (*Metadata, error) {
 	}
 
 	err = repo.Clone(git.CloneOptions{
-		URL:            path,
-		Tag:            version,
+		URL: path,
+		Tag: version,
 	})
 	if err != nil {
 		return nil, err

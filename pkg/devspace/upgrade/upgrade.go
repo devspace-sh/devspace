@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/blang/semver"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
@@ -16,7 +16,7 @@ import (
 var version string
 var rawVersion string
 
-var githubSlug = "devspace-cloud/devspace"
+var githubSlug = "loft-sh/devspace"
 var reVersion = regexp.MustCompile(`\d+\.\d+\.\d+`)
 
 func eraseVersionPrefix(version string) (string, error) {

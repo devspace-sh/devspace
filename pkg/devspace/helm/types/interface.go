@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
 
 // Client is the client interface for helm

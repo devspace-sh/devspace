@@ -1,7 +1,7 @@
 package sync
 
 import (
-	"github.com/devspace-cloud/devspace/helper/remote"
+	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/rjeczalik/notify"
 )
 

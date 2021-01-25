@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/devspace-cloud/devspace/helper/cmd"
+	"github.com/loft-sh/devspace/helper/cmd"
 	"math/rand"
 	"time"
 )

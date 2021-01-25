@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/pkg/errors"
 )
 

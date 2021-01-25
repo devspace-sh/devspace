@@ -1,6 +1,6 @@
 package testing
 
-import "github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
+import "github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 
 // Client is a fake implementation of the Client interface
 type Client struct{}

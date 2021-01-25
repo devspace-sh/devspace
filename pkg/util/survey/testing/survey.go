@@ -3,7 +3,7 @@ package testing
 import (
 	"errors"
 
-	surveypkg "github.com/devspace-cloud/devspace/pkg/util/survey"
+	surveypkg "github.com/loft-sh/devspace/pkg/util/survey"
 )
 
 // FakeSurvey is a fake survey that just returns predefined strings
