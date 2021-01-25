@@ -6,8 +6,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
 	goansi "github.com/k0kubun/go-ansi"
+	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

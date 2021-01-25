@@ -3,15 +3,15 @@ package run
 import (
 	"time"
 
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/e2e/utils"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/services"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 
@@ -159,7 +159,7 @@ func beforeTest(f *customFactory) error {
 
 	f.Client = client
 
-	err = deployConfig.Run(f, nil,nil, nil)
+	err = deployConfig.Run(f, nil, nil, nil)
 	if err != nil {
 		return err
 	}

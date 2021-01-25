@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/devspace-cloud/devspace/pkg/util/terminal"
+	"github.com/loft-sh/devspace/pkg/util/terminal"
 	corev1 "k8s.io/api/core/v1"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"

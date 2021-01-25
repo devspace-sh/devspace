@@ -4,10 +4,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/e2e/utils"
+	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
 func runUploadOnly(f *customFactory, logger log.Logger) error {
@@ -37,7 +37,7 @@ func runUploadOnly(f *customFactory, logger log.Logger) error {
 		Container: "container-0",
 	}
 
-	err := sc.Run(f, nil,nil, nil)
+	err := sc.Run(f, nil, nil, nil)
 	defer close(f.interrupt)
 	if err != nil {
 		return err

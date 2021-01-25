@@ -4,11 +4,11 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 	"github.com/pkg/errors"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	yaml "gopkg.in/yaml.v2"
 )
 

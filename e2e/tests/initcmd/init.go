@@ -6,21 +6,21 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/sirupsen/logrus"
 
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
-	"github.com/devspace-cloud/devspace/pkg/devspace/configure"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/e2e/utils"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
+	"github.com/loft-sh/devspace/pkg/devspace/configure"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	fakesurvey "github.com/devspace-cloud/devspace/pkg/util/survey/testing"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	fakesurvey "github.com/loft-sh/devspace/pkg/util/survey/testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	fakedocker "github.com/devspace-cloud/devspace/pkg/devspace/docker/testing"
 	dockertypes "github.com/docker/docker/api/types"
+	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	fakedocker "github.com/loft-sh/devspace/pkg/devspace/docker/testing"
 	"github.com/pkg/errors"
 
 	yaml "gopkg.in/yaml.v2"

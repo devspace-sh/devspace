@@ -3,10 +3,10 @@ package logs
 import (
 	"time"
 
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/e2e/utils"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 

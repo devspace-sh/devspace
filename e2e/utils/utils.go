@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl/portforward"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
-	"github.com/devspace-cloud/devspace/pkg/util/port"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/pkg/devspace/build"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/message"
+	"github.com/loft-sh/devspace/pkg/util/port"
 
 	"html"
 	"io"
@@ -30,9 +30,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	logger "github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/analyze"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	logger "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 

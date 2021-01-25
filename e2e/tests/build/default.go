@@ -1,9 +1,9 @@
 package build
 
 import (
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 
@@ -22,7 +22,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		GlobalFlags: &flags.GlobalFlags{},
 	}
 
-	err = bc.Run(f, nil,nil, nil)
+	err = bc.Run(f, nil, nil, nil)
 	if err != nil {
 		return err
 	}

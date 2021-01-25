@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,15 +10,15 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
-	"github.com/devspace-cloud/devspace/pkg/devspace/generator"
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	latest "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
+	"github.com/loft-sh/devspace/pkg/devspace/generator"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -416,7 +416,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 			syncConfig := &latest.SyncConfig{
 				ImageName:          defaultImageName,
 				UploadExcludePaths: excludePaths,
-				ExcludePaths:       []string{
+				ExcludePaths: []string{
 					".git/",
 				},
 			}

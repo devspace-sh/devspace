@@ -1,4 +1,4 @@
-module github.com/devspace-cloud/devspace
+module github.com/loft-sh/devspace
 
 go 1.15
 

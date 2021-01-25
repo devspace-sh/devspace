@@ -10,8 +10,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/spf13/cobra/doc"
 )
 

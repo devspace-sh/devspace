@@ -11,7 +11,7 @@ import (
 
 	"fmt"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
+	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

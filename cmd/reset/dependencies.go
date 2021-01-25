@@ -1,10 +1,10 @@
 package reset
 
 import (
-	dependencyutil "github.com/devspace-cloud/devspace/pkg/devspace/dependency/util"
+	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"os"
 
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/factory"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"

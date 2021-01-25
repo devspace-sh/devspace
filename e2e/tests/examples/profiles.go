@@ -2,12 +2,12 @@ package examples
 
 import (
 	"context"
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/cmd/use"
-	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/cmd/use"
+	"github.com/loft-sh/devspace/e2e/utils"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -77,7 +77,7 @@ func runProfile(f *customFactory, deployConfig *cmd.DeployCmd, profile string, c
 		return err
 	}
 
-	err = deployConfig.Run(f, nil,nil, nil)
+	err = deployConfig.Run(f, nil, nil, nil)
 	if err != nil {
 		return err
 	}

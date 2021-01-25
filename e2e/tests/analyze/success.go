@@ -5,10 +5,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/e2e/utils"
+	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
 func runSuccess(f *utils.BaseCustomFactory, logger log.Logger) error {
@@ -35,7 +35,7 @@ func runSuccess(f *utils.BaseCustomFactory, logger log.Logger) error {
 	verboseHistory := f.Verbose
 	f.Verbose = false
 
-	err = ac.RunAnalyze(f, nil,nil, nil)
+	err = ac.RunAnalyze(f, nil, nil, nil)
 	if err != nil {
 		return errors.Errorf("err should be nil: %v", err)
 	}

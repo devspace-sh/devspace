@@ -4,10 +4,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/e2e/utils"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 
@@ -111,7 +111,7 @@ func RunTest(f *customFactory, deployConfig *cmd.DeployCmd) error {
 
 	f.Client = client
 
-	err = deployConfig.Run(f, nil,nil, nil)
+	err = deployConfig.Run(f, nil, nil, nil)
 	if err != nil {
 		return err
 	}

@@ -7,8 +7,8 @@ import (
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 )
 
 var version string

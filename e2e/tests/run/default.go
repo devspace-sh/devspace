@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/e2e/utils"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 
@@ -34,7 +34,7 @@ func runDefault(f *customFactory, logger log.Logger) error {
 		},
 	}
 
-	err := sc.Run(f, nil,nil, nil)
+	err := sc.Run(f, nil, nil, nil)
 	defer close(f.interrupt)
 	if err != nil {
 		return errors.Errorf("Error while running sync command: %s", err.Error())

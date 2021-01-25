@@ -11,8 +11,8 @@ import (
 	"github.com/juju/ratelimit"
 	"github.com/pkg/errors"
 
-	"github.com/devspace-cloud/devspace/helper/remote"
-	"github.com/devspace-cloud/devspace/helper/util"
+	"github.com/loft-sh/devspace/helper/remote"
+	"github.com/loft-sh/devspace/helper/util"
 )
 
 type downstream struct {

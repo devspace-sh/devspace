@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	"github.com/bmatcuk/doublestar"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/command"
-	"github.com/devspace-cloud/devspace/pkg/util/hash"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/hash"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 
 	dockerterm "github.com/docker/docker/pkg/term"
 	"github.com/pkg/errors"

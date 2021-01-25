@@ -1,6 +1,6 @@
 package testing
 
-import "github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
+import "github.com/loft-sh/devspace/pkg/devspace/config/generated"
 
 // Loader is a fake implementation of the ConigLoader interface
 type Loader struct {

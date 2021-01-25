@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 
 	"github.com/mgutz/ansi"
 	kubectlExec "k8s.io/client-go/util/exec"

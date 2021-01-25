@@ -2,9 +2,9 @@ package tunnel
 
 import (
 	"fmt"
-	"github.com/devspace-cloud/devspace/helper/remote"
-	"github.com/devspace-cloud/devspace/helper/util"
 	"github.com/google/uuid"
+	"github.com/loft-sh/devspace/helper/remote"
+	"github.com/loft-sh/devspace/helper/util"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"

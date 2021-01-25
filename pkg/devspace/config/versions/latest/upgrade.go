@@ -1,8 +1,8 @@
 package latest
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
+	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
 // Upgrade upgrades the config

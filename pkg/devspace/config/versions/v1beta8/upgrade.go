@@ -1,10 +1,10 @@
 package v1beta8
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
-	next "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
+	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
+	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
 // Upgrade upgrades the config

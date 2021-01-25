@@ -3,9 +3,9 @@ package docker
 import (
 	"testing"
 
-	log "github.com/devspace-cloud/devspace/pkg/util/log/testing"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	log "github.com/loft-sh/devspace/pkg/util/log/testing"
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )

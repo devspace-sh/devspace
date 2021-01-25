@@ -4,8 +4,8 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )

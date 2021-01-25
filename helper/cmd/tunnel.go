@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/helper/tunnel"
+	"github.com/loft-sh/devspace/helper/tunnel"
 	"github.com/spf13/cobra"
 	"os"
 )

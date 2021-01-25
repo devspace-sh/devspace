@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 )
 
 type testCase struct {

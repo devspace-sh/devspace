@@ -4,7 +4,7 @@ package util
 
 import (
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	cloudpkg "github.com/devspace-cloud/devspace/pkg/devspace/cloud"
+	cloudpkg "github.com/loft-sh/devspace/pkg/devspace/cloud"
 
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"

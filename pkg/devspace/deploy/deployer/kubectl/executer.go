@@ -1,7 +1,7 @@
 package kubectl
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/command"
 	"os/exec"
 )
 

@@ -1,8 +1,8 @@
 package v1beta1
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 	v1 "k8s.io/api/core/v1"
 )
 

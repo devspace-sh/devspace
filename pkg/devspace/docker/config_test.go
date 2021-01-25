@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
 	"github.com/docker/cli/cli/config/configfile"
 	configtypes "github.com/docker/cli/cli/config/types"
 	"github.com/docker/docker/api/types"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )

@@ -1,10 +1,10 @@
 package util
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"regexp"
 )
 

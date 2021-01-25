@@ -5,14 +5,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/devspace-cloud/devspace/cmd"
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/e2e/utils"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/e2e/utils"
+	"github.com/loft-sh/devspace/pkg/devspace/build"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -131,7 +131,7 @@ func runTest(f *customFactory, t *test) error {
 	f.Client = client
 
 	// 2. Deploy config
-	err = t.deployConfig.Run(f, nil,nil, nil)
+	err = t.deployConfig.Run(f, nil, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -161,7 +161,7 @@ func testPurge(f *customFactory) error {
 		},
 	}
 
-	err := purgeCmd.Run(f, nil,nil, nil)
+	err := purgeCmd.Run(f, nil, nil, nil)
 	if err != nil {
 		return err
 	}

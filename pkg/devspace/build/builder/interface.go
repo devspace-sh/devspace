@@ -1,8 +1,8 @@
 package builder
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
 // Interface defines methods for builders docker, kaniko and custom

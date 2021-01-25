@@ -2,8 +2,8 @@ package helm
 
 import (
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer"
-	"github.com/devspace-cloud/devspace/pkg/devspace/helm"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
+	"github.com/loft-sh/devspace/pkg/devspace/helm"
 )
 
 // Status gets the status of the deployment

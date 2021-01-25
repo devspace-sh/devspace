@@ -1,13 +1,13 @@
 package v3
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/helm/generic"
-	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/command"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/ghodss/yaml"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
+	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -93,7 +93,7 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	// Chart settings
 	if chartRepo != "" {
 		args = append(args, "--repo", chartRepo)
-		args = append(args, "--repository-config=''") 
+		args = append(args, "--repository-config=''")
 	}
 	if helmConfig.Chart.Version != "" {
 		args = append(args, "--version", helmConfig.Chart.Version)
