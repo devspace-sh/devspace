@@ -34,6 +34,9 @@ type upstream struct {
 	isBusy      bool
 	isBusyMutex sync.Mutex
 
+	eventBuffer      []notify.EventInfo
+	eventBufferMutex sync.Mutex
+
 	workingDirectory string
 }
 
@@ -62,11 +65,12 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 
 	workingDirectory, _ := os.Getwd()
 	return &upstream{
-		events:    make(chan notify.EventInfo, 3000), // High buffer size so we don't miss any fsevents if there are a lot of changes
-		symlinks:  make(map[string]*Symlink),
-		interrupt: make(chan bool, 1),
-		sync:      sync,
-		isBusy:    true,
+		events:      make(chan notify.EventInfo, 1000), // High buffer size so we don't miss any fsevents if there are a lot of changes
+		eventBuffer: make([]notify.EventInfo, 0, 64),
+		symlinks:    make(map[string]*Symlink),
+		interrupt:   make(chan bool, 1),
+		sync:        sync,
+		isBusy:      true,
 
 		reader: reader,
 		writer: writer,
@@ -83,49 +87,86 @@ func (u *upstream) IsBusy() bool {
 	return u.isBusy
 }
 
-func (u *upstream) mainLoop() error {
-	for {
-		var (
-			changes      []*FileInformation
-			changeAmount = 0
-		)
-
+func (u *upstream) startEventsLoop(doneChan chan struct{}) {
+	go func() {
 		for {
 			select {
-			case <-u.interrupt:
-				return nil
+			case <-doneChan:
+				return
 			case event, ok := <-u.events:
 				if ok == false {
-					return nil
+					return
 				}
 
-				events := make([]notify.EventInfo, 0, 10)
-				events = append(events, event)
-
 				// We need this loop to catch up if we got a lot of change events
+				u.eventBufferMutex.Lock()
+				u.eventBuffer = append(u.eventBuffer, event)
 				for eventsLeft := true; eventsLeft == true; {
 					select {
 					case event := <-u.events:
-						events = append(events, event)
+						u.eventBuffer = append(u.eventBuffer, event)
 						break
 					default:
 						eventsLeft = false
 						break
 					}
 				}
+				u.eventBufferMutex.Unlock()
+			}
+		}
+	}()
+}
 
+func (u *upstream) getEvents() []notify.EventInfo {
+	var eventsRef []notify.EventInfo
+	u.eventBufferMutex.Lock()
+	defer u.eventBufferMutex.Unlock()
+
+	// exchange buffer if we got events
+	if len(u.eventBuffer) > 0 {
+		eventsRef = u.eventBuffer
+		u.eventBuffer = make([]notify.EventInfo, 0, 64)
+	}
+
+	return eventsRef
+}
+
+func (u *upstream) mainLoop() error {
+	doneChan := make(chan struct{})
+	defer close(doneChan)
+
+	// start collecting events
+	u.startEventsLoop(doneChan)
+
+	for {
+		var (
+			changes      []*FileInformation
+			changeAmount = 0
+		)
+
+		// gather changes
+		for {
+			select {
+			case <-u.interrupt:
+				return nil
+			case <-time.After(time.Millisecond * 600):
+				break
+			}
+
+			// retrieve the newest events
+			events := u.getEvents()
+			if len(events) > 0 {
 				fileInformations, err := u.getfileInformationFromEvent(events)
 				if err != nil {
 					return errors.Wrap(err, "get file information from event")
 				}
 
 				changes = append(changes, fileInformations...)
-			case <-time.After(time.Millisecond * 600):
-				break
 			}
 
-			// We gather changes till there are no more changes
-			if changeAmount == len(changes) && changeAmount > 0 {
+			// We gather changes till there are no more changes or
+			// a certain amount of changes is reached
+			if len(changes) > 50000 || (changeAmount == len(changes) && changeAmount > 0) {
 				break
 			}
 
@@ -139,6 +180,7 @@ func (u *upstream) mainLoop() error {
 			}
 		}
 
+		// apply the changes
 		err := u.applyChanges(changes)
 		if err != nil {
 			return errors.Wrap(err, "apply changes")
@@ -335,7 +377,6 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 			}
 
 			u.sync.log.Infof("Upstream - Retry upload because of error: %v", err)
-
 			creates = u.updateUploadChanges(creates)
 			if len(creates) == 0 {
 				break
@@ -392,8 +433,7 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 			size += c.Size
 		}
 	}
-
-	u.sync.log.Infof("Upstream - Upload %d create changes (size %d)", len(files), size)
+	u.sync.log.Infof("Upstream - Upload %d create change(s) (Uncompressed ~%0.2f KB)", len(files), float64(size)/1024.0)
 
 	// Create combined exclude paths
 	excludePaths := make([]string, 0, len(u.sync.Options.ExcludePaths)+len(u.sync.Options.UploadExcludePaths))

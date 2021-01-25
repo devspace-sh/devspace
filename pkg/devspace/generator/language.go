@@ -19,7 +19,7 @@ import (
 )
 
 // DockerfileRepoURL is the default repository url
-const DockerfileRepoURL = "https://github.com/loft-sh/devspace-templates.git"
+const DockerfileRepoURL = "https://github.com/devspace-cloud/devspace-templates.git"
 
 // DockerfileRepoPath is the path relative to the user folder where the docker file repo is stored
 const DockerfileRepoPath = ".devspace/dockerfileRepo"

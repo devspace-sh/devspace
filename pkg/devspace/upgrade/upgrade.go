@@ -16,7 +16,7 @@ import (
 var version string
 var rawVersion string
 
-var githubSlug = "devspace-cloud/devspace"
+var githubSlug = "loft-sh/devspace"
 var reVersion = regexp.MustCompile(`\d+\.\d+\.\d+`)
 
 func eraseVersionPrefix(version string) (string, error) {

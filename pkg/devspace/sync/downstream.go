@@ -249,7 +249,7 @@ func (d *downstream) downloadFiles(writer io.WriteCloser, changes []*remote.Chan
 	// Print log message
 	if len(changes) <= 3 || d.sync.Options.Verbose {
 		for _, element := range changes {
-			d.sync.log.Infof("Downstream - Download file '.%s', size: %d", element.Path, element.Size)
+			d.sync.log.Infof("Downstream - Download file '.%s', uncompressed: ~%0.2f KB", element.Path, float64(element.Size)/1024.0)
 		}
 	} else if len(changes) > 3 {
 		filesize := int64(0)
@@ -257,7 +257,7 @@ func (d *downstream) downloadFiles(writer io.WriteCloser, changes []*remote.Chan
 			filesize += v.Size
 		}
 
-		d.sync.log.Infof("Downstream - Download %d files (size: %d)", len(changes), filesize)
+		d.sync.log.Infof("Downstream - Download %d file(s) (Uncompressed: ~%0.2f KB)", len(changes), float64(filesize)/1024.0)
 	}
 
 	// Create new download client
