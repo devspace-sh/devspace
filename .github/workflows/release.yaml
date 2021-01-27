@@ -24,10 +24,10 @@ jobs:
   test-linux:
     runs-on: ubuntu-18.04
     steps:
-      - name: Set up Go 1.15
+      - name: Set up Go
         uses: actions/setup-go@v1
         with:
-          go-version: 1.15
+          go-version: 1.16beta1
       - name: Check out code into the Go module directory
         uses: actions/checkout@v1
       - name: Test
@@ -36,10 +36,10 @@ jobs:
     if: github.ref != 'refs/heads/master'
     runs-on: windows-2019
     steps:
-      - name: Set up Go 1.15
+      - name: Set up Go
         uses: actions/setup-go@v1
         with:
-          go-version: 1.15
+          go-version: 1.16beta1
       - name: Check out code into the Go module directory
         uses: actions/checkout@v1
       - name: Test
@@ -78,10 +78,10 @@ jobs:
     needs: [ release-ui ]
     runs-on: macOS-latest
     steps:
-      - name: Set up Go 1.15
+      - name: Set up Go
         uses: actions/setup-go@v1
         with:
-          go-version: 1.15
+          go-version: 1.16beta1
       - name: install-go-bindata
         run: go get -u github.com/go-bindata/go-bindata/...
         env:

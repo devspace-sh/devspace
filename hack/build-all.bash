@@ -36,7 +36,7 @@ if [[ -z "${DEVSPACE_BUILD_PLATFORMS}" ]]; then
 fi
 
 if [[ -z "${DEVSPACE_BUILD_ARCHS}" ]]; then
-    DEVSPACE_BUILD_ARCHS="amd64 386"
+    DEVSPACE_BUILD_ARCHS="amd64 386 arm64"
 fi
 
 # Create the release directory
@@ -69,15 +69,22 @@ for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
     if [[ "${OS}" == "windows" ]]; then
       NAME="${NAME}.exe"
     fi
-
+    
+    # darwin 386 is deprecated and shouldn't be used anymore
     if [[ "${ARCH}" == "386" && "${OS}" == "darwin" ]]; then
-        # darwin 386 is deprecated and shouldn't be used anymore
         echo "Building for ${OS}/${ARCH} not supported."
-    else
-        echo "Building for ${OS}/${ARCH}"
-        GOARCH=${ARCH} GOOS=${OS} ${GO_BUILD_CMD} -ldflags "${GO_BUILD_LDFLAGS}"\
-            -o "${DEVSPACE_ROOT}/release/${NAME}" .
-        shasum -a 256 "${DEVSPACE_ROOT}/release/${NAME}" > "${DEVSPACE_ROOT}/release/${NAME}".sha256
+        continue
     fi
+    
+    # arm64 build is only supported for darwin
+    if [[ "${ARCH}" == "arm64" && "${OS}" != "darwin" ]]; then
+        echo "Building for ${OS}/${ARCH} not supported."
+        continue
+    fi
+
+    echo "Building for ${OS}/${ARCH}"
+    GOARCH=${ARCH} GOOS=${OS} ${GO_BUILD_CMD} -ldflags "${GO_BUILD_LDFLAGS}"\
+      -o "${DEVSPACE_ROOT}/release/${NAME}" .
+    shasum -a 256 "${DEVSPACE_ROOT}/release/${NAME}" > "${DEVSPACE_ROOT}/release/${NAME}".sha256
   done
 done
