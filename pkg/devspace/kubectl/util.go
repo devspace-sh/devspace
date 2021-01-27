@@ -177,6 +177,11 @@ func CompareImageNames(image1 string, image2 string) bool {
 	}
 
 	if tagStrippedImage1 != image1 {
+		// In the case that the tag is latest and we find an image that has no tag
+		if tagStrippedImage1+":latest" == image1 && tagStrippedImage2 == image2 {
+			return true
+		}
+
 		// if the tag consists of a # we build a regex
 		if strings.Index(image1, "#") != -1 {
 			regex := "^" + strings.Replace(image1, "#", "[a-zA-Z]", -1) + "$"
