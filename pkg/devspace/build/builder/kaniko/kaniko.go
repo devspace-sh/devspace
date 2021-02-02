@@ -252,7 +252,6 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 		log.StartWait("Uploading files to build container")
 		buildCtx, err := archive.TarWithOptions(contextPath, &archive.TarOptions{
-			Compression:     archive.Gzip,
 			ExcludePatterns: ignoreRules,
 			ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
 		})
@@ -261,9 +260,13 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 
 		// Copy complete context
-		err = b.helper.KubeClient.CopyFromReader(buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, buildCtx)
+		_, stderr, err := b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"tar", "xp", "-C", kanikoContextPath + "/."}, buildCtx)
 		if err != nil {
-			return errors.Errorf("error uploading context to container: %v", err)
+			if stderr != nil {
+				return errors.Errorf("copy context: error executing tar: %s: %v", string(stderr), err)
+			}
+
+			return errors.Wrap(err, "copy context")
 		}
 
 		// Copy dockerfile
