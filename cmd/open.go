@@ -354,7 +354,7 @@ func (cmd *OpenCmd) getService(client kubectl.Client, namespace, host string, ge
 			continue
 		}
 
-		if service.Spec.Type == v1.ServiceTypeClusterIP {
+		if service.Spec.Type == v1.ServiceTypeClusterIP || service.Spec.Type == v1.ServiceTypeLoadBalancer {
 			if service.Spec.ClusterIP == "None" {
 				continue
 			}
