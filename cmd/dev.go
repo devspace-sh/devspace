@@ -1,14 +1,15 @@
 package cmd
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-	"github.com/loft-sh/devspace/pkg/devspace/server"
-	"github.com/loft-sh/devspace/pkg/devspace/services"
-	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/server"
+	"github.com/loft-sh/devspace/pkg/devspace/services"
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
@@ -57,7 +58,8 @@ type DevCmd struct {
 	VerboseSync     bool
 	PrintSyncLog    bool
 
-	UI bool
+	UI     bool
+	UIPort int
 
 	Terminal         bool
 	WorkingDirectory string
@@ -117,6 +119,7 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 
 	devCmd.Flags().BoolVar(&cmd.UI, "ui", true, "Start the ui server")
+	devCmd.Flags().IntVar(&cmd.UIPort, "ui-port", 0, "The port to use when opening the ui server")
 	devCmd.Flags().BoolVar(&cmd.Open, "open", true, "Open defined URLs in the browser, if defined")
 	devCmd.Flags().BoolVar(&cmd.Sync, "sync", true, "Enable code synchronization")
 	devCmd.Flags().BoolVar(&cmd.VerboseSync, "verbose-sync", false, "When enabled the sync will log every file change")
@@ -404,8 +407,13 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 		logger.StartWait("Starting the ui server...")
 		defer logger.StopWait()
 
+		var port *int
+		if cmd.UIPort != 0 {
+			port = &cmd.UIPort
+		}
+
 		// Create server
-		server, err := server.NewServer(cmd.configLoader, config, generatedConfig, "localhost", false, client.CurrentContext(), client.Namespace(), nil, logger)
+		server, err := server.NewServer(cmd.configLoader, config, generatedConfig, "localhost", false, client.CurrentContext(), client.Namespace(), port, logger)
 		if err != nil {
 			logger.Warnf("Couldn't start UI server: %v", err)
 		} else {
