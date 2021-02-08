@@ -106,7 +106,11 @@ func testGetProfiles(testCase getProfilesTestCase, t *testing.T) {
 			ConfigPath: testCase.configPath,
 		},
 	}
-	profiles, err := loader.GetProfiles()
+	profileObjects, err := loader.GetProfiles()
+	profiles := []string{}
+	for _, p := range profileObjects {
+		profiles = append(profiles, p.Name)
+	}
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Error in testCase %s", testCase.name)
