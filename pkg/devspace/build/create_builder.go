@@ -39,7 +39,7 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 
 		log.StartWait("Creating kaniko builder")
 		defer log.StopWait()
-		builder, err = kaniko.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTags, options.IsDev, log)
+		builder, err = kaniko.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTags, log)
 		if err != nil {
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
 		}
@@ -76,7 +76,7 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 			return c.createBuilder(imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTags, options, log)
 		}
 
-		builder, err = docker.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTags, options.SkipPush, options.IsDev)
+		builder, err = docker.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes)
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker builder: %v", err)
 		}

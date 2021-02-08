@@ -23,11 +23,11 @@ type imageNameAndTag struct {
 
 // Options describe how images should be build
 type Options struct {
-	SkipPush                 bool
-	IsDev                    bool
-	ForceRebuild             bool
-	Sequential               bool
-	IgnoreContextPathChanges bool
+	SkipPush                  bool
+	SkipPushOnLocalKubernetes bool
+	ForceRebuild              bool
+	Sequential                bool
+	IgnoreContextPathChanges  bool
 }
 
 // Controller is the main building interface

@@ -61,7 +61,7 @@ type Builder struct {
 const waitTimeout = 20 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(config *latest.Config, dockerClient docker.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, isDev bool, log logpkg.Logger) (builder.Interface, error) {
+func NewBuilder(config *latest.Config, dockerClient docker.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, log logpkg.Logger) (builder.Interface, error) {
 	buildNamespace := kubeClient.Namespace()
 	if imageConf.Build.Kaniko.Namespace != "" {
 		buildNamespace = imageConf.Build.Kaniko.Namespace
@@ -85,7 +85,7 @@ func NewBuilder(config *latest.Config, dockerClient docker.Client, kubeClient ku
 		allowInsecureRegistry: allowInsecurePush,
 
 		dockerClient: dockerClient,
-		helper:       helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags, isDev),
+		helper:       helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags),
 	}
 
 	// create pull secret

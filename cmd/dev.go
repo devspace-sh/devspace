@@ -39,6 +39,7 @@ type DevCmd struct {
 	*flags.GlobalFlags
 
 	SkipPush                bool
+	SkipPushLocalKubernetes bool
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 	Open                    bool
@@ -115,6 +116,7 @@ Open terminal instead of logs:
 
 	devCmd.Flags().BoolVarP(&cmd.SkipPipeline, "skip-pipeline", "x", false, "Skips build & deployment and only starts sync, portforwarding & terminal")
 	devCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
+	devCmd.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", true, "Skips image pushing, if a local kubernetes environment is detected")
 
 	devCmd.Flags().BoolVar(&cmd.UI, "ui", true, "Start the ui server")
 	devCmd.Flags().BoolVar(&cmd.Open, "open", true, "Open defined URLs in the browser, if defined")
@@ -265,8 +267,8 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 
 		// Dependencies
 		err = manager.DeployAll(dependency.DeployOptions{
-			SkipPush:                cmd.SkipPush,
 			ForceDeployDependencies: cmd.ForceDependencies,
+			SkipPush:                cmd.SkipPush,
 			SkipBuild:               cmd.SkipBuild,
 			ForceBuild:              cmd.ForceBuild,
 			ForceDeploy:             cmd.ForceDeploy,
@@ -280,11 +282,11 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 		builtImages := make(map[string]string)
 		if cmd.SkipBuild == false {
 			builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
-				SkipPush:                 cmd.SkipPush,
-				IsDev:                    true,
-				ForceRebuild:             cmd.ForceBuild,
-				Sequential:               cmd.BuildSequential,
-				IgnoreContextPathChanges: skipBuildIfAlreadyBuilt,
+				SkipPush:                  cmd.SkipPush,
+				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
+				ForceRebuild:              cmd.ForceBuild,
+				Sequential:                cmd.BuildSequential,
+				IgnoreContextPathChanges:  skipBuildIfAlreadyBuilt,
 			}, cmd.log)
 			if err != nil {
 				if strings.Index(err.Error(), "no space left on device") != -1 {
@@ -693,6 +695,18 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 			} else if imageConf.Entrypoint == nil && imageConf.Cmd == nil {
 				imageConf.Entrypoint = []string{"sleep"}
 				imageConf.Cmd = []string{"999999999"}
+			}
+
+			for imageConfName, imageOverrideConfig := range config.Images {
+				if imageConf.Name == imageConfName {
+					if imageConf.Entrypoint != nil {
+						imageOverrideConfig.Entrypoint = imageConf.Entrypoint
+					}
+					if imageConf.Cmd != nil {
+						imageOverrideConfig.Cmd = imageConf.Cmd
+					}
+					break
+				}
 			}
 
 			if imageConf.Entrypoint != nil && imageConf.Cmd != nil {

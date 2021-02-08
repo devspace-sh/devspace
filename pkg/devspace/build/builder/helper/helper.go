@@ -30,7 +30,6 @@ type BuildHelper struct {
 	Entrypoint []string
 	Cmd        []string
 
-	IsDev      bool
 	KubeClient kubectl.Client
 }
 
@@ -40,7 +39,7 @@ type BuildHelperInterface interface {
 }
 
 // NewBuildHelper creates a new build helper for a certain engine
-func NewBuildHelper(config *latest.Config, kubeClient kubectl.Client, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, isDev bool) *BuildHelper {
+func NewBuildHelper(config *latest.Config, kubeClient kubectl.Client, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string) *BuildHelper {
 	var (
 		dockerfilePath, contextPath = GetDockerfileAndContext(imageConf)
 		imageName                   = imageConf.Image
@@ -51,22 +50,11 @@ func NewBuildHelper(config *latest.Config, kubeClient kubectl.Client, engineName
 		entrypoint []string
 		cmd        []string
 	)
-	if isDev {
-		if config.Dev != nil && config.Dev.Interactive != nil {
-			for _, imageOverrideConfig := range config.Dev.Interactive.Images {
-				if imageOverrideConfig.Name == imageConfigName {
-					entrypoint = imageOverrideConfig.Entrypoint
-					cmd = imageOverrideConfig.Cmd
-					break
-				}
-			}
-		}
-	}
 
-	if entrypoint == nil && imageConf.Entrypoint != nil {
+	if imageConf.Entrypoint != nil {
 		entrypoint = imageConf.Entrypoint
 	}
-	if cmd == nil && imageConf.Cmd != nil {
+	if imageConf.Cmd != nil {
 		cmd = imageConf.Cmd
 	}
 
@@ -85,7 +73,6 @@ func NewBuildHelper(config *latest.Config, kubeClient kubectl.Client, engineName
 		Cmd:        cmd,
 		Config:     config,
 
-		IsDev:      isDev,
 		KubeClient: kubeClient,
 	}
 }
