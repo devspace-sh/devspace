@@ -841,6 +841,7 @@ const (
 // ProfileConfig defines a profile config
 type ProfileConfig struct {
 	Name           string                  `yaml:"name" json:"name"`
+	Description    string                  `yaml:"description" json:"description"`
 	Parent         string                  `yaml:"parent,omitempty" json:"parent,omitempty"`
 	Parents        []*ProfileParent        `yaml:"parents,omitempty" json:"parents,omitempty"`
 	Patches        []*PatchConfig          `yaml:"patches,omitempty" json:"patches,omitempty"`

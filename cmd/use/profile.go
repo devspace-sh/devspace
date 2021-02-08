@@ -56,9 +56,14 @@ func (cmd *ProfileCmd) RunUseProfile(f factory.Factory, cobraCmd *cobra.Command,
 		return errors.New(message.ConfigNotFound)
 	}
 
-	profiles, err := configLoader.GetProfiles()
+	profileObjects, err := configLoader.GetProfiles()
 	if err != nil {
 		return err
+	}
+
+	profiles := []string{}
+	for _, p := range profileObjects {
+		profiles = append(profiles, p.Name)
 	}
 
 	profileName := ""

@@ -29,7 +29,7 @@ func varMatchFn(path, key, value string) bool {
 }
 
 // GetProfiles retrieves all available profiles
-func (l *configLoader) GetProfiles() ([]string, error) {
+func (l *configLoader) GetProfiles() ([]*latest.ProfileConfig, error) {
 	path := l.ConfigPath()
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -47,22 +47,27 @@ func (l *configLoader) GetProfiles() ([]string, error) {
 		profiles = []interface{}{}
 	}
 
-	profileNames := []string{}
+	retProfiles := []*latest.ProfileConfig{}
 	for _, profile := range profiles {
 		profileMap, ok := profile.(map[interface{}]interface{})
 		if !ok {
 			continue
 		}
 
-		name, ok := profileMap["name"].(string)
-		if !ok {
+		profileConfig := &latest.ProfileConfig{}
+		o, err := yaml.Marshal(profileMap)
+		if err != nil {
+			continue
+		}
+		err = yaml.Unmarshal(o, profileConfig)
+		if err != nil {
 			continue
 		}
 
-		profileNames = append(profileNames, name)
+		retProfiles = append(retProfiles, profileConfig)
 	}
 
-	return profileNames, nil
+	return retProfiles, nil
 }
 
 // ParseCommands fills the variables in the data and parses the commands
