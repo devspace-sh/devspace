@@ -44,7 +44,6 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
       --chart string                                   A helm chart to deploy (e.g. ./chart or stable/mysql)
       --chart-repo string                              The helm chart repository url to use
       --chart-version string                           The helm chart version to use
-      --component devspace list available-components   A predefined component to use (run devspace list available-components to see all available components)
       --context string                                 
       --dockerfile string                              A dockerfile
   -h, --help                                           help for deployment

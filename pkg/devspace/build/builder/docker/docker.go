@@ -47,17 +47,19 @@ var (
 type Builder struct {
 	helper *helper.BuildHelper
 
-	authConfig *types.AuthConfig
-	client     dockerclient.Client
-	skipPush   bool
+	authConfig                *types.AuthConfig
+	client                    dockerclient.Client
+	skipPush                  bool
+	skipPushOnLocalKubernetes bool
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config *latest.Config, client dockerclient.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, isDev bool) (*Builder, error) {
+func NewBuilder(config *latest.Config, client dockerclient.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
 	return &Builder{
-		helper:   helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags, isDev),
-		client:   client,
-		skipPush: skipPush,
+		helper:                    helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags),
+		client:                    client,
+		skipPush:                  skipPush,
+		skipPushOnLocalKubernetes: skipPushOnLocalKubernetes,
 	}, nil
 }
 
@@ -89,10 +91,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// We skip pushing when it is the minikube client
-	if b.helper.ImageConf == nil || b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.PreferMinikube == nil || *b.helper.ImageConf.Build.Docker.PreferMinikube == true {
-		if b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
-			b.skipPush = true
-		}
+	if b.skipPushOnLocalKubernetes && b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
+		b.skipPush = true
 	}
 
 	// Authenticate

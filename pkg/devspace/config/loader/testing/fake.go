@@ -99,14 +99,8 @@ func (f *FakeConfigLoader) LoadWithoutProfile() (*latest.Config, error) {
 }
 
 // GetProfiles implements interface
-func (f *FakeConfigLoader) GetProfiles() ([]string, error) {
-	profiles := []string{}
-
-	for _, profile := range f.Config.Profiles {
-		profiles = append(profiles, profile.Name)
-	}
-
-	return profiles, nil
+func (f *FakeConfigLoader) GetProfiles() ([]*latest.ProfileConfig, error) {
+	return f.Config.Profiles, nil
 }
 
 // ParseCommands implements interface

@@ -62,14 +62,16 @@ func (cmd *profilesCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 	headerColumnNames := []string{
 		"Name",
 		"Active",
+		"Description",
 	}
 
 	configRows := make([][]string, 0, len(profiles))
 
 	for _, profile := range profiles {
 		configRows = append(configRows, []string{
-			profile,
-			strconv.FormatBool(profile == generatedConfig.ActiveProfile),
+			profile.Name,
+			strconv.FormatBool(profile.Name == generatedConfig.ActiveProfile),
+			profile.Description,
 		})
 	}
 

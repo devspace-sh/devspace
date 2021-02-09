@@ -29,7 +29,7 @@ type ConfigLoader interface {
 	LoadWithoutProfile() (*latest.Config, error)
 
 	ConfigPath() string
-	GetProfiles() ([]string, error)
+	GetProfiles() ([]*latest.ProfileConfig, error)
 	ParseCommands() ([]*latest.CommandConfig, error)
 
 	ResolvedVars() map[string]string

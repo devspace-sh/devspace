@@ -180,7 +180,8 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 	d.Log.StartWait("Deleting manifests with kubectl")
 	defer d.Log.StopWait()
 
-	for _, manifest := range d.Manifests {
+	for i := len(d.Manifests) - 1; i >= 0; i-- {
+		manifest := d.Manifests[i]
 		_, replacedManifest, err := d.getReplacedManifest(manifest, cache, nil)
 		if err != nil {
 			return err
