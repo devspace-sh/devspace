@@ -288,11 +288,22 @@ type KanikoAdditionalMountKeyToPath struct {
 
 // CustomConfig tells the DevSpace CLI to build with a custom build script
 type CustomConfig struct {
-	Command    string   `yaml:"command,omitempty" json:"command,omitempty"`
-	AppendArgs []string `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty"`
-	Args       []string `yaml:"args,omitempty" json:"args,omitempty"`
-	ImageFlag  string   `yaml:"imageFlag,omitempty" json:"imageFlag,omitempty"`
-	OnChange   []string `yaml:"onChange,omitempty" json:"onChange,omitempty"`
+	Command  string                `yaml:"command,omitempty" json:"command,omitempty"`
+	Commands []CustomConfigCommand `yaml:"commands,omitempty" json:"commands,omitempty"`
+
+	Args         []string `yaml:"args,omitempty" json:"args,omitempty"`
+	AppendArgs   []string `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty"`
+	ImageFlag    string   `yaml:"imageFlag,omitempty" json:"imageFlag,omitempty"`
+	ImageTagOnly bool     `yaml:"imageTagOnly,omitempty" json:"imageTagOnly,omitempty"`
+	SkipImageArg bool     `yaml:"skipImageArg,omitempty" json:"skipImageArg,omitempty"`
+
+	OnChange []string `yaml:"onChange,omitempty" json:"onChange,omitempty"`
+}
+
+// CustomConfigCommand holds the information about a command on a specific operating system
+type CustomConfigCommand struct {
+	Command         string `yaml:"command,omitempty" json:"command,omitempty"`
+	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
 }
 
 // BuildOptions defines options for building Docker images

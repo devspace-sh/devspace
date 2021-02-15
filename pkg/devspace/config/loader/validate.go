@@ -1,7 +1,6 @@
 package loader
 
 import (
-	fmt "fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm/merge"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -174,11 +173,8 @@ func validateImages(config *latest.Config) error {
 		if imageConf.Image == "" {
 			return errors.Errorf("images.%s.image is required", imageConfigName)
 		}
-		if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == "" {
-			return errors.Errorf("images.%s.build.custom.command is required", imageConfigName)
-		}
-		if imageConf.Image == "" {
-			return fmt.Errorf("images.%s.image is required", imageConfigName)
+		if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == "" && len(imageConf.Build.Custom.Commands) == 0 {
+			return errors.Errorf("images.%s.build.custom.command or images.%s.build.custom.commands is required", imageConfigName, imageConfigName)
 		}
 		if images[imageConf.Image] {
 			return errors.Errorf("multiple image definitions with the same image name are not allowed")
