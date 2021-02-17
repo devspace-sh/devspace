@@ -324,6 +324,7 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Do the request
