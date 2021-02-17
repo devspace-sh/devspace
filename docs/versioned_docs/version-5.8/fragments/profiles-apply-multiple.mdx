@@ -1,0 +1,14 @@
+:::tip Apply Multiple Profiles with Flags
+
+It is possible to apply multiple profiles in a single command with the `--profile-parent` flag. This flag can take one or multiple profiles that will be applied **before** the actual profile in the order that they are specified. 
+If no `--profile` flag is given the last specfied `--profile-parent` will be last profile that is applied to the configuration.
+
+Example:
+```
+# Apply profile1, profile2 and profile3 in this order
+devspace print --profile-parent profile1 --profile-parent profile2 --profile profile3
+# Without the --profile flag will have the same output as above
+devspace print --profile-parent profile1 --profile-parent profile2 --profile-parent profile3
+```
+
+:::
