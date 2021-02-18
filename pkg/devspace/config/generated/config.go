@@ -75,25 +75,29 @@ func (l *configLoader) LoadFromPath(path string) (*Config, error) {
 	}
 
 	// Decrypt vars if necessary
-	for k, v := range loadedConfig.Vars {
-		if len(v) == 0 {
-			continue
+	if loadedConfig.VarsEncrypted {
+		for k, v := range loadedConfig.Vars {
+			if len(v) == 0 {
+				continue
+			}
+
+			decoded, err := base64.StdEncoding.DecodeString(v)
+			if err != nil {
+				// seems like not encrypted
+				continue
+			}
+
+			decrypted, err := encryption.DecryptAES([]byte(EncryptionKey), decoded)
+			if err != nil {
+				// we cannot decrypt the variable, so we will ask the user again
+				delete(loadedConfig.Vars, k)
+				continue
+			}
+
+			loadedConfig.Vars[k] = string(decrypted)
 		}
 
-		decoded, err := base64.StdEncoding.DecodeString(v)
-		if err != nil {
-			// seems like not encrypted
-			continue
-		}
-
-		decrypted, err := encryption.DecryptAES([]byte(EncryptionKey), decoded)
-		if err != nil {
-			// we cannot decrypt the variable, so we will ask the user again
-			delete(loadedConfig.Vars, k)
-			continue
-		}
-
-		loadedConfig.Vars[k] = string(decrypted)
+		loadedConfig.VarsEncrypted = false
 	}
 
 	return loadedConfig, nil
@@ -127,6 +131,8 @@ func (l *configLoader) Save(config *Config) error {
 
 			copiedConfig.Vars[k] = base64.StdEncoding.EncodeToString(encrypted)
 		}
+
+		copiedConfig.VarsEncrypted = true
 	}
 
 	// marshal again with the encrypted vars
