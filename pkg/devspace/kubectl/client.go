@@ -28,33 +28,69 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// Client holds all kubect functions
+// Client holds all kubernetes related functions
 type Client interface {
+	// Returns the current kube context name
 	CurrentContext() string
+
+	// Returns an interface to a kube client
 	KubeClient() kubernetes.Interface
+
+	// Returns the default namespace of the kube context
 	Namespace() string
+
+	// Returns the underlying kube rest config
 	RestConfig() *rest.Config
+
+	// Returns the kube config loader interface
 	KubeConfigLoader() kubeconfig.Loader
 
+	// This function will print a warning if the generated config contains a different last kube context / namespace
+	// than the one that is used currently
 	PrintWarning(generatedConfig *generated.Config, noWarning, shouldWait bool, log log.Logger) error
+
+	// Copies and extracts files into the container from the reader interface
 	CopyFromReader(pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error
+
+	// Copies and extracts files into the container from the local path excluding the ones specified
+	// in the exclude array.
 	Copy(pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error
 
+	// Starts a new exec request with given options and custom transport
 	ExecStreamWithTransport(options *ExecStreamWithTransportOptions) error
+
+	// Starts a new exec request with given options
 	ExecStream(options *ExecStreamOptions) error
+
+	// Starts a new exec request, waits for it to finish and returns the stdout and stderr to the caller
 	ExecBuffered(pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error)
 
+	// Executes a generic kubernetes api request and returns the response as a string
 	GenericRequest(options *GenericRequestOptions) (string, error)
 
+	// Starts a new logs request to the given pod and container
 	ReadLogs(namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error)
+
+	// Starts a new logs request to the given pod and container and returns a ReadCloser interface
+	// to allow continous reading. Can also follow a log if specified.
 	Logs(ctx context.Context, namespace, podName, containerName string, lastContainerLog bool, tail *int64, follow bool) (io.ReadCloser, error)
 
+	// Creates a new round tripper and upgrade wrapper for the current kube config
 	GetUpgraderWrapper() (http.RoundTripper, UpgraderWrapper, error)
 
+	// Ensures the config names exist and if not creates them
 	EnsureDeployNamespaces(config *latest.Config, log log.Logger) error
+
+	// Ensures a google cloud cluster role binding is created in GKE like clusters
 	EnsureGoogleCloudClusterRoleBinding(log log.Logger) error
+
+	// Creates a new port forwarder object for the current kube context to the given pod
 	NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}, errorChan chan error) (*portforward.PortForwarder, error)
+
+	// Returns true if a local kubernetes installation such as minikube is detected
 	IsLocalKubernetes() bool
+
+	// Returns true if in cluster kubernetes configuration is detected
 	IsInCluster() bool
 }
 

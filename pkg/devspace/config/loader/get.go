@@ -105,7 +105,7 @@ func (l *configLoader) RestoreLoadSave(client kubectl.Client) (*latest.Config, e
 
 	// save vars if wanted
 	if client != nil && l.options.SaveVars {
-		err = SaveVarsInSecret(client, generatedConfig.Vars, l.options.VarsSecretName)
+		err = SaveVarsInSecret(client, generatedConfig.Vars, l.options.VarsSecretName, l.log)
 		if err != nil {
 			return nil, errors.Wrap(err, "save vars")
 		}

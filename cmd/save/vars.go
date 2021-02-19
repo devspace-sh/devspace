@@ -98,7 +98,7 @@ func (cmd *varsCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	}
 
 	// save the vars into the kubernetes secret
-	err = loader.SaveVarsInSecret(client, generatedConfig.Vars, cmd.SecretName)
+	err = loader.SaveVarsInSecret(client, generatedConfig.Vars, cmd.SecretName, logger)
 	if err != nil {
 		return err
 	}
