@@ -217,7 +217,7 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 
 	// save vars if wanted
 	if cmd.SaveVars {
-		err = loader.SaveVarsInSecret(client, generatedConfig.Vars, cmd.VarsSecretName)
+		err = loader.SaveVarsInSecret(client, generatedConfig.Vars, cmd.VarsSecretName, cmd.log)
 		if err != nil {
 			return errors.Wrap(err, "save vars")
 		}

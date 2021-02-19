@@ -216,20 +216,27 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 				}
 
 				return false, err
-			} else if len(buildPod.Status.InitContainerStatuses) > 0 && buildPod.Status.InitContainerStatuses[0].State.Terminated != nil {
-				errorLog := ""
-				reader, _ := b.helper.KubeClient.Logs(context.TODO(), b.BuildNamespace, buildPodCreated.Name, buildPod.Spec.InitContainers[0].Name, false, nil, false)
-				if reader != nil {
-					out, err := ioutil.ReadAll(reader)
-					if err == nil {
-						errorLog = string(out)
+			} else if len(buildPod.Status.InitContainerStatuses) > 0 {
+				status := buildPod.Status.InitContainerStatuses[0]
+				if status.State.Terminated != nil {
+					errorLog := ""
+					reader, _ := b.helper.KubeClient.Logs(context.TODO(), b.BuildNamespace, buildPodCreated.Name, buildPod.Spec.InitContainers[0].Name, false, nil, false)
+					if reader != nil {
+						out, err := ioutil.ReadAll(reader)
+						if err == nil {
+							errorLog = string(out)
+						}
+					}
+					if errorLog == "" {
+						errorLog = buildPod.Status.InitContainerStatuses[0].State.Terminated.Message
+					}
+
+					return false, fmt.Errorf("kaniko init container %s/%s has unexpectedly exited with code %d: %s", buildPod.Namespace, buildPod.Name, buildPod.Status.InitContainerStatuses[0].State.Terminated.ExitCode, errorLog)
+				} else if status.State.Waiting != nil {
+					if kubectl.CriticalStatus[status.State.Waiting.Reason] {
+						return false, fmt.Errorf("kaniko init container %s/%s cannot start: %s (%s)", buildPod.Namespace, buildPod.Name, status.State.Waiting.Message, status.State.Waiting.Reason)
 					}
 				}
-				if errorLog == "" {
-					errorLog = buildPod.Status.InitContainerStatuses[0].State.Terminated.Message
-				}
-
-				return false, fmt.Errorf("kaniko init container %s/%s has unexpectedly exited with code %d: %s", buildPod.Namespace, buildPod.Name, buildPod.Status.InitContainerStatuses[0].State.Terminated.ExitCode, errorLog)
 			}
 
 			return len(buildPod.Status.InitContainerStatuses) > 0 && buildPod.Status.InitContainerStatuses[0].State.Running != nil, nil
@@ -340,20 +347,27 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 				}
 
 				return false, err
-			} else if len(buildPod.Status.ContainerStatuses) > 0 && buildPod.Status.ContainerStatuses[0].State.Terminated != nil {
-				errorLog := ""
-				reader, _ := b.helper.KubeClient.Logs(context.TODO(), b.BuildNamespace, buildPodCreated.Name, buildPod.Spec.Containers[0].Name, false, nil, false)
-				if reader != nil {
-					out, err := ioutil.ReadAll(reader)
-					if err == nil {
-						errorLog = string(out)
+			} else if len(buildPod.Status.ContainerStatuses) > 0 {
+				status := buildPod.Status.ContainerStatuses[0]
+				if status.State.Terminated != nil {
+					errorLog := ""
+					reader, _ := b.helper.KubeClient.Logs(context.TODO(), b.BuildNamespace, buildPodCreated.Name, status.Name, false, nil, false)
+					if reader != nil {
+						out, err := ioutil.ReadAll(reader)
+						if err == nil {
+							errorLog = string(out)
+						}
+					}
+					if errorLog == "" {
+						errorLog = buildPod.Status.ContainerStatuses[0].State.Terminated.Message
+					}
+
+					return false, fmt.Errorf("kaniko pod %s/%s has unexpectedly exited with code %d: %s", buildPod.Namespace, buildPod.Name, status.State.Terminated.ExitCode, errorLog)
+				} else if status.State.Waiting != nil {
+					if kubectl.CriticalStatus[status.State.Waiting.Reason] {
+						return false, fmt.Errorf("kaniko pod %s/%s cannot start: %s (%s)", buildPod.Namespace, buildPod.Name, status.State.Waiting.Message, status.State.Waiting.Reason)
 					}
 				}
-				if errorLog == "" {
-					errorLog = buildPod.Status.ContainerStatuses[0].State.Terminated.Message
-				}
-
-				return false, fmt.Errorf("kaniko pod %s/%s has unexpectedly exited with code %d: %s", buildPod.Namespace, buildPod.Name, buildPod.Status.ContainerStatuses[0].State.Terminated.ExitCode, errorLog)
 			}
 
 			return len(buildPod.Status.ContainerStatuses) > 0 && buildPod.Status.ContainerStatuses[0].Ready, nil

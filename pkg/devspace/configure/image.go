@@ -320,7 +320,19 @@ func (m *manager) getRegistryURL(dockerClient docker.Client) (string, error) {
 				break
 			}
 		} else {
-			return "", errors.Errorf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
+			m.log.Warnf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
+			answer, questionErr := m.log.Question(&survey.QuestionOptions{
+				Question: "Are you sure you want to use the registry '" + registryURL + "' even though the authentication failed?",
+				Options: []string{
+					"No",
+					"Yes",
+				},
+			})
+			if questionErr != nil {
+				return "", questionErr
+			} else if answer == "No" {
+				return "", errors.Errorf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
+			}
 		}
 	}
 

@@ -1,12 +1,18 @@
 package generated
 
 import (
+	"encoding/base64"
+	"github.com/loft-sh/devspace/pkg/util/encryption"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	yaml "gopkg.in/yaml.v2"
 )
+
+// EncryptionKey is the key to encrypt generated variables with. This will be compiled into the binary during the pipeline.
+// If empty DevSpace will not encrypt / decrypt the variables.
+var EncryptionKey string
 
 // ConfigPath is the relative generated config path
 var ConfigPath = ".devspace/generated.yaml"
@@ -68,6 +74,32 @@ func (l *configLoader) LoadFromPath(path string) (*Config, error) {
 		loadedConfig.OverrideProfile = nil
 	}
 
+	// Decrypt vars if necessary
+	if loadedConfig.VarsEncrypted {
+		for k, v := range loadedConfig.Vars {
+			if len(v) == 0 {
+				continue
+			}
+
+			decoded, err := base64.StdEncoding.DecodeString(v)
+			if err != nil {
+				// seems like not encrypted
+				continue
+			}
+
+			decrypted, err := encryption.DecryptAES([]byte(EncryptionKey), decoded)
+			if err != nil {
+				// we cannot decrypt the variable, so we will ask the user again
+				delete(loadedConfig.Vars, k)
+				continue
+			}
+
+			loadedConfig.Vars[k] = string(decrypted)
+		}
+
+		loadedConfig.VarsEncrypted = false
+	}
+
 	return loadedConfig, nil
 }
 
@@ -75,6 +107,36 @@ func (l *configLoader) LoadFromPath(path string) (*Config, error) {
 func (l *configLoader) Save(config *Config) error {
 	workdir, _ := os.Getwd()
 	data, err := yaml.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	copiedConfig := &Config{}
+	err = yaml.Unmarshal(data, copiedConfig)
+	if err != nil {
+		return err
+	}
+
+	// encrypt variables
+	if EncryptionKey != "" {
+		for k, v := range copiedConfig.Vars {
+			if len(v) == 0 {
+				continue
+			}
+
+			encrypted, err := encryption.EncryptAES([]byte(EncryptionKey), []byte(v))
+			if err != nil {
+				return err
+			}
+
+			copiedConfig.Vars[k] = base64.StdEncoding.EncodeToString(encrypted)
+		}
+
+		copiedConfig.VarsEncrypted = true
+	}
+
+	// marshal again with the encrypted vars
+	data, err = yaml.Marshal(copiedConfig)
 	if err != nil {
 		return err
 	}

@@ -96,6 +96,7 @@ jobs:
         run: ./hack/build-all.bash
         env:
           GOPATH: /Users/runner/work/devspace/go
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           ANALYTICS_TOKEN: ${{ secrets.ANALYTICS_TOKEN }}
           ANALYTICS_ENDPOINT_EVENT: ${{ secrets.ANALYTICS_ENDPOINT_EVENT }}
           ANALYTICS_ENDPOINT_USER: ${{ secrets.ANALYTICS_ENDPOINT_USER }}

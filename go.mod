@@ -3,6 +3,7 @@ module github.com/loft-sh/devspace
 go 1.15
 
 require (
+	github.com/AlecAivazis/survey/v2 v2.2.7
 	github.com/Microsoft/hcsshim v0.8.10 // indirect
 	github.com/agl/ed25519 v0.0.0-00010101000000-000000000000 // indirect
 	github.com/blang/semver v3.5.1+incompatible
@@ -58,7 +59,7 @@ require (
 	github.com/ulikunitz/xz v0.5.7 // indirect
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
 	google.golang.org/grpc v1.27.0
-	gopkg.in/AlecAivazis/survey.v1 v1.8.7
+	gopkg.in/AlecAivazis/survey.v1 v1.8.7 // indirect
 	gopkg.in/src-d/enry.v1 v1.6.4
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
