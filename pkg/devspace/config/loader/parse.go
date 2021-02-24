@@ -420,14 +420,15 @@ func (l *configLoader) fillVariable(varName string, definition *latest.Variable)
 
 func variableFromCommand(varName string, definition *latest.Variable) (interface{}, bool, error) {
 	writer := &bytes.Buffer{}
+	stdErrWriter := &bytes.Buffer{}
 	for _, c := range definition.Commands {
 		if command.ShouldExecuteOnOS(c.OperatingSystem) == false {
 			continue
 		}
 
-		err := command.ExecuteCommand(c.Command, c.Args, writer, nil)
+		err := command.ExecuteCommand(c.Command, c.Args, writer, stdErrWriter)
 		if err != nil {
-			return "", false, errors.Wrapf(err, "fill variable %s", varName)
+			return "", false, errors.Wrapf(err, "fill variable %s (stdout: %s, stderr: %s)", varName, string(writer.Bytes()), string(stdErrWriter.Bytes()))
 		} else if writer.String() == "" {
 			return definition.Default, true, nil
 		}
@@ -438,9 +439,9 @@ func variableFromCommand(varName string, definition *latest.Variable) (interface
 		return nil, false, errors.Errorf("couldn't set variable '%s', because source is '%s' but no command for this operating system is specified", varName, latest.VariableSourceCommand)
 	}
 
-	err := command.ExecuteCommand(definition.Command, definition.Args, writer, nil)
+	err := command.ExecuteCommand(definition.Command, definition.Args, writer, stdErrWriter)
 	if err != nil {
-		return "", false, errors.Wrapf(err, "fill variable %s", varName)
+		return "", false, errors.Wrapf(err, "fill variable %s (stdout: %s, stderr: %s)", varName, string(writer.Bytes()), string(stdErrWriter.Bytes()))
 	} else if writer.String() == "" {
 		return definition.Default, true, nil
 	}
