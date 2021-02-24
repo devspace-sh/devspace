@@ -10,6 +10,10 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+const (
+	DEVSPACE_DISABLE_VARS_ENCRYPTION_ENV = "DEVSPACE_DISABLE_VARS_ENCRYPTION"
+)
+
 // EncryptionKey is the key to encrypt generated variables with. This will be compiled into the binary during the pipeline.
 // If empty DevSpace will not encrypt / decrypt the variables.
 var EncryptionKey string
@@ -118,7 +122,7 @@ func (l *configLoader) Save(config *Config) error {
 	}
 
 	// encrypt variables
-	if EncryptionKey != "" {
+	if os.Getenv(DEVSPACE_DISABLE_VARS_ENCRYPTION_ENV) != "true" && EncryptionKey != "" {
 		for k, v := range copiedConfig.Vars {
 			if len(v) == 0 {
 				continue
