@@ -1,15 +1,13 @@
 package loader
 
 import (
-	"fmt"
-	"path/filepath"
-
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm/merge"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
-	yaml "gopkg.in/yaml.v2"
-
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/helm/merge"
-	"github.com/devspace-cloud/devspace/pkg/util/yamlutil"
+	"gopkg.in/yaml.v2"
+	"path/filepath"
 )
 
 // ValidInitialSyncStrategy checks if strategy is valid
@@ -23,36 +21,41 @@ func ValidInitialSyncStrategy(strategy latest.InitialSyncStrategy) bool {
 		strategy == latest.InitialSyncStrategyPreferNewest
 }
 
-func validate(config *latest.Config) error {
-	if config.Dev != nil {
-		if config.Dev.Ports != nil {
-			for index, port := range config.Dev.Ports {
-				if port.ImageName == "" && port.LabelSelector == nil {
-					return errors.Errorf("Error in config: imageName and label selector are nil in port config at index %d", index)
-				}
-				if len(port.PortMappings) == 0 && len(port.PortMappingsReverse) == 0 {
-					return errors.Errorf("Error in config: portMappings is empty in port config at index %d", index)
-				}
-			}
-		}
-
-		if config.Dev.Sync != nil {
-			for index, sync := range config.Dev.Sync {
-				if ValidInitialSyncStrategy(sync.InitialSync) == false {
-					return errors.Errorf("Error in config: sync.initialSync is not valid '%s' at index %d", sync.InitialSync, index)
-				}
-			}
-		}
-
-		if config.Dev.Interactive != nil {
-			for index, imageConf := range config.Dev.Interactive.Images {
-				if imageConf.Name == "" {
-					return errors.Errorf("Error in config: Unnamed interactive image config at index %d", index)
-				}
-			}
-		}
+func validate(config *latest.Config, log log.Logger) error {
+	err := validateImages(config)
+	if err != nil {
+		return err
 	}
 
+	err = validateDev(config)
+	if err != nil {
+		return err
+	}
+
+	err = validateHooks(config)
+	if err != nil {
+		return err
+	}
+
+	err = validateDeployments(config)
+	if err != nil {
+		return err
+	}
+
+	err = validatePullSecrets(config)
+	if err != nil {
+		return err
+	}
+
+	err = validateCommands(config)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateCommands(config *latest.Config) error {
 	for index, command := range config.Commands {
 		if command.Name == "" {
 			return errors.Errorf("commands[%d].name is required", index)
@@ -62,6 +65,10 @@ func validate(config *latest.Config) error {
 		}
 	}
 
+	return nil
+}
+
+func validateHooks(config *latest.Config) error {
 	for index, hookConfig := range config.Hooks {
 		if hookConfig.Command == "" && hookConfig.Upload == nil && hookConfig.Download == nil {
 			return errors.Errorf("hooks[%d].command, hooks[%d].download or hooks[%d].upload is required", index, index, index)
@@ -87,30 +94,10 @@ func validate(config *latest.Config) error {
 		}
 	}
 
-	// images lists all the image names in order to check for duplicates
-	images := map[string]bool{}
-	for imageConfigName, imageConf := range config.Images {
-		if imageConfigName == "" {
-			return errors.Errorf("images keys cannot be an empty string")
-		}
-		if imageConf == nil {
-			return errors.Errorf("images.%s is empty and should at least contain an image name", imageConfigName)
-		}
-		if imageConf.Image == "" {
-			return errors.Errorf("images.%s.image is required", imageConfigName)
-		}
-		if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == "" {
-			return errors.Errorf("images.%s.build.custom.command is required", imageConfigName)
-		}
-		if imageConf.Image == "" {
-			return fmt.Errorf("images.%s.image is required", imageConfigName)
-		}
-		if images[imageConf.Image] {
-			return errors.Errorf("multiple image definitions with the same image name are not allowed")
-		}
-		images[imageConf.Image] = true
-	}
+	return nil
+}
 
+func validateDeployments(config *latest.Config) error {
 	for index, deployConfig := range config.Deployments {
 		if deployConfig.Name == "" {
 			return errors.Errorf("deployments[%d].name is required", index)
@@ -160,6 +147,10 @@ func validate(config *latest.Config) error {
 		}
 	}
 
+	return nil
+}
+
+func validatePullSecrets(config *latest.Config) error {
 	for i, ps := range config.PullSecrets {
 		if ps.Registry == "" {
 			return errors.Errorf("pullSecrets[%d].registry: cannot be empty", i)
@@ -167,4 +158,82 @@ func validate(config *latest.Config) error {
 	}
 
 	return nil
+}
+
+func validateImages(config *latest.Config) error {
+	// images lists all the image names in order to check for duplicates
+	images := map[string]bool{}
+	for imageConfigName, imageConf := range config.Images {
+		if imageConfigName == "" {
+			return errors.Errorf("images keys cannot be an empty string")
+		}
+		if imageConf == nil {
+			return errors.Errorf("images.%s is empty and should at least contain an image name", imageConfigName)
+		}
+		if imageConf.Image == "" {
+			return errors.Errorf("images.%s.image is required", imageConfigName)
+		}
+		if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == "" && len(imageConf.Build.Custom.Commands) == 0 {
+			return errors.Errorf("images.%s.build.custom.command or images.%s.build.custom.commands is required", imageConfigName, imageConfigName)
+		}
+		if images[imageConf.Image] {
+			return errors.Errorf("multiple image definitions with the same image name are not allowed")
+		}
+		images[imageConf.Image] = true
+	}
+
+	return nil
+}
+
+func validateDev(config *latest.Config) error {
+	if config.Dev != nil {
+		if config.Dev.Ports != nil {
+			for index, port := range config.Dev.Ports {
+				// Validate imageName and label selector
+				if port.ImageName == "" && len(port.LabelSelector) == 0 {
+					return errors.Errorf("Error in config: imageName and label selector are nil in ports config at index %d", index)
+				} else if port.ImageName != "" && findImageName(config, port.ImageName) == false {
+					return errors.Errorf("Error in config: dev.ports[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, port.ImageName)
+				}
+
+				if len(port.PortMappings) == 0 && len(port.PortMappingsReverse) == 0 {
+					return errors.Errorf("Error in config: portMappings is empty in port config at index %d", index)
+				}
+			}
+		}
+
+		if config.Dev.Sync != nil {
+			for index, sync := range config.Dev.Sync {
+				// Validate imageName and label selector
+				if sync.ImageName == "" && len(sync.LabelSelector) == 0 {
+					return errors.Errorf("Error in config: imageName and label selector are nil in sync config at index %d", index)
+				} else if sync.ImageName != "" && findImageName(config, sync.ImageName) == false {
+					return errors.Errorf("Error in config: dev.sync[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, sync.ImageName)
+				}
+
+				// Validate initial sync strategy
+				if ValidInitialSyncStrategy(sync.InitialSync) == false {
+					return errors.Errorf("Error in config: sync.initialSync is not valid '%s' at index %d", sync.InitialSync, index)
+				}
+			}
+		}
+
+		if config.Dev.Interactive != nil {
+			for index, imageConf := range config.Dev.Interactive.Images {
+				if imageConf.Name == "" {
+					return errors.Errorf("Error in config: Unnamed interactive image config at index %d", index)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func findImageName(config *latest.Config, imageName string) bool {
+	if config.Images == nil {
+		return false
+	}
+
+	return config.Images[imageName] != nil
 }

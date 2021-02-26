@@ -8,12 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	fakekubeconfig "github.com/devspace-cloud/devspace/pkg/util/kubeconfig/testing"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	fakekubeconfig "github.com/loft-sh/devspace/pkg/util/kubeconfig/testing"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 	yaml "gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -43,10 +43,6 @@ func TestGetProfiles(t *testing.T) {
 			files: map[string]interface{}{
 				"custom.yaml": map[interface{}]interface{}{
 					"profiles": []interface{}{
-						"noMap",
-						map[interface{}]interface{}{
-							"description": "Has no name",
-						},
 						map[interface{}]interface{}{
 							"name": "myprofile",
 						},
@@ -106,7 +102,11 @@ func testGetProfiles(testCase getProfilesTestCase, t *testing.T) {
 			ConfigPath: testCase.configPath,
 		},
 	}
-	profiles, err := loader.GetProfiles()
+	profileObjects, err := loader.GetProfiles()
+	profiles := []string{}
+	for _, p := range profileObjects {
+		profiles = append(profiles, p.Name)
+	}
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -114,7 +114,7 @@ func testGetProfiles(testCase getProfilesTestCase, t *testing.T) {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 	}
 
-	assert.Equal(t, strings.Join(profiles, ", "), strings.Join(testCase.expectedProfiles, ", "), "Unexpected profiles in testCase %s", testCase.name)
+	assert.Equal(t, strings.Join(profiles, ","), strings.Join(testCase.expectedProfiles, ","), "Unexpected profiles in testCase %s", testCase.name)
 }
 
 type parseCommandsTestCase struct {

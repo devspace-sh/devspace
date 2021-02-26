@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 
 	"gotest.tools/assert"
@@ -135,7 +135,7 @@ func TestWatcher(t *testing.T) {
 		return nil
 	}
 
-	watcherObj, err := New(watchedPaths, []string{}, time.Millisecond * 10, callback, log.GetInstance())
+	watcherObj, err := New(watchedPaths, []string{}, time.Millisecond*10, callback, log.GetInstance())
 	if err != nil {
 		t.Fatalf("Error creating watcher: %v", err)
 	}

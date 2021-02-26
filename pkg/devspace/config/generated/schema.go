@@ -5,6 +5,7 @@ type Config struct {
 	OverrideProfile *string                 `yaml:"lastOverrideProfile,omitempty"`
 	ActiveProfile   string                  `yaml:"activeProfile,omitempty"`
 	Vars            map[string]string       `yaml:"vars,omitempty"`
+	VarsEncrypted   bool                    `yaml:"varsEncrypted,omitempty"`
 	Profiles        map[string]*CacheConfig `yaml:"profiles,omitempty"`
 }
 

@@ -1,15 +1,15 @@
 package v2
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/helm/generic"
+	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	"gopkg.in/yaml.v2"
 )
 

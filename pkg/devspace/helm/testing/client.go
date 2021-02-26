@@ -2,8 +2,8 @@ package v2
 
 import (
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	"time"
 )
 

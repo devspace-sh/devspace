@@ -3,16 +3,16 @@ package build
 import (
 	"context"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/custom"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/kaniko"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/custom"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 )
 
@@ -39,7 +39,7 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 
 		log.StartWait("Creating kaniko builder")
 		defer log.StopWait()
-		builder, err = kaniko.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTags, options.IsDev, log)
+		builder, err = kaniko.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTags, log)
 		if err != nil {
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
 		}
@@ -76,7 +76,7 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 			return c.createBuilder(imageConfigName, convertDockerConfigToKanikoConfig(imageConf), imageTags, options, log)
 		}
 
-		builder, err = docker.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTags, options.SkipPush, options.IsDev)
+		builder, err = docker.NewBuilder(c.config, dockerClient, c.client, imageConfigName, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes)
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker builder: %v", err)
 		}

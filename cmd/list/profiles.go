@@ -3,9 +3,9 @@ package list
 import (
 	"strconv"
 
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
@@ -62,14 +62,16 @@ func (cmd *profilesCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 	headerColumnNames := []string{
 		"Name",
 		"Active",
+		"Description",
 	}
 
 	configRows := make([][]string, 0, len(profiles))
 
 	for _, profile := range profiles {
 		configRows = append(configRows, []string{
-			profile,
-			strconv.FormatBool(profile == generatedConfig.ActiveProfile),
+			profile.Name,
+			strconv.FormatBool(profile.Name == generatedConfig.ActiveProfile),
+			profile.Description,
 		})
 	}
 

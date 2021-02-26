@@ -3,7 +3,7 @@ package log
 import (
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	"github.com/sirupsen/logrus"
 )

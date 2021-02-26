@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	"github.com/juju/errors"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	gitignore "github.com/sabhiram/go-gitignore"
 )
 

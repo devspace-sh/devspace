@@ -2,24 +2,24 @@ package versions
 
 import (
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha1"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha2"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha3"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1alpha4"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta1"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta2"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta3"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta4"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta5"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta6"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta7"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/v1beta8"
-	dependencyutil "github.com/devspace-cloud/devspace/pkg/devspace/dependency/util"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1alpha1"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1alpha2"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1alpha3"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1alpha4"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta1"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta2"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta3"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta4"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta5"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta6"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta7"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta8"
+	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"io/ioutil"
 	"path/filepath"
 
@@ -212,11 +212,15 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 	}
 
 	// Search for config
-	for _, profileMap := range profiles {
+	for i, profileMap := range profiles {
 		profileConfig := &latest.ProfileConfig{}
-		err := util.Convert(profileMap, &profileConfig)
+		o, err := yaml.Marshal(profileMap)
 		if err != nil {
 			return err
+		}
+		err = yaml.UnmarshalStrict(o, profileConfig)
+		if err != nil {
+			return fmt.Errorf("error parsing profile at profiles[%d]: %v", i, err)
 		}
 
 		configMap, ok := profileMap.(map[interface{}]interface{})

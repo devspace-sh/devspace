@@ -1,15 +1,15 @@
 package list
 
 import (
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer"
-	deployHelm "github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/helm"
-	deployKubectl "github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl"
-	helmtypes "github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
+	deployHelm "github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
+	deployKubectl "github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl"
+	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/message"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"

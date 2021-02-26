@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/util"
 	cliTypes "github.com/docker/cli/cli/config/types"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/registry"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	"github.com/pkg/errors"
 )
 

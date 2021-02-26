@@ -8,13 +8,14 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	v1 "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	v1 "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
 )
 
@@ -113,7 +114,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 			DefaultValue:      dockerUsername + "/" + imageName,
 			ValidationMessage: "Please enter a valid image name for Docker Hub (e.g. myregistry.com/user/repository | allowed charaters: /, a-z, 0-9)",
 			ValidationFunc: func(name string) error {
-				_, err := pullsecrets.GetStrippedDockerImageName(name)
+				_, err := kubectl.GetStrippedDockerImageName(name)
 				return err
 			},
 		})
@@ -121,7 +122,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 			return nil, err
 		}
 
-		imageName, _ = pullsecrets.GetStrippedDockerImageName(imageName)
+		imageName, _ = kubectl.GetStrippedDockerImageName(imageName)
 	} else if regexp.MustCompile("^(.+\\.)?gcr.io$").Match([]byte(registryURL)) { // Is google registry?
 		project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
 		gcloudProject := "myGCloudProject"
@@ -135,7 +136,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 			DefaultValue:      registryURL + "/" + gcloudProject + "/" + imageName,
 			ValidationMessage: "Please enter a valid Docker image name (e.g. myregistry.com/user/repository | allowed charaters: /, a-z, 0-9)",
 			ValidationFunc: func(name string) error {
-				_, err := pullsecrets.GetStrippedDockerImageName(name)
+				_, err := kubectl.GetStrippedDockerImageName(name)
 				return err
 			},
 		})
@@ -143,7 +144,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 			return nil, err
 		}
 
-		imageName, _ = pullsecrets.GetStrippedDockerImageName(imageName)
+		imageName, _ = kubectl.GetStrippedDockerImageName(imageName)
 	} else {
 		if dockerUsername == "" {
 			dockerUsername = "username"
@@ -160,7 +161,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 			DefaultValue:      repoURL,
 			ValidationMessage: "Please enter a valid docker image name (e.g. myregistry.com/user/repository)",
 			ValidationFunc: func(name string) error {
-				_, err := pullsecrets.GetStrippedDockerImageName(name)
+				_, err := kubectl.GetStrippedDockerImageName(name)
 				return err
 			},
 		})
@@ -168,7 +169,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 			return nil, err
 		}
 
-		imageName, _ = pullsecrets.GetStrippedDockerImageName(imageName)
+		imageName, _ = kubectl.GetStrippedDockerImageName(imageName)
 	}
 
 	targets, err := helper.GetDockerfileTargets(dockerfile)
@@ -320,7 +321,19 @@ func (m *manager) getRegistryURL(dockerClient docker.Client) (string, error) {
 				break
 			}
 		} else {
-			return "", errors.Errorf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
+			m.log.Warnf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
+			answer, questionErr := m.log.Question(&survey.QuestionOptions{
+				Question: "Are you sure you want to use the registry '" + registryURL + "' even though the authentication failed?",
+				Options: []string{
+					"No",
+					"Yes",
+				},
+			})
+			if questionErr != nil {
+				return "", questionErr
+			} else if answer == "No" {
+				return "", errors.Errorf("Registry authentication failed for %s.\n         %s", registryURL, registryLoginHint)
+			}
 		}
 	}
 

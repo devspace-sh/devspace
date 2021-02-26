@@ -4,7 +4,7 @@ package add
 // 	"strings"
 // 	"testing"
 
-// 	"github.com/devspace-cloud/devspace/cmd/flags"
+// 	"github.com/loft-sh/devspace/cmd/flags"
 
 // 	"gotest.tools/assert"
 // )

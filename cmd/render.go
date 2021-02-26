@@ -1,18 +1,18 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"os"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
-	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/build"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/message"
 
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
@@ -26,6 +26,7 @@ type RenderCmd struct {
 	Tags []string
 
 	SkipPush                bool
+	SkipPushLocalKubernetes bool
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 
@@ -68,6 +69,7 @@ deployment.
 	renderCmd.Flags().StringSliceVarP(&cmd.Tags, "tag", "t", []string{}, "Use the given tag for all built images")
 	renderCmd.Flags().BoolVar(&cmd.ShowLogs, "show-logs", false, "Shows the build logs")
 	renderCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
+	renderCmd.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", true, "Skips image pushing, if a local kubernetes environment is detected")
 	renderCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips image building")
 	renderCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specifc deployment (You can specify multiple deployments comma-separated")
 
@@ -161,10 +163,10 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	builtImages := map[string]string{}
 	if cmd.SkipBuild == false {
 		builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
-			SkipPush:     cmd.SkipPush,
-			IsDev:        true,
-			ForceRebuild: cmd.ForceBuild,
-			Sequential:   cmd.BuildSequential,
+			SkipPush:                  cmd.SkipPush,
+			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
+			ForceRebuild:              cmd.ForceBuild,
+			Sequential:                cmd.BuildSequential,
 		}, log)
 		if err != nil {
 			if strings.Index(err.Error(), "no space left on device") != -1 {

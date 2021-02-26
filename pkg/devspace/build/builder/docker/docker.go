@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 	"io"
 	"os"
 	"path/filepath"
@@ -12,13 +12,13 @@ import (
 
 	"github.com/docker/cli/cli/streams"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	dockerclient "github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/docker/distribution/reference"
 
@@ -47,17 +47,19 @@ var (
 type Builder struct {
 	helper *helper.BuildHelper
 
-	authConfig *types.AuthConfig
-	client     dockerclient.Client
-	skipPush   bool
+	authConfig                *types.AuthConfig
+	client                    dockerclient.Client
+	skipPush                  bool
+	skipPushOnLocalKubernetes bool
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config *latest.Config, client dockerclient.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, isDev bool) (*Builder, error) {
+func NewBuilder(config *latest.Config, client dockerclient.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
 	return &Builder{
-		helper:   helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags, isDev),
-		client:   client,
-		skipPush: skipPush,
+		helper:                    helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags),
+		client:                    client,
+		skipPush:                  skipPush,
+		skipPushOnLocalKubernetes: skipPushOnLocalKubernetes,
 	}, nil
 }
 
@@ -89,10 +91,8 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// We skip pushing when it is the minikube client
-	if b.helper.ImageConf == nil || b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.PreferMinikube == nil || *b.helper.ImageConf.Build.Docker.PreferMinikube == true {
-		if b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
-			b.skipPush = true
-		}
+	if b.skipPushOnLocalKubernetes && b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
+		b.skipPush = true
 	}
 
 	// Authenticate

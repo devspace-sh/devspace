@@ -1,8 +1,8 @@
 package v1alpha3
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/config"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 )
 
 // Version is the current api version

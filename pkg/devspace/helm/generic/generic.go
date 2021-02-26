@@ -10,12 +10,12 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/helm/downloader"
-	"github.com/devspace-cloud/devspace/pkg/util/command"
-	"github.com/devspace-cloud/devspace/pkg/util/extract"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/helm/downloader"
+	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/extract"
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/otiai10/copy"

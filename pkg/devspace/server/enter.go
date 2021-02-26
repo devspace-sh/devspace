@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/tools/remotecommand"
 	"net/http"

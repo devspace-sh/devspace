@@ -6,10 +6,10 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"github.com/devspace-cloud/devspace/assets"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/util/hash"
+	"github.com/loft-sh/devspace/assets"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/hash"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -20,12 +20,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/devspace/sync"
-	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/pkg/devspace/sync"
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -33,13 +33,13 @@ import (
 )
 
 // DevSpaceHelperBaseURL is the base url where to look for the sync helper
-const DevSpaceHelperBaseURL = "https://github.com/devspace-cloud/devspace/releases"
+const DevSpaceHelperBaseURL = "https://github.com/loft-sh/devspace/releases"
 
 // DevSpaceHelperTempFolder is the local folder where we store the sync helper
 const DevSpaceHelperTempFolder = "devspacehelper"
 
 // HelperBinaryRegEx is the regexp that finds the correct download link for the sync helper binary
-var HelperBinaryRegEx = regexp.MustCompile(`href="(\/devspace-cloud\/devspace\/releases\/download\/[^\/]*\/devspacehelper)"`)
+var HelperBinaryRegEx = regexp.MustCompile(`href="(\/loft-sh\/devspace\/releases\/download\/[^\/]*\/devspacehelper)"`)
 
 // DevSpaceHelperContainerPath is the path of the devspace helper in the container
 const DevSpaceHelperContainerPath = "/tmp/devspacehelper"
@@ -491,7 +491,7 @@ func downloadSyncHelper(filepath, syncBinaryFolder, version string, log logpkg.L
 		}
 
 		// download sha256 html
-		url := fmt.Sprintf("https://github.com/devspace-cloud/devspace/releases/download/%s/devspacehelper.sha256", version)
+		url := fmt.Sprintf("https://github.com/loft-sh/devspace/releases/download/%s/devspacehelper.sha256", version)
 		resp, err := http.Get(url)
 		if err != nil {
 			log.Warnf("Couldn't retrieve helper sha256: %v", err)

@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/sync"
+	"github.com/loft-sh/devspace/pkg/devspace/sync"
 
 	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"

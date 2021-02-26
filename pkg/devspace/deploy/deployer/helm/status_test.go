@@ -3,10 +3,10 @@ package helm
 import (
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer"
-	fakehelm "github.com/devspace-cloud/devspace/pkg/devspace/helm/testing"
-	helmtypes "github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
+	fakehelm "github.com/loft-sh/devspace/pkg/devspace/helm/testing"
+	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	yaml "gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )

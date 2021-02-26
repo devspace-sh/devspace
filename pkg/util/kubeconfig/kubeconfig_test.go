@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/util/fsutil"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 
 	"gotest.tools/assert"
 	"k8s.io/apimachinery/pkg/runtime"

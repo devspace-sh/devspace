@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/devspace-cloud/devspace/helper/cmd/sync"
+	"github.com/loft-sh/devspace/helper/cmd/sync"
 	"github.com/spf13/cobra"
 	"os"
 )

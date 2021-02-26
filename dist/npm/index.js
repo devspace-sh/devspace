@@ -8,7 +8,7 @@ const inquirer = require('inquirer');
 const findProcess = require('find-process');
 
 const downloadPathTemplate =
-  "https://github.com/devspace-cloud/devspace/releases/download/v{{version}}/devspace-{{platform}}-{{arch}}";
+  "https://github.com/loft-sh/devspace/releases/download/v{{version}}/devspace-{{platform}}-{{arch}}";
 const ARCH_MAPPING = {
   ia32: "386",
   x64: "amd64",
@@ -60,7 +60,7 @@ const requestHeaders = {
 let packageJson = JSON.parse(fs.readFileSync(packageJsonPath));
 
 const getLatestVersion = function(callback, includePreReleases) {
-  const releasesURL = "https://github.com/devspace-cloud/devspace/releases";
+  const releasesURL = "https://github.com/loft-sh/devspace/releases";
 
   request({ uri: releasesURL, headers: requestHeaders }, function(
     err,
@@ -79,11 +79,11 @@ const getLatestVersion = function(callback, includePreReleases) {
       process.exit(1);
     }
     let versionRegex = 
-    /^.*?\/devspace-cloud\/devspace\/releases\/download\/v([^\/-]*)\/devspace-.*$/s;
+    /^.*?\/loft-sh\/devspace\/releases\/download\/v([^\/-]*)\/devspace-.*$/s;
 
     if (includePreReleases) {
       versionRegex = 
-      /^.*?\/devspace-cloud\/devspace\/releases\/download\/v([^\/]*)\/devspace-.*$/s;
+      /^.*?\/loft-sh\/devspace\/releases\/download\/v([^\/]*)\/devspace-.*$/s;
     }
     
     const latestVersion = releasePage.replace(versionRegex,
@@ -307,7 +307,7 @@ let continueProcess = function(askRemoveGlobalFolder) {
     }
   } else {
     if (action == "finish-install") {
-      cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, '').replace(/(\\)+/g, '/');
+      cleanPathVar = process.env.PATH.replace(/(^|;)[a-z]:/gi, path.delimiter).replace(/(\\)+/g, '/');
       cleanGlobalDir = globalDir.replace(/(^|;)[a-z]:/gi, '').replace(/(\\)+/g, '/').trimRight("/");
     
       if (cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir) == -1 && cleanPathVar.split(path.delimiter).indexOf(cleanGlobalDir + "/") == -1) {

@@ -1,10 +1,10 @@
 package use
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/message"
+	"github.com/loft-sh/devspace/pkg/util/survey"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -56,9 +56,14 @@ func (cmd *ProfileCmd) RunUseProfile(f factory.Factory, cobraCmd *cobra.Command,
 		return errors.New(message.ConfigNotFound)
 	}
 
-	profiles, err := configLoader.GetProfiles()
+	profileObjects, err := configLoader.GetProfiles()
 	if err != nil {
 		return err
+	}
+
+	profiles := []string{}
+	for _, p := range profileObjects {
+		profiles = append(profiles, p.Name)
 	}
 
 	profileName := ""

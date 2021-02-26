@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 
 	"github.com/pkg/errors"
 	"mvdan.cc/sh/v3/interp"

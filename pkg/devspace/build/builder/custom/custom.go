@@ -1,16 +1,17 @@
 package custom
 
 import (
+	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
 
 	"github.com/bmatcuk/doublestar"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/command"
-	"github.com/devspace-cloud/devspace/pkg/util/hash"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/hash"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 
 	dockerterm "github.com/docker/docker/pkg/term"
 	"github.com/pkg/errors"
@@ -91,21 +92,45 @@ func (b *Builder) Build(log logpkg.Logger) error {
 		args = append(args, arg)
 	}
 
-	// add tags
-	for _, tag := range b.imageTags {
-		if b.imageConf.Build.Custom.ImageFlag != "" {
-			args = append(args, b.imageConf.Build.Custom.ImageFlag)
-		}
+	// add image arg
+	if b.imageConf.Build.Custom.SkipImageArg == false {
+		for _, tag := range b.imageTags {
+			if b.imageConf.Build.Custom.ImageFlag != "" {
+				args = append(args, b.imageConf.Build.Custom.ImageFlag)
+			}
 
-		args = append(args, b.imageConf.Image+":"+tag)
+			if b.imageConf.Build.Custom.ImageTagOnly == false {
+				args = append(args, b.imageConf.Image+":"+tag)
+			} else {
+				args = append(args, tag)
+			}
+		}
 	}
 
+	// append the rest
 	for _, arg := range b.imageConf.Build.Custom.AppendArgs {
 		args = append(args, arg)
 	}
 
+	// get the command
+	commandPath := b.imageConf.Build.Custom.Command
+	for _, c := range b.imageConf.Build.Custom.Commands {
+		if command.ShouldExecuteOnOS(c.OperatingSystem) == false {
+			continue
+		}
+
+		commandPath = c.Command
+		break
+	}
+	if commandPath == "" {
+		return fmt.Errorf("no command specified for custom builder")
+	}
+
+	// make sure the path has the correct slashes
+	commandPath = filepath.FromSlash(commandPath)
+
 	// Create the command
-	cmd := command.NewStreamCommand(filepath.FromSlash(b.imageConf.Build.Custom.Command), args)
+	cmd := command.NewStreamCommand(commandPath, args)
 
 	// Determine output writer
 	var writer io.Writer
@@ -115,7 +140,7 @@ func (b *Builder) Build(log logpkg.Logger) error {
 		writer = log
 	}
 
-	log.Infof("Build %s:%s with custom command %s %s", b.imageConf.Image, b.imageTags[0], b.imageConf.Build.Custom.Command, strings.Join(args, " "))
+	log.Infof("Build %s:%s with custom command '%s %s'", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "))
 
 	err := cmd.Run(writer, writer, nil)
 	if err != nil {

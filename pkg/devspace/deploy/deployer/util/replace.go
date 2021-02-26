@@ -1,10 +1,10 @@
 package util
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
-	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"regexp"
 )
 
@@ -55,7 +55,7 @@ func replaceImageNames(cache *generated.CacheConfig, imagesConf map[string]*late
 		}
 
 		// Strip tag from image
-		image, err := pullsecrets.GetStrippedDockerImageName(value)
+		image, err := kubectl.GetStrippedDockerImageName(value)
 		if err != nil {
 			return false
 		}
@@ -87,7 +87,7 @@ func replaceImageNames(cache *generated.CacheConfig, imagesConf map[string]*late
 			value = onlyImage
 		}
 
-		image, err := pullsecrets.GetStrippedDockerImageName(value)
+		image, err := kubectl.GetStrippedDockerImageName(value)
 		if err != nil {
 			return false, nil
 		}

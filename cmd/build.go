@@ -1,13 +1,13 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build"
-	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
-	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/build"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/mgutz/ansi"
 	"strings"
 
@@ -22,6 +22,7 @@ type BuildCmd struct {
 	Tags []string
 
 	SkipPush                bool
+	SkipPushLocalKubernetes bool
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 	Dependency              []string
@@ -60,6 +61,7 @@ Builds all defined images and pushes them
 	buildCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Builds only the specific named dependencies")
 
 	buildCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
+	buildCmd.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", false, "Skips image pushing, if a local kubernetes environment is detected")
 
 	return buildCmd
 }
@@ -133,10 +135,10 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	// Build images if necessary
 	if len(cmd.Dependency) == 0 {
 		builtImages, err := f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
-			SkipPush:     cmd.SkipPush,
-			IsDev:        true,
-			ForceRebuild: cmd.ForceBuild,
-			Sequential:   cmd.BuildSequential,
+			SkipPush:                  cmd.SkipPush,
+			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
+			ForceRebuild:              cmd.ForceBuild,
+			Sequential:                cmd.BuildSequential,
 		}, log)
 		if err != nil {
 			if strings.Index(err.Error(), "no space left on device") != -1 {

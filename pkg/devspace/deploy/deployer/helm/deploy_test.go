@@ -3,12 +3,12 @@ package helm
 import (
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	fakehelm "github.com/devspace-cloud/devspace/pkg/devspace/helm/testing"
-	helmtypes "github.com/devspace-cloud/devspace/pkg/devspace/helm/types"
-	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
-	log "github.com/devspace-cloud/devspace/pkg/util/log/testing"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	fakehelm "github.com/loft-sh/devspace/pkg/devspace/helm/testing"
+	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"
+	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
+	log "github.com/loft-sh/devspace/pkg/util/log/testing"
 	yaml "gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 	"k8s.io/client-go/kubernetes/fake"

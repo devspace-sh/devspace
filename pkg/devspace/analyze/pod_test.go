@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	fakekube "github.com/devspace-cloud/devspace/pkg/devspace/kubectl/testing"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
 	"gotest.tools/assert"
 	k8sv1 "k8s.io/api/core/v1"

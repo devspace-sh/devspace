@@ -2,18 +2,19 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
-	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
+	"k8s.io/apimachinery/pkg/labels"
 	"os"
 
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
-	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	latest "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -191,7 +192,14 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 					remotePath = "."
 				}
 
-				syncConfigNames = append(syncConfigNames, fmt.Sprintf("%d: Sync %s (local) <-> %s (container)", idx, localPath, remotePath))
+				selector := ""
+				if sc.ImageName != "" {
+					selector = "image: " + sc.ImageName
+				} else if len(sc.LabelSelector) > 0 {
+					selector = "selector: " + labels.Set(sc.LabelSelector).String()
+				}
+
+				syncConfigNames = append(syncConfigNames, fmt.Sprintf("%d: Sync %s: %s <-> %s ", idx, selector, localPath, remotePath))
 			}
 
 			answer, err := logger.Question(&survey.QuestionOptions{

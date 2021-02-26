@@ -3,24 +3,25 @@ package loader
 import (
 	"bytes"
 	"fmt"
-	"github.com/devspace-cloud/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/command"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
-	varspkg "github.com/devspace-cloud/devspace/pkg/util/vars"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
+	"github.com/loft-sh/devspace/pkg/util/survey"
+	varspkg "github.com/loft-sh/devspace/pkg/util/vars"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
 
 type variable struct {
 	Definition *latest.Variable
+	ForceType  bool
 	Value      interface{}
 }
 
@@ -29,7 +30,7 @@ func varMatchFn(path, key, value string) bool {
 }
 
 // GetProfiles retrieves all available profiles
-func (l *configLoader) GetProfiles() ([]string, error) {
+func (l *configLoader) GetProfiles() ([]*latest.ProfileConfig, error) {
 	path := l.ConfigPath()
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -47,22 +48,27 @@ func (l *configLoader) GetProfiles() ([]string, error) {
 		profiles = []interface{}{}
 	}
 
-	profileNames := []string{}
+	retProfiles := []*latest.ProfileConfig{}
 	for _, profile := range profiles {
 		profileMap, ok := profile.(map[interface{}]interface{})
 		if !ok {
 			continue
 		}
 
-		name, ok := profileMap["name"].(string)
-		if !ok {
+		profileConfig := &latest.ProfileConfig{}
+		o, err := yaml.Marshal(profileMap)
+		if err != nil {
+			continue
+		}
+		err = yaml.Unmarshal(o, profileConfig)
+		if err != nil {
 			continue
 		}
 
-		profileNames = append(profileNames, name)
+		retProfiles = append(retProfiles, profileConfig)
 	}
 
-	return profileNames, nil
+	return retProfiles, nil
 }
 
 // ParseCommands fills the variables in the data and parses the commands
@@ -185,9 +191,9 @@ func (l *configLoader) FillVariables(preparedConfig map[interface{}]interface{},
 	// Find out what vars are really used
 	varsUsed := map[string]bool{}
 	err := walk.Walk(preparedConfig, varMatchFn, func(path, value string) (interface{}, error) {
-		varspkg.ParseString(value, func(v string) (interface{}, error) {
+		_, _ = varspkg.ParseString(value, func(v string) (interface{}, bool, error) {
 			varsUsed[v] = true
-			return "", nil
+			return "", false, nil
 		})
 
 		return value, nil
@@ -260,7 +266,7 @@ func (l *configLoader) askQuestions(vars []*latest.Variable, varsParsed map[stri
 		}
 
 		// fill the variable
-		value, err := l.fillVariable(name, definition)
+		value, forceType, err := l.fillVariable(name, definition)
 		if err != nil {
 			return err
 		}
@@ -268,6 +274,7 @@ func (l *configLoader) askQuestions(vars []*latest.Variable, varsParsed map[stri
 		// set the variable value
 		varsParsed[name] = &variable{
 			Definition: definition,
+			ForceType:  forceType,
 			Value:      value,
 		}
 	}
@@ -281,63 +288,64 @@ func (l *configLoader) VarReplaceFn(path, value string, vars map[string]*variabl
 		l.options.LoadedVars[path] = value
 	}
 
-	return varspkg.ParseString(value, func(v string) (interface{}, error) {
-		val, err := l.ResolveVar(v, vars)
+	return varspkg.ParseString(value, func(v string) (interface{}, bool, error) {
+		val, force, err := l.ResolveVar(v, vars)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
 
 		l.resolvedVars[v] = fmt.Sprintf("%v", val)
-		return val, nil
+		return val, force, nil
 	})
 }
 
-func (l *configLoader) ResolveVar(varName string, vars map[string]*variable) (interface{}, error) {
+func (l *configLoader) ResolveVar(varName string, vars map[string]*variable) (interface{}, bool, error) {
 	// check if in vars already
 	v, ok := vars[varName]
 	if ok {
-		return v.Value, nil
+		return v.Value, v.ForceType, nil
 	}
 
 	// fill the variable if not found
-	value, err := l.fillVariable(varName, nil)
+	value, forceType, err := l.fillVariable(varName, nil)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	// set variable so that we don't ask again
 	vars[varName] = &variable{
-		Value: value,
+		Value:     value,
+		ForceType: forceType,
 	}
 
-	return value, nil
+	return value, forceType, nil
 }
 
-func (l *configLoader) fillVariable(varName string, definition *latest.Variable) (interface{}, error) {
+func (l *configLoader) fillVariable(varName string, definition *latest.Variable) (interface{}, bool, error) {
 	// is predefined variable?
 	found, value, err := l.resolvePredefinedVar(varName)
 	if err != nil {
-		return "", err
+		return "", false, err
 	} else if found {
-		return value, nil
+		return value, true, nil
 	}
 
 	// get the cache
 	generatedConfig, err := l.Generated()
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	// fill variable without definition
 	if definition == nil {
 		// Is in environment?
 		if os.Getenv(varName) != "" {
-			return os.Getenv(varName), nil
+			return os.Getenv(varName), false, nil
 		}
 
 		// Is in generated config?
 		if _, ok := generatedConfig.Vars[varName]; ok {
-			return generatedConfig.Vars[varName], nil
+			return generatedConfig.Vars[varName], false, nil
 		}
 
 		// Ask for variable
@@ -345,10 +353,10 @@ func (l *configLoader) fillVariable(varName string, definition *latest.Variable)
 			Question: "Please enter a value for " + varName,
 		})
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
 
-		return generatedConfig.Vars[varName], nil
+		return generatedConfig.Vars[varName], false, nil
 	}
 
 	// fill variable by source
@@ -360,13 +368,13 @@ func (l *configLoader) fillVariable(varName string, definition *latest.Variable)
 		// Use default value for env variable if it is configured
 		if value == "" {
 			if definition.Default == nil {
-				return nil, errors.Errorf("couldn't find environment variable %s, but is needed for loading the config", varName)
+				return nil, false, errors.Errorf("couldn't find environment variable %s, but is needed for loading the config", varName)
 			}
 
-			return definition.Default, nil
+			return definition.Default, true, nil
 		}
 
-		return value, nil
+		return value, false, nil
 	case latest.VariableSourceDefault, latest.VariableSourceInput, latest.VariableSourceAll:
 		if definition.Command != "" || len(definition.Commands) > 0 {
 			return variableFromCommand(varName, definition)
@@ -377,81 +385,84 @@ func (l *configLoader) fillVariable(varName string, definition *latest.Variable)
 
 		// Did we find it in the environment variables?
 		if definition.Source != latest.VariableSourceInput && value != "" {
-			return valueByType(value, definition)
+			return valueByType(value, definition.Default)
 		}
 
 		// Is cached
 		if value, ok := generatedConfig.Vars[varName]; ok {
-			return valueByType(value, definition)
+			return valueByType(value, definition.Default)
 		}
 
 		// Now ask the question
 		value, err := l.askQuestion(definition)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		generatedConfig.Vars[varName] = value
-		return valueByType(value, definition)
+		return valueByType(value, definition.Default)
 	case latest.VariableSourceNone:
 		if definition.Default == nil {
-			return nil, errors.Errorf("couldn't set variable '%s', because source is '%s' but the default value is empty", varName, latest.VariableSourceNone)
+			return nil, false, errors.Errorf("couldn't set variable '%s', because source is '%s' but the default value is empty", varName, latest.VariableSourceNone)
 		}
 
-		return definition.Default, nil
+		return definition.Default, true, nil
 	case latest.VariableSourceCommand:
 		if definition.Command == "" && len(definition.Commands) == 0 {
-			return nil, errors.Errorf("couldn't set variable '%s', because source is '%s' but no command is specified", varName, latest.VariableSourceCommand)
+			return nil, false, errors.Errorf("couldn't set variable '%s', because source is '%s' but no command is specified", varName, latest.VariableSourceCommand)
 		}
 
 		return variableFromCommand(varName, definition)
 	default:
-		return nil, errors.Errorf("unrecognized variable source '%s', please choose one of 'all', 'input', 'env' or 'none'", varName)
+		return nil, false, errors.Errorf("unrecognized variable source '%s', please choose one of 'all', 'input', 'env' or 'none'", varName)
 	}
 }
 
-func variableFromCommand(varName string, definition *latest.Variable) (interface{}, error) {
+func variableFromCommand(varName string, definition *latest.Variable) (interface{}, bool, error) {
 	writer := &bytes.Buffer{}
+	stdErrWriter := &bytes.Buffer{}
 	for _, c := range definition.Commands {
 		if command.ShouldExecuteOnOS(c.OperatingSystem) == false {
 			continue
 		}
 
-		err := command.ExecuteCommand(c.Command, c.Args, writer, nil)
+		err := command.ExecuteCommand(c.Command, c.Args, writer, stdErrWriter)
 		if err != nil {
-			return "", errors.Wrapf(err, "fill variable %s", varName)
+			return "", false, errors.Wrapf(err, "fill variable %s (stdout: %s, stderr: %s)", varName, string(writer.Bytes()), string(stdErrWriter.Bytes()))
 		} else if writer.String() == "" {
-			return definition.Default, nil
+			return definition.Default, true, nil
 		}
 
-		return strings.TrimSpace(writer.String()), nil
+		return strings.TrimSpace(writer.String()), false, nil
 	}
 	if definition.Command == "" {
-		return nil, errors.Errorf("couldn't set variable '%s', because source is '%s' but no command for this operating system is specified", varName, latest.VariableSourceCommand)
+		return nil, false, errors.Errorf("couldn't set variable '%s', because source is '%s' but no command for this operating system is specified", varName, latest.VariableSourceCommand)
 	}
 
-	err := command.ExecuteCommand(definition.Command, definition.Args, writer, nil)
+	err := command.ExecuteCommand(definition.Command, definition.Args, writer, stdErrWriter)
 	if err != nil {
-		return "", errors.Wrapf(err, "fill variable %s", varName)
+		return "", false, errors.Wrapf(err, "fill variable %s (stdout: %s, stderr: %s)", varName, string(writer.Bytes()), string(stdErrWriter.Bytes()))
 	} else if writer.String() == "" {
-		return definition.Default, nil
+		return definition.Default, true, nil
 	}
 
-	return strings.TrimSpace(writer.String()), nil
+	return strings.TrimSpace(writer.String()), false, nil
 }
 
-func valueByType(value string, defaultValue interface{}) (interface{}, error) {
+func valueByType(value string, defaultValue interface{}) (interface{}, bool, error) {
 	if defaultValue == nil {
-		return value, nil
+		return value, false, nil
 	}
 
 	switch defaultValue.(type) {
 	case int:
-		return strconv.Atoi(value)
+		r, err := strconv.Atoi(value)
+		return r, true, err
 	case bool:
-		return strconv.ParseBool(value)
+		r, err := strconv.ParseBool(value)
+		return r, true, err
 	default:
-		return value, nil
+		return value, true, nil
 	}
 }
 
@@ -498,6 +509,5 @@ func (l *configLoader) askQuestion(variable *latest.Variable) (string, error) {
 		return "", err
 	}
 
-	fmt.Println(answer)
 	return answer, nil
 }

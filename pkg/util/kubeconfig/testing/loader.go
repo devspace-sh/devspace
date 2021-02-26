@@ -1,7 +1,7 @@
 package testing
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
+	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )

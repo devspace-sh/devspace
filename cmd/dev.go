@@ -1,35 +1,36 @@
 package cmd
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/plugin"
-	"github.com/devspace-cloud/devspace/pkg/devspace/server"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services"
-	"github.com/devspace-cloud/devspace/pkg/devspace/upgrade"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/devspace-cloud/devspace/cmd/flags"
-	"github.com/devspace-cloud/devspace/pkg/devspace/analyze"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build"
-	"github.com/devspace-cloud/devspace/pkg/devspace/dependency"
-	"github.com/devspace-cloud/devspace/pkg/devspace/deploy"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	"github.com/devspace-cloud/devspace/pkg/devspace/watch"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/server"
+	"github.com/loft-sh/devspace/pkg/devspace/services"
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
+
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/analyze"
+	"github.com/loft-sh/devspace/pkg/devspace/build"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/pkg/devspace/watch"
 	"github.com/mgutz/ansi"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/loader"
-	latest "github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
-	"github.com/devspace-cloud/devspace/pkg/util/exit"
-	"github.com/devspace-cloud/devspace/pkg/util/factory"
-	"github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
-	"github.com/devspace-cloud/devspace/pkg/util/ptr"
-	"github.com/devspace-cloud/devspace/pkg/util/survey"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	latest "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
+	"github.com/loft-sh/devspace/pkg/util/exit"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/message"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -39,6 +40,7 @@ type DevCmd struct {
 	*flags.GlobalFlags
 
 	SkipPush                bool
+	SkipPushLocalKubernetes bool
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 	Open                    bool
@@ -57,7 +59,8 @@ type DevCmd struct {
 	VerboseSync     bool
 	PrintSyncLog    bool
 
-	UI bool
+	UI     bool
+	UIPort int
 
 	Terminal         bool
 	WorkingDirectory string
@@ -115,8 +118,10 @@ Open terminal instead of logs:
 
 	devCmd.Flags().BoolVarP(&cmd.SkipPipeline, "skip-pipeline", "x", false, "Skips build & deployment and only starts sync, portforwarding & terminal")
 	devCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
+	devCmd.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", true, "Skips image pushing, if a local kubernetes environment is detected")
 
 	devCmd.Flags().BoolVar(&cmd.UI, "ui", true, "Start the ui server")
+	devCmd.Flags().IntVar(&cmd.UIPort, "ui-port", 0, "The port to use when opening the ui server")
 	devCmd.Flags().BoolVar(&cmd.Open, "open", true, "Open defined URLs in the browser, if defined")
 	devCmd.Flags().BoolVar(&cmd.Sync, "sync", true, "Enable code synchronization")
 	devCmd.Flags().BoolVar(&cmd.VerboseSync, "verbose-sync", false, "When enabled the sync will log every file change")
@@ -212,7 +217,7 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 
 	// save vars if wanted
 	if cmd.SaveVars {
-		err = loader.SaveVarsInSecret(client, generatedConfig.Vars, cmd.VarsSecretName)
+		err = loader.SaveVarsInSecret(client, generatedConfig.Vars, cmd.VarsSecretName, cmd.log)
 		if err != nil {
 			return errors.Wrap(err, "save vars")
 		}
@@ -265,8 +270,8 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 
 		// Dependencies
 		err = manager.DeployAll(dependency.DeployOptions{
-			SkipPush:                cmd.SkipPush,
 			ForceDeployDependencies: cmd.ForceDependencies,
+			SkipPush:                cmd.SkipPush,
 			SkipBuild:               cmd.SkipBuild,
 			ForceBuild:              cmd.ForceBuild,
 			ForceDeploy:             cmd.ForceDeploy,
@@ -280,11 +285,11 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 		builtImages := make(map[string]string)
 		if cmd.SkipBuild == false {
 			builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
-				SkipPush:                 cmd.SkipPush,
-				IsDev:                    true,
-				ForceRebuild:             cmd.ForceBuild,
-				Sequential:               cmd.BuildSequential,
-				IgnoreContextPathChanges: skipBuildIfAlreadyBuilt,
+				SkipPush:                  cmd.SkipPush,
+				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
+				ForceRebuild:              cmd.ForceBuild,
+				Sequential:                cmd.BuildSequential,
+				IgnoreContextPathChanges:  skipBuildIfAlreadyBuilt,
 			}, cmd.log)
 			if err != nil {
 				if strings.Index(err.Error(), "no space left on device") != -1 {
@@ -404,8 +409,14 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 		logger.StartWait("Starting the ui server...")
 		defer logger.StopWait()
 
+		var port *int
+		if cmd.UIPort != 0 {
+			port = &cmd.UIPort
+		}
+
 		// Create server
-		server, err := server.NewServer(cmd.configLoader, config, generatedConfig, "localhost", false, client.CurrentContext(), client.Namespace(), nil, logger)
+		uiLogger := log.GetFileLogger("ui")
+		server, err := server.NewServer(cmd.configLoader, config, generatedConfig, "localhost", false, client.CurrentContext(), client.Namespace(), port, uiLogger)
 		if err != nil {
 			logger.Warnf("Couldn't start UI server: %v", err)
 		} else {
@@ -693,6 +704,18 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 			} else if imageConf.Entrypoint == nil && imageConf.Cmd == nil {
 				imageConf.Entrypoint = []string{"sleep"}
 				imageConf.Cmd = []string{"999999999"}
+			}
+
+			for imageConfName, imageOverrideConfig := range config.Images {
+				if imageConf.Name == imageConfName {
+					if imageConf.Entrypoint != nil {
+						imageOverrideConfig.Entrypoint = imageConf.Entrypoint
+					}
+					if imageConf.Cmd != nil {
+						imageOverrideConfig.Cmd = imageConf.Cmd
+					}
+					break
+				}
 			}
 
 			if imageConf.Entrypoint != nil && imageConf.Cmd != nil {

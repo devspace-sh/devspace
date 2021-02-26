@@ -1,7 +1,7 @@
 package loader
 
 import (
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,12 +10,12 @@ import (
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/log"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/constants"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/util/kubeconfig"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 )
 
 // ConfigLoader is the base interface for the main config loader
@@ -29,7 +29,7 @@ type ConfigLoader interface {
 	LoadWithoutProfile() (*latest.Config, error)
 
 	ConfigPath() string
-	GetProfiles() ([]string, error)
+	GetProfiles() ([]*latest.ProfileConfig, error)
 	ParseCommands() ([]*latest.CommandConfig, error)
 
 	ResolvedVars() map[string]string
@@ -105,7 +105,7 @@ func (l *configLoader) RestoreLoadSave(client kubectl.Client) (*latest.Config, e
 
 	// save vars if wanted
 	if client != nil && l.options.SaveVars {
-		err = SaveVarsInSecret(client, generatedConfig.Vars, l.options.VarsSecretName)
+		err = SaveVarsInSecret(client, generatedConfig.Vars, l.options.VarsSecretName, l.log)
 		if err != nil {
 			return nil, errors.Wrap(err, "save vars")
 		}
@@ -267,7 +267,7 @@ func (l *configLoader) loadInternal(allowProfile bool) (*latest.Config, error) {
 	}
 
 	// Now we validate the config
-	err = validate(config)
+	err = validate(config, l.log)
 	if err != nil {
 		return nil, err
 	}

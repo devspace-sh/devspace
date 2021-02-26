@@ -8,9 +8,9 @@
     "main": "index.js",
     "repository": {
         "type": "git",
-        "url": "https://github.com/devspace-cloud/devspace"
+        "url": "https://github.com/loft-sh/devspace"
     },
-    "homepage": "https://github.com/devspace-cloud/devspace",
+    "homepage": "https://github.com/loft-sh/devspace",
     "scripts": {
         "postinstall": "node index.js install",
         "preuninstall": "node index.js uninstall",

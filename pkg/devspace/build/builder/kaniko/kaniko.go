@@ -13,18 +13,18 @@ import (
 
 	"k8s.io/client-go/util/exec"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/helper"
-	"github.com/devspace-cloud/devspace/pkg/devspace/build/builder/restart"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/docker"
-	"github.com/devspace-cloud/devspace/pkg/devspace/kubectl"
-	"github.com/devspace-cloud/devspace/pkg/devspace/pullsecrets"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/randutil"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
+	"github.com/loft-sh/devspace/pkg/devspace/services"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/randutil"
 
 	"os"
 	"path/filepath"
@@ -61,7 +61,7 @@ type Builder struct {
 const waitTimeout = 20 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(config *latest.Config, dockerClient docker.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, isDev bool, log logpkg.Logger) (builder.Interface, error) {
+func NewBuilder(config *latest.Config, dockerClient docker.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, log logpkg.Logger) (builder.Interface, error) {
 	buildNamespace := kubeClient.Namespace()
 	if imageConf.Build.Kaniko.Namespace != "" {
 		buildNamespace = imageConf.Build.Kaniko.Namespace
@@ -85,13 +85,15 @@ func NewBuilder(config *latest.Config, dockerClient docker.Client, kubeClient ku
 		allowInsecureRegistry: allowInsecurePush,
 
 		dockerClient: dockerClient,
-		helper:       helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags, isDev),
+		helper:       helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags),
 	}
 
 	// create pull secret
-	err := builder.createPullSecret(log)
-	if err != nil {
-		return nil, errors.Wrap(err, "create pull secret")
+	if !imageConf.Build.Kaniko.SkipPullSecretMount {
+		err := builder.createPullSecret(log)
+		if err != nil {
+			return nil, errors.Wrap(err, "create pull secret")
+		}
 	}
 
 	return builder, nil
@@ -214,20 +216,27 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 				}
 
 				return false, err
-			} else if len(buildPod.Status.InitContainerStatuses) > 0 && buildPod.Status.InitContainerStatuses[0].State.Terminated != nil {
-				errorLog := ""
-				reader, _ := b.helper.KubeClient.Logs(context.TODO(), b.BuildNamespace, buildPodCreated.Name, buildPod.Spec.InitContainers[0].Name, false, nil, false)
-				if reader != nil {
-					out, err := ioutil.ReadAll(reader)
-					if err == nil {
-						errorLog = string(out)
+			} else if len(buildPod.Status.InitContainerStatuses) > 0 {
+				status := buildPod.Status.InitContainerStatuses[0]
+				if status.State.Terminated != nil {
+					errorLog := ""
+					reader, _ := b.helper.KubeClient.Logs(context.TODO(), b.BuildNamespace, buildPodCreated.Name, buildPod.Spec.InitContainers[0].Name, false, nil, false)
+					if reader != nil {
+						out, err := ioutil.ReadAll(reader)
+						if err == nil {
+							errorLog = string(out)
+						}
+					}
+					if errorLog == "" {
+						errorLog = buildPod.Status.InitContainerStatuses[0].State.Terminated.Message
+					}
+
+					return false, fmt.Errorf("kaniko init container %s/%s has unexpectedly exited with code %d: %s", buildPod.Namespace, buildPod.Name, buildPod.Status.InitContainerStatuses[0].State.Terminated.ExitCode, errorLog)
+				} else if status.State.Waiting != nil {
+					if kubectl.CriticalStatus[status.State.Waiting.Reason] {
+						return false, fmt.Errorf("kaniko init container %s/%s cannot start: %s (%s)", buildPod.Namespace, buildPod.Name, status.State.Waiting.Message, status.State.Waiting.Reason)
 					}
 				}
-				if errorLog == "" {
-					errorLog = buildPod.Status.InitContainerStatuses[0].State.Terminated.Message
-				}
-
-				return false, fmt.Errorf("kaniko init container %s/%s has unexpectedly exited with code %d: %s", buildPod.Namespace, buildPod.Name, buildPod.Status.InitContainerStatuses[0].State.Terminated.ExitCode, errorLog)
 			}
 
 			return len(buildPod.Status.InitContainerStatuses) > 0 && buildPod.Status.InitContainerStatuses[0].State.Running != nil, nil
@@ -250,7 +259,6 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 		log.StartWait("Uploading files to build container")
 		buildCtx, err := archive.TarWithOptions(contextPath, &archive.TarOptions{
-			Compression:     archive.Gzip,
 			ExcludePatterns: ignoreRules,
 			ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
 		})
@@ -259,9 +267,13 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 
 		// Copy complete context
-		err = b.helper.KubeClient.CopyFromReader(buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, buildCtx)
+		_, stderr, err := b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"tar", "xp", "-C", kanikoContextPath + "/."}, buildCtx)
 		if err != nil {
-			return errors.Errorf("error uploading context to container: %v", err)
+			if stderr != nil {
+				return errors.Errorf("copy context: error executing tar: %s: %v", string(stderr), err)
+			}
+
+			return errors.Wrap(err, "copy context")
 		}
 
 		// Copy dockerfile
@@ -335,20 +347,27 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 				}
 
 				return false, err
-			} else if len(buildPod.Status.ContainerStatuses) > 0 && buildPod.Status.ContainerStatuses[0].State.Terminated != nil {
-				errorLog := ""
-				reader, _ := b.helper.KubeClient.Logs(context.TODO(), b.BuildNamespace, buildPodCreated.Name, buildPod.Spec.Containers[0].Name, false, nil, false)
-				if reader != nil {
-					out, err := ioutil.ReadAll(reader)
-					if err == nil {
-						errorLog = string(out)
+			} else if len(buildPod.Status.ContainerStatuses) > 0 {
+				status := buildPod.Status.ContainerStatuses[0]
+				if status.State.Terminated != nil {
+					errorLog := ""
+					reader, _ := b.helper.KubeClient.Logs(context.TODO(), b.BuildNamespace, buildPodCreated.Name, status.Name, false, nil, false)
+					if reader != nil {
+						out, err := ioutil.ReadAll(reader)
+						if err == nil {
+							errorLog = string(out)
+						}
+					}
+					if errorLog == "" {
+						errorLog = buildPod.Status.ContainerStatuses[0].State.Terminated.Message
+					}
+
+					return false, fmt.Errorf("kaniko pod %s/%s has unexpectedly exited with code %d: %s", buildPod.Namespace, buildPod.Name, status.State.Terminated.ExitCode, errorLog)
+				} else if status.State.Waiting != nil {
+					if kubectl.CriticalStatus[status.State.Waiting.Reason] {
+						return false, fmt.Errorf("kaniko pod %s/%s cannot start: %s (%s)", buildPod.Namespace, buildPod.Name, status.State.Waiting.Message, status.State.Waiting.Reason)
 					}
 				}
-				if errorLog == "" {
-					errorLog = buildPod.Status.ContainerStatuses[0].State.Terminated.Message
-				}
-
-				return false, fmt.Errorf("kaniko pod %s/%s has unexpectedly exited with code %d: %s", buildPod.Namespace, buildPod.Name, buildPod.Status.ContainerStatuses[0].State.Terminated.ExitCode, errorLog)
 			}
 
 			return len(buildPod.Status.ContainerStatuses) > 0 && buildPod.Status.ContainerStatuses[0].Ready, nil

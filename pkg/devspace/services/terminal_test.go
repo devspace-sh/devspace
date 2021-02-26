@@ -3,7 +3,7 @@ package services
 import (
 	"testing"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 
 	"gotest.tools/assert"
 )

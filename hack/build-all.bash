@@ -29,14 +29,14 @@ if [[ "$(pwd)" != "${DEVSPACE_ROOT}" ]]; then
 fi
 
 GO_BUILD_CMD="go build -a"
-GO_BUILD_LDFLAGS="-s -w -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${DATE} -X main.version=${VERSION}"
+GO_BUILD_LDFLAGS="-s -w -X main.commitHash=${COMMIT_HASH} -X main.buildDate=${DATE} -X main.version=${VERSION} -X github.com/loft-sh/devspace/pkg/devspace/config/generated.EncryptionKey=$ENCRYPTION_KEY"
 
 if [[ -z "${DEVSPACE_BUILD_PLATFORMS}" ]]; then
     DEVSPACE_BUILD_PLATFORMS="linux windows darwin"
 fi
 
 if [[ -z "${DEVSPACE_BUILD_ARCHS}" ]]; then
-    DEVSPACE_BUILD_ARCHS="amd64 386"
+    DEVSPACE_BUILD_ARCHS="amd64 386 arm64"
 fi
 
 # Create the release directory
@@ -57,7 +57,7 @@ shasum -a 256 "${DEVSPACE_ROOT}/release/ui.tar.gz" > "${DEVSPACE_ROOT}/release/u
 
 # build devspace helper
 echo "Building devspace helper"
-GOARCH=386 GOOS=linux go build -ldflags "-s -w -X github.com/devspace-cloud/devspace/helper/cmd.version=${VERSION}" -o "${DEVSPACE_ROOT}/release/devspacehelper" helper/main.go
+GOARCH=386 GOOS=linux go build -ldflags "-s -w -X github.com/loft-sh/devspace/helper/cmd.version=${VERSION}" -o "${DEVSPACE_ROOT}/release/devspacehelper" helper/main.go
 shasum -a 256 "${DEVSPACE_ROOT}/release/devspacehelper" > "${DEVSPACE_ROOT}/release/devspacehelper".sha256
 
 # build bin data
@@ -69,15 +69,22 @@ for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
     if [[ "${OS}" == "windows" ]]; then
       NAME="${NAME}.exe"
     fi
-
+    
+    # darwin 386 is deprecated and shouldn't be used anymore
     if [[ "${ARCH}" == "386" && "${OS}" == "darwin" ]]; then
-        # darwin 386 is deprecated and shouldn't be used anymore
         echo "Building for ${OS}/${ARCH} not supported."
-    else
-        echo "Building for ${OS}/${ARCH}"
-        GOARCH=${ARCH} GOOS=${OS} ${GO_BUILD_CMD} -ldflags "${GO_BUILD_LDFLAGS}"\
-            -o "${DEVSPACE_ROOT}/release/${NAME}" .
-        shasum -a 256 "${DEVSPACE_ROOT}/release/${NAME}" > "${DEVSPACE_ROOT}/release/${NAME}".sha256
+        continue
     fi
+    
+    # arm64 build is only supported for darwin
+    if [[ "${ARCH}" == "arm64" && "${OS}" != "darwin" ]]; then
+        echo "Building for ${OS}/${ARCH} not supported."
+        continue
+    fi
+
+    echo "Building for ${OS}/${ARCH}"
+    GOARCH=${ARCH} GOOS=${OS} ${GO_BUILD_CMD} -ldflags "${GO_BUILD_LDFLAGS}"\
+      -o "${DEVSPACE_ROOT}/release/${NAME}" .
+    shasum -a 256 "${DEVSPACE_ROOT}/release/${NAME}" > "${DEVSPACE_ROOT}/release/${NAME}".sha256
   done
 done

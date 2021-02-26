@@ -7,9 +7,9 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
 // FakeClient is a prototype for a fake docker cient for testing purposes

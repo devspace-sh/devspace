@@ -11,7 +11,7 @@ import (
 var VarMatchRegex = regexp.MustCompile("(\\$+!?\\{[^\\}]+\\})")
 
 // ReplaceVarFn defines the replace function
-type ReplaceVarFn func(value string) (interface{}, error)
+type ReplaceVarFn func(value string) (interface{}, bool, error)
 
 // ParseString parses a given string, calls replace var on found variables and returns the replaced string
 func ParseString(value string, replace ReplaceVarFn) (interface{}, error) {
@@ -39,7 +39,7 @@ func ParseString(value string, replace ReplaceVarFn) (interface{}, error) {
 				forceString = true
 			}
 
-			replacedValue, err := replace(matchStr[offset : len(matchStr)-1])
+			replacedValue, forceType, err := replace(matchStr[offset : len(matchStr)-1])
 			if err != nil {
 				return "", err
 			}
@@ -47,6 +47,9 @@ func ParseString(value string, replace ReplaceVarFn) (interface{}, error) {
 			switch v := replacedValue.(type) {
 			case string:
 				newMatchStr = v
+				if forceType {
+					forceString = true
+				}
 			default:
 				if forceString {
 					newMatchStr = fmt.Sprintf("%v", v)

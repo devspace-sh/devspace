@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/devspace-cloud/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/blang/semver"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
@@ -16,7 +16,7 @@ import (
 var version string
 var rawVersion string
 
-var githubSlug = "devspace-cloud/devspace"
+var githubSlug = "loft-sh/devspace"
 var reVersion = regexp.MustCompile(`\d+\.\d+\.\d+`)
 
 func eraseVersionPrefix(version string) (string, error) {
@@ -55,6 +55,10 @@ func GetRawVersion() string {
 // SetVersion sets the application version
 func SetVersion(verText string) {
 	if len(verText) > 0 {
+		if verText[0] != 'v' {
+			verText = "v" + verText
+		}
+
 		_version, err := eraseVersionPrefix(verText)
 		if err != nil {
 			log.GetInstance().Errorf("Error parsing version: %v", err)

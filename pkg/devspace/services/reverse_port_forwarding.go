@@ -2,15 +2,15 @@ package services
 
 import (
 	"context"
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/generated"
-	"github.com/devspace-cloud/devspace/pkg/devspace/tunnel"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/tunnel"
 	"io"
 	"time"
 
-	"github.com/devspace-cloud/devspace/pkg/devspace/config/versions/latest"
-	"github.com/devspace-cloud/devspace/pkg/devspace/services/targetselector"
-	logpkg "github.com/devspace-cloud/devspace/pkg/util/log"
-	"github.com/devspace-cloud/devspace/pkg/util/message"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 )
 
@@ -56,7 +56,9 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 	}
 
 	// make sure the devspace helper binary is injected
+	log.StartWait("Reverse-Port-Forwarding: Upload devspace helper...")
 	err = InjectDevSpaceHelper(serviceClient.client, container.Pod, container.Container.Name, serviceClient.log)
+	log.StopWait()
 	if err != nil {
 		return err
 	}
@@ -74,7 +76,7 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 	}()
 
 	go func() {
-		err := tunnel.StartReverseForward(stdoutReader, stdinWriter, portForwarding.PortMappingsReverse, closeChan, log)
+		err := tunnel.StartReverseForward(stdoutReader, stdinWriter, portForwarding.PortMappingsReverse, closeChan, container.Pod.Namespace, container.Pod.Name, log)
 		if err != nil {
 			errorChan <- err
 		}

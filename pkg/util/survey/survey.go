@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"sort"
 
+	surveypkg "github.com/AlecAivazis/survey/v2"
 	"github.com/pkg/errors"
-	surveypkg "gopkg.in/AlecAivazis/survey.v1"
 )
 
 // QuestionOptions defines a question and its options
