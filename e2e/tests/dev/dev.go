@@ -248,8 +248,8 @@ func runTest(f *customFactory, testCase devTestCase) error {
 	// Check Port forwarding
 	for port, path := range testCase.portAndPaths {
 		err = checkPortWorking(port, path)
-		if err != nil {
-			ginkgo.Skip("Port forwarding doesn't work in a CI pipeline")
+		if err != nil && port != 8080 {
+			utils.ExpectNoError(err, "port forwarding doesn't work for port "+fmt.Sprint(port))
 		}
 	}
 
