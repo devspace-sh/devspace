@@ -419,29 +419,34 @@ func (l *configLoader) fillVariable(varName string, definition *latest.Variable)
 }
 
 func variableFromCommand(varName string, definition *latest.Variable) (interface{}, bool, error) {
-	writer := &bytes.Buffer{}
-	stdErrWriter := &bytes.Buffer{}
 	for _, c := range definition.Commands {
 		if command.ShouldExecuteOnOS(c.OperatingSystem) == false {
 			continue
 		}
 
-		err := command.ExecuteCommand(c.Command, c.Args, writer, stdErrWriter)
-		if err != nil {
-			return "", false, errors.Wrapf(err, "fill variable %s (stdout: %s, stderr: %s)", varName, string(writer.Bytes()), string(stdErrWriter.Bytes()))
-		} else if writer.String() == "" {
-			return definition.Default, true, nil
-		}
-
-		return strings.TrimSpace(writer.String()), false, nil
+		return execCommand(varName, definition, c.Command, c.Args)
 	}
 	if definition.Command == "" {
 		return nil, false, errors.Errorf("couldn't set variable '%s', because source is '%s' but no command for this operating system is specified", varName, latest.VariableSourceCommand)
 	}
 
-	err := command.ExecuteCommand(definition.Command, definition.Args, writer, stdErrWriter)
+	return execCommand(varName, definition, definition.Command, definition.Args)
+}
+
+func execCommand(varName string, definition *latest.Variable, cmd string, args []string) (interface{}, bool, error) {
+	writer := &bytes.Buffer{}
+	stdErrWriter := &bytes.Buffer{}
+	err := command.ExecuteCommand(cmd, args, writer, stdErrWriter)
 	if err != nil {
-		return "", false, errors.Wrapf(err, "fill variable %s (stdout: %s, stderr: %s)", varName, string(writer.Bytes()), string(stdErrWriter.Bytes()))
+		errMsg := "fill variable " + varName + ": " + err.Error()
+		if len(writer.Bytes()) > 0 {
+			errMsg = errMsg + "\n\nstdout: \n" + string(writer.Bytes())
+		}
+		if len(stdErrWriter.Bytes()) > 0 {
+			errMsg = errMsg + "\n\nstderr: \n" + string(stdErrWriter.Bytes())
+		}
+
+		return "", false, errors.New(errMsg)
 	} else if writer.String() == "" {
 		return definition.Default, true, nil
 	}
