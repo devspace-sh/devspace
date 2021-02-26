@@ -69,7 +69,6 @@ func PrintTable(s Logger, header []string, values [][]string) {
 	}
 
 	columnLengths := make([]int, len(header))
-
 	for k, v := range header {
 		columnLengths[k] = len(v)
 	}
@@ -77,6 +76,11 @@ func PrintTable(s Logger, header []string, values [][]string) {
 	// Get maximum column length
 	for _, v := range values {
 		for key, value := range v {
+			if len(value) > 64 {
+				value = value[:61] + "..."
+				v[key] = value
+			}
+
 			if len(value) > columnLengths[key] {
 				columnLengths[key] = len(value)
 			}
