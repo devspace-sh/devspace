@@ -518,6 +518,9 @@ google.golang.org/protobuf/types/known/timestamppb
 ## explicit
 # gopkg.in/inf.v0 v0.9.1
 gopkg.in/inf.v0
+# gopkg.in/natefinch/lumberjack.v2 v2.0.0
+## explicit
+gopkg.in/natefinch/lumberjack.v2
 # gopkg.in/src-d/enry.v1 v1.6.4
 ## explicit
 gopkg.in/src-d/enry.v1

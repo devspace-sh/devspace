@@ -1,13 +1,10 @@
 package sync
 
 import (
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/juju/errors"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	gitignore "github.com/sabhiram/go-gitignore"
 )
 
@@ -27,32 +24,4 @@ func CompilePaths(excludePaths []string) (gitignore.IgnoreParser, error) {
 	}
 
 	return nil, nil
-}
-
-func cleanupSyncLogs() error {
-	syncLogName := log.Logdir + "sync.log"
-	_, err := os.Stat(syncLogName)
-	if err != nil {
-		return nil
-	}
-
-	// We read the log file and append it to the old log
-	data, err := ioutil.ReadFile(syncLogName)
-	if err != nil {
-		return err
-	}
-
-	// Append to syncLog.log.old
-	f, err := os.OpenFile(syncLogName+".old", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-
-	if _, err = f.Write(data); err != nil {
-		return err
-	}
-
-	return os.Remove(syncLogName)
 }

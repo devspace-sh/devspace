@@ -2,7 +2,6 @@ package sync
 
 import (
 	"io"
-	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -14,14 +13,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rjeczalik/notify"
 	gitignore "github.com/sabhiram/go-gitignore"
-	"github.com/sirupsen/logrus"
 )
 
 var syncRetries = 5
 var initialUpstreamBatchSize = 1000
-
-var syncLogOnce sync.Once
-var syncLog log.Logger
 
 // Options holds the sync options
 type Options struct {
@@ -101,18 +96,7 @@ func NewSync(localPath string, options Options) (*Sync, error) {
 
 	// Initialize log
 	if options.Log == nil {
-		syncLogOnce.Do(func() {
-			// Check if syncLog already exists
-			stat, err := os.Stat(log.Logdir + "sync.log")
-			if err == nil || stat != nil {
-				cleanupSyncLogs()
-			}
-
-			syncLog = log.GetFileLogger("sync")
-			syncLog.SetLevel(logrus.InfoLevel)
-		})
-
-		options.Log = syncLog
+		options.Log = log.GetFileLogger("sync")
 	}
 
 	// Create sync structure

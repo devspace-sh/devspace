@@ -60,6 +60,7 @@ require (
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
 	google.golang.org/grpc v1.27.0
 	gopkg.in/AlecAivazis/survey.v1 v1.8.7 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/src-d/enry.v1 v1.6.4
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
