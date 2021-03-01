@@ -9,7 +9,9 @@ import (
 )
 
 // UpgradeCmd is a struct that defines a command call for "upgrade"
-type UpgradeCmd struct{}
+type UpgradeCmd struct {
+	Version string
+}
 
 // NewUpgradeCmd creates a new upgrade command
 func NewUpgradeCmd(plugins []plugin.Metadata) *cobra.Command {
@@ -30,6 +32,7 @@ Upgrades the DevSpace CLI to the newest version
 		},
 	}
 
+	upgradeCmd.Flags().StringVar(&cmd.Version, "version", "", "The version to update devspace to. Defaults to the latest stable version available")
 	return upgradeCmd
 }
 
@@ -41,7 +44,8 @@ func (cmd *UpgradeCmd) Run(plugins []plugin.Metadata, cobraCmd *cobra.Command, a
 		return err
 	}
 
-	err = upgrade.Upgrade()
+	// Run the upgrade command
+	err = upgrade.Upgrade(cmd.Version)
 	if err != nil {
 		return errors.Errorf("Couldn't upgrade: %v", err)
 	}

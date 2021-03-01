@@ -1,7 +1,8 @@
 package upgrade
 
 import (
-	"errors"
+	"fmt"
+	"github.com/pkg/errors"
 	"os"
 	"regexp"
 	"sync"
@@ -120,8 +121,31 @@ func NewerVersionAvailable() string {
 }
 
 // Upgrade downloads the latest release from github and replaces devspace if a new version is found
-func Upgrade() error {
+func Upgrade(version string) error {
 	log := log.GetInstance()
+	if version != "" {
+		release, found, err := selfupdate.DetectVersion(githubSlug, version)
+		if err != nil {
+			return errors.Wrap(err, "find version")
+		} else if !found {
+			return fmt.Errorf("devspace version %s couldn't be found", version)
+		}
+
+		cmdPath, err := os.Executable()
+		if err != nil {
+			return err
+		}
+
+		log.StartWait(fmt.Sprintf("Downloading version %s...", version))
+		err = selfupdate.DefaultUpdater().UpdateTo(release, cmdPath)
+		log.StopWait()
+		if err != nil {
+			return err
+		}
+
+		log.Donef("Successfully updated devspace to version %s", version)
+		return nil
+	}
 
 	newerVersion, err := CheckForNewerVersion()
 	if err != nil {
