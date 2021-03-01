@@ -3,6 +3,7 @@
 package sync
 
 import (
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"io/ioutil"
 	"os"
 	"path"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/loft-sh/devspace/helper/server"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
 
@@ -54,8 +54,6 @@ func initTestDirs(t *testing.T) (string, string, string) {
 }
 
 func createTestSyncClient(testLocalPath string, testCases testCaseList) (*Sync, error) {
-	syncLog = log.GetInstance()
-
 	sync, err := NewSync(testLocalPath, getSyncOptions(testCases))
 	if err != nil {
 		return nil, err
@@ -284,6 +282,7 @@ func getSyncOptions(testCases testCaseList) Options {
 		DownloadExcludePaths: []string{},
 		UploadExcludePaths:   []string{},
 		Verbose:              true,
+		Log:                  log.GetInstance(),
 	}
 
 	for _, testCase := range testCases {
