@@ -1,6 +1,7 @@
 package watch
 
 import (
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"os"
 	"strings"
 	"sync"
@@ -9,8 +10,6 @@ import (
 	"github.com/bmatcuk/doublestar"
 	"github.com/loft-sh/devspace/helper/util"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/pkg/errors"
-	gitignore "github.com/sabhiram/go-gitignore"
 )
 
 // Callback is the function type
@@ -26,7 +25,7 @@ type Watcher interface {
 // watcher is the struct that contains the watching information
 type watcher struct {
 	Paths   []string
-	Exclude gitignore.IgnoreParser
+	Exclude ignoreparser.IgnoreParser
 
 	PollInterval time.Duration
 	FileMap      map[string]os.FileInfo
@@ -41,7 +40,7 @@ type watcher struct {
 
 // New watches a given glob paths array for changes
 func New(paths []string, exclude []string, pollInterval time.Duration, callback Callback, log log.Logger) (Watcher, error) {
-	ignoreMatcher, err := compilePaths(exclude)
+	ignoreMatcher, err := ignoreparser.CompilePaths(exclude)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +115,7 @@ func (w *watcher) Update() ([]string, []string, error) {
 				continue
 			}
 
+			// is excluded?
 			if w.Exclude != nil && util.MatchesPath(w.Exclude, file, stat.IsDir()) {
 				continue
 			}
@@ -165,18 +165,4 @@ func (w *watcher) gatherChanges(newState map[string]os.FileInfo) ([]string, []st
 	}
 
 	return changed, deleted
-}
-
-// compilePaths compiles the exclude paths into an ignore parser
-func compilePaths(excludePaths []string) (gitignore.IgnoreParser, error) {
-	if len(excludePaths) > 0 {
-		ignoreParser, err := gitignore.CompileIgnoreLines(excludePaths...)
-		if err != nil {
-			return nil, errors.Wrap(err, "compile ignore lines")
-		}
-
-		return ignoreParser, nil
-	}
-
-	return nil, nil
 }

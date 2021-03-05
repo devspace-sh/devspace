@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"io"
 	"path/filepath"
 	"runtime"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rjeczalik/notify"
-	gitignore "github.com/sabhiram/go-gitignore"
 )
 
 var syncRetries = 5
@@ -58,9 +58,9 @@ type Sync struct {
 
 	fileIndex *fileIndex
 
-	ignoreMatcher         gitignore.IgnoreParser
-	downloadIgnoreMatcher gitignore.IgnoreParser
-	uploadIgnoreMatcher   gitignore.IgnoreParser
+	ignoreMatcher         ignoreparser.IgnoreParser
+	downloadIgnoreMatcher ignoreparser.IgnoreParser
+	uploadIgnoreMatcher   ignoreparser.IgnoreParser
 
 	log log.Logger
 
@@ -152,7 +152,7 @@ func (s *Sync) Start() error {
 
 func (s *Sync) initIgnoreParsers() error {
 	if s.Options.ExcludePaths != nil {
-		ignoreMatcher, err := CompilePaths(s.Options.ExcludePaths)
+		ignoreMatcher, err := ignoreparser.CompilePaths(s.Options.ExcludePaths)
 		if err != nil {
 			return errors.Wrap(err, "compile exclude paths")
 		}
@@ -161,7 +161,7 @@ func (s *Sync) initIgnoreParsers() error {
 	}
 
 	if s.Options.DownloadExcludePaths != nil {
-		ignoreMatcher, err := CompilePaths(s.Options.DownloadExcludePaths)
+		ignoreMatcher, err := ignoreparser.CompilePaths(s.Options.DownloadExcludePaths)
 		if err != nil {
 			return errors.Wrap(err, "compile download exclude paths")
 		}
@@ -170,7 +170,7 @@ func (s *Sync) initIgnoreParsers() error {
 	}
 
 	if s.Options.UploadExcludePaths != nil {
-		ignoreMatcher, err := CompilePaths(s.Options.UploadExcludePaths)
+		ignoreMatcher, err := ignoreparser.CompilePaths(s.Options.UploadExcludePaths)
 		if err != nil {
 			return errors.Wrap(err, "compile upload exclude paths")
 		}

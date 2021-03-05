@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"io"
 	"io/ioutil"
 	"os"
@@ -13,7 +14,6 @@ import (
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/util"
 	"github.com/pkg/errors"
-	gitignore "github.com/sabhiram/go-gitignore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -33,7 +33,7 @@ func StartDownstreamServer(reader io.Reader, writer io.Writer, options *Downstre
 	done := make(chan error)
 
 	// Compile ignore paths
-	ignoreMatcher, err := compilePaths(options.ExcludePaths)
+	ignoreMatcher, err := ignoreparser.CompilePaths(options.ExcludePaths)
 	if err != nil {
 		return errors.Wrap(err, "compile paths")
 	}
@@ -59,7 +59,7 @@ type Downstream struct {
 	options *DownstreamOptions
 
 	// ignore matcher is the ignore matcher which matches against excluded files and paths
-	ignoreMatcher gitignore.IgnoreParser
+	ignoreMatcher ignoreparser.IgnoreParser
 
 	// watchedFiles is a memory map of the previous state of the changes function
 	watchedFiles map[string]*remote.Change
@@ -273,7 +273,7 @@ func streamChanges(basePath string, oldState map[string]*remote.Change, newState
 	return changeAmount, nil
 }
 
-func walkDir(basePath string, path string, ignoreMatcher gitignore.IgnoreParser, state map[string]*remote.Change, throttle time.Duration) {
+func walkDir(basePath string, path string, ignoreMatcher ignoreparser.IgnoreParser, state map[string]*remote.Change, throttle time.Duration) {
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		// We ignore errors here
@@ -292,7 +292,7 @@ func walkDir(basePath string, path string, ignoreMatcher gitignore.IgnoreParser,
 		}
 
 		// Check if ignored
-		if ignoreMatcher != nil && util.MatchesPath(ignoreMatcher, absolutePath[len(basePath):], stat.IsDir()) {
+		if ignoreMatcher != nil && ignoreMatcher.HasNegatePatterns() == false && util.MatchesPath(ignoreMatcher, absolutePath[len(basePath):], stat.IsDir()) {
 			continue
 		}
 
@@ -303,33 +303,26 @@ func walkDir(basePath string, path string, ignoreMatcher gitignore.IgnoreParser,
 
 		// Check if directory
 		if stat.IsDir() {
-			state[absolutePath] = &remote.Change{
-				Path:  absolutePath,
-				IsDir: true,
+			// Check if not ignored
+			if ignoreMatcher == nil || ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(ignoreMatcher, absolutePath[len(basePath):], true) == false {
+				state[absolutePath] = &remote.Change{
+					Path:  absolutePath,
+					IsDir: true,
+				}
 			}
 
 			walkDir(basePath, absolutePath, ignoreMatcher, state, throttle)
 		} else {
-			state[absolutePath] = &remote.Change{
-				Path:          absolutePath,
-				Size:          stat.Size(),
-				MtimeUnix:     stat.ModTime().Unix(),
-				MtimeUnixNano: stat.ModTime().UnixNano(),
-				IsDir:         false,
+			// Check if not ignored
+			if ignoreMatcher == nil || ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(ignoreMatcher, absolutePath[len(basePath):], false) == false {
+				state[absolutePath] = &remote.Change{
+					Path:          absolutePath,
+					Size:          stat.Size(),
+					MtimeUnix:     stat.ModTime().Unix(),
+					MtimeUnixNano: stat.ModTime().UnixNano(),
+					IsDir:         false,
+				}
 			}
 		}
 	}
-}
-
-func compilePaths(excludePaths []string) (gitignore.IgnoreParser, error) {
-	if len(excludePaths) > 0 {
-		ignoreParser, err := gitignore.CompileIgnoreLines(excludePaths...)
-		if err != nil {
-			return nil, errors.Wrap(err, "compile ignore lines")
-		}
-
-		return ignoreParser, nil
-	}
-
-	return nil, nil
 }

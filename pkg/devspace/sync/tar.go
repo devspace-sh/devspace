@@ -3,6 +3,7 @@ package sync
 import (
 	"archive/tar"
 	"compress/gzip"
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"io"
 	"io/ioutil"
 	"os"
@@ -17,7 +18,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
-	gitignore "github.com/sabhiram/go-gitignore"
 )
 
 // Unarchiver is responsible for unarchiving a remote archive
@@ -220,13 +220,13 @@ func (u *Unarchiver) createAllFolders(name string, perm os.FileMode) error {
 // Archiver is responsible for compressing specific files and folders within a target directory
 type Archiver struct {
 	basePath      string
-	ignoreMatcher gitignore.IgnoreParser
+	ignoreMatcher ignoreparser.IgnoreParser
 	writer        *tar.Writer
 	writtenFiles  map[string]*FileInformation
 }
 
 // NewArchiver creates a new archiver
-func NewArchiver(basePath string, writer *tar.Writer, ignoreMatcher gitignore.IgnoreParser) *Archiver {
+func NewArchiver(basePath string, writer *tar.Writer, ignoreMatcher ignoreparser.IgnoreParser) *Archiver {
 	return &Archiver{
 		basePath: basePath,
 
@@ -255,8 +255,8 @@ func (a *Archiver) AddToArchive(relativePath string) error {
 		return nil
 	}
 
-	// Exclude files on the exclude list
-	if a.ignoreMatcher != nil && util.MatchesPath(a.ignoreMatcher, relativePath, stat.IsDir()) {
+	// Exclude files on the exclude list if it does not have a negate pattern, otherwise we will check below
+	if a.ignoreMatcher != nil && a.ignoreMatcher.HasNegatePatterns() == false && util.MatchesPath(a.ignoreMatcher, relativePath, stat.IsDir()) {
 		return nil
 	}
 
@@ -266,7 +266,12 @@ func (a *Archiver) AddToArchive(relativePath string) error {
 		return a.tarFolder(fileInformation, stat)
 	}
 
-	return a.tarFile(fileInformation, stat)
+	// exclude file?
+	if a.ignoreMatcher == nil || a.ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(a.ignoreMatcher, relativePath, false) == false {
+		return a.tarFile(fileInformation, stat)
+	}
+
+	return nil
 }
 
 func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) error {
@@ -278,17 +283,20 @@ func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) er
 	}
 
 	if len(files) == 0 && target.Name != "" {
-		// Case empty directory
-		hdr, _ := tar.FileInfoHeader(targetStat, filepath)
-		hdr.Uid = 0
-		hdr.Gid = 0
-		hdr.Mode = fillGo18FileTypeBits(int64(chmodTarEntry(os.FileMode(hdr.Mode))), targetStat)
-		hdr.Name = target.Name
-		if err := a.writer.WriteHeader(hdr); err != nil {
-			return errors.Wrap(err, "tar write header")
-		}
+		// check if not excluded
+		if a.ignoreMatcher == nil || a.ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(a.ignoreMatcher, target.Name, true) == false {
+			// Case empty directory
+			hdr, _ := tar.FileInfoHeader(targetStat, filepath)
+			hdr.Uid = 0
+			hdr.Gid = 0
+			hdr.Mode = fillGo18FileTypeBits(int64(chmodTarEntry(os.FileMode(hdr.Mode))), targetStat)
+			hdr.Name = target.Name
+			if err := a.writer.WriteHeader(hdr); err != nil {
+				return errors.Wrap(err, "tar write header")
+			}
 
-		a.writtenFiles[target.Name] = target
+			a.writtenFiles[target.Name] = target
+		}
 	}
 
 	for _, f := range files {
