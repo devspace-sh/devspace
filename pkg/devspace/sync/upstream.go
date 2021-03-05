@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"io"
 	"os"
 	"path"
@@ -13,11 +14,9 @@ import (
 	"time"
 
 	"github.com/juju/ratelimit"
-	"github.com/pkg/errors"
-	gitignore "github.com/sabhiram/go-gitignore"
-
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/util"
+	"github.com/pkg/errors"
 	"github.com/rjeczalik/notify"
 )
 
@@ -38,6 +37,8 @@ type upstream struct {
 	eventBufferMutex sync.Mutex
 
 	workingDirectory string
+
+	ignoreMatcher ignoreparser.IgnoreParser
 }
 
 const removeFilesBufferSize = 64
@@ -63,6 +64,16 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 		return nil, errors.Wrap(err, "new client connection")
 	}
 
+	// Create combined exclude paths
+	excludePaths := make([]string, 0, len(sync.Options.ExcludePaths)+len(sync.Options.UploadExcludePaths))
+	excludePaths = append(excludePaths, sync.Options.ExcludePaths...)
+	excludePaths = append(excludePaths, sync.Options.UploadExcludePaths...)
+
+	ignoreMatcher, err := ignoreparser.CompilePaths(excludePaths)
+	if err != nil {
+		return nil, errors.Wrap(err, "compile paths")
+	}
+
 	workingDirectory, _ := os.Getwd()
 	return &upstream{
 		events:      make(chan notify.EventInfo, 1000), // High buffer size so we don't miss any fsevents if there are a lot of changes
@@ -77,6 +88,7 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 		client: remote.NewUpstreamClient(conn),
 
 		workingDirectory: workingDirectory,
+		ignoreMatcher:    ignoreMatcher,
 	}, nil
 }
 
@@ -435,16 +447,6 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 	}
 	u.sync.log.Infof("Upstream - Upload %d create change(s) (Uncompressed ~%0.2f KB)", len(files), float64(size)/1024.0)
 
-	// Create combined exclude paths
-	excludePaths := make([]string, 0, len(u.sync.Options.ExcludePaths)+len(u.sync.Options.UploadExcludePaths))
-	excludePaths = append(excludePaths, u.sync.Options.ExcludePaths...)
-	excludePaths = append(excludePaths, u.sync.Options.UploadExcludePaths...)
-
-	ignoreMatcher, err := CompilePaths(excludePaths)
-	if err != nil {
-		return errors.Wrap(err, "compile paths")
-	}
-
 	// Create a pipe for reading and writing
 	reader, writer, err := os.Pipe()
 	if err != nil {
@@ -462,7 +464,7 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 	errorChan := make(chan error)
 	go func() {
 		var compressErr error
-		archiver, compressErr = u.compress(writer, files, ignoreMatcher)
+		archiver, compressErr = u.compress(writer, files, u.ignoreMatcher)
 		errorChan <- compressErr
 	}()
 
@@ -487,7 +489,7 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 	return nil
 }
 
-func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ignoreMatcher gitignore.IgnoreParser) (*Archiver, error) {
+func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ignoreMatcher ignoreparser.IgnoreParser) (*Archiver, error) {
 	defer writer.Close()
 
 	// Use compression

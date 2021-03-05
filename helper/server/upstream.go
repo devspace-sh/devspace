@@ -3,9 +3,9 @@ package server
 import (
 	"context"
 	"github.com/loft-sh/devspace/helper/remote"
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/helper/util"
 	"github.com/pkg/errors"
-	gitignore "github.com/sabhiram/go-gitignore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"io"
@@ -40,7 +40,7 @@ func StartUpstreamServer(reader io.Reader, writer io.Writer, options *UpstreamOp
 	done := make(chan error)
 
 	// Compile ignore paths
-	ignoreMatcher, err := compilePaths(options.ExludePaths)
+	ignoreMatcher, err := ignoreparser.CompilePaths(options.ExludePaths)
 	if err != nil {
 		return errors.Wrap(err, "compile paths")
 	}
@@ -66,7 +66,7 @@ type Upstream struct {
 	options *UpstreamOptions
 
 	// ignore matcher is the ignore matcher which matches against excluded files and paths
-	ignoreMatcher gitignore.IgnoreParser
+	ignoreMatcher ignoreparser.IgnoreParser
 }
 
 // RestartContainer implements the server
@@ -96,9 +96,9 @@ func (u *Upstream) Remove(stream remote.Upstream_RemoveServer) error {
 				}
 
 				if stat.IsDir() {
-					u.removeRecursive(absolutePath)
+					_ = u.removeRecursive(absolutePath)
 				} else {
-					os.Remove(absolutePath)
+					_ = os.Remove(absolutePath)
 				}
 			}
 		}
@@ -129,7 +129,7 @@ func (u *Upstream) removeRecursive(absolutePath string) error {
 		absoluteChildPath := filepath.Join(absolutePath, f.Name())
 
 		// Check if ignored
-		if u.ignoreMatcher != nil && util.MatchesPath(u.ignoreMatcher, absolutePath[len(u.options.UploadPath):], f.IsDir()) {
+		if u.ignoreMatcher != nil && u.ignoreMatcher.HasNegatePatterns() == false && util.MatchesPath(u.ignoreMatcher, absolutePath[len(u.options.UploadPath):], f.IsDir()) {
 			continue
 		}
 
@@ -138,12 +138,19 @@ func (u *Upstream) removeRecursive(absolutePath string) error {
 			// Ignore the errors here
 			_ = u.removeRecursive(absoluteChildPath)
 		} else {
-			os.Remove(absoluteChildPath)
+			// Check if not ignored
+			if u.ignoreMatcher == nil || u.ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(u.ignoreMatcher, absolutePath[len(u.options.UploadPath):], false) == false {
+				_ = os.Remove(absoluteChildPath)
+			}
 		}
 	}
 
-	// This will not remove the directory if there is still a file or directory in it
-	return os.Remove(absolutePath)
+	// Check if not ignored
+	if u.ignoreMatcher == nil || u.ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(u.ignoreMatcher, absolutePath[len(u.options.UploadPath):], true) == false {
+		// This will not remove the directory if there is still a file or directory in it
+		return os.Remove(absolutePath)
+	}
+	return nil
 }
 
 // Upload implements the server upload interface and writes all the data received to a
