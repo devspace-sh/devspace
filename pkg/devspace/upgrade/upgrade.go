@@ -121,14 +121,14 @@ func NewerVersionAvailable() string {
 }
 
 // Upgrade downloads the latest release from github and replaces devspace if a new version is found
-func Upgrade(version string) error {
+func Upgrade(flagVersion string) error {
 	log := log.GetInstance()
-	if version != "" {
-		release, found, err := selfupdate.DetectVersion(githubSlug, version)
+	if flagVersion != "" {
+		release, found, err := selfupdate.DetectVersion(githubSlug, flagVersion)
 		if err != nil {
 			return errors.Wrap(err, "find version")
 		} else if !found {
-			return fmt.Errorf("devspace version %s couldn't be found", version)
+			return fmt.Errorf("devspace version %s couldn't be found", flagVersion)
 		}
 
 		cmdPath, err := os.Executable()
@@ -136,16 +136,18 @@ func Upgrade(version string) error {
 			return err
 		}
 
-		log.StartWait(fmt.Sprintf("Downloading version %s...", version))
+		log.StartWait(fmt.Sprintf("Downloading version %s...", flagVersion))
 		err = selfupdate.DefaultUpdater().UpdateTo(release, cmdPath)
 		log.StopWait()
 		if err != nil {
 			return err
 		}
 
-		log.Donef("Successfully updated devspace to version %s", version)
+		log.Donef("Successfully updated devspace to version %s", flagVersion)
 		return nil
 	}
+
+	v := semver.MustParse(version)
 
 	newerVersion, err := CheckForNewerVersion()
 	if err != nil {
@@ -155,8 +157,6 @@ func Upgrade(version string) error {
 		log.Infof("Current binary is the latest version: %s", version)
 		return nil
 	}
-
-	v := semver.MustParse(version)
 
 	log.StartWait("Downloading newest version...")
 	latest, err := selfupdate.UpdateSelf(v, githubSlug)
