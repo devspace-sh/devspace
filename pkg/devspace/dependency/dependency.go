@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/command"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/exit"
+	"io"
 	"mvdan.cc/sh/v3/interp"
 	"os"
 
@@ -207,11 +208,12 @@ type RenderOptions struct {
 	SkipPush           bool
 	SkipBuild          bool
 	ForceBuild         bool
+	Writer             io.Writer
 }
 
 func (m *manager) RenderAll(options RenderOptions) error {
 	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Render", func(dependency *Dependency, log log.Logger) error {
-		return dependency.Render(options.SkipPush, options.SkipBuild, options.ForceBuild, log)
+		return dependency.Render(options.SkipPush, options.SkipBuild, options.ForceBuild, options.Writer, log)
 	})
 }
 
@@ -398,7 +400,7 @@ func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, 
 }
 
 // Render renders the dependency
-func (d *Dependency) Render(skipPush, skipBuild, forceBuild bool, log log.Logger) error {
+func (d *Dependency) Render(skipPush, skipBuild, forceBuild bool, out io.Writer, log log.Logger) error {
 	// Switch current working directory
 	currentWorkingDirectory, err := d.changeWorkingDirectory()
 	if err != nil {
@@ -416,7 +418,7 @@ func (d *Dependency) Render(skipPush, skipBuild, forceBuild bool, log log.Logger
 	// Deploy all defined deployments
 	return d.deployController.Render(&deploy.Options{
 		BuiltImages: builtImages,
-	}, os.Stdout, log)
+	}, out, log)
 }
 
 // Purge purges the dependency
