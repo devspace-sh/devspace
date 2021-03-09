@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"io"
 	"os"
 	"strings"
 
@@ -39,11 +40,16 @@ type RenderCmd struct {
 
 	SkipDependencies bool
 	Dependency       []string
+
+	Writer io.Writer
 }
 
 // NewRenderCmd creates a new devspace render command
 func NewRenderCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
-	cmd := &RenderCmd{GlobalFlags: globalFlags}
+	cmd := &RenderCmd{
+		GlobalFlags: globalFlags,
+		Writer:      os.Stdout,
+	}
 
 	renderCmd := &cobra.Command{
 		Use:   "render",
@@ -149,6 +155,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 			SkipBuild:    cmd.SkipBuild,
 			ForceBuild:   cmd.ForceBuild,
 			Verbose:      cmd.VerboseDependencies,
+			Writer:       cmd.Writer,
 		})
 		if err != nil {
 			return errors.Wrap(err, "render dependencies")
@@ -202,7 +209,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	err = f.NewDeployController(config, generatedConfig.GetActive(), client).Render(&deploy.Options{
 		BuiltImages: builtImages,
 		Deployments: deployments,
-	}, os.Stdout, log)
+	}, cmd.Writer, log)
 	if err != nil {
 		return err
 	}
