@@ -1,7 +1,8 @@
 package upgrade
 
 import (
-	"errors"
+	"fmt"
+	"github.com/pkg/errors"
 	"os"
 	"regexp"
 	"sync"
@@ -120,8 +121,33 @@ func NewerVersionAvailable() string {
 }
 
 // Upgrade downloads the latest release from github and replaces devspace if a new version is found
-func Upgrade() error {
+func Upgrade(flagVersion string) error {
 	log := log.GetInstance()
+	if flagVersion != "" {
+		release, found, err := selfupdate.DetectVersion(githubSlug, flagVersion)
+		if err != nil {
+			return errors.Wrap(err, "find version")
+		} else if !found {
+			return fmt.Errorf("devspace version %s couldn't be found", flagVersion)
+		}
+
+		cmdPath, err := os.Executable()
+		if err != nil {
+			return err
+		}
+
+		log.StartWait(fmt.Sprintf("Downloading version %s...", flagVersion))
+		err = selfupdate.DefaultUpdater().UpdateTo(release, cmdPath)
+		log.StopWait()
+		if err != nil {
+			return err
+		}
+
+		log.Donef("Successfully updated devspace to version %s", flagVersion)
+		return nil
+	}
+
+	v := semver.MustParse(version)
 
 	newerVersion, err := CheckForNewerVersion()
 	if err != nil {
@@ -131,8 +157,6 @@ func Upgrade() error {
 		log.Infof("Current binary is the latest version: %s", version)
 		return nil
 	}
-
-	v := semver.MustParse(version)
 
 	log.StartWait("Downloading newest version...")
 	latest, err := selfupdate.UpdateSelf(v, githubSlug)

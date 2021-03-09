@@ -16,6 +16,8 @@ import (
 	_ "github.com/loft-sh/devspace/e2e/tests/deploy"
 	_ "github.com/loft-sh/devspace/e2e/tests/dev"
 	_ "github.com/loft-sh/devspace/e2e/tests/initcmd"
+	_ "github.com/loft-sh/devspace/e2e/tests/print"
+	_ "github.com/loft-sh/devspace/e2e/tests/render"
 )
 
 var ()

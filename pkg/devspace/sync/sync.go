@@ -1,8 +1,8 @@
 package sync
 
 import (
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"io"
-	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -13,15 +13,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rjeczalik/notify"
-	gitignore "github.com/sabhiram/go-gitignore"
-	"github.com/sirupsen/logrus"
 )
 
 var syncRetries = 5
 var initialUpstreamBatchSize = 1000
-
-var syncLogOnce sync.Once
-var syncLog log.Logger
 
 // Options holds the sync options
 type Options struct {
@@ -63,9 +58,9 @@ type Sync struct {
 
 	fileIndex *fileIndex
 
-	ignoreMatcher         gitignore.IgnoreParser
-	downloadIgnoreMatcher gitignore.IgnoreParser
-	uploadIgnoreMatcher   gitignore.IgnoreParser
+	ignoreMatcher         ignoreparser.IgnoreParser
+	downloadIgnoreMatcher ignoreparser.IgnoreParser
+	uploadIgnoreMatcher   ignoreparser.IgnoreParser
 
 	log log.Logger
 
@@ -101,18 +96,7 @@ func NewSync(localPath string, options Options) (*Sync, error) {
 
 	// Initialize log
 	if options.Log == nil {
-		syncLogOnce.Do(func() {
-			// Check if syncLog already exists
-			stat, err := os.Stat(log.Logdir + "sync.log")
-			if err == nil || stat != nil {
-				cleanupSyncLogs()
-			}
-
-			syncLog = log.GetFileLogger("sync")
-			syncLog.SetLevel(logrus.InfoLevel)
-		})
-
-		options.Log = syncLog
+		options.Log = log.GetFileLogger("sync")
 	}
 
 	// Create sync structure
@@ -168,7 +152,7 @@ func (s *Sync) Start() error {
 
 func (s *Sync) initIgnoreParsers() error {
 	if s.Options.ExcludePaths != nil {
-		ignoreMatcher, err := CompilePaths(s.Options.ExcludePaths)
+		ignoreMatcher, err := ignoreparser.CompilePaths(s.Options.ExcludePaths)
 		if err != nil {
 			return errors.Wrap(err, "compile exclude paths")
 		}
@@ -177,7 +161,7 @@ func (s *Sync) initIgnoreParsers() error {
 	}
 
 	if s.Options.DownloadExcludePaths != nil {
-		ignoreMatcher, err := CompilePaths(s.Options.DownloadExcludePaths)
+		ignoreMatcher, err := ignoreparser.CompilePaths(s.Options.DownloadExcludePaths)
 		if err != nil {
 			return errors.Wrap(err, "compile download exclude paths")
 		}
@@ -186,7 +170,7 @@ func (s *Sync) initIgnoreParsers() error {
 	}
 
 	if s.Options.UploadExcludePaths != nil {
-		ignoreMatcher, err := CompilePaths(s.Options.UploadExcludePaths)
+		ignoreMatcher, err := ignoreparser.CompilePaths(s.Options.UploadExcludePaths)
 		if err != nil {
 			return errors.Wrap(err, "compile upload exclude paths")
 		}
