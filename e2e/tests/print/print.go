@@ -62,8 +62,7 @@ var _ = ginkgo.Describe("dev", func() {
 		// Run cmd
 		printCmd := &cmd.PrintCmd{
 			GlobalFlags: &flags.GlobalFlags{
-				Namespace: f.Namespace,
-				Vars:      []string{"MY_IMAGE=default"},
+				Vars: []string{"MY_IMAGE=default"},
 			},
 		}
 		err = printCmd.Run(f, []plugin.Metadata{}, &cobra.Command{}, []string{})

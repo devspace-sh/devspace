@@ -28,86 +28,86 @@ func (c *CatchLogger) GetLogs() string {
 
 // Debug implements logger interface
 func (c *CatchLogger) Debug(args ...interface{}) {
-	c.logs = c.logs + "\n[DEBUG] " + fmt.Sprint(args)
+	c.logs = c.logs + "\n[DEBUG] " + fmt.Sprint(args...)
 }
 
 // Debugf implements logger interface
 func (c *CatchLogger) Debugf(format string, args ...interface{}) {
-	c.logs = c.logs + "\n[DEBUG] " + fmt.Sprintf(format, args)
+	c.logs = c.logs + "\n[DEBUG] " + fmt.Sprintf(format, args...)
 }
 
 // Info implements logger interface
 func (c *CatchLogger) Info(args ...interface{}) {
-	c.logs = c.logs + "\n[INFO] " + fmt.Sprint(args)
+	c.logs = c.logs + "\n[INFO] " + fmt.Sprint(args...)
 }
 
 // Infof implements logger interface
 func (c *CatchLogger) Infof(format string, args ...interface{}) {
-	c.logs = c.logs + "\n[INFO] " + fmt.Sprintf(format, args)
+	c.logs = c.logs + "\n[INFO] " + fmt.Sprintf(format, args...)
 }
 
 // Warn implements logger interface
 func (c *CatchLogger) Warn(args ...interface{}) {
-	c.logs = c.logs + "\n[WARN] " + fmt.Sprint(args)
+	c.logs = c.logs + "\n[WARN] " + fmt.Sprint(args...)
 }
 
 // Warnf implements logger interface
 func (c *CatchLogger) Warnf(format string, args ...interface{}) {
-	c.logs = c.logs + "\n[WARN] " + fmt.Sprintf(format, args)
+	c.logs = c.logs + "\n[WARN] " + fmt.Sprintf(format, args...)
 }
 
 // Error implements logger interface
 func (c *CatchLogger) Error(args ...interface{}) {
-	c.logs = c.logs + "\n[ERROR] " + fmt.Sprint(args)
+	c.logs = c.logs + "\n[ERROR] " + fmt.Sprint(args...)
 }
 
 // Errorf implements logger interface
 func (c *CatchLogger) Errorf(format string, args ...interface{}) {
-	c.logs = c.logs + "\n[ERROR] " + fmt.Sprintf(format, args)
+	c.logs = c.logs + "\n[ERROR] " + fmt.Sprintf(format, args...)
 }
 
 // Fatal implements logger interface
 func (c *CatchLogger) Fatal(args ...interface{}) {
-	c.logs = c.logs + "\n[FATAL] " + fmt.Sprint(args)
+	c.logs = c.logs + "\n[FATAL] " + fmt.Sprint(args...)
 	c.Panic(args...)
 }
 
 // Fatalf implements logger interface
 func (c *CatchLogger) Fatalf(format string, args ...interface{}) {
-	c.logs = c.logs + "\n[FATAL] " + fmt.Sprintf(format, args)
+	c.logs = c.logs + "\n[FATAL] " + fmt.Sprintf(format, args...)
 	c.Panicf(format, args...)
 }
 
 // Panic implements logger interface
 func (c *CatchLogger) Panic(args ...interface{}) {
-	c.logs = c.logs + "\n[PANIC] " + fmt.Sprint(args)
+	c.logs = c.logs + "\n[PANIC] " + fmt.Sprint(args...)
 	panic(fmt.Sprint(args...))
 }
 
 // Panicf implements logger interface
 func (c *CatchLogger) Panicf(format string, args ...interface{}) {
-	c.logs = c.logs + "\n[PANIC] " + fmt.Sprintf(format, args)
+	c.logs = c.logs + "\n[PANIC] " + fmt.Sprintf(format, args...)
 	panic(fmt.Sprintf(format, args...))
 }
 
 // Done implements logger interface
 func (c *CatchLogger) Done(args ...interface{}) {
-	c.logs = c.logs + "\n[DONE] " + fmt.Sprint(args)
+	c.logs = c.logs + "\n[DONE] " + fmt.Sprint(args...)
 }
 
 // Donef implements logger interface
 func (c *CatchLogger) Donef(format string, args ...interface{}) {
-	c.logs = c.logs + "\n[DONE] " + fmt.Sprintf(format, args)
+	c.logs = c.logs + "\n[DONE] " + fmt.Sprintf(format, args...)
 }
 
 // Fail implements logger interface
 func (c *CatchLogger) Fail(args ...interface{}) {
-	c.logs = c.logs + "\n[FAIL] " + fmt.Sprint(args)
+	c.logs = c.logs + "\n[FAIL] " + fmt.Sprint(args...)
 }
 
 // Failf implements logger interface
 func (c *CatchLogger) Failf(format string, args ...interface{}) {
-	c.logs = c.logs + "\n[FAIL] " + fmt.Sprintf(format, args)
+	c.logs = c.logs + "\n[FAIL] " + fmt.Sprintf(format, args...)
 }
 
 // Print implements logger interface

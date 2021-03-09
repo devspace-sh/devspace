@@ -44,3 +44,13 @@ func ExpectHaveKey(actual interface{}, key interface{}, explain ...interface{}) 
 func ExpectEmpty(actual interface{}, explain ...interface{}) {
 	gomega.ExpectWithOffset(1, actual).To(gomega.BeEmpty(), explain...)
 }
+
+// ExpectNotEmpty expects actual is not empty
+func ExpectNotEmpty(actual interface{}, explain ...interface{}) {
+	gomega.ExpectWithOffset(1, actual).NotTo(gomega.BeEmpty(), explain...)
+}
+
+// ExpectTrue expects actual is true
+func ExpectTrue(actual interface{}, explain ...interface{}) {
+	gomega.ExpectWithOffset(1, actual).To(gomega.BeTrue(), explain...)
+}
