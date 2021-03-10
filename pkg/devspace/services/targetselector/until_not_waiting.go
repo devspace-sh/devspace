@@ -60,7 +60,7 @@ func (u *untilNotWaiting) SelectContainer(containers []*kubectl.SelectedPodConta
 	sort.Slice(containers, func(i, j int) bool {
 		return kubectl.SortContainersByNewest(containers, i, j)
 	})
-	if isContainerWaiting(containers[0]) == false {
+	if isContainerWaiting(containers[0]) {
 		return false, nil, nil
 	}
 
@@ -74,6 +74,11 @@ func (u *untilNotWaiting) printNotFoundWarning(log log.Logger) {
 }
 
 func isPodWaiting(pod *v1.Pod) bool {
+	for _, containerStatus := range pod.Status.InitContainerStatuses {
+		if containerStatus.State.Waiting != nil {
+			return true
+		}
+	}
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.State.Waiting != nil {
 			return true
@@ -84,9 +89,14 @@ func isPodWaiting(pod *v1.Pod) bool {
 }
 
 func isContainerWaiting(container *kubectl.SelectedPodContainer) bool {
+	for _, containerStatus := range container.Pod.Status.InitContainerStatuses {
+		if containerStatus.Name == container.Container.Name && containerStatus.State.Waiting != nil {
+			return true
+		}
+	}
 	for _, containerStatus := range container.Pod.Status.ContainerStatuses {
-		if containerStatus.Name == container.Container.Name {
-			return containerStatus.State.Waiting != nil
+		if containerStatus.Name == container.Container.Name && containerStatus.State.Waiting != nil {
+			return true
 		}
 	}
 

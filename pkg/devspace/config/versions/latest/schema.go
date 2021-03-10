@@ -754,18 +754,46 @@ type SourceConfig struct {
 
 // HookConfig defines a hook
 type HookConfig struct {
-	Command  string          `yaml:"command" json:"command"`
-	Args     []string        `yaml:"args,omitempty" json:"args,omitempty"`
-	Upload   *HookSyncConfig `yaml:"upload,omitempty" json:"upload,omitempty"`
+	// Command is the base command that is either executed locally or in a remote container.
+	// Command is mutually exclusive with other hook actions. In the case this is defined
+	// together with where.container, DevSpace will until the target container is running and
+	// only then execute the command. If the container does not start in time, DevSpace will fail.
+	Command string `yaml:"command" json:"command"`
+	// Args are additional arguments passed together with the command to execute.
+	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
+	// If Upload is specified, DevSpace will upload certain local files or folders into a
+	// remote container.
+	Upload *HookSyncConfig `yaml:"upload,omitempty" json:"upload,omitempty"`
+	// Same as Upload, but with this option DevSpace will download files or folders from
+	// a remote container.
 	Download *HookSyncConfig `yaml:"download,omitempty" json:"download,omitempty"`
+	// If logs is defined will print the logs of the target container. This is useful for containers
+	// that should finish like init containers or job pods. Otherwise this hook will never terminate.
+	Logs *HookLogsConfig `yaml:"logs,omitempty" json:"logs,omitempty"`
 
+	// If an operating system is defined, the hook will only be executed for the given os.
+	// All supported golang OS types are supported and multiple can be combined with ','.
 	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
 
+	// If true, the hook will be executed in the background.
 	Background bool `yaml:"background,omitempty" json:"background,omitempty"`
-	Silent     bool `yaml:"silent,omitempty" json:"silent,omitempty"`
+	// If true, the hook will not output anything to the standard out of DevSpace except
+	// for the case when the hook fails, where DevSpace will show the error including
+	// the captured output streams of the hook.
+	Silent bool `yaml:"silent,omitempty" json:"silent,omitempty"`
 
+	// Specifies where the hook should be run. If this is ommitted DevSpace expects a
+	// local command hook.
 	Where HookWhereConfig `yaml:"where,omitempty" json:"where,omitempty"`
-	When  *HookWhenConfig `yaml:"when,omitempty" json:"when,omitempty"`
+	// Specifies when the hook should be run.
+	When *HookWhenConfig `yaml:"when,omitempty" json:"when,omitempty"`
+}
+
+// HookLogsConfig defines a hook logs config
+type HookLogsConfig struct {
+	// If set, the number of lines from the end of the logs to show. If not specified,
+	// logs are shown from the creation of the container
+	TailLines *int64 `yaml:"tailLines,omitempty" json:"tailLines,omitempty"`
 }
 
 // HookSyncConfig defines a hook upload config
