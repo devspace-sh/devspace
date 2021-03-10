@@ -9,7 +9,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/message"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -25,6 +24,7 @@ type LogsCmd struct {
 	Pick          bool
 
 	Follow            bool
+	Wait              bool
 	LastAmountOfLines int
 }
 
@@ -60,6 +60,7 @@ devspace logs --namespace=mynamespace
 	logsCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
 	logsCmd.Flags().BoolVarP(&cmd.Follow, "follow", "f", false, "Attach to logs afterwards")
 	logsCmd.Flags().IntVar(&cmd.LastAmountOfLines, "lines", 200, "Max amount of lines to print from the last log")
+	logsCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "Wait for the pod(s) to start if they are not running")
 
 	return logsCmd
 }
@@ -117,10 +118,9 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 
 	// set image selector
 	options.ImageSelector = imageSelector
-	options.Wait = ptr.Bool(false)
 
 	// Start terminal
-	err = f.NewServicesClient(nil, generatedConfig, client, log).StartLogs(options, cmd.Follow, int64(cmd.LastAmountOfLines))
+	err = f.NewServicesClient(nil, generatedConfig, client, log).StartLogs(options, cmd.Follow, int64(cmd.LastAmountOfLines), cmd.Wait)
 	if err != nil {
 		return err
 	}
