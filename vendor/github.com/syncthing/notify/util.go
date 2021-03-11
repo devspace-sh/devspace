@@ -123,10 +123,12 @@ func base(s string) string {
 	return s
 }
 
-func indexbase(root, name string) int {
-	if n, m := len(root), len(name); m >= n && name[:n] == root &&
-		(n == m || name[n] == os.PathSeparator) {
-		return min(n+1, m)
+// indexrel returns the index of the first char of name that is
+// below/relative to root. It returns -1 if name is not a child of root.
+func indexrel(root, name string) int {
+	if n, m := len(root), len(name); m > n && name[:n] == root &&
+		name[n] == os.PathSeparator {
+		return n + 1
 	}
 	return -1
 }

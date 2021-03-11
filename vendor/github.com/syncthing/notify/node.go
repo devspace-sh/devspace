@@ -6,7 +6,6 @@ package notify
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -49,7 +48,7 @@ func (nd node) addchild(name, base string) node {
 }
 
 func (nd node) Add(name string) node {
-	i := indexbase(nd.Name, name)
+	i := indexrel(nd.Name, name)
 	if i == -1 {
 		return node{}
 	}
@@ -60,7 +59,7 @@ func (nd node) Add(name string) node {
 	return nd.addchild(name, name[i:])
 }
 
-func (nd node) AddDir(fn walkFunc) error {
+func (nd node) AddDir(fn walkFunc, doNotWatch DoNotWatchFn) error {
 	stack := []node{nd}
 Traverse:
 	for n := len(stack); n != 0; n = len(stack) {
@@ -78,13 +77,25 @@ Traverse:
 		}
 		// TODO(rjeczalik): tolerate open failures - add failed names to
 		// AddDirError and notify users which names are not added to the tree.
-		fi, err := ioutil.ReadDir(nd.Name)
+		f, err := os.Open(nd.Name)
 		if err != nil {
 			return err
 		}
-		for _, fi := range fi {
+		names, err := f.Readdirnames(-1)
+		f.Close()
+		if err != nil {
+			return err
+		}
+		for _, name := range names {
+			name = filepath.Join(nd.Name, name)
+			if doNotWatch != nil && doNotWatch(name) {
+				continue
+			}
+			fi, err := os.Lstat(name)
+			if err != nil {
+				return err
+			}
 			if fi.Mode()&(os.ModeSymlink|os.ModeDir) == os.ModeDir {
-				name := filepath.Join(nd.Name, fi.Name())
 				stack = append(stack, nd.addchild(name, name[len(nd.Name)+1:]))
 			}
 		}
@@ -93,7 +104,7 @@ Traverse:
 }
 
 func (nd node) Get(name string) (node, error) {
-	i := indexbase(nd.Name, name)
+	i := indexrel(nd.Name, name)
 	if i == -1 {
 		return node{}, errnotexist(name)
 	}
@@ -111,7 +122,7 @@ func (nd node) Get(name string) (node, error) {
 }
 
 func (nd node) Del(name string) error {
-	i := indexbase(nd.Name, name)
+	i := indexrel(nd.Name, name)
 	if i == -1 {
 		return errnotexist(name)
 	}
@@ -122,13 +133,13 @@ func (nd node) Del(name string) error {
 			return errnotexist(name[:i+j])
 		}
 		stack = append(stack, nd)
+		i += j + 1
 	}
-	if nd, ok = nd.Child[name[i:]]; !ok {
+	if _, ok = nd.Child[name[i:]]; !ok {
 		return errnotexist(name)
 	}
-	nd.Child = nil
-	nd.Watch = nil
-	for name, i = base(nd.Name), len(stack); i != 0; name, i = base(nd.Name), i-1 {
+	delete(nd.Child, name[i:])
+	for name, i = name[i:], len(stack); i != 0; name, i = base(nd.Name), i-1 {
 		nd = stack[i-1]
 		if nd := nd.Child[name]; len(nd.Watch) > 1 || len(nd.Child) != 0 {
 			break
@@ -141,7 +152,7 @@ func (nd node) Del(name string) error {
 	return nil
 }
 
-func (nd node) Walk(fn walkFunc) error {
+func (nd node) Walk(fn walkFunc, doNotWatch DoNotWatchFn) error {
 	stack := []node{nd}
 Traverse:
 	for n := len(stack); n != 0; n = len(stack) {
@@ -160,6 +171,9 @@ Traverse:
 				// never has a parent node.
 				continue
 			}
+			if doNotWatch != nil && doNotWatch(nd.Name) {
+				continue
+			}
 			stack = append(stack, nd)
 		}
 	}
@@ -167,7 +181,7 @@ Traverse:
 }
 
 func (nd node) WalkPath(name string, fn walkPathFunc) error {
-	i := indexbase(nd.Name, name)
+	i := indexrel(nd.Name, name)
 	if i == -1 {
 		return errnotexist(name)
 	}
@@ -233,8 +247,8 @@ func (r root) Add(name string) node {
 	return r.addroot(name).Add(name)
 }
 
-func (r root) AddDir(dir string, fn walkFunc) error {
-	return r.Add(dir).AddDir(fn)
+func (r root) AddDir(dir string, fn walkFunc, doNotWatch DoNotWatchFn) error {
+	return r.Add(dir).AddDir(fn, doNotWatch)
 }
 
 func (r root) Del(name string) error {
@@ -258,12 +272,12 @@ func (r root) Get(name string) (node, error) {
 	return nd, nil
 }
 
-func (r root) Walk(name string, fn walkFunc) error {
+func (r root) Walk(name string, fn walkFunc, doNotWatch DoNotWatchFn) error {
 	nd, err := r.Get(name)
 	if err != nil {
 		return err
 	}
-	return nd.Walk(fn)
+	return nd.Walk(fn, doNotWatch)
 }
 
 func (r root) WalkPath(name string, fn walkPathFunc) error {

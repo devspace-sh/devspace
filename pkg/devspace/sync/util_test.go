@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/juju/errors"
+	"github.com/pkg/errors"
 )
 
 const (
