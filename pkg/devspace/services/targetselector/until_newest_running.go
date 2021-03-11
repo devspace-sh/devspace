@@ -1,7 +1,7 @@
 package targetselector
 
 import (
-	kubectl "github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	v1 "k8s.io/api/core/v1"
 	"sort"
@@ -40,7 +40,7 @@ func (u *untilNewestRunning) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *v
 	sort.Slice(pods, func(i, j int) bool {
 		return kubectl.SortPodsByNewest(pods, i, j)
 	})
-	if hasPodProblem(pods[0]) {
+	if HasPodProblem(pods[0]) {
 		u.printPodWarning(pods[0], log)
 		return false, nil, nil
 	}
@@ -66,7 +66,7 @@ func (u *untilNewestRunning) SelectContainer(containers []*kubectl.SelectedPodCo
 	sort.Slice(containers, func(i, j int) bool {
 		return kubectl.SortContainersByNewest(containers, i, j)
 	})
-	if hasPodProblem(containers[0].Pod) {
+	if HasPodProblem(containers[0].Pod) {
 		u.printPodWarning(containers[0].Pod, log)
 		return false, nil, nil
 	}
@@ -107,7 +107,7 @@ func IsContainerRunning(container *kubectl.SelectedPodContainer) bool {
 	return false
 }
 
-func hasPodProblem(pod *v1.Pod) bool {
+func HasPodProblem(pod *v1.Pod) bool {
 	status := kubectl.GetPodStatus(pod)
 	if strings.HasPrefix(status, "Init:") {
 		status = status[5:]

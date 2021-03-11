@@ -770,6 +770,9 @@ type HookConfig struct {
 	// If logs is defined will print the logs of the target container. This is useful for containers
 	// that should finish like init containers or job pods. Otherwise this hook will never terminate.
 	Logs *HookLogsConfig `yaml:"logs,omitempty" json:"logs,omitempty"`
+	// If wait is defined the hook will wait until the matched pod or container is running or is terminated
+	// with a certain exit code. Timeout for the wait is specified in where.container.timeout
+	Wait *HookWaitConfig `yaml:"wait,omitempty" json:"wait,omitempty"`
 
 	// If an operating system is defined, the hook will only be executed for the given os.
 	// All supported golang OS types are supported and multiple can be combined with ','.
@@ -787,6 +790,21 @@ type HookConfig struct {
 	Where HookWhereConfig `yaml:"where,omitempty" json:"where,omitempty"`
 	// Specifies when the hook should be run.
 	When *HookWhenConfig `yaml:"when,omitempty" json:"when,omitempty"`
+}
+
+// HookWaitConfig defines a hook wait config
+type HookWaitConfig struct {
+	// If running is true, will wait until the newest pod and container that
+	// matches the search is running. Can be used together with terminatedWithCode.
+	Running bool `yaml:"running,omitempty" json:"running,omitempty"`
+
+	// If terminatedWithCode is not nil, will wait until the newest pod and container that
+	// matches the search is terminated with the given exit code. If the container has exited with a different
+	// exit code, the hook will fail. Can be used together with running.
+	TerminatedWithCode *int32 `yaml:"terminatedWithCode,omitempty" json:"terminatedWithCode,omitempty"`
+
+	// The amount of seconds to wait until the hook will fail. Defaults to 150 seconds.
+	Timeout int64 `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 }
 
 // HookLogsConfig defines a hook logs config

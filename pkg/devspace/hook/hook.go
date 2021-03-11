@@ -190,6 +190,8 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 				} else if hookConfig.Logs != nil {
 					// we use another waiting strategy here, because the pod might has finished already
 					hook = NewRemoteHookWithWaitingStrategy(NewLogsHook(hookWriter), targetselector.NewUntilNotWaitingStrategy(time.Second*2))
+				} else if hookConfig.Wait != nil {
+					hook = NewWaitHook()
 				} else {
 					hook = NewRemoteHook(NewRemoteCommandHook(hookWriter, hookWriter))
 				}
@@ -303,6 +305,19 @@ func hookName(hook *latest.HookConfig) string {
 		}
 
 		return fmt.Sprintf("logs from first container found")
+	}
+	if hook.Wait != nil && hook.Where.Container != nil {
+		if hook.Where.Container.Pod != "" {
+			return fmt.Sprintf("wait for pod %s", hook.Where.Container.Pod)
+		}
+		if len(hook.Where.Container.LabelSelector) > 0 {
+			return fmt.Sprintf("wait for selector %s", labels.Set(hook.Where.Container.LabelSelector).String())
+		}
+		if hook.Where.Container.ImageName != "" {
+			return fmt.Sprintf("wait for imageName %s", hook.Where.Container.ImageName)
+		}
+
+		return fmt.Sprintf("wait for everything")
 	}
 	return "hook"
 }

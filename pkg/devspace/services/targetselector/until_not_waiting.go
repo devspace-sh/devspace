@@ -74,6 +74,10 @@ func (u *untilNotWaiting) printNotFoundWarning(log log.Logger) {
 }
 
 func isPodWaiting(pod *v1.Pod) bool {
+	if pod.DeletionTimestamp != nil {
+		return true
+	}
+	
 	for _, containerStatus := range pod.Status.InitContainerStatuses {
 		if containerStatus.State.Waiting != nil {
 			return true
@@ -89,6 +93,10 @@ func isPodWaiting(pod *v1.Pod) bool {
 }
 
 func isContainerWaiting(container *kubectl.SelectedPodContainer) bool {
+	if container.Pod.DeletionTimestamp != nil {
+		return true
+	}
+	
 	for _, containerStatus := range container.Pod.Status.InitContainerStatuses {
 		if containerStatus.Name == container.Container.Name && containerStatus.State.Waiting != nil {
 			return true

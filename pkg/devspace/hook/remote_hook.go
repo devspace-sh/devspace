@@ -66,7 +66,7 @@ func (r *remoteHook) execute(ctx Context, hook *latest.HookConfig, imageSelector
 		labelSelector = labels.Set(hook.Where.Container.LabelSelector).String()
 	}
 
-	timeout := int64(120)
+	timeout := int64(150)
 	if hook.Where.Container.Timeout > 0 {
 		timeout = hook.Where.Container.Timeout
 	}
