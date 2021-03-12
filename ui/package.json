@@ -39,7 +39,7 @@
     "raf": "3.4.0",
     "react": "next",
     "react-cookie": "^3.1.1",
-    "react-dev-utils": "9.0.1",
+    "react-dev-utils": "11.0.4",
     "react-dom": "next",
     "react-github-btn": "^1.0.6",
     "react-responsive-select": "^4.6.0",
