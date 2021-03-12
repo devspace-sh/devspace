@@ -17,7 +17,7 @@ import (
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/util"
 	"github.com/pkg/errors"
-	"github.com/rjeczalik/notify"
+	"github.com/syncthing/notify"
 )
 
 type upstream struct {

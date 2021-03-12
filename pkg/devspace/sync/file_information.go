@@ -2,7 +2,7 @@ package sync
 
 import (
 	"github.com/loft-sh/devspace/helper/remote"
-	"github.com/rjeczalik/notify"
+	"github.com/syncthing/notify"
 )
 
 // FileInformation describes a path or file that is synced either in the remote container or locally

@@ -7,7 +7,7 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/watch"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/rjeczalik/notify"
+	"github.com/syncthing/notify"
 )
 
 type symlinkEvent struct {

@@ -70,8 +70,8 @@ func validateCommands(config *latest.Config) error {
 
 func validateHooks(config *latest.Config) error {
 	for index, hookConfig := range config.Hooks {
-		if hookConfig.Command == "" && hookConfig.Upload == nil && hookConfig.Download == nil {
-			return errors.Errorf("hooks[%d].command, hooks[%d].download or hooks[%d].upload is required", index, index, index)
+		if hookConfig.Command == "" && hookConfig.Upload == nil && hookConfig.Download == nil && hookConfig.Logs == nil && hookConfig.Wait == nil {
+			return errors.Errorf("hooks[%d].command, hooks[%d].logs, hooks[%d].wait, hooks[%d].download or hooks[%d].upload is required", index, index, index, index, index)
 		}
 		enabled := 0
 		if hookConfig.Command != "" {
@@ -83,14 +83,29 @@ func validateHooks(config *latest.Config) error {
 		if hookConfig.Upload != nil {
 			enabled++
 		}
+		if hookConfig.Logs != nil {
+			enabled++
+		}
+		if hookConfig.Wait != nil {
+			enabled++
+		}
 		if enabled > 1 {
-			return errors.Errorf("you can only use one of hooks[%d].command, hooks[%d].upload and hooks[%d].download per hook", index, index, index)
+			return errors.Errorf("you can only use one of hooks[%d].command, hooks[%d].logs, hooks[%d].wait, hooks[%d].upload and hooks[%d].download per hook", index, index, index, index, index)
 		}
 		if hookConfig.Upload != nil && hookConfig.Where.Container == nil {
 			return errors.Errorf("hooks[%d].where.container is required if hooks[%d].upload is used", index, index)
 		}
 		if hookConfig.Download != nil && hookConfig.Where.Container == nil {
 			return errors.Errorf("hooks[%d].where.container is required if hooks[%d].download is used", index, index)
+		}
+		if hookConfig.Logs != nil && hookConfig.Where.Container == nil {
+			return errors.Errorf("hooks[%d].where.container is required if hooks[%d].logs is used", index, index)
+		}
+		if hookConfig.Wait != nil && hookConfig.Where.Container == nil {
+			return errors.Errorf("hooks[%d].where.container is required if hooks[%d].wait is used", index, index)
+		}
+		if hookConfig.Wait != nil && hookConfig.Wait.Running == false && hookConfig.Wait.TerminatedWithCode == nil {
+			return errors.Errorf("hooks[%d].wait.running or hooks[%d].wait.terminatedWithCode is required if hooks[%d].wait is used", index, index, index)
 		}
 	}
 
