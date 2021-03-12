@@ -15,7 +15,7 @@ func NewIdleGetter() (Getter, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	kernel32, err := syscall.LoadDLL("kernel32.dll")
 	if err != nil {
 		return nil, err
@@ -25,12 +25,12 @@ func NewIdleGetter() (Getter, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	getTickCount, err := kernel32.FindProc("GetTickCount")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &idleGetter{
 		getLastInputInfo: getLastInputInfo,
 		getTickCount:     getTickCount,
@@ -49,15 +49,11 @@ type idleGetter struct {
 
 func (i *idleGetter) Idle() (time.Duration, error) {
 	i.lastInputInfo.cbSize = uint32(unsafe.Sizeof(i.lastInputInfo))
-	currentTickCount, _, err := i.getTickCount.Call()
-	if err != nil {
-		return 0, errors.New("error running GetTickCount: " + err.Error())
-	}
-	
+	currentTickCount, _, _ := i.getTickCount.Call()
 	r1, _, err := i.getLastInputInfo.Call(uintptr(unsafe.Pointer(&i.lastInputInfo)))
 	if r1 == 0 {
 		return 0, errors.New("error getting last input info: " + err.Error())
 	}
-	
+
 	return time.Duration((uint32(currentTickCount) - i.lastInputInfo.dwTime)) * time.Millisecond, nil
 }

@@ -40,7 +40,7 @@ func (r *waitHook) Execute(ctx Context, hook *latest.HookConfig, log logpkg.Logg
 	if err != nil {
 		return err
 	}
-	
+
 	log.Donef("Hook '%s' successfully executed", ansi.Color(hookName(hook), "white+b"))
 	return nil
 }
@@ -58,7 +58,7 @@ func (r *waitHook) execute(ctx Context, hook *latest.HookConfig, imageSelector [
 
 	// wait until the defined condition will be true, this will wait initially 2 seconds
 	err := wait.Poll(time.Second*2, time.Duration(timeout)*time.Second, func() (done bool, err error) {
-		podContainers, err := kubectl.NewFilterWithSort(ctx.Client, nil, nil).SelectContainers(context.TODO(), kubectl.Selector{
+		podContainers, err := kubectl.NewFilter(ctx.Client).SelectContainers(context.TODO(), kubectl.Selector{
 			ImageSelector: imageSelector,
 			LabelSelector: labelSelector,
 			Pod:           hook.Where.Container.Pod,
@@ -96,7 +96,7 @@ func isWaitConditionTrue(condition *latest.HookWaitConfig, podContainer *kubectl
 	if podContainer.Pod.DeletionTimestamp != nil {
 		return false
 	}
-	
+
 	for _, cs := range podContainer.Pod.Status.InitContainerStatuses {
 		if cs.Name == podContainer.Container.Name {
 			if condition.Running && cs.State.Running != nil {

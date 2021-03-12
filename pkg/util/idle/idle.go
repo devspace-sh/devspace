@@ -14,21 +14,21 @@ type Getter interface {
 	Idle() (time.Duration, error)
 }
 
-// NewIdleMonitor returns a new idle monitor 
+// NewIdleMonitor returns a new idle monitor
 func NewIdleMonitor() (Monitor, error) {
 	getter, err := NewIdleGetter()
 	if err != nil {
 		if _, ok := err.(*unsupportedError); ok {
 			return nil, nil
 		}
-		
+
 		return nil, err
 	}
-	
+
 	return &monitor{
 		Getter: getter,
 	}, nil
-} 
+}
 
 type monitor struct {
 	Getter Getter
@@ -38,7 +38,7 @@ func (m *monitor) Start(timeout time.Duration, log log.Logger) {
 	if timeout <= 0 {
 		return
 	}
-	
+
 	go func() {
 		wait.Forever(func() {
 			duration, err := m.Getter.Idle()
@@ -49,11 +49,11 @@ func (m *monitor) Start(timeout time.Duration, log log.Logger) {
 				// we exit here
 				log.Fatalf("Automatically exit DevSpace, because the user is inactive for %s. To disable automatic exiting, run with --inactivity-timeout=0", duration.String())
 			}
-		}, time.Second * 5)
+		}, time.Second*10)
 	}()
 }
 
-type unsupportedError struct {}
+type unsupportedError struct{}
 
 func (u *unsupportedError) Error() string {
 	return "not supported"
