@@ -1,6 +1,6 @@
 # cloud.google.com/go v0.51.0
 cloud.google.com/go/compute/metadata
-# github.com/AlecAivazis/survey/v2 v2.2.7
+# github.com/AlecAivazis/survey/v2 v2.2.9
 ## explicit
 github.com/AlecAivazis/survey/v2
 github.com/AlecAivazis/survey/v2/core
@@ -289,7 +289,7 @@ github.com/miekg/pkcs11
 github.com/mitchellh/go-homedir
 # github.com/mitchellh/go-wordwrap v1.0.0
 github.com/mitchellh/go-wordwrap
-# github.com/moby/term v0.0.0-20200312100748-672ec06f55cd
+# github.com/moby/term v0.0.0-20201216013528-df9cb8a40635
 ## explicit
 github.com/moby/term
 github.com/moby/term/windows

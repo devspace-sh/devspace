@@ -2,17 +2,17 @@ package kubectl
 
 import (
 	"bytes"
+	"github.com/loft-sh/devspace/pkg/util/terminal"
 	"io"
+	"k8s.io/kubectl/pkg/util/term"
 	"net/http"
 
-	"github.com/loft-sh/devspace/pkg/util/terminal"
 	corev1 "k8s.io/api/core/v1"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/transport/spdy"
 	kubectlExec "k8s.io/client-go/util/exec"
 	"k8s.io/kubectl/pkg/scheme"
-	"k8s.io/kubectl/pkg/util/term"
 )
 
 // SubResource specifies with sub resources should be used for the container connection (exec or attach)
@@ -62,10 +62,12 @@ func (client *client) ExecStreamWithTransport(options *ExecStreamWithTransportOp
 				t.Raw = true
 			}
 
+			// unset options.Stderr if it was previously set because both stdout and stderr
+			// go over t.Out when tty is true
+			options.Stderr = nil
 			streamOptions = remotecommand.StreamOptions{
 				Stdin:             t.In,
 				Stdout:            t.Out,
-				Stderr:            options.Stderr,
 				Tty:               t.Raw,
 				TerminalSizeQueue: sizeQueue,
 			}

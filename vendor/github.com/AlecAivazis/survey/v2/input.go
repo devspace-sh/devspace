@@ -105,7 +105,8 @@ func (i *Input) OnChange(key rune, config *PromptConfig) (bool, error) {
 		}
 	} else if key == terminal.KeyDelete || key == terminal.KeyBackspace {
 		if i.answer != "" {
-			i.answer = i.answer[0 : len(i.answer)-1]
+			runeAnswer := []rune(i.answer)
+			i.answer = string(runeAnswer[0 : len(runeAnswer)-1])
 		}
 	} else if key >= terminal.KeySpace {
 		i.answer += string(key)

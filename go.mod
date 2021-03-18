@@ -3,7 +3,7 @@ module github.com/loft-sh/devspace
 go 1.15
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.2.7
+	github.com/AlecAivazis/survey/v2 v2.2.9
 	github.com/Microsoft/hcsshim v0.8.10 // indirect
 	github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d // indirect
 	github.com/agl/ed25519 v0.0.0-00010101000000-000000000000 // indirect
@@ -49,7 +49,7 @@ require (
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/miekg/pkcs11 v1.0.3 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/moby/term v0.0.0-20200312100748-672ec06f55cd
+	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v0.1.1 // indirect

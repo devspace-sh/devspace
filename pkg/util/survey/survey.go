@@ -115,6 +115,9 @@ func (s *survey) Question(params *QuestionOptions) (string, error) {
 		// Keyboard interrupt
 		os.Exit(0)
 	}
+	if answers.Question == "" && len(params.Options) > 0 {
+		answers.Question = params.Options[0]
+	}
 
 	return answers.Question, nil
 }
