@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"strconv"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
@@ -40,6 +41,7 @@ type DeployCmd struct {
 	SkipPushLocalKubernetes bool
 	AllowCyclicDependencies bool
 	Dependency              []string
+	MaxConcurrency          int
 
 	Wait    bool
 	Timeout int
@@ -85,6 +87,7 @@ devspace deploy --kube-context=deploy-context
 	deployCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to (re-)build every image")
 	deployCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips building of images")
 	deployCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
+	deployCmd.Flags().IntVar(&cmd.MaxConcurrency, "max-concurrency", 0, "Set maximum number of build jobs that run simultaneously")
 	deployCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
 	deployCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 	deployCmd.Flags().BoolVar(&cmd.SkipDeploy, "skip-deploy", false, "Skips deploying and only builds images")
@@ -215,6 +218,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 				ForceRebuild:              cmd.ForceBuild,
 				Sequential:                cmd.BuildSequential,
+				MaxConcurrency:            cmd.MaxConcurrency,
 			}, cmd.log)
 			if err != nil {
 				if strings.Index(err.Error(), "no space left on device") != -1 {

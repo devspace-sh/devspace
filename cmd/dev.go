@@ -51,6 +51,7 @@ type DevCmd struct {
 	ForceDeploy       bool
 	Deployments       string
 	ForceDependencies bool
+	MaxConcurrency    int
 
 	Sync            bool
 	ExitAfterDeploy bool
@@ -111,6 +112,7 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	devCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips building of images")
 	devCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
+	devCmd.Flags().IntVar(&cmd.MaxConcurrency, "max-concurrency", 0, "Set maximum number of build jobs that run simultaneously")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to deploy every deployment")
 	devCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specifc deployment (You can specify multiple deployments comma-separated")
@@ -289,6 +291,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 				ForceRebuild:              cmd.ForceBuild,
 				Sequential:                cmd.BuildSequential,
+				MaxConcurrency:            cmd.MaxConcurrency,
 				IgnoreContextPathChanges:  skipBuildIfAlreadyBuilt,
 			}, cmd.log)
 			if err != nil {

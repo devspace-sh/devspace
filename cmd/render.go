@@ -1,10 +1,11 @@
 package cmd
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
@@ -34,6 +35,7 @@ type RenderCmd struct {
 	SkipBuild       bool
 	ForceBuild      bool
 	BuildSequential bool
+	MaxConcurrency  int
 
 	ShowLogs    bool
 	Deployments string
@@ -71,6 +73,7 @@ deployment.
 
 	renderCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	renderCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
+	renderCmd.Flags().IntVar(&cmd.MaxConcurrency, "max-concurrency", 0, "Set maximum number of build jobs that run simultaneously")
 	renderCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
 	renderCmd.Flags().StringSliceVarP(&cmd.Tags, "tag", "t", []string{}, "Use the given tag for all built images")
 	renderCmd.Flags().BoolVar(&cmd.ShowLogs, "show-logs", false, "Shows the build logs")
@@ -174,6 +177,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 			ForceRebuild:              cmd.ForceBuild,
 			Sequential:                cmd.BuildSequential,
+			MaxConcurrency:            cmd.MaxConcurrency,
 		}, log)
 		if err != nil {
 			if strings.Index(err.Error(), "no space left on device") != -1 {

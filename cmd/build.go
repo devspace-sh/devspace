@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
@@ -9,7 +11,6 @@ import (
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/mgutz/ansi"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -30,6 +31,7 @@ type BuildCmd struct {
 	ForceBuild        bool
 	BuildSequential   bool
 	ForceDependencies bool
+	MaxConcurrency    int
 }
 
 // NewBuildCmd creates a new devspace build command
@@ -54,6 +56,7 @@ Builds all defined images and pushes them
 
 	buildCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	buildCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
+	buildCmd.Flags().IntVar(&cmd.MaxConcurrency, "max-concurrency", 0, "Set maximum number of build jobs that run simultaneously")
 	buildCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 	buildCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
 
@@ -139,6 +142,7 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 			ForceRebuild:              cmd.ForceBuild,
 			Sequential:                cmd.BuildSequential,
+			MaxConcurrency:            cmd.MaxConcurrency,
 		}, log)
 		if err != nil {
 			if strings.Index(err.Error(), "no space left on device") != -1 {
