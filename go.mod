@@ -3,7 +3,7 @@ module github.com/loft-sh/devspace
 go 1.15
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.2.7
+	github.com/AlecAivazis/survey/v2 v2.2.9
 	github.com/Microsoft/hcsshim v0.8.10 // indirect
 	github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d // indirect
 	github.com/agl/ed25519 v0.0.0-00010101000000-000000000000 // indirect
