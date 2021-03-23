@@ -133,7 +133,6 @@ helm:                               # struct   | Options for deploying with Helm
   cleanupOnFail: false              # bool     | Delete resources if rollback fails (Default: false)
   recreate: false                   # bool     | Recreate pods for applicable resources, e.g. deployments (Default: false)
   disableHooks: false               # bool     | Disable hooks (Default: false)
-  driver: secrets|configmaps|memory # enum     | Driver used by Helm v3 to store release configuration (Default: secrets)
   v2: false                         # bool     | Use legacy Helm v2 (Default: false)
   tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in when using Helm v2 (Default: "" = same a deployment namespace)
   deleteArgs: []                    # []string | Extra args for the `helm delete` command during devspace purge

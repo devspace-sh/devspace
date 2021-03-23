@@ -194,6 +194,9 @@ func validateImages(config *latest.Config) error {
 		if images[imageConf.Image] {
 			return errors.Errorf("multiple image definitions with the same image name are not allowed")
 		}
+		if imageConf.RebuildStrategy != latest.RebuildStrategyDefault && imageConf.RebuildStrategy != latest.RebuildStrategyAlways && imageConf.RebuildStrategy != latest.RebuildStrategyIgnoreContextChanges {
+			return errors.Errorf("images.%s.rebuildStrategy %s is invalid. Please choose one of %v", imageConfigName, string(imageConf.RebuildStrategy), []latest.RebuildStrategy{latest.RebuildStrategyAlways, latest.RebuildStrategyIgnoreContextChanges})
+		}
 		images[imageConf.Image] = true
 	}
 

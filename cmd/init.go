@@ -455,6 +455,12 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config) error {
 					Path:      "images." + defaultImageName + ".injectRestartHelper",
 				})
 			}
+			if defaultImageConfig.RebuildStrategy != latest.RebuildStrategyDefault {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + defaultImageName + ".rebuildStrategy",
+				})
+			}
 			if len(defaultImageConfig.Entrypoint) > 0 {
 				patches = append(patches, &latest.PatchConfig{
 					Operation: patchRemoveOp,
