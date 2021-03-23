@@ -27,6 +27,7 @@ type Options struct {
 	SkipPushOnLocalKubernetes bool
 	ForceRebuild              bool
 	Sequential                bool
+	MaxConcurrentBuilds       int
 	IgnoreContextPathChanges  bool
 }
 
@@ -90,6 +91,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	imagesToBuild := 0
+
 	for key, imageConf := range c.config.Images {
 		if imageConf.Build != nil && imageConf.Build.Disabled != nil && *imageConf.Build.Disabled == true {
 			log.Infof("Skipping building image %s", key)
@@ -173,6 +175,16 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 				return nil, err
 			}
 		} else {
+			// wait until we are below the MaxConcurrency
+			if options.MaxConcurrentBuilds > 0 && imagesToBuild >= options.MaxConcurrentBuilds {
+				err = c.waitForBuild(errChan, cacheChan, builtImages, log)
+				if err != nil {
+					return nil, err
+				}
+
+				imagesToBuild--
+			}
+
 			imagesToBuild++
 			go func() {
 				// Create a string log
@@ -214,28 +226,15 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		}
 	}
 
-	if options.Sequential == false && imagesToBuild > 0 {
+	// wait for the builds to finish
+	if options.Sequential == false {
 		for imagesToBuild > 0 {
-			select {
-			case err := <-errChan:
-				c.hookExecuter.OnError(hook.StageImages, []string{hook.All}, hook.Context{Client: c.client, Config: c.config, Cache: c.cache, Error: err}, log)
+			err = c.waitForBuild(errChan, cacheChan, builtImages, log)
+			if err != nil {
 				return nil, err
-			case done := <-cacheChan:
-				imagesToBuild--
-				log.Donef("Done building image %s:%s (%s)", done.imageName, done.imageTag, done.imageConfigName)
-
-				// Update cache
-				imageCache := c.cache.GetImageCache(done.imageConfigName)
-				if imageCache.Tag == done.imageTag {
-					log.Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", done.imageName, done.imageTag)
-				}
-
-				imageCache.ImageName = done.imageName
-				imageCache.Tag = done.imageTag
-
-				// Track built images
-				builtImages[done.imageName] = done.imageTag
 			}
+
+			imagesToBuild--
 		}
 	}
 
@@ -246,4 +245,28 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	return builtImages, nil
+}
+
+func (c *controller) waitForBuild(errChan <-chan error, cacheChan <-chan imageNameAndTag, builtImages map[string]string, log logpkg.Logger) error {
+	select {
+	case err := <-errChan:
+		c.hookExecuter.OnError(hook.StageImages, []string{hook.All}, hook.Context{Client: c.client, Config: c.config, Cache: c.cache, Error: err}, log)
+		return err
+	case done := <-cacheChan:
+		log.Donef("Done building image %s:%s (%s)", done.imageName, done.imageTag, done.imageConfigName)
+
+		// Update cache
+		imageCache := c.cache.GetImageCache(done.imageConfigName)
+		if imageCache.Tag == done.imageTag {
+			log.Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", done.imageName, done.imageTag)
+		}
+
+		imageCache.ImageName = done.imageName
+		imageCache.Tag = done.imageTag
+
+		// Track built images
+		builtImages[done.imageName] = done.imageTag
+	}
+
+	return nil
 }

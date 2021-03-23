@@ -31,9 +31,10 @@ type RenderCmd struct {
 	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 
-	SkipBuild       bool
-	ForceBuild      bool
-	BuildSequential bool
+	SkipBuild           bool
+	ForceBuild          bool
+	BuildSequential     bool
+	MaxConcurrentBuilds int
 
 	ShowLogs    bool
 	Deployments string
@@ -71,6 +72,7 @@ deployment.
 
 	renderCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	renderCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
+	renderCmd.Flags().IntVar(&cmd.MaxConcurrentBuilds, "max-concurrent-builds", 0, "The maximum number of image builds built in parallel (0 for infinite)")
 	renderCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
 	renderCmd.Flags().StringSliceVarP(&cmd.Tags, "tag", "t", []string{}, "Use the given tag for all built images")
 	renderCmd.Flags().BoolVar(&cmd.ShowLogs, "show-logs", false, "Shows the build logs")
@@ -173,6 +175,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 			SkipPush:                  cmd.SkipPush,
 			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 			ForceRebuild:              cmd.ForceBuild,
+			MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
 			Sequential:                cmd.BuildSequential,
 		}, log)
 		if err != nil {

@@ -30,6 +30,8 @@ type DeployCmd struct {
 	ForceBuild          bool
 	SkipBuild           bool
 	BuildSequential     bool
+	MaxConcurrentBuilds int
+
 	ForceDeploy         bool
 	SkipDeploy          bool
 	Deployments         string
@@ -85,6 +87,8 @@ devspace deploy --kube-context=deploy-context
 	deployCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to (re-)build every image")
 	deployCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips building of images")
 	deployCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
+	deployCmd.Flags().IntVar(&cmd.MaxConcurrentBuilds, "max-concurrent-builds", 0, "The maximum number of image builds built in parallel (0 for infinite)")
+
 	deployCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
 	deployCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 	deployCmd.Flags().BoolVar(&cmd.SkipDeploy, "skip-deploy", false, "Skips deploying and only builds images")
@@ -215,6 +219,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 				ForceRebuild:              cmd.ForceBuild,
 				Sequential:                cmd.BuildSequential,
+				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
 			}, cmd.log)
 			if err != nil {
 				if strings.Index(err.Error(), "no space left on device") != -1 {
