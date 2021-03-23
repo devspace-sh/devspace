@@ -52,6 +52,11 @@ func (cmd *pluginCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 
 	updatedPlugin, err := pluginManager.Update(args[0], cmd.Version)
 	if err != nil {
+		if newestVersion, ok := err.(*plugin.NewestVersionError); ok {
+			f.GetLog().Info(newestVersion.Error())
+			return nil
+		}
+
 		return err
 	}
 
