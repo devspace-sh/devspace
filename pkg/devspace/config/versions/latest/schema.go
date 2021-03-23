@@ -212,7 +212,12 @@ type KanikoConfig struct {
 	InitEnv map[string]string `yaml:"initEnv,omitempty" json:"initEnv,omitempty"`
 
 	// extra environment variables that will be added to the build kaniko container
+	// Will populate the env.value field.
 	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
+
+	// extra environment variables from configmap or secret that will be added to the build kaniko container
+	// Will populate the env.valueFrom field.
+	EnvFrom map[string]map[interface{}]interface{} `yaml:"envFrom,omitempty" json:"envFrom,omitempty"`
 
 	// additional mounts that will be added to the build pod
 	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty" json:"additionalMounts,omitempty"`

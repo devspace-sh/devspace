@@ -73,7 +73,13 @@ kaniko:                             # struct   | Options for building images wit
   namespace: ""                     # string   | Kubernetes namespace to run kaniko build pod in (Default: "" = deployment namespace)
   options: ...                      # struct   | Set build general build options
   skipPullSecretMount: true         # bool     | If true devspace will not mount and create any image pull secret for the kaniko pod
-  env: {}                           # map      | Key value pairs of environment variables that should be added to the kaniko pod
+  env:                              # map      | Key value pairs of environment variables that should be added to the kaniko container (fills the env.value field)
+    my-string-env: value
+  envFrom:                          # map      | Key value pairs of environment variables that should be added to the kaniko container (fills the env.valueFrom field)
+    my-env-from-secret:
+      secretKeyRef: ...               
+    my-env-from-configmap:
+      configMapKeyRef: ... 
   initEnv: {}                       # map      | Key value pairs of enviroment variables that should be added to the kaniko init pod
 ```
 
