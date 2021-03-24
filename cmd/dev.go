@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"os"
 	"strings"
 	"sync"
@@ -151,8 +152,9 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 
 	// Set config root
 	cmd.log = f.GetLog()
-	cmd.configLoader = f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
-	configExists, err := cmd.configLoader.SetDevSpaceRoot()
+	cmd.configLoader = f.NewConfigLoader(cmd.ConfigPath)
+	configOptions := cmd.ToConfigOptions()
+	configExists, err := cmd.configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
 		return err
 	}
@@ -170,10 +172,11 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 	}
 
 	// Load generated config
-	generatedConfig, err := cmd.configLoader.Generated()
+	generatedConfig, err := cmd.configLoader.LoadGenerated(configOptions)
 	if err != nil {
 		return errors.Errorf("Error loading generated.yaml: %v", err)
 	}
+	configOptions.GeneratedConfig = generatedConfig
 
 	// Use last context if specified
 	err = cmd.UseLastContext(generatedConfig, cmd.log)
@@ -186,6 +189,7 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
+	configOptions.KubeClient = client
 
 	// Show a warning if necessary
 	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, cmd.log)
@@ -213,10 +217,11 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 	}
 
 	// Get the config
-	config, err := cmd.loadConfig()
+	configInterface, err := cmd.loadConfig(configOptions)
 	if err != nil {
 		return err
 	}
+	config := configInterface.Config()
 
 	// save vars if wanted
 	if cmd.SaveVars {
@@ -251,7 +256,7 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 	}
 
 	// Build and deploy images
-	exitCode, err := cmd.buildAndDeploy(f, config, generatedConfig, client, args, true)
+	exitCode, err := cmd.buildAndDeploy(f, configInterface, configOptions, client, args, true)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {
@@ -263,7 +268,12 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 	return nil
 }
 
-func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
+func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Config, configOptions *loader.ConfigOptions, client kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
+	var (
+		config          = configInterface.Config()
+		generatedConfig = configInterface.Generated()
+	)
+
 	if cmd.SkipPipeline == false {
 		// Create Dependencymanager
 		manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log)
@@ -305,7 +315,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 
 			// Save config if an image was built
 			if len(builtImages) > 0 {
-				err := cmd.configLoader.SaveGenerated()
+				err := cmd.configLoader.SaveGenerated(generatedConfig)
 				if err != nil {
 					return 0, errors.Errorf("error saving generated config: %v", err)
 				}
@@ -335,7 +345,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 			}
 
 			// Save Config
-			err = cmd.configLoader.SaveGenerated()
+			err = cmd.configLoader.SaveGenerated(generatedConfig)
 			if err != nil {
 				return 0, errors.Errorf("error saving generated config: %v", err)
 			}
@@ -366,18 +376,18 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 		var err error
 
 		// Start services
-		exitCode, err = cmd.startServices(f, config, generatedConfig, client, args, cmd.log)
+		exitCode, err = cmd.startServices(f, configInterface, client, args, cmd.log)
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
 				// Get the config
-				config, err := cmd.loadConfig()
+				configInterface, err := cmd.loadConfig(configOptions)
 				if err != nil {
 					return 0, err
 				}
 
 				// Trigger rebuild & redeploy
-				return cmd.buildAndDeploy(f, config, generatedConfig, client, args, false)
+				return cmd.buildAndDeploy(f, configInterface, configOptions, client, args, false)
 			}
 
 			return 0, err
@@ -387,8 +397,10 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, config *latest.Config, gene
 	return exitCode, nil
 }
 
-func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, logger log.Logger) (int, error) {
+func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Config, client kubectl.Client, args []string, logger log.Logger) (int, error) {
 	var (
+		config          = configInterface.Config()
+		generatedConfig = configInterface.Generated()
 		servicesClient  = f.NewServicesClient(config, generatedConfig, client, logger)
 		exitChan        = make(chan error)
 		autoReloadPaths = GetPaths(config)
@@ -420,7 +432,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, config *latest.Config, gener
 
 		// Create server
 		uiLogger := log.GetFileLogger("ui")
-		server, err := server.NewServer(cmd.configLoader, config, generatedConfig, "localhost", false, client.CurrentContext(), client.Namespace(), port, uiLogger)
+		server, err := server.NewServer(configInterface, "localhost", false, client.CurrentContext(), client.Namespace(), port, uiLogger)
 		if err != nil {
 			logger.Warnf("Couldn't start UI server: %v", err)
 		} else {
@@ -646,12 +658,13 @@ func (r *reloadError) Error() string {
 	return ""
 }
 
-func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
+func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Config, error) {
 	// Load config
-	config, err := cmd.configLoader.Load()
+	configInterface, err := cmd.configLoader.Load(configOptions, cmd.log)
 	if err != nil {
 		return nil, err
 	}
+	config := configInterface.Config()
 
 	// Adjust config for interactive mode
 	interactiveModeInConfigEnabled := config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.DefaultEnabled != nil && *config.Dev.Interactive.DefaultEnabled == true
@@ -739,7 +752,7 @@ func (cmd *DevCmd) loadConfig() (*latest.Config, error) {
 		}
 	}
 
-	return config, nil
+	return configInterface, nil
 }
 
 func removeDuplicates(arr []string) []string {
@@ -769,7 +782,7 @@ func updateLastKubeContext(configLoader loader.ConfigLoader, client kubectl.Clie
 			Namespace: client.Namespace(),
 		}
 
-		err := configLoader.SaveGenerated()
+		err := configLoader.SaveGenerated(generatedConfig)
 		if err != nil {
 			return errors.Wrap(err, "save generated")
 		}

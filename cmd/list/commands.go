@@ -40,8 +40,8 @@ devspace.yaml
 func (cmd *commandsCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	logger := f.GetLog()
 	// Set config root
-	configLoader := f.NewConfigLoader(nil, logger)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader("")
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
@@ -50,13 +50,19 @@ func (cmd *commandsCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 	}
 
 	// Parse commands
-	commands, err := configLoader.ParseCommands()
+	commands, err := configLoader.LoadCommands(nil, logger)
+	if err != nil {
+		return err
+	}
+
+	// Load generated config
+	generatedConfig, err := configLoader.LoadGenerated(nil)
 	if err != nil {
 		return err
 	}
 
 	// Save variables
-	err = configLoader.SaveGenerated()
+	err = configLoader.SaveGenerated(generatedConfig)
 	if err != nil {
 		return err
 	}

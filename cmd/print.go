@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"path/filepath"
 
@@ -51,8 +53,8 @@ func (cmd *PrintCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	// Set config root
 	log := f.GetLog()
 	configOptions := cmd.ToConfigOptions()
-	configLoader := f.NewConfigLoader(configOptions, log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	} else if !configExists {
@@ -64,26 +66,27 @@ func (cmd *PrintCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	if err != nil {
 		log.Warnf("Unable to create new kubectl client: %v", err)
 	}
+	configOptions.KubeClient = client
 
-	// Load config
-	loadedConfig, err := configLoader.RestoreLoadSave(client)
+	// load config
+	loadedConfig, err := configLoader.Load(configOptions, log)
 	if err != nil {
 		return err
 	}
 
-	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "print", "", "", loadedConfig)
+	// execute plugin hook
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "print", "", "", loadedConfig.Config())
 	if err != nil {
 		return err
 	}
 
-	bsConfig, err := yaml.Marshal(loadedConfig)
+	bsConfig, err := yaml.Marshal(loadedConfig.Config())
 	if err != nil {
 		return err
 	}
 
 	if !cmd.SkipInfo {
-		err = printExtraInfo(configLoader, log)
+		err = printExtraInfo(cmd.ConfigPath, loadedConfig, log)
 		if err != nil {
 			return err
 		}
@@ -93,8 +96,8 @@ func (cmd *PrintCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	return nil
 }
 
-func printExtraInfo(configLoader loader.ConfigLoader, log logger.Logger) error {
-	absPath, err := filepath.Abs(configLoader.ConfigPath())
+func printExtraInfo(configPath string, config config.Config, log logger.Logger) error {
+	absPath, err := filepath.Abs(loader.ConfigPath(configPath))
 	if err != nil {
 		return err
 	}
@@ -103,11 +106,11 @@ func printExtraInfo(configLoader loader.ConfigLoader, log logger.Logger) error {
 
 	headerColumnNames := []string{"Name", "Value"}
 	values := [][]string{}
-	resolvedVars := configLoader.ResolvedVars()
+	resolvedVars := config.Variables()
 	for varName, varValue := range resolvedVars {
 		values = append(values, []string{
 			varName,
-			varValue,
+			fmt.Sprintf("%v", varValue),
 		})
 	}
 

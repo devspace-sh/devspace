@@ -27,10 +27,10 @@ test2:
 		t.Fatalf("Error parsing input: %v", err)
 	}
 
-	match := MatchFn(func(path, key, value string) bool {
+	match := MatchFn(func(key, value string) bool {
 		return key == "image" && value != "dontreplaceme"
 	})
-	replace := ReplaceFn(func(path, value string) (interface{}, error) {
+	replace := ReplaceFn(func(value string) (interface{}, error) {
 		if value == "appendtag" {
 			return "appendtag:test", nil
 		}

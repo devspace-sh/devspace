@@ -89,7 +89,7 @@ func (f *Factory) NewPullSecretClient(config *latest.Config, cache *generated.Ca
 }
 
 // NewConfigLoader implements interface
-func (f *Factory) NewConfigLoader(options *loader.ConfigOptions, log log.Logger) loader.ConfigLoader {
+func (f *Factory) NewConfigLoader(configPath string) loader.ConfigLoader {
 	return f.ConfigLoader
 }
 

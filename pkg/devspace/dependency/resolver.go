@@ -2,6 +2,7 @@ package dependency
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"os"
 	"path/filepath"
 	"strings"
@@ -196,8 +197,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 	// Load config
 	cloned.GeneratedConfig = r.BaseCache
-	cloned.ConfigPath = configPath
-	cloned.BasePath = loader.NewConfigLoader(r.ConfigOptions, r.log).ConfigPath()
+	cloned.BasePath = loader.ConfigPath(configPath)
 	if cloned.Vars == nil {
 		cloned.Vars = []string{}
 	}
@@ -207,22 +207,26 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 	// Load the dependency config
 	var (
-		dConfig   *latest.Config
-		dCommands []*latest.CommandConfig
+		dConfigWrapper config.Config
+		dCommands      []*latest.CommandConfig
 	)
 	err = executeInDirectory(filepath.Dir(configPath), func() error {
-		configLoader := loader.NewConfigLoader(cloned, r.log)
-		if cloned.Profile == "" {
-			dConfig, err = configLoader.LoadWithoutProfile()
+		configLoader := loader.NewConfigLoader(configPath)
+		// make sure we not apply the profile from generated
+		if cloned.Profile == "" && cloned.GeneratedConfig.ActiveProfile != "" {
+			baseConfigProfile := cloned.GeneratedConfig.ActiveProfile
+			cloned.GeneratedConfig.ActiveProfile = ""
+			dConfigWrapper, err = configLoader.Load(cloned, r.log)
+			cloned.GeneratedConfig.ActiveProfile = baseConfigProfile
 		} else {
-			dConfig, err = configLoader.Load()
+			dConfigWrapper, err = configLoader.Load(cloned, r.log)
 		}
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", ID))
 		}
 
 		// parse the commands
-		dCommands, err = configLoader.ParseCommands()
+		dCommands, err = configLoader.LoadCommands(cloned, r.log)
 		if err != nil {
 			return errors.Wrap(err, "parse dependency commands")
 		}
@@ -232,6 +236,8 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	if err != nil {
 		return nil, err
 	}
+
+	dConfig := dConfigWrapper.Config()
 
 	// Override complete dev config
 	dConfig.Dev = &latest.DevConfig{}

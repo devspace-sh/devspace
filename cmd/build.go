@@ -73,8 +73,8 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	// Set config root
 	log := f.GetLog()
 	configOptions := cmd.ToConfigOptions()
-	configLoader := f.NewConfigLoader(configOptions, log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
@@ -86,22 +86,25 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	logpkg.StartFileLogging()
 
 	// Load config
-	generatedConfig, err := configLoader.Generated()
+	generatedConfig, err := configLoader.LoadGenerated(configOptions)
 	if err != nil {
 		return err
 	}
+	configOptions.GeneratedConfig = generatedConfig
 
 	// create kubectl client
 	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		log.Warnf("Unable to create new kubectl client: %v", err)
 	}
+	configOptions.KubeClient = client
 
 	// Get the config
-	config, err := configLoader.RestoreLoadSave(client)
+	configInterface, err := configLoader.Load(configOptions, log)
 	if err != nil {
 		return err
 	}
+	config := configInterface.Config()
 
 	// Execute plugin hook
 	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "build", cmd.KubeContext, cmd.Namespace, config)
@@ -153,7 +156,7 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 
 		// Save config if an image was built
 		if len(builtImages) > 0 {
-			err := configLoader.SaveGenerated()
+			err := configLoader.SaveGenerated(generatedConfig)
 			if err != nil {
 				return err
 			}

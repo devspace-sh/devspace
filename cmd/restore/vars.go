@@ -49,8 +49,8 @@ devspace restore vars --vars-secret my-secret
 func (cmd *varsCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	logger := f.GetLog()
-	configLoader := f.NewConfigLoader(nil, logger)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader("")
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (cmd *varsCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	}
 
 	// Load generated config
-	generatedConfig, err := configLoader.Generated()
+	generatedConfig, err := configLoader.LoadGenerated(nil)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (cmd *varsCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	generatedConfig.Vars = vars
 
 	// Make sure the vars are also saved to file
-	err = configLoader.SaveGenerated()
+	err = configLoader.SaveGenerated(generatedConfig)
 	if err != nil {
 		return fmt.Errorf("error saving generated.yaml: %v", err)
 	}

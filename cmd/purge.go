@@ -70,8 +70,8 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	// Set config root
 	cmd.log = f.GetLog()
 	configOptions := cmd.ToConfigOptions()
-	configLoader := f.NewConfigLoader(configOptions, cmd.log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
 		return err
 	}
@@ -82,10 +82,11 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	log.StartFileLogging()
 
 	// Get config with adjusted cluster config
-	generatedConfig, err := configLoader.Generated()
+	generatedConfig, err := configLoader.LoadGenerated(configOptions)
 	if err != nil {
 		return err
 	}
+	configOptions.GeneratedConfig = generatedConfig
 
 	// Use last context if specified
 	err = cmd.UseLastContext(generatedConfig, cmd.log)
@@ -97,6 +98,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	if err != nil {
 		return errors.Wrap(err, "create kube client")
 	}
+	configOptions.KubeClient = client
 
 	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, cmd.log)
 	if err != nil {
@@ -110,10 +112,11 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	}
 
 	// Get config with adjusted cluster config
-	config, err := configLoader.RestoreLoadSave(client)
+	configInterface, err := configLoader.Load(configOptions, cmd.log)
 	if err != nil {
 		return err
 	}
+	config := configInterface.Config()
 
 	// Only purge if we don't specify dependency
 	if len(cmd.Dependency) == 0 {
@@ -149,7 +152,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 		}
 	}
 
-	err = configLoader.SaveGenerated()
+	err = configLoader.SaveGenerated(generatedConfig)
 	if err != nil {
 		cmd.log.Errorf("Error saving generated.yaml: %v", err)
 	}

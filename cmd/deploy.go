@@ -107,8 +107,8 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	// set config root
 	cmd.log = f.GetLog()
 	configOptions := cmd.ToConfigOptions()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
 		return err
 	}
@@ -126,10 +126,11 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	}
 
 	// load generated config
-	generatedConfig, err := configLoader.Generated()
+	generatedConfig, err := configLoader.LoadGenerated(configOptions)
 	if err != nil {
 		return errors.Errorf("error loading generated.yaml: %v", err)
 	}
+	configOptions.GeneratedConfig = generatedConfig
 
 	// use last context if specified
 	err = cmd.UseLastContext(generatedConfig, cmd.log)
@@ -142,6 +143,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	if err != nil {
 		return errors.Errorf("unable to create new kubectl client: %v", err)
 	}
+	configOptions.KubeClient = client
 
 	// warn the user if we deployed into a different context before
 	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, cmd.log)
@@ -159,10 +161,11 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	}
 
 	// load config
-	config, err := configLoader.RestoreLoadSave(client)
+	configInterface, err := configLoader.Load(configOptions, cmd.log)
 	if err != nil {
 		return err
 	}
+	config := configInterface.Config()
 
 	// execute plugin hook
 	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "deploy", client.CurrentContext(), client.Namespace(), config)
@@ -231,7 +234,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 
 			// save cache if an image was built
 			if len(builtImages) > 0 {
-				err := configLoader.SaveGenerated()
+				err := configLoader.SaveGenerated(generatedConfig)
 				if err != nil {
 					return errors.Errorf("error saving generated config: %v", err)
 				}

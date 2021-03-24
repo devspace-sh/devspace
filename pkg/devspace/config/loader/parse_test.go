@@ -98,11 +98,13 @@ func testGetProfiles(testCase getProfilesTestCase, t *testing.T) {
 	}
 
 	loader := &configLoader{
-		options: &ConfigOptions{
-			ConfigPath: testCase.configPath,
-		},
+		configPath: testCase.configPath,
 	}
-	profileObjects, err := loader.GetProfiles()
+	c, err := loader.Load(nil, log.Discard)
+	assert.NilError(t, err, "Error loading config in testCase %s", testCase.name)
+	profileObjects, err := c.Profiles()
+	assert.NilError(t, err, "Error loading profiles in testCase %s", testCase.name)
+
 	profiles := []string{}
 	for _, p := range profileObjects {
 		profiles = append(profiles, p.Name)
@@ -159,16 +161,15 @@ func TestParseCommands(t *testing.T) {
 			// Close before reading
 			f.Close()
 			loader := &configLoader{
-				options: &ConfigOptions{
-					GeneratedConfig: testCase.generatedConfig,
-					ConfigPath:      f.Name(),
-				},
+				configPath: f.Name(),
 				kubeConfigLoader: &fakekubeconfig.Loader{
 					RawConfig: &api.Config{},
 				},
 			}
 
-			commands, err := loader.ParseCommands()
+			commands, err := loader.LoadCommands(&ConfigOptions{
+				GeneratedConfig: testCase.generatedConfig,
+			}, log.Discard)
 			if testCase.expectedErr == "" {
 				assert.NilError(t, err, "Error in testCase %s", testCase.name)
 			} else {
@@ -664,7 +665,7 @@ profiles:
 		}
 
 		testCase.in.options.GeneratedConfig = testCase.in.generatedConfig
-		newConfig, err := NewConfigLoader(testCase.in.options, log.Discard).(*configLoader).parseConfig(testMap)
+		newConfig, err := NewConfigLoader("").(*configLoader).parseConfig(testMap, testCase.in.generatedConfig, testCase.in.options, log.Discard)
 		if testCase.expectedErr {
 			if err == nil {
 				t.Fatalf("TestCase %s: expected error, but got none", index)

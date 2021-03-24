@@ -57,7 +57,6 @@ func (gf *GlobalFlags) ToConfigOptions() *loader.ConfigOptions {
 		Profile:        gf.Profile,
 		ProfileRefresh: gf.ProfileRefresh,
 		ProfileParents: gf.ProfileParents,
-		ConfigPath:     gf.ConfigPath,
 		KubeContext:    gf.KubeContext,
 		Namespace:      gf.Namespace,
 		Vars:           gf.Vars,

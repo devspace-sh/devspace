@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/loft-sh/devspace/cmd/flags"
+	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
@@ -60,19 +61,22 @@ devspace attach -n my-namespace
 func (cmd *AttachCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
 
-	// Load generated config if possible
+	// Load config if possible
 	var generatedConfig *generated.Config
+	var config config2.Config
 	if configExists {
-		generatedConfig, err = configLoader.Generated()
+		config, err = configLoader.Load(cmd.ToConfigOptions(), log)
 		if err != nil {
 			return err
 		}
+
+		generatedConfig = config.Generated()
 	}
 
 	// Use last context if specified
@@ -101,8 +105,8 @@ func (cmd *AttachCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	// Build params
 	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
-	// get imageselector if specified
-	imageSelector, err := getImageSelector(configLoader, cmd.Image)
+	// get image selector if specified
+	imageSelector, err := getImageSelector(config, cmd.Image)
 	if err != nil {
 		return err
 	}

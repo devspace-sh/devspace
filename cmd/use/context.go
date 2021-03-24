@@ -4,6 +4,7 @@ import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 
 	"github.com/mgutz/ansi"
@@ -86,7 +87,7 @@ func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command,
 	}
 
 	// clear project kube context
-	err = ClearProjectKubeContext(f.NewConfigLoader(cmd.ToConfigOptions(), f.GetLog()))
+	err = ClearProjectKubeContext(f.NewConfigLoader(cmd.ConfigPath), cmd.ToConfigOptions(), log)
 	if err != nil {
 		return errors.Wrap(err, "clear generated kube context")
 	}
@@ -95,8 +96,8 @@ func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command,
 	return nil
 }
 
-func ClearProjectKubeContext(configLoader loader.ConfigLoader) error {
-	configExists, err := configLoader.SetDevSpaceRoot()
+func ClearProjectKubeContext(configLoader loader.ConfigLoader, options *loader.ConfigOptions, log log.Logger) error {
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	} else if !configExists {
@@ -104,7 +105,7 @@ func ClearProjectKubeContext(configLoader loader.ConfigLoader) error {
 	}
 
 	// load config if it exists
-	generatedConfig, err := configLoader.Generated()
+	generatedConfig, err := configLoader.LoadGenerated(options)
 	if err != nil {
 		return err
 	}
@@ -113,5 +114,5 @@ func ClearProjectKubeContext(configLoader loader.ConfigLoader) error {
 	generatedConfig.GetActive().LastContext = nil
 
 	// save it
-	return configLoader.SaveGenerated()
+	return configLoader.SaveGenerated(generatedConfig)
 }
