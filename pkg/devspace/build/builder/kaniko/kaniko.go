@@ -246,7 +246,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 
 		// Get ignore rules from docker ignore
-		ignoreRules, err := build.ReadDockerignore(contextPath)
+		ignoreRules, err := helper.ReadDockerignore(contextPath)
 		if err != nil {
 			return err
 		}

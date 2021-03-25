@@ -177,7 +177,7 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, 
 			return false, errors.Wrap(err, "get context from local dir")
 		}
 
-		excludes, err := build.ReadDockerignore(contextDir)
+		excludes, err := ReadDockerignore(contextDir)
 		if err != nil {
 			return false, errors.Errorf("Error reading .dockerignore: %v", err)
 		}
