@@ -16,7 +16,7 @@ type Resolver interface {
 	ConvertFlags(flags []string) (map[string]interface{}, error)
 
 	// FindVariables returns all variable names that were found in the given map
-	FindVariables(haystack map[interface{}]interface{}) (map[string]bool, error)
+	FindVariables(haystack map[interface{}]interface{}, vars []*latest.Variable) (map[string]bool, error)
 
 	// FillVariables walks over the haystack and replaces all encountered variables
 	FillVariables(haystack map[interface{}]interface{}) error

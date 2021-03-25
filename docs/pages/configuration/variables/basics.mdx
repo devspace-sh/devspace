@@ -96,6 +96,7 @@ The `source` option of a config variable expects either:
 - `all` means to check environment variables **first** and then ask a question if no env variable is defined (**default**)
 - [`env`](../../configuration/variables/source-env.mdx) means to check environment variables **only**
 - [`input`](../../configuration/variables/source-input.mdx) means to ask the user a question **once** (values will be cached in `.devspace/generated.yaml`)
+- [`command`](../../configuration/variables/source-command.mdx) means DevSpace will not ask the user a question and instead execute a command to determine the value of the variable.
 :::
 
 :::warning Pass Variables via CLI
