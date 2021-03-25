@@ -156,11 +156,17 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 		// Dependencies
 		err = manager.RenderAll(dependency.RenderOptions{
 			Dependencies: cmd.Dependency,
-			SkipPush:     cmd.SkipPush,
 			SkipBuild:    cmd.SkipBuild,
-			ForceBuild:   cmd.ForceBuild,
 			Verbose:      cmd.VerboseDependencies,
 			Writer:       cmd.Writer,
+
+			BuildOptions: build.Options{
+				SkipPush:                  cmd.SkipPush,
+				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
+				ForceRebuild:              cmd.ForceBuild,
+				Sequential:                cmd.BuildSequential,
+				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
+			},
 		})
 		if err != nil {
 			return errors.Wrap(err, "render dependencies")

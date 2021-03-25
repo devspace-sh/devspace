@@ -58,7 +58,8 @@ type configLoader struct {
 // NewConfigLoader creates a new config loader with the given options
 func NewConfigLoader(configPath string) ConfigLoader {
 	return &configLoader{
-		configPath: configPath,
+		configPath:       configPath,
+		kubeConfigLoader: kubeconfig.NewLoader(),
 	}
 }
 

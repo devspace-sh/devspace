@@ -168,7 +168,7 @@ func (c *client) FetchChart(helmConfig *latest.HelmConfig) (bool, string, error)
 		return false, "", err
 	}
 
-	args := []string{"fetch", chartName, "--repo", chartRepo, "--repository-config=''", "--untar", "--untardir", tempFolder}
+	args := []string{"fetch", chartName, "--repo", chartRepo, "--untar", "--untardir", tempFolder}
 	if helmConfig.Chart.Version != "" {
 		args = append(args, "--version", helmConfig.Chart.Version)
 	}
@@ -177,6 +177,9 @@ func (c *client) FetchChart(helmConfig *latest.HelmConfig) (bool, string, error)
 	}
 	if helmConfig.Chart.Password != "" {
 		args = append(args, "--password", helmConfig.Chart.Password)
+	}
+	if helmConfig.V2 == false {
+		args = append(args, "--repository-config=''")
 	}
 
 	args = append(args, helmConfig.FetchArgs...)

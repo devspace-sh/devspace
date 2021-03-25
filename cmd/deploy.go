@@ -200,13 +200,19 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	// deploy dependencies
 	err = manager.DeployAll(dependency.DeployOptions{
 		Dependencies:            cmd.Dependency,
-		SkipPush:                cmd.SkipPush,
 		ForceDeployDependencies: cmd.ForceDependencies,
 		SkipBuild:               cmd.SkipBuild,
-		ForceBuild:              cmd.ForceBuild,
 		SkipDeploy:              cmd.SkipDeploy,
 		ForceDeploy:             cmd.ForceDeploy,
 		Verbose:                 cmd.VerboseDependencies,
+
+		BuildOptions: build.Options{
+			SkipPush:                  cmd.SkipPush,
+			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
+			ForceRebuild:              cmd.ForceBuild,
+			Sequential:                cmd.BuildSequential,
+			MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
+		},
 	})
 	if err != nil {
 		return errors.Wrap(err, "deploy dependencies")

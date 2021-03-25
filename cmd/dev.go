@@ -284,11 +284,18 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 		// Dependencies
 		err = manager.DeployAll(dependency.DeployOptions{
 			ForceDeployDependencies: cmd.ForceDependencies,
-			SkipPush:                cmd.SkipPush,
 			SkipBuild:               cmd.SkipBuild,
-			ForceBuild:              cmd.ForceBuild,
 			ForceDeploy:             cmd.ForceDeploy,
 			Verbose:                 cmd.VerboseDependencies,
+
+			BuildOptions: build.Options{
+				SkipPush:                  cmd.SkipPush,
+				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
+				ForceRebuild:              cmd.ForceBuild,
+				Sequential:                cmd.BuildSequential,
+				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
+				IgnoreContextPathChanges:  skipBuildIfAlreadyBuilt,
+			},
 		})
 		if err != nil {
 			return 0, errors.Errorf("error deploying dependencies: %v", err)
