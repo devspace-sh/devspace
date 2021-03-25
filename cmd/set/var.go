@@ -74,9 +74,9 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 		}
 
 		// check if variable can be set
-		splitted := strings.Split(v, "=")
-		if len(splitted) != 2 {
-			return errors.Errorf("unexpected variable format. Expected key=value, got %s", v)
+		splitted := strings.SplitN(v, "=", 2)
+		if len(splitted) < 2 {
+			return errors.Errorf("Unexpected variable format. Expected key=value, got %s", v)
 		} else if variable.IsPredefinedVariable(splitted[0]) {
 			return errors.Errorf("cannot set predefined variable %s", splitted[0])
 		} else if variableParser.Used[splitted[0]] == false {
