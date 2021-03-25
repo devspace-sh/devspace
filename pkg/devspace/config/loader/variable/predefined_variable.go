@@ -92,6 +92,12 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 	},
 }
 
+func IsPredefinedVariable(name string) bool {
+	name = strings.ToUpper(name)
+	_, ok := predefinedVars[name]
+	return ok
+}
+
 func AddPredefinedVars(plugins []plugin.Metadata) {
 	for _, p := range plugins {
 		pluginName := p.Name

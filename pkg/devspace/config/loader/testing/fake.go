@@ -90,7 +90,7 @@ func (f *FakeConfigLoader) LoadProfiles() ([]*latest.ProfileConfig, error) {
 }
 
 // ParseCommands implements interface
-func (f *FakeConfigLoader) LoadCommands(options *loader.ConfigOptions, log log.Logger) ([]*latest.CommandConfig, error) {
+func (f *FakeConfigLoader) LoadWithParser(parser loader.Parser, options *loader.ConfigOptions, log log.Logger) (config.Config, error) {
 	return nil, fmt.Errorf("Unsupported")
 }
 

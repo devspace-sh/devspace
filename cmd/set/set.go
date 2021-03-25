@@ -1,13 +1,14 @@
 package set
 
 import (
+	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/spf13/cobra"
 )
 
 // NewSetCmd creates a new cobra command for the use sub command
-func NewSetCmd(f factory.Factory, plugins []plugin.Metadata) *cobra.Command {
+func NewSetCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
 	setCmd := &cobra.Command{
 		Use:   "set",
 		Short: "Make global configuration changes",
@@ -19,7 +20,7 @@ func NewSetCmd(f factory.Factory, plugins []plugin.Metadata) *cobra.Command {
 		Args: cobra.NoArgs,
 	}
 
-	setCmd.AddCommand(newVarCmd(f))
+	setCmd.AddCommand(newVarCmd(f, globalFlags))
 
 	// Add plugin commands
 	plugin.AddPluginCommands(setCmd, plugins, "set")
