@@ -105,7 +105,7 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 		if cmd.Overwrite || generatedConfig.Vars[splitted[0]] == "" {
 			generatedConfig.Vars[splitted[0]] = splitted[1]
 		} else {
-			log.Infof("Skip variable %s, because it already has value", splitted[0])
+			log.Infof("Skip variable %s, because it already has a value", splitted[0])
 		}
 	}
 
