@@ -18,82 +18,82 @@ func TestParse(t *testing.T) {
 	testCases := map[string]*testCase{
 		"Single Replace": &testCase{
 			input:   " test abc ${Test} ",
-			replace: func(value string) (interface{}, bool, error) { return "test", false, nil },
+			replace: func(value string) (interface{}, error) { return "test", nil },
 			output:  " test abc test ",
 		},
 		"Var Name 2": &testCase{
 			input: " test abc ${Test} ",
-			replace: func(value string) (interface{}, bool, error) {
+			replace: func(value string) (interface{}, error) {
 				if value != "Test" {
-					return "", false, errors.New("unexpected var name")
+					return "", errors.New("unexpected var name")
 				}
-				return "test", false, nil
+				return "test", nil
 			},
 			output: " test abc test ",
 		},
 		"Var Name": &testCase{
 			input: " test abc $!{Test} ",
-			replace: func(value string) (interface{}, bool, error) {
+			replace: func(value string) (interface{}, error) {
 				if value != "Test" {
-					return "", false, errors.New("unexpected var name")
+					return "", errors.New("unexpected var name")
 				}
-				return "test", false, nil
+				return "test", nil
 			},
 			output: " test abc test ",
 		},
 		"Single Escape": &testCase{
 			input:   " test abc $${Test} ",
-			replace: func(value string) (interface{}, bool, error) { return "", false, errors.New("Shouldn't match at all") },
+			replace: func(value string) (interface{}, error) { return "", errors.New("Shouldn't match at all") },
 			output:  " test abc ${Test} ",
 		},
 		"Single Escape 2": &testCase{
 			input:   " test abc $$${Test} ",
-			replace: func(value string) (interface{}, bool, error) { return "", false, errors.New("Shouldn't match at all") },
+			replace: func(value string) (interface{}, error) { return "", errors.New("Shouldn't match at all") },
 			output:  " test abc $${Test} ",
 		},
 		"Multiple Replace": &testCase{
 			input:   " test ${ABC}${Test} abc $${Test}${Test} ",
-			replace: func(value string) (interface{}, bool, error) { return "test", false, nil },
+			replace: func(value string) (interface{}, error) { return "test", nil },
 			output:  " test testtest abc ${Test}test ",
 		},
 		"Multiple Replace 2": &testCase{
 			input:   "${Test}${Test}${Test}",
-			replace: func(value string) (interface{}, bool, error) { return value, false, nil },
+			replace: func(value string) (interface{}, error) { return value, nil },
 			output:  "TestTestTest",
 		},
 		"Return integer": &testCase{
 			input:   "${integer}",
-			replace: func(value string) (interface{}, bool, error) { return "1", false, nil },
-			output:  1,
+			replace: func(value string) (interface{}, error) { return "1", nil },
+			output:  "1",
 		},
 		"Return bool": &testCase{
 			input:   "${bool}",
-			replace: func(value string) (interface{}, bool, error) { return "true", false, nil },
-			output:  true,
+			replace: func(value string) (interface{}, error) { return "true", nil },
+			output:  "true",
 		},
 		"Return error": &testCase{
 			input:   "${bool}",
-			replace: func(value string) (interface{}, bool, error) { return "", false, errors.New("Test Error") },
+			replace: func(value string) (interface{}, error) { return "", errors.New("Test Error") },
 			err:     ptr.String("Test Error"),
 		},
 		"No match": &testCase{
 			input:   "Test",
-			replace: func(value string) (interface{}, bool, error) { return "", false, errors.New("Test Error") },
+			replace: func(value string) (interface{}, error) { return "", errors.New("Test Error") },
 			output:  "Test",
 		},
 		"Force String": &testCase{
 			input:   "$!{Test}",
-			replace: func(value string) (interface{}, bool, error) { return 123, false, nil },
+			replace: func(value string) (interface{}, error) { return 123, nil },
 			output:  "123",
 		},
 		"Force String 2": &testCase{
 			input:   "$!{Test}",
-			replace: func(value string) (interface{}, bool, error) { return "123", false, nil },
+			replace: func(value string) (interface{}, error) { return "123", nil },
 			output:  "123",
 		},
 		"Force String 3": &testCase{
 			input:   "${Test}",
-			replace: func(value string) (interface{}, bool, error) { return "123", true, nil },
+			replace: func(value string) (interface{}, error) { return "123", nil },
 			output:  "123",
 		},
 	}

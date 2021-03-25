@@ -14,7 +14,7 @@ import (
 func TestParse(t *testing.T) {
 	config, err := Parse(map[interface{}]interface{}{
 		"version": "DoesNotExist",
-	}, nil, log.Discard)
+	}, log.Discard)
 	assert.Error(t, err, "Unrecognized config version DoesNotExist. Please upgrade devspace with `devspace upgrade`")
 	assert.Equal(t, true, config == nil, "Config from invalid version not nil")
 
@@ -25,7 +25,7 @@ func TestParse(t *testing.T) {
 				Image: "TestImg",
 			},
 		},
-	}, nil, log.Discard)
+	}, log.Discard)
 	assert.NilError(t, err, "Error parsing map without defined version: %v")
 	assert.Equal(t, latest.Version, config.Version, "Conversion to latest version not correct")
 	assert.Equal(t, "TestImg", config.Images["TestImg"].Image, "Conversion to latest version not correct")
@@ -37,7 +37,7 @@ func TestParse(t *testing.T) {
 				Name: ptr.String("TestImg"),
 			},
 		},
-	}, nil, log.Discard)
+	}, log.Discard)
 	assert.NilError(t, err, "Error parsing map with defined version v1alpha1: %v")
 	assert.Equal(t, latest.Version, config.Version, "Conversion to latest version not correct")
 	assert.Equal(t, "TestImg", config.Images["TestImg"].Image, "Conversion to latest version not correct")

@@ -179,9 +179,7 @@ func TestLoad(t *testing.T) {
 		},
 		loadTestCase{
 			name: "Get from default file without profile",
-			options: ConfigOptions{
-				Profile: "myProfile",
-			},
+			options: ConfigOptions{},
 			files: map[string]interface{}{
 				"devspace.yaml": latest.Config{
 					Version: latest.Version,
@@ -239,6 +237,7 @@ func testLoad(testCase loadTestCase, t *testing.T) {
 	}
 
 	loader := &configLoader{
+		configPath: testCase.configPath,
 		kubeConfigLoader: &fakekubeconfig.Loader{
 			RawConfig: &api.Config{},
 		},

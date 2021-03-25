@@ -34,7 +34,9 @@ func TestGetProfiles(t *testing.T) {
 		getProfilesTestCase{
 			name: "Empty file",
 			files: map[string]interface{}{
-				"devspace.yaml": map[interface{}]interface{}{},
+				"devspace.yaml": map[interface{}]interface{}{
+					"version": "v1beta9",
+				},
 			},
 		},
 		getProfilesTestCase{
@@ -42,6 +44,7 @@ func TestGetProfiles(t *testing.T) {
 			configPath: "custom.yaml",
 			files: map[string]interface{}{
 				"custom.yaml": map[interface{}]interface{}{
+					"version": "v1beta9",
 					"profiles": []interface{}{
 						map[interface{}]interface{}{
 							"name": "myprofile",
@@ -665,7 +668,8 @@ profiles:
 		}
 
 		testCase.in.options.GeneratedConfig = testCase.in.generatedConfig
-		newConfig, err := NewConfigLoader("").(*configLoader).parseConfig(testMap, testCase.in.generatedConfig, testCase.in.options, log.Discard)
+		configLoader := NewConfigLoader("").(*configLoader)
+		newConfig, err := configLoader.parseConfig(configLoader.newVariableResolver(testCase.in.generatedConfig, testCase.in.options, log.Discard), testMap, testCase.in.options, log.Discard)
 		if testCase.expectedErr {
 			if err == nil {
 				t.Fatalf("TestCase %s: expected error, but got none", index)

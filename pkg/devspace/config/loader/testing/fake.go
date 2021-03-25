@@ -40,7 +40,7 @@ func (f *FakeConfigLoader) Load(options *loader.ConfigOptions, log log.Logger) (
 		return nil, errors.New("Couldn't load config")
 	}
 
-	return config.NewConfig(nil, f.Config, f.GeneratedConfig), nil
+	return config.NewConfig(nil, f.Config, f.GeneratedConfig, nil), nil
 }
 
 func (f *FakeConfigLoader) ConfigPath() string {
