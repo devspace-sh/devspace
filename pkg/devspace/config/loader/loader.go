@@ -29,8 +29,8 @@ type ConfigLoader interface {
 	// LoadRaw loads the config without parsing it.
 	LoadRaw() (map[interface{}]interface{}, error)
 
-	// LoadCommands loads only the devspace commands from the devspace.yaml
-	LoadCommands(options *ConfigOptions, log log.Logger) ([]*latest.CommandConfig, error)
+	// LoadWithParser loads the config with the given parser
+	LoadWithParser(parser Parser, options *ConfigOptions, log log.Logger) (config.Config, error)
 
 	// LoadGenerated loads the generated config
 	LoadGenerated(options *ConfigOptions) (*generated.Config, error)
@@ -88,6 +88,11 @@ func (l *configLoader) LoadGenerated(options *ConfigOptions) (*generated.Config,
 
 // Load restores variables from the cluster (if wanted), loads the config and then saves them to the cluster again
 func (l *configLoader) Load(options *ConfigOptions, log log.Logger) (config.Config, error) {
+	return l.LoadWithParser(NewDefaultParser(), options, log)
+}
+
+// LoadWithParser loads the config with the given parser
+func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log log.Logger) (config.Config, error) {
 	if options == nil {
 		options = &ConfigOptions{}
 	}
@@ -97,7 +102,7 @@ func (l *configLoader) Load(options *ConfigOptions, log log.Logger) (config.Conf
 		return nil, err
 	}
 
-	parsedConfig, generatedConfig, resolver, err := l.parseConfig(data, removeCommands, options, log)
+	parsedConfig, generatedConfig, resolver, err := l.parseConfig(data, parser, options, log)
 	if err != nil {
 		return nil, err
 	}
@@ -105,30 +110,7 @@ func (l *configLoader) Load(options *ConfigOptions, log log.Logger) (config.Conf
 	return config.NewConfig(data, parsedConfig, generatedConfig, resolver.ResolvedVariables()), nil
 }
 
-// LoadCommands fills the variables in the data and parses the commands
-func (l *configLoader) LoadCommands(options *ConfigOptions, log log.Logger) ([]*latest.CommandConfig, error) {
-	if options == nil {
-		options = &ConfigOptions{}
-	}
-
-	data, err := l.LoadRaw()
-	if err != nil {
-		return nil, err
-	}
-
-	parsedConfig, _, _, err := l.parseConfig(data, onlyCommands, options, log)
-	if err != nil {
-		return nil, err
-	}
-
-	return parsedConfig.Commands, nil
-}
-
-func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, modifyConfig ModifyConfig, options *ConfigOptions, log log.Logger) (*latest.Config, *generated.Config, variable.Resolver, error) {
-	if options == nil {
-		options = &ConfigOptions{}
-	}
-
+func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, parser Parser, options *ConfigOptions, log log.Logger) (*latest.Config, *generated.Config, variable.Resolver, error) {
 	// load the generated config
 	generatedConfig, err := l.LoadGenerated(options)
 	if err != nil {
@@ -150,14 +132,14 @@ func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, modify
 		options.Profile = generatedConfig.ActiveProfile
 	}
 
+	// create a new variable resolver
+	resolver := l.newVariableResolver(generatedConfig, options, log)
+
 	// copy raw config
 	copiedRawConfig, err := config.CopyRaw(rawConfig)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-
-	// create a new variable resolver
-	resolver := l.newVariableResolver(generatedConfig, options, log)
 
 	// apply the profiles
 	copiedRawConfig, err = l.applyProfiles(copiedRawConfig, options, log)
@@ -175,21 +157,9 @@ func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, modify
 	delete(copiedRawConfig, "vars")
 
 	// parse the config
-	copiedRawConfig, err = modifyConfig(copiedRawConfig)
+	latestConfig, err := parser.Parse(copiedRawConfig, vars, resolver, options, log)
 	if err != nil {
 		return nil, nil, nil, err
-	}
-
-	// fill in variables
-	err = l.fillVariables(resolver, copiedRawConfig, vars, options)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// Now convert the whole config to latest
-	latestConfig, err := versions.Parse(copiedRawConfig, log)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "convert config")
 	}
 
 	// now we validate the config
@@ -271,7 +241,7 @@ func (l *configLoader) newVariableResolver(generatedConfig *generated.Config, op
 }
 
 // fillVariables fills in the given vars into the prepared config
-func (l *configLoader) fillVariables(resolver variable.Resolver, preparedConfig map[interface{}]interface{}, vars []*latest.Variable, options *ConfigOptions) error {
+func fillVariables(resolver variable.Resolver, preparedConfig map[interface{}]interface{}, vars []*latest.Variable, options *ConfigOptions) error {
 	// Find out what vars are really used
 	varsUsed, err := resolver.FindVariables(preparedConfig, vars)
 	if err != nil {
@@ -294,7 +264,7 @@ func (l *configLoader) fillVariables(resolver variable.Resolver, preparedConfig 
 		}
 
 		if len(newVars) > 0 {
-			err = l.askQuestions(resolver, newVars)
+			err = askQuestions(resolver, newVars)
 			if err != nil {
 				return err
 			}
@@ -310,7 +280,7 @@ func (l *configLoader) fillVariables(resolver variable.Resolver, preparedConfig 
 	return nil
 }
 
-func (l *configLoader) askQuestions(resolver variable.Resolver, vars []*latest.Variable) error {
+func askQuestions(resolver variable.Resolver, vars []*latest.Variable) error {
 	for _, definition := range vars {
 		name := strings.TrimSpace(definition.Name)
 
@@ -424,17 +394,6 @@ func ConfigPath(configPath string) string {
 	}
 
 	return path
-}
-
-type ModifyConfig func(data map[interface{}]interface{}) (map[interface{}]interface{}, error)
-
-func onlyCommands(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
-	preparedConfig, err := versions.ParseCommands(data)
-	if err != nil {
-		return nil, err
-	}
-
-	return preparedConfig, nil
 }
 
 func removeCommands(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {

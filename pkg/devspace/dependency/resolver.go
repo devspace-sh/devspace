@@ -226,11 +226,12 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		}
 
 		// parse the commands
-		dCommands, err = configLoader.LoadCommands(cloned, r.log)
+		dCommandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), cloned, r.log)
 		if err != nil {
 			return errors.Wrap(err, "parse dependency commands")
 		}
 
+		dCommands = dCommandsInterface.Config().Commands
 		return nil
 	})
 	if err != nil {

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"os"
 	"strings"
 
@@ -132,10 +133,11 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 	configOptions.GeneratedConfig = generatedConfig
 
 	// Parse commands
-	commands, err := configLoader.LoadCommands(configOptions, f.GetLog())
+	commandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), configOptions, f.GetLog())
 	if err != nil {
 		return err
 	}
+	commands := commandsInterface.Config().Commands
 
 	// Save variables
 	err = configLoader.SaveGenerated(generatedConfig)
