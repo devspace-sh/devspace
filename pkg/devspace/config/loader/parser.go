@@ -19,22 +19,20 @@ func NewDefaultParser() Parser {
 type defaultParser struct{}
 
 func (d *defaultParser) Parse(rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
-	// modify the config
+	// delete the commands, since we don't need it in a normal scenario
 	delete(rawConfig, "commands")
 
-	// fill in variables
-	err := fillVariables(resolver, rawConfig, vars, options)
-	if err != nil {
-		return nil, err
-	}
+	return fillVariablesAndParse(rawConfig, vars, resolver, options, log)
+}
 
-	// Now convert the whole config to latest
-	latestConfig, err := versions.Parse(rawConfig, log)
-	if err != nil {
-		return nil, errors.Wrap(err, "convert config")
-	}
+func NewWithCommandsParser() Parser {
+	return &withCommandsParser{}
+}
 
-	return latestConfig, nil
+type withCommandsParser struct{}
+
+func (d *withCommandsParser) Parse(rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
+	return fillVariablesAndParse(rawConfig, vars, resolver, options, log)
 }
 
 func NewCommandsParser() Parser {
@@ -51,8 +49,12 @@ func (c *commandsParser) Parse(rawConfig map[interface{}]interface{}, vars []*la
 		return nil, err
 	}
 
+	return fillVariablesAndParse(preparedConfig, vars, resolver, options, log)
+}
+
+func fillVariablesAndParse(preparedConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
 	// fill in variables
-	err = fillVariables(resolver, preparedConfig, vars, options)
+	err := fillVariables(resolver, preparedConfig, vars, options)
 	if err != nil {
 		return nil, err
 	}

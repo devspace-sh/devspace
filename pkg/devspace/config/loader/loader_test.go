@@ -539,7 +539,7 @@ func TestParseCommands(t *testing.T) {
 				},
 			}
 
-			commands, err := loader.LoadWithParser(NewCommandsParser(), &ConfigOptions{
+			commandsInterface, err := loader.LoadWithParser(NewCommandsParser(), &ConfigOptions{
 				GeneratedConfig: testCase.generatedConfig,
 			}, log.Discard)
 			if testCase.expectedErr == "" {
@@ -547,6 +547,7 @@ func TestParseCommands(t *testing.T) {
 			} else {
 				assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 			}
+			commands := commandsInterface.Config().Commands
 
 			commandsAsYaml, err := yaml.Marshal(commands)
 			assert.NilError(t, err, "Error parsing commands in testCase %s", testCase.name)

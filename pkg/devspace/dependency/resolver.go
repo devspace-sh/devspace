@@ -213,20 +213,19 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	err = executeInDirectory(filepath.Dir(configPath), func() error {
 		configLoader := loader.NewConfigLoader(configPath)
 		// make sure we not apply the profile from generated
-		if cloned.Profile == "" && cloned.GeneratedConfig.ActiveProfile != "" {
-			baseConfigProfile := cloned.GeneratedConfig.ActiveProfile
-			cloned.GeneratedConfig.ActiveProfile = ""
-			dConfigWrapper, err = configLoader.Load(cloned, r.log)
-			cloned.GeneratedConfig.ActiveProfile = baseConfigProfile
-		} else {
-			dConfigWrapper, err = configLoader.Load(cloned, r.log)
-		}
+		baseConfigProfile := cloned.GeneratedConfig.ActiveProfile
+		cloned.GeneratedConfig.ActiveProfile = ""
+		dConfigWrapper, err = configLoader.Load(cloned, r.log)
+		cloned.GeneratedConfig.ActiveProfile = baseConfigProfile
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", ID))
 		}
 
 		// parse the commands
+		baseConfigProfile = cloned.GeneratedConfig.ActiveProfile
+		cloned.GeneratedConfig.ActiveProfile = ""
 		dCommandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), cloned, r.log)
+		cloned.GeneratedConfig.ActiveProfile = baseConfigProfile
 		if err != nil {
 			return errors.Wrap(err, "parse dependency commands")
 		}
