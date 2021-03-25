@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"io/ioutil"
 	"os"
 
@@ -20,6 +21,11 @@ func (l *configLoader) shouldRestoreKey(key string) bool {
 		}
 	}
 	return true
+}
+
+// SaveGenerated is a convenience method to save the generated config
+func (l *configLoader) SaveGenerated(generatedConfig *generated.Config) error {
+	return generated.NewConfigLoader("").Save(generatedConfig)
 }
 
 // Save writes the data of a config to its yaml file

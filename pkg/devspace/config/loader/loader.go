@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -85,8 +86,45 @@ func (l *configLoader) LoadGenerated(options *ConfigOptions) (*generated.Config,
 	return generatedConfig, nil
 }
 
-// RestoreLoadSave restores variables from the cluster (if wanted), loads the config and then saves them to the cluster again
+// Load restores variables from the cluster (if wanted), loads the config and then saves them to the cluster again
 func (l *configLoader) Load(options *ConfigOptions, log log.Logger) (config.Config, error) {
+	if options == nil {
+		options = &ConfigOptions{}
+	}
+
+	data, err := l.LoadRaw()
+	if err != nil {
+		return nil, err
+	}
+
+	parsedConfig, generatedConfig, resolver, err := l.parseConfig(data, removeCommands, options, log)
+	if err != nil {
+		return nil, err
+	}
+
+	return config.NewConfig(data, parsedConfig, generatedConfig, resolver.ResolvedVariables()), nil
+}
+
+// LoadCommands fills the variables in the data and parses the commands
+func (l *configLoader) LoadCommands(options *ConfigOptions, log log.Logger) ([]*latest.CommandConfig, error) {
+	if options == nil {
+		options = &ConfigOptions{}
+	}
+
+	data, err := l.LoadRaw()
+	if err != nil {
+		return nil, err
+	}
+
+	parsedConfig, _, _, err := l.parseConfig(data, onlyCommands, options, log)
+	if err != nil {
+		return nil, err
+	}
+
+	return parsedConfig.Commands, nil
+}
+
+func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, modifyConfig ModifyConfig, options *ConfigOptions, log log.Logger) (*latest.Config, *generated.Config, variable.Resolver, error) {
 	if options == nil {
 		options = &ConfigOptions{}
 	}
@@ -94,14 +132,14 @@ func (l *configLoader) Load(options *ConfigOptions, log log.Logger) (config.Conf
 	// load the generated config
 	generatedConfig, err := l.LoadGenerated(options)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	// restore vars if wanted
 	if options.KubeClient != nil && options.RestoreVars {
 		vars, _, err := RestoreVarsFromSecret(options.KubeClient, options.VarsSecretName)
 		if err != nil {
-			return nil, errors.Wrap(err, "restore vars")
+			return nil, nil, nil, errors.Wrap(err, "restore vars")
 		} else if vars != nil {
 			generatedConfig.Vars = vars
 		}
@@ -112,31 +150,52 @@ func (l *configLoader) Load(options *ConfigOptions, log log.Logger) (config.Conf
 		options.Profile = generatedConfig.ActiveProfile
 	}
 
-	// load the raw config
-	rawConfig, err := l.LoadRaw()
-	if err != nil {
-		return nil, err
-	}
-
 	// copy raw config
 	copiedRawConfig, err := config.CopyRaw(rawConfig)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	// create a new variable resolver
 	resolver := l.newVariableResolver(generatedConfig, options, log)
 
-	// parse the config
-	parsedConfig, err := l.parseConfig(resolver, rawConfig, options, log)
+	// apply the profiles
+	copiedRawConfig, err = l.applyProfiles(copiedRawConfig, options, log)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
+	}
+
+	// Load defined variables
+	vars, err := versions.ParseVariables(copiedRawConfig, log)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// Delete vars from config
+	delete(copiedRawConfig, "vars")
+
+	// parse the config
+	copiedRawConfig, err = modifyConfig(copiedRawConfig)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// fill in variables
+	err = l.fillVariables(resolver, copiedRawConfig, vars, options)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// Now convert the whole config to latest
+	latestConfig, err := versions.Parse(copiedRawConfig, log)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "convert config")
 	}
 
 	// now we validate the config
-	err = validate(parsedConfig, log)
+	err = validate(latestConfig, log)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	// Save generated config
@@ -146,64 +205,58 @@ func (l *configLoader) Load(options *ConfigOptions, log log.Logger) (config.Conf
 		err = options.generatedLoader.Save(generatedConfig)
 	}
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	// save vars if wanted
 	if options.KubeClient != nil && options.SaveVars {
 		err = SaveVarsInSecret(options.KubeClient, generatedConfig.Vars, options.VarsSecretName, log)
 		if err != nil {
-			return nil, errors.Wrap(err, "save vars")
+			return nil, nil, nil, errors.Wrap(err, "save vars")
 		}
 	}
 
-	return config.NewConfig(copiedRawConfig, parsedConfig, generatedConfig, resolver.ResolvedVariables()), nil
+	return latestConfig, generatedConfig, resolver, nil
 }
 
-// LoadCommands fills the variables in the data and parses the commands
-func (l *configLoader) LoadCommands(options *ConfigOptions, log log.Logger) ([]*latest.CommandConfig, error) {
-	data, err := l.LoadRaw()
+func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *ConfigOptions, log log.Logger) (map[interface{}]interface{}, error) {
+	// Get profile
+	profiles, err := versions.ParseProfile(filepath.Dir(l.configPath), data, options.Profile, options.ProfileParents, options.ProfileRefresh, log)
 	if err != nil {
 		return nil, err
 	}
 
-	// apply the profiles
-	data, err = l.applyProfiles(data, options, log)
-	if err != nil {
-		return nil, err
+	// Now delete not needed parts from config
+	delete(data, "profiles")
+
+	// Apply profiles
+	for i := len(profiles) - 1; i >= 0; i-- {
+		// Apply replace
+		err = ApplyReplace(data, profiles[i])
+		if err != nil {
+			return nil, err
+		}
+
+		// Apply merge
+		data, err = ApplyMerge(data, profiles[i])
+		if err != nil {
+			return nil, err
+		}
+
+		// Apply strategic merge
+		data, err = ApplyStrategicMerge(data, profiles[i])
+		if err != nil {
+			return nil, err
+		}
+
+		// Apply patches
+		data, err = ApplyPatches(data, profiles[i])
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// Load defined variables
-	vars, err := versions.ParseVariables(data, log)
-	if err != nil {
-		return nil, err
-	}
-
-	// Parse commands
-	preparedConfig, err := versions.ParseCommands(data)
-	if err != nil {
-		return nil, err
-	}
-
-	// load the generated config
-	generatedConfig, err := l.LoadGenerated(options)
-	if err != nil {
-		return nil, err
-	}
-
-	// Fill in variables
-	err = l.fillVariables(l.newVariableResolver(generatedConfig, options, log), preparedConfig, vars, options)
-	if err != nil {
-		return nil, err
-	}
-
-	// Now parse the whole config
-	parsedConfig, err := versions.Parse(preparedConfig, log)
-	if err != nil {
-		return nil, errors.Wrap(err, "parse config")
-	}
-
-	return parsedConfig.Commands, nil
+	return data, nil
 }
 
 func (l *configLoader) newVariableResolver(generatedConfig *generated.Config, options *ConfigOptions, log log.Logger) variable.Resolver {
@@ -217,9 +270,58 @@ func (l *configLoader) newVariableResolver(generatedConfig *generated.Config, op
 	}, log)
 }
 
-// SaveGenerated is a convenience method to save the generated config
-func (l *configLoader) SaveGenerated(generatedConfig *generated.Config) error {
-	return generated.NewConfigLoader("").Save(generatedConfig)
+// fillVariables fills in the given vars into the prepared config
+func (l *configLoader) fillVariables(resolver variable.Resolver, preparedConfig map[interface{}]interface{}, vars []*latest.Variable, options *ConfigOptions) error {
+	// Find out what vars are really used
+	varsUsed, err := resolver.FindVariables(preparedConfig, vars)
+	if err != nil {
+		return err
+	}
+
+	// parse cli --var's, the resolver will cache them for us
+	_, err = resolver.ConvertFlags(options.Vars)
+	if err != nil {
+		return err
+	}
+
+	// Fill used defined variables
+	if len(vars) > 0 {
+		newVars := []*latest.Variable{}
+		for _, v := range vars {
+			if varsUsed[strings.TrimSpace(v.Name)] {
+				newVars = append(newVars, v)
+			}
+		}
+
+		if len(newVars) > 0 {
+			err = l.askQuestions(resolver, newVars)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// Walk over data and fill in variables
+	err = resolver.FillVariables(preparedConfig)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (l *configLoader) askQuestions(resolver variable.Resolver, vars []*latest.Variable) error {
+	for _, definition := range vars {
+		name := strings.TrimSpace(definition.Name)
+
+		// fill the variable with definition
+		_, err := resolver.Resolve(name, definition)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // configExistsInPath checks whether a devspace configuration exists at a certain path
@@ -322,4 +424,21 @@ func ConfigPath(configPath string) string {
 	}
 
 	return path
+}
+
+type ModifyConfig func(data map[interface{}]interface{}) (map[interface{}]interface{}, error)
+
+func onlyCommands(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+	preparedConfig, err := versions.ParseCommands(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return preparedConfig, nil
+}
+
+func removeCommands(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+	delete(data, "commands")
+
+	return data, nil
 }
