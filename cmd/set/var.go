@@ -70,8 +70,8 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 			continue
 		}
 
-		splitted := strings.Split(v, "=")
-		if len(splitted) != 2 {
+		splitted := strings.SplitN(v, "=", 2)
+		if len(splitted) < 2 {
 			return errors.Errorf("Unexpected variable format. Expected key=value, got %s", v)
 		} else if allowedVars[splitted[0]] == false {
 			allowedVarsArr := []string{}
