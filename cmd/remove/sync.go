@@ -2,7 +2,6 @@ package remove
 
 import (
 	"errors"
-
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/message"
@@ -63,6 +62,7 @@ func (cmd *syncCmd) RunRemoveSync(f factory.Factory, cobraCmd *cobra.Command, ar
 		return errors.New(message.ConfigNotFound)
 	}
 
+	log.Warn("This command is deprecated and will be removed in a future DevSpace version. Please modify the devspace.yaml directly instead")
 	config, err := configLoader.Load(cmd.ToConfigOptions(), log)
 	if err != nil {
 		return err

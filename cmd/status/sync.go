@@ -59,6 +59,8 @@ func (cmd *syncCmd) RunStatusSync(f factory.Factory, cobraCmd *cobra.Command, ar
 		return errors.New(message.ConfigNotFound)
 	}
 
+	logger.Warn("This command is deprecated and will be removed in a future DevSpace version. Please take a look at the sync logs at .devspace/logs/sync.log instead")
+
 	// Read syncLog
 	cwd, err := os.Getwd()
 	if err != nil {

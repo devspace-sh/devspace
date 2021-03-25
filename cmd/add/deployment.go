@@ -88,6 +88,7 @@ func (cmd *deploymentCmd) RunAddDeployment(f factory.Factory, cobraCmd *cobra.Co
 		return errors.New(message.ConfigNotFound)
 	}
 
+	logger.Warn("This command is deprecated and will be removed in a future DevSpace version. Please modify the devspace.yaml directly instead")
 	deploymentName := args[0]
 
 	// Get base config and check if deployment already exists

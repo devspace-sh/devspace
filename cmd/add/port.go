@@ -53,6 +53,7 @@ func (cmd *portCmd) RunAddPort(f factory.Factory, cobraCmd *cobra.Command, args 
 		return errors.New(message.ConfigNotFound)
 	}
 
+	logger.Warn("This command is deprecated and will be removed in a future DevSpace version. Please modify the devspace.yaml directly instead")
 	configInterface, err := configLoader.Load(cmd.ToConfigOptions(), logger)
 	if err != nil {
 		return err

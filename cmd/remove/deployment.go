@@ -58,6 +58,7 @@ func (cmd *deploymentCmd) RunRemoveDeployment(f factory.Factory, cobraCmd *cobra
 		return errors.New(message.ConfigNotFound)
 	}
 
+	log.Warn("This command is deprecated and will be removed in a future DevSpace version. Please modify the devspace.yaml directly instead")
 	name := ""
 	if len(args) > 0 {
 		name = args[0]

@@ -50,6 +50,8 @@ func (cmd *configCmd) RunConfig(f factory.Factory, cobraCmd *cobra.Command, args
 		return errors.New(message.ConfigNotFound)
 	}
 
+	log.Warn("This command is deprecated and will be removed in a future DevSpace version. Please modify the devspace.yaml directly instead")
+
 	// Get config
 	config, err := configLoader.Load(cmd.ToConfigOptions(), log)
 	if err != nil {
