@@ -3,11 +3,12 @@ package cmd
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -69,6 +70,7 @@ devspace logs --namespace=mynamespace
 func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
+	configOptions := cmd.ToConfigOptions()
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
@@ -77,14 +79,12 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 
 	// Load config if possible
 	var generatedConfig *generated.Config
-	var config config.Config
 	if configExists {
-		config, err = configLoader.Load(cmd.ToConfigOptions(), log)
+		generatedConfig, err = configLoader.LoadGenerated(configOptions)
 		if err != nil {
 			return err
 		}
-
-		generatedConfig = config.Generated()
+		configOptions.GeneratedConfig = generatedConfig
 	}
 
 	// Use last context if specified
@@ -113,8 +113,8 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 	// Build options
 	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
-	// get imageselector if specified
-	imageSelector, err := getImageSelector(config, cmd.Image)
+	// get image selector if specified
+	imageSelector, err := getImageSelector(configLoader, configOptions, cmd.Image, log)
 	if err != nil {
 		return err
 	}
@@ -131,11 +131,16 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 	return nil
 }
 
-func getImageSelector(config config.Config, image string) ([]string, error) {
+func getImageSelector(configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, image string, log log.Logger) ([]string, error) {
 	var imageSelector []string
 	if image != "" {
-		if config == nil {
+		if configLoader.Exists() == false {
 			return nil, errors.New(message.ConfigNotFound)
+		}
+
+		config, err := configLoader.Load(configOptions, log)
+		if err != nil {
+			return nil, err
 		}
 
 		imageSelector = targetselector.ImageSelectorFromConfig(image, config.Config(), config.Generated().GetActive())
