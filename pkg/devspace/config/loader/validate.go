@@ -1,12 +1,14 @@
 package loader
 
 import (
+	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm/merge"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	k8sv1 "k8s.io/api/core/v1"
 	"path/filepath"
 )
 
@@ -193,6 +195,22 @@ func validateImages(config *latest.Config) error {
 		}
 		if images[imageConf.Image] {
 			return errors.Errorf("multiple image definitions with the same image name are not allowed")
+		}
+		if imageConf.RebuildStrategy != latest.RebuildStrategyDefault && imageConf.RebuildStrategy != latest.RebuildStrategyAlways && imageConf.RebuildStrategy != latest.RebuildStrategyIgnoreContextChanges {
+			return errors.Errorf("images.%s.rebuildStrategy %s is invalid. Please choose one of %v", imageConfigName, string(imageConf.RebuildStrategy), []latest.RebuildStrategy{latest.RebuildStrategyAlways, latest.RebuildStrategyIgnoreContextChanges})
+		}
+		if imageConf.Build != nil && imageConf.Build.Kaniko != nil && imageConf.Build.Kaniko.EnvFrom != nil {
+			for _, v := range imageConf.Build.Kaniko.EnvFrom {
+				o, err := yaml.Marshal(v)
+				if err != nil {
+					return errors.Errorf("images.%s.build.kaniko.envFrom is invalid: %v", imageConfigName, err)
+				}
+
+				err = jsonyaml.Unmarshal(o, &k8sv1.EnvVarSource{})
+				if err != nil {
+					return errors.Errorf("images.%s.build.kaniko.envFrom is invalid: %v", imageConfigName, err)
+				}
+			}
 		}
 		images[imageConf.Image] = true
 	}

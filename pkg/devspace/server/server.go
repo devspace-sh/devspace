@@ -2,8 +2,8 @@ package server
 
 import (
 	"encoding/json"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
@@ -33,7 +33,7 @@ type Server struct {
 const DefaultPort = 8090
 
 // NewServer creates a new server from the given parameters
-func NewServer(configLoader loader.ConfigLoader, config *latest.Config, generatedConfig *generated.Config, host string, ignoreDownloadError bool, defaultContext, defaultNamespace string, forcePort *int, log log.Logger) (*Server, error) {
+func NewServer(config config.Config, host string, ignoreDownloadError bool, defaultContext, defaultNamespace string, forcePort *int, log log.Logger) (*Server, error) {
 	path, err := downloadUI()
 	if err != nil {
 		if !ignoreDownloadError {
@@ -71,7 +71,7 @@ func NewServer(configLoader loader.ConfigLoader, config *latest.Config, generate
 	}
 
 	// Create handler
-	handler, err := newHandler(configLoader, config, generatedConfig, defaultContext, defaultNamespace, path, log)
+	handler, err := newHandler(config, defaultContext, defaultNamespace, path, log)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,6 @@ func (s *Server) ListenAndServe() error {
 }
 
 type handler struct {
-	configLoader     loader.ConfigLoader
 	config           *latest.Config
 	generatedConfig  *generated.Config
 	defaultContext   string
@@ -125,7 +124,7 @@ type forward struct {
 	podUUID string
 }
 
-func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generatedConfig *generated.Config, defaultContext, defaultNamespace, path string, log log.Logger) (*handler, error) { // Get kube config
+func newHandler(config config.Config, defaultContext, defaultNamespace, path string, log log.Logger) (*handler, error) { // Get kube config
 	kubeConfig, err := kubeconfig.NewLoader().LoadConfig().RawConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "load kube config")
@@ -153,10 +152,8 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 		defaultNamespace:     defaultNamespace,
 		kubeContexts:         kubeContexts,
 		workingDirectory:     cwd,
-		configLoader:         configLoader,
-		config:               config,
 		log:                  log,
-		generatedConfig:      generatedConfig,
+		generatedConfig:      config.Generated(),
 		ports:                make(map[string]*forward),
 		clientCache:          make(map[string]kubectl.Client),
 		terminalResizeQueues: make(map[string]TerminalResizeQueue),
@@ -164,10 +161,8 @@ func newHandler(configLoader loader.ConfigLoader, config *latest.Config, generat
 
 	// Load raw config
 	if config != nil {
-		handler.rawConfig, err = configLoader.LoadRaw()
-		if err != nil {
-			return nil, errors.Wrap(err, "load raw config")
-		}
+		handler.rawConfig = config.Raw()
+		handler.config = config.Config()
 	}
 
 	handler.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

@@ -1,5 +1,7 @@
 package generated
 
+import "gopkg.in/yaml.v2"
+
 // Config specifies the runtime config struct
 type Config struct {
 	OverrideProfile *string                 `yaml:"lastOverrideProfile,omitempty"`
@@ -7,6 +9,14 @@ type Config struct {
 	Vars            map[string]string       `yaml:"vars,omitempty"`
 	VarsEncrypted   bool                    `yaml:"varsEncrypted,omitempty"`
 	Profiles        map[string]*CacheConfig `yaml:"profiles,omitempty"`
+}
+
+// DeepCopy creates a deep copy of the config
+func (c *Config) DeepCopy() *Config {
+	o, _ := yaml.Marshal(c)
+	n := &Config{}
+	_ = yaml.Unmarshal(o, n)
+	return n
 }
 
 // LastContextConfig holds all the informations about the last used kubernetes context

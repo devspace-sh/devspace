@@ -49,8 +49,8 @@ devspace remove deployment --all
 func (cmd *deploymentCmd) RunRemoveDeployment(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
@@ -58,17 +58,19 @@ func (cmd *deploymentCmd) RunRemoveDeployment(f factory.Factory, cobraCmd *cobra
 		return errors.New(message.ConfigNotFound)
 	}
 
+	log.Warn("This command is deprecated and will be removed in a future DevSpace version. Please modify the devspace.yaml directly instead")
 	name := ""
 	if len(args) > 0 {
 		name = args[0]
 	}
 
 	// Load base config
-	config, err := configLoader.LoadWithoutProfile()
+	configWrapper, err := configLoader.Load(cmd.ToConfigOptions(), log)
 	if err != nil {
 		return err
 	}
 
+	config := configWrapper.Config()
 	shouldPurgeDeployment, err := log.Question(&survey.QuestionOptions{
 		Question:     "Do you want to delete all deployment resources deployed?",
 		DefaultValue: "yes",
@@ -91,18 +93,13 @@ func (cmd *deploymentCmd) RunRemoveDeployment(f factory.Factory, cobraCmd *cobra
 			deployments = []string{name}
 		}
 
-		generatedConfig, err := configLoader.Generated()
-		if err != nil {
-			log.Errorf("Error loading generated.yaml: %v", err)
-			return nil
-		}
-
+		generatedConfig := configWrapper.Generated()
 		err = deploy.NewController(config, generatedConfig.GetActive(), client).Purge(deployments, log)
 		if err != nil {
 			log.Errorf("Error purging deployments: %v", err)
 		}
 
-		err = configLoader.SaveGenerated()
+		err = configLoader.SaveGenerated(generatedConfig)
 		if err != nil {
 			log.Errorf("Error saving generated.yaml: %v", err)
 		}

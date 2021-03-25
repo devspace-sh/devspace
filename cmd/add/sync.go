@@ -55,8 +55,8 @@ devspace add sync --local=app --container=/app
 func (cmd *syncCmd) RunAddSync(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	logger := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
@@ -64,10 +64,13 @@ func (cmd *syncCmd) RunAddSync(f factory.Factory, cobraCmd *cobra.Command, args 
 		return errors.New(message.ConfigNotFound)
 	}
 
-	config, err := configLoader.LoadWithoutProfile()
+	logger.Warn("This command is deprecated and will be removed in a future DevSpace version. Please modify the devspace.yaml directly instead")
+	configInterface, err := configLoader.Load(cmd.ToConfigOptions(), logger)
 	if err != nil {
 		return err
 	}
+
+	config := configInterface.Config()
 	configureManager := f.NewConfigureManager(config, logger)
 
 	err = configureManager.AddSyncPath(cmd.LocalPath, cmd.ContainerPath, cmd.Namespace, cmd.LabelSelector, cmd.ExcludedPaths)

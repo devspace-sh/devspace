@@ -104,6 +104,7 @@ func convertDockerConfigToKanikoConfig(dockerConfig *latest.ImageConfig) *latest
 		Entrypoint:            dockerConfig.Entrypoint,
 		Cmd:                   dockerConfig.Cmd,
 		PreferSyncOverRebuild: dockerConfig.PreferSyncOverRebuild,
+		RebuildStrategy:       dockerConfig.RebuildStrategy,
 		InjectRestartHelper:   dockerConfig.InjectRestartHelper,
 		CreatePullSecret:      dockerConfig.CreatePullSecret,
 		Build: &latest.BuildConfig{

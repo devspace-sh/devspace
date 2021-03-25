@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"io/ioutil"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
-	latest "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -67,8 +67,9 @@ Opens the localhost UI in the browser
 func (cmd *UICmd) RunUI(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configOptions := cmd.ToConfigOptions()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
 		return err
 	}
@@ -125,16 +126,17 @@ func (cmd *UICmd) RunUI(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	}
 
 	var (
-		config          *latest.Config
+		config          config2.Config
 		generatedConfig *generated.Config
 	)
 
 	if configExists {
 		// Load generated config
-		generatedConfig, err = configLoader.Generated()
+		generatedConfig, err = configLoader.LoadGenerated(configOptions)
 		if err != nil {
 			return errors.Errorf("Error loading generated.yaml: %v", err)
 		}
+		configOptions.GeneratedConfig = generatedConfig
 	}
 
 	// Use last context if specified
@@ -148,6 +150,7 @@ func (cmd *UICmd) RunUI(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
+	configOptions.KubeClient = client
 
 	// Warn the user if we deployed into a different context before
 	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, cmd.log)
@@ -155,25 +158,9 @@ func (cmd *UICmd) RunUI(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		return err
 	}
 
+	// Load config
 	if configExists {
-		// Load config
-		_, err = configLoader.RestoreLoadSave(client)
-		if err != nil {
-			return err
-		}
-
-		// fills the right vars into the generated config
-		generatedConfig.Vars = configLoader.ResolvedVars()
-
-		// Deprecated: Fill DEVSPACE_DOMAIN vars
-		err = fillDevSpaceDomainVars(client, generatedConfig)
-		if err != nil {
-			return err
-		}
-		// fmt.Printf("generatedConfig after: %#v\n", generatedConfig)
-
-		// Add current kube context to context
-		config, err = configLoader.Load()
+		config, err = configLoader.Load(configOptions, cmd.log)
 		if err != nil {
 			return err
 		}
@@ -183,7 +170,7 @@ func (cmd *UICmd) RunUI(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	log.OverrideRuntimeErrorHandler(true)
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "ui", client.CurrentContext(), client.Namespace(), config)
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "ui", client.CurrentContext(), client.Namespace(), config.Config())
 	if err != nil {
 		return err
 	}
@@ -195,7 +182,7 @@ func (cmd *UICmd) RunUI(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	}
 
 	// Create server
-	server, err := server.NewServer(configLoader, config, generatedConfig, cmd.Host, cmd.Dev, client.CurrentContext(), client.Namespace(), forcePort, cmd.log)
+	server, err := server.NewServer(config, cmd.Host, cmd.Dev, client.CurrentContext(), client.Namespace(), forcePort, cmd.log)
 	if err != nil {
 		return err
 	}

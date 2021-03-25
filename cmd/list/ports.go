@@ -40,8 +40,8 @@ Lists the port forwarding configurations
 func (cmd *portsCmd) RunListPort(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	logger := f.GetLog()
 	// Set config root
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
@@ -49,11 +49,12 @@ func (cmd *portsCmd) RunListPort(f factory.Factory, cobraCmd *cobra.Command, arg
 		return errors.New(message.ConfigNotFound)
 	}
 
-	config, err := configLoader.Load()
+	configInterface, err := configLoader.Load(cmd.ToConfigOptions(), logger)
 	if err != nil {
 		return err
 	}
 
+	config := configInterface.Config()
 	if config.Dev.Ports == nil || len(config.Dev.Ports) == 0 {
 		logger.Info("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
 		return nil

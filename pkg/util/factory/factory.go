@@ -24,7 +24,7 @@ import (
 // Factory is the main interface for various client creations
 type Factory interface {
 	// Config Loader
-	NewConfigLoader(options *loader.ConfigOptions, log log.Logger) loader.ConfigLoader
+	NewConfigLoader(configPath string) loader.ConfigLoader
 
 	// ConfigureManager
 	NewConfigureManager(config *latest.Config, log log.Logger) configure.Manager
@@ -124,8 +124,8 @@ func (f *DefaultFactoryImpl) NewPullSecretClient(config *latest.Config, cache *g
 }
 
 // NewConfigLoader implements interface
-func (f *DefaultFactoryImpl) NewConfigLoader(options *loader.ConfigOptions, log log.Logger) loader.ConfigLoader {
-	return loader.NewConfigLoader(options, log)
+func (f *DefaultFactoryImpl) NewConfigLoader(configPath string) loader.ConfigLoader {
+	return loader.NewConfigLoader(configPath)
 }
 
 // NewConfigureManager implements interface

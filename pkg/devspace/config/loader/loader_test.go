@@ -1,6 +1,7 @@
 package loader
 
 import (
+	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -90,9 +91,7 @@ func testExists(testCase existsTestCase, t *testing.T) {
 	}
 
 	loader := &configLoader{
-		options: &ConfigOptions{
-			ConfigPath: testCase.configPath,
-		},
+		configPath: testCase.configPath,
 	}
 
 	exists := loader.Exists()
@@ -143,6 +142,7 @@ func TestClone(t *testing.T) {
 type loadTestCase struct {
 	name string
 
+	configPath        string
 	options           ConfigOptions
 	returnedGenerated generated.Config
 	files             map[string]interface{}
@@ -155,10 +155,9 @@ type loadTestCase struct {
 func TestLoad(t *testing.T) {
 	testCases := []loadTestCase{
 		loadTestCase{
-			name: "Get from custom config file with profile",
-			options: ConfigOptions{
-				ConfigPath: "custom.yaml",
-			},
+			name:       "Get from custom config file with profile",
+			configPath: "custom.yaml",
+			options:    ConfigOptions{},
 			files: map[string]interface{}{
 				"custom.yaml": latest.Config{
 					Version: latest.Version,
@@ -180,9 +179,7 @@ func TestLoad(t *testing.T) {
 		},
 		loadTestCase{
 			name: "Get from default file without profile",
-			options: ConfigOptions{
-				Profile: "myProfile",
-			},
+			options: ConfigOptions{},
 			files: map[string]interface{}{
 				"devspace.yaml": latest.Config{
 					Version: latest.Version,
@@ -240,31 +237,25 @@ func testLoad(testCase loadTestCase, t *testing.T) {
 	}
 
 	loader := &configLoader{
-		options: &testCase.options,
-		log:     log.Discard,
-		generatedLoader: &fakegenerated.Loader{
-			Config: testCase.returnedGenerated,
-		},
+		configPath: testCase.configPath,
 		kubeConfigLoader: &fakekubeconfig.Loader{
 			RawConfig: &api.Config{},
 		},
 	}
 
-	var config *latest.Config
+	var config config2.Config
 	var err error
-	if testCase.withProfile {
-		config, err = loader.Load()
-	} else {
-		config, err = loader.LoadWithoutProfile()
+	testCase.options.generatedLoader = &fakegenerated.Loader{
+		Config: testCase.returnedGenerated,
 	}
-
+	config, err = loader.Load(&testCase.options, log.Discard)
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Error in testCase %s", testCase.name)
 	} else {
 		assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 	}
 
-	configAsYaml, err := yaml.Marshal(config)
+	configAsYaml, err := yaml.Marshal(config.Config())
 	assert.NilError(t, err, "Error parsing config in testCase %s", testCase.name)
 	expectedAsYaml, err := yaml.Marshal(testCase.expectedConfig)
 	assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
@@ -374,13 +365,10 @@ func testSetDevSpaceRoot(testCase setDevSpaceRootTestCase, t *testing.T) {
 	}
 
 	loader := &configLoader{
-		options: &ConfigOptions{
-			ConfigPath: testCase.configPath,
-		},
-		log: log.Discard,
+		configPath: testCase.configPath,
 	}
 
-	exists, err := loader.SetDevSpaceRoot()
+	exists, err := loader.SetDevSpaceRoot(log.Discard)
 
 	if testCase.expectedErr == "" {
 		assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -393,5 +381,5 @@ func testSetDevSpaceRoot(testCase setDevSpaceRootTestCase, t *testing.T) {
 	assert.NilError(t, err, "Error getting wd in testCase %s", testCase.name)
 	assert.Equal(t, wd, testCase.expectedWorkDir, "Unexpected work dir in testCase %s", testCase.name)
 
-	assert.Equal(t, loader.options.ConfigPath, testCase.expectedConfigPath, "Unexpected configPath in testCase %s", testCase.name)
+	assert.Equal(t, loader.configPath, testCase.expectedConfigPath, "Unexpected configPath in testCase %s", testCase.name)
 }

@@ -104,6 +104,11 @@ func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, log log.Logger) e
 
 // ShouldRebuild determines if the image should be rebuilt
 func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, ignoreContextPathChanges bool) (bool, error) {
+	// if rebuild strategy is always, we return here
+	if b.ImageConf.RebuildStrategy == latest.RebuildStrategyAlways {
+		return true, nil
+	}
+
 	imageCache := cache.GetImageCache(b.ImageConfigName)
 
 	// Hash dockerfile
@@ -165,14 +170,14 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, 
 	}
 
 	// Check if should consider context path changes for rebuilding
-	if ignoreContextPathChanges == false {
+	if ignoreContextPathChanges == false && b.ImageConf.RebuildStrategy != latest.RebuildStrategyIgnoreContextChanges {
 		// Hash context path
 		contextDir, relDockerfile, err := build.GetContextFromLocalDir(b.ContextPath, b.DockerfilePath)
 		if err != nil {
 			return false, errors.Wrap(err, "get context from local dir")
 		}
 
-		excludes, err := build.ReadDockerignore(contextDir)
+		excludes, err := ReadDockerignore(contextDir)
 		if err != nil {
 			return false, errors.Errorf("Error reading .dockerignore: %v", err)
 		}

@@ -462,28 +462,6 @@ deployments:
     disableHooks: true
 ```
 
-### `driver`
-The `driver` option expects a string that states the storage driver that should be used by Helm. By default, Helm 3 uses Kubneretes secrets to store the deployment configuration of a release. Alternative options include `configmaps` or `memory`.
-
-:::warning
-This option is **not** compatible with `v2: true`.
-:::
-
-#### Default Value for `driver`
-```yaml
-driver: secrets
-```
-
-#### Example: Use Different Driver
-```yaml
-deployments:
-- name: database
-  helm:
-    chart:
-      name: stable/mysql
-    driver: configmaps
-```
-
 ### `v2`
 The `v2` option expects a boolean that tells DevSpace to use the legacy version 2 of Helm instead of Helm v3.
 

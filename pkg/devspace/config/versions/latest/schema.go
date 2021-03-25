@@ -28,18 +28,36 @@ func NewRaw() *Config {
 
 // Config defines the configuration
 type Config struct {
+	// Version holds the config version
 	Version string `yaml:"version"`
 
-	Images       map[string]*ImageConfig `yaml:"images,omitempty" json:"images,omitempty"`
-	Deployments  []*DeploymentConfig     `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	Dev          *DevConfig              `yaml:"dev,omitempty" json:"dev,omitempty"`
-	Dependencies []*DependencyConfig     `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	Hooks        []*HookConfig           `yaml:"hooks,omitempty" json:"hooks,omitempty"`
-	PullSecrets  []*PullSecretConfig     `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+	// Images holds configuration of how devspace should build images
+	Images map[string]*ImageConfig `yaml:"images,omitempty" json:"images,omitempty"`
 
+	// Deployments is an ordered list of deployments to deploy via helm, kustomize or kubectl.
+	Deployments []*DeploymentConfig `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// Dev holds development configuration for the 'devspace dev' command.
+	Dev *DevConfig `yaml:"dev,omitempty" json:"dev,omitempty"`
+
+	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
+	Dependencies []*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
+	// in the order they are specified.
+	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty"`
+
+	// PullSecrets are image pull secrets that will be created by devspace in the target namespace
+	// during devspace dev or devspace deploy
+	PullSecrets []*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+
+	// Commands are custom commands that can be executed via 'devspace run COMMAND'
 	Commands []*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
-	Vars     []*Variable      `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	// Vars are config variables that can be used inside other config sections to replace certain values dynamically
+	Vars []*Variable `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// Profiles can be used to change the current configuration and change the behaviour of devspace
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 }
 
@@ -75,6 +93,7 @@ type ImageConfig struct {
 	// target namespace. Defaults to true
 	CreatePullSecret *bool `yaml:"createPullSecret,omitempty" json:"createPullSecret,omitempty"`
 
+	// DEPRECATED: Use rebuildStrategy instead
 	// If this is true, devspace will not rebuild the image even though files have changed within
 	// the context if a syncpath for this image is defined. This can reduce the number of builds
 	// when running 'devspace dev'
@@ -94,9 +113,27 @@ type ImageConfig struct {
 	// and are appended before the entrypoint and cmd instructions
 	AppendDockerfileInstructions []string `yaml:"appendDockerfileInstructions,omitempty" json:"appendDockerfileInstructions,omitempty"`
 
+	// RebuildStrategy is used to determine when DevSpace should rebuild an image. By default, devspace will
+	// rebuild an image if one of the following conditions is true:
+	// - The dockerfile has changed
+	// - The configuration within the devspace.yaml for the image has changed
+	// - A file within the docker context (excluding .dockerignore rules) has changed
+	// This option is ignored for custom builds.
+	RebuildStrategy RebuildStrategy `yaml:"rebuildStrategy,omitempty" json:"rebuildStrategy,omitempty"`
+
 	// Specific build options how to build the specified image
 	Build *BuildConfig `yaml:"build,omitempty" json:"build,omitempty"`
 }
+
+// RebuildStrategy is the type of a image rebuild strategy
+type RebuildStrategy string
+
+// List of values that source can take
+const (
+	RebuildStrategyDefault              RebuildStrategy = ""
+	RebuildStrategyAlways               RebuildStrategy = "always"
+	RebuildStrategyIgnoreContextChanges RebuildStrategy = "ignoreContextChanges"
+)
 
 // BuildConfig defines the build process for an image. Only one of the options below
 // can be specified.
@@ -175,7 +212,12 @@ type KanikoConfig struct {
 	InitEnv map[string]string `yaml:"initEnv,omitempty" json:"initEnv,omitempty"`
 
 	// extra environment variables that will be added to the build kaniko container
+	// Will populate the env.value field.
 	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
+
+	// extra environment variables from configmap or secret that will be added to the build kaniko container
+	// Will populate the env.valueFrom field.
+	EnvFrom map[string]map[interface{}]interface{} `yaml:"envFrom,omitempty" json:"envFrom,omitempty"`
 
 	// additional mounts that will be added to the build pod
 	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty" json:"additionalMounts,omitempty"`

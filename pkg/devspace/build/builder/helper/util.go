@@ -5,8 +5,10 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/docker/docker/builder/dockerignore"
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -29,6 +31,30 @@ const DockerfileTargetRegexTemplate = "(?i)(^|\n)\\s*FROM\\s+(\\S+)\\s+AS\\s+(%s
 
 // DefaultContextPath is the default context path to use
 const DefaultContextPath = "./"
+
+// ReadDockerignore reads the devspace.dockerignore or .dockerignore file in the context directory and
+// returns the list of paths to exclude. devspace.dockerignore takes precedence over .dockerignore if both
+// are found
+func ReadDockerignore(contextDir string) ([]string, error) {
+	var excludes []string
+
+	f, err := os.Open(filepath.Join(contextDir, "devspace.dockerignore"))
+	switch {
+	case os.IsNotExist(err):
+		f, err = os.Open(filepath.Join(contextDir, ".dockerignore"))
+		switch {
+		case os.IsNotExist(err):
+			return excludes, nil
+		case err != nil:
+			return nil, err
+		}
+	case err != nil:
+		return nil, err
+	}
+	defer f.Close()
+
+	return dockerignore.ReadAll(f)
+}
 
 // GetDockerfileAndContext retrieves the dockerfile and context
 func GetDockerfileAndContext(imageConf *latest.ImageConfig) (string, string) {

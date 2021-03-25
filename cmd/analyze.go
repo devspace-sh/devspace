@@ -57,8 +57,8 @@ devspace analyze --namespace=mynamespace
 func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, plugins []plugin.Metadata, 
 	// Load generated config if possible
 	var generatedConfig *generated.Config
 	if configExists {
-		generatedConfig, err = configLoader.Generated()
+		generatedConfig, err = configLoader.LoadGenerated(cmd.ToConfigOptions())
 		if err != nil {
 			return err
 		}

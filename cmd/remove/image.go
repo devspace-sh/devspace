@@ -2,7 +2,6 @@ package remove
 
 import (
 	"errors"
-
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/message"
@@ -44,8 +43,8 @@ devspace remove image --all
 func (cmd *imageCmd) RunRemoveImage(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
@@ -53,11 +52,13 @@ func (cmd *imageCmd) RunRemoveImage(f factory.Factory, cobraCmd *cobra.Command, 
 		return errors.New(message.ConfigNotFound)
 	}
 
-	config, err := configLoader.LoadWithoutProfile()
+	log.Warn("This command is deprecated and will be removed in a future DevSpace version. Please modify the devspace.yaml directly instead")
+	configWrapper, err := configLoader.Load(cmd.ToConfigOptions(), log)
 	if err != nil {
 		return err
 	}
 
+	config := configWrapper.Config()
 	configureManager := f.NewConfigureManager(config, log)
 	err = configureManager.RemoveImage(cmd.RemoveAll, args)
 	if err != nil {

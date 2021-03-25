@@ -135,7 +135,7 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 				} else if when == After && hook.When.After != nil {
 					if stage == StageDeployments && hook.When.After.Deployments != "" && strings.TrimSpace(hook.When.After.Deployments) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StagePurgeDeployments && hook.When.After.PurgeDeployments != "" && strings.TrimSpace(hook.When.Before.PurgeDeployments) == strings.TrimSpace(which) {
+					} else if stage == StagePurgeDeployments && hook.When.After.PurgeDeployments != "" && strings.TrimSpace(hook.When.After.PurgeDeployments) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
 					} else if stage == StageImages && hook.When.After.Images != "" && strings.TrimSpace(hook.When.After.Images) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)

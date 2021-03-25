@@ -32,7 +32,7 @@ images:
         - "--arg2"
 ```
 **Explanation:**  
-The image `backend` would be built using the command `./build arg1 --flag=flag-value arg2 "[IMAGE]:[TAG]"` while `[IMAGE]` would be replaced with the `image` option (in this case: `john/appbackend`) and `[TAG]` would be replaced with the tag generated according to the [tagging schema](../../configuration/images/basics.mdx#6-tag-image).
+The image `backend` would be built using the command `./build arg1 --flag flag-value arg2 "[IMAGE]:[TAG]"` while `[IMAGE]` would be replaced with the `image` option (in this case: `john/appbackend`) and `[TAG]` would be replaced with the tag generated according to the [tagging schema](../../configuration/images/basics.mdx#6-tag-image).
 
 
 ### `imageFlag`
@@ -51,7 +51,7 @@ images:
     build:
       custom:
         command: ./build
-        imageFlag: image
+        imageFlag: "--image"
         args:
         - "--arg1"
         - "--flag"
@@ -59,7 +59,7 @@ images:
         - "--arg2"
 ```
 **Explanation:**  
-The image `backend` would be built using the command `./build --arg1 --flag flag-value --arg2 --image="[IMAGE]:[TAG]"` while `[IMAGE]` would be replaced with the `image` option (in this case: `john/appbackend`) and `[TAG]` would be replaced with the tag generated according to the [tagging schema](../../configuration/images/basics.mdx#6-tag-image).
+The image `backend` would be built using the command `./build --arg1 --flag flag-value --arg2 --image "[IMAGE]:[TAG]"` while `[IMAGE]` would be replaced with the `image` option (in this case: `john/appbackend`) and `[TAG]` would be replaced with the tag generated according to the [tagging schema](../../configuration/images/basics.mdx#6-tag-image).
 
 ### `skipImageArg`
 The `skipImageArg` option expects a boolean which specifies if DevSpace should add an argument to the command with the `image:tag`. If enabled DevSpace will omit the image argument completely
@@ -93,7 +93,7 @@ images:
     build:
       custom:
         command: ./build
-        imageFlag: image
+        imageFlag: "--image"
         imageTagOnly: true
         args:
         - "--arg1"
@@ -102,7 +102,7 @@ images:
         - "--arg2"
 ```
 **Explanation:**  
-The image `backend` would be built using the command `./build --arg1 --flag flag-value --arg2 --image="[TAG]"` while `[TAG]` would be replaced with the tag generated according to the [tagging schema](../../configuration/images/basics.mdx#6-tag-image).
+The image `backend` would be built using the command `./build --arg1 --flag flag-value --arg2 --image "[TAG]"` while `[TAG]` would be replaced with the tag generated according to the [tagging schema](../../configuration/images/basics.mdx#6-tag-image).
 
 ### `args`
 The `args` option expects an array of strings which represent additional flags and arguments that should be passed to the custom build command **before** the argument containing `[IMAGE]:[TAG]`.
@@ -192,10 +192,10 @@ images:
     build:
       custom:
         command: ./build
-        imageFlag: image
+        imageFlag: "--image"
         onChange:
         - some/path/
         - another/path/file.txt
 ```
 **Explanation:**  
-The image `backend` would be built using the command `./build --image="[IMAGE]:[TAG]"` and DevSpace would skip the build if none of the files within `some/path/` nor the file `another/path/file.txt` has changed since the last build.
+The image `backend` would be built using the command `./build --image "[IMAGE]:[TAG]"` and DevSpace would skip the build if none of the files within `some/path/` nor the file `another/path/file.txt` has changed since the last build.

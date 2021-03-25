@@ -101,7 +101,7 @@ folder. Creates a devspace.yaml with all configuration.
 func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Check if config already exists
 	cmd.log = f.GetLog()
-	configLoader := f.NewConfigLoader(nil, cmd.log)
+	configLoader := f.NewConfigLoader("")
 	configExists := configLoader.Exists()
 	if configExists && cmd.Reconfigure == false {
 		cmd.log.Info("Config already exists. If you want to recreate the config please run `devspace init --reconfigure`")
@@ -128,7 +128,7 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	}
 
 	// Create config
-	config := configLoader.New()
+	config := latest.New().(*latest.Config)
 
 	// Create ConfigureManager
 	configureManager := f.NewConfigureManager(config, cmd.log)
@@ -453,6 +453,12 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config) error {
 				patches = append(patches, &latest.PatchConfig{
 					Operation: patchRemoveOp,
 					Path:      "images." + defaultImageName + ".injectRestartHelper",
+				})
+			}
+			if defaultImageConfig.RebuildStrategy != latest.RebuildStrategyDefault {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + defaultImageName + ".rebuildStrategy",
 				})
 			}
 			if len(defaultImageConfig.Entrypoint) > 0 {

@@ -73,7 +73,13 @@ kaniko:                             # struct   | Options for building images wit
   namespace: ""                     # string   | Kubernetes namespace to run kaniko build pod in (Default: "" = deployment namespace)
   options: ...                      # struct   | Set build general build options
   skipPullSecretMount: true         # bool     | If true devspace will not mount and create any image pull secret for the kaniko pod
-  env: {}                           # map      | Key value pairs of environment variables that should be added to the kaniko pod
+  env:                              # map      | Key value pairs of environment variables that should be added to the kaniko container (fills the env.value field)
+    my-string-env: value
+  envFrom:                          # map      | Key value pairs of environment variables that should be added to the kaniko container (fills the env.valueFrom field)
+    my-env-from-secret:
+      secretKeyRef: ...               
+    my-env-from-configmap:
+      configMapKeyRef: ... 
   initEnv: {}                       # map      | Key value pairs of enviroment variables that should be added to the kaniko init pod
 ```
 
@@ -133,7 +139,6 @@ helm:                               # struct   | Options for deploying with Helm
   cleanupOnFail: false              # bool     | Delete resources if rollback fails (Default: false)
   recreate: false                   # bool     | Recreate pods for applicable resources, e.g. deployments (Default: false)
   disableHooks: false               # bool     | Disable hooks (Default: false)
-  driver: secrets|configmaps|memory # enum     | Driver used by Helm v3 to store release configuration (Default: secrets)
   v2: false                         # bool     | Use legacy Helm v2 (Default: false)
   tillerNamespace: ""               # string   | Kubernetes namespace to run Tiller in when using Helm v2 (Default: "" = same a deployment namespace)
   deleteArgs: []                    # []string | Extra args for the `helm delete` command during devspace purge

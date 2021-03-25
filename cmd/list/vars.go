@@ -42,8 +42,8 @@ values
 func (cmd *varsCmd) RunListVars(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	logger := f.GetLog()
 	// Set config root
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
@@ -52,16 +52,13 @@ func (cmd *varsCmd) RunListVars(f factory.Factory, cobraCmd *cobra.Command, args
 	}
 
 	// Fill variables config
-	_, err = configLoader.Load()
+	config, err := configLoader.Load(cmd.ToConfigOptions(), logger)
 	if err != nil {
 		return err
 	}
 
-	// Load generated config
-	generatedConfig, err := configLoader.Generated()
-	if err != nil {
-		return err
-	}
+	// Get generated config
+	generatedConfig := config.Generated()
 
 	// Specify the table column names
 	headerColumnNames := []string{

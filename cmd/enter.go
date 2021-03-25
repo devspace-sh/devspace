@@ -67,19 +67,21 @@ devspace enter bash -l release=test
 func (cmd *EnterCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	logger := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configOptions := cmd.ToConfigOptions()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
 
-	// Load generated config if possible
+	// Load config if possible
 	var generatedConfig *generated.Config
 	if configExists {
-		generatedConfig, err = configLoader.Generated()
+		generatedConfig, err = configLoader.LoadGenerated(configOptions)
 		if err != nil {
 			return err
 		}
+		configOptions.GeneratedConfig = generatedConfig
 	}
 
 	// Use last context if specified
@@ -109,7 +111,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	selectorOptions := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
 	// get image selector if specified
-	imageSelector, err := getImageSelector(configLoader, cmd.Image)
+	imageSelector, err := getImageSelector(configLoader, configOptions, cmd.Image, logger)
 	if err != nil {
 		return err
 	}

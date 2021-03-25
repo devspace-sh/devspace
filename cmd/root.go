@@ -15,7 +15,7 @@ import (
 	"github.com/loft-sh/devspace/cmd/status"
 	"github.com/loft-sh/devspace/cmd/update"
 	"github.com/loft-sh/devspace/cmd/use"
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/exit"
@@ -64,14 +64,14 @@ func NewRootCmd(f factory.Factory, plugins []plugin.Metadata) *cobra.Command {
 				} else if len(extraFlags) > 0 {
 					log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
 				}
-				
+
 				// call inactivity timeout
 				if globalFlags.InactivityTimeout > 0 {
 					m, err := idle.NewIdleMonitor()
 					if err != nil {
 						log.Warnf("Error creating inactivity monitor: %v", err)
 					} else if m != nil {
-						m.Start(time.Duration(globalFlags.InactivityTimeout) * time.Minute, log)
+						m.Start(time.Duration(globalFlags.InactivityTimeout)*time.Minute, log)
 					}
 				}
 			}
@@ -171,7 +171,7 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 
 	// Add plugin commands
 	plugin.AddPluginCommands(rootCmd, plugins, "")
-	loader.AddPredefinedVars(plugins)
+	variable.AddPredefinedVars(plugins)
 	return rootCmd
 }
 

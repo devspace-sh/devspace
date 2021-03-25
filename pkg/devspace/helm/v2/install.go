@@ -15,6 +15,7 @@ import (
 
 // InstallChart installs the given chart via helm v2
 func (c *client) InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
+	c.log.Warn("Helm v2 support is deprecated and will be removed in future (see https://helm.sh/blog/helm-v2-deprecation-timeline/) for more details.")
 	err := c.ensureTiller(helmConfig)
 	if err != nil {
 		return nil, err
