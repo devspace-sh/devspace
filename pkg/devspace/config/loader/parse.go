@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"path/filepath"
@@ -89,7 +90,7 @@ func (l *configLoader) parseConfig(resolver variable.Resolver, data map[interfac
 // fillVariables fills in the given vars into the prepared config
 func (l *configLoader) fillVariables(resolver variable.Resolver, preparedConfig map[interface{}]interface{}, vars []*latest.Variable, options *ConfigOptions) error {
 	// Find out what vars are really used
-	varsUsed, err := resolver.FindVariables(preparedConfig)
+	varsUsed, err := resolver.FindVariables(preparedConfig, vars)
 	if err != nil {
 		return err
 	}
@@ -129,6 +130,8 @@ func (l *configLoader) fillVariables(resolver variable.Resolver, preparedConfig 
 func (l *configLoader) askQuestions(resolver variable.Resolver, vars []*latest.Variable) error {
 	for _, definition := range vars {
 		name := strings.TrimSpace(definition.Name)
+
+		fmt.Println(definition.Name)
 
 		// fill the variable with definition
 		_, err := resolver.Resolve(name, definition)
