@@ -30,7 +30,7 @@ func setupFactory() {
 		os.Exit(1)
 	}
 
-	utils.DefaultFactory.Namespace = "testns2"
+	utils.DefaultFactory.Namespace = "testns"
 	utils.DefaultFactory.Verbose = false
 	utils.DefaultFactory.Pwd = pwd
 	utils.DefaultFactory.CacheLogger = fakelog.NewFakeLogger()

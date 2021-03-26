@@ -1,6 +1,8 @@
 package build
 
 import (
+	"context"
+
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	ginkgo "github.com/loft-sh/devspace/e2e/ginkgo-ext"
@@ -9,9 +11,11 @@ import (
 	"github.com/spf13/cobra"
 
 	dockertypes "github.com/docker/docker/api/types"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = ginkgo.Describe("deploy", func() {
+var _ = ginkgo.Describe("build", func() {
 	var (
 		f          *utils.BaseCustomFactory
 		testDir    string
@@ -37,6 +41,16 @@ var _ = ginkgo.Describe("deploy", func() {
 		authConfig, err = dockerClient.Login("hub.docker.com", "", "", true, false, false)
 		if err != nil || authConfig.Username == "" {
 			ginkgo.Skip("Can't login, skip kaniko " + err.Error())
+		}
+
+		// Create namespace
+		_, err = f.Client.KubeClient().CoreV1().Namespaces().Create(context.Background(), &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: f.Namespace,
+			},
+		}, metav1.CreateOptions{})
+		if err != nil && err.Error() != "namespaces \"testns\" already exists" {
+			utils.ExpectNoError(err, "error creating namespace")
 		}
 	})
 

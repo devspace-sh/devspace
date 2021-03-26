@@ -5,6 +5,8 @@ import (
 	ginkgo "github.com/loft-sh/devspace/e2e/ginkgo-ext"
 	"github.com/loft-sh/devspace/e2e/utils"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
@@ -40,14 +42,121 @@ var _ = ginkgo.Describe("init", func() {
 		runTest(f, initTestCase{
 			dir:     tmpDir + "/data1",
 			answers: []string{cmd.CreateDockerfileOption, "go", "Use hub.docker.com => you are logged in as user", "user/data1", "build", "8080", cmd.ComponentChartOption},
-			expectedConfig: &latest.Config{
+			expected: config.NewConfig(map[interface{}]interface{}{
+				"profiles": []interface{}{
+					map[interface{}]interface{}{
+						"name": "production",
+						"patches": []interface{}{
+							map[interface{}]interface{}{
+								"op":   "remove",
+								"path": "images.app.appendDockerfileInstructions",
+							},
+							map[interface{}]interface{}{
+								"op":   "remove",
+								"path": "images.app.injectRestartHelper",
+							},
+							map[interface{}]interface{}{
+								"op":   "remove",
+								"path": "images.app.rebuildStrategy",
+							},
+							map[interface{}]interface{}{
+								"op":   "remove",
+								"path": "images.app.build.docker.options.target",
+							},
+						},
+					},
+					map[interface{}]interface{}{
+						"patches": []interface{}{
+							map[interface{}]interface{}{
+								"path": "dev.interactive",
+								"value": map[interface{}]interface{}{
+									"defaultEnabled": true,
+								},
+								"op": "add",
+							},
+							map[interface{}]interface{}{
+								"op":    "add",
+								"path":  "images.app.entrypoint",
+								"value": []interface{}{"sleep", "9999999999"},
+							},
+						},
+						"name": "interactive",
+					},
+				},
+				"version": "v1beta9",
+				"images": map[interface{}]interface{}{
+					"app": map[interface{}]interface{}{
+						"image":                        "user/data1",
+						"injectRestartHelper":          true,
+						"appendDockerfileInstructions": []interface{}{"USER root"},
+						"rebuildStrategy":              "ignoreContextChanges",
+						"build": map[interface{}]interface{}{
+							"docker": map[interface{}]interface{}{
+								"options": map[interface{}]interface{}{
+									"target": "build",
+								},
+							},
+						},
+					},
+				},
+				"deployments": []interface{}{
+					map[interface{}]interface{}{
+						"name": "data1",
+						"helm": map[interface{}]interface{}{
+							"componentChart": true,
+							"values": map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "user/data1",
+									},
+								},
+								"service": map[interface{}]interface{}{
+									"ports": []interface{}{
+										map[interface{}]interface{}{
+											"port": 8080,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				"dev": map[interface{}]interface{}{
+					"ports": []interface{}{
+						map[interface{}]interface{}{
+							"forward": []interface{}{
+								map[interface{}]interface{}{
+									"port": 8080,
+								},
+							},
+							"imageName": "app",
+						},
+					},
+					"open": []interface{}{
+						map[interface{}]interface{}{
+							"url": "http://localhost:8080",
+						},
+					},
+					"sync": []interface{}{
+						map[interface{}]interface{}{
+							"imageName":          "app",
+							"excludePaths":       []interface{}{".git/"},
+							"uploadExcludePaths": []interface{}{"Dockerfile", "devspace.yaml"},
+							"onUpload": map[interface{}]interface{}{
+								"restartContainer": true,
+							},
+						},
+					},
+				},
+			}, &latest.Config{
 				Version: latest.Version,
 				Images: map[string]*latest.ImageConfig{
 					"app": &latest.ImageConfig{
 						Image:                        "user/data1",
-						PreferSyncOverRebuild:        true,
+						PreferSyncOverRebuild:        false,
 						InjectRestartHelper:          true,
 						AppendDockerfileInstructions: []string{"USER root"},
+						RebuildStrategy:              "ignoreContextChanges",
 						Build: &latest.BuildConfig{
 							Docker: &latest.DockerConfig{
 								Options: &latest.BuildOptions{
@@ -106,14 +215,108 @@ var _ = ginkgo.Describe("init", func() {
 						},
 					},
 				},
-			},
+			}, &generated.Config{
+				Vars:     map[string]string{},
+				Profiles: map[string]*generated.CacheConfig{},
+			}, map[string]interface{}{}),
 		})
 	})
 
 	ginkgo.It("Everything already created", func() {
 		runTest(f, initTestCase{
 			dir: tmpDir + "/everythingIsThere",
-			expectedConfig: &latest.Config{
+			expected: config.NewConfig(map[interface{}]interface{}{
+				"profiles": []interface{}{
+					map[interface{}]interface{}{
+						"name": "production",
+						"patches": []interface{}{
+							map[interface{}]interface{}{
+								"op":   "remove",
+								"path": "images.app.appendDockerfileInstructions",
+							},
+							map[interface{}]interface{}{
+								"op":   "remove",
+								"path": "images.app.injectRestartHelper",
+							},
+						},
+					},
+					map[interface{}]interface{}{
+						"patches": []interface{}{
+							map[interface{}]interface{}{
+								"path": "dev.interactive",
+								"value": map[interface{}]interface{}{
+									"defaultEnabled": true,
+								},
+								"op": "add",
+							},
+							map[interface{}]interface{}{
+								"op":    "add",
+								"path":  "images.app.entrypoint",
+								"value": []interface{}{"sleep", "9999999999"},
+							},
+						},
+						"name": "interactive",
+					},
+				},
+				"version": "v1beta9",
+				"images": map[interface{}]interface{}{
+					"app": map[interface{}]interface{}{
+						"image":                        "user/everythingIsThere",
+						"injectRestartHelper":          true,
+						"appendDockerfileInstructions": []interface{}{"USER root"},
+						"preferSyncOverRebuild":        true,
+					},
+				},
+				"deployments": []interface{}{
+					map[interface{}]interface{}{
+						"name": "everythingIsThere",
+						"helm": map[interface{}]interface{}{
+							"componentChart": true,
+							"values": map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "user/everythingIsThere",
+									},
+								},
+								"service": map[interface{}]interface{}{
+									"ports": []interface{}{
+										map[interface{}]interface{}{
+											"port": 8081,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				"dev": map[interface{}]interface{}{
+					"ports": []interface{}{
+						map[interface{}]interface{}{
+							"forward": []interface{}{
+								map[interface{}]interface{}{
+									"port": 8081,
+								},
+							},
+							"imageName": "app",
+						},
+					},
+					"open": []interface{}{
+						map[interface{}]interface{}{
+							"url": "http://localhost:8081",
+						},
+					},
+					"sync": []interface{}{
+						map[interface{}]interface{}{
+							"imageName":          "app",
+							"excludePaths":       []interface{}{".git/"},
+							"uploadExcludePaths": []interface{}{"Dockerfile", "devspace.yaml"},
+							"onUpload": map[interface{}]interface{}{
+								"restartContainer": true,
+							},
+						},
+					},
+				},
+			}, &latest.Config{
 				Version: latest.Version,
 				Images: map[string]*latest.ImageConfig{
 					"app": &latest.ImageConfig{
@@ -172,7 +375,10 @@ var _ = ginkgo.Describe("init", func() {
 						},
 					},
 				},
-			},
+			}, &generated.Config{
+				Vars:     map[string]string{},
+				Profiles: map[string]*generated.CacheConfig{},
+			}, map[string]interface{}{}),
 		})
 	})
 })
@@ -181,7 +387,7 @@ type initTestCase struct {
 	dir     string
 	answers []string
 
-	expectedConfig *latest.Config
+	expected config.Config
 }
 
 func runTest(f *customFactory, testCase initTestCase) {
@@ -204,10 +410,10 @@ func runTest(f *customFactory, testCase initTestCase) {
 	err = initCmd.Run(f, []plugin.Metadata{}, &cobra.Command{}, []string{})
 	utils.ExpectNoError(err, "executing command")
 
-	if testCase.expectedConfig != nil {
-		config, err := f.NewConfigLoader(nil, f.GetLog()).Load()
+	if testCase.expected != nil {
+		config, err := f.NewConfigLoader("").Load(nil, f.GetLog())
 		utils.ExpectNoError(err, "new config loader")
 
-		utils.ExpectEqual(testCase.expectedConfig, config)
+		utils.ExpectEqual(config, testCase.expected, "Unexpected config")
 	}
 }
