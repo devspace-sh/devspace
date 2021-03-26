@@ -2,6 +2,7 @@ package list
 
 import (
 	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
@@ -50,10 +51,11 @@ func (cmd *commandsCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 	}
 
 	// Parse commands
-	commands, err := configLoader.LoadCommands(nil, logger)
+	commandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), nil, logger)
 	if err != nil {
 		return err
 	}
+	commands := commandsInterface.Config().Commands
 
 	// Load generated config
 	generatedConfig, err := configLoader.LoadGenerated(nil)

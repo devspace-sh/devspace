@@ -143,7 +143,7 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	rootCmd.AddCommand(list.NewListCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(remove.NewRemoveCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(reset.NewResetCmd(f, plugins))
-	rootCmd.AddCommand(set.NewSetCmd(f, plugins))
+	rootCmd.AddCommand(set.NewSetCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(status.NewStatusCmd(f, plugins))
 	rootCmd.AddCommand(use.NewUseCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(update.NewUpdateCmd(f, globalFlags, plugins))

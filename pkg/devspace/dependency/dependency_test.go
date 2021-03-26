@@ -123,6 +123,11 @@ func TestUpdateAll(t *testing.T) {
 
 		testConfig := &latest.Config{
 			Dependencies: testCase.dependencyTasks,
+			Profiles: []*latest.ProfileConfig{
+				{
+					Name: "default",
+				},
+			},
 		}
 		generatedConfig := &generated.Config{
 			ActiveProfile: "default",
