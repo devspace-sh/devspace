@@ -15,12 +15,13 @@ import (
 	"github.com/loft-sh/devspace/cmd/status"
 	"github.com/loft-sh/devspace/cmd/update"
 	"github.com/loft-sh/devspace/cmd/use"
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	flagspkg "github.com/loft-sh/devspace/pkg/util/flags"
+	"github.com/loft-sh/devspace/pkg/util/idle"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -28,6 +29,7 @@ import (
 	"k8s.io/klog"
 	"os"
 	"strings"
+	"time"
 )
 
 // NewRootCmd returns a new root command
@@ -61,6 +63,16 @@ func NewRootCmd(f factory.Factory, plugins []plugin.Metadata) *cobra.Command {
 					log.Warnf("Error applying extra flags: %v", err)
 				} else if len(extraFlags) > 0 {
 					log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
+				}
+
+				// call inactivity timeout
+				if globalFlags.InactivityTimeout > 0 {
+					m, err := idle.NewIdleMonitor()
+					if err != nil {
+						log.Warnf("Error creating inactivity monitor: %v", err)
+					} else if m != nil {
+						m.Start(time.Duration(globalFlags.InactivityTimeout)*time.Minute, log)
+					}
 				}
 			}
 
@@ -131,7 +143,7 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	rootCmd.AddCommand(list.NewListCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(remove.NewRemoveCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(reset.NewResetCmd(f, plugins))
-	rootCmd.AddCommand(set.NewSetCmd(f, plugins))
+	rootCmd.AddCommand(set.NewSetCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(status.NewStatusCmd(f, plugins))
 	rootCmd.AddCommand(use.NewUseCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(update.NewUpdateCmd(f, globalFlags, plugins))
@@ -159,7 +171,7 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 
 	// Add plugin commands
 	plugin.AddPluginCommands(rootCmd, plugins, "")
-	loader.AddPredefinedVars(plugins)
+	variable.AddPredefinedVars(plugins)
 	return rootCmd
 }
 

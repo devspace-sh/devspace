@@ -1,10 +1,12 @@
 package list
 
 import (
+	"encoding/json"
 	"fmt"
-	"strings"
+	"sort"
 
 	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
@@ -14,6 +16,8 @@ import (
 
 type varsCmd struct {
 	*flags.GlobalFlags
+
+	Output string
 }
 
 func newVarsCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
@@ -35,6 +39,7 @@ values
 			return cmd.RunListVars(f, cobraCmd, args)
 		}}
 
+	varsCmd.Flags().StringVarP(&cmd.Output, "output", "o", "", "The output format of the command. Can be either empty, keyvalue or json")
 	return varsCmd
 }
 
@@ -42,8 +47,8 @@ values
 func (cmd *varsCmd) RunListVars(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	logger := f.GetLog()
 	// Set config root
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
@@ -52,41 +57,52 @@ func (cmd *varsCmd) RunListVars(f factory.Factory, cobraCmd *cobra.Command, args
 	}
 
 	// Fill variables config
-	_, err = configLoader.Load()
+	config, err := configLoader.LoadWithParser(loader.NewWithCommandsParser(), cmd.ToConfigOptions(), logger)
 	if err != nil {
 		return err
 	}
 
-	// Load generated config
-	generatedConfig, err := configLoader.Generated()
-	if err != nil {
-		return err
-	}
-
-	// Specify the table column names
-	headerColumnNames := []string{
-		"Variable",
-		"Value",
-	}
-
-	varRow := make([][]string, 0, len(generatedConfig.Vars))
-	for name, value := range generatedConfig.Vars {
-		if strings.HasPrefix(name, "DEVSPACE_SPACE_DOMAIN") {
-			continue
+	switch cmd.Output {
+	case "":
+		// Specify the table column names
+		headerColumnNames := []string{
+			"Variable",
+			"Value",
 		}
 
-		varRow = append(varRow, []string{
-			name,
-			fmt.Sprintf("%v", value),
+		varRow := make([][]string, 0, len(config.Variables()))
+		for name, value := range config.Variables() {
+			varRow = append(varRow, []string{
+				name,
+				fmt.Sprintf("%v", value),
+			})
+		}
+
+		// No variable found
+		if len(varRow) == 0 {
+			logger.Info("No variables found")
+			return nil
+		}
+
+		sort.SliceStable(varRow, func(i, j int) bool {
+			return varRow[i][0] < varRow[j][0]
 		})
+
+		log.PrintTable(logger, headerColumnNames, varRow)
+	case "keyvalue":
+		for name, value := range config.Variables() {
+			fmt.Printf("%s=%v\n", name, value)
+		}
+	case "json":
+		out, err := json.MarshalIndent(config.Variables(), "", "  ")
+		if err != nil {
+			return err
+		}
+
+		fmt.Print(string(out))
+	default:
+		return errors.Errorf("unsupported value for flag --output: %s", cmd.Output)
 	}
 
-	// No variable found
-	if len(varRow) == 0 {
-		logger.Info("No variables found")
-		return nil
-	}
-
-	log.PrintTable(logger, headerColumnNames, varRow)
 	return nil
 }

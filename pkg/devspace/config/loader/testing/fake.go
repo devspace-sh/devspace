@@ -2,13 +2,13 @@ package testing
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 )
@@ -29,27 +29,18 @@ func NewFakeConfigLoader(generatedConfig *generated.Config, config *latest.Confi
 	}
 }
 
-// New implements interface
-func (f *FakeConfigLoader) New() *latest.Config {
-	return f.Config
-}
-
-func (f *FakeConfigLoader) ResolvedVars() map[string]string {
-	return nil
-}
-
 // Exists implements interface
 func (f *FakeConfigLoader) Exists() bool {
 	return f.Config != nil
 }
 
 // Load implements interface
-func (f *FakeConfigLoader) Load() (*latest.Config, error) {
+func (f *FakeConfigLoader) Load(options *loader.ConfigOptions, log log.Logger) (config.Config, error) {
 	if f.Config == nil {
 		return nil, errors.New("Couldn't load config")
 	}
 
-	return f.Config, nil
+	return config.NewConfig(nil, f.Config, f.GeneratedConfig, nil), nil
 }
 
 func (f *FakeConfigLoader) ConfigPath() string {
@@ -67,6 +58,10 @@ func (f *FakeConfigLoader) LoadFromPath(generatedConfig *generated.Config, path 
 
 func (f *FakeConfigLoader) RestoreLoadSave(client kubectl.Client) (*latest.Config, error) {
 	return f.Config, nil
+}
+
+func (f *FakeConfigLoader) LoadGenerated(options *loader.ConfigOptions) (*generated.Config, error) {
+	return f.GeneratedConfig, nil
 }
 
 // LoadRaw implements interface
@@ -89,22 +84,13 @@ func (f *FakeConfigLoader) LoadRaw() (map[interface{}]interface{}, error) {
 	return retConfig, nil
 }
 
-// LoadWithoutProfile implements interface
-func (f *FakeConfigLoader) LoadWithoutProfile() (*latest.Config, error) {
-	if f.Config == nil {
-		return nil, errors.New("Couldn't load config")
-	}
-
-	return f.Config, nil
-}
-
 // GetProfiles implements interface
-func (f *FakeConfigLoader) GetProfiles() ([]*latest.ProfileConfig, error) {
+func (f *FakeConfigLoader) LoadProfiles() ([]*latest.ProfileConfig, error) {
 	return f.Config.Profiles, nil
 }
 
 // ParseCommands implements interface
-func (f *FakeConfigLoader) ParseCommands() ([]*latest.CommandConfig, error) {
+func (f *FakeConfigLoader) LoadWithParser(parser loader.Parser, options *loader.ConfigOptions, log log.Logger) (config.Config, error) {
 	return nil, fmt.Errorf("Unsupported")
 }
 
@@ -118,7 +104,7 @@ func (f *FakeConfigLoader) Generated() (*generated.Config, error) {
 }
 
 // SaveGenerated implements interface
-func (f *FakeConfigLoader) SaveGenerated() error {
+func (f *FakeConfigLoader) SaveGenerated(generatedConfig *generated.Config) error {
 	return nil
 }
 
@@ -127,21 +113,7 @@ func (f *FakeConfigLoader) Save(config *latest.Config) error {
 	return nil
 }
 
-// RestoreVars implements interface
-func (f *FakeConfigLoader) RestoreVars(config *latest.Config) (*latest.Config, error) {
-	// Cloned config
-	clonedConfig := &latest.Config{}
-
-	// Copy config
-	err := util.Convert(config, clonedConfig)
-	if err != nil {
-		return nil, errors.Wrap(err, "convert cloned config")
-	}
-
-	return clonedConfig, nil
-}
-
 // SetDevSpaceRoot implements interface
-func (f *FakeConfigLoader) SetDevSpaceRoot() (bool, error) {
+func (f *FakeConfigLoader) SetDevSpaceRoot(log log.Logger) (bool, error) {
 	return f.Config != nil, nil
 }

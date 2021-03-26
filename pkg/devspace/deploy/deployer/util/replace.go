@@ -38,7 +38,7 @@ func replaceImageNames(cache *generated.CacheConfig, imagesConf map[string]*late
 
 	shouldRedeploy := false
 
-	match := func(path, key, value string) bool {
+	match := func(key, value string) bool {
 		if len(keys) > 0 && keys[key] == false {
 			return false
 		}
@@ -76,7 +76,7 @@ func replaceImageNames(cache *generated.CacheConfig, imagesConf map[string]*late
 		return false
 	}
 
-	replace := func(path, value string) (interface{}, error) {
+	replace := func(value string) (interface{}, error) {
 		var (
 			onlyImage = get(value, imageRegEx)
 			onlyTag   = get(value, tagRegEx)

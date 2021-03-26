@@ -3,8 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services"
@@ -69,8 +67,8 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 	// Set config root
 	cmd.log = f.GetLog()
 	configOptions := cmd.ToConfigOptions()
-	configLoader := f.NewConfigLoader(configOptions, cmd.log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
 		return err
 	} else if !configExists || cmd.Pod != "" || cmd.LabelSelector != "" || cmd.Pick {
@@ -82,19 +80,14 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 		return restartContainer(client, targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick), cmd.log)
 	}
 
-	var (
-		generatedConfig *generated.Config
-		config          *latest.Config
-		client          kubectl.Client
-	)
-
 	log.StartFileLogging()
 
 	// Get config with adjusted cluster config
-	generatedConfig, err = configLoader.Generated()
+	generatedConfig, err := configLoader.LoadGenerated(configOptions)
 	if err != nil {
 		return err
 	}
+	configOptions.GeneratedConfig = generatedConfig
 
 	// Use last context if specified
 	err = cmd.UseLastContext(generatedConfig, cmd.log)
@@ -102,10 +95,11 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 		return err
 	}
 
-	client, err = f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		return errors.Wrap(err, "create kube client")
 	}
+	configOptions.KubeClient = client
 
 	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, cmd.log)
 	if err != nil {
@@ -113,10 +107,11 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 	}
 
 	// Get config with adjusted cluster config
-	config, err = configLoader.RestoreLoadSave(client)
+	configInterface, err := configLoader.Load(configOptions, cmd.log)
 	if err != nil {
 		return err
 	}
+	config := configInterface.Config()
 
 	// Execute plugin hook
 	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "restart", client.CurrentContext(), client.Namespace(), config)
@@ -144,7 +139,7 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 		}
 	}
 
-	err = configLoader.SaveGenerated()
+	err = configLoader.SaveGenerated(generatedConfig)
 	if err != nil {
 		cmd.log.Errorf("Error saving generated.yaml: %v", err)
 	}

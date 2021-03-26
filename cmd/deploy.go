@@ -30,6 +30,8 @@ type DeployCmd struct {
 	ForceBuild          bool
 	SkipBuild           bool
 	BuildSequential     bool
+	MaxConcurrentBuilds int
+
 	ForceDeploy         bool
 	SkipDeploy          bool
 	Deployments         string
@@ -85,6 +87,8 @@ devspace deploy --kube-context=deploy-context
 	deployCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to (re-)build every image")
 	deployCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips building of images")
 	deployCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
+	deployCmd.Flags().IntVar(&cmd.MaxConcurrentBuilds, "max-concurrent-builds", 0, "The maximum number of image builds built in parallel (0 for infinite)")
+
 	deployCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
 	deployCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 	deployCmd.Flags().BoolVar(&cmd.SkipDeploy, "skip-deploy", false, "Skips deploying and only builds images")
@@ -103,8 +107,8 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	// set config root
 	cmd.log = f.GetLog()
 	configOptions := cmd.ToConfigOptions()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), cmd.log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
 		return err
 	}
@@ -122,10 +126,11 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	}
 
 	// load generated config
-	generatedConfig, err := configLoader.Generated()
+	generatedConfig, err := configLoader.LoadGenerated(configOptions)
 	if err != nil {
 		return errors.Errorf("error loading generated.yaml: %v", err)
 	}
+	configOptions.GeneratedConfig = generatedConfig
 
 	// use last context if specified
 	err = cmd.UseLastContext(generatedConfig, cmd.log)
@@ -138,6 +143,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	if err != nil {
 		return errors.Errorf("unable to create new kubectl client: %v", err)
 	}
+	configOptions.KubeClient = client
 
 	// warn the user if we deployed into a different context before
 	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, cmd.log)
@@ -155,10 +161,11 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	}
 
 	// load config
-	config, err := configLoader.RestoreLoadSave(client)
+	configInterface, err := configLoader.Load(configOptions, cmd.log)
 	if err != nil {
 		return err
 	}
+	config := configInterface.Config()
 
 	// execute plugin hook
 	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "deploy", client.CurrentContext(), client.Namespace(), config)
@@ -193,13 +200,19 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	// deploy dependencies
 	err = manager.DeployAll(dependency.DeployOptions{
 		Dependencies:            cmd.Dependency,
-		SkipPush:                cmd.SkipPush,
 		ForceDeployDependencies: cmd.ForceDependencies,
 		SkipBuild:               cmd.SkipBuild,
-		ForceBuild:              cmd.ForceBuild,
 		SkipDeploy:              cmd.SkipDeploy,
 		ForceDeploy:             cmd.ForceDeploy,
 		Verbose:                 cmd.VerboseDependencies,
+
+		BuildOptions: build.Options{
+			SkipPush:                  cmd.SkipPush,
+			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
+			ForceRebuild:              cmd.ForceBuild,
+			Sequential:                cmd.BuildSequential,
+			MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
+		},
 	})
 	if err != nil {
 		return errors.Wrap(err, "deploy dependencies")
@@ -215,6 +228,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 				ForceRebuild:              cmd.ForceBuild,
 				Sequential:                cmd.BuildSequential,
+				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
 			}, cmd.log)
 			if err != nil {
 				if strings.Index(err.Error(), "no space left on device") != -1 {
@@ -226,7 +240,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 
 			// save cache if an image was built
 			if len(builtImages) > 0 {
-				err := configLoader.SaveGenerated()
+				err := configLoader.SaveGenerated(generatedConfig)
 				if err != nil {
 					return errors.Errorf("error saving generated config: %v", err)
 				}

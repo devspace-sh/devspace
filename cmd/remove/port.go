@@ -2,7 +2,6 @@ package remove
 
 import (
 	"errors"
-
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/message"
@@ -47,8 +46,8 @@ devspace remove port --all
 func (cmd *portCmd) RunRemovePort(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
@@ -56,11 +55,13 @@ func (cmd *portCmd) RunRemovePort(f factory.Factory, cobraCmd *cobra.Command, ar
 		return errors.New(message.ConfigNotFound)
 	}
 
-	config, err := configLoader.LoadWithoutProfile()
+	log.Warn("This command is deprecated and will be removed in a future DevSpace version. Please modify the devspace.yaml directly instead")
+	configInterface, err := configLoader.Load(cmd.ToConfigOptions(), log)
 	if err != nil {
 		return err
 	}
 
+	config := configInterface.Config()
 	configureManager := f.NewConfigureManager(config, log)
 	err = configureManager.RemovePort(cmd.RemoveAll, cmd.LabelSelector, args)
 	if err != nil {

@@ -1,56 +1,57 @@
 package loader
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"io/ioutil"
 	"os"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 	"github.com/pkg/errors"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	yaml "gopkg.in/yaml.v2"
 )
 
-func (l *configLoader) replaceVar(path, value string) (interface{}, error) {
-	oldValue, _ := l.options.LoadedVars[path]
-	return oldValue, nil
+var ignoreConfigKeys = []string{"images", "deployments", "dev"}
+
+func (l *configLoader) shouldRestoreKey(key string) bool {
+	for _, ignoreKey := range ignoreConfigKeys {
+		if ignoreKey == key {
+			return false
+		}
+	}
+	return true
 }
 
-func (l *configLoader) matchVar(path, key, value string) bool {
-	_, ok := l.options.LoadedVars[path+"."+key]
-	return ok
+// SaveGenerated is a convenience method to save the generated config
+func (l *configLoader) SaveGenerated(generatedConfig *generated.Config) error {
+	return generated.NewConfigLoader("").Save(generatedConfig)
 }
 
-// RestoreVars restores the variables in the config
-func (l *configLoader) RestoreVars(config *latest.Config) (*latest.Config, error) {
+// Save writes the data of a config to its yaml file
+func (l *configLoader) Save(config *latest.Config) error {
 	configMap := make(map[interface{}]interface{})
 
 	// Copy config
 	err := util.Convert(config, &configMap)
 	if err != nil {
-		return nil, errors.Wrap(err, "convert cloned config")
-	}
-
-	// Restore old vars values
-	if len(l.options.LoadedVars) > 0 {
-		walk.Walk(configMap, l.matchVar, l.replaceVar)
+		return errors.Wrap(err, "convert cloned config")
 	}
 
 	// Check if config exists
-	path := l.ConfigPath()
+	path := ConfigPath(l.configPath)
 	_, err = os.Stat(path)
 	if err == nil {
 		// Shallow merge with config from file to add vars, configs etc.
 		bytes, err := ioutil.ReadFile(path)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		originalConfig := map[interface{}]interface{}{}
 		err = yaml.Unmarshal(bytes, &originalConfig)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		// Now merge missing from original into new
@@ -72,32 +73,10 @@ func (l *configLoader) RestoreVars(config *latest.Config) (*latest.Config, error
 	// Copy config
 	err = util.Convert(configMap, clonedConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "convert cloned config")
+		return errors.Wrap(err, "convert cloned config")
 	}
 
-	return clonedConfig, nil
-}
-
-var ignoreConfigKeys = []string{"images", "deployments", "dev"}
-
-func (l *configLoader) shouldRestoreKey(key string) bool {
-	for _, ignoreKey := range ignoreConfigKeys {
-		if ignoreKey == key {
-			return false
-		}
-	}
-	return true
-}
-
-// Save writes the data of a config to its yaml file
-func (l *configLoader) Save(config *latest.Config) error {
-	// RestoreVars restores the variables in the config
-	clonedConfig, err := l.RestoreVars(config)
-	if err != nil {
-		return errors.Wrap(err, "restore vars")
-	}
-
-	return saveConfig(l.ConfigPath(), clonedConfig)
+	return saveConfig(ConfigPath(l.configPath), clonedConfig)
 }
 
 // saveConfig saves the config to file

@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"io/ioutil"
 	"os"
@@ -122,6 +123,11 @@ func TestUpdateAll(t *testing.T) {
 
 		testConfig := &latest.Config{
 			Dependencies: testCase.dependencyTasks,
+			Profiles: []*latest.ProfileConfig{
+				{
+					Name: "default",
+				},
+			},
 		}
 		generatedConfig := &generated.Config{
 			ActiveProfile: "default",
@@ -557,7 +563,10 @@ func TestBuild(t *testing.T) {
 		}).Resolve(false)
 		dependency := dependencies[0]
 
-		err = dependency.Build(testCase.skipPush, testCase.forceDependencies, testCase.forceBuild, log.Discard)
+		err = dependency.Build(testCase.forceDependencies, &build.Options{
+			SkipPush:                  testCase.skipPush,
+			ForceRebuild:              testCase.forceBuild,
+		}, log.Discard)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error purging all in testCase %s", testCase.name)
@@ -677,7 +686,10 @@ func TestDeploy(t *testing.T) {
 		}).Resolve(false)
 		dependency := dependencies[0]
 
-		err = dependency.Deploy(testCase.skipPush, testCase.forceDependencies, testCase.skipBuild, testCase.forceBuild, testCase.skipDeploy, testCase.forceDeploy, log.Discard)
+		err = dependency.Deploy(testCase.forceDependencies, testCase.skipBuild, testCase.skipDeploy, testCase.forceDeploy, &build.Options{
+			SkipPush:                  testCase.skipPush,
+			ForceRebuild:              testCase.forceBuild,
+		}, log.Discard)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error purging all in testCase %s", testCase.name)

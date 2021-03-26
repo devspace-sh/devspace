@@ -3,6 +3,8 @@ package kaniko
 import (
 	"context"
 	"github.com/docker/distribution/reference"
+	jsonyaml "github.com/ghodss/yaml"
+	"gopkg.in/yaml.v2"
 	"path/filepath"
 
 	"github.com/docker/docker/api/types"
@@ -281,6 +283,27 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, k8sv1.EnvVar{
 			Name:  k,
 			Value: v,
+		})
+	}
+	for k, v := range kanikoOptions.EnvFrom {
+		if len(pod.Spec.Containers[0].Env) == 0 {
+			pod.Spec.Containers[0].Env = []k8sv1.EnvVar{}
+		}
+
+		o, err := yaml.Marshal(v)
+		if err != nil {
+			return nil, errors.Errorf("error converting envFrom %s: %v", k, err)
+		}
+
+		source := &k8sv1.EnvVarSource{}
+		err = jsonyaml.Unmarshal(o, source)
+		if err != nil {
+			return nil, errors.Errorf("error converting envFrom %s: %v", k, err)
+		}
+
+		pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, k8sv1.EnvVar{
+			Name:      k,
+			ValueFrom: source,
 		})
 	}
 

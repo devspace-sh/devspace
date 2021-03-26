@@ -14,8 +14,8 @@ import (
 type Client interface {
 	StartAttach(options targetselector.Options, interrupt chan error) error
 
-	StartLogs(options targetselector.Options, follow bool, tail int64) error
-	StartLogsWithWriter(options targetselector.Options, follow bool, tail int64, writer io.Writer) error
+	StartLogs(options targetselector.Options, follow bool, tail int64, wait bool) error
+	StartLogsWithWriter(options targetselector.Options, follow bool, tail int64, wait bool, writer io.Writer) error
 
 	StartPortForwarding(interrupt chan error) error
 	StartReversePortForwarding(interrupt chan error) error

@@ -42,8 +42,8 @@ Shows the status of all deployments
 func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	logger := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 	}
 
 	// Load generated
-	generatedConfig, err := configLoader.Generated()
+	generatedConfig, err := configLoader.LoadGenerated(cmd.ToConfigOptions())
 	if err != nil {
 		return err
 	}
@@ -84,11 +84,12 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 	}
 
 	// Get config with adjusted cluster config
-	config, err := configLoader.Load()
+	configInterface, err := configLoader.Load(cmd.ToConfigOptions(), logger)
 	if err != nil {
 		return err
 	}
 
+	config := configInterface.Config()
 	if config.Deployments != nil {
 		helmV2Clients := map[string]helmtypes.Client{}
 

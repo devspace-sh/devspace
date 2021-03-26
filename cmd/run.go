@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"os"
 	"strings"
 
@@ -96,8 +97,8 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 
 	// Set config root
 	configOptions := cmd.ToConfigOptions()
-	configLoader := f.NewConfigLoader(configOptions, f.GetLog())
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(f.GetLog())
 	if err != nil {
 		return err
 	}
@@ -107,17 +108,12 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 
 	// check if we should execute a dependency command
 	if cmd.Dependency != "" {
-		config, err := configLoader.Load()
+		config, err := configLoader.Load(configOptions, f.GetLog())
 		if err != nil {
 			return err
 		}
 
-		cache, err := configLoader.Generated()
-		if err != nil {
-			return err
-		}
-
-		mgr, err := f.NewDependencyManager(config, cache, nil, false, configOptions, f.GetLog())
+		mgr, err := f.NewDependencyManager(config.Config(), config.Generated(), nil, false, configOptions, f.GetLog())
 		if err != nil {
 			return err
 		}
@@ -129,14 +125,22 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 		})
 	}
 
-	// Parse commands
-	commands, err := configLoader.ParseCommands()
+	// load generated
+	generatedConfig, err := configLoader.LoadGenerated(configOptions)
 	if err != nil {
 		return err
 	}
+	configOptions.GeneratedConfig = generatedConfig
+
+	// Parse commands
+	commandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), configOptions, f.GetLog())
+	if err != nil {
+		return err
+	}
+	commands := commandsInterface.Config().Commands
 
 	// Save variables
-	err = configLoader.SaveGenerated()
+	err = configLoader.SaveGenerated(generatedConfig)
 	if err != nil {
 		return err
 	}

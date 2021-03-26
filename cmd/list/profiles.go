@@ -38,8 +38,8 @@ Lists all DevSpace configuartions for this project
 func (cmd *profilesCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	logger := f.GetLog()
 	// Set config root
-	configLoader := f.NewConfigLoader(nil, logger)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader("")
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
@@ -47,16 +47,17 @@ func (cmd *profilesCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 		return errors.New(message.ConfigNotFound)
 	}
 
-	profiles, err := configLoader.GetProfiles()
+	config, err := configLoader.Load(nil, logger)
 	if err != nil {
 		return err
 	}
 
-	// Load generated config
-	generatedConfig, err := configLoader.Generated()
+	profiles, err := config.Profiles()
 	if err != nil {
 		return err
 	}
+
+	generatedConfig := config.Generated()
 
 	// Specify the table column names
 	headerColumnNames := []string{

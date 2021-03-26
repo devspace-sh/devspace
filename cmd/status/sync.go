@@ -50,14 +50,16 @@ Shows the sync status
 func (cmd *syncCmd) RunStatusSync(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	logger := f.GetLog()
-	configLoader := f.NewConfigLoader(nil, logger)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader("")
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
 	if !configExists {
 		return errors.New(message.ConfigNotFound)
 	}
+
+	logger.Warn("This command is deprecated and will be removed in a future DevSpace version. Please take a look at the sync logs at .devspace/logs/sync.log instead")
 
 	// Read syncLog
 	cwd, err := os.Getwd()

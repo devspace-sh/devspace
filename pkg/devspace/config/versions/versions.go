@@ -83,7 +83,7 @@ func ParseVariables(data map[interface{}]interface{}, log log.Logger) ([]*latest
 		return nil, errors.Wrap(err, "loading variables")
 	}
 
-	config, err := Parse(strippedData, nil, log)
+	config, err := Parse(strippedData, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse variables")
 	}
@@ -92,7 +92,7 @@ func ParseVariables(data map[interface{}]interface{}, log log.Logger) ([]*latest
 }
 
 // Parse parses the data into the latest config
-func Parse(data map[interface{}]interface{}, loadedVars map[string]string, log log.Logger) (*latest.Config, error) {
+func Parse(data map[interface{}]interface{}, log log.Logger) (*latest.Config, error) {
 	version, ok := data["version"].(string)
 	if ok == false {
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
@@ -121,13 +121,6 @@ func Parse(data map[interface{}]interface{}, loadedVars map[string]string, log l
 		upgradedConfig, err := latestConfig.Upgrade(log)
 		if err != nil {
 			return nil, errors.Errorf("Error upgrading config from version %s: %v", latestConfig.GetVersion(), err)
-		}
-
-		if loadedVars != nil {
-			err = latestConfig.UpgradeVarPaths(loadedVars, log)
-			if err != nil {
-				return nil, errors.Errorf("Error upgrading config var paths from version %s: %v", latestConfig.GetVersion(), err)
-			}
 		}
 
 		latestConfig = upgradedConfig

@@ -136,29 +136,29 @@ func ExecuteCommand(commands []*latest.CommandConfig, cmd string, args []string)
 
 // BuildOptions has all options for building all dependencies
 type BuildOptions struct {
+	BuildOptions build.Options
+
 	Dependencies            []string
 	UpdateDependencies      bool
-	SkipPush                bool
 	ForceDeployDependencies bool
-	ForceBuild              bool
 	Verbose                 bool
 }
 
 // BuildAll will build all dependencies if there are any
 func (m *manager) BuildAll(options BuildOptions) error {
 	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Build", func(dependency *Dependency, log log.Logger) error {
-		return dependency.Build(options.SkipPush, options.ForceDeployDependencies, options.ForceBuild, log)
+		return dependency.Build(options.ForceDeployDependencies, &options.BuildOptions, log)
 	})
 }
 
 // DeployOptions has all options for deploying all dependencies
 type DeployOptions struct {
+	BuildOptions build.Options
+
 	Dependencies            []string
 	UpdateDependencies      bool
-	SkipPush                bool
 	ForceDeployDependencies bool
 	SkipBuild               bool
-	ForceBuild              bool
 	SkipDeploy              bool
 	ForceDeploy             bool
 	Verbose                 bool
@@ -172,7 +172,7 @@ func (m *manager) DeployAll(options DeployOptions) error {
 	}
 
 	err = m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
-		return dependency.Deploy(options.SkipPush, options.ForceDeployDependencies, options.SkipBuild, options.ForceBuild, options.SkipDeploy, options.ForceDeploy, log)
+		return dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
 	})
 	if err != nil {
 		m.hookExecuter.OnError(hook.StageDependencies, []string{hook.All}, hook.Context{Client: m.client, Config: m.config, Cache: m.cache, Error: err}, m.log)
@@ -205,15 +205,15 @@ type RenderOptions struct {
 	Dependencies       []string
 	Verbose            bool
 	UpdateDependencies bool
-	SkipPush           bool
 	SkipBuild          bool
-	ForceBuild         bool
 	Writer             io.Writer
+
+	BuildOptions build.Options
 }
 
 func (m *manager) RenderAll(options RenderOptions) error {
 	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Render", func(dependency *Dependency, log log.Logger) error {
-		return dependency.Render(options.SkipPush, options.SkipBuild, options.ForceBuild, options.Writer, log)
+		return dependency.Render(options.SkipBuild, &options.BuildOptions, options.Writer, log)
 	})
 }
 
@@ -325,7 +325,7 @@ type Dependency struct {
 }
 
 // Build builds and pushes all defined images
-func (d *Dependency) Build(skipPush, forceDependencies, forceBuild bool, log log.Logger) error {
+func (d *Dependency) Build(forceDependencies bool, buildOptions *build.Options, log log.Logger) error {
 	// Switch current working directory
 	currentWorkingDirectory, err := d.prepare(forceDependencies)
 	if err != nil {
@@ -338,7 +338,7 @@ func (d *Dependency) Build(skipPush, forceDependencies, forceBuild bool, log log
 	defer os.Chdir(currentWorkingDirectory)
 
 	// Check if image build is enabled
-	_, err = d.buildImages(false, skipPush, forceBuild, log)
+	_, err = d.buildImages(false, buildOptions, log)
 	if err != nil {
 		return err
 	}
@@ -348,7 +348,7 @@ func (d *Dependency) Build(skipPush, forceDependencies, forceBuild bool, log log
 }
 
 // Deploy deploys the dependency if necessary
-func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, skipDeploy, forceDeploy bool, log log.Logger) error {
+func (d *Dependency) Deploy(forceDependencies, skipBuild, skipDeploy, forceDeploy bool, buildOptions *build.Options, log log.Logger) error {
 	// Switch current working directory
 	currentWorkingDirectory, err := d.prepare(forceDependencies)
 	if err != nil {
@@ -373,7 +373,7 @@ func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, 
 	}
 
 	// Check if image build is enabled
-	builtImages, err := d.buildImages(skipBuild, skipPush, forceBuild, log)
+	builtImages, err := d.buildImages(skipBuild, buildOptions, log)
 	if err != nil {
 		return err
 	}
@@ -400,7 +400,7 @@ func (d *Dependency) Deploy(skipPush, forceDependencies, skipBuild, forceBuild, 
 }
 
 // Render renders the dependency
-func (d *Dependency) Render(skipPush, skipBuild, forceBuild bool, out io.Writer, log log.Logger) error {
+func (d *Dependency) Render(skipBuild bool, buildOptions *build.Options, out io.Writer, log log.Logger) error {
 	// Switch current working directory
 	currentWorkingDirectory, err := d.changeWorkingDirectory()
 	if err != nil {
@@ -410,7 +410,7 @@ func (d *Dependency) Render(skipPush, skipBuild, forceBuild bool, out io.Writer,
 	defer os.Chdir(currentWorkingDirectory)
 
 	// Check if image build is enabled
-	builtImages, err := d.buildImages(skipBuild, skipPush, forceBuild, log)
+	builtImages, err := d.buildImages(skipBuild, buildOptions, log)
 	if err != nil {
 		return err
 	}
@@ -447,17 +447,14 @@ func (d *Dependency) Purge(log log.Logger) error {
 	return nil
 }
 
-func (d *Dependency) buildImages(skipBuild, skipPush, forceBuild bool, log log.Logger) (map[string]string, error) {
+func (d *Dependency) buildImages(skipBuild bool, buildOptions *build.Options, log log.Logger) (map[string]string, error) {
 	var err error
 
 	// Check if image build is enabled
 	builtImages := make(map[string]string)
 	if skipBuild == false && (d.DependencyConfig.SkipBuild == nil || *d.DependencyConfig.SkipBuild == false) {
 		// Build images
-		builtImages, err = d.buildController.Build(&build.Options{
-			SkipPush:     skipPush,
-			ForceRebuild: forceBuild,
-		}, log)
+		builtImages, err = d.buildController.Build(buildOptions, log)
 		if err != nil {
 			return nil, err
 		}

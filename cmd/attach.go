@@ -60,19 +60,21 @@ devspace attach -n my-namespace
 func (cmd *AttachCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configOptions := cmd.ToConfigOptions()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
 
-	// Load generated config if possible
+	// Load config if possible
 	var generatedConfig *generated.Config
 	if configExists {
-		generatedConfig, err = configLoader.Generated()
+		generatedConfig, err = configLoader.LoadGenerated(configOptions)
 		if err != nil {
 			return err
 		}
+		configOptions.GeneratedConfig = generatedConfig
 	}
 
 	// Use last context if specified
@@ -101,8 +103,8 @@ func (cmd *AttachCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	// Build params
 	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
-	// get imageselector if specified
-	imageSelector, err := getImageSelector(configLoader, cmd.Image)
+	// get image selector if specified
+	imageSelector, err := getImageSelector(configLoader, configOptions, cmd.Image, log)
 	if err != nil {
 		return err
 	}

@@ -28,6 +28,8 @@ type GlobalFlags struct {
 	VarsSecretName string
 	SwitchContext  bool
 
+	InactivityTimeout int
+
 	Flags *flag.FlagSet
 }
 
@@ -55,7 +57,6 @@ func (gf *GlobalFlags) ToConfigOptions() *loader.ConfigOptions {
 		Profile:        gf.Profile,
 		ProfileRefresh: gf.ProfileRefresh,
 		ProfileParents: gf.ProfileParents,
-		ConfigPath:     gf.ConfigPath,
 		KubeContext:    gf.KubeContext,
 		Namespace:      gf.Namespace,
 		Vars:           gf.Vars,
@@ -88,6 +89,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.BoolVar(&globalFlags.RestoreVars, "restore-vars", false, "If true will restore the variables from kubernetes before loading the config")
 	flags.BoolVar(&globalFlags.SaveVars, "save-vars", false, "If true will save the variables to kubernetes after loading the config")
 	flags.StringVar(&globalFlags.VarsSecretName, "vars-secret", "devspace-vars", "The secret to restore/save the variables from/to, if --restore-vars or --save-vars is enabled")
+	flags.IntVar(&globalFlags.InactivityTimeout, "inactivity-timeout", 180, "Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems")
 
 	return globalFlags
 }

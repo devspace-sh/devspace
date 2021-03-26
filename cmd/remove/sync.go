@@ -2,7 +2,6 @@ package remove
 
 import (
 	"errors"
-
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/message"
@@ -54,8 +53,8 @@ devspace remove sync --all
 func (cmd *syncCmd) RunRemoveSync(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
@@ -63,16 +62,17 @@ func (cmd *syncCmd) RunRemoveSync(f factory.Factory, cobraCmd *cobra.Command, ar
 		return errors.New(message.ConfigNotFound)
 	}
 
-	config, err := configLoader.LoadWithoutProfile()
+	log.Warn("This command is deprecated and will be removed in a future DevSpace version. Please modify the devspace.yaml directly instead")
+	config, err := configLoader.Load(cmd.ToConfigOptions(), log)
 	if err != nil {
 		return err
 	}
 
-	configureManager := f.NewConfigureManager(config, log)
+	configureManager := f.NewConfigureManager(config.Config(), log)
 	err = configureManager.RemoveSyncPath(cmd.RemoveAll, cmd.LocalPath, cmd.ContainerPath, cmd.LabelSelector)
 	if err != nil {
 		return err
 	}
 
-	return configLoader.Save(config)
+	return configLoader.Save(config.Config())
 }

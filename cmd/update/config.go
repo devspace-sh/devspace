@@ -42,28 +42,30 @@ Note: This does not upgrade the overwrite configs
 func (cmd *configCmd) RunConfig(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	} else if !configExists {
 		return errors.New(message.ConfigNotFound)
 	}
 
-	// Get profiles
-	profiles, err := configLoader.GetProfiles()
-	if err != nil {
-		return err
-	}
+	log.Warn("This command is deprecated and will be removed in a future DevSpace version. Please modify the devspace.yaml directly instead")
 
 	// Get config
-	config, err := configLoader.LoadWithoutProfile()
+	config, err := configLoader.Load(cmd.ToConfigOptions(), log)
 	if err != nil {
 		return errors.Wrap(err, "load config")
 	}
 
+	// Get profiles
+	profiles, err := config.Profiles()
+	if err != nil {
+		return err
+	}
+
 	// Save it
-	err = configLoader.Save(config)
+	err = configLoader.Save(config.Config())
 	if err != nil {
 		return errors.Errorf("Error saving config: %v", err)
 	}

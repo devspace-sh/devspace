@@ -147,7 +147,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		defer dockerfileCtx.Close()
 	}
 
-	excludes, err := build.ReadDockerignore(contextDir)
+	excludes, err := helper.ReadDockerignore(contextDir)
 	if err != nil {
 		return err
 	}

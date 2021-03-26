@@ -48,8 +48,8 @@ func (cmd *dependenciesCmd) RunDependencies(f factory.Factory, cobraCmd *cobra.C
 	// Set config root
 	log := f.GetLog()
 	configOptions := cmd.ToConfigOptions()
-	configLoader := f.NewConfigLoader(configOptions, log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
@@ -58,19 +58,16 @@ func (cmd *dependenciesCmd) RunDependencies(f factory.Factory, cobraCmd *cobra.C
 	}
 
 	// Get the config
-	config, err := configLoader.Load()
+	config, err := configLoader.Load(configOptions, log)
 	if err != nil {
 		return err
 	}
 
 	// Load generated config
-	generatedConfig, err := configLoader.Generated()
-	if err != nil {
-		return errors.Errorf("Error loading generated.yaml: %v", err)
-	}
+	generatedConfig := config.Generated()
 
 	// Create Dependencymanager
-	manager, err := dependency.NewManager(config, generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log)
+	manager, err := dependency.NewManager(config.Config(), generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log)
 	if err != nil {
 		return errors.Wrap(err, "new manager")
 	}

@@ -47,8 +47,8 @@ Lists all namespaces in the selected kube context
 func (cmd *namespacesCmd) RunListNamespaces(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	logger := f.GetLog()
 	// Set config root
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (cmd *namespacesCmd) RunListNamespaces(f factory.Factory, cobraCmd *cobra.C
 	// Load generated config if possible
 	var generatedConfig *generated.Config
 	if configExists {
-		generatedConfig, err = configLoader.Generated()
+		generatedConfig, err = configLoader.LoadGenerated(cmd.ToConfigOptions())
 		if err != nil {
 			return err
 		}

@@ -38,8 +38,8 @@ devspace reset vars
 func (cmd *varsCmd) RunResetVars(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(nil, log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader("")
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (cmd *varsCmd) RunResetVars(f factory.Factory, cobraCmd *cobra.Command, arg
 	}
 
 	// Load generated config
-	generatedConfig, err := configLoader.Generated()
+	generatedConfig, err := configLoader.LoadGenerated(nil)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (cmd *varsCmd) RunResetVars(f factory.Factory, cobraCmd *cobra.Command, arg
 	generatedConfig.Vars = map[string]string{}
 
 	// Save the config
-	err = configLoader.SaveGenerated()
+	err = configLoader.SaveGenerated(generatedConfig)
 	if err != nil {
 		return errors.Errorf("Error saving config: %v", err)
 	}

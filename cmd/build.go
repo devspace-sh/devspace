@@ -27,9 +27,10 @@ type BuildCmd struct {
 	VerboseDependencies     bool
 	Dependency              []string
 
-	ForceBuild        bool
-	BuildSequential   bool
-	ForceDependencies bool
+	ForceBuild          bool
+	BuildSequential     bool
+	MaxConcurrentBuilds int
+	ForceDependencies   bool
 }
 
 // NewBuildCmd creates a new devspace build command
@@ -54,6 +55,7 @@ Builds all defined images and pushes them
 
 	buildCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	buildCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
+	buildCmd.Flags().IntVar(&cmd.MaxConcurrentBuilds, "max-concurrent-builds", 0, "The maximum number of image builds built in parallel (0 for infinite)")
 	buildCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 	buildCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
 
@@ -71,8 +73,8 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	// Set config root
 	log := f.GetLog()
 	configOptions := cmd.ToConfigOptions()
-	configLoader := f.NewConfigLoader(configOptions, log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
@@ -84,22 +86,25 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	logpkg.StartFileLogging()
 
 	// Load config
-	generatedConfig, err := configLoader.Generated()
+	generatedConfig, err := configLoader.LoadGenerated(configOptions)
 	if err != nil {
 		return err
 	}
+	configOptions.GeneratedConfig = generatedConfig
 
 	// create kubectl client
 	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
 		log.Warnf("Unable to create new kubectl client: %v", err)
 	}
+	configOptions.KubeClient = client
 
 	// Get the config
-	config, err := configLoader.RestoreLoadSave(client)
+	configInterface, err := configLoader.Load(configOptions, log)
 	if err != nil {
 		return err
 	}
+	config := configInterface.Config()
 
 	// Execute plugin hook
 	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "build", cmd.KubeContext, cmd.Namespace, config)
@@ -123,10 +128,16 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	// Dependencies
 	err = manager.BuildAll(dependency.BuildOptions{
 		Dependencies:            cmd.Dependency,
-		SkipPush:                cmd.SkipPush,
 		ForceDeployDependencies: cmd.ForceDependencies,
-		ForceBuild:              cmd.ForceBuild,
 		Verbose:                 cmd.VerboseDependencies,
+
+		BuildOptions: build.Options{
+			SkipPush:                  cmd.SkipPush,
+			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
+			ForceRebuild:              cmd.ForceBuild,
+			Sequential:                cmd.BuildSequential,
+			MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
+		},
 	})
 	if err != nil {
 		return errors.Wrap(err, "build dependencies")
@@ -139,6 +150,7 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 			ForceRebuild:              cmd.ForceBuild,
 			Sequential:                cmd.BuildSequential,
+			MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
 		}, log)
 		if err != nil {
 			if strings.Index(err.Error(), "no space left on device") != -1 {
@@ -150,7 +162,7 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 
 		// Save config if an image was built
 		if len(builtImages) > 0 {
-			err := configLoader.SaveGenerated()
+			err := configLoader.SaveGenerated(generatedConfig)
 			if err != nil {
 				return err
 			}

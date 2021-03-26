@@ -47,8 +47,8 @@ devspace use profile --reset
 func (cmd *ProfileCmd) RunUseProfile(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(nil, logpkg.Discard)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader("")
+	configExists, err := configLoader.SetDevSpaceRoot(logpkg.Discard)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,12 @@ func (cmd *ProfileCmd) RunUseProfile(f factory.Factory, cobraCmd *cobra.Command,
 		return errors.New(message.ConfigNotFound)
 	}
 
-	profileObjects, err := configLoader.GetProfiles()
+	config, err := configLoader.Load(nil, logpkg.Discard)
+	if err != nil {
+		return err
+	}
+
+	profileObjects, err := config.Profiles()
 	if err != nil {
 		return err
 	}
@@ -95,16 +100,13 @@ func (cmd *ProfileCmd) RunUseProfile(f factory.Factory, cobraCmd *cobra.Command,
 	}
 
 	// Load generated config
-	generatedConfig, err := configLoader.Generated()
-	if err != nil {
-		return err
-	}
+	generatedConfig := config.Generated()
 
 	// Exchange active config
 	generatedConfig.ActiveProfile = profileName
 
 	// Save generated config
-	err = configLoader.SaveGenerated()
+	err = configLoader.SaveGenerated(generatedConfig)
 	if err != nil {
 		return err
 	}

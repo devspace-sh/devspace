@@ -28,18 +28,36 @@ func NewRaw() *Config {
 
 // Config defines the configuration
 type Config struct {
+	// Version holds the config version
 	Version string `yaml:"version"`
 
-	Images       map[string]*ImageConfig `yaml:"images,omitempty" json:"images,omitempty"`
-	Deployments  []*DeploymentConfig     `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	Dev          *DevConfig              `yaml:"dev,omitempty" json:"dev,omitempty"`
-	Dependencies []*DependencyConfig     `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	Hooks        []*HookConfig           `yaml:"hooks,omitempty" json:"hooks,omitempty"`
-	PullSecrets  []*PullSecretConfig     `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+	// Images holds configuration of how devspace should build images
+	Images map[string]*ImageConfig `yaml:"images,omitempty" json:"images,omitempty"`
 
+	// Deployments is an ordered list of deployments to deploy via helm, kustomize or kubectl.
+	Deployments []*DeploymentConfig `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// Dev holds development configuration for the 'devspace dev' command.
+	Dev *DevConfig `yaml:"dev,omitempty" json:"dev,omitempty"`
+
+	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
+	Dependencies []*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
+	// in the order they are specified.
+	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty"`
+
+	// PullSecrets are image pull secrets that will be created by devspace in the target namespace
+	// during devspace dev or devspace deploy
+	PullSecrets []*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+
+	// Commands are custom commands that can be executed via 'devspace run COMMAND'
 	Commands []*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
-	Vars     []*Variable      `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	// Vars are config variables that can be used inside other config sections to replace certain values dynamically
+	Vars []*Variable `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// Profiles can be used to change the current configuration and change the behaviour of devspace
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 }
 
@@ -75,6 +93,7 @@ type ImageConfig struct {
 	// target namespace. Defaults to true
 	CreatePullSecret *bool `yaml:"createPullSecret,omitempty" json:"createPullSecret,omitempty"`
 
+	// DEPRECATED: Use rebuildStrategy instead
 	// If this is true, devspace will not rebuild the image even though files have changed within
 	// the context if a syncpath for this image is defined. This can reduce the number of builds
 	// when running 'devspace dev'
@@ -94,9 +113,27 @@ type ImageConfig struct {
 	// and are appended before the entrypoint and cmd instructions
 	AppendDockerfileInstructions []string `yaml:"appendDockerfileInstructions,omitempty" json:"appendDockerfileInstructions,omitempty"`
 
+	// RebuildStrategy is used to determine when DevSpace should rebuild an image. By default, devspace will
+	// rebuild an image if one of the following conditions is true:
+	// - The dockerfile has changed
+	// - The configuration within the devspace.yaml for the image has changed
+	// - A file within the docker context (excluding .dockerignore rules) has changed
+	// This option is ignored for custom builds.
+	RebuildStrategy RebuildStrategy `yaml:"rebuildStrategy,omitempty" json:"rebuildStrategy,omitempty"`
+
 	// Specific build options how to build the specified image
 	Build *BuildConfig `yaml:"build,omitempty" json:"build,omitempty"`
 }
+
+// RebuildStrategy is the type of a image rebuild strategy
+type RebuildStrategy string
+
+// List of values that source can take
+const (
+	RebuildStrategyDefault              RebuildStrategy = ""
+	RebuildStrategyAlways               RebuildStrategy = "always"
+	RebuildStrategyIgnoreContextChanges RebuildStrategy = "ignoreContextChanges"
+)
 
 // BuildConfig defines the build process for an image. Only one of the options below
 // can be specified.
@@ -175,7 +212,12 @@ type KanikoConfig struct {
 	InitEnv map[string]string `yaml:"initEnv,omitempty" json:"initEnv,omitempty"`
 
 	// extra environment variables that will be added to the build kaniko container
+	// Will populate the env.value field.
 	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
+
+	// extra environment variables from configmap or secret that will be added to the build kaniko container
+	// Will populate the env.valueFrom field.
+	EnvFrom map[string]map[interface{}]interface{} `yaml:"envFrom,omitempty" json:"envFrom,omitempty"`
 
 	// additional mounts that will be added to the build pod
 	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty" json:"additionalMounts,omitempty"`
@@ -754,18 +796,62 @@ type SourceConfig struct {
 
 // HookConfig defines a hook
 type HookConfig struct {
-	Command  string          `yaml:"command" json:"command"`
-	Args     []string        `yaml:"args,omitempty" json:"args,omitempty"`
-	Upload   *HookSyncConfig `yaml:"upload,omitempty" json:"upload,omitempty"`
+	// Command is the base command that is either executed locally or in a remote container.
+	// Command is mutually exclusive with other hook actions. In the case this is defined
+	// together with where.container, DevSpace will until the target container is running and
+	// only then execute the command. If the container does not start in time, DevSpace will fail.
+	Command string `yaml:"command" json:"command"`
+	// Args are additional arguments passed together with the command to execute.
+	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
+	// If Upload is specified, DevSpace will upload certain local files or folders into a
+	// remote container.
+	Upload *HookSyncConfig `yaml:"upload,omitempty" json:"upload,omitempty"`
+	// Same as Upload, but with this option DevSpace will download files or folders from
+	// a remote container.
 	Download *HookSyncConfig `yaml:"download,omitempty" json:"download,omitempty"`
+	// If logs is defined will print the logs of the target container. This is useful for containers
+	// that should finish like init containers or job pods. Otherwise this hook will never terminate.
+	Logs *HookLogsConfig `yaml:"logs,omitempty" json:"logs,omitempty"`
+	// If wait is defined the hook will wait until the matched pod or container is running or is terminated
+	// with a certain exit code.
+	Wait *HookWaitConfig `yaml:"wait,omitempty" json:"wait,omitempty"`
 
+	// If an operating system is defined, the hook will only be executed for the given os.
+	// All supported golang OS types are supported and multiple can be combined with ','.
 	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
 
+	// If true, the hook will be executed in the background.
 	Background bool `yaml:"background,omitempty" json:"background,omitempty"`
-	Silent     bool `yaml:"silent,omitempty" json:"silent,omitempty"`
+	// If true, the hook will not output anything to the standard out of DevSpace except
+	// for the case when the hook fails, where DevSpace will show the error including
+	// the captured output streams of the hook.
+	Silent bool `yaml:"silent,omitempty" json:"silent,omitempty"`
 
+	// Specifies where the hook should be run. If this is ommitted DevSpace expects a
+	// local command hook.
 	Where HookWhereConfig `yaml:"where,omitempty" json:"where,omitempty"`
-	When  *HookWhenConfig `yaml:"when,omitempty" json:"when,omitempty"`
+	// Specifies when the hook should be run.
+	When *HookWhenConfig `yaml:"when,omitempty" json:"when,omitempty"`
+}
+
+// HookWaitConfig defines a hook wait config
+type HookWaitConfig struct {
+	// If running is true, will wait until the matched containers are running. Can be used together with terminatedWithCode.
+	Running bool `yaml:"running,omitempty" json:"running,omitempty"`
+
+	// If terminatedWithCode is not nil, will wait until the matched containers are terminated with the given exit code.
+	// If the container has exited with a different exit code, the hook will fail. Can be used together with running.
+	TerminatedWithCode *int32 `yaml:"terminatedWithCode,omitempty" json:"terminatedWithCode,omitempty"`
+
+	// The amount of seconds to wait until the hook will fail. Defaults to 150 seconds.
+	Timeout int64 `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+}
+
+// HookLogsConfig defines a hook logs config
+type HookLogsConfig struct {
+	// If set, the number of lines from the end of the logs to show. If not specified,
+	// logs are shown from the creation of the container
+	TailLines *int64 `yaml:"tailLines,omitempty" json:"tailLines,omitempty"`
 }
 
 // HookSyncConfig defines a hook upload config
@@ -852,7 +938,7 @@ const (
 // ProfileConfig defines a profile config
 type ProfileConfig struct {
 	Name           string                  `yaml:"name" json:"name"`
-	Description    string                  `yaml:"description" json:"description"`
+	Description    string                  `yaml:"description,omitempty" json:"description,omitempty"`
 	Parent         string                  `yaml:"parent,omitempty" json:"parent,omitempty"`
 	Parents        []*ProfileParent        `yaml:"parents,omitempty" json:"parents,omitempty"`
 	Patches        []*PatchConfig          `yaml:"patches,omitempty" json:"patches,omitempty"`

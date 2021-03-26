@@ -105,12 +105,15 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	var err error
 	var generatedConfig *generated.Config
 	logger := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
+	configOptions := cmd.ToConfigOptions()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
 	if configLoader.Exists() {
-		generatedConfig, err = configLoader.Generated()
+		generatedConfig, err = configLoader.LoadGenerated(configOptions)
 		if err != nil {
 			return err
 		}
+
+		configOptions.GeneratedConfig = generatedConfig
 	} else {
 		logger.Warnf("If you want to use the sync paths from `devspace.yaml`, use the `--config=devspace.yaml` flag for this command.")
 	}
@@ -126,6 +129,7 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	if err != nil {
 		return errors.Wrap(err, "new kube client")
 	}
+	configOptions.KubeClient = client
 
 	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, logger)
 	if err != nil {
@@ -134,10 +138,12 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 
 	var config *latest.Config
 	if configLoader.Exists() {
-		config, err = configLoader.RestoreLoadSave(client)
+		configInterface, err := configLoader.Load(configOptions, logger)
 		if err != nil {
 			return err
 		}
+
+		config = configInterface.Config()
 	}
 
 	// Execute plugin hook

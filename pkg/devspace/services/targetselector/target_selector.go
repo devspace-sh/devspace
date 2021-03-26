@@ -13,7 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 
-	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -165,7 +164,10 @@ func (t *targetSelector) selectSingle(ctx context.Context, options Options, log 
 		})
 		if err != nil {
 			if err == wait.ErrWaitTimeout {
-				return nil, errors.Errorf("timeout: couldn't find a pod / container in time with %s", options.Selector.String())
+				return nil, &NotFoundErr{
+					Timeout:  true,
+					Selector: options.Selector.String(),
+				}
 			}
 
 			return nil, err
@@ -179,7 +181,9 @@ func (t *targetSelector) selectSingle(ctx context.Context, options Options, log 
 	if err != nil {
 		return nil, err
 	} else if !done {
-		return nil, fmt.Errorf("couldn't find a pod / container with %s", options.Selector.String())
+		return nil, &NotFoundErr{
+			Selector: options.Selector.String(),
+		}
 	}
 
 	// could be nil
@@ -302,4 +306,17 @@ func ImageSelectorFromConfig(configImageName string, config *latest.Config, gene
 	}
 
 	return imageSelector
+}
+
+type NotFoundErr struct {
+	Timeout  bool
+	Selector string
+}
+
+func (n *NotFoundErr) Error() string {
+	if n.Timeout {
+		return "timeout: couldn't find a pod / container in time with " + n.Selector
+	}
+
+	return "couldn't find a pod / container with " + n.Selector
 }

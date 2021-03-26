@@ -6,7 +6,6 @@ import "github.com/loft-sh/devspace/pkg/util/log"
 type Config interface {
 	GetVersion() string
 	Upgrade(log log.Logger) (Config, error)
-	UpgradeVarPaths(varPaths map[string]string, log log.Logger) error
 }
 
 // New creates a new config

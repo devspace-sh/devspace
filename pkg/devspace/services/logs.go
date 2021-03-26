@@ -2,22 +2,29 @@ package services
 
 import (
 	"context"
-	"io"
-	"os"
-
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/mgutz/ansi"
+	"io"
+	"os"
+	"time"
 )
 
 // StartLogs print the logs and then attaches to the container
-func (serviceClient *client) StartLogs(options targetselector.Options, follow bool, tail int64) error {
-	return serviceClient.StartLogsWithWriter(options, follow, tail, os.Stdout)
+func (serviceClient *client) StartLogs(options targetselector.Options, follow bool, tail int64, wait bool) error {
+	return serviceClient.StartLogsWithWriter(options, follow, tail, wait, os.Stdout)
 }
 
 // StartLogsWithWriter prints the logs and then attaches to the container with the given stdout and stderr
-func (serviceClient *client) StartLogsWithWriter(options targetselector.Options, follow bool, tail int64, writer io.Writer) error {
+func (serviceClient *client) StartLogsWithWriter(options targetselector.Options, follow bool, tail int64, wait bool, writer io.Writer) error {
 	targetSelector := targetselector.NewTargetSelector(serviceClient.client)
-	options.FilterContainer = nil
+	options.Wait = &wait
+	if wait == false {
+		options.FilterContainer = nil
+	} else {
+		options.FilterPod = nil
+		options.FilterContainer = nil
+		options.WaitingStrategy = targetselector.NewUntilNotWaitingStrategy(time.Second * 2)
+	}
 
 	container, err := targetSelector.SelectSingleContainer(context.TODO(), options, serviceClient.log)
 	if err != nil {

@@ -52,6 +52,14 @@ func init() {
 	}
 }
 
+type NewestVersionError struct {
+	version string
+}
+
+func (n *NewestVersionError) Error() string {
+	return "Current binary is the latest version: " + n.version
+}
+
 type Interface interface {
 	Add(path, version string) (*Metadata, error)
 	GetByName(name string) (string, *Metadata, error)
@@ -171,7 +179,7 @@ func (c *client) Update(name, version string) (*Metadata, error) {
 	}
 
 	if oldVersion.EQ(newVersion) {
-		return nil, fmt.Errorf("no update for plugin found")
+		return nil, &NewestVersionError{newVersion.String()}
 	} else if oldVersion.GT(newVersion) {
 		return nil, fmt.Errorf("new version is older than existing version")
 	}

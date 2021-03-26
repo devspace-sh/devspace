@@ -79,8 +79,8 @@ devspace add deployment my-deployment --manifests=kube/* --namespace=devspace
 func (cmd *deploymentCmd) RunAddDeployment(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	logger := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
@@ -88,13 +88,16 @@ func (cmd *deploymentCmd) RunAddDeployment(f factory.Factory, cobraCmd *cobra.Co
 		return errors.New(message.ConfigNotFound)
 	}
 
+	logger.Warn("This command is deprecated and will be removed in a future DevSpace version. Please modify the devspace.yaml directly instead")
 	deploymentName := args[0]
 
 	// Get base config and check if deployment already exists
-	config, err := configLoader.LoadWithoutProfile()
+	configInterface, err := configLoader.Load(cmd.ToConfigOptions(), logger)
 	if err != nil {
 		return err
 	}
+
+	config := configInterface.Config()
 	if config.Deployments != nil {
 		for _, deployConfig := range config.Deployments {
 			if deployConfig.Name == deploymentName {
@@ -120,7 +123,7 @@ func (cmd *deploymentCmd) RunAddDeployment(f factory.Factory, cobraCmd *cobra.Co
 	} else if cmd.Image != "" {
 		newImage, newDeployment, err = configureManager.NewImageComponentDeployment(deploymentName, cmd.Image)
 	} else {
-		return errors.New("Please specifiy one of these parameters:\n--image: A docker image to deploy (e.g. dscr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)\n--manifests: The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)\n--chart: A helm chart to deploy (e.g. ./chart or stable/mysql)")
+		return errors.New("Please specify one of these parameters:\n--image: A docker image to deploy (e.g. dscr.io/myuser/myrepo or dockeruser/repo:0.1 or mysql:latest)\n--manifests: The kubernetes manifests to deploy (glob pattern are allowed, comma separated, e.g. manifests/** or kube/pod.yaml)\n--chart: A helm chart to deploy (e.g. ./chart or stable/mysql)")
 	}
 	if err != nil {
 		return err
@@ -131,19 +134,13 @@ func (cmd *deploymentCmd) RunAddDeployment(f factory.Factory, cobraCmd *cobra.Co
 		newDeployment.Namespace = cmd.Namespace
 	}
 
-	// Restore vars in config
-	clonedConfig, err := configLoader.RestoreVars(config)
-	if err != nil {
-		return errors.Errorf("Error restoring vars: %v", err)
-	}
-
 	// Add image config if necessary
 	if newImage != nil {
 		imageAlreadyExists := false
 
 		// First check if image already exists in another configuration
-		if clonedConfig.Images != nil {
-			for _, imageConfig := range clonedConfig.Images {
+		if config.Images != nil {
+			for _, imageConfig := range config.Images {
 				if imageConfig.Image == newImage.Image {
 					imageAlreadyExists = true
 					break
@@ -157,9 +154,9 @@ func (cmd *deploymentCmd) RunAddDeployment(f factory.Factory, cobraCmd *cobra.Co
 			imageName := deploymentName
 
 			// Check if image name exits
-			if clonedConfig.Images != nil {
+			if config.Images != nil {
 				for i := 0; true; i++ {
-					if _, ok := (clonedConfig.Images)[imageName]; ok {
+					if _, ok := (config.Images)[imageName]; ok {
 						if i == 0 {
 							imageName = imageName + "-" + strconv.Itoa(i)
 						} else {
@@ -172,22 +169,22 @@ func (cmd *deploymentCmd) RunAddDeployment(f factory.Factory, cobraCmd *cobra.Co
 					break
 				}
 			} else {
-				clonedConfig.Images = map[string]*latest.ImageConfig{}
+				config.Images = map[string]*latest.ImageConfig{}
 			}
 
-			(clonedConfig.Images)[imageName] = newImage
+			config.Images[imageName] = newImage
 		}
 	}
 
 	// Prepend deployment
-	if clonedConfig.Deployments == nil {
-		clonedConfig.Deployments = []*latest.DeploymentConfig{}
+	if config.Deployments == nil {
+		config.Deployments = []*latest.DeploymentConfig{}
 	}
 
-	clonedConfig.Deployments = append([]*latest.DeploymentConfig{newDeployment}, clonedConfig.Deployments...)
+	config.Deployments = append([]*latest.DeploymentConfig{newDeployment}, config.Deployments...)
 
 	// Save config
-	err = configLoader.Save(clonedConfig)
+	err = configLoader.Save(config)
 	if err != nil {
 		return errors.Errorf("Couldn't save config file: %s", err.Error())
 	}

@@ -8,8 +8,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -25,6 +25,7 @@ type LogsCmd struct {
 	Pick          bool
 
 	Follow            bool
+	Wait              bool
 	LastAmountOfLines int
 }
 
@@ -60,6 +61,7 @@ devspace logs --namespace=mynamespace
 	logsCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
 	logsCmd.Flags().BoolVarP(&cmd.Follow, "follow", "f", false, "Attach to logs afterwards")
 	logsCmd.Flags().IntVar(&cmd.LastAmountOfLines, "lines", 200, "Max amount of lines to print from the last log")
+	logsCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "Wait for the pod(s) to start if they are not running")
 
 	return logsCmd
 }
@@ -68,19 +70,21 @@ devspace logs --namespace=mynamespace
 func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), log)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configOptions := cmd.ToConfigOptions()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
 
-	// Load generated config if possible
+	// Load config if possible
 	var generatedConfig *generated.Config
 	if configExists {
-		generatedConfig, err = configLoader.Generated()
+		generatedConfig, err = configLoader.LoadGenerated(configOptions)
 		if err != nil {
 			return err
 		}
+		configOptions.GeneratedConfig = generatedConfig
 	}
 
 	// Use last context if specified
@@ -109,18 +113,17 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 	// Build options
 	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
-	// get imageselector if specified
-	imageSelector, err := getImageSelector(configLoader, cmd.Image)
+	// get image selector if specified
+	imageSelector, err := getImageSelector(configLoader, configOptions, cmd.Image, log)
 	if err != nil {
 		return err
 	}
 
 	// set image selector
 	options.ImageSelector = imageSelector
-	options.Wait = ptr.Bool(false)
 
 	// Start terminal
-	err = f.NewServicesClient(nil, generatedConfig, client, log).StartLogs(options, cmd.Follow, int64(cmd.LastAmountOfLines))
+	err = f.NewServicesClient(nil, generatedConfig, client, log).StartLogs(options, cmd.Follow, int64(cmd.LastAmountOfLines), cmd.Wait)
 	if err != nil {
 		return err
 	}
@@ -128,24 +131,19 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 	return nil
 }
 
-func getImageSelector(configLoader loader.ConfigLoader, image string) ([]string, error) {
+func getImageSelector(configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, image string, log log.Logger) ([]string, error) {
 	var imageSelector []string
 	if image != "" {
-		if !configLoader.Exists() {
+		if configLoader.Exists() == false {
 			return nil, errors.New(message.ConfigNotFound)
 		}
 
-		config, err := configLoader.Load()
+		config, err := configLoader.Load(configOptions, log)
 		if err != nil {
 			return nil, err
 		}
 
-		generatedConfig, err := configLoader.Generated()
-		if err != nil {
-			return nil, err
-		}
-
-		imageSelector = targetselector.ImageSelectorFromConfig(image, config, generatedConfig.GetActive())
+		imageSelector = targetselector.ImageSelectorFromConfig(image, config.Config(), config.Generated().GetActive())
 		if len(imageSelector) == 0 {
 			return nil, fmt.Errorf("couldn't find an image with name %s in devspace config", image)
 		}

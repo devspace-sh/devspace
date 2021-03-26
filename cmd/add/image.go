@@ -58,8 +58,8 @@ devspace add image my-image --image=dockeruser/devspaceimage2 --buildtool=kaniko
 func (cmd *imageCmd) RunAddImage(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	logger := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ToConfigOptions(), logger)
-	configExists, err := configLoader.SetDevSpaceRoot()
+	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
@@ -67,10 +67,12 @@ func (cmd *imageCmd) RunAddImage(f factory.Factory, cobraCmd *cobra.Command, arg
 		return errors.New(message.ConfigNotFound)
 	}
 
-	config, err := configLoader.LoadWithoutProfile()
+	logger.Warn("This command is deprecated and will be removed in a future DevSpace version. Please modify the devspace.yaml directly instead")
+	configInterface, err := configLoader.Load(cmd.ToConfigOptions(), logger)
 	if err != nil {
 		return err
 	}
+	config := configInterface.Config()
 	configureManager := f.NewConfigureManager(config, logger)
 
 	err = configureManager.AddImage(args[0], cmd.Name, cmd.Tag, cmd.ContextPath, cmd.DockerfilePath, cmd.BuildTool)
