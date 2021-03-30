@@ -71,6 +71,7 @@ type ImageConfig struct {
 	// the build process. If this is empty, devspace will generate a random tag
 	Tags []string `yaml:"tags,omitempty" json:"tags,omitempty"`
 
+	// DEPRECATED: Use tags with ### instead
 	// If TagsAppendRandom is true, for all tags defined for this image a random suffix in
 	// the form of '-xxxxx' will be appended
 	TagsAppendRandom bool `yaml:"tagsAppendRandom,omitempty" json:"tagsAppendRandom,omitempty"`

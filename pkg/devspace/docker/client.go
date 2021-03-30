@@ -84,7 +84,7 @@ func newDockerClient() (Client, error) {
 }
 
 func newDockerClientFromEnvironment() (Client, error) {
-	cli, err := dockerclient.NewEnvClient()
+	cli, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv)
 	if err != nil {
 		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
