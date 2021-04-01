@@ -3,6 +3,12 @@ package kubectl
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/http"
+	"os/exec"
+	"regexp"
+	"strings"
+
 	"github.com/docker/distribution/reference"
 	dockerregistry "github.com/docker/docker/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -15,11 +21,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/transport/spdy"
-	"net"
-	"net/http"
-	"os/exec"
-	"regexp"
-	"strings"
 )
 
 // ClusterRoleBindingName is the name of the cluster role binding that ensures that the user has enough rights
@@ -101,6 +102,9 @@ func (client *client) EnsureDeployNamespaces(config *latest.Config, log log.Logg
 					Name: namespace,
 				},
 			}, metav1.CreateOptions{})
+			if err != nil {
+				return err
+			}
 
 			log.Donef("Created namespace: %s", namespace)
 		}
