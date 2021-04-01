@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
@@ -9,7 +11,6 @@ import (
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/mgutz/ansi"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -117,6 +118,11 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 		for _, imageConfig := range config.Images {
 			imageConfig.Tags = cmd.Tags
 		}
+	}
+
+	err = client.EnsureDeployNamespaces(config, log)
+	if err != nil {
+		return errors.Errorf("unable to create namespace: %v", err)
 	}
 
 	// Create Dependencymanager
