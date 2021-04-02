@@ -1,12 +1,11 @@
-package docker
+package buildkit
 
 import (
-	"context"
-	"encoding/base64"
-	"encoding/json"
+	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -17,12 +16,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 
-	"github.com/docker/distribution/reference"
-
-	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
@@ -32,12 +27,10 @@ import (
 	"github.com/docker/docker/pkg/streamformatter"
 	"github.com/docker/docker/pkg/term"
 	"github.com/pkg/errors"
-
-	"github.com/docker/docker/pkg/jsonmessage"
 )
 
 // EngineName is the name of the building engine
-const EngineName = "docker"
+const EngineName = "buildkit"
 
 var (
 	stdin, stdout, stderr = term.StdStreams()
@@ -47,19 +40,15 @@ var (
 type Builder struct {
 	helper *helper.BuildHelper
 
-	authConfig                *types.AuthConfig
-	client                    dockerclient.Client
-	skipPush                  bool
-	skipPushOnLocalKubernetes bool
+	authConfig *types.AuthConfig
+	skipPush   bool
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config *latest.Config, client dockerclient.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
+func NewBuilder(config *latest.Config, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush bool) (*Builder, error) {
 	return &Builder{
-		helper:                    helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags),
-		client:                    client,
-		skipPush:                  skipPush,
-		skipPushOnLocalKubernetes: skipPushOnLocalKubernetes,
+		helper:   helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags),
+		skipPush: skipPush,
 	}, nil
 }
 
@@ -77,47 +66,17 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, igno
 // contextPath is the absolute path to the context path
 // dockerfilePath is the absolute path to the dockerfile WITHIN the contextPath
 func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, log logpkg.Logger) error {
-	var (
-		displayRegistryURL = "hub.docker.com"
-	)
-
-	// Display nice registry name
-	registryURL, err := pullsecrets.GetRegistryFromImageName(b.helper.ImageName)
-	if err != nil {
-		return err
-	}
-	if registryURL != "" {
-		displayRegistryURL = registryURL
-	}
-
-	// We skip pushing when it is the minikube client
-	if b.skipPushOnLocalKubernetes && b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
-		b.skipPush = true
-	}
-
-	// Authenticate
-	if b.skipPush == false && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == nil || *b.helper.ImageConf.Build.Docker.SkipPush == false) {
-		log.StartWait("Authenticating (" + displayRegistryURL + ")")
-		_, err = b.Authenticate()
-		log.StopWait()
-		if err != nil {
-			return errors.Errorf("Error during image registry authentication: %v", err)
-		}
-
-		log.Done("Authentication successful (" + displayRegistryURL + ")")
-	}
-
 	// Buildoptions
 	options := &types.ImageBuildOptions{}
-	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && b.helper.ImageConf.Build.Docker.Options != nil {
-		if b.helper.ImageConf.Build.Docker.Options.BuildArgs != nil {
-			options.BuildArgs = b.helper.ImageConf.Build.Docker.Options.BuildArgs
+	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.BuildKit != nil && b.helper.ImageConf.Build.BuildKit.Options != nil {
+		if b.helper.ImageConf.Build.BuildKit.Options.BuildArgs != nil {
+			options.BuildArgs = b.helper.ImageConf.Build.BuildKit.Options.BuildArgs
 		}
-		if b.helper.ImageConf.Build.Docker.Options.Target != "" {
-			options.Target = b.helper.ImageConf.Build.Docker.Options.Target
+		if b.helper.ImageConf.Build.BuildKit.Options.Target != "" {
+			options.Target = b.helper.ImageConf.Build.BuildKit.Options.Target
 		}
-		if b.helper.ImageConf.Build.Docker.Options.Network != "" {
-			options.NetworkMode = b.helper.ImageConf.Build.Docker.Options.Network
+		if b.helper.ImageConf.Build.BuildKit.Options.Network != "" {
+			options.NetworkMode = b.helper.ImageConf.Build.BuildKit.Options.Network
 		}
 	}
 
@@ -129,7 +88,6 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		writer = log
 	}
 
-	ctx := context.Background()
 	contextDir, relDockerfile, err := build.GetContextFromLocalDir(contextPath, dockerfilePath)
 	if err != nil {
 		return err
@@ -226,6 +184,12 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		tags = append(tags, b.helper.ImageName+":"+tag)
 	}
 
+	// create the builder
+	builder, err := createBuilder(b.helper.KubeClient, b.helper.ImageConf.Build.BuildKit, log)
+	if err != nil {
+		return err
+	}
+
 	// Setup an upload progress bar
 	outStream := streams.NewOut(writer)
 	progressOutput := streamformatter.NewProgressOutput(outStream)
@@ -240,98 +204,114 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Should we build with cli?
-	useBuildKit := false
-	useDockerCli := b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && b.helper.ImageConf.Build.Docker.UseCLI == true
-	cliArgs := []string{}
-	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil {
-		cliArgs = b.helper.ImageConf.Build.Docker.Args
-		if b.helper.ImageConf.Build.Docker.UseBuildKit != nil && *b.helper.ImageConf.Build.Docker.UseBuildKit == true {
-			useBuildKit = true
-		}
-	}
-	if useDockerCli || useBuildKit || len(cliArgs) > 0 {
-		err = b.client.ImageBuildCLI(useBuildKit, body, writer, cliArgs, buildOptions, log)
-		if err != nil {
-			return err
-		}
-	} else {
-		response, err := b.client.ImageBuild(ctx, body, buildOptions)
-		if err != nil {
-			return err
-		}
-		defer response.Body.Close()
-
-		err = jsonmessage.DisplayJSONMessagesStream(response.Body, outStream, outStream.FD(), outStream.IsTerminal(), nil)
-		if err != nil {
-			return err
-		}
+	if b.skipPush {
+		b.helper.ImageConf.Build.BuildKit.SkipPush = &b.skipPush
 	}
 
-	// Check if we skip push
-	if b.skipPush == false && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == nil || *b.helper.ImageConf.Build.Docker.SkipPush == false) {
-		for _, tag := range tags {
-			err = b.pushImage(writer, tag)
-			if err != nil {
-				return errors.Errorf("Error during image push: %v", err)
+	return buildWithCLI(body, writer, builder, b.helper.ImageConf.Build.BuildKit, buildOptions, log)
+}
+
+func buildWithCLI(context io.Reader, writer io.Writer, builder string, imageConf *latest.BuildKitConfig, options types.ImageBuildOptions, log logpkg.Logger) error {
+	// TODO: kube context
+
+	command := []string{"docker", "buildx"}
+	if len(imageConf.Command) > 0 {
+		command = imageConf.Command
+	}
+
+	args := []string{"build"}
+	if options.BuildArgs != nil {
+		for k, v := range options.BuildArgs {
+			if v == nil {
+				continue
 			}
 
-			log.Info("Image pushed to registry (" + displayRegistryURL + ")")
+			args = append(args, "--build-arg", k+"="+*v)
 		}
-	} else {
-		log.Infof("Skip image push for %s", b.helper.ImageName)
+	}
+	if options.NetworkMode != "" {
+		args = append(args, "--network", options.NetworkMode)
+	}
+	for _, tag := range options.Tags {
+		args = append(args, "--tag", tag)
+	}
+	if imageConf.SkipPush == nil || *imageConf.SkipPush != true {
+		if len(options.Tags) > 0 {
+			args = append(args, "--push")
+		}
+	}
+	if options.Dockerfile != "" {
+		args = append(args, "--file", options.Dockerfile)
+	}
+	if options.Target != "" {
+		args = append(args, "--target", options.Target)
+	}
+	for _, arg := range imageConf.Args {
+		args = append(args, arg)
+	}
+	if builder != "" {
+		args = append(args, "--builder", builder)
 	}
 
-	return nil
+	args = append(args, "-")
+
+	log.Infof("Execute BuildKit command with: %s %s", strings.Join(command, " "), strings.Join(args, " "))
+	completeArgs := []string{}
+	completeArgs = append(completeArgs, command[1:]...)
+	completeArgs = append(completeArgs, args...)
+
+	cmd := exec.Command(command[0], completeArgs...)
+	cmd.Stdin = context
+	cmd.Stdout = writer
+	cmd.Stderr = writer
+	return cmd.Run()
 }
 
-// Authenticate authenticates the client with a remote registry
-func (b *Builder) Authenticate() (*types.AuthConfig, error) {
-	registryURL, err := pullsecrets.GetRegistryFromImageName(b.helper.ImageName + ":" + b.helper.ImageTags[0])
-	if err != nil {
-		return nil, err
+func createBuilder(kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, log logpkg.Logger) (string, error) {
+	namespace := kubeClient.Namespace()
+	if imageConf.InCluster != nil && imageConf.InCluster.Namespace != "" {
+		namespace = imageConf.InCluster.Namespace
 	}
 
-	b.authConfig, err = b.client.Login(registryURL, "", "", true, false, false)
-	if err != nil {
-		return nil, err
+	name := "devspace-" + namespace
+	if imageConf.InCluster != nil && imageConf.InCluster.Name != "" {
+		name = imageConf.InCluster.Name
 	}
 
-	return b.authConfig, nil
-}
-
-// pushImage pushes an image to the specified registry
-func (b *Builder) pushImage(writer io.Writer, imageName string) error {
-	ref, err := reference.ParseNormalizedNamed(imageName)
-	if err != nil {
-		return err
+	// check if we should skip
+	if imageConf.InCluster == nil || imageConf.InCluster.Enabled == false {
+		return "", nil
+	} else if imageConf.InCluster.NoCreate {
+		return name, nil
 	}
 
-	encodedAuth, err := encodeAuthToBase64(*b.authConfig)
-	if err != nil {
-		return err
+	command := []string{"docker", "buildx"}
+	if len(imageConf.Command) > 0 {
+		command = imageConf.Command
 	}
 
-	out, err := b.client.ImagePush(context.Background(), reference.FamiliarString(ref), types.ImagePushOptions{
-		RegistryAuth: encodedAuth,
-	})
-	if err != nil {
-		return err
+	args := []string{"create", "--driver", "kubernetes", "--driver-opt", "namespace=" + namespace, "--name", name}
+	if imageConf.InCluster.Rootless {
+		args = append(args, "--driver-opt", "rootless=true")
+	}
+	if len(imageConf.InCluster.Args) > 0 {
+		args = append(args, imageConf.InCluster.Args...)
 	}
 
-	outStream := command.NewOutStream(writer)
-	err = jsonmessage.DisplayJSONMessagesStream(out, outStream, outStream.FD(), outStream.IsTerminal(), nil)
+	log.Infof("Ensure BuildKit builder with: %s %s", strings.Join(command, " "), strings.Join(args, " "))
+	completeArgs := []string{}
+	completeArgs = append(completeArgs, command[1:]...)
+	completeArgs = append(completeArgs, args...)
+
+	// create the builder
+	out, err := exec.Command(command[0], completeArgs...).CombinedOutput()
 	if err != nil {
-		return err
+		if strings.Contains(string(out), "existing instance") {
+			return name, nil
+		}
+
+		return "", fmt.Errorf("error creating BuildKit builder: %s => %v", string(out), err)
 	}
 
-	return nil
-}
-
-func encodeAuthToBase64(authConfig types.AuthConfig) (string, error) {
-	buf, err := json.Marshal(authConfig)
-	if err != nil {
-		return "", err
-	}
-
-	return base64.URLEncoding.EncodeToString(buf), nil
+	return name, nil
 }

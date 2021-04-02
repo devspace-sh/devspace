@@ -246,16 +246,14 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 
 		// Get ignore rules from docker ignore
-		ignoreRules, err := helper.ReadDockerignore(contextPath)
+		relDockerfile := archive.CanonicalTarNameForPath(dockerfilePath)
+		ignoreRules, err := helper.ReadDockerignore(contextPath, relDockerfile)
 		if err != nil {
 			return err
 		}
 		if err := build.ValidateContextDirectory(contextPath, ignoreRules); err != nil {
 			return errors.Errorf("error checking context: '%s'", err)
 		}
-		relDockerfile := archive.CanonicalTarNameForPath(dockerfilePath)
-		ignoreRules = build.TrimBuildFilesFromExcludes(ignoreRules, relDockerfile, false)
-		ignoreRules = append(ignoreRules, ".devspace/")
 
 		log.StartWait("Uploading files to build container")
 		buildCtx, err := archive.TarWithOptions(contextPath, &archive.TarOptions{
