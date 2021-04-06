@@ -32,6 +32,8 @@ type Client interface {
 	Login(registryURL, user, password string, checkCredentialsStore, saveAuthConfig, relogin bool) (*dockertypes.AuthConfig, error)
 	GetAuthConfig(registryURL string, checkCredentialsStore bool) (*dockertypes.AuthConfig, error)
 
+	ParseProxyConfig(buildArgs map[string]*string) map[string]*string
+
 	DeleteImageByName(imageName string, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
 	DeleteImageByFilter(filter filters.Args, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
 }
@@ -160,4 +162,14 @@ func getMinikubeEnvironment() (map[string]string, error) {
 	}
 
 	return env, nil
+}
+
+// ParseProxyConfig parses the proxy config from the ~/.docker/config.json
+func (c *client) ParseProxyConfig(buildArgs map[string]*string) map[string]*string {
+	dockerConfig, err := loadDockerConfig()
+	if err == nil {
+		buildArgs = dockerConfig.ParseProxyConfig(c.DaemonHost(), buildArgs)
+	}
+
+	return buildArgs
 }

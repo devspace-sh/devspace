@@ -255,6 +255,9 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			return err
 		}
 	} else {
+		// make sure to use the correct proxy configuration
+		buildOptions.BuildArgs = b.client.ParseProxyConfig(buildOptions.BuildArgs)
+
 		response, err := b.client.ImageBuild(ctx, body, buildOptions)
 		if err != nil {
 			return err

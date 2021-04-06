@@ -14,9 +14,8 @@ import (
 
 const dockerFileFolder = ".docker"
 
-var configDir = os.Getenv("DOCKER_CONFIG")
-
 func loadDockerConfig() (*configfile.ConfigFile, error) {
+	configDir := os.Getenv("DOCKER_CONFIG")
 	if configDir == "" {
 		configDir = filepath.Join(homedir.Get(), dockerFileFolder)
 	}
