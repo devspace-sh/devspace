@@ -108,13 +108,13 @@ func (client *client) EnsureDeployNamespaces(config *latest.Config, log log.Logg
 				return errors.Wrap(err, "get namespace")
 			}
 
-			// Create release namespace
+			// create namespace
 			_, err = client.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 				},
 			}, metav1.CreateOptions{})
-			if err != nil {
+			if err != nil && kerrors.IsAlreadyExists(err) == false {
 				return err
 			}
 
