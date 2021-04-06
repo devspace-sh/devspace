@@ -13,6 +13,7 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/transport/spdy"
 	"net"
@@ -86,6 +87,14 @@ func IsPrivateIP(ip net.IP) bool {
 // EnsureDefaultNamespace makes sure the default namespace exists or will be created
 func (client *client) EnsureDeployNamespaces(config *latest.Config, log log.Logger) error {
 	namespaces := []string{client.Namespace()}
+	for _, imageConfig := range config.Images {
+		if imageConfig.Build != nil && imageConfig.Build.Kaniko != nil && imageConfig.Build.Kaniko.Namespace != "" {
+			namespaces = append(namespaces, imageConfig.Build.Kaniko.Namespace)
+		}
+		if imageConfig.Build != nil && imageConfig.Build.BuildKit != nil && imageConfig.Build.BuildKit.InCluster != nil && imageConfig.Build.BuildKit.InCluster.Namespace != "" {
+			namespaces = append(namespaces, imageConfig.Build.BuildKit.InCluster.Namespace)
+		}
+	}
 	for _, deployConfig := range config.Deployments {
 		if deployConfig.Namespace != "" {
 			namespaces = append(namespaces, deployConfig.Namespace)
@@ -95,12 +104,19 @@ func (client *client) EnsureDeployNamespaces(config *latest.Config, log log.Logg
 	for _, namespace := range namespaces {
 		_, err := client.KubeClient().CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
 		if err != nil {
+			if kerrors.IsNotFound(err) == false {
+				return errors.Wrap(err, "get namespace")
+			}
+
 			// Create release namespace
 			_, err = client.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 				},
 			}, metav1.CreateOptions{})
+			if err != nil {
+				return err
+			}
 
 			log.Donef("Created namespace: %s", namespace)
 		}
