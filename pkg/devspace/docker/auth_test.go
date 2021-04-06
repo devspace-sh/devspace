@@ -85,7 +85,7 @@ func TestGetRegistryEndpoint(t *testing.T) {
 
 	for _, testCase := range testCases {
 		client := &client{
-			&fakeDockerClient{},
+			CommonAPIClient: &fakeDockerClient{},
 		}
 
 		isDefault, endpoint, err := client.GetRegistryEndpoint(testCase.registryURL)
@@ -174,7 +174,7 @@ func TestGetAuthConfig(t *testing.T) {
 		}
 
 		client := &client{
-			&fakeDockerClient{},
+			CommonAPIClient: &fakeDockerClient{},
 		}
 
 		auth, err := client.GetAuthConfig(testCase.registryURL, testCase.checkCredentialsStore)
@@ -273,11 +273,10 @@ func TestLogin(t *testing.T) {
 		}
 
 		client := &client{
-			&fakeDockerClient{},
+			CommonAPIClient: &fakeDockerClient{},
 		}
 
 		auth, err := client.Login(testCase.registryURL, testCase.user, testCase.password, testCase.checkCredentialsStore, testCase.saveAuthConfig, testCase.relogin)
-
 		if !testCase.expectedErr {
 			assert.NilError(t, err, "Unexpected error in testCase %s", testCase.name)
 		} else if err == nil {

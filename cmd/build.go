@@ -112,6 +112,14 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 		return err
 	}
 
+	// create namespaces if we have a client
+	if client != nil {
+		err = client.EnsureDeployNamespaces(config, log)
+		if err != nil {
+			return errors.Errorf("unable to create namespace: %v", err)
+		}
+	}
+
 	// Force tag
 	if len(cmd.Tags) > 0 {
 		for _, imageConfig := range config.Images {

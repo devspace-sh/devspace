@@ -11,9 +11,8 @@ import (
 )
 
 // ImageBuildCLI builds an image with the docker cli
-func (c *client) ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions, log log.Logger) error {
+func (c *client) ImageBuildCLI(useBuildKit bool, context io.Reader, writer io.Writer, additionalArgs []string, options dockertypes.ImageBuildOptions, log log.Logger) error {
 	args := []string{"build"}
-
 	if options.BuildArgs != nil {
 		for k, v := range options.BuildArgs {
 			if v == nil {
@@ -45,8 +44,14 @@ func (c *client) ImageBuildCLI(useBuildkit bool, context io.Reader, writer io.Wr
 
 	log.Infof("Execute docker cli command with: docker %s", strings.Join(args, " "))
 	cmd := exec.Command("docker", args...)
-	if useBuildkit {
-		cmd.Env = append(os.Environ(), "DOCKER_BUILDKIT=1")
+	cmd.Env = os.Environ()
+	if useBuildKit {
+		cmd.Env = append(cmd.Env, "DOCKER_BUILDKIT=1")
+	}
+	if c.minikubeEnv != nil {
+		for k, v := range c.minikubeEnv {
+			cmd.Env = append(cmd.Env, k+"="+v)
+		}
 	}
 
 	cmd.Stdin = context

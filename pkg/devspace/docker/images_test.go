@@ -41,7 +41,7 @@ func TestDeleteImage(t *testing.T) {
 		)
 
 		client := &client{
-			&fakeDockerClient{},
+			CommonAPIClient: &fakeDockerClient{},
 		}
 
 		if testCase.deletedImageName != "" {

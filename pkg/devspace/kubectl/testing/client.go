@@ -5,6 +5,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"io"
 	"io/ioutil"
+	"k8s.io/client-go/tools/clientcmd"
 	"net/http"
 	"strings"
 	"time"
@@ -31,6 +32,11 @@ type Client struct {
 	IsKubernetes       bool
 	Context            string
 	IsInClusterContext bool
+}
+
+// ClientConfig implements the interface
+func (c *Client) ClientConfig() clientcmd.ClientConfig {
+	return nil
 }
 
 // CurrentContext is a fake implementation of function

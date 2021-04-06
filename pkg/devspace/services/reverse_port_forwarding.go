@@ -57,7 +57,7 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 
 	// make sure the devspace helper binary is injected
 	log.StartWait("Reverse-Port-Forwarding: Upload devspace helper...")
-	err = InjectDevSpaceHelper(serviceClient.client, container.Pod, container.Container.Name, serviceClient.log)
+	err = InjectDevSpaceHelper(serviceClient.client, container.Pod, container.Container.Name, string(portForwarding.Arch), serviceClient.log)
 	log.StopWait()
 	if err != nil {
 		return err

@@ -71,6 +71,7 @@ type ImageConfig struct {
 	// the build process. If this is empty, devspace will generate a random tag
 	Tags []string `yaml:"tags,omitempty" json:"tags,omitempty"`
 
+	// DEPRECATED: Use tags with ### instead
 	// If TagsAppendRandom is true, for all tags defined for this image a random suffix in
 	// the form of '-xxxxx' will be appended
 	TagsAppendRandom bool `yaml:"tagsAppendRandom,omitempty" json:"tagsAppendRandom,omitempty"`
@@ -138,11 +139,14 @@ const (
 // BuildConfig defines the build process for an image. Only one of the options below
 // can be specified.
 type BuildConfig struct {
-	// If docker is specified, devspace will build the image using the local docker daemon
+	// If docker is specified, DevSpace will build the image using the local docker daemon
 	Docker *DockerConfig `yaml:"docker,omitempty" json:"docker,omitempty"`
 
-	// If kaniko is specified, devspace will build the image in-cluster with kaniko
+	// If kaniko is specified, DevSpace will build the image in-cluster with kaniko
 	Kaniko *KanikoConfig `yaml:"kaniko,omitempty" json:"kaniko,omitempty"`
+
+	// If buildKit is specified, DevSpace will build the image either in-cluster or locally with BuildKit
+	BuildKit *BuildKitConfig `yaml:"buildKit,omitempty" json:"buildKit,omitempty"`
 
 	// If custom is specified, devspace will build the image with the help of
 	// a custom script.
@@ -162,6 +166,51 @@ type DockerConfig struct {
 	UseCLI          bool          `yaml:"useCli,omitempty" json:"useCli,omitempty"`
 	Args            []string      `yaml:"args,omitempty" json:"args,omitempty"`
 	Options         *BuildOptions `yaml:"options,omitempty" json:"options,omitempty"`
+}
+
+// BuildKitConfig tells the DevSpace CLI to
+type BuildKitConfig struct {
+	// If this is true, DevSpace will not push any images
+	SkipPush *bool `yaml:"skipPush,omitempty" json:"skipPush,omitempty"`
+
+	// If false, will not try to use the minikube docker daemon to build the image
+	PreferMinikube *bool `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty"`
+
+	// If specified, DevSpace will use BuildKit to build the image within the cluster
+	InCluster *BuildKitInClusterConfig `yaml:"inCluster,omitempty" json:"inCluster,omitempty"`
+
+	// Additional arguments to call docker buildx build with
+	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
+
+	// Override the base command to create a builder and build images. Defaults to ["docker", "buildx"]
+	Command []string `yaml:"command,omitempty" json:"command,omitempty"`
+
+	// Additional build options
+	Options *BuildOptions `yaml:"options,omitempty" json:"options,omitempty"`
+}
+
+// BuildKitInClusterConfig holds the buildkit builder config
+type BuildKitInClusterConfig struct {
+	// If enabled is true, DevSpace will use BuildKit to build within the cluster
+	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// Name is the name of the builder to use. If omitted, DevSpace will try to create
+	// or reuse a builder in the form devspace-$NAMESPACE
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	// Namespace where to create the builder deployment in. Defaults to the current
+	// active namespace.
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+
+	// By default, DevSpace will try to create a new builder if it cannot be found.
+	// If this is true, DevSpace will fail if the specified builder cannot be found.
+	NoCreate bool `yaml:"noCreate,omitempty" json:"noCreate,omitempty"`
+
+	// If enabled will create a rootless builder deployment.
+	Rootless bool `yaml:"rootless,omitempty" json:"rootless,omitempty"`
+
+	// Additional args to create the builder with.
+	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
 }
 
 // KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
@@ -595,12 +644,16 @@ type DevConfig struct {
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
 type PortForwardingConfig struct {
-	ImageName           string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
-	LabelSelector       map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	ContainerName       string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
-	Namespace           string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	PortMappings        []*PortMapping    `yaml:"forward,omitempty" json:"forward,omitempty"`
-	PortMappingsReverse []*PortMapping    `yaml:"reverseForward,omitempty" json:"reverseForward,omitempty"`
+	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
+	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
+	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
+	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+
+	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
+	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
+
+	PortMappings        []*PortMapping `yaml:"forward,omitempty" json:"forward,omitempty"`
+	PortMappingsReverse []*PortMapping `yaml:"reverseForward,omitempty" json:"reverseForward,omitempty"`
 }
 
 // PortMapping defines the ports for a PortMapping
@@ -635,12 +688,22 @@ type SyncConfig struct {
 	WaitInitialSync *bool            `yaml:"waitInitialSync,omitempty" json:"waitInitialSync,omitempty"`
 	BandwidthLimits *BandwidthLimits `yaml:"bandwidthLimits,omitempty" json:"bandwidthLimits,omitempty"`
 
+	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
+	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
+
 	// If greater zero, describes the amount of milliseconds to wait after each checked 100 files
 	ThrottleChangeDetection *int64 `yaml:"throttleChangeDetection,omitempty" json:"throttleChangeDetection,omitempty"`
 
 	OnUpload   *SyncOnUpload   `yaml:"onUpload,omitempty" json:"onUpload,omitempty"`
 	OnDownload *SyncOnDownload `yaml:"onDownload,omitempty" json:"onDownload,omitempty"`
 }
+
+type ContainerArchitecture string
+
+const (
+	ContainerArchitectureAmd64 ContainerArchitecture = "amd64"
+	ContainerArchitectureArm64 ContainerArchitecture = "arm64"
+)
 
 // SyncOnUpload defines the struct for the command that should be executed when files / folders are uploaded
 type SyncOnUpload struct {

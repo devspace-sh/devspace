@@ -212,7 +212,7 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 	// create the build pod
 	pod := &k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "devspace-build-",
+			GenerateName: "devspace-build-kaniko-",
 			Annotations:  map[string]string{},
 			Labels: map[string]string{
 				"devspace-build":    "true",
@@ -335,11 +335,11 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 		}
 	} else {
 		// convert resources
-		limits, err := convertMap(kanikoOptions.Resources.Limits)
+		limits, err := ConvertMap(kanikoOptions.Resources.Limits)
 		if err != nil {
 			return nil, errors.Wrap(err, "limits")
 		}
-		requests, err := convertMap(kanikoOptions.Resources.Requests)
+		requests, err := ConvertMap(kanikoOptions.Resources.Requests)
 		if err != nil {
 			return nil, errors.Wrap(err, "requests")
 		}
@@ -358,7 +358,7 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 	return pod, nil
 }
 
-func convertMap(m map[string]string) (map[k8sv1.ResourceName]resource.Quantity, error) {
+func ConvertMap(m map[string]string) (map[k8sv1.ResourceName]resource.Quantity, error) {
 	if m == nil {
 		return nil, nil
 	}

@@ -2,6 +2,7 @@ package build
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/buildkit"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/custom"
@@ -23,6 +24,13 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
 		builder = custom.NewBuilder(imageConfigName, imageConf, imageTags)
+	} else if imageConf.Build != nil && imageConf.Build.BuildKit != nil {
+		log.StartWait("Creating BuildKit builder")
+		defer log.StopWait()
+		builder, err = buildkit.NewBuilder(c.config, c.client, imageConfigName, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes)
+		if err != nil {
+			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
+		}
 	} else if imageConf.Build != nil && imageConf.Build.Docker == nil && imageConf.Build.Kaniko != nil {
 		dockerClient, err := dockerclient.NewClient(log)
 		if err != nil {

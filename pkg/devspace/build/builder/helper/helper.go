@@ -177,14 +177,11 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, 
 			return false, errors.Wrap(err, "get context from local dir")
 		}
 
-		excludes, err := ReadDockerignore(contextDir)
+		relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
+		excludes, err := ReadDockerignore(contextDir, relDockerfile)
 		if err != nil {
 			return false, errors.Errorf("Error reading .dockerignore: %v", err)
 		}
-
-		relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
-		excludes = build.TrimBuildFilesFromExcludes(excludes, relDockerfile, false)
-		excludes = append(excludes, ".devspace/")
 
 		contextHash, err := hash.DirectoryExcludes(contextDir, excludes, false)
 		if err != nil {

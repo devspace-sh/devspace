@@ -23,6 +23,13 @@ func ValidInitialSyncStrategy(strategy latest.InitialSyncStrategy) bool {
 		strategy == latest.InitialSyncStrategyPreferNewest
 }
 
+// ValidContainerArch checks if the target container arch is valid
+func ValidContainerArch(arch latest.ContainerArchitecture) bool {
+	return arch == "" ||
+		arch == latest.ContainerArchitectureAmd64 ||
+		arch == latest.ContainerArchitectureArm64
+}
+
 func validate(config *latest.Config, log log.Logger) error {
 	err := validateImages(config)
 	if err != nil {
@@ -232,6 +239,9 @@ func validateDev(config *latest.Config) error {
 				if len(port.PortMappings) == 0 && len(port.PortMappingsReverse) == 0 {
 					return errors.Errorf("Error in config: portMappings is empty in port config at index %d", index)
 				}
+				if ValidContainerArch(port.Arch) == false {
+					return errors.Errorf("Error in config: ports.arch is not valid '%s' at index %d", port.Arch, index)
+				}
 			}
 		}
 
@@ -247,6 +257,9 @@ func validateDev(config *latest.Config) error {
 				// Validate initial sync strategy
 				if ValidInitialSyncStrategy(sync.InitialSync) == false {
 					return errors.Errorf("Error in config: sync.initialSync is not valid '%s' at index %d", sync.InitialSync, index)
+				}
+				if ValidContainerArch(sync.Arch) == false {
+					return errors.Errorf("Error in config: sync.arch is not valid '%s' at index %d", sync.Arch, index)
 				}
 			}
 		}
