@@ -30,7 +30,7 @@ import (
 
 	"github.com/docker/docker/pkg/progress"
 	"github.com/docker/docker/pkg/streamformatter"
-	"github.com/docker/docker/pkg/term"
+	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
 
 	"github.com/docker/docker/pkg/jsonmessage"
@@ -40,7 +40,7 @@ import (
 const EngineName = "docker"
 
 var (
-	stdin, stdout, stderr = term.StdStreams()
+	_, stdout, _ = dockerterm.StdStreams()
 )
 
 // Builder holds the necessary information to build and push docker images

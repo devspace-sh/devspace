@@ -37,8 +37,7 @@ const DefaultContextPath = "./"
 // returns the list of paths to exclude. devspace.dockerignore takes precedence over .dockerignore if both
 // are found
 func ReadDockerignore(contextDir string, dockerfile string) ([]string, error) {
-	var excludes []string
-
+	excludes := []string{}
 	useDevSpaceDockerignore := true
 	f, err := os.Open(filepath.Join(contextDir, "devspace.dockerignore"))
 	switch {
@@ -46,7 +45,7 @@ func ReadDockerignore(contextDir string, dockerfile string) ([]string, error) {
 		f, err = os.Open(filepath.Join(contextDir, ".dockerignore"))
 		switch {
 		case os.IsNotExist(err):
-			return excludes, nil
+			return ensureDockerIgnoreAndDockerFile(excludes, dockerfile, false), nil
 		case err != nil:
 			return nil, err
 		}
@@ -61,7 +60,10 @@ func ReadDockerignore(contextDir string, dockerfile string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	return ensureDockerIgnoreAndDockerFile(excludes, dockerfile, useDevSpaceDockerignore), nil
+}
 
+func ensureDockerIgnoreAndDockerFile(excludes []string, dockerfile string, useDevSpaceDockerignore bool) []string {
 	if useDevSpaceDockerignore {
 		excludes = append(excludes, ".dockerignore")
 	} else {
@@ -73,7 +75,7 @@ func ReadDockerignore(contextDir string, dockerfile string) ([]string, error) {
 		excludes = append(excludes, "!"+dockerfile)
 	}
 	excludes = append(excludes, ".devspace/")
-	return excludes, nil
+	return excludes
 }
 
 // GetDockerfileAndContext retrieves the dockerfile and context
