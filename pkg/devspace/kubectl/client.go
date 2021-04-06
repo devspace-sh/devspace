@@ -42,6 +42,9 @@ type Client interface {
 	// Returns the underlying kube rest config
 	RestConfig() *rest.Config
 
+	// Returns the underlying kube client config
+	ClientConfig() clientcmd.ClientConfig
+
 	// Returns the kube config loader interface
 	KubeConfigLoader() kubeconfig.Loader
 
@@ -96,7 +99,7 @@ type Client interface {
 
 type client struct {
 	Client       kubernetes.Interface
-	ClientConfig clientcmd.ClientConfig
+	clientConfig clientcmd.ClientConfig
 	restConfig   *rest.Config
 	kubeLoader   kubeconfig.Loader
 
@@ -129,7 +132,7 @@ func NewClientFromContext(context, namespace string, switchContext bool, kubeLoa
 
 	return &client{
 		Client:       kubeClient,
-		ClientConfig: clientConfig,
+		clientConfig: clientConfig,
 		restConfig:   restConfig,
 		kubeLoader:   kubeLoader,
 
@@ -189,6 +192,11 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, kubeLoader kubecon
 	}
 
 	return nil, errors.New("We should not reach this point")
+}
+
+// Returns the underlying kube client config
+func (client *client) ClientConfig() clientcmd.ClientConfig {
+	return client.clientConfig
 }
 
 // IsInCluster returns if the kube context is the in cluster context

@@ -173,6 +173,9 @@ type BuildKitConfig struct {
 	// If this is true, DevSpace will not push any images
 	SkipPush *bool `yaml:"skipPush,omitempty" json:"skipPush,omitempty"`
 
+	// If false, will not try to use the minikube docker daemon to build the image
+	PreferMinikube *bool `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty"`
+
 	// If specified, DevSpace will use BuildKit to build the image within the cluster
 	InCluster *BuildKitInClusterConfig `yaml:"inCluster,omitempty" json:"inCluster,omitempty"`
 

@@ -25,17 +25,9 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
 		builder = custom.NewBuilder(imageConfigName, imageConf, imageTags)
 	} else if imageConf.Build != nil && imageConf.Build.BuildKit != nil {
-		if c.client == nil {
-			// Create kubectl client if not specified
-			c.client, err = kubectl.NewDefaultClient()
-			if err != nil {
-				return nil, errors.Errorf("Unable to create new kubectl client: %v", err)
-			}
-		}
-
-		log.StartWait("Creating buildkit builder")
+		log.StartWait("Creating BuildKit builder")
 		defer log.StopWait()
-		builder, err = buildkit.NewBuilder(c.config, c.client, imageConfigName, imageConf, imageTags, options.SkipPush)
+		builder, err = buildkit.NewBuilder(c.config, c.client, imageConfigName, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes)
 		if err != nil {
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
 		}

@@ -31,7 +31,7 @@ func (client *client) GenericRequest(options *GenericRequestOptions) (string, er
 			return "", errors.Errorf("Error parsing %s: expected version to be group/version", options.APIVersion)
 		}
 
-		config, err := client.ClientConfig.ClientConfig()
+		config, err := client.ClientConfig().ClientConfig()
 		if err != nil {
 			return "", err
 		}

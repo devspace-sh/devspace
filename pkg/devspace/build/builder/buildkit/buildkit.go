@@ -2,53 +2,44 @@ package buildkit
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/docker"
+	"github.com/pkg/errors"
 	"io"
+	"io/ioutil"
+	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
-
-	"github.com/docker/cli/cli/streams"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
+	dockerpkg "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 
-	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/docker/pkg/idtools"
-
-	"github.com/docker/docker/pkg/progress"
-	"github.com/docker/docker/pkg/streamformatter"
-	"github.com/docker/docker/pkg/term"
-	"github.com/pkg/errors"
 )
 
 // EngineName is the name of the building engine
 const EngineName = "buildkit"
-
-var (
-	stdin, stdout, stderr = term.StdStreams()
-)
 
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
 	helper *helper.BuildHelper
 
 	authConfig *types.AuthConfig
-	skipPush   bool
+
+	skipPush                  bool
+	skipPushOnLocalKubernetes bool
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config *latest.Config, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush bool) (*Builder, error) {
+func NewBuilder(config *latest.Config, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
 	return &Builder{
-		helper:   helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags),
-		skipPush: skipPush,
+		helper:                    helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags),
+		skipPush:                  skipPush,
+		skipPushOnLocalKubernetes: skipPushOnLocalKubernetes,
 	}, nil
 }
 
@@ -66,7 +57,7 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, igno
 // contextPath is the absolute path to the context path
 // dockerfilePath is the absolute path to the dockerfile WITHIN the contextPath
 func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, log logpkg.Logger) error {
-	// Buildoptions
+	// build options
 	options := &types.ImageBuildOptions{}
 	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.BuildKit != nil && b.helper.ImageConf.Build.BuildKit.Options != nil {
 		if b.helper.ImageConf.Build.BuildKit.Options.BuildArgs != nil {
@@ -80,139 +71,41 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 	}
 
-	// Determine output writer
-	var writer io.Writer
-	if log == logpkg.GetInstance() {
-		writer = stdout
-	} else {
-		writer = log
-	}
-
-	contextDir, relDockerfile, err := build.GetContextFromLocalDir(contextPath, dockerfilePath)
+	// create the context stream
+	body, writer, _, buildOptions, err := docker.CreateContextStream(b.helper, contextPath, dockerfilePath, entrypoint, cmd, options, log)
 	if err != nil {
 		return err
 	}
 
-	var dockerfileCtx *os.File
-
-	// Dockerfile is out of context
-	if strings.HasPrefix(relDockerfile, ".."+string(filepath.Separator)) {
-		// Dockerfile is outside of build-context; read the Dockerfile and pass it as dockerfileCtx
-		dockerfileCtx, err = os.Open(dockerfilePath)
-		if err != nil {
-			return errors.Errorf("unable to open Dockerfile: %v", err)
-		}
-		defer dockerfileCtx.Close()
-	}
-
-	// And canonicalize dockerfile name to a platform-independent one
-	authConfigs, _ := dockerclient.GetAllAuthConfigs()
-	relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
-	excludes, err := helper.ReadDockerignore(contextDir, relDockerfile)
-	if err != nil {
-		return err
-	}
-
-	if err := build.ValidateContextDirectory(contextDir, excludes); err != nil {
-		return errors.Errorf("Error checking context: '%s'", err)
-	}
-
-	buildCtx, err := archive.TarWithOptions(contextDir, &archive.TarOptions{
-		ExcludePatterns: excludes,
-		ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
-	})
-	if err != nil {
-		return err
-	}
-
-	// Check if we should overwrite entrypoint
-	if len(entrypoint) > 0 || len(cmd) > 0 || b.helper.ImageConf.InjectRestartHelper || len(b.helper.ImageConf.AppendDockerfileInstructions) > 0 {
-		dockerfilePath, err = helper.RewriteDockerfile(dockerfilePath, entrypoint, cmd, b.helper.ImageConf.AppendDockerfileInstructions, options.Target, b.helper.ImageConf.InjectRestartHelper, log)
-		if err != nil {
-			return err
-		}
-
-		// Check if dockerfile is out of context, then we use the docker way to replace the dockerfile
-		if dockerfileCtx != nil {
-			// We will add it to the build context
-			dockerfileCtx, err = os.Open(dockerfilePath)
-			if err != nil {
-				return errors.Errorf("unable to open Dockerfile: %v", err)
-			}
-
-			defer dockerfileCtx.Close()
-		} else {
-			// We will add it to the build context
-			overwriteDockerfileCtx, err := os.Open(dockerfilePath)
-			if err != nil {
-				return errors.Errorf("unable to open Dockerfile: %v", err)
-			}
-
-			buildCtx, err = helper.OverwriteDockerfileInBuildContext(overwriteDockerfileCtx, buildCtx, relDockerfile)
-			if err != nil {
-				return errors.Errorf("Error overwriting %s: %v", relDockerfile, err)
-			}
-		}
-
-		defer os.RemoveAll(filepath.Dir(dockerfilePath))
-
-		// inject the build script
-		if b.helper.ImageConf.InjectRestartHelper {
-			helperScript, err := restart.LoadRestartHelper(b.helper.ImageConf.RestartHelperPath)
-			if err != nil {
-				return errors.Wrap(err, "load restart helper")
-			}
-
-			buildCtx, err = helper.InjectBuildScriptInContext(helperScript, buildCtx)
-			if err != nil {
-				return errors.Wrap(err, "inject build script into context")
-			}
-		}
-	}
-
-	// replace Dockerfile if it was added from stdin or a file outside the build-context, and there is archive context
-	if dockerfileCtx != nil && buildCtx != nil {
-		buildCtx, relDockerfile, err = build.AddDockerfileToBuildContext(dockerfileCtx, buildCtx)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Which tags to build
-	tags := []string{}
-	for _, tag := range b.helper.ImageTags {
-		tags = append(tags, b.helper.ImageName+":"+tag)
-	}
+	buildKitConfig := b.helper.ImageConf.Build.BuildKit
 
 	// create the builder
-	builder, err := createBuilder(b.helper.KubeClient, b.helper.ImageConf.Build.BuildKit, log)
+	builder, err := createBuilder(b.helper.KubeClient, buildKitConfig, log)
 	if err != nil {
 		return err
 	}
 
-	// Setup an upload progress bar
-	outStream := streams.NewOut(writer)
-	progressOutput := streamformatter.NewProgressOutput(outStream)
-	body := progress.NewProgressReader(buildCtx, progressOutput, 0, "", "Sending build context to Docker daemon")
-	buildOptions := types.ImageBuildOptions{
-		Tags:        tags,
-		Dockerfile:  relDockerfile,
-		BuildArgs:   options.BuildArgs,
-		Target:      options.Target,
-		NetworkMode: options.NetworkMode,
-		AuthConfigs: authConfigs,
+	// We skip pushing when it is the minikube client
+	if b.skipPushOnLocalKubernetes && b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
+		b.skipPush = true
+	}
+
+	// Should we use the minikube docker daemon?
+	useMinikubeDocker := false
+	if b.helper.KubeClient != nil && b.helper.KubeClient.CurrentContext() == "minikube" && (buildKitConfig.PreferMinikube == nil || *buildKitConfig.PreferMinikube == true) {
+		useMinikubeDocker = true
 	}
 
 	// Should we build with cli?
 	if b.skipPush {
-		b.helper.ImageConf.Build.BuildKit.SkipPush = &b.skipPush
+		buildKitConfig.SkipPush = &b.skipPush
 	}
 
-	return buildWithCLI(body, writer, builder, b.helper.ImageConf.Build.BuildKit, buildOptions, log)
+	return buildWithCLI(body, writer, b.helper.KubeClient, builder, buildKitConfig, *buildOptions, useMinikubeDocker, log)
 }
 
-func buildWithCLI(context io.Reader, writer io.Writer, builder string, imageConf *latest.BuildKitConfig, options types.ImageBuildOptions, log logpkg.Logger) error {
-	// TODO: kube context
+func buildWithCLI(context io.Reader, writer io.Writer, kubeClient kubectl.Client, builder string, imageConf *latest.BuildKitConfig, options types.ImageBuildOptions, useMinikubeDocker bool, log logpkg.Logger) error {
+	environ := os.Environ()
 
 	command := []string{"docker", "buildx"}
 	if len(imageConf.Command) > 0 {
@@ -250,6 +143,31 @@ func buildWithCLI(context io.Reader, writer io.Writer, builder string, imageConf
 		args = append(args, arg)
 	}
 	if builder != "" {
+		rawConfig, err := kubeClient.ClientConfig().RawConfig()
+		if err != nil {
+			return errors.Wrap(err, "get raw kube config")
+		}
+		if !kubeClient.IsInCluster() {
+			rawConfig.CurrentContext = kubeClient.CurrentContext()
+		}
+
+		bytes, err := clientcmd.Write(rawConfig)
+		if err != nil {
+			return err
+		}
+
+		tempFile, err := ioutil.TempFile("", "")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(tempFile.Name())
+
+		_, err = tempFile.Write(bytes)
+		if err != nil {
+			return errors.Wrap(err, "error writing to file")
+		}
+
+		environ = append(environ, "KUBECONFIG="+tempFile.Name())
 		args = append(args, "--builder", builder)
 	}
 
@@ -261,13 +179,31 @@ func buildWithCLI(context io.Reader, writer io.Writer, builder string, imageConf
 	completeArgs = append(completeArgs, args...)
 
 	cmd := exec.Command(command[0], completeArgs...)
+	cmd.Env = environ
+	if useMinikubeDocker {
+		minikubeEnv, err := dockerpkg.GetMinikubeEnvironment()
+		if err != nil {
+			return fmt.Errorf("error retrieving minikube environment with 'minikube docker-env --shell none'. Try setting the option preferMinikube to false: %v", err)
+		}
+		for k, v := range minikubeEnv {
+			cmd.Env = append(cmd.Env, k+"="+v)
+		}
+	}
+
 	cmd.Stdin = context
 	cmd.Stdout = writer
 	cmd.Stderr = writer
+
 	return cmd.Run()
 }
 
 func createBuilder(kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, log logpkg.Logger) (string, error) {
+	if imageConf.InCluster == nil || imageConf.InCluster.Enabled == false {
+		return "", nil
+	} else if kubeClient == nil {
+		return "", fmt.Errorf("cannot build in cluster wth build kit without a correct kubernetes context")
+	}
+
 	namespace := kubeClient.Namespace()
 	if imageConf.InCluster != nil && imageConf.InCluster.Namespace != "" {
 		namespace = imageConf.InCluster.Namespace
@@ -279,9 +215,7 @@ func createBuilder(kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, 
 	}
 
 	// check if we should skip
-	if imageConf.InCluster == nil || imageConf.InCluster.Enabled == false {
-		return "", nil
-	} else if imageConf.InCluster.NoCreate {
+	if imageConf.InCluster.NoCreate {
 		return name, nil
 	}
 
