@@ -644,12 +644,16 @@ type DevConfig struct {
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
 type PortForwardingConfig struct {
-	ImageName           string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
-	LabelSelector       map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	ContainerName       string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
-	Namespace           string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	PortMappings        []*PortMapping    `yaml:"forward,omitempty" json:"forward,omitempty"`
-	PortMappingsReverse []*PortMapping    `yaml:"reverseForward,omitempty" json:"reverseForward,omitempty"`
+	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
+	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
+	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
+	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+
+	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
+	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
+
+	PortMappings        []*PortMapping `yaml:"forward,omitempty" json:"forward,omitempty"`
+	PortMappingsReverse []*PortMapping `yaml:"reverseForward,omitempty" json:"reverseForward,omitempty"`
 }
 
 // PortMapping defines the ports for a PortMapping
@@ -684,12 +688,22 @@ type SyncConfig struct {
 	WaitInitialSync *bool            `yaml:"waitInitialSync,omitempty" json:"waitInitialSync,omitempty"`
 	BandwidthLimits *BandwidthLimits `yaml:"bandwidthLimits,omitempty" json:"bandwidthLimits,omitempty"`
 
+	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
+	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
+
 	// If greater zero, describes the amount of milliseconds to wait after each checked 100 files
 	ThrottleChangeDetection *int64 `yaml:"throttleChangeDetection,omitempty" json:"throttleChangeDetection,omitempty"`
 
 	OnUpload   *SyncOnUpload   `yaml:"onUpload,omitempty" json:"onUpload,omitempty"`
 	OnDownload *SyncOnDownload `yaml:"onDownload,omitempty" json:"onDownload,omitempty"`
 }
+
+type ContainerArchitecture string
+
+const (
+	ContainerArchitectureAmd64 ContainerArchitecture = "amd64"
+	ContainerArchitectureArm64 ContainerArchitecture = "arm64"
+)
 
 // SyncOnUpload defines the struct for the command that should be executed when files / folders are uploaded
 type SyncOnUpload struct {

@@ -157,7 +157,7 @@ func restartContainer(client kubectl.Client, options targetselector.Options, log
 		return errors.Errorf("Error selecting pod: %v", err)
 	}
 
-	err = services.InjectDevSpaceHelper(client, container.Pod, container.Container.Name, log)
+	err = services.InjectDevSpaceHelper(client, container.Pod, container.Container.Name, "", log)
 	if err != nil {
 		return errors.Wrap(err, "inject devspace helper")
 	}
