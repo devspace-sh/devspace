@@ -41,6 +41,8 @@ type Client interface {
 //Client is a client for docker
 type client struct {
 	dockerclient.CommonAPIClient
+
+	minikubeEnv map[string]string
 }
 
 // NewClient retrieves a new docker client
@@ -82,7 +84,10 @@ func newDockerClient() (Client, error) {
 		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
 
-	return &client{cli}, nil
+	return &client{
+		CommonAPIClient: cli,
+		minikubeEnv:     nil,
+	}, nil
 }
 
 func newDockerClientFromEnvironment() (Client, error) {
@@ -91,7 +96,10 @@ func newDockerClientFromEnvironment() (Client, error) {
 		return nil, errors.Errorf("Couldn't create docker client: %s", err)
 	}
 
-	return &client{cli}, nil
+	return &client{
+		CommonAPIClient: cli,
+		minikubeEnv:     nil,
+	}, nil
 }
 
 func newDockerClientFromMinikube(currentKubeContext string) (Client, error) {
@@ -99,7 +107,7 @@ func newDockerClientFromMinikube(currentKubeContext string) (Client, error) {
 		return nil, errNotMinikube
 	}
 
-	env, err := getMinikubeEnvironment()
+	env, err := GetMinikubeEnvironment()
 	if err != nil {
 		return nil, errors.Errorf("can't retrieve minikube docker environment due to error: %v", err)
 	}
@@ -135,10 +143,13 @@ func newDockerClientFromMinikube(currentKubeContext string) (Client, error) {
 		return nil, err
 	}
 
-	return &client{cli}, nil
+	return &client{
+		CommonAPIClient: cli,
+		minikubeEnv:     env,
+	}, nil
 }
 
-func getMinikubeEnvironment() (map[string]string, error) {
+func GetMinikubeEnvironment() (map[string]string, error) {
 	cmd := exec.Command("minikube", "docker-env", "--shell", "none")
 	out, err := cmd.Output()
 
@@ -150,7 +161,6 @@ func getMinikubeEnvironment() (map[string]string, error) {
 	}
 
 	env := map[string]string{}
-
 	for _, line := range strings.Split(string(out), "\n") {
 		envKeyValue := strings.Split(line, "=")
 
