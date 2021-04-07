@@ -191,9 +191,6 @@ type BuildKitConfig struct {
 
 // BuildKitInClusterConfig holds the buildkit builder config
 type BuildKitInClusterConfig struct {
-	// If enabled is true, DevSpace will use BuildKit to build within the cluster
-	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
-
 	// Name is the name of the builder to use. If omitted, DevSpace will try to create
 	// or reuse a builder in the form devspace-$NAMESPACE
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`

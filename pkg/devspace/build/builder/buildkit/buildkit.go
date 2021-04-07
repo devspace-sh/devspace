@@ -198,7 +198,7 @@ func buildWithCLI(context io.Reader, writer io.Writer, kubeClient kubectl.Client
 }
 
 func createBuilder(kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, log logpkg.Logger) (string, error) {
-	if imageConf.InCluster == nil || imageConf.InCluster.Enabled == false {
+	if imageConf.InCluster == nil {
 		return "", nil
 	} else if kubeClient == nil {
 		return "", fmt.Errorf("cannot build in cluster wth build kit without a correct kubernetes context")
