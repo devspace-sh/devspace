@@ -1,24 +1,28 @@
-// +build !windows
-
 package term
 
 import (
 	"golang.org/x/sys/unix"
 )
 
-// Termios is the Unix API for terminal I/O.
-type Termios = unix.Termios
+const (
+	getTermios = unix.TCGETS
+	setTermios = unix.TCSETS
+)
 
-// MakeRaw puts the terminal connected to the given file descriptor into raw
+// Termios is the Unix API for terminal I/O.
+type Termios unix.Termios
+
+// MakeRaw put the terminal connected to the given file descriptor into raw
 // mode and returns the previous state of the terminal so that it can be
 // restored.
 func MakeRaw(fd uintptr) (*State, error) {
-	termios, err := tcget(fd)
+	termios, err := unix.IoctlGetTermios(int(fd), getTermios)
 	if err != nil {
 		return nil, err
 	}
 
-	oldState := State{termios: *termios}
+	var oldState State
+	oldState.termios = Termios(*termios)
 
 	termios.Iflag &^= (unix.IGNBRK | unix.BRKINT | unix.PARMRK | unix.ISTRIP | unix.INLCR | unix.IGNCR | unix.ICRNL | unix.IXON)
 	termios.Oflag &^= unix.OPOST
@@ -28,7 +32,7 @@ func MakeRaw(fd uintptr) (*State, error) {
 	termios.Cc[unix.VMIN] = 1
 	termios.Cc[unix.VTIME] = 0
 
-	if err := tcset(fd, termios); err != nil {
+	if err := unix.IoctlSetTermios(int(fd), setTermios, termios); err != nil {
 		return nil, err
 	}
 	return &oldState, nil

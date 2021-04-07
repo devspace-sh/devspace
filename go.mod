@@ -93,4 +93,5 @@ require (
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.0+incompatible
 	github.com/agl/ed25519 => github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412
+	github.com/moby/term => github.com/moby/term v0.0.0-20200429084858-129dac9f73f6
 )

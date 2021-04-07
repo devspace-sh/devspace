@@ -50,8 +50,8 @@ func GetFdInfo(in interface{}) (uintptr, bool) {
 
 // IsTerminal returns true if the given file descriptor is a terminal.
 func IsTerminal(fd uintptr) bool {
-	_, err := tcget(fd)
-	return err == nil
+	var termios Termios
+	return tcget(fd, &termios) == 0
 }
 
 // RestoreTerminal restores the terminal connected to the given file descriptor
@@ -60,16 +60,20 @@ func RestoreTerminal(fd uintptr, state *State) error {
 	if state == nil {
 		return ErrInvalidState
 	}
-	return tcset(fd, &state.termios)
+	if err := tcset(fd, &state.termios); err != 0 {
+		return err
+	}
+	return nil
 }
 
 // SaveState saves the state of the terminal connected to the given file descriptor.
 func SaveState(fd uintptr) (*State, error) {
-	termios, err := tcget(fd)
-	if err != nil {
+	var oldState State
+	if err := tcget(fd, &oldState.termios); err != 0 {
 		return nil, err
 	}
-	return &State{termios: *termios}, nil
+
+	return &oldState, nil
 }
 
 // DisableEcho applies the specified state to the terminal connected to the file
@@ -78,7 +82,7 @@ func DisableEcho(fd uintptr, state *State) error {
 	newState := state.termios
 	newState.Lflag &^= unix.ECHO
 
-	if err := tcset(fd, &newState); err != nil {
+	if err := tcset(fd, &newState); err != 0 {
 		return err
 	}
 	handleInterrupt(fd, state)
