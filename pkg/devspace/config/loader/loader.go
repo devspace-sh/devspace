@@ -2,14 +2,12 @@ package loader
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
@@ -238,60 +236,6 @@ func (l *configLoader) newVariableResolver(generatedConfig *generated.Config, op
 		KubeConfigLoader: l.kubeConfigLoader,
 		Profile:          options.Profile,
 	}, log)
-}
-
-// fillVariables fills in the given vars into the prepared config
-func fillVariables(resolver variable.Resolver, preparedConfig map[interface{}]interface{}, vars []*latest.Variable, options *ConfigOptions) error {
-	// Find out what vars are really used
-	varsUsed, err := resolver.FindVariables(preparedConfig, vars)
-	if err != nil {
-		return err
-	}
-
-	// parse cli --var's, the resolver will cache them for us
-	_, err = resolver.ConvertFlags(options.Vars)
-	if err != nil {
-		return err
-	}
-
-	// Fill used defined variables
-	if len(vars) > 0 {
-		newVars := []*latest.Variable{}
-		for _, v := range vars {
-			if varsUsed[strings.TrimSpace(v.Name)] {
-				newVars = append(newVars, v)
-			}
-		}
-
-		if len(newVars) > 0 {
-			err = askQuestions(resolver, newVars)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	// Walk over data and fill in variables
-	err = resolver.FillVariables(preparedConfig)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func askQuestions(resolver variable.Resolver, vars []*latest.Variable) error {
-	for _, definition := range vars {
-		name := strings.TrimSpace(definition.Name)
-
-		// fill the variable with definition
-		_, err := resolver.Resolve(name, definition)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // configExistsInPath checks whether a devspace configuration exists at a certain path
