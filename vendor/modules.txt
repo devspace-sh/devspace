@@ -48,8 +48,6 @@ github.com/Microsoft/hcsshim/osversion
 ## explicit
 # github.com/agl/ed25519 v0.0.0-00010101000000-000000000000 => github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412
 ## explicit
-github.com/agl/ed25519
-github.com/agl/ed25519/edwards25519
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
 # github.com/bitly/go-hostpool v0.1.0
@@ -94,34 +92,16 @@ github.com/davecgh/go-spew/spew
 github.com/dgrijalva/jwt-go
 # github.com/docker/cli v20.10.0-beta1.0.20201029214301-1d20b15adc38+incompatible
 ## explicit
-github.com/docker/cli/cli/command
 github.com/docker/cli/cli/command/image/build
 github.com/docker/cli/cli/config
 github.com/docker/cli/cli/config/configfile
 github.com/docker/cli/cli/config/credentials
 github.com/docker/cli/cli/config/types
-github.com/docker/cli/cli/connhelper
-github.com/docker/cli/cli/connhelper/commandconn
-github.com/docker/cli/cli/connhelper/ssh
-github.com/docker/cli/cli/context
-github.com/docker/cli/cli/context/docker
-github.com/docker/cli/cli/context/store
-github.com/docker/cli/cli/debug
-github.com/docker/cli/cli/flags
-github.com/docker/cli/cli/manifest/store
-github.com/docker/cli/cli/manifest/types
-github.com/docker/cli/cli/registry/client
 github.com/docker/cli/cli/streams
-github.com/docker/cli/cli/trust
-github.com/docker/cli/cli/version
-github.com/docker/cli/opts
 # github.com/docker/distribution v2.7.1+incompatible
 ## explicit
 github.com/docker/distribution
 github.com/docker/distribution/digestset
-github.com/docker/distribution/manifest
-github.com/docker/distribution/manifest/manifestlist
-github.com/docker/distribution/manifest/schema2
 github.com/docker/distribution/metrics
 github.com/docker/distribution/reference
 github.com/docker/distribution/registry/api/errcode
@@ -132,7 +112,6 @@ github.com/docker/distribution/registry/client/auth/challenge
 github.com/docker/distribution/registry/client/transport
 github.com/docker/distribution/registry/storage/cache
 github.com/docker/distribution/registry/storage/cache/memory
-github.com/docker/distribution/uuid
 # github.com/docker/docker v20.10.5+incompatible
 ## explicit
 github.com/docker/docker/api
@@ -176,7 +155,6 @@ github.com/docker/docker-credential-helpers/client
 github.com/docker/docker-credential-helpers/credentials
 # github.com/docker/go v1.5.1-1
 ## explicit
-github.com/docker/go/canonical/json
 # github.com/docker/go-connections v0.4.0
 ## explicit
 github.com/docker/go-connections/nat
@@ -207,7 +185,6 @@ github.com/evanphx/json-patch
 github.com/evanphx/json-patch/v5
 # github.com/fvbommel/sortorder v1.0.2
 ## explicit
-github.com/fvbommel/sortorder
 # github.com/ghodss/yaml v1.0.0
 ## explicit
 github.com/ghodss/yaml
@@ -307,7 +284,6 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 github.com/mgutz/ansi
 # github.com/miekg/pkcs11 v1.0.3
 ## explicit
-github.com/miekg/pkcs11
 # github.com/mitchellh/go-homedir v1.1.0
 ## explicit
 github.com/mitchellh/go-homedir
@@ -324,7 +300,7 @@ github.com/moby/sys/mountinfo
 # github.com/moby/sys/symlink v0.1.0
 ## explicit
 github.com/moby/sys/symlink
-# github.com/moby/term v0.0.0-20201216013528-df9cb8a40635
+# github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 => github.com/moby/term v0.0.0-20200429084858-129dac9f73f6
 ## explicit
 github.com/moby/term
 github.com/moby/term/windows
@@ -403,20 +379,6 @@ github.com/syncthing/notify
 github.com/tcnksm/go-gitconfig
 # github.com/theupdateframework/notary v0.6.1
 ## explicit
-github.com/theupdateframework/notary
-github.com/theupdateframework/notary/client
-github.com/theupdateframework/notary/client/changelist
-github.com/theupdateframework/notary/cryptoservice
-github.com/theupdateframework/notary/passphrase
-github.com/theupdateframework/notary/storage
-github.com/theupdateframework/notary/trustmanager
-github.com/theupdateframework/notary/trustmanager/yubikey
-github.com/theupdateframework/notary/trustpinning
-github.com/theupdateframework/notary/tuf
-github.com/theupdateframework/notary/tuf/data
-github.com/theupdateframework/notary/tuf/signed
-github.com/theupdateframework/notary/tuf/utils
-github.com/theupdateframework/notary/tuf/validation
 # github.com/toqueteos/trie v1.0.0
 ## explicit
 github.com/toqueteos/trie
@@ -448,7 +410,6 @@ golang.org/x/crypto/openpgp/elgamal
 golang.org/x/crypto/openpgp/errors
 golang.org/x/crypto/openpgp/packet
 golang.org/x/crypto/openpgp/s2k
-golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/poly1305
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/agent
@@ -899,3 +860,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 sigs.k8s.io/yaml
 # github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.0+incompatible
 # github.com/agl/ed25519 => github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412
+# github.com/moby/term => github.com/moby/term v0.0.0-20200429084858-129dac9f73f6

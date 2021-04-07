@@ -805,6 +805,8 @@ github.com/moby/sys/symlink v0.1.0 h1:MTFZ74KtNI6qQQpuBxU+uKCim4WtOMokr03hCfJcaz
 github.com/moby/sys/symlink v0.1.0/go.mod h1:GGDODQmbFOjFsXvfLVn3+ZRxkch54RkSiGqsZeMYowQ=
 github.com/moby/term v0.0.0-20200312100748-672ec06f55cd h1:aY7OQNf2XqY/JQ6qREWamhI/81os/agb2BAGpcx5yWI=
 github.com/moby/term v0.0.0-20200312100748-672ec06f55cd/go.mod h1:DdlQx2hp0Ss5/fLikoLlEeIYiATotOjgB//nb973jeo=
+github.com/moby/term v0.0.0-20200429084858-129dac9f73f6 h1:3Y9aosU6S5Bo8GYH0s+t1ej4m30GuUKvQ3c9ZLqdL28=
+github.com/moby/term v0.0.0-20200429084858-129dac9f73f6/go.mod h1:or9wGItza1sRcM4Wd3dIv8DsFHYQuFsMHEdxUIlUxms=
 github.com/moby/term v0.0.0-20200915141129-7f0af18e79f2/go.mod h1:TjQg8pa4iejrUrjiz0MCtMV38jdMNW4doKSiBrEvCQQ=
 github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 h1:rzf0wL0CHVc8CEsgyygG0Mn9CNCCPZqOPaz8RiiHYQk=
 github.com/moby/term v0.0.0-20201216013528-df9cb8a40635/go.mod h1:FBS0z0QWA44HXygs7VXDUOGoN/1TV3RuWkLO04am3wc=
