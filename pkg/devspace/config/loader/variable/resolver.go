@@ -1,6 +1,7 @@
 package variable
 
 import (
+	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -71,13 +72,11 @@ func (r *resolver) FindVariables(haystack map[interface{}]interface{}, vars []*l
 		return nil, err
 	}
 
-	// find out what vars are used within other vars default values
+	// find out what vars are used within other vars definition
 	for _, v := range vars {
-		if strDefault, ok := v.Default.(string); ok {
-			_, _ = varspkg.ParseString(strDefault, func(v string) (interface{}, error) {
-				varsUsed[v] = true
-				return "", nil
-			})
+		varsUsedInDefinition := r.findVariablesInDefinition(v)
+		for usedVar := range varsUsedInDefinition {
+			varsUsed[usedVar] = true
 		}
 	}
 
@@ -110,15 +109,10 @@ func (r *resolver) Resolve(name string, definition *latest.Variable) (interface{
 		return v, nil
 	}
 
-	// if the definition has a default value, we try to resolve possible variables
-	// in that definition from the cache (or predefined) before continuing
-	if definition != nil && definition.Default != nil {
-		resolvedDefaultValue, err := r.resolveDefaultValue(definition)
-		if err != nil {
-			return nil, err
-		}
-
-		definition.Default = resolvedDefaultValue
+	// fill other variables in the variable definition
+	err := r.fillVariableDefinition(definition)
+	if err != nil {
+		return nil, err
 	}
 
 	// fill the variable if not found
@@ -132,20 +126,119 @@ func (r *resolver) Resolve(name string, definition *latest.Variable) (interface{
 	return value, nil
 }
 
-func (r *resolver) resolveDefaultValue(definition *latest.Variable) (interface{}, error) {
-	// check if default value is a string
-	defaultString, ok := definition.Default.(string)
-	if !ok {
-		return definition.Default, nil
+func (r *resolver) findVariablesInDefinition(definition *latest.Variable) map[string]bool {
+	varsUsed := map[string]bool{}
+	if definition == nil {
+		return varsUsed
 	}
 
-	return varspkg.ParseString(defaultString, func(varName string) (interface{}, error) {
+	// check default value
+	if strDefault, ok := definition.Default.(string); ok {
+		_, _ = varspkg.ParseString(strDefault, func(v string) (interface{}, error) {
+			varsUsed[v] = true
+			return "", nil
+		})
+	}
+
+	// check command
+	_, _ = varspkg.ParseString(definition.Command, func(v string) (interface{}, error) {
+		varsUsed[v] = true
+		return "", nil
+	})
+
+	// check args
+	for _, arg := range definition.Args {
+		_, _ = varspkg.ParseString(arg, func(v string) (interface{}, error) {
+			varsUsed[v] = true
+			return "", nil
+		})
+	}
+
+	// check commands
+	for _, osDef := range definition.Commands {
+		// check command
+		_, _ = varspkg.ParseString(osDef.Command, func(v string) (interface{}, error) {
+			varsUsed[v] = true
+			return "", nil
+		})
+
+		// check args
+		for _, arg := range osDef.Args {
+			_, _ = varspkg.ParseString(arg, func(v string) (interface{}, error) {
+				varsUsed[v] = true
+				return "", nil
+			})
+		}
+	}
+
+	return varsUsed
+}
+
+func (r *resolver) fillVariableDefinition(definition *latest.Variable) error {
+	var err error
+	if definition == nil {
+		return nil
+	}
+
+	// if the definition has a default value, we try to resolve possible variables
+	// in that definition from the cache (or predefined) before continuing
+	if definition.Default != nil {
+		resolvedDefaultValue, err := r.resolveDefaultValue(definition)
+		if err != nil {
+			return err
+		}
+
+		definition.Default = resolvedDefaultValue
+	}
+
+	// resolve command
+	definition.Command, err = r.resolveDefinitionStringToString(definition.Command, definition)
+	if err != nil {
+		return err
+	}
+
+	// resolve args
+	for i := range definition.Args {
+		definition.Args[i], err = r.resolveDefinitionStringToString(definition.Args[i], definition)
+		if err != nil {
+			return err
+		}
+	}
+
+	// resolve commands
+	for ci := range definition.Commands {
+		definition.Commands[ci].Command, err = r.resolveDefinitionStringToString(definition.Commands[ci].Command, definition)
+		if err != nil {
+			return err
+		}
+		for i := range definition.Commands[ci].Args {
+			definition.Commands[ci].Args[i], err = r.resolveDefinitionStringToString(definition.Commands[ci].Args[i], definition)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *resolver) resolveDefinitionStringToString(str string, definition *latest.Variable) (string, error) {
+	val, err := r.resolveDefinitionString(str, definition)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%v", val), nil
+}
+
+func (r *resolver) resolveDefinitionString(str string, definition *latest.Variable) (interface{}, error) {
+	return varspkg.ParseString(str, func(varName string) (interface{}, error) {
 		v, ok := r.memoryCache[varName]
 		if !ok {
 			// check if its a predefined variable
 			variable, err := NewPredefinedVariable(varName, r.persistentCache, r.options)
 			if err != nil {
-				return nil, errors.Errorf("variable %s was not resolved yet, however is used in the default value of variable %s. Please make sure you define %s before %s", varName, definition.Name, varName, definition.Name)
+				return nil, errors.Errorf("variable '%s' was not resolved yet, however is used in the definition of variable '%s' as '%s'. Please make sure you define '%s' before '%s' in the vars array", varName, definition.Name, str, varName, definition.Name)
 			}
 
 			return variable.Load(definition)
@@ -153,6 +246,16 @@ func (r *resolver) resolveDefaultValue(definition *latest.Variable) (interface{}
 
 		return v, nil
 	})
+}
+
+func (r *resolver) resolveDefaultValue(definition *latest.Variable) (interface{}, error) {
+	// check if default value is a string
+	defaultString, ok := definition.Default.(string)
+	if !ok {
+		return definition.Default, nil
+	}
+
+	return r.resolveDefinitionString(defaultString, definition)
 }
 
 func (r *resolver) fillVariable(name string, definition *latest.Variable) (interface{}, error) {

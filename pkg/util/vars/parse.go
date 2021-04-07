@@ -13,6 +13,10 @@ type ReplaceVarFn func(value string) (interface{}, error)
 
 // ParseString parses a given string, calls replace var on found variables and returns the replaced string
 func ParseString(value string, replace ReplaceVarFn) (interface{}, error) {
+	if value == "" {
+		return value, nil
+	}
+
 	matches := VarMatchRegex.FindAllStringIndex(value, -1)
 
 	// No vars found
