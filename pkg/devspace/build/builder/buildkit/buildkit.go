@@ -1,24 +1,29 @@
 package buildkit
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	cliconfig "github.com/docker/cli/cli/config"
+	"github.com/docker/docker/api/types"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/docker"
-	"github.com/pkg/errors"
-	"io"
-	"io/ioutil"
-	"k8s.io/client-go/tools/clientcmd"
-	"os"
-	"os/exec"
-	"strings"
-
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	dockerpkg "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
-
-	"github.com/docker/docker/api/types"
+	"github.com/pkg/errors"
+	"io"
+	"io/ioutil"
+	"k8s.io/client-go/tools/clientcmd"
+	"math/rand"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 )
 
 // EngineName is the name of the building engine
@@ -71,16 +76,16 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 	}
 
-	// create the context stream
-	body, writer, _, buildOptions, err := docker.CreateContextStream(b.helper, contextPath, dockerfilePath, entrypoint, cmd, options, log)
+	buildKitConfig := b.helper.ImageConf.Build.BuildKit
+
+	// create the builder
+	builder, err := ensureBuilder(b.helper.KubeClient, buildKitConfig, log)
 	if err != nil {
 		return err
 	}
 
-	buildKitConfig := b.helper.ImageConf.Build.BuildKit
-
-	// create the builder
-	builder, err := createBuilder(b.helper.KubeClient, buildKitConfig, log)
+	// create the context stream
+	body, writer, _, buildOptions, err := docker.CreateContextStream(b.helper, contextPath, dockerfilePath, entrypoint, cmd, options, log)
 	if err != nil {
 		return err
 	}
@@ -132,6 +137,10 @@ func buildWithCLI(context io.Reader, writer io.Writer, kubeClient kubectl.Client
 		if len(options.Tags) > 0 {
 			args = append(args, "--push")
 		}
+	} else if builder != "" {
+		if imageConf.InCluster == nil || imageConf.InCluster.NoLoad == false {
+			args = append(args, "--load")
+		}
 	}
 	if options.Dockerfile != "" {
 		args = append(args, "--file", options.Dockerfile)
@@ -139,36 +148,25 @@ func buildWithCLI(context io.Reader, writer io.Writer, kubeClient kubectl.Client
 	if options.Target != "" {
 		args = append(args, "--target", options.Target)
 	}
+	if builder != "" {
+		tempFile, err := tempKubeContextFromClient(kubeClient)
+		if err != nil {
+			return err
+		}
+		defer os.Remove(tempFile)
+
+		environ = append(environ, "KUBECONFIG="+tempFile)
+		args = append(args, "--builder", builder)
+
+		// TODO: find a better solution than this
+		// we wait here a little bit, otherwise it might be possible that we get issues during
+		// parallel image building, as it seems that docker buildx has problems if the
+		// same builder is used at the same time for multiple builds and the BuildKit deployment
+		// is created in parallel.
+		time.Sleep(time.Millisecond * time.Duration(rand.Intn(3000)+500))
+	}
 	for _, arg := range imageConf.Args {
 		args = append(args, arg)
-	}
-	if builder != "" {
-		rawConfig, err := kubeClient.ClientConfig().RawConfig()
-		if err != nil {
-			return errors.Wrap(err, "get raw kube config")
-		}
-		if !kubeClient.IsInCluster() {
-			rawConfig.CurrentContext = kubeClient.CurrentContext()
-		}
-
-		bytes, err := clientcmd.Write(rawConfig)
-		if err != nil {
-			return err
-		}
-
-		tempFile, err := ioutil.TempFile("", "")
-		if err != nil {
-			return err
-		}
-		defer os.Remove(tempFile.Name())
-
-		_, err = tempFile.Write(bytes)
-		if err != nil {
-			return errors.Wrap(err, "error writing to file")
-		}
-
-		environ = append(environ, "KUBECONFIG="+tempFile.Name())
-		args = append(args, "--builder", builder)
 	}
 
 	args = append(args, "-")
@@ -197,7 +195,23 @@ func buildWithCLI(context io.Reader, writer io.Writer, kubeClient kubectl.Client
 	return cmd.Run()
 }
 
-func createBuilder(kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, log logpkg.Logger) (string, error) {
+type NodeGroup struct {
+	Name    string
+	Driver  string
+	Nodes   []Node
+	Dynamic bool
+}
+
+type Node struct {
+	Name       string
+	Endpoint   string
+	Platforms  []interface{}
+	Flags      []string
+	ConfigFile string
+	DriverOpts map[string]string
+}
+
+func ensureBuilder(kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, log logpkg.Logger) (string, error) {
 	if imageConf.InCluster == nil {
 		return "", nil
 	} else if kubeClient == nil {
@@ -205,12 +219,12 @@ func createBuilder(kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, 
 	}
 
 	namespace := kubeClient.Namespace()
-	if imageConf.InCluster != nil && imageConf.InCluster.Namespace != "" {
+	if imageConf.InCluster.Namespace != "" {
 		namespace = imageConf.InCluster.Namespace
 	}
 
 	name := "devspace-" + namespace
-	if imageConf.InCluster != nil && imageConf.InCluster.Name != "" {
+	if imageConf.InCluster.Name != "" {
 		name = imageConf.InCluster.Name
 	}
 
@@ -228,24 +242,142 @@ func createBuilder(kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, 
 	if imageConf.InCluster.Rootless {
 		args = append(args, "--driver-opt", "rootless=true")
 	}
-	if len(imageConf.InCluster.Args) > 0 {
-		args = append(args, imageConf.InCluster.Args...)
+	if imageConf.InCluster.Image != "" {
+		args = append(args, "--driver-opt", "image="+imageConf.InCluster.Image)
+	}
+	if imageConf.InCluster.NodeSelector != "" {
+		args = append(args, "--driver-opt", "nodeselector="+imageConf.InCluster.NodeSelector)
+	}
+	if len(imageConf.InCluster.CreateArgs) > 0 {
+		args = append(args, imageConf.InCluster.CreateArgs...)
 	}
 
-	log.Infof("Ensure BuildKit builder with: %s %s", strings.Join(command, " "), strings.Join(args, " "))
 	completeArgs := []string{}
 	completeArgs = append(completeArgs, command[1:]...)
 	completeArgs = append(completeArgs, args...)
 
-	// create the builder
-	out, err := exec.Command(command[0], completeArgs...).CombinedOutput()
-	if err != nil {
-		if strings.Contains(string(out), "existing instance") {
+	// check if builder already exists
+	builderPath := filepath.Join(getConfigStorePath(), "instances", name)
+	_, err := os.Stat(builderPath)
+	if err == nil {
+		if imageConf.InCluster.NoRecreate {
 			return name, nil
 		}
 
-		return "", fmt.Errorf("error creating BuildKit builder: %s => %v", string(out), err)
+		// update the builder if necessary
+		b, err := ioutil.ReadFile(builderPath)
+		if err != nil {
+			log.Warnf("Error reading builder %s: %v", builderPath, err)
+			return name, nil
+		}
+
+		// parse builder config
+		ng := &NodeGroup{}
+		err = json.Unmarshal(b, ng)
+		if err != nil {
+			log.Warnf("Error decoding builder %s: %v", builderPath, err)
+			return name, nil
+		}
+
+		// check for: correct driver name, driver opts
+		if strings.ToLower(ng.Driver) == "kubernetes" && len(ng.Nodes) == 1 {
+			node := ng.Nodes[0]
+
+			// check driver options
+			namespaceCorrect := node.DriverOpts["namespace"] == namespace
+			if node.DriverOpts["rootless"] == "" {
+				node.DriverOpts["rootless"] = "false"
+			}
+			rootlessCorrect := strconv.FormatBool(imageConf.InCluster.Rootless) == node.DriverOpts["rootless"]
+			imageCorrect := imageConf.InCluster.Image == node.DriverOpts["image"]
+			nodeSelectorCorrect := imageConf.InCluster.NodeSelector == node.DriverOpts["nodeselector"]
+
+			// if builder up to date, exit here
+			if namespaceCorrect && rootlessCorrect && imageCorrect && nodeSelectorCorrect {
+				return name, nil
+			}
+		}
+
+		// recreate the builder
+		log.Infof("Recreate BuildKit builder because builder options differ")
+
+		// create a temporary kube context
+		tempFile, err := tempKubeContextFromClient(kubeClient)
+		if err != nil {
+			return "", err
+		}
+		defer os.Remove(tempFile)
+
+		// prepare the command
+		rmArgs := []string{}
+		rmArgs = append(rmArgs, command[1:]...)
+		rmArgs = append(rmArgs, "rm", name)
+
+		// execute the command
+		cmd := exec.Command(command[0], rmArgs...)
+		cmd.Env = append(os.Environ(), "KUBECONFIG="+tempFile)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Warnf("error deleting BuildKit builder: %s => %v", string(out), err)
+		}
+	}
+
+	// create the builder
+	log.Infof("Create BuildKit builder with: %s %s", strings.Join(command, " "), strings.Join(args, " "))
+
+	cmd := exec.Command(command[0], completeArgs...)
+	// This is necessary because docker would otherwise save the used kube config
+	// which we don't want because we will override it with our own temp kube config
+	// during building.
+	cmd.Env = append(os.Environ(), "KUBECONFIG=")
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		if strings.Contains(string(out), "existing instance") == false {
+			return "", fmt.Errorf("error creating BuildKit builder: %s => %v", string(out), err)
+		}
 	}
 
 	return name, nil
+}
+
+// getConfigStorePath will look for correct configuration store path;
+// if `$BUILDX_CONFIG` is set - use it, otherwise use parent directory
+// of Docker config file (i.e. `${DOCKER_CONFIG}/buildx`)
+func getConfigStorePath() string {
+	if buildxConfig := os.Getenv("BUILDX_CONFIG"); buildxConfig != "" {
+		return buildxConfig
+	}
+
+	stderr := &bytes.Buffer{}
+	configFile := cliconfig.LoadDefaultConfigFile(stderr)
+	buildxConfig := filepath.Join(filepath.Dir(configFile.Filename), "buildx")
+	return buildxConfig
+}
+
+func tempKubeContextFromClient(kubeClient kubectl.Client) (string, error) {
+	rawConfig, err := kubeClient.ClientConfig().RawConfig()
+	if err != nil {
+		return "", errors.Wrap(err, "get raw kube config")
+	}
+	if !kubeClient.IsInCluster() {
+		rawConfig.CurrentContext = kubeClient.CurrentContext()
+	}
+
+	bytes, err := clientcmd.Write(rawConfig)
+	if err != nil {
+		return "", err
+	}
+
+	tempFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return "", err
+	}
+
+	_, err = tempFile.Write(bytes)
+	if err != nil {
+		return "", errors.Wrap(err, "error writing to file")
+	}
+
+	return tempFile.Name(), nil
 }

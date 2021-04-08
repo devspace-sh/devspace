@@ -472,11 +472,9 @@ func testGetProfiles(testCase getProfilesTestCase, t *testing.T) {
 	loader := &configLoader{
 		configPath: testCase.configPath,
 	}
-	c, err := loader.Load(nil, log.Discard)
+	c, err := loader.LoadWithParser(NewProfilesParser(), nil, log.Discard)
 	assert.NilError(t, err, "Error loading config in testCase %s", testCase.name)
-	profileObjects, err := c.Profiles()
-	assert.NilError(t, err, "Error loading profiles in testCase %s", testCase.name)
-
+	profileObjects := c.Config().Profiles
 	profiles := []string{}
 	for _, p := range profileObjects {
 		profiles = append(profiles, p.Name)

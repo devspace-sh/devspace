@@ -6,11 +6,12 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 	"strings"
 )
 
 type Parser interface {
-	Parse(rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error)
+	Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error)
 }
 
 func NewDefaultParser() Parser {
@@ -19,7 +20,7 @@ func NewDefaultParser() Parser {
 
 type defaultParser struct{}
 
-func (d *defaultParser) Parse(rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
+func (d *defaultParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
 	// delete the commands, since we don't need it in a normal scenario
 	delete(rawConfig, "commands")
 
@@ -32,7 +33,7 @@ func NewWithCommandsParser() Parser {
 
 type withCommandsParser struct{}
 
-func (d *withCommandsParser) Parse(rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
+func (d *withCommandsParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
 	return fillVariablesAndParse(rawConfig, vars, resolver, options, log)
 }
 
@@ -40,10 +41,9 @@ func NewCommandsParser() Parser {
 	return &commandsParser{}
 }
 
-type commandsParser struct {
-}
+type commandsParser struct{}
 
-func (c *commandsParser) Parse(rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
+func (c *commandsParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
 	// modify the config
 	preparedConfig, err := versions.ParseCommands(rawConfig)
 	if err != nil {
@@ -51,6 +51,48 @@ func (c *commandsParser) Parse(rawConfig map[interface{}]interface{}, vars []*la
 	}
 
 	return fillVariablesAndParse(preparedConfig, vars, resolver, options, log)
+}
+
+func NewProfilesParser() Parser {
+	return &profilesParser{}
+}
+
+type profilesParser struct{}
+
+func (p *profilesParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
+	rawMap, err := copyRaw(originalRawConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	profiles, ok := rawMap["profiles"].([]interface{})
+	if !ok {
+		profiles = []interface{}{}
+	}
+
+	retProfiles := []*latest.ProfileConfig{}
+	for _, profile := range profiles {
+		profileMap, ok := profile.(map[interface{}]interface{})
+		if !ok {
+			continue
+		}
+
+		profileConfig := &latest.ProfileConfig{}
+		o, err := yaml.Marshal(profileMap)
+		if err != nil {
+			continue
+		}
+		err = yaml.Unmarshal(o, profileConfig)
+		if err != nil {
+			continue
+		}
+
+		retProfiles = append(retProfiles, profileConfig)
+	}
+
+	retConfig := latest.NewRaw()
+	retConfig.Profiles = retProfiles
+	return retConfig, nil
 }
 
 func fillVariablesAndParse(preparedConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {

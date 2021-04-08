@@ -199,15 +199,30 @@ type BuildKitInClusterConfig struct {
 	// active namespace.
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 
+	// If enabled will create a rootless builder deployment.
+	Rootless bool `yaml:"rootless,omitempty" json:"rootless,omitempty"`
+
+	// The docker image to use for the BuildKit deployment
+	Image string `yaml:"image,omitempty" json:"image,omitempty"`
+
+	// The node selector to use for the BuildKit deployment
+	NodeSelector string `yaml:"nodeSelector,omitempty" json:"nodeSelector,omitempty"`
+
 	// By default, DevSpace will try to create a new builder if it cannot be found.
 	// If this is true, DevSpace will fail if the specified builder cannot be found.
 	NoCreate bool `yaml:"noCreate,omitempty" json:"noCreate,omitempty"`
 
-	// If enabled will create a rootless builder deployment.
-	Rootless bool `yaml:"rootless,omitempty" json:"rootless,omitempty"`
+	// By default, DevSpace will try to recreate the builder if the builder configuration
+	// in the devspace.yaml differs from the actual builder configuration. If this is
+	// true, DevSpace will not try to do that.
+	NoRecreate bool `yaml:"noRecreate,omitempty" json:"noRecreate,omitempty"`
+
+	// If enabled, DevSpace will not try to load the built image into the local docker
+	// daemon if skip push is defined
+	NoLoad bool `yaml:"noLoad,omitempty" json:"noLoad,omitempty"`
 
 	// Additional args to create the builder with.
-	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
+	CreateArgs []string `yaml:"createArgs,omitempty" json:"createArgs,omitempty"`
 }
 
 // KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost

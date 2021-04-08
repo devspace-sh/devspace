@@ -44,6 +44,7 @@ module.exports = {
               label: 'build',
               items: [
                 'configuration/images/docker',
+                'configuration/images/buildkit',
                 'configuration/images/kaniko',
                 'configuration/images/custom',
                 'configuration/images/disabled',
