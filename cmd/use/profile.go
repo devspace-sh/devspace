@@ -39,7 +39,6 @@ devspace use profile --reset
 	}
 
 	useProfile.Flags().BoolVar(&cmd.Reset, "reset", false, "Don't use a profile anymore")
-
 	return useProfile
 }
 
