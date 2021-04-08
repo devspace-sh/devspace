@@ -2,6 +2,7 @@ package update
 
 import (
 	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -59,7 +60,7 @@ func (cmd *configCmd) RunConfig(f factory.Factory, cobraCmd *cobra.Command, args
 	}
 
 	// Get profiles
-	profiles, err := config.Profiles()
+	profiles, err := configLoader.LoadWithParser(loader.NewProfilesParser(), nil, log)
 	if err != nil {
 		return err
 	}
@@ -71,7 +72,7 @@ func (cmd *configCmd) RunConfig(f factory.Factory, cobraCmd *cobra.Command, args
 	}
 
 	// Check if there are any profile patches
-	if len(profiles) > 0 {
+	if len(profiles.Config().Profiles) > 0 {
 		log.Warnf("'devspace update config' does NOT update profiles[*].replace or profiles[*].patches. Please manually update any profiles[*].replace and profiles[*].patches")
 	}
 

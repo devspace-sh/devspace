@@ -1,6 +1,7 @@
 package use
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
@@ -55,16 +56,12 @@ func (cmd *ProfileCmd) RunUseProfile(f factory.Factory, cobraCmd *cobra.Command,
 		return errors.New(message.ConfigNotFound)
 	}
 
-	config, err := configLoader.Load(nil, logpkg.Discard)
+	config, err := configLoader.LoadWithParser(loader.NewProfilesParser(), nil, logpkg.Discard)
 	if err != nil {
 		return err
 	}
 
-	profileObjects, err := config.Profiles()
-	if err != nil {
-		return err
-	}
-
+	profileObjects := config.Config().Profiles
 	profiles := []string{}
 	for _, p := range profileObjects {
 		profiles = append(profiles, p.Name)

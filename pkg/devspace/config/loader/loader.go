@@ -134,7 +134,7 @@ func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, parser
 	resolver := l.newVariableResolver(generatedConfig, options, log)
 
 	// copy raw config
-	copiedRawConfig, err := config.CopyRaw(rawConfig)
+	copiedRawConfig, err := copyRaw(rawConfig)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -155,7 +155,7 @@ func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, parser
 	delete(copiedRawConfig, "vars")
 
 	// parse the config
-	latestConfig, err := parser.Parse(copiedRawConfig, vars, resolver, options, log)
+	latestConfig, err := parser.Parse(rawConfig, copiedRawConfig, vars, resolver, options, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -340,8 +340,17 @@ func ConfigPath(configPath string) string {
 	return path
 }
 
-func removeCommands(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
-	delete(data, "commands")
+func copyRaw(in map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+	o, err := yaml.Marshal(in)
+	if err != nil {
+		return nil, err
+	}
 
-	return data, nil
+	n := map[interface{}]interface{}{}
+	err = yaml.Unmarshal(o, &n)
+	if err != nil {
+		return nil, err
+	}
+
+	return n, nil
 }
