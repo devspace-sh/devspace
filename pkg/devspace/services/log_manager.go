@@ -10,7 +10,9 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
+	appsv1 "k8s.io/api/apps/v1"
 	k8sv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"strings"
 	"sync"
@@ -197,25 +199,48 @@ func (l *logManager) gatherPods() ([]podInfo, error) {
 		}
 
 		for _, podContainer := range selectedPodsContainers {
-			prefix := podContainer.Pod.Name
-			if componentLabel, ok := podContainer.Pod.Labels[k8sComponentLabel]; ok {
-				prefix = componentLabel
-			}
-			if len(podContainer.Pod.Spec.Containers) > 1 {
-				prefix += ":" + podContainer.Container.Name
-			}
-			if podContainer.Pod.Namespace != l.client.Namespace() {
-				prefix = podContainer.Pod.Namespace + ":" + prefix
-			}
-
 			returnList = append(returnList, podInfo{
 				key:  key(podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name),
-				name: prefix,
+				name: getDisplayName(l.client, podContainer),
 			})
 		}
 	}
 
 	return returnList, nil
+}
+
+func getDisplayName(client kubectl.Client, podContainer *kubectl.SelectedPodContainer) string {
+	controller := metav1.GetControllerOf(podContainer.Pod)
+
+	// pod name by default, or deployment or statefulset name if found
+	name := podContainer.Pod.Name
+	if componentLabel, ok := podContainer.Pod.Labels[k8sComponentLabel]; ok {
+		name = componentLabel
+	} else if controller != nil && controller.Kind == "ReplicaSet" && controller.APIVersion == appsv1.SchemeGroupVersion.String() {
+		name = controller.Name
+
+		rs, err := client.KubeClient().AppsV1().ReplicaSets(podContainer.Pod.Namespace).Get(context.TODO(), controller.Name, metav1.GetOptions{})
+		if err == nil {
+			controller = metav1.GetControllerOf(rs)
+			if controller != nil && controller.Kind == "Deployment" && controller.APIVersion == appsv1.SchemeGroupVersion.String() {
+				name = controller.Name
+			}
+		}
+	} else if controller != nil && controller.Kind == "StatefulSet" && controller.APIVersion == appsv1.SchemeGroupVersion.String() {
+		name = controller.Name
+	}
+
+	// if the pod has multiple containers, we mark the container
+	if len(podContainer.Pod.Spec.Containers) > 1 {
+		name += ":" + podContainer.Container.Name
+	}
+
+	// if the pod is in another namespace we add the namespace
+	if podContainer.Pod.Namespace != client.Namespace() {
+		name = podContainer.Pod.Namespace + ":" + name
+	}
+
+	return name
 }
 
 func key(namespace string, pod string, container string) string {
