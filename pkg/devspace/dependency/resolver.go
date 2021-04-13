@@ -240,7 +240,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	dConfig := dConfigWrapper.Config()
 
 	// Override complete dev config
-	dConfig.Dev = &latest.DevConfig{}
+	dConfig.Dev = latest.DevConfig{}
 
 	// Check if we should skip building
 	if dependency.SkipBuild != nil && *dependency.SkipBuild == true {

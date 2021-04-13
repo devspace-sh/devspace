@@ -226,49 +226,47 @@ func validateImages(config *latest.Config) error {
 }
 
 func validateDev(config *latest.Config) error {
-	if config.Dev != nil {
-		if config.Dev.Ports != nil {
-			for index, port := range config.Dev.Ports {
-				// Validate imageName and label selector
-				if port.ImageName == "" && len(port.LabelSelector) == 0 {
-					return errors.Errorf("Error in config: imageName and label selector are nil in ports config at index %d", index)
-				} else if port.ImageName != "" && findImageName(config, port.ImageName) == false {
-					return errors.Errorf("Error in config: dev.ports[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, port.ImageName)
-				}
+	if config.Dev.Ports != nil {
+		for index, port := range config.Dev.Ports {
+			// Validate imageName and label selector
+			if port.ImageName == "" && len(port.LabelSelector) == 0 {
+				return errors.Errorf("Error in config: imageName and label selector are nil in ports config at index %d", index)
+			} else if port.ImageName != "" && findImageName(config, port.ImageName) == false {
+				return errors.Errorf("Error in config: dev.ports[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, port.ImageName)
+			}
 
-				if len(port.PortMappings) == 0 && len(port.PortMappingsReverse) == 0 {
-					return errors.Errorf("Error in config: portMappings is empty in port config at index %d", index)
-				}
-				if ValidContainerArch(port.Arch) == false {
-					return errors.Errorf("Error in config: ports.arch is not valid '%s' at index %d", port.Arch, index)
-				}
+			if len(port.PortMappings) == 0 && len(port.PortMappingsReverse) == 0 {
+				return errors.Errorf("Error in config: portMappings is empty in port config at index %d", index)
+			}
+			if ValidContainerArch(port.Arch) == false {
+				return errors.Errorf("Error in config: ports.arch is not valid '%s' at index %d", port.Arch, index)
 			}
 		}
+	}
 
-		if config.Dev.Sync != nil {
-			for index, sync := range config.Dev.Sync {
-				// Validate imageName and label selector
-				if sync.ImageName == "" && len(sync.LabelSelector) == 0 {
-					return errors.Errorf("Error in config: imageName and label selector are nil in sync config at index %d", index)
-				} else if sync.ImageName != "" && findImageName(config, sync.ImageName) == false {
-					return errors.Errorf("Error in config: dev.sync[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, sync.ImageName)
-				}
+	if config.Dev.Sync != nil {
+		for index, sync := range config.Dev.Sync {
+			// Validate imageName and label selector
+			if sync.ImageName == "" && len(sync.LabelSelector) == 0 {
+				return errors.Errorf("Error in config: imageName and label selector are nil in sync config at index %d", index)
+			} else if sync.ImageName != "" && findImageName(config, sync.ImageName) == false {
+				return errors.Errorf("Error in config: dev.sync[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, sync.ImageName)
+			}
 
-				// Validate initial sync strategy
-				if ValidInitialSyncStrategy(sync.InitialSync) == false {
-					return errors.Errorf("Error in config: sync.initialSync is not valid '%s' at index %d", sync.InitialSync, index)
-				}
-				if ValidContainerArch(sync.Arch) == false {
-					return errors.Errorf("Error in config: sync.arch is not valid '%s' at index %d", sync.Arch, index)
-				}
+			// Validate initial sync strategy
+			if ValidInitialSyncStrategy(sync.InitialSync) == false {
+				return errors.Errorf("Error in config: sync.initialSync is not valid '%s' at index %d", sync.InitialSync, index)
+			}
+			if ValidContainerArch(sync.Arch) == false {
+				return errors.Errorf("Error in config: sync.arch is not valid '%s' at index %d", sync.Arch, index)
 			}
 		}
+	}
 
-		if config.Dev.Interactive != nil {
-			for index, imageConf := range config.Dev.Interactive.Images {
-				if imageConf.Name == "" {
-					return errors.Errorf("Error in config: Unnamed interactive image config at index %d", index)
-				}
+	if config.Dev.InteractiveImages != nil {
+		for index, imageConf := range config.Dev.InteractiveImages {
+			if imageConf.Name == "" {
+				return errors.Errorf("Error in config: Unnamed interactive image config at index %d", index)
 			}
 		}
 	}

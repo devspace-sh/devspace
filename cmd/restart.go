@@ -121,22 +121,20 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 
 	// restart containers
 	restarts := 0
-	if config.Dev != nil {
-		for _, syncPath := range config.Dev.Sync {
-			if syncPath.OnUpload == nil || !syncPath.OnUpload.RestartContainer {
-				continue
-			}
-
-			// create target selector options
-			options := targetselector.NewOptionsFromFlags("", "", cmd.Namespace, "", cmd.Pick).ApplyConfigParameter(syncPath.LabelSelector, syncPath.Namespace, syncPath.ContainerName, "")
-			options.ImageSelector = targetselector.ImageSelectorFromConfig(syncPath.ImageName, config, generatedConfig.GetActive())
-
-			err = restartContainer(client, options, cmd.log)
-			if err != nil {
-				return err
-			}
-			restarts++
+	for _, syncPath := range config.Dev.Sync {
+		if syncPath.OnUpload == nil || !syncPath.OnUpload.RestartContainer {
+			continue
 		}
+
+		// create target selector options
+		options := targetselector.NewOptionsFromFlags("", "", cmd.Namespace, "", cmd.Pick).ApplyConfigParameter(syncPath.LabelSelector, syncPath.Namespace, syncPath.ContainerName, "")
+		options.ImageSelector = targetselector.ImageSelectorFromConfig(syncPath.ImageName, config, generatedConfig.GetActive())
+
+		err = restartContainer(client, options, cmd.log)
+		if err != nil {
+			return err
+		}
+		restarts++
 	}
 
 	err = configLoader.SaveGenerated(generatedConfig)

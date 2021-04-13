@@ -16,10 +16,6 @@ import (
 
 // StartPortForwarding starts the port forwarding functionality
 func (serviceClient *client) StartReversePortForwarding(interrupt chan error) error {
-	if serviceClient.config.Dev == nil {
-		return nil
-	}
-
 	var cache *generated.CacheConfig
 	if serviceClient.generated != nil {
 		cache = serviceClient.generated.GetActive()

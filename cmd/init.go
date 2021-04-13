@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -425,9 +424,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 					RestartContainer: true,
 				}
 			} else {
-				config.Dev.Interactive = &latest.InteractiveConfig{
-					DefaultEnabled: ptr.Bool(true),
-				}
+				config.Dev.Terminal = &latest.Terminal{}
 			}
 
 			config.Dev.Sync = append(config.Dev.Sync, syncConfig)

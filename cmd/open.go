@@ -310,7 +310,7 @@ func (cmd *OpenCmd) openLocal(f factory.Factory, generatedConfig *generated.Conf
 
 	// start port-forwarding for localhost access
 	servicesClient := f.NewServicesClient(&latest.Config{
-		Dev: &latest.DevConfig{
+		Dev: latest.DevConfig{
 			Ports: portforwardingConfig,
 		},
 	}, generatedConfig, client, cmd.log)

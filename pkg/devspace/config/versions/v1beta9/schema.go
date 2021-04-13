@@ -1,11 +1,11 @@
-package latest
+package v1beta9
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 )
 
 // Version is the current api version
-const Version string = "v1beta10"
+const Version string = "v1beta9"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -21,6 +21,7 @@ func New() config.Config {
 func NewRaw() *Config {
 	return &Config{
 		Version: Version,
+		Dev:     &DevConfig{},
 		Images:  map[string]*ImageConfig{},
 	}
 }
@@ -37,7 +38,7 @@ type Config struct {
 	Deployments []*DeploymentConfig `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
 	// Dev holds development configuration for the 'devspace dev' command.
-	Dev DevConfig `yaml:"dev,omitempty" json:"dev,omitempty"`
+	Dev *DevConfig `yaml:"dev,omitempty" json:"dev,omitempty"`
 
 	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
 	Dependencies []*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
@@ -70,6 +71,11 @@ type ImageConfig struct {
 	// the build process. If this is empty, devspace will generate a random tag
 	Tags []string `yaml:"tags,omitempty" json:"tags,omitempty"`
 
+	// DEPRECATED: Use tags with ### instead
+	// If TagsAppendRandom is true, for all tags defined for this image a random suffix in
+	// the form of '-xxxxx' will be appended
+	TagsAppendRandom bool `yaml:"tagsAppendRandom,omitempty" json:"tagsAppendRandom,omitempty"`
+
 	// Specifies a path (relative or absolute) to the dockerfile
 	Dockerfile string `yaml:"dockerfile,omitempty" json:"dockerfile,omitempty"`
 
@@ -87,6 +93,12 @@ type ImageConfig struct {
 	// CreatePullSecret specifies if a pull secret should be created for this image in the
 	// target namespace. Defaults to true
 	CreatePullSecret *bool `yaml:"createPullSecret,omitempty" json:"createPullSecret,omitempty"`
+
+	// DEPRECATED: Use rebuildStrategy instead
+	// If this is true, devspace will not rebuild the image even though files have changed within
+	// the context if a syncpath for this image is defined. This can reduce the number of builds
+	// when running 'devspace dev'
+	PreferSyncOverRebuild bool `yaml:"preferSyncOverRebuild,omitempty" json:"preferSyncOverRebuild,omitempty"`
 
 	// If true injects a small restart script into the container and wraps the entrypoint of that
 	// container, so that devspace is able to restart the complete container during sync.
@@ -136,7 +148,7 @@ type BuildConfig struct {
 	// If buildKit is specified, DevSpace will build the image either in-cluster or locally with BuildKit
 	BuildKit *BuildKitConfig `yaml:"buildKit,omitempty" json:"buildKit,omitempty"`
 
-	// If custom is specified, DevSpace will build the image with the help of
+	// If custom is specified, devspace will build the image with the help of
 	// a custom script.
 	Custom *CustomConfig `yaml:"custom,omitempty" json:"custom,omitempty"`
 
@@ -634,17 +646,12 @@ type KubectlConfig struct {
 
 // DevConfig defines the devspace deployment
 type DevConfig struct {
-	Ports      []*PortForwardingConfig `yaml:"ports,omitempty" json:"ports,omitempty"`
-	Open       []*OpenConfig           `yaml:"open,omitempty" json:"open,omitempty"`
-	Sync       []*SyncConfig           `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
-	Logs       *LogsConfig             `yaml:"logs,omitempty" json:"logs,omitempty"`
-	AutoReload *AutoReloadConfig       `yaml:"autoReload,omitempty" json:"autoReload,omitempty"`
-	Terminal   *Terminal               `yaml:"terminal,omitempty" json:"terminal,omitempty"`
-
-	// DEPRECATED: If disabled is true, DevSpace will not use the terminal
-	InteractiveEnabled bool `yaml:"deprecatedInteractiveEnabled,omitempty" json:"deprecatedInteractiveEnabled,omitempty"`
-	// DEPRECATED: Only used for backwards compatibility with older config versions
-	InteractiveImages []*InteractiveImageConfig `yaml:"deprecatedInteractiveImages,omitempty" json:"deprecatedInteractiveImages,omitempty"`
+	Ports       []*PortForwardingConfig `yaml:"ports,omitempty" json:"ports,omitempty"`
+	Open        []*OpenConfig           `yaml:"open,omitempty" json:"open,omitempty"`
+	Sync        []*SyncConfig           `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
+	Logs        *LogsConfig             `yaml:"logs,omitempty" json:"logs,omitempty"`
+	AutoReload  *AutoReloadConfig       `yaml:"autoReload,omitempty" json:"autoReload,omitempty"`
+	Interactive *InteractiveConfig      `yaml:"interactive,omitempty" json:"interactive,omitempty"`
 }
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
@@ -803,6 +810,13 @@ type AutoReloadConfig struct {
 	Images      []string `yaml:"images,omitempty" json:"images,omitempty"`
 }
 
+// InteractiveConfig defines the default interactive config
+type InteractiveConfig struct {
+	DefaultEnabled *bool                     `yaml:"defaultEnabled,omitempty" json:"defaultEnabled,omitempty"`
+	Images         []*InteractiveImageConfig `yaml:"images,omitempty" json:"images,omitempty"`
+	Terminal       *TerminalConfig           `yaml:"terminal,omitempty" json:"terminal,omitempty"`
+}
+
 // InteractiveImageConfig describes the interactive mode options for an image
 type InteractiveImageConfig struct {
 	Name       string   `yaml:"name,omitempty" json:"name,omitempty"`
@@ -810,28 +824,14 @@ type InteractiveImageConfig struct {
 	Cmd        []string `yaml:"cmd,omitempty" json:"cmd,omitempty"`
 }
 
-// Terminal describes the terminal options
-type Terminal struct {
+// TerminalConfig describes the terminal options
+type TerminalConfig struct {
 	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 	Command       []string          `yaml:"command,omitempty" json:"command,omitempty"`
 	WorkDir       string            `yaml:"workDir,omitempty" json:"workDir,omitempty"`
-
-	// If disabled is true, DevSpace will not use the terminal
-	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
-
-	// If this is configured, DevSpace will patch the selected parent Deployment, StatefulSet, ReplicaSet or Pod
-	Patch *TerminalPatch `yaml:"patch,omitempty" json:"patch,omitempty"`
-}
-
-type TerminalPatch struct {
-	// If image is specified, DevSpace will replace the target image
-	Image string `yaml:"image,omitempty" json:"image,omitempty"`
-
-	// Regular JSON patches that will be applied to the target Deployment, StatefulSet, ReplicaSet or Pod
-	Other []*PatchConfig `yaml:"other,omitempty" json:"other,omitempty"`
 }
 
 // DependencyConfig defines the devspace dependency

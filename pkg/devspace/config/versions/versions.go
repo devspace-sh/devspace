@@ -18,6 +18,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta6"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta7"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta8"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta9"
 	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"io/ioutil"
@@ -44,6 +45,7 @@ var versionLoader = map[string]*loader{
 	v1beta6.Version:  &loader{New: v1beta6.New},
 	v1beta7.Version:  &loader{New: v1beta7.New},
 	v1beta8.Version:  &loader{New: v1beta8.New},
+	v1beta9.Version:  &loader{New: v1beta9.New},
 	latest.Version:   &loader{New: latest.New},
 }
 

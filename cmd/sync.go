@@ -181,7 +181,7 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		syncConfig.InitialSync = latest.InitialSyncStrategy(cmd.InitialSync)
 	}
 
-	if cmd.GlobalFlags.ConfigPath != "" && config.Dev != nil && len(config.Dev.Sync) > 0 {
+	if cmd.GlobalFlags.ConfigPath != "" && config != nil && len(config.Dev.Sync) > 0 {
 		// Check which sync config should be used
 		loadedSyncConfig := config.Dev.Sync[0]
 		if len(config.Dev.Sync) > 1 {

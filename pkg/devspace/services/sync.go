@@ -78,10 +78,6 @@ func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Optio
 
 // StartSync starts the syncing functionality
 func (serviceClient *client) StartSync(interrupt chan error, printSyncLog bool, verboseSync bool) error {
-	if serviceClient.config.Dev == nil {
-		return nil
-	}
-
 	// Start sync client
 	for idx, syncConfig := range serviceClient.config.Dev.Sync {
 		targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(syncConfig.LabelSelector, syncConfig.Namespace, syncConfig.ContainerName, "")
@@ -194,8 +190,8 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 
 	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, container.Pod.Namespace, container.Pod.Name)
 
-	if syncConfig.WaitInitialSync != nil && *syncConfig.WaitInitialSync == true {
-		log.StartWait("Sync: waiting for intial sync to complete")
+	if syncConfig.WaitInitialSync == nil || *syncConfig.WaitInitialSync == true {
+		log.StartWait("Sync: waiting for initial sync to complete")
 		<-syncClient.Options.UpstreamInitialSyncDone
 		<-syncClient.Options.DownstreamInitialSyncDone
 		log.StopWait()

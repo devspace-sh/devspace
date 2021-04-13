@@ -38,18 +38,6 @@ func (serviceClient *client) StartTerminal(options targetselector.Options, args 
 	}
 
 	serviceClient.log.Infof("Opening shell to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
-	if len(container.Container.Command) > 0 && serviceClient.config != nil && serviceClient.generated != nil && serviceClient.config.Dev != nil && serviceClient.config.Dev.Interactive != nil && len(serviceClient.config.Dev.Interactive.Images) > 0 {
-		for _, image := range serviceClient.config.Dev.Interactive.Images {
-			imageConfigCache := serviceClient.generated.GetActive().GetImageCache(image.Name)
-			if imageConfigCache != nil && imageConfigCache.ImageName != "" {
-				imageName := imageConfigCache.ImageName + ":" + imageConfigCache.Tag
-				if imageName == container.Container.Image && (len(image.Entrypoint) > 0 || len(image.Cmd) > 0) {
-					serviceClient.log.Warnf("The container you are entering was started with a Kubernetes `command` option (%s) instead of the original Dockerfile ENTRYPOINT. Interactive mode ENTRYPOINT override does not work for containers started using with Kubernetes command.", container.Container.Command)
-				}
-			}
-		}
-	}
-
 	go func() {
 		interrupt <- serviceClient.client.ExecStreamWithTransport(&kubectl.ExecStreamWithTransportOptions{
 			ExecStreamOptions: kubectl.ExecStreamOptions{
@@ -82,14 +70,14 @@ func (serviceClient *client) StartTerminal(options targetselector.Options, args 
 
 func (serviceClient *client) getCommand(args []string, workDir string) []string {
 	config := serviceClient.config
-	if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil {
+	if config != nil && config.Dev.Terminal != nil {
 		if len(args) == 0 {
-			for _, cmd := range config.Dev.Interactive.Terminal.Command {
+			for _, cmd := range config.Dev.Terminal.Command {
 				args = append(args, cmd)
 			}
 		}
 		if workDir == "" {
-			workDir = config.Dev.Interactive.Terminal.WorkDir
+			workDir = config.Dev.Terminal.WorkDir
 		}
 	}
 

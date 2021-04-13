@@ -47,7 +47,7 @@ func NewLogManager(client kubectl.Client, config *latest.Config, generatedConfig
 
 	// Build an image selector
 	imageSelector := []string{}
-	if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.Images != nil {
+	if config.Dev.Logs != nil && config.Dev.Logs.Images != nil {
 		for _, configImageName := range config.Dev.Logs.Images {
 			imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig.GetActive())...)
 		}
@@ -59,12 +59,12 @@ func NewLogManager(client kubectl.Client, config *latest.Config, generatedConfig
 
 	// Show last log lines
 	var tail *int64
-	if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.ShowLast != nil {
+	if config.Dev.Logs != nil && config.Dev.Logs.ShowLast != nil {
 		tail = ptr.Int64(int64(*config.Dev.Logs.ShowLast))
 	}
 
 	var selectors []latest.LogsSelector
-	if config.Dev != nil && config.Dev.Logs != nil {
+	if config.Dev.Logs != nil {
 		selectors = config.Dev.Logs.Selectors
 	}
 	if tail == nil {

@@ -28,7 +28,6 @@ type Options struct {
 	ForceRebuild              bool
 	Sequential                bool
 	MaxConcurrentBuilds       int
-	IgnoreContextPathChanges  bool
 }
 
 // Controller is the main building interface
@@ -112,14 +111,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		// Get image tags
 		imageTags := []string{}
 		if len(imageConf.Tags) > 0 {
-			if imageConf.TagsAppendRandom {
-				for _, t := range imageConf.Tags {
-					r := randutil.GenerateRandomString(5)
-					imageTags = append(imageTags, t+"-"+r)
-				}
-			} else {
-				imageTags = append(imageTags, imageConf.Tags...)
-			}
+			imageTags = append(imageTags, imageConf.Tags...)
 		} else {
 			imageTags = append(imageTags, randutil.GenerateRandomString(7))
 		}
@@ -138,7 +130,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		}
 
 		// Check if rebuild is needed
-		needRebuild, err := builder.ShouldRebuild(c.cache, options.ForceRebuild, options.IgnoreContextPathChanges)
+		needRebuild, err := builder.ShouldRebuild(c.cache, options.ForceRebuild)
 		if err != nil {
 			return nil, errors.Errorf("error during shouldRebuild check: %v", err)
 		}

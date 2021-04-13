@@ -21,10 +21,6 @@ Adds config sections to devspace.yaml
 		Args: cobra.NoArgs,
 	}
 
-	addCmd.AddCommand(newSyncCmd(f, globalFlags))
-	addCmd.AddCommand(newPortCmd(f, globalFlags))
-	addCmd.AddCommand(newImageCmd(f, globalFlags))
-	addCmd.AddCommand(newDeploymentCmd(f, globalFlags))
 	addCmd.AddCommand(newPluginCmd(f))
 
 	// Add plugin commands
