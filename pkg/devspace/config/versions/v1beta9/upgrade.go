@@ -8,6 +8,11 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 )
 
+const (
+	oldAll = "all"
+	newAll = "*"
+)
+
 // Upgrade upgrades the config
 func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	nextConfig := &next.Config{}

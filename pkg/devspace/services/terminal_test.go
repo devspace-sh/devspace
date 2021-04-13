@@ -11,11 +11,9 @@ import (
 func TestGetCommand(t *testing.T) {
 	client := &client{
 		config: &latest.Config{
-			Dev: &latest.DevConfig{
-				Interactive: &latest.InteractiveConfig{
-					Terminal: &latest.TerminalConfig{
-						Command: []string{"echo"},
-					},
+			Dev: latest.DevConfig{
+				Terminal: &latest.Terminal{
+					Command: []string{"echo"},
 				},
 			},
 		},
