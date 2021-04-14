@@ -847,6 +847,16 @@ type DependencyConfig struct {
 	SkipBuild          bool            `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
 	IgnoreDependencies bool            `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
 	Namespace          string          `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	Dev                *DependencyDev  `yaml:"dev,omitempty" json:"dev,omitempty"`
+}
+
+// DependencyDev specifies which parts of the dependency dev config should
+// be reused
+type DependencyDev struct {
+	// If ports is true, DevSpace will forward and reverse forward the
+	// specified ports in the dependency's dev.ports config.
+	// Defaults to true
+	Ports *bool `yaml:"ports,omitempty" json:"ports,omitempty"`
 }
 
 // DependencyVar holds an override value for a config variable

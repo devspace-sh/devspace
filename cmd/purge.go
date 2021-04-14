@@ -20,10 +20,9 @@ import (
 type PurgeCmd struct {
 	*flags.GlobalFlags
 
-	Deployments             string
-	AllowCyclicDependencies bool
-	VerboseDependencies     bool
-	PurgeDependencies       bool
+	Deployments         string
+	VerboseDependencies bool
+	PurgeDependencies   bool
 
 	Dependency []string
 
@@ -57,9 +56,8 @@ devspace purge -d my-deployment
 	}
 
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
-	purgeCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", false, "When enabled purges the dependencies as well")
-	purgeCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
+	purgeCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Builds the dependencies verbosely")
 
 	purgeCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Purges only the specific named dependencies")
 
@@ -121,7 +119,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	// Purge dependencies
 	var dependencies []types.Dependency
 	if cmd.PurgeDependencies || len(cmd.Dependency) > 0 {
-		dependencies, err = f.NewDependencyManager(configInterface, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log).PurgeAll(dependency.PurgeOptions{
+		dependencies, err = f.NewDependencyManager(configInterface, client, cmd.ToConfigOptions(), cmd.log).PurgeAll(dependency.PurgeOptions{
 			Dependencies: cmd.Dependency,
 			Verbose:      cmd.VerboseDependencies,
 		})

@@ -45,7 +45,6 @@ type DevCmd struct {
 
 	SkipPush                bool
 	SkipPushLocalKubernetes bool
-	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 	Open                    bool
 
@@ -111,8 +110,8 @@ Open terminal instead of logs:
 		},
 	}
 
-	devCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 	devCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Deploys the dependencies verbosely")
+	devCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	devCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips building of images")
@@ -121,7 +120,6 @@ Open terminal instead of logs:
 
 	devCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to deploy every deployment")
 	devCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specifc deployment (You can specify multiple deployments comma-separated")
-	devCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 
 	devCmd.Flags().BoolVarP(&cmd.SkipPipeline, "skip-pipeline", "x", false, "Skips build & deployment and only starts sync, portforwarding & terminal")
 	devCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
@@ -274,7 +272,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 
 	if cmd.SkipPipeline == false {
 		// Dependencies
-		dependencies, err := f.NewDependencyManager(configInterface, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log).DeployAll(dependency.DeployOptions{
+		dependencies, err := f.NewDependencyManager(configInterface, client, cmd.ToConfigOptions(), cmd.log).DeployAll(dependency.DeployOptions{
 			ForceDeployDependencies: cmd.ForceDependencies,
 			SkipBuild:               cmd.SkipBuild,
 			ForceDeploy:             cmd.ForceDeploy,

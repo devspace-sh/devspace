@@ -121,7 +121,7 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 	}
 
 	// Resolve dependencies
-	dep, err := f.NewDependencyManager(configInterface, client, false, configOptions, cmd.log).ResolveAll(dependency.ResolveOptions{
+	dep, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).ResolveAll(dependency.ResolveOptions{
 		UpdateDependencies: false,
 		Verbose:            false,
 	})

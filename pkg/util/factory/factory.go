@@ -39,7 +39,7 @@ type Factory interface {
 	NewHelmClient(config *latest.Config, deployConfig *latest.DeploymentConfig, kubeClient kubectl.Client, tillerNamespace string, upgradeTiller bool, dryInit bool, log log.Logger) (types.Client, error)
 
 	// NewDependencyManager creates a new dependency manager
-	NewDependencyManager(config config.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) dependency.Manager
+	NewDependencyManager(config config.Config, client kubectl.Client, configOptions *loader.ConfigOptions, logger log.Logger) dependency.Manager
 
 	// NewHookExecutor creates a new hook executor
 	NewHookExecutor(config config.Config, dependencies []dependencytypes.Dependency) hook.Executer
@@ -115,8 +115,8 @@ func (f *DefaultFactoryImpl) NewHookExecutor(config config.Config, dependencies 
 }
 
 // NewDependencyManager implements interface
-func (f *DefaultFactoryImpl) NewDependencyManager(config config.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) dependency.Manager {
-	return dependency.NewManager(config, client, allowCyclic, configOptions, logger)
+func (f *DefaultFactoryImpl) NewDependencyManager(config config.Config, client kubectl.Client, configOptions *loader.ConfigOptions, logger log.Logger) dependency.Manager {
+	return dependency.NewManager(config, client, configOptions, logger)
 }
 
 // NewPullSecretClient implements interface

@@ -29,7 +29,6 @@ type RenderCmd struct {
 
 	SkipPush                bool
 	SkipPushLocalKubernetes bool
-	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 
 	SkipBuild           bool
@@ -68,8 +67,6 @@ deployment.
 			return cmd.Run(f, plugins, cobraCmd, args)
 		},
 	}
-
-	renderCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 
 	renderCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	renderCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
@@ -150,7 +147,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	// Render dependencies
 	var dependencies []types.Dependency
 	if cmd.SkipDependencies == false {
-		dependencies, err = f.NewDependencyManager(configInterface, client, cmd.AllowCyclicDependencies, configOptions, log).RenderAll(dependency.RenderOptions{
+		dependencies, err = f.NewDependencyManager(configInterface, client, configOptions, log).RenderAll(dependency.RenderOptions{
 			Dependencies: cmd.Dependency,
 			SkipBuild:    cmd.SkipBuild,
 			Verbose:      cmd.VerboseDependencies,

@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/command"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"io"
@@ -61,12 +62,12 @@ type manager struct {
 }
 
 // NewManager creates a new instance of the interface Manager
-func NewManager(config config.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) Manager {
+func NewManager(config config.Config, client kubectl.Client, configOptions *loader.ConfigOptions, logger log.Logger) Manager {
 	return &manager{
 		config:       config.Config(),
 		cache:        config.Generated().GetActive(),
 		log:          logger,
-		resolver:     NewResolver(config.Config(), config.Generated(), client, allowCyclic, configOptions, logger),
+		resolver:     NewResolver(config.Config(), config.Generated(), client, configOptions, logger),
 		hookExecuter: hook.NewExecuter(config, nil),
 		client:       client,
 	}
@@ -332,6 +333,14 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 		}
 	}
 
+	// we only return the root executed dependencies (you could get the others via traversing the graph and children)
+	retDependencies := []types.Dependency{}
+	for _, d := range executedDependencies {
+		if d.Root() {
+			retDependencies = append(retDependencies, d)
+		}
+	}
+
 	return executedDependencies, nil
 }
 
@@ -341,9 +350,13 @@ type Dependency struct {
 	localPath   string
 	localConfig config.Config
 
+	children []types.Dependency
+	root     bool
+
 	dependencyConfig *latest.DependencyConfig
 	dependencyCache  *generated.Config
 
+	dockerClient     docker.Client
 	kubeClient       kubectl.Client
 	registryClient   pullsecrets.Client
 	buildController  build.Controller
@@ -355,18 +368,17 @@ type Dependency struct {
 
 func (d *Dependency) ID() string { return d.id }
 
-func (d *Dependency) NameOrID() string {
-	if d.dependencyConfig.Name != "" {
-		return d.dependencyConfig.Name
-	}
-	return d.id
-}
+func (d *Dependency) Name() string { return d.dependencyConfig.Name }
 
 func (d *Dependency) Config() config.Config { return d.localConfig }
 
 func (d *Dependency) LocalPath() string { return d.localPath }
 
 func (d *Dependency) DependencyConfig() *latest.DependencyConfig { return d.dependencyConfig }
+
+func (d *Dependency) Children() []types.Dependency { return d.children }
+
+func (d *Dependency) Root() bool { return d.root }
 
 // Build builds and pushes all defined images
 func (d *Dependency) Build(forceDependencies bool, buildOptions *build.Options, log log.Logger) error {

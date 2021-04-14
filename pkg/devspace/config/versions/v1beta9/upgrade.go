@@ -6,11 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
-)
-
-const (
-	oldAll = "all"
-	newAll = "*"
+	"strconv"
 )
 
 // Upgrade upgrades the config
@@ -19,6 +15,17 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	err := util.Convert(c, nextConfig)
 	if err != nil {
 		return nil, err
+	}
+
+	// convert dependencies
+	for k, d := range c.Dependencies {
+		if d.Name == "" {
+			nextConfig.Dependencies[k].Name = strconv.Itoa(k)
+		}
+
+		nextConfig.Dependencies[k].Dev = &next.DependencyDev{
+			Ports: ptr.Bool(false),
+		}
 	}
 
 	// convert images

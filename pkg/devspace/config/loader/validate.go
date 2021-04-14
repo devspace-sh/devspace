@@ -62,7 +62,49 @@ func validate(config *latest.Config, log log.Logger) error {
 		return err
 	}
 
+	err = validateDependencies(config)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func validateDependencies(config *latest.Config) error {
+	for index, dep := range config.Dependencies {
+		if dep.Name == "" {
+			return errors.Errorf("dependencies[%d].name is required", index)
+		}
+		if strings.Contains(dep.Name, ".") {
+			return errors.Errorf("dependencies[%d].name cannot contain a '.'", index)
+		}
+		if !isDependencyNameUnique(dep.Name, config.Dependencies) {
+			return errors.Errorf("dependencies[%d].name has to be unique", index)
+		}
+		if dep.Source == nil {
+			return errors.Errorf("dependencies[%d].source is required", index)
+		}
+		if dep.Source.Git == "" && dep.Source.Path == "" {
+			return errors.Errorf("dependencies[%d].source.git or dependencies[%d].source.path is required", index, index)
+		}
+	}
+
+	return nil
+}
+
+func isDependencyNameUnique(name string, dependencies []*latest.DependencyConfig) bool {
+	found := false
+	for _, d := range dependencies {
+		if d.Name == name {
+			if found == true {
+				return false
+			}
+
+			found = true
+		}
+	}
+
+	return true
 }
 
 func validateCommands(config *latest.Config) error {

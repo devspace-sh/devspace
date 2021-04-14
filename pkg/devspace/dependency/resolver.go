@@ -2,21 +2,22 @@ package dependency
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy"
+	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/util"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"github.com/loft-sh/devspace/pkg/util/git"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -31,6 +32,7 @@ type ResolverInterface interface {
 
 // Resolver implements the resolver interface
 type resolver struct {
+	RootID          string
 	DependencyGraph *graph
 
 	BasePath   string
@@ -38,7 +40,6 @@ type resolver struct {
 	BaseCache  *generated.Config
 
 	ConfigOptions *loader.ConfigOptions
-	AllowCyclic   bool
 
 	kubeLoader     kubeconfig.Loader
 	client         kubectl.Client
@@ -47,7 +48,7 @@ type resolver struct {
 }
 
 // NewResolver creates a new resolver for resolving dependencies
-func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, log log.Logger) ResolverInterface {
+func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client kubectl.Client, configOptions *loader.ConfigOptions, log log.Logger) ResolverInterface {
 	var id string
 
 	var kubeLoader kubeconfig.Loader
@@ -69,12 +70,12 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client 
 	}
 
 	return &resolver{
+		RootID:          id,
 		DependencyGraph: newGraph(newNode(id, nil)),
 
 		BaseConfig: baseConfig,
 		BaseCache:  baseCache,
 
-		AllowCyclic:   allowCyclic,
 		ConfigOptions: configOptions,
 
 		// We only need that for saving
@@ -92,7 +93,7 @@ func (r *resolver) Resolve(update bool) ([]*Dependency, error) {
 		return nil, errors.Wrap(err, "get current working directory")
 	}
 
-	err = r.resolveRecursive(currentWorkingDirectory, r.DependencyGraph.Root.ID, r.BaseConfig.Dependencies, update)
+	err = r.resolveRecursive(currentWorkingDirectory, r.DependencyGraph.Root.ID, nil, r.BaseConfig.Dependencies, update)
 	if err != nil {
 		if _, ok := err.(*cyclicError); ok {
 			return nil, err
@@ -113,6 +114,7 @@ func (r *resolver) Resolve(update bool) ([]*Dependency, error) {
 func (r *resolver) buildDependencyQueue() ([]*Dependency, error) {
 	retDependencies := make([]*Dependency, 0, len(r.DependencyGraph.Nodes)-1)
 
+	// build dependency queue
 	for len(r.DependencyGraph.Nodes) > 1 {
 		next := r.DependencyGraph.getNextLeaf(r.DependencyGraph.Root)
 		if next == r.DependencyGraph.Root {
@@ -130,27 +132,35 @@ func (r *resolver) buildDependencyQueue() ([]*Dependency, error) {
 	return retDependencies, nil
 }
 
-func (r *resolver) resolveRecursive(basePath, parentID string, dependencies []*latest.DependencyConfig, update bool) error {
+func (r *resolver) resolveRecursive(basePath, parentID string, currentDependency *Dependency, dependencies []*latest.DependencyConfig, update bool) error {
+	if currentDependency != nil {
+		currentDependency.children = []types.Dependency{}
+	}
 	for _, dependencyConfig := range dependencies {
 		ID := util.GetDependencyID(basePath, dependencyConfig.Source, dependencyConfig.Profile, dependencyConfig.Vars)
 
 		// Try to insert new edge
-		if _, ok := r.DependencyGraph.Nodes[ID]; ok {
+		var child *Dependency
+		if n, ok := r.DependencyGraph.Nodes[ID]; ok {
 			err := r.DependencyGraph.addEdge(parentID, ID)
 			if err != nil {
 				if _, ok := err.(*cyclicError); ok {
-					// Check if cyclic dependencies are allowed
-					if !r.AllowCyclic {
-						return err
-					}
+					r.log.Warn(err.Error())
 				} else {
 					return err
 				}
+			} else {
+				child = n.Data.(*Dependency)
 			}
 		} else {
 			dependency, err := r.resolveDependency(basePath, dependencyConfig, update)
 			if err != nil {
 				return err
+			}
+
+			child = dependency
+			if currentDependency == nil {
+				child.root = true
 			}
 
 			_, err = r.DependencyGraph.insertNodeAt(parentID, ID, dependency)
@@ -159,15 +169,25 @@ func (r *resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 			}
 
 			// Load dependencies from dependency
-			if dependencyConfig.IgnoreDependencies == false {
-				if dependency.localConfig.Config().Dependencies != nil && len(dependency.localConfig.Config().Dependencies) > 0 {
-					err = r.resolveRecursive(dependency.localPath, ID, dependency.localConfig.Config().Dependencies, update)
-					if err != nil {
-						return err
-					}
+			if dependencyConfig.IgnoreDependencies == false && dependency.localConfig.Config().Dependencies != nil && len(dependency.localConfig.Config().Dependencies) > 0 {
+				err = r.resolveRecursive(dependency.localPath, ID, dependency, dependency.localConfig.Config().Dependencies, update)
+				if err != nil {
+					return err
 				}
 			}
 		}
+
+		// add child
+		if currentDependency != nil {
+			currentDependency.children = append(currentDependency.children, child)
+		}
+	}
+
+	// after we traversed the dependencies initialize the managers with the correct dependencies
+	if currentDependency != nil {
+		currentDependency.registryClient = pullsecrets.NewClient(currentDependency.localConfig, currentDependency.children, currentDependency.kubeClient, currentDependency.dockerClient, r.log)
+		currentDependency.buildController = build.NewController(currentDependency.localConfig, currentDependency.children, currentDependency.kubeClient)
+		currentDependency.deployController = deploy.NewController(currentDependency.localConfig, currentDependency.children, currentDependency.kubeClient)
 	}
 
 	return nil
@@ -281,11 +301,8 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		dependencyCache:  r.BaseCache,
 
 		kubeClient:     client,
+		dockerClient:   dockerClient,
 		generatedSaver: gLoader,
-
-		registryClient:   pullsecrets.NewClient(localConfig, nil, client, dockerClient, r.log),
-		buildController:  build.NewController(localConfig, nil, client),
-		deployController: deploy.NewController(localConfig, nil, client),
 	}, nil
 }
 

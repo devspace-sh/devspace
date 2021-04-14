@@ -23,7 +23,6 @@ type BuildCmd struct {
 
 	SkipPush                bool
 	SkipPushLocalKubernetes bool
-	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 	Dependency              []string
 
@@ -51,13 +50,12 @@ Builds all defined images and pushes them
 		},
 	}
 
-	buildCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
-
 	buildCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	buildCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
 	buildCmd.Flags().IntVar(&cmd.MaxConcurrentBuilds, "max-concurrent-builds", 0, "The maximum number of image builds built in parallel (0 for infinite)")
+
 	buildCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
-	buildCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Builds the dependencies verbosely")
+	buildCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Builds the dependencies verbosely")
 
 	buildCmd.Flags().StringSliceVarP(&cmd.Tags, "tag", "t", []string{}, "Use the given tag for all built images")
 	buildCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Builds only the specific named dependencies")
@@ -128,7 +126,7 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	}
 
 	// Dependencies
-	dependencies, err := f.NewDependencyManager(configInterface, client, cmd.AllowCyclicDependencies, configOptions, log).BuildAll(dependency.BuildOptions{
+	dependencies, err := f.NewDependencyManager(configInterface, client, configOptions, log).BuildAll(dependency.BuildOptions{
 		Dependencies:            cmd.Dependency,
 		ForceDeployDependencies: cmd.ForceDependencies,
 		Verbose:                 cmd.VerboseDependencies,
