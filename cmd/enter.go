@@ -111,7 +111,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	selectorOptions := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
 	// get image selector if specified
-	imageSelector, err := getImageSelector(configLoader, configOptions, cmd.Image, logger)
+	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, logger)
 	if err != nil {
 		return err
 	}

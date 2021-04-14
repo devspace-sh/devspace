@@ -36,8 +36,9 @@ type resolver struct {
 	DependencyGraph *graph
 
 	BasePath   string
-	BaseConfig *latest.Config
 	BaseCache  *generated.Config
+	BaseConfig *latest.Config
+	BaseVars   map[string]interface{}
 
 	ConfigOptions *loader.ConfigOptions
 
@@ -48,7 +49,7 @@ type resolver struct {
 }
 
 // NewResolver creates a new resolver for resolving dependencies
-func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client kubectl.Client, configOptions *loader.ConfigOptions, log log.Logger) ResolverInterface {
+func NewResolver(baseConfig config.Config, client kubectl.Client, configOptions *loader.ConfigOptions, log log.Logger) ResolverInterface {
 	var id string
 
 	var kubeLoader kubeconfig.Loader
@@ -73,8 +74,9 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client 
 		RootID:          id,
 		DependencyGraph: newGraph(newNode(id, nil)),
 
-		BaseConfig: baseConfig,
-		BaseCache:  baseCache,
+		BaseConfig: baseConfig.Config(),
+		BaseCache:  baseConfig.Generated(),
+		BaseVars:   baseConfig.Variables(),
 
 		ConfigOptions: configOptions,
 
@@ -140,7 +142,10 @@ func (r *resolver) resolveRecursive(basePath, parentID string, currentDependency
 		ID := util.GetDependencyID(basePath, dependencyConfig.Source, dependencyConfig.Profile, dependencyConfig.Vars)
 
 		// Try to insert new edge
-		var child *Dependency
+		var (
+			child *Dependency
+			err   error
+		)
 		if n, ok := r.DependencyGraph.Nodes[ID]; ok {
 			err := r.DependencyGraph.addEdge(parentID, ID)
 			if err != nil {
@@ -153,41 +158,39 @@ func (r *resolver) resolveRecursive(basePath, parentID string, currentDependency
 				child = n.Data.(*Dependency)
 			}
 		} else {
-			dependency, err := r.resolveDependency(basePath, dependencyConfig, update)
+			child, err = r.resolveDependency(basePath, dependencyConfig, update)
 			if err != nil {
 				return err
 			}
 
-			child = dependency
+			// is root dependency?
 			if currentDependency == nil {
 				child.root = true
 			}
 
-			_, err = r.DependencyGraph.insertNodeAt(parentID, ID, dependency)
+			_, err = r.DependencyGraph.insertNodeAt(parentID, ID, child)
 			if err != nil {
 				return errors.Wrap(err, "insert node")
 			}
 
-			// Load dependencies from dependency
-			if dependencyConfig.IgnoreDependencies == false && dependency.localConfig.Config().Dependencies != nil && len(dependency.localConfig.Config().Dependencies) > 0 {
-				err = r.resolveRecursive(dependency.localPath, ID, dependency, dependency.localConfig.Config().Dependencies, update)
+			// load dependencies from dependency
+			if dependencyConfig.IgnoreDependencies == false && child.localConfig.Config().Dependencies != nil && len(child.localConfig.Config().Dependencies) > 0 {
+				err = r.resolveRecursive(child.localPath, ID, child, child.localConfig.Config().Dependencies, update)
 				if err != nil {
 					return err
 				}
 			}
+
+			// after we traversed the dependencies initialize the managers with the correct dependencies
+			child.registryClient = pullsecrets.NewClient(child.localConfig, child.children, child.kubeClient, child.dockerClient, r.log)
+			child.buildController = build.NewController(child.localConfig, child.children, child.kubeClient)
+			child.deployController = deploy.NewController(child.localConfig, child.children, child.kubeClient)
 		}
 
 		// add child
 		if currentDependency != nil {
 			currentDependency.children = append(currentDependency.children, child)
 		}
-	}
-
-	// after we traversed the dependencies initialize the managers with the correct dependencies
-	if currentDependency != nil {
-		currentDependency.registryClient = pullsecrets.NewClient(currentDependency.localConfig, currentDependency.children, currentDependency.kubeClient, currentDependency.dockerClient, r.log)
-		currentDependency.buildController = build.NewController(currentDependency.localConfig, currentDependency.children, currentDependency.kubeClient)
-		currentDependency.deployController = deploy.NewController(currentDependency.localConfig, currentDependency.children, currentDependency.kubeClient)
 	}
 
 	return nil
@@ -199,44 +202,43 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		return nil, err
 	}
 
-	// Clone config options
+	// clone config options
 	cloned, err := r.ConfigOptions.Clone()
 	if err != nil {
 		return nil, errors.Wrap(err, "clone config options")
 	}
 
-	// Set dependency profile
+	// set dependency profile
 	cloned.Profile = dependency.Profile
 	cloned.ProfileParents = dependency.ProfileParents
 
-	// Construct load path
+	// construct load path
 	configPath := filepath.Join(localPath, constants.DefaultConfigPath)
 	if dependency.Source.ConfigName != "" {
 		configPath = filepath.Join(localPath, dependency.Source.ConfigName)
 	}
 
-	// Load config
-	cloned.GeneratedConfig = r.BaseCache
-	cloned.BasePath = loader.ConfigPath(configPath)
+	// load config
+	cloned.GeneratedConfig = nil
+	cloned.BasePath = configPath
 	if cloned.Vars == nil {
 		cloned.Vars = []string{}
+	}
+	for k, v := range r.BaseVars {
+		cloned.Vars = append(cloned.Vars, strings.TrimSpace(k)+"="+strings.TrimSpace(fmt.Sprintf("%v", v)))
 	}
 	for _, v := range dependency.Vars {
 		cloned.Vars = append(cloned.Vars, strings.TrimSpace(v.Name)+"="+strings.TrimSpace(v.Value))
 	}
 
-	// Load the dependency config
+	// load the dependency config
 	var dConfigWrapper config.Config
 	err = executeInDirectory(filepath.Dir(configPath), func() error {
-		configLoader := loader.NewConfigLoader(configPath)
-		// make sure we not apply the profile from generated
-		baseConfigProfile := cloned.GeneratedConfig.ActiveProfile
-		cloned.GeneratedConfig.ActiveProfile = ""
-		dConfigWrapper, err = configLoader.LoadWithParser(loader.NewWithCommandsParser(), cloned, r.log)
-		cloned.GeneratedConfig.ActiveProfile = baseConfigProfile
+		dConfigWrapper, err = loader.NewConfigLoader(configPath).LoadWithParser(loader.NewWithCommandsParser(), cloned, r.log)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", ID))
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -244,6 +246,14 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	}
 
 	dConfig := dConfigWrapper.Config()
+
+	// set parsed variables in parent config
+	for k, v := range dConfigWrapper.Variables() {
+		_, ok := r.BaseVars[k]
+		if !ok {
+			r.BaseVars[k] = v
+		}
+	}
 
 	// Override complete dev config
 	dConfig.Dev = latest.DevConfig{
@@ -260,16 +270,6 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 			b.Build.Disabled = true
 		}
 	}
-
-	// Load dependency generated config
-	gLoader := generated.NewConfigLoader(dependency.Profile)
-	dGeneratedConfig, err := gLoader.LoadFromPath(filepath.Join(localPath, filepath.FromSlash(generated.ConfigPath)))
-	if err != nil {
-		return nil, errors.Errorf("Error loading generated config for dependency %s: %v", ID, err)
-	}
-
-	dGeneratedConfig.ActiveProfile = dependency.Profile
-	generated.InitDevSpaceConfig(dGeneratedConfig, dependency.Profile)
 
 	// Recreate client if necessary
 	client := r.client
@@ -290,21 +290,18 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		return nil, errors.Wrap(err, "create docker client")
 	}
 
-	// This is the loaded config with the additional generated config from the dependency path
-	localConfig := config.NewConfig(dConfigWrapper.Raw(), dConfig, dGeneratedConfig, dConfigWrapper.Variables())
-
 	// Create registry client for pull secrets
 	return &Dependency{
 		id:          ID,
 		localPath:   localPath,
-		localConfig: localConfig,
+		localConfig: dConfigWrapper,
 
 		dependencyConfig: dependency,
 		dependencyCache:  r.BaseCache,
 
 		kubeClient:     client,
 		dockerClient:   dockerClient,
-		generatedSaver: gLoader,
+		generatedSaver: generated.NewConfigLoader(dependency.Profile),
 	}, nil
 }
 

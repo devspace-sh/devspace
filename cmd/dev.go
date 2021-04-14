@@ -207,30 +207,12 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 		return err
 	}
 
-	// restore vars if wanted
-	if cmd.RestoreVars {
-		vars, _, err := loader.RestoreVarsFromSecret(client, cmd.VarsSecretName)
-		if err != nil {
-			return errors.Wrap(err, "restore vars")
-		} else if vars != nil {
-			generatedConfig.Vars = vars
-		}
-	}
-
 	// Get the config
 	configInterface, err := cmd.loadConfig(configOptions)
 	if err != nil {
 		return err
 	}
 	config := configInterface.Config()
-
-	// save vars if wanted
-	if cmd.SaveVars {
-		err = loader.SaveVarsInSecret(client, generatedConfig.Vars, cmd.VarsSecretName, cmd.log)
-		if err != nil {
-			return errors.Wrap(err, "save vars")
-		}
-	}
 
 	// Execute plugin hook
 	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "dev", client.CurrentContext(), client.Namespace(), config)
@@ -265,6 +247,7 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 
 func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Config, configOptions *loader.ConfigOptions, client kubectl.Client, dockerClient docker.Client, args []string) (int, error) {
 	var (
+		err             error
 		config          = configInterface.Config()
 		generatedConfig = configInterface.Generated()
 		dependencies    = []types.Dependency{}
@@ -272,7 +255,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 
 	if cmd.SkipPipeline == false {
 		// Dependencies
-		dependencies, err := f.NewDependencyManager(configInterface, client, cmd.ToConfigOptions(), cmd.log).DeployAll(dependency.DeployOptions{
+		dependencies, err = f.NewDependencyManager(configInterface, client, cmd.ToConfigOptions(), cmd.log).DeployAll(dependency.DeployOptions{
 			ForceDeployDependencies: cmd.ForceDependencies,
 			SkipBuild:               cmd.SkipBuild,
 			ForceDeploy:             cmd.ForceDeploy,
@@ -290,42 +273,8 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 			return 0, errors.Errorf("error deploying dependencies: %v", err)
 		}
 
-		// check if we should should add dev config from dependencies
-		for _, d := range config.Dependencies {
-			if d.Dev != nil && d.Dev.Ports != nil && *d.Dev.Ports == false {
-				continue
-			}
-
-			// find the dependency in the deployed ones and it
-			for _, e := range dependencies {
-				if e.Name() != d.Name {
-					continue
-				}
-
-				for _, p := range e.Config().Config().Dev.Ports {
-					if config.Dev.Ports == nil {
-						config.Dev.Ports = []*latest.PortForwardingConfig{}
-					}
-
-					imageName := p.ImageName
-					if imageName != "" {
-						imageName = e.Name() + "." + imageName
-					}
-
-					config.Dev.Ports = append(config.Dev.Ports, &latest.PortForwardingConfig{
-						ImageName:           imageName,
-						LabelSelector:       p.LabelSelector,
-						ContainerName:       p.ContainerName,
-						Namespace:           p.Namespace,
-						Arch:                p.Arch,
-						PortMappings:        p.PortMappings,
-						PortMappingsReverse: p.PortMappingsReverse,
-					})
-				}
-
-				break
-			}
-		}
+		// add dev config from dependencies
+		addDependenciesDevConfig(config, dependencies)
 
 		// Create Pull Secrets
 		err = pullsecrets.NewClient(configInterface, dependencies, client, dockerClient, cmd.log).CreatePullSecrets()
@@ -486,9 +435,12 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 	if cmd.Sync {
 		cmd.Sync = false
 		printSyncLog := cmd.PrintSyncLog
-		if useTerminal == false && config.Dev.Logs != nil && config.Dev.Logs.Sync != nil && *config.Dev.Logs.Sync == false {
+		if useTerminal == false && config.Dev.Logs != nil && (config.Dev.Logs.Sync == nil || *config.Dev.Logs.Sync == true) {
 			printSyncLog = true
 		}
+
+		fmt.Println(useTerminal)
+		fmt.Println(printSyncLog)
 
 		err := servicesClient.StartSync(nil, printSyncLog, cmd.VerboseSync)
 		if err != nil {
@@ -782,4 +734,42 @@ func updateLastKubeContext(configLoader loader.ConfigLoader, client kubectl.Clie
 	}
 
 	return nil
+}
+
+func addDependenciesDevConfig(config *latest.Config, dependencies []types.Dependency) {
+	for _, d := range config.Dependencies {
+		if d.Dev != nil && d.Dev.Ports != nil && *d.Dev.Ports == false {
+			continue
+		}
+
+		// find the dependency in the deployed ones and it
+		for _, e := range dependencies {
+			if e.Name() != d.Name {
+				continue
+			}
+
+			for _, p := range e.Config().Config().Dev.Ports {
+				if config.Dev.Ports == nil {
+					config.Dev.Ports = []*latest.PortForwardingConfig{}
+				}
+
+				imageName := p.ImageName
+				if imageName != "" {
+					imageName = e.Name() + "." + imageName
+				}
+
+				config.Dev.Ports = append(config.Dev.Ports, &latest.PortForwardingConfig{
+					ImageName:           imageName,
+					LabelSelector:       p.LabelSelector,
+					ContainerName:       p.ContainerName,
+					Namespace:           p.Namespace,
+					Arch:                p.Arch,
+					PortMappings:        p.PortMappings,
+					PortMappingsReverse: p.PortMappingsReverse,
+				})
+			}
+
+			break
+		}
+	}
 }
