@@ -290,6 +290,43 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 			return 0, errors.Errorf("error deploying dependencies: %v", err)
 		}
 
+		// check if we should should add dev config from dependencies
+		for _, d := range config.Dependencies {
+			if d.Dev != nil && d.Dev.Ports != nil && *d.Dev.Ports == false {
+				continue
+			}
+
+			// find the dependency in the deployed ones and it
+			for _, e := range dependencies {
+				if e.Name() != d.Name {
+					continue
+				}
+
+				for _, p := range e.Config().Config().Dev.Ports {
+					if config.Dev.Ports == nil {
+						config.Dev.Ports = []*latest.PortForwardingConfig{}
+					}
+
+					imageName := p.ImageName
+					if imageName != "" {
+						imageName = e.Name() + "." + imageName
+					}
+
+					config.Dev.Ports = append(config.Dev.Ports, &latest.PortForwardingConfig{
+						ImageName:           imageName,
+						LabelSelector:       p.LabelSelector,
+						ContainerName:       p.ContainerName,
+						Namespace:           p.Namespace,
+						Arch:                p.Arch,
+						PortMappings:        p.PortMappings,
+						PortMappingsReverse: p.PortMappingsReverse,
+					})
+				}
+
+				break
+			}
+		}
+
 		// Create Pull Secrets
 		err = pullsecrets.NewClient(configInterface, dependencies, client, dockerClient, cmd.log).CreatePullSecrets()
 		if err != nil {

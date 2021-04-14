@@ -246,7 +246,9 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	dConfig := dConfigWrapper.Config()
 
 	// Override complete dev config
-	dConfig.Dev = latest.DevConfig{}
+	dConfig.Dev = latest.DevConfig{
+		Ports: dConfig.Dev.Ports,
+	}
 
 	// Check if we should skip building
 	if dependency.SkipBuild == true {
