@@ -80,7 +80,7 @@ func (f *Factory) NewHookExecutor(config config.Config, dependencies []dependenc
 }
 
 // NewDependencyManager implements interface
-func (f *Factory) NewDependencyManager(config config.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) dependency.Manager {
+func (f *Factory) NewDependencyManager(config config.Config, client kubectl.Client, configOptions *loader.ConfigOptions, logger log.Logger) dependency.Manager {
 	return f.DependencyManager
 }
 

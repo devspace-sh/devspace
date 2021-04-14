@@ -1,5 +1,6 @@
 package patch
 
+/*
 import (
 	"context"
 	"encoding/json"
@@ -510,3 +511,4 @@ func getParent(ctx context.Context, client kubectl.Client, pod *corev1.Pod) (run
 
 	return nil, fmt.Errorf("unrecognized owner of Pod %s: %s %s %s", pod.Name, controller.Kind, controller.APIVersion, controller.Name)
 }
+*/
