@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/assets"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	"io"
@@ -67,7 +66,7 @@ func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Optio
 		return err
 	}
 
-	if syncConfig.WaitInitialSync != nil && *syncConfig.WaitInitialSync == true {
+	if syncConfig.WaitInitialSync == nil || *syncConfig.WaitInitialSync == true {
 		return nil
 	}
 
@@ -78,8 +77,12 @@ func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Optio
 
 // StartSync starts the syncing functionality
 func (serviceClient *client) StartSync(interrupt chan error, printSyncLog bool, verboseSync bool) error {
+	if serviceClient.config == nil || serviceClient.config.Config() == nil {
+		return fmt.Errorf("DevSpace config is nil")
+	}
+
 	// Start sync client
-	for idx, syncConfig := range serviceClient.config.Dev.Sync {
+	for idx, syncConfig := range serviceClient.config.Config().Dev.Sync {
 		targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(syncConfig.LabelSelector, syncConfig.Namespace, syncConfig.ContainerName, "")
 		targetOptions.AllowPick = false
 		targetOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
@@ -156,11 +159,10 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 		}
 	}
 
-	var cache *generated.CacheConfig
-	if serviceClient.generated != nil {
-		cache = serviceClient.generated.GetActive()
+	options.TargetOptions.ImageSelector, err = targetselector.ImageSelectorFromConfig(syncConfig.ImageName, serviceClient.config, serviceClient.dependencies)
+	if err != nil {
+		return err
 	}
-	options.TargetOptions.ImageSelector = targetselector.ImageSelectorFromConfig(syncConfig.ImageName, serviceClient.config, cache)
 
 	log.StartWait("Sync: Waiting for pods...")
 	container, err := targetselector.NewTargetSelector(serviceClient.client).SelectSingleContainer(context.TODO(), options.TargetOptions, serviceClient.log)
@@ -305,7 +307,7 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		options.UploadExcludePaths = syncConfig.UploadExcludePaths
 	}
 
-	if syncConfig.WaitInitialSync != nil && *syncConfig.WaitInitialSync == true {
+	if syncConfig.WaitInitialSync == nil || *syncConfig.WaitInitialSync == true {
 		options.UpstreamInitialSyncDone = make(chan bool)
 		options.DownstreamInitialSyncDone = make(chan bool)
 	}

@@ -821,17 +821,20 @@ type Terminal struct {
 
 	// If disabled is true, DevSpace will not use the terminal
 	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
-
-	// If this is configured, DevSpace will patch the selected parent Deployment, StatefulSet, ReplicaSet or Pod
-	Patch *TerminalPatch `yaml:"patch,omitempty" json:"patch,omitempty"`
 }
 
-type TerminalPatch struct {
-	// If image is specified, DevSpace will replace the target image
-	Image string `yaml:"image,omitempty" json:"image,omitempty"`
+// PodPatch will patch a pod's owning ReplicaSet, Deployment or StatefulSet with the givens patches or image
+type PodPatch struct {
+	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
+	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
+	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
+	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 
-	// Regular JSON patches that will be applied to the target Deployment, StatefulSet, ReplicaSet or Pod
-	Other []*PatchConfig `yaml:"other,omitempty" json:"other,omitempty"`
+	// If image is specified, DevSpace will replace the target image
+	Image string `yaml:"replaceImage,omitempty" json:"replaceImage,omitempty"`
+
+	// Regular JSON patches that will be applied to the target Deployment, StatefulSet or ReplicaSet
+	Patches []*PatchConfig `yaml:"patches,omitempty" json:"patches,omitempty"`
 }
 
 // DependencyConfig defines the devspace dependency

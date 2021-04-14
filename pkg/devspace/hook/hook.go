@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	dockerterm "github.com/docker/docker/pkg/term"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/command"
@@ -27,7 +28,7 @@ const (
 
 // Hook is an interface to execute a specific hook type
 type Hook interface {
-	Execute(ctx Context, hook *latest.HookConfig, log logpkg.Logger) error
+	Execute(ctx Context, hook *latest.HookConfig, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error
 }
 
 // Executer executes configured commands locally
@@ -38,13 +39,15 @@ type Executer interface {
 }
 
 type executer struct {
-	config *latest.Config
+	config       config.Config
+	dependencies []types.Dependency
 }
 
 // NewExecuter creates an instance of Executer for the specified config
-func NewExecuter(config *latest.Config) Executer {
+func NewExecuter(config config.Config, dependencies []types.Dependency) Executer {
 	return &executer{
-		config: config,
+		config:       config,
+		dependencies: dependencies,
 	}
 }
 
@@ -87,8 +90,6 @@ var (
 type Context struct {
 	Error  error
 	Client kubectl.Client
-	Config *latest.Config
-	Cache  *generated.CacheConfig
 }
 
 // ExecuteMultiple executes multiple hooks at a specific time
@@ -114,11 +115,12 @@ func (e *executer) OnError(stage Stage, whichs []string, context Context, log lo
 
 // Execute executes hooks at a specific time
 func (e *executer) Execute(when When, stage Stage, which string, context Context, log logpkg.Logger) error {
-	if e.config.Hooks != nil && len(e.config.Hooks) > 0 {
+	c := e.config.Config()
+	if c.Hooks != nil && len(c.Hooks) > 0 {
 		hooksToExecute := []*latest.HookConfig{}
 
 		// Gather all hooks we should execute
-		for _, hook := range e.config.Hooks {
+		for _, hook := range c.Hooks {
 			if hook.When != nil {
 				if when == Before && hook.When.Before != nil {
 					if stage == StageDeployments && hook.When.Before.Deployments != "" && strings.TrimSpace(hook.When.Before.Deployments) == strings.TrimSpace(which) {
@@ -200,7 +202,7 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 			}
 
 			// Execute the hook
-			err := executeHook(context, hookConfig, hookWriter, log, hook)
+			err := executeHook(context, hookConfig, hookWriter, e.config, e.dependencies, log, hook)
 			if err != nil {
 				return err
 			}
@@ -210,7 +212,7 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 	return nil
 }
 
-func executeHook(ctx Context, hookConfig *latest.HookConfig, hookWriter io.Writer, log logpkg.Logger, hook Hook) error {
+func executeHook(ctx Context, hookConfig *latest.HookConfig, hookWriter io.Writer, config config.Config, dependencies []types.Dependency, log logpkg.Logger, hook Hook) error {
 	hookLog := log
 	if hookConfig.Silent {
 		hookLog = logpkg.Discard
@@ -219,7 +221,7 @@ func executeHook(ctx Context, hookConfig *latest.HookConfig, hookWriter io.Write
 	if hookConfig.Background {
 		log.Infof("Execute hook '%s' in background", ansi.Color(hookName(hookConfig), "white+b"))
 		go func() {
-			err := hook.Execute(ctx, hookConfig, hookLog)
+			err := hook.Execute(ctx, hookConfig, config, dependencies, hookLog)
 			if err != nil {
 				if hookConfig.Silent {
 					log.Warnf("Error executing hook '%s' in background: %s %v", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(*bytes.Buffer).String(), err)
@@ -233,7 +235,7 @@ func executeHook(ctx Context, hookConfig *latest.HookConfig, hookWriter io.Write
 	}
 
 	log.Infof("Execute hook '%s'", ansi.Color(hookName(hookConfig), "white+b"))
-	err := hook.Execute(ctx, hookConfig, hookLog)
+	err := hook.Execute(ctx, hookConfig, config, dependencies, hookLog)
 	if err != nil {
 		if hookConfig.Silent {
 			return errors.Wrapf(err, "in hook '%s': %s", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(*bytes.Buffer).String())

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/tunnel"
 	"io"
@@ -14,19 +15,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-// StartPortForwarding starts the port forwarding functionality
+// StartReversePortForwarding starts the reverse port forwarding functionality
 func (serviceClient *client) StartReversePortForwarding(interrupt chan error) error {
-	var cache *generated.CacheConfig
-	if serviceClient.generated != nil {
-		cache = serviceClient.generated.GetActive()
+	if serviceClient.config == nil || serviceClient.config.Config() == nil || serviceClient.config.Generated() == nil {
+		return fmt.Errorf("DevSpace config is not set")
 	}
 
-	for _, portForwarding := range serviceClient.config.Dev.Ports {
+	cache := serviceClient.config.Generated().GetActive()
+	for _, portForwarding := range serviceClient.config.Config().Dev.Ports {
 		if len(portForwarding.PortMappingsReverse) == 0 {
 			continue
 		}
 
-		// start reverse portforwarding
+		// start reverse port forwarding
 		err := serviceClient.startReversePortForwarding(cache, portForwarding, interrupt, serviceClient.log)
 		if err != nil {
 			return err
@@ -37,10 +38,15 @@ func (serviceClient *client) StartReversePortForwarding(interrupt chan error) er
 }
 
 func (serviceClient *client) startReversePortForwarding(cache *generated.CacheConfig, portForwarding *latest.PortForwardingConfig, interrupt chan error, log logpkg.Logger) error {
+	var err error
+
 	// apply config & set image selector
 	options := targetselector.NewEmptyOptions().ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, portForwarding.ContainerName, "")
 	options.AllowPick = false
-	options.ImageSelector = targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, cache)
+	options.ImageSelector, err = targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, serviceClient.dependencies)
+	if err != nil {
+		return err
+	}
 	options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
 	options.SkipInitContainers = true
 

@@ -79,7 +79,7 @@ devspace deploy --kube-context=deploy-context
 	}
 
 	deployCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
-	deployCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Deploys the dependencies verbosely")
+	deployCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Deploys the dependencies verbosely")
 
 	deployCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 	deployCmd.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", true, "Skips image pushing, if a local kubernetes environment is detected")
@@ -185,20 +185,8 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 		dockerClient = nil
 	}
 
-	// create pull secrets if necessary
-	err = f.NewPullSecretClient(config, generatedConfig.GetActive(), client, dockerClient, cmd.log).CreatePullSecrets()
-	if err != nil {
-		cmd.log.Warn(err)
-	}
-
-	// create dependency manager
-	manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, configOptions, cmd.log)
-	if err != nil {
-		return errors.Wrap(err, "new manager")
-	}
-
 	// deploy dependencies
-	err = manager.DeployAll(dependency.DeployOptions{
+	dependencies, err := f.NewDependencyManager(configInterface, client, cmd.AllowCyclicDependencies, configOptions, cmd.log).DeployAll(dependency.DeployOptions{
 		Dependencies:            cmd.Dependency,
 		ForceDeployDependencies: cmd.ForceDependencies,
 		SkipBuild:               cmd.SkipBuild,
@@ -218,12 +206,18 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 		return errors.Wrap(err, "deploy dependencies")
 	}
 
+	// create pull secrets if necessary
+	err = f.NewPullSecretClient(configInterface, dependencies, client, dockerClient, cmd.log).CreatePullSecrets()
+	if err != nil {
+		cmd.log.Warn(err)
+	}
+
 	// only deploy if we don't want to deploy a dependency specificly
 	if len(cmd.Dependency) == 0 {
 		// build images
 		builtImages := make(map[string]string)
 		if cmd.SkipBuild == false {
-			builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
+			builtImages, err = f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
 				SkipPush:                  cmd.SkipPush,
 				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 				ForceRebuild:              cmd.ForceBuild,
@@ -258,7 +252,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 			}
 
 			// deploy all defined deployments
-			err = f.NewDeployController(config, generatedConfig.GetActive(), client).Deploy(&deploy.Options{
+			err = f.NewDeployController(configInterface, dependencies, client).Deploy(&deploy.Options{
 				ForceDeploy: cmd.ForceDeploy,
 				BuiltImages: builtImages,
 				Deployments: deployments,

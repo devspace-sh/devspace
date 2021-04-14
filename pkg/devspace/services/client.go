@@ -1,10 +1,11 @@
 package services
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	dependencytypes "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"io"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -26,18 +27,18 @@ type Client interface {
 }
 
 type client struct {
-	config    *latest.Config
-	generated *generated.Config
-	client    kubectl.Client
-	log       log.Logger
+	config       config.Config
+	dependencies []dependencytypes.Dependency
+	client       kubectl.Client
+	log          log.Logger
 }
 
 // NewClient creates a new client object
-func NewClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, log log.Logger) Client {
+func NewClient(config config.Config, dependencies []dependencytypes.Dependency, kubeClient kubectl.Client, log log.Logger) Client {
 	return &client{
-		config:    config,
-		generated: generated,
-		client:    kubeClient,
-		log:       log,
+		config:       config,
+		dependencies: dependencies,
+		client:       kubeClient,
+		log:          log,
 	}
 }

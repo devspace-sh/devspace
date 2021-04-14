@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/command"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"io"
@@ -27,11 +29,25 @@ import (
 
 // Manager can update, build, deploy and purge dependencies.
 type Manager interface {
+	// UpdateAll updates all dependencies
 	UpdateAll() error
-	BuildAll(options BuildOptions) error
-	DeployAll(options DeployOptions) error
-	PurgeAll(options PurgeOptions) error
-	RenderAll(options RenderOptions) error
+
+	// BuildAll builds all dependencies
+	BuildAll(options BuildOptions) ([]types.Dependency, error)
+
+	// DeployAll deploys all dependencies and returns them
+	DeployAll(options DeployOptions) ([]types.Dependency, error)
+
+	// ResolveAll resolves all dependencies and returns them
+	ResolveAll(options ResolveOptions) ([]types.Dependency, error)
+
+	// PurgeAll purges all dependencies
+	PurgeAll(options PurgeOptions) ([]types.Dependency, error)
+
+	// RenderAll renders all dependencies
+	RenderAll(options RenderOptions) ([]types.Dependency, error)
+
+	// Command executes a dependency command
 	Command(options CommandOptions) error
 }
 
@@ -45,20 +61,15 @@ type manager struct {
 }
 
 // NewManager creates a new instance of the interface Manager
-func NewManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (Manager, error) {
-	resolver, err := NewResolver(config, cache, client, allowCyclic, configOptions, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "new resolver")
-	}
-
+func NewManager(config config.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) Manager {
 	return &manager{
-		config:       config,
-		cache:        cache.GetActive(),
+		config:       config.Config(),
+		cache:        config.Generated().GetActive(),
 		log:          logger,
-		resolver:     resolver,
-		hookExecuter: hook.NewExecuter(config),
+		resolver:     NewResolver(config.Config(), config.Generated(), client, allowCyclic, configOptions, logger),
+		hookExecuter: hook.NewExecuter(config, nil),
 		client:       client,
-	}, nil
+	}
 }
 
 // UpdateAll will update all dependencies if there are any
@@ -83,6 +94,23 @@ func (m *manager) UpdateAll() error {
 	return nil
 }
 
+type ResolveOptions struct {
+	Dependencies       []string
+	UpdateDependencies bool
+	Verbose            bool
+}
+
+func (m *manager) ResolveAll(options ResolveOptions) ([]types.Dependency, error) {
+	dependencies, err := m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Resolve", func(dependency *Dependency, log log.Logger) error {
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return dependencies, nil
+}
+
 // CommandOptions has all options for executing a command from a dependency
 type CommandOptions struct {
 	Dependencies       []string
@@ -92,9 +120,9 @@ type CommandOptions struct {
 	Verbose            bool
 }
 
-// BuildAll will build all dependencies if there are any
+// Command will execute a dependency command
 func (m *manager) Command(options CommandOptions) error {
-	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, true, options.Verbose, "Command", func(dependency *Dependency, log log.Logger) error {
+	_, err := m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, true, options.Verbose, "Command", func(dependency *Dependency, log log.Logger) error {
 		// Switch current working directory
 		currentWorkingDirectory, err := dependency.prepare(true)
 		if err != nil {
@@ -106,8 +134,9 @@ func (m *manager) Command(options CommandOptions) error {
 		// Change back to original working directory
 		defer os.Chdir(currentWorkingDirectory)
 
-		return ExecuteCommand(dependency.Commands, options.Command, options.Args)
+		return ExecuteCommand(dependency.localConfig.Config().Commands, options.Command, options.Args)
 	})
+	return err
 }
 
 // ExecuteCommand executes a given command from the available commands
@@ -145,7 +174,7 @@ type BuildOptions struct {
 }
 
 // BuildAll will build all dependencies if there are any
-func (m *manager) BuildAll(options BuildOptions) error {
+func (m *manager) BuildAll(options BuildOptions) ([]types.Dependency, error) {
 	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Build", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Build(options.ForceDeployDependencies, &options.BuildOptions, log)
 	})
@@ -165,26 +194,26 @@ type DeployOptions struct {
 }
 
 // DeployAll will deploy all dependencies if there are any
-func (m *manager) DeployAll(options DeployOptions) error {
-	err := m.hookExecuter.Execute(hook.Before, hook.StageDependencies, hook.All, hook.Context{Client: m.client, Config: m.config, Cache: m.cache}, m.log)
+func (m *manager) DeployAll(options DeployOptions) ([]types.Dependency, error) {
+	err := m.hookExecuter.Execute(hook.Before, hook.StageDependencies, hook.All, hook.Context{Client: m.client}, m.log)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
+	dependencies, err := m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
 	})
 	if err != nil {
-		m.hookExecuter.OnError(hook.StageDependencies, []string{hook.All}, hook.Context{Client: m.client, Config: m.config, Cache: m.cache, Error: err}, m.log)
-		return err
+		m.hookExecuter.OnError(hook.StageDependencies, []string{hook.All}, hook.Context{Client: m.client, Error: err}, m.log)
+		return nil, err
 	}
 
-	err = m.hookExecuter.Execute(hook.After, hook.StageDependencies, hook.All, hook.Context{Client: m.client, Config: m.config, Cache: m.cache}, m.log)
+	err = m.hookExecuter.Execute(hook.After, hook.StageDependencies, hook.All, hook.Context{Client: m.client}, m.log)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return dependencies, nil
 }
 
 // PurgeOptions has all options for purging all dependencies
@@ -194,7 +223,7 @@ type PurgeOptions struct {
 }
 
 // PurgeAll purges all dependencies in reverse order
-func (m *manager) PurgeAll(options PurgeOptions) error {
+func (m *manager) PurgeAll(options PurgeOptions) ([]types.Dependency, error) {
 	return m.handleDependencies(options.Dependencies, true, false, false, options.Verbose, "Purge", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Purge(log)
 	})
@@ -211,15 +240,15 @@ type RenderOptions struct {
 	BuildOptions build.Options
 }
 
-func (m *manager) RenderAll(options RenderOptions) error {
+func (m *manager) RenderAll(options RenderOptions) ([]types.Dependency, error) {
 	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Render", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Render(options.SkipBuild, &options.BuildOptions, options.Writer, log)
 	})
 }
 
-func (m *manager) handleDependencies(filterDependencies []string, reverse, updateDependencies, silent, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) error {
+func (m *manager) handleDependencies(filterDependencies []string, reverse, updateDependencies, silent, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) ([]types.Dependency, error) {
 	if m.config == nil || m.config.Dependencies == nil || len(m.config.Dependencies) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	if silent == false {
@@ -230,10 +259,10 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 	dependencies, err := m.resolver.Resolve(updateDependencies)
 	if err != nil {
 		if _, ok := err.(*cyclicError); ok {
-			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
+			return nil, errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
 		}
 
-		return errors.Wrap(err, "resolve dependencies")
+		return nil, errors.Wrap(err, "resolve dependencies")
 	}
 
 	defer m.log.StopWait()
@@ -251,12 +280,12 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 		i = len(dependencies) - 1
 	}
 
-	executed := 0
 	numDependencies := len(dependencies)
 	if len(filterDependencies) > 0 {
 		numDependencies = len(filterDependencies)
 	}
 
+	executedDependencies := []types.Dependency{}
 	if silent == false {
 		m.log.StartWait(fmt.Sprintf("%s %d dependencies", actionName, numDependencies))
 	}
@@ -275,7 +304,7 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 		}
 
 		// Check if we should act on this dependency
-		if foundDependency(dependency.DependencyConfig.Name, filterDependencies) == false {
+		if foundDependency(dependency.dependencyConfig.Name, filterDependencies) == false {
 			continue
 		}
 
@@ -286,36 +315,34 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 
 		err := action(dependency, dependencyLogger)
 		if err != nil {
-			return errors.Wrapf(err, "%s dependency %s error %s", actionName, dependency.ID, buff.String())
+			return nil, errors.Wrapf(err, "%s dependency %s error %s", actionName, dependency.id, buff.String())
 		}
 
-		executed++
+		executedDependencies = append(executedDependencies, dependency)
 		if silent == false {
-			m.log.Donef("%s dependency %s completed", actionName, dependency.ID)
+			m.log.Donef("%s dependency %s completed", actionName, dependency.id)
 		}
 	}
 	m.log.StopWait()
 	if silent == false {
-		if executed > 0 {
-			m.log.Donef("Successfully processed %d dependencies", executed)
+		if len(executedDependencies) > 0 {
+			m.log.Donef("Successfully processed %d dependencies", len(executedDependencies))
 		} else {
 			m.log.Done("No dependency processed")
 		}
 	}
 
-	return nil
+	return executedDependencies, nil
 }
 
 // Dependency holds the dependency config and has an id
 type Dependency struct {
-	ID              string
-	LocalPath       string
-	Config          *latest.Config
-	Commands        []*latest.CommandConfig
-	GeneratedConfig *generated.Config
+	id          string
+	localPath   string
+	localConfig config.Config
 
-	DependencyConfig *latest.DependencyConfig
-	DependencyCache  *generated.Config
+	dependencyConfig *latest.DependencyConfig
+	dependencyCache  *generated.Config
 
 	kubeClient       kubectl.Client
 	registryClient   pullsecrets.Client
@@ -323,6 +350,23 @@ type Dependency struct {
 	deployController deploy.Controller
 	generatedSaver   generated.ConfigLoader
 }
+
+// Implement Interface Methods
+
+func (d *Dependency) ID() string { return d.id }
+
+func (d *Dependency) NameOrID() string {
+	if d.dependencyConfig.Name != "" {
+		return d.dependencyConfig.Name
+	}
+	return d.id
+}
+
+func (d *Dependency) Config() config.Config { return d.localConfig }
+
+func (d *Dependency) LocalPath() string { return d.localPath }
+
+func (d *Dependency) DependencyConfig() *latest.DependencyConfig { return d.dependencyConfig }
 
 // Build builds and pushes all defined images
 func (d *Dependency) Build(forceDependencies bool, buildOptions *build.Options, log log.Logger) error {
@@ -343,7 +387,7 @@ func (d *Dependency) Build(forceDependencies bool, buildOptions *build.Options, 
 		return err
 	}
 
-	log.Donef("Built dependency %s", d.ID)
+	log.Donef("Built dependency %s", d.id)
 	return nil
 }
 
@@ -361,7 +405,7 @@ func (d *Dependency) Deploy(forceDependencies, skipBuild, skipDeploy, forceDeplo
 	defer os.Chdir(currentWorkingDirectory)
 
 	// Create namespace if necessary
-	err = d.kubeClient.EnsureDeployNamespaces(d.Config, log)
+	err = d.kubeClient.EnsureDeployNamespaces(d.localConfig.Config(), log)
 	if err != nil {
 		return errors.Errorf("Unable to create namespace: %v", err)
 	}
@@ -390,12 +434,12 @@ func (d *Dependency) Deploy(forceDependencies, skipBuild, skipDeploy, forceDeplo
 	}
 
 	// Save Config
-	err = d.generatedSaver.Save(d.GeneratedConfig)
+	err = d.generatedSaver.Save(d.localConfig.Generated())
 	if err != nil {
 		return errors.Errorf("Error saving generated config: %v", err)
 	}
 
-	log.Donef("Deployed dependency %s", d.ID)
+	log.Donef("Deployed dependency %s", d.id)
 	return nil
 }
 
@@ -434,16 +478,16 @@ func (d *Dependency) Purge(log log.Logger) error {
 	// Purge the deployments
 	err = d.deployController.Purge(nil, log)
 	if err != nil {
-		log.Errorf("Error purging dependency %s: %v", d.ID, err)
+		log.Errorf("Error purging dependency %s: %v", d.id, err)
 	}
 
-	err = d.generatedSaver.Save(d.GeneratedConfig)
+	err = d.generatedSaver.Save(d.localConfig.Generated())
 	if err != nil {
 		log.Errorf("Error saving generated.yaml: %v", err)
 	}
 
-	delete(d.DependencyCache.GetActive().Dependencies, d.ID)
-	log.Donef("Purged dependency %s", d.ID)
+	delete(d.dependencyCache.GetActive().Dependencies, d.id)
+	log.Donef("Purged dependency %s", d.id)
 	return nil
 }
 
@@ -452,7 +496,7 @@ func (d *Dependency) buildImages(skipBuild bool, buildOptions *build.Options, lo
 
 	// Check if image build is enabled
 	builtImages := make(map[string]string)
-	if skipBuild == false && (d.DependencyConfig.SkipBuild == nil || *d.DependencyConfig.SkipBuild == false) {
+	if skipBuild == false && (d.dependencyConfig.SkipBuild == nil || *d.dependencyConfig.SkipBuild == false) {
 		// Build images
 		builtImages, err = d.buildController.Build(buildOptions, log)
 		if err != nil {
@@ -461,7 +505,7 @@ func (d *Dependency) buildImages(skipBuild bool, buildOptions *build.Options, lo
 
 		// Save config if an image was built
 		if len(builtImages) > 0 {
-			err := d.generatedSaver.Save(d.GeneratedConfig)
+			err := d.generatedSaver.Save(d.localConfig.Generated())
 			if err != nil {
 				return nil, errors.Errorf("Error saving generated config: %v", err)
 			}
@@ -478,7 +522,7 @@ func (d *Dependency) changeWorkingDirectory() (string, error) {
 		return "", errors.Wrap(err, "getwd")
 	}
 
-	err = os.Chdir(d.LocalPath)
+	err = os.Chdir(d.localPath)
 	if err != nil {
 		return "", errors.Wrap(err, "change working directory")
 	}
@@ -488,17 +532,17 @@ func (d *Dependency) changeWorkingDirectory() (string, error) {
 
 func (d *Dependency) prepare(forceDependencies bool) (string, error) {
 	// Check if we should redeploy
-	directoryHash, err := hash.DirectoryExcludes(d.LocalPath, []string{".git", ".devspace"}, true)
+	directoryHash, err := hash.DirectoryExcludes(d.localPath, []string{".git", ".devspace"}, true)
 	if err != nil {
 		return "", errors.Wrap(err, "hash directory")
 	}
 
 	// Check if we skip the dependency deploy
-	if forceDependencies == false && directoryHash == d.DependencyCache.GetActive().Dependencies[d.ID] {
+	if forceDependencies == false && directoryHash == d.dependencyCache.GetActive().Dependencies[d.id] {
 		return "", nil
 	}
 
-	d.DependencyCache.GetActive().Dependencies[d.ID] = directoryHash
+	d.dependencyCache.GetActive().Dependencies[d.id] = directoryHash
 	return d.changeWorkingDirectory()
 }
 

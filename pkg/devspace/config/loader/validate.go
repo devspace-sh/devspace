@@ -10,6 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 	k8sv1 "k8s.io/api/core/v1"
 	"path/filepath"
+	"strings"
 )
 
 // ValidInitialSyncStrategy checks if strategy is valid
@@ -275,9 +276,5 @@ func validateDev(config *latest.Config) error {
 }
 
 func findImageName(config *latest.Config, imageName string) bool {
-	if config.Images == nil {
-		return false
-	}
-
-	return config.Images[imageName] != nil
+	return (config.Images == nil && config.Images[imageName] != nil) || len(strings.Split(imageName, ".")) == 2
 }

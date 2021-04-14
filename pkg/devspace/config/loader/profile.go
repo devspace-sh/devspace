@@ -111,11 +111,6 @@ func ApplyReplace(config map[interface{}]interface{}, profile map[interface{}]in
 
 // ApplyPatches applies the patches to the config if defined
 func ApplyPatches(data map[interface{}]interface{}, profile map[interface{}]interface{}) (map[interface{}]interface{}, error) {
-	out, err := yaml.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-
 	patchesRaw, ok := profile["patches"]
 	if !ok {
 		return data, nil
@@ -129,17 +124,26 @@ func ApplyPatches(data map[interface{}]interface{}, profile map[interface{}]inte
 	}
 
 	configPatches := []*latest.PatchConfig{}
-	err = util.Convert(patchesArr, &configPatches)
+	err := util.Convert(patchesArr, &configPatches)
 	if err != nil {
 		return nil, errors.Wrap(err, "convert patches")
+	}
+
+	return ApplyPatchesOnObject(data, configPatches)
+}
+
+func ApplyPatchesOnObject(data map[interface{}]interface{}, configPatches []*latest.PatchConfig) (map[interface{}]interface{}, error) {
+	out, err := yaml.Marshal(data)
+	if err != nil {
+		return nil, err
 	}
 
 	patches := yamlpatch.Patch{}
 	for idx, patch := range configPatches {
 		if patch.Operation == "" {
-			return nil, errors.Errorf("profiles.%v.patches.%d.op is missing", profile["name"], idx)
+			return nil, errors.Errorf("patches.%d.op is missing", idx)
 		} else if patch.Path == "" {
-			return nil, errors.Errorf("profiles.%v.patches.%d.path is missing", profile["name"], idx)
+			return nil, errors.Errorf("patches.%d.path is missing", idx)
 		}
 
 		newPatch := yamlpatch.Operation{

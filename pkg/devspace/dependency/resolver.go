@@ -47,7 +47,7 @@ type resolver struct {
 }
 
 // NewResolver creates a new resolver for resolving dependencies
-func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, log log.Logger) (ResolverInterface, error) {
+func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, log log.Logger) ResolverInterface {
 	var id string
 
 	var kubeLoader kubeconfig.Loader
@@ -59,7 +59,7 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client 
 
 	basePath, err := filepath.Abs(".")
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	remote, err := git.GetRemote(basePath)
 	if err == nil {
@@ -82,7 +82,7 @@ func NewResolver(baseConfig *latest.Config, baseCache *generated.Config, client 
 		client:         client,
 		generatedSaver: generated.NewConfigLoader(""),
 		log:            log,
-	}, nil
+	}
 }
 
 // Resolve implements interface
@@ -160,8 +160,8 @@ func (r *resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 
 			// Load dependencies from dependency
 			if dependencyConfig.IgnoreDependencies == nil || *dependencyConfig.IgnoreDependencies == false {
-				if dependency.Config.Dependencies != nil && len(dependency.Config.Dependencies) > 0 {
-					err = r.resolveRecursive(dependency.LocalPath, ID, dependency.Config.Dependencies, update)
+				if dependency.localConfig.Config().Dependencies != nil && len(dependency.localConfig.Config().Dependencies) > 0 {
+					err = r.resolveRecursive(dependency.localPath, ID, dependency.localConfig.Config().Dependencies, update)
 					if err != nil {
 						return err
 					}
@@ -206,31 +206,17 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	}
 
 	// Load the dependency config
-	var (
-		dConfigWrapper config.Config
-		dCommands      []*latest.CommandConfig
-	)
+	var dConfigWrapper config.Config
 	err = executeInDirectory(filepath.Dir(configPath), func() error {
 		configLoader := loader.NewConfigLoader(configPath)
 		// make sure we not apply the profile from generated
 		baseConfigProfile := cloned.GeneratedConfig.ActiveProfile
 		cloned.GeneratedConfig.ActiveProfile = ""
-		dConfigWrapper, err = configLoader.Load(cloned, r.log)
+		dConfigWrapper, err = configLoader.LoadWithParser(loader.NewWithCommandsParser(), cloned, r.log)
 		cloned.GeneratedConfig.ActiveProfile = baseConfigProfile
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", ID))
 		}
-
-		// parse the commands
-		baseConfigProfile = cloned.GeneratedConfig.ActiveProfile
-		cloned.GeneratedConfig.ActiveProfile = ""
-		dCommandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), cloned, r.log)
-		cloned.GeneratedConfig.ActiveProfile = baseConfigProfile
-		if err != nil {
-			return errors.Wrap(err, "parse dependency commands")
-		}
-
-		dCommands = dCommandsInterface.Config().Commands
 		return nil
 	})
 	if err != nil {
@@ -276,24 +262,24 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 		return nil, errors.Wrap(err, "create docker client")
 	}
 
+	// This is the loaded config with the additional generated config from the dependency path
+	localConfig := config.NewConfig(dConfigWrapper.Raw(), dConfig, dGeneratedConfig, dConfigWrapper.Variables())
+
 	// Create registry client for pull secrets
 	return &Dependency{
-		ID:        ID,
-		LocalPath: localPath,
+		id:          ID,
+		localPath:   localPath,
+		localConfig: localConfig,
 
-		Config:          dConfig,
-		Commands:        dCommands,
-		GeneratedConfig: dGeneratedConfig,
-
-		DependencyConfig: dependency,
-		DependencyCache:  r.BaseCache,
+		dependencyConfig: dependency,
+		dependencyCache:  r.BaseCache,
 
 		kubeClient:     client,
 		generatedSaver: gLoader,
 
-		registryClient:   pullsecrets.NewClient(dConfig, dGeneratedConfig.GetActive(), client, dockerClient, r.log),
-		buildController:  build.NewController(dConfig, dGeneratedConfig.GetActive(), client),
-		deployController: deploy.NewController(dConfig, dGeneratedConfig.GetActive(), client),
+		registryClient:   pullsecrets.NewClient(localConfig, nil, client, dockerClient, r.log),
+		buildController:  build.NewController(localConfig, nil, client),
+		deployController: deploy.NewController(localConfig, nil, client),
 	}, nil
 }
 

@@ -113,12 +113,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 			return err
 		}
 
-		mgr, err := f.NewDependencyManager(config.Config(), config.Generated(), nil, false, configOptions, f.GetLog())
-		if err != nil {
-			return err
-		}
-
-		return mgr.Command(dependency.CommandOptions{
+		return f.NewDependencyManager(config, nil, false, configOptions, f.GetLog()).Command(dependency.CommandOptions{
 			Dependencies: []string{cmd.Dependency},
 			Command:      args[0],
 			Args:         args[1:],

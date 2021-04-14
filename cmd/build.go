@@ -127,14 +127,8 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 		}
 	}
 
-	// Create Dependencymanager
-	manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, configOptions, log)
-	if err != nil {
-		return errors.Wrap(err, "new manager")
-	}
-
 	// Dependencies
-	err = manager.BuildAll(dependency.BuildOptions{
+	dependencies, err := f.NewDependencyManager(configInterface, client, cmd.AllowCyclicDependencies, configOptions, log).BuildAll(dependency.BuildOptions{
 		Dependencies:            cmd.Dependency,
 		ForceDeployDependencies: cmd.ForceDependencies,
 		Verbose:                 cmd.VerboseDependencies,
@@ -153,7 +147,7 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 
 	// Build images if necessary
 	if len(cmd.Dependency) == 0 {
-		builtImages, err := f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
+		builtImages, err := f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
 			SkipPush:                  cmd.SkipPush,
 			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 			ForceRebuild:              cmd.ForceBuild,

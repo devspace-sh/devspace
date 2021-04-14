@@ -123,7 +123,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 	options.ImageSelector = imageSelector
 
 	// Start terminal
-	err = f.NewServicesClient(nil, generatedConfig, client, log).StartLogs(options, cmd.Follow, int64(cmd.LastAmountOfLines), cmd.Wait)
+	err = f.NewServicesClient(nil, nil, client, log).StartLogs(options, cmd.Follow, int64(cmd.LastAmountOfLines), cmd.Wait)
 	if err != nil {
 		return err
 	}
@@ -143,8 +143,10 @@ func getImageSelector(configLoader loader.ConfigLoader, configOptions *loader.Co
 			return nil, err
 		}
 
-		imageSelector = targetselector.ImageSelectorFromConfig(image, config.Config(), config.Generated().GetActive())
-		if len(imageSelector) == 0 {
+		imageSelector, err = targetselector.ImageSelectorFromConfig(image, config, nil)
+		if err != nil {
+			return nil, err
+		} else if len(imageSelector) == 0 {
 			return nil, fmt.Errorf("couldn't find an image with name %s in devspace config", image)
 		}
 	}

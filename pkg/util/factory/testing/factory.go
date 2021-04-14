@@ -3,11 +3,12 @@ package testing
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/configure"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	dependencytypes "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
@@ -54,12 +55,12 @@ func (f *Factory) NewAnalyzer(client kubectl.Client, log log.Logger) analyze.Ana
 }
 
 // NewBuildController implements interface
-func (f *Factory) NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller {
+func (f *Factory) NewBuildController(config config.Config, dependencies []dependencytypes.Dependency, client kubectl.Client) build.Controller {
 	return f.BuildController
 }
 
 // NewDeployController implements interface
-func (f *Factory) NewDeployController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) deploy.Controller {
+func (f *Factory) NewDeployController(config config.Config, dependencies []dependencytypes.Dependency, client kubectl.Client) deploy.Controller {
 	return f.DeployController
 }
 
@@ -74,17 +75,17 @@ func (f *Factory) GetLog() log.Logger {
 }
 
 // NewHookExecutor implements interface
-func (f *Factory) NewHookExecutor(config *latest.Config) hook.Executer {
+func (f *Factory) NewHookExecutor(config config.Config, dependencies []dependencytypes.Dependency) hook.Executer {
 	return f.HookExecutor
 }
 
 // NewDependencyManager implements interface
-func (f *Factory) NewDependencyManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (dependency.Manager, error) {
-	return f.DependencyManager, nil
+func (f *Factory) NewDependencyManager(config config.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) dependency.Manager {
+	return f.DependencyManager
 }
 
 // NewPullSecretClient implements interface
-func (f *Factory) NewPullSecretClient(config *latest.Config, cache *generated.CacheConfig, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client {
+func (f *Factory) NewPullSecretClient(config config.Config, dependencies []dependencytypes.Dependency, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client {
 	return f.PullSecretClient
 }
 
@@ -129,6 +130,6 @@ func (f *Factory) NewHelmClient(config *latest.Config, deployConfig *latest.Depl
 }
 
 // NewServicesClient implements interface
-func (f *Factory) NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, log log.Logger) services.Client {
+func (f *Factory) NewServicesClient(config config.Config, dependencies []dependencytypes.Dependency, kubeClient kubectl.Client, log log.Logger) services.Client {
 	return f.ServicesClient
 }

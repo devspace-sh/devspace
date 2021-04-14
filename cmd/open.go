@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"net/http"
 	"os"
@@ -309,11 +310,11 @@ func (cmd *OpenCmd) openLocal(f factory.Factory, generatedConfig *generated.Conf
 	}
 
 	// start port-forwarding for localhost access
-	servicesClient := f.NewServicesClient(&latest.Config{
+	servicesClient := f.NewServicesClient(config.NewConfig(nil, &latest.Config{
 		Dev: latest.DevConfig{
 			Ports: portforwardingConfig,
 		},
-	}, generatedConfig, client, cmd.log)
+	}, generatedConfig, nil), nil, client, cmd.log)
 	err = servicesClient.StartPortForwarding(nil)
 	if err != nil {
 		return errors.Wrap(err, "start port forwarding")

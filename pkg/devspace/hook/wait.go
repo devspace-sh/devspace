@@ -2,7 +2,9 @@ package hook
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -22,21 +24,27 @@ type waitHook struct {
 	printWarning sync.Once
 }
 
-func (r *waitHook) Execute(ctx Context, hook *latest.HookConfig, log logpkg.Logger) error {
+func (r *waitHook) Execute(ctx Context, hook *latest.HookConfig, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error {
 	if ctx.Client == nil {
 		return errors.Errorf("Cannot execute hook '%s': kube client is not initialized", ansi.Color(hookName(hook), "white+b"))
 	}
 
-	var imageSelector []string
+	var (
+		imageSelector []string
+		err           error
+	)
 	if hook.Where.Container.ImageName != "" {
-		if ctx.Config == nil || ctx.Cache == nil {
+		if config == nil || config.Generated() == nil {
 			return errors.Errorf("Cannot execute hook '%s': config is not loaded", ansi.Color(hookName(hook), "white+b"))
 		}
 
-		imageSelector = targetselector.ImageSelectorFromConfig(hook.Where.Container.ImageName, ctx.Config, ctx.Cache)
+		imageSelector, err = targetselector.ImageSelectorFromConfig(hook.Where.Container.ImageName, config, dependencies)
+		if err != nil {
+			return err
+		}
 	}
 
-	err := r.execute(ctx, hook, imageSelector, log)
+	err = r.execute(ctx, hook, imageSelector, log)
 	if err != nil {
 		return err
 	}

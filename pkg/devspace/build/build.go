@@ -2,11 +2,11 @@ package build
 
 import (
 	"bufio"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"io"
 	"strings"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -36,20 +36,18 @@ type Controller interface {
 }
 
 type controller struct {
-	config *latest.Config
-	cache  *generated.CacheConfig
+	config config.Config
 
 	hookExecuter hook.Executer
 	client       kubectl.Client
 }
 
 // NewController creates a new image build controller
-func NewController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) Controller {
+func NewController(config config.Config, dependencies []types.Dependency, client kubectl.Client) Controller {
 	return &controller{
 		config: config,
-		cache:  cache,
 
-		hookExecuter: hook.NewExecuter(config),
+		hookExecuter: hook.NewExecuter(config, dependencies),
 		client:       client,
 	}
 }
@@ -62,10 +60,11 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		// Parallel build
 		errChan   = make(chan error)
 		cacheChan = make(chan imageNameAndTag)
+		config    = c.config.Config()
 	)
 
 	// Check if we have at least 1 image to build
-	if len(c.config.Images) == 0 {
+	if len(config.Images) == 0 {
 		return builtImages, nil
 	}
 
@@ -73,25 +72,25 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	if options.Sequential == false {
 		// check if all images are disabled besides one
 		imagesToBuild := 0
-		for _, image := range c.config.Images {
+		for _, image := range config.Images {
 			if image.Build == nil || image.Build.Disabled == nil || *image.Build.Disabled == false {
 				imagesToBuild++
 			}
 		}
-		if len(c.config.Images) <= 1 || imagesToBuild <= 1 {
+		if len(config.Images) <= 1 || imagesToBuild <= 1 {
 			options.Sequential = true
 		}
 	}
 
 	// Execute before images build hook
-	err := c.hookExecuter.Execute(hook.Before, hook.StageImages, hook.All, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+	err := c.hookExecuter.Execute(hook.Before, hook.StageImages, hook.All, hook.Context{Client: c.client}, log)
 	if err != nil {
 		return nil, err
 	}
 
 	imagesToBuild := 0
 
-	for key, imageConf := range c.config.Images {
+	for key, imageConf := range config.Images {
 		if imageConf.Build != nil && imageConf.Build.Disabled != nil && *imageConf.Build.Disabled == true {
 			log.Infof("Skipping building image %s", key)
 			continue
@@ -103,7 +102,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		imageConfigName := key
 
 		// Execute before images build hook
-		err = c.hookExecuter.Execute(hook.Before, hook.StageImages, imageConfigName, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+		err = c.hookExecuter.Execute(hook.Before, hook.StageImages, imageConfigName, hook.Context{Client: c.client}, log)
 		if err != nil {
 			return nil, err
 		}
@@ -130,7 +129,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		}
 
 		// Check if rebuild is needed
-		needRebuild, err := builder.ShouldRebuild(c.cache, options.ForceRebuild)
+		needRebuild, err := builder.ShouldRebuild(c.config.Generated().GetActive(), options.ForceRebuild)
 		if err != nil {
 			return nil, errors.Errorf("error during shouldRebuild check: %v", err)
 		}
@@ -145,12 +144,12 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 			// Build the image
 			err = builder.Build(log)
 			if err != nil {
-				c.hookExecuter.OnError(hook.StageImages, []string{hook.All, imageConfigName}, hook.Context{Client: c.client, Config: c.config, Cache: c.cache, Error: err}, log)
+				c.hookExecuter.OnError(hook.StageImages, []string{hook.All, imageConfigName}, hook.Context{Client: c.client, Error: err}, log)
 				return nil, errors.Wrapf(err, "error building image %s:%s", imageName, imageTags[0])
 			}
 
 			// Update cache
-			imageCache := c.cache.GetImageCache(imageConfigName)
+			imageCache := c.config.Generated().GetActive().GetImageCache(imageConfigName)
 			if imageCache.Tag == imageTags[0] {
 				log.Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", imageName, imageTags[0])
 			}
@@ -162,7 +161,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 			builtImages[imageName] = imageTags[0]
 
 			// Execute before images build hook
-			err = c.hookExecuter.Execute(hook.After, hook.StageImages, imageConfigName, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+			err = c.hookExecuter.Execute(hook.After, hook.StageImages, imageConfigName, hook.Context{Client: c.client}, log)
 			if err != nil {
 				return nil, err
 			}
@@ -196,13 +195,13 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 				err := builder.Build(streamLog)
 				_ = writer.Close()
 				if err != nil {
-					c.hookExecuter.OnError(hook.StageImages, []string{imageConfigName}, hook.Context{Client: c.client, Config: c.config, Cache: c.cache, Error: err}, log)
+					c.hookExecuter.OnError(hook.StageImages, []string{imageConfigName}, hook.Context{Client: c.client, Error: err}, log)
 					errChan <- errors.Errorf("error building image %s:%s: %v", imageName, imageTags[0], err)
 					return
 				}
 
 				// Execute before images build hook
-				err = c.hookExecuter.Execute(hook.After, hook.StageImages, imageConfigName, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+				err = c.hookExecuter.Execute(hook.After, hook.StageImages, imageConfigName, hook.Context{Client: c.client}, log)
 				if err != nil {
 					errChan <- errors.Errorf("error executing image hook %s:%s: %v", imageName, imageTags[0], err)
 					return
@@ -231,7 +230,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	// Execute after images build hook
-	err = c.hookExecuter.Execute(hook.After, hook.StageImages, hook.All, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+	err = c.hookExecuter.Execute(hook.After, hook.StageImages, hook.All, hook.Context{Client: c.client}, log)
 	if err != nil {
 		return nil, err
 	}
@@ -242,13 +241,13 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 func (c *controller) waitForBuild(errChan <-chan error, cacheChan <-chan imageNameAndTag, builtImages map[string]string, log logpkg.Logger) error {
 	select {
 	case err := <-errChan:
-		c.hookExecuter.OnError(hook.StageImages, []string{hook.All}, hook.Context{Client: c.client, Config: c.config, Cache: c.cache, Error: err}, log)
+		c.hookExecuter.OnError(hook.StageImages, []string{hook.All}, hook.Context{Client: c.client, Error: err}, log)
 		return err
 	case done := <-cacheChan:
 		log.Donef("Done building image %s:%s (%s)", done.imageName, done.imageTag, done.imageConfigName)
 
 		// Update cache
-		imageCache := c.cache.GetImageCache(done.imageConfigName)
+		imageCache := c.config.Generated().GetActive().GetImageCache(done.imageConfigName)
 		if imageCache.Tag == done.imageTag {
 			log.Warnf("Newly built image '%s' has the same tag as in the last build (%s), this can lead to problems that the image during deployment is not updated", done.imageName, done.imageTag)
 		}

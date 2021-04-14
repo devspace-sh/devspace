@@ -4,8 +4,9 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -40,32 +41,45 @@ type logManager struct {
 	activeLogs      map[string]activeLog
 }
 
-func NewLogManager(client kubectl.Client, config *latest.Config, generatedConfig *generated.Config, interrupt chan error, out log.Logger) (LogManager, error) {
-	if config == nil || generatedConfig == nil {
+func NewLogManager(client kubectl.Client, config config.Config, dependencies []types.Dependency, interrupt chan error, out log.Logger) (LogManager, error) {
+	if config == nil || config.Config() == nil || config.Generated() == nil {
 		return nil, fmt.Errorf("no devspace config loaded")
 	}
 
+	// get config
+	c := config.Config()
+
 	// Build an image selector
 	imageSelector := []string{}
-	if config.Dev.Logs != nil && config.Dev.Logs.Images != nil {
-		for _, configImageName := range config.Dev.Logs.Images {
-			imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig.GetActive())...)
+	if c.Dev.Logs != nil && c.Dev.Logs.Images != nil {
+		for _, configImageName := range c.Dev.Logs.Images {
+			selectors, err := targetselector.ImageSelectorFromConfig(configImageName, config, dependencies)
+			if err != nil {
+				return nil, err
+			}
+
+			imageSelector = append(imageSelector, selectors...)
 		}
 	} else {
-		for configImageName := range config.Images {
-			imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig.GetActive())...)
+		for configImageName := range c.Images {
+			selectors, err := targetselector.ImageSelectorFromConfig(configImageName, config, dependencies)
+			if err != nil {
+				return nil, err
+			}
+
+			imageSelector = append(imageSelector, selectors...)
 		}
 	}
 
 	// Show last log lines
 	var tail *int64
-	if config.Dev.Logs != nil && config.Dev.Logs.ShowLast != nil {
-		tail = ptr.Int64(int64(*config.Dev.Logs.ShowLast))
+	if c.Dev.Logs != nil && c.Dev.Logs.ShowLast != nil {
+		tail = ptr.Int64(int64(*c.Dev.Logs.ShowLast))
 	}
 
 	var selectors []latest.LogsSelector
-	if config.Dev.Logs != nil {
-		selectors = config.Dev.Logs.Selectors
+	if c.Dev.Logs != nil {
+		selectors = c.Dev.Logs.Selectors
 	}
 	if tail == nil {
 		tail = ptr.Int64(50)

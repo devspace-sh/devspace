@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services"
@@ -119,6 +120,15 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 		return err
 	}
 
+	// Resolve dependencies
+	dep, err := f.NewDependencyManager(configInterface, client, false, configOptions, cmd.log).ResolveAll(dependency.ResolveOptions{
+		UpdateDependencies: false,
+		Verbose:            false,
+	})
+	if err != nil {
+		cmd.log.Warnf("Error resolving dependencies: %v", err)
+	}
+
 	// restart containers
 	restarts := 0
 	for _, syncPath := range config.Dev.Sync {
@@ -128,7 +138,7 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 
 		// create target selector options
 		options := targetselector.NewOptionsFromFlags("", "", cmd.Namespace, "", cmd.Pick).ApplyConfigParameter(syncPath.LabelSelector, syncPath.Namespace, syncPath.ContainerName, "")
-		options.ImageSelector = targetselector.ImageSelectorFromConfig(syncPath.ImageName, config, generatedConfig.GetActive())
+		options.ImageSelector, err = targetselector.ImageSelectorFromConfig(syncPath.ImageName, configInterface, dep)
 
 		err = restartContainer(client, options, cmd.log)
 		if err != nil {

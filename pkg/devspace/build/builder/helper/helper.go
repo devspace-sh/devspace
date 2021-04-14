@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"os"
 	"path/filepath"
 
@@ -19,7 +20,7 @@ import (
 type BuildHelper struct {
 	ImageConfigName string
 	ImageConf       *latest.ImageConfig
-	Config          *latest.Config
+	Config          config.Config
 
 	DockerfilePath string
 	ContextPath    string
@@ -39,7 +40,7 @@ type BuildHelperInterface interface {
 }
 
 // NewBuildHelper creates a new build helper for a certain engine
-func NewBuildHelper(config *latest.Config, kubeClient kubectl.Client, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string) *BuildHelper {
+func NewBuildHelper(config config.Config, kubeClient kubectl.Client, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string) *BuildHelper {
 	var (
 		dockerfilePath, contextPath = GetDockerfileAndContext(imageConf)
 		imageName                   = imageConf.Image

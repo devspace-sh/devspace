@@ -69,15 +69,14 @@ func (serviceClient *client) StartTerminal(options targetselector.Options, args 
 }
 
 func (serviceClient *client) getCommand(args []string, workDir string) []string {
-	config := serviceClient.config
-	if config != nil && config.Dev.Terminal != nil {
+	if serviceClient.config != nil && serviceClient.config.Config() != nil && serviceClient.config.Config().Dev.Terminal != nil {
 		if len(args) == 0 {
-			for _, cmd := range config.Dev.Terminal.Command {
+			for _, cmd := range serviceClient.config.Config().Dev.Terminal.Command {
 				args = append(args, cmd)
 			}
 		}
 		if workDir == "" {
-			workDir = config.Dev.Terminal.WorkDir
+			workDir = serviceClient.config.Config().Dev.Terminal.WorkDir
 		}
 	}
 

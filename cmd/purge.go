@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"strings"
 
@@ -116,7 +117,18 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	if err != nil {
 		return err
 	}
-	config := configInterface.Config()
+
+	// Purge dependencies
+	var dependencies []types.Dependency
+	if cmd.PurgeDependencies || len(cmd.Dependency) > 0 {
+		dependencies, err = f.NewDependencyManager(configInterface, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log).PurgeAll(dependency.PurgeOptions{
+			Dependencies: cmd.Dependency,
+			Verbose:      cmd.VerboseDependencies,
+		})
+		if err != nil {
+			cmd.log.Errorf("Error purging dependencies: %v", err)
+		}
+	}
 
 	// Only purge if we don't specify dependency
 	if len(cmd.Dependency) == 0 {
@@ -129,26 +141,9 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 		}
 
 		// Purge deployments
-		err = f.NewDeployController(config, generatedConfig.GetActive(), client).Purge(deployments, cmd.log)
+		err = f.NewDeployController(configInterface, dependencies, client).Purge(deployments, cmd.log)
 		if err != nil {
 			cmd.log.Errorf("Error purging deployments: %v", err)
-		}
-	}
-
-	// Purge dependencies
-	if cmd.PurgeDependencies || len(cmd.Dependency) > 0 {
-		// Create Dependencymanager
-		manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log)
-		if err != nil {
-			return errors.Wrap(err, "new manager")
-		}
-
-		err = manager.PurgeAll(dependency.PurgeOptions{
-			Dependencies: cmd.Dependency,
-			Verbose:      cmd.VerboseDependencies,
-		})
-		if err != nil {
-			cmd.log.Errorf("Error purging dependencies: %v", err)
 		}
 	}
 
