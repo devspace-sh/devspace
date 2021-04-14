@@ -101,12 +101,6 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		imageName := cImageConf.Image
 		imageConfigName := key
 
-		// Execute before images build hook
-		err = c.hookExecuter.Execute(hook.Before, hook.StageImages, imageConfigName, hook.Context{Client: c.client}, log)
-		if err != nil {
-			return nil, err
-		}
-
 		// Get image tags
 		imageTags := []string{}
 		if len(imageConf.Tags) > 0 {
@@ -137,6 +131,12 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		if options.ForceRebuild == false && needRebuild == false {
 			log.Infof("Skip building image '%s'", imageConfigName)
 			continue
+		}
+
+		// Execute before images build hook
+		err = c.hookExecuter.Execute(hook.Before, hook.StageImages, imageConfigName, hook.Context{Client: c.client}, log)
+		if err != nil {
+			return nil, err
 		}
 
 		// Sequential or parallel build?
