@@ -853,10 +853,15 @@ type DependencyConfig struct {
 // DependencyDev specifies which parts of the dependency dev config should
 // be reused
 type DependencyDev struct {
-	// If ports is true, DevSpace will forward and reverse forward the
+	// If disable is true, the dev section of the dependency will not be used at all
+	Disable bool `yaml:"disable,omitempty" json:"disable,omitempty"`
+
+	// If disablePorts is true, DevSpace will not forward and reverse forward the
 	// specified ports in the dependency's dev.ports config.
-	// Defaults to true
-	Ports *bool `yaml:"ports,omitempty" json:"ports,omitempty"`
+	DisablePorts bool `yaml:"disablePorts,omitempty" json:"disablePorts,omitempty"`
+
+	// If disableSync is true, DevSpace will not run the specified sync paths
+	DisableSync bool `yaml:"disableSync,omitempty" json:"disableSync,omitempty"`
 }
 
 // DependencyVar holds an override value for a config variable

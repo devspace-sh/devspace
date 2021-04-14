@@ -67,7 +67,7 @@ func NewManager(config config.Config, client kubectl.Client, configOptions *load
 		config:       config.Config(),
 		cache:        config.Generated().GetActive(),
 		log:          logger,
-		resolver:     NewResolver(config.Config(), config.Generated(), client, configOptions, logger),
+		resolver:     NewResolver(config, client, configOptions, logger),
 		hookExecuter: hook.NewExecuter(config, nil),
 		client:       client,
 	}
@@ -98,11 +98,12 @@ func (m *manager) UpdateAll() error {
 type ResolveOptions struct {
 	Dependencies       []string
 	UpdateDependencies bool
+	Silent             bool
 	Verbose            bool
 }
 
 func (m *manager) ResolveAll(options ResolveOptions) ([]types.Dependency, error) {
-	dependencies, err := m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Resolve", func(dependency *Dependency, log log.Logger) error {
+	dependencies, err := m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, options.Silent, options.Verbose, "Resolve", func(dependency *Dependency, log log.Logger) error {
 		return nil
 	})
 	if err != nil {
@@ -259,10 +260,6 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 	// Resolve all dependencies
 	dependencies, err := m.resolver.Resolve(updateDependencies)
 	if err != nil {
-		if _, ok := err.(*cyclicError); ok {
-			return nil, errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
-		}
-
 		return nil, errors.Wrap(err, "resolve dependencies")
 	}
 
@@ -316,12 +313,12 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 
 		err := action(dependency, dependencyLogger)
 		if err != nil {
-			return nil, errors.Wrapf(err, "%s dependency %s error %s", actionName, dependency.id, buff.String())
+			return nil, errors.Wrapf(err, "%s dependency %s error %s", actionName, dependency.Name(), buff.String())
 		}
 
 		executedDependencies = append(executedDependencies, dependency)
 		if silent == false {
-			m.log.Donef("%s dependency %s completed", actionName, dependency.id)
+			m.log.Donef("%s dependency %s completed", actionName, dependency.Name())
 		}
 	}
 	m.log.StopWait()
@@ -341,7 +338,7 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 		}
 	}
 
-	return executedDependencies, nil
+	return retDependencies, nil
 }
 
 // Dependency holds the dependency config and has an id
@@ -398,8 +395,6 @@ func (d *Dependency) Build(forceDependencies bool, buildOptions *build.Options, 
 	if err != nil {
 		return err
 	}
-
-	log.Donef("Built dependency %s", d.id)
 	return nil
 }
 
@@ -451,7 +446,6 @@ func (d *Dependency) Deploy(forceDependencies, skipBuild, skipDeploy, forceDeplo
 		return errors.Errorf("Error saving generated config: %v", err)
 	}
 
-	log.Donef("Deployed dependency %s", d.id)
 	return nil
 }
 
@@ -499,7 +493,6 @@ func (d *Dependency) Purge(log log.Logger) error {
 	}
 
 	delete(d.dependencyCache.GetActive().Dependencies, d.id)
-	log.Donef("Purged dependency %s", d.id)
 	return nil
 }
 

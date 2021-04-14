@@ -24,7 +24,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		}
 
 		nextConfig.Dependencies[k].Dev = &next.DependencyDev{
-			Ports: ptr.Bool(false),
+			Disable: true,
 		}
 	}
 

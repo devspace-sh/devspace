@@ -5,6 +5,8 @@ import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -114,7 +116,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
 	// get image selector if specified
-	imageSelector, err := getImageSelector(configLoader, configOptions, cmd.Image, log)
+	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, log)
 	if err != nil {
 		return err
 	}
@@ -131,7 +133,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 	return nil
 }
 
-func getImageSelector(configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, image string, log log.Logger) ([]string, error) {
+func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, image string, log log.Logger) ([]string, error) {
 	var imageSelector []string
 	if image != "" {
 		if configLoader.Exists() == false {
@@ -143,7 +145,14 @@ func getImageSelector(configLoader loader.ConfigLoader, configOptions *loader.Co
 			return nil, err
 		}
 
-		imageSelector, err = targetselector.ImageSelectorFromConfig(image, config, nil)
+		resolved, err := dependency.NewManager(config, client, configOptions, log).ResolveAll(dependency.ResolveOptions{
+			Silent: true,
+		})
+		if err != nil {
+			log.Warnf("Error resolving dependencies: %v", err)
+		}
+
+		imageSelector, err = targetselector.ImageSelectorFromConfig(image, config, resolved)
 		if err != nil {
 			return nil, err
 		} else if len(imageSelector) == 0 {
