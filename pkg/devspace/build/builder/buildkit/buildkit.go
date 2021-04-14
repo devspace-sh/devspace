@@ -104,7 +104,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 	// Should we build with cli?
 	if b.skipPush {
-		buildKitConfig.SkipPush = &b.skipPush
+		buildKitConfig.SkipPush = b.skipPush
 	}
 
 	return buildWithCLI(body, writer, b.helper.KubeClient, builder, buildKitConfig, *buildOptions, useMinikubeDocker, log)
@@ -134,7 +134,7 @@ func buildWithCLI(context io.Reader, writer io.Writer, kubeClient kubectl.Client
 	for _, tag := range options.Tags {
 		args = append(args, "--tag", tag)
 	}
-	if imageConf.SkipPush == nil || *imageConf.SkipPush != true {
+	if imageConf.SkipPush == false {
 		if len(options.Tags) > 0 {
 			args = append(args, "--push")
 		}

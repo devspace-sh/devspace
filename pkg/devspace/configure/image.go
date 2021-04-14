@@ -44,7 +44,7 @@ func (m *manager) newImageConfigFromImageName(imageName, dockerfile, context str
 	}
 	if dockerfile == "" {
 		retImageConfig.Build = &latest.BuildConfig{
-			Disabled: ptr.Bool(true),
+			Disabled: true,
 		}
 	} else {
 		if dockerfile != helper.DefaultDockerfilePath {
@@ -231,7 +231,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 			retImageConfig.Build.Docker = &v1.DockerConfig{}
 		}
 
-		retImageConfig.Build.Docker.SkipPush = ptr.Bool(true)
+		retImageConfig.Build.Docker.SkipPush = true
 	}
 
 	return retImageConfig, nil

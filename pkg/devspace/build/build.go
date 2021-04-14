@@ -73,7 +73,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		// check if all images are disabled besides one
 		imagesToBuild := 0
 		for _, image := range config.Images {
-			if image.Build == nil || image.Build.Disabled == nil || *image.Build.Disabled == false {
+			if image.Build == nil || image.Build.Disabled == false {
 				imagesToBuild++
 			}
 		}
@@ -91,7 +91,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	imagesToBuild := 0
 
 	for key, imageConf := range config.Images {
-		if imageConf.Build != nil && imageConf.Build.Disabled != nil && *imageConf.Build.Disabled == true {
+		if imageConf.Build != nil && imageConf.Build.Disabled == true {
 			log.Infof("Skipping building image %s", key)
 			continue
 		}

@@ -496,7 +496,7 @@ func (d *Dependency) buildImages(skipBuild bool, buildOptions *build.Options, lo
 
 	// Check if image build is enabled
 	builtImages := make(map[string]string)
-	if skipBuild == false && (d.dependencyConfig.SkipBuild == nil || *d.dependencyConfig.SkipBuild == false) {
+	if skipBuild == false && d.dependencyConfig.SkipBuild == false {
 		// Build images
 		builtImages, err = d.buildController.Build(buildOptions, log)
 		if err != nil {

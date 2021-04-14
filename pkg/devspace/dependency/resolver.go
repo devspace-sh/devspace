@@ -159,7 +159,7 @@ func (r *resolver) resolveRecursive(basePath, parentID string, dependencies []*l
 			}
 
 			// Load dependencies from dependency
-			if dependencyConfig.IgnoreDependencies == nil || *dependencyConfig.IgnoreDependencies == false {
+			if dependencyConfig.IgnoreDependencies == false {
 				if dependency.localConfig.Config().Dependencies != nil && len(dependency.localConfig.Config().Dependencies) > 0 {
 					err = r.resolveRecursive(dependency.localPath, ID, dependency.localConfig.Config().Dependencies, update)
 					if err != nil {
@@ -229,8 +229,14 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	dConfig.Dev = latest.DevConfig{}
 
 	// Check if we should skip building
-	if dependency.SkipBuild != nil && *dependency.SkipBuild == true {
-		dConfig.Images = map[string]*latest.ImageConfig{}
+	if dependency.SkipBuild == true {
+		for _, b := range dConfig.Images {
+			if b.Build == nil {
+				b.Build = &latest.BuildConfig{}
+			}
+
+			b.Build.Disabled = true
+		}
 	}
 
 	// Load dependency generated config

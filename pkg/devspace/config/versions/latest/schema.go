@@ -142,15 +142,15 @@ type BuildConfig struct {
 
 	// This overrides other options and is able to disable the build for this image.
 	// Useful if you just want to select the image in a sync path or via devspace enter --image
-	Disabled *bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 }
 
 // DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type DockerConfig struct {
 	PreferMinikube  *bool         `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty"`
-	SkipPush        *bool         `yaml:"skipPush,omitempty" json:"skipPush,omitempty"`
+	SkipPush        bool          `yaml:"skipPush,omitempty" json:"skipPush,omitempty"`
 	DisableFallback *bool         `yaml:"disableFallback,omitempty" json:"disableFallback,omitempty"`
-	UseBuildKit     *bool         `yaml:"useBuildKit,omitempty" json:"useBuildKit,omitempty"`
+	UseBuildKit     bool          `yaml:"useBuildKit,omitempty" json:"useBuildKit,omitempty"`
 	UseCLI          bool          `yaml:"useCli,omitempty" json:"useCli,omitempty"`
 	Args            []string      `yaml:"args,omitempty" json:"args,omitempty"`
 	Options         *BuildOptions `yaml:"options,omitempty" json:"options,omitempty"`
@@ -159,7 +159,7 @@ type DockerConfig struct {
 // BuildKitConfig tells the DevSpace CLI to
 type BuildKitConfig struct {
 	// If this is true, DevSpace will not push any images
-	SkipPush *bool `yaml:"skipPush,omitempty" json:"skipPush,omitempty"`
+	SkipPush bool `yaml:"skipPush,omitempty" json:"skipPush,omitempty"`
 
 	// If false, will not try to use the minikube docker daemon to build the image
 	PreferMinikube *bool `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty"`
@@ -844,8 +844,8 @@ type DependencyConfig struct {
 	Profile            string          `yaml:"profile,omitempty" json:"profile,omitempty"`
 	ProfileParents     []string        `yaml:"profileParents,omitempty" json:"profileParents,omitempty"`
 	Vars               []DependencyVar `yaml:"vars,omitempty" json:"vars,omitempty"`
-	SkipBuild          *bool           `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
-	IgnoreDependencies *bool           `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
+	SkipBuild          bool            `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
+	IgnoreDependencies bool            `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
 	Namespace          string          `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 }
 

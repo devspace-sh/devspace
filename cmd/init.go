@@ -395,7 +395,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 
 	// Specify sync path
 	if len(config.Images) > 0 {
-		if (config.Images)[defaultImageName].Build == nil || (config.Images)[defaultImageName].Build.Disabled == nil {
+		if config.Images[defaultImageName].Build == nil || config.Images[defaultImageName].Build.Disabled == false {
 			if config.Dev.Sync == nil {
 				config.Dev.Sync = []*latest.SyncConfig{}
 			}
@@ -437,7 +437,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 func (cmd *InitCmd) addProfileConfig(config *latest.Config) error {
 	if len(config.Images) > 0 {
 		defaultImageConfig, ok := (config.Images)[defaultImageName]
-		if ok && (defaultImageConfig.Build == nil || defaultImageConfig.Build.Disabled == nil) {
+		if ok && (defaultImageConfig.Build == nil || defaultImageConfig.Build.Disabled == false) {
 			patchRemoveOp := "remove"
 			patches := []*latest.PatchConfig{
 				{
