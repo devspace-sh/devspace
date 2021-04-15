@@ -40,6 +40,7 @@ type Client interface {
 
 func NewGenericClient(versionedClient VersionedClient, log log.Logger) Client {
 	c := &client{
+		log:             log,
 		exec:            command.NewStreamCommand,
 		versionedClient: versionedClient,
 		extract:         extract.NewExtractor(),
@@ -51,6 +52,7 @@ func NewGenericClient(versionedClient VersionedClient, log log.Logger) Client {
 
 type client struct {
 	exec            command.Exec
+	log             log.Logger
 	versionedClient VersionedClient
 	extract         extract.Extract
 	downloader      downloader.Downloader
@@ -86,6 +88,8 @@ func (c *client) Exec(args []string, helmConfig *latest.HelmConfig) ([]byte, err
 	if c.versionedClient.IsInCluster() == false {
 		args = append(args, "--kube-context", c.versionedClient.KubeContext())
 	}
+
+	c.log.Infof("Execute '%s %s'", c.helmPath, strings.Join(args, " "))
 	result, err := c.exec(c.helmPath, args).Output()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {

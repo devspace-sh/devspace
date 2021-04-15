@@ -13,8 +13,6 @@ import (
 // dependenciesCmd holds the cmd flags
 type dependenciesCmd struct {
 	*flags.GlobalFlags
-
-	AllowCyclicDependencies bool
 }
 
 // newDependenciesCmd creates a new command
@@ -37,8 +35,6 @@ in the devspace.yaml
 			return cmd.RunDependencies(f, cobraCmd, args)
 		},
 	}
-
-	dependenciesCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 
 	return dependenciesCmd
 }
@@ -63,16 +59,8 @@ func (cmd *dependenciesCmd) RunDependencies(f factory.Factory, cobraCmd *cobra.C
 		return err
 	}
 
-	// Load generated config
-	generatedConfig := config.Generated()
-
-	// Create Dependencymanager
-	manager, err := dependency.NewManager(config.Config(), generatedConfig, nil, cmd.AllowCyclicDependencies, configOptions, log)
-	if err != nil {
-		return errors.Wrap(err, "new manager")
-	}
-
-	err = manager.UpdateAll()
+	// Update dependencies
+	err = dependency.NewManager(config, nil, configOptions, log).UpdateAll()
 	if err != nil {
 		return err
 	}

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -32,7 +31,7 @@ var gitFolderIgnoreRegex = regexp.MustCompile("/?\\.git/?")
 const gitIgnoreFile = ".gitignore"
 const dockerIgnoreFile = ".dockerignore"
 const devspaceFolderGitignore = "\n\n# Ignore DevSpace cache and log folder\n.devspace/\n"
-const configDockerignore = "\n\n# Ignore devspace.yaml file to prevent image rebuilding after config changes\ndevspace.yaml\n"
+const configDockerignore = "\n\n# Ignore devspace.yaml file to prevent image rebuilding after config changes\ndevspace.yaml\n.devspace/\n"
 
 const (
 	// Dockerfile not found options
@@ -396,7 +395,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 
 	// Specify sync path
 	if len(config.Images) > 0 {
-		if (config.Images)[defaultImageName].Build == nil || (config.Images)[defaultImageName].Build.Disabled == nil {
+		if config.Images[defaultImageName].Build == nil || config.Images[defaultImageName].Build.Disabled == false {
 			if config.Dev.Sync == nil {
 				config.Dev.Sync = []*latest.SyncConfig{}
 			}
@@ -425,9 +424,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 					RestartContainer: true,
 				}
 			} else {
-				config.Dev.Interactive = &latest.InteractiveConfig{
-					DefaultEnabled: ptr.Bool(true),
-				}
+				config.Dev.Terminal = &latest.Terminal{}
 			}
 
 			config.Dev.Sync = append(config.Dev.Sync, syncConfig)
@@ -440,7 +437,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
 func (cmd *InitCmd) addProfileConfig(config *latest.Config) error {
 	if len(config.Images) > 0 {
 		defaultImageConfig, ok := (config.Images)[defaultImageName]
-		if ok && (defaultImageConfig.Build == nil || defaultImageConfig.Build.Disabled == nil) {
+		if ok && (defaultImageConfig.Build == nil || defaultImageConfig.Build.Disabled == false) {
 			patchRemoveOp := "remove"
 			patches := []*latest.PatchConfig{
 				{

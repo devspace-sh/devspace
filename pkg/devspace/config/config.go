@@ -3,7 +3,6 @@ package config
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"gopkg.in/yaml.v2"
 )
 
 type Config interface {
@@ -17,10 +16,7 @@ type Config interface {
 	// Generated returns the generated config
 	Generated() *generated.Config
 
-	// Returns the profiles that can be parsed
-	Profiles() ([]*latest.ProfileConfig, error)
-
-	// Returns the variables that were resolved while
+	// Variables returns the variables that were resolved while
 	// loading the config
 	Variables() map[string]interface{}
 }
@@ -55,53 +51,4 @@ func (c *config) Generated() *generated.Config {
 
 func (c *config) Variables() map[string]interface{} {
 	return c.resolvedVariables
-}
-
-func (c *config) Profiles() ([]*latest.ProfileConfig, error) {
-	rawMap, err := CopyRaw(c.rawConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	profiles, ok := rawMap["profiles"].([]interface{})
-	if !ok {
-		profiles = []interface{}{}
-	}
-
-	retProfiles := []*latest.ProfileConfig{}
-	for _, profile := range profiles {
-		profileMap, ok := profile.(map[interface{}]interface{})
-		if !ok {
-			continue
-		}
-
-		profileConfig := &latest.ProfileConfig{}
-		o, err := yaml.Marshal(profileMap)
-		if err != nil {
-			continue
-		}
-		err = yaml.Unmarshal(o, profileConfig)
-		if err != nil {
-			continue
-		}
-
-		retProfiles = append(retProfiles, profileConfig)
-	}
-
-	return retProfiles, nil
-}
-
-func CopyRaw(in map[interface{}]interface{}) (map[interface{}]interface{}, error) {
-	o, err := yaml.Marshal(in)
-	if err != nil {
-		return nil, err
-	}
-
-	n := map[interface{}]interface{}{}
-	err = yaml.Unmarshal(o, &n)
-	if err != nil {
-		return nil, err
-	}
-
-	return n, nil
 }

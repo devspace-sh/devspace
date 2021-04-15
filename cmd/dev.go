@@ -1,8 +1,14 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/legacy"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/util/survey"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -23,15 +29,13 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	latest "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
-	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -42,7 +46,6 @@ type DevCmd struct {
 
 	SkipPush                bool
 	SkipPushLocalKubernetes bool
-	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 	Open                    bool
 
@@ -108,8 +111,8 @@ Open terminal instead of logs:
 		},
 	}
 
-	devCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
-	devCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", false, "Deploys the dependencies verbosely")
+	devCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Deploys the dependencies verbosely")
+	devCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	devCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips building of images")
@@ -118,7 +121,6 @@ Open terminal instead of logs:
 
 	devCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to deploy every deployment")
 	devCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specifc deployment (You can specify multiple deployments comma-separated")
-	devCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 
 	devCmd.Flags().BoolVarP(&cmd.SkipPipeline, "skip-pipeline", "x", false, "Skips build & deployment and only starts sync, portforwarding & terminal")
 	devCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
@@ -134,7 +136,7 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVar(&cmd.Portforwarding, "portforwarding", true, "Enable port forwarding")
 
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
-	devCmd.Flags().BoolVarP(&cmd.Interactive, "interactive", "i", false, "Enable interactive mode for images (overrides entrypoint with sleep command) and start terminal proxy")
+	devCmd.Flags().BoolVarP(&cmd.Interactive, "interactive", "i", false, "DEPRECATED: DO NOT USE ANYMORE")
 	devCmd.Flags().BoolVarP(&cmd.Terminal, "terminal", "t", false, "Open a terminal instead of showing logs")
 	devCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
 
@@ -206,30 +208,12 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 		return err
 	}
 
-	// restore vars if wanted
-	if cmd.RestoreVars {
-		vars, _, err := loader.RestoreVarsFromSecret(client, cmd.VarsSecretName)
-		if err != nil {
-			return errors.Wrap(err, "restore vars")
-		} else if vars != nil {
-			generatedConfig.Vars = vars
-		}
-	}
-
 	// Get the config
 	configInterface, err := cmd.loadConfig(configOptions)
 	if err != nil {
 		return err
 	}
 	config := configInterface.Config()
-
-	// save vars if wanted
-	if cmd.SaveVars {
-		err = loader.SaveVarsInSecret(client, generatedConfig.Vars, cmd.VarsSecretName, cmd.log)
-		if err != nil {
-			return errors.Wrap(err, "save vars")
-		}
-	}
 
 	// Execute plugin hook
 	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "dev", client.CurrentContext(), client.Namespace(), config)
@@ -249,14 +233,8 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 		dockerClient = nil
 	}
 
-	registryClient := pullsecrets.NewClient(config, generatedConfig.GetActive(), client, dockerClient, cmd.log)
-	err = registryClient.CreatePullSecrets()
-	if err != nil {
-		cmd.log.Warn(err)
-	}
-
 	// Build and deploy images
-	exitCode, err := cmd.buildAndDeploy(f, configInterface, configOptions, client, args, true)
+	exitCode, err := cmd.buildAndDeploy(f, configInterface, configOptions, client, dockerClient, args)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {
@@ -268,21 +246,17 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 	return nil
 }
 
-func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Config, configOptions *loader.ConfigOptions, client kubectl.Client, args []string, skipBuildIfAlreadyBuilt bool) (int, error) {
+func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Config, configOptions *loader.ConfigOptions, client kubectl.Client, dockerClient docker.Client, args []string) (int, error) {
 	var (
+		err             error
 		config          = configInterface.Config()
 		generatedConfig = configInterface.Generated()
+		dependencies    = []types.Dependency{}
 	)
 
 	if cmd.SkipPipeline == false {
-		// Create Dependencymanager
-		manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, cmd.ToConfigOptions(), cmd.log)
-		if err != nil {
-			return 0, errors.Wrap(err, "new manager")
-		}
-
 		// Dependencies
-		err = manager.DeployAll(dependency.DeployOptions{
+		dependencies, err = f.NewDependencyManager(configInterface, client, cmd.ToConfigOptions(), cmd.log).DeployAll(dependency.DeployOptions{
 			ForceDeployDependencies: cmd.ForceDependencies,
 			SkipBuild:               cmd.SkipBuild,
 			ForceDeploy:             cmd.ForceDeploy,
@@ -294,23 +268,30 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 				ForceRebuild:              cmd.ForceBuild,
 				Sequential:                cmd.BuildSequential,
 				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
-				IgnoreContextPathChanges:  skipBuildIfAlreadyBuilt,
 			},
 		})
 		if err != nil {
 			return 0, errors.Errorf("error deploying dependencies: %v", err)
 		}
 
+		// add dev config from dependencies
+		addDependenciesDevConfig(config, dependencies)
+
+		// Create Pull Secrets
+		err = pullsecrets.NewClient(configInterface, dependencies, client, dockerClient, cmd.log).CreatePullSecrets()
+		if err != nil {
+			cmd.log.Warn(err)
+		}
+
 		// Build image if necessary
 		builtImages := make(map[string]string)
 		if cmd.SkipBuild == false {
-			builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
+			builtImages, err = f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
 				SkipPush:                  cmd.SkipPush,
 				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 				ForceRebuild:              cmd.ForceBuild,
 				Sequential:                cmd.BuildSequential,
 				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
-				IgnoreContextPathChanges:  skipBuildIfAlreadyBuilt,
 			}, cmd.log)
 			if err != nil {
 				if strings.Index(err.Error(), "no space left on device") != -1 {
@@ -341,7 +322,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 			}
 
 			// Deploy all
-			err = f.NewDeployController(config, generatedConfig.GetActive(), client).Deploy(&deploy.Options{
+			err = f.NewDeployController(configInterface, dependencies, client).Deploy(&deploy.Options{
 				IsDev:       true,
 				ForceDeploy: cmd.ForceDeploy,
 				BuiltImages: builtImages,
@@ -383,7 +364,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 		var err error
 
 		// Start services
-		exitCode, err = cmd.startServices(f, configInterface, client, args, cmd.log)
+		exitCode, err = cmd.startServices(f, configInterface, client, args, dependencies, cmd.log)
 		if err != nil {
 			// Check if we should reload
 			if _, ok := err.(*reloadError); ok {
@@ -394,7 +375,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 				}
 
 				// Trigger rebuild & redeploy
-				return cmd.buildAndDeploy(f, configInterface, configOptions, client, args, false)
+				return cmd.buildAndDeploy(f, configInterface, configOptions, client, dockerClient, args)
 			}
 
 			return 0, err
@@ -404,14 +385,13 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 	return exitCode, nil
 }
 
-func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Config, client kubectl.Client, args []string, logger log.Logger) (int, error) {
+func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Config, client kubectl.Client, args []string, dependencies []types.Dependency, logger log.Logger) (int, error) {
 	var (
 		config          = configInterface.Config()
-		generatedConfig = configInterface.Generated()
-		servicesClient  = f.NewServicesClient(config, generatedConfig, client, logger)
+		servicesClient  = f.NewServicesClient(configInterface, dependencies, client, logger)
 		exitChan        = make(chan error)
 		autoReloadPaths = GetPaths(config)
-		interactiveMode = config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.DefaultEnabled != nil && *config.Dev.Interactive.DefaultEnabled == true
+		useTerminal     = config.Dev.Terminal != nil && config.Dev.Terminal.Disabled == false
 	)
 
 	if cmd.Portforwarding {
@@ -439,7 +419,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 
 		// Create server
 		uiLogger := log.GetFileLogger("ui")
-		server, err := server.NewServer(configInterface, "localhost", false, client.CurrentContext(), client.Namespace(), port, uiLogger)
+		server, err := server.NewServer(configInterface, dependencies, "localhost", false, client.CurrentContext(), client.Namespace(), port, uiLogger)
 		if err != nil {
 			logger.Warnf("Couldn't start UI server: %v", err)
 		} else {
@@ -456,10 +436,8 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 	if cmd.Sync {
 		cmd.Sync = false
 		printSyncLog := cmd.PrintSyncLog
-		if interactiveMode == false {
-			if config == nil || config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Sync == nil || *config.Dev.Logs.Sync == true {
-				printSyncLog = true
-			}
+		if useTerminal == false && config.Dev.Logs != nil && (config.Dev.Logs.Sync == nil || *config.Dev.Logs.Sync == true) {
+			printSyncLog = true
 		}
 
 		err := servicesClient.StartSync(nil, printSyncLog, cmd.VerboseSync)
@@ -480,7 +458,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 			}
 
 			once.Do(func() {
-				if interactiveMode {
+				if useTerminal {
 					logger.Infof("Change detected in '%s', will reload in 2 seconds", path)
 					time.Sleep(time.Second * 2)
 				} else {
@@ -501,7 +479,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 	}
 
 	// Run dev.open configs
-	if config.Dev.Open != nil && cmd.Open == true {
+	if config != nil && config.Dev.Open != nil && cmd.Open == true {
 		// Skip executing open config next time (e.g. when automatic redeployment is enabled)
 		cmd.Open = false
 
@@ -523,33 +501,39 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 		}
 	}
 
-	return cmd.startOutput(interactiveMode, config, generatedConfig, client, args, servicesClient, exitChan, logger)
+	return cmd.startOutput(configInterface, dependencies, client, args, servicesClient, exitChan, logger)
 }
 
-func (cmd *DevCmd) startOutput(interactiveMode bool, config *latest.Config, generatedConfig *generated.Config, client kubectl.Client, args []string, servicesClient services.Client, exitChan chan error, logger log.Logger) (int, error) {
+func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []types.Dependency, client kubectl.Client, args []string, servicesClient services.Client, exitChan chan error, logger log.Logger) (int, error) {
+	var err error
+	if configInterface == nil {
+		return 0, fmt.Errorf("config is nil")
+	}
+
+	// get config
+	config := configInterface.Config()
+
 	// Check if we should open a terminal or stream logs
 	if cmd.PrintSyncLog == false {
-		if interactiveMode {
+		if config.Dev.Terminal != nil && config.Dev.Terminal.Disabled == false {
 			selectorOptions := targetselector.NewDefaultOptions().ApplyCmdParameter("", "", cmd.Namespace, "")
-			if config != nil && config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.Terminal != nil {
-				selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Interactive.Terminal.LabelSelector, config.Dev.Interactive.Terminal.Namespace, config.Dev.Interactive.Terminal.ContainerName, "")
+			if config.Dev.Terminal != nil {
+				selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Terminal.LabelSelector, config.Dev.Terminal.Namespace, config.Dev.Terminal.ContainerName, "")
 			}
 
 			var imageSelector []string
-			if config.Dev.Interactive.Terminal != nil && config.Dev.Interactive.Terminal.ImageName != "" {
-				imageSelector = targetselector.ImageSelectorFromConfig(config.Dev.Interactive.Terminal.ImageName, config, generatedConfig.GetActive())
-			} else if len(config.Dev.Interactive.Images) > 0 {
-				imageSelector = []string{}
-				for _, imageConfig := range config.Dev.Interactive.Images {
-					imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(imageConfig.Name, config, generatedConfig.GetActive())...)
+			if config.Dev.Terminal != nil && config.Dev.Terminal.ImageName != "" {
+				imageSelector, err = targetselector.ImageSelectorFromConfig(config.Dev.Terminal.ImageName, configInterface, dependencies)
+				if err != nil {
+					return 0, err
 				}
 			}
 
 			selectorOptions.ImageSelector = imageSelector
 			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true)
-		} else if config.Dev == nil || config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
+		} else if config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
 			// Log multiple images at once
-			manager, err := services.NewLogManager(client, config, generatedConfig, exitChan, logger)
+			manager, err := services.NewLogManager(client, configInterface, dependencies, exitChan, logger)
 			if err != nil {
 				return 0, errors.Wrap(err, "starting log manager")
 			}
@@ -586,7 +570,7 @@ func GetPaths(config *latest.Config) []string {
 	paths := make([]string, 0, 1)
 
 	// Add the deploy manifest paths
-	if config.Dev != nil && config.Dev.AutoReload != nil {
+	if config.Dev.AutoReload != nil {
 		if config.Dev.AutoReload.Deployments != nil && config.Deployments != nil {
 			for _, deployName := range config.Dev.AutoReload.Deployments {
 				for _, deployConf := range config.Deployments {
@@ -671,41 +655,31 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 	if err != nil {
 		return nil, err
 	}
-	config := configInterface.Config()
 
-	// Adjust config for interactive mode
-	interactiveModeInConfigEnabled := config.Dev != nil && config.Dev.Interactive != nil && config.Dev.Interactive.DefaultEnabled != nil && *config.Dev.Interactive.DefaultEnabled == true
-	if cmd.Terminal || cmd.Interactive || interactiveModeInConfigEnabled {
-		if config.Dev == nil {
-			config.Dev = &latest.DevConfig{}
-		}
-		if config.Dev.Interactive == nil {
-			config.Dev.Interactive = &latest.InteractiveConfig{}
-		}
+	// apply legacy interactive mode
+	wasInteractive, err := legacy.LegacyInteractiveMode(configInterface.Config(), cmd.Interactive, cmd.Terminal, cmd.log)
+	if err != nil {
+		return nil, err
+	} else if wasInteractive {
+		return configInterface, nil
+	}
 
-		images := config.Images
-		if config.Dev.Interactive.Images == nil && config.Dev.Interactive.Terminal == nil {
-			if config.Images == nil || len(config.Images) == 0 {
-				return nil, errors.New(message.ConfigNoImages)
-			}
-
-			imageNames := make([]string, 0, len(images))
-			for k := range images {
+	// check if terminal is enabled
+	c := configInterface.Config()
+	if cmd.Terminal || (c.Dev.Terminal != nil && c.Dev.Terminal.Disabled == false) {
+		if c.Dev.Terminal == nil || (c.Dev.Terminal.ImageName == "" && len(c.Dev.Terminal.LabelSelector) == 0) {
+			imageNames := make([]string, 0, len(c.Images))
+			for k := range c.Images {
 				imageNames = append(imageNames, k)
 			}
 
-			// If only one image exists, use it, otherwise show image picker
+			// if only one image exists, use it, otherwise show image picker
 			imageName := ""
 			if len(imageNames) == 1 {
 				imageName = imageNames[0]
 			} else {
-				question := "Which image do you want to build using the 'ENTRPOINT [sleep, 999999]' override?"
-				if cmd.Terminal {
-					question = "Which image do you want to open a terminal to?"
-				}
-
 				imageName, err = cmd.log.Question(&survey.QuestionOptions{
-					Question: question,
+					Question: "Which image do you want to open a terminal to?",
 					Options:  imageNames,
 				})
 				if err != nil {
@@ -713,49 +687,11 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 				}
 			}
 
-			config.Dev.Interactive.Images = []*latest.InteractiveImageConfig{
-				{
-					Name: imageName,
-				},
+			c.Dev.Terminal = &latest.Terminal{
+				ImageName: imageName,
 			}
-		}
-
-		// Set image entrypoints if necessary
-		for _, imageConf := range config.Dev.Interactive.Images {
-			if cmd.Terminal {
-				imageConf.Entrypoint = nil
-				imageConf.Cmd = nil
-			} else if imageConf.Entrypoint == nil && imageConf.Cmd == nil {
-				imageConf.Entrypoint = []string{"sleep"}
-				imageConf.Cmd = []string{"999999999"}
-			}
-
-			for imageConfName, imageOverrideConfig := range config.Images {
-				if imageConf.Name == imageConfName {
-					if imageConf.Entrypoint != nil {
-						imageOverrideConfig.Entrypoint = imageConf.Entrypoint
-					}
-					if imageConf.Cmd != nil {
-						imageOverrideConfig.Cmd = imageConf.Cmd
-					}
-					break
-				}
-			}
-
-			if imageConf.Entrypoint != nil && imageConf.Cmd != nil {
-				cmd.log.Infof("Override image '%s' entrypoint with %+v and cmd with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Entrypoint, imageConf.Cmd)
-			} else if imageConf.Entrypoint != nil {
-				cmd.log.Infof("Override image '%s' entrypoint with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Entrypoint)
-			} else if imageConf.Cmd != nil {
-				cmd.log.Infof("Override image '%s' cmd with %+v", ansi.Color(imageConf.Name, "white+b"), imageConf.Cmd)
-			}
-		}
-
-		cmd.log.Info("Interactive mode: enable terminal")
-		config.Dev.Interactive.DefaultEnabled = ptr.Bool(true)
-	} else {
-		if config.Dev != nil && config.Dev.Interactive != nil {
-			config.Dev.Interactive = nil
+		} else {
+			c.Dev.Terminal.Disabled = false
 		}
 	}
 
@@ -796,4 +732,69 @@ func updateLastKubeContext(configLoader loader.ConfigLoader, client kubectl.Clie
 	}
 
 	return nil
+}
+
+func addDependenciesDevConfig(config *latest.Config, dependencies []types.Dependency) {
+	for _, d := range config.Dependencies {
+		if d.Dev != nil && d.Dev.Disable == true {
+			continue
+		}
+
+		// find the dependency in the deployed ones and it
+		for _, e := range dependencies {
+			if e.Name() != d.Name {
+				continue
+			}
+
+			// ports
+			if d.Dev == nil || d.Dev.DisablePorts == false {
+				for _, p := range e.Config().Config().Dev.Ports {
+					if config.Dev.Ports == nil {
+						config.Dev.Ports = []*latest.PortForwardingConfig{}
+					}
+
+					imageName := p.ImageName
+					if imageName != "" {
+						imageName = e.Name() + "." + imageName
+					}
+
+					config.Dev.Ports = append(config.Dev.Ports, &latest.PortForwardingConfig{
+						ImageName:           imageName,
+						LabelSelector:       p.LabelSelector,
+						ContainerName:       p.ContainerName,
+						Namespace:           p.Namespace,
+						Arch:                p.Arch,
+						PortMappings:        p.PortMappings,
+						PortMappingsReverse: p.PortMappingsReverse,
+					})
+				}
+			}
+
+			// sync
+			if d.Dev == nil || d.Dev.DisableSync == false {
+				for _, p := range e.Config().Config().Dev.Sync {
+					if config.Dev.Sync == nil {
+						config.Dev.Sync = []*latest.SyncConfig{}
+					}
+
+					// set the correct image name
+					imageName := p.ImageName
+					if imageName != "" {
+						imageName = e.Name() + "." + imageName
+					}
+
+					// set the correct local sub path
+					if p.LocalSubPath != "" {
+						p.LocalSubPath = filepath.Join(e.LocalPath(), p.LocalSubPath)
+					} else {
+						p.LocalSubPath = e.LocalPath()
+					}
+
+					config.Dev.Sync = append(config.Dev.Sync, p)
+				}
+			}
+
+			break
+		}
+	}
 }

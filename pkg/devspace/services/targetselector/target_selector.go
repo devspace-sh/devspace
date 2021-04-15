@@ -3,12 +3,13 @@ package targetselector
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"strings"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
@@ -290,22 +291,39 @@ func (t *targetSelector) selectSinglePod(ctx context.Context, options Options, l
 	return true, pods[0], nil
 }
 
-func ImageSelectorFromConfig(configImageName string, config *latest.Config, generated *generated.CacheConfig) []string {
+func ImageSelectorFromConfig(configImageName string, config config.Config, dependencies []types.Dependency) ([]string, error) {
 	var imageSelector []string
-	if configImageName != "" && generated != nil && config != nil {
+	if configImageName != "" && config != nil && config.Generated() != nil && config.Config() != nil {
+		var (
+			c         = config.Config()
+			generated = config.Generated().GetActive()
+		)
+
 		imageConfigCache := generated.GetImageCache(configImageName)
 		if imageConfigCache.ImageName != "" {
 			imageSelector = []string{imageConfigCache.ImageName + ":" + imageConfigCache.Tag}
-		} else if config.Images[configImageName] != nil {
-			if len(config.Images[configImageName].Tags) > 0 {
-				imageSelector = []string{config.Images[configImageName].Image + ":" + config.Images[configImageName].Tags[0]}
+		} else if c.Images[configImageName] != nil {
+			if len(c.Images[configImageName].Tags) > 0 {
+				imageSelector = []string{c.Images[configImageName].Image + ":" + c.Images[configImageName].Tags[0]}
 			} else {
-				imageSelector = []string{config.Images[configImageName].Image}
+				imageSelector = []string{c.Images[configImageName].Image}
 			}
+		} else {
+			// might be a dependency image name
+			splitted := strings.Split(configImageName, ".")
+			if len(splitted) == 2 {
+				for _, dep := range dependencies {
+					if dep.DependencyConfig().Name == splitted[0] {
+						return ImageSelectorFromConfig(splitted[1], dep.Config(), nil)
+					}
+				}
+			}
+
+			return nil, fmt.Errorf("couldn't find imageName %s", configImageName)
 		}
 	}
 
-	return imageSelector
+	return imageSelector, nil
 }
 
 type NotFoundErr struct {

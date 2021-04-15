@@ -90,48 +90,6 @@ func (m *manager) NewDockerfileComponentDeployment(name, imageName, dockerfile, 
 	return imageConfig, retDeploymentConfig, nil
 }
 
-// NewImageComponentDeployment returns a new deployment that deploys an image via a component
-func (m *manager) NewImageComponentDeployment(name, imageName string) (*latest.ImageConfig, *latest.DeploymentConfig, error) {
-	componentConfig := &latest.ComponentConfig{
-		Containers: []*latest.ContainerConfig{
-			{
-				Image: imageName,
-			},
-		},
-	}
-
-	// Configure port
-	port, err := m.log.Question(&survey.QuestionOptions{
-		Question: "Which port do you want to expose for this image? (Enter to skip)",
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-	if port != "" {
-		port, err := strconv.Atoi(port)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing port")
-		}
-
-		componentConfig.Service = &latest.ServiceConfig{
-			Ports: []*latest.ServicePortConfig{
-				{
-					Port: &port,
-				},
-			},
-		}
-	}
-
-	retDeploymentConfig, err := generateComponentDeployment(name, componentConfig)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Check if we should create pull secret
-	retImageConfig := m.newImageConfigFromImageName(imageName, "", "")
-	return retImageConfig, retDeploymentConfig, nil
-}
-
 func generateComponentDeployment(name string, componentConfig *latest.ComponentConfig) (*latest.DeploymentConfig, error) {
 	chartValues, err := yamlutil.ToInterfaceMap(componentConfig)
 	if err != nil {
@@ -189,29 +147,4 @@ func (m *manager) NewHelmDeployment(name, chartName, chartRepo, chartVersion str
 	}
 
 	return retDeploymentConfig, nil
-}
-
-// RemoveDeployment removes one or all deployments from the config
-func (m *manager) RemoveDeployment(removeAll bool, name string) (bool, error) {
-	if name == "" && removeAll == false {
-		return false, errors.New("You have to specify either a deployment name or the --all flag")
-	}
-
-	found := false
-
-	if m.config.Deployments != nil {
-		newDeployments := []*v1.DeploymentConfig{}
-
-		for _, deployConfig := range m.config.Deployments {
-			if removeAll == false && deployConfig.Name != name {
-				newDeployments = append(newDeployments, deployConfig)
-			} else {
-				found = true
-			}
-		}
-
-		m.config.Deployments = newDeployments
-	}
-
-	return found, nil
 }

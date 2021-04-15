@@ -94,12 +94,12 @@ func TestResolver(t *testing.T) {
 			},
 			expectedDependencies: []Dependency{
 				Dependency{
-					ID:        filepath.Join(dir, "dependency1"),
-					LocalPath: filepath.Join(dir, "dependency1"),
+					id:        filepath.Join(dir, "dependency1"),
+					localPath: filepath.Join(dir, "dependency1"),
 				},
 				Dependency{
-					ID:        filepath.Join(dir, "dependency2"),
-					LocalPath: filepath.Join(dir, "dependency2"),
+					id:        filepath.Join(dir, "dependency2"),
+					localPath: filepath.Join(dir, "dependency2"),
 				},
 			},
 		},
@@ -119,8 +119,8 @@ func TestResolver(t *testing.T) {
 			},
 			expectedDependencies: []Dependency{
 				Dependency{
-					ID:        "https://github.com/devspace-cloud/example-dependency.git@f8b2aa8cf8ac03238a28e8f78382b214d619893f:mysubpath",
-					LocalPath: filepath.Join(util.DependencyFolderPath, "84e3f5121aa5a99b3d26752f40e3935f494312ad82d0e85afc9b6e23c762c705", "mysubpath"),
+					id:        "https://github.com/devspace-cloud/example-dependency.git@f8b2aa8cf8ac03238a28e8f78382b214d619893f:mysubpath",
+					localPath: filepath.Join(util.DependencyFolderPath, "84e3f5121aa5a99b3d26752f40e3935f494312ad82d0e85afc9b6e23c762c705", "mysubpath"),
 				},
 			},
 		},
@@ -148,8 +148,8 @@ func TestResolver(t *testing.T) {
 			allowCyclic: true,
 			expectedDependencies: []Dependency{
 				Dependency{
-					ID:        filepath.Join(dir, "dependency1"),
-					LocalPath: filepath.Join(dir, "dependency1"),
+					id:        filepath.Join(dir, "dependency1"),
+					localPath: filepath.Join(dir, "dependency1"),
 				},
 			},
 		},
@@ -194,7 +194,7 @@ func TestResolver(t *testing.T) {
 		kubeClient := &fakekube.Client{
 			Client: kube,
 		}
-		testResolver, err := NewResolver(testConfig, generatedConfig, kubeClient, testCase.allowCyclic, &loader.ConfigOptions{}, log.Discard)
+		testResolver := NewResolver(testConfig, generatedConfig, kubeClient, testCase.allowCyclic, &loader.ConfigOptions{}, log.Discard)
 		assert.NilError(t, err, "Error creating a resolver in testCase %s", testCase.name)
 
 		dependencies, err := testResolver.Resolve(testCase.updateParam)

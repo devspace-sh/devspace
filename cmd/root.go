@@ -12,7 +12,6 @@ import (
 	"github.com/loft-sh/devspace/cmd/restore"
 	"github.com/loft-sh/devspace/cmd/save"
 	"github.com/loft-sh/devspace/cmd/set"
-	"github.com/loft-sh/devspace/cmd/status"
 	"github.com/loft-sh/devspace/cmd/update"
 	"github.com/loft-sh/devspace/cmd/use"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
@@ -144,7 +143,6 @@ func BuildRoot(f factory.Factory) *cobra.Command {
 	rootCmd.AddCommand(remove.NewRemoveCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(reset.NewResetCmd(f, plugins))
 	rootCmd.AddCommand(set.NewSetCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(status.NewStatusCmd(f, plugins))
 	rootCmd.AddCommand(use.NewUseCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(update.NewUpdateCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(save.NewSaveCmd(f, globalFlags, plugins))

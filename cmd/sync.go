@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
@@ -136,9 +137,10 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		return err
 	}
 
+	var configInterface config.Config
 	var config *latest.Config
 	if configLoader.Exists() {
-		configInterface, err := configLoader.Load(configOptions, logger)
+		configInterface, err = configLoader.Load(configOptions, logger)
 		if err != nil {
 			return err
 		}
@@ -181,7 +183,7 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		syncConfig.InitialSync = latest.InitialSyncStrategy(cmd.InitialSync)
 	}
 
-	if cmd.GlobalFlags.ConfigPath != "" && config.Dev != nil && len(config.Dev.Sync) > 0 {
+	if cmd.GlobalFlags.ConfigPath != "" && config != nil && len(config.Dev.Sync) > 0 {
 		// Check which sync config should be used
 		loadedSyncConfig := config.Dev.Sync[0]
 		if len(config.Dev.Sync) > 1 {
@@ -226,8 +228,8 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		}
 
 		loadedSyncConfig.InitialSync = syncConfig.InitialSync
-		if syncConfig.WaitInitialSync != nil && *syncConfig.WaitInitialSync == true {
-			loadedSyncConfig.WaitInitialSync = syncConfig.WaitInitialSync
+		if syncConfig.WaitInitialSync == nil || *syncConfig.WaitInitialSync == true {
+			loadedSyncConfig.WaitInitialSync = ptr.Bool(true)
 		}
 		if syncConfig.LocalSubPath != "" {
 			loadedSyncConfig.LocalSubPath = syncConfig.LocalSubPath
@@ -260,5 +262,5 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	}
 
 	// Start terminal
-	return f.NewServicesClient(config, generatedConfig, client, logger).StartSyncFromCmd(options, syncConfig, nil, cmd.Verbose)
+	return f.NewServicesClient(configInterface, nil, client, logger).StartSyncFromCmd(options, syncConfig, nil, cmd.Verbose)
 }

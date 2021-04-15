@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/docker/docker/builder/dockerignore"
+	"github.com/docker/docker/pkg/fileutils"
 	"io"
 	"io/ioutil"
 	"os"
@@ -35,25 +36,46 @@ const DefaultContextPath = "./"
 // ReadDockerignore reads the devspace.dockerignore or .dockerignore file in the context directory and
 // returns the list of paths to exclude. devspace.dockerignore takes precedence over .dockerignore if both
 // are found
-func ReadDockerignore(contextDir string) ([]string, error) {
-	var excludes []string
-
+func ReadDockerignore(contextDir string, dockerfile string) ([]string, error) {
+	excludes := []string{}
+	useDevSpaceDockerignore := true
 	f, err := os.Open(filepath.Join(contextDir, "devspace.dockerignore"))
 	switch {
 	case os.IsNotExist(err):
 		f, err = os.Open(filepath.Join(contextDir, ".dockerignore"))
 		switch {
 		case os.IsNotExist(err):
-			return excludes, nil
+			return ensureDockerIgnoreAndDockerFile(excludes, dockerfile, false), nil
 		case err != nil:
 			return nil, err
 		}
+
+		useDevSpaceDockerignore = false
 	case err != nil:
 		return nil, err
 	}
 	defer f.Close()
 
-	return dockerignore.ReadAll(f)
+	excludes, err = dockerignore.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+	return ensureDockerIgnoreAndDockerFile(excludes, dockerfile, useDevSpaceDockerignore), nil
+}
+
+func ensureDockerIgnoreAndDockerFile(excludes []string, dockerfile string, useDevSpaceDockerignore bool) []string {
+	if useDevSpaceDockerignore {
+		excludes = append(excludes, ".dockerignore")
+	} else {
+		if keep, _ := fileutils.Matches(".dockerignore", excludes); keep {
+			excludes = append(excludes, "!.dockerignore")
+		}
+	}
+	if keep, _ := fileutils.Matches(dockerfile, excludes); keep {
+		excludes = append(excludes, "!"+dockerfile)
+	}
+	excludes = append(excludes, ".devspace/")
+	return excludes
 }
 
 // GetDockerfileAndContext retrieves the dockerfile and context

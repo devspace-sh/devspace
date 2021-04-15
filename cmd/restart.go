@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services"
@@ -119,24 +120,31 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 		return err
 	}
 
+	// Resolve dependencies
+	dep, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).ResolveAll(dependency.ResolveOptions{
+		UpdateDependencies: false,
+		Verbose:            false,
+	})
+	if err != nil {
+		cmd.log.Warnf("Error resolving dependencies: %v", err)
+	}
+
 	// restart containers
 	restarts := 0
-	if config.Dev != nil {
-		for _, syncPath := range config.Dev.Sync {
-			if syncPath.OnUpload == nil || !syncPath.OnUpload.RestartContainer {
-				continue
-			}
-
-			// create target selector options
-			options := targetselector.NewOptionsFromFlags("", "", cmd.Namespace, "", cmd.Pick).ApplyConfigParameter(syncPath.LabelSelector, syncPath.Namespace, syncPath.ContainerName, "")
-			options.ImageSelector = targetselector.ImageSelectorFromConfig(syncPath.ImageName, config, generatedConfig.GetActive())
-
-			err = restartContainer(client, options, cmd.log)
-			if err != nil {
-				return err
-			}
-			restarts++
+	for _, syncPath := range config.Dev.Sync {
+		if syncPath.OnUpload == nil || !syncPath.OnUpload.RestartContainer {
+			continue
 		}
+
+		// create target selector options
+		options := targetselector.NewOptionsFromFlags("", "", cmd.Namespace, "", cmd.Pick).ApplyConfigParameter(syncPath.LabelSelector, syncPath.Namespace, syncPath.ContainerName, "")
+		options.ImageSelector, err = targetselector.ImageSelectorFromConfig(syncPath.ImageName, configInterface, dep)
+
+		err = restartContainer(client, options, cmd.log)
+		if err != nil {
+			return err
+		}
+		restarts++
 	}
 
 	err = configLoader.SaveGenerated(generatedConfig)
@@ -157,7 +165,7 @@ func restartContainer(client kubectl.Client, options targetselector.Options, log
 		return errors.Errorf("Error selecting pod: %v", err)
 	}
 
-	err = services.InjectDevSpaceHelper(client, container.Pod, container.Container.Name, log)
+	err = services.InjectDevSpaceHelper(client, container.Pod, container.Container.Name, "", log)
 	if err != nil {
 		return errors.Wrap(err, "inject devspace helper")
 	}

@@ -3,11 +3,12 @@ package factory
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/configure"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	dependencytypes "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
@@ -34,28 +35,28 @@ type Factory interface {
 	NewKubeClientFromContext(context, namespace string, switchContext bool) (kubectl.Client, error)
 	NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error)
 
-	// Helm
+	// NewHelmClient creates a new helm client
 	NewHelmClient(config *latest.Config, deployConfig *latest.DeploymentConfig, kubeClient kubectl.Client, tillerNamespace string, upgradeTiller bool, dryInit bool, log log.Logger) (types.Client, error)
 
-	// Dependencies
-	NewDependencyManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (dependency.Manager, error)
+	// NewDependencyManager creates a new dependency manager
+	NewDependencyManager(config config.Config, client kubectl.Client, configOptions *loader.ConfigOptions, logger log.Logger) dependency.Manager
 
-	// Hooks
-	NewHookExecutor(config *latest.Config) hook.Executer
+	// NewHookExecutor creates a new hook executor
+	NewHookExecutor(config config.Config, dependencies []dependencytypes.Dependency) hook.Executer
 
-	// Pull secrets client
-	NewPullSecretClient(config *latest.Config, cache *generated.CacheConfig, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client
+	// NewPullSecretClient creates a new pull secrets client
+	NewPullSecretClient(config config.Config, dependencies []dependencytypes.Dependency, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client
 
 	// Docker
 	NewDockerClient(log log.Logger) (docker.Client, error)
 	NewDockerClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error)
 
-	// Services
-	NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, log log.Logger) services.Client
+	// NewServicesClient creates a new services client
+	NewServicesClient(config config.Config, dependencies []dependencytypes.Dependency, kubeClient kubectl.Client, log log.Logger) services.Client
 
 	// Build & Deploy
-	NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller
-	NewDeployController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) deploy.Controller
+	NewBuildController(config config.Config, dependencies []dependencytypes.Dependency, client kubectl.Client) build.Controller
+	NewDeployController(config config.Config, dependencies []dependencytypes.Dependency, client kubectl.Client) deploy.Controller
 
 	// Analyzer
 	NewAnalyzer(client kubectl.Client, log log.Logger) analyze.Analyzer
@@ -89,13 +90,13 @@ func (f *DefaultFactoryImpl) NewAnalyzer(client kubectl.Client, log log.Logger) 
 }
 
 // NewBuildController implements interface
-func (f *DefaultFactoryImpl) NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller {
-	return build.NewController(config, cache, client)
+func (f *DefaultFactoryImpl) NewBuildController(config config.Config, dependencies []dependencytypes.Dependency, client kubectl.Client) build.Controller {
+	return build.NewController(config, dependencies, client)
 }
 
 // NewDeployController implements interface
-func (f *DefaultFactoryImpl) NewDeployController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) deploy.Controller {
-	return deploy.NewController(config, cache, client)
+func (f *DefaultFactoryImpl) NewDeployController(config config.Config, dependencies []dependencytypes.Dependency, client kubectl.Client) deploy.Controller {
+	return deploy.NewController(config, dependencies, client)
 }
 
 // NewKubeConfigLoader implements interface
@@ -109,18 +110,18 @@ func (f *DefaultFactoryImpl) GetLog() log.Logger {
 }
 
 // NewHookExecutor implements interface
-func (f *DefaultFactoryImpl) NewHookExecutor(config *latest.Config) hook.Executer {
-	return hook.NewExecuter(config)
+func (f *DefaultFactoryImpl) NewHookExecutor(config config.Config, dependencies []dependencytypes.Dependency) hook.Executer {
+	return hook.NewExecuter(config, dependencies)
 }
 
 // NewDependencyManager implements interface
-func (f *DefaultFactoryImpl) NewDependencyManager(config *latest.Config, cache *generated.Config, client kubectl.Client, allowCyclic bool, configOptions *loader.ConfigOptions, logger log.Logger) (dependency.Manager, error) {
-	return dependency.NewManager(config, cache, client, allowCyclic, configOptions, logger)
+func (f *DefaultFactoryImpl) NewDependencyManager(config config.Config, client kubectl.Client, configOptions *loader.ConfigOptions, logger log.Logger) dependency.Manager {
+	return dependency.NewManager(config, client, configOptions, logger)
 }
 
 // NewPullSecretClient implements interface
-func (f *DefaultFactoryImpl) NewPullSecretClient(config *latest.Config, cache *generated.CacheConfig, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client {
-	return pullsecrets.NewClient(config, cache, kubeClient, dockerClient, log)
+func (f *DefaultFactoryImpl) NewPullSecretClient(config config.Config, dependencies []dependencytypes.Dependency, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client {
+	return pullsecrets.NewClient(config, dependencies, kubeClient, dockerClient, log)
 }
 
 // NewConfigLoader implements interface
@@ -166,6 +167,6 @@ func (f *DefaultFactoryImpl) NewHelmClient(config *latest.Config, deployConfig *
 }
 
 // NewServicesClient implements interface
-func (f *DefaultFactoryImpl) NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, log log.Logger) services.Client {
-	return services.NewClient(config, generated, kubeClient, log)
+func (f *DefaultFactoryImpl) NewServicesClient(config config.Config, dependencies []dependencytypes.Dependency, kubeClient kubectl.Client, log log.Logger) services.Client {
+	return services.NewClient(config, dependencies, kubeClient, log)
 }

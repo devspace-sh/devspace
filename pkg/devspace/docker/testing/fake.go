@@ -31,6 +31,11 @@ func (client *FakeClient) ImageBuildCLI(useBuildkit bool, context io.Reader, wri
 	return nil
 }
 
+// ParseProxyConfig implements the interface
+func (client *FakeClient) ParseProxyConfig(buildArgs map[string]*string) map[string]*string {
+	return buildArgs
+}
+
 // ImageBuild is a fake implementation
 func (client *FakeClient) ImageBuild(ctx context.Context, context io.Reader, options dockertypes.ImageBuildOptions) (dockertypes.ImageBuildResponse, error) {
 	return dockertypes.ImageBuildResponse{

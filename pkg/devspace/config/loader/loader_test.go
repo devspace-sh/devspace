@@ -178,7 +178,7 @@ func TestLoad(t *testing.T) {
 			withProfile: true,
 			expectedConfig: &latest.Config{
 				Version: latest.Version,
-				Dev:     &latest.DevConfig{},
+				Dev:     latest.DevConfig{},
 			},
 		},
 		loadTestCase{
@@ -191,7 +191,7 @@ func TestLoad(t *testing.T) {
 			},
 			expectedConfig: &latest.Config{
 				Version: latest.Version,
-				Dev:     &latest.DevConfig{},
+				Dev:     latest.DevConfig{},
 			},
 		},
 	}
@@ -472,11 +472,9 @@ func testGetProfiles(testCase getProfilesTestCase, t *testing.T) {
 	loader := &configLoader{
 		configPath: testCase.configPath,
 	}
-	c, err := loader.Load(nil, log.Discard)
+	c, err := loader.LoadWithParser(NewProfilesParser(), nil, log.Discard)
 	assert.NilError(t, err, "Error loading config in testCase %s", testCase.name)
-	profileObjects, err := c.Profiles()
-	assert.NilError(t, err, "Error loading profiles in testCase %s", testCase.name)
-
+	profileObjects := c.Config().Profiles
 	profiles := []string{}
 	for _, p := range profileObjects {
 		profiles = append(profiles, p.Name)
@@ -581,10 +579,8 @@ version: v1alpha1`,
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
-				Dev: &latest.DevConfig{
-					Interactive: &latest.InteractiveConfig{
-						DefaultEnabled: ptr.Bool(true),
-					},
+				Dev: latest.DevConfig{
+					InteractiveEnabled: true,
 				},
 			},
 		},
@@ -602,7 +598,7 @@ deployments:
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
-				Dev:     &latest.DevConfig{},
+				Dev:     latest.DevConfig{},
 				Deployments: []*latest.DeploymentConfig{
 					{
 						Name: "test",
@@ -637,7 +633,7 @@ deployments:
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
-				Dev:     &latest.DevConfig{},
+				Dev:     latest.DevConfig{},
 				Deployments: []*latest.DeploymentConfig{
 					{
 						Name: "test",
@@ -680,7 +676,7 @@ profiles:
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
-				Dev:     &latest.DevConfig{},
+				Dev:     latest.DevConfig{},
 				Deployments: []*latest.DeploymentConfig{
 					{
 						Name: "test",
@@ -730,7 +726,7 @@ profiles:
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
-				Dev:     &latest.DevConfig{},
+				Dev:     latest.DevConfig{},
 				Deployments: []*latest.DeploymentConfig{
 					{
 						Name: "test",
@@ -778,7 +774,7 @@ profiles:
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
-				Dev:     &latest.DevConfig{},
+				Dev:     latest.DevConfig{},
 				Deployments: []*latest.DeploymentConfig{
 					{
 						Name: "test",
@@ -825,7 +821,7 @@ profiles:
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
-				Dev:     &latest.DevConfig{},
+				Dev:     latest.DevConfig{},
 				Deployments: []*latest.DeploymentConfig{
 					{
 						Name: "newdefault",
@@ -861,7 +857,7 @@ vars:
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
-				Dev:     &latest.DevConfig{},
+				Dev:     latest.DevConfig{},
 				Deployments: []*latest.DeploymentConfig{
 					{
 						Name: "test",
@@ -910,7 +906,7 @@ profiles:
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
-				Dev:     &latest.DevConfig{},
+				Dev:     latest.DevConfig{},
 				Deployments: []*latest.DeploymentConfig{
 					{
 						Name: "replaced2",
@@ -931,8 +927,7 @@ profiles:
 				},
 				Images: map[string]*latest.ImageConfig{
 					"test": &latest.ImageConfig{
-						Image:                 "test",
-						PreferSyncOverRebuild: true,
+						Image: "test",
 					},
 				},
 			},
@@ -1012,7 +1007,7 @@ profiles:
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
-				Dev:     &latest.DevConfig{},
+				Dev:     latest.DevConfig{},
 				Images: map[string]*latest.ImageConfig{
 					"test": {
 						Image: "test2/test2",

@@ -4,13 +4,16 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
+	appsv1 "k8s.io/api/apps/v1"
 	k8sv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"strings"
 	"sync"
@@ -38,32 +41,45 @@ type logManager struct {
 	activeLogs      map[string]activeLog
 }
 
-func NewLogManager(client kubectl.Client, config *latest.Config, generatedConfig *generated.Config, interrupt chan error, out log.Logger) (LogManager, error) {
-	if config == nil || generatedConfig == nil {
+func NewLogManager(client kubectl.Client, config config.Config, dependencies []types.Dependency, interrupt chan error, out log.Logger) (LogManager, error) {
+	if config == nil || config.Config() == nil || config.Generated() == nil {
 		return nil, fmt.Errorf("no devspace config loaded")
 	}
 
+	// get config
+	c := config.Config()
+
 	// Build an image selector
 	imageSelector := []string{}
-	if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.Images != nil {
-		for _, configImageName := range config.Dev.Logs.Images {
-			imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig.GetActive())...)
+	if c.Dev.Logs != nil && c.Dev.Logs.Images != nil {
+		for _, configImageName := range c.Dev.Logs.Images {
+			selectors, err := targetselector.ImageSelectorFromConfig(configImageName, config, dependencies)
+			if err != nil {
+				return nil, err
+			}
+
+			imageSelector = append(imageSelector, selectors...)
 		}
 	} else {
-		for configImageName := range config.Images {
-			imageSelector = append(imageSelector, targetselector.ImageSelectorFromConfig(configImageName, config, generatedConfig.GetActive())...)
+		for configImageName := range c.Images {
+			selectors, err := targetselector.ImageSelectorFromConfig(configImageName, config, dependencies)
+			if err != nil {
+				return nil, err
+			}
+
+			imageSelector = append(imageSelector, selectors...)
 		}
 	}
 
 	// Show last log lines
 	var tail *int64
-	if config.Dev != nil && config.Dev.Logs != nil && config.Dev.Logs.ShowLast != nil {
-		tail = ptr.Int64(int64(*config.Dev.Logs.ShowLast))
+	if c.Dev.Logs != nil && c.Dev.Logs.ShowLast != nil {
+		tail = ptr.Int64(int64(*c.Dev.Logs.ShowLast))
 	}
 
 	var selectors []latest.LogsSelector
-	if config.Dev != nil && config.Dev.Logs != nil {
-		selectors = config.Dev.Logs.Selectors
+	if c.Dev.Logs != nil {
+		selectors = c.Dev.Logs.Selectors
 	}
 	if tail == nil {
 		tail = ptr.Int64(50)
@@ -197,25 +213,48 @@ func (l *logManager) gatherPods() ([]podInfo, error) {
 		}
 
 		for _, podContainer := range selectedPodsContainers {
-			prefix := podContainer.Pod.Name
-			if componentLabel, ok := podContainer.Pod.Labels[k8sComponentLabel]; ok {
-				prefix = componentLabel
-			}
-			if len(podContainer.Pod.Spec.Containers) > 1 {
-				prefix += ":" + podContainer.Container.Name
-			}
-			if podContainer.Pod.Namespace != l.client.Namespace() {
-				prefix = podContainer.Pod.Namespace + ":" + prefix
-			}
-
 			returnList = append(returnList, podInfo{
 				key:  key(podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name),
-				name: prefix,
+				name: getDisplayName(l.client, podContainer),
 			})
 		}
 	}
 
 	return returnList, nil
+}
+
+func getDisplayName(client kubectl.Client, podContainer *kubectl.SelectedPodContainer) string {
+	controller := metav1.GetControllerOf(podContainer.Pod)
+
+	// pod name by default, or deployment or statefulset name if found
+	name := podContainer.Pod.Name
+	if componentLabel, ok := podContainer.Pod.Labels[k8sComponentLabel]; ok {
+		name = componentLabel
+	} else if controller != nil && controller.Kind == "ReplicaSet" && controller.APIVersion == appsv1.SchemeGroupVersion.String() {
+		name = controller.Name
+
+		rs, err := client.KubeClient().AppsV1().ReplicaSets(podContainer.Pod.Namespace).Get(context.TODO(), controller.Name, metav1.GetOptions{})
+		if err == nil {
+			controller = metav1.GetControllerOf(rs)
+			if controller != nil && controller.Kind == "Deployment" && controller.APIVersion == appsv1.SchemeGroupVersion.String() {
+				name = controller.Name
+			}
+		}
+	} else if controller != nil && controller.Kind == "StatefulSet" && controller.APIVersion == appsv1.SchemeGroupVersion.String() {
+		name = controller.Name
+	}
+
+	// if the pod has multiple containers, we mark the container
+	if len(podContainer.Pod.Spec.Containers) > 1 {
+		name += ":" + podContainer.Container.Name
+	}
+
+	// if the pod is in another namespace we add the namespace
+	if podContainer.Pod.Namespace != client.Namespace() {
+		name = podContainer.Pod.Namespace + ":" + name
+	}
+
+	return name
 }
 
 func key(namespace string, pod string, container string) string {

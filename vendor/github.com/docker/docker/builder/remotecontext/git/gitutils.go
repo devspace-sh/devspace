@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/docker/docker/pkg/symlink"
+	"github.com/moby/sys/symlink"
 	"github.com/pkg/errors"
+	exec "golang.org/x/sys/execabs"
 )
 
 type gitRepo struct {

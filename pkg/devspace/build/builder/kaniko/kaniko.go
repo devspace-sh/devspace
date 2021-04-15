@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"io"
 	"io/ioutil"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -61,7 +62,7 @@ type Builder struct {
 const waitTimeout = 20 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(config *latest.Config, dockerClient docker.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, log logpkg.Logger) (builder.Interface, error) {
+func NewBuilder(config config.Config, dockerClient docker.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, log logpkg.Logger) (builder.Interface, error) {
 	buildNamespace := kubeClient.Namespace()
 	if imageConf.Build.Kaniko.Namespace != "" {
 		buildNamespace = imageConf.Build.Kaniko.Namespace
@@ -105,8 +106,8 @@ func (b *Builder) Build(log logpkg.Logger) error {
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, ignoreContextPathChanges bool) (bool, error) {
-	return b.helper.ShouldRebuild(cache, forceRebuild, ignoreContextPathChanges)
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool) (bool, error) {
+	return b.helper.ShouldRebuild(cache, forceRebuild)
 }
 
 // Authenticate authenticates kaniko for pushing to the RegistryURL (if username == "", it will try to get login data from local docker daemon)
@@ -246,16 +247,14 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 
 		// Get ignore rules from docker ignore
-		ignoreRules, err := helper.ReadDockerignore(contextPath)
+		relDockerfile := archive.CanonicalTarNameForPath(dockerfilePath)
+		ignoreRules, err := helper.ReadDockerignore(contextPath, relDockerfile)
 		if err != nil {
 			return err
 		}
 		if err := build.ValidateContextDirectory(contextPath, ignoreRules); err != nil {
 			return errors.Errorf("error checking context: '%s'", err)
 		}
-		relDockerfile := archive.CanonicalTarNameForPath(dockerfilePath)
-		ignoreRules = build.TrimBuildFilesFromExcludes(ignoreRules, relDockerfile, false)
-		ignoreRules = append(ignoreRules, ".devspace/")
 
 		log.StartWait("Uploading files to build container")
 		buildCtx, err := archive.TarWithOptions(contextPath, &archive.TarOptions{

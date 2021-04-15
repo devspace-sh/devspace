@@ -122,6 +122,29 @@ func (c *client) install(path, version string) (*Metadata, error) {
 		return nil, fmt.Errorf("plugin %s does not support %s/%s", metadata.Name, runtime.GOOS, runtime.GOARCH)
 	}
 
+	// download binary to temp folder and test it
+	tempBinaryName := "./plugin-binary"
+	if runtime.GOOS == "windows" {
+		tempBinaryName += ".exe"
+	}
+	err = c.installer.DownloadBinary(path, version, binaryPath, tempBinaryName)
+	if err != nil {
+		return nil, errors.Wrap(err, "download plugin binary")
+	}
+	_ = os.Chmod(tempBinaryName, 0755)
+
+	// test the binary
+	absolutePath, err := filepath.Abs(tempBinaryName)
+	if err != nil {
+		return nil, err
+	}
+	o, err := exec.Command(absolutePath).Output()
+	if err != nil {
+		_ = os.Remove(absolutePath)
+		return nil, fmt.Errorf("error executing plugin binary, make sure the plugin binary is executable and returns a zero exit code when run without arguments: %s => %v", string(o), err)
+	}
+
+	// create the plugin folder
 	pluginFolder, err := c.PluginFolder()
 	if err != nil {
 		return nil, err
@@ -144,9 +167,9 @@ func (c *client) install(path, version string) (*Metadata, error) {
 	}
 
 	outBinaryPath := filepath.Join(pluginFolder, PluginBinary)
-	err = c.installer.DownloadBinary(path, version, binaryPath, outBinaryPath)
+	err = moveFile(tempBinaryName, outBinaryPath)
 	if err != nil {
-		return nil, errors.Wrap(err, "download plugin binary")
+		return nil, err
 	}
 
 	// make the file executable
@@ -496,5 +519,29 @@ func CallPluginExecutable(main string, argv []string, extraEnvVars map[string]st
 		return err
 	}
 
+	return nil
+}
+
+func moveFile(sourcePath, destPath string) error {
+	inputFile, err := os.Open(sourcePath)
+	if err != nil {
+		return fmt.Errorf("couldn't open source file: %s", err)
+	}
+	outputFile, err := os.Create(destPath)
+	if err != nil {
+		inputFile.Close()
+		return fmt.Errorf("couldn't open dest file: %s", err)
+	}
+	defer outputFile.Close()
+	_, err = io.Copy(outputFile, inputFile)
+	inputFile.Close()
+	if err != nil {
+		return fmt.Errorf("writing to output file failed: %s", err)
+	}
+	// The copy was successful, so now delete the original file
+	err = os.Remove(sourcePath)
+	if err != nil {
+		return fmt.Errorf("failed removing original file: %s", err)
+	}
 	return nil
 }

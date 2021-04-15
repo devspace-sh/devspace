@@ -3,6 +3,8 @@ package list
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -81,6 +83,10 @@ func (cmd *varsCmd) RunListVars(f factory.Factory, cobraCmd *cobra.Command, args
 			logger.Info("No variables found")
 			return nil
 		}
+
+		sort.SliceStable(varRow, func(i, j int) bool {
+			return varRow[i][0] < varRow[j][0]
+		})
 
 		log.PrintTable(logger, headerColumnNames, varRow)
 	case "keyvalue":

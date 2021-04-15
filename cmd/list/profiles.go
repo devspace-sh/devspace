@@ -1,6 +1,7 @@
 package list
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"strconv"
 
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -47,16 +48,12 @@ func (cmd *profilesCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 		return errors.New(message.ConfigNotFound)
 	}
 
-	config, err := configLoader.Load(nil, logger)
+	config, err := configLoader.LoadWithParser(loader.NewProfilesParser(), nil, logger)
 	if err != nil {
 		return err
 	}
 
-	profiles, err := config.Profiles()
-	if err != nil {
-		return err
-	}
-
+	profiles := config.Config().Profiles
 	generatedConfig := config.Generated()
 
 	// Specify the table column names
@@ -67,7 +64,6 @@ func (cmd *profilesCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 	}
 
 	configRows := make([][]string, 0, len(profiles))
-
 	for _, profile := range profiles {
 		configRows = append(configRows, []string{
 			profile.Name,

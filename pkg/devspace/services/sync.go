@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/assets"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	"io"
@@ -38,8 +37,8 @@ const DevSpaceHelperBaseURL = "https://github.com/loft-sh/devspace/releases"
 // DevSpaceHelperTempFolder is the local folder where we store the sync helper
 const DevSpaceHelperTempFolder = "devspacehelper"
 
-// HelperBinaryRegEx is the regexp that finds the correct download link for the sync helper binary
-var HelperBinaryRegEx = regexp.MustCompile(`href="(\/loft-sh\/devspace\/releases\/download\/[^\/]*\/devspacehelper)"`)
+// helperBinaryRegEx is the regexp that finds the correct download link for the sync helper binary
+var helperBinaryRegEx = `href="(\/loft-sh\/devspace\/releases\/download\/[^\/]*\/%s)"`
 
 // DevSpaceHelperContainerPath is the path of the devspace helper in the container
 const DevSpaceHelperContainerPath = "/tmp/devspacehelper"
@@ -67,7 +66,7 @@ func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Optio
 		return err
 	}
 
-	if syncConfig.WaitInitialSync != nil && *syncConfig.WaitInitialSync == true {
+	if syncConfig.WaitInitialSync == nil || *syncConfig.WaitInitialSync == true {
 		return nil
 	}
 
@@ -78,12 +77,12 @@ func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Optio
 
 // StartSync starts the syncing functionality
 func (serviceClient *client) StartSync(interrupt chan error, printSyncLog bool, verboseSync bool) error {
-	if serviceClient.config.Dev == nil {
-		return nil
+	if serviceClient.config == nil || serviceClient.config.Config() == nil {
+		return fmt.Errorf("DevSpace config is nil")
 	}
 
 	// Start sync client
-	for idx, syncConfig := range serviceClient.config.Dev.Sync {
+	for idx, syncConfig := range serviceClient.config.Config().Dev.Sync {
 		targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(syncConfig.LabelSelector, syncConfig.Namespace, syncConfig.ContainerName, "")
 		targetOptions.AllowPick = false
 		targetOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
@@ -160,11 +159,10 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 		}
 	}
 
-	var cache *generated.CacheConfig
-	if serviceClient.generated != nil {
-		cache = serviceClient.generated.GetActive()
+	options.TargetOptions.ImageSelector, err = targetselector.ImageSelectorFromConfig(syncConfig.ImageName, serviceClient.config, serviceClient.dependencies)
+	if err != nil {
+		return err
 	}
-	options.TargetOptions.ImageSelector = targetselector.ImageSelectorFromConfig(syncConfig.ImageName, serviceClient.config, cache)
 
 	log.StartWait("Sync: Waiting for pods...")
 	container, err := targetselector.NewTargetSelector(serviceClient.client).SelectSingleContainer(context.TODO(), options.TargetOptions, serviceClient.log)
@@ -194,8 +192,8 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 
 	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, container.Pod.Namespace, container.Pod.Name)
 
-	if syncConfig.WaitInitialSync != nil && *syncConfig.WaitInitialSync == true {
-		log.StartWait("Sync: waiting for intial sync to complete")
+	if syncConfig.WaitInitialSync == nil || *syncConfig.WaitInitialSync == true {
+		log.StartWait("Sync: waiting for initial sync to complete")
 		<-syncClient.Options.UpstreamInitialSyncDone
 		<-syncClient.Options.DownstreamInitialSyncDone
 		log.StopWait()
@@ -247,7 +245,7 @@ func (serviceClient *client) isFatalSyncError(err error) bool {
 }
 
 func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, syncDone chan bool, customLog logpkg.Logger) (*sync.Sync, error) {
-	err := InjectDevSpaceHelper(serviceClient.client, pod, container, serviceClient.log)
+	err := InjectDevSpaceHelper(serviceClient.client, pod, container, string(syncConfig.Arch), serviceClient.log)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +307,7 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		options.UploadExcludePaths = syncConfig.UploadExcludePaths
 	}
 
-	if syncConfig.WaitInitialSync != nil && *syncConfig.WaitInitialSync == true {
+	if syncConfig.WaitInitialSync == nil || *syncConfig.WaitInitialSync == true {
 		options.UpstreamInitialSyncDone = make(chan bool)
 		options.DownstreamInitialSyncDone = make(chan bool)
 	}
@@ -441,18 +439,26 @@ func (serviceClient *client) startStream(pod *v1.Pod, container string, command 
 	return nil
 }
 
-func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, log logpkg.Logger) error {
+func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, arch string, log logpkg.Logger) error {
 	// Compare sync versions
 	version := upgrade.GetRawVersion()
 	if version == "" {
 		version = "latest"
 	}
+	if arch != "" {
+		if latest.ContainerArchitecture(arch) == latest.ContainerArchitectureAmd64 {
+			arch = ""
+		} else {
+			arch = "-" + arch
+		}
+	}
 
 	// Check if sync is already in pod
+	localHelperName := "devspacehelper" + arch
 	stdout, _, err := client.ExecBuffered(pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
 	if err != nil || version != string(stdout) {
 		// check if we can find it in the assets
-		helperBytes, err := assets.Asset("release/" + DevSpaceHelperTempFolder)
+		helperBytes, err := assets.Asset("release/" + localHelperName)
 		if err == nil {
 			return injectSyncHelperFromBytes(client, pod, container, helperBytes)
 		}
@@ -463,15 +469,15 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 		}
 
 		syncBinaryFolder := filepath.Join(homedir, constants.DefaultHomeDevSpaceFolder, DevSpaceHelperTempFolder, version)
-		filepath := filepath.Join(syncBinaryFolder, "devspacehelper")
 
 		// Download sync helper if necessary
-		err = downloadSyncHelper(filepath, syncBinaryFolder, version, log)
+		err = downloadSyncHelper(localHelperName, syncBinaryFolder, version, log)
 		if err != nil {
 			return errors.Wrap(err, "download devspace helper")
 		}
 
 		// Inject sync helper
+		filepath := filepath.Join(syncBinaryFolder, localHelperName)
 		err = injectSyncHelper(client, pod, container, filepath)
 		if err != nil {
 			return errors.Wrap(err, "inject devspace helper")
@@ -481,7 +487,9 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 	return nil
 }
 
-func downloadSyncHelper(filepath, syncBinaryFolder, version string, log logpkg.Logger) error {
+func downloadSyncHelper(helperName, syncBinaryFolder, version string, log logpkg.Logger) error {
+	filepath := filepath.Join(syncBinaryFolder, helperName)
+
 	// Check if file exists
 	_, err := os.Stat(filepath)
 	if err == nil {
@@ -491,7 +499,7 @@ func downloadSyncHelper(filepath, syncBinaryFolder, version string, log logpkg.L
 		}
 
 		// download sha256 html
-		url := fmt.Sprintf("https://github.com/loft-sh/devspace/releases/download/%s/devspacehelper.sha256", version)
+		url := fmt.Sprintf("https://github.com/loft-sh/devspace/releases/download/%s/%s.sha256", version, helperName)
 		resp, err := http.Get(url)
 		if err != nil {
 			log.Warnf("Couldn't retrieve helper sha256: %v", err)
@@ -524,16 +532,16 @@ func downloadSyncHelper(filepath, syncBinaryFolder, version string, log logpkg.L
 	}
 
 	// Make sync binary
-	log.Info("Couldn't find devspacehelper, will try to download it now")
+	log.Infof("Couldn't find %s, will try to download it now", helperName)
 	err = os.MkdirAll(syncBinaryFolder, 0755)
 	if err != nil {
 		return errors.Wrap(err, "mkdir helper binary folder")
 	}
 
-	return downloadFile(version, filepath)
+	return downloadFile(version, filepath, helperName)
 }
 
-func downloadFile(version string, filepath string) error {
+func downloadFile(version string, filepath string, filename string) error {
 	// Create download url
 	url := ""
 	if version == "latest" {
@@ -553,9 +561,14 @@ func downloadFile(version string, filepath string) error {
 		return errors.Wrap(err, "read body")
 	}
 
-	matches := HelperBinaryRegEx.FindStringSubmatch(string(body))
+	regEx, err := regexp.Compile(fmt.Sprintf(helperBinaryRegEx, filename))
+	if err != nil {
+		return err
+	}
+
+	matches := regEx.FindStringSubmatch(string(body))
 	if len(matches) != 2 {
-		return errors.Errorf("Couldn't find devspace helper in github release %s at url %s", version, url)
+		return errors.Errorf("couldn't find %s in github release %s at url %s", filename, version, url)
 	}
 
 	out, err := os.Create(filepath)

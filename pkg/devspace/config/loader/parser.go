@@ -6,10 +6,12 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
+	"strings"
 )
 
 type Parser interface {
-	Parse(rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error)
+	Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error)
 }
 
 func NewDefaultParser() Parser {
@@ -18,7 +20,7 @@ func NewDefaultParser() Parser {
 
 type defaultParser struct{}
 
-func (d *defaultParser) Parse(rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
+func (d *defaultParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
 	// delete the commands, since we don't need it in a normal scenario
 	delete(rawConfig, "commands")
 
@@ -31,7 +33,7 @@ func NewWithCommandsParser() Parser {
 
 type withCommandsParser struct{}
 
-func (d *withCommandsParser) Parse(rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
+func (d *withCommandsParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
 	return fillVariablesAndParse(rawConfig, vars, resolver, options, log)
 }
 
@@ -39,10 +41,9 @@ func NewCommandsParser() Parser {
 	return &commandsParser{}
 }
 
-type commandsParser struct {
-}
+type commandsParser struct{}
 
-func (c *commandsParser) Parse(rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
+func (c *commandsParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
 	// modify the config
 	preparedConfig, err := versions.ParseCommands(rawConfig)
 	if err != nil {
@@ -50,6 +51,48 @@ func (c *commandsParser) Parse(rawConfig map[interface{}]interface{}, vars []*la
 	}
 
 	return fillVariablesAndParse(preparedConfig, vars, resolver, options, log)
+}
+
+func NewProfilesParser() Parser {
+	return &profilesParser{}
+}
+
+type profilesParser struct{}
+
+func (p *profilesParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
+	rawMap, err := copyRaw(originalRawConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	profiles, ok := rawMap["profiles"].([]interface{})
+	if !ok {
+		profiles = []interface{}{}
+	}
+
+	retProfiles := []*latest.ProfileConfig{}
+	for _, profile := range profiles {
+		profileMap, ok := profile.(map[interface{}]interface{})
+		if !ok {
+			continue
+		}
+
+		profileConfig := &latest.ProfileConfig{}
+		o, err := yaml.Marshal(profileMap)
+		if err != nil {
+			continue
+		}
+		err = yaml.Unmarshal(o, profileConfig)
+		if err != nil {
+			continue
+		}
+
+		retProfiles = append(retProfiles, profileConfig)
+	}
+
+	retConfig := latest.NewRaw()
+	retConfig.Profiles = retProfiles
+	return retConfig, nil
 }
 
 func fillVariablesAndParse(preparedConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *ConfigOptions, log log.Logger) (*latest.Config, error) {
@@ -66,4 +109,58 @@ func fillVariablesAndParse(preparedConfig map[interface{}]interface{}, vars []*l
 	}
 
 	return latestConfig, nil
+}
+
+// fillVariables fills in the given vars into the prepared config
+func fillVariables(resolver variable.Resolver, preparedConfig map[interface{}]interface{}, vars []*latest.Variable, options *ConfigOptions) error {
+	// Find out what vars are really used
+	varsUsed, err := resolver.FindVariables(preparedConfig, vars)
+	if err != nil {
+		return err
+	}
+
+	// parse cli --var's, the resolver will cache them for us
+	_, err = resolver.ConvertFlags(options.Vars)
+	if err != nil {
+		return err
+	}
+
+	// Fill used defined variables
+	if len(vars) > 0 {
+		newVars := []*latest.Variable{}
+		for _, v := range vars {
+			if varsUsed[strings.TrimSpace(v.Name)] {
+				newVars = append(newVars, v)
+			}
+		}
+
+		if len(newVars) > 0 {
+			err = askQuestions(resolver, newVars)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// Walk over data and fill in variables
+	err = resolver.FillVariables(preparedConfig)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func askQuestions(resolver variable.Resolver, vars []*latest.Variable) error {
+	for _, definition := range vars {
+		name := strings.TrimSpace(definition.Name)
+
+		// fill the variable with definition
+		_, err := resolver.Resolve(name, definition)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

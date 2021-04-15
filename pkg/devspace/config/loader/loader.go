@@ -2,14 +2,12 @@ package loader
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
@@ -35,16 +33,16 @@ type ConfigLoader interface {
 	// LoadGenerated loads the generated config
 	LoadGenerated(options *ConfigOptions) (*generated.Config, error)
 
-	// Saves a devspace.yaml to file
+	// Save saves a devspace.yaml to file
 	Save(config *latest.Config) error
 
-	// Saves a generated config yaml to file
+	// SaveGenerated saves a generated config yaml to file
 	SaveGenerated(generated *generated.Config) error
 
-	// Returns if a devspace.yaml could be found
+	// Exists returns if a devspace.yaml could be found
 	Exists() bool
 
-	// Searches for a devspace.yaml in the current directory and parent directories
+	// SetDevSpaceRoot searches for a devspace.yaml in the current directory and parent directories
 	// and will return if a devspace.yaml was found as well as switch to the current
 	// working directory to that directory if a devspace.yaml could be found.
 	SetDevSpaceRoot(log log.Logger) (bool, error)
@@ -136,7 +134,7 @@ func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, parser
 	resolver := l.newVariableResolver(generatedConfig, options, log)
 
 	// copy raw config
-	copiedRawConfig, err := config.CopyRaw(rawConfig)
+	copiedRawConfig, err := copyRaw(rawConfig)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -157,7 +155,7 @@ func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, parser
 	delete(copiedRawConfig, "vars")
 
 	// parse the config
-	latestConfig, err := parser.Parse(copiedRawConfig, vars, resolver, options, log)
+	latestConfig, err := parser.Parse(rawConfig, copiedRawConfig, vars, resolver, options, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -238,60 +236,6 @@ func (l *configLoader) newVariableResolver(generatedConfig *generated.Config, op
 		KubeConfigLoader: l.kubeConfigLoader,
 		Profile:          options.Profile,
 	}, log)
-}
-
-// fillVariables fills in the given vars into the prepared config
-func fillVariables(resolver variable.Resolver, preparedConfig map[interface{}]interface{}, vars []*latest.Variable, options *ConfigOptions) error {
-	// Find out what vars are really used
-	varsUsed, err := resolver.FindVariables(preparedConfig, vars)
-	if err != nil {
-		return err
-	}
-
-	// parse cli --var's, the resolver will cache them for us
-	_, err = resolver.ConvertFlags(options.Vars)
-	if err != nil {
-		return err
-	}
-
-	// Fill used defined variables
-	if len(vars) > 0 {
-		newVars := []*latest.Variable{}
-		for _, v := range vars {
-			if varsUsed[strings.TrimSpace(v.Name)] {
-				newVars = append(newVars, v)
-			}
-		}
-
-		if len(newVars) > 0 {
-			err = askQuestions(resolver, newVars)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	// Walk over data and fill in variables
-	err = resolver.FillVariables(preparedConfig)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func askQuestions(resolver variable.Resolver, vars []*latest.Variable) error {
-	for _, definition := range vars {
-		name := strings.TrimSpace(definition.Name)
-
-		// fill the variable with definition
-		_, err := resolver.Resolve(name, definition)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // configExistsInPath checks whether a devspace configuration exists at a certain path
@@ -396,8 +340,17 @@ func ConfigPath(configPath string) string {
 	return path
 }
 
-func removeCommands(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
-	delete(data, "commands")
+func copyRaw(in map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+	o, err := yaml.Marshal(in)
+	if err != nil {
+		return nil, err
+	}
 
-	return data, nil
+	n := map[interface{}]interface{}{}
+	err = yaml.Unmarshal(o, &n)
+	if err != nil {
+		return nil, err
+	}
+
+	return n, nil
 }

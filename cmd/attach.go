@@ -104,7 +104,7 @@ func (cmd *AttachCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
 	// get image selector if specified
-	imageSelector, err := getImageSelector(configLoader, configOptions, cmd.Image, log)
+	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, log)
 	if err != nil {
 		return err
 	}

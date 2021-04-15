@@ -1,8 +1,10 @@
 package pullsecrets
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -16,13 +18,13 @@ type Client interface {
 }
 
 // NewClient creates a client for a registry
-func NewClient(config *latest.Config, cache *generated.CacheConfig, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) Client {
+func NewClient(config config.Config, dependencies []types.Dependency, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) Client {
 	return &client{
-		config:       config,
-		cache:        cache,
+		config:       config.Config(),
+		cache:        config.Generated().GetActive(),
 		kubeClient:   kubeClient,
 		dockerClient: dockerClient,
-		hookExecuter: hook.NewExecuter(config),
+		hookExecuter: hook.NewExecuter(config, dependencies),
 		log:          log,
 	}
 }

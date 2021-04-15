@@ -182,7 +182,7 @@ func (cmd *UICmd) RunUI(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	}
 
 	// Create server
-	server, err := server.NewServer(config, cmd.Host, cmd.Dev, client.CurrentContext(), client.Namespace(), forcePort, cmd.log)
+	server, err := server.NewServer(config, nil, cmd.Host, cmd.Dev, client.CurrentContext(), client.Namespace(), forcePort, cmd.log)
 	if err != nil {
 		return err
 	}

@@ -44,7 +44,7 @@ func (m *manager) newImageConfigFromImageName(imageName, dockerfile, context str
 	}
 	if dockerfile == "" {
 		retImageConfig.Build = &latest.BuildConfig{
-			Disabled: ptr.Bool(true),
+			Disabled: true,
 		}
 	} else {
 		if dockerfile != helper.DefaultDockerfilePath {
@@ -231,7 +231,7 @@ func (m *manager) newImageConfigFromDockerfile(imageName, dockerfile, context st
 			retImageConfig.Build.Docker = &v1.DockerConfig{}
 		}
 
-		retImageConfig.Build.Docker.SkipPush = ptr.Bool(true)
+		retImageConfig.Build.Docker.SkipPush = true
 	}
 
 	return retImageConfig, nil
@@ -337,72 +337,4 @@ func (m *manager) getRegistryURL(dockerClient docker.Client) (string, error) {
 	}
 
 	return registryURL, nil
-}
-
-// AddImage adds an image to the devspace
-func (m *manager) AddImage(nameInConfig, name, tag, contextPath, dockerfilePath, buildTool string) error {
-	imageConfig := &v1.ImageConfig{
-		Image: name,
-	}
-
-	if tag != "" {
-		imageConfig.Tags = []string{tag}
-	}
-	if contextPath != "" {
-		imageConfig.Context = contextPath
-	}
-	if dockerfilePath != "" {
-		imageConfig.Dockerfile = dockerfilePath
-	}
-
-	if buildTool == "docker" {
-		if imageConfig.Build == nil {
-			imageConfig.Build = &v1.BuildConfig{}
-		}
-
-		imageConfig.Build.Docker = &v1.DockerConfig{}
-	} else if buildTool == "kaniko" {
-		if imageConfig.Build == nil {
-			imageConfig.Build = &v1.BuildConfig{}
-		}
-
-		imageConfig.Build.Kaniko = &v1.KanikoConfig{}
-	} else if buildTool != "" {
-		m.log.Errorf("BuildTool %v unknown. Please select one of docker|kaniko", buildTool)
-	}
-
-	if m.config.Images == nil {
-		images := make(map[string]*v1.ImageConfig)
-		m.config.Images = images
-	}
-
-	m.config.Images[nameInConfig] = imageConfig
-
-	return nil
-}
-
-//RemoveImage removes an image from the devspace
-func (m *manager) RemoveImage(removeAll bool, names []string) error {
-	if len(names) == 0 && removeAll == false {
-		return errors.Errorf("You have to specify at least one image")
-	}
-
-	newImageList := make(map[string]*v1.ImageConfig)
-
-	if !removeAll && m.config.Images != nil {
-	ImagesLoop:
-		for nameInConfig, imageConfig := range m.config.Images {
-			for _, deletionName := range names {
-				if deletionName == nameInConfig {
-					continue ImagesLoop
-				}
-			}
-
-			newImageList[nameInConfig] = imageConfig
-		}
-	}
-
-	m.config.Images = newImageList
-
-	return nil
 }
