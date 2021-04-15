@@ -33,7 +33,7 @@ import (
 
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
-	dockerterm "github.com/docker/docker/pkg/term"
+	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubectl/pkg/util/interrupt"

@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -133,8 +134,8 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 	return nil
 }
 
-func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, image string, log log.Logger) ([]string, error) {
-	var imageSelector []string
+func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, image string, log log.Logger) ([]imageselector.ImageSelector, error) {
+	var imageSelector []imageselector.ImageSelector
 	if image != "" {
 		if configLoader.Exists() == false {
 			return nil, errors.New(message.ConfigNotFound)
@@ -152,7 +153,7 @@ func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, c
 			log.Warnf("Error resolving dependencies: %v", err)
 		}
 
-		imageSelector, err = targetselector.ImageSelectorFromConfig(image, config, resolved)
+		imageSelector, err = imageselector.Resolve(image, config, resolved)
 		if err != nil {
 			return nil, err
 		} else if len(imageSelector) == 0 {

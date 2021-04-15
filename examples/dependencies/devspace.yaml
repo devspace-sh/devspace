@@ -1,16 +1,19 @@
-version: v1beta9
-deployments:
-- name: root
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: nginx:latest
+version: v1beta10
 dependencies:
-- source:
+- name: dependency1
+  source:
     path: dependency1
-  name: test
-- source:
+- name: dependency2
+  source:
     path: dependency2
-- source:
+  # Use dev.ports config from dependency2
+  dev:
+    ports: true
+- name: dependency3
+  source:
     git: https://github.com/devspace-cloud/example-dependency.git
+dev:
+  # Open terminal to the pod with the imageName created in dependency1
+  terminal:
+    imageName: dependency1.default
+    

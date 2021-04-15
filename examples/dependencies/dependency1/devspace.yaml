@@ -10,6 +10,8 @@ deployments:
     values:
       containers:
       - image: mydockeruser/devspace
-dependencies:
-- source:
-    path: ../dependency2
+hooks:
+  - command: "echo 'Hello from dependency1'"
+    when:
+      before:
+        images: default

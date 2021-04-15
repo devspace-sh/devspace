@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -138,7 +139,7 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 
 		// create target selector options
 		options := targetselector.NewOptionsFromFlags("", "", cmd.Namespace, "", cmd.Pick).ApplyConfigParameter(syncPath.LabelSelector, syncPath.Namespace, syncPath.ContainerName, "")
-		options.ImageSelector, err = targetselector.ImageSelectorFromConfig(syncPath.ImageName, configInterface, dep)
+		options.ImageSelector, err = imageselector.Resolve(syncPath.ImageName, configInterface, dep)
 
 		err = restartContainer(client, options, cmd.log)
 		if err != nil {

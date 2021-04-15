@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
@@ -44,7 +45,7 @@ func (r *remoteHook) Execute(ctx Context, hook *latest.HookConfig, config config
 	}
 
 	var (
-		imageSelector []string
+		imageSelector []imageselector.ImageSelector
 		err           error
 	)
 	if hook.Where.Container.ImageName != "" {
@@ -52,7 +53,7 @@ func (r *remoteHook) Execute(ctx Context, hook *latest.HookConfig, config config
 			return errors.Errorf("Cannot execute hook '%s': config is not loaded", ansi.Color(hookName(hook), "white+b"))
 		}
 
-		imageSelector, err = targetselector.ImageSelectorFromConfig(hook.Where.Container.ImageName, config, dependencies)
+		imageSelector, err = imageselector.Resolve(hook.Where.Container.ImageName, config, dependencies)
 		if err != nil {
 			return err
 		}
@@ -68,7 +69,7 @@ func (r *remoteHook) Execute(ctx Context, hook *latest.HookConfig, config config
 	return nil
 }
 
-func (r *remoteHook) execute(ctx Context, hook *latest.HookConfig, imageSelector []string, log logpkg.Logger) (bool, error) {
+func (r *remoteHook) execute(ctx Context, hook *latest.HookConfig, imageSelector []imageselector.ImageSelector, log logpkg.Logger) (bool, error) {
 	labelSelector := ""
 	if len(hook.Where.Container.LabelSelector) > 0 {
 		labelSelector = labels.Set(hook.Where.Container.LabelSelector).String()

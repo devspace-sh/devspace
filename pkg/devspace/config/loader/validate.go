@@ -268,7 +268,49 @@ func validateImages(config *latest.Config) error {
 	return nil
 }
 
+func isReplacePodsUnique(index int, rp *latest.ReplacePod, rps []*latest.ReplacePod) bool {
+	for i, r := range rps {
+		if i == index {
+			continue
+		}
+
+		if r.ImageName == rp.ReplaceImage {
+			return false
+		} else if len(r.LabelSelector) > 0 && len(rp.LabelSelector) > 0 && strMapEquals(r.LabelSelector, rp.LabelSelector) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func strMapEquals(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for k, v := range a {
+		if w, ok := b[k]; !ok || v != w {
+			return false
+		}
+	}
+
+	return true
+}
+
 func validateDev(config *latest.Config) error {
+	for index, rp := range config.Dev.ReplacePods {
+		if rp.ImageName == "" && len(rp.LabelSelector) == 0 {
+			return errors.Errorf("Error in config: imageName and label selector are nil in replace pods at index %d", index)
+		}
+		if rp.ImageName != "" && len(rp.LabelSelector) > 0 {
+			return errors.Errorf("Error in config: imageName and label selector cannot both be defined in replace pods at index %d", index)
+		}
+		if isReplacePodsUnique(index, rp, config.Dev.ReplacePods) == false {
+			return errors.Errorf("Error in config: imageName or label selector is not unique in replace pods at index %d", index)
+		}
+	}
+
 	if config.Dev.Ports != nil {
 		for index, port := range config.Dev.Ports {
 			// Validate imageName and label selector

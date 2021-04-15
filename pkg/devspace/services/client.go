@@ -3,6 +3,7 @@ package services
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	dependencytypes "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/services/podreplace"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"io"
 
@@ -24,13 +25,17 @@ type Client interface {
 
 	StartSyncFromCmd(options targetselector.Options, syncConfig *latest.SyncConfig, interrupt chan error, verbose bool) error
 	StartTerminal(options targetselector.Options, args []string, workDir string, interrupt chan error, wait bool) (int, error)
+
+	ReplacePods() error
 }
 
 type client struct {
 	config       config.Config
 	dependencies []dependencytypes.Dependency
-	client       kubectl.Client
-	log          log.Logger
+
+	podReplacer podreplace.PodReplacer
+	client      kubectl.Client
+	log         log.Logger
 }
 
 // NewClient creates a new client object
@@ -39,6 +44,7 @@ func NewClient(config config.Config, dependencies []dependencytypes.Dependency, 
 		config:       config,
 		dependencies: dependencies,
 		client:       kubeClient,
+		podReplacer:  podreplace.NewPodReplacer(),
 		log:          log,
 	}
 }

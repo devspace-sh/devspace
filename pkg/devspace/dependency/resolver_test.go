@@ -1,7 +1,7 @@
 package dependency
 
 import (
-	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"io/ioutil"
 	"os"
@@ -82,11 +82,13 @@ func TestResolver(t *testing.T) {
 			},
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{
+					Name: "test",
 					Source: &latest.SourceConfig{
 						Path: "dependency1",
 					},
 				},
 				&latest.DependencyConfig{
+					Name: "test",
 					Source: &latest.SourceConfig{
 						Path: "dependency2",
 					},
@@ -110,6 +112,7 @@ func TestResolver(t *testing.T) {
 			},
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{
+					Name: "test",
 					Source: &latest.SourceConfig{
 						Git:      "https://github.com/devspace-cloud/example-dependency.git",
 						Revision: "f8b2aa8cf8ac03238a28e8f78382b214d619893f",
@@ -131,6 +134,7 @@ func TestResolver(t *testing.T) {
 					Version: latest.Version,
 					Dependencies: []*latest.DependencyConfig{
 						&latest.DependencyConfig{
+							Name: "test",
 							Source: &latest.SourceConfig{
 								Path: "..",
 							},
@@ -140,6 +144,7 @@ func TestResolver(t *testing.T) {
 			},
 			dependencyTasks: []*latest.DependencyConfig{
 				&latest.DependencyConfig{
+					Name: "test",
 					Source: &latest.SourceConfig{
 						Path: "dependency1",
 					},
@@ -152,29 +157,6 @@ func TestResolver(t *testing.T) {
 					localPath: filepath.Join(dir, "dependency1"),
 				},
 			},
-		},
-		resolverTestCase{
-			name: "Cyclic unallowed dependency",
-			files: map[string]*latest.Config{
-				"dependency1/devspace.yaml": &latest.Config{
-					Version: latest.Version,
-					Dependencies: []*latest.DependencyConfig{
-						&latest.DependencyConfig{
-							Source: &latest.SourceConfig{
-								Path: "..",
-							},
-						},
-					},
-				},
-			},
-			dependencyTasks: []*latest.DependencyConfig{
-				&latest.DependencyConfig{
-					Source: &latest.SourceConfig{
-						Path: "dependency1",
-					},
-				},
-			},
-			expectedErr: fmt.Sprintf("Cyclic dependency found: \n%s\n%s\n%s", filepath.Join(dir, "dependency1"), dir, filepath.Join(dir, "dependency1")),
 		},
 	}
 
@@ -194,7 +176,7 @@ func TestResolver(t *testing.T) {
 		kubeClient := &fakekube.Client{
 			Client: kube,
 		}
-		testResolver := NewResolver(testConfig, generatedConfig, kubeClient, testCase.allowCyclic, &loader.ConfigOptions{}, log.Discard)
+		testResolver := NewResolver(config.NewConfig(nil, testConfig, generatedConfig, map[string]interface{}{}), kubeClient, &loader.ConfigOptions{}, log.Discard)
 		assert.NilError(t, err, "Error creating a resolver in testCase %s", testCase.name)
 
 		dependencies, err := testResolver.Resolve(testCase.updateParam)
@@ -206,8 +188,8 @@ func TestResolver(t *testing.T) {
 
 		assert.Equal(t, len(testCase.expectedDependencies), len(dependencies), "Wrong dependency length in testCase %s", testCase.name)
 		for index, expected := range testCase.expectedDependencies {
-			assert.Equal(t, expected.ID, dependencies[index].ID, "Dependency has wrong id in testCase %s", testCase.name)
-			assert.Equal(t, expected.LocalPath, dependencies[index].LocalPath, "Dependency has wrong local path in testCase %s", testCase.name)
+			assert.Equal(t, expected.id, dependencies[index].id, "Dependency has wrong id in testCase %s", testCase.name)
+			assert.Equal(t, expected.localPath, dependencies[index].localPath, "Dependency has wrong local path in testCase %s", testCase.name)
 		}
 
 		for path := range testCase.files {

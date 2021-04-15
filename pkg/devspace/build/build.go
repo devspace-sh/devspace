@@ -52,7 +52,7 @@ func NewController(config config.Config, dependencies []types.Dependency, client
 	}
 }
 
-// All builds all images
+// Build builds all images
 func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]string, error) {
 	var (
 		builtImages = make(map[string]string)

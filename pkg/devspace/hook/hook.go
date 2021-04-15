@@ -115,6 +115,10 @@ func (e *executer) OnError(stage Stage, whichs []string, context Context, log lo
 
 // Execute executes hooks at a specific time
 func (e *executer) Execute(when When, stage Stage, which string, context Context, log logpkg.Logger) error {
+	if e.config == nil {
+		return nil
+	}
+
 	c := e.config.Config()
 	if c.Hooks != nil && len(c.Hooks) > 0 {
 		hooksToExecute := []*latest.HookConfig{}
@@ -249,6 +253,10 @@ func executeHook(ctx Context, hookConfig *latest.HookConfig, hookWriter io.Write
 
 func hookName(hook *latest.HookConfig) string {
 	if hook.Command != "" {
+		if hook.Args == nil {
+			return hook.Command
+		}
+		
 		return fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " "))
 	}
 	if hook.Upload != nil && hook.Where.Container != nil {

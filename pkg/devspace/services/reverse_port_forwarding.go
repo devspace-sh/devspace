@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/tunnel"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"io"
 	"time"
 
@@ -43,7 +44,7 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 	// apply config & set image selector
 	options := targetselector.NewEmptyOptions().ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, portForwarding.ContainerName, "")
 	options.AllowPick = false
-	options.ImageSelector, err = targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, serviceClient.dependencies)
+	options.ImageSelector, err = imageselector.Resolve(portForwarding.ImageName, serviceClient.config, serviceClient.dependencies)
 	if err != nil {
 		return err
 	}

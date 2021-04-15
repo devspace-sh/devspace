@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devspace/assets"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/hash"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -159,7 +160,7 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 		}
 	}
 
-	options.TargetOptions.ImageSelector, err = targetselector.ImageSelectorFromConfig(syncConfig.ImageName, serviceClient.config, serviceClient.dependencies)
+	options.TargetOptions.ImageSelector, err = imageselector.Resolve(syncConfig.ImageName, serviceClient.config, serviceClient.dependencies)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/legacy"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"os"
 	"path/filepath"
@@ -394,6 +395,12 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 		useTerminal     = config.Dev.Terminal != nil && config.Dev.Terminal.Disabled == false
 	)
 
+	// replace pods
+	err := servicesClient.ReplacePods()
+	if err != nil {
+		return 0, err
+	}
+
 	if cmd.Portforwarding {
 		cmd.Portforwarding = false
 		err := servicesClient.StartPortForwarding(nil)
@@ -436,7 +443,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 	if cmd.Sync {
 		cmd.Sync = false
 		printSyncLog := cmd.PrintSyncLog
-		if useTerminal == false && config.Dev.Logs != nil && (config.Dev.Logs.Sync == nil || *config.Dev.Logs.Sync == true) {
+		if useTerminal == false && (config.Dev.Logs == nil || config.Dev.Logs.Sync == nil || *config.Dev.Logs.Sync == true) {
 			printSyncLog = true
 		}
 
@@ -521,9 +528,9 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 				selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Terminal.LabelSelector, config.Dev.Terminal.Namespace, config.Dev.Terminal.ContainerName, "")
 			}
 
-			var imageSelector []string
+			var imageSelector []imageselector.ImageSelector
 			if config.Dev.Terminal != nil && config.Dev.Terminal.ImageName != "" {
-				imageSelector, err = targetselector.ImageSelectorFromConfig(config.Dev.Terminal.ImageName, configInterface, dependencies)
+				imageSelector, err = imageselector.Resolve(config.Dev.Terminal.ImageName, configInterface, dependencies)
 				if err != nil {
 					return 0, err
 				}
@@ -736,7 +743,7 @@ func updateLastKubeContext(configLoader loader.ConfigLoader, client kubectl.Clie
 
 func addDependenciesDevConfig(config *latest.Config, dependencies []types.Dependency) {
 	for _, d := range config.Dependencies {
-		if d.Dev != nil && d.Dev.Disable == true {
+		if d.Dev == nil {
 			continue
 		}
 
@@ -747,7 +754,7 @@ func addDependenciesDevConfig(config *latest.Config, dependencies []types.Depend
 			}
 
 			// ports
-			if d.Dev == nil || d.Dev.DisablePorts == false {
+			if d.Dev != nil && d.Dev.Ports {
 				for _, p := range e.Config().Config().Dev.Ports {
 					if config.Dev.Ports == nil {
 						config.Dev.Ports = []*latest.PortForwardingConfig{}
@@ -771,7 +778,7 @@ func addDependenciesDevConfig(config *latest.Config, dependencies []types.Depend
 			}
 
 			// sync
-			if d.Dev == nil || d.Dev.DisableSync == false {
+			if d.Dev != nil && d.Dev.Sync == true {
 				for _, p := range e.Config().Config().Dev.Sync {
 					if config.Dev.Sync == nil {
 						config.Dev.Sync = []*latest.SyncConfig{}

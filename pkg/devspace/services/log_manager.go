@@ -8,7 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -29,7 +29,7 @@ type LogManager interface {
 type logManager struct {
 	client kubectl.Client
 
-	imageNameSelectors []string
+	imageNameSelectors []imageselector.ImageSelector
 	labelSelectors     []latest.LogsSelector
 
 	tail int64
@@ -50,10 +50,10 @@ func NewLogManager(client kubectl.Client, config config.Config, dependencies []t
 	c := config.Config()
 
 	// Build an image selector
-	imageSelector := []string{}
+	imageSelector := []imageselector.ImageSelector{}
 	if c.Dev.Logs != nil && c.Dev.Logs.Images != nil {
 		for _, configImageName := range c.Dev.Logs.Images {
-			selectors, err := targetselector.ImageSelectorFromConfig(configImageName, config, dependencies)
+			selectors, err := imageselector.Resolve(configImageName, config, dependencies)
 			if err != nil {
 				return nil, err
 			}
@@ -62,7 +62,7 @@ func NewLogManager(client kubectl.Client, config config.Config, dependencies []t
 		}
 	} else {
 		for configImageName := range c.Images {
-			selectors, err := targetselector.ImageSelectorFromConfig(configImageName, config, dependencies)
+			selectors, err := imageselector.Resolve(configImageName, config, dependencies)
 			if err != nil {
 				return nil, err
 			}

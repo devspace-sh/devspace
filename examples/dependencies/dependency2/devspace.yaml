@@ -1,11 +1,16 @@
 version: v1beta9
 deployments:
-- name: dependency2
+- name: nginx
   helm:
     componentChart: true
     values:
       containers:
       - image: nginx
-dependencies:
-- source:
-    git: https://github.com/devspace-cloud/example-dependency.git
+dev:
+  ports:
+  - labelSelector:
+      app.kubernetes.io/component: nginx
+    forward:
+      - port: 8080
+        remotePort: 80
+    

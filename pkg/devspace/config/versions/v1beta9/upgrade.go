@@ -22,10 +22,6 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		if d.Name == "" {
 			nextConfig.Dependencies[k].Name = strconv.Itoa(k)
 		}
-
-		nextConfig.Dependencies[k].Dev = &next.DependencyDev{
-			Disable: true,
-		}
 	}
 
 	// convert images
