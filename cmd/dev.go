@@ -443,7 +443,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 	if cmd.Sync {
 		cmd.Sync = false
 		printSyncLog := cmd.PrintSyncLog
-		if useTerminal == false && config.Dev.Logs != nil && (config.Dev.Logs.Sync == nil || *config.Dev.Logs.Sync == true) {
+		if useTerminal == false && (config.Dev.Logs == nil || config.Dev.Logs.Sync == nil || *config.Dev.Logs.Sync == true) {
 			printSyncLog = true
 		}
 
