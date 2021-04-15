@@ -641,10 +641,26 @@ type DevConfig struct {
 	AutoReload *AutoReloadConfig       `yaml:"autoReload,omitempty" json:"autoReload,omitempty"`
 	Terminal   *Terminal               `yaml:"terminal,omitempty" json:"terminal,omitempty"`
 
-	// DEPRECATED: If disabled is true, DevSpace will not use the terminal
+	// Replace pods will replace the selected target pod/container with a new image and optionally apply
+	// pod patches.
+	ReplacePods []*ReplacePod `yaml:"replacePods,omitempty" json:"replacePods,omitempty"`
+
+	// DEPRECATED: Only used for backwards compatibility with older config versions
 	InteractiveEnabled bool `yaml:"deprecatedInteractiveEnabled,omitempty" json:"deprecatedInteractiveEnabled,omitempty"`
 	// DEPRECATED: Only used for backwards compatibility with older config versions
 	InteractiveImages []*InteractiveImageConfig `yaml:"deprecatedInteractiveImages,omitempty" json:"deprecatedInteractiveImages,omitempty"`
+}
+
+// ReplacePod will replace the selected target pod/container with a new image and optionally apply
+// pod patches.
+type ReplacePod struct {
+	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
+	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
+	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
+	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+
+	ReplaceImage string         `yaml:"replaceImage,omitempty" json:"replaceImage,omitempty"`
+	Patches      []*PatchConfig `yaml:"patches,omitempty" json:"patches,omitempty"`
 }
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
@@ -853,15 +869,13 @@ type DependencyConfig struct {
 // DependencyDev specifies which parts of the dependency dev config should
 // be reused
 type DependencyDev struct {
-	// If disable is true, the dev section of the dependency will not be used at all
-	Disable bool `yaml:"disable,omitempty" json:"disable,omitempty"`
-
-	// If disablePorts is true, DevSpace will not forward and reverse forward the
+	// If ports is true, DevSpace will forward and reverse forward the
 	// specified ports in the dependency's dev.ports config.
-	DisablePorts bool `yaml:"disablePorts,omitempty" json:"disablePorts,omitempty"`
+	Ports bool `yaml:"ports,omitempty" json:"ports,omitempty"`
 
-	// If disableSync is true, DevSpace will not run the specified sync paths
-	DisableSync bool `yaml:"disableSync,omitempty" json:"disableSync,omitempty"`
+	// If sync is true, DevSpace will run the specified sync paths
+	// from the dependency's dev.sync config
+	Sync bool `yaml:"sync,omitempty" json:"sync,omitempty"`
 }
 
 // DependencyVar holds an override value for a config variable

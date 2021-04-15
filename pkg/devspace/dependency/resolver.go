@@ -236,7 +236,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	err = executeInDirectory(filepath.Dir(configPath), func() error {
 		dConfigWrapper, err = loader.NewConfigLoader(configPath).LoadWithParser(loader.NewWithCommandsParser(), cloned, r.log)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", ID))
+			return errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", dependency.Name))
 		}
 
 		return nil

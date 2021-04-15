@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"strconv"
 	"strings"
 	"time"
@@ -44,7 +45,7 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 	// apply config & set image selector
 	options := targetselector.NewEmptyOptions().ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, "", "")
 	options.AllowPick = false
-	options.ImageSelector, err = targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, serviceClient.dependencies)
+	options.ImageSelector, err = imageselector.Resolve(portForwarding.ImageName, serviceClient.config, serviceClient.dependencies)
 	if err != nil {
 		return err
 	}
