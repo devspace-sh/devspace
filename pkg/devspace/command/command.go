@@ -2,14 +2,16 @@ package command
 
 import (
 	"context"
+	"io"
+	"mvdan.cc/sh/v3/expand"
+	"mvdan.cc/sh/v3/interp"
+	"mvdan.cc/sh/v3/syntax"
 	"os"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 
 	"github.com/pkg/errors"
-	"mvdan.cc/sh/v3/interp"
-	"mvdan.cc/sh/v3/syntax"
 )
 
 // ExecuteCommand executes a command from the config
@@ -33,8 +35,18 @@ func ExecuteCommand(commands []*latest.CommandConfig, name string, args []string
 		shellCommand += " '" + arg + "'"
 	}
 
+	// execute the command
+	return ExecuteShellCommand(shellCommand, os.Stdout, os.Stderr, nil)
+}
+
+func ExecuteShellCommand(command string, stdout io.Writer, stderr io.Writer, extraEnvVars map[string]string) error {
+	env := os.Environ()
+	for k, v := range extraEnvVars {
+		env = append(env, k+"="+v)
+	}
+
 	// Let's parse the complete command
-	file, err := syntax.NewParser().Parse(strings.NewReader(shellCommand), "")
+	file, err := syntax.NewParser().Parse(strings.NewReader(command), "")
 	if err != nil {
 		return errors.Wrap(err, "parse shell command")
 	}
@@ -46,7 +58,7 @@ func ExecuteCommand(commands []*latest.CommandConfig, name string, args []string
 	}
 
 	// Create shell runner
-	r, err := interp.New(interp.Dir(pwd), interp.StdIO(os.Stdin, os.Stdout, os.Stderr))
+	r, err := interp.New(interp.Dir(pwd), interp.StdIO(os.Stdin, stdout, stderr), interp.Env(expand.ListEnviron(env...)))
 	if err != nil {
 		return errors.Wrap(err, "create shell runner")
 	}

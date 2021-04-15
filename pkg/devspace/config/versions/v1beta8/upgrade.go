@@ -2,8 +2,8 @@ package v1beta8
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
-	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
+	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta9"
 	"github.com/loft-sh/devspace/pkg/util/log"
 )
 

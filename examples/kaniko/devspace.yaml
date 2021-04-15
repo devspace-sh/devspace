@@ -1,7 +1,9 @@
-version: v1beta9
+version: v1beta10
 images:
   default:
     image: myuser/myimage
+    entrypoint: ["sleep"]
+    cmd: ["99999999999999"]
     build:
       kaniko:
         cache: true
@@ -33,7 +35,5 @@ dev:
     - port: 8080
   sync:
   - imageName: default
-  interactive:
-    defaultEnabled: true
-    images:
-    - name: default
+  terminal:
+    imageName: default

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"io"
 	"os"
@@ -28,7 +29,6 @@ type RenderCmd struct {
 
 	SkipPush                bool
 	SkipPushLocalKubernetes bool
-	AllowCyclicDependencies bool
 	VerboseDependencies     bool
 
 	SkipBuild           bool
@@ -67,8 +67,6 @@ deployment.
 			return cmd.Run(f, plugins, cobraCmd, args)
 		},
 	}
-
-	renderCmd.Flags().BoolVar(&cmd.AllowCyclicDependencies, "allow-cyclic", false, "When enabled allows cyclic dependencies")
 
 	renderCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	renderCmd.Flags().BoolVar(&cmd.BuildSequential, "build-sequential", false, "Builds the images one after another instead of in parallel")
@@ -146,15 +144,10 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 		return err
 	}
 
-	// Create Dependencymanager
+	// Render dependencies
+	var dependencies []types.Dependency
 	if cmd.SkipDependencies == false {
-		manager, err := f.NewDependencyManager(config, generatedConfig, client, cmd.AllowCyclicDependencies, configOptions, log)
-		if err != nil {
-			return errors.Wrap(err, "new manager")
-		}
-
-		// Dependencies
-		err = manager.RenderAll(dependency.RenderOptions{
+		dependencies, err = f.NewDependencyManager(configInterface, client, configOptions, log).RenderAll(dependency.RenderOptions{
 			Dependencies: cmd.Dependency,
 			SkipBuild:    cmd.SkipBuild,
 			Verbose:      cmd.VerboseDependencies,
@@ -180,7 +173,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	// Build images if necessary
 	builtImages := map[string]string{}
 	if cmd.SkipBuild == false {
-		builtImages, err = f.NewBuildController(config, generatedConfig.GetActive(), client).Build(&build.Options{
+		builtImages, err = f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
 			SkipPush:                  cmd.SkipPush,
 			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 			ForceRebuild:              cmd.ForceBuild,
@@ -218,7 +211,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	}
 
 	// Deploy all defined deployments
-	err = f.NewDeployController(config, generatedConfig.GetActive(), client).Render(&deploy.Options{
+	err = f.NewDeployController(configInterface, dependencies, client).Render(&deploy.Options{
 		BuiltImages: builtImages,
 		Deployments: deployments,
 	}, cmd.Writer, log)

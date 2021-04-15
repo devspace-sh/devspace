@@ -72,6 +72,7 @@ require (
 	github.com/ulikunitz/xz v0.5.7 // indirect
 	golang.org/x/net v0.0.0-20201010224723-4f7140c49acb
 	golang.org/x/sys v0.0.0-20210403161142-5e06dd20ab57 // indirect
+	gomodules.xyz/jsonpatch/v2 v2.1.0
 	google.golang.org/grpc v1.29.1
 	gopkg.in/dancannon/gorethink.v3 v3.0.5 // indirect
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect

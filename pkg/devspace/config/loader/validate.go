@@ -10,6 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 	k8sv1 "k8s.io/api/core/v1"
 	"path/filepath"
+	"strings"
 )
 
 // ValidInitialSyncStrategy checks if strategy is valid
@@ -61,7 +62,49 @@ func validate(config *latest.Config, log log.Logger) error {
 		return err
 	}
 
+	err = validateDependencies(config)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func validateDependencies(config *latest.Config) error {
+	for index, dep := range config.Dependencies {
+		if dep.Name == "" {
+			return errors.Errorf("dependencies[%d].name is required", index)
+		}
+		if strings.Contains(dep.Name, ".") {
+			return errors.Errorf("dependencies[%d].name cannot contain a '.'", index)
+		}
+		if !isDependencyNameUnique(dep.Name, config.Dependencies) {
+			return errors.Errorf("dependencies[%d].name has to be unique", index)
+		}
+		if dep.Source == nil {
+			return errors.Errorf("dependencies[%d].source is required", index)
+		}
+		if dep.Source.Git == "" && dep.Source.Path == "" {
+			return errors.Errorf("dependencies[%d].source.git or dependencies[%d].source.path is required", index, index)
+		}
+	}
+
+	return nil
+}
+
+func isDependencyNameUnique(name string, dependencies []*latest.DependencyConfig) bool {
+	found := false
+	for _, d := range dependencies {
+		if d.Name == name {
+			if found == true {
+				return false
+			}
+
+			found = true
+		}
+	}
+
+	return true
 }
 
 func validateCommands(config *latest.Config) error {
@@ -225,50 +268,90 @@ func validateImages(config *latest.Config) error {
 	return nil
 }
 
+func isReplacePodsUnique(index int, rp *latest.ReplacePod, rps []*latest.ReplacePod) bool {
+	for i, r := range rps {
+		if i == index {
+			continue
+		}
+
+		if r.ImageName == rp.ReplaceImage {
+			return false
+		} else if len(r.LabelSelector) > 0 && len(rp.LabelSelector) > 0 && strMapEquals(r.LabelSelector, rp.LabelSelector) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func strMapEquals(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for k, v := range a {
+		if w, ok := b[k]; !ok || v != w {
+			return false
+		}
+	}
+
+	return true
+}
+
 func validateDev(config *latest.Config) error {
-	if config.Dev != nil {
-		if config.Dev.Ports != nil {
-			for index, port := range config.Dev.Ports {
-				// Validate imageName and label selector
-				if port.ImageName == "" && len(port.LabelSelector) == 0 {
-					return errors.Errorf("Error in config: imageName and label selector are nil in ports config at index %d", index)
-				} else if port.ImageName != "" && findImageName(config, port.ImageName) == false {
-					return errors.Errorf("Error in config: dev.ports[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, port.ImageName)
-				}
+	for index, rp := range config.Dev.ReplacePods {
+		if rp.ImageName == "" && len(rp.LabelSelector) == 0 {
+			return errors.Errorf("Error in config: imageName and label selector are nil in replace pods at index %d", index)
+		}
+		if rp.ImageName != "" && len(rp.LabelSelector) > 0 {
+			return errors.Errorf("Error in config: imageName and label selector cannot both be defined in replace pods at index %d", index)
+		}
+		if isReplacePodsUnique(index, rp, config.Dev.ReplacePods) == false {
+			return errors.Errorf("Error in config: imageName or label selector is not unique in replace pods at index %d", index)
+		}
+	}
 
-				if len(port.PortMappings) == 0 && len(port.PortMappingsReverse) == 0 {
-					return errors.Errorf("Error in config: portMappings is empty in port config at index %d", index)
-				}
-				if ValidContainerArch(port.Arch) == false {
-					return errors.Errorf("Error in config: ports.arch is not valid '%s' at index %d", port.Arch, index)
-				}
+	if config.Dev.Ports != nil {
+		for index, port := range config.Dev.Ports {
+			// Validate imageName and label selector
+			if port.ImageName == "" && len(port.LabelSelector) == 0 {
+				return errors.Errorf("Error in config: imageName and label selector are nil in ports config at index %d", index)
+			} else if port.ImageName != "" && findImageName(config, port.ImageName) == false {
+				return errors.Errorf("Error in config: dev.ports[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, port.ImageName)
+			}
+
+			if len(port.PortMappings) == 0 && len(port.PortMappingsReverse) == 0 {
+				return errors.Errorf("Error in config: portMappings is empty in port config at index %d", index)
+			}
+			if ValidContainerArch(port.Arch) == false {
+				return errors.Errorf("Error in config: ports.arch is not valid '%s' at index %d", port.Arch, index)
 			}
 		}
+	}
 
-		if config.Dev.Sync != nil {
-			for index, sync := range config.Dev.Sync {
-				// Validate imageName and label selector
-				if sync.ImageName == "" && len(sync.LabelSelector) == 0 {
-					return errors.Errorf("Error in config: imageName and label selector are nil in sync config at index %d", index)
-				} else if sync.ImageName != "" && findImageName(config, sync.ImageName) == false {
-					return errors.Errorf("Error in config: dev.sync[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, sync.ImageName)
-				}
+	if config.Dev.Sync != nil {
+		for index, sync := range config.Dev.Sync {
+			// Validate imageName and label selector
+			if sync.ImageName == "" && len(sync.LabelSelector) == 0 {
+				return errors.Errorf("Error in config: imageName and label selector are nil in sync config at index %d", index)
+			} else if sync.ImageName != "" && findImageName(config, sync.ImageName) == false {
+				return errors.Errorf("Error in config: dev.sync[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, sync.ImageName)
+			}
 
-				// Validate initial sync strategy
-				if ValidInitialSyncStrategy(sync.InitialSync) == false {
-					return errors.Errorf("Error in config: sync.initialSync is not valid '%s' at index %d", sync.InitialSync, index)
-				}
-				if ValidContainerArch(sync.Arch) == false {
-					return errors.Errorf("Error in config: sync.arch is not valid '%s' at index %d", sync.Arch, index)
-				}
+			// Validate initial sync strategy
+			if ValidInitialSyncStrategy(sync.InitialSync) == false {
+				return errors.Errorf("Error in config: sync.initialSync is not valid '%s' at index %d", sync.InitialSync, index)
+			}
+			if ValidContainerArch(sync.Arch) == false {
+				return errors.Errorf("Error in config: sync.arch is not valid '%s' at index %d", sync.Arch, index)
 			}
 		}
+	}
 
-		if config.Dev.Interactive != nil {
-			for index, imageConf := range config.Dev.Interactive.Images {
-				if imageConf.Name == "" {
-					return errors.Errorf("Error in config: Unnamed interactive image config at index %d", index)
-				}
+	if config.Dev.InteractiveImages != nil {
+		for index, imageConf := range config.Dev.InteractiveImages {
+			if imageConf.Name == "" {
+				return errors.Errorf("Error in config: Unnamed interactive image config at index %d", index)
 			}
 		}
 	}
@@ -277,9 +360,5 @@ func validateDev(config *latest.Config) error {
 }
 
 func findImageName(config *latest.Config, imageName string) bool {
-	if config.Images == nil {
-		return false
-	}
-
-	return config.Images[imageName] != nil
+	return (config.Images != nil && config.Images[imageName] != nil) || len(strings.Split(imageName, ".")) == 2
 }

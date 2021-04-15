@@ -2,7 +2,9 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"strconv"
 	"strings"
 	"time"
@@ -17,16 +19,12 @@ import (
 
 // StartPortForwarding starts the port forwarding functionality
 func (serviceClient *client) StartPortForwarding(interrupt chan error) error {
-	if serviceClient.config.Dev == nil {
-		return nil
+	if serviceClient.config == nil || serviceClient.config.Config() == nil || serviceClient.config.Generated() == nil {
+		return fmt.Errorf("DevSpace config is not set")
 	}
 
-	var cache *generated.CacheConfig
-	if serviceClient.generated != nil {
-		cache = serviceClient.generated.GetActive()
-	}
-
-	for _, portForwarding := range serviceClient.config.Dev.Ports {
+	cache := serviceClient.config.Generated().GetActive()
+	for _, portForwarding := range serviceClient.config.Config().Dev.Ports {
 		if len(portForwarding.PortMappings) == 0 {
 			continue
 		}
@@ -42,10 +40,15 @@ func (serviceClient *client) StartPortForwarding(interrupt chan error) error {
 }
 
 func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portForwarding *latest.PortForwardingConfig, interrupt chan error, log logpkg.Logger) error {
+	var err error
+
 	// apply config & set image selector
 	options := targetselector.NewEmptyOptions().ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, "", "")
 	options.AllowPick = false
-	options.ImageSelector = targetselector.ImageSelectorFromConfig(portForwarding.ImageName, serviceClient.config, cache)
+	options.ImageSelector, err = imageselector.Resolve(portForwarding.ImageName, serviceClient.config, serviceClient.dependencies)
+	if err != nil {
+		return err
+	}
 	options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
 	options.SkipInitContainers = true
 

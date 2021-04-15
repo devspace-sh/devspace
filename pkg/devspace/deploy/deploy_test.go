@@ -1,6 +1,7 @@
 package deploy
 
 import (
+	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"testing"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
@@ -70,7 +71,7 @@ func TestRender(t *testing.T) {
 		config := &latest.Config{
 			Deployments: testCase.deployments,
 		}
-		controller := NewController(config, nil, kubeClient)
+		controller := NewController(config2.NewConfig(nil, config, nil, nil), nil, kubeClient)
 
 		if testCase.options == nil {
 			testCase.options = &Options{}

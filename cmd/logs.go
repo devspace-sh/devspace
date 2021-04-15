@@ -5,9 +5,12 @@ import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -114,7 +117,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
 	// get image selector if specified
-	imageSelector, err := getImageSelector(configLoader, configOptions, cmd.Image, log)
+	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, log)
 	if err != nil {
 		return err
 	}
@@ -123,7 +126,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 	options.ImageSelector = imageSelector
 
 	// Start terminal
-	err = f.NewServicesClient(nil, generatedConfig, client, log).StartLogs(options, cmd.Follow, int64(cmd.LastAmountOfLines), cmd.Wait)
+	err = f.NewServicesClient(nil, nil, client, log).StartLogs(options, cmd.Follow, int64(cmd.LastAmountOfLines), cmd.Wait)
 	if err != nil {
 		return err
 	}
@@ -131,8 +134,8 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 	return nil
 }
 
-func getImageSelector(configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, image string, log log.Logger) ([]string, error) {
-	var imageSelector []string
+func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, image string, log log.Logger) ([]imageselector.ImageSelector, error) {
+	var imageSelector []imageselector.ImageSelector
 	if image != "" {
 		if configLoader.Exists() == false {
 			return nil, errors.New(message.ConfigNotFound)
@@ -143,8 +146,17 @@ func getImageSelector(configLoader loader.ConfigLoader, configOptions *loader.Co
 			return nil, err
 		}
 
-		imageSelector = targetselector.ImageSelectorFromConfig(image, config.Config(), config.Generated().GetActive())
-		if len(imageSelector) == 0 {
+		resolved, err := dependency.NewManager(config, client, configOptions, log).ResolveAll(dependency.ResolveOptions{
+			Silent: true,
+		})
+		if err != nil {
+			log.Warnf("Error resolving dependencies: %v", err)
+		}
+
+		imageSelector, err = imageselector.Resolve(image, config, resolved)
+		if err != nil {
+			return nil, err
+		} else if len(imageSelector) == 0 {
 			return nil, fmt.Errorf("couldn't find an image with name %s in devspace config", image)
 		}
 	}

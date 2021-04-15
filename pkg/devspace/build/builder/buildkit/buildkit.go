@@ -8,6 +8,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	dockerpkg "github.com/loft-sh/devspace/pkg/devspace/docker"
@@ -40,7 +41,7 @@ type Builder struct {
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config *latest.Config, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
+func NewBuilder(config config.Config, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
 	return &Builder{
 		helper:                    helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags),
 		skipPush:                  skipPush,
@@ -54,8 +55,8 @@ func (b *Builder) Build(log logpkg.Logger) error {
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, ignoreContextPathChanges bool) (bool, error) {
-	return b.helper.ShouldRebuild(cache, forceRebuild, ignoreContextPathChanges)
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool) (bool, error) {
+	return b.helper.ShouldRebuild(cache, forceRebuild)
 }
 
 // BuildImage builds a dockerimage with the docker cli
@@ -103,7 +104,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 	// Should we build with cli?
 	if b.skipPush {
-		buildKitConfig.SkipPush = &b.skipPush
+		buildKitConfig.SkipPush = b.skipPush
 	}
 
 	return buildWithCLI(body, writer, b.helper.KubeClient, builder, buildKitConfig, *buildOptions, useMinikubeDocker, log)
@@ -133,7 +134,7 @@ func buildWithCLI(context io.Reader, writer io.Writer, kubeClient kubectl.Client
 	for _, tag := range options.Tags {
 		args = append(args, "--tag", tag)
 	}
-	if imageConf.SkipPush == nil || *imageConf.SkipPush != true {
+	if imageConf.SkipPush == false {
 		if len(options.Tags) > 0 {
 			args = append(args, "--push")
 		}

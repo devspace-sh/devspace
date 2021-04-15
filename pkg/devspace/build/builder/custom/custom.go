@@ -40,7 +40,7 @@ func NewBuilder(imageConfigName string, imageConf *latest.ImageConfig, imageTags
 }
 
 // ShouldRebuild implements interface
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, ignoreContextPathChanges bool) (bool, error) {
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool) (bool, error) {
 	if b.imageConf.Build.Custom.OnChange == nil || len(b.imageConf.Build.Custom.OnChange) == 0 {
 		return true, nil
 	}

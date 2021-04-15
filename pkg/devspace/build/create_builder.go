@@ -105,16 +105,15 @@ func convertDockerConfigToKanikoConfig(dockerConfig *latest.ImageConfig) *latest
 	}
 
 	kanikoConfig := &latest.ImageConfig{
-		Image:                 dockerConfig.Image,
-		Tags:                  dockerConfig.Tags,
-		Dockerfile:            dockerConfig.Dockerfile,
-		Context:               dockerConfig.Context,
-		Entrypoint:            dockerConfig.Entrypoint,
-		Cmd:                   dockerConfig.Cmd,
-		PreferSyncOverRebuild: dockerConfig.PreferSyncOverRebuild,
-		RebuildStrategy:       dockerConfig.RebuildStrategy,
-		InjectRestartHelper:   dockerConfig.InjectRestartHelper,
-		CreatePullSecret:      dockerConfig.CreatePullSecret,
+		Image:               dockerConfig.Image,
+		Tags:                dockerConfig.Tags,
+		Dockerfile:          dockerConfig.Dockerfile,
+		Context:             dockerConfig.Context,
+		Entrypoint:          dockerConfig.Entrypoint,
+		Cmd:                 dockerConfig.Cmd,
+		RebuildStrategy:     dockerConfig.RebuildStrategy,
+		InjectRestartHelper: dockerConfig.InjectRestartHelper,
+		CreatePullSecret:    dockerConfig.CreatePullSecret,
 		Build: &latest.BuildConfig{
 			Kaniko: kanikoBuildOptions,
 		},

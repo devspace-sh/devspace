@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"io"
 	"os"
 	"path/filepath"
@@ -53,7 +54,7 @@ type Builder struct {
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config *latest.Config, client dockerclient.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
+func NewBuilder(config config.Config, client dockerclient.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
 	return &Builder{
 		helper:                    helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags),
 		client:                    client,
@@ -68,8 +69,8 @@ func (b *Builder) Build(log logpkg.Logger) error {
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, ignoreContextPathChanges bool) (bool, error) {
-	return b.helper.ShouldRebuild(cache, forceRebuild, ignoreContextPathChanges)
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool) (bool, error) {
+	return b.helper.ShouldRebuild(cache, forceRebuild)
 }
 
 // BuildImage builds a dockerimage with the docker cli
@@ -95,7 +96,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Authenticate
-	if b.skipPush == false && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == nil || *b.helper.ImageConf.Build.Docker.SkipPush == false) {
+	if b.skipPush == false && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == false) {
 		log.StartWait("Authenticating (" + displayRegistryURL + ")")
 		_, err = b.Authenticate()
 		log.StopWait()
@@ -132,7 +133,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	cliArgs := []string{}
 	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil {
 		cliArgs = b.helper.ImageConf.Build.Docker.Args
-		if b.helper.ImageConf.Build.Docker.UseBuildKit != nil && *b.helper.ImageConf.Build.Docker.UseBuildKit == true {
+		if b.helper.ImageConf.Build.Docker.UseBuildKit == true {
 			useBuildKit = true
 		}
 	}
@@ -158,7 +159,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Check if we skip push
-	if b.skipPush == false && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == nil || *b.helper.ImageConf.Build.Docker.SkipPush == false) {
+	if b.skipPush == false && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == false) {
 		for _, tag := range buildOptions.Tags {
 			err = b.pushImage(writer, tag)
 			if err != nil {

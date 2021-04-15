@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"io"
 	"io/ioutil"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,7 +33,7 @@ import (
 
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
-	dockerterm "github.com/docker/docker/pkg/term"
+	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubectl/pkg/util/interrupt"
@@ -61,7 +62,7 @@ type Builder struct {
 const waitTimeout = 20 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(config *latest.Config, dockerClient docker.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, log logpkg.Logger) (builder.Interface, error) {
+func NewBuilder(config config.Config, dockerClient docker.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, log logpkg.Logger) (builder.Interface, error) {
 	buildNamespace := kubeClient.Namespace()
 	if imageConf.Build.Kaniko.Namespace != "" {
 		buildNamespace = imageConf.Build.Kaniko.Namespace
@@ -105,8 +106,8 @@ func (b *Builder) Build(log logpkg.Logger) error {
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, ignoreContextPathChanges bool) (bool, error) {
-	return b.helper.ShouldRebuild(cache, forceRebuild, ignoreContextPathChanges)
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool) (bool, error) {
+	return b.helper.ShouldRebuild(cache, forceRebuild)
 }
 
 // Authenticate authenticates kaniko for pushing to the RegistryURL (if username == "", it will try to get login data from local docker daemon)

@@ -16,7 +16,7 @@ type Config interface {
 	// Generated returns the generated config
 	Generated() *generated.Config
 
-	// Returns the variables that were resolved while
+	// Variables returns the variables that were resolved while
 	// loading the config
 	Variables() map[string]interface{}
 }

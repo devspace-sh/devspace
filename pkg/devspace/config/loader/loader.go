@@ -33,16 +33,16 @@ type ConfigLoader interface {
 	// LoadGenerated loads the generated config
 	LoadGenerated(options *ConfigOptions) (*generated.Config, error)
 
-	// Saves a devspace.yaml to file
+	// Save saves a devspace.yaml to file
 	Save(config *latest.Config) error
 
-	// Saves a generated config yaml to file
+	// SaveGenerated saves a generated config yaml to file
 	SaveGenerated(generated *generated.Config) error
 
-	// Returns if a devspace.yaml could be found
+	// Exists returns if a devspace.yaml could be found
 	Exists() bool
 
-	// Searches for a devspace.yaml in the current directory and parent directories
+	// SetDevSpaceRoot searches for a devspace.yaml in the current directory and parent directories
 	// and will return if a devspace.yaml was found as well as switch to the current
 	// working directory to that directory if a devspace.yaml could be found.
 	SetDevSpaceRoot(log log.Logger) (bool, error)

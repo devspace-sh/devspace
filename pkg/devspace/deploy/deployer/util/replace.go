@@ -4,7 +4,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"regexp"
 )
 
@@ -55,7 +55,7 @@ func replaceImageNames(cache *generated.CacheConfig, imagesConf map[string]*late
 		}
 
 		// Strip tag from image
-		image, err := kubectl.GetStrippedDockerImageName(value)
+		image, err := imageselector.GetStrippedDockerImageName(value)
 		if err != nil {
 			return false
 		}
@@ -87,7 +87,7 @@ func replaceImageNames(cache *generated.CacheConfig, imagesConf map[string]*late
 			value = onlyImage
 		}
 
-		image, err := kubectl.GetStrippedDockerImageName(value)
+		image, err := imageselector.GetStrippedDockerImageName(value)
 		if err != nil {
 			return false, nil
 		}

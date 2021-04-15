@@ -1,6 +1,8 @@
 package deploy
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"io"
 	"strings"
 
@@ -43,12 +45,23 @@ type controller struct {
 }
 
 // NewController creates a new image build controller
-func NewController(config *latest.Config, cache *generated.CacheConfig, client kubectlclient.Client) Controller {
+func NewController(config config.Config, dependencies []types.Dependency, client kubectlclient.Client) Controller {
+	var (
+		latest *latest.Config
+		cache  *generated.CacheConfig
+	)
+	if config != nil {
+		latest = config.Config()
+		if config.Generated() != nil {
+			cache = config.Generated().GetActive()	
+		}
+	}
+
 	return &controller{
-		config: config,
+		config: latest,
 		cache:  cache,
 
-		hookExecuter: hook.NewExecuter(config),
+		hookExecuter: hook.NewExecuter(config, dependencies),
 		client:       client,
 	}
 }
@@ -115,7 +128,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 		helmV2Clients := map[string]helmtypes.Client{}
 
 		// Execute before deployments deploy hook
-		err := c.hookExecuter.Execute(hook.Before, hook.StageDeployments, hook.All, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+		err := c.hookExecuter.Execute(hook.Before, hook.StageDeployments, hook.All, hook.Context{Client: c.client}, log)
 		if err != nil {
 			return err
 		}
@@ -167,14 +180,14 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 			}
 
 			// Execute before deployment deploy hook
-			err = c.hookExecuter.Execute(hook.Before, hook.StageDeployments, deployConfig.Name, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+			err = c.hookExecuter.Execute(hook.Before, hook.StageDeployments, deployConfig.Name, hook.Context{Client: c.client}, log)
 			if err != nil {
 				return err
 			}
 
 			wasDeployed, err := deployClient.Deploy(c.cache, options.ForceDeploy, options.BuiltImages)
 			if err != nil {
-				c.hookExecuter.OnError(hook.StageDeployments, []string{hook.All, deployConfig.Name}, hook.Context{Client: c.client, Config: c.config, Cache: c.cache, Error: err}, log)
+				c.hookExecuter.OnError(hook.StageDeployments, []string{hook.All, deployConfig.Name}, hook.Context{Client: c.client, Error: err}, log)
 				return errors.Errorf("Error deploying %s: %v", deployConfig.Name, err)
 			}
 
@@ -182,7 +195,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 				log.Donef("Successfully deployed %s with %s", deployConfig.Name, method)
 
 				// Execute after deployment deploy hook
-				err = c.hookExecuter.Execute(hook.After, hook.StageDeployments, deployConfig.Name, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+				err = c.hookExecuter.Execute(hook.After, hook.StageDeployments, deployConfig.Name, hook.Context{Client: c.client}, log)
 				if err != nil {
 					return err
 				}
@@ -192,7 +205,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 		}
 
 		// Execute after deployments deploy hook
-		err = c.hookExecuter.Execute(hook.After, hook.StageDeployments, hook.All, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+		err = c.hookExecuter.Execute(hook.After, hook.StageDeployments, hook.All, hook.Context{Client: c.client}, log)
 		if err != nil {
 			return err
 		}
@@ -211,7 +224,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 		helmV2Clients := map[string]helmtypes.Client{}
 
 		// Execute before deployments purge hook
-		err := c.hookExecuter.Execute(hook.Before, hook.StagePurgeDeployments, hook.All, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+		err := c.hookExecuter.Execute(hook.Before, hook.StagePurgeDeployments, hook.All, hook.Context{Client: c.client}, log)
 		if err != nil {
 			return err
 		}
@@ -261,7 +274,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 			}
 
 			// Execute before deployment purge hook
-			err = c.hookExecuter.Execute(hook.Before, hook.StagePurgeDeployments, deployConfig.Name, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+			err = c.hookExecuter.Execute(hook.Before, hook.StagePurgeDeployments, deployConfig.Name, hook.Context{Client: c.client}, log)
 			if err != nil {
 				return err
 			}
@@ -271,7 +284,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 			log.StopWait()
 			if err != nil {
 				// Execute on error deployment purge hook
-				err = c.hookExecuter.Execute(hook.OnError, hook.StagePurgeDeployments, deployConfig.Name, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+				err = c.hookExecuter.Execute(hook.OnError, hook.StagePurgeDeployments, deployConfig.Name, hook.Context{Client: c.client}, log)
 				if err != nil {
 					return err
 				}
@@ -279,7 +292,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 				log.Warnf("Error deleting deployment %s: %v", deployConfig.Name, err)
 			} else {
 				// Execute after deployment purge hook
-				err = c.hookExecuter.Execute(hook.After, hook.StagePurgeDeployments, deployConfig.Name, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+				err = c.hookExecuter.Execute(hook.After, hook.StagePurgeDeployments, deployConfig.Name, hook.Context{Client: c.client}, log)
 				if err != nil {
 					return err
 				}
@@ -289,7 +302,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 		}
 
 		// Execute after deployments purge hook
-		err = c.hookExecuter.Execute(hook.After, hook.StagePurgeDeployments, hook.All, hook.Context{Client: c.client, Config: c.config, Cache: c.cache}, log)
+		err = c.hookExecuter.Execute(hook.After, hook.StagePurgeDeployments, hook.All, hook.Context{Client: c.client}, log)
 		if err != nil {
 			return err
 		}

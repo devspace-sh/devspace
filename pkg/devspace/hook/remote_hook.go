@@ -2,9 +2,12 @@ package hook
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
@@ -36,18 +39,24 @@ type remoteHook struct {
 	WaitingStrategy targetselector.WaitingStrategy
 }
 
-func (r *remoteHook) Execute(ctx Context, hook *latest.HookConfig, log logpkg.Logger) error {
+func (r *remoteHook) Execute(ctx Context, hook *latest.HookConfig, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error {
 	if ctx.Client == nil {
 		return errors.Errorf("Cannot execute hook '%s': kube client is not initialized", ansi.Color(hookName(hook), "white+b"))
 	}
 
-	var imageSelector []string
+	var (
+		imageSelector []imageselector.ImageSelector
+		err           error
+	)
 	if hook.Where.Container.ImageName != "" {
-		if ctx.Config == nil || ctx.Cache == nil {
+		if config == nil || config.Generated() == nil {
 			return errors.Errorf("Cannot execute hook '%s': config is not loaded", ansi.Color(hookName(hook), "white+b"))
 		}
 
-		imageSelector = targetselector.ImageSelectorFromConfig(hook.Where.Container.ImageName, ctx.Config, ctx.Cache)
+		imageSelector, err = imageselector.Resolve(hook.Where.Container.ImageName, config, dependencies)
+		if err != nil {
+			return err
+		}
 	}
 
 	executed, err := r.execute(ctx, hook, imageSelector, log)
@@ -60,7 +69,7 @@ func (r *remoteHook) Execute(ctx Context, hook *latest.HookConfig, log logpkg.Lo
 	return nil
 }
 
-func (r *remoteHook) execute(ctx Context, hook *latest.HookConfig, imageSelector []string, log logpkg.Logger) (bool, error) {
+func (r *remoteHook) execute(ctx Context, hook *latest.HookConfig, imageSelector []imageselector.ImageSelector, log logpkg.Logger) (bool, error) {
 	labelSelector := ""
 	if len(hook.Where.Container.LabelSelector) > 0 {
 		labelSelector = labels.Set(hook.Where.Container.LabelSelector).String()

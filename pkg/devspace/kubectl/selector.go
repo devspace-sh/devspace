@@ -2,12 +2,20 @@ package kubectl
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sort"
 	"strings"
+)
+
+const (
+	MatchedContainerAnnotation = "devspace.sh/container"
+	ImageNameLabel             = "devspace.sh/imageName"
+
+	ReplacedLabel = "devspace.sh/replaced"
 )
 
 var SortPodsByNewest = func(pods []*k8sv1.Pod, i, j int) bool {
@@ -45,7 +53,7 @@ type SelectedPodContainer struct {
 }
 
 type Selector struct {
-	ImageSelector      []string
+	ImageSelector      []imageselector.ImageSelector
 	LabelSelector      string
 	Pod                string
 	ContainerName      string
@@ -63,7 +71,12 @@ func (s Selector) String() string {
 
 	strs := []string{}
 	if len(s.ImageSelector) > 0 {
-		strs = append(strs, "image selector: "+strings.Join(s.ImageSelector, ","))
+		sa := []string{}
+		for _, c := range s.ImageSelector {
+			sa = append(sa, c.ConfigImageName+"="+c.Image)
+		}
+
+		strs = append(strs, "image selector: "+strings.Join(sa, ","))
 	}
 	if len(s.LabelSelector) > 0 {
 		strs = append(strs, "label selector: "+s.LabelSelector)
@@ -306,7 +319,7 @@ func byLabelSelector(ctx context.Context, client Client, namespace string, label
 	return retPods, nil
 }
 
-func byImageName(ctx context.Context, client Client, namespace string, imageSelector []string, skipPod FilterPod, skipContainer FilterContainer, skipInit bool) ([]*SelectedPodContainer, error) {
+func byImageName(ctx context.Context, client Client, namespace string, imageSelector []imageselector.ImageSelector, skipPod FilterPod, skipContainer FilterContainer, skipInit bool) ([]*SelectedPodContainer, error) {
 	retPods := []*SelectedPodContainer{}
 	if len(imageSelector) > 0 {
 		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
@@ -326,7 +339,7 @@ func byImageName(ctx context.Context, client Client, namespace string, imageSele
 							continue
 						}
 
-						if CompareImageNames(imageName, container.Image) {
+						if imageselector.CompareImageNames(imageName, container.Image) {
 							retPod := pod
 							retContainer := container
 							retPods = append(retPods, &SelectedPodContainer{
@@ -343,7 +356,18 @@ func byImageName(ctx context.Context, client Client, namespace string, imageSele
 						continue
 					}
 
-					if CompareImageNames(imageName, container.Image) {
+					// check if it is a replaced pod and if yes, check if the imageName and container name matches
+					if pod.Labels != nil && pod.Labels[ReplacedLabel] == "true" && pod.Labels[ImageNameLabel] == imageName.ConfigImageName && pod.Annotations != nil && pod.Annotations[MatchedContainerAnnotation] == container.Name {
+						retPod := pod
+						retContainer := container
+						retPods = append(retPods, &SelectedPodContainer{
+							Pod:       &retPod,
+							Container: &retContainer,
+						})
+						continue
+					}
+
+					if imageselector.CompareImageNames(imageName, container.Image) {
 						retPod := pod
 						retContainer := container
 						retPods = append(retPods, &SelectedPodContainer{

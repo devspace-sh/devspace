@@ -2,6 +2,7 @@ package dependency
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/build"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"io/ioutil"
 	"os"
@@ -32,8 +33,8 @@ var replaceWithHash = "replaceThisWithHash"
 func (r *fakeResolver) Resolve(update bool) ([]*Dependency, error) {
 	for _, dep := range r.resolvedDependencies {
 
-		directoryHash, _ := hash.DirectoryExcludes(dep.LocalPath, []string{".git", ".devspace"}, true)
-		for _, profile := range dep.DependencyCache.Profiles {
+		directoryHash, _ := hash.DirectoryExcludes(dep.localPath, []string{".git", ".devspace"}, true)
+		for _, profile := range dep.dependencyCache.Profiles {
 			for key, val := range profile.Dependencies {
 				if val == replaceWithHash {
 					profile.Dependencies[key] = directoryHash
@@ -136,9 +137,7 @@ func TestUpdateAll(t *testing.T) {
 			},
 		}
 
-		manager, err := NewManager(testConfig, generatedConfig, nil, testCase.allowCyclicParam, &loader.ConfigOptions{}, log.Discard)
-		assert.NilError(t, err, "Error creating manager in testCase %s", testCase.name)
-
+		manager := NewManager(config.NewConfig(nil, testConfig, generatedConfig, nil), nil, &loader.ConfigOptions{}, log.Discard)
 		err = manager.UpdateAll()
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error updating all in testCase %s", testCase.name)
@@ -207,9 +206,9 @@ func TestBuildAll(t *testing.T) {
 			},
 			resolvedDependencies: []*Dependency{
 				&Dependency{
-					LocalPath:        "./",
-					DependencyConfig: &latest.DependencyConfig{},
-					DependencyCache: &generated.Config{
+					localPath:        "./",
+					dependencyConfig: &latest.DependencyConfig{},
+					dependencyCache: &generated.Config{
 						ActiveProfile: "",
 						Profiles: map[string]*generated.CacheConfig{
 							"": &generated.CacheConfig{
@@ -240,8 +239,7 @@ func TestBuildAll(t *testing.T) {
 			},
 		}
 
-		err = manager.BuildAll(testCase.options)
-
+		_, err = manager.BuildAll(testCase.options)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error deploying all in testCase %s", testCase.name)
 		} else {
@@ -309,9 +307,9 @@ func TestDeployAll(t *testing.T) {
 			},
 			resolvedDependencies: []*Dependency{
 				&Dependency{
-					LocalPath:        "./",
-					DependencyConfig: &latest.DependencyConfig{},
-					DependencyCache: &generated.Config{
+					localPath:        "./",
+					dependencyConfig: &latest.DependencyConfig{},
+					dependencyCache: &generated.Config{
 						ActiveProfile: "",
 						Profiles: map[string]*generated.CacheConfig{
 							"": &generated.CacheConfig{
@@ -340,13 +338,12 @@ func TestDeployAll(t *testing.T) {
 			resolver: &fakeResolver{
 				resolvedDependencies: testCase.resolvedDependencies,
 			},
-			hookExecuter: hook.NewExecuter(&latest.Config{
+			hookExecuter: hook.NewExecuter(config.NewConfig(nil, &latest.Config{
 				Dependencies: testCase.dependencyTasks,
-			}),
+			}, nil, nil), nil),
 		}
 
-		err = manager.DeployAll(testCase.options)
-
+		_, err = manager.DeployAll(testCase.options)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error deploying all in testCase %s", testCase.name)
 		} else {
@@ -417,9 +414,9 @@ func TestPurgeAll(t *testing.T) {
 			},
 			resolvedDependencies: []*Dependency{
 				&Dependency{
-					LocalPath:        "./",
-					DependencyConfig: &latest.DependencyConfig{},
-					DependencyCache: &generated.Config{
+					localPath:        "./",
+					dependencyConfig: &latest.DependencyConfig{},
+					dependencyCache: &generated.Config{
 						ActiveProfile: "",
 						Profiles: map[string]*generated.CacheConfig{
 							"": &generated.CacheConfig{
@@ -450,8 +447,7 @@ func TestPurgeAll(t *testing.T) {
 			},
 		}
 
-		err = manager.PurgeAll(PurgeOptions{Verbose: testCase.verboseParam})
-
+		_, err = manager.PurgeAll(PurgeOptions{Verbose: testCase.verboseParam})
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error purging all in testCase %s", testCase.name)
 		} else {
@@ -512,8 +508,8 @@ func TestBuild(t *testing.T) {
 		buildTestCase{
 			name: "Skipped",
 			dependency: &Dependency{
-				LocalPath: "./",
-				DependencyCache: &generated.Config{
+				localPath: "./",
+				dependencyCache: &generated.Config{
 					ActiveProfile: "",
 					Profiles: map[string]*generated.CacheConfig{
 						"": &generated.CacheConfig{
@@ -528,9 +524,9 @@ func TestBuild(t *testing.T) {
 		buildTestCase{
 			name: "Build dependency",
 			dependency: &Dependency{
-				LocalPath:        "./",
-				DependencyConfig: &latest.DependencyConfig{},
-				DependencyCache: &generated.Config{
+				localPath:        "./",
+				dependencyConfig: &latest.DependencyConfig{},
+				dependencyCache: &generated.Config{
 					ActiveProfile: "",
 					Profiles: map[string]*generated.CacheConfig{
 						"": &generated.CacheConfig{
@@ -564,8 +560,8 @@ func TestBuild(t *testing.T) {
 		dependency := dependencies[0]
 
 		err = dependency.Build(testCase.forceDependencies, &build.Options{
-			SkipPush:                  testCase.skipPush,
-			ForceRebuild:              testCase.forceBuild,
+			SkipPush:     testCase.skipPush,
+			ForceRebuild: testCase.forceBuild,
 		}, log.Discard)
 
 		if testCase.expectedErr == "" {
@@ -633,8 +629,8 @@ func TestDeploy(t *testing.T) {
 		deployTestCase{
 			name: "Skipped",
 			dependency: &Dependency{
-				LocalPath: "./",
-				DependencyCache: &generated.Config{
+				localPath: "./",
+				dependencyCache: &generated.Config{
 					ActiveProfile: "",
 					Profiles: map[string]*generated.CacheConfig{
 						"": &generated.CacheConfig{
@@ -649,9 +645,9 @@ func TestDeploy(t *testing.T) {
 		deployTestCase{
 			name: "Deploy dependency",
 			dependency: &Dependency{
-				LocalPath:        "./",
-				DependencyConfig: &latest.DependencyConfig{},
-				DependencyCache: &generated.Config{
+				localPath:        "./",
+				dependencyConfig: &latest.DependencyConfig{},
+				dependencyCache: &generated.Config{
 					ActiveProfile: "",
 					Profiles: map[string]*generated.CacheConfig{
 						"": &generated.CacheConfig{
@@ -685,10 +681,13 @@ func TestDeploy(t *testing.T) {
 			},
 		}).Resolve(false)
 		dependency := dependencies[0]
+		if dependency.localConfig == nil {
+			dependency.localConfig = config.NewConfig(nil, &latest.Config{}, nil, nil)
+		}
 
 		err = dependency.Deploy(testCase.forceDependencies, testCase.skipBuild, testCase.skipDeploy, testCase.forceDeploy, &build.Options{
-			SkipPush:                  testCase.skipPush,
-			ForceRebuild:              testCase.forceBuild,
+			SkipPush:     testCase.skipPush,
+			ForceRebuild: testCase.forceBuild,
 		}, log.Discard)
 
 		if testCase.expectedErr == "" {
