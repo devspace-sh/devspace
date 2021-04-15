@@ -46,9 +46,18 @@ type controller struct {
 
 // NewController creates a new image build controller
 func NewController(config config.Config, dependencies []types.Dependency, client kubectlclient.Client) Controller {
+	var (
+		latest *latest.Config
+		cache  *generated.CacheConfig
+	)
+	if config != nil {
+		latest = config.Config()
+		cache = config.Generated().GetActive()
+	}
+
 	return &controller{
-		config: config.Config(),
-		cache:  config.Generated().GetActive(),
+		config: latest,
+		cache:  cache,
 
 		hookExecuter: hook.NewExecuter(config, dependencies),
 		client:       client,

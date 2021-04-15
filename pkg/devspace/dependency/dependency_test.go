@@ -137,7 +137,7 @@ func TestUpdateAll(t *testing.T) {
 			},
 		}
 
-		manager := NewManager(config.NewConfig(nil, testConfig, generatedConfig, nil), nil, testCase.allowCyclicParam, &loader.ConfigOptions{}, log.Discard)
+		manager := NewManager(config.NewConfig(nil, testConfig, generatedConfig, nil), nil, &loader.ConfigOptions{}, log.Discard)
 		err = manager.UpdateAll()
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error updating all in testCase %s", testCase.name)
