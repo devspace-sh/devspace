@@ -1,0 +1,33 @@
+version: v1beta10
+# This deployment exists just for demo purposes, you don't even need one here
+deployments:
+  - name: replaced
+    kubectl:
+      manifests:
+        - deployment.yaml
+dev:
+  # Will replace the pod created by the deployment with an adjusted
+  # one that can be run by us. This is useful if you cannot control the 
+  # chart and still want to stay as close as possible to production
+  replacePods:
+    - labelSelector:
+        app: my-app
+      replaceImage: ubuntu:latest
+      patches:
+        - op: add
+          path: spec.containers[0].command
+          value: ["sleep"]
+        - op: add
+          path: spec.containers[0].args
+          value: ["9999999999"]
+        - op: add
+          path: spec.containers[0].workingDir
+          value: "/workdir"
+  # This will create a terminal to the replaced pod
+  terminal:
+    labelSelector:
+      app: my-app
+  # This will sync to the replaced pods working directory
+  sync:
+    - labelSelector:
+        app: my-app

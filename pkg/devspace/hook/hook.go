@@ -253,6 +253,10 @@ func executeHook(ctx Context, hookConfig *latest.HookConfig, hookWriter io.Write
 
 func hookName(hook *latest.HookConfig) string {
 	if hook.Command != "" {
+		if hook.Args == nil {
+			return hook.Command
+		}
+		
 		return fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " "))
 	}
 	if hook.Upload != nil && hook.Where.Container != nil {

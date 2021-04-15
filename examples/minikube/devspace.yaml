@@ -1,4 +1,4 @@
-version: v1beta9
+version: v1beta10
 images:
   default:
     image: mydockeruser/devspace

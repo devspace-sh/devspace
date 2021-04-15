@@ -681,6 +681,9 @@ func TestDeploy(t *testing.T) {
 			},
 		}).Resolve(false)
 		dependency := dependencies[0]
+		if dependency.localConfig == nil {
+			dependency.localConfig = config.NewConfig(nil, &latest.Config{}, nil, nil)
+		}
 
 		err = dependency.Deploy(testCase.forceDependencies, testCase.skipBuild, testCase.skipDeploy, testCase.forceDeploy, &build.Options{
 			SkipPush:     testCase.skipPush,

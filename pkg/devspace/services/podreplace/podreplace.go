@@ -150,6 +150,12 @@ func updateNeeded(ctx context.Context, client kubectl.Client, pod *kubectl.Selec
 
 	// don't update if pod spec & config hash are the same
 	if parentHash == pod.Pod.Annotations[ParentHashAnnotation] && configHash == pod.Pod.Annotations[ReplaceConfigHashAnnotation] {
+		// make sure parent is downscaled
+		err = scaleDownParent(ctx, client, parent)
+		if err != nil {
+			log.Warnf("Error scaling down parent: %v", err)
+		}
+		
 		return false, nil
 	}
 
@@ -307,7 +313,7 @@ func replace(ctx context.Context, client kubectl.Client, pod *kubectl.SelectedPo
 
 	// reset the metadata
 	copiedPod.ObjectMeta = metav1.ObjectMeta{
-		Name:        copiedPod.Name,
+		Name:        encoding.SafeConcatName(copiedPod.Name, "devspace"),
 		Namespace:   copiedPod.Namespace,
 		Labels:      copiedPod.Labels,
 		Annotations: copiedPod.Annotations,
@@ -321,6 +327,8 @@ func replace(ctx context.Context, client kubectl.Client, pod *kubectl.SelectedPo
 
 	// make sure the pod-template-hash label is deleted
 	delete(copiedPod.Labels, "pod-template-hash")
+	delete(copiedPod.Labels, "controller-revision-hash")
+	delete(copiedPod.Labels, "statefulset.kubernetes.io/pod-name")
 
 	copiedPod.Labels[kubectl.ReplacedLabel] = "true"
 	if replacePod.ImageName != "" {
@@ -335,11 +343,9 @@ func replace(ctx context.Context, client kubectl.Client, pod *kubectl.SelectedPo
 	case *appsv1.ReplicaSet:
 		copiedPod.Annotations[ParentNameAnnotation] = t.Name
 		copiedPod.Annotations[ParentKindAnnotation] = "ReplicaSet"
-		copiedPod.Name = encoding.SafeConcatName(copiedPod.Name, "devspace")
 	case *appsv1.Deployment:
 		copiedPod.Annotations[ParentNameAnnotation] = t.Name
 		copiedPod.Annotations[ParentKindAnnotation] = "Deployment"
-		copiedPod.Name = encoding.SafeConcatName(copiedPod.Name, "devspace")
 	case *appsv1.StatefulSet:
 		copiedPod.Annotations[ParentNameAnnotation] = t.Name
 		copiedPod.Annotations[ParentKindAnnotation] = "StatefulSet"
@@ -348,11 +354,11 @@ func replace(ctx context.Context, client kubectl.Client, pod *kubectl.SelectedPo
 	}
 
 	// scale down parent
-	err = scaleDown(ctx, client, parent)
+	err = scaleDownParent(ctx, client, parent)
 	if err != nil {
 		return errors.Wrap(err, "scale down parent")
 	}
-	log.Donef("Scaled down %s %s", copiedPod.Annotations[ParentKindAnnotation], copiedPod.Annotations[ParentNameAnnotation])
+	log.Donef("Scaled down %s %s/%s", copiedPod.Annotations[ParentKindAnnotation], copiedPod.Namespace, copiedPod.Annotations[ParentNameAnnotation])
 
 	// wait until pod is in terminating mode
 	log.StartWait("Waiting for Pod " + pod.Pod.Name + " to get terminated...")
@@ -491,7 +497,7 @@ func replaceImageInPodSpec(podSpec *corev1.PodSpec, config config.Config, depend
 	return nil
 }
 
-func scaleDown(ctx context.Context, client kubectl.Client, obj runtime.Object) error {
+func scaleDownParent(ctx context.Context, client kubectl.Client, obj runtime.Object) error {
 	cloned := obj.DeepCopyObject()
 
 	// update object based on type

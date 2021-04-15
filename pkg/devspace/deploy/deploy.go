@@ -52,7 +52,9 @@ func NewController(config config.Config, dependencies []types.Dependency, client
 	)
 	if config != nil {
 		latest = config.Config()
-		cache = config.Generated().GetActive()
+		if config.Generated() != nil {
+			cache = config.Generated().GetActive()	
+		}
 	}
 
 	return &controller{

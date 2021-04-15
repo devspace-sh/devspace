@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"testing"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -10,19 +11,19 @@ import (
 
 func TestGetCommand(t *testing.T) {
 	client := &client{
-		config: &latest.Config{
+		config: config.NewConfig(nil, &latest.Config{
 			Dev: latest.DevConfig{
 				Terminal: &latest.Terminal{
 					Command: []string{"echo"},
 				},
 			},
-		},
+		}, nil, nil),
 	}
 	command := client.getCommand([]string{"args"}, "")
 	assert.Equal(t, 1, len(command), "Returned command has wrong length")
 	assert.Equal(t, "args", command[0], "Wrong command returned")
 
-	client.config = &latest.Config{}
+	client.config = nil
 	command = client.getCommand([]string{}, "")
 	assert.Equal(t, 3, len(command), "Returned command has wrong length")
 	assert.Equal(t, "sh", command[0], "Wrong command returned")

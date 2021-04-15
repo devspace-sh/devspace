@@ -1,22 +1,27 @@
-version: v1beta9
-dependencies:
-  - name: dep
-    source:
-      path: ./dep/
-      configName: test.yaml
+version: v1beta10
+images:
+  default:
+    image: myusername/devspace
+deployments:
+  - name: quickstart
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: myusername/devspace
+        service:
+          ports:
+            - port: 3000
 dev:
-  logs:
-    images:
-      - dep.default
   ports:
-  - imageName: dep.default
-    forward:
-    - port: 3000
+    - imageName: default
+      forward:
+        - port: 3000
   autoReload:
     paths:
-    - package.json
-    - Dockerfile
+      - package.json
+      - Dockerfile
   sync:
-  - imageName: dep.default
-    excludePaths:
-    - node_modules
+    - imageName: default
+      excludePaths:
+        - node_modules

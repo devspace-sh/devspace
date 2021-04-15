@@ -487,9 +487,11 @@ func (d *Dependency) Purge(log log.Logger) error {
 		log.Errorf("Error purging dependency %s: %v", d.id, err)
 	}
 
-	err = d.generatedSaver.Save(d.localConfig.Generated())
-	if err != nil {
-		log.Errorf("Error saving generated.yaml: %v", err)
+	if d.generatedSaver != nil && d.localConfig != nil && d.localConfig.Generated() != nil {
+		err = d.generatedSaver.Save(d.localConfig.Generated())
+		if err != nil {
+			log.Errorf("Error saving generated.yaml: %v", err)
+		}
 	}
 
 	delete(d.dependencyCache.GetActive().Dependencies, d.id)
@@ -509,7 +511,7 @@ func (d *Dependency) buildImages(skipBuild bool, buildOptions *build.Options, lo
 		}
 
 		// Save config if an image was built
-		if len(builtImages) > 0 {
+		if len(builtImages) > 0 && d.generatedSaver != nil && d.localConfig != nil && d.localConfig.Generated() != nil {
 			err := d.generatedSaver.Save(d.localConfig.Generated())
 			if err != nil {
 				return nil, errors.Errorf("Error saving generated config: %v", err)
