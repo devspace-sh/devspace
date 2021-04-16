@@ -2,16 +2,14 @@ package deployer
 
 import (
 	"io"
-
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 )
 
 // Interface defines the common interface used for the deployment methods
 type Interface interface {
 	Status() (*StatusResult, error)
-	Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error)
-	Render(cache *generated.CacheConfig, builtImages map[string]string, out io.Writer) error
-	Delete(cache *generated.CacheConfig) error
+	Deploy(forceDeploy bool, builtImages map[string]string) (bool, error)
+	Render(builtImages map[string]string, out io.Writer) error
+	Delete() error
 }
 
 // StatusResult holds the status of a deployment

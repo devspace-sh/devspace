@@ -13,8 +13,23 @@ import (
 type ImageSelector struct {
 	// ConfigImageName is the image config name (from images.*)
 	ConfigImageName string
-	// Image is the resolved docker image
+	// Image is the resolved docker image inclusive tag
 	Image string
+	// Dependency is the dependency this image selector was loaded from
+	Dependency types.Dependency
+}
+
+func ResolveSingle(configImageName string, config config.Config, dependencies []types.Dependency) (*ImageSelector, error) {
+	selectors, err := Resolve(configImageName, config, dependencies)
+	if err != nil {
+		return nil, err
+	} else if len(selectors) == 0 {
+		return nil, fmt.Errorf("imageName %s not found", configImageName)
+	} else if len(selectors) > 1 {
+		return nil, fmt.Errorf("unexpected amount of image selectors: %v", len(selectors))
+	}
+
+	return &selectors[0], nil
 }
 
 func Resolve(configImageName string, config config.Config, dependencies []types.Dependency) ([]ImageSelector, error) {
@@ -66,6 +81,11 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 						return nil, err
 					} else if len(imageSelector) != 1 {
 						return imageSelector, nil
+					}
+
+					// if no dependency is set, we set it here
+					if imageSelector[0].Dependency == nil {
+						imageSelector[0].Dependency = dep
 					}
 
 					// make sure the selector has the correct original name

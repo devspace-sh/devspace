@@ -52,3 +52,24 @@ func (c *config) Generated() *generated.Config {
 func (c *config) Variables() map[string]interface{} {
 	return c.resolvedVariables
 }
+
+func Ensure(config Config) Config {
+	retConfig := config
+	if retConfig == nil {
+		retConfig = NewConfig(nil, nil, nil, nil)
+	}
+	if retConfig.Raw() == nil {
+		retConfig = NewConfig(map[interface{}]interface{}{}, config.Config(), config.Generated(), config.Variables())
+	}
+	if retConfig.Config() == nil {
+		retConfig = NewConfig(config.Raw(), latest.NewRaw(), config.Generated(), config.Variables())
+	}
+	if retConfig.Generated() == nil {
+		retConfig = NewConfig(config.Raw(), config.Config(), generated.New(), config.Variables())
+	}
+	if retConfig.Variables() == nil {
+		retConfig = NewConfig(config.Raw(), config.Config(), config.Generated(), map[string]interface{}{})
+	}
+
+	return config
+}

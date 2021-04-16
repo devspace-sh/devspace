@@ -1,6 +1,7 @@
 package helm
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"testing"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
@@ -57,8 +58,7 @@ func TestNew(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		deployer, err := New(testCase.config, testCase.helmClient, testCase.kubeClient, testCase.deployConfig, nil)
-
+		deployer, err := New(config.NewConfig(nil, testCase.config, nil, nil), nil, testCase.helmClient, testCase.kubeClient, testCase.deployConfig, nil)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {
@@ -115,8 +115,14 @@ func TestDelete(t *testing.T) {
 			Client: kube,
 		}
 
+		if testCase.cache == nil {
+			testCase.cache = &generated.CacheConfig{}
+		}
+		cache := generated.New()
+		cache.Profiles[""] = testCase.cache
 		deployer := &DeployConfig{
-			Kube: kubeClient,
+			config: config.NewConfig(nil, latest.NewRaw(), cache, nil),
+			Kube:   kubeClient,
 			Helm: &fakehelm.Client{
 				Releases: testCase.releasesBefore,
 			},
@@ -131,12 +137,7 @@ func TestDelete(t *testing.T) {
 			},
 		}
 
-		if testCase.cache == nil {
-			testCase.cache = &generated.CacheConfig{}
-		}
-
-		err := deployer.Delete(testCase.cache)
-
+		err := deployer.Delete()
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {

@@ -21,6 +21,9 @@ type Dependency interface {
 	// LocalPath returns the path where this dependency is stored
 	LocalPath() string
 
+	// BuiltImages returns the images that were built by this dependency
+	BuiltImages() map[string]string
+
 	// Config holds the dependency config
 	Config() config.Config
 
