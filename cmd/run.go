@@ -106,6 +106,13 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 		return errors.New(message.ConfigNotFound)
 	}
 
+	// check if dependency command
+	commandSplitted := strings.Split(args[0], ".")
+	if len(commandSplitted) == 2 {
+		cmd.Dependency = commandSplitted[0]
+		args[0] = commandSplitted[1]
+	}
+
 	// check if we should execute a dependency command
 	if cmd.Dependency != "" {
 		config, err := configLoader.Load(configOptions, f.GetLog())
@@ -114,9 +121,9 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 		}
 
 		return f.NewDependencyManager(config, nil, configOptions, f.GetLog()).Command(dependency.CommandOptions{
-			Dependencies: []string{cmd.Dependency},
-			Command:      args[0],
-			Args:         args[1:],
+			Dependency: cmd.Dependency,
+			Command:    args[0],
+			Args:       args[1:],
 		})
 	}
 

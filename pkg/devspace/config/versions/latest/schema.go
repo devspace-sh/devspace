@@ -1002,24 +1002,47 @@ type HookWhenAtConfig struct {
 
 // CommandConfig defines the command specification
 type CommandConfig struct {
-	Name        string `yaml:"name" json:"name"`
-	Command     string `yaml:"command" json:"command"`
+	// Name is the name of a command that is used via `devspace run NAME`
+	Name string `yaml:"name" json:"name"`
+
+	// Command is the command that should be executed. For example: 'echo 123'
+	Command string `yaml:"command" json:"command"`
+
+	// Args are optional and if defined, command is not executed within a shell
+	// and rather directly.
+	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
+
+	// Description describes what the command is doing and can be seen in `devspace list commands`
 	Description string `yaml:"description" json:"description"`
 }
 
 // Variable describes the var definition
 type Variable struct {
-	Name              string         `yaml:"name" json:"name"`
-	Question          string         `yaml:"question,omitempty" json:"question,omitempty"`
-	Options           []string       `yaml:"options,omitempty" json:"options,omitempty"`
-	Password          bool           `yaml:"password,omitempty" json:"password,omitempty"`
-	ValidationPattern string         `yaml:"validationPattern,omitempty" json:"validationPattern,omitempty"`
-	ValidationMessage string         `yaml:"validationMessage,omitempty" json:"validationMessage,omitempty"`
-	Default           interface{}    `yaml:"default,omitempty" json:"default,omitempty"`
-	Source            VariableSource `yaml:"source,omitempty" json:"source,omitempty"`
+	Name              string   `yaml:"name" json:"name"`
+	Question          string   `yaml:"question,omitempty" json:"question,omitempty"`
+	Options           []string `yaml:"options,omitempty" json:"options,omitempty"`
+	Password          bool     `yaml:"password,omitempty" json:"password,omitempty"`
+	ValidationPattern string   `yaml:"validationPattern,omitempty" json:"validationPattern,omitempty"`
+	ValidationMessage string   `yaml:"validationMessage,omitempty" json:"validationMessage,omitempty"`
 
-	Command  string            `yaml:"command,omitempty" json:"command,omitempty"`
-	Args     []string          `yaml:"args,omitempty" json:"args,omitempty"`
+	// Value is a shortcut for using source: none and default: my-value
+	Value interface{} `yaml:"value,omitempty" json:"value,omitempty"`
+
+	// Default is the default value the variable should have if not set by the user
+	Default interface{} `yaml:"default,omitempty" json:"default,omitempty"`
+
+	// Source defines where the variable should be taken from
+	Source VariableSource `yaml:"source,omitempty" json:"source,omitempty"`
+
+	// Command is the command how to retrieve the variable. If args is omitted, command is parsed as a shell
+	// command.
+	Command string `yaml:"command,omitempty" json:"command,omitempty"`
+
+	// Args are optional args that will be used for the command
+	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
+
+	// Commands are additional commands that can be used to run a different command on a different operating
+	// system.
 	Commands []VariableCommand `yaml:"commands,omitempty" json:"commands,omitempty"`
 }
 

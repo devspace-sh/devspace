@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/shell"
 	"github.com/pkg/errors"
 	"strings"
 )
@@ -45,7 +46,12 @@ func variableFromCommand(varName string, definition *latest.Variable) (interface
 func execCommand(varName string, definition *latest.Variable, cmd string, args []string) (interface{}, error) {
 	writer := &bytes.Buffer{}
 	stdErrWriter := &bytes.Buffer{}
-	err := command.ExecuteCommand(cmd, args, writer, stdErrWriter)
+	var err error
+	if args == nil {
+		err = shell.ExecuteShellCommand(cmd, writer, stdErrWriter, nil)
+	} else {
+		err = command.ExecuteCommand(cmd, args, writer, stdErrWriter)
+	}
 	if err != nil {
 		errMsg := "fill variable " + varName + ": " + err.Error()
 		if len(writer.Bytes()) > 0 {

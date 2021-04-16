@@ -23,6 +23,7 @@ type PurgeCmd struct {
 	Deployments         string
 	VerboseDependencies bool
 	PurgeDependencies   bool
+	All                 bool
 
 	Dependency []string
 
@@ -56,7 +57,8 @@ devspace purge -d my-deployment
 	}
 
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
-	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", false, "When enabled purges the dependencies as well")
+	purgeCmd.Flags().BoolVarP(&cmd.All, "all", "a", false, "When enabled purges the dependencies as well")
+	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", false, "DEPRECATED: Please use --all instead")
 	purgeCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Builds the dependencies verbosely")
 
 	purgeCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Purges only the specific named dependencies")
@@ -76,6 +78,12 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	}
 	if !configExists {
 		return errors.New(message.ConfigNotFound)
+	}
+
+	// check for deprecated flag
+	if cmd.PurgeDependencies {
+		cmd.log.Warnf("Flag --dependencies is deprecated, please use --all or -a instead")
+		cmd.All = true
 	}
 
 	log.StartFileLogging()
@@ -118,7 +126,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 
 	// Purge dependencies
 	var dependencies []types.Dependency
-	if cmd.PurgeDependencies || len(cmd.Dependency) > 0 {
+	if cmd.All || len(cmd.Dependency) > 0 {
 		dependencies, err = f.NewDependencyManager(configInterface, client, cmd.ToConfigOptions(), cmd.log).PurgeAll(dependency.PurgeOptions{
 			Dependencies: cmd.Dependency,
 			Verbose:      cmd.VerboseDependencies,
