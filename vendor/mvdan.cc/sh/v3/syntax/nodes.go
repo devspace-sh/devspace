@@ -4,7 +4,7 @@
 package syntax
 
 import (
-	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -75,19 +75,37 @@ type Pos struct {
 func (p Pos) Offset() uint { return uint(p.offs) }
 
 // Line returns the line number of the position, starting at 1.
+//
+// Line is protected against overflows; if an input has too many lines, extra
+// lines will have a line number of 0, rendered as "?".
 func (p Pos) Line() uint { return uint(p.line) }
 
 // Col returns the column number of the position, starting at 1. It counts in
 // bytes.
+//
+// Col is protected against overflows; if an input line has too many columns,
+// extra columns will have a column number of 0, rendered as "?".
 func (p Pos) Col() uint { return uint(p.col) }
 
 func (p Pos) String() string {
-	return fmt.Sprintf("%d:%d", p.Line(), p.Col())
+	var b strings.Builder
+	if line := p.Line(); line > 0 {
+		b.WriteString(strconv.FormatUint(uint64(line), 10))
+	} else {
+		b.WriteByte('?')
+	}
+	b.WriteByte(':')
+	if col := p.Col(); col > 0 {
+		b.WriteString(strconv.FormatUint(uint64(col), 10))
+	} else {
+		b.WriteByte('?')
+	}
+	return b.String()
 }
 
 // IsValid reports whether the position is valid. All positions in nodes
 // returned by Parse are valid.
-func (p Pos) IsValid() bool { return p.line > 0 }
+func (p Pos) IsValid() bool { return p != Pos{} }
 
 // After reports whether the position p is after p2. It is a more expressive
 // version of p.Offset() > p2.Offset().
@@ -178,6 +196,7 @@ func (*DeclClause) commandNode()   {}
 func (*LetClause) commandNode()    {}
 func (*TimeClause) commandNode()   {}
 func (*CoprocClause) commandNode() {}
+func (*TestDecl) commandNode()     {}
 
 // Assign represents an assignment to a variable.
 //
@@ -331,6 +350,7 @@ func (w *WhileClause) End() Pos { return posAddCol(w.DonePos, 4) }
 type ForClause struct {
 	ForPos, DoPos, DonePos Pos
 	Select                 bool
+	Braces                 bool // deprecated form with { } instead of do/done
 	Loop                   Loop
 
 	Do     []*Stmt
@@ -371,7 +391,8 @@ func (w *WordIter) End() Pos {
 //
 // This node will only appear with LangBash.
 type CStyleLoop struct {
-	Lparen, Rparen   Pos
+	Lparen, Rparen Pos
+	// Init, Cond, Post can each be nil, if the for loop construct omits it.
 	Init, Cond, Post ArithmExpr
 }
 
@@ -391,7 +412,8 @@ func (b *BinaryCmd) End() Pos { return b.Y.End() }
 // FuncDecl represents the declaration of a function.
 type FuncDecl struct {
 	Position Pos
-	RsrvWord bool // non-posix "function f()" style
+	RsrvWord bool // non-posix "function f" style
+	Parens   bool // with () parentheses, only meaningful with RsrvWord=true
 	Name     *Lit
 	Body     *Stmt
 }
@@ -409,9 +431,9 @@ type Word struct {
 func (w *Word) Pos() Pos { return w.Parts[0].Pos() }
 func (w *Word) End() Pos { return w.Parts[len(w.Parts)-1].End() }
 
-// Lit returns the word as a literal value, if the word consists of *syntax.Lit
-// nodes only. An empty string is returned otherwise. Words with multiple
-// literals, which can appear in some edge cases, are handled properly.
+// Lit returns the word as a literal value, if the word consists of *Lit nodes
+// only. An empty string is returned otherwise. Words with multiple literals,
+// which can appear in some edge cases, are handled properly.
 //
 // For example, the word "foo" will return "foo", but the word "foo${bar}" will
 // return "".
@@ -475,21 +497,13 @@ func (q *SglQuoted) End() Pos { return posAddCol(q.Right, 1) }
 
 // DblQuoted represents a list of nodes within double quotes.
 type DblQuoted struct {
-	Position Pos
-	Dollar   bool // $""
-	Parts    []WordPart
+	Left, Right Pos
+	Dollar      bool // $""
+	Parts       []WordPart
 }
 
-func (q *DblQuoted) Pos() Pos { return q.Position }
-func (q *DblQuoted) End() Pos {
-	if len(q.Parts) == 0 {
-		if q.Dollar {
-			return posAddCol(q.Position, 3)
-		}
-		return posAddCol(q.Position, 2)
-	}
-	return posAddCol(q.Parts[len(q.Parts)-1].End(), 1)
-}
+func (q *DblQuoted) Pos() Pos { return q.Left }
+func (q *DblQuoted) End() Pos { return posAddCol(q.Right, 1) }
 
 // CmdSubst represents a command substitution.
 type CmdSubst struct {
@@ -655,7 +669,8 @@ func (p *ParenArithm) End() Pos { return posAddCol(p.Rparen, 1) }
 
 // CaseClause represents a case (switch) clause.
 type CaseClause struct {
-	Case, Esac Pos
+	Case, In, Esac Pos
+	Braces         bool // deprecated mksh form with braces instead of in/esac
 
 	Word  *Word
 	Items []*CaseItem
@@ -867,12 +882,11 @@ type LetClause struct {
 func (l *LetClause) Pos() Pos { return l.Let }
 func (l *LetClause) End() Pos { return l.Exprs[len(l.Exprs)-1].End() }
 
-// BraceExp represents a Bash brace expression, such as "{x,y}" or "{1..10}".
+// BraceExp represents a Bash brace expression, such as "{a,f}" or "{1..10}".
 //
 // This node will only appear as a result of SplitBraces.
 type BraceExp struct {
 	Sequence bool // {x..y[..incr]} instead of {x,y[,...]}
-	Chars    bool // sequence is of chars, not numbers (TODO: remove)
 	Elems    []*Word
 }
 
@@ -883,6 +897,16 @@ func (b *BraceExp) Pos() Pos {
 func (b *BraceExp) End() Pos {
 	return posAddCol(wordLastEnd(b.Elems), 1)
 }
+
+// TestDecl represents the declaration of a Bats test function.
+type TestDecl struct {
+	Position    Pos
+	Description *Word
+	Body        *Stmt
+}
+
+func (f *TestDecl) Pos() Pos { return f.Position }
+func (f *TestDecl) End() Pos { return f.Body.End() }
 
 func wordLastEnd(ws []*Word) Pos {
 	if len(ws) == 0 {

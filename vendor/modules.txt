@@ -439,7 +439,7 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
+# golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 golang.org/x/sync/errgroup
 # golang.org/x/sys v0.0.0-20210403161142-5e06dd20ab57
 ## explicit
@@ -861,10 +861,11 @@ k8s.io/kubectl/pkg/util/interrupt
 k8s.io/kubectl/pkg/util/term
 # k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 k8s.io/utils/integer
-# mvdan.cc/sh/v3 v3.0.0-alpha2
+# mvdan.cc/sh/v3 v3.2.4
 ## explicit
 mvdan.cc/sh/v3/expand
 mvdan.cc/sh/v3/interp
+mvdan.cc/sh/v3/pattern
 mvdan.cc/sh/v3/syntax
 # sigs.k8s.io/structured-merge-diff/v4 v4.0.2
 sigs.k8s.io/structured-merge-diff/v4/value

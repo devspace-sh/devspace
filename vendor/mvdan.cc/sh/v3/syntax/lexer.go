@@ -61,10 +61,15 @@ func (p *Parser) rune() rune {
 	if p.r == '\n' || p.r == escNewl {
 		// p.r instead of b so that newline
 		// character positions don't have col 0.
-		p.npos.line++
+		if p.npos.line++; p.npos.line == 0 {
+			p.lineOverflow = true
+		}
 		p.npos.col = 0
+		p.colOverflow = false
 	}
-	p.npos.col += p.w
+	if p.npos.col += p.w; p.npos.col < p.w {
+		p.colOverflow = true
+	}
 	bquotes := 0
 retry:
 	if p.bsp < len(p.bs) {
@@ -158,7 +163,7 @@ func (p *Parser) nextKeepSpaces() {
 		switch r {
 		case '}', '/':
 			p.tok = p.paramToken(r)
-		case '`', '"', '$':
+		case '`', '"', '$', '\'':
 			p.tok = p.regToken(r)
 		default:
 			p.advanceLitOther(r)
@@ -171,11 +176,9 @@ func (p *Parser) nextKeepSpaces() {
 			p.advanceLitDquote(r)
 		}
 	case hdocBody, hdocBodyTabs:
-		switch {
-		case r == '`' || r == '$':
+		switch r {
+		case '`', '$':
 			p.tok = p.dqToken(r)
-		case p.hdocStop == nil:
-			p.tok = _Newl
 		default:
 			p.advanceLitHdoc(r)
 		}
@@ -256,6 +259,7 @@ skipSpace:
 			for r != '\n' && r != utf8.RuneSelf {
 				if r == escNewl {
 					p.litBs = append(p.litBs, '\\', '\n')
+					break
 				}
 				r = p.rune()
 			}
@@ -300,7 +304,7 @@ skipSpace:
 		p.tok = p.arithmToken(r)
 	case p.quote&allParamExp != 0 && paramOps(r):
 		p.tok = p.paramToken(r)
-	case p.quote == testRegexp:
+	case p.quote == testExprRegexp:
 		if !p.rxFirstPart && p.spaced {
 			p.quote = noState
 			goto skipSpace
@@ -316,6 +320,7 @@ skipSpace:
 			} else {
 				p.tok = rightParen
 				p.quote = noState
+				p.rune() // we are tokenizing manually
 			}
 		default: // including '(', '|'
 			p.advanceLitRe(r)
@@ -401,7 +406,7 @@ func (p *Parser) regToken(r rune) token {
 			p.rune()
 			return dollBrace
 		case '[':
-			if p.lang != LangBash || p.quote == paramExpName {
+			if !p.lang.isBash() || p.quote == paramExpName {
 				// latter to not tokenise ${$[@]} as $[
 				break
 			}
@@ -416,7 +421,7 @@ func (p *Parser) regToken(r rune) token {
 		}
 		return dollar
 	case '(':
-		if p.rune() == '(' && p.lang != LangPOSIX {
+		if p.rune() == '(' && p.lang != LangPOSIX && p.quote != testExpr {
 			p.rune()
 			return dblLeftParen
 		}
@@ -427,7 +432,7 @@ func (p *Parser) regToken(r rune) token {
 	case ';':
 		switch p.rune() {
 		case ';':
-			if p.rune() == '&' && p.lang == LangBash {
+			if p.rune() == '&' && p.lang.isBash() {
 				p.rune()
 				return dblSemiAnd
 			}
@@ -464,7 +469,7 @@ func (p *Parser) regToken(r rune) token {
 			p.rune()
 			return dplIn
 		case '(':
-			if p.lang != LangBash {
+			if !p.lang.isBash() {
 				break
 			}
 			p.rune()
@@ -483,7 +488,7 @@ func (p *Parser) regToken(r rune) token {
 			p.rune()
 			return clbOut
 		case '(':
-			if p.lang != LangBash {
+			if !p.lang.isBash() {
 				break
 			}
 			p.rune()
@@ -508,7 +513,7 @@ func (p *Parser) dqToken(r rune) token {
 			p.rune()
 			return dollBrace
 		case '[':
-			if p.lang != LangBash {
+			if !p.lang.isBash() {
 				break
 			}
 			p.rune()
@@ -807,7 +812,7 @@ loop:
 		switch r {
 		case '\\': // escaped byte follows
 			p.rune()
-		case '"', '`', '$':
+		case '\'', '"', '`', '$':
 			tok = _Lit
 			break loop
 		case '}':
@@ -831,7 +836,7 @@ loop:
 			if p.quote&allParamReg != 0 {
 				break loop
 			}
-		case '\'', '+', '-', ' ', '\t', ';', '&', '>', '<', '|', '(', ')', '\n', '\r':
+		case '+', '-', ' ', '\t', ';', '&', '>', '<', '|', '(', ')', '\n', '\r':
 			if p.quote&allKeepSpaces == 0 {
 				break loop
 			}
@@ -841,7 +846,7 @@ loop:
 }
 
 func (p *Parser) advanceLitNone(r rune) {
-	p.eqlOffs = 0
+	p.eqlOffs = -1
 	tok := _LitWord
 loop:
 	for p.newLit(r); r != utf8.RuneSelf; r = p.rune() {
@@ -871,7 +876,7 @@ loop:
 				break loop
 			}
 		case '=':
-			if p.eqlOffs == 0 {
+			if p.eqlOffs < 0 {
 				p.eqlOffs = len(p.litBs) - 1
 			}
 		case '[':
@@ -910,9 +915,10 @@ func (p *Parser) advanceLitHdoc(r rune) {
 		}
 	}
 	lStart := len(p.litBs) - 1
+	stop := p.hdocStops[len(p.hdocStops)-1]
 	for ; ; r = p.rune() {
 		switch r {
-		case '`', '$':
+		case escNewl, '`', '$':
 			p.val = p.endLit()
 			return
 		case '\\': // escaped byte follows
@@ -923,13 +929,20 @@ func (p *Parser) advanceLitHdoc(r rune) {
 					p.val = p.endLit()
 					return
 				}
-			} else if lStart >= 0 && bytes.HasPrefix(p.litBs[lStart:], p.hdocStop) {
-				p.val = p.endLit()[:lStart]
-				if p.val == "" {
-					p.tok = _Newl
+			} else if lStart >= 0 {
+				// Compare the current line with the stop word.
+				line := p.litBs[lStart:]
+				if r == '\n' && len(line) > 0 {
+					line = line[:len(line)-1] // minus \n
 				}
-				p.hdocStop = nil
-				return
+				if bytes.Equal(line, stop) {
+					p.val = p.endLit()[:lStart]
+					if p.val == "" {
+						p.tok = _Newl
+					}
+					p.hdocStops[len(p.hdocStops)-1] = nil
+					return
+				}
 			}
 			if r == utf8.RuneSelf {
 				return
@@ -948,6 +961,7 @@ func (p *Parser) quotedHdocWord() *Word {
 	r := p.r
 	p.newLit(r)
 	pos := p.getPos()
+	stop := p.hdocStops[len(p.hdocStops)-1]
 	for ; ; r = p.rune() {
 		if r == utf8.RuneSelf {
 			return nil
@@ -959,10 +973,22 @@ func (p *Parser) quotedHdocWord() *Word {
 		}
 		lStart := len(p.litBs) - 1
 		for r != utf8.RuneSelf && r != '\n' {
+			if r == escNewl {
+				p.litBs = append(p.litBs, '\\', '\n')
+				break
+			}
 			r = p.rune()
 		}
-		if lStart >= 0 && bytes.HasPrefix(p.litBs[lStart:], p.hdocStop) {
-			p.hdocStop = nil
+		if lStart < 0 {
+			continue
+		}
+		// Compare the current line with the stop word.
+		line := p.litBs[lStart:]
+		if r == '\n' && len(line) > 0 {
+			line = line[:len(line)-1] // minus \n
+		}
+		if bytes.Equal(line, stop) {
+			p.hdocStops[len(p.hdocStops)-1] = nil
 			val := p.endLit()[:lStart]
 			if val == "" {
 				return nil
@@ -985,7 +1011,7 @@ func (p *Parser) advanceLitRe(r rune) {
 				p.quote = noState
 				return
 			}
-		case ' ', '\t', '\r', '\n':
+		case ' ', '\t', '\r', '\n', ';', '&', '>', '<':
 			if p.rxOpenParens <= 0 {
 				p.tok, p.val = _LitWord, p.endLit()
 				p.quote = noState
@@ -994,7 +1020,7 @@ func (p *Parser) advanceLitRe(r rune) {
 		case '"', '\'', '$', '`':
 			p.tok, p.val = _Lit, p.endLit()
 			return
-		case utf8.RuneSelf, ';', '&', '>', '<':
+		case utf8.RuneSelf:
 			p.tok, p.val = _LitWord, p.endLit()
 			p.quote = noState
 			return

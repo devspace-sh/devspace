@@ -37,7 +37,11 @@ func ExecuteShellCommand(command string, stdout io.Writer, stderr io.Writer, ext
 
 	// Run command
 	err = r.Run(context.Background(), file)
-	if err != nil && err != interp.ShellExitStatus(0) {
+	if err != nil {
+		if status, ok := interp.IsExitStatus(err); ok && status == 0 {
+			return nil
+		}
+
 		return err
 	}
 

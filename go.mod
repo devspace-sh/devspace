@@ -89,7 +89,7 @@ require (
 	k8s.io/client-go v0.20.4
 	k8s.io/klog v1.0.0
 	k8s.io/kubectl v0.20.4
-	mvdan.cc/sh/v3 v3.0.0-alpha2
+	mvdan.cc/sh/v3 v3.2.4
 )
 
 replace (
