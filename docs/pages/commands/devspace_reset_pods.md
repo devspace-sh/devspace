@@ -1,23 +1,26 @@
 ---
-title: "Command - devspace list ports"
-sidebar_label: devspace list ports
+title: "Command - devspace reset pods"
+sidebar_label: devspace reset pods
 ---
 
 
-Lists port forwarding configurations
+Resets the replaced pods
 
 ## Synopsis
 
 
 ```
-devspace list ports [flags]
+devspace reset pods [flags]
 ```
 
 ```
 #######################################################
-############### devspace list ports ###################
+############### devspace reset pods ###################
 #######################################################
-Lists the port forwarding configurations
+Resets the replaced pods to its original state
+
+Examples:
+devspace reset pods
 #######################################################
 ```
 
@@ -25,7 +28,7 @@ Lists the port forwarding configurations
 ## Flags
 
 ```
-  -h, --help   help for ports
+  -h, --help   help for pods
 ```
 
 
@@ -34,6 +37,7 @@ Lists the port forwarding configurations
 ```
       --config string            The devspace config file to use
       --debug                    Prints the stack trace if an error occurs
+      --inactivity-timeout int   Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems (default 180)
       --kube-context string      The kubernetes context to use
   -n, --namespace string         The kubernetes namespace to use
       --no-warn                  If true does not show any warning when deploying into a different namespace or kube-context than before

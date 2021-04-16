@@ -84,7 +84,7 @@ func (c *controller) Render(options *Options, out io.Writer, log log.Logger) err
 			if deployConfig.Kubectl != nil {
 				deployClient, err = kubectl.New(c.config, c.dependencies, c.client, deployConfig, log)
 				if err != nil {
-					return errors.Errorf("Error render: deployment %s error: %v", deployConfig.Name, err)
+					return errors.Errorf("error render: deployment %s error: %v", deployConfig.Name, err)
 				}
 
 			} else if deployConfig.Helm != nil {
@@ -96,15 +96,15 @@ func (c *controller) Render(options *Options, out io.Writer, log log.Logger) err
 
 				deployClient, err = helm.New(c.config, c.dependencies, helmClient, c.client, deployConfig, log)
 				if err != nil {
-					return errors.Errorf("Error render: deployment %s error: %v", deployConfig.Name, err)
+					return errors.Errorf("error render: deployment %s error: %v", deployConfig.Name, err)
 				}
 			} else {
-				return errors.Errorf("Error render: deployment %s has no deployment method", deployConfig.Name)
+				return errors.Errorf("error render: deployment %s has no deployment method", deployConfig.Name)
 			}
 
 			err = deployClient.Render(options.BuiltImages, out)
 			if err != nil {
-				return errors.Errorf("Error deploying %s: %v", deployConfig.Name, err)
+				return errors.Errorf("error deploying %s: %v", deployConfig.Name, err)
 			}
 		}
 	}
@@ -149,7 +149,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 			if deployConfig.Kubectl != nil {
 				deployClient, err = kubectl.New(c.config, c.dependencies, c.client, deployConfig, log)
 				if err != nil {
-					return errors.Errorf("Error deploying: deployment %s error: %v", deployConfig.Name, err)
+					return errors.Errorf("error deploying: deployment %s error: %v", deployConfig.Name, err)
 				}
 
 				method = "kubectl"
@@ -162,12 +162,12 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 
 				deployClient, err = helm.New(c.config, c.dependencies, helmClient, c.client, deployConfig, log)
 				if err != nil {
-					return errors.Errorf("Error deploying: deployment %s error: %v", deployConfig.Name, err)
+					return errors.Errorf("error deploying: deployment %s error: %v", deployConfig.Name, err)
 				}
 
 				method = "helm"
 			} else {
-				return errors.Errorf("Error deploying: deployment %s has no deployment method", deployConfig.Name)
+				return errors.Errorf("error deploying: deployment %s has no deployment method", deployConfig.Name)
 			}
 
 			// Execute before deployment deploy hook
@@ -179,7 +179,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 			wasDeployed, err := deployClient.Deploy(options.ForceDeploy, options.BuiltImages)
 			if err != nil {
 				c.hookExecuter.OnError(hook.StageDeployments, []string{hook.All, deployConfig.Name}, hook.Context{Client: c.client, Error: err}, log)
-				return errors.Errorf("Error deploying %s: %v", deployConfig.Name, err)
+				return errors.Errorf("error deploying %s: %v", deployConfig.Name, err)
 			}
 
 			if wasDeployed {
@@ -262,7 +262,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 					return errors.Wrap(err, "create helm client")
 				}
 			} else {
-				return errors.Errorf("Error purging: deployment %s has no deployment method", deployConfig.Name)
+				return errors.Errorf("error purging: deployment %s has no deployment method", deployConfig.Name)
 			}
 
 			// Execute before deployment purge hook
@@ -276,9 +276,9 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 			log.StopWait()
 			if err != nil {
 				// Execute on error deployment purge hook
-				err = c.hookExecuter.Execute(hook.OnError, hook.StagePurgeDeployments, deployConfig.Name, hook.Context{Client: c.client}, log)
-				if err != nil {
-					return err
+				hookErr := c.hookExecuter.Execute(hook.OnError, hook.StagePurgeDeployments, deployConfig.Name, hook.Context{Client: c.client}, log)
+				if hookErr != nil {
+					return hookErr
 				}
 
 				log.Warnf("Error deleting deployment %s: %v", deployConfig.Name, err)

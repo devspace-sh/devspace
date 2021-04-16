@@ -1,6 +1,6 @@
 ---
 title: Config Reference
-sidebar_label: devspace.yaml
+sidebar_label: Config Reference
 ---
 
 import FragmentConfigImages from '../fragments/config-images.mdx';
@@ -15,7 +15,7 @@ import WarningBuildToolPriority from '../fragments/warning-build-tool-priority.m
 
 ## `version`
 ```yaml
-version: v1beta9                   # string   | Version of the config
+version: v1beta10                   # string   | Version of the config
 ```
 
 ## `images`
@@ -47,7 +47,6 @@ docker:                             # struct   | Options for building images wit
   preferMinikube: true              # bool     | If available, use minikube's in-built docker daemon instaed of local docker daemon (default: true)
   skipPush: false                   # bool     | Skip pushing image to registry, enabled automatically for minikube and docker-desktop (Default: false)
   disableFallback: false            # bool     | Disable using kaniko as fallback when Docker is not installed (Default: false)
-  useBuildKit: true                 # bool     | Enable BuildKit for Docker build process (default: false)
   useCli: false                     # bool     | If true will use the docker cli for building    
   args:                             # []string | Additional arguments that should be used for executing the docker cli
   - --any-flag    
@@ -230,7 +229,7 @@ kubectl:                            # struct   | Options for deploying with "kub
 ### `dev.ports`
 ```yaml
 ports:                              # struct[] | Array of port forwarding settings for selected pods
-- imageName: someImage              # string   | Name of an image defined in `images` to select pods with
+- imageName: someImage              # string   | Name of an image defined in `images` or in a dependency to select pods with
   labelSelector: ...                # struct   | Key Value map of labels and values to select pods with
   namespace: ""                     # string   | Kubernetes namespace to select pods in
   containerName: ""                 # string   | Name of the container to select (only applies if reverseForward is used)
@@ -255,7 +254,7 @@ open:                               # struct[] | Array of auto-open settings
 ### `dev.sync`
 ```yaml
 sync:                               # struct[] | Array of file sync settings for selected pods
-- imageName: someImage              # string   | Name of an image defined in `images` to select pods with
+- imageName: someImage              # string   | Name of an image defined in `images` or in a dependency to select pods with
   labelSelector: ...                # struct   | Key Value map of labels and values to select pods with
   containerName: ""                 # string   | Container name to use after selecting a pod
   namespace: ""                     # string   | Kubernetes namespace to select pods in
@@ -338,24 +337,34 @@ autoReload:                         # struct   | Options for auto-reloading (i.e
   images: []                        # string[] | Array containing names of images to watch for auto-reloading (i.e. reload when the Dockerfile changes)
 ```
 
-### `dev.interactive`
+### `dev.terminal`
 ```yaml
-interactive:                        # struct   | Options for interactive mode
-  defaultEnabled: false             # bool     | Start interactive mode instead of log streaming by default, even without -i / --interactive flag (Default: false)
-  images:                           # struct[] | Array of image override configurations for interactive mode
-  - name: default                   # string   | Name of the image to apply this override rule to (key in `images`)
-    entrypoint: []                  # string[] | Array defining with the ENTRYPOINT that should be used instead of the ENTRYPOINT defined in the Dockerfile
-    cmd: []                         # string[] | Array defining with the CMD that should be used instead of the CMD defined in the Dockerfile
-  terminal:                         # struct   | Options for the terminal proxy
-    imageName: someImage            # string   | Name of an image defined in `images` to select pods with
-    labelSelector: ...              # struct   | Key Value map of labels and values to select pods with
-    containerName: ""               # string   | Container name to use after selecting a pod
-    namespace: ""                   # string   | Kubernetes namespace to select pods in
-    command: []                     # string[] | Array defining the shell command to start the terminal with (Default: ["sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"])
-    workDir: ""                     # string   | The working directory where to execute the command or open the shell
+terminal:                         # struct   | Options for terminal mode
+  imageName: someImage            # string   | Name of an image defined in `images` or in a dependency to select pods with
+  labelSelector: ...              # struct   | Key Value map of labels and values to select pods with
+  containerName: ""               # string   | Container name to use after selecting a pod
+  namespace: ""                   # string   | Kubernetes namespace to select pods in
+  command: []                     # string[] | Array defining the shell command to start the terminal with (Default: ["sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"])
+  workDir: ""                     # string   | The working directory where to execute the command or open the shell
 ```
-[Learn more about configuring interactive mode.](../configuration/development/interactive-mode.mdx)
 
+[Learn more about terminal mode.](../configuration/development/interactive-mode.mdx)
+
+### `dev.replacePods`
+```yaml
+replacePods:                              # struct[] | Which pods should be replaced
+- imageName: someImage                    # string   | Name of an image defined in `images` or in a dependency to select pods with
+  labelSelector: ...                      # struct   | Key Value map of labels and values to select pods with
+  containerName: ""                       # string   | Container name to use after selecting a pod
+  namespace: ""                           # string   | Kubernetes namespace to select pods in
+  replaceImage: ""                        # string   | The image that should be used for the pod
+  patches:                                # struct[] | Other patches that should be applied on the pod
+  - op: Add                               # enum     | Patch operation (replace, add, remove)
+    path: "spec.containers[0].command"    # string    | Jsonpath or xpath to config option that should be patched
+    value: ["sleep"]                      # arbitrary | Value to use for patch operation
+```
+
+[Learn more about replacing pods.](../configuration/development/replace-pods.mdx)
 
 ## `dependencies`
 

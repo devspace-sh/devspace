@@ -67,13 +67,14 @@ module.exports = {
           label: 'dev',
           items: [
             'configuration/development/basics',
-            'configuration/development/open-links',
             'configuration/development/port-forwarding',
             'configuration/development/reverse-port-forwarding',
             'configuration/development/file-synchronization',
             'configuration/development/auto-reloading',
+            'configuration/development/open-links',
             'configuration/development/log-streaming',
             'configuration/development/interactive-mode',
+            'configuration/development/replace-pods',
           ],
         },
         {

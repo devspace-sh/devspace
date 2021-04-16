@@ -9,22 +9,33 @@ import FragmentDependencyIgnoreDependencies from '../../fragments/dependency-ign
 import FragmentDependencyNamespace from '../../fragments/dependency-namespace.mdx';
 import FragmentDependencyName from '../../fragments/dependency-name.mdx';
 import FragmentDependencyVars from '../../fragments/dependency-vars.mdx';
+import FragmentDependencyDev from '../../fragments/dependency-dev.mdx';
 
 
 ## Example
 ```yaml
 dependencies:
-- source:
+- name: api-server
+  source:
     git: https://github.com/my-api-server
     branch: stable
-- source:
+  dev:
+    sync: true
+- name: auth-server
+  source:
     git: https://github.com/my-auth-server
     revision: c967392
   profile: production
-- source:
+- name: database-server
+  source:
     git: https://github.com/my-database-server
     tag: v3.0.1
     subPath: /configuration
+  dev:
+    ports: true
+dev:
+  terminal:
+    imageName: api-server.server-image
 ```
 
 :::info Authentication
@@ -139,3 +150,7 @@ cloneArgs: []
 ### `vars`
 
 <FragmentDependencyVars/>
+
+### `dev`
+
+<FragmentDependencyDev/>

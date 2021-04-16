@@ -66,7 +66,7 @@ The `name` option is mandatory and expects a string defining the name of the pro
 ### `patches`
 The `patches` option expects a patch object which consists of the following properties:
 - `op` stating the patch operation (possible values: `replace`, `add`, `remove`)
-- `path` stating a jsonpath or an xpath within the config (e.g. `images.backend.image`, `deployments.name=backend.helm.values.containers[1]`)
+- `path` stating a jsonpath or a xpath within the config (e.g. `images.backend.image`, `deployments.name=backend.helm.values.containers[1]`)
 - `value` stating an arbitrary value used by the operation (e.g. a string, an integer, a boolean, a yaml object)
 
 :::warning `op: add` only for arrays

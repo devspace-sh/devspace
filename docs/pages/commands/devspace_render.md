@@ -27,7 +27,6 @@ deployment.
 ## Flags
 
 ```
-      --allow-cyclic                When enabled allows cyclic dependencies
       --build-sequential            Builds the images one after another instead of in parallel
       --dependency strings          Renders only the specific named dependencies
       --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated

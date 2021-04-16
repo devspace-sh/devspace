@@ -25,7 +25,6 @@ Builds all defined images and pushes them
 ## Flags
 
 ```
-      --allow-cyclic                When enabled allows cyclic dependencies
       --build-sequential            Builds the images one after another instead of in parallel
       --dependency strings          Builds only the specific named dependencies
   -b, --force-build                 Forces to build every image
@@ -35,7 +34,7 @@ Builds all defined images and pushes them
       --skip-push                   Skips image pushing, useful for minikube deployment
       --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected
   -t, --tag strings                 Use the given tag for all built images
-      --verbose-dependencies        Builds the dependencies verbosely
+      --verbose-dependencies        Builds the dependencies verbosely (default true)
 ```
 
 

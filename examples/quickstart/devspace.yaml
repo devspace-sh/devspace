@@ -2,6 +2,9 @@ version: v1beta10
 images:
   default:
     image: myusername/devspace
+commands:
+  - name: test
+    value: "echo before image building"
 deployments:
   - name: quickstart
     helm:
