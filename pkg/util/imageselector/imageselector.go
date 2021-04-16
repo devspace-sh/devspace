@@ -55,11 +55,13 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 		}
 
 		// check if image from dependency
-		splitted := strings.Split(configImageName, ".")
-		if len(splitted) == 2 {
+		if strings.Contains(configImageName, ".") {
+			dependency := configImageName[:strings.Index(configImageName, ".")]
+			dependencyImageName := configImageName[len(dependency)+1:]
+
 			for _, dep := range dependencies {
-				if dep.DependencyConfig().Name == splitted[0] {
-					imageSelector, err := Resolve(splitted[1], dep.Config(), nil)
+				if dep.DependencyConfig().Name == dependency {
+					imageSelector, err := Resolve(dependencyImageName, dep.Config(), dep.Children())
 					if err != nil {
 						return nil, err
 					} else if len(imageSelector) != 1 {

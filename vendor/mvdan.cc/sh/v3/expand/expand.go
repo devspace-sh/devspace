@@ -11,9 +11,11 @@ import (
 	"os/user"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 
+	"mvdan.cc/sh/v3/pattern"
 	"mvdan.cc/sh/v3/syntax"
 )
 
@@ -40,6 +42,12 @@ type Config struct {
 	// If nil, encountering a command substitution will result in an
 	// UnexpectedCommandError.
 	CmdSubst func(io.Writer, *syntax.CmdSubst) error
+
+	// ProcSubst expands a process substitution node.
+	//
+	// Note that this feature is a work in progress, and the signature of
+	// this field might change until #451 is completely fixed.
+	ProcSubst func(*syntax.ProcSubst) (string, error)
 
 	// ReadDir is used for file path globbing. If nil, globbing is disabled.
 	// Use ioutil.ReadDir to use the filesystem directly.
@@ -157,6 +165,8 @@ func Document(cfg *Config, word *syntax.Word) (string, error) {
 	return cfg.fieldJoin(field), nil
 }
 
+const patMode = pattern.Filenames | pattern.Braces
+
 // Pattern expands a single shell word as a pattern, using syntax.QuotePattern
 // on any non-quoted parts of the input word. The result can be used on
 // syntax.TranslatePattern directly.
@@ -172,7 +182,7 @@ func Pattern(cfg *Config, word *syntax.Word) (string, error) {
 	buf := cfg.strBuilder()
 	for _, part := range field {
 		if part.quote > quoteNone {
-			buf.WriteString(syntax.QuotePattern(part.val))
+			buf.WriteString(pattern.QuoteMeta(part.val, patMode))
 		} else {
 			buf.WriteString(part.val)
 		}
@@ -343,11 +353,11 @@ func (cfg *Config) escapedGlobField(parts []fieldPart) (escaped string, glob boo
 	buf := cfg.strBuilder()
 	for _, part := range parts {
 		if part.quote > quoteNone {
-			buf.WriteString(syntax.QuotePattern(part.val))
+			buf.WriteString(pattern.QuoteMeta(part.val, patMode))
 			continue
 		}
 		buf.WriteString(part.val)
-		if syntax.HasPattern(part.val) {
+		if pattern.HasMeta(part.val, patMode) {
 			glob = true
 		}
 	}
@@ -365,9 +375,10 @@ func Fields(cfg *Config, words ...*syntax.Word) ([]string, error) {
 	fields := make([]string, 0, len(words))
 	dir := cfg.envGet("PWD")
 	for _, word := range words {
-		afterBraces := []*syntax.Word{word}
-		if w2 := syntax.SplitBraces(word); w2 != word {
-			afterBraces = Braces(w2)
+		word := *word // make a copy, since SplitBraces replaces the Parts slice
+		afterBraces := []*syntax.Word{&word}
+		if syntax.SplitBraces(&word) {
+			afterBraces = Braces(&word)
 		}
 		for _, word2 := range afterBraces {
 			wfields, err := cfg.wordFields(word2.Parts)
@@ -468,6 +479,12 @@ func (cfg *Config) wordField(wps []syntax.WordPart, ql quoteLevel) ([]fieldPart,
 				return nil, err
 			}
 			field = append(field, fieldPart{val: strconv.Itoa(n)})
+		case *syntax.ProcSubst:
+			path, err := cfg.ProcSubst(x)
+			if err != nil {
+				return nil, err
+			}
+			field = append(field, fieldPart{val: path})
 		default:
 			panic(fmt.Sprintf("unhandled word part: %T", x))
 		}
@@ -522,7 +539,9 @@ func (cfg *Config) wordFields(wps []syntax.WordPart) ([][]fieldPart, error) {
 				for i := 0; i < len(s); i++ {
 					b := s[i]
 					if b == '\\' {
-						i++
+						if i++; i >= len(s) {
+							break
+						}
 						b = s[i]
 					}
 					buf.WriteByte(b)
@@ -538,10 +557,9 @@ func (cfg *Config) wordFields(wps []syntax.WordPart) ([][]fieldPart, error) {
 			}
 			curField = append(curField, fp)
 		case *syntax.DblQuoted:
-			allowEmpty = true
 			if len(x.Parts) == 1 {
 				pe, _ := x.Parts[0].(*syntax.ParamExp)
-				if elems := cfg.quotedElems(pe); elems != nil {
+				if elems := cfg.quotedElemFields(pe); elems != nil {
 					for i, elem := range elems {
 						if i > 0 {
 							flush()
@@ -554,6 +572,7 @@ func (cfg *Config) wordFields(wps []syntax.WordPart) ([][]fieldPart, error) {
 					continue
 				}
 			}
+			allowEmpty = true
 			wfield, err := cfg.wordField(x.Parts, quoteDouble)
 			if err != nil {
 				return nil, err
@@ -580,6 +599,12 @@ func (cfg *Config) wordFields(wps []syntax.WordPart) ([][]fieldPart, error) {
 				return nil, err
 			}
 			curField = append(curField, fieldPart{val: strconv.Itoa(n)})
+		case *syntax.ProcSubst:
+			path, err := cfg.ProcSubst(x)
+			if err != nil {
+				return nil, err
+			}
+			splitAdd(path)
 		default:
 			panic(fmt.Sprintf("unhandled word part: %T", x))
 		}
@@ -591,20 +616,35 @@ func (cfg *Config) wordFields(wps []syntax.WordPart) ([][]fieldPart, error) {
 	return fields, nil
 }
 
-// quotedElems checks if a parameter expansion is exactly ${@} or ${foo[@]}
-func (cfg *Config) quotedElems(pe *syntax.ParamExp) []string {
-	if pe == nil || pe.Excl || pe.Length || pe.Width {
+// quotedElemFields returns the list of elements resulting from a quoted
+// parameter expansion if it was in the form of ${*}, ${@}, ${foo[*], ${foo[@]},
+// or ${!foo@}.
+func (cfg *Config) quotedElemFields(pe *syntax.ParamExp) []string {
+	if pe == nil || pe.Length || pe.Width {
 		return nil
 	}
-	if pe.Param.Value == "@" {
-		return cfg.Env.Get("@").List
-	}
-	if nodeLit(pe.Index) != "@" {
+	if pe.Excl {
+		if pe.Names == syntax.NamesPrefixWords {
+			return cfg.namesByPrefix(pe.Param.Value)
+		}
 		return nil
 	}
-	vr := cfg.Env.Get(pe.Param.Value)
-	if vr.Kind == Indexed {
-		return vr.List
+	name := pe.Param.Value
+	switch name {
+	case "*":
+		return []string{cfg.ifsJoin(cfg.Env.Get(name).List)}
+	case "@":
+		return cfg.Env.Get(name).List
+	}
+	switch nodeLit(pe.Index) {
+	case "@":
+		if vr := cfg.Env.Get(name); vr.Kind == Indexed {
+			return vr.List
+		}
+	case "*":
+		if vr := cfg.Env.Get(name); vr.Kind == Indexed {
+			return []string{cfg.ifsJoin(vr.List)}
+		}
 	}
 	return nil
 }
@@ -619,8 +659,26 @@ func (cfg *Config) expandUser(field string) (prefix, rest string) {
 		name = name[:i]
 	}
 	if name == "" {
-		return cfg.Env.Get("HOME").String(), rest
+		// Current user; try via "HOME", otherwise fall back to the
+		// system's appropriate home dir env var. Don't use os/user, as
+		// that's overkill. We can't use os.UserHomeDir, because we want
+		// to use cfg.Env, and we always want to check "HOME" first.
+
+		if vr := cfg.Env.Get("HOME"); vr.IsSet() {
+			return vr.String(), rest
+		}
+
+		if runtime.GOOS == "windows" {
+			if vr := cfg.Env.Get("USERPROFILE"); vr.IsSet() {
+				return vr.String(), rest
+			}
+		}
+		return "", field
 	}
+
+	// Not the current user; try via "HOME <name>", otherwise fall back to
+	// os/user. There isn't a way to lookup user home dirs without cgo.
+
 	if vr := cfg.Env.Get("HOME " + name); vr.IsSet() {
 		return vr.String(), rest
 	}
@@ -632,8 +690,8 @@ func (cfg *Config) expandUser(field string) (prefix, rest string) {
 	return u.HomeDir, rest
 }
 
-func findAllIndex(pattern, name string, n int) [][]int {
-	expr, err := syntax.TranslatePattern(pattern, true)
+func findAllIndex(pat, name string, n int) [][]int {
+	expr, err := pattern.Regexp(pat, 0)
 	if err != nil {
 		return nil
 	}
@@ -663,10 +721,10 @@ func pathSplit(path string) []string {
 	return strings.Split(path, string(filepath.Separator))
 }
 
-func (cfg *Config) glob(base, pattern string) ([]string, error) {
-	parts := pathSplit(pattern)
+func (cfg *Config) glob(base, pat string) ([]string, error) {
+	parts := pathSplit(pat)
 	matches := []string{""}
-	if filepath.IsAbs(pattern) {
+	if filepath.IsAbs(pat) {
 		if parts[0] == "" {
 			// unix-like
 			matches[0] = string(filepath.Separator)
@@ -677,6 +735,8 @@ func (cfg *Config) glob(base, pattern string) ([]string, error) {
 		}
 		parts = parts[1:]
 	}
+	// TODO: as an optimization, we could do chunks of the path all at once,
+	// like doing a single stat for "/foo/bar" in "/foo/bar/*".
 	for i, part := range parts {
 		wantDir := i < len(parts)-1
 		switch {
@@ -684,6 +744,25 @@ func (cfg *Config) glob(base, pattern string) ([]string, error) {
 			for i, dir := range matches {
 				matches[i] = pathJoin2(dir, part)
 			}
+			continue
+		case !pattern.HasMeta(part, patMode):
+			var newMatches []string
+			for _, dir := range matches {
+				match := dir
+				if !filepath.IsAbs(match) {
+					match = filepath.Join(base, match)
+				}
+				match = pathJoin2(match, part)
+				info, err := os.Stat(match)
+				if err != nil {
+					continue
+				}
+				if wantDir && !info.IsDir() {
+					continue
+				}
+				newMatches = append(newMatches, pathJoin2(dir, part))
+			}
+			matches = newMatches
 			continue
 		case part == "**" && cfg.GlobStar:
 			for i, match := range matches {
@@ -713,7 +792,7 @@ func (cfg *Config) glob(base, pattern string) ([]string, error) {
 			}
 			continue
 		}
-		expr, err := syntax.TranslatePattern(part, true)
+		expr, err := pattern.Regexp(part, pattern.Filenames)
 		if err != nil {
 			// If any glob part is not a valid pattern, don't glob.
 			return nil, nil

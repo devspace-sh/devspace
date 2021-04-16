@@ -151,17 +151,9 @@ func (m *manager) Command(options CommandOptions) error {
 func ExecuteCommand(commands []*latest.CommandConfig, cmd string, args []string) error {
 	err := command.ExecuteCommand(commands, cmd, args)
 	if err != nil {
-		shellExitError, ok := err.(interp.ShellExitStatus)
-		if ok {
+		if status, ok := interp.IsExitStatus(err); ok {
 			return &exit.ReturnCodeError{
-				ExitCode: int(shellExitError),
-			}
-		}
-
-		exitError, ok := err.(interp.ExitStatus)
-		if ok {
-			return &exit.ReturnCodeError{
-				ExitCode: int(exitError),
+				ExitCode: int(status),
 			}
 		}
 

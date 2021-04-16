@@ -41,6 +41,18 @@ func (o overlayEnviron) Each(f func(name string, vr expand.Variable) bool) {
 func execEnv(env expand.Environ) []string {
 	list := make([]string, 0, 64)
 	env.Each(func(name string, vr expand.Variable) bool {
+		if !vr.IsSet() {
+			// If a variable is set globally but unset in the
+			// runner, we need to ensure it's not part of the final
+			// list. Seems like zeroing the element is enough.
+			// This is a linear search, but this scenario should be
+			// rare, and the number of variables shouldn't be large.
+			for i, kv := range list {
+				if strings.HasPrefix(kv, name+"=") {
+					list[i] = ""
+				}
+			}
+		}
 		if vr.Exported {
 			list = append(list, name+"="+vr.String())
 		}
@@ -58,9 +70,15 @@ func (r *Runner) lookupVar(name string) expand.Variable {
 	case "#":
 		vr.Kind, vr.Str = expand.String, strconv.Itoa(len(r.Params))
 	case "@", "*":
-		vr.Kind, vr.List = expand.Indexed, r.Params
+		vr.Kind = expand.Indexed
+		if r.Params == nil {
+			// r.Params may be nil but positional parameters always exist
+			vr.List = []string{}
+		} else {
+			vr.List = r.Params
+		}
 	case "?":
-		vr.Kind, vr.Str = expand.String, strconv.Itoa(r.exit)
+		vr.Kind, vr.Str = expand.String, strconv.Itoa(r.lastExit)
 	case "$":
 		vr.Kind, vr.Str = expand.String, strconv.Itoa(os.Getpid())
 	case "PPID":
@@ -107,7 +125,8 @@ func (r *Runner) lookupVar(name string) expand.Variable {
 	}
 	if r.opts[optNoUnset] {
 		r.errf("%s: unbound variable\n", name)
-		r.setErr(ShellExitStatus(1))
+		r.exit = 1
+		r.exitShell = true
 	}
 	return expand.Variable{}
 }

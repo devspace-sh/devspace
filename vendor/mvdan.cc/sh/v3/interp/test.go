@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"regexp"
 
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/syntax"
@@ -20,7 +20,12 @@ import (
 func (r *Runner) bashTest(ctx context.Context, expr syntax.TestExpr, classic bool) string {
 	switch x := expr.(type) {
 	case *syntax.Word:
-		return r.document(x)
+		if classic {
+			// In the classic "test" mode, we already expanded and
+			// split the list of words, so don't redo that work.
+			return r.document(x)
+		}
+		return r.literal(x)
 	case *syntax.ParenTest:
 		return r.bashTest(ctx, x.X, classic)
 	case *syntax.BinaryTest:
@@ -133,7 +138,7 @@ func (r *Runner) unTest(ctx context.Context, op syntax.UnTestOperator, x string)
 	case syntax.TsSocket:
 		return r.statMode(x, os.ModeSocket)
 	case syntax.TsSmbLink:
-		info, err := os.Lstat(r.relPath(x))
+		info, err := os.Lstat(r.absPath(x))
 		return err == nil && info.Mode()&os.ModeSymlink != 0
 	case syntax.TsSticky:
 		return r.statMode(x, os.ModeSticky)
@@ -145,25 +150,41 @@ func (r *Runner) unTest(ctx context.Context, op syntax.UnTestOperator, x string)
 	// case syntax.TsUsrOwn:
 	// case syntax.TsModif:
 	case syntax.TsRead:
-		f, err := r.open(ctx, r.relPath(x), os.O_RDONLY, 0, false)
+		f, err := r.open(ctx, x, os.O_RDONLY, 0, false)
 		if err == nil {
 			f.Close()
 		}
 		return err == nil
 	case syntax.TsWrite:
-		f, err := r.open(ctx, r.relPath(x), os.O_WRONLY, 0, false)
+		f, err := r.open(ctx, x, os.O_WRONLY, 0, false)
 		if err == nil {
 			f.Close()
 		}
 		return err == nil
 	case syntax.TsExec:
-		_, err := exec.LookPath(r.relPath(x))
+		_, err := exec.LookPath(r.absPath(x))
 		return err == nil
 	case syntax.TsNoEmpty:
 		info, err := r.stat(x)
 		return err == nil && info.Size() > 0
 	case syntax.TsFdTerm:
-		return terminal.IsTerminal(atoi(x))
+		fd := atoi(x)
+		var f interface{}
+		switch fd {
+		case 0:
+			f = r.stdin
+		case 1:
+			f = r.stdout
+		case 2:
+			f = r.stderr
+		}
+		if f, ok := f.(interface{ Fd() uintptr }); ok {
+			// Support Fd methods such as the one on *os.File.
+			return term.IsTerminal(int(f.Fd()))
+		}
+		// TODO: allow term.IsTerminal here too if running in the
+		// "single process" mode.
+		return false
 	case syntax.TsEmpStr:
 		return x == ""
 	case syntax.TsNempStr:
