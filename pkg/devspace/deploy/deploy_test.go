@@ -48,7 +48,7 @@ func TestRender(t *testing.T) {
 			options: &Options{
 				Deployments: []string{"noMethod"},
 			},
-			expectedErr: "Error render: deployment noMethod has no deployment method",
+			expectedErr: "error render: deployment noMethod has no deployment method",
 		},
 		renderTestCase{
 			name: "Render with kubectl",
@@ -120,7 +120,7 @@ func TestDeploy(t *testing.T) {
 			options: &Options{
 				Deployments: []string{"noMethod"},
 			},
-			expectedErr: "Error deploying: deployment noMethod has no deployment method",
+			expectedErr: "error deploying: deployment noMethod has no deployment method",
 		},
 		deployTestCase{
 			name: "Deploy with kubectl",
@@ -197,7 +197,7 @@ func TestPurge(t *testing.T) {
 				},
 			},
 			deployments: []string{},
-			expectedErr: "Error purging: deployment noMethod has no deployment method",
+			expectedErr: "error purging: deployment noMethod has no deployment method",
 		},
 		purgeTestCase{
 			name: "Purge with kubectl",

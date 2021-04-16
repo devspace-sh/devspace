@@ -1,17 +1,20 @@
 version: v1beta10
-# This deployment exists just for demo purposes, you don't even need one here
+images:
+  backend:
+    image: john/devbackend
+    build:
+      disabled: true
 deployments:
-  - name: replaced
-    kubectl:
-      manifests:
-        - deployment.yaml
+  - name: app-backend
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - name: container-0
+            image: john/devbackend
 dev:
-  # Will replace the pod created by the deployment with an adjusted
-  # one that can be run by us. This is useful if you cannot control the 
-  # chart and still want to stay as close as possible to production
   replacePods:
-    - labelSelector:
-        app: my-app
+    - imageName: backend
       replaceImage: ubuntu:latest
       patches:
         - op: add
@@ -23,11 +26,5 @@ dev:
         - op: add
           path: spec.containers[0].workingDir
           value: "/workdir"
-  # This will create a terminal to the replaced pod
   terminal:
-    labelSelector:
-      app: my-app
-  # This will sync to the replaced pods working directory
-  sync:
-    - labelSelector:
-        app: my-app
+    imageName: backend

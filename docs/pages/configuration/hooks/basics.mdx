@@ -4,7 +4,7 @@ sidebar_label: hooks
 ---
 
 DevSpace allows you to define certain actions that should be executed during the pipeline. This makes it possible to customize the deployment and development process with DevSpace. The following actions can be executed with hooks:
-- Execute a command on the local machine
+- Execute a command on the local machine (in a golang shell or directly on the system)
 - Execute a command in a container
 - Upload a file or folder into a container
 - Download a file or folder from a container
@@ -14,9 +14,20 @@ DevSpace allows you to define certain actions that should be executed during the
 Hooks can be defined in the `hooks` section of `devspace.yaml`:
 ```yaml
 hooks:
-- command: echo
-  args:
-    - before image building
+# Execute the hook in a golang shell (cross operating system compatible)
+- command: "echo before image building"
+  when:
+    before:
+      images: all
+# Execute the hook directly on the system (echo binary must exist)
+- command: "echo"
+  args: ["before image building"]
+  when:
+    before:
+      images: all
+# Execute the hook only on windows
+- command: "echo before image building"
+  os: windows
   when:
     before:
       images: all
@@ -53,11 +64,8 @@ The actual error will be passed to the hook via the environment variable `DEVSPA
 ```yaml
 # This will print the error to the console that has occured during a deployment
 hooks:
-- command: "sh"
-  os: linux,darwin
-  args: 
-  - -c
-  - 'echo "The following error has occured: $DEVSPACE_HOOK_ERROR"'
+- command: "echo The following error has occured: $DEVSPACE_HOOK_ERROR"
+  os: darwin,windows
   when:
     onError:
       deployments: all
@@ -80,6 +88,9 @@ hooks:
       # namespace: ...
       # containerName: ...
       # pod: ...
+
+      # If you are using dependencies, you can also select a dependency via
+      # imageName: dependency1.my-image
   when:
     after:
       deployments: my-deployment

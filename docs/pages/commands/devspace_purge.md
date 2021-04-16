@@ -29,12 +29,12 @@ devspace purge -d my-deployment
 ## Flags
 
 ```
-      --allow-cyclic           When enabled allows cyclic dependencies
-      --dependencies           When enabled purges the dependencies as well
+  -a, --all                    When enabled purges the dependencies as well
+      --dependencies           DEPRECATED: Please use --all instead
       --dependency strings     Purges only the specific named dependencies
   -d, --deployments string     The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)
   -h, --help                   help for purge
-      --verbose-dependencies   Builds the dependencies verbosely
+      --verbose-dependencies   Builds the dependencies verbosely (default true)
 ```
 
 

@@ -41,7 +41,7 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 
 		// check if cached
 		imageConfigCache := generated.GetImageCache(configImageName)
-		if imageConfigCache.ImageName != "" {
+		if imageConfigCache.ImageName != "" && c.Images[configImageName] != nil {
 			return []ImageSelector{
 				{
 					ConfigImageName: configImageName,

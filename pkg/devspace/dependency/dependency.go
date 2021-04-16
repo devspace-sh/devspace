@@ -201,18 +201,7 @@ func (m *manager) DeployAll(options DeployOptions) ([]types.Dependency, error) {
 	}
 
 	dependencies, err := m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
-		err := m.hookExecuter.Execute(hook.Before, hook.StageDependencies, dependency.Name(), hook.Context{Client: m.client}, m.log)
-		if err != nil {
-			return err
-		}
-
 		err = dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
-		if err != nil {
-			m.hookExecuter.OnError(hook.StageDependencies, []string{dependency.Name()}, hook.Context{Client: m.client, Error: err}, m.log)
-			return err
-		}
-
-		err = m.hookExecuter.Execute(hook.After, hook.StageDependencies, dependency.Name(), hook.Context{Client: m.client}, m.log)
 		if err != nil {
 			return err
 		}
@@ -298,7 +287,7 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 	}
 
 	executedDependencies := []types.Dependency{}
-	if silent == false {
+	if silent == false && verbose == false {
 		m.log.StartWait(fmt.Sprintf("%s %d dependencies", actionName, numDependencies))
 	}
 	for i >= 0 && i < len(dependencies) {

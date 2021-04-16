@@ -13,7 +13,7 @@ images:
     image: john/backend
 commands:
 - name: debug-backend
-  command: "devspace dev -i --profile=debug-backend"
+  command: "devspace dev --profile=debug-backend"
 profiles:
 - name: debug-backend
   patches:
@@ -35,9 +35,9 @@ devspace run debug-backend -- --verbose-dependencies -s
 
 And `devspace run` would execute the following commands internally:
 ```bash
-devspace dev -i --profile=debug-backend
-devspace dev -i --profile=debug-backend --verbose-dependencies
-devspace dev -i --profile=debug-backend --verbose-dependencies -s
+devspace dev --profile=debug-backend
+devspace dev --profile=debug-backend --verbose-dependencies
+devspace dev --profile=debug-backend --verbose-dependencies -s
 ```
 
 :::note `--` End of Options Separator
@@ -79,12 +79,11 @@ devspace list commands
 ```
 
 
-### `devspace --dependency [x] run ...`
+### `devspace run dependency1.command`
 You can run a command defined in one of the dependencies of the current project like this:
 ```bash
-devspace --dependency [name] run [command] [command-flags-and-args]
+devspace run [dependency].[command] [command-flags-and-args]
 ```
-**Note that the `--dependency` flag must be placed <u>before</u> the `run` command.**
 
 :::note Working Directory
 When running a command of a dependency, DevSpace will use the root folder of the dependency as current working directory when executing the command.

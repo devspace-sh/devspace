@@ -1,25 +1,33 @@
 ---
 title: Fixed Variables
-sidebar_label: "source: none"
+sidebar_label: "value"
 ---
 
 import FragmentVarsName from '../../fragments/vars-name.mdx';
-import FragmentVarsDefault from '../../fragments/vars-default.mdx';
 
-If the `source` is `none`, DevSpace will use the `default` value as value for this config variable.
-```yaml {3,5-7}
+You can specify fixed variables with the `value` field. This cannot be used together with `default` in a single variable definition.
+```yaml {3,5-8}
 images:
   database:
     image: "mysql:${MYSQL_VERSION}"
 vars:
 - name: MYSQL_VERSION
-  source: none
-  default: "5.5"
+  value: "5.5"
 - name: NAMESPACE
+  value: ${DEVSPACE_NAMESPACE}-suffix
+# If you set 'default: my-value' and 'source: none' will be 
+# internally converted to 'value: my-value'.
+# Both variable definitions below are handled exactly the same
+- name: SOURCE_NONE
+  default: my-value
   source: none
-  default: ${DEVSPACE_NAMESPACE}
+- name: SOURCE_NONE
+  value: my-value
 ```
 
+:::note OVERWRITING
+If you want to overwrite a fixed variable, you can use the `--var FIXED=new-value` flag
+::: 
 
 ## Configuration
 
@@ -27,11 +35,9 @@ vars:
 
 <FragmentVarsName/>
 
+### `value`
 
-### `default`
+The `value` option expects a string, integer or boolean defining the value for the variable. You can also use other variables in a value, with one of the following conditions being true:
 
-<FragmentVarsDefault/>
-
-:::info
-If using `source: none`, the default value is the fixed value for this variable. It will only be changed using a [config patch](../../configuration/profiles/patches.mdx).
-:::
+- The used variable is defined before the variable that wants to use it
+- The used variable is a predefined variable

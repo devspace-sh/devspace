@@ -26,8 +26,7 @@ in the devspace.yaml
 ## Flags
 
 ```
-      --allow-cyclic   When enabled allows cyclic dependencies
-  -h, --help           help for dependencies
+  -h, --help   help for dependencies
 ```
 
 

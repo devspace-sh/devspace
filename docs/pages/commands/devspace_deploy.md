@@ -29,7 +29,6 @@ devspace deploy --kube-context=deploy-context
 ## Flags
 
 ```
-      --allow-cyclic                When enabled allows cyclic dependencies
       --build-sequential            Builds the images one after another instead of in parallel
       --dependency strings          Deploys only the specific named dependencies
       --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
@@ -43,7 +42,7 @@ devspace deploy --kube-context=deploy-context
       --skip-push                   Skips image pushing, useful for minikube deployment
       --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
       --timeout int                 Timeout until deploy should stop waiting (default 120)
-      --verbose-dependencies        Deploys the dependencies verbosely
+      --verbose-dependencies        Deploys the dependencies verbosely (default true)
       --wait                        If true will wait for pods to be running or fails after given timeout
 ```
 

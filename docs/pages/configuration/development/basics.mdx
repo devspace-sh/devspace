@@ -32,7 +32,7 @@ devspace dev
 
 ### Important Flags for `devspace dev`
 The following flags are available for all commands that trigger image building:
-- `-i / --interactive` starts the [interactive mode](../../configuration/development/interactive-mode.mdx)
+- `-t / --terminal` starts a terminal to a container
 - `-d / --force-deploy` redeploy all deployments (even if they could be skipped because they have not changed)
 - `-b / --force-build` rebuild all images (even if they could be skipped because context and Dockerfile have not changed)
 
@@ -96,14 +96,14 @@ The first option starts your application as defined in your Dockerfile or in you
 Learn how to [customize which containers should be included in the log stream and how many log lines should be shown in the beginning](../../configuration/development/log-streaming.mdx).
 :::
 
-:::note Interactive Terminal Session
-To start interactive mode, run:
+:::note Terminal Session
+To start a terminal mode, run:
 ```bash
-devspace dev -i
+devspace dev -t
 ```
-Instead of starting the multi-container log streaming, you can also start development mode using an interactive terminal session. This interactive mode builds your images (by default) using an `ENTRYPOINT = [sleep, 999999]` override for the image you want to work on and starts an interactive terminal session for the container that is being started with this image. This means that your container starts but without starting your application which allows you to run a command through the terminal session to manually start the application. This is often useful for debugging container start issues or for quickly testing different commands that could be used as an `ENTRYPOINT`.
+Instead of starting the multi-container log streaming, you can also start development mode using a terminal session.
 
-Interactive mode works out of the box but is also [customizable using the `dev.interactive` configuration section](../../configuration/development/interactive-mode.mdx).
+Terminal is configurable by [using the `dev.terminal` configuration section](../../configuration/development/interactive-mode.mdx).
 :::
 
 ### 8. Open Links (optional)
@@ -117,17 +117,17 @@ Learn more about [configuring auto-opening links](../../configuration/developmen
 
 ## Useful Commands
 
-### `devspace dev -i`
-To start development in interactive mode, run:
+### `devspace dev -t`
+To start development in terminal mode, run:
 ```bash
-devspace dev -i
+devspace dev -t
 ```
 
-Learn more about [using interactive mode](../../guides/interactive-mode.mdx).
+Learn more about [using terminal](../../guides/interactive-mode.mdx).
 
 
 ### `devspace enter`
-The command `devspace dev -i` starts a terminal but it also starts port-forwarding and file synchronization which can only be opened once. However, you often need additional terminal sessions. To open a simple terminal session without starting port-forwarding and file sync, run the following command:
+The command `devspace dev -t` starts a terminal but it also starts port-forwarding and file synchronization which can only be opened once. However, you often need additional terminal sessions. To open a simple terminal session without starting port-forwarding and file sync, run the following command:
 ```bash
 devspace enter
 ```

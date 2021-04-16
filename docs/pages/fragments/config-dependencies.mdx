@@ -13,6 +13,9 @@ dependencies:                       # struct[]  | Array of dependencies (other p
   skipBuild: false                  # bool      | Do not build images of this dependency (= only start deployments)
   ignoreDependencies: false         # bool      | Do not build and deploy dependencies of this dependency
   namespace: ""                     # string    | Kubernetes namespace to deploy dependency to (Default: default namespace of current kube-context)
+  dev:                              # struct    | Define which dev config should be reused from a dependency
+    ports: false                    # bool      | Reuse dev.ports config from the dependency
+    sync: false                     # bool      | Reuse dev.sync config from the dependency
   vars:                             # struct[]  | Variables in the dependency config that should be overriden with the specified values 
   - name: NAME
     value: value
