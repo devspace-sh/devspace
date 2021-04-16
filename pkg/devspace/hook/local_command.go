@@ -2,12 +2,12 @@ package hook
 
 import (
 	"encoding/json"
-	command2 "github.com/loft-sh/devspace/pkg/devspace/command"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/shell"
 	"io"
 	"os"
 )
@@ -43,7 +43,7 @@ func (l *localCommandHook) Execute(ctx Context, hook *latest.HookConfig, config 
 
 	// if args are nil we execute the command in a shell
 	if hook.Args == nil {
-		return command2.ExecuteShellCommand(hook.Command, l.Stdout, l.Stderr, extraEnv)
+		return shell.ExecuteShellCommand(hook.Command, l.Stdout, l.Stderr, extraEnv)
 	}
 
 	// else we execute it directly

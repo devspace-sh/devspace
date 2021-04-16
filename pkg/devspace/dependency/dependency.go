@@ -115,7 +115,7 @@ func (m *manager) ResolveAll(options ResolveOptions) ([]types.Dependency, error)
 
 // CommandOptions has all options for executing a command from a dependency
 type CommandOptions struct {
-	Dependencies       []string
+	Dependency         string
 	Command            string
 	Args               []string
 	UpdateDependencies bool
@@ -124,7 +124,8 @@ type CommandOptions struct {
 
 // Command will execute a dependency command
 func (m *manager) Command(options CommandOptions) error {
-	_, err := m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, true, options.Verbose, "Command", func(dependency *Dependency, log log.Logger) error {
+	found := false
+	_, err := m.handleDependencies([]string{options.Dependency}, false, options.UpdateDependencies, true, options.Verbose, "Command", func(dependency *Dependency, log log.Logger) error {
 		// Switch current working directory
 		currentWorkingDirectory, err := dependency.prepare(true)
 		if err != nil {
@@ -136,8 +137,13 @@ func (m *manager) Command(options CommandOptions) error {
 		// Change back to original working directory
 		defer os.Chdir(currentWorkingDirectory)
 
+		found = true
 		return ExecuteCommand(dependency.localConfig.Config().Commands, options.Command, options.Args)
 	})
+	if !found {
+		return fmt.Errorf("couldn't find dependency %s", options.Dependency)
+	}
+
 	return err
 }
 
