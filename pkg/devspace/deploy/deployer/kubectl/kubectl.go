@@ -1,7 +1,9 @@
 package kubectl
 
 import (
+	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/downloader"
 	"github.com/mitchellh/go-homedir"
 	"io"
@@ -14,7 +16,6 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -42,13 +43,16 @@ type DeployConfig struct {
 	DeploymentConfig *latest.DeploymentConfig
 	Log              log.Logger
 
-	config *latest.Config
+	config       config2.Config
+	dependencies []types.Dependency
 
 	commandExecuter commandExecuter
 }
 
 // New creates a new deploy config for kubectl
-func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (deployer.Interface, error) {
+func New(config config2.Config, dependencies []types.Dependency, kubeClient kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (deployer.Interface, error) {
+	config = config2.Ensure(config)
+
 	if deployConfig.Kubectl == nil {
 		return nil, errors.New("error creating kubectl deploy config: kubectl is nil")
 	} else if deployConfig.Kubectl.Manifests == nil {
@@ -103,6 +107,7 @@ func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.
 
 			DeploymentConfig: deployConfig,
 			config:           config,
+			dependencies:     dependencies,
 			Log:              log,
 
 			commandExecuter: executer,
@@ -125,6 +130,7 @@ func New(config *latest.Config, kubeClient kubectl.Client, deployConfig *latest.
 
 		DeploymentConfig: deployConfig,
 		config:           config,
+		dependencies:     dependencies,
 		Log:              log,
 
 		commandExecuter: executer,
@@ -145,9 +151,9 @@ func installKubectl(downloadedFile, installPath, installFromURL string) error {
 }
 
 // Render writes the generated manifests to the out stream
-func (d *DeployConfig) Render(cache *generated.CacheConfig, builtImages map[string]string, out io.Writer) error {
+func (d *DeployConfig) Render(builtImages map[string]string, out io.Writer) error {
 	for _, manifest := range d.Manifests {
-		_, replacedManifest, err := d.getReplacedManifest(manifest, cache, builtImages)
+		_, replacedManifest, err := d.getReplacedManifest(manifest, builtImages)
 		if err != nil {
 			return errors.Errorf("%v\nPlease make sure `kubectl apply` does work locally with manifest `%s`", err, manifest)
 		}
@@ -176,13 +182,13 @@ func (d *DeployConfig) Status() (*deployer.StatusResult, error) {
 }
 
 // Delete deletes all matched manifests from kubernetes
-func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
+func (d *DeployConfig) Delete() error {
 	d.Log.StartWait("Deleting manifests with kubectl")
 	defer d.Log.StopWait()
 
 	for i := len(d.Manifests) - 1; i >= 0; i-- {
 		manifest := d.Manifests[i]
-		_, replacedManifest, err := d.getReplacedManifest(manifest, cache, nil)
+		_, replacedManifest, err := d.getReplacedManifest(manifest, nil)
 		if err != nil {
 			return err
 		}
@@ -198,13 +204,13 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 		}
 	}
 
-	delete(cache.Deployments, d.DeploymentConfig.Name)
+	delete(d.config.Generated().GetActive().Deployments, d.DeploymentConfig.Name)
 	return nil
 }
 
 // Deploy deploys all specified manifests via kubectl apply and adds to the specified image names the corresponding tags
-func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error) {
-	deployCache := cache.GetDeploymentCache(d.DeploymentConfig.Name)
+func (d *DeployConfig) Deploy(forceDeploy bool, builtImages map[string]string) (bool, error) {
+	deployCache := d.config.Generated().GetActive().GetDeploymentCache(d.DeploymentConfig.Name)
 
 	// Hash the manifests
 	manifestsHash := ""
@@ -242,7 +248,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	wasDeployed := false
 
 	for _, manifest := range d.Manifests {
-		shouldRedeploy, replacedManifest, err := d.getReplacedManifest(manifest, cache, builtImages)
+		shouldRedeploy, replacedManifest, err := d.getReplacedManifest(manifest, builtImages)
 		if err != nil {
 			return false, errors.Errorf("%v\nPlease make sure `kubectl apply` does work locally with manifest `%s`", err, manifest)
 		}
@@ -270,7 +276,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	return wasDeployed, nil
 }
 
-func (d *DeployConfig) getReplacedManifest(manifest string, cache *generated.CacheConfig, builtImages map[string]string) (bool, string, error) {
+func (d *DeployConfig) getReplacedManifest(manifest string, builtImages map[string]string) (bool, string, error) {
 	objects, err := d.buildManifests(manifest)
 	if err != nil {
 		return false, "", err
@@ -287,9 +293,12 @@ func (d *DeployConfig) getReplacedManifest(manifest string, cache *generated.Cac
 			continue
 		}
 
-		if len(cache.Images) > 0 {
-			if d.DeploymentConfig.Kubectl.ReplaceImageTags == nil || *d.DeploymentConfig.Kubectl.ReplaceImageTags == true {
-				shouldRedeploy = util.ReplaceImageNamesStringMap(resource.Object, cache, d.config.Images, builtImages, map[string]bool{"image": true}) || shouldRedeploy
+		if d.DeploymentConfig.Kubectl.ReplaceImageTags == nil || *d.DeploymentConfig.Kubectl.ReplaceImageTags == true {
+			redeploy, err := util.ReplaceImageNamesStringMap(resource.Object, d.config, d.dependencies, builtImages, map[string]bool{"image": true})
+			if err != nil {
+				return false, "", err
+			} else if redeploy {
+				shouldRedeploy = true
 			}
 		}
 

@@ -3,9 +3,10 @@ package helm
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/assets"
+	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
 	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"
@@ -39,11 +40,14 @@ type DeployConfig struct {
 	DeploymentConfig *latest.DeploymentConfig
 	Log              log.Logger
 
-	config *latest.Config
+	config       config2.Config
+	dependencies []types.Dependency
 }
 
 // New creates a new helm deployment client
-func New(config *latest.Config, helmClient helmtypes.Client, kubeClient kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (deployer.Interface, error) {
+func New(config config2.Config, dependencies []types.Dependency, helmClient helmtypes.Client, kubeClient kubectl.Client, deployConfig *latest.DeploymentConfig, log log.Logger) (deployer.Interface, error) {
+	config = config2.Ensure(config)
+
 	tillerNamespace := ""
 	if kubeClient != nil {
 		tillerNamespace = kubeClient.Namespace()
@@ -90,11 +94,12 @@ func New(config *latest.Config, helmClient helmtypes.Client, kubeClient kubectl.
 		DeploymentConfig: deployConfig,
 		Log:              log,
 		config:           config,
+		dependencies:     dependencies,
 	}, nil
 }
 
 // Delete deletes the release
-func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
+func (d *DeployConfig) Delete() error {
 	// Delete with helm engine
 	if d.DeploymentConfig.Helm.V2 == true {
 		isDeployed := helmv2.IsTillerDeployed(d.Kube, d.TillerNamespace)
@@ -107,7 +112,7 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 		var err error
 
 		// Get HelmClient
-		d.Helm, err = helm.NewClient(d.config, d.DeploymentConfig, d.Kube, d.TillerNamespace, false, false, d.Log)
+		d.Helm, err = helm.NewClient(d.config.Config(), d.DeploymentConfig, d.Kube, d.TillerNamespace, false, false, d.Log)
 		if err != nil {
 			return errors.Wrap(err, "new helm client")
 		}
@@ -119,6 +124,6 @@ func (d *DeployConfig) Delete(cache *generated.CacheConfig) error {
 	}
 
 	// Delete from cache
-	delete(cache.Deployments, d.DeploymentConfig.Helm.Chart.Name)
+	delete(d.config.Generated().GetActive().Deployments, d.DeploymentConfig.Helm.Chart.Name)
 	return nil
 }

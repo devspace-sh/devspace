@@ -1,6 +1,7 @@
 package helm
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"testing"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
@@ -75,6 +76,14 @@ func TestDeploy(t *testing.T) {
 			Client: kube,
 		}
 
+		if testCase.cache == nil {
+			testCase.cache = &generated.CacheConfig{
+				Deployments: map[string]*generated.DeploymentCache{},
+			}
+		}
+
+		cache := generated.New()
+		cache.Profiles[""] = testCase.cache
 		deployer := &DeployConfig{
 			Kube: kubeClient,
 			Helm: &fakehelm.Client{
@@ -90,21 +99,15 @@ func TestDeploy(t *testing.T) {
 					Values:      testCase.values,
 				},
 			},
-			config: &latest.Config{},
+			config: config.NewConfig(nil, latest.NewRaw(), cache, nil),
 			Log:    &log.FakeLogger{},
-		}
-
-		if testCase.cache == nil {
-			testCase.cache = &generated.CacheConfig{
-				Deployments: map[string]*generated.DeploymentCache{},
-			}
 		}
 
 		if testCase.expectedCache == nil {
 			testCase.expectedCache = testCase.cache
 		}
 
-		deployed, err := deployer.Deploy(testCase.cache, testCase.forceDeploy, testCase.builtImages)
+		deployed, err := deployer.Deploy(testCase.forceDeploy, testCase.builtImages)
 		assert.Equal(t, deployed, testCase.expectedDeployed, "Unexpected deployed-bool in testCase %s", testCase.name)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)

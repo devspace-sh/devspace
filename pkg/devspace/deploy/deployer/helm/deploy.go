@@ -9,7 +9,6 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm/merge"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
@@ -20,7 +19,7 @@ import (
 )
 
 // Deploy deploys the given deployment with helm
-func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string) (bool, error) {
+func (d *DeployConfig) Deploy(forceDeploy bool, builtImages map[string]string) (bool, error) {
 	var (
 		releaseName = d.DeploymentConfig.Name
 		chartPath   = d.DeploymentConfig.Helm.Chart.Name
@@ -38,7 +37,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	}
 
 	// Ensure deployment config is there
-	deployCache := cache.GetDeploymentCache(d.DeploymentConfig.Name)
+	deployCache := d.config.Generated().GetActive().GetDeploymentCache(d.DeploymentConfig.Name)
 
 	// Check values files for changes
 	helmOverridesHash := ""
@@ -63,7 +62,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 
 	// Get HelmClient if necessary
 	if d.Helm == nil {
-		d.Helm, err = helm.NewClient(d.config, d.DeploymentConfig, d.Kube, d.TillerNamespace, false, false, d.Log)
+		d.Helm, err = helm.NewClient(d.config.Config(), d.DeploymentConfig, d.Kube, d.TillerNamespace, false, false, d.Log)
 		if err != nil {
 			return false, errors.Errorf("Error creating helm client: %v", err)
 		}
@@ -87,7 +86,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	}
 
 	// Deploy
-	wasDeployed, release, err := d.internalDeploy(cache, forceDeploy, builtImages, nil)
+	wasDeployed, release, err := d.internalDeploy(forceDeploy, builtImages, nil)
 	if err != nil {
 		return false, err
 	}
@@ -107,7 +106,7 @@ func (d *DeployConfig) Deploy(cache *generated.CacheConfig, forceDeploy bool, bu
 	return true, nil
 }
 
-func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy bool, builtImages map[string]string, out io.Writer) (bool, *types.Release, error) {
+func (d *DeployConfig) internalDeploy(forceDeploy bool, builtImages map[string]string, out io.Writer) (bool, *types.Release, error) {
 	var (
 		releaseName     = d.DeploymentConfig.Name
 		chartPath       = d.DeploymentConfig.Helm.Chart.Name
@@ -153,7 +152,11 @@ func (d *DeployConfig) internalDeploy(cache *generated.CacheConfig, forceDeploy 
 	// Add devspace specific values
 	if d.DeploymentConfig.Helm.ReplaceImageTags == nil || *d.DeploymentConfig.Helm.ReplaceImageTags == true {
 		// Replace image names
-		shouldRedeploy := util.ReplaceImageNames(overwriteValues, cache, d.config.Images, builtImages, nil)
+		shouldRedeploy, err := util.ReplaceImageNames(overwriteValues, d.config, d.dependencies, builtImages, nil)
+		if err != nil {
+			return false, nil, err
+		}
+
 		if forceDeploy == false && shouldRedeploy {
 			forceDeploy = true
 		}

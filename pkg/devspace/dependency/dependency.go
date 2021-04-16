@@ -201,7 +201,23 @@ func (m *manager) DeployAll(options DeployOptions) ([]types.Dependency, error) {
 	}
 
 	dependencies, err := m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
-		return dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
+		err := m.hookExecuter.Execute(hook.Before, hook.StageDependencies, dependency.Name(), hook.Context{Client: m.client}, m.log)
+		if err != nil {
+			return err
+		}
+
+		err = dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
+		if err != nil {
+			m.hookExecuter.OnError(hook.StageDependencies, []string{dependency.Name()}, hook.Context{Client: m.client, Error: err}, m.log)
+			return err
+		}
+
+		err = m.hookExecuter.Execute(hook.After, hook.StageDependencies, dependency.Name(), hook.Context{Client: m.client}, m.log)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
 	if err != nil {
 		m.hookExecuter.OnError(hook.StageDependencies, []string{hook.All}, hook.Context{Client: m.client, Error: err}, m.log)
@@ -345,6 +361,8 @@ type Dependency struct {
 	localPath   string
 	localConfig config.Config
 
+	builtImages map[string]string
+
 	children []types.Dependency
 	root     bool
 
@@ -374,6 +392,8 @@ func (d *Dependency) DependencyConfig() *latest.DependencyConfig { return d.depe
 func (d *Dependency) Children() []types.Dependency { return d.children }
 
 func (d *Dependency) Root() bool { return d.root }
+
+func (d *Dependency) BuiltImages() map[string]string { return d.builtImages }
 
 // Build builds and pushes all defined images
 func (d *Dependency) Build(forceDependencies bool, buildOptions *build.Options, log log.Logger) error {
@@ -515,6 +535,8 @@ func (d *Dependency) buildImages(skipBuild bool, buildOptions *build.Options, lo
 				return nil, errors.Errorf("Error saving generated config: %v", err)
 			}
 		}
+
+		d.builtImages = builtImages
 	}
 
 	return builtImages, nil

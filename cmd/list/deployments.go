@@ -2,6 +2,7 @@ package list
 
 import (
 	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	deployHelm "github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
@@ -42,6 +43,7 @@ Shows the status of all deployments
 func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	logger := f.GetLog()
+	configOptions := cmd.ToConfigOptions()
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
 	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
@@ -60,10 +62,11 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 	}
 
 	// Load generated
-	generatedConfig, err := configLoader.LoadGenerated(cmd.ToConfigOptions())
+	generatedConfig, err := configLoader.LoadGenerated(configOptions)
 	if err != nil {
 		return err
 	}
+	configOptions.GeneratedConfig = generatedConfig
 
 	// Use last context if specified
 	err = cmd.UseLastContext(generatedConfig, logger)
@@ -76,6 +79,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 	if err != nil {
 		return err
 	}
+	configOptions.KubeClient = client
 
 	// Show warning if the old kube context was different
 	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, logger)
@@ -84,10 +88,15 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 	}
 
 	// Get config with adjusted cluster config
-	configInterface, err := configLoader.Load(cmd.ToConfigOptions(), logger)
+	configInterface, err := configLoader.Load(configOptions, logger)
 	if err != nil {
 		return err
 	}
+
+	// Resolve dependencies
+	dependencies, err := f.NewDependencyManager(configInterface, client, configOptions, logger).ResolveAll(dependency.ResolveOptions{
+		Silent: true,
+	})
 
 	config := configInterface.Config()
 	if config.Deployments != nil {
@@ -98,7 +107,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 
 			// Delete kubectl engine
 			if deployConfig.Kubectl != nil {
-				deployClient, err = deployKubectl.New(config, client, deployConfig, logger)
+				deployClient, err = deployKubectl.New(configInterface, dependencies, client, deployConfig, logger)
 				if err != nil {
 					logger.Warnf("Unable to create kubectl deploy config for %s: %v", deployConfig.Name, err)
 					continue
@@ -110,7 +119,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 					continue
 				}
 
-				deployClient, err = deployHelm.New(config, helmClient, client, deployConfig, logger)
+				deployClient, err = deployHelm.New(configInterface, dependencies, helmClient, client, deployConfig, logger)
 				if err != nil {
 					logger.Warnf("Unable to create helm deploy config for %s: %v", deployConfig.Name, err)
 					continue

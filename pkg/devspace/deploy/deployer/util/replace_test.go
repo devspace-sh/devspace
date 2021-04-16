@@ -1,6 +1,7 @@
 package util
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"testing"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
@@ -76,7 +77,10 @@ func TestReplaceContainerNames(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		shouldRedeploy := ReplaceImageNames(testCase.overwriteValues, testCase.cache, testCase.imagesConf, testCase.builtImages, nil)
+		cache := generated.New()
+		cache.Profiles[""] = testCase.cache
+		shouldRedeploy, err := ReplaceImageNames(testCase.overwriteValues, config.NewConfig(nil, &latest.Config{Images: testCase.imagesConf}, cache, nil), nil, testCase.builtImages, nil)
+		assert.NilError(t, err, "Error replacing image names in testCase %s", testCase.name)
 
 		assert.Equal(t, shouldRedeploy, testCase.expectedShouldRedeploy, "Unexpected deployed-bool in testCase %s", testCase.name)
 

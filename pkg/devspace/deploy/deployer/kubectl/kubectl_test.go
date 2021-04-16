@@ -1,6 +1,7 @@
 package kubectl
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -96,7 +97,7 @@ func TestNew(t *testing.T) {
 			testCase.deployConfig = &latest.DeploymentConfig{}
 		}
 
-		deployer, err := New(testCase.config, testCase.kubeClient, testCase.deployConfig, nil)
+		deployer, err := New(config.NewConfig(nil, testCase.config, nil, nil), nil, testCase.kubeClient, testCase.deployConfig, nil)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {
@@ -173,7 +174,11 @@ func TestRender(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
+		cache := generated.New()
+		cache.Profiles[""] = testCase.cache
+
 		deployer := &DeployConfig{
+			config:    config.NewConfig(nil, nil, cache, nil),
 			Manifests: testCase.manifests,
 			DeploymentConfig: &latest.DeploymentConfig{
 				Kubectl: &latest.KubectlConfig{
@@ -191,7 +196,7 @@ func TestRender(t *testing.T) {
 		go func() {
 			defer writer.Close()
 
-			err := deployer.Render(testCase.cache, testCase.builtImages, writer)
+			err := deployer.Render(testCase.builtImages, writer)
 
 			if testCase.expectedErr == "" {
 				assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -283,7 +288,10 @@ func TestDelete(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
+		cache := generated.New()
+		cache.Profiles[""] = testCase.cache
 		deployer := &DeployConfig{
+			config:    config.NewConfig(nil, nil, cache, nil),
 			CmdPath:   testCase.cmdPath,
 			Manifests: testCase.manifests,
 			DeploymentConfig: &latest.DeploymentConfig{
@@ -308,8 +316,7 @@ func TestDelete(t *testing.T) {
 			}
 		}
 
-		err := deployer.Delete(testCase.cache)
-
+		err := deployer.Delete()
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {
@@ -363,7 +370,10 @@ func TestDeploy(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
+		cache := generated.New()
+		cache.Profiles[""] = testCase.cache
 		deployer := &DeployConfig{
+			config:    config.NewConfig(nil, latest.NewRaw(), cache, nil),
 			CmdPath:   testCase.cmdPath,
 			Context:   testCase.context,
 			Namespace: testCase.namespace,
@@ -390,7 +400,7 @@ func TestDeploy(t *testing.T) {
 			}
 		}
 
-		deployed, err := deployer.Deploy(testCase.cache, testCase.forceDeploy, testCase.builtImages)
+		deployed, err := deployer.Deploy(testCase.forceDeploy, testCase.builtImages)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -452,6 +462,8 @@ func TestGetReplacedManifest(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
+		cache := generated.New()
+		cache.Profiles[""] = testCase.cache
 		deployer := &DeployConfig{
 			DeploymentConfig: &latest.DeploymentConfig{
 				Kubectl: &latest.KubectlConfig{
@@ -461,12 +473,12 @@ func TestGetReplacedManifest(t *testing.T) {
 			commandExecuter: &fakeExecuter{
 				output: testCase.cmdOutput,
 			},
-			config: &latest.Config{
+			config: config.NewConfig(nil, &latest.Config{
 				Images: testCase.imageConfigs,
-			},
+			}, cache, nil),
 		}
 
-		shouldRedeploy, replacedManifest, err := deployer.getReplacedManifest(testCase.manifest, testCase.cache, testCase.builtImages)
+		shouldRedeploy, replacedManifest, err := deployer.getReplacedManifest(testCase.manifest, testCase.builtImages)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)

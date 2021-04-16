@@ -146,9 +146,11 @@ func TestDeploy(t *testing.T) {
 		config := &latest.Config{
 			Deployments: testCase.deployments,
 		}
+
+		cache := generated.New()
+		cache.Profiles[""] = testCase.cache
 		controller := &controller{
-			config:       config,
-			cache:        testCase.cache,
+			config:       config2.NewConfig(nil, config, cache, nil),
 			hookExecuter: &fakehook.FakeHook{},
 			client:       kubeClient,
 		}
@@ -158,7 +160,6 @@ func TestDeploy(t *testing.T) {
 		}
 
 		err := controller.Deploy(testCase.options, log.Discard)
-
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {
@@ -224,9 +225,11 @@ func TestPurge(t *testing.T) {
 		config := &latest.Config{
 			Deployments: testCase.configDeployments,
 		}
+
+		cache := generated.New()
+		cache.Profiles[""] = testCase.cache
 		controller := &controller{
-			config:       config,
-			cache:        testCase.cache,
+			config:       config2.NewConfig(nil, config, cache, nil),
 			hookExecuter: &fakehook.FakeHook{},
 			client:       kubeClient,
 		}

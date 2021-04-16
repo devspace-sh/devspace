@@ -32,6 +32,16 @@ type configLoader struct {
 	profile string
 }
 
+// New generates a new generated config
+func New() *Config {
+	return &Config{
+		OverrideProfile: nil,
+		ActiveProfile:   "",
+		Profiles:        make(map[string]*CacheConfig),
+		Vars:            make(map[string]string),
+	}
+}
+
 // NewConfigLoader creates a new generated config loader
 func NewConfigLoader(profile string) ConfigLoader {
 	return &configLoader{
@@ -50,12 +60,7 @@ func (l *configLoader) LoadFromPath(path string) (*Config, error) {
 
 	data, readErr := ioutil.ReadFile(path)
 	if readErr != nil {
-		loadedConfig = &Config{
-			OverrideProfile: nil,
-			ActiveProfile:   "",
-			Profiles:        make(map[string]*CacheConfig),
-			Vars:            make(map[string]string),
-		}
+		loadedConfig = New()
 	} else {
 		loadedConfig = &Config{}
 		err := yaml.Unmarshal(data, loadedConfig)
