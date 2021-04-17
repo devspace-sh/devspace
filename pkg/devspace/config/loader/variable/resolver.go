@@ -132,6 +132,14 @@ func (r *resolver) findVariablesInDefinition(definition *latest.Variable) map[st
 		return varsUsed
 	}
 
+	// check value
+	if strDefault, ok := definition.Value.(string); ok {
+		_, _ = varspkg.ParseString(strDefault, func(v string) (interface{}, error) {
+			varsUsed[v] = true
+			return "", nil
+		})
+	}
+
 	// check default value
 	if strDefault, ok := definition.Default.(string); ok {
 		_, _ = varspkg.ParseString(strDefault, func(v string) (interface{}, error) {
