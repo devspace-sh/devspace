@@ -5,8 +5,8 @@ hooks:                              # struct[]  | Array of hooks to be executed.
                                     #           | - hooks[*].download which will download files or folder from a container
                                     #           | - hooks[*].wait which will wait for a container to become running or terminate
                                     #           | - hooks[*].logs which will print the logs for a certain container
-- command: "./scripts/my-hook"      # string    | Command to be executed when this hook is triggered
-  args: []                          # string[]  | Array of arguments for the command of this hook
+- command: "./scripts/my-hook"      # string    | Command to be executed when this hook is triggered (if no args a specified, will be executed in a golang shell)
+  args: []                          # string[]  | (Optional) Array of arguments for the command of this hook
   upload:                           # struct    | If defined will upload files or folders into the container.
     localPath: ./test               # string    | The local path of the file or folder
     containerPath: /app             # string    | The remote path where to upload the file or folder into

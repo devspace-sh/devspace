@@ -115,7 +115,7 @@ func (m *manager) ResolveAll(options ResolveOptions) ([]types.Dependency, error)
 
 // CommandOptions has all options for executing a command from a dependency
 type CommandOptions struct {
-	Dependencies       []string
+	Dependency         string
 	Command            string
 	Args               []string
 	UpdateDependencies bool
@@ -124,7 +124,8 @@ type CommandOptions struct {
 
 // Command will execute a dependency command
 func (m *manager) Command(options CommandOptions) error {
-	_, err := m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, true, options.Verbose, "Command", func(dependency *Dependency, log log.Logger) error {
+	found := false
+	_, err := m.handleDependencies([]string{options.Dependency}, false, options.UpdateDependencies, true, options.Verbose, "Command", func(dependency *Dependency, log log.Logger) error {
 		// Switch current working directory
 		currentWorkingDirectory, err := dependency.prepare(true)
 		if err != nil {
@@ -136,8 +137,13 @@ func (m *manager) Command(options CommandOptions) error {
 		// Change back to original working directory
 		defer os.Chdir(currentWorkingDirectory)
 
+		found = true
 		return ExecuteCommand(dependency.localConfig.Config().Commands, options.Command, options.Args)
 	})
+	if !found {
+		return fmt.Errorf("couldn't find dependency %s", options.Dependency)
+	}
+
 	return err
 }
 
@@ -145,17 +151,9 @@ func (m *manager) Command(options CommandOptions) error {
 func ExecuteCommand(commands []*latest.CommandConfig, cmd string, args []string) error {
 	err := command.ExecuteCommand(commands, cmd, args)
 	if err != nil {
-		shellExitError, ok := err.(interp.ShellExitStatus)
-		if ok {
+		if status, ok := interp.IsExitStatus(err); ok {
 			return &exit.ReturnCodeError{
-				ExitCode: int(shellExitError),
-			}
-		}
-
-		exitError, ok := err.(interp.ExitStatus)
-		if ok {
-			return &exit.ReturnCodeError{
-				ExitCode: int(exitError),
+				ExitCode: int(status),
 			}
 		}
 
@@ -203,7 +201,12 @@ func (m *manager) DeployAll(options DeployOptions) ([]types.Dependency, error) {
 	}
 
 	dependencies, err := m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
-		return dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
+		err = dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
 	if err != nil {
 		m.hookExecuter.OnError(hook.StageDependencies, []string{hook.All}, hook.Context{Client: m.client, Error: err}, m.log)
@@ -284,7 +287,7 @@ func (m *manager) handleDependencies(filterDependencies []string, reverse, updat
 	}
 
 	executedDependencies := []types.Dependency{}
-	if silent == false {
+	if silent == false && verbose == false {
 		m.log.StartWait(fmt.Sprintf("%s %d dependencies", actionName, numDependencies))
 	}
 	for i >= 0 && i < len(dependencies) {
@@ -347,6 +350,8 @@ type Dependency struct {
 	localPath   string
 	localConfig config.Config
 
+	builtImages map[string]string
+
 	children []types.Dependency
 	root     bool
 
@@ -376,6 +381,8 @@ func (d *Dependency) DependencyConfig() *latest.DependencyConfig { return d.depe
 func (d *Dependency) Children() []types.Dependency { return d.children }
 
 func (d *Dependency) Root() bool { return d.root }
+
+func (d *Dependency) BuiltImages() map[string]string { return d.builtImages }
 
 // Build builds and pushes all defined images
 func (d *Dependency) Build(forceDependencies bool, buildOptions *build.Options, log log.Logger) error {
@@ -517,6 +524,8 @@ func (d *Dependency) buildImages(skipBuild bool, buildOptions *build.Options, lo
 				return nil, errors.Errorf("Error saving generated config: %v", err)
 			}
 		}
+
+		d.builtImages = builtImages
 	}
 
 	return builtImages, nil

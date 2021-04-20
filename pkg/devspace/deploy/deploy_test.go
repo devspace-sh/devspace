@@ -48,7 +48,7 @@ func TestRender(t *testing.T) {
 			options: &Options{
 				Deployments: []string{"noMethod"},
 			},
-			expectedErr: "Error render: deployment noMethod has no deployment method",
+			expectedErr: "error render: deployment noMethod has no deployment method",
 		},
 		renderTestCase{
 			name: "Render with kubectl",
@@ -120,7 +120,7 @@ func TestDeploy(t *testing.T) {
 			options: &Options{
 				Deployments: []string{"noMethod"},
 			},
-			expectedErr: "Error deploying: deployment noMethod has no deployment method",
+			expectedErr: "error deploying: deployment noMethod has no deployment method",
 		},
 		deployTestCase{
 			name: "Deploy with kubectl",
@@ -146,9 +146,11 @@ func TestDeploy(t *testing.T) {
 		config := &latest.Config{
 			Deployments: testCase.deployments,
 		}
+
+		cache := generated.New()
+		cache.Profiles[""] = testCase.cache
 		controller := &controller{
-			config:       config,
-			cache:        testCase.cache,
+			config:       config2.NewConfig(nil, config, cache, nil),
 			hookExecuter: &fakehook.FakeHook{},
 			client:       kubeClient,
 		}
@@ -158,7 +160,6 @@ func TestDeploy(t *testing.T) {
 		}
 
 		err := controller.Deploy(testCase.options, log.Discard)
-
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {
@@ -196,7 +197,7 @@ func TestPurge(t *testing.T) {
 				},
 			},
 			deployments: []string{},
-			expectedErr: "Error purging: deployment noMethod has no deployment method",
+			expectedErr: "error purging: deployment noMethod has no deployment method",
 		},
 		purgeTestCase{
 			name: "Purge with kubectl",
@@ -224,9 +225,11 @@ func TestPurge(t *testing.T) {
 		config := &latest.Config{
 			Deployments: testCase.configDeployments,
 		}
+
+		cache := generated.New()
+		cache.Profiles[""] = testCase.cache
 		controller := &controller{
-			config:       config,
-			cache:        testCase.cache,
+			config:       config2.NewConfig(nil, config, cache, nil),
 			hookExecuter: &fakehook.FakeHook{},
 			client:       kubeClient,
 		}

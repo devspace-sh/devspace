@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/git"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
+	"github.com/mitchellh/go-homedir"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -44,6 +45,13 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 	},
 	"DEVSPACE_PROFILE": func(options *PredefinedVariableOptions) (interface{}, error) {
 		return options.Profile, nil
+	},
+	"DEVSPACE_USER_HOME": func(options *PredefinedVariableOptions) (interface{}, error) {
+		homeDir, err := homedir.Dir()
+		if err != nil {
+			return nil, err
+		}
+		return homeDir, nil
 	},
 	"DEVSPACE_TIMESTAMP": func(options *PredefinedVariableOptions) (interface{}, error) {
 		return strconv.FormatInt(time.Now().Unix(), 10), nil

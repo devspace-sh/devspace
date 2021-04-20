@@ -360,5 +360,5 @@ func validateDev(config *latest.Config) error {
 }
 
 func findImageName(config *latest.Config, imageName string) bool {
-	return (config.Images != nil && config.Images[imageName] != nil) || len(strings.Split(imageName, ".")) == 2
+	return (config.Images != nil && config.Images[imageName] != nil) || strings.Contains(imageName, ".")
 }

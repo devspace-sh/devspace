@@ -27,8 +27,14 @@ func TestCommand(t *testing.T) {
 	}
 
 	err = r.Run(context.Background(), file)
-	if err != nil && err != interp.ShellExitStatus(0) {
-		t.Fatal(err)
+	if err != nil {
+		if status, ok := interp.IsExitStatus(err); ok {
+			if status != 0 {
+				t.Fatal(err)
+			}
+		} else {
+			t.Fatal(err)
+		}
 	}
 
 	if stdout.String() != "1234'56" {

@@ -33,7 +33,6 @@ Open terminal instead of logs:
 ## Flags
 
 ```
-      --allow-cyclic                When enabled allows cyclic dependencies
       --build-sequential            Builds the images one after another instead of in parallel
       --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
       --exit-after-deploy           Exits the command after building the images and deploying the project
@@ -41,7 +40,7 @@ Open terminal instead of logs:
       --force-dependencies          Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies) (default true)
   -d, --force-deploy                Forces to deploy every deployment
   -h, --help                        help for dev
-  -i, --interactive                 Enable interactive mode for images (overrides entrypoint with sleep command) and start terminal proxy
+  -i, --interactive                 DEPRECATED: DO NOT USE ANYMORE
       --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
       --open                        Open defined URLs in the browser, if defined (default true)
       --portforwarding              Enable port forwarding (default true)
@@ -55,7 +54,7 @@ Open terminal instead of logs:
       --timeout int                 Timeout until dev should stop waiting and fail (default 120)
       --ui                          Start the ui server (default true)
       --ui-port int                 The port to use when opening the ui server
-      --verbose-dependencies        Deploys the dependencies verbosely
+      --verbose-dependencies        Deploys the dependencies verbosely (default true)
       --verbose-sync                When enabled the sync will log every file change
       --wait                        If true will wait first for pods to be running or fails after given timeout
       --workdir string              The working directory where to open the terminal or execute the command

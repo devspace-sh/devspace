@@ -13,8 +13,23 @@ import (
 type ImageSelector struct {
 	// ConfigImageName is the image config name (from images.*)
 	ConfigImageName string
-	// Image is the resolved docker image
+	// Image is the resolved docker image inclusive tag
 	Image string
+	// Dependency is the dependency this image selector was loaded from
+	Dependency types.Dependency
+}
+
+func ResolveSingle(configImageName string, config config.Config, dependencies []types.Dependency) (*ImageSelector, error) {
+	selectors, err := Resolve(configImageName, config, dependencies)
+	if err != nil {
+		return nil, err
+	} else if len(selectors) == 0 {
+		return nil, fmt.Errorf("imageName %s not found", configImageName)
+	} else if len(selectors) > 1 {
+		return nil, fmt.Errorf("unexpected amount of image selectors: %v", len(selectors))
+	}
+
+	return &selectors[0], nil
 }
 
 func Resolve(configImageName string, config config.Config, dependencies []types.Dependency) ([]ImageSelector, error) {
@@ -26,7 +41,7 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 
 		// check if cached
 		imageConfigCache := generated.GetImageCache(configImageName)
-		if imageConfigCache.ImageName != "" {
+		if imageConfigCache.ImageName != "" && c.Images[configImageName] != nil {
 			return []ImageSelector{
 				{
 					ConfigImageName: configImageName,
@@ -55,15 +70,22 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 		}
 
 		// check if image from dependency
-		splitted := strings.Split(configImageName, ".")
-		if len(splitted) == 2 {
+		if strings.Contains(configImageName, ".") {
+			dependency := configImageName[:strings.Index(configImageName, ".")]
+			dependencyImageName := configImageName[len(dependency)+1:]
+
 			for _, dep := range dependencies {
-				if dep.DependencyConfig().Name == splitted[0] {
-					imageSelector, err := Resolve(splitted[1], dep.Config(), nil)
+				if dep.DependencyConfig().Name == dependency {
+					imageSelector, err := Resolve(dependencyImageName, dep.Config(), dep.Children())
 					if err != nil {
 						return nil, err
 					} else if len(imageSelector) != 1 {
 						return imageSelector, nil
+					}
+
+					// if no dependency is set, we set it here
+					if imageSelector[0].Dependency == nil {
+						imageSelector[0].Dependency = dep
 					}
 
 					// make sure the selector has the correct original name

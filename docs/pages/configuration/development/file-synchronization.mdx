@@ -46,10 +46,6 @@ The following config options are needed to determine the container which the fil
 - [`containerName`](#containername)
 - [`namespace`](#namespace)
 
-:::info Combine Otions
-If you specify multiple these config options, they will be jointly used to select the pod / container (think logical `AND / &&`).
-:::
-
 :::info Auto Reconnect
 If the sync is unable to establish a connection to the selected container or loses it after starting the sync, DevSpace will try to restart the sync several times.
 :::
@@ -58,11 +54,11 @@ If the sync is unable to establish a connection to the selected container or los
 The `imageName` option expects a string with the name of an image from the `images` section of the `devspace.yaml`. Using `imageName` tells DevSpace to select the container based on the referenced image that was last built using DevSpace.
 
 :::note
-If `imageName` is specified in any of the sync configurations, `devspace dev` will **not** rebuild this image because DevSpace assumes that instead of rebuilding the image, the user wants to use the much faster file synchronization. If you still want to force rebuilding all images, run `devspace dev -b`.
+When you want to select a container with an image that is not defined in your `devspace.yaml`, you generally want to select the right pod using the [`labelSelector`](#labelselector).
 :::
 
 :::note
-When multiple `deployments` in your `devspace.yaml` use the same `image`, you generally want to select the right pod using the [`labelSelector`](#labelselector) but you should additionally define the `imageName` option if you want to enable faster image building (see note above).
+You can also select an image from a dependency with `dependency1.image1`
 :::
 
 #### Example: Select Container by Image Name
@@ -109,10 +105,6 @@ In consequence, the following sync processes would be started when using the abo
 
 ### `labelSelector`
 The `labelSelector` option expects a key-value map of strings with Kubernetes labels.
-
-:::info
-If you are using the `labelSelector` option, you may want to additionally specify the [`imageName` option](#imagename) to speed up the image building process.
-:::
 
 #### Example: Select Container by Label
 ```yaml {18-21}

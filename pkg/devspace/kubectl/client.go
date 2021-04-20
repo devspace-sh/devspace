@@ -30,25 +30,25 @@ import (
 
 // Client holds all kubernetes related functions
 type Client interface {
-	// Returns the current kube context name
+	// CurrentContext returns the current kube context name
 	CurrentContext() string
 
-	// Returns an interface to a kube client
+	// KubeClient returns an interface to a kube client
 	KubeClient() kubernetes.Interface
 
-	// Returns the default namespace of the kube context
+	// Namespace returns the default namespace of the kube context
 	Namespace() string
 
-	// Returns the underlying kube rest config
+	// RestConfig returns the underlying kube rest config
 	RestConfig() *rest.Config
 
-	// Returns the underlying kube client config
+	// ClientConfig returns the underlying kube client config
 	ClientConfig() clientcmd.ClientConfig
 
-	// Returns the kube config loader interface
+	// KubeConfigLoader returns the kube config loader interface
 	KubeConfigLoader() kubeconfig.Loader
 
-	// This function will print a warning if the generated config contains a different last kube context / namespace
+	// PrintWarning this function will print a warning if the generated config contains a different last kube context / namespace
 	// than the one that is used currently
 	PrintWarning(generatedConfig *generated.Config, noWarning, shouldWait bool, log log.Logger) error
 

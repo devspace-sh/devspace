@@ -132,6 +132,14 @@ func (r *resolver) findVariablesInDefinition(definition *latest.Variable) map[st
 		return varsUsed
 	}
 
+	// check value
+	if strDefault, ok := definition.Value.(string); ok {
+		_, _ = varspkg.ParseString(strDefault, func(v string) (interface{}, error) {
+			varsUsed[v] = true
+			return "", nil
+		})
+	}
+
 	// check default value
 	if strDefault, ok := definition.Default.(string); ok {
 		_, _ = varspkg.ParseString(strDefault, func(v string) (interface{}, error) {
@@ -178,6 +186,16 @@ func (r *resolver) fillVariableDefinition(definition *latest.Variable) error {
 	var err error
 	if definition == nil {
 		return nil
+	}
+
+	// this converts the definition.Value to definition.Default
+	if definition.Value != nil {
+		if definition.Default != nil {
+			return fmt.Errorf(".default cannot be used with .value together for variable ${%s}", definition.Name)
+		}
+
+		definition.Default = definition.Value
+		definition.Source = latest.VariableSourceNone
 	}
 
 	// if the definition has a default value, we try to resolve possible variables

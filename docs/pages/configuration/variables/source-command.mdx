@@ -1,5 +1,5 @@
 ---
-title: Environment Variables
+title: Variables From Commands
 sidebar_label: "source: command"
 ---
 
@@ -15,8 +15,8 @@ images:
 vars:
 - name: MYSQL_VERSION
   source: command
-  command: echo
-  args: ["5.5"]
+  # Will execute the command in a Golang Shell (cross plattform compatible)
+  command: "echo 5.5"
 ```
 
 If you need different commands depending on the operating system you can use `commands`:
