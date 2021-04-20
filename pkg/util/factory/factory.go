@@ -4,6 +4,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/configure"
@@ -28,7 +29,7 @@ type Factory interface {
 	NewConfigLoader(configPath string) loader.ConfigLoader
 
 	// ConfigureManager
-	NewConfigureManager(config *latest.Config, log log.Logger) configure.Manager
+	NewConfigureManager(config *latest.Config, generated *generated.Config, log log.Logger) configure.Manager
 
 	// Kubernetes Clients
 	NewKubeDefaultClient() (kubectl.Client, error)
@@ -130,8 +131,8 @@ func (f *DefaultFactoryImpl) NewConfigLoader(configPath string) loader.ConfigLoa
 }
 
 // NewConfigureManager implements interface
-func (f *DefaultFactoryImpl) NewConfigureManager(config *latest.Config, log log.Logger) configure.Manager {
-	return configure.NewManager(f, config, log)
+func (f *DefaultFactoryImpl) NewConfigureManager(config *latest.Config, generated *generated.Config, log log.Logger) configure.Manager {
+	return configure.NewManager(f, config, generated, log)
 }
 
 // NewDockerClient implements interface

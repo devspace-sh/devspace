@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -9,13 +9,16 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	latest "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	"github.com/loft-sh/devspace/pkg/devspace/generator"
+	"github.com/loft-sh/devspace/pkg/util/dockerfile"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
@@ -38,13 +41,10 @@ const (
 	UseExistingDockerfileOption = "Use the Dockerfile in ./Dockerfile"
 	CreateDockerfileOption      = "Create a Dockerfile for this project"
 	EnterDockerfileOption       = "Enter path to a different Dockerfile"
-	ComponentChartOption        = "Deploy with the component-chart (https://devspace.sh/component-chart/docs)"
-	ManifestsOption             = "Deploy with existing Kubernetes manifests (e.g. ./kube/deployment.yaml)"
-	LocalHelmChartOption        = "Deploy with a local Helm chart (e.g. ./chart/)"
-	RemoteHelmChartOption       = "Deploy with a remote Helm chart"
-
-	// The default image name in the config
-	defaultImageName = "app"
+	ComponentChartOption        = "helm: Use Component Helm Chart [QUICK START] (https://devspace.sh/component-chart/docs)"
+	HelmChartOption             = "helm: Use my own Helm chart (e.g. local via ./chart/ or any remote chart)"
+	ManifestsOption             = "kubectl: Use existing Kubernetes manifests (e.g. ./kube/deployment.yaml)"
+	KustomizeOption             = "kustomize: Use an existing Kustomization (e.g. ./kube/kustomization/)"
 
 	// The default name for the production profile
 	productionProfileName = "production"
@@ -128,9 +128,10 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 
 	// Create config
 	config := latest.New().(*latest.Config)
+	generated, err := configLoader.LoadGenerated(nil)
 
 	// Create ConfigureManager
-	configureManager := f.NewConfigureManager(config, cmd.log)
+	configureManager := f.NewConfigureManager(config, generated, cmd.log)
 
 	// Print DevSpace logo
 	log.PrintLogo()
@@ -141,116 +142,137 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		return err
 	}
 
-	var (
-		newImage       *latest.ImageConfig
-		newDeployment  *latest.DeploymentConfig
-		selectedOption string
-	)
+	imageName := "app"
+	imageQuestion := ""
+	selectedDeploymentOption := ""
 
-	_, err = os.Stat(cmd.Dockerfile)
-	if err != nil {
-		selectedOption, err = cmd.log.Question(&survey.QuestionOptions{
-			Question:     "This project does not seem to have a Dockerfile. What do you want to do?",
-			DefaultValue: CreateDockerfileOption,
+	for true {
+		selectedDeploymentOption, err = cmd.log.Question(&survey.QuestionOptions{
+			Question:     "How do you want to deploy this project?",
+			DefaultValue: ComponentChartOption,
 			Options: []string{
-				CreateDockerfileOption,
-				EnterDockerfileOption,
+				ComponentChartOption,
+				HelmChartOption,
+				ManifestsOption,
+				KustomizeOption,
 			},
 		})
 		if err != nil {
 			return err
 		}
-	} else {
-		selectedOption, err = cmd.log.Question(&survey.QuestionOptions{
-			Question:     "There is a Dockerfile in this project. Do you want to use it?",
-			DefaultValue: UseExistingDockerfileOption,
-			Options: []string{
-				UseExistingDockerfileOption,
-				EnterDockerfileOption,
-			},
-		})
+
+		if selectedDeploymentOption == HelmChartOption {
+			imageQuestion = "What is the main container image of this project which is deployed by this Helm chart? (e.g. ecr.io/project/image)"
+			err = configureManager.AddHelmDeployment(deploymentName)
+		} else if selectedDeploymentOption == HelmChartOption {
+			imageQuestion = "What is the main container image of this project which is deployed by this Helm chart? (e.g. ecr.io/project/image)"
+			err = configureManager.AddHelmDeployment(deploymentName)
+		} else if selectedDeploymentOption == ManifestsOption || selectedDeploymentOption == KustomizeOption {
+			if selectedDeploymentOption == ManifestsOption {
+				imageQuestion = "What is the main container image of this project which is deployed by these manifests? (e.g. ecr.io/project/image)"
+			} else {
+				imageQuestion = "What is the main container image of this project which is deployed by this Kustomization? (e.g. ecr.io/project/image)"
+			}
+			err = configureManager.AddKubectlDeployment(deploymentName, selectedDeploymentOption == KustomizeOption)
+		}
+
 		if err != nil {
-			return err
+			if err.Error() != "" {
+				cmd.log.Errorf("Error: %s", err.Error())
+			}
+		} else {
+			break
 		}
 	}
 
-	if selectedOption == CreateDockerfileOption {
-		// Containerize application if necessary
-		err = generator.ContainerizeApplication(cmd.Dockerfile, ".", "", cmd.log)
-		if err != nil {
-			return errors.Wrap(err, "containerize application")
-		}
-	} else if selectedOption == EnterDockerfileOption {
-		cmd.Dockerfile, err = cmd.log.Question(&survey.QuestionOptions{
-			Question: "Please enter a path to your Dockerfile (e.g. ./backend/Dockerfile)",
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	// Check if dockerfile exists now
-	_, err = os.Stat(cmd.Dockerfile)
-	if err != nil {
-		return errors.Errorf("Couldn't find dockerfile at '%s'. Please make sure you have a Dockerfile at the specified location", cmd.Dockerfile)
-	}
-
-	newImage, newDeployment, err = configureManager.NewDockerfileComponentDeployment(deploymentName, "", cmd.Dockerfile, cmd.Context)
+	// Create new dockerfile generator
+	dockerfileGenerator, err := generator.NewDockerfileGenerator("", "", cmd.log)
 	if err != nil {
 		return err
 	}
 
-	// Add devspace.yaml to .dockerignore
-	err = appendToIgnoreFile(dockerIgnoreFile, configDockerignore)
-	if err != nil {
-		cmd.log.Warn(err)
+	for true {
+		image := ""
+		if imageQuestion != "" {
+			image, err = cmd.log.Question(&survey.QuestionOptions{
+				Question:          imageQuestion,
+				ValidationMessage: "Please enter a valid container image from a Kubernetes pod (e.g. myregistry.tld/project/image)",
+				ValidationFunc: func(name string) error {
+					_, err := imageselector.GetStrippedDockerImageName(strings.ToLower(name))
+					return err
+				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		err = configureManager.AddImage(imageName, image, cmd.Dockerfile, cmd.Context, dockerfileGenerator)
+		if err != nil {
+			if err.Error() != "" {
+				cmd.log.Errorf("Error: %s", err.Error())
+			}
+		} else {
+			break
+		}
 	}
 
-	selectedOption, err = cmd.log.Question(&survey.QuestionOptions{
-		Question:     "How do you want to deploy this project?",
-		DefaultValue: ComponentChartOption,
-		Options: []string{
-			ComponentChartOption,
-			ManifestsOption,
-			LocalHelmChartOption,
-			RemoteHelmChartOption,
-		},
-	})
+	// Determine app port
+	portString := ""
+
+	// Try to get ports from dockerfile
+	ports, err := dockerfile.GetPorts(config.Images[imageName].Dockerfile)
+	if err == nil {
+		if len(ports) == 1 {
+			portString = strconv.Itoa(ports[0])
+		} else if len(ports) > 1 {
+			portString, err = cmd.log.Question(&survey.QuestionOptions{
+				Question:     "Which port is your application listening on?",
+				DefaultValue: strconv.Itoa(ports[0]),
+			})
+			if err != nil {
+				return err
+			}
+
+			if portString == "" {
+				portString = strconv.Itoa(ports[0])
+			}
+		}
+	}
+
+	if portString == "" {
+		portString, err = cmd.log.Question(&survey.QuestionOptions{
+			Question:               "Which port is your application listening on? (Enter to skip)",
+			ValidationRegexPattern: "[0-9]*",
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	port, err := strconv.Atoi(portString)
+	if err != nil {
+		return errors.Wrap(err, "parsing port")
+	}
+
+	// Add component deployment if selected
+	if selectedDeploymentOption == ComponentChartOption {
+		err = configureManager.AddComponentDeployment(deploymentName, imageName, port)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add the development configuration
+	err = cmd.addDevConfig(config, imageName, port, dockerfileGenerator)
 	if err != nil {
 		return err
 	}
 
-	if selectedOption == ComponentChartOption {
-		// Nothing to do
-	} else if selectedOption == ManifestsOption {
-		manifests, err := cmd.log.Question(&survey.QuestionOptions{
-			Question: "Please enter the paths to your Kubernetes manifests (comma separated, glob patterns are allowed, e.g. 'manifests/**' or 'kube/pod.yaml')",
-		})
-		if err != nil {
-			return err
-		}
-
-		newDeployment, err = configureManager.NewKubectlDeployment(deploymentName, manifests)
-		if err != nil {
-			return err
-		}
-	} else if selectedOption == LocalHelmChartOption || selectedOption == RemoteHelmChartOption {
-		question := "Please enter the path to your Helm chart (e.g. ./chart)"
-		if selectedOption == RemoteHelmChartOption {
-			question = "Please enter the URL  your Helm chart (e.g. https://company.tld/mychart.tgz)"
-		}
-
-		chartName, err := cmd.log.Question(&survey.QuestionOptions{
-			Question: question,
-		})
-		if err != nil {
-			return err
-		}
-
-		newDeployment, err = configureManager.NewHelmDeployment(deploymentName, chartName, "", "")
-		if err != nil {
-			return err
-		}
+	// Add the profile configuration
+	err = cmd.addProfileConfig(config, imageName)
+	if err != nil {
+		return err
 	}
 
 	// Add .devspace/ to .gitignore
@@ -259,30 +281,16 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		cmd.log.Warn(err)
 	}
 
-	if newImage != nil {
-		config.Images[defaultImageName] = newImage
-	}
-
-	if newDeployment != nil {
-		config.Deployments = []*latest.DeploymentConfig{newDeployment}
-	}
-
-	// Add the development configuration
-	err = cmd.addDevConfig(config)
-	if err != nil {
-		return err
-	}
-
-	// Add the profile configuration
-	err = cmd.addProfileConfig(config)
-	if err != nil {
-		return err
-	}
-
 	// Save config
 	err = configLoader.Save(config)
 	if err != nil {
 		return err
+	}
+
+	// Save generated
+	err = configLoader.SaveGenerated(generated)
+	if err != nil {
+		return errors.Errorf("Error saving generated file: %v", err)
 	}
 
 	cmd.log.WriteString("\n")
@@ -338,164 +346,178 @@ func getDeploymentName() (string, error) {
 	return dirname, nil
 }
 
-func (cmd *InitCmd) addDevConfig(config *latest.Config) error {
+func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port int, dockerfileGenerator *generator.DockerfileGenerator) error {
 	// Forward ports
-	if len(config.Images) > 0 && len(config.Deployments) > 0 && config.Deployments[0].Helm != nil && config.Deployments[0].Helm.ComponentChart != nil && *config.Deployments[0].Helm.ComponentChart == true {
-		componentValues := latest.ComponentConfig{}
-		err := util.Convert(config.Deployments[0].Helm.Values, &componentValues)
-		if err == nil && componentValues.Service != nil && componentValues.Service.Ports != nil && len(componentValues.Service.Ports) > 0 {
-			servicePort := componentValues.Service.Ports[0]
-			if servicePort.Port != nil {
-				localPortPtr := servicePort.Port
-				var remotePortPtr *int
+	if len(config.Deployments) > 0 {
+		if port > 0 {
+			localPort := port
+			if localPort < 1024 {
+				cmd.log.WriteString("\n")
+				cmd.log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
 
-				if *localPortPtr < 1024 {
-					cmd.log.WriteString("\n")
-					cmd.log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
-
-					portString, err := cmd.log.Question(&survey.QuestionOptions{
-						Question:     "Which forwarding port [1024-49151] do you want to use to access your application?",
-						DefaultValue: strconv.Itoa(*localPortPtr + 8000),
-					})
-					if err != nil {
-						return err
-					}
-
-					remotePortPtr = localPortPtr
-
-					localPort, err := strconv.Atoi(portString)
-					if err != nil {
-						return errors.Errorf("Error parsing port '%s'", portString)
-					}
-					localPortPtr = &localPort
-				}
-				portMappings := []*latest.PortMapping{}
-				portMappings = append(portMappings, &latest.PortMapping{
-					LocalPort:  localPortPtr,
-					RemotePort: remotePortPtr,
+				portString, err := cmd.log.Question(&survey.QuestionOptions{
+					Question:     "Which forwarding port [1024-49151] do you want to use to access your application?",
+					DefaultValue: strconv.Itoa(localPort + 8000),
 				})
-
-				// Add dev.ports config
-				config.Dev.Ports = []*latest.PortForwardingConfig{
-					{
-						ImageName:    defaultImageName,
-						PortMappings: portMappings,
-					},
+				if err != nil {
+					return err
 				}
 
-				// Add dev.open config
-				config.Dev.Open = []*latest.OpenConfig{
-					{
-						URL: "http://localhost:" + strconv.Itoa(*localPortPtr),
-					},
-				}
-			}
-		}
-	}
-
-	// Specify sync path
-	if len(config.Images) > 0 {
-		if config.Images[defaultImageName].Build == nil || config.Images[defaultImageName].Build.Disabled == false {
-			if config.Dev.Sync == nil {
-				config.Dev.Sync = []*latest.SyncConfig{}
-			}
-
-			dockerignore, err := ioutil.ReadFile(".dockerignore")
-			excludePaths := []string{}
-			if err == nil {
-				dockerignoreRules := strings.Split(string(dockerignore), "\n")
-				for _, ignoreRule := range dockerignoreRules {
-					ignoreRule = strings.TrimSpace(ignoreRule)
-					if len(ignoreRule) > 0 && ignoreRule[0] != "#"[0] && gitFolderIgnoreRegex.MatchString(ignoreRule) == false {
-						excludePaths = append(excludePaths, ignoreRule)
-					}
+				localPort, err = strconv.Atoi(portString)
+				if err != nil {
+					return errors.Errorf("Error parsing port '%s'", portString)
 				}
 			}
 
-			syncConfig := &latest.SyncConfig{
-				ImageName:          defaultImageName,
-				UploadExcludePaths: excludePaths,
-				ExcludePaths: []string{
-					".git/",
+			portMapping := latest.PortMapping{
+				LocalPort: &port,
+			}
+
+			if port != localPort {
+				portMapping = latest.PortMapping{
+					LocalPort:  &localPort,
+					RemotePort: &port,
+				}
+			}
+
+			portMappings := []*latest.PortMapping{}
+			portMappings = append(portMappings, &portMapping)
+
+			// Add dev.ports config
+			config.Dev.Ports = []*latest.PortForwardingConfig{
+				{
+					ImageName:    imageName,
+					PortMappings: portMappings,
 				},
 			}
-			if config.Images[defaultImageName].InjectRestartHelper {
-				syncConfig.OnUpload = &latest.SyncOnUpload{
-					RestartContainer: true,
+
+			// Add dev.open config
+			config.Dev.Open = []*latest.OpenConfig{
+				{
+					URL: "http://localhost:" + strconv.Itoa(localPort),
+				},
+			}
+		}
+
+		// Specify sync path
+		if config.Dev.Sync == nil {
+			config.Dev.Sync = []*latest.SyncConfig{}
+		}
+
+		dockerignore, err := ioutil.ReadFile(".dockerignore")
+		excludePaths := []string{}
+		if err == nil {
+			dockerignoreRules := strings.Split(string(dockerignore), "\n")
+			for _, ignoreRule := range dockerignoreRules {
+				ignoreRule = strings.TrimSpace(ignoreRule)
+				if len(ignoreRule) > 0 && ignoreRule[0] != "#"[0] && gitFolderIgnoreRegex.MatchString(ignoreRule) == false {
+					excludePaths = append(excludePaths, ignoreRule)
 				}
-			} else {
-				config.Dev.Terminal = &latest.Terminal{}
+			}
+		}
+
+		syncConfig := &latest.SyncConfig{
+			ImageName:          imageName,
+			UploadExcludePaths: excludePaths,
+			ExcludePaths: []string{
+				".git/",
+			},
+		}
+
+		if config.Images[imageName].InjectRestartHelper {
+			syncConfig.OnUpload = &latest.SyncOnUpload{
+				RestartContainer: true,
+			}
+		} else {
+			config.Dev.Terminal = &latest.Terminal{
+				ImageName: imageName,
 			}
 
-			config.Dev.Sync = append(config.Dev.Sync, syncConfig)
+			devImageVar := "DEV_IMAGE"
+
+			config.Dev.ReplacePods = []*latest.ReplacePod{
+				{
+					ImageName:    imageName,
+					ReplaceImage: fmt.Sprintf("${%s}", devImageVar),
+					Patches: []*latest.PatchConfig{
+						{
+							Path:      fmt.Sprintf("spec.containers.image=${%s}.command", devImageVar),
+							Operation: "replace",
+							Value:     []string{"sh", "-c", "sleep 9999999"},
+						},
+						{
+							Path:      fmt.Sprintf("spec.containers.image=${%s}.securityContext", devImageVar),
+							Operation: "add",
+							Value: map[string]interface{}{
+								"runAsUser": 0,
+							},
+						},
+					},
+				},
+			}
+
+			language, err := dockerfileGenerator.GetLanguage()
+			if err != nil {
+				return err
+			}
+
+			config.Vars = append(config.Vars, &latest.Variable{
+				Name:  devImageVar,
+				Value: fmt.Sprintf("loft-sh/%s-dev-tools", language),
+			})
 		}
+
+		config.Dev.Sync = append(config.Dev.Sync, syncConfig)
 	}
 
 	return nil
 }
 
-func (cmd *InitCmd) addProfileConfig(config *latest.Config) error {
+func (cmd *InitCmd) addProfileConfig(config *latest.Config, imageName string) error {
 	if len(config.Images) > 0 {
-		defaultImageConfig, ok := (config.Images)[defaultImageName]
-		if ok && (defaultImageConfig.Build == nil || defaultImageConfig.Build.Disabled == false) {
+		imageConfig, ok := (config.Images)[imageName]
+		if ok && (imageConfig.Build == nil || imageConfig.Build.Disabled == false) {
 			patchRemoveOp := "remove"
-			patches := []*latest.PatchConfig{
-				{
+			patches := []*latest.PatchConfig{}
+
+			if len(imageConfig.AppendDockerfileInstructions) > 0 {
+				patches = append(patches, &latest.PatchConfig{
 					Operation: patchRemoveOp,
-					Path:      "images." + defaultImageName + ".appendDockerfileInstructions",
-				},
+					Path:      "images." + imageName + ".appendDockerfileInstructions",
+				})
 			}
 
-			if defaultImageConfig.InjectRestartHelper {
+			if imageConfig.InjectRestartHelper {
 				patches = append(patches, &latest.PatchConfig{
 					Operation: patchRemoveOp,
-					Path:      "images." + defaultImageName + ".injectRestartHelper",
+					Path:      "images." + imageName + ".injectRestartHelper",
 				})
 			}
-			if defaultImageConfig.RebuildStrategy != latest.RebuildStrategyDefault {
+
+			if imageConfig.RebuildStrategy != latest.RebuildStrategyDefault {
 				patches = append(patches, &latest.PatchConfig{
 					Operation: patchRemoveOp,
-					Path:      "images." + defaultImageName + ".rebuildStrategy",
+					Path:      "images." + imageName + ".rebuildStrategy",
 				})
 			}
-			if len(defaultImageConfig.Entrypoint) > 0 {
+
+			if len(imageConfig.Entrypoint) > 0 {
 				patches = append(patches, &latest.PatchConfig{
 					Operation: patchRemoveOp,
-					Path:      "images." + defaultImageName + ".entrypoint",
+					Path:      "images." + imageName + ".entrypoint",
 				})
 			}
-			if defaultImageConfig.Build != nil && defaultImageConfig.Build.Docker != nil && defaultImageConfig.Build.Docker.Options != nil && defaultImageConfig.Build.Docker.Options.Target != "" {
+
+			if imageConfig.Build != nil && imageConfig.Build.Docker != nil && imageConfig.Build.Docker.Options != nil && imageConfig.Build.Docker.Options.Target != "" {
 				patches = append(patches, &latest.PatchConfig{
 					Operation: patchRemoveOp,
-					Path:      "images." + defaultImageName + ".build.docker.options.target",
+					Path:      "images." + imageName + ".build.docker.options.target",
 				})
 			}
 
 			config.Profiles = append(config.Profiles, &latest.ProfileConfig{
 				Name:    productionProfileName,
 				Patches: patches,
-			})
-		}
-		if ok && defaultImageConfig.InjectRestartHelper {
-			config.Profiles = append(config.Profiles, &latest.ProfileConfig{
-				Name: interactiveProfileName,
-				Patches: []*latest.PatchConfig{
-					{
-						Operation: "add",
-						Path:      "dev.interactive",
-						Value: map[string]bool{
-							"defaultEnabled": true,
-						},
-					},
-					{
-						Operation: "add",
-						Path:      "images." + defaultImageName + ".entrypoint",
-						Value: []string{
-							"sleep",
-							"9999999999",
-						},
-					},
-				},
 			})
 		}
 	}
