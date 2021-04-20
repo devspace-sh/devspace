@@ -50,13 +50,15 @@ func TestReplaceContainerNames(t *testing.T) {
 				"": "myimage",
 			},
 		},
-		replaceContainerNamesTestCase{
+		{
 			name: "Image in cache",
 			overwriteValues: map[interface{}]interface{}{
 				"": "myimage",
 			},
 			imagesConf: map[string]*latest.ImageConfig{
-				"test": &latest.ImageConfig{},
+				"test": {
+					Image: "myimage",
+				},
 			},
 			cache: &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
@@ -72,6 +74,84 @@ func TestReplaceContainerNames(t *testing.T) {
 			expectedShouldRedeploy: true,
 			expectedOverwriteValues: map[interface{}]interface{}{
 				"": "myimage:someTag",
+			},
+		},
+		{
+			name: "Replace image & tag helpers",
+			overwriteValues: map[interface{}]interface{}{
+				"": "image(test):tag(test)",
+			},
+			imagesConf: map[string]*latest.ImageConfig{
+				"test": {
+					Image: "myimage",
+				},
+			},
+			cache: &generated.CacheConfig{
+				Images: map[string]*generated.ImageCache{
+					"test": &generated.ImageCache{
+						ImageName: "myimage",
+						Tag:       "someTag",
+					},
+				},
+			},
+			builtImages: map[string]string{
+				"myimage": "",
+			},
+			expectedShouldRedeploy: true,
+			expectedOverwriteValues: map[interface{}]interface{}{
+				"": "myimage:someTag",
+			},
+		},
+		{
+			name: "Do not replace unknown tag helpers",
+			overwriteValues: map[interface{}]interface{}{
+				"": "tag(test2):image(test):tag(test)image(test)",
+			},
+			imagesConf: map[string]*latest.ImageConfig{
+				"test": {
+					Image: "myimage",
+				},
+			},
+			cache: &generated.CacheConfig{
+				Images: map[string]*generated.ImageCache{
+					"test": &generated.ImageCache{
+						ImageName: "myimage",
+						Tag:       "someTag",
+					},
+				},
+			},
+			builtImages: map[string]string{
+				"myimage": "",
+			},
+			expectedShouldRedeploy: true,
+			expectedOverwriteValues: map[interface{}]interface{}{
+				"": "tag(test2):myimage:someTagmyimage",
+			},
+		},
+		{
+			name: "Do not replace unknown image helpers",
+			overwriteValues: map[interface{}]interface{}{
+				"": "image(test2):image(test):tag(test)image(test)",
+			},
+			imagesConf: map[string]*latest.ImageConfig{
+				"test": {
+					Image: "myimage",
+				},
+			},
+			cache: &generated.CacheConfig{
+				Images: map[string]*generated.ImageCache{
+					"test": &generated.ImageCache{
+						ImageName: "myimage",
+						Tag:       "someTag",
+					},
+				},
+			},
+			builtImages: map[string]string{
+				"myimage": "",
+			},
+			expectedShouldRedeploy: true,
+			expectedOverwriteValues: map[interface{}]interface{}{
+				"": "image(test2):myimage:someTagmyimage",
 			},
 		},
 	}

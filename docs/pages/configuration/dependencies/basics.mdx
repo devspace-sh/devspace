@@ -151,7 +151,7 @@ dev:
 
 ### Referencing Dependencies in Deployment Values / Manifests
 
-It is also possible to reference a dependency's image with the helpers `imageName()`, `imageNameImage()` or `imageNameTag()` in deployment:
+It is also possible to reference a dependency's image with the helpers `image()` or `tag()` in a deployment:
 ```yaml
 dependencies:
 - name: dep1
@@ -163,7 +163,7 @@ deployments:
       componentChart: true
       values:
         containers:
-          - image: imageName(dep1.image1) # -> replaced with 'myusername/devspace:xxxx' 
+          - image: image(dep1.image1):tag(dep1.image1) # -> replaced with 'myusername/devspace:xxxx' 
 ```
 
 With a dependency `dep1/devspace.yaml` that looks like:

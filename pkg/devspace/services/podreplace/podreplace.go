@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	dependencytypes "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/encoding"
@@ -155,7 +156,7 @@ func updateNeeded(ctx context.Context, client kubectl.Client, pod *kubectl.Selec
 		if err != nil {
 			log.Warnf("Error scaling down parent: %v", err)
 		}
-		
+
 		return false, nil
 	}
 
@@ -455,6 +456,12 @@ func hashParentPodSpec(obj runtime.Object, config config.Config, dependencies []
 }
 
 func replaceImageInPodSpec(podSpec *corev1.PodSpec, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod) error {
+	_, image, err := util.Replace(replacePod.ReplaceImage, config, dependencies, map[string]string{})
+	if err != nil {
+		return err
+	}
+	imageStr := fmt.Sprintf("%v", image)
+
 	// either replace by labelSelector & containerName
 	// or by resolved image name
 	if replacePod.LabelSelector != nil {
@@ -467,10 +474,10 @@ func replaceImageInPodSpec(podSpec *corev1.PodSpec, config config.Config, depend
 		// exchange image name
 		for i := range podSpec.Containers {
 			if len(podSpec.Containers) == 1 {
-				podSpec.Containers[i].Image = replacePod.ReplaceImage
+				podSpec.Containers[i].Image = imageStr
 				break
 			} else if podSpec.Containers[i].Name == replacePod.ContainerName {
-				podSpec.Containers[i].Image = replacePod.ReplaceImage
+				podSpec.Containers[i].Image = imageStr
 				break
 			}
 		}
@@ -485,10 +492,10 @@ func replaceImageInPodSpec(podSpec *corev1.PodSpec, config config.Config, depend
 		// exchange image name
 		for i := range podSpec.Containers {
 			if len(podSpec.Containers) == 1 {
-				podSpec.Containers[i].Image = replacePod.ReplaceImage
+				podSpec.Containers[i].Image = imageStr
 				break
 			} else if imageselector.CompareImageNames(imageSelector[0], podSpec.Containers[i].Image) {
-				podSpec.Containers[i].Image = replacePod.ReplaceImage
+				podSpec.Containers[i].Image = imageStr
 				break
 			}
 		}
