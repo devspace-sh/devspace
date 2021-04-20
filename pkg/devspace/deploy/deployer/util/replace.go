@@ -3,6 +3,7 @@ package util
 import (
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
@@ -25,7 +26,7 @@ func get(in string, regEx *regexp.Regexp) string {
 	return ""
 }
 
-func match(key, value string, keys map[string]bool, config config2.Config) bool {
+func Match(key, value string, keys map[string]bool, config config2.Config) bool {
 	if len(keys) > 0 && keys[key] == false {
 		return false
 	}
@@ -67,7 +68,7 @@ func match(key, value string, keys map[string]bool, config config2.Config) bool 
 	return false
 }
 
-func replace(value string, config config2.Config, dependencies []types.Dependency, builtImages map[string]string) (bool, interface{}, error) {
+func Replace(value string, config config2.Config, dependencies []types.Dependency, builtImages map[string]string) (bool, interface{}, error) {
 	var (
 		err                error
 		selector           *imageselector.ImageSelector
@@ -107,10 +108,11 @@ func replace(value string, config config2.Config, dependencies []types.Dependenc
 	if imageCache == nil {
 		imageCache = map[string]*generated.ImageCache{}
 	}
-	for name := range config.Config().Images {
-		if _, ok := imageCache[name]; !ok {
-			delete(imageCache, name)
-		}
+
+	// config images
+	configImages := config.Config().Images
+	if configImages == nil {
+		configImages = map[string]*latest.ImageConfig{}
 	}
 
 	// strip docker image name
@@ -133,8 +135,8 @@ func replace(value string, config config2.Config, dependencies []types.Dependenc
 	}
 
 	// Search for image name
-	for _, imageCache := range imageCache {
-		if imageCache.ImageName == image {
+	for key, imageCache := range imageCache {
+		if imageCache.ImageName == image && configImages[key] != nil {
 			if onlyTag != "" || imageNameOnlyTag != "" {
 				return shouldRedeploy, imageCache.Tag, nil
 			}
@@ -154,9 +156,9 @@ func replaceImageNames(config config2.Config, dependencies []types.Dependency, b
 
 	shouldRedeploy := false
 	err := action(func(key, value string) bool {
-		return match(key, value, keys, config)
+		return Match(key, value, keys, config)
 	}, func(value string) (interface{}, error) {
-		redeploy, retValue, err := replace(value, config, dependencies, builtImages)
+		redeploy, retValue, err := Replace(value, config, dependencies, builtImages)
 		if err != nil {
 			return nil, err
 		} else if redeploy {
