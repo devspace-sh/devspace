@@ -31,6 +31,13 @@ func (m *manager) AddKubectlDeployment(deploymentName string, isKustomization bo
 
 		manifests, err := m.log.Question(&survey.QuestionOptions{
 			Question: question,
+			ValidationFunc: func(value string) error {
+				stat, err := os.Stat(path.Join(value, "kustomization.yaml"))
+				if err == nil && stat.IsDir() == false {
+					return nil
+				}
+				return errors.New(fmt.Sprintf("Path `%s` is not a Kustomization (kustomization.yaml missing)", value))
+			},
 		})
 		if err != nil {
 			return err
@@ -96,14 +103,8 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 
 		if chartLocation == localPath {
 			localChartPath, err := m.log.Question(&survey.QuestionOptions{
-				Question: "Which Helm chart do you want to use?",
-				Options: []string{
-					localPath,
-					chartRepo,
-					archiveURL,
-					gitRepo,
-					abort,
-				},
+				Question:               "Please enter the relative path to your local Helm chart (e.g. ./chart)",
+				ValidationRegexPattern: ".+",
 			})
 			if err != nil {
 				return err
@@ -114,18 +115,19 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				return err
 			}
 
-			localChartPath, err = filepath.Rel(absPath, localChartPath)
+			localChartPathRel, err := filepath.Rel(absPath, localChartPath)
 			if err != nil {
-				return err
+				localChartPathRel = localChartPath
 			}
 
-			stat, err := os.Stat(localChartPath)
-			if err != nil || stat.IsDir() == false {
-				m.log.Errorf("Local path `%s` does not exist or is not a directory", localChartPath)
+			stat, err := os.Stat(path.Join(localChartPathRel, "Chart.yaml"))
+			if err != nil || stat.IsDir() {
+				m.log.WriteString("\n")
+				m.log.Errorf("Local path `%s` is not a Helm chart (Chart.yaml missing)", localChartPathRel)
 				continue
 			}
 
-			helmConfig.Chart.Name = localChartPath
+			helmConfig.Chart.Name = localChartPathRel
 		} else if chartLocation == chartRepo || chartLocation == archiveURL {
 		ChartRepoLoop:
 			for true {
@@ -140,10 +142,11 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 						return err
 					}
 
-					requestURL = chartRepo + "/index.yaml"
+					requestURL = helmConfig.Chart.RepoURL + "/index.yaml"
 
 					helmConfig.Chart.Name, err = m.log.Question(&survey.QuestionOptions{
-						Question: "Please specify the name of the chart within your chart repository (e.g. payment-service)",
+						Question:               "Please specify the name of the chart within your chart repository (e.g. payment-service)",
+						ValidationRegexPattern: ".+",
 					})
 					if err != nil {
 						return err
@@ -151,7 +154,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				} else {
 					requestURL, err = m.log.Question(&survey.QuestionOptions{
 						Question:               "Please specify the full URL of your tar archived chart (e.g. https://artifacts.org.tld/chart.tar.gz)",
-						ValidationRegexPattern: "^http(s)?://.*\\.tar\\.gz",
+						ValidationRegexPattern: "^http(s)?://.*",
 					})
 					if err != nil {
 						return err
@@ -164,14 +167,22 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				password := ""
 
 				for true {
+					httpClient := &http.Client{}
 					req, err := http.NewRequest("GET", requestURL, nil)
+					if err != nil {
+						return err
+					}
 
 					if username != "" || password != "" {
 						req.SetBasicAuth(username, password)
 					}
 
-					resp, err := http.DefaultClient.Do(req)
-					if err != nil {
+					resp, err := httpClient.Do(req)
+					if resp == nil {
+						return err
+					}
+
+					if resp.StatusCode != http.StatusOK {
 						if resp.StatusCode == http.StatusUnauthorized {
 							m.log.Error("Not authorized to access Helm chart repository. Please provide auth credentials")
 
@@ -190,20 +201,23 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 							}
 						} else {
 							m.log.Errorf("Error: Received %s for chart repo index file `%s`", resp.Status, requestURL)
+							break
 						}
 					} else {
-						usernameVar := "HELM_USERNAME"
-						passwordVar := "HELM_PASSWORD"
-						helmConfig.Chart.Username = fmt.Sprintf("${%s}", usernameVar)
-						helmConfig.Chart.Password = fmt.Sprintf("${%s}", passwordVar)
+						if username != "" || password != "" {
+							usernameVar := "HELM_USERNAME"
+							passwordVar := "HELM_PASSWORD"
+							helmConfig.Chart.Username = fmt.Sprintf("${%s}", usernameVar)
+							helmConfig.Chart.Password = fmt.Sprintf("${%s}", passwordVar)
 
-						m.config.Vars = append(m.config.Vars, &v1.Variable{
-							Name:     passwordVar,
-							Password: true,
-						})
+							m.config.Vars = append(m.config.Vars, &v1.Variable{
+								Name:     passwordVar,
+								Password: true,
+							})
 
-						m.generated.Vars[usernameVar] = username
-						m.generated.Vars[passwordVar] = password
+							m.generated.Vars[usernameVar] = username
+							m.generated.Vars[passwordVar] = password
+						}
 
 						break ChartRepoLoop
 					}
@@ -235,10 +249,14 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 					return err
 				}
 
-				gitCommand := fmt.Sprintf("mkdir -p %s; git fetch origin %s --depth 1 || git clone --single-branch --branch %s --depth 1 %s %s", chartTempPath, gitBranch, gitBranch, gitRepo, chartTempPath)
+				gitCommand := fmt.Sprintf("if [ -d '%s/.git' ]; then git fetch origin %s --depth 1; else mkdir -p %s; git clone --single-branch --branch %s --depth 1 %s %s; fi ", chartTempPath, gitBranch, chartTempPath, gitBranch, gitRepo, chartTempPath)
+
+				m.log.WriteString("\n")
+				m.log.Infof("Cloning external repo `%s` containing to retrieve Helm chart", gitRepo)
 
 				err = shell.ExecuteShellCommand(gitCommand, os.Stdout, os.Stderr, nil)
 				if err != nil {
+					m.log.WriteString("\n")
 					m.log.Errorf("Unable to clone repository `%s` (branch: %s)", gitRepo, gitBranch)
 					continue
 				}
@@ -246,6 +264,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				chartFolder := path.Join(chartTempPath, gitSubFolder)
 				stat, err := os.Stat(chartFolder)
 				if err != nil || stat.IsDir() == false {
+					m.log.WriteString("\n")
 					m.log.Errorf("Local path `%s` does not exist or is not a directory", chartFolder)
 					continue
 				}

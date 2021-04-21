@@ -133,13 +133,13 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 		Image:           strings.ToLower(image),
 		Dockerfile:      dockerfile,
 		Context:         contextPath,
-		Tags:            []string{"${DEVSPACE_GIT_COMMIT}-${DEVSPACE_TIMESTAMP}-#####"},
+		Tags:            []string{"dev-#####"},
 		RebuildStrategy: latest.RebuildStrategyIgnoreContextChanges,
 	}
 
 	buildMethods := []string{createNewDockerfile, subPathDockerfile}
 
-	stat, err := os.Stat(dockerfile)
+	stat, err := os.Stat(imageConfig.Dockerfile)
 	if err == nil && stat.IsDir() == false {
 		buildMethods = []string{providedDockerfile, differentDockerfile}
 	}
@@ -163,12 +163,16 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 
 		buildCommandSplit := strings.Split(strings.TrimSpace(buildCommand), " ")
 
-		imageConfig.Build.Custom.Command = buildCommandSplit[0]
-		imageConfig.Build.Custom.Args = buildCommandSplit[1:]
+		imageConfig.Build = &v1.BuildConfig{
+			Custom: &v1.CustomConfig{
+				Command: buildCommandSplit[0],
+				Args:    buildCommandSplit[1:],
+			},
+		}
 	} else {
 		if buildMethod == createNewDockerfile {
 			// Containerize application if necessary
-			err = dockerfileGenerator.ContainerizeApplication(dockerfile)
+			err = dockerfileGenerator.ContainerizeApplication(imageConfig.Dockerfile)
 			if err != nil {
 				return errors.Wrap(err, "containerize application")
 			}
@@ -181,7 +185,7 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 						if err == nil && stat.IsDir() == false {
 							return nil
 						}
-						return errors.New("Dockerfile does not exist or is not a file")
+						return errors.New(fmt.Sprintf("Dockerfile `%s` does not exist or is not a file", value))
 					},
 				})
 				if err != nil {
@@ -191,7 +195,7 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 
 			imageConfig.Context, err = m.log.Question(&survey.QuestionOptions{
 				Question:     "What is the build context for building this image?",
-				DefaultValue: path.Dir(dockerfile) + "/",
+				DefaultValue: path.Dir(imageConfig.Dockerfile) + "/",
 				ValidationFunc: func(value string) error {
 					stat, err := os.Stat(value)
 					if err != nil && stat.IsDir() == false {
@@ -205,7 +209,7 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 			}
 		}
 
-		targets, err := helper.GetDockerfileTargets(dockerfile)
+		targets, err := helper.GetDockerfileTargets(imageConfig.Dockerfile)
 		if err != nil {
 			return err
 		}

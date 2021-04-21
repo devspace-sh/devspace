@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -20,6 +22,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
@@ -178,6 +181,7 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 
 		if err != nil {
 			if err.Error() != "" {
+				cmd.log.WriteString("\n")
 				cmd.log.Errorf("Error: %s", err.Error())
 			}
 		} else {
@@ -250,9 +254,12 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		}
 	}
 
-	port, err := strconv.Atoi(portString)
-	if err != nil {
-		return errors.Wrap(err, "parsing port")
+	port := 0
+	if portString != "" {
+		port, err = strconv.Atoi(portString)
+		if err != nil {
+			return errors.Wrap(err, "error parsing port")
+		}
 	}
 
 	// Add component deployment if selected
@@ -295,8 +302,9 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 
 	cmd.log.WriteString("\n")
 	cmd.log.Done("Project successfully initialized")
+	cmd.log.WriteString("\n")
 	cmd.log.Info("Check devspace.yaml for your configuration and make adjustments as needed")
-	cmd.log.Infof("\r         \nYou can now run:\n- `%s` to pick which Kubernetes namespace to work in\n- `%s` to start developing your project in Kubernetes\n- `%s` to deploy your project to Kubernetes\n- `%s` to get a list of available commands", ansi.Color("devspace use namespace", "blue+b"), ansi.Color("devspace dev", "blue+b"), ansi.Color("devspace deploy", "blue+b"), ansi.Color("devspace -h", "blue+b"))
+	cmd.log.Infof("\r         \nYou can now run:\n- `%s` to pick which Kubernetes namespace to work in\n- `%s` to start developing your project in Kubernetes\n- `%s` to deploy your project to Kubernetes\n- `%s` to get a list of available commands", ansi.Color("devspace use namespace", "blue+b"), ansi.Color("devspace dev", "blue+b"), ansi.Color("devspace deploy -p production", "blue+b"), ansi.Color("devspace -h", "blue+b"))
 	return nil
 }
 
@@ -419,6 +427,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 		syncConfig := &latest.SyncConfig{
 			ImageName:          imageName,
 			UploadExcludePaths: excludePaths,
+			WaitInitialSync:    ptr.Bool(true),
 			ExcludePaths: []string{
 				".git/",
 			},
@@ -429,8 +438,58 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 				RestartContainer: true,
 			}
 		} else {
+			language, err := dockerfileGenerator.GetLanguage()
+			if err != nil {
+				return err
+			}
+
+			if language == "none" {
+				language = "alpine"
+			}
+
+			if language == "java" {
+				stat, err := os.Stat("build.gradle")
+				if err == nil && stat.IsDir() == false {
+					language += "-gradle"
+				} else {
+					language += "-maven"
+				}
+			}
+
+			startScriptName := "devspace_start.sh"
+			startFileURL := fmt.Sprintf("https://raw.githubusercontent.com/loft-sh/devtools-containers/main/%s/%s", language, startScriptName)
+
+			startScriptFile, err := os.Create(startScriptName)
+			if err != nil {
+				return err
+			}
+			client := http.Client{
+				CheckRedirect: func(r *http.Request, via []*http.Request) error {
+					r.URL.Opaque = r.URL.Path
+					return nil
+				},
+			}
+
+			resp, err := client.Get(startFileURL)
+			if err != nil {
+				return err
+			}
+			defer resp.Body.Close()
+
+			_, err = io.Copy(startScriptFile, resp.Body)
+			if err != nil {
+				return err
+			}
+			defer startScriptFile.Close()
+
+			err = os.Chmod(startScriptName, 0755)
+			if err != nil {
+				return err
+			}
+
 			config.Dev.Terminal = &latest.Terminal{
 				ImageName: imageName,
+				Command:   []string{"./" + startScriptName},
 			}
 
 			devImageVar := "DEV_IMAGE"
@@ -441,13 +500,18 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 					ReplaceImage: fmt.Sprintf("${%s}", devImageVar),
 					Patches: []*latest.PatchConfig{
 						{
-							Path:      fmt.Sprintf("spec.containers.image=${%s}.command", devImageVar),
+							Path:      "spec.containers[0].command",
 							Operation: "replace",
-							Value:     []string{"sh", "-c", "sleep 9999999"},
+							Value:     []string{"sleep"},
 						},
 						{
-							Path:      fmt.Sprintf("spec.containers.image=${%s}.securityContext", devImageVar),
-							Operation: "add",
+							Path:      "spec.containers[0].args",
+							Operation: "replace",
+							Value:     []string{"9999999"},
+						},
+						{
+							Path:      "spec.containers[0].securityContext",
+							Operation: "replace",
 							Value: map[string]interface{}{
 								"runAsUser": 0,
 							},
@@ -456,14 +520,9 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 				},
 			}
 
-			language, err := dockerfileGenerator.GetLanguage()
-			if err != nil {
-				return err
-			}
-
 			config.Vars = append(config.Vars, &latest.Variable{
 				Name:  devImageVar,
-				Value: fmt.Sprintf("loft-sh/%s-dev-tools", language),
+				Value: fmt.Sprintf("loftsh/%s:latest", language),
 			})
 		}
 
