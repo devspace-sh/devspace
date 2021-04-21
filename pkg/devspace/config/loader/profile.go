@@ -156,6 +156,14 @@ func ApplyPatchesOnObject(data map[interface{}]interface{}, configPatches []*lat
 			newPatch.Value = yamlpatch.NewNode(&patch.Value)
 		}
 
+		if string(newPatch.Op) == "remove" && patch.Path[0] != '/' {
+			// figure out automatically if the path to remove is not there and just skip the patch
+			target, _ := findPath(&newPatch.Path, data)
+			if target == nil {
+				continue
+			}
+		}
+
 		if string(newPatch.Op) == "replace" && patch.Path[0] != '/' {
 			// figure out automatically if to use add or replace based on if the target path exists or not
 			target, _ := findPath(&newPatch.Path, data)
