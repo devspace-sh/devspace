@@ -436,13 +436,14 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 				RestartContainer: true,
 			}
 		} else {
+			fallbackLanguage := "alpine"
 			language, err := dockerfileGenerator.GetLanguage()
 			if err != nil {
 				return err
 			}
 
 			if language == "none" {
-				language = "alpine"
+				language = fallbackLanguage
 			}
 
 			if language == "java" {
@@ -455,26 +456,41 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 			}
 
 			startScriptName := "devspace_start.sh"
-			startFileURL := fmt.Sprintf("https://raw.githubusercontent.com/loft-sh/devtools-containers/main/%s/%s", language, startScriptName)
+			startScriptContent := io.NopCloser(strings.NewReader("#!/bin/bash\nbash"))
+
+			for true {
+				startFileURL := fmt.Sprintf("https://raw.githubusercontent.com/loft-sh/devtools-containers/main/%s/%s", language, startScriptName)
+
+				client := http.Client{
+					CheckRedirect: func(r *http.Request, via []*http.Request) error {
+						r.URL.Opaque = r.URL.Path
+						return nil
+					},
+				}
+
+				resp, err := client.Get(startFileURL)
+				if err != nil {
+					return err
+				}
+				defer resp.Body.Close()
+
+				if resp.StatusCode == http.StatusOK {
+					startScriptContent = resp.Body
+					break
+				} else {
+					if language == fallbackLanguage {
+						break
+					}
+					language = fallbackLanguage
+				}
+			}
 
 			startScriptFile, err := os.Create(startScriptName)
 			if err != nil {
 				return err
 			}
-			client := http.Client{
-				CheckRedirect: func(r *http.Request, via []*http.Request) error {
-					r.URL.Opaque = r.URL.Path
-					return nil
-				},
-			}
 
-			resp, err := client.Get(startFileURL)
-			if err != nil {
-				return err
-			}
-			defer resp.Body.Close()
-
-			_, err = io.Copy(startScriptFile, resp.Body)
+			_, err = io.Copy(startScriptFile, startScriptContent)
 			if err != nil {
 				return err
 			}
