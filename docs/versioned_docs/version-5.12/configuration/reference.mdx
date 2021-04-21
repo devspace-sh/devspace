@@ -359,7 +359,7 @@ replacePods:                              # struct[] | Which pods should be repl
   namespace: ""                           # string   | Kubernetes namespace to select pods in
   replaceImage: ""                        # string   | The image that should be used for the pod
   patches:                                # struct[] | Other patches that should be applied on the pod
-  - op: Add                               # enum     | Patch operation (replace, add, remove)
+  - op: add                               # enum     | Patch operation (replace, add, remove)
     path: "spec.containers[0].command"    # string    | Jsonpath or xpath to config option that should be patched
     value: ["sleep"]                      # arbitrary | Value to use for patch operation
 ```

@@ -27,13 +27,13 @@ dev:
         app.kubernetes.io/component: my-app
       replaceImage: ubuntu:latest
       patches:
-        - op: add
+        - op: replace
           path: spec.containers[0].command
           value: ["sleep"]
-        - op: add
+        - op: replace
           path: spec.containers[0].args
           value: ["9999999999"]
-        - op: add
+        - op: replace
           path: spec.containers[0].workingDir
           value: "/workdir"
   # This will create a terminal to the replaced pod
@@ -102,13 +102,13 @@ dev:
   - imageName: backend
     replaceImage: ubuntu:latest
     patches:
-    - op: add
+    - op: replace
       path: spec.containers[0].command
       value: ["sleep"]
-    - op: add
+    - op: replace
       path: spec.containers[0].args
       value: ["9999999999"]
-    - op: add
+    - op: replace
       path: spec.containers[0].workingDir
       value: "/workdir"
   terminal:
@@ -139,13 +139,13 @@ dev:
     containerName: container-0
     replaceImage: ubuntu:latest
     patches:
-    - op: add
+    - op: replace
       path: spec.containers[0].command
       value: ["sleep"]
-    - op: add
+    - op: replace
       path: spec.containers[0].args
       value: ["9999999999"]
-    - op: add
+    - op: replace
       path: spec.containers[0].workingDir
       value: "/workdir"
   sync:
@@ -218,10 +218,10 @@ dev:
       app.kubernetes.io/component: app-backend
     containerName: container-0
     patches:
-    - op: add
+    - op: replace
       path: spec.containers[0].command
       value: ["sleep"]
-    - op: add
+    - op: replace
       path: spec.containers[0].args
       value: ["9999999999"]
 ```

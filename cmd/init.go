@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -456,47 +455,18 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 			}
 
 			startScriptName := "devspace_start.sh"
-			startScriptContent := io.NopCloser(strings.NewReader("#!/bin/bash\nbash"))
-
-			for true {
-				startFileURL := fmt.Sprintf("https://raw.githubusercontent.com/loft-sh/devtools-containers/main/%s/%s", language, startScriptName)
-
-				client := http.Client{
-					CheckRedirect: func(r *http.Request, via []*http.Request) error {
-						r.URL.Opaque = r.URL.Path
-						return nil
-					},
-				}
-
-				resp, err := client.Get(startFileURL)
+			startScriptContent, err := getScriptContent(language, startScriptName)
+			if err != nil {
+				// try fall back language
+				startScriptContent, err = getScriptContent(fallbackLanguage, startScriptName)
 				if err != nil {
-					return err
+					startScriptContent = []byte("#!/bin/bash\nbash")
 				}
-				defer resp.Body.Close()
 
-				if resp.StatusCode == http.StatusOK {
-					startScriptContent = resp.Body
-					break
-				} else {
-					if language == fallbackLanguage {
-						break
-					}
-					language = fallbackLanguage
-				}
+				language = fallbackLanguage
 			}
 
-			startScriptFile, err := os.Create(startScriptName)
-			if err != nil {
-				return err
-			}
-
-			_, err = io.Copy(startScriptFile, startScriptContent)
-			if err != nil {
-				return err
-			}
-			defer startScriptFile.Close()
-
-			err = os.Chmod(startScriptName, 0755)
+			err = ioutil.WriteFile(startScriptName, startScriptContent, 0755)
 			if err != nil {
 				return err
 			}
@@ -534,6 +504,33 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 	}
 
 	return nil
+}
+
+func getScriptContent(language, startScriptName string) ([]byte, error) {
+	startFileURL := fmt.Sprintf("https://raw.githubusercontent.com/loft-sh/devtools-containers/main/%s/%s", language, startScriptName)
+	client := http.Client{
+		CheckRedirect: func(r *http.Request, via []*http.Request) error {
+			r.URL.Opaque = r.URL.Path
+			return nil
+		},
+	}
+
+	resp, err := client.Get(startFileURL)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	out, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		return out, nil
+	}
+
+	return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(out))
 }
 
 func (cmd *InitCmd) addProfileConfig(config *latest.Config, imageName string) error {
