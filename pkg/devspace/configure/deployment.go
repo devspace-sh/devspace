@@ -305,13 +305,6 @@ func (m *manager) AddComponentDeployment(deploymentName, imageName string, servi
 			},
 		},
 		Service: &v1.ServiceConfig{},
-		Ingress: &v1.IngressConfig{
-			Rules: []*v1.IngressRuleConfig{
-				{
-					Host: "my-domain.tld",
-				},
-			},
-		},
 	}
 
 	if servicePort > 0 {

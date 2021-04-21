@@ -22,7 +22,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
@@ -427,7 +426,6 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 		syncConfig := &latest.SyncConfig{
 			ImageName:          imageName,
 			UploadExcludePaths: excludePaths,
-			WaitInitialSync:    ptr.Bool(true),
 			ExcludePaths: []string{
 				".git/",
 			},
@@ -492,12 +490,10 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 				Command:   []string{"./" + startScriptName},
 			}
 
-			devImageVar := "DEV_IMAGE"
-
 			config.Dev.ReplacePods = []*latest.ReplacePod{
 				{
 					ImageName:    imageName,
-					ReplaceImage: fmt.Sprintf("${%s}", devImageVar),
+					ReplaceImage: fmt.Sprintf("loftsh/%s:latest", language),
 					Patches: []*latest.PatchConfig{
 						{
 							Path:      "spec.containers[0].command",
@@ -511,19 +507,11 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 						},
 						{
 							Path:      "spec.containers[0].securityContext",
-							Operation: "replace",
-							Value: map[string]interface{}{
-								"runAsUser": 0,
-							},
+							Operation: "remove",
 						},
 					},
 				},
 			}
-
-			config.Vars = append(config.Vars, &latest.Variable{
-				Name:  devImageVar,
-				Value: fmt.Sprintf("loftsh/%s:latest", language),
-			})
 		}
 
 		config.Dev.Sync = append(config.Dev.Sync, syncConfig)
@@ -535,7 +523,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 func (cmd *InitCmd) addProfileConfig(config *latest.Config, imageName string) error {
 	if len(config.Images) > 0 {
 		imageConfig, ok := (config.Images)[imageName]
-		if ok && (imageConfig.Build == nil || imageConfig.Build.Disabled == false) {
+		if ok {
 			patchRemoveOp := "remove"
 			patches := []*latest.PatchConfig{}
 
@@ -564,6 +552,13 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config, imageName string) er
 				patches = append(patches, &latest.PatchConfig{
 					Operation: patchRemoveOp,
 					Path:      "images." + imageName + ".entrypoint",
+				})
+			}
+
+			if imageConfig.Build != nil && imageConfig.Build.Disabled == true {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + imageName + ".build.disabled",
 				})
 			}
 

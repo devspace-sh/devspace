@@ -130,11 +130,11 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 	}
 
 	imageConfig := &latest.ImageConfig{
-		Image:           strings.ToLower(image),
-		Dockerfile:      dockerfile,
-		Context:         contextPath,
-		Tags:            []string{"dev-#####"},
-		RebuildStrategy: latest.RebuildStrategyIgnoreContextChanges,
+		Image:      strings.ToLower(image),
+		Dockerfile: dockerfile,
+		Build: &v1.BuildConfig{
+			Disabled: true,
+		},
 	}
 
 	buildMethods := []string{createNewDockerfile, subPathDockerfile}
@@ -191,21 +191,21 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 				if err != nil {
 					return err
 				}
-			}
 
-			imageConfig.Context, err = m.log.Question(&survey.QuestionOptions{
-				Question:     "What is the build context for building this image?",
-				DefaultValue: path.Dir(imageConfig.Dockerfile) + "/",
-				ValidationFunc: func(value string) error {
-					stat, err := os.Stat(value)
-					if err != nil && stat.IsDir() == false {
-						return errors.New("Context path does not exist or is not a directory")
-					}
-					return nil
-				},
-			})
-			if err != nil {
-				return err
+				imageConfig.Context, err = m.log.Question(&survey.QuestionOptions{
+					Question:     "What is the build context for building this image?",
+					DefaultValue: path.Dir(imageConfig.Dockerfile) + "/",
+					ValidationFunc: func(value string) error {
+						stat, err := os.Stat(value)
+						if err != nil && stat.IsDir() == false {
+							return errors.New("Context path does not exist or is not a directory")
+						}
+						return nil
+					},
+				})
+				if err != nil {
+					return err
+				}
 			}
 		}
 
