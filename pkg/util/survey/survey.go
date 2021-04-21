@@ -51,7 +51,7 @@ func (s *survey) Question(params *QuestionOptions) (string, error) {
 		}
 
 		prompt = &surveypkg.Select{
-			Message: params.Question + "\n",
+			Message: params.Question,
 			Options: params.Options,
 			Default: params.DefaultValue,
 		}

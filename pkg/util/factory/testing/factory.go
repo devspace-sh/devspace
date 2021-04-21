@@ -4,6 +4,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/configure"
@@ -95,7 +96,7 @@ func (f *Factory) NewConfigLoader(configPath string) loader.ConfigLoader {
 }
 
 // NewConfigureManager implements interface
-func (f *Factory) NewConfigureManager(config *latest.Config, log log.Logger) configure.Manager {
+func (f *Factory) NewConfigureManager(config *latest.Config, generated *generated.Config, log log.Logger) configure.Manager {
 	return f.ConfigureManager
 }
 

@@ -30,6 +30,13 @@ type Config struct {
 	// Version holds the config version
 	Version string `yaml:"version"`
 
+	// Vars are config variables that can be used inside other config sections to replace certain values dynamically
+	Vars []*Variable `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// PullSecrets are image pull secrets that will be created by devspace in the target namespace
+	// during devspace dev or devspace deploy
+	PullSecrets []*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+
 	// Images holds configuration of how devspace should build images
 	Images map[string]*ImageConfig `yaml:"images,omitempty" json:"images,omitempty"`
 
@@ -39,25 +46,18 @@ type Config struct {
 	// Dev holds development configuration for the 'devspace dev' command.
 	Dev DevConfig `yaml:"dev,omitempty" json:"dev,omitempty"`
 
-	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
-	Dependencies []*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-
 	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
 	// in the order they are specified.
 	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty"`
 
-	// PullSecrets are image pull secrets that will be created by devspace in the target namespace
-	// during devspace dev or devspace deploy
-	PullSecrets []*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
-
 	// Commands are custom commands that can be executed via 'devspace run COMMAND'
 	Commands []*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
-	// Vars are config variables that can be used inside other config sections to replace certain values dynamically
-	Vars []*Variable `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-
 	// Profiles can be used to change the current configuration and change the behaviour of devspace
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`
+
+	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
+	Dependencies []*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // ImageConfig defines the image specification
@@ -1079,14 +1079,14 @@ type ProfileConfig struct {
 
 // ProfileConfigStructure is the base structure used to validate profiles
 type ProfileConfigStructure struct {
+	Vars         []interface{}               `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	PullSecrets  []interface{}               `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
 	Images       map[interface{}]interface{} `yaml:"images,omitempty" json:"images,omitempty"`
 	Deployments  []interface{}               `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 	Dev          map[interface{}]interface{} `yaml:"dev,omitempty" json:"dev,omitempty"`
-	Dependencies []interface{}               `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 	Hooks        []interface{}               `yaml:"hooks,omitempty" json:"hooks,omitempty"`
-	PullSecrets  []interface{}               `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
 	Commands     []interface{}               `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-	Vars         []interface{}               `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Dependencies []interface{}               `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // ProfileParent defines where to load the profile from

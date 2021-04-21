@@ -19,7 +19,7 @@ import (
 )
 
 // DockerfileRepoURL is the default repository url
-const DockerfileRepoURL = "https://github.com/devspace-cloud/devspace-templates.git"
+const DockerfileRepoURL = "https://github.com/loft-sh/dockerfile-templates.git"
 
 // DockerfileRepoPath is the path relative to the user folder where the docker file repo is stored
 const DockerfileRepoPath = ".devspace/dockerfileRepo"
@@ -31,68 +31,15 @@ type DockerfileGenerator struct {
 
 	gitRepo            *git.GoGitRepository
 	supportedLanguages []string
-}
 
-// ContainerizeApplication will create a dockerfile at the given path based on the language detected
-func ContainerizeApplication(dockerfilePath, localPath string, templateRepoURL string, log log.Logger) error {
-	// Check if the user already has a dockerfile
-	_, err := os.Stat(dockerfilePath)
-	if os.IsNotExist(err) == false {
-		return fmt.Errorf("Dockerfile at %s already exists", dockerfilePath)
-	}
-
-	var repoURL *string
-	if templateRepoURL != "" {
-		repoURL = &templateRepoURL
-	}
-
-	// Create new dockerfile generator
-	dockerfileGenerator, err := NewDockerfileGenerator(localPath, repoURL)
-	if err != nil {
-		return err
-	}
-
-	log.StartWait("Detecting programming language")
-
-	detectedLang := "none"
-	supportedLanguages, err := dockerfileGenerator.GetSupportedLanguages()
-	if err == nil {
-		detectedLang, err = dockerfileGenerator.GetLanguage()
-		if err != nil {
-			log.Warnf("Error during language detection: %v", err)
-		}
-		if detectedLang == "" {
-			detectedLang = "none"
-		}
-	} else {
-		log.Warnf("Error retrieving support languages: %v", err)
-	}
-	if len(supportedLanguages) == 0 {
-		supportedLanguages = []string{"none"}
-	}
-
-	log.StopWait()
-
-	// Let the user select the language
-	selectedLanguage, err := log.Question(&survey.QuestionOptions{
-		Question:     "Select the programming language of this project",
-		DefaultValue: detectedLang,
-		Options:      supportedLanguages,
-	})
-	if err != nil {
-		return err
-	}
-
-	log.WriteString("\n")
-
-	return dockerfileGenerator.CreateDockerfile(selectedLanguage)
+	log log.Logger
 }
 
 // NewDockerfileGenerator creates a new dockerfile generator
-func NewDockerfileGenerator(localPath string, templateRepoURL *string) (*DockerfileGenerator, error) {
+func NewDockerfileGenerator(localPath, templateRepoURL string, log log.Logger) (*DockerfileGenerator, error) {
 	repoURL := DockerfileRepoURL
-	if templateRepoURL != nil {
-		repoURL = *templateRepoURL
+	if templateRepoURL != "" {
+		repoURL = templateRepoURL
 	}
 
 	homedir, err := homedir.Dir()
@@ -105,7 +52,52 @@ func NewDockerfileGenerator(localPath string, templateRepoURL *string) (*Dockerf
 	return &DockerfileGenerator{
 		LocalPath: localPath,
 		gitRepo:   gitRepository,
+		log:       log,
 	}, nil
+}
+
+// ContainerizeApplication will create a dockerfile at the given path based on the language detected
+func (cg *DockerfileGenerator) ContainerizeApplication(dockerfilePath string) error {
+	// Check if the user already has a dockerfile
+	_, err := os.Stat(dockerfilePath)
+	if os.IsNotExist(err) == false {
+		return fmt.Errorf("Dockerfile at %s already exists", dockerfilePath)
+	}
+
+	cg.log.StartWait("Detecting programming language")
+
+	detectedLang := "none"
+	supportedLanguages, err := cg.GetSupportedLanguages()
+	if err == nil {
+		detectedLang, err = cg.GetLanguage()
+		if err != nil {
+			cg.log.Warnf("Error during language detection: %v", err)
+		}
+		if detectedLang == "" {
+			detectedLang = "none"
+		}
+	} else {
+		cg.log.Warnf("Error retrieving support languages: %v", err)
+	}
+	if len(supportedLanguages) == 0 {
+		supportedLanguages = []string{"none"}
+	}
+
+	cg.log.StopWait()
+
+	// Let the user select the language
+	selectedLanguage, err := cg.log.Question(&survey.QuestionOptions{
+		Question:     "Select the programming language of this project",
+		DefaultValue: detectedLang,
+		Options:      supportedLanguages,
+	})
+	if err != nil {
+		return err
+	}
+
+	cg.log.WriteString("\n")
+
+	return cg.CreateDockerfile(selectedLanguage)
 }
 
 // GetLanguage gets the language from DockerfileGenerator either from its field "Language" or by detecting it
