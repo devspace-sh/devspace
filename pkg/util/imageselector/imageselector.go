@@ -55,7 +55,7 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 				return []ImageSelector{
 					{
 						ConfigImageName: configImageName,
-						Image:           c.Images[configImageName].Image + ":" + c.Images[configImageName].Tags[0],
+						Image:           c.Images[configImageName].Image + ":" + strings.Replace(c.Images[configImageName].Tags[0], "#", "x", -1),
 					},
 				}, nil
 			}
