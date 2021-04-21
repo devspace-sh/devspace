@@ -1,7 +1,6 @@
 package util
 
 import (
-	"fmt"
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -122,7 +121,7 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 		// only return the tag
 		if onlyTag {
 			if tag == "" {
-				return false, false, "", fmt.Errorf("no tag found for image %s", image)
+				return true, shouldRedeploy, "latest", nil
 			}
 
 			return true, shouldRedeploy, tag, nil
