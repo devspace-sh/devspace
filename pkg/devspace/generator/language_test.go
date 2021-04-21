@@ -6,48 +6,9 @@ import (
 	"testing"
 
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	fakelogger "github.com/loft-sh/devspace/pkg/util/log/testing"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
-
 	"gotest.tools/assert"
 )
-
-func TestContainerizeApplicationWithExistingDockerfile(t *testing.T) {
-	//Create TmpFolder
-	dir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
-
-	wdBackup, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Error getting current working directory: %v", err)
-	}
-	err = os.Chdir(dir)
-	if err != nil {
-		t.Fatalf("Error changing working directory: %v", err)
-	}
-
-	// Cleanup temp folder
-	defer func() {
-		err = os.Chdir(wdBackup)
-		if err != nil {
-			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
-		}
-	}()
-
-	err = fsutil.WriteToFile([]byte(""), "Dockerfile")
-	if err != nil {
-		t.Fatalf("Error writing file: %v", err)
-	}
-	err = ContainerizeApplication("Dockerfile", "", "", log.GetInstance())
-	assert.Error(t, err, "Dockerfile at Dockerfile already exists", "Unexpected or no error when trying to containerize with existing Dockerfile")
-}
 
 func TestContainerizeApplication(t *testing.T) {
 	//Create TmpFolder
@@ -93,7 +54,13 @@ app.listen(3000, function () {
 
 	fakeLogger := fakelogger.NewFakeLogger()
 	fakeLogger.Survey.SetNextAnswer("javascript")
-	err = ContainerizeApplication("", "", "", fakeLogger)
+
+	generator, err := NewDockerfileGenerator("", "", fakeLogger)
+	if err != nil {
+		t.Fatalf("Error containerizing application: %v", err)
+	}
+
+	err = generator.ContainerizeApplication("")
 	if err != nil {
 		t.Fatalf("Error containerizing application: %v", err)
 	}
@@ -128,7 +95,7 @@ func TestDockerfileGenerator(t *testing.T) {
 	}()
 
 	//Test factory method
-	dockerfileGenerator, err := NewDockerfileGenerator("", ptr.String(""))
+	dockerfileGenerator, err := NewDockerfileGenerator("", "", fakelogger.NewFakeLogger())
 	if err != nil {
 		t.Fatalf("Error creating a dockerfileGenerator: %v", err)
 	}

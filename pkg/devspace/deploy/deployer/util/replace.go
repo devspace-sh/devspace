@@ -1,7 +1,6 @@
 package util
 
 import (
-	"fmt"
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -96,13 +95,13 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 			shouldRedeploy = true
 		}
 	}
-	
+
 	// search for image name
 	for configImageKey, configImage := range configImages {
 		if configImage.Image != image {
 			continue
 		}
-		
+
 		// if we only need the image we are done here
 		if onlyImage {
 			return true, shouldRedeploy, configImage.Image, nil
@@ -116,13 +115,13 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 
 		// does the config have a tag defined?
 		if tag == "" && len(configImage.Tags) > 0 {
-			tag = configImage.Tags[0]
+			tag = strings.Replace(configImage.Tags[0], "#", "x", -1)
 		}
 
 		// only return the tag
 		if onlyTag {
 			if tag == "" {
-				return false, false, "", fmt.Errorf("no tag found for image %s", image)
+				return true, shouldRedeploy, "latest", nil
 			}
 
 			return true, shouldRedeploy, tag, nil
@@ -132,7 +131,7 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 		if tag == "" {
 			return true, shouldRedeploy, image, nil
 		}
-		return true, shouldRedeploy, image + ":" + imageCache[configImageKey].Tag, nil
+		return true, shouldRedeploy, image + ":" + tag, nil
 	}
 
 	// not found, return the initial value
