@@ -156,6 +156,14 @@ func ApplyPatchesOnObject(data map[interface{}]interface{}, configPatches []*lat
 			newPatch.Value = yamlpatch.NewNode(&patch.Value)
 		}
 
+		if string(newPatch.Op) == "replace" && patch.Path[0] != '/' {
+			// figure out automatically if to use add or replace based on if the target path exists or not
+			target, _ := findPath(&newPatch.Path, data)
+			if target == nil {
+				newPatch.Op = yamlpatch.Op("add")
+			}
+		}
+
 		if string(newPatch.Op) == "add" && patch.Path[0] != '/' {
 			// In yamlpath the user has to add a '/-' to append to an array which is often confusing
 			// if the '/-' is not added the operation is essentially an replace. So what we do here is check
