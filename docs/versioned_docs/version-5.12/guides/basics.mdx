@@ -6,7 +6,8 @@ sidebar_label: Onboarding
 ## View Help & Flags
 To see help information and a list of all flags for any command, simply use the `-h` flag:
 ```bash
-devspace dev -h
+devspace -h         # Shows all major commands and flags
+devspace dev -h     # Shows sub-commands and specific flags for this command
 ```
 
 <br/>
@@ -27,24 +28,11 @@ This command deploys the project and then starts the development mode:
 devspace dev
 ```
 
-To start a terminal at the end of `devspace dev` instead of showing the container logs, run:
-```bash
-devspace dev -t
-```
-
-This command starts the interactive mode for development:
-```bash
-devspace dev -i
-```
-:::info
-Interactive mode is similar to the `-t` flag which shows a terminal instead of streaming the logs in the development mode but interactive mode also overrides the `ENTRYPOINT` of one of your containers, so you can start your application manually. This is great for debugging failing containers.
-:::
-
 
 ### Deploy Project
-This commands deploys the project to Kubernetes:
+This command deploys the project to Kubernetes:
 ```bash
-devspace deploy
+devspace deploy # -p / --profile production     => see: devspace list profiles
 ```
 
 Run this command to just build, tag and push all images to a registry without deploying the project:
@@ -53,15 +41,11 @@ devspace build
 ```
 
 
-### Open Project
-This command opens the current project in the browser:
+### Port Forwarding
+To get a list of all ports that are being forwarded as defined in `devspace.yaml`, run:
 ```bash
-devspace open
+devspace list ports
 ```
-
-:::note Must be deployed
-This command requires that the project has already been deployed.
-:::
 
 
 ### Commands
@@ -104,6 +88,11 @@ This command lists all variables as well as their values:
 devspace list vars
 ```
 
+To change the value of a variable, run:
+```bash
+devspace set var VAR_NAME=value # VAR_NAME_2=value2 VAR_NAME_3=value3
+```
+
 Use this command to reset all variables, i.e. delete variable values from the variable cache:
 ```bash
 devspace reset vars
@@ -126,6 +115,17 @@ Use this command to clear the dependencies cache:
 ```bash
 devspace reset dependencies
 ```
+
+
+### Open Project
+This command opens the current project in the browser:
+```bash
+devspace open
+```
+
+:::note Must be deployed
+This command requires that the project has already been deployed.
+:::
 
 <br/>
 
@@ -172,10 +172,6 @@ devspace sync
 If file sync is configured in your project, it automatically starts when running: `devspace dev`
 :::
 
-Use this command to view the status of the file sync during development mode:
-```bash
-devspace status sync
-```
 
 
 <br/>
@@ -183,30 +179,31 @@ devspace status sync
 ---
 
 
-## Namespace & Contexts
-This command creates a new Space:
-```bash
-devspace create space [space-name]
-```
-
-This command switches to a different Space:
-```bash
-devspace use space [optional:space-name]
-```
-
-This command switches to a different kube-context:
-```bash
-devspace use context [optional:context-name]
-```
-
-This command sets a different namespace as default namespace for the current kube-context:
+## Clusters & Namespaces
+This command sets a different namespace as default namespace for the current kube-context/cluster:
 ```bash
 devspace use namespace [optional:namespace]
 ```
 
 :::info Not for Spaces
-The command `devspace use namespace` does **<u>not</u>** work for Spaces. Use `devspace use space` instead.
+The command `devspace use namespace` does **<u>not</u>** work for Loft spaces. Use `devspace use space` instead.
 :::
+
+This command creates a new space using Loft:
+```bash
+devspace create space [space-name]
+```
+
+This command switches to a different spaces:
+```bash
+devspace use space [optional:space-name]
+```
+
+This command switches to a different kube-context/cluster:
+```bash
+devspace use context [optional:context-name]
+```
+
 
 
 <br/>

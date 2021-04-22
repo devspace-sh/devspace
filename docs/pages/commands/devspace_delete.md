@@ -3,28 +3,21 @@ title: "Command - devspace delete"
 sidebar_label: devspace delete
 ---
 
+## devspace delete
 
 the "loft" plugin
-
-## Synopsis
 
 ```
 devspace delete [flags]
 ```
 
-```
-the "loft" plugin
-```
-
-
-## Flags
+### Options
 
 ```
   -h, --help   help for delete
 ```
 
-
-## Global & Inherited Flags
+### Options inherited from parent commands
 
 ```
       --config string            The devspace config file to use
@@ -44,3 +37,10 @@ the "loft" plugin
       --vars-secret string       The secret to restore/save the variables from/to, if --restore-vars or --save-vars is enabled (default "devspace-vars")
 ```
 
+```
+
+```
+
+
+## Flags
+## Global & Inherited Flags

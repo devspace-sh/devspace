@@ -4,31 +4,529 @@
  * work well for content-centric websites.
  */
 
-@import url("https://devspace.sh/css/docs.css");
-
-.menu > .menu__list > .menu__list-item:nth-last-child(3) {
-  margin-top: 1.5em;
-  padding-top: 1.5em;
-  border-top: 1px solid #e9e9e9;
+ .table-of-contents__link {
+  position: relative;
 }
 
-.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__link,
-.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__list > .menu__list-item:nth-child(n+2) .menu__link {
-  font-family: var(--ifm-font-family-monospace) !important;
-  background: rgb(233, 233, 233);
+.table-of-contents__link--active::before {
+  content: " ";
+  background: var(--ifm-color-primary);
+  position: absolute;
+  left: -17px;
+  top: -5px;
+  bottom: -5px;
+  width: 6px;
+}
+
+ul ul .table-of-contents__link--active::before {
+  left: -32px;
+}
+
+
+.menu__link {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+.menu::-webkit-scrollbar,
+.menu::-webkit-scrollbar-thumb,
+.menu::-webkit-scrollbar-track {
+  transition: all 0.3s !important;
+  border-radius: 0 !important;
+}
+
+.menu:not(:hover)::-webkit-scrollbar,
+.menu:not(:hover)::-webkit-scrollbar-thumb,
+.menu:not(:hover)::-webkit-scrollbar-track {
+  background-color: #fff !important;
+}
+
+.menu__list {
+  margin-right: 0;
+}
+
+.menu__link {
+  outline: none;
+  font-weight: 400;
+}
+
+.menu__list-item > .menu__list .menu__list-item {
+  margin: 0 !important;
+  padding: 0 0 0.2em 0.8em;
+}
+
+.menu__list-item > .menu__list .menu__link {
+  position: relative;
+  margin: 0 !important;
+  padding: 0.1em 0 0.1em 0.2em;
+  background: transparent;
+}
+
+.menu__link--sublist + .menu__list > .menu__list-item:first-child {
+  margin-top: 0.3em !important;
+}
+
+.menu__list-item > .menu__list .menu__link:hover {
+  color: var(--ifm-color-primary);
+}
+
+.menu__list-item > .menu__list .menu__link--active {
+  font-weight: 600;
+}
+
+.menu > .menu__list > .menu__list-item > .menu__link--sublist {
+  color: var(--ifm-menu-color)!important;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.markdown figure figcaption {
+  z-index: 1;
+}
+
+.markdown p + ul {
+  margin-top: -1.2em !important;
+  margin-bottom: 1.4em !important;
+}
+
+.markdown ul > li {
+  margin-top: 0 !important;
+}
+
+.markdown h2,
+.markdown h3 {
+  margin-top: 2.4em;
+  line-height: 1em;
+}
+
+.markdown .step_src-components-Step- {
+  margin-top: 0.8em !important;
+}
+
+.markdown .step_src-components-Step- + h2,
+.markdown .step_src-components-Step- + h3,
+.markdown .step_src-components-Step- + h4,
+.markdown .step_src-components-Step- + h5,
+.markdown .step_src-components-Step- + p {
+  display: inline-block;
+  margin-top: 1em;
+  margin-bottom: 0.9em;
+}
+
+:root {
+  --ifm-color-info: #077EEC;
+  --ifm-color-success: rgb(64, 185, 255);
+  --ifm-color-warning: #ED7200;
+  --ifm-color-error: #C21B1B;
+}
+
+ul[role="tablist"] {
+  margin-top: -0.6em;
+  border-bottom: none;
+}
+
+ul[role="tablist"] li,
+ul[role="tablist"] li:hover {
+  background: transparent;
+  padding: 0.5em 1.2em;
+}
+
+ul[role="tablist"] li:not([aria-selected="true"]):hover {
+  border-bottom-color: #a6acd0;
+}
+
+[role="tabpanel"] {
+  background-color: #f7f8fc;
+  padding: 1.3em;
+  padding-bottom: 0em;
+  margin: 0 -1.3em 1.8em !important;
+  border: 1px solid #d2e8fd !important;
+  border-radius: 5px;
+}
+
+[role="tabpanel"] [role="tabpanel"] {
+  background-color: #fff;
+  margin-left: -5px !important;
+  margin-right: -5px !important;
   border-radius: 3px;
 }
 
-.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__list > .menu__list-item:nth-child(1) > .menu__link {
-  background: rgb(218, 218, 218);
+.tabs + div {
+  margin-top: 0 !important;
 }
 
-.navbar__brand {
-  margin-right: 0 !important;
+.tabs__item {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.markdown p + ul,
+.markdown p + ol {
+  margin-top: calc(-0.5 * var(--ifm-paragraph-margin-bottom));
+  margin-bottom: calc(0.8 * var(--ifm-paragraph-margin-bottom));
+}
+
+.markdown .admonition {
+  margin-left: -1px;
+  border-radius: 4px;
+}
+
+.admonition-note code {
+  background: #cdcdcd;
+}
+
+.markdown .codeBlockTitle_node_modules-\@docusaurus-theme-classic-src-theme-CodeBlock- {
+  background: transparent!important;
+  display: none;
+}
+
+.markdown [role="tab"],
+.markdown .prism-code,
+code {
+  outline: none;
+}
+
+.markdown [role="tab"] .comment,
+.markdown .prism-code .comment,
+code .comment {
+  user-select: none;
+}
+
+html body .markdown button[aria-label="Copy code to clipboard"],
+html body pre.prism-code > button {
+  margin-top: 0.25em !important;
+  box-shadow: 0 0 0 8px #292d3e;
+}
+
+.active-section,
+[id^="fn-"] {
+  position: relative;
+}
+
+[id^="fn-"] {
+  display: block;
+  text-indent: -0.8em;
+  padding-left: 0.8em;
+}
+
+.active-section::before,
+span:target::before {
+  content: " ";
+  width: 3px;
+  position: absolute;
+  left: -17px;
+  top: -10px;
+  bottom: calc(-1*var(--ifm-paragraph-margin-bottom));
+  background: #077EEC;
+}
+
+@media (min-width: 1500px) {
+  .active-section::before,
+  span:target::before {
+    left: -40px;
+  }
+}
+
+
+span:target::before {
+  bottom: -5px;
+}
+
+details .active-section::before {
+  display: none;
+}
+
+blockquote.active-section::before {
+  left: -25px;
+}
+
+.markdown h4 {
+  font-size: 1.15em;
+  margin-bottom: 0.4em;
+}
+
+.markdown h2 + h3 {
+  margin-top: 1.5em !important;
+}
+
+h3.active-section::before {
+  top: -2.4em;
+}
+
+*:not(.active-section) + h2.active-section::before,
+*:not(.active-section) + h3.active-section::before {
+  top: -0.5em;
+}
+
+.step_src-components-Step-.active-section::before,
+.step_src-components-Step- + h2.active-section::before,
+.step_src-components-Step- + h3.active-section::before,
+.step_src-components-Step- + h4.active-section::before {
+  display: none;
+}
+
+.step_src-components-Step- + h2.active-section + .active-section::before {
+  top: -5rem;
+}
+
+.step_src-components-Step- + h3.active-section + .active-section::before,
+.step_src-components-Step- + h4.active-section + .active-section::before {
+  top: -3.5rem;
+}
+
+.embed-container {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.embed-container iframe,
+.embed-container object,
+.embed-container embed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+table thead > tr {
+  border-top: none;
+}
+
+table th:first-child:empty {
+  opacity: 0;
+  border: none;
+}
+
+.container > .row > .col > div {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Button: Edit this page */
+.container > .row > .col > div > .margin-vert--xl {
+  order: -1;
+  height: 3em;
+  margin: 0 !important;
+  text-align: right;
+}
+
+/* Button: Edit this page */
+.container > .row > .col > div > .margin-vert--xl a {
+  padding: 0.3em 0.5em;
+  background: var(--ifm-color-primary-lighter);
+  color: #fff;
+  font-size: 0.8em;
+  font-weight: 600;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background-color 0.3s;
+}
+
+/* Button: Edit this page */
+.container > .row > .col > div > .margin-vert--xl a:hover {
+  background: var(--ifm-color-primary);
+}
+
+.docusaurus-highlight-code-line {
+  background-color: rgb(72, 77, 91);
+  display: block;
+  margin: 0 calc(-1 * var(--ifm-pre-padding));
+  padding: 0 var(--ifm-pre-padding);
+}
+
+html body .markdown button[aria-label="Copy code to clipboard"],
+html body pre.prism-code > button {
+  z-index: 1;
+  border: none;
+  background: var(--ifm-color-primary-lighter);
+  color: #fff;
+  text-transform: uppercase;
+  font-size: 0.8em;
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 0.6em 0.8em;
+  margin-top: -0.2em;
+  letter-spacing: 0.1em;
+  transition: background-color 0.3s;
+}
+
+html body .markdown button[aria-label="Copy code to clipboard"]:hover,
+html body pre.prism-code > button:hover {
+  background: var(--ifm-color-primary-darker);
+}
+
+body .prism-code,
+pre.prism-code {
+  margin-top: -0.2em;
+  border-radius: 4px;
+}
+
+body .prism-code,
+code {
+	counter-reset: linenumber;
+}
+
+body .prism-code .token-line,
+code > .token-line {
+  counter-increment: linenumber;
+}
+
+body .prism-code .token-line::before,
+code > .token-line::before {
+  width: 1em;
+  content: counter(linenumber);
+  color: #fff;
+  display: block;
+  float: left;
+  padding-right: 0.8em;
+  text-align: right;
+  opacity: 0.6;
+
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+body .prism-code .token-line:first-child:last-child::before,
+code > .token-line:first-child:last-child::before {
+  display: none;
+}
+
+body .prism-code .token-line,
+code .token-line {
+  padding-right: 2em;
+}
+
+.tabs {
+  border-bottom: 1px solid var(--ifm-color-primary-lightest);
+}
+
+.tabs > .tab-item {
+  border-radius: 0;
+  padding: 0.6em 1.2em;
+}
+
+.tabs > .tab-item:focus,
+.tabs > .tab-item:hover {
+  background-color: #f2f9fb;
+}
+
+div[role="tabpanel"] {
+  border-bottom: 1px solid var(--ifm-color-primary-lightest);
+}
+
+body .markdown {
+  position: relative;
+  --ifm-h2-vertical-rhythm-top: 1.8;
+}
+
+.markdown *:not(pre) > code,
+.contents code {
+  white-space: nowrap;
+}
+
+.admonition-warning a,
+.admonition-info a,
+.admonition-warning a:hover,
+.admonition-info a:hover {
+  color: rgb(255, 251, 0);
+}
+
+.markdown figure {
+  margin: 1em 0 2em;
+}
+
+.markdown figure:last-child {
+  margin-bottom: 1.2em;
+}
+
+.markdown figure.stretch,
+.markdown figure.stretch img {
+  width: 100%;
+}
+
+.markdown figure.frame img,
+.markdown figure.frame video {
+  width: 100%;
+  box-shadow: 0 0 7px 5px #00000009;
+  border: 1.5px solid #c6cbd1;
+  border-radius: 4px;
+}
+
+.markdown figcaption {
+  position: relative;
+  left: 0;
+  width: 100%;
+  top: 0;
+  margin-top: 5px;
+  outline: 0;
+  text-align: center;
+  z-index: 300;
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: 0;
 }
 
 .navbar__brand::after {
-  display: none !important;
+  display: block;
+  content: " ";
+  background: #dadde1;
+  width: 1px;
+  height: 60px;
+  margin-left: 20px;
+  transform: skew(-15deg, 0);
+}
+
+.menu__link--active {
+  color: var(--ifm-color-primary) !important;
+}
+
+.version-link {
+  position: relative;
+  margin-right: 20px;
+  padding: 0.2em 0.6em;
+  background-color: var(--ifm-color-primary);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 3px;
+  transition: background-color 0.3s;
+}
+
+.version-link:hover {
+  color: #fff;
+  text-decoration: none;
+  background-color: var(--ifm-color-primary-darkest);
+}
+
+.version-link::before {
+  content: "v";
+  padding-right: 0.1em;
+}
+
+.version-link::after {
+  display: block;
+  content: " ";
+  width: 1px;
+  height: 60px;
+  position: absolute;
+  top: -16px;
+  right: -20px;
+  transform: skew(-15deg, 0deg);
+  background: rgb(218, 221, 225);
+}
+
+.github-link,
+.slack-link {
+  padding: 0;
 }
 
 .github-link:before {
@@ -52,4 +550,51 @@
   background-repeat: no-repeat;
   background-position: center center;
   background-size: contain;
+}
+
+
+
+.menu>.menu__list>.menu__list-item:nth-child(-n+6) {
+  margin: 1em 0;
+}
+
+.menu > .menu__list > .menu__list-item:first-child {
+  display: none;
+}
+
+.menu > .menu__list > .menu__list-item:nth-child(2) > .menu__link,
+.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__link {
+  pointer-events: none;
+}
+
+.menu > .menu__list > .menu__list-item:nth-child(2) > .menu__link::after,
+.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__link::after {
+  display: none;
+}
+
+.menu > .menu__list > .menu__list-item:nth-last-child(2) {
+  margin-top: 1.5em;
+  padding-top: 1.5em;
+  border-top: 1px solid #e9e9e9;
+}
+
+.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__link,
+.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__list > .menu__list-item:nth-child(n+2) .menu__link {
+  padding: 0.35em 0.7em;
+  font-family: var(--ifm-font-family-monospace) !important;
+  background: rgb(233, 233, 233);
+  border-radius: 3px;
+}
+
+.menu > .menu__list > .menu__list-item:nth-child(3) > .menu__list > .menu__list-item > .menu__list > .menu__list-item:nth-child(1) > .menu__link {
+  padding: 0.35em 0.7em;
+  background: rgb(218, 218, 218);
+}
+
+.navbar__brand {
+  margin-right: 0 !important;
+}
+
+.navbar__brand::after {
+  display: none !important;
 }

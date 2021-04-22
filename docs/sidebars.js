@@ -14,17 +14,30 @@ module.exports = {
     {
       type: 'category',
       label: 'Getting Started',
+      collapsed: false,
       items: [
-        'getting-started/installation',
-        'getting-started/initialize-project',
-        'getting-started/development',
-        'getting-started/deployment',
-        'getting-started/next-steps',
+        {
+          type: 'doc',
+          id: 'quickstart',
+        },
+        {
+          type: 'category',
+          label: 'Full Guide',
+          items: [
+            'getting-started/installation',
+            'getting-started/initialize-project',
+            'getting-started/development',
+            'getting-started/deployment',
+            'getting-started/cleanup',
+            'getting-started/next-steps',
+          ],
+        },
       ],
     },
     {
       type: 'category',
       label: 'Configuration',
+      collapsed: false,
       items: [
         'configuration/reference',
         {
@@ -60,6 +73,11 @@ module.exports = {
             'configuration/deployments/helm-charts',
             'configuration/deployments/kubernetes-manifests',
             'configuration/deployments/kustomizations',
+            {
+              type: 'link',
+              label: '↗️ Component Chart',
+              href: 'https://devspace.sh/component-chart/docs',
+            },
           ],
         },
         {
@@ -69,12 +87,12 @@ module.exports = {
             'configuration/development/basics',
             'configuration/development/port-forwarding',
             'configuration/development/reverse-port-forwarding',
-            'configuration/development/file-synchronization',
-            'configuration/development/auto-reloading',
             'configuration/development/open-links',
+            'configuration/development/file-synchronization',
+            'configuration/development/terminal',
             'configuration/development/log-streaming',
-            'configuration/development/interactive-mode',
             'configuration/development/replace-pods',
+            'configuration/development/auto-reloading',
           ],
         },
         {
@@ -138,36 +156,36 @@ module.exports = {
       items: [
         {
           type: 'link',
-          label: '↗️ Ruby on Rails',
+          label: 'Ruby on Rails',
           href: 'https://devspace.cloud/blog/2019/10/21/deploy-ruby-on-rails-to-kubernetes',
         },
         {
           type: 'link',
-          label: '↗️ Python Django',
+          label: 'Python Django',
           href: 'https://devspace.cloud/blog/2019/10/18/deploy-django-to-kubernetes',
         },
         {
           type: 'link',
-          label: '↗️ PHP Laravel',
+          label: 'PHP Laravel',
           href: 'https://devspace.cloud/blog/2019/10/16/deploy-laravel-to-kubernetes',
         },
         {
           type: 'category',
-          label: '↗️ Node / JavaScript',
+          label: 'Node / JavaScript',
           items: [
             {
               type: 'link',
-              label: '↗️ Express.js',
+              label: 'Express.js',
               href: 'https://devspace.cloud/blog/2019/10/15/deploy-express.js-server-to-kubernetes',
             },
             {
               type: 'link',
-              label: '↗️ React.js',
+              label: 'React.js',
               href: 'https://devspace.cloud/blog/2019/03/07/deploy-react-js-to-kubernetes',
             },
             {
               type: 'link',
-              label: '↗️ Vue.js',
+              label: 'Vue.js',
               href: 'https://devspace.cloud/blog/2019/09/30/deploy-vue-js-to-kubernetes',
             },
           ]
@@ -182,12 +200,7 @@ module.exports = {
           type: "category",
           label: "devspace add",
           items: [
-            "commands/devspace_add_deployment",
-            "commands/devspace_add_image",
             "commands/devspace_add_plugin",
-            "commands/devspace_add_port",
-            "commands/devspace_add_provider",
-            "commands/devspace_add_sync"
           ]
         },
         "commands/devspace_analyze",
@@ -258,7 +271,6 @@ module.exports = {
             "commands/devspace_set_var"
           ]
         },
-        "commands/devspace_status_sync",
         "commands/devspace_sync",
         "commands/devspace_ui",
         {
@@ -287,17 +299,12 @@ module.exports = {
     {
       type: 'link',
       label: '↗️ Component Chart',
-      href: 'https://devspace.sh/component-chart/docs/introduction',
+      href: 'https://devspace.sh/component-chart/docs',
     },
     {
       type: 'link',
-      label: '↗️ loft / DevSpace Cloud v2',
-      href: 'https://loft.sh/docs/introduction',
-    },
-    {
-      type: 'link',
-      label: '↗️ DevSpace Cloud v1',
-      href: 'https://devspace.cloud/cloud/docs/introduction',
+      label: '↗️ Open-Source by Loft Labs',
+      href: 'https://loft.sh/',
     },
   ],
 };
