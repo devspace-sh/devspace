@@ -148,9 +148,6 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 		}
 	}
 
-	m.log.WriteString("\n")
-	m.log.Info("DevSpace does *not* require pushing your images to a registry but let's assume you wanted to do that (optional)")
-
 	// Ignore error as context may not be a Space
 	kubeContext, err := m.factory.NewKubeConfigLoader().GetCurrentContext()
 	if err != nil {
@@ -164,6 +161,9 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 	}
 
 	if image == "" {
+		m.log.WriteString("\n")
+		m.log.Info("DevSpace does *not* require pushing your images to a registry but let's assume you wanted to do that (optional)")
+
 		authConfig, err := dockerClient.GetAuthConfig(dockerHubHostname, true)
 		if err == nil && authConfig.Username != "" {
 			useDockerHub = useDockerHub + fmt.Sprintf(registryUsernameHint, authConfig.Username)
@@ -225,6 +225,9 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 			imageConfig.Image = registryHostname + "/" + projectPath + "/" + imageName
 		}
 	} else {
+		m.log.WriteString("\n")
+		m.log.Info("DevSpace does *not* require pushing your images to a registry but let's check your registry credentials for this image (optional)")
+
 		_, err := m.addPullSecretConfig(dockerClient, image)
 		if err != nil {
 			return err
@@ -237,12 +240,7 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 }
 
 func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) (string, error) {
-	var (
-		usernameQuestion = ""
-		passwordQuestion = ""
-		err              error
-	)
-
+	var err error
 	image, err = imageselector.GetStrippedDockerImageName(strings.ToLower(image))
 	if err != nil {
 		return "", err
@@ -257,11 +255,14 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 	registryHostnameSpaced := " " + registryHostname
 
 	if registryHostname == "" {
-		usernameQuestion = "What is your Docker Hub username? (optional, Enter to skip)"
-		passwordQuestion = "What is your Docker Hub password? (optional, Enter to skip)"
 		registryHostnamePrintable = dockerHubHostname
 		registryHostnameSpaced = registryHostname
-	} else if strings.Contains(registryHostname, "ghcr.io") || strings.Contains(registryHostname, "github.com") {
+	}
+
+	usernameQuestion := fmt.Sprintf("What is your username for %s? (optional, Enter to skip)", registryHostnamePrintable)
+	passwordQuestion := fmt.Sprintf("What is your password for %s? (optional, Enter to skip)", registryHostnamePrintable)
+
+	if strings.Contains(registryHostname, "ghcr.io") || strings.Contains(registryHostname, "github.com") {
 		usernameQuestion = "What is your GitHub username? (optional, Enter to skip)"
 		passwordQuestion = "Please enter a GitHub personal access token (optional, Enter to skip)"
 	}
@@ -275,6 +276,8 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 		m.log.StopWait()
 		if err == nil && (authConfig.Username != "" || authConfig.Password != "") {
 			registryUsername = authConfig.Username
+
+			m.log.Donef("Great! You are authenticated with %s", registryHostnamePrintable)
 			break
 		}
 
@@ -301,11 +304,11 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 			}
 		}
 
+		m.log.WriteString("\n")
+
 		// Check if docker is running
 		runErr := exec.Command("docker version").Run()
 		if runErr != nil || registryUsername == "" {
-			m.log.WriteString("\n")
-
 			if registryUsername == "" {
 				m.log.Warn("Skipping image registry authentication.")
 				m.log.Warn("You may ignore this warning. Pushing images to a registry is *not* required.")
