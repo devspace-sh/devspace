@@ -304,13 +304,14 @@ func (m *manager) AddComponentDeployment(deploymentName, imageName string, servi
 				Image: fmt.Sprintf("image(%s):tag(%s)", imageName, imageName),
 			},
 		},
-		Service: &v1.ServiceConfig{},
 	}
 
 	if servicePort > 0 {
-		componentConfig.Service.Ports = []*v1.ServicePortConfig{
-			{
-				Port: &servicePort,
+		componentConfig.Service = &v1.ServiceConfig{
+			Ports: []*v1.ServicePortConfig{
+				{
+					Port: &servicePort,
+				},
 			},
 		}
 	}

@@ -39,96 +39,6 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 		err                   error
 	)
 
-	// Ignore error as context may not be a Space
-	kubeContext, err := m.factory.NewKubeConfigLoader().GetCurrentContext()
-	if err != nil {
-		return err
-	}
-
-	// Get docker client
-	dockerClient, err := m.factory.NewDockerClientWithMinikube(kubeContext, true, m.log)
-	if err != nil {
-		return errors.Errorf("Cannot create docker client: %v", err)
-	}
-
-	noImageProvided := image == ""
-
-	if noImageProvided {
-		authConfig, err := dockerClient.GetAuthConfig(dockerHubHostname, true)
-		if err == nil && authConfig.Username != "" {
-			useDockerHub = useDockerHub + fmt.Sprintf(registryUsernameHint, authConfig.Username)
-			registryDefaultOption = useDockerHub
-		}
-
-		authConfig, err = dockerClient.GetAuthConfig(githubContainerRegistry, true)
-		if err == nil && authConfig.Username != "" {
-			useGithubRegistry = useGithubRegistry + fmt.Sprintf(registryUsernameHint, authConfig.Username)
-		}
-
-		registryOptions := []string{useDockerHub, useGithubRegistry, useOtherRegistry}
-		selectedRegistry, err := m.log.Question(&survey.QuestionOptions{
-			Question:     "Which registry do you want to use to push images to?",
-			DefaultValue: registryDefaultOption,
-			Options:      registryOptions,
-		})
-		if err != nil {
-			return err
-		}
-
-		registryHostname := ""
-
-		if selectedRegistry == useDockerHub {
-			// nothing to do here
-		} else if selectedRegistry == useGithubRegistry {
-			registryHostname = githubContainerRegistry
-		} else {
-			registryHostname, err = m.log.Question(&survey.QuestionOptions{
-				Question:     "Please provide the registry hostname (e.g. gcr.io, ghcr.io, ecr.io)",
-				DefaultValue: "gcr.io",
-			})
-			if err != nil {
-				return err
-			}
-		}
-
-		registryUsername, err := m.addPullSecretConfig(dockerClient, strings.Trim(registryHostname+"/test/test", "/"))
-		if err != nil {
-			return err
-		}
-
-		if selectedRegistry == useDockerHub {
-			image = registryUsername + "/" + imageName
-		} else {
-			projectPath := registryUsername + "/project"
-			if regexp.MustCompile("^(.+\\.)?gcr.io$").Match([]byte(registryHostname)) {
-				project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
-
-				if err == nil {
-					projectPath = strings.TrimSpace(string(project))
-				}
-			}
-
-			image = registryHostname + "/" + projectPath + "/" + imageName
-		}
-
-		image, err = m.log.Question(&survey.QuestionOptions{
-			Question:     "Please provide the full image to be pushed for this project",
-			DefaultValue: image,
-			ValidationFunc: func(value string) error {
-				_, err = imageselector.GetStrippedDockerImageName(strings.ToLower(value))
-				return err
-			},
-		})
-		if err != nil {
-			return err
-		}
-	} else {
-		_, err := m.addPullSecretConfig(dockerClient, image)
-		if err != nil {
-			return err
-		}
-	}
-
 	imageConfig := &latest.ImageConfig{
 		Image:      strings.ToLower(image),
 		Dockerfile: dockerfile,
@@ -145,7 +55,7 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 	}
 
 	buildMethod, err := m.log.Question(&survey.QuestionOptions{
-		Question:     "How should DevSpace build this image?",
+		Question:     "How should DevSpace build the container image for this project?",
 		DefaultValue: buildMethods[0],
 		Options:      append(buildMethods, customBuild),
 	})
@@ -238,6 +148,89 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 		}
 	}
 
+	m.log.WriteString("\n")
+	m.log.Info("DevSpace does *not* require pushing your images to a registry but let's assume you wanted to do that (optional)")
+
+	// Ignore error as context may not be a Space
+	kubeContext, err := m.factory.NewKubeConfigLoader().GetCurrentContext()
+	if err != nil {
+		return err
+	}
+
+	// Get docker client
+	dockerClient, err := m.factory.NewDockerClientWithMinikube(kubeContext, true, m.log)
+	if err != nil {
+		return errors.Errorf("Cannot create docker client: %v", err)
+	}
+
+	if image == "" {
+		authConfig, err := dockerClient.GetAuthConfig(dockerHubHostname, true)
+		if err == nil && authConfig.Username != "" {
+			useDockerHub = useDockerHub + fmt.Sprintf(registryUsernameHint, authConfig.Username)
+			registryDefaultOption = useDockerHub
+		}
+
+		authConfig, err = dockerClient.GetAuthConfig(githubContainerRegistry, true)
+		if err == nil && authConfig.Username != "" {
+			useGithubRegistry = useGithubRegistry + fmt.Sprintf(registryUsernameHint, authConfig.Username)
+		}
+
+		registryOptions := []string{useDockerHub, useGithubRegistry, useOtherRegistry}
+		selectedRegistry, err := m.log.Question(&survey.QuestionOptions{
+			Question:     "Which registry would you want to use to push images to? (optional, choose any)",
+			DefaultValue: registryDefaultOption,
+			Options:      registryOptions,
+		})
+		if err != nil {
+			return err
+		}
+
+		registryHostname := ""
+
+		if selectedRegistry == useDockerHub {
+			// nothing to do here
+		} else if selectedRegistry == useGithubRegistry {
+			registryHostname = githubContainerRegistry
+		} else {
+			registryHostname, err = m.log.Question(&survey.QuestionOptions{
+				Question:     "Please provide the registry hostname without the image path (e.g. gcr.io, ghcr.io, ecr.io)",
+				DefaultValue: "gcr.io",
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		registryUsername, err := m.addPullSecretConfig(dockerClient, strings.Trim(registryHostname+"/test/test", "/"))
+		if err != nil {
+			return err
+		}
+
+		if registryUsername == "" {
+			registryUsername = "username"
+		}
+
+		if selectedRegistry == useDockerHub {
+			imageConfig.Image = registryUsername + "/" + imageName
+		} else {
+			projectPath := registryUsername + "/project"
+			if regexp.MustCompile("^(.+\\.)?gcr.io$").Match([]byte(registryHostname)) {
+				project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
+
+				if err == nil {
+					projectPath = strings.TrimSpace(string(project))
+				}
+			}
+
+			imageConfig.Image = registryHostname + "/" + projectPath + "/" + imageName
+		}
+	} else {
+		_, err := m.addPullSecretConfig(dockerClient, image)
+		if err != nil {
+			return err
+		}
+	}
+
 	m.config.Images[imageName] = imageConfig
 
 	return nil
@@ -260,19 +253,24 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 		return "", err
 	}
 
+	registryHostnamePrintable := registryHostname
+	registryHostnameSpaced := " " + registryHostname
+
 	if registryHostname == "" {
-		usernameQuestion = "What is your Docker Hub username?"
-		passwordQuestion = "What is your Docker Hub password? (will only be used for `docker login`)"
+		usernameQuestion = "What is your Docker Hub username? (optional, Enter to skip)"
+		passwordQuestion = "What is your Docker Hub password? (optional, Enter to skip)"
+		registryHostnamePrintable = dockerHubHostname
+		registryHostnameSpaced = registryHostname
 	} else if strings.Contains(registryHostname, "ghcr.io") || strings.Contains(registryHostname, "github.com") {
-		usernameQuestion = "What is your GitHub username?"
-		passwordQuestion = "Please enter a GitHub personal access token (will only be used for `docker login`)"
+		usernameQuestion = "What is your GitHub username? (optional, Enter to skip)"
+		passwordQuestion = "Please enter a GitHub personal access token (optional, Enter to skip)"
 	}
 
 	registryUsername := ""
 	registryPassword := ""
 
 	for true {
-		m.log.StartWait("Checking registry authentication")
+		m.log.StartWait("Checking registry authentication for " + registryHostnamePrintable)
 		authConfig, err := dockerClient.Login(registryHostname, registryUsername, registryPassword, true, false, false)
 		m.log.StopWait()
 		if err == nil && (authConfig.Username != "" || authConfig.Password != "") {
@@ -280,8 +278,9 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 			break
 		}
 
-		m.log.Warnf("Unable to find registry credentials for %s", registryHostname)
-		m.log.Warnf("Running `docker login %s` for you to authenticate with the registry. Make sure you have push permissions", registryHostname)
+		m.log.WriteString("\n")
+		m.log.Warnf("Unable to find registry credentials for %s", registryHostnamePrintable)
+		m.log.Warnf("Running `docker login%s` for you to authenticate with the registry (optional)", registryHostnameSpaced)
 
 		registryUsername, err = m.log.Question(&survey.QuestionOptions{
 			Question:               usernameQuestion,
@@ -291,19 +290,29 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 			return "", err
 		}
 
-		registryPassword, err = m.log.Question(&survey.QuestionOptions{
-			Question:               passwordQuestion,
-			ValidationRegexPattern: "^.*$",
-			IsPassword:             true,
-		})
-		if err != nil {
-			return "", err
+		if registryUsername != "" {
+			registryPassword, err = m.log.Question(&survey.QuestionOptions{
+				Question:               passwordQuestion,
+				ValidationRegexPattern: "^.*$",
+				IsPassword:             true,
+			})
+			if err != nil {
+				return "", err
+			}
 		}
 
 		// Check if docker is running
 		runErr := exec.Command("docker version").Run()
-		if runErr != nil {
-			m.log.Warn("Docker daemon is not running. Start Docker daemon or images will be built using kaniko inside Kubernetes.")
+		if runErr != nil || registryUsername == "" {
+			m.log.WriteString("\n")
+
+			if registryUsername == "" {
+				m.log.Warn("Skipping image registry authentication.")
+				m.log.Warn("You may ignore this warning. Pushing images to a registry is *not* required.")
+			} else {
+				m.log.Warn("Unable to verify image registry authentication because Docker daemon is not running.")
+				m.log.Warn("You may ignore this warning. Pushing images to a registry is *not* required.")
+			}
 
 			usernameVar := "REGISTRY_USERNAME"
 			passwordVar := "REGISTRY_PASSWORD"
