@@ -517,26 +517,33 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 				Command:   []string{"./" + startScriptName},
 			}
 
+			replacePodPatches := []*latest.PatchConfig{
+				{
+					Path:      "spec.containers[0].securityContext",
+					Operation: "remove",
+				},
+			}
+
+			if language != "php" {
+				replacePodPatches = append([]*latest.PatchConfig{
+					{
+						Path:      "spec.containers[0].command",
+						Operation: "replace",
+						Value:     []string{"sleep"},
+					},
+					{
+						Path:      "spec.containers[0].args",
+						Operation: "replace",
+						Value:     []string{"9999999"},
+					},
+				}, replacePodPatches...)
+			}
+
 			config.Dev.ReplacePods = []*latest.ReplacePod{
 				{
 					ImageName:    imageName,
 					ReplaceImage: fmt.Sprintf("loftsh/%s:latest", language),
-					Patches: []*latest.PatchConfig{
-						{
-							Path:      "spec.containers[0].command",
-							Operation: "replace",
-							Value:     []string{"sleep"},
-						},
-						{
-							Path:      "spec.containers[0].args",
-							Operation: "replace",
-							Value:     []string{"9999999"},
-						},
-						{
-							Path:      "spec.containers[0].securityContext",
-							Operation: "remove",
-						},
-					},
+					Patches:      replacePodPatches,
 				},
 			}
 		}
