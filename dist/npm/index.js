@@ -12,7 +12,9 @@ const downloadPathTemplate =
 const ARCH_MAPPING = {
   ia32: "386",
   x64: "amd64",
-  arm: "arm"
+  x86_64: "amd64",
+  arm: "arm",
+  aarch64: "arm"
 };
 const PLATFORM_MAPPING = {
   darwin: "darwin",
