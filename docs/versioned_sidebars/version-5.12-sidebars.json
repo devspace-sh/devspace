@@ -310,10 +310,6 @@
         },
         {
           "type": "doc",
-          "id": "version-5.12/guides/interactive-mode"
-        },
-        {
-          "type": "doc",
           "id": "version-5.12/guides/ci-cd-integration"
         },
         {
