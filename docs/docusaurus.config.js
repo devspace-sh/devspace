@@ -8,10 +8,12 @@ module.exports = {
   url: 'https://devspace.sh',
   baseUrl: __webpack_public_path__,
   favicon: '/img/favicon.png',
-  organizationName: 'devspace-cloud', // Usually your GitHub org/user name.
+  organizationName: 'loft-sh', // Usually your GitHub org/user name.
   projectName: 'devspace', // Usually your repo name.
   themeConfig: {
-    disableDarkMode: true,
+    colorMode: {
+      disableSwitch: true
+    },
     navbar: {
       logo: {
         alt: 'DevSpace',
@@ -19,7 +21,7 @@ module.exports = {
         href: 'https://devspace.sh/',
         target: '_self'
       },
-      links: [
+      items: [
         {
           to: 'versions',
           label: `${versions[0]}`,
@@ -85,14 +87,6 @@ module.exports = {
         },
       },
     ],
-  ],
-  plugins: [
-    [
-      require.resolve('docusaurus-gtm-plugin'),
-      {
-        id: 'GTM-5KKTMWJ',
-      }
-    ]
   ],
   scripts: [
     {
