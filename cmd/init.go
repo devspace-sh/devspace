@@ -14,6 +14,7 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	latest "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/generator"
 	"github.com/loft-sh/devspace/pkg/util/dockerfile"
@@ -292,7 +293,7 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		return err
 	}
 
-	configPath := configLoader.GetConfigPath()
+	configPath := loader.ConfigPath("")
 	annotatedConfig, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		panic(err)

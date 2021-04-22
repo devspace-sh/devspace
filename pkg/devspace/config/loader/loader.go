@@ -47,9 +47,6 @@ type ConfigLoader interface {
 	// and will return if a devspace.yaml was found as well as switch to the current
 	// working directory to that directory if a devspace.yaml could be found.
 	SetDevSpaceRoot(log log.Logger) (bool, error)
-
-	// GetConfigPath returns the path where the config is stored
-	GetConfigPath() string
 }
 
 type configLoader struct {
@@ -333,10 +330,6 @@ func (l *configLoader) SetDevSpaceRoot(log log.Logger) (bool, error) {
 	}
 
 	return false, nil
-}
-
-func (l *configLoader) GetConfigPath() string {
-	return ConfigPath(l.configPath)
 }
 
 func ConfigPath(configPath string) string {
