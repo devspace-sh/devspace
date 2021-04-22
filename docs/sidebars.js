@@ -141,7 +141,6 @@ module.exports = {
         'guides/localhost-ui',
         'guides/networking-domains',
         'guides/file-synchronization',
-        'guides/interactive-mode',
         'guides/ci-cd-integration',
         'guides/dev-staging-production',
         'guides/image-building',
