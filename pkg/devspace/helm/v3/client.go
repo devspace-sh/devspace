@@ -1,6 +1,10 @@
 package v3
 
 import (
+	"os"
+	"path/filepath"
+	"strconv"
+
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
@@ -8,9 +12,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"os"
-	"path/filepath"
-	"strconv"
 
 	"runtime"
 	"strings"
@@ -126,7 +127,12 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	}
 
 	args = append(args, helmConfig.UpgradeArgs...)
-	_, err = c.genericHelm.Exec(args, helmConfig)
+	output, err := c.genericHelm.Exec(args, helmConfig)
+
+	if helmConfig.Output {
+		c.log.Infof("Helm Output '%s'", output)
+	}
+
 	if err != nil {
 		return nil, err
 	}
