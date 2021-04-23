@@ -66,7 +66,7 @@ func (c *client) IsValidHelm(path string) (bool, error) {
 	return strings.Contains(string(out), `:"v3.`), nil
 }
 
-// InstallChart installs the given chart via helm v2
+// InstallChart installs the given chart via helm v3
 func (c *client) InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
 	valuesFile, err := c.genericHelm.WriteValues(values)
 	if err != nil {
