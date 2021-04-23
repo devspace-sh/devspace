@@ -102,6 +102,10 @@ func (client *client) EnsureDeployNamespaces(config *latest.Config, log log.Logg
 		_, err := client.KubeClient().CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) == false {
+				if kerrors.IsForbidden(err) {
+					continue
+				}
+
 				return errors.Wrap(err, "get namespace")
 			}
 
