@@ -129,8 +129,8 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	args = append(args, helmConfig.UpgradeArgs...)
 	output, err := c.genericHelm.Exec(args, helmConfig)
 
-	if helmConfig.Output {
-		c.log.Infof("Helm Output '%s'", output)
+	if helmConfig.DisplayOutput {
+		c.log.Write(output)
 	}
 
 	if err != nil {
