@@ -255,7 +255,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 					return err
 				}
 
-				gitCommand := fmt.Sprintf("if [ -d '%s/.git' ]; then cd \"%s\" && git fetch origin %s --depth 1; else mkdir -p %s; git clone --single-branch --branch %s --depth 1 %s %s; fi", chartTempPath, chartTempPath, gitBranch, chartTempPath, gitBranch, gitRepo, chartTempPath)
+				gitCommand := fmt.Sprintf("if [ -d '%s/.git' ]; then cd \"%s\" && git pull origin %s; else mkdir -p %s; git clone --single-branch --branch %s %s %s; fi", chartTempPath, chartTempPath, gitBranch, chartTempPath, gitBranch, gitRepo, chartTempPath)
 
 				m.log.WriteString("\n")
 				m.log.Infof("Cloning external repo `%s` containing to retrieve Helm chart", gitRepo)
