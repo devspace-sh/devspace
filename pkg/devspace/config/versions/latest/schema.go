@@ -594,6 +594,7 @@ type HelmConfig struct {
 	ValuesFiles      []string                    `yaml:"valuesFiles,omitempty" json:"valuesFiles,omitempty"`
 	ReplaceImageTags *bool                       `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
 	Wait             bool                        `yaml:"wait,omitempty" json:"wait,omitempty"`
+	DisplayOutput    bool                        `yaml:"displayOutput,omitempty" json:"output,omitempty"`
 	Timeout          *int64                      `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 	Force            bool                        `yaml:"force,omitempty" json:"force,omitempty"`
 	Atomic           bool                        `yaml:"atomic,omitempty" json:"atomic,omitempty"`

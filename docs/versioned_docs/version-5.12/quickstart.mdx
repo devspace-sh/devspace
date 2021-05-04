@@ -1,0 +1,54 @@
+---
+title: Quickstart
+sidebar_label: Quickstart
+---
+
+import InstallFragment from './fragments/install-cli.mdx';
+import ChooseProjectFragment from './fragments/choose-project.mdx';
+import StartAppFragment from './fragments/start-app.mdx';
+
+This is a 2-minute quickstart guide. For additional details and explanations, see the [Getting Started Guide](./getting-started/installation.mdx).
+
+## 1. Download CLI
+<InstallFragment/>
+
+## 2. Choose a Project
+You can either deploy one of your own projects or alternatively, checkout one of our demo applications using git:
+
+<ChooseProjectFragment/>
+
+## 3. Initialize Project
+```bash
+devspace init
+```
+Choose `Component Chart` and `Based on this existing Dockerfile` for quickstart projects.
+
+
+## 4. Start Development
+```bash
+devspace use namespace my-namespace  # will be created by DevSpace if it does not exist
+devspace dev
+```
+
+As soon as the terminal opens up, you can start your application:
+
+<StartAppFragment/>
+
+**Hot Reloading**: Now, change a file on your local computer and re-run the application inside the container terminal.
+
+**Port Forwarding**: You can access your application via `localhost:PORT` if your port is specified in `dev.ports` within `devspace.yaml`.
+
+When you're done testing development, type `exit` or hit `Ctrl-d` to exit the container terminal.
+
+## 5. Deploy Project
+To build your container image and deploy a clean version of this project, run:
+```bash
+devspace use namespace my-namespace  # will be created by DevSpace if it does not exist
+devspace deploy -p production
+```
+
+## 6. Cleanup
+To purge your deployment from the cluster, run:
+```bash
+devspace purge
+```

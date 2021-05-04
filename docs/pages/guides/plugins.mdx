@@ -5,7 +5,7 @@ sidebar_label: Plugins
 
 The functionality of DevSpace can be extended and changed via plugins. Plugins are managed through DevSpace and are contained in a single binary or shell script. Plugins are able to extend DevSpace in the following ways:
 - Add new commands to DevSpace (e.g. `devspace login` or `devspace list users`)
-- Add new [predefined variables](../configuration/variables/basics)
+- Add new [predefined variables](../configuration/variables/basics.mdx)
 - Execute hooks at specific events (like a command execution)
 
 ## Installing a plugin
@@ -87,7 +87,7 @@ DevSpace will forward all passed arguments and flags to the plugin command.
 
 #### `vars`
 
-This section specifies which [predefined variables](../configuration/variables/basics) are added to DevSpace. These variable values will be retrieved from the plugin binary instead of asking the user. It expects an array with objects that can have the following properties:
+This section specifies which [predefined variables](../configuration/variables/basics.mdx) are added to DevSpace. These variable values will be retrieved from the plugin binary instead of asking the user. It expects an array with objects that can have the following properties:
 * `name` of the predefined variable to add (e.g. `EXAMPLE_VARIABLE` which can then be used in a `devspace.yaml` as `${EXAMPLE_VARIABLE}`)
 * `baseArgs` these args are appended to the plugin binary (e.g. `["print", "var", "test"]` will cause devspace to call the plugin binary with: `plugin-binary print var test`)
 

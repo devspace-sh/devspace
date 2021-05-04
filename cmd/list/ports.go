@@ -56,7 +56,7 @@ func (cmd *portsCmd) RunListPort(f factory.Factory, cobraCmd *cobra.Command, arg
 
 	config := configInterface.Config()
 	if config.Dev.Ports == nil || len(config.Dev.Ports) == 0 {
-		logger.Info("No ports are forwarded. Run `devspace add port` to add a port that should be forwarded\n")
+		logger.Info("No ports are forwarded.\n")
 		return nil
 	}
 

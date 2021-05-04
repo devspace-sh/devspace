@@ -9,11 +9,10 @@
     "deploy": "docusaurus deploy"
   },
   "dependencies": {
-    "@docusaurus/core": "^2.0.0-alpha.50",
-    "@docusaurus/preset-classic": "^2.0.0-alpha.50",
+    "@docusaurus/core": "^2.0.0-alpha.72",
+    "@docusaurus/preset-classic": "^2.0.0-alpha.72",
     "classnames": "^2.2.6",
-    "docusaurus-gtm-plugin": "^0.0.2",
-    "mdx-link-checker": "^0.0.4",
+    "mdx-link-checker": "^0.0.7",
     "react": "^16.8.4",
     "react-dom": "^16.8.4"
   },

@@ -1,6 +1,10 @@
 package v3
 
 import (
+	"os"
+	"path/filepath"
+	"strconv"
+
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
@@ -8,9 +12,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"os"
-	"path/filepath"
-	"strconv"
 
 	"runtime"
 	"strings"
@@ -66,7 +67,7 @@ func (c *client) IsValidHelm(path string) (bool, error) {
 	return strings.Contains(string(out), `:"v3.`), nil
 }
 
-// InstallChart installs the given chart via helm v2
+// InstallChart installs the given chart via helm v3
 func (c *client) InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
 	valuesFile, err := c.genericHelm.WriteValues(values)
 	if err != nil {
@@ -126,7 +127,12 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	}
 
 	args = append(args, helmConfig.UpgradeArgs...)
-	_, err = c.genericHelm.Exec(args, helmConfig)
+	output, err := c.genericHelm.Exec(args, helmConfig)
+
+	if helmConfig.DisplayOutput {
+		c.log.Write(output)
+	}
+
 	if err != nil {
 		return nil, err
 	}
