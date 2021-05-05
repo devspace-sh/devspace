@@ -151,7 +151,10 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, plugins []plugin.Metadata, cobraC
 
 	// Check if we should open locally
 	if openingMode == openLocalHostOption {
-		cmd.openLocal(f, nil, client, domain)
+		err := cmd.openLocal(f, client, domain)
+		if err != nil {
+			cmd.log.Error(err)
+		}
 		return nil
 	}
 
@@ -267,7 +270,7 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 	return nil
 }
 
-func (cmd *OpenCmd) openLocal(f factory.Factory, generatedConfig *generated.Config, client kubectl.Client, domain string) error {
+func (cmd *OpenCmd) openLocal(f factory.Factory, client kubectl.Client, domain string) error {
 	_, servicePort, serviceLabels, err := cmd.getService(client, client.Namespace(), domain, true)
 	if err != nil {
 		return errors.Errorf("Unable to get service: %v", err)
@@ -310,11 +313,11 @@ func (cmd *OpenCmd) openLocal(f factory.Factory, generatedConfig *generated.Conf
 	}
 
 	// start port-forwarding for localhost access
-	servicesClient := f.NewServicesClient(config.NewConfig(nil, &latest.Config{
+	servicesClient := f.NewServicesClient(config.Ensure(config.NewConfig(nil, &latest.Config{
 		Dev: latest.DevConfig{
 			Ports: portforwardingConfig,
 		},
-	}, generatedConfig, nil), nil, client, cmd.log)
+	}, nil, nil)), nil, client, cmd.log)
 	err = servicesClient.StartPortForwarding(nil)
 	if err != nil {
 		return errors.Wrap(err, "start port forwarding")

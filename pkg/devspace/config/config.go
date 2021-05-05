@@ -59,17 +59,17 @@ func Ensure(config Config) Config {
 		retConfig = NewConfig(nil, nil, nil, nil)
 	}
 	if retConfig.Raw() == nil {
-		retConfig = NewConfig(map[interface{}]interface{}{}, config.Config(), config.Generated(), config.Variables())
+		retConfig = NewConfig(map[interface{}]interface{}{}, retConfig.Config(), retConfig.Generated(), retConfig.Variables())
 	}
 	if retConfig.Config() == nil {
-		retConfig = NewConfig(config.Raw(), latest.NewRaw(), config.Generated(), config.Variables())
+		retConfig = NewConfig(retConfig.Raw(), latest.NewRaw(), retConfig.Generated(), retConfig.Variables())
 	}
 	if retConfig.Generated() == nil {
-		retConfig = NewConfig(config.Raw(), config.Config(), generated.New(), config.Variables())
+		retConfig = NewConfig(retConfig.Raw(), retConfig.Config(), generated.New(), retConfig.Variables())
 	}
 	if retConfig.Variables() == nil {
-		retConfig = NewConfig(config.Raw(), config.Config(), config.Generated(), map[string]interface{}{})
+		retConfig = NewConfig(retConfig.Raw(), retConfig.Config(), retConfig.Generated(), map[string]interface{}{})
 	}
 
-	return config
+	return retConfig
 }
