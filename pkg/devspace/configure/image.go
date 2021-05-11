@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
@@ -74,6 +73,7 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 		buildCommandSplit := strings.Split(strings.TrimSpace(buildCommand), " ")
 
 		imageConfig.Build = &v1.BuildConfig{
+			Disabled: true,
 			Custom: &v1.CustomConfig{
 				Command: buildCommandSplit[0],
 				Args:    buildCommandSplit[1:],
@@ -115,34 +115,6 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 				})
 				if err != nil {
 					return err
-				}
-			}
-		}
-
-		targets, err := helper.GetDockerfileTargets(imageConfig.Dockerfile)
-		if err != nil {
-			return err
-		}
-
-		var target string
-		if len(targets) > 0 {
-			targetNone := "[none] (build complete Dockerfile)"
-			targets = append(targets, targetNone)
-			target, err = m.log.Question(&survey.QuestionOptions{
-				Question: "Which build stage (target) within your Dockerfile do you want to use for development?\n  Choose `build` for quickstart projects.",
-				Options:  targets,
-			})
-			if err != nil {
-				return err
-			}
-
-			if target != targetNone {
-				imageConfig.Build = &latest.BuildConfig{
-					Docker: &latest.DockerConfig{
-						Options: &latest.BuildOptions{
-							Target: target,
-						},
-					},
 				}
 			}
 		}
