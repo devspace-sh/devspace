@@ -19,5 +19,5 @@ dev:
         - port: 3000
   sync:
     - imageName: default
-      excludePaths:
+      uploadExcludePaths:
         - node_modules

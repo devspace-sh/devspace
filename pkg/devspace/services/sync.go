@@ -285,6 +285,7 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 		UpstreamDisabled:     upstreamDisabled,
 		DownstreamDisabled:   downstreamDisabled,
 		Log:                  customLog,
+		Polling:              syncConfig.Polling,
 	}
 
 	// Add onDownload hooks
@@ -391,6 +392,9 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 	downstreamArgs := []string{DevSpaceHelperContainerPath, "sync", "downstream"}
 	if syncConfig.ThrottleChangeDetection != nil {
 		downstreamArgs = append(downstreamArgs, "--throttle", strconv.FormatInt(*syncConfig.ThrottleChangeDetection, 10))
+	}
+	if syncConfig.Polling {
+		downstreamArgs = append(downstreamArgs, "--polling")
 	}
 	for _, exclude := range options.ExcludePaths {
 		downstreamArgs = append(downstreamArgs, "--exclude", exclude)

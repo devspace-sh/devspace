@@ -168,12 +168,12 @@ func (u *upstream) mainLoop() error {
 			// retrieve the newest events
 			events := u.getEvents()
 			if len(events) > 0 {
-				fileInformations, err := u.getfileInformationFromEvent(events)
+				fileInformation, err := u.getFileInformationFromEvent(events)
 				if err != nil {
 					return errors.Wrap(err, "get file information from event")
 				}
 
-				changes = append(changes, fileInformations...)
+				changes = append(changes, fileInformation...)
 			}
 
 			// We gather changes till there are no more changes or
@@ -200,7 +200,7 @@ func (u *upstream) mainLoop() error {
 	}
 }
 
-func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) ([]*FileInformation, error) {
+func (u *upstream) getFileInformationFromEvent(events []notify.EventInfo) ([]*FileInformation, error) {
 	u.sync.fileIndex.fileMapMutex.Lock()
 	defer u.sync.fileIndex.fileMapMutex.Unlock()
 
@@ -212,11 +212,11 @@ func (u *upstream) getfileInformationFromEvent(events []notify.EventInfo) ([]*Fi
 		if ok {
 			changes = append(changes, fileInfo)
 		} else {
-			fullpath := event.Path()
-			relativePath := getRelativeFromFullPath(fullpath, u.sync.LocalPath)
+			fullPath := event.Path()
+			relativePath := getRelativeFromFullPath(fullPath, u.sync.LocalPath)
 
 			// Determine what kind of change we got (Create or Remove)
-			newChange, err := u.evaluateChange(relativePath, fullpath)
+			newChange, err := u.evaluateChange(relativePath, fullPath)
 			if err != nil {
 				return nil, errors.Wrap(err, "evaluate change")
 			}
@@ -385,6 +385,8 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 			if err == nil {
 				break
 			} else if i+1 >= syncRetries {
+				return errors.Wrap(err, "apply creates")
+			} else if strings.HasSuffix(err.Error(), "transport is closing") || strings.HasSuffix(err.Error(), "broken pipe") {
 				return errors.Wrap(err, "apply creates")
 			}
 

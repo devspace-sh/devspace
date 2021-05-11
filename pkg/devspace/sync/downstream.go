@@ -108,6 +108,10 @@ func (d *downstream) collectChanges() ([]*remote.Change, error) {
 
 func (d *downstream) mainLoop() error {
 	lastAmountChanges := int64(0)
+	recheckInterval := 1700
+	if d.sync.Options.Polling == false {
+		recheckInterval = 500
+	}
 
 	for {
 		// Check for changes remotely
@@ -134,7 +138,7 @@ func (d *downstream) mainLoop() error {
 		select {
 		case <-d.interrupt:
 			return nil
-		case <-time.After(1700 * time.Millisecond):
+		case <-time.After(time.Duration(recheckInterval) * time.Millisecond):
 			break
 		}
 

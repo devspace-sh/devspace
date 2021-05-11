@@ -11,6 +11,8 @@ type DownstreamCmd struct {
 	Exclude []string
 
 	Throttle int64
+
+	Polling bool
 }
 
 // NewDownstreamCmd creates a new downstream command
@@ -25,6 +27,7 @@ func NewDownstreamCmd() *cobra.Command {
 
 	downstreamCmd.Flags().StringSliceVar(&cmd.Exclude, "exclude", []string{}, "The exclude paths for downstream watching")
 	downstreamCmd.Flags().Int64Var(&cmd.Throttle, "throttle", 5, "The amount of milliseconds to throttle change detection per 100 files")
+	downstreamCmd.Flags().BoolVar(&cmd.Polling, "polling", false, "If true, DevSpace will use polling instead of inotify")
 	return downstreamCmd
 }
 
@@ -40,6 +43,7 @@ func (cmd *DownstreamCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		ExcludePaths: cmd.Exclude,
 
 		Throttle:    cmd.Throttle,
+		Polling:     cmd.Polling,
 		ExitOnClose: true,
 	})
 }

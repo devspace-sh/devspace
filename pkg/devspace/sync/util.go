@@ -5,6 +5,6 @@ import (
 	"strings"
 )
 
-func getRelativeFromFullPath(fullpath string, prefix string) string {
-	return strings.TrimPrefix(strings.Replace(filepath.ToSlash(fullpath[len(prefix):]), "//", "/", -1), ".")
+func getRelativeFromFullPath(fullPath string, prefix string) string {
+	return strings.TrimPrefix(strings.Replace(filepath.ToSlash(fullPath[len(prefix):]), "//", "/", -1), ".")
 }

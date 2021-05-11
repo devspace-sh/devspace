@@ -5,10 +5,14 @@ import (
 	"compress/gzip"
 	"context"
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
+	"github.com/syncthing/notify"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/loft-sh/devspace/helper/remote"
@@ -18,12 +22,16 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+const rescanPeriod = time.Minute * 15
+
 // DownstreamOptions holds the options for the downstream server
 type DownstreamOptions struct {
 	RemotePath   string
 	ExcludePaths []string
 	ExitOnClose  bool
 	Throttle     int64
+
+	Polling bool
 }
 
 // StartDownstreamServer starts a new downstream server with the given reader and writer
@@ -40,14 +48,35 @@ func StartDownstreamServer(reader io.Reader, writer io.Writer, options *Downstre
 
 	go func() {
 		s := grpc.NewServer()
-
-		remote.RegisterDownstreamServer(s, &Downstream{
+		downStream := &Downstream{
 			options:       options,
 			ignoreMatcher: ignoreMatcher,
-		})
+			events:        make(chan notify.EventInfo, 1000),
+			changes:       map[string]bool{},
+		}
+
+		remote.RegisterDownstreamServer(s, downStream)
 		reflection.Register(s)
 
+		// start watcher if this we should use it
+		watchStop := make(chan struct{})
+		if options.Polling == false {
+			go func() {
+				// set up a watchpoint listening for events within a directory tree rooted at specified directory
+				err := notify.Watch(options.RemotePath+"/...", downStream.events, notify.All)
+				if err != nil {
+					log.Fatalf("error watching path %s: %v", options.RemotePath, err)
+					return
+				}
+				defer notify.Stop(downStream.events)
+
+				// start the watch loop
+				downStream.watch(watchStop)
+			}()
+		}
+
 		done <- s.Serve(lis)
+		close(watchStop)
 	}()
 
 	lis.Ready(pipe)
@@ -63,6 +92,18 @@ type Downstream struct {
 
 	// watchedFiles is a memory map of the previous state of the changes function
 	watchedFiles map[string]*remote.Change
+	
+	// events is the event stream if we watch for changes
+	events chan notify.EventInfo
+
+	// changesMutex is used to protect changes
+	changesMutex sync.Mutex
+
+	// changes is a map of changed paths
+	changes map[string]bool
+
+	// lastRescan is used to rescan the complete path from time to time
+	lastRescan *time.Time
 }
 
 // Download sends the file at the temp download location to the client
@@ -146,11 +187,21 @@ func (d *Downstream) ChangesCount(context.Context, *remote.Empty) (*remote.Chang
 	throttle := time.Duration(d.options.Throttle) * time.Millisecond
 
 	// Walk through the dir
-	walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, throttle)
+	if d.options.Polling {
+		walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, throttle)
+	}
 
-	changeAmount, err := streamChanges(d.options.RemotePath, d.watchedFiles, newState, nil, throttle)
-	if err != nil {
-		return nil, errors.Wrap(err, "count changes")
+	changeAmount := int64(0)
+	if d.options.Polling {
+		var err error
+		changeAmount, err = streamChanges(d.options.RemotePath, d.watchedFiles, newState, nil, throttle)
+		if err != nil {
+			return nil, errors.Wrap(err, "count changes")
+		}
+	} else {
+		d.changesMutex.Lock()
+		changeAmount = int64(len(d.changes))
+		d.changesMutex.Unlock()
 	}
 
 	return &remote.ChangeAmount{
@@ -158,21 +209,172 @@ func (d *Downstream) ChangesCount(context.Context, *remote.Empty) (*remote.Chang
 	}, nil
 }
 
-// Changes retrieves all changes from the watchpath
+func (d *Downstream) getWatchState() map[string]*remote.Change {
+	d.changesMutex.Lock()
+	defer d.changesMutex.Unlock()
+	
+	var (
+		now = time.Now()
+		shouldRescan = d.watchedFiles == nil || d.lastRescan == nil || d.lastRescan.Add(rescanPeriod).Before(now)
+		changeAmount = len(d.changes)
+	)
+	
+	if changeAmount > 100 || shouldRescan {
+		// we rescan so reset all changes
+		d.changes = map[string]bool{}
+		d.lastRescan = &now
+		
+		newState := make(map[string]*remote.Change)
+		walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, 0)
+		return newState
+	} else if changeAmount == 0 {
+		return nil
+	}
+	
+	// copy state from old
+	newState := copyState(d.watchedFiles)
+	
+	// copy changes
+	changes := []string{}
+	for k := range d.changes {
+		changes = append(changes, k)
+	}
+	d.changes = map[string]bool{}
+	
+	// apply changes
+	for _, change := range changes {
+		d.applyChange(newState, change)
+	}
+
+	return newState
+}
+
+// Changes retrieves all changes from the watch path
 func (d *Downstream) Changes(empty *remote.Empty, stream remote.Downstream_ChangesServer) error {
 	newState := make(map[string]*remote.Change)
 	throttle := time.Duration(d.options.Throttle) * time.Millisecond
 
 	// Walk through the dir
-	walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, throttle)
-
-	_, err := streamChanges(d.options.RemotePath, d.watchedFiles, newState, stream, throttle)
-	if err != nil {
-		return errors.Wrap(err, "stream changes")
+	if d.options.Polling == false {
+		newState = d.getWatchState()
+	} else {
+		walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, throttle)
 	}
 
-	d.watchedFiles = newState
+	if newState != nil {
+		_, err := streamChanges(d.options.RemotePath, d.watchedFiles, newState, stream, throttle)
+		if err != nil {
+			return errors.Wrap(err, "stream changes")
+		}
+
+		d.watchedFiles = newState
+	}
 	return nil
+}
+
+func (d *Downstream) watch(stopChan chan struct{}) {
+	for {
+		select {
+		case <-stopChan:
+			return
+		case event, ok := <-d.events:
+			if ok == false {
+				return
+			}
+			
+			d.changesMutex.Lock()
+			// re-sync if overflow
+			if len(d.events) >= 999 {
+				d.lastRescan = nil
+			} else {
+				// check if parent folder might be already in changes then skip
+				// this saves us a lot of folder crawling later on
+				parts := strings.Split(filepath.ToSlash(event.Path()), "/")
+				found := false
+				for i := len(parts)-1; i > 0; i-- {
+					path := strings.Join(parts[:i], "/")
+					if d.changes[path] {
+						found = true
+						break
+					}
+				}
+				if !found {
+					d.changes[event.Path()] = true
+				}
+			}
+			d.changesMutex.Unlock()
+		}
+	}
+}
+
+func (d *Downstream) applyChange(newState map[string]*remote.Change, fullPath string) {
+	if strings.HasSuffix(fullPath, "/") {
+		fullPath = fullPath[:len(fullPath)-1]
+	}
+	
+	relativePath := fullPath[len(d.options.RemotePath):]
+
+	// in any case we mark this part of the tree as dirty and delete it
+	if old, ok := d.watchedFiles[fullPath]; ok {
+		if old.IsDir {
+			deletePathFromState(newState, fullPath)
+		} else {
+			delete(newState, fullPath)
+		}
+	}
+	
+	// check if the path still exists
+	stat, err := os.Stat(fullPath)
+	if err != nil {
+		return
+	} else if d.ignoreMatcher != nil && d.ignoreMatcher.HasNegatePatterns() == false && util.MatchesPath(d.ignoreMatcher, relativePath, stat.IsDir()) {
+		return
+	}
+
+	if stat.IsDir() {
+		if d.ignoreMatcher == nil || d.ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(d.ignoreMatcher, relativePath, true) == false {
+			newState[fullPath] = &remote.Change{
+				Path:  fullPath,
+				IsDir: true,
+			}
+		}
+
+		walkDir(d.options.RemotePath, fullPath, d.ignoreMatcher, newState, time.Duration(d.options.Throttle)*time.Millisecond)
+	} else {
+		if d.ignoreMatcher == nil || d.ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(d.ignoreMatcher, relativePath, false) == false {
+			newState[fullPath] = &remote.Change{
+				Path:          fullPath,
+				Size:          stat.Size(),
+				MtimeUnix:     stat.ModTime().Unix(),
+				MtimeUnixNano: stat.ModTime().UnixNano(),
+				IsDir:         false,
+			}
+		}
+	}
+}
+
+func deletePathFromState(state map[string]*remote.Change, path string) {
+	for k := range state {
+		if strings.HasPrefix(k, path+"/") || k == path {
+			delete(state, k)
+		}
+	}
+}
+
+func copyState(state map[string]*remote.Change) map[string]*remote.Change {
+	newState := make(map[string]*remote.Change, len(state))
+	for k, v := range state {
+		newState[k] = &remote.Change{
+			ChangeType:    v.ChangeType,
+			Path:          v.Path,
+			MtimeUnix:     v.MtimeUnix,
+			MtimeUnixNano: v.MtimeUnixNano,
+			Size:          v.Size,
+			IsDir:         v.IsDir,
+		}
+	}
+
+	return newState
 }
 
 func streamChanges(basePath string, oldState map[string]*remote.Change, newState map[string]*remote.Change, stream remote.Downstream_ChangesServer, throttle time.Duration) (int64, error) {

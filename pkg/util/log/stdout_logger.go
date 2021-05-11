@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"sync"
+	"time"
 
 	goansi "github.com/k0kubun/go-ansi"
 	"github.com/loft-sh/devspace/pkg/util/survey"
@@ -12,6 +14,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
+
+const DEVSPACE_LOG_TIMESTAMPS = "DEVSPACE_LOG_TIMESTAMPS"
 
 var stdout = goansi.NewAnsiStdout()
 var stderr = goansi.NewAnsiStderr()
@@ -84,6 +88,14 @@ var fnTypeInformationMap = map[logFunctionType]*fnTypeInformation{
 	},
 }
 
+func formatInt(i int) string {
+	formatted := strconv.Itoa(i)
+	if len(formatted) == 1 {
+		formatted = "0"+formatted
+	}
+	return formatted
+}
+
 func (s *stdoutLogger) writeMessage(fnType logFunctionType, message string) {
 	fnInformation := fnTypeInformationMap[fnType]
 	if s.level >= fnInformation.logLevel {
@@ -91,6 +103,10 @@ func (s *stdoutLogger) writeMessage(fnType logFunctionType, message string) {
 			s.loadingText.Stop()
 		}
 
+		if os.Getenv(DEVSPACE_LOG_TIMESTAMPS) == "true" {
+			now := time.Now()
+			fnInformation.stream.Write([]byte(ansi.Color(formatInt(now.Hour()) + ":" + formatInt(now.Minute()) + ":" + formatInt(now.Second()) + " ", "white+b")))
+		}
 		fnInformation.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
 		fnInformation.stream.Write([]byte(message))
 
