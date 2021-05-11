@@ -69,6 +69,11 @@ type Upstream struct {
 	ignoreMatcher ignoreparser.IgnoreParser
 }
 
+// Ping returns empty
+func (u *Upstream) Ping(context.Context, *remote.Empty) (*remote.Empty, error) {
+	return &remote.Empty{}, nil
+}
+
 // RestartContainer implements the server
 func (u *Upstream) RestartContainer(context.Context, *remote.Empty) (*remote.Empty, error) {
 	err := util.NewContainerRestarter().RestartContainer()

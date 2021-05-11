@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"sync"
+	"time"
 )
 
 var Colors = []string{
@@ -46,7 +47,12 @@ type prefixLogger struct {
 }
 
 func (s *prefixLogger) writeMessage(message string) {
-	s.WriteString(ansi.Color(s.prefix, s.color) + message)
+	if os.Getenv(DEVSPACE_LOG_TIMESTAMPS) == "true" {
+		now := time.Now()
+		s.WriteString(ansi.Color(formatInt(now.Hour()) + ":" + formatInt(now.Minute()) + ":" + formatInt(now.Second()) + " ", "white+b") + ansi.Color(s.prefix, s.color) + message)
+	} else {
+		s.WriteString(ansi.Color(s.prefix, s.color) + message)
+	}
 }
 
 func (s *prefixLogger) Debug(args ...interface{}) {

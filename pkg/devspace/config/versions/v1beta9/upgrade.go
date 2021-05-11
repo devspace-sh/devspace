@@ -56,6 +56,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			if s.WaitInitialSync == nil {
 				nextConfig.Dev.Sync[i].WaitInitialSync = ptr.Bool(false)
 			}
+			nextConfig.Dev.Sync[i].Polling = true
 		}
 
 		if c.Dev.Interactive != nil {

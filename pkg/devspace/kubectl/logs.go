@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 // ReadLogs reads the logs and returns a string
@@ -30,13 +31,12 @@ func (client *client) Logs(ctx context.Context, namespace, podName, containerNam
 		lines = *tail
 	}
 
-	request := client.KubeClient().CoreV1().Pods(namespace).GetLogs(podName, &v1.PodLogOptions{
+	request := client.KubeClient().CoreV1().RESTClient().Get().Namespace(namespace).Name(podName).Resource("pods").SubResource("log").VersionedParams(&v1.PodLogOptions{
 		Container: containerName,
 		TailLines: &lines,
 		Previous:  lastContainerLog,
 		Follow:    follow,
-	})
-
+	}, scheme.ParameterCodec)
 	if request.URL().String() == "" {
 		return nil, errors.New("Request url is empty")
 	}

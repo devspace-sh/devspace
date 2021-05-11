@@ -154,7 +154,8 @@ func shouldRemoveLocal(absFilepath string, fileInformation *FileInformation, s *
 
 				s.log.Infof("Skip %s because stat.ModTime() %d is greater than fileInformation.Mtime %d", absFilepath, stat.ModTime().Unix(), fileInformation.Mtime)
 			} else {
-				s.log.Infof("Skip %s because Mtime (%d and %d) or Size (%d and %d) is unequal between fileInformation and fileMap", absFilepath, fileInformation.Mtime, s.fileIndex.fileMap[fileInformation.Name].Mtime, fileInformation.Size, s.fileIndex.fileMap[fileInformation.Name].Size)
+				// s.log.Infof("Skip %s because Mtime (%d and %d) or Size (%d and %d) is unequal between fileInformation and fileMap", absFilepath, fileInformation.Mtime, s.fileIndex.fileMap[fileInformation.Name].Mtime, fileInformation.Size, s.fileIndex.fileMap[fileInformation.Name].Size)
+				return true
 			}
 		} else {
 			return true

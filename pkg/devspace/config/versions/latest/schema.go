@@ -707,6 +707,8 @@ type SyncConfig struct {
 	DisableDownload *bool `yaml:"disableDownload,omitempty" json:"disableDownload,omitempty"`
 	DisableUpload   *bool `yaml:"disableUpload,omitempty" json:"disableUpload,omitempty"`
 
+	Polling bool `yaml:"polling,omitempty" json:"polling,omitempty"`
+
 	WaitInitialSync *bool            `yaml:"waitInitialSync,omitempty" json:"waitInitialSync,omitempty"`
 	BandwidthLimits *BandwidthLimits `yaml:"bandwidthLimits,omitempty" json:"bandwidthLimits,omitempty"`
 

@@ -20,6 +20,8 @@ var initialUpstreamBatchSize = 1000
 
 // Options holds the sync options
 type Options struct {
+	Polling bool
+
 	ExcludePaths         []string
 	DownloadExcludePaths []string
 	UploadExcludePaths   []string
