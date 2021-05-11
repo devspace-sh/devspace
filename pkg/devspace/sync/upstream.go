@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"fmt"
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"io"
 	"os"
@@ -99,6 +100,26 @@ func (u *upstream) IsBusy() bool {
 	return u.isBusy
 }
 
+func (u *upstream) startPing(doneChan chan struct{}) {
+	go func() {
+		for {
+			select {
+			case <-doneChan:
+				return
+			case <-time.After(time.Second * 10):
+				if u.client != nil {
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+					_, err := u.client.Ping(ctx, &remote.Empty{})
+					cancel()
+					if err != nil {
+						u.sync.Stop(fmt.Errorf("ping connection: %v", err))
+					}
+				}
+			}
+		}
+	}()
+}
+
 func (u *upstream) startEventsLoop(doneChan chan struct{}) {
 	go func() {
 		for {
@@ -149,6 +170,7 @@ func (u *upstream) mainLoop() error {
 
 	// start collecting events
 	u.startEventsLoop(doneChan)
+	u.startPing(doneChan)
 
 	for {
 		var (
@@ -408,7 +430,10 @@ func (u *upstream) RestartContainer() error {
 	if u.sync.Options.RestartContainer {
 		u.sync.log.Info("Upstream - Restarting container")
 
-		_, err := u.client.RestartContainer(context.Background(), &remote.Empty{})
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
+		defer cancel()
+
+		_, err := u.client.RestartContainer(ctx, &remote.Empty{})
 		if err != nil {
 			return errors.Wrap(err, "restart container")
 		}
@@ -515,8 +540,12 @@ func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ign
 }
 
 func (u *upstream) uploadArchive(reader io.Reader) error {
+	// cancel after 1 hour
+	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
+	defer cancel()
+
 	// Create upload client
-	uploadClient, err := u.client.Upload(context.Background())
+	uploadClient, err := u.client.Upload(ctx)
 	if err != nil {
 		return errors.Wrap(err, "upload")
 	}
@@ -557,10 +586,13 @@ func (u *upstream) applyRemoves(files []*FileInformation) error {
 	u.sync.fileIndex.fileMapMutex.Lock()
 	defer u.sync.fileIndex.fileMapMutex.Unlock()
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*30)
+	defer cancel()
+
 	u.sync.log.Infof("Upstream - Handling %d removes", len(files))
 	fileMap := u.sync.fileIndex.fileMap
 
-	removeClient, err := u.client.Remove(context.Background())
+	removeClient, err := u.client.Remove(ctx)
 	if err != nil {
 		return errors.Wrap(err, "remove client")
 	}

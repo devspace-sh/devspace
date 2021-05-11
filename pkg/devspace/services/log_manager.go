@@ -106,7 +106,8 @@ func (l *logManager) Start() error {
 	for {
 		targets, err := l.gatherPods()
 		if err != nil {
-			l.output.Errorf("Error gathering target pods: %v", err)
+			l.output.Errorf("Error gathering target pods for log streaming: %v", err)
+			time.Sleep(time.Second * 15)
 			continue
 		}
 

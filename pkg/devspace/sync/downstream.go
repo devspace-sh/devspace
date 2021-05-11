@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -79,9 +80,11 @@ func (d *downstream) populateFileMap() error {
 
 func (d *downstream) collectChanges() ([]*remote.Change, error) {
 	changes := make([]*remote.Change, 0, 128)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*30)
+	defer cancel()
 
 	// Create a change client and collect all changes
-	changesClient, err := d.client.Changes(context.Background(), &remote.Empty{})
+	changesClient, err := d.client.Changes(ctx, &remote.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "start retrieving changes")
 	}
@@ -106,7 +109,33 @@ func (d *downstream) collectChanges() ([]*remote.Change, error) {
 	return changes, nil
 }
 
+func (d *downstream) startPing(doneChan chan struct{}) {
+	go func() {
+		for {
+			select {
+			case <-doneChan:
+				return
+			case <-time.After(time.Second * 10):
+				if d.client != nil {
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+					_, err := d.client.Ping(ctx, &remote.Empty{})
+					cancel()
+					if err != nil {
+						d.sync.Stop(fmt.Errorf("ping connection: %v", err))
+					}
+				}
+			}
+		}
+	}()
+}
+
 func (d *downstream) mainLoop() error {
+	doneChan := make(chan struct{})
+	defer close(doneChan)
+
+	// start pinging the underlying connection
+	d.startPing(doneChan)
+
 	lastAmountChanges := int64(0)
 	recheckInterval := 1700
 	if d.sync.Options.Polling == false {
@@ -115,7 +144,9 @@ func (d *downstream) mainLoop() error {
 
 	for {
 		// Check for changes remotely
-		changeAmount, err := d.client.ChangesCount(context.Background(), &remote.Empty{})
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
+		changeAmount, err := d.client.ChangesCount(ctx, &remote.Empty{})
+		cancel()
 		if err != nil {
 			return errors.Wrap(err, "count changes")
 		}
@@ -250,6 +281,10 @@ func (d *downstream) initDownload(download []*remote.Change, force bool) error {
 func (d *downstream) downloadFiles(writer io.WriteCloser, changes []*remote.Change) error {
 	defer writer.Close()
 
+	// cancel after 1 hour
+	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
+	defer cancel()
+
 	// Print log message
 	if len(changes) <= 3 || d.sync.Options.Verbose {
 		for _, element := range changes {
@@ -265,7 +300,7 @@ func (d *downstream) downloadFiles(writer io.WriteCloser, changes []*remote.Chan
 	}
 
 	// Create new download client
-	downloadClient, err := d.client.Download(context.Background())
+	downloadClient, err := d.client.Download(ctx)
 	if err != nil {
 		return errors.Wrap(err, "download files")
 	}

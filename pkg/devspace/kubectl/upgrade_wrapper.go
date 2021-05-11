@@ -38,7 +38,10 @@ func (uw *upgraderWrapper) NewConnection(resp *http.Response) (httpstream.Connec
 					case <-newConn.Conn.CloseChan():
 						return
 					case <-time.After(time.Second * 10):
-						newConn.Conn.Ping()
+						_, err := newConn.Conn.Ping()
+						if err != nil {
+							_ = newConn.Conn.Close()
+						}
 					}
 				}
 			}

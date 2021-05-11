@@ -211,14 +211,15 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 
 				options.RestartLog.Info("Restarting sync...")
 				for {
-					time.Sleep(time.Second * 5)
 					err := serviceClient.startSyncClient(options, options.RestartLog)
 					if err != nil {
 						serviceClient.log.Errorf("Error restarting sync: %v", err)
-						serviceClient.log.Errorf("Will try again in 5 seconds")
+						serviceClient.log.Errorf("Will try again in 15 seconds")
+						time.Sleep(time.Second * 15)
 						continue
 					}
 
+					time.Sleep(time.Second * 5)
 					break
 				}
 			case <-options.Interrupt:

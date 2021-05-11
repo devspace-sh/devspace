@@ -46,12 +46,14 @@ service Downstream {
     rpc Download (stream Paths) returns (stream Chunk) {}
     rpc Changes (Empty) returns (stream ChangeChunk) {}
     rpc ChangesCount (Empty) returns (ChangeAmount) {}
+    rpc Ping (Empty) returns (Empty) {}
 }
 
 service Upstream {
     rpc Upload (stream Chunk) returns (Empty) {}
     rpc RestartContainer (Empty) returns (Empty) {}
     rpc Remove (stream Paths) returns (Empty) {}
+    rpc Ping (Empty) returns (Empty) {}
 }
 
 message Watch {

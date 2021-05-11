@@ -120,8 +120,8 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 					err = serviceClient.startForwarding(cache, portForwarding, interrupt, logpkg.Discard)
 					if err != nil {
 						serviceClient.log.Errorf("Error restarting port-forwarding: %v", err)
-						serviceClient.log.Errorf("Will try again in 3 seconds")
-						time.Sleep(time.Second * 3)
+						serviceClient.log.Errorf("Will try again in 15 seconds")
+						time.Sleep(time.Second * 15)
 						continue
 					}
 

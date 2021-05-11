@@ -92,7 +92,7 @@ type Downstream struct {
 
 	// watchedFiles is a memory map of the previous state of the changes function
 	watchedFiles map[string]*remote.Change
-	
+
 	// events is the event stream if we watch for changes
 	events chan notify.EventInfo
 
@@ -181,6 +181,11 @@ func (d *Downstream) compress(writer io.WriteCloser, files []string) error {
 	return nil
 }
 
+// Ping returns empty
+func (d *Downstream) Ping(context.Context, *remote.Empty) (*remote.Empty, error) {
+	return &remote.Empty{}, nil
+}
+
 // ChangesCount returns the amount of changes on the remote side
 func (d *Downstream) ChangesCount(context.Context, *remote.Empty) (*remote.ChangeAmount, error) {
 	newState := make(map[string]*remote.Change)
@@ -200,7 +205,13 @@ func (d *Downstream) ChangesCount(context.Context, *remote.Empty) (*remote.Chang
 		}
 	} else {
 		d.changesMutex.Lock()
-		changeAmount = int64(len(d.changes))
+		// if rescan is not set we make sure that we say that there
+		// are changes
+		if d.lastRescan == nil {
+			changeAmount = int64(1)
+		} else {
+			changeAmount = int64(len(d.changes))
+		}
 		d.changesMutex.Unlock()
 	}
 
@@ -212,35 +223,35 @@ func (d *Downstream) ChangesCount(context.Context, *remote.Empty) (*remote.Chang
 func (d *Downstream) getWatchState() map[string]*remote.Change {
 	d.changesMutex.Lock()
 	defer d.changesMutex.Unlock()
-	
+
 	var (
-		now = time.Now()
+		now          = time.Now()
 		shouldRescan = d.watchedFiles == nil || d.lastRescan == nil || d.lastRescan.Add(rescanPeriod).Before(now)
 		changeAmount = len(d.changes)
 	)
-	
+
 	if changeAmount > 100 || shouldRescan {
 		// we rescan so reset all changes
 		d.changes = map[string]bool{}
 		d.lastRescan = &now
-		
+
 		newState := make(map[string]*remote.Change)
 		walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, 0)
 		return newState
 	} else if changeAmount == 0 {
 		return nil
 	}
-	
+
 	// copy state from old
 	newState := copyState(d.watchedFiles)
-	
+
 	// copy changes
 	changes := []string{}
 	for k := range d.changes {
 		changes = append(changes, k)
 	}
 	d.changes = map[string]bool{}
-	
+
 	// apply changes
 	for _, change := range changes {
 		d.applyChange(newState, change)
@@ -281,7 +292,7 @@ func (d *Downstream) watch(stopChan chan struct{}) {
 			if ok == false {
 				return
 			}
-			
+
 			d.changesMutex.Lock()
 			// re-sync if overflow
 			if len(d.events) >= 999 {
@@ -291,7 +302,7 @@ func (d *Downstream) watch(stopChan chan struct{}) {
 				// this saves us a lot of folder crawling later on
 				parts := strings.Split(filepath.ToSlash(event.Path()), "/")
 				found := false
-				for i := len(parts)-1; i > 0; i-- {
+				for i := len(parts) - 1; i > 0; i-- {
 					path := strings.Join(parts[:i], "/")
 					if d.changes[path] {
 						found = true
@@ -311,7 +322,7 @@ func (d *Downstream) applyChange(newState map[string]*remote.Change, fullPath st
 	if strings.HasSuffix(fullPath, "/") {
 		fullPath = fullPath[:len(fullPath)-1]
 	}
-	
+
 	relativePath := fullPath[len(d.options.RemotePath):]
 
 	// in any case we mark this part of the tree as dirty and delete it
@@ -322,7 +333,7 @@ func (d *Downstream) applyChange(newState map[string]*remote.Change, fullPath st
 			delete(newState, fullPath)
 		}
 	}
-	
+
 	// check if the path still exists
 	stat, err := os.Stat(fullPath)
 	if err != nil {
