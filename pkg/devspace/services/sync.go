@@ -368,14 +368,8 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 
 	upstreamArgs = append(upstreamArgs, containerPath)
 
-	upStdinReader, upStdinWriter, err := os.Pipe()
-	if err != nil {
-		return nil, errors.Wrap(err, "create pipe")
-	}
-	upStdoutReader, upStdoutWriter, err := os.Pipe()
-	if err != nil {
-		return nil, errors.Wrap(err, "create pipe")
-	}
+	upStdinReader, upStdinWriter := io.Pipe()
+	upStdoutReader, upStdoutWriter := io.Pipe()
 
 	go func() {
 		err := serviceClient.startStream(pod, container, upstreamArgs, upStdinReader, upStdoutWriter)
@@ -405,14 +399,8 @@ func (serviceClient *client) startSync(pod *v1.Pod, container string, syncConfig
 	}
 	downstreamArgs = append(downstreamArgs, containerPath)
 
-	downStdinReader, downStdinWriter, err := os.Pipe()
-	if err != nil {
-		return nil, errors.Wrap(err, "create pipe")
-	}
-	downStdoutReader, downStdoutWriter, err := os.Pipe()
-	if err != nil {
-		return nil, errors.Wrap(err, "create pipe")
-	}
+	downStdinReader, downStdinWriter := io.Pipe()
+	downStdoutReader, downStdoutWriter := io.Pipe()
 
 	go func() {
 		err := serviceClient.startStream(pod, container, downstreamArgs, downStdinReader, downStdoutWriter)

@@ -106,9 +106,9 @@ func (u *upstream) startPing(doneChan chan struct{}) {
 			select {
 			case <-doneChan:
 				return
-			case <-time.After(time.Second * 10):
+			case <-time.After(time.Second * 30):
 				if u.client != nil {
-					ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 					_, err := u.client.Ping(ctx, &remote.Empty{})
 					cancel()
 					if err != nil {
@@ -475,10 +475,7 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 	u.sync.log.Infof("Upstream - Upload %d create change(s) (Uncompressed ~%0.2f KB)", len(files), float64(size)/1024.0)
 
 	// Create a pipe for reading and writing
-	reader, writer, err := os.Pipe()
-	if err != nil {
-		return errors.Wrap(err, "create pipe")
-	}
+	reader, writer := io.Pipe()
 
 	defer reader.Close()
 	defer writer.Close()
@@ -496,7 +493,7 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 	}()
 
 	// upload the archive
-	err = u.uploadArchive(reader)
+	err := u.uploadArchive(reader)
 	if err != nil {
 		return errors.Wrap(err, "upload archive")
 	}
