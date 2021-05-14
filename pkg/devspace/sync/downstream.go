@@ -115,9 +115,9 @@ func (d *downstream) startPing(doneChan chan struct{}) {
 			select {
 			case <-doneChan:
 				return
-			case <-time.After(time.Second * 10):
+			case <-time.After(time.Second * 30):
 				if d.client != nil {
-					ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 					_, err := d.client.Ping(ctx, &remote.Empty{})
 					cancel()
 					if err != nil {
@@ -254,10 +254,7 @@ func (d *downstream) updateDownloadChanges(download []*remote.Change) []*remote.
 }
 
 func (d *downstream) initDownload(download []*remote.Change, force bool) error {
-	reader, writer, err := os.Pipe()
-	if err != nil {
-		return errors.Wrap(err, "create pipe")
-	}
+	reader, writer := io.Pipe()
 
 	defer reader.Close()
 	defer writer.Close()
@@ -269,7 +266,7 @@ func (d *downstream) initDownload(download []*remote.Change, force bool) error {
 
 	// Untaring all downloaded files to the right location
 	// this can be a lengthy process when we downloaded a lot of files
-	err = d.unarchiver.Untar(reader, d.sync.LocalPath)
+	err := d.unarchiver.Untar(reader, d.sync.LocalPath)
 	if err != nil {
 		return errors.Wrap(err, "untar files")
 	}
