@@ -89,11 +89,6 @@ func (cmd *AttachCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 		return errors.Wrap(err, "new kube client")
 	}
 
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log)
-	if err != nil {
-		return err
-	}
-
 	// Execute plugin hook
 	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "attach", client.CurrentContext(), client.Namespace(), nil)
 	if err != nil {

@@ -108,7 +108,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	}
 	configOptions.KubeClient = client
 
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, cmd.log)
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, cmd.log)
 	if err != nil {
 		return err
 	}
