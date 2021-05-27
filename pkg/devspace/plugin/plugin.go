@@ -203,8 +203,6 @@ func (c *client) Update(name, version string) (*Metadata, error) {
 
 	if oldVersion.EQ(newVersion) {
 		return nil, &NewestVersionError{newVersion.String()}
-	} else if oldVersion.GT(newVersion) {
-		return nil, fmt.Errorf("new version is older than existing version")
 	}
 
 	c.log.Infof("Updating plugin %s to version %s", name, newMetadata.Version)
