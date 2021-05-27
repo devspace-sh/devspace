@@ -3,6 +3,8 @@ package reset
 import (
 	"context"
 	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/podreplace"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -88,15 +90,22 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 		return err
 	}
 
+	// reset the pods
+	ResetPods(client, configInterface, cmd.log)
+	return nil
+}
+
+// ResetPods deletes the pods created by dev.replacePods
+func ResetPods(client kubectl.Client, config config.Config, log log.Logger) {
 	// create pod replacer
 	podReplacer := podreplace.NewPodReplacer()
 	resetted := 0
 	errored := false
-	for _, replacePod := range configInterface.Config().Dev.ReplacePods {
-		deletedPod, err := podReplacer.RevertReplacePod(context.TODO(), client, replacePod, cmd.log)
+	for _, replacePod := range config.Config().Dev.ReplacePods {
+		deletedPod, err := podReplacer.RevertReplacePod(context.TODO(), client, replacePod, log)
 		if err != nil {
 			errored = true
-			cmd.log.Warnf("Error reverting replaced pod: %v", err)
+			log.Warnf("Error reverting replaced pod: %v", err)
 		} else if deletedPod != nil {
 			resetted++
 		}
@@ -104,11 +113,9 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 
 	if resetted == 0 {
 		if errored == false {
-			cmd.log.Info("No pods to reset found")
+			log.Info("No pods to reset found")
 		}
 	} else {
-		cmd.log.Donef("Successfully reset %d pods", resetted)
+		log.Donef("Successfully reset %d pods", resetted)
 	}
-
-	return nil
 }

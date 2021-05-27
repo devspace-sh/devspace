@@ -213,7 +213,7 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 
 func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) (string, error) {
 	var err error
-	image, err = imageselector.GetStrippedDockerImageName(strings.ToLower(image))
+	image, _, err = imageselector.GetStrippedDockerImageName(strings.ToLower(image))
 	if err != nil {
 		return "", err
 	}

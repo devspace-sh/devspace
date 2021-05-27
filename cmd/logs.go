@@ -102,11 +102,6 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 		return errors.Wrap(err, "create kube client")
 	}
 
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log)
-	if err != nil {
-		return err
-	}
-
 	// Execute plugin hook
 	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "logs", client.CurrentContext(), client.Namespace(), nil)
 	if err != nil {

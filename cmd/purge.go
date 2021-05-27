@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/loft-sh/devspace/cmd/reset"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"strings"
@@ -107,7 +108,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	}
 	configOptions.KubeClient = client
 
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, cmd.log)
+	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, cmd.log)
 	if err != nil {
 		return err
 	}
@@ -138,6 +139,11 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 
 	// Only purge if we don't specify dependency
 	if len(cmd.Dependency) == 0 {
+		// Reset replaced pods
+		if len(configInterface.Config().Dev.ReplacePods) > 0 {
+			reset.ResetPods(client, configInterface, cmd.log)
+		}
+
 		deployments := []string{}
 		if cmd.Deployments != "" {
 			deployments = strings.Split(cmd.Deployments, ",")
