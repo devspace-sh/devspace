@@ -32,11 +32,14 @@ func (m *manager) AddKubectlDeployment(deploymentName string, isKustomization bo
 		manifests, err := m.log.Question(&survey.QuestionOptions{
 			Question: question,
 			ValidationFunc: func(value string) error {
-				stat, err := os.Stat(path.Join(value, "kustomization.yaml"))
-				if err == nil && stat.IsDir() == false {
-					return nil
+				if isKustomization {
+					stat, err := os.Stat(path.Join(value, "kustomization.yaml"))
+					if err == nil && stat.IsDir() == false {
+						return nil
+					}
+					return errors.New(fmt.Sprintf("Path `%s` is not a Kustomization (kustomization.yaml missing)", value))
 				}
-				return errors.New(fmt.Sprintf("Path `%s` is not a Kustomization (kustomization.yaml missing)", value))
+				return nil
 			},
 		})
 		if err != nil {
@@ -55,11 +58,14 @@ func (m *manager) AddKubectlDeployment(deploymentName string, isKustomization bo
 			{
 				Name: deploymentName,
 				Kubectl: &v1.KubectlConfig{
-					Kustomize: ptr.Bool(isKustomization),
 					Manifests: splittedPointer,
 				},
 			},
 		}, m.config.Deployments...)
+
+		if isKustomization {
+			m.config.Deployments[0].Kubectl.Kustomize = ptr.Bool(isKustomization)
+		}
 
 		break
 	}
@@ -72,7 +78,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 		helmConfig := &v1.HelmConfig{
 			Chart: &v1.ChartConfig{},
 			Values: map[interface{}]interface{}{
-				"someChartValue": "Add values for your chart either here under `values` or use the `valuesFiles` option",
+				"someChartValue": "",
 			},
 		}
 
@@ -249,7 +255,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 					return err
 				}
 
-				gitCommand := fmt.Sprintf("if [ -d '%s/.git' ]; then git fetch origin %s --depth 1; else mkdir -p %s; git clone --single-branch --branch %s --depth 1 %s %s; fi ", chartTempPath, gitBranch, chartTempPath, gitBranch, gitRepo, chartTempPath)
+				gitCommand := fmt.Sprintf("if [ -d '%s/.git' ]; then cd \"%s\" && git pull origin %s; else mkdir -p %s; git clone --single-branch --branch %s %s %s; fi", chartTempPath, chartTempPath, gitBranch, chartTempPath, gitBranch, gitRepo, chartTempPath)
 
 				m.log.WriteString("\n")
 				m.log.Infof("Cloning external repo `%s` containing to retrieve Helm chart", gitRepo)
@@ -304,13 +310,14 @@ func (m *manager) AddComponentDeployment(deploymentName, imageName string, servi
 				Image: fmt.Sprintf("image(%s):tag(%s)", imageName, imageName),
 			},
 		},
-		Service: &v1.ServiceConfig{},
 	}
 
 	if servicePort > 0 {
-		componentConfig.Service.Ports = []*v1.ServicePortConfig{
-			{
-				Port: &servicePort,
+		componentConfig.Service = &v1.ServiceConfig{
+			Ports: []*v1.ServicePortConfig{
+				{
+					Port: &servicePort,
+				},
 			},
 		}
 	}

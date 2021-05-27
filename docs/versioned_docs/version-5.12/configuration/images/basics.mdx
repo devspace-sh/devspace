@@ -192,7 +192,7 @@ DevSpace uses one of the following [build tools](../../configuration/images/basi
 ### 6. Tag Image
 DevSpace automatically tags all images after building them using a tagging schema that you can customize using the `tag` option. By default, this option is configured to generate a random string consisting of 5 characters. 
 
-[Learn more about defining a custom tagging schema.](../../configuration/images/image-tagging.mdx#tag-tagging-schema)
+[Learn more about defining a custom tagging schema.](../../configuration/images/image-tagging.mdx#tags-tagging-schema)
 
 :::info Tag Replacement
 Before deploying your application, DevSpace will use the newly generated image tags and replace them in-memory in the values for your [Helm charts](../../configuration/deployments/helm-charts.mdx) and [Kubernetes manifests](../../configuration/deployments/kubernetes-manifests.mdx), so they will be deployed using the newest image tag.

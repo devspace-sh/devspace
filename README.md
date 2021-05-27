@@ -2,11 +2,11 @@
 
 ### **[Website](https://devspace.sh)** • **[Quickstart](#quickstart)** • **[Examples](#configuration-examples)** • **[Documentation](https://devspace.sh/cli/docs/introduction)** • **[Blog](https://loft.sh/blog)** • **[Twitter](https://twitter.com/devspace)**
 
-![Build Status Passing](https://img.shields.io/github/workflow/status/devspace-cloud/devspace/Test%20&%20Release%20CLI%20Version/master?style=for-the-badge)
-![Latest Release](https://img.shields.io/github/v/release/devspace-cloud/devspace?style=for-the-badge&label=Latest%20Release&color=%23007ec6)
-![License: Apache-2.0](https://img.shields.io/github/license/devspace-cloud/devspace?style=for-the-badge&color=%23007ec6)
+![Build Status Passing](https://img.shields.io/github/workflow/status/loft-sh/devspace/Test%20&%20Release%20CLI%20Version/master?style=for-the-badge)
+![Latest Release](https://img.shields.io/github/v/release/loft-sh/devspace?style=for-the-badge&label=Latest%20Release&color=%23007ec6)
+![License: Apache-2.0](https://img.shields.io/github/license/loft-sh/devspace?style=for-the-badge&color=%23007ec6)
 <br>
-![Total Downloads (GitHub Releases)](https://img.shields.io/github/downloads/devspace-cloud/devspace/total?style=for-the-badge&label=Total%20Downloads&color=%23007ec6)
+![Total Downloads (GitHub Releases)](https://img.shields.io/github/downloads/loft-sh/devspace/total?style=for-the-badge&label=Total%20Downloads&color=%23007ec6)
 ![NPM Installs per Month](https://img.shields.io/npm/dm/devspace?label=NPM%20Installs&style=for-the-badge&color=%23007ec6)
 
 [![Join us on Slack!](static/img/slack.svg)](https://slack.k8s.io/#devspace)
@@ -34,8 +34,8 @@
 
 ## Contents
 - [Why DevSpace?](#why-devspace)
-- [Features](#features)
 - [Architecture & Workflow](#architecture--workflow)
+- [Features](#features)
 - [Quickstart Guide](#quickstart)
 - [Config Examples](#configuration-examples)
 - [Troubleshooting](#troubleshooting)
@@ -222,7 +222,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 <summary><b>Lightweight & Easy to Setup</b></summary>
 <br>
 
-- **Client-Only Binary** (optional plugin for [loft.sh](https://github.com/loft-sh/loft-devspace-plugin) for cluster sharing + multi-tenancy)
+- **Client-Only Binary** (optional plugin for [Loft](https://github.com/loft-sh/loft-devspace-plugin) for cluster sharing + multi-tenancy)
 - **Standalone Executable for all platforms** with no external dependencies and *fully written in Golang*
 - **Automatic Config Generation** from existing Dockerfiles, Helm chart or Kubernetes manifests (optional)
 - **Automatic Dockerfile Generation** (optional)
@@ -235,7 +235,7 @@ Stop wasting time for running the same build and deploy commands over and over a
 <summary><b>Loft.sh Plugin for Easy Namespace & Virtual Cluster Provisioning</b></summary>
 <br>
 
-DevSpace provides a plugin for [loft.sh](https://github.com/loft-sh/loft-devspace-plugin) which allows users to run command such as `devspace create space` or `devspace create vcluster` for creating namespaces and virtual Kubernetes clusters in shared dev clusters.
+DevSpace provides a plugin for [Loft](https://github.com/loft-sh/loft-devspace-plugin) which allows users to run command such as `devspace create space` or `devspace create vcluster` for creating namespaces and virtual Kubernetes clusters in shared dev clusters.
 
 Loft is a server-side solution for Kubernetes multi-tenancy and efficient cluster sharing which provides:
 - **On-Demand Namespace Creation & Isolation** with automatic RBAC, network policies, pod security policies etc.
@@ -244,7 +244,7 @@ Loft is a server-side solution for Kubernetes multi-tenancy and efficient cluste
 - **Fully Automatic Context Configuration** on the machines of all cluster users with secure access token handling
 - **100% Pure Kubernetes** and nothing else! Works with any Kubernetes cluster.
 
-**For more infos and install intructions for loft, see: [www.github.com/loft-sh/loft](https://github.com/loft-sh/loft)**
+**For more infos and install intructions for Loft, see [Loft Documentation](https://loft.sh/docs)**
 
 </details>
 
@@ -275,11 +275,25 @@ yarn global add devspace
 </details>
 
 <details>
+<summary>via brew</summary>
+
+```
+brew install devspace
+```
+
+</details>
+
+<details>
 <summary>via Mac Terminal</summary>
 
 ```
+# AMD64 / Intel
 curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-darwin-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
-sudo mv devspace /usr/local/bin;
+sudo install devspace /usr/local/bin;
+
+# ARM64 / Silicon Mac
+curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-darwin-arm64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
+sudo install devspace /usr/local/bin;
 ```
 
 </details>
@@ -288,7 +302,12 @@ sudo mv devspace /usr/local/bin;
 <summary>via Linux Bash</summary>
 
 ```
+# AMD64
 curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
+sudo install devspace /usr/local/bin
+
+# ARM64
+curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-arm64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace;
 sudo install devspace /usr/local/bin
 ```
 
@@ -314,13 +333,13 @@ $env:Path += ";" + $Env:APPDATA + "\devspace";
 
 | Project | Command                                     |
 | ------- | --------------------------------------------------------------------------------------- |
-| Node.js | `git clone https://github.com/devspace-cloud/quickstart-nodejs && cd quickstart-nodejs` |
-| Python  | `git clone https://github.com/devspace-cloud/quickstart-python && cd quickstart-python` |
-| Java    | `git clone https://github.com/devspace-cloud/quickstart-java && cd quickstart-java` |
-| Ruby    | `git clone https://github.com/devspace-cloud/quickstart-ruby && cd quickstart-ruby`     |
-| Golang  | `git clone https://github.com/devspace-cloud/quickstart-golang && cd quickstart-golang` |
-| PHP     | `git clone https://github.com/devspace-cloud/quickstart-php && cd quickstart-php`       |
-| ASP.NET | `git clone https://github.com/devspace-cloud/quickstart-asp-dotnet && cd quickstart-asp-dotnet`       |
+| Node.js | `git clone https://github.com/loft-sh/devspace-quickstart-nodejs && cd devspace-quickstart-nodejs` |
+| Python  | `git clone https://github.com/loft-sh/devspace-quickstart-python && cd devspace-quickstart-python` |
+| Java    | `git clone https://github.com/loft-sh/devspace-quickstart-java && cd devspace-quickstart-java` |
+| Ruby    | `git clone https://github.com/loft-sh/devspace-quickstart-ruby && cd devspace-quickstart-ruby`     |
+| Golang  | `git clone https://github.com/loft-sh/devspace-quickstart-golang && cd devspace-quickstart-golang` |
+| PHP     | `git clone https://github.com/loft-sh/devspace-quickstart-php && cd devspace-quickstart-php`       |
+| ASP.NET | `git clone https://github.com/loft-sh/devspace-quickstart-asp-dotnet && cd devspace-quickstart-asp-dotnet`       |
 
 
 <details>
@@ -342,135 +361,51 @@ Initializing a project will create the configuration file `devspace.yaml` which 
 ```bash
 devspace init
 ```
-> Take a look at the [Configuration Examples](#configuration-examples) to learn more about `devspace.yaml`
 
 <br>
 
-### 4. Choose a Kubernetes Cluster
-Choose the cluster, you want to deploy your project to. If you are not sure, pick the first option. It is very easy to switch between the options later on.
-<br>
-
-<details>
-<summary><b>Hosted Spaces sponsored by DevSpace (managed Kubernetes namespaces)</b>
-<br>&nbsp;&nbsp;&nbsp;
-<i>
-FREE for one project, includes 1 GB RAM
-</i>
-</summary>
-
-<br>
-
+### 4. Start Development
+Tell DevSpace which namespace to use and start the development mode:
 ```bash
-devspace create space my-app # requires login via GitHub or email
-```
-> DevSpace automatically sets up a kube-context for this space, so you can also access your isolated namespace using `kubectl`, `helm` or any other Kubernetes tool.
-
-</details>
-
-<br>
-
-<details>
-<summary><b>Your own local cluster</b>
-<br>&nbsp;&nbsp;&nbsp;
-<i>
-works with any local Kubernetes cluster (minikube, kind, k3s, mikrok8s etc.)
-</i>
-</summary>
-
-<br>
-
-If you want to deploy to a local Kubernetes cluster, make sure your **current kube-context** points to this cluster and tell DevSpace which namespace to use:
-
-```bash
-# Tell DevSpace which namespace to use (will be created automatically during deployment)
-devspace use namespace my-namespace
-```
-
-</details>
-
-<br>
-
-<details>
-<summary><b>Your own remote cluster</b>
-<br>&nbsp;&nbsp;&nbsp;
-<i>
-works with any remote Kubernetes cluster (GKE, EKS, AKS, bare metal etc.)
-</i>
-</summary>
-
-<img src="static/img/line.svg" height="1">
-
-#### Option A: You alone want to use this cluster
-If you want to deploy to a remote Kubernetes cluster, make sure your **current kube-context** points to this cluster and tell DevSpace which namespace to use:
-```bash
-# Tell DevSpace which namespace to use (will be created automatically during deployment)
-devspace use namespace my-namespace
-```
-
-#### Option B: You want to share this cluster with your team
-To share a cluster with everyone on your team, [install loft](https://loft.sh/), then connect your cluster to your loft instance and then create an isolated Kubernetes namespace via the loft plugin for DevSpace.
-```bash
-# Install the loft plugin for DevSpace
-devspace add plugin https://github.com/loft-sh/loft-devspace-plugin
-
-# Login to your loft instance via the CLI
-devspace login https://your-loft-instance.tld
-
-# Create an isolated Kubernetes namespace via loft
-devspace create space my-namespace
-```
-
-> The loft plugin for DevSpace will automatically set up a kube-context for every space you create, so you can also access your isolated namespace using `kubectl`, `helm` or any other Kubernetes tool.
-
-<br>
-
-<details>
-  <summary><b>What is loft?</b></summary>
-
-[loft](https://loft.sh/) is a multi-tenancy manager for Kubernetes which allows you to connect clusters that you want to make available for your engineering teams. After connecting a cluster, engineers will be able to create isolated namespaces and even virtual Kubernetes clusters within the cluster whenever they need access to Kubernetes.
-
-loft is maintained by the same people who are developing DevSpace.
-
-<br>
-</details>
-
-<details>
-  <summary><b>How are Spaces isolated? Why is it safe to share a cluster?</b></summary>
-
-loft makes sure that developers cannot break out of their namespaces by configuring RBAC, network policies, pod security policies etc. By default, these restrictions are very strict and do not even allow pods from different namespaces to communicate with eather other. You can configure every security setting that loft enforces using the UI of loft and even set custom limits for different members of your team.
-
-<br>
-</details>
-
-<details>
-  <summary><b>How can I add my team mates, so we can share this cluster?</b></summary>
-
-Take a look at the [loft documentation](https://loft.sh/docs/auth/users#add-users) for details on [how to add users to a cluster](https://loft.sh/docs/auth/users#add-users) that is connected to loft.
-
-<br>
-</details>
-
-<img src="static/img/line.svg" height="1">
-</details>
-
-<br>
-
-### 5. Develop
-The most important command in DevSpace starts the development mode and lets you directly code within your Kubernetes cluster using terminal proxy, port forwarding and real-time code synchronization.
-
-```bash
+devspace use namespace my-namespace  # will be created by DevSpace if it does not exist
 devspace dev
 ```
+
+As soon as the terminal opens up, you can start your application:
+```bash
+# Node.js
+npm start
+
+# Python
+python main.py
+
+# Ruby
+bundle exec rails server -p 3000 -b 0.0.0.0
+
+# Golang
+go run main.go
+
+# Java
+mvn package -T 1C -U -Dmaven.test.skip=true  # or: gradle build
+java -jar target/.../my.jar
+
+# .NET
+dotnet run
+
+# PHP
+# Your app should be running already but you can still run:
+php ...
+composer ...
+```
+
 You can now:
 - Access your application via `http://localhost:PORT` in your browser
 - Edit your source code files and DevSpace will automatically synchronize them to the containers running in Kubernetes
 - Use a hot reloading tool like `nodemon` and your application will automatically reload when you edit source code files
 
-> Run `devspace dev -i` to use interactive mode: overrides your Dockerfile `ENTRYPOINT` with `[sleep, 999999]` and opens the terminal proxy, so you can manually run the start command for your application, e.g. `npm start`. Interactive mode is great for debugging containers that keep crashing or starting an application in hot reloading mode when the Dockerfile ENTRYPOINT generally starts a rather production-like version of the application.
-
 <br>
 
-### 6. Open The Development UI
+### 5. Open The Development UI
 When running `devspace dev`, DevSpace starts a client-only UI for Kubernetes. You can see that in the output of `devspace dev` which should contain a log line similar to this one:
 ```bash
 #########################################################
@@ -492,7 +427,7 @@ Once the UI is open in your browser, it will look similar to this screenshot:
 
 <br>
 
-### 7. Deploy
+### 6. Deploy
 Initializing a project will create the configuration file `devspace.yaml` which tells DevSpace how to deploy your project.
 ```bash
 devspace deploy -p production
@@ -503,29 +438,14 @@ The `-p / --profile` flag tells DevSpace to apply a certain profile defined in y
 
 <br>
 
-### 8. Open Deployed App
-You can now open your application in the browser using the following command:
-```bash
-devspace open
-```
-When DevSpace asks you how to open your application, choose the first option **"via localhost"** because it will work no matter what cluster you are using.
-
-> If you want to connect a domain, check out our guide on [how to connect a domain by creating an ingress with DevSpace](https://devspace.sh/cli/docs/guides/networking-domains).
-
-**Congratulations!** You just deployed your first project to Kubernetes using DevSpace.
-
-<img width="300" src="static/img/congrats.gif">
-
-<br>
-
-### 9. Learn more
+### 7. Learn more
 Follow these links to more about how to use DevSpace:
-- [**DevSpace Tutorials**](https://devspace.sh/cli/docs/getting-started/next-steps) (for different languages and frameworks)
 - [Onboarding Guide](https://devspace.sh/cli/docs/guides/basics)
-- [How to use the Localhost UI of DevSpace](https://devspace.sh/cli/docs/guides/localhost-ui)
-- [How to connect a domain by creating an ingress](https://devspace.sh/cli/docs/guides/networking-domains)
-- [How to integrate DevSpace in your CI/CD pipeline](https://devspace.sh/cli/docs/guides/ci-cd-integration)
+- [Config Reference](http://devspace.sh/cli/docs/next/configuration/reference)
 - [How to troubleshoot common issues](#troubleshooting)
+- [How to use the Localhost UI of DevSpace](https://devspace.sh/cli/docs/guides/localhost-ui)
+- [How to integrate DevSpace in your CI/CD pipeline](https://devspace.sh/cli/docs/guides/ci-cd-integration)
+
 
 #### Useful Commands for Development
 
@@ -541,9 +461,8 @@ Follow these links to more about how to use DevSpace:
 | <a href="https://devspace.sh/cli/docs/commands/devspace_build">`devspace build`</a> <br> Build, tag and push images (no deploy) | `-t [TAG] • Use specified [TAG] to tag all images` |
 | <a href="https://devspace.sh/cli/docs/commands/devspace_cleanup_images">`devspace cleanup images`</a> <br> Deletes old images (locally, built by DevSpace) | <i>This is very useful after you built a lot of images and your local Docker daemon runs out of space (error: `no space left on device`) </i> |
 | <a href="https://devspace.sh/cli/docs/commands/devspace_attach">`devspace attach`</a> <br> Attaches to a running container | <i><a href="https://devspace.sh/component-chart/docs/configuration/containers#stdin">Requires `stdin` and `tty` to be `true`</a></i> |
-| <a href="https://devspace.sh/cli/docs/commands/devspace_attach">`devspace use space [NAME]`</a> <br> Switch into a different (existing) Space | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of all your Spaces.</i> |
-| <a href="https://devspace.sh/cli/docs/commands/devspace_attach">`devspace use namespace [NAME]`</a> <br> Switch to a different namespace | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of available namespaces.</i> |
-| <a href="https://devspace.sh/cli/docs/commands/devspace_attach">`devspace use context [NAME]`</a> <br> Switch to a different kube-context | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of available kube-contexts.</i> |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_use_namespace">`devspace use namespace [NAME]`</a> <br> Switch to a different namespace | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of available namespaces.</i> |
+| <a href="https://devspace.sh/cli/docs/commands/devspace_use_context">`devspace use context [NAME]`</a> <br> Switch to a different kube-context | <i>If you do not provide a `[NAME]`, DevSpace will show a selector with a list of available kube-contexts.</i> |
 
 <br>
 
@@ -569,9 +488,10 @@ dev:                    # Special config options for `devspace dev`
   ports: ...            # Configure port-forwarding
   open: ...             # Configure auto-open for opening URLs after starting development mode
   sync: ...             # Configure file synchronization
+  terminal: ...         # Customize the terminal to be opened
   logs: ...             # Configure multi-container log streaming
+  replacePods: ...      # Replace pods during development mode
   autoReload: ...       # Tells DevSpace when to redeploy (e.g. when a manifest file has been edited)
-  interactive: ...      # Customize Interactive Mode (devspace dev -i)
 
 dependencies:           # Tells DevSpace which related projects should be deployed before deploying this project
   - {dependency-1}      # Could be another git repository
@@ -607,15 +527,19 @@ hooks:                  # Customize all workflows using hooks
 
 ```yaml
 # File: ./devspace.yaml
-version: v1beta9
+version: v1beta10
 
 images:
   backend:                              # Key 'backend' = Name of this image
     image: my-registry.tld/image1       # Registry and image name for pushing the image
-    createPullSecret: true              # Let DevSpace automatically create pull secrets in your Kubernetes namespace
 
 deployments:
-- name: quickstart-nodejs               # Name of this deployment
+- name: database                        # A deployment for a postgresql database
+  kubectl:                              # Deploy using kubectl
+    manifests:
+    - postgresql/statefulset.yaml
+    - postgresql/service.yaml
+- name: quickstart-nodejs               # A second deployment
   helm:                                 # Deploy using Helm
     chart:                              # Helm chart to be deployed
       name: component-chart             # DevSpace component chart is a general-purpose Helm chart
@@ -631,35 +555,24 @@ deployments:
       service:                          # Expose this component with a Kubernetes service
         ports:                          # Array of container ports to expose through the service
         - port: 3000                    # Exposes container port 3000 on service port 3000
-- name: database                        # A second deployment for a postgresql database
-  helm:
-    chart:
-      name: stable/postgresql
-    values:
-      postgresqlDatabase: "db_website"
-      postgresqlUsername: "db_user"
-      postgresqlPassword: ${DB_PASSWORD}
-      resources:
-        requests:
-          memory: 0
-          cpu: 0
 
 dev:
   ports:
+    imageName: backend
     forward:
     - port: 3000
     - port: 8080
       remotePort: 80
-    image: backend
   open:
   - url: http://localhost:3000/login
   sync:
-  - localSubPath: ./src
-    containerPath: .
-    image: backend
-  autoReload:
-    paths:
-    - ./manifests/**
+  - imageName: backend
+    localSubPath: ./src
+  terminal:
+    imageName: backend
+  replacePods:
+  - imageName: backend
+    replaceImage: loftsh/javascript:latest
 
 dependencies:
 - source:
@@ -698,9 +611,9 @@ images:
     createPullSecret: true
     dockerfile: ./db/Dockerfile                 # Build with --dockerfile=./db/Dockerfile
     context: ./db                               # Build with --context=./db
-    # The following lines define custom tag schemata for this image (default tag schema is: ${DEVSPACE_RANDOM})
+    # The following lines define custom tag schemata for this image
     tags:
-    - ${DEVSPACE_USERNAME}-devspace-${DEVSPACE_GIT_COMMIT}-${DEVSPACE_RANDOM}
+    - ${DEVSPACE_USERNAME}-devspace-${DEVSPACE_GIT_COMMIT}-######
 ```
 Take a look at the documentation for more information about [configuring builds with Docker](https://devspace.sh/cli/docs/configuration/images/docker).  <img src="static/img/line.svg" height="1">
 
@@ -761,7 +674,7 @@ Take a look at the documentation for more information about using [custom build 
 
 <details>
 <summary>
-Deploy components
+Deploy Component Helm Chart
 </summary>
 
 ```yaml
@@ -802,7 +715,6 @@ deployments:
       repo: https://kubernetes-charts.storage.googleapis.com
 ```
 Learn more about:
-- [What are Helm charts?](https://devspace.cloud/docs/cli/deployment/helm-charts/what-are-helm-charts)
 - [Configure Helm chart deployments](https://devspace.sh/cli/docs/configuration/deployments/helm-charts)
 
  <img src="static/img/line.svg" height="1">
@@ -824,7 +736,6 @@ deployments:
     - some-other-manifest.yaml
 ```
 Learn more about:
-- [What are Kubernetes manifests?](https://devspace.cloud/docs/cli/deployment/kubernetes-manifests/what-are-manifests)
 - [Configure manifest deployments](https://devspace.sh/cli/docs/configuration/deployments/kubernetes-manifests)
 
 <img src="static/img/line.svg" height="1">
@@ -841,10 +752,10 @@ Deploy manifests with kustomize
 deployments:
 - name: my-deployment
   kubectl:
+    kustomize: true
     manifests:
     - my-manifests/
     - more-manifests/
-    kustomize: true
 ```
 Take a look at the documentation for more information about [deploying manifests with kustomize](https://devspace.sh/cli/docs/configuration/deployments/kustomizations).
 
@@ -1170,15 +1081,6 @@ DevSpace is an open-source command-line tool that provides everything you need t
 </details>
 
 <details>
-<summary>What is loft?</summary>
-
-[loft](https://loft.sh/) is a multi-tenancy manager for Kubernetes which allows you to connect clusters that you want to make available for your engineering teams. After connecting a cluster, engineers will be able to create isolated namespaces and even virtual Kubernetes clusters within the cluster whenever they need access to Kubernetes.
-
-loft is maintained by the same people who are developing DevSpace.
-
-</details>
-
-<details>
 <summary>Do I need a Kubernetes cluster to use DevSpace?</summary>
 
 **Yes.** You can either use a local cluster such as Docker Desktop Kubernetes, minikube, or Kind, but you can also use a remote cluster such as GKE, EKS, AKS, RKE (Rancher), or DOKS.
@@ -1195,7 +1097,7 @@ loft is maintained by the same people who are developing DevSpace.
 <details>
 <summary>What is a Helm chart?</summary>
 
-[Helm](https://helm.sh/) is the package manager for Kubernetes. Packages in Helm are called Helm charts. [Learn more about Helm charts.](https://devspace.cloud/docs/cli/deployment/helm-charts/what-are-helm-charts)
+[Helm](https://helm.sh/) is the package manager for Kubernetes. Packages in Helm are called Helm charts.
 
 </details>
 

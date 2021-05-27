@@ -3,28 +3,21 @@ title: "Command - devspace sleep"
 sidebar_label: devspace sleep
 ---
 
+## devspace sleep
 
 the "loft" plugin
-
-## Synopsis
 
 ```
 devspace sleep [flags]
 ```
 
-```
-the "loft" plugin
-```
-
-
-## Flags
+### Options
 
 ```
   -h, --help   help for sleep
 ```
 
-
-## Global & Inherited Flags
+### Options inherited from parent commands
 
 ```
       --config string            The devspace config file to use
@@ -44,3 +37,10 @@ the "loft" plugin
       --vars-secret string       The secret to restore/save the variables from/to, if --restore-vars or --save-vars is enabled (default "devspace-vars")
 ```
 
+```
+
+```
+
+
+## Flags
+## Global & Inherited Flags

@@ -14,6 +14,7 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	latest "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/generator"
 	"github.com/loft-sh/devspace/pkg/util/dockerfile"
@@ -292,6 +293,48 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		return err
 	}
 
+	configPath := loader.ConfigPath("")
+	annotatedConfig, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		panic(err)
+	}
+
+	configAnnotations := map[string]string{
+		"(?m)^(vars:)":                   "\n# `vars` specifies variables which may be used as ${VAR_NAME} in devspace.yaml\n$1",
+		"(?m)^(images:)":                 "\n# `images` specifies all images that may need to be built for this project\n$1",
+		"(?m)^(  app:)":                  "$1 # This image is called `app` and this name `app` is referenced multiple times in the config below",
+		"(?m)^(deployments:)":            "\n# `deployments` tells DevSpace how to deploy this project\n$1",
+		"(?m)^(  helm:)":                 "  # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations\n$1",
+		"(?m)^(    )(componentChart:)":   "$1# We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs\n$1$2",
+		"(?m)^(    )(chart:)":            "$1# We are deploying this project with the Helm chart you provided\n$1$2",
+		"(?m)^(    )(values:)":           "$1# Under `values` we can define the values for this Helm chart used during `helm install/upgrade`\n$1# You may also use `valuesFiles` to load values from files, e.g. valuesFiles: [\"values.yaml\"]\n$1$2",
+		"(?m)^(    )  someChartValue:.*": "$1# image: image(app):tag(app)\n$1# ingress:\n$1#   enabled: true",
+		"(image\\(app\\):tag\\(app\\))":  "$1 # Use the `app` image (see `images`) and the tag DevSpace generates during image building in your Helm values",
+		"(?m)^(  kubectl:)":              "  # This deployment uses `kubectl` but you can also define `helm` deployments\n$1",
+		"(?m)^(dev:)":                    "\n# `dev` only applies when you run `devspace dev`\n$1",
+		"(?m)^(  ports:)":                "  # `dev.ports` specifies all ports that should be forwarded while `devspace dev` is running\n  # Port-forwarding lets you access your application via localhost on your local machine\n$1",
+		"(?m)^(  open:)":                 "\n  # `dev.open` tells DevSpace to open certain URLs as soon as they return HTTP status 200\n  # Since we configured port-forwarding, we can use a localhost address here to access our application\n$1",
+		"(?m)^(  - url:.+)":              "$1\n",
+		"(?m)^(  sync:)":                 "  # `dev.sync` configures a file sync between our Pods in k8s and your local project files\n$1",
+		"(?m)^(  terminal:)":             "\n  # `dev.terminal` tells DevSpace to open a terminal as a last step during `devspace dev`\n$1",
+		"(?m)^(    command:)":            "    # With this optional `command` we can tell DevSpace to run a script when opening the terminal\n    # This is often useful to display help info for new users or perform initial tasks (e.g. installing dependencies)\n    # DevSpace has generated an example ./devspace_start.sh file in your local project - Feel free to customize it!\n$1",
+		"(?m)^(  replacePods:)":          "\n  # Since our Helm charts and manifests deployments are often optimized for production,\n  # DevSpace let's you swap out Pods dynamically to get a better dev environment\n$1",
+		"(?m)^(    replaceImage:)":       "    # Since our `app` image may be distroless or not have any dev tooling, let's replace it with a dev-optimized image\n    # DevSpace provides a sample image here but you can use any image for your specific needs\n$1",
+		"(?m)^(    patches:)":            "    # Besides replacing the container image, let's also apply some patches to the `spec` of our Pod\n    # We are overwriting `command` + `args` for the first container in our selected Pod, so it starts with `sleep 9999999`\n    # Using `sleep 9999999` as PID 1 (instead of the regular ENTRYPOINT), allows you to start the application manually\n$1",
+		"(?m)^(  - imageName:.+)":        "$1 # Select the Pod that runs our `app` image",
+		"(?m)^(profiles:)":               "\n# `profiles` lets you modify the config above for different environments (e.g. dev vs production)\n$1",
+		"(?m)^(- name: production)":      "  # This profile is called `production` and you can use it for example using: devspace deploy -p production\n  # We generally recommend to use the base config without any profiles as optimized for development (e.g. image build+push is disabled)\n$1\n  # This profile applies patches to the config above.\n  # In this case, it enables image building for example by removing the `disabled: true` statement for the image `app`",
+	}
+
+	for expr, replacement := range configAnnotations {
+		annotatedConfig = regexp.MustCompile(expr).ReplaceAll(annotatedConfig, []byte(replacement))
+	}
+
+	err = ioutil.WriteFile(configPath, annotatedConfig, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
 	// Save generated
 	err = configLoader.SaveGenerated(generated)
 	if err != nil {
@@ -299,9 +342,8 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	}
 
 	cmd.log.WriteString("\n")
+	cmd.log.Info("Configuration saved in devspace.yaml - you can make adjustments as needed")
 	cmd.log.Done("Project successfully initialized")
-	cmd.log.WriteString("\n")
-	cmd.log.Info("Check devspace.yaml for your configuration and make adjustments as needed")
 	cmd.log.Infof("\r         \nYou can now run:\n- `%s` to pick which Kubernetes namespace to work in\n- `%s` to start developing your project in Kubernetes\n- `%s` to deploy your project to Kubernetes\n- `%s` to get a list of available commands", ansi.Color("devspace use namespace", "blue+b"), ansi.Color("devspace dev", "blue+b"), ansi.Color("devspace deploy -p production", "blue+b"), ansi.Color("devspace -h", "blue+b"))
 	return nil
 }
@@ -476,26 +518,33 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 				Command:   []string{"./" + startScriptName},
 			}
 
+			replacePodPatches := []*latest.PatchConfig{
+				{
+					Path:      "spec.containers[0].securityContext",
+					Operation: "remove",
+				},
+			}
+
+			if language != "php" {
+				replacePodPatches = append([]*latest.PatchConfig{
+					{
+						Path:      "spec.containers[0].command",
+						Operation: "replace",
+						Value:     []string{"sleep"},
+					},
+					{
+						Path:      "spec.containers[0].args",
+						Operation: "replace",
+						Value:     []string{"9999999"},
+					},
+				}, replacePodPatches...)
+			}
+
 			config.Dev.ReplacePods = []*latest.ReplacePod{
 				{
 					ImageName:    imageName,
 					ReplaceImage: fmt.Sprintf("loftsh/%s:latest", language),
-					Patches: []*latest.PatchConfig{
-						{
-							Path:      "spec.containers[0].command",
-							Operation: "replace",
-							Value:     []string{"sleep"},
-						},
-						{
-							Path:      "spec.containers[0].args",
-							Operation: "replace",
-							Value:     []string{"9999999"},
-						},
-						{
-							Path:      "spec.containers[0].securityContext",
-							Operation: "remove",
-						},
-					},
+					Patches:      replacePodPatches,
 				},
 			}
 		}

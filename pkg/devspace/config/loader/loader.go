@@ -1,13 +1,14 @@
 package loader
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
