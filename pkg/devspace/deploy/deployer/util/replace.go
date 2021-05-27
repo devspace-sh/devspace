@@ -83,7 +83,7 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 	}
 
 	// strip docker image name
-	image, err := imageselector.GetStrippedDockerImageName(resolvedImage)
+	image, originalTag, err := imageselector.GetStrippedDockerImageName(resolvedImage)
 	if err != nil {
 		return false, false, "", nil
 	}
@@ -108,7 +108,7 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 		}
 
 		// try to find the tag for the image
-		tag := ""
+		tag := originalTag
 		if imageCache[configImageKey] != nil && imageCache[configImageKey].Tag != "" {
 			tag = imageCache[configImageKey].Tag
 		}

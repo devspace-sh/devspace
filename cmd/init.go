@@ -200,7 +200,7 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 				Question:          imageQuestion,
 				ValidationMessage: "Please enter a valid container image from a Kubernetes pod (e.g. myregistry.tld/project/image)",
 				ValidationFunc: func(name string) error {
-					_, err := imageselector.GetStrippedDockerImageName(strings.ToLower(name))
+					_, _, err := imageselector.GetStrippedDockerImageName(strings.ToLower(name))
 					return err
 				},
 			})

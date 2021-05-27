@@ -115,7 +115,7 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 			Question:     "Please provide the full image to be pushed for this project",
 			DefaultValue: image,
 			ValidationFunc: func(value string) error {
-				_, err = imageselector.GetStrippedDockerImageName(strings.ToLower(value))
+				_, _, err = imageselector.GetStrippedDockerImageName(strings.ToLower(value))
 				return err
 			},
 		})
@@ -250,7 +250,7 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 		err              error
 	)
 
-	image, err = imageselector.GetStrippedDockerImageName(strings.ToLower(image))
+	image, _, err = imageselector.GetStrippedDockerImageName(strings.ToLower(image))
 	if err != nil {
 		return "", err
 	}
