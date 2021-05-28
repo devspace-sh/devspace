@@ -239,6 +239,9 @@ github.com/gorilla/mux
 github.com/gorilla/websocket
 # github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed
 ## explicit
+# github.com/hashicorp/go-version v1.2.0
+## explicit
+github.com/hashicorp/go-version
 # github.com/imdario/mergo v0.3.9
 github.com/imdario/mergo
 # github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf

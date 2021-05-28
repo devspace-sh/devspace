@@ -32,7 +32,12 @@ func ValidContainerArch(arch latest.ContainerArchitecture) bool {
 }
 
 func validate(config *latest.Config, log log.Logger) error {
-	err := validateImages(config)
+	err := validateRequire(config)
+	if err != nil {
+		return err
+	}
+
+	err = validateImages(config)
 	if err != nil {
 		return err
 	}
@@ -65,6 +70,34 @@ func validate(config *latest.Config, log log.Logger) error {
 	err = validateDependencies(config)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func validateRequire(config *latest.Config) error {
+	for index, plugin := range config.Require.Plugins {
+		if plugin.Name == "" {
+			return errors.Errorf("require.plugins[%d].name is required", index)
+		}
+		if plugin.Version == "" {
+			return errors.Errorf("require.plugins[%d].version is required", index)
+		}
+	}
+
+	for index, command := range config.Require.Commands {
+		if command.Name == "" {
+			return errors.Errorf("require.commands[%d].name is required", index)
+		}
+		if len(command.VersionArgs) == 0 {
+			return errors.Errorf("require.commands[%d].versionArgs is required", index)
+		}
+		if command.VersionRegEx == "" {
+			return errors.Errorf("require.commands[%d].versionRegEx is required", index)
+		}
+		if command.Version == "" {
+			return errors.Errorf("require.commands[%d].version is required", index)
+		}
 	}
 
 	return nil

@@ -30,6 +30,9 @@ type Config struct {
 	// Version holds the config version
 	Version string `yaml:"version"`
 
+	// Require defines what DevSpace, plugins and command versions are needed to use this config
+	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
+
 	// Vars are config variables that can be used inside other config sections to replace certain values dynamically
 	Vars []*Variable `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
@@ -58,6 +61,39 @@ type Config struct {
 
 	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
 	Dependencies []*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+}
+
+type RequireConfig struct {
+	// DevSpace specifies the DevSpace version constraint that is needed to use this config
+	DevSpace string `yaml:"devspace,omitempty" json:"devspace,omitempty"`
+
+	// Commands specifies an array of commands that need to be installed locally to use this config
+	Commands []RequireCommand `yaml:"commands,omitempty" json:"commands,omitempty"`
+
+	// Plugins specifies an array of plugins that need to be installed locally
+	Plugins []RequirePlugin `yaml:"plugins,omitempty" json:"plugins,omitempty"`
+}
+
+type RequirePlugin struct {
+	// Name of the plugin that should be installed
+	Name string `yaml:"name" json:"name"`
+
+	// Version constraint of the plugin that should be installed
+	Version string `yaml:"version" json:"version"`
+}
+
+type RequireCommand struct {
+	// Name is the name of the command that should be installed
+	Name string `yaml:"name" json:"name"`
+
+	// VersionArgs are the arguments to retrieve the version of the command
+	VersionArgs []string `yaml:"versionArgs,omitempty" json:"versionArgs,omitempty"`
+
+	// VersionRegEx is the regex that is used to parse the version
+	VersionRegEx string `yaml:"versionRegEx,omitempty" json:"versionRegEx,omitempty"`
+
+	// Version constraint of the command that should be installed
+	Version string `yaml:"version,omitempty" json:"version,omitempty"`
 }
 
 // ImageConfig defines the image specification

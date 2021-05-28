@@ -1,9 +1,15 @@
 package loader
 
 import (
+	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/mitchellh/go-homedir"
@@ -17,6 +23,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/log"
+
+	version "github.com/hashicorp/go-version"
 )
 
 // ConfigLoader is the base interface for the main config loader
@@ -106,7 +114,93 @@ func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log
 		return nil, err
 	}
 
+	err = l.ensureRequires(parsedConfig, log)
+	if err != nil {
+		return nil, errors.Wrap(err, "require versions")
+	}
+
 	return config.NewConfig(data, parsedConfig, generatedConfig, resolver.ResolvedVariables()), nil
+}
+
+func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) error {
+	if config == nil {
+		return nil
+	}
+
+	if config.Require.DevSpace != "" {
+		constraint, err := version.NewConstraint(config.Require.DevSpace)
+		if err != nil {
+			return errors.Wrap(err, "parsing require.devspace")
+		}
+
+		v, err := version.NewSemver(upgrade.GetVersion())
+		if err != nil {
+			return errors.Wrap(err, "parsing devspace version")
+		}
+
+		if constraint.Check(v) == false {
+			return fmt.Errorf("DevSpace version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have installed DevSpace with version %s", upgrade.GetVersion(), config.Require.DevSpace, config.Require.DevSpace)
+		}
+	}
+
+	if len(config.Require.Plugins) > 0 {
+		pluginClient := plugin.NewClient(log)
+		for index, p := range config.Require.Plugins {
+			_, metadata, err := pluginClient.GetByName(p.Name)
+			if err != nil {
+				return fmt.Errorf("cannot find plugin '%s' (%v), however it is required by the config. Please make sure you have installed the plugin '%s' with version %s", p.Name, err, p.Name, p.Version)
+			} else if metadata == nil {
+				return fmt.Errorf("cannot find plugin '%s', however it is required by the config. Please make sure you have installed the plugin '%s' with version %s", p.Name, p.Name, p.Version)
+			}
+
+			constraint, err := version.NewConstraint(p.Version)
+			if err != nil {
+				return errors.Wrapf(err, "parsing require.plugins[%d].version", index)
+			}
+
+			v, err := version.NewSemver(metadata.Version)
+			if err != nil {
+				return errors.Wrapf(err, "parsing plugin %s version", p.Name)
+			}
+
+			if constraint.Check(v) == false {
+				return fmt.Errorf("plugin '%s' version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have installed the plugin '%s' with version %s", p.Name, metadata.Version, p.Version, p.Name, p.Version)
+			}
+		}
+	}
+
+	for index, c := range config.Require.Commands {
+		regEx, err := regexp.Compile(c.VersionRegEx)
+		if err != nil {
+			return errors.Wrapf(err, "parsing require.commands[%d].versionRegEx", index)
+		}
+
+		constraint, err := version.NewConstraint(c.Version)
+		if err != nil {
+			return errors.Wrapf(err, "parsing require.commands[%d].version", index)
+		}
+
+		out, err := exec.Command(c.Name, c.VersionArgs...).Output()
+		if err != nil {
+			return fmt.Errorf("cannot run command '%s' (%v), however it is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, err, c.Name, c.Version)
+		}
+
+		matches := regEx.FindStringSubmatch(string(out))
+		if len(matches) != 2 {
+			return fmt.Errorf("command %s %s output does not match the provided regex '%s', however the command is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, strings.Join(c.VersionArgs, " "), c.VersionRegEx, c.Name, c.Version)
+		}
+
+		v, err := version.NewSemver(matches[1])
+		if err != nil {
+			return fmt.Errorf("command %s %s output does not return a semver version, however the command is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, strings.Join(c.VersionArgs, " "), c.Name, c.Version)
+		}
+
+		if constraint.Check(v) == false {
+			return fmt.Errorf("command '%s' version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have correctly installed '%s' with version %s", c.Name, matches[1], c.Version, c.Name, c.Version)
+		}
+	}
+
+	return nil
 }
 
 func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, parser Parser, options *ConfigOptions, log log.Logger) (*latest.Config, *generated.Config, variable.Resolver, error) {
