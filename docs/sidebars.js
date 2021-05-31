@@ -130,6 +130,7 @@ module.exports = {
         'configuration/pullSecrets/basics',
         'configuration/commands/basics',
         'configuration/hooks/basics',
+        'configuration/require/basics',
         'configuration/env-file',
       ],
     },
