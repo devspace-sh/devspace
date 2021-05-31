@@ -1,25 +1,24 @@
 ---
-title: "Command - devspace render"
-sidebar_label: devspace render
+title: "Command - devspace init"
+sidebar_label: devspace init
 ---
 
 
-Render builds all defined images and shows the yamls that would be deployed
+Initializes DevSpace in the current folder
 
 ## Synopsis
 
 
 ```
-devspace render [flags]
+devspace init [flags]
 ```
 
 ```
 #######################################################
-################## devspace render #####################
+#################### devspace init ####################
 #######################################################
-Builds all defined images and shows the yamls that would
-be deployed via helm and kubectl, but skips actual 
-deployment.
+Initializes a new devspace project within the current
+folder. Creates a devspace.yaml with all configuration.
 #######################################################
 ```
 
@@ -27,18 +26,11 @@ deployment.
 ## Flags
 
 ```
-      --build-sequential            Builds the images one after another instead of in parallel
-      --dependency strings          Renders only the specific named dependencies
-      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
-  -b, --force-build                 Forces to build every image
-  -h, --help                        help for render
-      --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
-      --skip-build                  Skips image building
-      --skip-dependencies           Skips rendering the dependencies
-      --skip-push                   Skips image pushing, useful for minikube deployment
-      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
-  -t, --tag strings                 Use the given tag for all built images
-      --verbose-dependencies        Builds the dependencies verbosely
+      --context string      Context path to use for intialization
+      --dockerfile string   Dockerfile to use for initialization (default "./Dockerfile")
+  -h, --help                help for init
+      --provider string     The cloud provider to use
+  -r, --reconfigure         Change existing configuration
 ```
 
 

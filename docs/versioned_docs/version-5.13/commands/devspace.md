@@ -1,52 +1,24 @@
 ---
-title: "Command - devspace render"
-sidebar_label: devspace render
+title: "Command - devspace"
+sidebar_label: devspace
 ---
 
+## devspace
 
-Render builds all defined images and shows the yamls that would be deployed
+Welcome to the DevSpace!
 
-## Synopsis
+### Synopsis
 
+DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
+	
+		devspace init
 
-```
-devspace render [flags]
-```
-
-```
-#######################################################
-################## devspace render #####################
-#######################################################
-Builds all defined images and shows the yamls that would
-be deployed via helm and kubectl, but skips actual 
-deployment.
-#######################################################
-```
-
-
-## Flags
-
-```
-      --build-sequential            Builds the images one after another instead of in parallel
-      --dependency strings          Renders only the specific named dependencies
-      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
-  -b, --force-build                 Forces to build every image
-  -h, --help                        help for render
-      --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
-      --skip-build                  Skips image building
-      --skip-dependencies           Skips rendering the dependencies
-      --skip-push                   Skips image pushing, useful for minikube deployment
-      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
-  -t, --tag strings                 Use the given tag for all built images
-      --verbose-dependencies        Builds the dependencies verbosely
-```
-
-
-## Global & Inherited Flags
+### Options
 
 ```
       --config string            The devspace config file to use
       --debug                    Prints the stack trace if an error occurs
+  -h, --help                     help for devspace
       --inactivity-timeout int   Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems (default 180)
       --kube-context string      The kubernetes context to use
   -n, --namespace string         The kubernetes namespace to use
@@ -62,3 +34,10 @@ deployment.
       --vars-secret string       The secret to restore/save the variables from/to, if --restore-vars or --save-vars is enabled (default "devspace-vars")
 ```
 
+```
+
+```
+
+
+## Flags
+## Global & Inherited Flags

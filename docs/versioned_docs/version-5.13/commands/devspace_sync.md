@@ -1,25 +1,30 @@
 ---
-title: "Command - devspace render"
-sidebar_label: devspace render
+title: "Command - devspace sync"
+sidebar_label: devspace sync
 ---
 
 
-Render builds all defined images and shows the yamls that would be deployed
+Starts a bi-directional sync between the target container and the local path
 
 ## Synopsis
 
 
 ```
-devspace render [flags]
+devspace sync [flags]
 ```
 
 ```
 #######################################################
-################## devspace render #####################
+################### devspace sync #####################
 #######################################################
-Builds all defined images and shows the yamls that would
-be deployed via helm and kubectl, but skips actual 
-deployment.
+Starts a bi-directionaly sync between the target container
+and the current path:
+
+devspace sync
+devspace sync --local-path=subfolder --container-path=/app
+devspace sync --exclude=node_modules --exclude=test
+devspace sync --pod=my-pod --container=my-container
+devspace sync --container-path=/my-path
 #######################################################
 ```
 
@@ -27,18 +32,20 @@ deployment.
 ## Flags
 
 ```
-      --build-sequential            Builds the images one after another instead of in parallel
-      --dependency strings          Renders only the specific named dependencies
-      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
-  -b, --force-build                 Forces to build every image
-  -h, --help                        help for render
-      --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
-      --skip-build                  Skips image building
-      --skip-dependencies           Skips rendering the dependencies
-      --skip-push                   Skips image pushing, useful for minikube deployment
-      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
-  -t, --tag strings                 Use the given tag for all built images
-      --verbose-dependencies        Builds the dependencies verbosely
+  -c, --container string           Container name within pod where to sync to
+      --container-path string      Container path to use (Default is working directory)
+      --download-on-initial-sync   DEPRECATED: Downloads all locally non existing remote files in the beginning (default true)
+      --download-only              If set DevSpace will only download files
+  -e, --exclude strings            Exclude directory from sync
+  -h, --help                       help for sync
+      --initial-sync string        The initial sync strategy to use (mirrorLocal, mirrorRemote, preferLocal, preferRemote, preferNewest, keepAll)
+  -l, --label-selector string      Comma separated key=value selector list (e.g. release=test)
+      --local-path string          Local path to use (Default is current directory
+      --no-watch                   Synchronizes local and remote and then stops
+      --pick                       Select a pod (default true)
+      --pod string                 Pod to sync to
+      --upload-only                If set DevSpace will only upload files
+      --verbose                    Shows every file that is synced
 ```
 
 

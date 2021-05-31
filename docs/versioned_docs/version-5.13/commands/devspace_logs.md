@@ -1,25 +1,28 @@
 ---
-title: "Command - devspace render"
-sidebar_label: devspace render
+title: "Command - devspace logs"
+sidebar_label: devspace logs
 ---
 
 
-Render builds all defined images and shows the yamls that would be deployed
+Prints the logs of a pod and attaches to it
 
 ## Synopsis
 
 
 ```
-devspace render [flags]
+devspace logs [flags]
 ```
 
 ```
 #######################################################
-################## devspace render #####################
+#################### devspace logs ####################
 #######################################################
-Builds all defined images and shows the yamls that would
-be deployed via helm and kubectl, but skips actual 
-deployment.
+Logs prints the last log of a pod container and attachs 
+to it
+
+Example:
+devspace logs
+devspace logs --namespace=mynamespace
 #######################################################
 ```
 
@@ -27,18 +30,15 @@ deployment.
 ## Flags
 
 ```
-      --build-sequential            Builds the images one after another instead of in parallel
-      --dependency strings          Renders only the specific named dependencies
-      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
-  -b, --force-build                 Forces to build every image
-  -h, --help                        help for render
-      --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
-      --skip-build                  Skips image building
-      --skip-dependencies           Skips rendering the dependencies
-      --skip-push                   Skips image pushing, useful for minikube deployment
-      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
-  -t, --tag strings                 Use the given tag for all built images
-      --verbose-dependencies        Builds the dependencies verbosely
+  -c, --container string        Container name within pod where to execute command
+  -f, --follow                  Attach to logs afterwards
+  -h, --help                    help for logs
+      --image string            Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage
+  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
+      --lines int               Max amount of lines to print from the last log (default 200)
+      --pick                    Select a pod (default true)
+      --pod string              Pod to print the logs of
+      --wait                    Wait for the pod(s) to start if they are not running
 ```
 
 

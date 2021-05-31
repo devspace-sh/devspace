@@ -1,25 +1,23 @@
 ---
-title: "Command - devspace render"
-sidebar_label: devspace render
+title: "Command - devspace ui"
+sidebar_label: devspace ui
 ---
 
 
-Render builds all defined images and shows the yamls that would be deployed
+Opens the localhost UI in the browser
 
 ## Synopsis
 
 
 ```
-devspace render [flags]
+devspace ui [flags]
 ```
 
 ```
 #######################################################
-################## devspace render #####################
+##################### devspace ui #####################
 #######################################################
-Builds all defined images and shows the yamls that would
-be deployed via helm and kubectl, but skips actual 
-deployment.
+Opens the localhost UI in the browser
 #######################################################
 ```
 
@@ -27,18 +25,11 @@ deployment.
 ## Flags
 
 ```
-      --build-sequential            Builds the images one after another instead of in parallel
-      --dependency strings          Renders only the specific named dependencies
-      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
-  -b, --force-build                 Forces to build every image
-  -h, --help                        help for render
-      --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
-      --skip-build                  Skips image building
-      --skip-dependencies           Skips rendering the dependencies
-      --skip-push                   Skips image pushing, useful for minikube deployment
-      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
-  -t, --tag strings                 Use the given tag for all built images
-      --verbose-dependencies        Builds the dependencies verbosely
+      --dev           Ignore errors when downloading UI
+  -h, --help          help for ui
+      --host string   The host to use when opening the ui server (default "localhost")
+      --port int      The port to use when opening the ui server
+      --server        If enabled will force start a server (otherwise an existing UI server is searched)
 ```
 
 

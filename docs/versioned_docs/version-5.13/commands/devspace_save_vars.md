@@ -1,25 +1,30 @@
 ---
-title: "Command - devspace render"
-sidebar_label: devspace render
+title: "Command - devspace save vars"
+sidebar_label: devspace save vars
 ---
 
 
-Render builds all defined images and shows the yamls that would be deployed
+Saves variable values to kubernetes
 
 ## Synopsis
 
 
 ```
-devspace render [flags]
+devspace save vars [flags]
 ```
 
 ```
 #######################################################
-################## devspace render #####################
+################ devspace save vars ###################
 #######################################################
-Builds all defined images and shows the yamls that would
-be deployed via helm and kubectl, but skips actual 
-deployment.
+Saves devspace config variable values into a kubernetes 
+secret. Variable values can be shared or restored via
+devspace restore vars.
+
+Examples:
+devspace save vars
+devspace save vars --namespace test 
+devspace save vars --vars-secret my-secret
 #######################################################
 ```
 
@@ -27,18 +32,7 @@ deployment.
 ## Flags
 
 ```
-      --build-sequential            Builds the images one after another instead of in parallel
-      --dependency strings          Renders only the specific named dependencies
-      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
-  -b, --force-build                 Forces to build every image
-  -h, --help                        help for render
-      --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
-      --skip-build                  Skips image building
-      --skip-dependencies           Skips rendering the dependencies
-      --skip-push                   Skips image pushing, useful for minikube deployment
-      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
-  -t, --tag strings                 Use the given tag for all built images
-      --verbose-dependencies        Builds the dependencies verbosely
+  -h, --help   help for vars
 ```
 
 

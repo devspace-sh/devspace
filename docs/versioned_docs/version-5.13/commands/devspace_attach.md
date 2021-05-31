@@ -1,25 +1,28 @@
 ---
-title: "Command - devspace render"
-sidebar_label: devspace render
+title: "Command - devspace attach"
+sidebar_label: devspace attach
 ---
 
 
-Render builds all defined images and shows the yamls that would be deployed
+Attaches to a container
 
 ## Synopsis
 
 
 ```
-devspace render [flags]
+devspace attach [flags]
 ```
 
 ```
 #######################################################
-################## devspace render #####################
+################# devspace attach #####################
 #######################################################
-Builds all defined images and shows the yamls that would
-be deployed via helm and kubectl, but skips actual 
-deployment.
+Attaches to a running container
+
+devspace attach
+devspace attach --pick # Select pod to enter
+devspace attach -c my-container
+devspace attach -n my-namespace
 #######################################################
 ```
 
@@ -27,18 +30,12 @@ deployment.
 ## Flags
 
 ```
-      --build-sequential            Builds the images one after another instead of in parallel
-      --dependency strings          Renders only the specific named dependencies
-      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
-  -b, --force-build                 Forces to build every image
-  -h, --help                        help for render
-      --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
-      --skip-build                  Skips image building
-      --skip-dependencies           Skips rendering the dependencies
-      --skip-push                   Skips image pushing, useful for minikube deployment
-      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
-  -t, --tag strings                 Use the given tag for all built images
-      --verbose-dependencies        Builds the dependencies verbosely
+  -c, --container string        Container name within pod where to execute command
+  -h, --help                    help for attach
+      --image string            Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage
+  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
+      --pick                    Select a pod (default true)
+      --pod string              Pod to open a shell to
 ```
 
 

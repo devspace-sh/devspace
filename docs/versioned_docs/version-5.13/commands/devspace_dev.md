@@ -1,25 +1,31 @@
 ---
-title: "Command - devspace render"
-sidebar_label: devspace render
+title: "Command - devspace dev"
+sidebar_label: devspace dev
 ---
 
 
-Render builds all defined images and shows the yamls that would be deployed
+Starts the development mode
 
 ## Synopsis
 
 
 ```
-devspace render [flags]
+devspace dev [flags]
 ```
 
 ```
 #######################################################
-################## devspace render #####################
+################### devspace dev ######################
 #######################################################
-Builds all defined images and shows the yamls that would
-be deployed via helm and kubectl, but skips actual 
-deployment.
+Starts your project in development mode:
+1. Builds your Docker images and override entrypoints if specified
+2. Deploys the deployments via helm or kubectl
+3. Forwards container ports to the local computer
+4. Starts the sync client
+5. Streams the logs of deployed containers
+
+Open terminal instead of logs:
+- Use "devspace dev -t" for opening a terminal
 #######################################################
 ```
 
@@ -28,17 +34,30 @@ deployment.
 
 ```
       --build-sequential            Builds the images one after another instead of in parallel
-      --dependency strings          Renders only the specific named dependencies
       --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
+      --exit-after-deploy           Exits the command after building the images and deploying the project
   -b, --force-build                 Forces to build every image
-  -h, --help                        help for render
+      --force-dependencies          Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies) (default true)
+  -d, --force-deploy                Forces to deploy every deployment
+  -h, --help                        help for dev
+  -i, --interactive                 DEPRECATED: DO NOT USE ANYMORE
       --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
-      --skip-build                  Skips image building
-      --skip-dependencies           Skips rendering the dependencies
+      --open                        Open defined URLs in the browser, if defined (default true)
+      --portforwarding              Enable port forwarding (default true)
+      --print-sync                  If enabled will print the sync log to the terminal
+      --skip-build                  Skips building of images
+  -x, --skip-pipeline               Skips build & deployment and only starts sync, portforwarding & terminal
       --skip-push                   Skips image pushing, useful for minikube deployment
       --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
-  -t, --tag strings                 Use the given tag for all built images
-      --verbose-dependencies        Builds the dependencies verbosely
+      --sync                        Enable code synchronization (default true)
+  -t, --terminal                    Open a terminal instead of showing logs
+      --timeout int                 Timeout until dev should stop waiting and fail (default 120)
+      --ui                          Start the ui server (default true)
+      --ui-port int                 The port to use when opening the ui server
+      --verbose-dependencies        Deploys the dependencies verbosely (default true)
+      --verbose-sync                When enabled the sync will log every file change
+      --wait                        If true will wait first for pods to be running or fails after given timeout
+      --workdir string              The working directory where to open the terminal or execute the command
 ```
 
 

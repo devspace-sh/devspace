@@ -1,25 +1,23 @@
 ---
-title: "Command - devspace render"
-sidebar_label: devspace render
+title: "Command - devspace build"
+sidebar_label: devspace build
 ---
 
 
-Render builds all defined images and shows the yamls that would be deployed
+Builds all defined images and pushes them
 
 ## Synopsis
 
 
 ```
-devspace render [flags]
+devspace build [flags]
 ```
 
 ```
 #######################################################
-################## devspace render #####################
+################## devspace build #####################
 #######################################################
-Builds all defined images and shows the yamls that would
-be deployed via helm and kubectl, but skips actual 
-deployment.
+Builds all defined images and pushes them
 #######################################################
 ```
 
@@ -28,17 +26,15 @@ deployment.
 
 ```
       --build-sequential            Builds the images one after another instead of in parallel
-      --dependency strings          Renders only the specific named dependencies
-      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
+      --dependency strings          Builds only the specific named dependencies
   -b, --force-build                 Forces to build every image
-  -h, --help                        help for render
+      --force-dependencies          Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies) (default true)
+  -h, --help                        help for build
       --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
-      --skip-build                  Skips image building
-      --skip-dependencies           Skips rendering the dependencies
       --skip-push                   Skips image pushing, useful for minikube deployment
-      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
+      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected
   -t, --tag strings                 Use the given tag for all built images
-      --verbose-dependencies        Builds the dependencies verbosely
+      --verbose-dependencies        Builds the dependencies verbosely (default true)
 ```
 
 

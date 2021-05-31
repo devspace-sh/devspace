@@ -1,25 +1,25 @@
 ---
-title: "Command - devspace render"
-sidebar_label: devspace render
+title: "Command - devspace remove image"
+sidebar_label: devspace remove image
 ---
 
 
-Render builds all defined images and shows the yamls that would be deployed
+Removes one or all images from the devspace
 
 ## Synopsis
 
 
 ```
-devspace render [flags]
+devspace remove image [flags]
 ```
 
 ```
 #######################################################
-################## devspace render #####################
+############ devspace remove image ####################
 #######################################################
-Builds all defined images and shows the yamls that would
-be deployed via helm and kubectl, but skips actual 
-deployment.
+Removes one or all images from a devspace:
+devspace remove image default
+devspace remove image --all
 #######################################################
 ```
 
@@ -27,18 +27,8 @@ deployment.
 ## Flags
 
 ```
-      --build-sequential            Builds the images one after another instead of in parallel
-      --dependency strings          Renders only the specific named dependencies
-      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
-  -b, --force-build                 Forces to build every image
-  -h, --help                        help for render
-      --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
-      --skip-build                  Skips image building
-      --skip-dependencies           Skips rendering the dependencies
-      --skip-push                   Skips image pushing, useful for minikube deployment
-      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
-  -t, --tag strings                 Use the given tag for all built images
-      --verbose-dependencies        Builds the dependencies verbosely
+      --all    Remove all images
+  -h, --help   help for image
 ```
 
 

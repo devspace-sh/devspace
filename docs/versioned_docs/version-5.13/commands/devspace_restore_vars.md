@@ -1,25 +1,29 @@
 ---
-title: "Command - devspace render"
-sidebar_label: devspace render
+title: "Command - devspace restore vars"
+sidebar_label: devspace restore vars
 ---
 
 
-Render builds all defined images and shows the yamls that would be deployed
+Restores variable values from kubernetes
 
 ## Synopsis
 
 
 ```
-devspace render [flags]
+devspace restore vars [flags]
 ```
 
 ```
 #######################################################
-################## devspace render #####################
+############### devspace restore vars #################
 #######################################################
-Builds all defined images and shows the yamls that would
-be deployed via helm and kubectl, but skips actual 
-deployment.
+Restores devspace config variable values from a kubernetes
+secret. 
+
+Examples:
+devspace restore vars
+devspace restore vars --namespace test 
+devspace restore vars --vars-secret my-secret
 #######################################################
 ```
 
@@ -27,18 +31,7 @@ deployment.
 ## Flags
 
 ```
-      --build-sequential            Builds the images one after another instead of in parallel
-      --dependency strings          Renders only the specific named dependencies
-      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
-  -b, --force-build                 Forces to build every image
-  -h, --help                        help for render
-      --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
-      --skip-build                  Skips image building
-      --skip-dependencies           Skips rendering the dependencies
-      --skip-push                   Skips image pushing, useful for minikube deployment
-      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
-  -t, --tag strings                 Use the given tag for all built images
-      --verbose-dependencies        Builds the dependencies verbosely
+  -h, --help   help for vars
 ```
 
 

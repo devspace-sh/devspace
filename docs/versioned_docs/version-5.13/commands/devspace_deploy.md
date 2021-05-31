@@ -1,25 +1,27 @@
 ---
-title: "Command - devspace render"
-sidebar_label: devspace render
+title: "Command - devspace deploy"
+sidebar_label: devspace deploy
 ---
 
 
-Render builds all defined images and shows the yamls that would be deployed
+Deploy the project
 
 ## Synopsis
 
 
 ```
-devspace render [flags]
+devspace deploy [flags]
 ```
 
 ```
 #######################################################
-################## devspace render #####################
+################## devspace deploy ####################
 #######################################################
-Builds all defined images and shows the yamls that would
-be deployed via helm and kubectl, but skips actual 
-deployment.
+Deploys the current project to a Space or namespace:
+
+devspace deploy
+devspace deploy -n some-namespace
+devspace deploy --kube-context=deploy-context
 #######################################################
 ```
 
@@ -28,17 +30,20 @@ deployment.
 
 ```
       --build-sequential            Builds the images one after another instead of in parallel
-      --dependency strings          Renders only the specific named dependencies
+      --dependency strings          Deploys only the specific named dependencies
       --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
-  -b, --force-build                 Forces to build every image
-  -h, --help                        help for render
+  -b, --force-build                 Forces to (re-)build every image
+      --force-dependencies          Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies) (default true)
+  -d, --force-deploy                Forces to (re-)deploy every deployment
+  -h, --help                        help for deploy
       --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
-      --skip-build                  Skips image building
-      --skip-dependencies           Skips rendering the dependencies
+      --skip-build                  Skips building of images
+      --skip-deploy                 Skips deploying and only builds images
       --skip-push                   Skips image pushing, useful for minikube deployment
       --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
-  -t, --tag strings                 Use the given tag for all built images
-      --verbose-dependencies        Builds the dependencies verbosely
+      --timeout int                 Timeout until deploy should stop waiting (default 120)
+      --verbose-dependencies        Deploys the dependencies verbosely (default true)
+      --wait                        If true will wait for pods to be running or fails after given timeout
 ```
 
 

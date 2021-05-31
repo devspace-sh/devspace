@@ -1,0 +1,29 @@
+---
+title: Next Steps
+sidebar_label: 6. Next Steps
+---
+
+## Loft Plugin For Teams
+If you plan to use DevSpace with your team, make sure to check out [www.loft.sh](https://loft.sh) and the Loft plugin for DevSpace, which you can install using this command:
+```bash
+devspace add plugin https://github.com/loft-sh/loft-devspace-plugin
+```
+
+Loft allows you to efficiently share Kubernetes clusters with a large number of engineers rather than letting everyone set up their own cluster and having to struggle to manage and administrate it on their own.
+
+Installing the Loft plugin will add commands like these to DevSpace:
+```bash
+devspace login                        # to login to Loft via DevSpace
+devspace create space my-namespace    # for creating namespace on-demand via Loft
+devspace create vcluster my-vcluster  # for creating virtual Kubernetes clusters via Loft
+```
+
+## Guides
+- [Onboarding Guide](../guides/basics.mdx) to share with the rest of your team
+- [Network & Domains Guide](../guides/networking-domains.mdx)
+- [CI/CD Integration Guide](../guides/ci-cd-integration.mdx)
+
+## Best Practices
+- [Image Building](../guides/image-building.mdx)
+- [Dev vs Staging vs Production](../guides/dev-staging-production.mdx)
+- [Remote Debugging](../guides/remote-debugging.mdx)
