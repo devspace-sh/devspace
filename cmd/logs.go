@@ -130,7 +130,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 }
 
 func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, image string, log log.Logger) ([]imageselector.ImageSelector, error) {
-	var imageSelector []imageselector.ImageSelector
+	var imageSelectors []imageselector.ImageSelector
 	if image != "" {
 		if configLoader.Exists() == false {
 			return nil, errors.New(message.ConfigNotFound)
@@ -148,13 +148,15 @@ func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, c
 			log.Warnf("Error resolving dependencies: %v", err)
 		}
 
-		imageSelector, err = imageselector.Resolve(image, config, resolved)
+		imageSelector, err := imageselector.Resolve(image, config, resolved)
 		if err != nil {
 			return nil, err
-		} else if len(imageSelector) == 0 {
+		} else if imageSelector == nil {
 			return nil, fmt.Errorf("couldn't find an image with name %s in devspace config", image)
 		}
+
+		imageSelectors = append(imageSelectors, *imageSelector)
 	}
 
-	return imageSelector, nil
+	return imageSelectors, nil
 }

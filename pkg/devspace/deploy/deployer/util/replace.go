@@ -57,7 +57,7 @@ func Match(key, value string, keys map[string]bool) bool {
 func resolveImage(value string, config config2.Config, dependencies []types.Dependency, builtImages map[string]string, tryImageKey, onlyImage, onlyTag bool) (bool, bool, string, error) {
 	resolvedImage := value
 	if tryImageKey {
-		selector, err := imageselector.ResolveSingle(value, config, dependencies)
+		selector, err := imageselector.Resolve(value, config, dependencies)
 		if err == nil && selector != nil {
 			resolvedImage = selector.Image
 			if selector.Dependency != nil {

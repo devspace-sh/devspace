@@ -53,9 +53,12 @@ func (r *remoteHook) Execute(ctx Context, hook *latest.HookConfig, config config
 			return errors.Errorf("Cannot execute hook '%s': config is not loaded", ansi.Color(hookName(hook), "white+b"))
 		}
 
-		imageSelector, err = imageselector.Resolve(hook.Where.Container.ImageName, config, dependencies)
+		imageSelectorFromConfig, err := imageselector.Resolve(hook.Where.Container.ImageName, config, dependencies)
 		if err != nil {
 			return err
+		}
+		if imageSelectorFromConfig != nil {
+			imageSelector = append(imageSelector, *imageSelectorFromConfig)
 		}
 	}
 

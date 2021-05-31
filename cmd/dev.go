@@ -512,7 +512,6 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 }
 
 func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []types.Dependency, client kubectl.Client, args []string, servicesClient services.Client, exitChan chan error, logger log.Logger) (int, error) {
-	var err error
 	if configInterface == nil {
 		return 0, fmt.Errorf("config is nil")
 	}
@@ -528,15 +527,17 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 				selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Terminal.LabelSelector, config.Dev.Terminal.Namespace, config.Dev.Terminal.ContainerName, "")
 			}
 
-			var imageSelector []imageselector.ImageSelector
+			var imageSelectors []imageselector.ImageSelector
 			if config.Dev.Terminal != nil && config.Dev.Terminal.ImageName != "" {
-				imageSelector, err = imageselector.Resolve(config.Dev.Terminal.ImageName, configInterface, dependencies)
+				imageSelector, err := imageselector.Resolve(config.Dev.Terminal.ImageName, configInterface, dependencies)
 				if err != nil {
 					return 0, err
+				} else if imageSelector != nil {
+					imageSelectors = append(imageSelectors, *imageSelector)
 				}
 			}
 
-			selectorOptions.ImageSelector = imageSelector
+			selectorOptions.ImageSelector = imageSelectors
 			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true)
 		} else if config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
 			// Log multiple images at once

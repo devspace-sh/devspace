@@ -139,7 +139,13 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 
 		// create target selector options
 		options := targetselector.NewOptionsFromFlags("", "", cmd.Namespace, "", cmd.Pick).ApplyConfigParameter(syncPath.LabelSelector, syncPath.Namespace, syncPath.ContainerName, "")
-		options.ImageSelector, err = imageselector.Resolve(syncPath.ImageName, configInterface, dep)
+		options.ImageSelector = []imageselector.ImageSelector{}
+		imageSelector, err := imageselector.Resolve(syncPath.ImageName, configInterface, dep)
+		if err != nil {
+			return err
+		} else if imageSelector != nil {
+			options.ImageSelector = append(options.ImageSelector, *imageSelector)
+		}
 
 		err = restartContainer(client, options, cmd.log)
 		if err != nil {

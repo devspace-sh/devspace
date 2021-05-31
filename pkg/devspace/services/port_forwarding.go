@@ -45,9 +45,12 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 	// apply config & set image selector
 	options := targetselector.NewEmptyOptions().ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, "", "")
 	options.AllowPick = false
-	options.ImageSelector, err = imageselector.Resolve(portForwarding.ImageName, serviceClient.config, serviceClient.dependencies)
+	options.ImageSelector = []imageselector.ImageSelector{}
+	imageSelector, err := imageselector.Resolve(portForwarding.ImageName, serviceClient.config, serviceClient.dependencies)
 	if err != nil {
 		return err
+	} else if imageSelector != nil {
+		options.ImageSelector = append(options.ImageSelector, *imageSelector)
 	}
 	options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
 	options.SkipInitContainers = true

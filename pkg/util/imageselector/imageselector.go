@@ -19,20 +19,7 @@ type ImageSelector struct {
 	Dependency types.Dependency
 }
 
-func ResolveSingle(configImageName string, config config.Config, dependencies []types.Dependency) (*ImageSelector, error) {
-	selectors, err := Resolve(configImageName, config, dependencies)
-	if err != nil {
-		return nil, err
-	} else if len(selectors) == 0 {
-		return nil, fmt.Errorf("imageName %s not found", configImageName)
-	} else if len(selectors) > 1 {
-		return nil, fmt.Errorf("unexpected amount of image selectors: %v", len(selectors))
-	}
-
-	return &selectors[0], nil
-}
-
-func Resolve(configImageName string, config config.Config, dependencies []types.Dependency) ([]ImageSelector, error) {
+func Resolve(configImageName string, config config.Config, dependencies []types.Dependency) (*ImageSelector, error) {
 	if configImageName != "" && config != nil && config.Generated() != nil && config.Config() != nil {
 		var (
 			c         = config.Config()
@@ -41,30 +28,24 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 
 		// check if cached
 		if generated.Images != nil && generated.Images[configImageName] != nil && generated.Images[configImageName].ImageName != "" && generated.Images[configImageName].Tag != "" && c.Images != nil && c.Images[configImageName] != nil {
-			return []ImageSelector{
-				{
-					ConfigImageName: configImageName,
-					Image:           generated.Images[configImageName].ImageName + ":" + generated.Images[configImageName].Tag,
-				},
+			return &ImageSelector{
+				ConfigImageName: configImageName,
+				Image:           generated.Images[configImageName].ImageName + ":" + generated.Images[configImageName].Tag,
 			}, nil
 		}
 
 		// check if defined in images
 		if c.Images != nil && c.Images[configImageName] != nil {
 			if len(c.Images[configImageName].Tags) > 0 {
-				return []ImageSelector{
-					{
-						ConfigImageName: configImageName,
-						Image:           c.Images[configImageName].Image + ":" + strings.Replace(c.Images[configImageName].Tags[0], "#", "x", -1),
-					},
+				return &ImageSelector{
+					ConfigImageName: configImageName,
+					Image:           c.Images[configImageName].Image + ":" + strings.Replace(c.Images[configImageName].Tags[0], "#", "x", -1),
 				}, nil
 			}
 
-			return []ImageSelector{
-				{
-					ConfigImageName: configImageName,
-					Image:           c.Images[configImageName].Image,
-				},
+			return &ImageSelector{
+				ConfigImageName: configImageName,
+				Image:           c.Images[configImageName].Image,
 			}, nil
 		}
 
@@ -78,17 +59,17 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 					imageSelector, err := Resolve(dependencyImageName, dep.Config(), dep.Children())
 					if err != nil {
 						return nil, err
-					} else if len(imageSelector) != 1 {
+					} else if imageSelector == nil {
 						return imageSelector, nil
 					}
 
 					// if no dependency is set, we set it here
-					if imageSelector[0].Dependency == nil {
-						imageSelector[0].Dependency = dep
+					if imageSelector.Dependency == nil {
+						imageSelector.Dependency = dep
 					}
 
 					// make sure the selector has the correct original name
-					imageSelector[0].ConfigImageName = configImageName
+					imageSelector.ConfigImageName = configImageName
 					return imageSelector, nil
 				}
 			}
@@ -97,7 +78,7 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 		return nil, fmt.Errorf("couldn't find imageName %s", configImageName)
 	}
 
-	return []ImageSelector{}, nil
+	return nil, nil
 }
 
 func CompareImageNames(selector ImageSelector, image2 string) bool {

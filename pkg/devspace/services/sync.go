@@ -160,9 +160,12 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 		}
 	}
 
-	options.TargetOptions.ImageSelector, err = imageselector.Resolve(syncConfig.ImageName, serviceClient.config, serviceClient.dependencies)
+	options.TargetOptions.ImageSelector = []imageselector.ImageSelector{}
+	imageSelector, err := imageselector.Resolve(syncConfig.ImageName, serviceClient.config, serviceClient.dependencies)
 	if err != nil {
 		return err
+	} else if imageSelector != nil {
+		options.TargetOptions.ImageSelector = append(options.TargetOptions.ImageSelector, *imageSelector)
 	}
 
 	log.StartWait("Sync: Waiting for pods...")

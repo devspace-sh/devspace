@@ -485,8 +485,8 @@ func replaceImageInPodSpec(podSpec *corev1.PodSpec, config config.Config, depend
 		imageSelector, err := imageselector.Resolve(replacePod.ImageName, config, dependencies)
 		if err != nil {
 			return err
-		} else if len(imageSelector) != 1 {
-			return fmt.Errorf("unexpected amount of image selectors resolved: %#+v", imageSelector)
+		} else if imageSelector == nil {
+			return fmt.Errorf("cannot find image name: %#+v", replacePod.ImageName)
 		}
 
 		// exchange image name
@@ -494,7 +494,7 @@ func replaceImageInPodSpec(podSpec *corev1.PodSpec, config config.Config, depend
 			if len(podSpec.Containers) == 1 {
 				podSpec.Containers[i].Image = imageStr
 				break
-			} else if imageselector.CompareImageNames(imageSelector[0], podSpec.Containers[i].Image) {
+			} else if imageselector.CompareImageNames(*imageSelector, podSpec.Containers[i].Image) {
 				podSpec.Containers[i].Image = imageStr
 				break
 			}
@@ -668,9 +668,12 @@ func findSingleReplaceablePodParent(ctx context.Context, client kubectl.Client, 
 	targetOptions.AllowPick = false
 	targetOptions.WaitingStrategy = targetselector.NewUntilNotTerminatingStrategy(time.Second * 2)
 	targetOptions.SkipInitContainers = true
-	targetOptions.ImageSelector, err = imageselector.Resolve(replacePod.ImageName, config, dependencies)
+	targetOptions.ImageSelector = []imageselector.ImageSelector{}
+	imageSelector, err := imageselector.Resolve(replacePod.ImageName, config, dependencies)
 	if err != nil {
 		return nil, nil, err
+	} else if imageSelector != nil {
+		targetOptions.ImageSelector = append(targetOptions.ImageSelector, *imageSelector)
 	}
 
 	container, err := targetselector.NewTargetSelector(client).SelectSingleContainer(ctx, targetOptions, log)
