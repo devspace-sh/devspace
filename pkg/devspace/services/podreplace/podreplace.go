@@ -335,6 +335,9 @@ func replace(ctx context.Context, client kubectl.Client, pod *kubectl.SelectedPo
 	if replacePod.ImageName != "" {
 		copiedPod.Labels[kubectl.ImageNameLabel] = replacePod.ImageName
 	}
+	if replacePod.ImageSelector != "" {
+		copiedPod.Labels[kubectl.ImageSelectorLabel] = hash.String(replacePod.ImageSelector)[:32]
+	}
 	copiedPod.Annotations[kubectl.MatchedContainerAnnotation] = pod.Container.Name
 	copiedPod.Annotations[ParentHashAnnotation] = parentHash
 	copiedPod.Annotations[ReplaceConfigHashAnnotation] = configHash
@@ -456,11 +459,10 @@ func hashParentPodSpec(obj runtime.Object, config config.Config, dependencies []
 }
 
 func replaceImageInPodSpec(podSpec *corev1.PodSpec, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod) error {
-	_, image, err := util.Replace(replacePod.ReplaceImage, config, dependencies, map[string]string{})
+	imageStr, err := util.ResolveImage(replacePod.ReplaceImage, config, dependencies)
 	if err != nil {
 		return err
 	}
-	imageStr := fmt.Sprintf("%v", image)
 
 	// either replace by labelSelector & containerName
 	// or by resolved image name
@@ -481,12 +483,20 @@ func replaceImageInPodSpec(podSpec *corev1.PodSpec, config config.Config, depend
 				break
 			}
 		}
-	} else {
-		imageSelector, err := imageselector.Resolve(replacePod.ImageName, config, dependencies)
-		if err != nil {
-			return err
-		} else if len(imageSelector) != 1 {
-			return fmt.Errorf("unexpected amount of image selectors resolved: %#+v", imageSelector)
+	} else if replacePod.ImageName != "" || replacePod.ImageSelector != "" {
+		var imageSelector *imageselector.ImageSelector
+		if replacePod.ImageName != "" {
+			imageSelector, err = imageselector.Resolve(replacePod.ImageName, config, dependencies)
+			if err != nil {
+				return err
+			} else if imageSelector == nil {
+				return fmt.Errorf("cannot find image name: %#+v", replacePod.ImageName)
+			}
+		} else if replacePod.ImageSelector != "" {
+			imageSelector, err = util.ResolveImageAsImageSelector(replacePod.ImageSelector, config, dependencies)
+			if err != nil {
+				return err
+			}
 		}
 
 		// exchange image name
@@ -494,7 +504,7 @@ func replaceImageInPodSpec(podSpec *corev1.PodSpec, config config.Config, depend
 			if len(podSpec.Containers) == 1 {
 				podSpec.Containers[i].Image = imageStr
 				break
-			} else if imageselector.CompareImageNames(imageSelector[0], podSpec.Containers[i].Image) {
+			} else if imageselector.CompareImageNames(*imageSelector, podSpec.Containers[i].Image) {
 				podSpec.Containers[i].Image = imageStr
 				break
 			}
@@ -633,12 +643,14 @@ func findSingleReplacedPod(ctx context.Context, client kubectl.Client, replacePo
 	}
 	if replacePod.ImageName != "" {
 		labelSelector[kubectl.ImageNameLabel] = replacePod.ImageName
+	} else if replacePod.ImageSelector != "" {
+		labelSelector[kubectl.ImageSelectorLabel] = hash.String(replacePod.ImageSelector)[:32]
 	} else if len(replacePod.LabelSelector) > 0 {
 		for k, v := range replacePod.LabelSelector {
 			labelSelector[k] = v
 		}
 	} else {
-		return nil, fmt.Errorf("imageName or labelSelector need to be defined")
+		return nil, fmt.Errorf("imageName, imageSelector or labelSelector need to be defined")
 	}
 
 	// create selector
@@ -668,9 +680,20 @@ func findSingleReplaceablePodParent(ctx context.Context, client kubectl.Client, 
 	targetOptions.AllowPick = false
 	targetOptions.WaitingStrategy = targetselector.NewUntilNotTerminatingStrategy(time.Second * 2)
 	targetOptions.SkipInitContainers = true
-	targetOptions.ImageSelector, err = imageselector.Resolve(replacePod.ImageName, config, dependencies)
+	targetOptions.ImageSelector = []imageselector.ImageSelector{}
+	imageSelector, err := imageselector.Resolve(replacePod.ImageName, config, dependencies)
 	if err != nil {
 		return nil, nil, err
+	} else if imageSelector != nil {
+		targetOptions.ImageSelector = append(targetOptions.ImageSelector, *imageSelector)
+	}
+	if replacePod.ImageSelector != "" {
+		imageSelector, err := util.ResolveImageAsImageSelector(replacePod.ImageSelector, config, dependencies)
+		if err != nil {
+			return nil, nil, err
+		}
+		
+		targetOptions.ImageSelector = append(targetOptions.ImageSelector, *imageSelector)
 	}
 
 	container, err := targetselector.NewTargetSelector(client).SelectSingleContainer(ctx, targetOptions, log)

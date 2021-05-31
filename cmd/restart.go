@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services"
@@ -139,7 +140,21 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 
 		// create target selector options
 		options := targetselector.NewOptionsFromFlags("", "", cmd.Namespace, "", cmd.Pick).ApplyConfigParameter(syncPath.LabelSelector, syncPath.Namespace, syncPath.ContainerName, "")
-		options.ImageSelector, err = imageselector.Resolve(syncPath.ImageName, configInterface, dep)
+		options.ImageSelector = []imageselector.ImageSelector{}
+		imageSelector, err := imageselector.Resolve(syncPath.ImageName, configInterface, dep)
+		if err != nil {
+			return err
+		} else if imageSelector != nil {
+			options.ImageSelector = append(options.ImageSelector, *imageSelector)
+		}
+		if syncPath.ImageSelector != "" {
+			imageSelector, err := util.ResolveImageAsImageSelector(syncPath.ImageSelector, configInterface, dep)
+			if err != nil {
+				return err
+			}
+
+			options.ImageSelector = append(options.ImageSelector, *imageSelector)
+		}
 
 		err = restartContainer(client, options, cmd.log)
 		if err != nil {

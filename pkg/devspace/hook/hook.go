@@ -256,7 +256,7 @@ func hookName(hook *latest.HookConfig) string {
 		if hook.Args == nil {
 			return hook.Command
 		}
-		
+
 		return fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " "))
 	}
 	if hook.Upload != nil && hook.Where.Container != nil {
@@ -277,6 +277,9 @@ func hookName(hook *latest.HookConfig) string {
 		}
 		if hook.Where.Container.ImageName != "" {
 			return fmt.Sprintf("copy %s to imageName %s", localPath, hook.Where.Container.ImageName)
+		}
+		if hook.Where.Container.ImageSelector != "" {
+			return fmt.Sprintf("copy %s to image %s", localPath, hook.Where.Container.ImageSelector)
 		}
 
 		return fmt.Sprintf("copy %s to %s", localPath, containerPath)
@@ -300,6 +303,9 @@ func hookName(hook *latest.HookConfig) string {
 		if hook.Where.Container.ImageName != "" {
 			return fmt.Sprintf("download from imageName %s to %s", hook.Where.Container.ImageName, localPath)
 		}
+		if hook.Where.Container.ImageSelector != "" {
+			return fmt.Sprintf("download from image %s to %s", hook.Where.Container.ImageSelector, localPath)
+		}
 
 		return fmt.Sprintf("download from container:%s to local:%s", containerPath, localPath)
 	}
@@ -313,6 +319,9 @@ func hookName(hook *latest.HookConfig) string {
 		if hook.Where.Container.ImageName != "" {
 			return fmt.Sprintf("logs from imageName %s", hook.Where.Container.ImageName)
 		}
+		if hook.Where.Container.ImageSelector != "" {
+			return fmt.Sprintf("logs from image %s", hook.Where.Container.ImageSelector)
+		}
 
 		return fmt.Sprintf("logs from first container found")
 	}
@@ -325,6 +334,9 @@ func hookName(hook *latest.HookConfig) string {
 		}
 		if hook.Where.Container.ImageName != "" {
 			return fmt.Sprintf("wait for imageName %s", hook.Where.Container.ImageName)
+		}
+		if hook.Where.Container.ImageSelector != "" {
+			return fmt.Sprintf("wait for image %s", hook.Where.Container.ImageSelector)
 		}
 
 		return fmt.Sprintf("wait for everything")

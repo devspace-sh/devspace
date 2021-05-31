@@ -203,6 +203,8 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 				selector := ""
 				if sc.ImageName != "" {
 					selector = "image: " + sc.ImageName
+				} else if sc.ImageSelector != "" {
+					selector = "img-selector: " + sc.ImageSelector
 				} else if len(sc.LabelSelector) > 0 {
 					selector = "selector: " + labels.Set(sc.LabelSelector).String()
 				}
@@ -246,6 +248,7 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		if options.LabelSelector != "" || options.Pod != "" {
 			loadedSyncConfig.LabelSelector = nil
 			loadedSyncConfig.ImageName = ""
+			loadedSyncConfig.ImageSelector = ""
 		}
 		if options.Namespace != "" {
 			loadedSyncConfig.Namespace = ""

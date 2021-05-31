@@ -5,6 +5,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
@@ -45,21 +46,35 @@ func (r *remoteHook) Execute(ctx Context, hook *latest.HookConfig, config config
 	}
 
 	var (
-		imageSelector []imageselector.ImageSelector
-		err           error
+		imageSelectors []imageselector.ImageSelector
+		err            error
 	)
-	if hook.Where.Container.ImageName != "" {
+	if hook.Where.Container.ImageName != "" || hook.Where.Container.ImageSelector != "" {
 		if config == nil || config.Generated() == nil {
 			return errors.Errorf("Cannot execute hook '%s': config is not loaded", ansi.Color(hookName(hook), "white+b"))
 		}
 
-		imageSelector, err = imageselector.Resolve(hook.Where.Container.ImageName, config, dependencies)
-		if err != nil {
-			return err
+		if hook.Where.Container.ImageName != "" {
+			imageSelectorFromConfig, err := imageselector.Resolve(hook.Where.Container.ImageName, config, dependencies)
+			if err != nil {
+				return err
+			}
+			if imageSelectorFromConfig != nil {
+				imageSelectors = append(imageSelectors, *imageSelectorFromConfig)
+			}
+		}
+
+		if hook.Where.Container.ImageSelector != "" {
+			imageSelector, err := util.ResolveImageAsImageSelector(hook.Where.Container.ImageSelector, config, dependencies)
+			if err != nil {
+				return err
+			}
+
+			imageSelectors = append(imageSelectors, *imageSelector)
 		}
 	}
 
-	executed, err := r.execute(ctx, hook, imageSelector, log)
+	executed, err := r.execute(ctx, hook, imageSelectors, log)
 	if err != nil {
 		return err
 	} else if executed == false {

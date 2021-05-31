@@ -301,7 +301,9 @@ func isReplacePodsUnique(index int, rp *latest.ReplacePod, rps []*latest.Replace
 			continue
 		}
 
-		if r.ImageName == rp.ReplaceImage {
+		if r.ImageSelector == rp.ImageSelector {
+			return false
+		} else if r.ImageName == rp.ReplaceImage {
 			return false
 		} else if len(r.LabelSelector) > 0 && len(rp.LabelSelector) > 0 && strMapEquals(r.LabelSelector, rp.LabelSelector) {
 			return false
@@ -327,22 +329,32 @@ func strMapEquals(a, b map[string]string) bool {
 
 func validateDev(config *latest.Config) error {
 	for index, rp := range config.Dev.ReplacePods {
-		if rp.ImageName == "" && len(rp.LabelSelector) == 0 {
-			return errors.Errorf("Error in config: imageName and label selector are nil in replace pods at index %d", index)
+		if rp.ImageName == "" && len(rp.LabelSelector) == 0 && rp.ImageSelector == "" {
+			return errors.Errorf("Error in config: image selector and label selector are nil in replace pods at index %d", index)
 		}
-		if rp.ImageName != "" && len(rp.LabelSelector) > 0 {
-			return errors.Errorf("Error in config: imageName and label selector cannot both be defined in replace pods at index %d", index)
+		definedSelectors := 0
+		if rp.ImageName != "" {
+			definedSelectors++
+		}
+		if rp.ImageSelector != "" {
+			definedSelectors++
+		}
+		if len(rp.LabelSelector) > 0 {
+			definedSelectors++
+		}
+		if definedSelectors > 1 {
+			return errors.Errorf("Error in config: image selector and label selector cannot both be defined in replace pods at index %d", index)
 		}
 		if isReplacePodsUnique(index, rp, config.Dev.ReplacePods) == false {
-			return errors.Errorf("Error in config: imageName or label selector is not unique in replace pods at index %d", index)
+			return errors.Errorf("Error in config: image selector or label selector is not unique in replace pods at index %d", index)
 		}
 	}
 
 	if config.Dev.Ports != nil {
 		for index, port := range config.Dev.Ports {
 			// Validate imageName and label selector
-			if port.ImageName == "" && len(port.LabelSelector) == 0 {
-				return errors.Errorf("Error in config: imageName and label selector are nil in ports config at index %d", index)
+			if port.ImageName == "" && len(port.LabelSelector) == 0 && port.ImageSelector == "" {
+				return errors.Errorf("Error in config: image selector and label selector are nil in ports config at index %d", index)
 			} else if port.ImageName != "" && findImageName(config, port.ImageName) == false {
 				return errors.Errorf("Error in config: dev.ports[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, port.ImageName)
 			}
@@ -359,8 +371,8 @@ func validateDev(config *latest.Config) error {
 	if config.Dev.Sync != nil {
 		for index, sync := range config.Dev.Sync {
 			// Validate imageName and label selector
-			if sync.ImageName == "" && len(sync.LabelSelector) == 0 {
-				return errors.Errorf("Error in config: imageName and label selector are nil in sync config at index %d", index)
+			if sync.ImageName == "" && len(sync.LabelSelector) == 0 && sync.ImageSelector == "" {
+				return errors.Errorf("Error in config: image selector and label selector are nil in sync config at index %d", index)
 			} else if sync.ImageName != "" && findImageName(config, sync.ImageName) == false {
 				return errors.Errorf("Error in config: dev.sync[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, sync.ImageName)
 			}

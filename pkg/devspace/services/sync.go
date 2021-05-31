@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/assets"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
@@ -160,9 +161,20 @@ func (serviceClient *client) startSyncClient(options *startClientOptions, log lo
 		}
 	}
 
-	options.TargetOptions.ImageSelector, err = imageselector.Resolve(syncConfig.ImageName, serviceClient.config, serviceClient.dependencies)
+	options.TargetOptions.ImageSelector = []imageselector.ImageSelector{}
+	imageSelector, err := imageselector.Resolve(syncConfig.ImageName, serviceClient.config, serviceClient.dependencies)
 	if err != nil {
 		return err
+	} else if imageSelector != nil {
+		options.TargetOptions.ImageSelector = append(options.TargetOptions.ImageSelector, *imageSelector)
+	}
+	if syncConfig.ImageSelector != "" {
+		imageSelector, err := util.ResolveImageAsImageSelector(syncConfig.ImageSelector, serviceClient.config, serviceClient.dependencies)
+		if err != nil {
+			return err
+		}
+
+		options.TargetOptions.ImageSelector = append(options.TargetOptions.ImageSelector, *imageSelector)
 	}
 
 	log.StartWait("Sync: Waiting for pods...")

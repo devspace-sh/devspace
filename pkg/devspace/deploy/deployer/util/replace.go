@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -57,7 +58,7 @@ func Match(key, value string, keys map[string]bool) bool {
 func resolveImage(value string, config config2.Config, dependencies []types.Dependency, builtImages map[string]string, tryImageKey, onlyImage, onlyTag bool) (bool, bool, string, error) {
 	resolvedImage := value
 	if tryImageKey {
-		selector, err := imageselector.ResolveSingle(value, config, dependencies)
+		selector, err := imageselector.Resolve(value, config, dependencies)
 		if err == nil && selector != nil {
 			resolvedImage = selector.Image
 			if selector.Dependency != nil {
@@ -136,6 +137,27 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 
 	// not found, return the initial value
 	return false, shouldRedeploy, value, nil
+}
+
+func ResolveImage(imageSelector string, config config2.Config, dependencies []types.Dependency) (string, error) {
+	_, image, err := Replace(imageSelector, config, dependencies, map[string]string{})
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%v", image), nil
+}
+
+func ResolveImageAsImageSelector(imageSelector string, config config2.Config, dependencies []types.Dependency) (*imageselector.ImageSelector, error) {
+	image, err := ResolveImage(imageSelector, config, dependencies)
+	if err != nil {
+		return nil, err
+	}
+
+	return &imageselector.ImageSelector{
+		ImageSelector: imageSelector,
+		Image:         image,
+	}, nil
 }
 
 func Replace(value string, config config2.Config, dependencies []types.Dependency, builtImages map[string]string) (bool, interface{}, error) {

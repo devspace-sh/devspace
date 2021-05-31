@@ -62,6 +62,7 @@ func (cmd *portsCmd) RunListPort(f factory.Factory, cobraCmd *cobra.Command, arg
 
 	headerColumnNames := []string{
 		"Image",
+		"ImageSelector",
 		"LabelSelector",
 		"Ports (Local:Remote)",
 	}
@@ -97,6 +98,7 @@ func (cmd *portsCmd) RunListPort(f factory.Factory, cobraCmd *cobra.Command, arg
 
 		portForwards = append(portForwards, []string{
 			value.ImageName,
+			value.ImageSelector,
 			selector,
 			portMappings,
 		})
