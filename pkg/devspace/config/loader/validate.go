@@ -89,12 +89,6 @@ func validateRequire(config *latest.Config) error {
 		if command.Name == "" {
 			return errors.Errorf("require.commands[%d].name is required", index)
 		}
-		if len(command.VersionArgs) == 0 {
-			return errors.Errorf("require.commands[%d].versionArgs is required", index)
-		}
-		if command.VersionRegEx == "" {
-			return errors.Errorf("require.commands[%d].versionRegEx is required", index)
-		}
 		if command.Version == "" {
 			return errors.Errorf("require.commands[%d].version is required", index)
 		}

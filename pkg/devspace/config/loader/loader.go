@@ -27,6 +27,9 @@ import (
 	version "github.com/hashicorp/go-version"
 )
 
+// DefaultCommandVersionRegEx is the default regex to use if no regex is specified for determining the commands version
+var DefaultCommandVersionRegEx = "(v\\d+\\.\\d+\\.\\d+)"
+
 // ConfigLoader is the base interface for the main config loader
 type ConfigLoader interface {
 	// Load loads the devspace.yaml, parses it, applies profiles, fills in variables and
@@ -170,7 +173,17 @@ func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) err
 	}
 
 	for index, c := range config.Require.Commands {
-		regEx, err := regexp.Compile(c.VersionRegEx)
+		regExString := c.VersionRegEx
+		if regExString == "" {
+			regExString = DefaultCommandVersionRegEx
+		}
+
+		versionArgs := c.VersionArgs
+		if c.VersionArgs == nil {
+			versionArgs = []string{"version"}
+		}
+
+		regEx, err := regexp.Compile(regExString)
 		if err != nil {
 			return errors.Wrapf(err, "parsing require.commands[%d].versionRegEx", index)
 		}
@@ -180,19 +193,19 @@ func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) err
 			return errors.Wrapf(err, "parsing require.commands[%d].version", index)
 		}
 
-		out, err := exec.Command(c.Name, c.VersionArgs...).Output()
+		out, err := exec.Command(c.Name, versionArgs...).Output()
 		if err != nil {
 			return fmt.Errorf("cannot run command '%s' (%v), however it is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, err, c.Name, c.Version)
 		}
 
 		matches := regEx.FindStringSubmatch(string(out))
 		if len(matches) != 2 {
-			return fmt.Errorf("command %s %s output does not match the provided regex '%s', however the command is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, strings.Join(c.VersionArgs, " "), c.VersionRegEx, c.Name, c.Version)
+			return fmt.Errorf("command %s %s output does not match the provided regex '%s', however the command is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, strings.Join(versionArgs, " "), regExString, c.Name, c.Version)
 		}
 
 		v, err := version.NewSemver(matches[1])
 		if err != nil {
-			return fmt.Errorf("command %s %s output does not return a semver version, however the command is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, strings.Join(c.VersionArgs, " "), c.Name, c.Version)
+			return fmt.Errorf("command %s %s output does not return a semver version, however the command is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, strings.Join(versionArgs, " "), c.Name, c.Version)
 		}
 
 		if constraint.Check(v) == false {
