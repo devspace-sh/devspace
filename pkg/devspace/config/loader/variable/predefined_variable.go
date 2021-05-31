@@ -81,7 +81,7 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 			return "", fmt.Errorf("error retrieving git branch: %v, but predefined var DEVSPACE_GIT_BRANCH_SLUG is used", err)
 		}
         reg, err := regexp.Compile("[^a-zA-Z0-9]+")
-        branchSlug := reg.ReplaceAllString(branch, "")
+        branchSlug := reg.ReplaceAllString(branch, "-")
 		if err != nil {
 			return "", fmt.Errorf("error slug regexp for branch: %v, but predefined var DEVSPACE_GIT_BRANCH_SLUG is used", err)
 		}
