@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services"
@@ -144,6 +145,14 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 		if err != nil {
 			return err
 		} else if imageSelector != nil {
+			options.ImageSelector = append(options.ImageSelector, *imageSelector)
+		}
+		if syncPath.ImageSelector != "" {
+			imageSelector, err := util.ResolveImageAsImageSelector(syncPath.ImageSelector, configInterface, dep)
+			if err != nil {
+				return err
+			}
+
 			options.ImageSelector = append(options.ImageSelector, *imageSelector)
 		}
 

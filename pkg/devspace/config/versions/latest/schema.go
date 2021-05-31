@@ -692,6 +692,7 @@ type DevConfig struct {
 // pod patches.
 type ReplacePod struct {
 	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
+	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
@@ -702,6 +703,7 @@ type ReplacePod struct {
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
 type PortForwardingConfig struct {
+	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
@@ -728,6 +730,7 @@ type OpenConfig struct {
 
 // SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
+	ImageSelector        string               `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	ImageName            string               `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	LabelSelector        map[string]string    `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	ContainerName        string               `yaml:"containerName,omitempty" json:"containerName,omitempty"`
@@ -867,6 +870,7 @@ type InteractiveImageConfig struct {
 
 // Terminal describes the terminal options
 type Terminal struct {
+	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
@@ -880,6 +884,7 @@ type Terminal struct {
 
 // PodPatch will patch a pod's owning ReplicaSet, Deployment or StatefulSet with the givens patches or image
 type PodPatch struct {
+	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
@@ -1016,6 +1021,7 @@ type HookContainer struct {
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	Pod           string            `yaml:"pod,omitempty" json:"pod,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 

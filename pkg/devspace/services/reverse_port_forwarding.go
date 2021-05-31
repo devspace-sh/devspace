@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/tunnel"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"io"
@@ -49,6 +50,14 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 	if err != nil {
 		return err
 	} else if imageSelector != nil {
+		options.ImageSelector = append(options.ImageSelector, *imageSelector)
+	}
+	if portForwarding.ImageSelector != "" {
+		imageSelector, err := util.ResolveImageAsImageSelector(portForwarding.ImageSelector, serviceClient.config, serviceClient.dependencies)
+		if err != nil {
+			return err
+		}
+
 		options.ImageSelector = append(options.ImageSelector, *imageSelector)
 	}
 	options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)

@@ -2,6 +2,7 @@ package kubectl
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
@@ -14,6 +15,7 @@ import (
 const (
 	MatchedContainerAnnotation = "devspace.sh/container"
 	ImageNameLabel             = "devspace.sh/imageName"
+	ImageSelectorLabel         = "devspace.sh/imageSelector"
 
 	ReplacedLabel = "devspace.sh/replaced"
 )
@@ -357,13 +359,22 @@ func byImageName(ctx context.Context, client Client, namespace string, imageSele
 					}
 
 					// check if it is a replaced pod and if yes, check if the imageName and container name matches
-					if pod.Labels != nil && pod.Labels[ReplacedLabel] == "true" && pod.Labels[ImageNameLabel] == imageName.ConfigImageName && pod.Annotations != nil && pod.Annotations[MatchedContainerAnnotation] == container.Name {
-						retPod := pod
-						retContainer := container
-						retPods = append(retPods, &SelectedPodContainer{
-							Pod:       &retPod,
-							Container: &retContainer,
-						})
+					if pod.Labels != nil && pod.Labels[ReplacedLabel] == "true" && pod.Annotations != nil && pod.Annotations[MatchedContainerAnnotation] == container.Name {
+						if pod.Labels[ImageNameLabel] != "" && pod.Labels[ImageNameLabel] == imageName.ConfigImageName {
+							retPod := pod
+							retContainer := container
+							retPods = append(retPods, &SelectedPodContainer{
+								Pod:       &retPod,
+								Container: &retContainer,
+							})
+						} else if pod.Labels[ImageSelectorLabel] != "" && pod.Labels[ImageSelectorLabel] == hash.String(imageName.ImageSelector)[:32] {
+							retPod := pod
+							retContainer := container
+							retPods = append(retPods, &SelectedPodContainer{
+								Pod:       &retPod,
+								Container: &retContainer,
+							})
+						}
 						continue
 					}
 

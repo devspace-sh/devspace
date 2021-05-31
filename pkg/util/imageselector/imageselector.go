@@ -13,6 +13,8 @@ import (
 type ImageSelector struct {
 	// ConfigImageName is the image config name (from images.*)
 	ConfigImageName string
+	// ImageSelector is the original image selector string
+	ImageSelector string
 	// Image is the resolved docker image inclusive tag
 	Image string
 	// Dependency is the dependency this image selector was loaded from

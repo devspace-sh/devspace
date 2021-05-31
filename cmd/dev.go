@@ -5,6 +5,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/legacy"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/survey"
@@ -535,6 +536,13 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 				} else if imageSelector != nil {
 					imageSelectors = append(imageSelectors, *imageSelector)
 				}
+			} else if config.Dev.Terminal != nil && config.Dev.Terminal.ImageSelector != "" {
+				imageSelector, err := util.ResolveImageAsImageSelector(config.Dev.Terminal.ImageSelector, configInterface, dependencies)
+				if err != nil {
+					return 0, err
+				}
+
+				imageSelectors = append(imageSelectors, *imageSelector)
 			}
 
 			selectorOptions.ImageSelector = imageSelectors
@@ -675,7 +683,7 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 	// check if terminal is enabled
 	c := configInterface.Config()
 	if cmd.Terminal || (c.Dev.Terminal != nil && c.Dev.Terminal.Disabled == false) {
-		if c.Dev.Terminal == nil || (c.Dev.Terminal.ImageName == "" && len(c.Dev.Terminal.LabelSelector) == 0) {
+		if c.Dev.Terminal == nil || (c.Dev.Terminal.ImageSelector == "" && c.Dev.Terminal.ImageName == "" && len(c.Dev.Terminal.LabelSelector) == 0) {
 			imageNames := make([]string, 0, len(c.Images))
 			for k := range c.Images {
 				imageNames = append(imageNames, k)
@@ -768,6 +776,7 @@ func addDependenciesDevConfig(config *latest.Config, dependencies []types.Depend
 
 					config.Dev.Ports = append(config.Dev.Ports, &latest.PortForwardingConfig{
 						ImageName:           imageName,
+						ImageSelector:       p.ImageSelector,
 						LabelSelector:       p.LabelSelector,
 						ContainerName:       p.ContainerName,
 						Namespace:           p.Namespace,
