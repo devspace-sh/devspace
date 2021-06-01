@@ -3,6 +3,10 @@ title: Configure Terminal
 sidebar_label: terminal
 ---
 
+import FragmentImageName from '../../fragments/selector-image-name.mdx';
+import FragmentImageSelector from '../../fragments/selector-image-selector.mdx';
+import FragmentLabelSelector from '../../fragments/selector-label-selector.mdx';
+
 There are two main modes how to develop with DevSpace, by streaming the log output of pods in DevSpace or by opening a terminal to the pod you would like to develop with. If you prefer the latter, you can configure the `dev.terminal` option to tell DevSpace to open a terminal to a target container. 
 
 In the `dev.terminal` section in the `devspace.yaml` you can configure the terminal:
@@ -25,7 +29,7 @@ deployments:
         args: ["999999999"]
 dev:
   terminal: 
-    imageName: frontend
+    imageSelector: myregistry/appfrontend
     workDir: '/path/to/my/workdir'
     # If you would like to open a different shell or start
     # it with a different command you can also use
@@ -38,8 +42,11 @@ You will need to make sure that the container has a terminal equipped and is sle
 
 ## Configuration
 
+### `imageSelector`
+<FragmentImageSelector />
+
 ### `imageName`
-The `imageName` expects a string and can be used to select a container based on an image specified in `images` or in a dependency. 
+<FragmentImageName />
 
 #### Example: Setting imageName
 ```yaml {25-34}
@@ -68,12 +75,8 @@ dev:
     imageName: backend
 ```
 
-:::note
-If you specify neither `imageName` nor `labelSelector`, DevSpace will ask the user which pod to select if it finds more than 1
-:::
-
 ### `labelSelector`
-The `labelSelector` option expects a label selector map to select a pod based on labels. If multiple pods match, the newest will be selected and DevSpace waits until that pod is running.
+<FragmentLabelSelector />
 
 #### Example: Setting labelSelector
 ```yaml {25-34}

@@ -3,6 +3,11 @@ title: Configure File Synchronization
 sidebar_label: sync
 ---
 
+import FragmentImageName from '../../fragments/selector-image-name.mdx';
+import FragmentImageSelector from '../../fragments/selector-image-selector.mdx';
+import FragmentLabelSelector from '../../fragments/selector-label-selector.mdx';
+
+
 The code synchronization feature of DevSpace allows you to use hot reloading during development. Especially when using programming languages and frameworks that support hot reloading with tools like nodemon, re-building and re-deploying containers is very annoying and time consuming. Therefore, DevSpace uses a smart syncing mechanism that is able to sync local file changes to remote containers directly without the need of rebuilding or restarting the container.
 
 When starting the development mode, DevSpace starts the file sync as configured in the `dev.sync` section of the `devspace.yaml`.
@@ -22,7 +27,7 @@ deployments:
       - image: john/debugger
 dev:
   sync:
-  - imageName: backend
+  - imageSelector: john/devbackend
     localSubPath: ./
     containerPath: /app
     excludePaths:
@@ -41,6 +46,7 @@ Every sync configuration consists of two essential parts:
 
 ## Pod/Container Selection
 The following config options are needed to determine the container which the file synchronization should be established to:
+- [`imageSelector`](#imageselector)
 - [`imageName`](#imagename)
 - [`labelSelector`](#labelselector)
 - [`containerName`](#containername)
@@ -50,16 +56,58 @@ The following config options are needed to determine the container which the fil
 If the sync is unable to establish a connection to the selected container or loses it after starting the sync, DevSpace will try to restart the sync several times.
 :::
 
+### `imageSelector`
+<FragmentImageSelector />
+
+#### Example: Select Container by Image
+```yaml
+vars:
+  - name: backend-image
+    value: john/devbackend
+  - name: backend-debugger-image
+    value: john/debugger
+images:
+  backend:
+    image: ${backend-image}
+  backend-debugger:
+    image: ${backend-debugger-image}
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: container-0
+        image: ${backend-image}
+      - name: container-1
+        image: ${backend-debugger-image}
+dev:
+  sync:
+  - imageSelector: ${backend-image}
+    excludePaths:
+    - node_modules/
+    - logs/
+  - imageSelector: ${backend-debugger-image}
+    localSubPath: ./debug-logs
+    containerPath: /logs
+```
+**Explanation:**
+- The above example defines two images that can be used as `imageSelector`: `john/devbackend` or `john/debugger`
+- The deployment starts two containers and each of them uses an image from the `images` section.
+- The `imageSelector` option of the first sync configuration in the `dev.sync` section references the same image as `images.backend`. That means DevSpace would select the first container for file synchronization, that would match `john/devbackend:tag(backend)`, where `tag(backend)` is the last built tag of `images.backend`
+- The first sync configuration does not define `localSubPath`, so it defaults to the project's root directory (location of `devspace.yaml`).
+- The first sync configuration does not define `containerPath`, so it defaults to the container's working directory (i.e. `WORKDIR`).
+- The `imageSelector` option of the second sync configuration in the `dev.sync` section references the same image as  `images.backend-debugger`. That means DevSpace would select the second container for file synchronization, as this container uses the `image: john/debugger` which belongs to the `backend-debugger` image as defined in the `images` section.
+
+In consequence, the following sync processes would be started when using the above config example assuming the local project root directoy `/my/project/`:
+
+1. `localhost:/my/project/` forwards to `container-0:$WORKDIR` **\***
+2. `localhost:/my/project/debug-logs/` forwards to `container-1:/logs`
+
+**\* Changes on either side (local and container filesystem) that occur within the sub-folders `node_modules/` and `logs/` would be ingored.**
+
 ### `imageName`
-The `imageName` option expects a string with the name of an image from the `images` section of the `devspace.yaml`. Using `imageName` tells DevSpace to select the container based on the referenced image that was last built using DevSpace.
-
-:::note
-When you want to select a container with an image that is not defined in your `devspace.yaml`, you generally want to select the right pod using the [`labelSelector`](#labelselector).
-:::
-
-:::note
-You can also select an image from a dependency with `dependency1.image1`
-:::
+<FragmentImageName />
 
 #### Example: Select Container by Image Name
 ```yaml {2,4,18,22}
@@ -91,7 +139,7 @@ dev:
 **Explanation:**  
 - The above example defines two images that can be used as `imageName`: `backend` and `backend-debugger`
 - The deployment starts two containers and each of them uses an image from the `images` section.
-- The `imageName` option of the first sync configuration in the `dev.sync` section references `backend`. That means DevSpace would select the first container for file synchronzation, as this container uses the `image: john/devbackend` which belongs to the `backend` image as defined in the `images` section.
+- The `imageName` option of the first sync configuration in the `dev.sync` section references `backend`. That means DevSpace would select the first container for file synchronization, as this container uses the `image: john/devbackend` which belongs to the `backend` image as defined in the `images` section.
 - The first sync configuration does not define `localSubPath`, so it defaults to the project's root directory (location of `devspace.yaml`).
 - The first sync configuration does not define `containerPath`, so it defaults to the container's working directory (i.e. `WORKDIR`).
 - The `imageName` option of the second sync configuration in the `dev.sync` section references `backend-debugger`. That means DevSpace would select the second container for file synchronization, as this container uses the `image: john/debugger` which belongs to the `backend-debugger` image as defined in the `images` section.
@@ -104,7 +152,7 @@ In consequence, the following sync processes would be started when using the abo
 **\* Changes on either side (local and container filesystem) that occur within the sub-folders `node_modules/` and `logs/` would be ingored.**
 
 ### `labelSelector`
-The `labelSelector` option expects a key-value map of strings with Kubernetes labels.
+<FragmentLabelSelector />
 
 #### Example: Select Container by Label
 ```yaml {18-21}
@@ -216,7 +264,7 @@ deployments:
       - image: john/devbackend
 dev:
   sync:
-  - imageName: backend
+  - imageSelector: john/devbackend
     excludePaths:
     - logs/
     - more/logs/
@@ -244,7 +292,7 @@ deployments:
       - image: john/devbackend
 dev:
   sync:
-  - imageName: backend
+  - imageSelector: john/devbackend
     excludePaths:
     - '**'
     - '!/my-folder-1/'
@@ -316,7 +364,7 @@ deployments:
       - image: john/devbackend
 dev:
   sync:
-  - imageName: backend
+  - imageSelector: john/devbackend
     onUpload:
       restartContainer: true
 ```
@@ -339,7 +387,7 @@ deployments:
       - image: john/devbackend
 dev:
   sync:
-  - imageName: backend
+  - imageSelector: john/devbackend
     onUpload:
       execRemote:         # These post-sync commands will be executed inside the affected container
         command: chmod    # Command to execute for files and folders
@@ -380,7 +428,7 @@ deployments:
       - image: john/devbackend
 dev:
   sync:
-  - imageName: backend
+  - imageSelector: john/devbackend
     onDownload:
       execLocal:          # These post-sync commands will be executed on the local dev machine
         command: chmod    # Command to execute for files and folders
@@ -427,7 +475,7 @@ deployments:
       - image: john/devbackend
 dev:
   sync:
-  - imageName: backend
+  - imageSelector: john/devbackend
     disableDownload: true
     excludePaths:
     - logs/
@@ -458,7 +506,7 @@ deployments:
       - image: john/devbackend
 dev:
   sync:
-  - imageName: backend
+  - imageSelector: john/devbackend
     disableUpload: true
     excludePaths:
     - logs/
@@ -521,10 +569,10 @@ deployments:
       - image: john/devbackend
 dev:
   sync:
-  - imageName: backend
+  - imageSelector: john/devbackend
     excludePaths:
     - node_modules/*
-  - imageName: backend
+  - imageSelector: john/devbackend
     localSubPath: ./node_modules/
     containerPath: /app/node_modules/
     initialSync: preferRemote
@@ -559,7 +607,7 @@ deployments:
       - image: john/devbackend
 dev:
   sync:
-  - imageName: backend
+  - imageSelector: john/devbackend
     waitInitialSync: true
 ```
 **Explanation:**  
@@ -595,7 +643,7 @@ deployments:
       - image: john/devbackend
 dev:
   sync:
-  - imageName: backend
+  - imageSelector: john/devbackend
     bandwidthLimits:
       download: 200
       upload: 100

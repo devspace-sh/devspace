@@ -3,6 +3,11 @@ title: Configure Port-Forwarding
 sidebar_label: ports[].forward
 ---
 
+import FragmentImageName from '../../fragments/selector-image-name.mdx';
+import FragmentImageSelector from '../../fragments/selector-image-selector.mdx';
+import FragmentLabelSelector from '../../fragments/selector-label-selector.mdx';
+
+
 Port-forwarding allows you to access your application on `localhost:[PORT]` by forwarding the network traffic from a localhost port to a specified port of a container.
 
 When starting the development mode, DevSpace starts port-forwarding as configured in the `dev.ports` section of the `devspace.yaml`.
@@ -22,7 +27,7 @@ deployments:
       - image: john/debugger
 dev:
   ports:
-  - imageName: backend
+  - imageSelector: john/devbackend
     forward:
     - port: 8080
       remotePort: 80
@@ -39,6 +44,7 @@ Every port-forwarding configuration consists of two parts:
 
 ## Pod Selection
 The following config options are needed to determine the pod to which the traffic should be forwarded:
+- [`imageSelector`](#imageselector)
 - [`imageName`](#imagename)
 - [`labelSelector`](#labelselector)
 - [`namespace`](#namespace)
@@ -51,12 +57,11 @@ If you specify multiple of these config options, they will be jointly used to se
 If DevSpace is unable to establish a port-forwarding connection to the selected pod or loses it after starting the port-forwarding, DevSpace will try to restart port-forwarding several times.
 :::
 
-### `imageName`
-The `imageName` option expects a string with the name of an image from the `images` section of the `devspace.yaml`. Using `imageName` tells DevSpace to select the container/pod based on the referenced image that was last built using DevSpace.
+### `imageSelector`
+<FragmentImageSelector/>
 
-:::warning
-Using `imageName` is not possible if multiple deployments use the same image that belongs to this `imageName` referencing the `images` section of the `devspace.yaml`.
-:::
+### `imageName`
+<FragmentImageName/>
 
 #### Example: Select Pod by Image Name
 ```yaml {2,4,18,22}
@@ -97,7 +102,7 @@ In consequence, the following port-forwarding processes would be started when us
 
 
 ### `labelSelector`
-The `labelSelector` option expects a key-value map of strings with Kubernetes labels.
+<FragmentLabelSelector />
 
 #### Example: Select Pod by Label
 ```yaml {18-21}

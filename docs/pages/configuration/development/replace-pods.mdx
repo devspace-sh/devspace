@@ -3,6 +3,10 @@ title: Replacing Pods for Development
 sidebar_label: replacePods
 ---
 
+import FragmentImageName from '../../fragments/selector-image-name.mdx';
+import FragmentImageSelector from '../../fragments/selector-image-selector.mdx';
+import FragmentLabelSelector from '../../fragments/selector-label-selector.mdx';
+
 `replacePods` gives you the option to exchange an already running or just deployed pod with a modified version. This is especially useful if you:
 
 - Need to configure or disable an option on a pod which is not configurable via your helm chart or manifests
@@ -11,20 +15,22 @@ sidebar_label: replacePods
 
 For example:
 ```yaml
+vars:
+- name: IMAGE
+  value: idonotexist:neverexisted
 deployments:
 - name: my-app
   helm:
     componentChart: true
     values:
       containers:
-      - image: idonotexist:neverexisted # this will create a failing pod
+      - image: ${IMAGE}
 dev:
-  # DevSpace will try to find a pod with the given label selector. If found (even if its currently in a failed state)
+  # DevSpace will try to find a pod with the given image selector. If found (even if its currently in a failed state)
   # DevSpace will copy the pod, scale down the owning ReplicaSet, Deployment or StatefulSet
   # and create the new modified pod in the cluster.
   replacePods:
-    - labelSelector:
-        app.kubernetes.io/component: my-app
+    - imageSelector: ${IMAGE}
       replaceImage: ubuntu:latest
       patches:
         - op: replace
@@ -38,12 +44,10 @@ dev:
           value: "/workdir"
   # This will create a terminal to the replaced pod
   terminal:
-    labelSelector:
-      app.kubernetes.io/component: my-app
+    imageSelector: ${IMAGE}
   # This will sync to the replaced pod's working directory
   sync:
-    - labelSelector:
-        app.kubernetes.io/component: my-app
+    - imageSelector: ${IMAGE}
 ```
 
 ## How does it work?
@@ -62,25 +66,45 @@ DevSpace will automatically recognize changes to the parent Deployment, ReplicaS
 
 ## Pod/Container Selection
 The following config options are needed to determine the container which should be replaced:
+- [`imageSelector`](#imageselector)
 - [`imageName`](#imagename)
 - [`labelSelector`](#labelselector)
 - [`containerName`](#containername)
 - [`namespace`](#namespace)
 
+### `imageSelector`
+<FragmentImageSelector />
+
+#### Example: Select Container by Image Selector
+```yaml
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: container-0
+        image: john/devbackend
+dev:
+  replacePods:
+  - imageSelector: john/devbackend
+    replaceImage: ubuntu:latest
+    patches:
+    - op: replace
+      path: spec.containers[0].command
+      value: ["sleep"]
+    - op: replace
+      path: spec.containers[0].args
+      value: ["9999999999"]
+    - op: replace
+      path: spec.containers[0].workingDir
+      value: "/workdir"
+  terminal:
+    imageSelector: john/devbackend
+```
+
 ### `imageName`
-The `imageName` option expects a string with the name of an image from the `images` section of the `devspace.yaml`. Using `imageName` tells DevSpace to select the container based on the referenced image that was last built using DevSpace.
-
-:::note
-If `imageName` is specified in any of the sync configurations, `devspace dev` will **not** rebuild this image because DevSpace assumes that instead of rebuilding the image, the user wants to use the much faster file synchronization. If you still want to force rebuilding all images, run `devspace dev -b`.
-:::
-
-:::note
-When you want to select a container with an image that is not defined in your `devspace.yaml`, you generally want to select the right pod using the [`labelSelector`](#labelselector).
-:::
-
-:::note 
-You can also select an image from a dependency with `dependency1.image1`
-:::
+<FragmentImageName />
 
 #### Example: Select Container by Image Name
 ```yaml
@@ -116,11 +140,7 @@ dev:
 ```
 
 ### `labelSelector`
-The `labelSelector` option expects a key-value map of strings with Kubernetes labels.
-
-:::info
-If you are using the `labelSelector` option, you may want to additionally specify the [`containerName` option](#containername) to set the target container.
-:::
+<FragmentLabelSelector />
 
 #### Example: Select Container by Label
 ```yaml
