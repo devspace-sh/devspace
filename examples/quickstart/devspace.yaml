@@ -1,23 +1,26 @@
 version: v1beta10
+vars:
+  - name: IMAGE
+    value: myusername/devspace
 images:
   default:
-    image: myusername/devspace
+    image: ${IMAGE}
 deployments:
   - name: quickstart
     helm:
       componentChart: true
       values:
         containers:
-          - image: myusername/devspace
+          - image: ${IMAGE}
         service:
           ports:
             - port: 3000
 dev:
   ports:
-    - imageName: default
+    - imageSelector: ${IMAGE}
       forward:
         - port: 3000
   sync:
-    - imageName: default
+    - imageSelector: ${IMAGE}
       uploadExcludePaths:
         - node_modules

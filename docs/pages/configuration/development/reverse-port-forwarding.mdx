@@ -3,6 +3,10 @@ title: Configure Reverse Port-Forwarding
 sidebar_label: ports[].reverseForward
 ---
 
+import FragmentImageName from '../../fragments/selector-image-name.mdx';
+import FragmentImageSelector from '../../fragments/selector-image-selector.mdx';
+import FragmentLabelSelector from '../../fragments/selector-label-selector.mdx';
+
 Reverse port-forwarding allows you to forward traffic from within your containers to your local machine. This can be useful when:
 - using certain remote debuggers that connect to your IDE instead of the other way around
 - developing a service on localhost which should be accessed from other services that run within the cluster, i.e. using the [Telepresence development model](https://www.telepresence.io/discussion/why-telepresence) but with DevSpace to get better performance and cross-platform support
@@ -26,7 +30,7 @@ deployments:
       - image: john/debugger
 dev:
   ports:
-  - imageName: backend
+  - imageSelector: john/devbackend
     forward:
     - port: 8080
       remotePort: 80
@@ -47,6 +51,7 @@ Every reverse port-forwarding configuration consists of two parts:
 
 ## Pod Selection
 The following config options are needed to determine the pod from which the traffic should be forwarded to localhost:
+- [`imageSelector`](#imageselector)
 - [`imageName`](#imagename)
 - [`labelSelector`](#labelselector)
 - [`containerName`](#containername)
@@ -60,12 +65,11 @@ If you specify multiple of these config options, they will be jointly used to se
 If DevSpace is unable to establish a reverse port-forwarding connection to the selected pod or loses it after starting the reverse port-forwarding, DevSpace will try to restart reverse port-forwarding several times.
 :::
 
-### `imageName`
-The `imageName` option expects a string with the name of an image from the `images` section of the `devspace.yaml`. Using `imageName` tells DevSpace to select the container/pod based on the referenced image that was last built using DevSpace.
+### `imageSelector`
+<FragmentImageSelector/>
 
-:::warning
-Using `imageName` is not possible if multiple deployments use the same image that belongs to this `imageName` referencing the `images` section of the `devspace.yaml`.
-:::
+### `imageName`
+<FragmentImageName />
 
 #### Example: Select Pod by Image Name
 ```yaml {2,4,18,22}
@@ -106,7 +110,7 @@ In consequence, the following reverse port-forwarding processes would be started
 
 
 ### `labelSelector`
-The `labelSelector` option expects a key-value map of strings with Kubernetes labels.
+<FragmentLabelSelector />
 
 #### Example: Select Pod by Label
 ```yaml {18-21}
