@@ -43,7 +43,7 @@ const (
 	UseExistingDockerfileOption = "Use the Dockerfile in ./Dockerfile"
 	CreateDockerfileOption      = "Create a Dockerfile for this project"
 	EnterDockerfileOption       = "Enter path to a different Dockerfile"
-	ComponentChartOption        = "helm: Use Component Helm Chart [QUICK START] (https://devspace.sh/component-chart/docs)"
+	ComponentChartOption        = "helm: Use Component Helm Chart [QUICKSTART] (https://devspace.sh/component-chart/docs)"
 	HelmChartOption             = "helm: Use my own Helm chart (e.g. local via ./chart/ or any remote chart)"
 	ManifestsOption             = "kubectl: Use existing Kubernetes manifests (e.g. ./kube/deployment.yaml)"
 	KustomizeOption             = "kustomize: Use an existing Kustomization (e.g. ./kube/kustomization/)"
@@ -194,6 +194,9 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		return err
 	}
 
+	imageVarName := "IMAGE"
+	imageVar := "${" + imageVarName + "}"
+
 	for true {
 		image := ""
 		if imageQuestion != "" {
@@ -218,6 +221,17 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 		} else {
 			break
 		}
+	}
+
+	if config.Images != nil && config.Images[imageName] != nil {
+		// Move full image name to variables
+		config.Vars = append(config.Vars, &latest.Variable{
+			Name:  imageVarName,
+			Value: config.Images[imageName].Image,
+		})
+
+		// Use variable in images section
+		config.Images[imageName].Image = imageVar
 	}
 
 	// Determine app port
@@ -263,14 +277,14 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 
 	// Add component deployment if selected
 	if selectedDeploymentOption == ComponentChartOption {
-		err = configureManager.AddComponentDeployment(deploymentName, imageName, port)
+		err = configureManager.AddComponentDeployment(deploymentName, imageVar, port)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Add the development configuration
-	err = cmd.addDevConfig(config, imageName, port, dockerfileGenerator)
+	err = cmd.addDevConfig(config, imageName, imageVar, port, dockerfileGenerator)
 	if err != nil {
 		return err
 	}
@@ -300,30 +314,32 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	}
 
 	configAnnotations := map[string]string{
-		"(?m)^(vars:)":                   "\n# `vars` specifies variables which may be used as ${VAR_NAME} in devspace.yaml\n$1",
-		"(?m)^(images:)":                 "\n# `images` specifies all images that may need to be built for this project\n$1",
-		"(?m)^(  app:)":                  "$1 # This image is called `app` and this name `app` is referenced multiple times in the config below",
-		"(?m)^(deployments:)":            "\n# `deployments` tells DevSpace how to deploy this project\n$1",
-		"(?m)^(  helm:)":                 "  # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations\n$1",
-		"(?m)^(    )(componentChart:)":   "$1# We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs\n$1$2",
-		"(?m)^(    )(chart:)":            "$1# We are deploying this project with the Helm chart you provided\n$1$2",
-		"(?m)^(    )(values:)":           "$1# Under `values` we can define the values for this Helm chart used during `helm install/upgrade`\n$1# You may also use `valuesFiles` to load values from files, e.g. valuesFiles: [\"values.yaml\"]\n$1$2",
-		"(?m)^(    )  someChartValue:.*": "$1# image: image(app):tag(app)\n$1# ingress:\n$1#   enabled: true",
-		"(image\\(app\\):tag\\(app\\))":  "$1 # Use the `app` image (see `images`) and the tag DevSpace generates during image building in your Helm values",
-		"(?m)^(  kubectl:)":              "  # This deployment uses `kubectl` but you can also define `helm` deployments\n$1",
-		"(?m)^(dev:)":                    "\n# `dev` only applies when you run `devspace dev`\n$1",
-		"(?m)^(  ports:)":                "  # `dev.ports` specifies all ports that should be forwarded while `devspace dev` is running\n  # Port-forwarding lets you access your application via localhost on your local machine\n$1",
-		"(?m)^(  open:)":                 "\n  # `dev.open` tells DevSpace to open certain URLs as soon as they return HTTP status 200\n  # Since we configured port-forwarding, we can use a localhost address here to access our application\n$1",
-		"(?m)^(  - url:.+)":              "$1\n",
-		"(?m)^(  sync:)":                 "  # `dev.sync` configures a file sync between our Pods in k8s and your local project files\n$1",
-		"(?m)^(  terminal:)":             "\n  # `dev.terminal` tells DevSpace to open a terminal as a last step during `devspace dev`\n$1",
-		"(?m)^(    command:)":            "    # With this optional `command` we can tell DevSpace to run a script when opening the terminal\n    # This is often useful to display help info for new users or perform initial tasks (e.g. installing dependencies)\n    # DevSpace has generated an example ./devspace_start.sh file in your local project - Feel free to customize it!\n$1",
-		"(?m)^(  replacePods:)":          "\n  # Since our Helm charts and manifests deployments are often optimized for production,\n  # DevSpace let's you swap out Pods dynamically to get a better dev environment\n$1",
-		"(?m)^(    replaceImage:)":       "    # Since our `app` image may be distroless or not have any dev tooling, let's replace it with a dev-optimized image\n    # DevSpace provides a sample image here but you can use any image for your specific needs\n$1",
-		"(?m)^(    patches:)":            "    # Besides replacing the container image, let's also apply some patches to the `spec` of our Pod\n    # We are overwriting `command` + `args` for the first container in our selected Pod, so it starts with `sleep 9999999`\n    # Using `sleep 9999999` as PID 1 (instead of the regular ENTRYPOINT), allows you to start the application manually\n$1",
-		"(?m)^(  - imageName:.+)":        "$1 # Select the Pod that runs our `app` image",
-		"(?m)^(profiles:)":               "\n# `profiles` lets you modify the config above for different environments (e.g. dev vs production)\n$1",
-		"(?m)^(- name: production)":      "  # This profile is called `production` and you can use it for example using: devspace deploy -p production\n  # We generally recommend to use the base config without any profiles as optimized for development (e.g. image build+push is disabled)\n$1\n  # This profile applies patches to the config above.\n  # In this case, it enables image building for example by removing the `disabled: true` statement for the image `app`",
+		"(?m)^(vars:)":                    "\n# `vars` specifies variables which may be used as $${VAR_NAME} in devspace.yaml\n$1",
+		"(?m)^(images:)":                  "\n# `images` specifies all images that may need to be built for this project\n$1",
+		"(?m)^(  app:)":                   "$1 # This image is called `app` (you can have more than one image)",
+		"(?m)^(deployments:)":             "\n# `deployments` tells DevSpace how to deploy this project\n$1",
+		"(?m)^(  helm:)":                  "  # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations\n$1",
+		"(?m)^(    )(componentChart:)":    "$1# We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs\n$1$2",
+		"(?m)^(    )(chart:)":             "$1# We are deploying this project with the Helm chart you provided\n$1$2",
+		"(?m)^(    )(values:)":            "$1# Under `values` we can define the values for this Helm chart used during `helm install/upgrade`\n$1# You may also use `valuesFiles` to load values from files, e.g. valuesFiles: [\"values.yaml\"]\n$1$2",
+		"(?m)^(    )  someChartValue:.*":  "$1# image: $${IMAGE}\n$1# ingress:\n$1#   enabled: true",
+		"(image: \\$\\{IMAGE\\})":         "$1 # Use the value of our `$${IMAGE}` variable here (see vars above)",
+		"(?m)^(  kubectl:)":               "  # This deployment uses `kubectl` but you can also define `helm` deployments\n$1",
+		"(?m)^(dev:)":                     "\n# `dev` only applies when you run `devspace dev`\n$1",
+		"(?m)^(  ports:)":                 "  # `dev.ports` specifies all ports that should be forwarded while `devspace dev` is running\n  # Port-forwarding lets you access your application via localhost on your local machine\n$1",
+		"(?m)^(  open:)":                  "\n  # `dev.open` tells DevSpace to open certain URLs as soon as they return HTTP status 200\n  # Since we configured port-forwarding, we can use a localhost address here to access our application\n$1",
+		"(?m)^(  - url:.+)":               "$1\n",
+		"(?m)^(  sync:)":                  "  # `dev.sync` configures a file sync between our Pods in k8s and your local project files\n$1",
+		"(?m)^(  terminal:)":              "\n  # `dev.terminal` tells DevSpace to open a terminal as a last step during `devspace dev`\n$1",
+		"(?m)^(    command:)":             "    # With this optional `command` we can tell DevSpace to run a script when opening the terminal\n    # This is often useful to display help info for new users or perform initial tasks (e.g. installing dependencies)\n    # DevSpace has generated an example ./devspace_start.sh file in your local project - Feel free to customize it!\n$1",
+		"(?m)^(  replacePods:)":           "\n  # Since our Helm charts and manifests deployments are often optimized for production,\n  # DevSpace let's you swap out Pods dynamically to get a better dev environment\n$1",
+		"(?m)^(    replaceImage:)":        "    # Since the `$${IMAGE}` used to start our main application pod may be distroless or not have any dev tooling, let's replace it with a dev-optimized image\n    # DevSpace provides a sample image here but you can use any image for your specific needs\n$1",
+		"(?m)^(    patches:)":             "    # Besides replacing the container image, let's also apply some patches to the `spec` of our Pod\n    # We are overwriting `command` + `args` for the first container in our selected Pod, so it starts with `sleep 9999999`\n    # Using `sleep 9999999` as PID 1 (instead of the regular ENTRYPOINT), allows you to start the application manually\n$1",
+		"(?m)^(  (-| ) imageSelector:.+)": "$1 # Select the Pod that runs our `$${IMAGE}`",
+		"(?m)^(profiles:)":                "\n# `profiles` lets you modify the config above for different environments (e.g. dev vs production)\n$1",
+		"(?m)^(- name: production)":       "  # This profile is called `production` and you can use it for example using: devspace deploy -p production\n  # We generally recommend to use the base config without any profiles as optimized for development (e.g. image build+push is disabled)\n$1",
+		"(?m)^(  patches:)":               "# This profile applies patches to the config above.\n  # In this case, it enables image building for example by removing the `disabled: true` statement for the image `app`\n$1",
+		"(?m)^(  merge:)":                 "# This profile adds our image to the config so that DevSpace will build, tag and push our image before the deployment\n$1",
 	}
 
 	for expr, replacement := range configAnnotations {
@@ -394,7 +410,7 @@ func getDeploymentName() (string, error) {
 	return dirname, nil
 }
 
-func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port int, dockerfileGenerator *generator.DockerfileGenerator) error {
+func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string, port int, dockerfileGenerator *generator.DockerfileGenerator) error {
 	// Forward ports
 	if len(config.Deployments) > 0 {
 		if port > 0 {
@@ -434,8 +450,8 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 			// Add dev.ports config
 			config.Dev.Ports = []*latest.PortForwardingConfig{
 				{
-					ImageName:    imageName,
-					PortMappings: portMappings,
+					ImageSelector: image,
+					PortMappings:  portMappings,
 				},
 			}
 
@@ -465,7 +481,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 		}
 
 		syncConfig := &latest.SyncConfig{
-			ImageName:          imageName,
+			ImageSelector:      image,
 			UploadExcludePaths: excludePaths,
 			ExcludePaths: []string{
 				".git/",
@@ -514,8 +530,8 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 			}
 
 			config.Dev.Terminal = &latest.Terminal{
-				ImageName: imageName,
-				Command:   []string{"./" + startScriptName},
+				ImageSelector: image,
+				Command:       []string{"./" + startScriptName},
 			}
 
 			replacePodPatches := []*latest.PatchConfig{
@@ -542,9 +558,9 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName string, port i
 
 			config.Dev.ReplacePods = []*latest.ReplacePod{
 				{
-					ImageName:    imageName,
-					ReplaceImage: fmt.Sprintf("loftsh/%s:latest", language),
-					Patches:      replacePodPatches,
+					ImageSelector: image,
+					ReplaceImage:  fmt.Sprintf("loftsh/%s:latest", language),
+					Patches:       replacePodPatches,
 				},
 			}
 		}
@@ -586,55 +602,81 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config, imageName string) er
 	if len(config.Images) > 0 {
 		imageConfig, ok := (config.Images)[imageName]
 		if ok {
-			patchRemoveOp := "remove"
-			patches := []*latest.PatchConfig{}
-
-			if len(imageConfig.AppendDockerfileInstructions) > 0 {
-				patches = append(patches, &latest.PatchConfig{
-					Operation: patchRemoveOp,
-					Path:      "images." + imageName + ".appendDockerfileInstructions",
-				})
+			profile := &latest.ProfileConfig{
+				Name: productionProfileName,
 			}
 
-			if imageConfig.InjectRestartHelper {
-				patches = append(patches, &latest.PatchConfig{
-					Operation: patchRemoveOp,
-					Path:      "images." + imageName + ".injectRestartHelper",
-				})
+			// If image building is disabled, move it to production profile instead of disabling it
+			if imageConfig.Build != nil && imageConfig.Build.Disabled {
+				imageConfig.AppendDockerfileInstructions = []string{}
+				imageConfig.InjectRestartHelper = false
+				imageConfig.RebuildStrategy = latest.RebuildStrategyDefault
+				imageConfig.Entrypoint = []string{}
+
+				if imageConfig.Build.Docker != nil && imageConfig.Build.Docker.Options != nil && imageConfig.Build.Docker.Options.Target != "" {
+					imageConfig.Build.Docker.Options.Target = ""
+				}
+
+				imageConfig.Build.Disabled = false
+				if imageConfig.Build.Docker == nil && imageConfig.Build.BuildKit == nil && imageConfig.Build.Kaniko == nil {
+					imageConfig.Build = nil
+				}
+
+				profile.Merge = &latest.ProfileConfigStructure{
+					Images: map[interface{}]interface{}{
+						imageName: imageConfig,
+					},
+				}
+
+				delete(config.Images, imageName)
+			} else {
+				patchRemoveOp := "remove"
+				patches := []*latest.PatchConfig{}
+
+				if len(imageConfig.AppendDockerfileInstructions) > 0 {
+					patches = append(patches, &latest.PatchConfig{
+						Operation: patchRemoveOp,
+						Path:      "images." + imageName + ".appendDockerfileInstructions",
+					})
+				}
+
+				if imageConfig.InjectRestartHelper {
+					patches = append(patches, &latest.PatchConfig{
+						Operation: patchRemoveOp,
+						Path:      "images." + imageName + ".injectRestartHelper",
+					})
+				}
+
+				if imageConfig.RebuildStrategy != latest.RebuildStrategyDefault {
+					patches = append(patches, &latest.PatchConfig{
+						Operation: patchRemoveOp,
+						Path:      "images." + imageName + ".rebuildStrategy",
+					})
+				}
+
+				if len(imageConfig.Entrypoint) > 0 {
+					patches = append(patches, &latest.PatchConfig{
+						Operation: patchRemoveOp,
+						Path:      "images." + imageName + ".entrypoint",
+					})
+				}
+
+				if imageConfig.Build != nil && imageConfig.Build.Docker != nil && imageConfig.Build.Docker.Options != nil && imageConfig.Build.Docker.Options.Target != "" {
+					patches = append(patches, &latest.PatchConfig{
+						Operation: patchRemoveOp,
+						Path:      "images." + imageName + ".build.docker.options.target",
+					})
+				}
+
+				if len(patches) == 0 {
+					return nil
+				}
+
+				profile.Patches = patches
 			}
 
-			if imageConfig.RebuildStrategy != latest.RebuildStrategyDefault {
-				patches = append(patches, &latest.PatchConfig{
-					Operation: patchRemoveOp,
-					Path:      "images." + imageName + ".rebuildStrategy",
-				})
-			}
+			config.Profiles = append(config.Profiles, profile)
 
-			if len(imageConfig.Entrypoint) > 0 {
-				patches = append(patches, &latest.PatchConfig{
-					Operation: patchRemoveOp,
-					Path:      "images." + imageName + ".entrypoint",
-				})
-			}
-
-			if imageConfig.Build != nil && imageConfig.Build.Disabled == true {
-				patches = append(patches, &latest.PatchConfig{
-					Operation: patchRemoveOp,
-					Path:      "images." + imageName + ".build.disabled",
-				})
-			}
-
-			if imageConfig.Build != nil && imageConfig.Build.Docker != nil && imageConfig.Build.Docker.Options != nil && imageConfig.Build.Docker.Options.Target != "" {
-				patches = append(patches, &latest.PatchConfig{
-					Operation: patchRemoveOp,
-					Path:      "images." + imageName + ".build.docker.options.target",
-				})
-			}
-
-			config.Profiles = append(config.Profiles, &latest.ProfileConfig{
-				Name:    productionProfileName,
-				Patches: patches,
-			})
 		}
 	}
 	return nil

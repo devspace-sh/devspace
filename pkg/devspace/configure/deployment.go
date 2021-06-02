@@ -303,11 +303,11 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 }
 
 // AddComponentDeployment adds a new deployment to the provided config
-func (m *manager) AddComponentDeployment(deploymentName, imageName string, servicePort int) error {
+func (m *manager) AddComponentDeployment(deploymentName, image string, servicePort int) error {
 	componentConfig := &latest.ComponentConfig{
 		Containers: []*latest.ContainerConfig{
 			{
-				Image: fmt.Sprintf("image(%s):tag(%s)", imageName, imageName),
+				Image: image,
 			},
 		},
 	}
