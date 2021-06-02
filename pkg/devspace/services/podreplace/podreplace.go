@@ -24,6 +24,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"strconv"
@@ -44,7 +45,7 @@ type PodReplacer interface {
 	ReplacePod(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) error
 
 	// RevertReplacePod will try to revert a pod replacement with the given config
-	RevertReplacePod(ctx context.Context, client kubectl.Client, replacePod *latest.ReplacePod, log log.Logger) (*kubectl.SelectedPodContainer, error)
+	RevertReplacePod(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (*kubectl.SelectedPodContainer, error)
 }
 
 func NewPodReplacer() PodReplacer {
@@ -53,7 +54,7 @@ func NewPodReplacer() PodReplacer {
 
 type replacer struct{}
 
-func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, replacePod *latest.ReplacePod, log log.Logger) (*kubectl.SelectedPodContainer, error) {
+func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (*kubectl.SelectedPodContainer, error) {
 	// check if there is a replaced pod in the target namespace
 	log.StartWait("Try to find replaced pod...")
 	defer log.StopWait()
@@ -63,7 +64,17 @@ func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, 
 	if err != nil {
 		return nil, errors.Wrap(err, "find patched pod")
 	} else if selectedPod == nil {
-		return nil, nil
+		parent, err := p.findScaledDownParentBySelector(ctx, client, config, dependencies, replacePod, log)
+		if err != nil {
+			return nil, err
+		} else if parent == nil {
+			return nil, nil
+		}
+
+		accessor, _ := meta.Accessor(parent)
+		typeAccessor, _ := meta.TypeAccessor(parent)
+		log.Infof("Scale up %s %s/%s", typeAccessor.GetKind(), accessor.GetNamespace(), accessor.GetName())
+		return nil, scaleUpParent(ctx, client, parent)
 	}
 
 	if selectedPod.Pod.Annotations == nil || selectedPod.Pod.Annotations[ParentKindAnnotation] == "" || selectedPod.Pod.Annotations[ParentNameAnnotation] == "" {
@@ -90,6 +101,104 @@ func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, 
 	}
 
 	return selectedPod, nil
+}
+
+func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (runtime.Object, error) {
+	namespace := client.Namespace()
+	if replacePod.Namespace != "" {
+		namespace = replacePod.Namespace
+	}
+
+	// deployments
+	deployments, err := client.KubeClient().AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, "list deployments")
+	}
+	for _, d := range deployments.Items {
+		matched, err := matchesSelector(d.Annotations, &d.Spec.Template, config, dependencies, replacePod)
+		if err != nil {
+			return nil, err
+		} else if matched {
+			d.Kind = "Deployment"
+			return &d, nil
+		}
+	}
+
+	// replicasets
+	replicasets, err := client.KubeClient().AppsV1().ReplicaSets(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, "list replicasets")
+	}
+	for _, d := range replicasets.Items {
+		matched, err := matchesSelector(d.Annotations, &d.Spec.Template, config, dependencies, replacePod)
+		if err != nil {
+			return nil, err
+		} else if matched {
+			d.Kind = "ReplicaSet"
+			return &d, nil
+		}
+	}
+
+	// statefulsets
+	statefulsets, err := client.KubeClient().AppsV1().StatefulSets(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, "list statefulsets")
+	}
+	for _, d := range statefulsets.Items {
+		matched, err := matchesSelector(d.Annotations, &d.Spec.Template, config, dependencies, replacePod)
+		if err != nil {
+			return nil, err
+		} else if matched {
+			d.Kind = "StatefulSet"
+			return &d, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func matchesSelector(annotations map[string]string, pod *corev1.PodTemplateSpec, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod) (bool, error) {
+	if annotations == nil || annotations[ReplicasAnnotation] == "" {
+		return false, nil
+	}
+
+	if len(replacePod.LabelSelector) > 0 {
+		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+			MatchLabels: replacePod.LabelSelector,
+		})
+		if err != nil {
+			return false, err
+		}
+
+		return selector.Matches(labels.Set(pod.Labels)), nil
+	} else if replacePod.ImageName != "" || replacePod.ImageSelector != "" {
+		var imageSelector *imageselector.ImageSelector
+		var err error
+		if replacePod.ImageName != "" {
+			imageSelector, err = imageselector.Resolve(replacePod.ImageName, config, dependencies)
+			if err != nil {
+				return false, err
+			} else if imageSelector == nil {
+				return false, fmt.Errorf("cannot find image name: %#+v", replacePod.ImageName)
+			}
+		} else if replacePod.ImageSelector != "" {
+			imageSelector, err = util.ResolveImageAsImageSelector(replacePod.ImageSelector, config, dependencies)
+			if err != nil {
+				return false, err
+			}
+		}
+
+		// compare pod name
+		for i := range pod.Spec.Containers {
+			if imageselector.CompareImageNames(*imageSelector, pod.Spec.Containers[i].Image) {
+				return true, nil
+			}
+		}
+
+		return false, nil
+	}
+
+	return false, nil
 }
 
 func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) error {
@@ -692,7 +801,7 @@ func findSingleReplaceablePodParent(ctx context.Context, client kubectl.Client, 
 		if err != nil {
 			return nil, nil, err
 		}
-		
+
 		targetOptions.ImageSelector = append(targetOptions.ImageSelector, *imageSelector)
 	}
 
