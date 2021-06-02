@@ -13,7 +13,7 @@ import (
 type Manager interface {
 	AddKubectlDeployment(deploymentName string, isKustomization bool) error
 	AddHelmDeployment(deploymentName string) error
-	AddComponentDeployment(deploymentName, imageName string, servicePort int) error
+	AddComponentDeployment(deploymentName, image string, servicePort int) error
 	AddImage(imageName, image, dockerfile, contextPath string, dockerfileGenerator *generator.DockerfileGenerator) error
 }
 
