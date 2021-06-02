@@ -114,9 +114,9 @@ func CompareImageNames(selector ImageSelector, image2 string) bool {
 		}
 
 		return image1 == image2
-	} else {
-		return tagStrippedImage1 == tagStrippedImage2
 	}
+
+	return tagStrippedImage1 == tagStrippedImage2
 }
 
 // GetStrippedDockerImageName returns a tag stripped image name and checks if it's a valid image name

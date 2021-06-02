@@ -1,9 +1,7 @@
 version: v1beta10
-images:
-  backend:
-    image: john/devbackend
-    build:
-      disabled: true
+vars:
+  - name: IMAGE
+    value: john/devbackend
 deployments:
   - name: app-backend
     helm:
@@ -11,10 +9,10 @@ deployments:
       values:
         containers:
           - name: container-0
-            image: john/devbackend
+            image: ${IMAGE}
 dev:
   replacePods:
-    - imageName: backend
+    - imageSelector: ${IMAGE}
       replaceImage: ubuntu:latest
       patches:
         - op: add
@@ -27,4 +25,4 @@ dev:
           path: spec.containers[0].workingDir
           value: "/workdir"
   terminal:
-    imageName: backend
+    imageSelector: ${IMAGE}

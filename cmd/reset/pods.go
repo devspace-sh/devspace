@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	dependencytypes "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/podreplace"
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -90,19 +92,28 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 		return err
 	}
 
+	// Resolve dependencies
+	dep, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).ResolveAll(dependency.ResolveOptions{
+		UpdateDependencies: false,
+		Verbose:            false,
+	})
+	if err != nil {
+		cmd.log.Warnf("Error resolving dependencies: %v", err)
+	}
+
 	// reset the pods
-	ResetPods(client, configInterface, cmd.log)
+	ResetPods(client, configInterface, dep, cmd.log)
 	return nil
 }
 
 // ResetPods deletes the pods created by dev.replacePods
-func ResetPods(client kubectl.Client, config config.Config, log log.Logger) {
+func ResetPods(client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, log log.Logger) {
 	// create pod replacer
 	podReplacer := podreplace.NewPodReplacer()
 	resetted := 0
 	errored := false
 	for _, replacePod := range config.Config().Dev.ReplacePods {
-		deletedPod, err := podReplacer.RevertReplacePod(context.TODO(), client, replacePod, log)
+		deletedPod, err := podReplacer.RevertReplacePod(context.TODO(), client, config, dependencies, replacePod, log)
 		if err != nil {
 			errored = true
 			log.Warnf("Error reverting replaced pod: %v", err)
