@@ -7,7 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-	"github.com/loft-sh/devspace/pkg/devspace/services"
+	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
@@ -181,12 +181,12 @@ func restartContainer(client kubectl.Client, options targetselector.Options, log
 		return errors.Errorf("Error selecting pod: %v", err)
 	}
 
-	err = services.InjectDevSpaceHelper(client, container.Pod, container.Container.Name, "", log)
+	err = inject.InjectDevSpaceHelper(client, container.Pod, container.Container.Name, "", log)
 	if err != nil {
 		return errors.Wrap(err, "inject devspace helper")
 	}
 
-	stdOut, stdErr, err := client.ExecBuffered(container.Pod, container.Container.Name, []string{services.DevSpaceHelperContainerPath, "restart"}, nil)
+	stdOut, stdErr, err := client.ExecBuffered(container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "restart"}, nil)
 	if err != nil {
 		return fmt.Errorf("error restarting container %s in pod %s/%s: %s %s => %v", container.Container.Name, container.Pod.Namespace, container.Pod.Name, string(stdOut), string(stdErr), err)
 	}
