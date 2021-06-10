@@ -106,7 +106,7 @@ func TestCreateReport(t *testing.T) {
 			expectedReport: []*ReportItem{
 				&ReportItem{
 					Name:     "Pods",
-					Problems: []string{fmt.Sprintf("  Pod %s:  \n    Status: %s  \n    Created: %s ago\n", ansi.Color("ErrorPod", "white+b"), ansi.Color("Error", "red+b"), ansi.Color("1s", "white+b"))},
+					Problems: []string{fmt.Sprintf("  Pod %s:  \n    Status: %s  \n    Created: %s ago\n", ansi.Color("ErrorPod", "white+b"), ansi.Color("Error", "red+b"), ansi.Color("2s", "white+b"))},
 				},
 			},
 		},

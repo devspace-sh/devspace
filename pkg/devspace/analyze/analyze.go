@@ -81,7 +81,7 @@ func (a *analyzer) CreateReport(namespace string, options Options) ([]*ReportIte
 	}
 
 	// Loop as long as we have a timeout
-	err := wait.PollImmediate(time.Second, timeout, func() (bool, error) {
+	err := wait.Poll(time.Second, timeout, func() (bool, error) {
 		report = []*ReportItem{}
 
 		// Analyze pods

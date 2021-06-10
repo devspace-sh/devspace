@@ -59,7 +59,7 @@ func createTestSyncClient(testLocalPath string, testCases testCaseList) (*Sync, 
 		return nil, err
 	}
 
-	sync.Options.SyncError = make(chan error)
+	sync.onError = make(chan error)
 	return sync, nil
 }
 
@@ -157,7 +157,7 @@ func TestInitialSync(t *testing.T) {
 		go syncClient.startUpstream()
 
 		// Do initial sync
-		err = syncClient.initialSync()
+		err = syncClient.initialSync(nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

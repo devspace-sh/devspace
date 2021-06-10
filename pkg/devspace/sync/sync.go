@@ -44,12 +44,6 @@ type Options struct {
 	InitialSyncCompareBy latest.InitialSyncCompareBy
 	InitialSync          latest.InitialSyncStrategy
 
-	// These channels can be used to listen for certain sync events
-	DownstreamInitialSyncDone chan bool
-	UpstreamInitialSyncDone   chan bool
-	SyncDone                  chan bool
-	SyncError                 chan error
-
 	Log log.Logger
 }
 
@@ -71,6 +65,9 @@ type Sync struct {
 
 	silent   bool
 	stopOnce sync.Once
+
+	onError chan error
+	onDone  chan struct{}
 
 	// Used for testing
 	readyChan chan bool
@@ -146,9 +143,11 @@ func (s *Sync) InitDownstream(reader io.ReadCloser, writer io.WriteCloser) error
 }
 
 // Start starts a new sync instance
-func (s *Sync) Start() error {
-	s.mainLoop()
+func (s *Sync) Start(onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}, onDone chan struct{}, onError chan error) error {
+	s.onError = onError
+	s.onDone = onDone
 
+	s.mainLoop(onInitUploadDone, onInitDownloadDone)
 	return nil
 }
 
@@ -183,7 +182,7 @@ func (s *Sync) initIgnoreParsers() error {
 	return nil
 }
 
-func (s *Sync) mainLoop() {
+func (s *Sync) mainLoop(onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}) {
 	s.log.Info("Start syncing")
 
 	// Start upstream as early as possible
@@ -193,7 +192,7 @@ func (s *Sync) mainLoop() {
 
 	// Start downstream and do initial sync
 	go func() {
-		err := s.initialSync()
+		err := s.initialSync(onInitUploadDone, onInitDownloadDone)
 		if err != nil {
 			s.Stop(errors.Wrap(err, "initial sync"))
 			return
@@ -237,7 +236,7 @@ func (s *Sync) startDownstream() {
 	}
 }
 
-func (s *Sync) initialSync() error {
+func (s *Sync) initialSync(onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}) error {
 	err := s.downstream.populateFileMap()
 	if err != nil {
 		return errors.Wrap(err, "populate file map")
@@ -273,7 +272,7 @@ func (s *Sync) initialSync() error {
 		Log:         s.log,
 
 		UpstreamDone: func() {
-			if s.Options.UpstreamInitialSyncDone != nil {
+			if onInitUploadDone != nil {
 				if s.Options.UpstreamDisabled == false {
 					for len(s.upstream.events) > 0 || s.upstream.IsBusy() {
 						time.Sleep(time.Millisecond * 100)
@@ -281,13 +280,13 @@ func (s *Sync) initialSync() error {
 				}
 
 				s.log.Info("Upstream - Initial sync completed")
-				close(s.Options.UpstreamInitialSyncDone)
+				close(onInitUploadDone)
 			}
 		},
 		DownstreamDone: func() {
-			if s.Options.DownstreamInitialSyncDone != nil {
+			if onInitDownloadDone != nil {
 				s.log.Info("Downstream - Initial sync completed")
-				close(s.Options.DownstreamInitialSyncDone)
+				close(onInitDownloadDone)
 			}
 		},
 	})
@@ -369,14 +368,14 @@ func (s *Sync) Stop(fatalError error) {
 
 			// This needs to be rethought because we do not always kill the application here, would be better to have an error channel
 			// or runtime error here
-			if s.Options.SyncError != nil {
-				s.Options.SyncError <- fatalError
+			if s.onError != nil {
+				s.onError <- fatalError
 			}
 		}
 
 		s.log.Infof("Sync stopped")
-		if s.Options.SyncDone != nil {
-			close(s.Options.SyncDone)
+		if s.onDone != nil {
+			close(s.onDone)
 		}
 	})
 }

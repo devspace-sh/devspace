@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
+	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
 	"github.com/loft-sh/devspace/pkg/devspace/tunnel"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"io"
@@ -72,7 +73,7 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 
 	// make sure the devspace helper binary is injected
 	log.StartWait("Reverse-Port-Forwarding: Upload devspace helper...")
-	err = InjectDevSpaceHelper(serviceClient.client, container.Pod, container.Container.Name, string(portForwarding.Arch), serviceClient.log)
+	err = inject.InjectDevSpaceHelper(serviceClient.client, container.Pod, container.Container.Name, string(portForwarding.Arch), serviceClient.log)
 	log.StopWait()
 	if err != nil {
 		return err
@@ -84,7 +85,7 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
 	go func() {
-		err := serviceClient.startStream(container.Pod, container.Container.Name, []string{DevSpaceHelperContainerPath, "tunnel"}, stdinReader, stdoutWriter)
+		err := inject.StartStream(serviceClient.client, container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "tunnel"}, stdinReader, stdoutWriter)
 		if err != nil {
 			errorChan <- errors.Errorf("Reverse Port Forwarding - connection lost to pod %s/%s: %v", container.Pod.Namespace, container.Pod.Name, err)
 		}
