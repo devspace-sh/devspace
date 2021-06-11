@@ -65,7 +65,7 @@ type Client interface {
 	// Starts a new exec request with given options
 	ExecStream(options *ExecStreamOptions) error
 
-	// Starts a new exec request, waits for it to finish and returns the stdout and stderr to the caller
+	// ExecBuffered starts a new exec request, waits for it to finish and returns the stdout and stderr to the caller
 	ExecBuffered(pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error)
 
 	// Executes a generic kubernetes api request and returns the response as a string

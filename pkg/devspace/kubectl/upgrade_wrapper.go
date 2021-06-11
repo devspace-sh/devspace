@@ -1,12 +1,15 @@
 package kubectl
 
 import (
+	"k8s.io/client-go/rest"
 	"net/http"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/transport"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/httpstream"
-	"k8s.io/client-go/transport/spdy"
+	"k8s.io/apimachinery/pkg/util/httpstream/spdy"
+	restclient "k8s.io/client-go/rest"
+	clientspdy "k8s.io/client-go/transport/spdy"
 )
 
 // UpgraderWrapper wraps the upgrader and adds a connections array
@@ -16,7 +19,7 @@ type UpgraderWrapper interface {
 }
 
 type upgraderWrapper struct {
-	Upgrader    spdy.Upgrader
+	Upgrader    clientspdy.Upgrader
 	Connections []httpstream.Connection
 }
 
@@ -27,43 +30,26 @@ func (uw *upgraderWrapper) NewConnection(resp *http.Response) (httpstream.Connec
 		return nil, err
 	}
 
-	// This is a fix to prevent the connection of getting idle and killed by the kubernetes
-	// api server, this is used for sync, port forwarding and the terminal
-	newConn, ok := conn.(*transport.Connection)
-	if ok && newConn != nil {
-		go func() {
-			if newConn.Conn != nil {
-				for {
-					select {
-					case <-newConn.Conn.CloseChan():
-						return
-					case <-time.After(time.Second * 10):
-						_, _ = newConn.Conn.Ping()
-					}
-				}
-			}
-		}()
-	}
-
 	uw.Connections = append(uw.Connections, conn)
 	return conn, nil
 }
 
 // Close closes all connections
 func (uw *upgraderWrapper) Close() error {
+	errs := []error{}
 	for _, conn := range uw.Connections {
 		err := conn.Close()
 		if err != nil {
-			return err
+			errs = append(errs, err)
 		}
 	}
 
-	return nil
+	return utilerrors.NewAggregate(errs)
 }
 
 // GetUpgraderWrapper returns an upgrade wrapper for the given config @Factory
 func (client *client) GetUpgraderWrapper() (http.RoundTripper, UpgraderWrapper, error) {
-	wrapper, upgradeRoundTripper, err := transport.RoundTripperFor(client.restConfig)
+	wrapper, upgradeRoundTripper, err := clientspdy.RoundTripperFor(client.restConfig)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -72,4 +58,27 @@ func (client *client) GetUpgraderWrapper() (http.RoundTripper, UpgraderWrapper, 
 		Upgrader:    upgradeRoundTripper,
 		Connections: make([]httpstream.Connection, 0, 1),
 	}, nil
+}
+
+func (client *client) roundTripperFor(config *rest.Config) (http.RoundTripper, clientspdy.Upgrader, error) {
+	tlsConfig, err := restclient.TLSConfigFor(config)
+	if err != nil {
+		return nil, nil, err
+	}
+	proxy := http.ProxyFromEnvironment
+	if config.Proxy != nil {
+		proxy = config.Proxy
+	}
+	upgradeRoundTripper := spdy.NewRoundTripperWithConfig(spdy.RoundTripperConfig{
+		TLS:                      tlsConfig,
+		FollowRedirects:          true,
+		RequireSameHostRedirects: false,
+		Proxier:                  proxy,
+		PingPeriod:               time.Second * 10,
+	})
+	wrapper, err := restclient.HTTPWrappersForConfig(config, upgradeRoundTripper)
+	if err != nil {
+		return nil, nil, err
+	}
+	return wrapper, upgradeRoundTripper, nil
 }
