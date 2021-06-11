@@ -189,10 +189,8 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 		return nil, errors.Errorf("Error selecting pod: %v", err)
 	}
 
-	syncDone := make(chan bool)
-
 	log.Info("Starting sync...")
-	syncClient, err := c.initClient(container.Pod, container.Container.Name, syncConfig, options.Verbose, syncDone, options.SyncLog)
+	syncClient, err := c.initClient(container.Pod, container.Container.Name, syncConfig, options.Verbose, options.SyncLog)
 	if err != nil {
 		return nil, errors.Wrap(err, "start sync")
 	}
@@ -222,7 +220,7 @@ func (c *controller) isFatalSyncError(err error) bool {
 	return false
 }
 
-func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, syncDone chan bool, customLog logpkg.Logger) (*sync.Sync, error) {
+func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, customLog logpkg.Logger) (*sync.Sync, error) {
 	err := inject.InjectDevSpaceHelper(c.client, pod, container, string(syncConfig.Arch), c.log)
 	if err != nil {
 		return nil, err

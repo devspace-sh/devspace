@@ -15,6 +15,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	v1 "k8s.io/api/core/v1"
 	"net/http"
@@ -22,6 +23,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -37,8 +39,21 @@ var helperBinaryRegEx = `href="(\/loft-sh\/devspace\/releases\/download\/[^\/]*\
 // DevSpaceHelperContainerPath is the path of the devspace helper in the container
 const DevSpaceHelperContainerPath = "/tmp/devspacehelper"
 
+// injectMutex makes sure we only inject one devspacehelper at the time
+var injectMutex = sync.Mutex{}
+
 // InjectDevSpaceHelper injects the devspace helper into the provided container
-func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, arch string, log logpkg.Logger) error {
+func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, arch string, log logpkg.Logger) (err error) {
+	injectMutex.Lock()
+	defer injectMutex.Unlock()
+	defer func() {
+		if r := recover(); r != nil {
+			if err == nil {
+				err = fmt.Errorf("inject devspacehelper: %v", r)
+			}
+		}
+	}()
+
 	// Compare sync versions
 	version := upgrade.GetRawVersion()
 	if version == "" {
@@ -56,10 +71,12 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 	localHelperName := "devspacehelper" + arch
 	stdout, _, err := client.ExecBuffered(pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
 	if err != nil || version != string(stdout) {
+		log.Infof("Inject devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
+
 		// check if we can find it in the assets
 		helperBytes, err := assets.Asset("release/" + localHelperName)
 		if err == nil {
-			return injectSyncHelperFromBytes(client, pod, container, helperBytes)
+			return injectSyncHelperFromBytes(client, pod, container, helperFileInfo(helperBytes), bytes.NewReader(helperBytes))
 		}
 
 		homedir, err := homedir.Dir()
@@ -77,7 +94,7 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 
 		// Inject sync helper
 		filepath := filepath.Join(syncBinaryFolder, localHelperName)
-		err = injectSyncHelper(client, pod, container, filepath)
+		err = injectSyncHelper(client, pod, container, filepath, log)
 		if err != nil {
 			return errors.Wrap(err, "inject devspace helper")
 		}
@@ -227,84 +244,7 @@ func (h helperFileInfo) Sys() interface{} {
 	return nil
 }
 
-func injectSyncHelperFromBytes(client kubectl.Client, pod *v1.Pod, container string, b []byte) error {
-	// Compress the sync helper and then copy it to the container
-	reader, writer := io.Pipe()
-
-	defer reader.Close()
-	defer writer.Close()
-
-	// Start reading on the other end
-	errChan := make(chan error)
-	go func() {
-		errChan <- client.CopyFromReader(pod, container, "/tmp", reader)
-	}()
-
-	// Use compression
-	gw := gzip.NewWriter(writer)
-	defer gw.Close()
-
-	// Create tar writer
-	tarWriter := tar.NewWriter(gw)
-	defer tarWriter.Close()
-
-	hdr, err := tar.FileInfoHeader(helperFileInfo(b), DevSpaceHelperTempFolder)
-	if err != nil {
-		return errors.Wrap(err, "create tar file info header")
-	}
-
-	hdr.Name = "devspacehelper"
-
-	// Set permissions correctly
-	hdr.Mode = 0777
-	hdr.Uid = 0
-	hdr.Uname = "root"
-	hdr.Gid = 0
-	hdr.Gname = "root"
-
-	if err := tarWriter.WriteHeader(hdr); err != nil {
-		return errors.Wrap(err, "tar write header")
-	}
-
-	go func() {
-		_, err = io.Copy(tarWriter, bytes.NewReader(b))
-
-		// Close all writers and file
-		tarWriter.Close()
-		gw.Close()
-		writer.Close()
-		
-		errChan <- err
-	}()
-	
-	err = <-errChan
-	if err != nil {
-		return errors.Wrap(err, "inject devspacehelper")
-	}
-	
-	return <-errChan
-}
-
-func injectSyncHelper(client kubectl.Client, pod *v1.Pod, container string, filepath string) error {
-	// Compress the sync helper and then copy it to the container
-	reader, writer := io.Pipe()
-	defer reader.Close()
-	defer writer.Close()
-
-	// Start reading on the other end
-	errChan := make(chan error)
-	go func() {
-		errChan <- client.CopyFromReader(pod, container, "/tmp", reader)
-	}()
-
-	// Use compression
-	gw := gzip.NewWriter(writer)
-	defer gw.Close()
-
-	// Create tar writer
-	tarWriter := tar.NewWriter(gw)
-	defer tarWriter.Close()
-
+func injectSyncHelper(client kubectl.Client, pod *v1.Pod, container string, filepath string, log logpkg.Logger) error {
 	// Stat sync helper
 	stat, err := os.Stat(filepath)
 	if err != nil {
@@ -319,7 +259,24 @@ func injectSyncHelper(client kubectl.Client, pod *v1.Pod, container string, file
 
 	defer f.Close()
 
-	hdr, err := tar.FileInfoHeader(stat, filepath)
+	return injectSyncHelperFromBytes(client, pod, container, stat, f)
+}
+
+func injectSyncHelperFromBytes(client kubectl.Client, pod *v1.Pod, container string, fi fs.FileInfo, bytesReader io.Reader) error {
+	// Compress the sync helper and then copy it to the container
+	reader, writer := io.Pipe()
+	defer reader.Close()
+	defer writer.Close()
+
+	// Use compression
+	gw := gzip.NewWriter(writer)
+	defer gw.Close()
+
+	// Create tar writer
+	tarWriter := tar.NewWriter(gw)
+	defer tarWriter.Close()
+
+	hdr, err := tar.FileInfoHeader(fi, DevSpaceHelperTempFolder)
 	if err != nil {
 		return errors.Wrap(err, "create tar file info header")
 	}
@@ -333,26 +290,57 @@ func injectSyncHelper(client kubectl.Client, pod *v1.Pod, container string, file
 	hdr.Gid = 0
 	hdr.Gname = "root"
 
-	if err := tarWriter.WriteHeader(hdr); err != nil {
-		return errors.Wrap(err, "tar write header")
-	}
+	var (
+		retErr    error
+		setRetErr sync.Once
+	)
+	writerComplete := make(chan struct{})
+	readerComplete := make(chan struct{})
 
 	go func() {
-		_, err = io.Copy(tarWriter, f)
+		defer close(readerComplete)
+		defer func() {
+			if r := recover(); r != nil {
+				setRetErr.Do(func() {
+					retErr = err
+				})
+			}
+		}()
 
-		// Close all writers and file
-		f.Close()
-		tarWriter.Close()
-		gw.Close()
-		writer.Close()
-
-		errChan <- err
+		err := client.CopyFromReader(pod, container, "/tmp", reader)
+		setRetErr.Do(func() {
+			retErr = err
+		})
 	}()
 
-	err = <-errChan
-	if err != nil {
-		return errors.Wrap(err, "inject devspacehelper")
+	go func() {
+		defer close(writerComplete)
+		defer func() {
+			if r := recover(); r != nil {
+				setRetErr.Do(func() {
+					retErr = err
+				})
+			}
+		}()
+
+		err := tarWriter.WriteHeader(hdr)
+		if err != nil {
+			setRetErr.Do(func() {
+				retErr = err
+			})
+			return
+		}
+
+		_, err = io.Copy(tarWriter, bytesReader)
+		setRetErr.Do(func() {
+			retErr = err
+		})
+	}()
+
+	select {
+	case <-writerComplete:
+	case <-readerComplete:
 	}
 
-	return <-errChan
+	return retErr
 }
