@@ -259,6 +259,12 @@ func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, parser
 		return nil, nil, nil, err
 	}
 
+	// validate variables
+	err = validateVars(vars)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	// Delete vars from config
 	delete(copiedRawConfig, "vars")
 

@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"fmt"
 	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm/merge"
@@ -70,6 +71,23 @@ func validate(config *latest.Config, log log.Logger) error {
 	err = validateDependencies(config)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func validateVars(vars []*latest.Variable) error {
+	for i, v := range vars {
+		if v.Name == "" {
+			return fmt.Errorf("vars[*].name has to be specified")
+		}
+
+		// make sure is unique
+		for j, v2 := range vars {
+			if i != j && v.Name == v2.Name {
+				return fmt.Errorf("multiple definitions for variable %s found", v.Name)
+			}
+		}
 	}
 
 	return nil
