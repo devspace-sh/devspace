@@ -1,8 +1,8 @@
-The `imageSelector` option expects an image (e.g. `my-registry.com/lib/my-image:tag`) to select a target pod and container with. The newest running pod that has a container that specifies this image will be selected by DevSpace.
+The `imageSelector` option expects a string that specifies an image (e.g. `my-registry.com/lib/my-image:tag`) to select a target pod and container with. The newest running pod that has a container which matches this image will be selected by DevSpace.
 
-Besides specifying a complete image, you can also reference images from the `images` section or even from `dependencies` within the `imageSelector` with:
-- If the image you specify exists in `images.*.image`, DevSpace will automatically append the latest built tag during runtime.
-- You can also let DevSpace resolve the actual image name and latest tag by using the helpers `image()` or `tag()`
+In addition, you can also reference images from the `images` section in the `imageSelector` with:
+- If the image in `imageSelector` matches a `images.*.image`, DevSpace will automatically append the latest built tag during runtime to the `imageSelector`.
+- You can also let DevSpace resolve the target image and tag by using the helpers `image()` or `tag()`
 
 For example:
 ```yaml

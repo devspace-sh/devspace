@@ -224,8 +224,10 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	if cloned.Vars == nil {
 		cloned.Vars = []string{}
 	}
-	for k, v := range r.BaseVars {
-		cloned.Vars = append(cloned.Vars, strings.TrimSpace(k)+"="+strings.TrimSpace(fmt.Sprintf("%v", v)))
+	if dependency.OverwriteVars == nil || *dependency.OverwriteVars == true {
+		for k, v := range r.BaseVars {
+			cloned.Vars = append(cloned.Vars, strings.TrimSpace(k)+"="+strings.TrimSpace(fmt.Sprintf("%v", v)))
+		}
 	}
 	for _, v := range dependency.Vars {
 		cloned.Vars = append(cloned.Vars, strings.TrimSpace(v.Name)+"="+strings.TrimSpace(v.Value))
