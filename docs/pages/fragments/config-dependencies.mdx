@@ -16,6 +16,7 @@ dependencies:                       # struct[]  | Array of dependencies (other p
   dev:                              # struct    | Define which dev config should be reused from a dependency
     ports: false                    # bool      | Reuse dev.ports config from the dependency
     sync: false                     # bool      | Reuse dev.sync config from the dependency
+  overwriteVars: true               # bool      | If not defined or true, will overwrite values of variables with the same name in the dependency
   vars:                             # struct[]  | Variables in the dependency config that should be overriden with the specified values 
   - name: NAME
     value: value
