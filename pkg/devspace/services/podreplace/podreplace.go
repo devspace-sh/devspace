@@ -220,6 +220,19 @@ func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config
 	}
 
 	// try to find a single patchable object
+	parent, err := p.findScaledDownParentBySelector(ctx, client, config, dependencies, replacePod, log)
+	if err != nil {
+		return err
+	} else if parent != nil {
+		accessor, _ := meta.Accessor(parent)
+		typeAccessor, _ := meta.TypeAccessor(parent)
+		log.Infof("Reset %s %s/%s", typeAccessor.GetKind(), accessor.GetNamespace(), accessor.GetName())
+		err = scaleUpParent(ctx, client, parent)
+		if err != nil {
+			return err
+		}
+	}
+
 	log.StartWait("Try to find replaceable pod...")
 	container, parent, err := findSingleReplaceablePodParent(ctx, client, config, dependencies, replacePod, log)
 	if err != nil {

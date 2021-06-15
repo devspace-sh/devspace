@@ -224,7 +224,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	if cloned.Vars == nil {
 		cloned.Vars = []string{}
 	}
-	if dependency.ForwardVars == nil || *dependency.ForwardVars == true {
+	if dependency.OverwriteVars == nil || *dependency.OverwriteVars == true {
 		for k, v := range r.BaseVars {
 			cloned.Vars = append(cloned.Vars, strings.TrimSpace(k)+"="+strings.TrimSpace(fmt.Sprintf("%v", v)))
 		}

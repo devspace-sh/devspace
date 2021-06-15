@@ -904,7 +904,7 @@ type DependencyConfig struct {
 	Profile            string          `yaml:"profile,omitempty" json:"profile,omitempty"`
 	ProfileParents     []string        `yaml:"profileParents,omitempty" json:"profileParents,omitempty"`
 	Vars               []DependencyVar `yaml:"vars,omitempty" json:"vars,omitempty"`
-	ForwardVars        *bool           `yaml:"forwardVars,omitempty" json:"forwardVars,omitempty"`
+	OverwriteVars      *bool           `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
 	SkipBuild          bool            `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
 	IgnoreDependencies bool            `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
 	Namespace          string          `yaml:"namespace,omitempty" json:"namespace,omitempty"`
