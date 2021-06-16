@@ -43,16 +43,13 @@ const DevSpaceHelperContainerPath = "/tmp/devspacehelper"
 var injectMutex = sync.Mutex{}
 
 // InjectDevSpaceHelper injects the devspace helper into the provided container
-func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, arch string, log logpkg.Logger) (err error) {
+func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, arch string, log logpkg.Logger) error {
+	if log == nil {
+		log = logpkg.Discard
+	}
+
 	injectMutex.Lock()
 	defer injectMutex.Unlock()
-	defer func() {
-		if r := recover(); r != nil {
-			if err == nil {
-				err = fmt.Errorf("inject devspacehelper: %v", r)
-			}
-		}
-	}()
 
 	// Compare sync versions
 	version := upgrade.GetRawVersion()
@@ -93,8 +90,7 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 		}
 
 		// Inject sync helper
-		filepath := filepath.Join(syncBinaryFolder, localHelperName)
-		err = injectSyncHelper(client, pod, container, filepath, log)
+		err = injectSyncHelper(client, pod, container, filepath.Join(syncBinaryFolder, localHelperName), log)
 		if err != nil {
 			return errors.Wrap(err, "inject devspace helper")
 		}
@@ -258,54 +254,30 @@ func injectSyncHelper(client kubectl.Client, pod *v1.Pod, container string, file
 	}
 
 	defer f.Close()
-
 	return injectSyncHelperFromBytes(client, pod, container, stat, f)
 }
 
 func injectSyncHelperFromBytes(client kubectl.Client, pod *v1.Pod, container string, fi fs.FileInfo, bytesReader io.Reader) error {
+	writerComplete := make(chan struct{})
+	readerComplete := make(chan struct{})
+
 	// Compress the sync helper and then copy it to the container
 	reader, writer := io.Pipe()
-	defer reader.Close()
-	defer writer.Close()
-
-	// Use compression
-	gw := gzip.NewWriter(writer)
-	defer gw.Close()
-
-	// Create tar writer
-	tarWriter := tar.NewWriter(gw)
-	defer tarWriter.Close()
-
-	hdr, err := tar.FileInfoHeader(fi, DevSpaceHelperTempFolder)
-	if err != nil {
-		return errors.Wrap(err, "create tar file info header")
-	}
-
-	hdr.Name = "devspacehelper"
-
-	// Set permissions correctly
-	hdr.Mode = 0777
-	hdr.Uid = 0
-	hdr.Uname = "root"
-	hdr.Gid = 0
-	hdr.Gname = "root"
-
 	var (
 		retErr    error
 		setRetErr sync.Once
 	)
-	writerComplete := make(chan struct{})
-	readerComplete := make(chan struct{})
 
 	go func() {
 		defer close(readerComplete)
 		defer func() {
 			if r := recover(); r != nil {
 				setRetErr.Do(func() {
-					retErr = err
+					retErr = fmt.Errorf("%v", r)
 				})
 			}
 		}()
+		defer reader.Close()
 
 		err := client.CopyFromReader(pod, container, "/tmp", reader)
 		setRetErr.Do(func() {
@@ -318,12 +290,38 @@ func injectSyncHelperFromBytes(client kubectl.Client, pod *v1.Pod, container str
 		defer func() {
 			if r := recover(); r != nil {
 				setRetErr.Do(func() {
-					retErr = err
+					retErr = fmt.Errorf("%v", r)
 				})
 			}
 		}()
+		defer writer.Close()
 
-		err := tarWriter.WriteHeader(hdr)
+		// Use compression
+		gw := gzip.NewWriter(writer)
+		defer gw.Close()
+
+		// Create tar writer
+		tarWriter := tar.NewWriter(gw)
+		defer tarWriter.Close()
+
+		hdr, err := tar.FileInfoHeader(fi, DevSpaceHelperTempFolder)
+		if err != nil {
+			setRetErr.Do(func() {
+				retErr = err
+			})
+			return
+		}
+
+		hdr.Name = "devspacehelper"
+
+		// Set permissions correctly
+		hdr.Mode = 0777
+		hdr.Uid = 0
+		hdr.Uname = "root"
+		hdr.Gid = 0
+		hdr.Gname = "root"
+
+		err = tarWriter.WriteHeader(hdr)
 		if err != nil {
 			setRetErr.Do(func() {
 				retErr = err
@@ -337,10 +335,21 @@ func injectSyncHelperFromBytes(client kubectl.Client, pod *v1.Pod, container str
 		})
 	}()
 
+	// wait for reader or writer to finish
 	select {
 	case <-writerComplete:
+		if retErr != nil {
+			return retErr
+		}
+
+		<-readerComplete
 	case <-readerComplete:
+		if retErr != nil {
+			return retErr
+		}
+
+		<-writerComplete
 	}
 
-	return retErr
+	return nil
 }
