@@ -106,9 +106,9 @@ func (u *upstream) startPing(doneChan chan struct{}) {
 			select {
 			case <-doneChan:
 				return
-			case <-time.After(time.Second * 30):
+			case <-time.After(time.Second * 20):
 				if u.client != nil {
-					ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 					_, err := u.client.Ping(ctx, &remote.Empty{})
 					cancel()
 					if err != nil {
@@ -476,7 +476,6 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 
 	// Create a pipe for reading and writing
 	reader, writer := io.Pipe()
-
 	defer reader.Close()
 	defer writer.Close()
 
@@ -536,7 +535,9 @@ func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ign
 	return archiver, nil
 }
 
-func (u *upstream) uploadArchive(reader io.Reader) error {
+func (u *upstream) uploadArchive(reader io.ReadCloser) error {
+	defer reader.Close()
+
 	// cancel after 1 hour
 	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
 	defer cancel()

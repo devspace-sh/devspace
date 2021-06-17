@@ -154,6 +154,7 @@ func (d *Downstream) Download(stream remote.Downstream_DownloadServer) error {
 		}
 	}
 
+	reader.Close()
 	return <-errorChan
 }
 

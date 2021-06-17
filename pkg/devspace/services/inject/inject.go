@@ -90,7 +90,7 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 		}
 
 		// Inject sync helper
-		err = injectSyncHelper(client, pod, container, filepath.Join(syncBinaryFolder, localHelperName), log)
+		err = injectSyncHelper(client, pod, container, filepath.Join(syncBinaryFolder, localHelperName))
 		if err != nil {
 			return errors.Wrap(err, "inject devspace helper")
 		}
@@ -240,7 +240,7 @@ func (h helperFileInfo) Sys() interface{} {
 	return nil
 }
 
-func injectSyncHelper(client kubectl.Client, pod *v1.Pod, container string, filepath string, log logpkg.Logger) error {
+func injectSyncHelper(client kubectl.Client, pod *v1.Pod, container string, filepath string) error {
 	// Stat sync helper
 	stat, err := os.Stat(filepath)
 	if err != nil {

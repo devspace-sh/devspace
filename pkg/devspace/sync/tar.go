@@ -38,7 +38,9 @@ func NewUnarchiver(syncConfig *Sync, forceOverride bool, log log.Logger) *Unarch
 }
 
 // Untar untars the given reader into the destination directory
-func (u *Unarchiver) Untar(fromReader io.Reader, toPath string) error {
+func (u *Unarchiver) Untar(fromReader io.ReadCloser, toPath string) error {
+	defer fromReader.Close()
+
 	fileCounter := 0
 	gzr, err := gzip.NewReader(fromReader)
 	if err != nil {
