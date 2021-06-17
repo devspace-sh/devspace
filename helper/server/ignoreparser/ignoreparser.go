@@ -73,7 +73,6 @@ func CompilePaths(excludePaths []string) (IgnoreParser, error) {
 				} else {
 					requireFullScan = true
 				}
-				break
 			}
 		}
 
