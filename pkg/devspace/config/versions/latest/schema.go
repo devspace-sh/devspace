@@ -573,6 +573,7 @@ type ServiceConfig struct {
 
 // ServicePortConfig holds the port configuration of a component service
 type ServicePortConfig struct {
+	Name          string `yaml:"name,omitempty" json:"name,omitempty"`
 	Port          *int   `yaml:"port,omitempty" json:"port,omitempty"`
 	ContainerPort *int   `yaml:"containerPort,omitempty" json:"containerPort,omitempty"`
 	Protocol      string `yaml:"protocol,omitempty" json:"protocol,omitempty"`
