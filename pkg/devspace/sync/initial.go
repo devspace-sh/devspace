@@ -242,6 +242,8 @@ func (i *initialSyncer) deltaPath(absPath string, remoteState map[string]*FileIn
 	// Check if stat is somehow not there
 	if stat == nil {
 		return nil, nil
+	} else if i.o.IgnoreMatcher != nil && i.o.IgnoreMatcher.RequireFullScan() == false && i.o.IgnoreMatcher.Matches(relativePath, stat.IsDir()) {
+		return nil, nil
 	}
 
 	if stat.IsDir() {
