@@ -1,17 +1,16 @@
 package sync
 
 import (
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"io/ioutil"
 	"os"
 	"path"
 
 	"github.com/loft-sh/devspace/helper/remote"
-	"github.com/loft-sh/devspace/helper/util"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
-	gitignore "github.com/sabhiram/go-gitignore"
 )
 
 type initialSyncer struct {
@@ -24,9 +23,9 @@ type initialSyncOptions struct {
 	CompareBy latest.InitialSyncCompareBy
 	Strategy  latest.InitialSyncStrategy
 
-	IgnoreMatcher         gitignore.IgnoreParser
-	DownloadIgnoreMatcher gitignore.IgnoreParser
-	UploadIgnoreMatcher   gitignore.IgnoreParser
+	IgnoreMatcher         ignoreparser.IgnoreParser
+	DownloadIgnoreMatcher ignoreparser.IgnoreParser
+	UploadIgnoreMatcher   ignoreparser.IgnoreParser
 
 	UpstreamDisabled   bool
 	DownstreamDisabled bool
@@ -66,7 +65,7 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation) error {
 			if len(download) > 0 && i.o.Strategy == latest.InitialSyncStrategyMirrorLocal {
 				deleteRemote := make([]*FileInformation, 0, len(download))
 				for _, element := range download {
-					if i.o.UploadIgnoreMatcher != nil && util.MatchesPath(i.o.UploadIgnoreMatcher, element.Name, element.IsDirectory) {
+					if i.o.UploadIgnoreMatcher != nil && i.o.UploadIgnoreMatcher.Matches(element.Name, element.IsDirectory) {
 						continue
 					}
 
@@ -85,7 +84,7 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation) error {
 					// only apply the ones that match the downstream ignore matcher
 					changes := []*FileInformation{}
 					for _, element := range upload {
-						if i.o.DownloadIgnoreMatcher != nil && util.MatchesPath(i.o.DownloadIgnoreMatcher, element.Name, element.IsDirectory) {
+						if i.o.DownloadIgnoreMatcher != nil && i.o.DownloadIgnoreMatcher.Matches(element.Name, element.IsDirectory) {
 							changes = append(changes, element)
 						}
 					}
@@ -108,7 +107,7 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation) error {
 		if len(upload) > 0 && i.o.Strategy == latest.InitialSyncStrategyMirrorRemote {
 			remoteChanges := make([]*remote.Change, 0, len(upload))
 			for _, element := range upload {
-				if i.o.DownloadIgnoreMatcher != nil && util.MatchesPath(i.o.DownloadIgnoreMatcher, element.Name, element.IsDirectory) {
+				if i.o.DownloadIgnoreMatcher != nil && i.o.DownloadIgnoreMatcher.Matches(element.Name, element.IsDirectory) {
 					continue
 				}
 
@@ -134,7 +133,7 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation) error {
 				// only apply the ones that match the upstream ignore matcher
 				remoteChanges := make([]*remote.Change, 0, len(download))
 				for _, element := range download {
-					if i.o.UploadIgnoreMatcher != nil && util.MatchesPath(i.o.UploadIgnoreMatcher, element.Name, element.IsDirectory) {
+					if i.o.UploadIgnoreMatcher != nil && i.o.UploadIgnoreMatcher.Matches(element.Name, element.IsDirectory) {
 						remoteChanges = append(remoteChanges, &remote.Change{
 							ChangeType:    remote.ChangeType_CHANGE,
 							Path:          element.Name,
@@ -198,7 +197,7 @@ func (i *initialSyncer) deltaPath(absPath string, remoteState map[string]*FileIn
 
 	// Exclude changes on the upload exclude list
 	if i.o.UploadIgnoreMatcher != nil {
-		if util.MatchesPath(i.o.UploadIgnoreMatcher, relativePath, stat.IsDir()) {
+		if i.o.UploadIgnoreMatcher.Matches(relativePath, stat.IsDir()) {
 			i.o.FileIndex.Lock()
 			// Add to file map and prevent download if local file is newer than the remote one
 			if i.o.FileIndex.fileMap[relativePath] != nil {
@@ -342,7 +341,7 @@ func (i *initialSyncer) decide(fileInformation *FileInformation, strategy latest
 
 	// Exclude changes on the exclude list
 	if i.o.IgnoreMatcher != nil {
-		if util.MatchesPath(i.o.IgnoreMatcher, fileInformation.Name, fileInformation.IsDirectory) {
+		if i.o.IgnoreMatcher.Matches(fileInformation.Name, fileInformation.IsDirectory) {
 			return noAction
 		}
 	}

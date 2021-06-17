@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/bmatcuk/doublestar"
-	"github.com/loft-sh/devspace/helper/util"
 	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
@@ -116,7 +115,7 @@ func (w *watcher) Update() ([]string, []string, error) {
 			}
 
 			// is excluded?
-			if w.Exclude != nil && util.MatchesPath(w.Exclude, file, stat.IsDir()) {
+			if w.Exclude != nil && w.Exclude.Matches(file, stat.IsDir()) {
 				continue
 			}
 

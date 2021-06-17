@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/loft-sh/devspace/helper/util"
 	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
@@ -258,7 +257,7 @@ func (a *Archiver) AddToArchive(relativePath string) error {
 	}
 
 	// Exclude files on the exclude list if it does not have a negate pattern, otherwise we will check below
-	if a.ignoreMatcher != nil && a.ignoreMatcher.HasNegatePatterns() == false && util.MatchesPath(a.ignoreMatcher, relativePath, stat.IsDir()) {
+	if a.ignoreMatcher != nil && a.ignoreMatcher.RequireFullScan() == false && a.ignoreMatcher.Matches(relativePath, stat.IsDir()) {
 		return nil
 	}
 
@@ -269,7 +268,7 @@ func (a *Archiver) AddToArchive(relativePath string) error {
 	}
 
 	// exclude file?
-	if a.ignoreMatcher == nil || a.ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(a.ignoreMatcher, relativePath, false) == false {
+	if a.ignoreMatcher == nil || a.ignoreMatcher.RequireFullScan() == false || a.ignoreMatcher.Matches(relativePath, false) == false {
 		return a.tarFile(fileInformation, stat)
 	}
 
@@ -286,7 +285,7 @@ func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) er
 
 	if len(files) == 0 && target.Name != "" {
 		// check if not excluded
-		if a.ignoreMatcher == nil || a.ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(a.ignoreMatcher, target.Name, true) == false {
+		if a.ignoreMatcher == nil || a.ignoreMatcher.RequireFullScan() == false || a.ignoreMatcher.Matches(target.Name, true) == false {
 			// Case empty directory
 			hdr, _ := tar.FileInfoHeader(targetStat, filepath)
 			hdr.Uid = 0

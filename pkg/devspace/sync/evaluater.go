@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/loft-sh/devspace/helper/remote"
-	"github.com/loft-sh/devspace/helper/util"
 )
 
 // s.fileIndex needs to be locked before this function is called
@@ -21,14 +20,14 @@ func shouldRemoveRemote(relativePath string, s *Sync) bool {
 
 	// Exclude changes on the exclude list
 	if s.ignoreMatcher != nil {
-		if util.MatchesPath(s.ignoreMatcher, relativePath, s.fileIndex.fileMap[relativePath].IsDirectory) {
+		if s.ignoreMatcher.Matches(relativePath, s.fileIndex.fileMap[relativePath].IsDirectory) {
 			return false
 		}
 	}
 
 	// Exclude changes on the upload exclude list
 	if s.uploadIgnoreMatcher != nil {
-		if util.MatchesPath(s.uploadIgnoreMatcher, relativePath, s.fileIndex.fileMap[relativePath].IsDirectory) {
+		if s.ignoreMatcher.Matches(relativePath, s.fileIndex.fileMap[relativePath].IsDirectory) {
 			return false
 		}
 	}
@@ -56,7 +55,7 @@ func shouldUpload(s *Sync, fileInformation *FileInformation) bool {
 
 	// Exclude changes on the exclude list
 	if s.ignoreMatcher != nil {
-		if util.MatchesPath(s.ignoreMatcher, fileInformation.Name, fileInformation.IsDirectory) {
+		if s.ignoreMatcher.Matches(fileInformation.Name, fileInformation.IsDirectory) {
 			return false
 		}
 	}

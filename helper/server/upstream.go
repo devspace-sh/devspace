@@ -134,7 +134,7 @@ func (u *Upstream) removeRecursive(absolutePath string) error {
 		absoluteChildPath := filepath.Join(absolutePath, f.Name())
 
 		// Check if ignored
-		if u.ignoreMatcher != nil && u.ignoreMatcher.HasNegatePatterns() == false && util.MatchesPath(u.ignoreMatcher, absolutePath[len(u.options.UploadPath):], f.IsDir()) {
+		if u.ignoreMatcher != nil && u.ignoreMatcher.RequireFullScan() == false && u.ignoreMatcher.Matches(absolutePath[len(u.options.UploadPath):], f.IsDir()) {
 			continue
 		}
 
@@ -144,14 +144,14 @@ func (u *Upstream) removeRecursive(absolutePath string) error {
 			_ = u.removeRecursive(absoluteChildPath)
 		} else {
 			// Check if not ignored
-			if u.ignoreMatcher == nil || u.ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(u.ignoreMatcher, absolutePath[len(u.options.UploadPath):], false) == false {
+			if u.ignoreMatcher == nil || u.ignoreMatcher.RequireFullScan() == false || u.ignoreMatcher.Matches(absolutePath[len(u.options.UploadPath):], false) == false {
 				_ = os.Remove(absoluteChildPath)
 			}
 		}
 	}
 
 	// Check if not ignored
-	if u.ignoreMatcher == nil || u.ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(u.ignoreMatcher, absolutePath[len(u.options.UploadPath):], true) == false {
+	if u.ignoreMatcher == nil || u.ignoreMatcher.RequireFullScan() == false || u.ignoreMatcher.Matches(absolutePath[len(u.options.UploadPath):], true) == false {
 		// This will not remove the directory if there is still a file or directory in it
 		return os.Remove(absolutePath)
 	}

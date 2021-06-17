@@ -3,39 +3,76 @@ package ignoreparser
 import (
 	"github.com/pkg/errors"
 	gitignore "github.com/sabhiram/go-gitignore"
+	"path"
 	"strings"
 )
 
 // IgnoreParser is a wrapping interface for gitignore.IgnoreParser that
 // adds a method to find out if the parser has any negating patterns
 type IgnoreParser interface {
-	gitignore.IgnoreParser
+	// Matches returns if the given relative path matches the ignore parser
+	Matches(relativePath string, isDir bool) bool
 
-	// This is useful for optimization, since if an ignore parser has no
-	// negate patterns, we can skip certain sub trees that do are ignored
+	// RequireFullScan is useful for optimization, since if an ignore parser has no
+	// general negate patterns, we can skip certain sub trees that do are ignored
 	// by another rule.
-	HasNegatePatterns() bool
+	RequireFullScan() bool
 }
 
 type ignoreParser struct {
-	gitignore.IgnoreParser
-	NegatePatterns bool
+	ignoreParser gitignore.IgnoreParser
+
+	absoluteNegatePatterns []string
+	requireFullScan        bool
 }
 
-func (i *ignoreParser) HasNegatePatterns() bool {
-	return i.NegatePatterns
+func (i *ignoreParser) Matches(relativePath string, isDir bool) bool {
+	relativePath = strings.TrimRight(relativePath, "/")
+	if isDir {
+		relativePath = relativePath + "/"
+	}
+
+	if strings.HasPrefix(relativePath, "./") {
+		relativePath = relativePath[1:]
+	} else if strings.HasPrefix(relativePath, "/") == false {
+		relativePath = "/" + relativePath
+	}
+
+	if isDir {
+		for _, p := range i.absoluteNegatePatterns {
+			if strings.Index(p, relativePath) == 0 {
+				return false
+			}
+		}
+	}
+
+	return i.ignoreParser.MatchesPath(relativePath)
+}
+
+func (i *ignoreParser) RequireFullScan() bool {
+	return i.requireFullScan
 }
 
 // CompilePaths creates a new ignore parser from a string array
 func CompilePaths(excludePaths []string) (IgnoreParser, error) {
 	if len(excludePaths) > 0 {
-		negatePattern := false
+		requireFullScan := false
+		absoluteNegatePatterns := []string{}
 		for _, line := range excludePaths {
 			line = strings.Trim(line, " ")
 			if line == "" {
 				continue
 			} else if line[0] == '!' {
-				negatePattern = true
+				if len(line) > 1 && line[1] == '/' {
+					p := line[1:]
+					if strings.Contains(p, "**") == false && strings.Contains(path.Dir(p), "*") == false {
+						absoluteNegatePatterns = append(absoluteNegatePatterns, p)
+					} else {
+						requireFullScan = true
+					}
+				} else {
+					requireFullScan = true
+				}
 				break
 			}
 		}
@@ -46,8 +83,9 @@ func CompilePaths(excludePaths []string) (IgnoreParser, error) {
 		}
 
 		return &ignoreParser{
-			IgnoreParser:   gitIgnoreParser,
-			NegatePatterns: negatePattern,
+			ignoreParser:           gitIgnoreParser,
+			absoluteNegatePatterns: absoluteNegatePatterns,
+			requireFullScan:        requireFullScan,
 		}, nil
 	}
 
