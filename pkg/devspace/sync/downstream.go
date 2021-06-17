@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/juju/ratelimit"
@@ -340,6 +341,11 @@ func (d *downstream) downloadFiles(writer io.WriteCloser, changes []*remote.Chan
 		if chunk != nil {
 			_, err := writer.Write(chunk.Content)
 			if err != nil {
+				// this means the tar is done already, so we just exit here
+				if strings.Contains(err.Error(), "io: read/write on closed pipe") {
+					return nil
+				}
+
 				return errors.Wrap(err, "write chunk")
 			}
 		}

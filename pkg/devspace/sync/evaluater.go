@@ -122,13 +122,15 @@ func shouldRemoveLocal(absFilepath string, fileInformation *FileInformation, s *
 	// in the beginning of the downstream mainLoop
 
 	// Only delete if mtime and size did not change
-	stat, err := os.Stat(absFilepath)
+	stat, err := os.Lstat(absFilepath)
 	if err != nil {
 		if os.IsNotExist(err) == false {
 			s.log.Infof("Skip %s because stat returned %v", absFilepath, err)
 		}
 
 		return false
+	} else if stat.Mode()&os.ModeSymlink != 0 {
+		return true
 	}
 
 	// Check if deletion is forced

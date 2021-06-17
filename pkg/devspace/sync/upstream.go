@@ -402,21 +402,31 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 
 	// Apply creates
 	if len(creates) > 0 {
-		for i := 0; i < syncRetries; i++ {
-			err := u.applyCreates(creates)
-			if err == nil {
-				break
-			} else if i+1 >= syncRetries {
-				return errors.Wrap(err, "apply creates")
-			} else if strings.HasSuffix(err.Error(), "transport is closing") || strings.HasSuffix(err.Error(), "broken pipe") {
-				return errors.Wrap(err, "apply creates")
+		err := func() error {
+			u.sync.fileIndex.fileMapMutex.Lock()
+			defer u.sync.fileIndex.fileMapMutex.Unlock()
+
+			for i := 0; i < syncRetries; i++ {
+				err := u.applyCreates(creates)
+				if err == nil {
+					break
+				} else if i+1 >= syncRetries {
+					return errors.Wrap(err, "apply creates")
+				} else if strings.HasSuffix(err.Error(), "transport is closing") || strings.HasSuffix(err.Error(), "broken pipe") {
+					return errors.Wrap(err, "apply creates")
+				}
+
+				u.sync.log.Infof("Upstream - Retry upload because of error: %v", err)
+				creates = u.updateUploadChanges(creates)
+				if len(creates) == 0 {
+					break
+				}
 			}
 
-			u.sync.log.Infof("Upstream - Retry upload because of error: %v", err)
-			creates = u.updateUploadChanges(creates)
-			if len(creates) == 0 {
-				break
-			}
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
 	}
 
@@ -443,9 +453,6 @@ func (u *upstream) RestartContainer() error {
 }
 
 func (u *upstream) updateUploadChanges(files []*FileInformation) []*FileInformation {
-	u.sync.fileIndex.fileMapMutex.Lock()
-	defer u.sync.fileIndex.fileMapMutex.Unlock()
-
 	newChanges := make([]*FileInformation, 0, len(files))
 	for _, change := range files {
 		if shouldUpload(u.sync, change) {
@@ -478,10 +485,6 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 	reader, writer := io.Pipe()
 	defer reader.Close()
 	defer writer.Close()
-
-	// Upload files
-	u.sync.fileIndex.fileMapMutex.Lock()
-	defer u.sync.fileIndex.fileMapMutex.Unlock()
 
 	var archiver *Archiver
 	errorChan := make(chan error)
