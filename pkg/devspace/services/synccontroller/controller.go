@@ -221,7 +221,7 @@ func (c *controller) isFatalSyncError(err error) bool {
 }
 
 func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, customLog logpkg.Logger) (*sync.Sync, error) {
-	err := inject.InjectDevSpaceHelper(c.client, pod, container, string(syncConfig.Arch), c.log)
+	err := inject.InjectDevSpaceHelper(c.client, pod, container, string(syncConfig.Arch), customLog)
 	if err != nil {
 		return nil, err
 	}

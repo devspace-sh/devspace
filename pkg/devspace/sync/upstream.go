@@ -106,9 +106,9 @@ func (u *upstream) startPing(doneChan chan struct{}) {
 			select {
 			case <-doneChan:
 				return
-			case <-time.After(time.Second * 30):
+			case <-time.After(time.Second * 20):
 				if u.client != nil {
-					ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 					_, err := u.client.Ping(ctx, &remote.Empty{})
 					cancel()
 					if err != nil {
@@ -260,7 +260,7 @@ func (u *upstream) evaluateChange(relativePath, fullpath string) (*FileInformati
 	if err == nil {
 		// Exclude changes on the upload exclude list
 		if u.sync.uploadIgnoreMatcher != nil {
-			if util.MatchesPath(u.sync.uploadIgnoreMatcher, relativePath, stat.IsDir()) {
+			if u.sync.uploadIgnoreMatcher.Matches(relativePath, stat.IsDir()) {
 				// Add to file map and prevent download if local file is newer than the remote one
 				if u.sync.fileIndex.fileMap[relativePath] != nil && u.sync.fileIndex.fileMap[relativePath].Mtime < stat.ModTime().Unix() {
 					// Add it to the fileMap
@@ -353,7 +353,7 @@ func (u *upstream) AddSymlink(relativePath, absPath string) (os.FileInfo, error)
 
 	// Check if symlink is ignored
 	if u.sync.ignoreMatcher != nil {
-		if util.MatchesPath(u.sync.ignoreMatcher, relativePath, stat.IsDir()) {
+		if u.sync.ignoreMatcher.Matches(relativePath, stat.IsDir()) {
 			return nil, nil
 		}
 	}
@@ -402,21 +402,31 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 
 	// Apply creates
 	if len(creates) > 0 {
-		for i := 0; i < syncRetries; i++ {
-			err := u.applyCreates(creates)
-			if err == nil {
-				break
-			} else if i+1 >= syncRetries {
-				return errors.Wrap(err, "apply creates")
-			} else if strings.HasSuffix(err.Error(), "transport is closing") || strings.HasSuffix(err.Error(), "broken pipe") {
-				return errors.Wrap(err, "apply creates")
+		err := func() error {
+			u.sync.fileIndex.fileMapMutex.Lock()
+			defer u.sync.fileIndex.fileMapMutex.Unlock()
+
+			for i := 0; i < syncRetries; i++ {
+				err := u.applyCreates(creates)
+				if err == nil {
+					break
+				} else if i+1 >= syncRetries {
+					return errors.Wrap(err, "apply creates")
+				} else if strings.HasSuffix(err.Error(), "transport is closing") || strings.HasSuffix(err.Error(), "broken pipe") {
+					return errors.Wrap(err, "apply creates")
+				}
+
+				u.sync.log.Infof("Upstream - Retry upload because of error: %v", err)
+				creates = u.updateUploadChanges(creates)
+				if len(creates) == 0 {
+					break
+				}
 			}
 
-			u.sync.log.Infof("Upstream - Retry upload because of error: %v", err)
-			creates = u.updateUploadChanges(creates)
-			if len(creates) == 0 {
-				break
-			}
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
 	}
 
@@ -443,9 +453,6 @@ func (u *upstream) RestartContainer() error {
 }
 
 func (u *upstream) updateUploadChanges(files []*FileInformation) []*FileInformation {
-	u.sync.fileIndex.fileMapMutex.Lock()
-	defer u.sync.fileIndex.fileMapMutex.Unlock()
-
 	newChanges := make([]*FileInformation, 0, len(files))
 	for _, change := range files {
 		if shouldUpload(u.sync, change) {
@@ -476,13 +483,8 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 
 	// Create a pipe for reading and writing
 	reader, writer := io.Pipe()
-
 	defer reader.Close()
 	defer writer.Close()
-
-	// Upload files
-	u.sync.fileIndex.fileMapMutex.Lock()
-	defer u.sync.fileIndex.fileMapMutex.Unlock()
 
 	var archiver *Archiver
 	errorChan := make(chan error)
@@ -536,7 +538,9 @@ func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ign
 	return archiver, nil
 }
 
-func (u *upstream) uploadArchive(reader io.Reader) error {
+func (u *upstream) uploadArchive(reader io.ReadCloser) error {
+	defer reader.Close()
+
 	// cancel after 1 hour
 	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
 	defer cancel()

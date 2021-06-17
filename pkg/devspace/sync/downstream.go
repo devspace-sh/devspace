@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/juju/ratelimit"
@@ -115,9 +116,9 @@ func (d *downstream) startPing(doneChan chan struct{}) {
 			select {
 			case <-doneChan:
 				return
-			case <-time.After(time.Second * 30):
+			case <-time.After(time.Second * 20):
 				if d.client != nil {
-					ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 					_, err := d.client.Ping(ctx, &remote.Empty{})
 					cancel()
 					if err != nil {
@@ -219,7 +220,7 @@ func (d *downstream) applyChanges(changes []*remote.Change, force bool) error {
 	// Extract downloaded archive
 	if len(download) > 0 {
 		for i := 0; i < syncRetries; i++ {
-			err := d.initDownload(download, force)
+			err := d.initDownload(download)
 			if err == nil {
 				break
 			} else if i+1 >= syncRetries {
@@ -253,7 +254,7 @@ func (d *downstream) updateDownloadChanges(download []*remote.Change) []*remote.
 	return newChanges
 }
 
-func (d *downstream) initDownload(download []*remote.Change, force bool) error {
+func (d *downstream) initDownload(download []*remote.Change) error {
 	reader, writer := io.Pipe()
 
 	defer reader.Close()
@@ -340,6 +341,11 @@ func (d *downstream) downloadFiles(writer io.WriteCloser, changes []*remote.Chan
 		if chunk != nil {
 			_, err := writer.Write(chunk.Content)
 			if err != nil {
+				// this means the tar is done already, so we just exit here
+				if strings.Contains(err.Error(), "io: read/write on closed pipe") {
+					return nil
+				}
+
 				return errors.Wrap(err, "write chunk")
 			}
 		}

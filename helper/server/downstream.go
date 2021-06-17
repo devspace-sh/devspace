@@ -154,6 +154,7 @@ func (d *Downstream) Download(stream remote.Downstream_DownloadServer) error {
 		}
 	}
 
+	reader.Close()
 	return <-errorChan
 }
 
@@ -338,12 +339,12 @@ func (d *Downstream) applyChange(newState map[string]*remote.Change, fullPath st
 	stat, err := os.Stat(fullPath)
 	if err != nil {
 		return
-	} else if d.ignoreMatcher != nil && d.ignoreMatcher.HasNegatePatterns() == false && util.MatchesPath(d.ignoreMatcher, relativePath, stat.IsDir()) {
+	} else if d.ignoreMatcher != nil && d.ignoreMatcher.RequireFullScan() == false && d.ignoreMatcher.Matches(relativePath, stat.IsDir()) {
 		return
 	}
 
 	if stat.IsDir() {
-		if d.ignoreMatcher == nil || d.ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(d.ignoreMatcher, relativePath, true) == false {
+		if d.ignoreMatcher == nil || d.ignoreMatcher.RequireFullScan() == false || d.ignoreMatcher.Matches(relativePath, true) == false {
 			newState[fullPath] = &remote.Change{
 				Path:  fullPath,
 				IsDir: true,
@@ -352,7 +353,7 @@ func (d *Downstream) applyChange(newState map[string]*remote.Change, fullPath st
 
 		walkDir(d.options.RemotePath, fullPath, d.ignoreMatcher, newState, time.Duration(d.options.Throttle)*time.Millisecond)
 	} else {
-		if d.ignoreMatcher == nil || d.ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(d.ignoreMatcher, relativePath, false) == false {
+		if d.ignoreMatcher == nil || d.ignoreMatcher.RequireFullScan() == false || d.ignoreMatcher.Matches(relativePath, false) == false {
 			newState[fullPath] = &remote.Change{
 				Path:          fullPath,
 				Size:          stat.Size(),
@@ -505,7 +506,7 @@ func walkDir(basePath string, path string, ignoreMatcher ignoreparser.IgnorePars
 		}
 
 		// Check if ignored
-		if ignoreMatcher != nil && ignoreMatcher.HasNegatePatterns() == false && util.MatchesPath(ignoreMatcher, absolutePath[len(basePath):], stat.IsDir()) {
+		if ignoreMatcher != nil && ignoreMatcher.RequireFullScan() == false && ignoreMatcher.Matches(absolutePath[len(basePath):], stat.IsDir()) {
 			continue
 		}
 
@@ -517,7 +518,7 @@ func walkDir(basePath string, path string, ignoreMatcher ignoreparser.IgnorePars
 		// Check if directory
 		if stat.IsDir() {
 			// Check if not ignored
-			if ignoreMatcher == nil || ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(ignoreMatcher, absolutePath[len(basePath):], true) == false {
+			if ignoreMatcher == nil || ignoreMatcher.RequireFullScan() == false || ignoreMatcher.Matches(absolutePath[len(basePath):], true) == false {
 				state[absolutePath] = &remote.Change{
 					Path:  absolutePath,
 					IsDir: true,
@@ -527,7 +528,7 @@ func walkDir(basePath string, path string, ignoreMatcher ignoreparser.IgnorePars
 			walkDir(basePath, absolutePath, ignoreMatcher, state, throttle)
 		} else {
 			// Check if not ignored
-			if ignoreMatcher == nil || ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(ignoreMatcher, absolutePath[len(basePath):], false) == false {
+			if ignoreMatcher == nil || ignoreMatcher.RequireFullScan() == false || ignoreMatcher.Matches(absolutePath[len(basePath):], false) == false {
 				state[absolutePath] = &remote.Change{
 					Path:          absolutePath,
 					Size:          stat.Size(),

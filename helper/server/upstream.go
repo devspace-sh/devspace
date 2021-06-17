@@ -134,7 +134,7 @@ func (u *Upstream) removeRecursive(absolutePath string) error {
 		absoluteChildPath := filepath.Join(absolutePath, f.Name())
 
 		// Check if ignored
-		if u.ignoreMatcher != nil && u.ignoreMatcher.HasNegatePatterns() == false && util.MatchesPath(u.ignoreMatcher, absolutePath[len(u.options.UploadPath):], f.IsDir()) {
+		if u.ignoreMatcher != nil && u.ignoreMatcher.RequireFullScan() == false && u.ignoreMatcher.Matches(absolutePath[len(u.options.UploadPath):], f.IsDir()) {
 			continue
 		}
 
@@ -144,14 +144,14 @@ func (u *Upstream) removeRecursive(absolutePath string) error {
 			_ = u.removeRecursive(absoluteChildPath)
 		} else {
 			// Check if not ignored
-			if u.ignoreMatcher == nil || u.ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(u.ignoreMatcher, absolutePath[len(u.options.UploadPath):], false) == false {
+			if u.ignoreMatcher == nil || u.ignoreMatcher.RequireFullScan() == false || u.ignoreMatcher.Matches(absolutePath[len(u.options.UploadPath):], false) == false {
 				_ = os.Remove(absoluteChildPath)
 			}
 		}
 	}
 
 	// Check if not ignored
-	if u.ignoreMatcher == nil || u.ignoreMatcher.HasNegatePatterns() == false || util.MatchesPath(u.ignoreMatcher, absolutePath[len(u.options.UploadPath):], true) == false {
+	if u.ignoreMatcher == nil || u.ignoreMatcher.RequireFullScan() == false || u.ignoreMatcher.Matches(absolutePath[len(u.options.UploadPath):], true) == false {
 		// This will not remove the directory if there is still a file or directory in it
 		return os.Remove(absolutePath)
 	}
@@ -199,6 +199,11 @@ func (u *Upstream) writeTar(writer io.WriteCloser, stream remote.Upstream_Upload
 		if chunk != nil {
 			n, err := writer.Write(chunk.Content)
 			if err != nil {
+				// this means the tar is done already, so we just exit here
+				if strings.Contains(err.Error(), "io: read/write on closed pipe") {
+					return nil
+				}
+
 				return err
 			} else if n != len(chunk.Content) {
 				return errors.Errorf("error writing data: bytes written %d != expected %d", n, len(chunk.Content))

@@ -21,15 +21,16 @@ type fileInformation struct {
 	Mtime time.Time
 }
 
-func untarAll(reader io.Reader, options *UpstreamOptions) error {
+func untarAll(reader io.ReadCloser, options *UpstreamOptions) error {
+	defer reader.Close()
+
 	gzr, err := gzip.NewReader(reader)
 	if err != nil {
 		return errors.Errorf("error decompressing: %v", err)
 	}
-
 	defer gzr.Close()
-	tarReader := tar.NewReader(gzr)
 
+	tarReader := tar.NewReader(gzr)
 	for {
 		shouldContinue, err := untarNext(tarReader, options)
 		if err != nil {

@@ -111,7 +111,7 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 	go func() {
 		err := pf.ForwardPorts()
 		if err != nil {
-			serviceClient.log.Fatalf("Error forwarding ports: %v", err)
+			errorChan <- err
 		}
 	}()
 
@@ -119,6 +119,8 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 	select {
 	case <-readyChan:
 		log.Donef("Port forwarding started on %s (%s/%s)", strings.Join(ports, ", "), pod.Namespace, pod.Name)
+	case err := <-errorChan:
+		return errors.Wrap(err, "forward ports")
 	case <-time.After(20 * time.Second):
 		return errors.Errorf("Timeout waiting for port forwarding to start")
 	}
