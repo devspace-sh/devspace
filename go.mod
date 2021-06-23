@@ -56,7 +56,7 @@ require (
 	github.com/moby/spdystream v0.2.0 // indirect
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/moby/sys/symlink v0.1.0 // indirect
-	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635
+	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/otiai10/copy v0.0.0-20180813030456-0046ee23fdbd
@@ -74,7 +74,6 @@ require (
 	github.com/toqueteos/trie v1.0.0 // indirect
 	github.com/ulikunitz/xz v0.5.7 // indirect
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
-	golang.org/x/sys v0.0.0-20210403161142-5e06dd20ab57 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.1.0 // indirect
 	google.golang.org/grpc v1.29.1
 	gopkg.in/dancannon/gorethink.v3 v3.0.5 // indirect
@@ -94,7 +93,4 @@ require (
 	mvdan.cc/sh/v3 v3.2.4
 )
 
-replace (
-	github.com/agl/ed25519 => github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412
-	github.com/moby/term => github.com/moby/term v0.0.0-20200429084858-129dac9f73f6
-)
+replace github.com/agl/ed25519 => github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412
