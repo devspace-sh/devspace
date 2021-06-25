@@ -56,10 +56,10 @@ type Options struct {
 }
 
 func (c *controller) Start(options *Options, log logpkg.Logger) error {
-	return c.startWithWait(options, true, log)
+	return c.startWithWait(options, log)
 }
 
-func (c *controller) startWithWait(options *Options, waitInitial bool, log logpkg.Logger) error {
+func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 	var (
 		onInitUploadDone   chan struct{}
 		onInitDownloadDone chan struct{}
@@ -68,7 +68,7 @@ func (c *controller) startWithWait(options *Options, waitInitial bool, log logpk
 	)
 
 	// should wait for initial sync?
-	if waitInitial && (options.SyncConfig.WaitInitialSync == nil || *options.SyncConfig.WaitInitialSync == true) {
+	if options.SyncConfig.WaitInitialSync == nil || *options.SyncConfig.WaitInitialSync == true {
 		onInitUploadDone = make(chan struct{})
 		onInitDownloadDone = make(chan struct{})
 	}
@@ -80,7 +80,7 @@ func (c *controller) startWithWait(options *Options, waitInitial bool, log logpk
 	}
 
 	// should wait for initial sync?
-	if waitInitial && onInitUploadDone != nil && onInitDownloadDone != nil {
+	if onInitUploadDone != nil && onInitDownloadDone != nil {
 		log.Info("Waiting for initial sync to complete")
 		var (
 			uploadDone   = false
@@ -120,7 +120,7 @@ func (c *controller) startWithWait(options *Options, waitInitial bool, log logpk
 
 				options.RestartLog.Info("Restarting sync...")
 				for {
-					err := c.startWithWait(options, false, options.RestartLog)
+					err := c.startWithWait(options, options.RestartLog)
 					if err != nil {
 						c.log.Errorf("Error restarting sync: %v", err)
 						c.log.Errorf("Will try again in 15 seconds")
