@@ -41,17 +41,26 @@ func NewPrefixLogger(prefix string, color string, base Logger) Logger {
 type prefixLogger struct {
 	Logger
 
-	prefix   string
-	color    string
+	prefix string
+	color  string
+
 	logMutex sync.Mutex
 }
 
 func (s *prefixLogger) writeMessage(message string) {
 	if os.Getenv(DEVSPACE_LOG_TIMESTAMPS) == "true" {
 		now := time.Now()
-		s.WriteString(ansi.Color(formatInt(now.Hour()) + ":" + formatInt(now.Minute()) + ":" + formatInt(now.Second()) + " ", "white+b") + ansi.Color(s.prefix, s.color) + message)
+		if s.color != "" {
+			s.WriteString(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b") + ansi.Color(s.prefix, s.color) + message)
+		} else {
+			s.WriteString(formatInt(now.Hour()) + ":" + formatInt(now.Minute()) + ":" + formatInt(now.Second()) + " " + s.prefix + message)
+		}
 	} else {
-		s.WriteString(ansi.Color(s.prefix, s.color) + message)
+		if s.color != "" {
+			s.WriteString(ansi.Color(s.prefix, s.color) + message)
+		} else {
+			s.WriteString(s.prefix + message)
+		}
 	}
 }
 

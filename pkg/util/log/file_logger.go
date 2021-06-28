@@ -2,6 +2,7 @@ package log
 
 import (
 	"errors"
+	"strings"
 	"sync"
 
 	"github.com/loft-sh/devspace/pkg/util/survey"
@@ -194,7 +195,7 @@ func (f *fileLogger) Write(message []byte) (int, error) {
 }
 
 func (f *fileLogger) WriteString(message string) {
-	f.logger.Out.Write([]byte(message))
+	f.logger.Info(strings.TrimSuffix(message, "\n"))
 }
 
 func (f *fileLogger) Question(params *survey.QuestionOptions) (string, error) {
