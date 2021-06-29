@@ -207,6 +207,7 @@ func (i *initialSyncer) deltaPath(absPath string, remoteState map[string]*FileIn
 						Name:        relativePath,
 						Mtime:       stat.ModTime().Unix(),
 						MtimeNano:   stat.ModTime().UnixNano(),
+						Mode:        stat.Mode(),
 						Size:        stat.Size(),
 						IsDirectory: stat.IsDir(),
 					})
@@ -259,6 +260,7 @@ func (i *initialSyncer) deltaPath(absPath string, remoteState map[string]*FileIn
 			Mtime:          stat.ModTime().Unix(),
 			MtimeNano:      stat.ModTime().UnixNano(),
 			Size:           stat.Size(),
+			Mode:           stat.Mode(),
 			IsDirectory:    false,
 			IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
 		}
@@ -296,6 +298,7 @@ func (i *initialSyncer) deltaDir(filepath string, stat os.FileInfo, remoteState 
 			Mtime:          stat.ModTime().Unix(),
 			MtimeNano:      stat.ModTime().UnixNano(),
 			Size:           stat.Size(),
+			Mode:           stat.Mode(),
 			IsDirectory:    true,
 			IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
 		}

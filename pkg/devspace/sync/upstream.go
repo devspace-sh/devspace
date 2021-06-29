@@ -267,6 +267,7 @@ func (u *upstream) evaluateChange(relativePath, fullpath string) (*FileInformati
 					u.sync.fileIndex.fileMap[relativePath] = &FileInformation{
 						Name:        relativePath,
 						Mtime:       stat.ModTime().Unix(),
+						Mode:        stat.Mode(),
 						Size:        stat.Size(),
 						IsDirectory: stat.IsDir(),
 					}
@@ -309,6 +310,7 @@ func (u *upstream) evaluateChange(relativePath, fullpath string) (*FileInformati
 			Mtime:          stat.ModTime().Unix(),
 			MtimeNano:      stat.ModTime().UnixNano(),
 			Size:           stat.Size(),
+			Mode:           stat.Mode(),
 			IsDirectory:    stat.IsDir(),
 			IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
 		}

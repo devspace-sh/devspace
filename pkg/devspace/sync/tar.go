@@ -89,6 +89,7 @@ func (u *Unarchiver) untarNext(destPath string, tarReader *tar.Reader) (bool, er
 			u.syncConfig.fileIndex.fileMap[relativePath] = &FileInformation{
 				Name:        relativePath,
 				Mtime:       stat.ModTime().Unix(),
+				Mode:        stat.Mode(),
 				Size:        stat.Size(),
 				IsDirectory: stat.IsDir(),
 			}
@@ -172,6 +173,7 @@ func (u *Unarchiver) untarNext(destPath string, tarReader *tar.Reader) (bool, er
 	u.syncConfig.fileIndex.fileMap[relativePath] = &FileInformation{
 		Name:        relativePath,
 		Mtime:       header.ModTime.Unix(),
+		Mode:        header.FileInfo().Mode(),
 		Size:        header.FileInfo().Size(),
 		IsDirectory: false,
 	}
@@ -414,6 +416,7 @@ func createFileInformationFromStat(relativePath string, stat os.FileInfo) *FileI
 		Size:        stat.Size(),
 		Mtime:       stat.ModTime().Unix(),
 		MtimeNano:   stat.ModTime().UnixNano(),
+		Mode:        stat.Mode(),
 		IsDirectory: stat.IsDir(),
 	}
 }
