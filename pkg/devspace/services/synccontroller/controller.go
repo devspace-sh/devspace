@@ -16,6 +16,7 @@ import (
 	"io"
 	v1 "k8s.io/api/core/v1"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -304,6 +305,9 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 
 	// Start upstream
 	upstreamArgs := []string{inject.DevSpaceHelperContainerPath, "sync", "upstream"}
+	if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
+		upstreamArgs = append(upstreamArgs, "--override-permissions")
+	}
 	for _, exclude := range options.ExcludePaths {
 		upstreamArgs = append(upstreamArgs, "--exclude", exclude)
 	}

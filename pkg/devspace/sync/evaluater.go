@@ -1,9 +1,8 @@
 package sync
 
 import (
-	"os"
-
 	"github.com/loft-sh/devspace/helper/remote"
+	"os"
 )
 
 // s.fileIndex needs to be locked before this function is called

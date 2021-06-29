@@ -131,8 +131,13 @@ func untarNext(tarReader *tar.Reader, options *UpstreamOptions) (bool, error) {
 
 	// Set old permissions and owner and group
 	if stat != nil {
-		// Set old permissions correctly
-		_ = os.Chmod(outFileName, stat.Mode())
+		if options.OverridePermission {
+			// Set permissions
+			_ = os.Chmod(outFileName, header.FileInfo().Mode())
+		} else {
+			// Set old permissions correctly
+			_ = os.Chmod(outFileName, stat.Mode())
+		}
 
 		// Set old owner & group correctly
 		_ = Chown(outFileName, stat)

@@ -30,7 +30,8 @@ type UpstreamOptions struct {
 	DirCreateCmd  string
 	DirCreateArgs []string
 
-	ExitOnClose bool
+	OverridePermission bool
+	ExitOnClose        bool
 }
 
 // StartUpstreamServer starts a new upstream server with the given reader and writer

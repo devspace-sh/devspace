@@ -3,6 +3,7 @@ package sync
 import (
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/syncthing/notify"
+	"os"
 )
 
 // FileInformation describes a path or file that is synced either in the remote container or locally
@@ -11,6 +12,7 @@ type FileInformation struct {
 	Size      int64
 	Mtime     int64
 	MtimeNano int64
+	Mode      os.FileMode
 
 	IsSymbolicLink bool
 	IsDirectory    bool
@@ -33,14 +35,6 @@ func (f *FileInformation) Event() notify.Event {
 	}
 
 	return notify.Create
-}
-
-type parsingError struct {
-	msg string
-}
-
-func (p parsingError) Error() string {
-	return p.msg
 }
 
 func parseFileInformation(change *remote.Change) *FileInformation {
