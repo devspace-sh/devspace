@@ -42,7 +42,7 @@ deployments:
 - name: "deployment-3"      # Name of this deployment
   helm:                     # Deploy a Helm Chart
     chart:
-      name: stable/mysql    # Deploy chart from stable registry
+      name: bitnami/mysql   # Deploy chart from bitnami registry
     values: ...
 
 - name: "deployment-4"      # Name of this deployment
@@ -71,7 +71,7 @@ deployments:
 - name: database            # Name of this deployment
   helm:                     # Deploy a Helm Chart
     chart:
-      name: stable/mysql    # Deploy chart from stable registry
+      name: bitnami/mysql   # Deploy chart from bitnami registry
     values: ...
 - name: backend             # Name of this deployment
   helm: ...                 # Deploy another Helm Chart

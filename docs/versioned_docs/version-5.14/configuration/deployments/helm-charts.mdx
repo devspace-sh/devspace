@@ -12,29 +12,13 @@ To deploy Helm charts, you need to configure them within the `deployments` secti
 ## Examples
 
 <Tabs
-  defaultValue="stable"
+  defaultValue="component"
   values={[
-    { label: 'Stable Chart', value: 'stable', },
     { label: 'Component Chart', value: 'component', },
     { label: 'Custom Chart', value: 'remote', },
     { label: 'Local Chart', value: 'local', },
   ]
 }>
-<TabItem value="stable">
-
-```yaml {5}
-deployments:
-- name: database
-  helm:
-    chart:
-      name: stable/mysql
-    values:
-      mysqlRootPassword: ${MYSQL_ROOT_PASSWORD}
-      mysqlUser: db_user
-      mysqlDatabase: app_database
-```
-
-</TabItem>
 <TabItem value="component">
 
 ```yaml {4}
@@ -136,7 +120,7 @@ deployments:
 ### `chart.name`
 The `name` option is mandatory and expects a string stating either:
 - **a path to a local chart** that is stored on the filesystem
-- **or the name of a remote chart** that is stored in a repository (either the default (stable) repository or one specified via [`repo` option](#chartrepo))
+- **or the name of a remote chart** that is stored in a repository (one specified via [`repo` option](#chartrepo)) or in the form of `repo/name`, where `repo` was added via `helm repo add repo https://repo.url` beforehand
 
 DevSpace follows the same behavior as `helm install` and first checks if the path specified in `name` exists on the file system and is a valid chart. If not, DevSpace will assume that the `name` is not a path but the name of a remote chart located in a chart repository.
 
@@ -146,12 +130,12 @@ deployments:
 - name: database
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
 ```
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install database stable/mysql
+helm install database bitnami/mysql
 ```
 
 ### `chart.version`
@@ -172,26 +156,17 @@ deployments:
 - name: database
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
       version: "1.3.1"
 ```
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install database stable/mysql --version="1.3.1"
+helm install database bitnami/mysql --version="1.3.1"
 ```
 
 ### `chart.repo`
-The `repo` option expects a string with an URL to a [Helm Chart Repository](https://helm.sh/docs/chart_repository/).
-
-:::note Stable Repository
-The [official Helm Chart Repository `stable`](https://github.com/helm/charts) does not need to be explicitly specified. Using the `stable/` prefix for the chart name is sufficient.
-:::
-
-#### Default Value for `repo`
-```yaml
-repo: stable
-```
+The `repo` option expects a string with a URL to a [Helm Chart Repository](https://helm.sh/docs/chart_repository/). This is equivalent of using the `--repo` flag in `helm install`
 
 #### Example: Custom Chart Repository
 ```yaml
@@ -239,7 +214,7 @@ deployments:
 - name: database
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
     values:
       mysqlRootPassword: ${MYSQL_ROOT_PASSWORD}
       mysqlUser: db_user
@@ -248,7 +223,7 @@ deployments:
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install database stable/mysql --set mysqlRootPassword="$MYSQL_ROOT_PASSWORD" --set mysqlUser="db_user" --set mysqlDatabase="app_database"
+helm install database bitnami/mysql --set mysqlRootPassword="$MYSQL_ROOT_PASSWORD" --set mysqlUser="db_user" --set mysqlDatabase="app_database"
 ```
 
 ### `valuesFiles`
@@ -273,7 +248,7 @@ deployments:
 - name: database
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
     valuesFiles:
     - mysql/values.yaml
     - mysql/values.production.yaml
@@ -281,7 +256,7 @@ deployments:
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install database stable/mysql -f mysql/values.yaml -f mysql/values.production.yaml
+helm install database bitnami/mysql -f mysql/values.yaml -f mysql/values.production.yaml
 ```
 
 
@@ -310,7 +285,7 @@ deployments:
 - name: database
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
     replaceImageTags: false
 ```
 
@@ -340,13 +315,13 @@ deployments:
 - name: database
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
     wait: true
 ```
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install database stable/mysql --wait
+helm install database bitnami/mysql --wait
 ```
 
 ### `timeout`
@@ -363,13 +338,13 @@ deployments:
 - name: database
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
     timeout: 300
 ```
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install database stable/mysql --timeout=300
+helm install database bitnami/mysql --timeout=300
 ```
 
 ### `force`
@@ -386,13 +361,13 @@ deployments:
 - name: database
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
     force: true
 ```
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install database stable/mysql --force
+helm install database bitnami/mysql --force
 ```
 
 ### `recreate`
@@ -409,7 +384,7 @@ deployments:
 - name: database
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
     recreate: true
 ```
 
@@ -427,7 +402,7 @@ deployments:
 - name: database
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
     atomic: true
 ```
 
@@ -445,7 +420,7 @@ deployments:
 - name: database
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
     cleanupOnFail: true
 ```
 
@@ -463,7 +438,7 @@ deployments:
 - name: database
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
     disableHooks: true
 ```
 
@@ -497,7 +472,7 @@ deployments:
 - name: database
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
     tillerNamespace: my-tiller-ns
     v2: true
 ```
@@ -505,7 +480,7 @@ deployments:
 Deploying the above example would roughly be equivalent to this command:
 ```bash
 # Helm v2 CLI
-helm install --name database stable/mysql --tiller-namespace=my-tiller-ns
+helm install --name database bitnami/mysql --tiller-namespace=my-tiller-ns
 ```
 
 
@@ -532,7 +507,7 @@ deployments:
 - name: database
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
 ```
 
 ### `namespace`
@@ -552,5 +527,5 @@ deployments:
   namespace: some-namespace
   helm:
     chart:
-      name: stable/mysql
+      name: bitnami/mysql
 ```
