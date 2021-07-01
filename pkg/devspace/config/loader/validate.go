@@ -321,7 +321,7 @@ func isReplacePodsUnique(index int, rp *latest.ReplacePod, rps []*latest.Replace
 
 		if r.ImageSelector == rp.ImageSelector {
 			return false
-		} else if r.ImageName == rp.ReplaceImage {
+		} else if r.ImageName == rp.ImageName {
 			return false
 		} else if len(r.LabelSelector) > 0 && len(rp.LabelSelector) > 0 && strMapEquals(r.LabelSelector, rp.LabelSelector) {
 			return false
