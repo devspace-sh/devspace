@@ -22,7 +22,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const stableChartRepo = "https://kubernetes-charts.storage.googleapis.com"
+const stableChartRepo = "https://charts.helm.sh/stable"
 
 type VersionedClient interface {
 	IsValidHelm(path string) (bool, error)
