@@ -86,7 +86,7 @@ func NewSync(localPath string, options Options) (*Sync, error) {
 	}
 
 	if options.ExcludePaths == nil {
-		options.ExcludePaths = make([]string, 0, 2)
+		options.ExcludePaths = []string{}
 	}
 
 	// We exclude the sync log to prevent an endless loop in upstream
