@@ -85,11 +85,11 @@ require (
 	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.21.1
-	k8s.io/apimachinery v0.21.1
-	k8s.io/client-go v0.21.1
+	k8s.io/api v0.21.2
+	k8s.io/apimachinery v0.21.2
+	k8s.io/client-go v0.21.2
 	k8s.io/klog v1.0.0
-	k8s.io/kubectl v0.21.1
+	k8s.io/kubectl v0.21.2
 	mvdan.cc/sh/v3 v3.2.4
 )
 
