@@ -123,7 +123,7 @@ func isWaitConditionTrue(condition *latest.HookWaitConfig, podContainer *kubectl
 
 	for _, cs := range podContainer.Pod.Status.InitContainerStatuses {
 		if cs.Name == podContainer.Container.Name {
-			if condition.Running && cs.State.Running != nil {
+			if condition.Running && cs.State.Running != nil && cs.Ready {
 				return true
 			}
 			if condition.TerminatedWithCode != nil && cs.State.Terminated != nil && cs.State.Terminated.ExitCode == *condition.TerminatedWithCode {
@@ -133,7 +133,7 @@ func isWaitConditionTrue(condition *latest.HookWaitConfig, podContainer *kubectl
 	}
 	for _, cs := range podContainer.Pod.Status.ContainerStatuses {
 		if cs.Name == podContainer.Container.Name {
-			if condition.Running && cs.State.Running != nil {
+			if condition.Running && cs.State.Running != nil && cs.Ready {
 				return true
 			}
 			if condition.TerminatedWithCode != nil && cs.State.Terminated != nil && cs.State.Terminated.ExitCode == *condition.TerminatedWithCode {
