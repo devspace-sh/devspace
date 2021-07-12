@@ -662,11 +662,40 @@ By default, the file synchronization algorithm uses the maximum bandwidth possib
 #### Example
 **See "[Example: Limiting Network Bandwidth](#example-limiting-network-bandwidth)"**
 
-## Container Architecture
+## Advanced Options
 
 ### `arch`
 
 Arch specifies which DevSpace helper architecture should be used for the container. Currently valid values are either no value, `amd64` or `arm64`. Depending on this value, DevSpace will inject the DevSpace helper binary with the corresponding architecture suffix.
+
+### `polling`
+
+Polling specifies if the DevSpace helper should traverse over all watched files and folders periodically in the container to identify file changes. By default, DevSpace will use [inotify](https://man7.org/linux/man-pages/man7/inotify.7.html) to detect changes which is more efficient, however sometimes it might be unsupported or not feasible in certain situations, in which polling might be preferred.
+
+```yaml {14}
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageSelector: john/devbackend
+    polling: true
+```
+
+:::info
+Polling might increase CPU consumption of the container drastically, depending on the amount of files and folders watched
+:::
+
+:::info
+If you are using a DevSpace config version below `v1beta10`, polling will be enabled by default, as it was the default syncing method in older DevSpace versions 
+:::
 
 ## Useful Commands
 

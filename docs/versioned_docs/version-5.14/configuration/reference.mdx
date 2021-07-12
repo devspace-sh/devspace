@@ -272,6 +272,7 @@ sync:                               # struct[] | Array of file sync settings for
   waitInitialSync: false            # bool     | Wait until initial sync is completed before continuing (Default: false)
   throttleChangeDetection: 100      # int      | If greater zero, describes the amount of milliseconds to wait after each checked 100 files on the remote site
   arch: "amd64"                     # string   | Target architecture of the selected container
+  polling: false                    # bool     | If polling should be used to detect file changes in the container
   bandwidthLimits:                  # struct   | Bandwidth limits for the synchronization algorithm
     download: 0                     # int64    | Max file download speed in kilobytes / second (e.g. 100 means 100 KB/s)
     upload: 0                       # int64    | Max file upload speed in kilobytes / second (e.g. 100 means 100 KB/s)
