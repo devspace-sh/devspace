@@ -379,7 +379,7 @@ github.com/src-d/gcfg
 github.com/src-d/gcfg/scanner
 github.com/src-d/gcfg/token
 github.com/src-d/gcfg/types
-# github.com/syncthing/notify v0.0.0-20210308121556-f45149b04939
+# github.com/syncthing/notify v0.0.0-20210616190510-c6b7342338d2
 ## explicit
 github.com/syncthing/notify
 # github.com/tcnksm/go-gitconfig v0.1.2

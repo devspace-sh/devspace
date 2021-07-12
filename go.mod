@@ -68,7 +68,7 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20160302144031-75fb7ed4208c
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
-	github.com/syncthing/notify v0.0.0-20210308121556-f45149b04939
+	github.com/syncthing/notify v0.0.0-20210616190510-c6b7342338d2
 	github.com/tcnksm/go-gitconfig v0.1.2 // indirect
 	github.com/theupdateframework/notary v0.6.1 // indirect
 	github.com/toqueteos/trie v1.0.0 // indirect

@@ -129,7 +129,7 @@ func (w *watch) Dispatch(ev []FSEvent) {
 		}
 		dbgprintf("%v (0x%x) (%s, i=%d, ID=%d, len=%d)\n", Event(ev[i].Flags),
 			ev[i].Flags, ev[i].Path, i, ev[i].ID, len(ev))
-		if ev[i].Flags&failure != 0 {
+		if ev[i].Flags&failure != 0 && failure&events == 0 {
 			// TODO(rjeczalik): missing error handling
 			continue
 		}
