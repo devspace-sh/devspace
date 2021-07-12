@@ -26,8 +26,8 @@ import (
 )
 
 var (
-	kubectlVersion  = "v1.20.0"
-	kubectlDownload = "https://storage.googleapis.com/kubernetes-release/release/" + kubectlVersion + "/bin/" + runtime.GOOS + "/amd64/kubectl"
+	kubectlVersion  = "v1.21.2"
+	kubectlDownload = "https://storage.googleapis.com/kubernetes-release/release/" + kubectlVersion + "/bin/" + runtime.GOOS + "/" + runtime.GOARCH + "/kubectl"
 )
 
 // DeployConfig holds the necessary information for kubectl deployment

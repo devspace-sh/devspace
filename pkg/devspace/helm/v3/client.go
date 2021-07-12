@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	helmVersion  = "v3.5.3"
+	helmVersion  = "v3.6.2"
 	helmDownload = "https://get.helm.sh/helm-" + helmVersion + "-" + runtime.GOOS + "-" + runtime.GOARCH
 )
 
