@@ -155,10 +155,10 @@ func (c *client) installHelmClient(archiveFile, installPath, installFromURL stri
 
 	// Copy file to target location
 	if runtime.GOOS == "windows" {
-		return copy.Copy(filepath.Join(t, runtime.GOOS+"-amd64", "helm.exe"), installPath)
+		return copy.Copy(filepath.Join(t, runtime.GOOS + "-" + runtime.GOARCH, "helm.exe"), installPath)
 	}
 
-	return copy.Copy(filepath.Join(t, runtime.GOOS+"-amd64", "helm"), installPath)
+	return copy.Copy(filepath.Join(t, runtime.GOOS+ "-" + runtime.GOARCH, "helm"), installPath)
 }
 
 func (c *client) FetchChart(helmConfig *latest.HelmConfig) (bool, string, error) {

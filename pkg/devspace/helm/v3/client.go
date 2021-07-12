@@ -19,7 +19,7 @@ import (
 
 var (
 	helmVersion  = "v3.5.3"
-	helmDownload = "https://get.helm.sh/helm-" + helmVersion + "-" + runtime.GOOS + "-amd64"
+	helmDownload = "https://get.helm.sh/helm-" + helmVersion + "-" + runtime.GOOS + "-" + runtime.GOARCH
 )
 
 type client struct {

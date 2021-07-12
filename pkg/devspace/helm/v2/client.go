@@ -1,9 +1,10 @@
 package v2
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
 	"runtime"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
@@ -14,7 +15,7 @@ import (
 
 var (
 	helmVersion  = "v2.17.0"
-	helmDownload = "https://get.helm.sh/helm-" + helmVersion + "-" + runtime.GOOS + "-amd64"
+	helmDownload = "https://get.helm.sh/helm-" + helmVersion + "-" + runtime.GOOS + "-" + runtime.GOARCH
 )
 
 type client struct {
