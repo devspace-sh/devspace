@@ -53,7 +53,18 @@ devspace use namespace my-namespace   # will be automatically created during dep
 </TabItem>
 <TabItem value="shared">
 
-<br/>
+#### Kubernetes multi-tenancy
+
+One of the options for setting up a multi-tenant Kubernetes environment would be to use [Loft](https://loft.sh/).
+It allows the developers to create isolated Kubernetes environments in a self-service fashion.
+
+[Loft](https://loft.sh/) offers a wide range of features to facilitate multi-tenancy in Kubernetes. One of such features is the ability to create [Virtual Clusters](https://loft.sh/features/virtual-kubernetes-clusters) - a lightweight, fully functional and certified Kubernetes distribution that runs fully within the host cluster. 
+
+[Loft](https://loft.sh/) also adds a resource called "Space" into your Kubernetes cluster. A "Space" is a virtual representation of a Kubernetes namespace, and we will be creating one in the steps below.
+
+
+#### How to use Loft
+
 <Step>1</Step>
 
 #### Setup Loft and connect your cluster
