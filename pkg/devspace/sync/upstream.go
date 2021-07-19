@@ -14,11 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FabianKramm/notify"
 	"github.com/juju/ratelimit"
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/util"
 	"github.com/pkg/errors"
-	"github.com/syncthing/notify"
 )
 
 type upstream struct {

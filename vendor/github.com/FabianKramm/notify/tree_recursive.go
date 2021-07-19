@@ -47,6 +47,10 @@ func watchCopy(src, dst node) {
 	}
 	if wpsrc := src.Child[""].Watch; len(wpsrc) != 0 {
 		wpdst := dst.Child[""].Watch
+		if wpdst == nil {
+			wpdst = make(watchpoint)
+			dst.Child[""] = node{Watch: wpdst}
+		}
 		for c, e := range wpsrc {
 			if c == nil {
 				continue
@@ -153,8 +157,7 @@ func (t *recursiveTree) dispatch() {
 }
 
 // Watch TODO(rjeczalik)
-func (t *recursiveTree) Watch(path string, c chan<- EventInfo,
-	_ DoNotWatchFn, events ...Event) error {
+func (t *recursiveTree) Watch(path string, c chan<- EventInfo, events ...Event) error {
 	if c == nil {
 		panic("notify: Watch using nil channel")
 	}
@@ -227,13 +230,13 @@ func (t *recursiveTree) Watch(path string, c chan<- EventInfo,
 	// Look for children nodes, unwatch n-1 of them and rewatch the last one.
 	var children []node
 	fn := func(nd node) error {
-		if len(nd.Watch) == 0 {
+		if watchTotal(nd) == 0 {
 			return nil
 		}
 		children = append(children, nd)
 		return errSkip
 	}
-	switch must(cur.Walk(fn, nil)); len(children) {
+	switch must(cur.Walk(fn)); len(children) {
 	case 0:
 		// no child watches, cur holds a new watch
 	case 1:
@@ -307,6 +310,7 @@ func (t *recursiveTree) Watch(path string, c chan<- EventInfo,
 func (t *recursiveTree) Stop(c chan<- EventInfo) {
 	var err error
 	fn := func(nd node) (e error) {
+		isRecursive := watchIsRecursive(nd)
 		diff := watchDel(nd, c, all)
 		switch {
 		case diff == none && watchTotal(nd) == 0:
@@ -316,13 +320,15 @@ func (t *recursiveTree) Stop(c chan<- EventInfo) {
 		case diff == none:
 			// Removing c from nd does not require shrinking its eventset.
 		case diff[1] == 0:
-			if watchIsRecursive(nd) {
-				e = t.w.RecursiveUnwatch(nd.Name)
-			} else {
-				e = t.w.Unwatch(nd.Name)
+			if watchTotal(nd) == 0 {
+				if isRecursive {
+					e = t.w.RecursiveUnwatch(nd.Name)
+				} else {
+					e = t.w.Unwatch(nd.Name)
+				}
 			}
 		default:
-			if watchIsRecursive(nd) {
+			if isRecursive {
 				e = t.w.RecursiveRewatch(nd.Name, nd.Name, diff[0], diff[1])
 			} else {
 				e = t.w.Rewatch(nd.Name, diff[0], diff[1])
@@ -332,14 +338,14 @@ func (t *recursiveTree) Stop(c chan<- EventInfo) {
 			watchDel(nd, c, all)
 			return nil
 		}
-		err = nonil(err, e, nd.Walk(fn, nil))
+		err = nonil(err, e, nd.Walk(fn))
 		// TODO(rjeczalik): if e != nil store dummy chan in nd.Watch just to
 		// retry un/rewatching next time and/or let the user handle the failure
 		// vie Error event?
 		return errSkip
 	}
 	t.rw.Lock()
-	e := t.root.Walk("", fn, nil) // TODO(rjeczalik): use max root per c
+	e := t.root.Walk("", fn) // TODO(rjeczalik): use max root per c
 	t.rw.Unlock()
 	if e != nil {
 		err = nonil(err, e)
