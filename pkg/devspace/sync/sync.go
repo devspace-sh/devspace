@@ -10,8 +10,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
 
+	"github.com/FabianKramm/notify"
 	"github.com/pkg/errors"
-	"github.com/syncthing/notify"
 )
 
 var syncRetries = 5
