@@ -416,14 +416,6 @@
         },
         {
           "type": "doc",
-          "id": "version-5.14/commands/devspace_connect_cluster"
-        },
-        {
-          "type": "doc",
-          "id": "version-5.14/commands/devspace_create_space"
-        },
-        {
-          "type": "doc",
           "id": "version-5.14/commands/devspace_deploy"
         },
         {
@@ -443,10 +435,6 @@
           "type": "category",
           "label": "devspace list",
           "items": [
-            {
-              "type": "doc",
-              "id": "version-5.14/commands/devspace_list_clusters"
-            },
             {
               "type": "doc",
               "id": "version-5.14/commands/devspace_list_commands"
@@ -477,14 +465,6 @@
             },
             {
               "type": "doc",
-              "id": "version-5.14/commands/devspace_list_providers"
-            },
-            {
-              "type": "doc",
-              "id": "version-5.14/commands/devspace_list_spaces"
-            },
-            {
-              "type": "doc",
               "id": "version-5.14/commands/devspace_list_sync"
             },
             {
@@ -492,10 +472,6 @@
               "id": "version-5.14/commands/devspace_list_vars"
             }
           ]
-        },
-        {
-          "type": "doc",
-          "id": "version-5.14/commands/devspace_login"
         },
         {
           "type": "doc",
@@ -520,39 +496,11 @@
           "items": [
             {
               "type": "doc",
-              "id": "version-5.14/commands/devspace_remove_cluster"
-            },
-            {
-              "type": "doc",
               "id": "version-5.14/commands/devspace_remove_context"
             },
             {
               "type": "doc",
-              "id": "version-5.14/commands/devspace_remove_deployment"
-            },
-            {
-              "type": "doc",
-              "id": "version-5.14/commands/devspace_remove_image"
-            },
-            {
-              "type": "doc",
               "id": "version-5.14/commands/devspace_remove_plugin"
-            },
-            {
-              "type": "doc",
-              "id": "version-5.14/commands/devspace_remove_port"
-            },
-            {
-              "type": "doc",
-              "id": "version-5.14/commands/devspace_remove_provider"
-            },
-            {
-              "type": "doc",
-              "id": "version-5.14/commands/devspace_remove_space"
-            },
-            {
-              "type": "doc",
-              "id": "version-5.14/commands/devspace_remove_sync"
             }
           ]
         },
@@ -571,10 +519,6 @@
             },
             {
               "type": "doc",
-              "id": "version-5.14/commands/devspace_reset_key"
-            },
-            {
-              "type": "doc",
               "id": "version-5.14/commands/devspace_reset_vars"
             }
           ]
@@ -588,14 +532,6 @@
           "type": "category",
           "label": "devspace set",
           "items": [
-            {
-              "type": "doc",
-              "id": "version-5.14/commands/devspace_set_analytics"
-            },
-            {
-              "type": "doc",
-              "id": "version-5.14/commands/devspace_set_encryptionkey"
-            },
             {
               "type": "doc",
               "id": "version-5.14/commands/devspace_set_var"
@@ -615,10 +551,6 @@
           "type": "category",
           "label": "devspace update",
           "items": [
-            {
-              "type": "doc",
-              "id": "version-5.14/commands/devspace_update_config"
-            },
             {
               "type": "doc",
               "id": "version-5.14/commands/devspace_update_plugin"
@@ -649,14 +581,6 @@
             {
               "type": "doc",
               "id": "version-5.14/commands/devspace_use_profile"
-            },
-            {
-              "type": "doc",
-              "id": "version-5.14/commands/devspace_use_provider"
-            },
-            {
-              "type": "doc",
-              "id": "version-5.14/commands/devspace_use_space"
             }
           ]
         }

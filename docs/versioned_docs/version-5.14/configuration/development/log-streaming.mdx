@@ -41,7 +41,7 @@ By default, DevSpace streams the logs of **all** containers that are created bas
 ```yaml {2,4,35-38}
 images:
   frontend:
-    image: gcr.io/${DEVSPACE_USERNAME}/appfrontend
+    image: john/appfrontend
   backend:
     image: john/appbackend
   database:
@@ -52,7 +52,7 @@ deployments:
     componentChart: true
     values:
       containers:
-      - image: gcr.io/${DEVSPACE_USERNAME}/appfrontend
+      - image: john/appfrontend
 - name: app-backend
   helm:
     componentChart: true
@@ -82,7 +82,7 @@ dev:
 - The above example defines 3 images and 5 deployments.
 - The `images` option defines that only containers using the `image` value of the images `backend` and `frontend` should be streamed.
 - The result would be that DevSpace streams the logs of:
-  - The container of deployment `app-frontend` because the image is `gcr.io/${DEVSPACE_USERNAME}/appfrontend` = `images.frontend.image`
+  - The container of deployment `app-frontend` because the image is `john/appfrontend` = `images.frontend.image`
   - Only the first container of deployment `app-backend` because the image is `john/appbackend` = `images.backend.image`
   
 :::note
@@ -122,7 +122,7 @@ showLast: 50
 ```yaml {22}
 images:
   frontend:
-    image: gcr.io/${DEVSPACE_USERNAME}/appfrontend
+    image: john/appfrontend
   backend:
     image: john/appbackend
 deployments:
@@ -131,7 +131,7 @@ deployments:
     componentChart: true
     values:
       containers:
-      - image: gcr.io/${DEVSPACE_USERNAME}/appfrontend
+      - image: john/appfrontend
 - name: app-backend
   helm:
     componentChart: true
@@ -146,7 +146,7 @@ dev:
 **Explanation:**  
 - The above example defines 2 images and 2 deployments.
 - DevSpace would stream the logs of:
-  - The container of deployment `app-frontend` because the image is `gcr.io/${DEVSPACE_USERNAME}/appfrontend` = `images.frontend.image`
+  - The container of deployment `app-frontend` because the image is `john/appfrontend` = `images.frontend.image`
   - Only the first container of deployment `app-backend` because the image is `john/appbackend` = `images.backend.image`
 - For each of the two containers, DevSpace would print the last 200 log lines before starting to stream the logs
 

@@ -68,7 +68,7 @@ images:
   backend:
     image: john/appbackend
   frontend:
-    image: gcr.io/${DEVSPACE_USERNAME}/appfrontend
+    image: john/appfrontend
     build:
       docker:
         disableFallback: true
@@ -95,7 +95,7 @@ images:
       docker:
         preferMinikube: true
   frontend:
-    image: gcr.io/${DEVSPACE_USERNAME}/appfrontend
+    image: john/appfrontend
     build:
       docker:
         preferMinikube: false
@@ -137,7 +137,7 @@ images:
         preferMinikube: true
         skipPush: true
   frontend:
-    image: gcr.io/${DEVSPACE_USERNAME}/appfrontend
+    image: john/appfrontend
     build:
       docker:
         preferMinikube: false
