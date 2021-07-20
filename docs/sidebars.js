@@ -207,8 +207,6 @@ module.exports = {
         "commands/devspace_attach",
         "commands/devspace_build",
         "commands/devspace_cleanup_images",
-        "commands/devspace_connect_cluster",
-        "commands/devspace_create_space",
         "commands/devspace_deploy",
         "commands/devspace_dev",
         "commands/devspace_enter",
@@ -217,7 +215,6 @@ module.exports = {
           type: "category",
           label: "devspace list",
           items: [
-            "commands/devspace_list_clusters",
             "commands/devspace_list_commands",
             "commands/devspace_list_contexts",
             "commands/devspace_list_deployments",
@@ -225,13 +222,10 @@ module.exports = {
             "commands/devspace_list_plugins",
             "commands/devspace_list_ports",
             "commands/devspace_list_profiles",
-            "commands/devspace_list_providers",
-            "commands/devspace_list_spaces",
             "commands/devspace_list_sync",
             "commands/devspace_list_vars"
           ]
         },
-        "commands/devspace_login",
         "commands/devspace_logs",
         "commands/devspace_open",
         "commands/devspace_print",
@@ -240,15 +234,8 @@ module.exports = {
           type: "category",
           label: "devspace remove",
           items: [
-            "commands/devspace_remove_cluster",
             "commands/devspace_remove_context",
-            "commands/devspace_remove_deployment",
-            "commands/devspace_remove_image",
-            "commands/devspace_remove_plugin",
-            "commands/devspace_remove_port",
-            "commands/devspace_remove_provider",
-            "commands/devspace_remove_space",
-            "commands/devspace_remove_sync"
+            "commands/devspace_remove_plugin"
           ]
         },
         "commands/devspace_render",
@@ -257,7 +244,6 @@ module.exports = {
           label: "devspace reset",
           items: [
             "commands/devspace_reset_dependencies",
-            "commands/devspace_reset_key",
             "commands/devspace_reset_vars"
           ]
         },
@@ -266,8 +252,6 @@ module.exports = {
           type: "category",
           label: "devspace set",
           items: [
-            "commands/devspace_set_analytics",
-            "commands/devspace_set_encryptionkey",
             "commands/devspace_set_var"
           ]
         },
@@ -277,7 +261,6 @@ module.exports = {
           type: "category",
           label: "devspace update",
           items: [
-            "commands/devspace_update_config",
             "commands/devspace_update_plugin",
             "commands/devspace_update_dependencies"
           ]
@@ -289,9 +272,7 @@ module.exports = {
           items: [
             "commands/devspace_use_context",
             "commands/devspace_use_namespace",
-            "commands/devspace_use_profile",
-            "commands/devspace_use_provider",
-            "commands/devspace_use_space"
+            "commands/devspace_use_profile"
           ]
         }
       ],

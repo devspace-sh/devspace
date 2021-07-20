@@ -41,7 +41,7 @@ images:
       kaniko:
         cache: true
   frontend:
-    image: gcr.io/${DEVSPACE_USERNAME}/appfrontend
+    image: john/appfrontend
     build:
       kaniko:
         cache: false
@@ -74,7 +74,7 @@ images:
       kaniko:
         cache: true
   frontend:
-    image: gcr.io/${DEVSPACE_USERNAME}/appfrontend
+    image: john/appfrontend
     build:
       kaniko:
         snapshotMode: time

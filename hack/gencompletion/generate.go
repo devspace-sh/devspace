@@ -11,7 +11,7 @@ func main() {
 	f := factory.DefaultFactory()
 
 	// build the root command
-	rootCmd := cmd.BuildRoot(f)
+	rootCmd := cmd.BuildRoot(f, true)
 
 	// generate the completions
 	err := rootCmd.GenBashCompletionFile("completion/bash.sh")

@@ -101,7 +101,7 @@ func Execute() {
 	f := factory.DefaultFactory()
 
 	// build the root command
-	rootCmd := BuildRoot(f)
+	rootCmd := BuildRoot(f, false)
 
 	// set version for --version flag
 	rootCmd.Version = upgrade.GetVersion()
@@ -124,11 +124,17 @@ func Execute() {
 }
 
 // BuildRoot creates a new root command from the
-func BuildRoot(f factory.Factory) *cobra.Command {
+func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 	// list plugins
-	plugins, err := f.NewPluginManager(f.GetLog()).List()
-	if err != nil {
-		f.GetLog().Fatal(err)
+	var (
+		plugins []plugin.Metadata
+		err     error
+	)
+	if !excludePlugins {
+		plugins, err = f.NewPluginManager(f.GetLog()).List()
+		if err != nil {
+			f.GetLog().Fatal(err)
+		}
 	}
 
 	// build the root cmd

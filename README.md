@@ -613,7 +613,7 @@ images:
     context: ./db                               # Build with --context=./db
     # The following lines define custom tag schemata for this image
     tags:
-    - ${DEVSPACE_USERNAME}-devspace-${DEVSPACE_GIT_COMMIT}-######
+    - devspace-${DEVSPACE_GIT_COMMIT}-######
 ```
 Take a look at the documentation for more information about [configuring builds with Docker](https://devspace.sh/cli/docs/configuration/images/docker).  <img src="static/img/line.svg" height="1">
 
@@ -884,7 +884,7 @@ Use config variables
 # File: ./devspace.yaml
 images:
   default:
-    image: ${DEVSPACE_USERNAME}/image-name
+    image: john/image-name
     tags:
     - ${DEVSPACE_GIT_COMMIT}-${DEVSPACE_TIMESTAMP}
     - latest

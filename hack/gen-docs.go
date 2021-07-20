@@ -55,7 +55,7 @@ func main() {
 	}
 
 	f := factory.DefaultFactory()
-	rootCmd := cmd.BuildRoot(f)
+	rootCmd := cmd.BuildRoot(f, true)
 
 	err := doc.GenMarkdownTreeCustom(rootCmd, cliDocsDir, filePrepender, linkHandler)
 	if err != nil {
