@@ -1,10 +1,11 @@
 package variable
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"os"
 	"strconv"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
 // NewDefaultVariable creates a new variable for the sources default, all or input
@@ -36,7 +37,7 @@ func (d *defaultVariable) Load(definition *latest.Variable) (interface{}, error)
 	}
 
 	// Is cached
-	if value, ok := d.cache[d.name]; ok {
+	if value, ok := d.cache[d.name]; !definition.NoCache && ok {
 		return valueByType(value, definition.Default)
 	}
 
@@ -46,7 +47,9 @@ func (d *defaultVariable) Load(definition *latest.Variable) (interface{}, error)
 		return nil, err
 	}
 
-	d.cache[d.name] = value
+	if !definition.NoCache {
+		d.cache[d.name] = value
+	}
 	return valueByType(value, definition.Default)
 }
 
