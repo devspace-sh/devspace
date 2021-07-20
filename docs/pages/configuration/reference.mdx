@@ -157,6 +157,7 @@ helm:                               # struct   | Options for deploying with Helm
   - ./chart/my-values.yaml          # string   | Path to a file to override values.yaml with
   replaceImageTags: true            # bool     | Enable automated tag replacement (Default: true)
   wait: false                       # bool     | Wait for pods to start after deployment (Default: false)
+  displayOutput: false              # bool     | Display output from helm install/upgrade (Default: false)  
   timeout: 180                      # int      | Timeout to wait for pods to start after deployment (Default: 180)
   force: false                      # bool     | Force deleting and re-creating Kubernetes resources during deployment (Default: false)
   atomic: false                     # bool     | Rollback deployment if it fails (Default: false)
