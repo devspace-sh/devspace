@@ -17,6 +17,7 @@ While there is no need to explicitly define a config variable, it allows you to 
     { label: 'Value', value: 'value', },
     { label: 'Options', value: 'options', },
     { label: 'Password', value: 'password', }, 
+    { label: 'NoCache', value: 'noCache', }, 
     { label: 'Command', value: 'command', },
     { label: 'Environment', value: 'env', },
     { label: 'Implicit', value: 'implicit', },
@@ -75,6 +76,20 @@ vars:
 - name: MYSQL_VERSION
   question: Which mysql version do you want to use?
   password: true
+```
+
+</TabItem>
+
+<TabItem value="NoCache">
+
+```yaml {3,5-6}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  question: Which mysql version do you want to use?
+  noCache: true
 ```
 
 </TabItem>
@@ -140,6 +155,8 @@ If `source` is either `all` or `input` and the variable is not defined, the user
 devspace reset vars
 ```
 :::
+
+To disable this functionality set the field `noCache` to `true`. This will make devspace prompt for the variable on every run.
 
 ## Predefined Variables
 DevSpace provides some variables that are filled automatically and can be used within the config. These can be helpful for image tagging and other use cases:

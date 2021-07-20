@@ -17,6 +17,7 @@ If `source: all (default) | input`, DevSpace may ask the user a question to dete
     { label: 'Question', value: 'question', },
     { label: 'Options', value: 'options', },
     { label: 'Password', value: 'password', },
+    { label: 'NoCache', value: 'noCache', },
   ]
 }>
 <TabItem value="question">
@@ -58,6 +59,19 @@ vars:
 - name: MYSQL_VERSION
   question: Which mysql version do you want to use?
   password: true
+```
+
+</TabItem>
+<TabItem value="NoCache">
+
+```yaml {3,5-6}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  question: Which mysql version do you want to use?
+  noCache: true
 ```
 
 </TabItem>
