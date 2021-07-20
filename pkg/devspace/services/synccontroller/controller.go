@@ -1,7 +1,10 @@
 package synccontroller
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -259,6 +262,11 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 		Polling:              syncConfig.Polling,
 	}
 
+	// Initialize log
+	if options.Log == nil {
+		options.Log = logpkg.GetFileLogger("sync")
+	}
+
 	// Add onDownload hooks
 	if syncConfig.OnDownload != nil && syncConfig.OnDownload.ExecLocal != nil {
 		fileCmd, fileArgs, dirCmd, dirArgs := getSyncCommands(syncConfig.OnDownload.ExecLocal)
@@ -340,7 +348,7 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 	upStdoutReader, upStdoutWriter := io.Pipe()
 
 	go func() {
-		err := inject.StartStream(c.client, pod, container, upstreamArgs, upStdinReader, upStdoutWriter)
+		err := startStream(c.client, pod, container, upstreamArgs, upStdinReader, upStdoutWriter, options.Log)
 		if err != nil {
 			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
@@ -371,7 +379,7 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 	downStdoutReader, downStdoutWriter := io.Pipe()
 
 	go func() {
-		err := inject.StartStream(c.client, pod, container, downstreamArgs, downStdinReader, downStdoutWriter)
+		err := startStream(c.client, pod, container, downstreamArgs, downStdinReader, downStdoutWriter, options.Log)
 		if err != nil {
 			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
@@ -403,4 +411,37 @@ func getSyncCommands(cmd *latest.SyncExecCommand) (string, []string, string, []s
 	}
 
 	return onFileChange.Command, onFileChange.Args, onDirCreate.Command, onDirCreate.Args
+}
+
+func startStream(client kubectl.Client, pod *v1.Pod, container string, command []string, reader io.Reader, stdoutWriter io.Writer, log logpkg.Logger) error {
+	stderrBuffer := &bytes.Buffer{}
+	stderrReader, stderrWriter := io.Pipe()
+	defer stderrWriter.Close()
+
+	go func() {
+		defer stderrReader.Close()
+
+		scanner := bufio.NewScanner(stderrReader)
+		buf := make([]byte, 0, 64*1024)
+		scanner.Buffer(buf, 1024*1024)
+		for scanner.Scan() {
+			log.Info("Helper - " + scanner.Text())
+		}
+		if scanner.Err() != nil && scanner.Err() != context.Canceled {
+			log.Warnf("Helper - Error streaming logs: %v", scanner.Err())
+		}
+	}()
+
+	err := client.ExecStream(&kubectl.ExecStreamOptions{
+		Pod:       pod,
+		Container: container,
+		Command:   command,
+		Stdin:     reader,
+		Stdout:    stdoutWriter,
+		Stderr:    io.MultiWriter(stderrBuffer, stderrWriter),
+	})
+	if err != nil {
+		return fmt.Errorf("%s %v", stderrBuffer.String(), err)
+	}
+	return nil
 }

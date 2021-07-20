@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/FabianKramm/notify"
 	"github.com/loft-sh/devspace/pkg/devspace/watch"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/notify"
 )
 
 type symlinkEvent struct {

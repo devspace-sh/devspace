@@ -1,4 +1,4 @@
-module github.com/FabianKramm/notify
+module github.com/loft-sh/notify
 
 go 1.11
 

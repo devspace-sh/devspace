@@ -5,6 +5,7 @@ import (
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/helper/util"
+	"github.com/loft-sh/devspace/helper/util/stderrlog"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -221,10 +222,13 @@ func (u *Upstream) writeTar(writer io.WriteCloser, stream remote.Upstream_Upload
 
 func (u *Upstream) executeBatchCommand() error {
 	if u.options.BatchCmd != "" {
+		stderrlog.Logf("Execute batch command '%s %s'", u.options.BatchCmd, strings.Join(u.options.BatchArgs, " "))
 		out, err := exec.Command(u.options.BatchCmd, u.options.BatchArgs...).CombinedOutput()
 		if err != nil {
 			return errors.Errorf("Error executing command '%s %s': %s => %v", u.options.BatchCmd, strings.Join(u.options.BatchArgs, " "), string(out), err)
 		}
+
+		stderrlog.Logf("Done executing batch command")
 	}
 
 	return nil

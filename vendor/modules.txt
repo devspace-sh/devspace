@@ -21,9 +21,6 @@ github.com/Azure/go-autorest/autorest/date
 github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.6.0
 github.com/Azure/go-autorest/tracing
-# github.com/FabianKramm/notify v0.9.3-0.20210719135015-4705c29227a1
-## explicit
-github.com/FabianKramm/notify
 # github.com/Microsoft/go-winio v0.4.15
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
@@ -278,6 +275,9 @@ github.com/kevinburke/ssh_config
 github.com/krishicks/yaml-patch
 # github.com/lib/pq v1.10.0
 ## explicit
+# github.com/loft-sh/notify v0.0.0-20210720071614-e401a229e34a
+## explicit
+github.com/loft-sh/notify
 # github.com/mattn/go-colorable v0.1.6
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.12
