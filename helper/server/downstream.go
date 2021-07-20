@@ -4,8 +4,9 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	"github.com/FabianKramm/notify"
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
+	"github.com/loft-sh/devspace/helper/util/stderrlog"
+	"github.com/loft-sh/notify"
 	"io"
 	"io/ioutil"
 	"log"
@@ -61,9 +62,22 @@ func StartDownstreamServer(reader io.Reader, writer io.Writer, options *Downstre
 		// start watcher if this we should use it
 		watchStop := make(chan struct{})
 		if options.Polling == false {
+			stderrlog.Logf("Use inotify as watching method in container")
+
 			go func() {
 				// set up a watchpoint listening for events within a directory tree rooted at specified directory
-				err := notify.Watch(options.RemotePath+"/...", downStream.events, notify.All)
+				err := notify.WatchWithFilter(options.RemotePath+"/...", downStream.events, func(s string) bool {
+					if ignoreMatcher == nil || ignoreMatcher.RequireFullScan() {
+						return false
+					}
+
+					stat, err := os.Stat(s)
+					if err != nil {
+						return true
+					}
+
+					return ignoreMatcher.Matches(s[len(options.RemotePath):], stat.IsDir())
+				}, notify.All)
 				if err != nil {
 					log.Fatalf("error watching path %s: %v", options.RemotePath, err)
 					return
@@ -73,6 +87,8 @@ func StartDownstreamServer(reader io.Reader, writer io.Writer, options *Downstre
 				// start the watch loop
 				downStream.watch(watchStop)
 			}()
+		} else {
+			stderrlog.Logf("Use polling as watching method in container")
 		}
 
 		done <- s.Serve(lis)

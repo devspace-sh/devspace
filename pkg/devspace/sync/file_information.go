@@ -1,8 +1,8 @@
 package sync
 
 import (
-	"github.com/FabianKramm/notify"
 	"github.com/loft-sh/devspace/helper/remote"
+	"github.com/loft-sh/notify"
 	"os"
 )
 

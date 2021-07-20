@@ -4,7 +4,6 @@ go 1.15
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.2.9
-	github.com/FabianKramm/notify v0.9.3-0.20210719135015-4705c29227a1
 	github.com/Microsoft/hcsshim v0.8.10 // indirect
 	github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d // indirect
 	github.com/agl/ed25519 v0.0.0-00010101000000-000000000000 // indirect
@@ -49,6 +48,7 @@ require (
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/krishicks/yaml-patch v0.0.10
 	github.com/lib/pq v1.10.0 // indirect
+	github.com/loft-sh/notify v0.0.0-20210720071614-e401a229e34a
 	github.com/mattn/go-sqlite3 v1.14.6 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/miekg/pkcs11 v1.0.3 // indirect

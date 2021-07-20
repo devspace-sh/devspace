@@ -3,6 +3,7 @@ package sync
 import (
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"io"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -10,7 +11,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
 
-	"github.com/FabianKramm/notify"
+	"github.com/loft-sh/notify"
 	"github.com/pkg/errors"
 )
 
@@ -91,11 +92,6 @@ func NewSync(localPath string, options Options) (*Sync, error) {
 
 	// We exclude the sync log to prevent an endless loop in upstream
 	options.ExcludePaths = append(options.ExcludePaths, ".devspace/")
-
-	// Initialize log
-	if options.Log == nil {
-		options.Log = log.GetFileLogger("sync")
-	}
 
 	// Create sync structure
 	s := &Sync{
@@ -208,7 +204,18 @@ func (s *Sync) startUpstream() {
 	defer s.Stop(nil)
 
 	// Set up a watchpoint listening for events within a directory tree rooted at specified directory
-	err := notify.Watch(s.LocalPath+"/...", s.upstream.events, notify.All)
+	err := notify.WatchWithFilter(s.LocalPath+"/...", s.upstream.events, func(path string) bool {
+		if s.ignoreMatcher == nil || s.ignoreMatcher.RequireFullScan() {
+			return false
+		}
+
+		stat, err := os.Stat(path)
+		if err != nil {
+			return true
+		}
+
+		return s.ignoreMatcher.Matches(path[len(s.LocalPath):], stat.IsDir())
+	}, notify.All)
 	if err != nil {
 		s.Stop(err)
 		return
