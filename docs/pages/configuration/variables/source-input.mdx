@@ -64,7 +64,7 @@ vars:
 </TabItem>
 <TabItem value="noCache">
 
-```yaml {3,5-6}
+```yaml {3,5-7}
 images:
   database:
     image: "mysql:${MYSQL_VERSION}"
@@ -137,7 +137,7 @@ Use the arrows UP/DOWN to select an option and ENTER to choose the selected opti
 ```
 
 ### `noCache`
-The `noCache` option expects a boolean that disable the caching behavior for variables. This will prompt the user on every run and will not save the value when set to `true`.
+The `noCache` option expects a boolean that disables the caching behavior for variables. When set to `true`, this will prompt the user on every run and will not save the value.
 
 #### Default Value For `noCache`
 ```yaml
