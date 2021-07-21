@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"io/ioutil"
 	"net/http"
@@ -169,8 +170,14 @@ func (cmd *UICmd) RunUI(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	// Override error runtime handler
 	log.OverrideRuntimeErrorHandler(true)
 
+	// Get DevSpace Config if available
+	var latestConfig *latest.Config
+	if config != nil {
+		latestConfig = config.Config()
+	}
+
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "ui", client.CurrentContext(), client.Namespace(), config.Config())
+	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "ui", client.CurrentContext(), client.Namespace(), latestConfig)
 	if err != nil {
 		return err
 	}
