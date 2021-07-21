@@ -62,7 +62,7 @@ vars:
 ```
 
 </TabItem>
-<TabItem value="NoCache">
+<TabItem value="noCache">
 
 ```yaml {3,5-6}
 images:
@@ -134,6 +134,14 @@ Use the arrows UP/DOWN to select an option and ENTER to choose the selected opti
   hub.docker.com
 > my.private-registry.tld
   gcr.io
+```
+
+### `noCache`
+The `noCache` option expects a boolean that disable the caching behavior for variables. This will prompt the user on every run and will not save the value when set to `true`.
+
+#### Default Value For `noCache`
+```yaml
+noCache: false
 ```
 
 ### `password`
