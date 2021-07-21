@@ -324,6 +324,29 @@ Deploying the above example would roughly be equivalent to this command:
 helm install database bitnami/mysql --wait
 ```
 
+### `displayOutput`
+
+The `displayOutput` option expects a boolean and allows helm output to be printed to the console after `helm install` and `helm upgrade`. This can be used to display `notes.txt` from your helm charts.
+
+#### Default Value for `displayOutput`
+```yaml
+displayOutput: false
+```
+
+#### Example: displayOutput
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+    displayOutput: true
+```
+
+**Explanation:**  
+Deploying the above example would print the helm output and the `notes.txt` from the bitnami/mysql chart.
+
+
 ### `timeout`
 The `timeout` option expects an integer representing a number of seconds that will be used for the [helm flag `--timeout`](https://helm.sh/docs/intro/using_helm/#helpful-options-for-installupgraderollback).
 
