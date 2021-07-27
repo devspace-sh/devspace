@@ -73,7 +73,7 @@ func StartDownstreamServer(reader io.Reader, writer io.Writer, options *Downstre
 
 					stat, err := os.Stat(s)
 					if err != nil {
-						return true
+						return false
 					}
 
 					return ignoreMatcher.Matches(s[len(options.RemotePath):], stat.IsDir())
