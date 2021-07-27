@@ -211,7 +211,7 @@ func (s *Sync) startUpstream() {
 
 		stat, err := os.Stat(path)
 		if err != nil {
-			return true
+			return false
 		}
 
 		return s.ignoreMatcher.Matches(path[len(s.LocalPath):], stat.IsDir())
