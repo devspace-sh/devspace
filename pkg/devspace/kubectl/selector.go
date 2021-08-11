@@ -75,7 +75,11 @@ func (s Selector) String() string {
 	if len(s.ImageSelector) > 0 {
 		sa := []string{}
 		for _, c := range s.ImageSelector {
-			sa = append(sa, c.ConfigImageName+"="+c.Image)
+			if c.ConfigImageName != "" {
+				sa = append(sa, c.ConfigImageName+"="+c.Image)
+			} else {
+				sa = append(sa, c.Image)
+			}
 		}
 
 		strs = append(strs, "image selector: "+strings.Join(sa, ","))
