@@ -10,7 +10,7 @@ import (
 // NewRootCmd returns a new root command
 func NewRootCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "devspace-restart-helper",
+		Use:   "devspacehelper",
 		Short: "DevSpace Utility CLI",
 	}
 }
