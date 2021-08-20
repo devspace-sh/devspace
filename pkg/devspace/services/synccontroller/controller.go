@@ -209,8 +209,13 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 		containerPath = syncConfig.ContainerPath
 	}
 
-	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, container.Pod.Namespace, container.Pod.Name)
+	log.Donef("Sync started on %s <-> %s (Container: %s)", syncClient.LocalPath, containerPath, c.containerName())
 	return syncClient, nil
+}
+
+function (c *controller) containerName() string {
+	name := [] string{c.Pod.Namespace, c.Pod.name, c.Container.Name}
+	return strings.join(name, "/")
 }
 
 func (c *controller) isFatalSyncError(err error) bool {
@@ -350,7 +355,7 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 	go func() {
 		err := startStream(c.client, pod, container, upstreamArgs, upStdinReader, upStdoutWriter, options.Log)
 		if err != nil {
-			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
+			syncClient.Stop(errors.Errorf("Sync - connection lost to conatiner %: %v", c.containerName(), err))
 		}
 	}()
 
@@ -381,7 +386,7 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 	go func() {
 		err := startStream(c.client, pod, container, downstreamArgs, downStdinReader, downStdoutWriter, options.Log)
 		if err != nil {
-			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
+			syncClient.Stop(errors.Errorf("Sync - connection lost to container %s: %v", c.containerName(), err))
 		}
 	}()
 
