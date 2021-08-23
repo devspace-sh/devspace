@@ -704,6 +704,7 @@ type ReplacePod struct {
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
 type PortForwardingConfig struct {
+	Name          string            `yaml:"name,omitempty" json:"name,omitempty"`
 	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
@@ -731,6 +732,7 @@ type OpenConfig struct {
 
 // SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
+	Name                 string               `yaml:"name,omitempty" json:"name,omitempty"`
 	ImageSelector        string               `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	ImageName            string               `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	LabelSelector        map[string]string    `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
