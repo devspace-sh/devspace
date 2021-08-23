@@ -43,6 +43,28 @@ Every sync configuration consists of two essential parts:
 - [Pod/Container Selection](#podcontainer-selection)
 - [Sync Path Mapping via `localSubPath` and `containerPath`](#sync-path-mapping)
 
+## Configuration
+### `name`
+The `name` option is optional and expects a string stating the name of this sync configuration. This can be used as a steady identifier when using profile patches.
+
+For example:
+```yaml {3}
+dev:
+  sync:
+  - name: devbackend
+    imageSelector: john/devbackend
+    localSubPath: ./
+    containerPath: /app
+    excludePaths:
+    - node_modules/
+    - logs/
+profiles:
+- name: production
+  patches:
+  - op: replace
+    path: dev.sync.name=devbackend.imageSelector
+    value: john/prodbackend
+```
 
 ## Pod/Container Selection
 The following config options are needed to determine the container which the file synchronization should be established to:

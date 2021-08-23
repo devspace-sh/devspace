@@ -230,7 +230,8 @@ kubectl:                            # struct   | Options for deploying with "kub
 ### `dev.ports`
 ```yaml
 ports:                              # struct[] | Array of port forwarding settings for selected pods
-- imageName: someImage              # string   | Name of an image defined in `images` or in a dependency to select pods with
+- name: somePort                    # string   | Optional string stating the name of this port-forwarding configuration
+  imageName: someImage              # string   | Name of an image defined in `images` or in a dependency to select pods with
   imageSelector: john/backend:0.1   # string   | Image of a container by which DevSpace should select the pod
   labelSelector: ...                # struct   | Key Value map of labels and values to select pods with
   namespace: ""                     # string   | Kubernetes namespace to select pods in
@@ -256,7 +257,8 @@ open:                               # struct[] | Array of auto-open settings
 ### `dev.sync`
 ```yaml
 sync:                               # struct[] | Array of file sync settings for selected pods
-- imageName: someImage              # string   | Name of an image defined in `images` or in a dependency to select pods with
+- name: someSync                    # string   | Optional string stating the name of this sync configuration
+  imageName: someImage              # string   | Name of an image defined in `images` or in a dependency to select pods with
   imageSelector: john/backend:0.1   # string   | Image of a container by which DevSpace should select the pod
   labelSelector: ...                # struct   | Key Value map of labels and values to select pods with
   containerName: ""                 # string   | Container name to use after selecting a pod

@@ -1,8 +1,6 @@
 package loader
 
 import (
-	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,6 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	fakegenerated "github.com/loft-sh/devspace/pkg/devspace/config/generated/testing"
@@ -1044,6 +1045,84 @@ profiles:
 										"image": "test/test",
 									},
 								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"Port name validation": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta10
+dev:
+  ports:
+  - name: devbackend
+    imageSelector: john/devbackend
+    forward:
+    - port: 8080
+      remotePort: 80
+profiles:
+- name: production
+  patches:
+  - op: replace
+    path: dev.ports.name=devbackend.imageSelector
+    value: john/prodbackend`,
+				options:         &ConfigOptions{Profile: "production"},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev: latest.DevConfig{
+					Ports: []*latest.PortForwardingConfig{
+						{
+							Name:          "devbackend",
+							ImageSelector: "john/prodbackend",
+							PortMappings: []*latest.PortMapping{
+								{
+									LocalPort:  ptr.Int(8080),
+									RemotePort: ptr.Int(80),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"Sync name validation": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta10
+dev:
+  sync:
+  - name: devbackend
+    imageSelector: john/devbackend
+    localSubPath: ./
+    containerPath: /app
+    excludePaths:
+    - node_modules/
+    - logs/
+profiles:
+- name: production
+  patches:
+  - op: replace
+    path: dev.sync.name=devbackend.imageSelector
+    value: john/prodbackend`,
+				options:         &ConfigOptions{Profile: "production"},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev: latest.DevConfig{
+					Sync: []*latest.SyncConfig{
+						{
+							Name:          "devbackend",
+							ImageSelector: "john/prodbackend",
+							LocalSubPath:  "./",
+							ContainerPath: "/app",
+							ExcludePaths: []string{
+								"node_modules/",
+								"logs/",
 							},
 						},
 					},
