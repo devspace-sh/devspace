@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
@@ -31,6 +32,7 @@ type Controller interface {
 
 func NewController(config config.Config, dependencies []types.Dependency, client kubectl.Client, log logpkg.Logger) Controller {
 	return &controller{
+		hookExecuter: hook.NewExecuter(config, dependencies),
 		config:       config,
 		dependencies: dependencies,
 		client:       client,
@@ -39,6 +41,7 @@ func NewController(config config.Config, dependencies []types.Dependency, client
 }
 
 type controller struct {
+	hookExecuter hook.Executer
 	config       config.Config
 	dependencies []types.Dependency
 	client       kubectl.Client
@@ -75,6 +78,12 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 	if options.SyncConfig.WaitInitialSync == nil || *options.SyncConfig.WaitInitialSync == true {
 		onInitUploadDone = make(chan struct{})
 		onInitDownloadDone = make(chan struct{})
+		if options.SyncConfig.Name != "" {
+			err := c.hookExecuter.Execute(hook.Before, hook.StageInitialSync, options.SyncConfig.Name, hook.Context{Client: c.client}, log)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	// start the sync
@@ -84,7 +93,7 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 	}
 
 	// should wait for initial sync?
-	if onInitUploadDone != nil && onInitDownloadDone != nil {
+	if options.SyncConfig.WaitInitialSync == nil || *options.SyncConfig.WaitInitialSync == true {
 		log.Info("Waiting for initial sync to complete")
 		var (
 			uploadDone   = false
@@ -109,6 +118,12 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 			}
 			if uploadDone && downloadDone {
 				break
+			}
+		}
+		if options.SyncConfig.Name != "" {
+			err := c.hookExecuter.Execute(hook.After, hook.StageInitialSync, options.SyncConfig.Name, hook.Context{Client: c.client}, log)
+			if err != nil {
+				return err
 			}
 		}
 	}

@@ -3,7 +3,6 @@ package hook
 import (
 	"bytes"
 	"fmt"
-	dockerterm "github.com/docker/docker/pkg/term"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -12,6 +11,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/command"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
+	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
 	"io"
 	"k8s.io/apimachinery/pkg/labels"
@@ -77,6 +77,8 @@ const (
 	StageDependencies Stage = "dependencies"
 	// StagePullSecrets is the pull secrets stage
 	StagePullSecrets Stage = "pullSecrets"
+	// StageInitialSync is the initial sync stage
+	StageInitialSync Stage = "initialSync"
 )
 
 // All is used to tell devspace to execute a hook before or after all images, deployments
@@ -137,6 +139,8 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 						hooksToExecute = append(hooksToExecute, hook)
 					} else if stage == StagePullSecrets && hook.When.Before.PullSecrets != "" && strings.TrimSpace(hook.When.Before.PullSecrets) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
+					} else if stage == StageInitialSync && hook.When.Before.InitialSync != "" && strings.TrimSpace(hook.When.Before.InitialSync) == strings.TrimSpace(which) {
+						hooksToExecute = append(hooksToExecute, hook)
 					}
 				} else if when == After && hook.When.After != nil {
 					if stage == StageDeployments && hook.When.After.Deployments != "" && strings.TrimSpace(hook.When.After.Deployments) == strings.TrimSpace(which) {
@@ -149,6 +153,8 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 						hooksToExecute = append(hooksToExecute, hook)
 					} else if stage == StagePullSecrets && hook.When.After.PullSecrets != "" && strings.TrimSpace(hook.When.After.PullSecrets) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
+					} else if stage == StageInitialSync && hook.When.After.InitialSync != "" && strings.TrimSpace(hook.When.After.InitialSync) == strings.TrimSpace(which) {
+						hooksToExecute = append(hooksToExecute, hook)
 					}
 				} else if when == OnError && hook.When.OnError != nil {
 					if stage == StageDeployments && hook.When.OnError.Deployments != "" && strings.TrimSpace(hook.When.OnError.Deployments) == strings.TrimSpace(which) {
@@ -160,6 +166,8 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 					} else if stage == StageDependencies && hook.When.OnError.Dependencies != "" && strings.TrimSpace(hook.When.OnError.Dependencies) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
 					} else if stage == StagePullSecrets && hook.When.OnError.PullSecrets != "" && strings.TrimSpace(hook.When.OnError.PullSecrets) == strings.TrimSpace(which) {
+						hooksToExecute = append(hooksToExecute, hook)
+					} else if stage == StageInitialSync && hook.When.OnError.InitialSync != "" && strings.TrimSpace(hook.When.OnError.InitialSync) == strings.TrimSpace(which) {
 						hooksToExecute = append(hooksToExecute, hook)
 					}
 				}

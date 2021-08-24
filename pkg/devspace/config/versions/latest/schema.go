@@ -1048,6 +1048,7 @@ type HookWhenAtConfig struct {
 	Deployments      string `yaml:"deployments,omitempty" json:"deployments,omitempty"`
 	Dependencies     string `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
 	PullSecrets      string `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
+	InitialSync      string `yaml:"initialSync,omitempty" json:"initialSync,omitempty"`
 }
 
 // CommandConfig defines the command specification
