@@ -31,7 +31,7 @@ type initialSyncOptions struct {
 	DownstreamDisabled bool
 	FileIndex          *fileIndex
 
-	ApplyRemote func(changes []*FileInformation)
+	ApplyRemote func(changes []*FileInformation, remove bool)
 	ApplyLocal  func(changes []*remote.Change, force bool) error
 	AddSymlink  func(relativePath, absPath string) (os.FileInfo, error)
 
@@ -75,7 +75,7 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation) error {
 					})
 				}
 
-				i.o.ApplyRemote(deleteRemote)
+				i.o.ApplyRemote(deleteRemote, true)
 			}
 
 			// Upload remote if not mirror remote
@@ -89,10 +89,10 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation) error {
 						}
 					}
 					if len(changes) > 0 {
-						i.o.ApplyRemote(changes)
+						i.o.ApplyRemote(changes, false)
 					}
 				} else {
-					i.o.ApplyRemote(upload)
+					i.o.ApplyRemote(upload, false)
 				}
 			}
 		}
