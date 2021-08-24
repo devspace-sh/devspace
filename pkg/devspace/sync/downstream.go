@@ -143,7 +143,17 @@ func (d *downstream) mainLoop() error {
 		recheckInterval = 500
 	}
 
+	var (
+		changeTimer time.Time
+	)
 	for {
+		select {
+		case <-d.interrupt:
+			return nil
+		case <-time.After(time.Duration(recheckInterval) * time.Millisecond):
+			break
+		}
+
 		// Check for changes remotely
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
 		changeAmount, err := d.client.ChangesCount(ctx, &remote.Empty{})
@@ -152,8 +162,13 @@ func (d *downstream) mainLoop() error {
 			return errors.Wrap(err, "count changes")
 		}
 
+		// start waiting timer
+		if changeAmount.Amount > 0 && lastAmountChanges == 0 {
+			changeTimer = time.Now().Add(waitForMoreChangesTimeout)
+		}
+
 		// Compare change amount
-		if lastAmountChanges > 0 && changeAmount.Amount == lastAmountChanges {
+		if lastAmountChanges > 0 && (time.Now().After(changeTimer) || changeAmount.Amount > 50000 || changeAmount.Amount == lastAmountChanges) {
 			d.sync.fileIndex.fileMapMutex.Lock()
 			changes, err := d.collectChanges()
 			d.sync.fileIndex.fileMapMutex.Unlock()
@@ -165,16 +180,12 @@ func (d *downstream) mainLoop() error {
 			if err != nil {
 				return errors.Wrap(err, "apply changes")
 			}
-		}
 
-		select {
-		case <-d.interrupt:
-			return nil
-		case <-time.After(time.Duration(recheckInterval) * time.Millisecond):
-			break
+			lastAmountChanges = 0
+			changeTimer = time.Time{}
+		} else {
+			lastAmountChanges = changeAmount.Amount
 		}
-
-		lastAmountChanges = changeAmount.Amount
 	}
 }
 

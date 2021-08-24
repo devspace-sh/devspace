@@ -18,6 +18,8 @@ import (
 var syncRetries = 5
 var initialUpstreamBatchSize = 1000
 
+const waitForMoreChangesTimeout = time.Minute
+
 // Options holds the sync options
 type Options struct {
 	Polling bool

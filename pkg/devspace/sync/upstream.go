@@ -42,7 +42,9 @@ type upstream struct {
 	ignoreMatcher ignoreparser.IgnoreParser
 }
 
-const removeFilesBufferSize = 64
+const (
+	removeFilesBufferSize = 64
+)
 
 // newUpstream creates a new upstream handler with the given parameters
 func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upstream, error) {
@@ -176,6 +178,7 @@ func (u *upstream) mainLoop() error {
 		var (
 			changes      []*FileInformation
 			changeAmount = 0
+			changeTimer  time.Time
 		)
 
 		// gather changes
@@ -183,7 +186,7 @@ func (u *upstream) mainLoop() error {
 			select {
 			case <-u.interrupt:
 				return nil
-			case <-time.After(time.Millisecond * 600):
+			case <-time.After(time.Millisecond * 400):
 				break
 			}
 
@@ -198,9 +201,14 @@ func (u *upstream) mainLoop() error {
 				changes = append(changes, fileInformation...)
 			}
 
+			// start waiting timer
+			if len(changes) > 0 && changeAmount == 0 {
+				changeTimer = time.Now().Add(waitForMoreChangesTimeout)
+			}
+
 			// We gather changes till there are no more changes or
 			// a certain amount of changes is reached
-			if len(changes) > 50000 || (changeAmount == len(changes) && changeAmount > 0) {
+			if changeAmount > 0 && (time.Now().After(changeTimer) || len(changes) > 50000 || changeAmount == len(changes)) {
 				break
 			}
 
