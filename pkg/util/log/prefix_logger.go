@@ -16,7 +16,6 @@ var Colors = []string{
 	"yellow",
 	"magenta",
 	"cyan",
-	"red",
 	"white+b",
 }
 
