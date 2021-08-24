@@ -19,14 +19,18 @@ type Config interface {
 	// Variables returns the variables that were resolved while
 	// loading the config
 	Variables() map[string]interface{}
+
+	// Path returns the path from which the config was loaded
+	Path() string
 }
 
-func NewConfig(raw map[interface{}]interface{}, parsed *latest.Config, generatedConfig *generated.Config, resolvedVariables map[string]interface{}) Config {
+func NewConfig(raw map[interface{}]interface{}, parsed *latest.Config, generatedConfig *generated.Config, resolvedVariables map[string]interface{}, path string) Config {
 	return &config{
 		rawConfig:         raw,
 		parsedConfig:      parsed,
 		generatedConfig:   generatedConfig,
 		resolvedVariables: resolvedVariables,
+		path:              path,
 	}
 }
 
@@ -35,6 +39,7 @@ type config struct {
 	parsedConfig      *latest.Config
 	generatedConfig   *generated.Config
 	resolvedVariables map[string]interface{}
+	path              string
 }
 
 func (c *config) Config() *latest.Config {
@@ -53,22 +58,26 @@ func (c *config) Variables() map[string]interface{} {
 	return c.resolvedVariables
 }
 
+func (c *config) Path() string {
+	return c.path
+}
+
 func Ensure(config Config) Config {
 	retConfig := config
 	if retConfig == nil {
-		retConfig = NewConfig(nil, nil, nil, nil)
+		retConfig = NewConfig(nil, nil, nil, nil, "")
 	}
 	if retConfig.Raw() == nil {
-		retConfig = NewConfig(map[interface{}]interface{}{}, retConfig.Config(), retConfig.Generated(), retConfig.Variables())
+		retConfig = NewConfig(map[interface{}]interface{}{}, retConfig.Config(), retConfig.Generated(), retConfig.Variables(), retConfig.Path())
 	}
 	if retConfig.Config() == nil {
-		retConfig = NewConfig(retConfig.Raw(), latest.NewRaw(), retConfig.Generated(), retConfig.Variables())
+		retConfig = NewConfig(retConfig.Raw(), latest.NewRaw(), retConfig.Generated(), retConfig.Variables(), retConfig.Path())
 	}
 	if retConfig.Generated() == nil {
-		retConfig = NewConfig(retConfig.Raw(), retConfig.Config(), generated.New(), retConfig.Variables())
+		retConfig = NewConfig(retConfig.Raw(), retConfig.Config(), generated.New(), retConfig.Variables(), retConfig.Path())
 	}
 	if retConfig.Variables() == nil {
-		retConfig = NewConfig(retConfig.Raw(), retConfig.Config(), retConfig.Generated(), map[string]interface{}{})
+		retConfig = NewConfig(retConfig.Raw(), retConfig.Config(), retConfig.Generated(), map[string]interface{}{}, retConfig.Path())
 	}
 
 	return retConfig

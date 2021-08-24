@@ -2,10 +2,13 @@ package generated
 
 import (
 	"encoding/base64"
-	"github.com/loft-sh/devspace/pkg/util/encryption"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	"github.com/loft-sh/devspace/pkg/util/encryption"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -18,18 +21,15 @@ const (
 // If empty DevSpace will not encrypt / decrypt the variables.
 var EncryptionKey string
 
-// ConfigPath is the relative generated config path
-var ConfigPath = ".devspace/generated.yaml"
-
 // ConfigLoader is the interface for loading the generated config
 type ConfigLoader interface {
 	Load() (*Config, error)
-	LoadFromPath(path string) (*Config, error)
 	Save(config *Config) error
 }
 
 type configLoader struct {
-	profile string
+	configPath string
+	profile    string
 }
 
 // New generates a new generated config
@@ -44,18 +44,24 @@ func New() *Config {
 
 // NewConfigLoader creates a new generated config loader
 func NewConfigLoader(profile string) ConfigLoader {
+	return NewConfigLoaderFromDevSpacePath(profile, constants.DefaultConfigPath)
+}
+
+// NewConfigLoaderFromDevSpacePath creates a new generated config loader for the given DevSpace configuration path
+func NewConfigLoaderFromDevSpacePath(profile string, path string) ConfigLoader {
 	return &configLoader{
-		profile: profile,
+		configPath: configPath(path),
+		profile:    profile,
 	}
 }
 
 // Load loads the config from the filesystem
 func (l *configLoader) Load() (*Config, error) {
-	return l.LoadFromPath(ConfigPath)
+	return l.loadFromPath(l.configPath)
 }
 
 // LoadFromPath loads the generated config from a given path
-func (l *configLoader) LoadFromPath(path string) (*Config, error) {
+func (l *configLoader) loadFromPath(path string) (*Config, error) {
 	var loadedConfig *Config
 
 	data, readErr := ioutil.ReadFile(path)
@@ -114,7 +120,6 @@ func (l *configLoader) LoadFromPath(path string) (*Config, error) {
 
 // Save saves the config to the filesystem
 func (l *configLoader) Save(config *Config) error {
-	workdir, _ := os.Getwd()
 	data, err := yaml.Marshal(config)
 	if err != nil {
 		return err
@@ -150,13 +155,12 @@ func (l *configLoader) Save(config *Config) error {
 		return err
 	}
 
-	configPath := filepath.Join(workdir, ConfigPath)
-	err = os.MkdirAll(filepath.Dir(configPath), 0755)
+	err = os.MkdirAll(filepath.Dir(l.configPath), 0755)
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(configPath, data, 0666)
+	return ioutil.WriteFile(l.configPath, data, 0666)
 }
 
 // NewCache returns a new cache object
@@ -221,4 +225,24 @@ func InitDevSpaceConfig(config *Config, configName string) {
 	if config.Profiles[configName].Dependencies == nil {
 		config.Profiles[configName].Dependencies = make(map[string]string)
 	}
+}
+
+// configPath returns the generated config absolute path. The if the default devspace.yaml is given the generated config path
+// will be $PWD/.devspace/generated.yaml. For any other file name it will be $PWD/.devspace/generated-[file name]
+func configPath(devspaceConfigPath string) string {
+	if devspaceConfigPath == "" {
+		return filepath.Join(constants.DefaultCacheFolder, "generated.yaml")
+	}
+
+	fileDir := filepath.Dir(devspaceConfigPath)
+	if fileDir == "" {
+		fileDir, _ = os.Getwd()
+	}
+
+	fileName := filepath.Base(devspaceConfigPath)
+	if fileName == constants.DefaultConfigPath {
+		return filepath.Join(fileDir, constants.DefaultCacheFolder, "generated.yaml")
+	}
+
+	return filepath.Join(fileDir, constants.DefaultCacheFolder, fmt.Sprintf("generated-%s", fileName))
 }

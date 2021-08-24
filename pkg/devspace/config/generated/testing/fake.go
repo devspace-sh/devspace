@@ -7,13 +7,12 @@ type Loader struct {
 	Config generated.Config
 }
 
-// Load is a fake implementation o this function
-func (l *Loader) Load() (*generated.Config, error) {
-	return &l.Config, nil
+func (l *Loader) ForDevspace(path string) generated.ConfigLoader {
+	return l
 }
 
-// LoadFromPath is a fake implementation o this function
-func (l *Loader) LoadFromPath(path string) (*generated.Config, error) {
+// Load is a fake implementation o this function
+func (l *Loader) Load() (*generated.Config, error) {
 	return &l.Config, nil
 }
 

@@ -4,16 +4,18 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -317,7 +319,7 @@ func (cmd *OpenCmd) openLocal(f factory.Factory, client kubectl.Client, domain s
 		Dev: latest.DevConfig{
 			Ports: portforwardingConfig,
 		},
-	}, nil, nil)), nil, client, cmd.log)
+	}, nil, nil, constants.DefaultConfigPath)), nil, client, cmd.log)
 	err = servicesClient.StartPortForwarding(nil)
 	if err != nil {
 		return errors.Wrap(err, "start port forwarding")

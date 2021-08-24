@@ -1,13 +1,15 @@
 package dependency
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/util"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -176,7 +178,7 @@ func TestResolver(t *testing.T) {
 		kubeClient := &fakekube.Client{
 			Client: kube,
 		}
-		testResolver := NewResolver(config.NewConfig(nil, testConfig, generatedConfig, map[string]interface{}{}), kubeClient, &loader.ConfigOptions{}, log.Discard)
+		testResolver := NewResolver(config.NewConfig(nil, testConfig, generatedConfig, map[string]interface{}{}, constants.DefaultConfigPath), kubeClient, &loader.ConfigOptions{}, log.Discard)
 		assert.NilError(t, err, "Error creating a resolver in testCase %s", testCase.name)
 
 		dependencies, err := testResolver.Resolve(testCase.updateParam)
