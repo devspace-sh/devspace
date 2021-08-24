@@ -325,13 +325,14 @@ sync:                               # struct[] | Array of file sync settings for
 logs:                               # struct   | Options for multi-container log streaming in development mode
   disabled: false                   # bool     | Disable log streaming in development mode (Default: false)
   showLast: 200                     # int      | Number of last log lines to show before starting stream (Default: 50)
-  images: []                        # string[] | Array of image names referencing images defined in `images` for selecting containers for log streaming
   sync: true                        # bool     | If the sync log should be merged with container and pod logs
-  selectors:                        # struct[] | An array of additional label selectors to select pods to stream logs from
+  selectors:                        # struct[] | An array of label or image selectors to select pods to stream logs from
   - labelSelector:            
       other: label
     namespace: optional
-    containerName: optional 
+    containerName: optional
+  - imageSelector: nginx
+    namespace: optional
 ```
 [Learn more about configuring multi-container log streaming.](../configuration/development/log-streaming.mdx)
 
