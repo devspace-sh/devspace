@@ -302,7 +302,7 @@ func (s *Sync) initialSync(onInitUploadDone chan struct{}, onInitDownloadDone ch
 	return initialSync.Run(downloadChanges)
 }
 
-func (s *Sync) sendChangesToUpstream(changes []*FileInformation) {
+func (s *Sync) sendChangesToUpstream(changes []*FileInformation, remove bool) {
 	for j := 0; j < len(changes); j += initialUpstreamBatchSize {
 		// Wait till upstream channel is empty
 		for len(s.upstream.events) > 0 {
@@ -314,7 +314,11 @@ func (s *Sync) sendChangesToUpstream(changes []*FileInformation) {
 		s.fileIndex.fileMapMutex.Lock()
 
 		for i := j; i < (j+initialUpstreamBatchSize) && i < len(changes); i++ {
-			sendBatch = append(sendBatch, changes[i])
+			if remove {
+				sendBatch = append(sendBatch, changes[i])
+			} else if s.fileIndex.fileMap[changes[i].Name] == nil || changes[i].Mtime > s.fileIndex.fileMap[changes[i].Name].Mtime || changes[i].Size != s.fileIndex.fileMap[changes[i].Name].Size {
+				sendBatch = append(sendBatch, changes[i])
+			}
 		}
 
 		s.fileIndex.fileMapMutex.Unlock()
