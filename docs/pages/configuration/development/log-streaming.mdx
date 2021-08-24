@@ -19,80 +19,18 @@ dev:
     showLast: 200
     # To display the sync log as well
     sync: true
-    images:
-    - backend
-    - frontend
-    # Other label selectors to forward logs from
-    selectors: ...
+    selectors:
+    - imageSelector: john/appbackend
+    - imageSelector: john/database
 ```
 
 DevSpace will continously check what pods match the given selectors and start or end log streaming accordingly.
 
 ## Configuration
 
-### `images`
-The `images` option expects an array of strings with image names. DevSpace uses this list to determine which containers to use for the multi-container log streaming.
-
-:::info
-By default, DevSpace streams the logs of **all** containers that are created based on images defined in the `images` section of the `devspace.yaml`.
-:::
-
-#### Example: Stream Only Containers Using Specified Images
-```yaml {2,4,35-38}
-images:
-  frontend:
-    image: john/appfrontend
-  backend:
-    image: john/appbackend
-  database:
-    image: john/database
-deployments:
-- name: app-frontend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/appfrontend
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/appbackend
-      - image: john/appbackend-sidecar
-- name: app-database
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/database
-- name: app-cache
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: redis:5.0.5
-dev:
-  logs:
-    images:
-    - backend
-    - frontend
-```
-**Explanation:**  
-- The above example defines 3 images and 5 deployments.
-- The `images` option defines that only containers using the `image` value of the images `backend` and `frontend` should be streamed.
-- The result would be that DevSpace streams the logs of:
-  - The container of deployment `app-frontend` because the image is `john/appfrontend` = `images.frontend.image`
-  - Only the first container of deployment `app-backend` because the image is `john/appbackend` = `images.backend.image`
-  
-:::note
-The **second** container of deployment `app-backend` would **not** be streamed in this example.
-:::
-
-
 ### `selectors`
 
-Besides `images`, DevSpaces allows log streaming from other pods and containers as well. You can configure them under the option `selectors`.
+DevSpaces allows log streaming from pods and containers based on label or image selectors. You can configure them under the option `selectors`.
 
 ```yaml
 dev:
@@ -105,6 +43,8 @@ dev:
       namespace: optional
     - labelSelector:
         other: selector   
+    - imageSelector: nginx
+      namespace: optional
 ```
 
 ### `sync`

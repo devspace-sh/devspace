@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -29,8 +30,8 @@ type LogManager interface {
 type logManager struct {
 	client kubectl.Client
 
-	imageNameSelectors []imageselector.ImageSelector
-	labelSelectors     []latest.LogsSelector
+	imageSelectors []namespacedImageSelector
+	labelSelectors []latest.LogsSelector
 
 	tail int64
 
@@ -41,58 +42,85 @@ type logManager struct {
 	activeLogs      map[string]activeLog
 }
 
+type namespacedImageSelector struct {
+	imageselector.ImageSelector
+
+	Namespace string
+}
+
 func NewLogManager(client kubectl.Client, config config.Config, dependencies []types.Dependency, interrupt chan error, out log.Logger) (LogManager, error) {
 	if config == nil || config.Config() == nil || config.Generated() == nil {
 		return nil, fmt.Errorf("no devspace config loaded")
 	}
 
 	// get config
-	c := config.Config()
+	var (
+		c              = config.Config()
+		tail           *int64
+		imageSelectors = []namespacedImageSelector{}
+		labelSelectors = []latest.LogsSelector{}
+	)
 
-	// Build an image selector
-	imageSelector := []imageselector.ImageSelector{}
-	if c.Dev.Logs != nil && c.Dev.Logs.Images != nil {
+	if c.Dev.Logs != nil {
+		if c.Dev.Logs.ShowLast != nil {
+			tail = ptr.Int64(int64(*c.Dev.Logs.ShowLast))
+		}
+
+		// resolve image names
 		for _, configImageName := range c.Dev.Logs.Images {
 			selector, err := imageselector.Resolve(configImageName, config, dependencies)
 			if err != nil {
 				return nil, err
 			} else if selector != nil {
-				imageSelector = append(imageSelector, *selector)
+				imageSelectors = append(imageSelectors, namespacedImageSelector{
+					ImageSelector: *selector,
+				})
 			}
 		}
-	} else {
+
+		// resolve selectors
+		for _, selector := range c.Dev.Logs.Selectors {
+			if selector.ImageSelector != "" {
+				imageSelector, err := util.ResolveImageAsImageSelector(selector.ImageSelector, config, dependencies)
+				if err != nil {
+					return nil, err
+				}
+
+				imageSelectors = append(imageSelectors, namespacedImageSelector{
+					ImageSelector: *imageSelector,
+					Namespace:     selector.Namespace,
+				})
+			} else {
+				labelSelectors = append(labelSelectors, selector)
+			}
+		}
+	}
+
+	// if we don't have any selectors, use the current images as selector
+	if len(labelSelectors)+len(imageSelectors) == 0 {
 		for configImageName := range c.Images {
 			selector, err := imageselector.Resolve(configImageName, config, dependencies)
 			if err != nil {
 				return nil, err
 			} else if selector != nil {
-				imageSelector = append(imageSelector, *selector)
+				imageSelectors = append(imageSelectors, namespacedImageSelector{
+					ImageSelector: *selector,
+				})
 			}
 		}
 	}
 
-	// Show last log lines
-	var tail *int64
-	if c.Dev.Logs != nil && c.Dev.Logs.ShowLast != nil {
-		tail = ptr.Int64(int64(*c.Dev.Logs.ShowLast))
-	}
-
-	var selectors []latest.LogsSelector
-	if c.Dev.Logs != nil {
-		selectors = c.Dev.Logs.Selectors
-	}
 	if tail == nil {
 		tail = ptr.Int64(50)
 	}
-
 	return &logManager{
-		client:             client,
-		imageNameSelectors: imageSelector,
-		labelSelectors:     selectors,
-		interrupt:          interrupt,
-		output:             out,
-		tail:               *tail,
-		activeLogs:         map[string]activeLog{},
+		client:         client,
+		imageSelectors: imageSelectors,
+		labelSelectors: labelSelectors,
+		interrupt:      interrupt,
+		output:         out,
+		tail:           *tail,
+		activeLogs:     map[string]activeLog{},
 	}, nil
 }
 
@@ -183,9 +211,10 @@ func (l *logManager) gatherPods() ([]podInfo, error) {
 	}
 
 	// first gather all pods by image
-	if len(l.imageNameSelectors) > 0 {
+	for _, selector := range l.imageSelectors {
 		selectors = append(selectors, kubectl.Selector{
-			ImageSelector:      l.imageNameSelectors,
+			ImageSelector:      []imageselector.ImageSelector{selector.ImageSelector},
+			Namespace:          selector.Namespace,
 			FilterPod:          filterPod,
 			SkipInitContainers: true,
 		})

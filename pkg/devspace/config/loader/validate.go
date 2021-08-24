@@ -167,6 +167,21 @@ func validateCommands(config *latest.Config) error {
 
 func validateHooks(config *latest.Config) error {
 	for index, hookConfig := range config.Hooks {
+		if hookConfig.When == nil {
+			return errors.Errorf("hooks[%d].when is required", index)
+		}
+		if hookConfig.When.After == nil && hookConfig.When.Before == nil && hookConfig.When.OnError == nil {
+			return errors.Errorf("hooks[%d].when.after or hooks[%d].when.before or hooks[%d].when.onError is required", index, index, index)
+		}
+		if hookConfig.When != nil && hookConfig.When.OnError != nil && hookConfig.When.OnError.InitialSync != "" {
+			return errors.Errorf("hooks[%d].when.onError.initialSync is not yet supported", index)
+		}
+		if hookConfig.When != nil && hookConfig.When.After != nil && hookConfig.When.After.InitialSync == "all" {
+			return errors.Errorf("hooks[%d].when.after.initialSync all is not yet supported", index)
+		}
+		if hookConfig.When != nil && hookConfig.When.Before != nil && hookConfig.When.Before.InitialSync == "all" {
+			return errors.Errorf("hooks[%d].when.before.initialSync all is not yet supported", index)
+		}
 		if hookConfig.Command == "" && hookConfig.Upload == nil && hookConfig.Download == nil && hookConfig.Logs == nil && hookConfig.Wait == nil {
 			return errors.Errorf("hooks[%d].command, hooks[%d].logs, hooks[%d].wait, hooks[%d].download or hooks[%d].upload is required", index, index, index, index, index)
 		}
@@ -409,6 +424,17 @@ func validateDev(config *latest.Config) error {
 		for index, imageConf := range config.Dev.InteractiveImages {
 			if imageConf.Name == "" {
 				return errors.Errorf("Error in config: Unnamed interactive image config at index %d", index)
+			}
+		}
+	}
+
+	if config.Dev.Logs != nil {
+		for index, selector := range config.Dev.Logs.Selectors {
+			if selector.ImageSelector != "" && len(selector.LabelSelector) > 0 {
+				return errors.Errorf("Error in config: dev.logs.selectors[%d].imageSelector and dev.logs.selectors[%d].labelSelector cannot be used together", index, index)
+			}
+			if selector.ImageSelector != "" && selector.ContainerName != "" {
+				return errors.Errorf("Error in config: dev.logs.selectors[%d].imageSelector and dev.logs.selectors[%d].containerName cannot be used together", index, index)
 			}
 		}
 	}

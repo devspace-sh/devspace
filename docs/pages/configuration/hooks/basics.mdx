@@ -19,6 +19,13 @@ hooks:
   when:
     before:
       images: all
+# Execute the hook in a golang shell (cross operating system compatible)
+- command: |
+    echo Hello
+    echo World
+  when:
+    before:
+      images: all
 # Execute the hook directly on the system (echo binary must exist)
 - command: "echo"
   args: ["before image building"]
@@ -78,11 +85,12 @@ DevSpace allows you to execute commands directly in a container instead of the l
 ```yaml
 ...
 hooks:
-- command: "echo"
-  args: ["Hello from within the container!"]
+- command: |
+    echo Hello World!
+    echo From within the container!
   where: 
     container:
-      imageName: default
+      imageSelector: nginx
       # Or select via labelSelector etc.
       # labelSelector: ...
       # namespace: ...

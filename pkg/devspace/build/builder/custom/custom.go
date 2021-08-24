@@ -13,7 +13,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 
-	dockerterm "github.com/docker/docker/pkg/term"
+	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )

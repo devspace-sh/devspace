@@ -18,6 +18,8 @@ import (
 var syncRetries = 5
 var initialUpstreamBatchSize = 1000
 
+const waitForMoreChangesTimeout = time.Minute
+
 // Options holds the sync options
 type Options struct {
 	Polling bool
@@ -300,7 +302,7 @@ func (s *Sync) initialSync(onInitUploadDone chan struct{}, onInitDownloadDone ch
 	return initialSync.Run(downloadChanges)
 }
 
-func (s *Sync) sendChangesToUpstream(changes []*FileInformation, remove bool) {
+func (s *Sync) sendChangesToUpstream(changes []*FileInformation) {
 	for j := 0; j < len(changes); j += initialUpstreamBatchSize {
 		// Wait till upstream channel is empty
 		for len(s.upstream.events) > 0 {
@@ -312,11 +314,7 @@ func (s *Sync) sendChangesToUpstream(changes []*FileInformation, remove bool) {
 		s.fileIndex.fileMapMutex.Lock()
 
 		for i := j; i < (j+initialUpstreamBatchSize) && i < len(changes); i++ {
-			if remove {
-				sendBatch = append(sendBatch, changes[i])
-			} else if s.fileIndex.fileMap[changes[i].Name] == nil || (s.fileIndex.fileMap[changes[i].Name] != nil && changes[i].Mtime > s.fileIndex.fileMap[changes[i].Name].Mtime) {
-				sendBatch = append(sendBatch, changes[i])
-			}
+			sendBatch = append(sendBatch, changes[i])
 		}
 
 		s.fileIndex.fileMapMutex.Unlock()

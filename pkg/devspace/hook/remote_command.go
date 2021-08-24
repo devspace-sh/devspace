@@ -22,7 +22,12 @@ type remoteCommandHook struct {
 
 func (r *remoteCommandHook) ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *kubectl.SelectedPodContainer, log logpkg.Logger) error {
 	cmd := []string{hook.Command}
-	cmd = append(cmd, hook.Args...)
+	if hook.Args == nil {
+		cmd = []string{"sh", "-c", hook.Command}
+	} else {
+		cmd = append(cmd, hook.Args...)
+	}
+
 	err := ctx.Client.ExecStream(&kubectl.ExecStreamOptions{
 		Pod:       podContainer.Pod,
 		Container: podContainer.Container.Name,
