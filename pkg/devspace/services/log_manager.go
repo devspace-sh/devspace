@@ -30,8 +30,8 @@ type LogManager interface {
 type logManager struct {
 	client kubectl.Client
 
-	imageNameSelectors []imageselector.ImageSelector
-	labelSelectors     []latest.LogsSelector
+	imageSelectors []namespacedImageSelector
+	labelSelectors []latest.LogsSelector
 
 	tail int64
 
@@ -40,6 +40,12 @@ type logManager struct {
 
 	activeLogsMutex sync.Mutex
 	activeLogs      map[string]activeLog
+}
+
+type namespacedImageSelector struct {
+	imageselector.ImageSelector
+
+	Namespace string
 }
 
 func NewLogManager(client kubectl.Client, config config.Config, dependencies []types.Dependency, interrupt chan error, out log.Logger) (LogManager, error) {
@@ -51,7 +57,7 @@ func NewLogManager(client kubectl.Client, config config.Config, dependencies []t
 	var (
 		c              = config.Config()
 		tail           *int64
-		imageSelectors = []imageselector.ImageSelector{}
+		imageSelectors = []namespacedImageSelector{}
 		labelSelectors = []latest.LogsSelector{}
 	)
 
@@ -66,7 +72,9 @@ func NewLogManager(client kubectl.Client, config config.Config, dependencies []t
 			if err != nil {
 				return nil, err
 			} else if selector != nil {
-				imageSelectors = append(imageSelectors, *selector)
+				imageSelectors = append(imageSelectors, namespacedImageSelector{
+					ImageSelector: *selector,
+				})
 			}
 		}
 
@@ -78,18 +86,26 @@ func NewLogManager(client kubectl.Client, config config.Config, dependencies []t
 					return nil, err
 				}
 
-				imageSelectors = append(imageSelectors, *imageSelector)
+				imageSelectors = append(imageSelectors, namespacedImageSelector{
+					ImageSelector: *imageSelector,
+					Namespace:     selector.Namespace,
+				})
 			} else {
 				labelSelectors = append(labelSelectors, selector)
 			}
 		}
-	} else {
+	}
+
+	// if we don't have any selectors, use the current images as selector
+	if len(labelSelectors)+len(imageSelectors) == 0 {
 		for configImageName := range c.Images {
 			selector, err := imageselector.Resolve(configImageName, config, dependencies)
 			if err != nil {
 				return nil, err
 			} else if selector != nil {
-				imageSelectors = append(imageSelectors, *selector)
+				imageSelectors = append(imageSelectors, namespacedImageSelector{
+					ImageSelector: *selector,
+				})
 			}
 		}
 	}
@@ -98,13 +114,13 @@ func NewLogManager(client kubectl.Client, config config.Config, dependencies []t
 		tail = ptr.Int64(50)
 	}
 	return &logManager{
-		client:             client,
-		imageNameSelectors: imageSelectors,
-		labelSelectors:     labelSelectors,
-		interrupt:          interrupt,
-		output:             out,
-		tail:               *tail,
-		activeLogs:         map[string]activeLog{},
+		client:         client,
+		imageSelectors: imageSelectors,
+		labelSelectors: labelSelectors,
+		interrupt:      interrupt,
+		output:         out,
+		tail:           *tail,
+		activeLogs:     map[string]activeLog{},
 	}, nil
 }
 
@@ -195,9 +211,10 @@ func (l *logManager) gatherPods() ([]podInfo, error) {
 	}
 
 	// first gather all pods by image
-	if len(l.imageNameSelectors) > 0 {
+	for _, selector := range l.imageSelectors {
 		selectors = append(selectors, kubectl.Selector{
-			ImageSelector:      l.imageNameSelectors,
+			ImageSelector:      []imageselector.ImageSelector{selector.ImageSelector},
+			Namespace:          selector.Namespace,
 			FilterPod:          filterPod,
 			SkipInitContainers: true,
 		})
