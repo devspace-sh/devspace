@@ -850,6 +850,7 @@ type LogsConfig struct {
 
 // LogsSelector holds configuration how to select a log target
 type LogsSelector struct {
+	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
