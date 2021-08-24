@@ -253,11 +253,13 @@ func executeHook(ctx Context, hookConfig *latest.HookConfig, hookWriter io.Write
 
 func hookName(hook *latest.HookConfig) string {
 	if hook.Command != "" {
-		if hook.Args == nil {
-			return hook.Command
+		commandString := strings.TrimSpace(hook.Command + " " + strings.Join(hook.Args, " "))
+		splitted := strings.Split(commandString, "\n")
+		if len(splitted) > 1 {
+			return splitted[0] + "..."
 		}
 
-		return fmt.Sprintf("%s %s", hook.Command, strings.Join(hook.Args, " "))
+		return commandString
 	}
 	if hook.Upload != nil && hook.Where.Container != nil {
 		localPath := "."
