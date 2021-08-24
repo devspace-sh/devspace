@@ -17,6 +17,7 @@ If `source: all (default) | input`, DevSpace may ask the user a question to dete
     { label: 'Question', value: 'question', },
     { label: 'Options', value: 'options', },
     { label: 'Password', value: 'password', },
+    { label: 'NoCache', value: 'noCache', },
   ]
 }>
 <TabItem value="question">
@@ -58,6 +59,19 @@ vars:
 - name: MYSQL_VERSION
   question: Which mysql version do you want to use?
   password: true
+```
+
+</TabItem>
+<TabItem value="noCache">
+
+```yaml {3,5-7}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  question: Which mysql version do you want to use?
+  noCache: true
 ```
 
 </TabItem>
@@ -120,6 +134,14 @@ Use the arrows UP/DOWN to select an option and ENTER to choose the selected opti
   hub.docker.com
 > my.private-registry.tld
   gcr.io
+```
+
+### `noCache`
+The `noCache` option expects a boolean that disables the caching behavior for variables. When set to `true`, this will prompt the user on every run and will not save the value.
+
+#### Default Value For `noCache`
+```yaml
+noCache: false
 ```
 
 ### `password`

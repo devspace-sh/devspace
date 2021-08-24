@@ -704,6 +704,7 @@ type ReplacePod struct {
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
 type PortForwardingConfig struct {
+	Name          string            `yaml:"name,omitempty" json:"name,omitempty"`
 	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
@@ -731,6 +732,7 @@ type OpenConfig struct {
 
 // SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
+	Name                 string               `yaml:"name,omitempty" json:"name,omitempty"`
 	ImageSelector        string               `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	ImageName            string               `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	LabelSelector        map[string]string    `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
@@ -1072,7 +1074,7 @@ type Variable struct {
 	Password          bool     `yaml:"password,omitempty" json:"password,omitempty"`
 	ValidationPattern string   `yaml:"validationPattern,omitempty" json:"validationPattern,omitempty"`
 	ValidationMessage string   `yaml:"validationMessage,omitempty" json:"validationMessage,omitempty"`
-
+	NoCache           bool     `yaml:"noCache,omitempty" json:"noCache,omitempty"`
 	// Value is a shortcut for using source: none and default: my-value
 	Value interface{} `yaml:"value,omitempty" json:"value,omitempty"`
 

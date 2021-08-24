@@ -30,7 +30,7 @@
     "js-sha256": "^0.9.0",
     "js-yaml": "^3.13.1",
     "moment": "^2.24.0",
-    "node-sass": "^4.12.0",
+    "node-sass": "^5.0.0",
     "npm-run-all": "^4.1.5",
     "object-assign": "4.1.1",
     "postcss-flexbugs-fixes": "4.1.0",
@@ -62,7 +62,7 @@
     "uglifyjs-webpack-plugin": "2.2.0",
     "url-loader": "2.1.0",
     "webpack": "4.38.0",
-    "webpack-dev-server": "3.7.2",
+    "webpack-dev-server": "4.0.0",
     "webpack-manifest-plugin": "2.0.4",
     "whatwg-fetch": "2.0.3",
     "xterm": "4.1.0"

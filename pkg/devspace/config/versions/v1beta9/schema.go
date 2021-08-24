@@ -984,6 +984,7 @@ type Variable struct {
 	Password          bool           `yaml:"password,omitempty" json:"password,omitempty"`
 	ValidationPattern string         `yaml:"validationPattern,omitempty" json:"validationPattern,omitempty"`
 	ValidationMessage string         `yaml:"validationMessage,omitempty" json:"validationMessage,omitempty"`
+	NoCache           bool           `yaml:"noCache,omitempty" json:"noCache,omitempty"`
 	Default           interface{}    `yaml:"default,omitempty" json:"default,omitempty"`
 	Source            VariableSource `yaml:"source,omitempty" json:"source,omitempty"`
 
