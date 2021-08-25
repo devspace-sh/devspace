@@ -1,0 +1,10 @@
+version: v1beta10
+vars:
+  - name: TEST_OVERRIDE
+    value: dev.yaml
+deployments:
+  - name: ${NOT_USED}
+    kubectl:
+      manifests:
+        - ${TEST_2}
+        - ${TEST_OVERRIDE}

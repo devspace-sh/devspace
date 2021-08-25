@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"path/filepath"
 
@@ -72,6 +73,14 @@ func (cmd *PrintCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	loadedConfig, err := configLoader.Load(configOptions, log)
 	if err != nil {
 		return err
+	}
+
+	// resolve dependencies
+	_, err = dependency.NewManager(loadedConfig, client, configOptions, log).ResolveAll(dependency.ResolveOptions{
+		Silent: true,
+	})
+	if err != nil {
+		log.Warnf("Error resolving dependencies: %v", err)
 	}
 
 	// execute plugin hook
