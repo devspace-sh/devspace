@@ -3,6 +3,7 @@ package kube
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/e2e/new/framework"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
@@ -74,11 +75,9 @@ func (k *KubeHelper) CreateNamespace(name string) (string, error) {
 	return name, nil
 }
 
-func (k *KubeHelper) DeleteNamespace(name string) error {
+func (k *KubeHelper) DeleteNamespace(name string) {
 	err := k.client.KubeClient().CoreV1().Namespaces().Delete(context.TODO(), name, metav1.DeleteOptions{})
 	if err != nil && kerrors.IsNotFound(err) == false {
-		return err
+		framework.ExpectNoError(err)
 	}
-
-	return nil
 }

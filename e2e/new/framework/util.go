@@ -15,7 +15,7 @@ import (
 	"sync"
 )
 
-func LoadConfig(f factory.Factory, configPath string) (config.Config, []types.Dependency, error) {
+func LoadConfigWithOptions(f factory.Factory, configPath string, configOptions *loader.ConfigOptions) (config.Config, []types.Dependency, error) {
 	before, err := os.Getwd()
 	if err != nil {
 		return nil, nil, err
@@ -24,7 +24,6 @@ func LoadConfig(f factory.Factory, configPath string) (config.Config, []types.De
 
 	// Set config root
 	log := f.GetLog()
-	configOptions := &loader.ConfigOptions{}
 	configLoader := f.NewConfigLoader(configPath)
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
@@ -46,6 +45,10 @@ func LoadConfig(f factory.Factory, configPath string) (config.Config, []types.De
 	}
 
 	return loadedConfig, dependencies, nil
+}
+
+func LoadConfig(f factory.Factory, configPath string) (config.Config, []types.Dependency, error) {
+	return LoadConfigWithOptions(f, configPath, &loader.ConfigOptions{})
 }
 
 func InterruptChan() (chan error, func()) {
