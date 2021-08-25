@@ -213,7 +213,7 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 	return syncClient, nil
 }
 
-function (c *controller) containerName() string {
+func (c *controller) containerName() string {
 	name := [] string{c.Pod.Namespace, c.Pod.name, c.Container.Name}
 	return strings.join(name, "/")
 }
