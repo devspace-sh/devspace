@@ -8,12 +8,22 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/message"
+	"github.com/onsi/ginkgo"
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"sync"
 )
+
+func BeforeAll(body func()) {
+	once := sync.Once{}
+	ginkgo.BeforeEach(func() {
+		once.Do(func() {
+			body()
+		})
+	})
+}
 
 func LoadConfigWithOptions(f factory.Factory, configPath string, configOptions *loader.ConfigOptions) (config.Config, []types.Dependency, error) {
 	before, err := os.Getwd()
