@@ -59,6 +59,8 @@ require (
 	github.com/moby/sys/symlink v0.1.0 // indirect
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6
 	github.com/morikuni/aec v1.0.0 // indirect
+	github.com/onsi/ginkgo v1.12.0
+	github.com/onsi/gomega v1.9.0
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/otiai10/copy v0.0.0-20180813030456-0046ee23fdbd
 	github.com/otiai10/mint v1.3.2 // indirect

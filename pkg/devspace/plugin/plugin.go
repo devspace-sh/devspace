@@ -388,6 +388,10 @@ func AddPluginCommands(base *cobra.Command, plugins []Metadata, subCommand strin
 }
 
 func ExecutePluginHook(plugins []Metadata, cobraCmd *cobra.Command, args []string, event, kubeContext, namespace string, config *latest.Config) error {
+	if cobraCmd == nil {
+		return nil
+	}
+
 	configStr := ""
 	if config != nil {
 		configBytes, err := yaml2.Marshal(config)

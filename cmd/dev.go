@@ -79,6 +79,9 @@ type DevCmd struct {
 
 	configLoader loader.ConfigLoader
 	log          log.Logger
+
+	// used for testing to allow interruption
+	Interrupt chan error
 }
 
 // NewDevCmd creates a new devspace dev command
@@ -395,6 +398,9 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 		autoReloadPaths = GetPaths(config)
 		useTerminal     = config.Dev.Terminal != nil && config.Dev.Terminal.Disabled == false
 	)
+	if cmd.Interrupt != nil {
+		exitChan = cmd.Interrupt
+	}
 
 	// replace pods
 	err := servicesClient.ReplacePods()
@@ -404,11 +410,11 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 
 	if cmd.Portforwarding {
 		cmd.Portforwarding = false
-		err := servicesClient.StartPortForwarding(nil)
+		err := servicesClient.StartPortForwarding(cmd.Interrupt)
 		if err != nil {
 			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
 		}
-		err = servicesClient.StartReversePortForwarding(nil)
+		err = servicesClient.StartReversePortForwarding(cmd.Interrupt)
 		if err != nil {
 			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
 		}
@@ -448,7 +454,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 			printSyncLog = true
 		}
 
-		err := servicesClient.StartSync(nil, printSyncLog, cmd.VerboseSync)
+		err := servicesClient.StartSync(cmd.Interrupt, printSyncLog, cmd.VerboseSync)
 		if err != nil {
 			return 0, errors.Wrap(err, "start sync")
 		}
