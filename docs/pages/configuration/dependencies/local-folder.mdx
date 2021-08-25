@@ -49,6 +49,23 @@ dependencies:
   - Load the `devspace.yaml` files of both dependencies and resolve their dependencies respectively.
   - Deploy both projects according to their `devspace.yaml` files.
 
+### `source.configName`
+The `source.configName` option is optional and specifies the dependency's DevSpace configuration file name. If not provided, `devspace.yaml` at the dependency `source.path` will be used.
+
+#### Default Value For `source.configName`
+```yaml
+configName: devspace.yaml
+```
+
+#### Example: Use dev.yaml for Dependency's DevSpace Configuration
+```yaml
+# This will use the file component-1/dev.yaml
+# for the dependency's DevSpace configuration
+dependencies:
+- source:
+    path: component-1
+    configName: dev.yaml
+```
 
 ## General Options
 
