@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	// Register tests
-	_ "github.com/loft-sh/devspace/e2e/new/tests/sync"
+	_ "github.com/loft-sh/devspace/e2e/new/tests/config"
+	//_ "github.com/loft-sh/devspace/e2e/new/tests/sync"
 )
 
 // RunE2ETests checks configuration parameters (specified through flags) and then runs

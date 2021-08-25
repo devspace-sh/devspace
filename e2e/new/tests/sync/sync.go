@@ -6,14 +6,17 @@ import (
 	"github.com/loft-sh/devspace/e2e/new/framework"
 	"github.com/loft-sh/devspace/e2e/new/kube"
 	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/onsi/ginkgo"
+	"io/ioutil"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
 
-var _ = DevSpaceDescribe("devspace dev", func() {
+var _ = DevSpaceDescribe("sync", func() {
 	initialDir, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -32,14 +35,28 @@ var _ = DevSpaceDescribe("devspace dev", func() {
 		framework.ExpectNoError(err)
 	})
 
+	ginkgo.It("devspace sync should work with and without config", func() {
+		// TODO:
+		// test devspace sync command with devspace.yaml and without devspace.yaml
+	})
+
+	ginkgo.It("should execute a command after sync", func() {
+		// TODO:
+		// test config options dev.sync.onUpload.execRemote, dev.sync.onUpload.execRemote.onFileChange, dev.sync.onUpload.execRemote.onDirCreate, dev.sync.onUpload.execRemote.onBatch
+		// test config options dev.sync.onDownload.execLocal, dev.sync.onDownload.execLocal.onFileChange, dev.sync.onDownload.execLocal.onDirCreate, dev.sync.onDownload.execLocal.onBatch
+		// test config option dev.sync.onUpload.restartContainer
+	})
+
 	ginkgo.It("should sync to a pod and detect changes", func() {
+		// TODO: test exclude / downloadExclude paths & file / folder deletion
+
 		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/dev-simple")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		ns, err := kubeClient.CreateNamespace("sync")
 		framework.ExpectNoError(err)
-		// defer kubeClient.DeleteNamespace(ns)
+		defer kubeClient.DeleteNamespace(ns)
 
 		// interrupt chan for the dev command
 		interrupt, stop := framework.InterruptChan()
@@ -84,6 +101,21 @@ var _ = DevSpaceDescribe("devspace dev", func() {
 		// check if excluded file was synced
 		out, err = kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/test.txt"})
 		framework.ExpectError(err)
+
+		// write a file and check that it got synced
+		payload := randutil.GenerateRandomString(10000)
+		err = ioutil.WriteFile(filepath.Join(tempDir, "file3.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+
+		// wait for sync
+		err = wait.Poll(time.Second, time.Minute*2, func() (done bool, err error) {
+			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/file3.txt"})
+			if err != nil {
+				return false, nil
+			}
+
+			return out == payload, nil
+		})
 
 		// stop command
 		stop()
