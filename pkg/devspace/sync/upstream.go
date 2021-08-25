@@ -475,7 +475,11 @@ func (u *upstream) updateUploadChanges(files []*FileInformation) []*FileInformat
 
 func (u *upstream) applyCreates(files []*FileInformation) error {
 	size := int64(0)
+	alreadyPrinted := map[string]bool{}
 	for _, c := range files {
+		if alreadyPrinted[c.Name] {
+			continue
+		}
 		if c.IsDirectory {
 			// Print changes
 			if u.sync.Options.Verbose || len(files) <= 3 {
@@ -488,8 +492,10 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 
 			size += c.Size
 		}
+
+		alreadyPrinted[c.Name] = true
 	}
-	u.sync.log.Infof("Upstream - Upload %d create change(s) (Uncompressed ~%0.2f KB)", len(files), float64(size)/1024.0)
+	u.sync.log.Infof("Upstream - Upload %d create change(s) (Uncompressed ~%0.2f KB)", len(alreadyPrinted), float64(size)/1024.0)
 
 	// Create a pipe for reading and writing
 	reader, writer := io.Pipe()
