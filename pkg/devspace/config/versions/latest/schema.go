@@ -1130,6 +1130,7 @@ type ProfileConfig struct {
 	Replace        *ProfileConfigStructure `yaml:"replace,omitempty" json:"replace,omitempty"`
 	Merge          *ProfileConfigStructure `yaml:"merge,omitempty" json:"merge,omitempty"`
 	StrategicMerge *ProfileConfigStructure `yaml:"strategicMerge,omitempty" json:"strategicMerge,omitempty"`
+	Activation     []*ProfileActivation    `yaml:"activation,omitempty" json:"activation,omitempty"`
 }
 
 // ProfileConfigStructure is the base structure used to validate profiles
@@ -1148,6 +1149,13 @@ type ProfileConfigStructure struct {
 type ProfileParent struct {
 	Source  *SourceConfig `yaml:"source,omitempty" json:"source,omitempty"`
 	Profile string        `yaml:"profile" json:"profile"`
+}
+
+// ProfileActivation defines rules that automatically activate a profile when evaluated to true
+type ProfileActivation struct {
+	// Environment defines key/value pairs where the key is the name of the environment variable and the value is a regular expression used to match the variable's value.
+	// When multiple keys are specified, they must all evaluate to true to activate the profile.
+	Environment map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 }
 
 // PatchConfig describes a config patch and how it should be applied

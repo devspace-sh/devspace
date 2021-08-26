@@ -2,6 +2,11 @@ package versions
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"regexp"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -21,8 +26,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta9"
 	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"io/ioutil"
-	"path/filepath"
 
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
@@ -57,8 +60,15 @@ func ParseProfile(basePath string, data map[interface{}]interface{}, profile str
 		profileParents = profileParents[:len(profileParents)-1]
 	}
 
-	err := getProfiles(basePath, data, profile, &profiles, 1, update, log)
+	// auto activated root level profiles
+	activatedProfiles, err := getActivatedProfiles(data)
 	if err != nil {
+		return nil, err
+	}
+	profileParents = append(activatedProfiles, profileParents...)
+
+	// explicitly activated profile
+	if err := getProfiles(basePath, data, profile, &profiles, 1, update, log); err != nil {
 		return nil, err
 	}
 
@@ -281,4 +291,62 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 
 	// Couldn't find config
 	return errors.Errorf("Couldn't find profile '%s'", profile)
+}
+
+func getActivatedProfiles(data map[interface{}]interface{}) ([]string, error) {
+	activatedProfiles := []string{}
+
+	// Check if there are profiles
+	if data["profiles"] == nil {
+		return activatedProfiles, nil
+	}
+
+	// Convert to array
+	profiles, ok := data["profiles"].([]interface{})
+	if !ok {
+		return activatedProfiles, errors.Errorf("Couldn't load profiles '%s': no profiles found")
+	}
+
+	// Select which profiles are activated
+	for i, profileMap := range profiles {
+		profileConfig := &latest.ProfileConfig{}
+
+		o, err := yaml.Marshal(profileMap)
+		if err != nil {
+			return activatedProfiles, err
+		}
+
+		err = yaml.UnmarshalStrict(o, profileConfig)
+		if err != nil {
+			return activatedProfiles, fmt.Errorf("error parsing profile at profiles[%d]: %v", i, err)
+		}
+
+		for _, activation := range profileConfig.Activation {
+			activated, err := matchEnvironment(activation.Environment)
+			if err != nil {
+				return activatedProfiles, err
+			}
+
+			if activated {
+				activatedProfiles = append(activatedProfiles, profileConfig.Name)
+			}
+		}
+	}
+
+	return activatedProfiles, nil
+}
+
+func matchEnvironment(env map[string]string) (bool, error) {
+	for k, v := range env {
+		match, err := regexp.MatchString(v, os.Getenv(k))
+		if err != nil {
+			return false, err
+		}
+
+		if !match {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
