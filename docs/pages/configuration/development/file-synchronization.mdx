@@ -45,7 +45,7 @@ Every sync configuration consists of two essential parts:
 
 ## Configuration
 ### `name`
-The `name` option is optional and expects a string stating the name of this sync configuration. This can be used as a steady identifier when using profile patches.
+The `name` option is optional and expects a string stating the name of this sync configuration. This can be used as a steady identifier when using profile patches or when targeting this sync configuration with the before or after initial sync hook.
 
 For example:
 ```yaml {3}
@@ -58,12 +58,15 @@ dev:
     excludePaths:
     - node_modules/
     - logs/
-profiles:
-- name: production
-  patches:
-  - op: replace
-    path: dev.sync.name=devbackend.imageSelector
-    value: john/prodbackend
+hooks:
+- command: |
+    /app/rebuild.sh
+  when:
+    after:
+      initialSync: devbackend
+  where:
+    container:
+      imageSelector: john/devbackend
 ```
 
 ## Pod/Container Selection

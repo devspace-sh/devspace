@@ -25,13 +25,13 @@ hooks:
     echo World
   when:
     before:
-      images: all
+      images: image-1,image-2
 # Execute the hook directly on the system (echo binary must exist)
 - command: "echo"
   args: ["before image building"]
   when:
     before:
-      images: all
+      images: image-1,image-2
 # Execute the hook only on windows
 - command: "echo before image building"
   os: windows
@@ -53,6 +53,7 @@ This tells DevSpace to execute the command `echo before image building` before a
 - **specific deployment**: Will be executed before or after a certain deployment is deployed. The hook `when.after.deployments: my-deployment` is only executed if the deployment was actually deployed and not skipped. Example: `when.before.deployments: my-deployment`
 - **deployment purging**: Will be executed before or after any deployment is purged. Example: `when.before.purgeDeployments: all`
 - **specific deployment purging**: Will be executed before or after a certain deployment is purged. Example: `when.before.purgeDeployments: my-deployment`
+- **initial sync**: Will be executed before or after a certain sync configuration finished merging remote and local state. Example: `when.before.initialSync: my-sync-config`
 
 :::info Errors in Hooks
 If any hook returns a non zero exit code, DevSpace will abort and print an error message.

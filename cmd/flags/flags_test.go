@@ -60,7 +60,7 @@ func testUseLastContext(t *testing.T, testCase useLastContextTestCase) {
 
 func TestToConfigOptions(t *testing.T) {
 	configOptions := (&GlobalFlags{
-		Profiles:    []string{"myProfile", "myProfile2"},
+		Profiles:    []string{"myProfile2", "myProfile"},
 		KubeContext: "myKubeContext",
 		Vars:        []string{"var1", "var2"},
 	}).ToConfigOptions(log.Discard)
