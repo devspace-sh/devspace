@@ -11,3 +11,6 @@ const DefaultVarsPath = "devspace-vars.yaml"
 
 // DefaultHomeDevSpaceFolder is the default .devspace home folder where to store specific configurations
 const DefaultHomeDevSpaceFolder = ".devspace"
+
+// DefaultCacheFolder is the default folder where generated.yaml will be stored
+const DefaultCacheFolder = ".devspace"

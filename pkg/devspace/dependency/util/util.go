@@ -1,6 +1,13 @@
 package util
 
 import (
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/git"
@@ -8,12 +15,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
-	"io"
-	"net/http"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strings"
 )
 
 var authRegEx = regexp.MustCompile("^(https?:\\/\\/)[^:]+:[^@]+@(.*)$")
@@ -172,9 +173,14 @@ func GetDependencyID(basePath string, source *latest.SourceConfig, profile strin
 			return remote
 		}
 
+		if source.ConfigName != "" {
+			filePath += filepath.Join(filePath, source.ConfigName)
+		}
+
 		if profile != "" {
 			filePath += " - profile " + profile
 		}
+
 		for _, v := range vars {
 			filePath += ";" + v.Name + "=" + v.Value
 		}

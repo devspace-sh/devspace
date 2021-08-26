@@ -1,9 +1,10 @@
 package loader
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"io/ioutil"
 	"os"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	yaml "gopkg.in/yaml.v2"
@@ -11,7 +12,7 @@ import (
 
 // SaveGenerated is a convenience method to save the generated config
 func (l *configLoader) SaveGenerated(generatedConfig *generated.Config) error {
-	return generated.NewConfigLoader("").Save(generatedConfig)
+	return generated.NewConfigLoaderFromDevSpacePath("", l.configPath).Save(generatedConfig)
 }
 
 // Save writes the data of a config to its yaml file

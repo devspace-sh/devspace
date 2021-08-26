@@ -1,9 +1,11 @@
 package util
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"testing"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"gopkg.in/yaml.v2"
@@ -159,7 +161,7 @@ func TestReplaceContainerNames(t *testing.T) {
 	for _, testCase := range testCases {
 		cache := generated.New()
 		cache.Profiles[""] = testCase.cache
-		shouldRedeploy, err := ReplaceImageNames(testCase.overwriteValues, config.NewConfig(nil, &latest.Config{Images: testCase.imagesConf}, cache, nil), nil, testCase.builtImages, nil)
+		shouldRedeploy, err := ReplaceImageNames(testCase.overwriteValues, config.NewConfig(nil, &latest.Config{Images: testCase.imagesConf}, cache, nil, constants.DefaultConfigPath), nil, testCase.builtImages, nil)
 		assert.NilError(t, err, "Error replacing image names in testCase %s", testCase.name)
 
 		assert.Equal(t, shouldRedeploy, testCase.expectedShouldRedeploy, "Unexpected deployed-bool in testCase %s", testCase.name)

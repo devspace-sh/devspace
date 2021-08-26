@@ -573,9 +573,9 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 		go func() {
 			// send 100 each time
 			for i := 0; i < len(needCheck); i += 100 {
-				batch := []string{}
+				batch := make([]string, 0, 100)
 				for j := 0; j < 100; j++ {
-					if i+j > len(needCheck) {
+					if i+j >= len(needCheck) {
 						break
 					}
 

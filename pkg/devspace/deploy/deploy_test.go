@@ -1,9 +1,11 @@
 package deploy
 
 import (
-	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"testing"
 
+	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	fakehelm "github.com/loft-sh/devspace/pkg/devspace/helm/testing"
@@ -71,7 +73,7 @@ func TestRender(t *testing.T) {
 		config := &latest.Config{
 			Deployments: testCase.deployments,
 		}
-		controller := NewController(config2.NewConfig(nil, config, nil, nil), nil, kubeClient)
+		controller := NewController(config2.NewConfig(nil, config, nil, nil, constants.DefaultConfigPath), nil, kubeClient)
 
 		if testCase.options == nil {
 			testCase.options = &Options{}
@@ -150,7 +152,7 @@ func TestDeploy(t *testing.T) {
 		cache := generated.New()
 		cache.Profiles[""] = testCase.cache
 		controller := &controller{
-			config:       config2.NewConfig(nil, config, cache, nil),
+			config:       config2.NewConfig(nil, config, cache, nil, constants.DefaultConfigPath),
 			hookExecuter: &fakehook.FakeHook{},
 			client:       kubeClient,
 		}
@@ -229,7 +231,7 @@ func TestPurge(t *testing.T) {
 		cache := generated.New()
 		cache.Profiles[""] = testCase.cache
 		controller := &controller{
-			config:       config2.NewConfig(nil, config, cache, nil),
+			config:       config2.NewConfig(nil, config, cache, nil, constants.DefaultConfigPath),
 			hookExecuter: &fakehook.FakeHook{},
 			client:       kubeClient,
 		}

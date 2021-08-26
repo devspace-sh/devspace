@@ -1166,10 +1166,10 @@ profiles:
 
 type fakeGeneratedLoader struct{}
 
-func (f *fakeGeneratedLoader) Load() (*generated.Config, error) {
-	panic("unimplemented")
+func (l *fakeGeneratedLoader) ForDevspace(path string) generated.ConfigLoader {
+	return l
 }
-func (f *fakeGeneratedLoader) LoadFromPath(path string) (*generated.Config, error) {
+func (f *fakeGeneratedLoader) Load() (*generated.Config, error) {
 	panic("unimplemented")
 }
 func (f *fakeGeneratedLoader) Save(config *generated.Config) error {

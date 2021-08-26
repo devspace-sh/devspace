@@ -98,6 +98,25 @@ The `source.subPath` option expects a string stating a folder within the git rep
 subPath: /
 ```
 
+### `source.configName`
+The `source.configName` option is optional and specifies the dependency's DevSpace configuration file name within the git repository's `source.subPath` folder.
+
+#### Default Value For `source.configName`
+```yaml
+configName: devspace.yaml
+```
+
+#### Example: Use dev.yaml for Dependency's DevSpace Configuration
+```yaml
+# This will use the file dev.yaml for the dependency's DevSpace configuration
+# at the root folder of the repository's "stable" branch
+dependencies:
+- source:
+    git: https://github.com/my-api-server
+    branch: stable
+    configName: dev.yaml
+```
+
 
 ## Git Options
 
@@ -120,7 +139,6 @@ The `source.cloneArgs` option expects an array of additional arguments that DevS
 ```yaml
 cloneArgs: []
 ```
-
 
 ## General Options
 

@@ -1,12 +1,14 @@
 package kubectl
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"io"
 	"io/ioutil"
 	"strings"
 	"testing"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
@@ -97,7 +99,7 @@ func TestNew(t *testing.T) {
 			testCase.deployConfig = &latest.DeploymentConfig{}
 		}
 
-		deployer, err := New(config.NewConfig(nil, testCase.config, nil, nil), nil, testCase.kubeClient, testCase.deployConfig, nil)
+		deployer, err := New(config.NewConfig(nil, testCase.config, nil, nil, constants.DefaultConfigPath), nil, testCase.kubeClient, testCase.deployConfig, nil)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {
@@ -178,7 +180,7 @@ func TestRender(t *testing.T) {
 		cache.Profiles[""] = testCase.cache
 
 		deployer := &DeployConfig{
-			config:    config.NewConfig(nil, nil, cache, nil),
+			config:    config.NewConfig(nil, nil, cache, nil, constants.DefaultConfigPath),
 			Manifests: testCase.manifests,
 			DeploymentConfig: &latest.DeploymentConfig{
 				Kubectl: &latest.KubectlConfig{
@@ -291,7 +293,7 @@ func TestDelete(t *testing.T) {
 		cache := generated.New()
 		cache.Profiles[""] = testCase.cache
 		deployer := &DeployConfig{
-			config:    config.NewConfig(nil, nil, cache, nil),
+			config:    config.NewConfig(nil, nil, cache, nil, constants.DefaultConfigPath),
 			CmdPath:   testCase.cmdPath,
 			Manifests: testCase.manifests,
 			DeploymentConfig: &latest.DeploymentConfig{
@@ -373,7 +375,7 @@ func TestDeploy(t *testing.T) {
 		cache := generated.New()
 		cache.Profiles[""] = testCase.cache
 		deployer := &DeployConfig{
-			config:    config.NewConfig(nil, latest.NewRaw(), cache, nil),
+			config:    config.NewConfig(nil, latest.NewRaw(), cache, nil, constants.DefaultConfigPath),
 			CmdPath:   testCase.cmdPath,
 			Context:   testCase.context,
 			Namespace: testCase.namespace,
@@ -475,7 +477,7 @@ func TestGetReplacedManifest(t *testing.T) {
 			},
 			config: config.NewConfig(nil, &latest.Config{
 				Images: testCase.imageConfigs,
-			}, cache, nil),
+			}, cache, nil, constants.DefaultConfigPath),
 		}
 
 		shouldRedeploy, replacedManifest, err := deployer.getReplacedManifest(testCase.manifest, testCase.builtImages)
