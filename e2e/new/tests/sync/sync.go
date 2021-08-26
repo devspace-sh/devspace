@@ -83,7 +83,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		}()
 
 		// wait until files were synced
-		err = wait.Poll(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
 			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/file1.txt"})
 			if err != nil {
 				return false, nil
@@ -108,7 +108,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectNoError(err)
 
 		// wait for sync
-		err = wait.Poll(time.Second, time.Minute*2, func() (done bool, err error) {
+		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
 			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/file3.txt"})
 			if err != nil {
 				return false, nil
@@ -116,6 +116,27 @@ var _ = DevSpaceDescribe("sync", func() {
 
 			return out == payload, nil
 		})
+		framework.ExpectNoError(err)
+
+		// check if file was downloaded through before hook
+		_, err = ioutil.ReadFile(filepath.Join(tempDir, "file4.txt"))
+		framework.ExpectError(err)
+		framework.ExpectEqual(os.IsNotExist(err), true)
+
+		// check if file was downloaded through after hook
+		err = wait.PollImmediate(time.Second, time.Minute, func() (done bool, err error) {
+			out, err := ioutil.ReadFile(filepath.Join(tempDir, "file5.txt"))
+			if err != nil {
+				if os.IsNotExist(err) == false {
+					return false, err
+				}
+
+				return false, nil
+			}
+
+			return string(out) == "Hello World", nil
+		})
+		framework.ExpectNoError(err)
 
 		// stop command
 		stop()

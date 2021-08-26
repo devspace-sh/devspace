@@ -13,7 +13,25 @@ deployments:
             args: ["999999999999"]
 dev:
   sync:
-    - imageSelector: ${IMAGE}
+    - name: test
+      imageSelector: ${IMAGE}
       containerPath: "/app"
       uploadExcludePaths:
         - test.txt
+hooks:
+  - command: |
+      mkdir /app
+      echo -n Hello World > /app/file4.txt
+    where:
+      container:
+        imageSelector: ${IMAGE}
+    when:
+      before:
+        initialSync: test,test2
+  - command: "echo -n Hello World > /app/file5.txt"
+    where:
+      container:
+        imageSelector: ${IMAGE}
+    when:
+      after:
+        initialSync: test,test2
