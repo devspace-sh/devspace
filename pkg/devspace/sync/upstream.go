@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
+	"github.com/loft-sh/devspace/helper/util/crc32"
 	"io"
 	"os"
 	"path"
@@ -411,19 +412,21 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 	}
 
 	// Apply creates
+	var writtenChanges int
 	if len(creates) > 0 {
-		err := func() error {
+		var err error
+		writtenChanges, err = func() (int, error) {
 			u.sync.fileIndex.fileMapMutex.Lock()
 			defer u.sync.fileIndex.fileMapMutex.Unlock()
 
 			for i := 0; i < syncRetries; i++ {
-				err := u.applyCreates(creates)
+				changes, err := u.applyCreates(creates)
 				if err == nil {
-					break
+					return changes, nil
 				} else if i+1 >= syncRetries {
-					return errors.Wrap(err, "apply creates")
+					return 0, errors.Wrap(err, "apply creates")
 				} else if strings.HasSuffix(err.Error(), "transport is closing") || strings.HasSuffix(err.Error(), "broken pipe") {
-					return errors.Wrap(err, "apply creates")
+					return 0, errors.Wrap(err, "apply creates")
 				}
 
 				u.sync.log.Infof("Upstream - Retry upload because of error: %v", err)
@@ -433,14 +436,19 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 				}
 			}
 
-			return nil
+			return 0, nil
 		}()
 		if err != nil {
 			return err
 		}
 	}
 
-	u.sync.log.Infof("Upstream - Successfully processed %d change(s)", len(changes))
+	changeAmount := len(removes) + writtenChanges
+	if changeAmount == 0 {
+		return nil
+	}
+
+	u.sync.log.Infof("Upstream - Successfully processed %d change(s)", changeAmount)
 
 	// Restart container if needed
 	return u.RestartContainer()
@@ -473,13 +481,16 @@ func (u *upstream) updateUploadChanges(files []*FileInformation) []*FileInformat
 	return newChanges
 }
 
-func (u *upstream) applyCreates(files []*FileInformation) error {
+func (u *upstream) applyCreates(files []*FileInformation) (int, error) {
+	files, err := u.filterChanges(files)
+	if err != nil {
+		return 0, err
+	} else if len(files) == 0 {
+		return 0, nil
+	}
+
 	size := int64(0)
-	alreadyPrinted := map[string]bool{}
 	for _, c := range files {
-		if alreadyPrinted[c.Name] {
-			continue
-		}
 		if c.IsDirectory {
 			// Print changes
 			if u.sync.Options.Verbose || len(files) <= 3 {
@@ -492,10 +503,8 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 
 			size += c.Size
 		}
-
-		alreadyPrinted[c.Name] = true
 	}
-	u.sync.log.Infof("Upstream - Upload %d create change(s) (Uncompressed ~%0.2f KB)", len(alreadyPrinted), float64(size)/1024.0)
+	u.sync.log.Infof("Upstream - Upload %d create change(s) (Uncompressed ~%0.2f KB)", len(files), float64(size)/1024.0)
 
 	// Create a pipe for reading and writing
 	reader, writer := io.Pipe()
@@ -511,15 +520,15 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 	}()
 
 	// upload the archive
-	err := u.uploadArchive(reader)
+	err = u.uploadArchive(reader)
 	if err != nil {
-		return errors.Wrap(err, "upload archive")
+		return 0, errors.Wrap(err, "upload archive")
 	}
 
 	// check if there was a compressing error
 	err = <-errorChan
 	if err != nil {
-		return errors.Wrap(err, "compress archive")
+		return 0, errors.Wrap(err, "compress archive")
 	}
 
 	// finally update written files
@@ -528,7 +537,101 @@ func (u *upstream) applyCreates(files []*FileInformation) error {
 		u.sync.fileIndex.fileMap[element.Name] = element
 	}
 
-	return nil
+	return len(archiver.WrittenFiles()), nil
+}
+
+func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, error) {
+	alreadyUsed := map[string]bool{}
+	newChanges := make([]*FileInformation, 0, len(files))
+	needCheck := []*FileInformation{}
+
+	// filter them first
+	for _, f := range files {
+		if alreadyUsed[f.Name] {
+			continue
+		} else if f.IsDirectory || u.sync.fileIndex.fileMap[f.Name] == nil || u.sync.fileIndex.fileMap[f.Name].Size != f.Size {
+			newChanges = append(newChanges, f)
+			alreadyUsed[f.Name] = true
+			continue
+		}
+
+		needCheck = append(needCheck, f)
+	}
+
+	// now compare crc32 hashes
+	if len(needCheck) > 0 {
+		// cancel after 10 minutes
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
+		defer cancel()
+
+		// create done chan
+		done := make(chan error)
+
+		// start remote hashing
+		remoteChecksums := make([]uint32, 0, len(needCheck))
+		localChecksums := make([]uint32, 0, len(needCheck))
+		go func() {
+			// send 100 each time
+			for i := 0; i < len(needCheck); i += 100 {
+				batch := make([]string, 0, 100)
+				for j := 0; j < 100; j++ {
+					if i+j >= len(needCheck) {
+						break
+					}
+
+					batch = append(batch, needCheck[i+j].Name)
+				}
+
+				// ask remote for checksums
+				checksums, err := u.client.Checksums(ctx, &remote.Paths{Paths: batch})
+				if err != nil {
+					done <- err
+					return
+				} else if checksums == nil {
+					done <- fmt.Errorf("unexpected checksum response")
+					return
+				} else if len(checksums.Checksums) != len(batch) {
+					done <- fmt.Errorf("unexpected checksum size %d != %d", len(checksums.Checksums), len(batch))
+					return
+				}
+
+				remoteChecksums = append(remoteChecksums, checksums.Checksums...)
+			}
+
+			done <- nil
+		}()
+
+		// start local hashing
+		for _, c := range needCheck {
+			// Just remove everything inside and ignore any errors
+			absolutePath := path.Join(u.sync.LocalPath, c.Name)
+			checksum, err := crc32.Checksum(absolutePath)
+			if err != nil && os.IsNotExist(err) == false {
+				u.sync.log.Infof("Error hashing file %s: %v", c.Name, err)
+			}
+
+			localChecksums = append(localChecksums, checksum)
+		}
+
+		// wait for remote
+		err := <-done
+		if err != nil {
+			return nil, errors.Wrap(err, "hashing remote files")
+		} else if len(remoteChecksums) != len(localChecksums) {
+			return nil, fmt.Errorf("unexpected checksum size %d != %d", len(remoteChecksums), len(localChecksums))
+		}
+
+		// compare checksums
+		for i := range remoteChecksums {
+			if remoteChecksums[i] != 0 && remoteChecksums[i] == localChecksums[i] {
+				continue
+			}
+
+			newChanges = append(newChanges, needCheck[i])
+		}
+	}
+
+	return newChanges, nil
 }
 
 func (u *upstream) compress(writer io.WriteCloser, files []*FileInformation, ignoreMatcher ignoreparser.IgnoreParser) (*Archiver, error) {
