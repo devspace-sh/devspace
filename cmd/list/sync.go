@@ -48,7 +48,7 @@ func (cmd *syncCmd) RunListSync(f factory.Factory, cobraCmd *cobra.Command, args
 		return errors.New(message.ConfigNotFound)
 	}
 
-	configInterface, err := configLoader.Load(cmd.ToConfigOptions(), logger)
+	configInterface, err := configLoader.Load(cmd.ToConfigOptions(logger), logger)
 	if err != nil {
 		return err
 	}

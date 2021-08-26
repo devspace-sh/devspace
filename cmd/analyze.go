@@ -66,7 +66,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, plugins []plugin.Metadata, 
 	// Load generated config if possible
 	var generatedConfig *generated.Config
 	if configExists {
-		generatedConfig, err = configLoader.LoadGenerated(cmd.ToConfigOptions())
+		generatedConfig, err = configLoader.LoadGenerated(cmd.ToConfigOptions(log))
 		if err != nil {
 			return err
 		}

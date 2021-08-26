@@ -17,7 +17,7 @@ type GlobalFlags struct {
 
 	Namespace      string
 	KubeContext    string
-	Profile        string
+	Profiles       []string
 	ProfileRefresh bool
 	ProfileParents []string
 	ConfigPath     string
@@ -52,9 +52,21 @@ func (gf *GlobalFlags) UseLastContext(generatedConfig *generated.Config, log log
 }
 
 // ToConfigOptions converts the globalFlags into config options
-func (gf *GlobalFlags) ToConfigOptions() *loader.ConfigOptions {
+func (gf *GlobalFlags) ToConfigOptions(log log.Logger) *loader.ConfigOptions {
+	if len(gf.ProfileParents) > 0 {
+		log.Infof("--profile-parent is deprecated, please use --profile instead")
+	}
+
+	if gf.ProfileParents == nil {
+		gf.ProfileParents = []string{}
+	}
+	profile := ""
+	if len(gf.Profiles) > 0 {
+		profile = gf.Profiles[len(gf.Profiles)-1]
+		gf.ProfileParents = append(gf.ProfileParents, gf.Profiles[:len(gf.Profiles)-1]...)
+	}
 	return &loader.ConfigOptions{
-		Profile:        gf.Profile,
+		Profile:        profile,
 		ProfileRefresh: gf.ProfileRefresh,
 		ProfileParents: gf.ProfileParents,
 		KubeContext:    gf.KubeContext,
@@ -78,7 +90,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.BoolVar(&globalFlags.Silent, "silent", false, "Run in silent mode and prevents any devspace log output except panics & fatals")
 
 	flags.StringVar(&globalFlags.ConfigPath, "config", "", "The devspace config file to use")
-	flags.StringVarP(&globalFlags.Profile, "profile", "p", "", "The devspace profile to use (if there is any)")
+	flags.StringSliceVarP(&globalFlags.Profiles, "profile", "p", []string{}, "The DevSpace profiles to apply. Multiple profiles are applied in the order they are specified")
 	flags.StringSliceVar(&globalFlags.ProfileParents, "profile-parent", []string{}, "One or more profiles that should be applied before the specified profile (e.g. devspace dev --profile-parent=base1 --profile-parent=base2 --profile=my-profile)")
 	flags.BoolVar(&globalFlags.ProfileRefresh, "profile-refresh", false, "If true will pull and re-download profile parent sources")
 	flags.StringVarP(&globalFlags.Namespace, "namespace", "n", "", "The kubernetes namespace to use")

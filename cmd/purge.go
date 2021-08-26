@@ -71,7 +71,7 @@ devspace purge -d my-deployment
 func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
-	configOptions := cmd.ToConfigOptions()
+	configOptions := cmd.ToConfigOptions(cmd.log)
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
 	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
@@ -128,7 +128,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	// Purge dependencies
 	var dependencies []types.Dependency
 	if cmd.All || len(cmd.Dependency) > 0 {
-		dependencies, err = f.NewDependencyManager(configInterface, client, cmd.ToConfigOptions(), cmd.log).PurgeAll(dependency.PurgeOptions{
+		dependencies, err = f.NewDependencyManager(configInterface, client, configOptions, cmd.log).PurgeAll(dependency.PurgeOptions{
 			Dependencies: cmd.Dependency,
 			Verbose:      cmd.VerboseDependencies,
 		})

@@ -129,45 +129,45 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 		for _, hook := range c.Hooks {
 			if hook.When != nil {
 				if when == Before && hook.When.Before != nil {
-					if stage == StageDeployments && hook.When.Before.Deployments != "" && strings.TrimSpace(hook.When.Before.Deployments) == strings.TrimSpace(which) {
+					if stage == StageDeployments && hook.When.Before.Deployments != "" && compareWhich(which, hook.When.Before.Deployments) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StagePurgeDeployments && hook.When.Before.PurgeDeployments != "" && strings.TrimSpace(hook.When.Before.PurgeDeployments) == strings.TrimSpace(which) {
+					} else if stage == StagePurgeDeployments && hook.When.Before.PurgeDeployments != "" && compareWhich(which, hook.When.Before.PurgeDeployments) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageImages && hook.When.Before.Images != "" && strings.TrimSpace(hook.When.Before.Images) == strings.TrimSpace(which) {
+					} else if stage == StageImages && hook.When.Before.Images != "" && compareWhich(which, hook.When.Before.Images) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageDependencies && hook.When.Before.Dependencies != "" && strings.TrimSpace(hook.When.Before.Dependencies) == strings.TrimSpace(which) {
+					} else if stage == StageDependencies && hook.When.Before.Dependencies != "" && compareWhich(which, hook.When.Before.Dependencies) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StagePullSecrets && hook.When.Before.PullSecrets != "" && strings.TrimSpace(hook.When.Before.PullSecrets) == strings.TrimSpace(which) {
+					} else if stage == StagePullSecrets && hook.When.Before.PullSecrets != "" && compareWhich(which, hook.When.Before.PullSecrets) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageInitialSync && hook.When.Before.InitialSync != "" && strings.TrimSpace(hook.When.Before.InitialSync) == strings.TrimSpace(which) {
+					} else if stage == StageInitialSync && hook.When.Before.InitialSync != "" && compareWhich(which, hook.When.Before.InitialSync) {
 						hooksToExecute = append(hooksToExecute, hook)
 					}
 				} else if when == After && hook.When.After != nil {
-					if stage == StageDeployments && hook.When.After.Deployments != "" && strings.TrimSpace(hook.When.After.Deployments) == strings.TrimSpace(which) {
+					if stage == StageDeployments && hook.When.After.Deployments != "" && compareWhich(which, hook.When.After.Deployments) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StagePurgeDeployments && hook.When.After.PurgeDeployments != "" && strings.TrimSpace(hook.When.After.PurgeDeployments) == strings.TrimSpace(which) {
+					} else if stage == StagePurgeDeployments && hook.When.After.PurgeDeployments != "" && compareWhich(which, hook.When.After.PurgeDeployments) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageImages && hook.When.After.Images != "" && strings.TrimSpace(hook.When.After.Images) == strings.TrimSpace(which) {
+					} else if stage == StageImages && hook.When.After.Images != "" && compareWhich(which, hook.When.After.Images) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageDependencies && hook.When.After.Dependencies != "" && strings.TrimSpace(hook.When.After.Dependencies) == strings.TrimSpace(which) {
+					} else if stage == StageDependencies && hook.When.After.Dependencies != "" && compareWhich(which, hook.When.After.Dependencies) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StagePullSecrets && hook.When.After.PullSecrets != "" && strings.TrimSpace(hook.When.After.PullSecrets) == strings.TrimSpace(which) {
+					} else if stage == StagePullSecrets && hook.When.After.PullSecrets != "" && compareWhich(which, hook.When.After.PullSecrets) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageInitialSync && hook.When.After.InitialSync != "" && strings.TrimSpace(hook.When.After.InitialSync) == strings.TrimSpace(which) {
+					} else if stage == StageInitialSync && hook.When.After.InitialSync != "" && compareWhich(which, hook.When.After.InitialSync) {
 						hooksToExecute = append(hooksToExecute, hook)
 					}
 				} else if when == OnError && hook.When.OnError != nil {
-					if stage == StageDeployments && hook.When.OnError.Deployments != "" && strings.TrimSpace(hook.When.OnError.Deployments) == strings.TrimSpace(which) {
+					if stage == StageDeployments && hook.When.OnError.Deployments != "" && compareWhich(which, hook.When.OnError.Deployments) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StagePurgeDeployments && hook.When.OnError.PurgeDeployments != "" && strings.TrimSpace(hook.When.Before.PurgeDeployments) == strings.TrimSpace(which) {
+					} else if stage == StagePurgeDeployments && hook.When.OnError.PurgeDeployments != "" && compareWhich(which, hook.When.OnError.PurgeDeployments) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageImages && hook.When.OnError.Images != "" && strings.TrimSpace(hook.When.OnError.Images) == strings.TrimSpace(which) {
+					} else if stage == StageImages && hook.When.OnError.Images != "" && compareWhich(which, hook.When.OnError.Images) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageDependencies && hook.When.OnError.Dependencies != "" && strings.TrimSpace(hook.When.OnError.Dependencies) == strings.TrimSpace(which) {
+					} else if stage == StageDependencies && hook.When.OnError.Dependencies != "" && compareWhich(which, hook.When.OnError.Dependencies) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StagePullSecrets && hook.When.OnError.PullSecrets != "" && strings.TrimSpace(hook.When.OnError.PullSecrets) == strings.TrimSpace(which) {
+					} else if stage == StagePullSecrets && hook.When.OnError.PullSecrets != "" && compareWhich(which, hook.When.OnError.PullSecrets) {
 						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageInitialSync && hook.When.OnError.InitialSync != "" && strings.TrimSpace(hook.When.OnError.InitialSync) == strings.TrimSpace(which) {
+					} else if stage == StageInitialSync && hook.When.OnError.InitialSync != "" && compareWhich(which, hook.When.OnError.InitialSync) {
 						hooksToExecute = append(hooksToExecute, hook)
 					}
 				}
@@ -222,6 +222,18 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 	}
 
 	return nil
+}
+
+func compareWhich(current, fromConfig string) bool {
+	current = strings.TrimSpace(current)
+	splitted := strings.Split(fromConfig, ",")
+	for _, s := range splitted {
+		if strings.TrimSpace(s) == current {
+			return true
+		}
+	}
+
+	return false
 }
 
 func executeHook(ctx Context, hookConfig *latest.HookConfig, hookWriter io.Writer, config config.Config, dependencies []types.Dependency, log logpkg.Logger, hook Hook) error {

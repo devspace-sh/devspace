@@ -106,7 +106,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, plugins []plugin.Metadata, cobraC
 	if configExists {
 		log.StartFileLogging()
 
-		generatedConfig, err = configLoader.LoadGenerated(cmd.ToConfigOptions())
+		generatedConfig, err = configLoader.LoadGenerated(cmd.ToConfigOptions(cmd.log))
 		if err != nil {
 			return err
 		}

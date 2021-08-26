@@ -37,11 +37,13 @@ hooks:                              # struct[]  | Array of hooks to be executed.
       dependencies: "all"           # string    | "all" for running hook before deploying dependencies
       images: "all"                 # string    | "all" for running hook before building the first image
       deployments: "all"            # string    | Name of the deployment you want to run this hook before deploying OR "all" for running hook before deploying the first deployment
+      initialSync: "sync-config"    # string    | Name of the sync configuration you want to execute this hook before merging remote and local file state
     after:                          # struct    | Run hook after a certain execution step
       pullSecrets: "all"            # string    | "all" for running hook after creating image pull secrets
       dependencies: "all"           # string    | "all" for running hook after deploying dependencies
-      images: "all"                 # string    | all" for running hook after building the last image
+      images: "all"                 # string    | "all" for running hook after building the last image
       deployments: "all"            # string    | Name of the deployment you want to run this hook after deploying OR "all" for running hook after deploying the last deployment
+      initialSync: "sync-config"    # string    | Name of the sync configuration you want to execute this hook after merging remote and local file state
     onError:
       pullSecrets: "all"            # string    | "all" for running hook if an error occurs during creating image pull secrets
       dependencies: "all"           # string    | "all" for running hook if an error occurs during deploying dependencies

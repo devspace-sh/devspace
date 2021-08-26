@@ -104,7 +104,7 @@ devspace deploy --kube-context=deploy-context
 func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// set config root
 	cmd.log = f.GetLog()
-	configOptions := cmd.ToConfigOptions()
+	configOptions := cmd.ToConfigOptions(cmd.log)
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
 	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {

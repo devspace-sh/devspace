@@ -1,7 +1,12 @@
 package config
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"gopkg.in/yaml.v2"
 	"os"
 	"path/filepath"
 
@@ -25,6 +30,51 @@ var _ = DevSpaceDescribe("config", func() {
 
 	ginkgo.BeforeEach(func() {
 		f = framework.NewDefaultFactory()
+	})
+
+	ginkgo.It("should load multiple profiles in order via --profile", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/multiple-profiles")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				Profiles: []string{"one", "two", "three"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(len(latestConfig.Deployments), 2)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test3")
+		
+		// run without profile
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
 	})
 
 	ginkgo.It("should load profile cached and uncached", func() {

@@ -61,7 +61,7 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 
 	// Load config and find all variables in it
 	variableParser := &variableParser{}
-	c, err := configLoader.LoadWithParser(variableParser, cmd.ToConfigOptions(), log)
+	c, err := configLoader.LoadWithParser(variableParser, cmd.ToConfigOptions(log), log)
 	if err != nil {
 		return err
 	}
