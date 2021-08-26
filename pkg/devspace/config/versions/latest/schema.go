@@ -903,16 +903,17 @@ type PodPatch struct {
 
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
-	Name               string          `yaml:"name" json:"name"`
-	Source             *SourceConfig   `yaml:"source" json:"source"`
-	Profile            string          `yaml:"profile,omitempty" json:"profile,omitempty"`
-	ProfileParents     []string        `yaml:"profileParents,omitempty" json:"profileParents,omitempty"`
-	Vars               []DependencyVar `yaml:"vars,omitempty" json:"vars,omitempty"`
-	OverwriteVars      *bool           `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
-	SkipBuild          bool            `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
-	IgnoreDependencies bool            `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
-	Namespace          string          `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	Dev                *DependencyDev  `yaml:"dev,omitempty" json:"dev,omitempty"`
+	Name                     string          `yaml:"name" json:"name"`
+	Source                   *SourceConfig   `yaml:"source" json:"source"`
+	Profile                  string          `yaml:"profile,omitempty" json:"profile,omitempty"`
+	ProfileParents           []string        `yaml:"profileParents,omitempty" json:"profileParents,omitempty"`
+	DisableProfileActivation bool            `yaml:"disableProfileActivation,omitempty" json:"disableProfileActivation,omitempty"`
+	Vars                     []DependencyVar `yaml:"vars,omitempty" json:"vars,omitempty"`
+	OverwriteVars            *bool           `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
+	SkipBuild                bool            `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
+	IgnoreDependencies       bool            `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
+	Namespace                string          `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	Dev                      *DependencyDev  `yaml:"dev,omitempty" json:"dev,omitempty"`
 }
 
 // DependencyDev specifies which parts of the dependency dev config should

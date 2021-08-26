@@ -1,0 +1,13 @@
+version: v1beta10
+deployments:
+- name: nginx
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+dependencies:
+  - name: nested
+    disableProfileActivation: true
+    source:
+      path: dep1

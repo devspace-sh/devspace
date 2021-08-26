@@ -306,7 +306,7 @@ func getActivatedProfiles(data map[interface{}]interface{}) ([]string, error) {
 	// Convert to array
 	profiles, ok := data["profiles"].([]interface{})
 	if !ok {
-		return activatedProfiles, errors.Errorf("Couldn't load profiles '%s': no profiles found")
+		return activatedProfiles, errors.Errorf("Couldn't load profiles: no profiles found")
 	}
 
 	// Select which profiles are activated

@@ -61,4 +61,38 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		framework.ExpectEqual(len(dependencies), 1)
 		framework.ExpectEqual(dependencies[0].Name(), "flat")
 	})
+
+	ginkgo.It("should resolve dependencies and activate dependency profiles", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// load it from the regular path first
+		os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO")
+		_, dependencies, err := framework.LoadConfig(f, filepath.Join(tempDir, "activated.yaml"))
+		framework.ExpectNoError(err)
+
+		// check if dependencies were loaded correctly with profile activation
+		framework.ExpectEqual(len(dependencies), 1)
+		framework.ExpectEqual(dependencies[0].Name(), "nested")
+		framework.ExpectEqual(len(dependencies[0].Config().Config().Deployments), 2)
+	})
+
+	ginkgo.It("should resolve dependencies and deactivate dependency profiles", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// load it from the regular path first
+		os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO")
+		_, dependencies, err := framework.LoadConfig(f, filepath.Join(tempDir, "deactivated.yaml"))
+		framework.ExpectNoError(err)
+
+		// check if dependencies were loaded correctly without profile activation
+		framework.ExpectEqual(len(dependencies), 1)
+		framework.ExpectEqual(dependencies[0].Name(), "nested")
+		framework.ExpectEqual(len(dependencies[0].Config().Config().Deployments), 1)
+	})
 })

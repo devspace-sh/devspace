@@ -212,6 +212,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	// set dependency profile
 	cloned.Profile = dependency.Profile
 	cloned.ProfileParents = dependency.ProfileParents
+	cloned.DisableProfileActivation = dependency.DisableProfileActivation
 
 	// construct load path
 	configPath := filepath.Join(localPath, constants.DefaultConfigPath)
