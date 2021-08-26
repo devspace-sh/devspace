@@ -32,6 +32,8 @@ type ConfigOptions struct {
 	ProfileParents []string
 	// If the profile parents that are loaded from other sources should be refreshed
 	ProfileRefresh bool
+	// If the profile activations should be disabled
+	DisableProfileActivation bool
 
 	Vars []string
 

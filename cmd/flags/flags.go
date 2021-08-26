@@ -15,13 +15,14 @@ type GlobalFlags struct {
 	NoWarn bool
 	Debug  bool
 
-	Namespace      string
-	KubeContext    string
-	Profiles       []string
-	ProfileRefresh bool
-	ProfileParents []string
-	ConfigPath     string
-	Vars           []string
+	Namespace                string
+	KubeContext              string
+	Profiles                 []string
+	ProfileRefresh           bool
+	ProfileParents           []string
+	DisableProfileActivation bool
+	ConfigPath               string
+	Vars                     []string
 
 	RestoreVars    bool
 	SaveVars       bool
@@ -66,15 +67,16 @@ func (gf *GlobalFlags) ToConfigOptions(log log.Logger) *loader.ConfigOptions {
 		gf.ProfileParents = append(gf.ProfileParents, gf.Profiles[:len(gf.Profiles)-1]...)
 	}
 	return &loader.ConfigOptions{
-		Profile:        profile,
-		ProfileRefresh: gf.ProfileRefresh,
-		ProfileParents: gf.ProfileParents,
-		KubeContext:    gf.KubeContext,
-		Namespace:      gf.Namespace,
-		Vars:           gf.Vars,
-		RestoreVars:    gf.RestoreVars,
-		SaveVars:       gf.SaveVars,
-		VarsSecretName: gf.VarsSecretName,
+		Profile:                  profile,
+		ProfileRefresh:           gf.ProfileRefresh,
+		ProfileParents:           gf.ProfileParents,
+		DisableProfileActivation: gf.DisableProfileActivation,
+		KubeContext:              gf.KubeContext,
+		Namespace:                gf.Namespace,
+		Vars:                     gf.Vars,
+		RestoreVars:              gf.RestoreVars,
+		SaveVars:                 gf.SaveVars,
+		VarsSecretName:           gf.VarsSecretName,
 	}
 }
 
@@ -93,6 +95,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.StringSliceVarP(&globalFlags.Profiles, "profile", "p", []string{}, "The DevSpace profiles to apply. Multiple profiles are applied in the order they are specified")
 	flags.StringSliceVar(&globalFlags.ProfileParents, "profile-parent", []string{}, "One or more profiles that should be applied before the specified profile (e.g. devspace dev --profile-parent=base1 --profile-parent=base2 --profile=my-profile)")
 	flags.BoolVar(&globalFlags.ProfileRefresh, "profile-refresh", false, "If true will pull and re-download profile parent sources")
+	flags.BoolVar(&globalFlags.DisableProfileActivation, "disable-profile-activation", false, "If true will ignore all profile activations")
 	flags.StringVarP(&globalFlags.Namespace, "namespace", "n", "", "The kubernetes namespace to use")
 	flags.StringVar(&globalFlags.KubeContext, "kube-context", "", "The kubernetes context to use")
 	flags.BoolVarP(&globalFlags.SwitchContext, "switch-context", "s", false, "Switches and uses the last kube context and namespace that was used to deploy the DevSpace project")

@@ -53,7 +53,7 @@ var versionLoader = map[string]*loader{
 }
 
 // ParseProfile loads the base config & a certain profile
-func ParseProfile(basePath string, data map[interface{}]interface{}, profile string, profileParents []string, update bool, log log.Logger) ([]map[interface{}]interface{}, error) {
+func ParseProfile(basePath string, data map[interface{}]interface{}, profile string, profileParents []string, update bool, disableProfileActivation bool, log log.Logger) ([]map[interface{}]interface{}, error) {
 	profiles := []map[interface{}]interface{}{}
 	if len(profileParents) > 0 && profile == "" {
 		profile = profileParents[len(profileParents)-1]
@@ -61,11 +61,13 @@ func ParseProfile(basePath string, data map[interface{}]interface{}, profile str
 	}
 
 	// auto activated root level profiles
-	activatedProfiles, err := getActivatedProfiles(data)
-	if err != nil {
-		return nil, err
+	if !disableProfileActivation {
+		activatedProfiles, err := getActivatedProfiles(data)
+		if err != nil {
+			return nil, err
+		}
+		profileParents = append(activatedProfiles, profileParents...)
 	}
-	profileParents = append(activatedProfiles, profileParents...)
 
 	// explicitly activated profile
 	if err := getProfiles(basePath, data, profile, &profiles, 1, update, log); err != nil {

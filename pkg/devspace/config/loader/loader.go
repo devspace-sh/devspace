@@ -304,7 +304,7 @@ func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, parser
 
 func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *ConfigOptions, log log.Logger) (map[interface{}]interface{}, error) {
 	// Get profile
-	profiles, err := versions.ParseProfile(filepath.Dir(l.configPath), data, options.Profile, options.ProfileParents, options.ProfileRefresh, log)
+	profiles, err := versions.ParseProfile(filepath.Dir(l.configPath), data, options.Profile, options.ProfileParents, options.ProfileRefresh, options.DisableProfileActivation, log)
 	if err != nil {
 		return nil, err
 	}
