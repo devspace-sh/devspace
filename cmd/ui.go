@@ -68,7 +68,7 @@ Opens the localhost UI in the browser
 func (cmd *UICmd) RunUI(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	cmd.log = f.GetLog()
-	configOptions := cmd.ToConfigOptions()
+	configOptions := cmd.ToConfigOptions(cmd.log)
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
 	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {

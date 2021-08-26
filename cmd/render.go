@@ -91,7 +91,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 		log = logpkg.Discard
 	}
 
-	configOptions := cmd.ToConfigOptions()
+	configOptions := cmd.ToConfigOptions(log)
 	configLoader := loader.NewConfigLoader(cmd.ConfigPath)
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {

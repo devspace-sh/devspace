@@ -68,7 +68,7 @@ func (cmd *imagesCmd) RunCleanupImages(f factory.Factory, cobraCmd *cobra.Comman
 	}
 
 	// Load config
-	configInterface, err := configLoader.Load(cmd.ToConfigOptions(), log)
+	configInterface, err := configLoader.Load(cmd.ToConfigOptions(log), log)
 	if err != nil {
 		return err
 	}

@@ -5,6 +5,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"io"
+	"os"
 	"path/filepath"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -22,12 +24,16 @@ import (
 type PrintCmd struct {
 	*flags.GlobalFlags
 
+	Out      io.Writer
 	SkipInfo bool
 }
 
 // NewPrintCmd creates a new devspace print command
 func NewPrintCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
-	cmd := &PrintCmd{GlobalFlags: globalFlags}
+	cmd := &PrintCmd{
+		GlobalFlags: globalFlags,
+		Out:         os.Stdout,
+	}
 
 	printCmd := &cobra.Command{
 		Use:   "print",
@@ -53,7 +59,7 @@ profile after all patching and variable substitution
 func (cmd *PrintCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configOptions := cmd.ToConfigOptions()
+	configOptions := cmd.ToConfigOptions(log)
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
@@ -101,7 +107,15 @@ func (cmd *PrintCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 		}
 	}
 
-	log.WriteString(string(bsConfig))
+	if cmd.Out != nil {
+		_, err := cmd.Out.Write(bsConfig)
+		if err != nil {
+			return err
+		}
+	} else {
+		log.WriteString(string(bsConfig))
+	}
+
 	return nil
 }
 

@@ -87,7 +87,7 @@ func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command,
 	}
 
 	// clear project kube context
-	err = ClearProjectKubeContext(f.NewConfigLoader(cmd.ConfigPath), cmd.ToConfigOptions(), log)
+	err = ClearProjectKubeContext(f.NewConfigLoader(cmd.ConfigPath), cmd.ToConfigOptions(log), log)
 	if err != nil {
 		return errors.Wrap(err, "clear generated kube context")
 	}

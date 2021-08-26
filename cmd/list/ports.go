@@ -49,7 +49,7 @@ func (cmd *portsCmd) RunListPort(f factory.Factory, cobraCmd *cobra.Command, arg
 		return errors.New(message.ConfigNotFound)
 	}
 
-	configInterface, err := configLoader.Load(cmd.ToConfigOptions(), logger)
+	configInterface, err := configLoader.Load(cmd.ToConfigOptions(logger), logger)
 	if err != nil {
 		return err
 	}

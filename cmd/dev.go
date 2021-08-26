@@ -160,7 +160,7 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 	// Set config root
 	cmd.log = f.GetLog()
 	cmd.configLoader = f.NewConfigLoader(cmd.ConfigPath)
-	configOptions := cmd.ToConfigOptions()
+	configOptions := cmd.ToConfigOptions(cmd.log)
 	configExists, err := cmd.configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
 		return err
@@ -261,7 +261,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 
 	if cmd.SkipPipeline == false {
 		// Dependencies
-		dependencies, err = f.NewDependencyManager(configInterface, client, cmd.ToConfigOptions(), cmd.log).DeployAll(dependency.DeployOptions{
+		dependencies, err = f.NewDependencyManager(configInterface, client, cmd.ToConfigOptions(cmd.log), cmd.log).DeployAll(dependency.DeployOptions{
 			ForceDeployDependencies: cmd.ForceDependencies,
 			SkipBuild:               cmd.SkipBuild,
 			ForceDeploy:             cmd.ForceDeploy,

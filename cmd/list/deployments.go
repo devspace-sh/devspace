@@ -43,7 +43,7 @@ Shows the status of all deployments
 func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	logger := f.GetLog()
-	configOptions := cmd.ToConfigOptions()
+	configOptions := cmd.ToConfigOptions(logger)
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
 	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {

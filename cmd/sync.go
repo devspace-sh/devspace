@@ -106,7 +106,7 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	var err error
 	var generatedConfig *generated.Config
 	logger := f.GetLog()
-	configOptions := cmd.ToConfigOptions()
+	configOptions := cmd.ToConfigOptions(logger)
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
 	if configLoader.Exists() {
 		generatedConfig, err = configLoader.LoadGenerated(configOptions)

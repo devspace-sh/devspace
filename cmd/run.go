@@ -96,7 +96,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Set config root
-	configOptions := cmd.ToConfigOptions()
+	configOptions := cmd.ToConfigOptions(f.GetLog())
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
 	configExists, err := configLoader.SetDevSpaceRoot(f.GetLog())
 	if err != nil {

@@ -60,12 +60,13 @@ func testUseLastContext(t *testing.T, testCase useLastContextTestCase) {
 
 func TestToConfigOptions(t *testing.T) {
 	configOptions := (&GlobalFlags{
-		Profile:     "myProfile",
+		Profiles:    []string{"myProfile", "myProfile2"},
 		KubeContext: "myKubeContext",
 		Vars:        []string{"var1", "var2"},
-	}).ToConfigOptions()
+	}).ToConfigOptions(log.Discard)
 
 	assert.Equal(t, configOptions.Profile, "myProfile", "ConfigOptions has wrong profile")
+	assert.Equal(t, len(configOptions.ProfileParents), 1)
 	assert.Equal(t, configOptions.KubeContext, "myKubeContext", "ConfigOptions has wrong kube context")
 	assert.Equal(t, len(configOptions.Vars), 2, "ConfigOptions has wrong vars")
 	assert.Equal(t, configOptions.Vars[0], "var1", "ConfigOptions has wrong vars")

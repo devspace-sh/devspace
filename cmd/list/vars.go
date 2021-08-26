@@ -57,7 +57,7 @@ func (cmd *varsCmd) RunListVars(f factory.Factory, cobraCmd *cobra.Command, args
 	}
 
 	// Fill variables config
-	config, err := configLoader.LoadWithParser(loader.NewWithCommandsParser(), cmd.ToConfigOptions(), logger)
+	config, err := configLoader.LoadWithParser(loader.NewWithCommandsParser(), cmd.ToConfigOptions(logger), logger)
 	if err != nil {
 		return err
 	}
