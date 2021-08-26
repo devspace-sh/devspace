@@ -1,15 +1,17 @@
 package dependency
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/build"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/loft-sh/devspace/pkg/devspace/build"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
+
 	fakebuild "github.com/loft-sh/devspace/pkg/devspace/build/testing"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	fakegeneratedloader "github.com/loft-sh/devspace/pkg/devspace/config/generated/testing"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
@@ -137,7 +139,7 @@ func TestUpdateAll(t *testing.T) {
 			},
 		}
 
-		manager := NewManager(config.NewConfig(nil, testConfig, generatedConfig, nil), nil, &loader.ConfigOptions{}, log.Discard)
+		manager := NewManager(config.NewConfig(nil, testConfig, generatedConfig, nil, constants.DefaultConfigPath), nil, &loader.ConfigOptions{}, log.Discard)
 		err = manager.UpdateAll()
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error updating all in testCase %s", testCase.name)
@@ -340,7 +342,7 @@ func TestDeployAll(t *testing.T) {
 			},
 			hookExecuter: hook.NewExecuter(config.NewConfig(nil, &latest.Config{
 				Dependencies: testCase.dependencyTasks,
-			}, nil, nil), nil),
+			}, nil, nil, constants.DefaultConfigPath), nil),
 		}
 
 		_, err = manager.DeployAll(testCase.options)
@@ -682,7 +684,7 @@ func TestDeploy(t *testing.T) {
 		}).Resolve(false)
 		dependency := dependencies[0]
 		if dependency.localConfig == nil {
-			dependency.localConfig = config.NewConfig(nil, &latest.Config{}, nil, nil)
+			dependency.localConfig = config.NewConfig(nil, &latest.Config{}, nil, nil, constants.DefaultConfigPath)
 		}
 
 		err = dependency.Deploy(testCase.forceDependencies, testCase.skipBuild, testCase.skipDeploy, testCase.forceDeploy, &build.Options{

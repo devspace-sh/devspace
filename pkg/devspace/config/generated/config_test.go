@@ -101,18 +101,20 @@ func testLoad(testCase loadTestCase, t *testing.T) {
 }
 
 type saveTestCase struct {
-	name string
+	name               string
+	devspaceConfigPath string
 
 	config *Config
 
-	expectedConfigFile interface{}
-	expectedErr        string
+	expectedConfigFileName string
+	expectedConfigFile     interface{}
+	expectedErr            string
 }
 
 func TestSave(t *testing.T) {
 	testCases := []saveTestCase{
 		saveTestCase{
-			name: "Save config",
+			name: "Save config default",
 			config: &Config{
 				OverrideProfile: ptr.String("overrideProf"),
 				ActiveProfile:   "active",
@@ -120,6 +122,26 @@ func TestSave(t *testing.T) {
 					"key": "value",
 				},
 			},
+			expectedConfigFileName: ".devspace/generated.yaml",
+			expectedConfigFile: Config{
+				OverrideProfile: ptr.String("overrideProf"),
+				ActiveProfile:   "active",
+				Vars: map[string]string{
+					"key": "value",
+				},
+			},
+		},
+		saveTestCase{
+			name:               "Save config test.yaml",
+			devspaceConfigPath: "test.yaml",
+			config: &Config{
+				OverrideProfile: ptr.String("overrideProf"),
+				ActiveProfile:   "active",
+				Vars: map[string]string{
+					"key": "value",
+				},
+			},
+			expectedConfigFileName: ".devspace/generated-test.yaml",
 			expectedConfigFile: Config{
 				OverrideProfile: ptr.String("overrideProf"),
 				ActiveProfile:   "active",
@@ -157,7 +179,12 @@ func TestSave(t *testing.T) {
 	}()
 
 	for _, testCase := range testCases {
-		loader := NewConfigLoader("")
+		var loader ConfigLoader
+		if testCase.devspaceConfigPath != "" {
+			loader = NewConfigLoaderFromDevSpacePath("", testCase.devspaceConfigPath)
+		} else {
+			loader = NewConfigLoader("")
+		}
 
 		err := loader.Save(testCase.config)
 
@@ -167,7 +194,7 @@ func TestSave(t *testing.T) {
 			assert.Error(t, err, testCase.expectedErr, "Wrong or no error in testCase %s", testCase.name)
 		}
 
-		fileContent, err := ioutil.ReadFile(".devspace/generated.yaml")
+		fileContent, err := ioutil.ReadFile(testCase.expectedConfigFileName)
 		assert.NilError(t, err, "Error reading file in testCase %s", testCase.name)
 		expectedAsYaml, err := yaml.Marshal(testCase.expectedConfigFile)
 		assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)

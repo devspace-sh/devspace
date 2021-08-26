@@ -1,9 +1,11 @@
 package helm
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"testing"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	fakehelm "github.com/loft-sh/devspace/pkg/devspace/helm/testing"
@@ -58,7 +60,7 @@ func TestNew(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		deployer, err := New(config.NewConfig(nil, testCase.config, nil, nil), nil, testCase.helmClient, testCase.kubeClient, testCase.deployConfig, nil)
+		deployer, err := New(config.NewConfig(nil, testCase.config, nil, nil, constants.DefaultConfigPath), nil, testCase.helmClient, testCase.kubeClient, testCase.deployConfig, nil)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {
@@ -121,7 +123,7 @@ func TestDelete(t *testing.T) {
 		cache := generated.New()
 		cache.Profiles[""] = testCase.cache
 		deployer := &DeployConfig{
-			config: config.NewConfig(nil, latest.NewRaw(), cache, nil),
+			config: config.NewConfig(nil, latest.NewRaw(), cache, nil, constants.DefaultConfigPath),
 			Kube:   kubeClient,
 			Helm: &fakehelm.Client{
 				Releases: testCase.releasesBefore,

@@ -1,9 +1,11 @@
 package services
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"testing"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 
 	"gotest.tools/assert"
@@ -17,7 +19,7 @@ func TestGetCommand(t *testing.T) {
 					Command: []string{"echo"},
 				},
 			},
-		}, nil, nil),
+		}, nil, nil, constants.DefaultConfigPath),
 	}
 	command := client.getCommand([]string{"args"}, "")
 	assert.Equal(t, 1, len(command), "Returned command has wrong length")

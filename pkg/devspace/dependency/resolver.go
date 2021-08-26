@@ -2,14 +2,15 @@ package dependency
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
@@ -83,7 +84,7 @@ func NewResolver(baseConfig config.Config, client kubectl.Client, configOptions 
 		// We only need that for saving
 		kubeLoader:     kubeLoader,
 		client:         client,
-		generatedSaver: generated.NewConfigLoader(""),
+		generatedSaver: generated.NewConfigLoaderFromDevSpacePath("", baseConfig.Path()),
 		log:            log,
 	}
 }
@@ -304,7 +305,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 		kubeClient:     client,
 		dockerClient:   dockerClient,
-		generatedSaver: generated.NewConfigLoader(dependency.Profile),
+		generatedSaver: generated.NewConfigLoaderFromDevSpacePath(dependency.Profile, configPath),
 	}, nil
 }
 

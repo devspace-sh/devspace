@@ -2,10 +2,12 @@ package testing
 
 import (
 	"fmt"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 
 	"github.com/ghodss/yaml"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -40,7 +42,7 @@ func (f *FakeConfigLoader) Load(options *loader.ConfigOptions, log log.Logger) (
 		return nil, errors.New("Couldn't load config")
 	}
 
-	return config.NewConfig(nil, f.Config, f.GeneratedConfig, nil), nil
+	return config.NewConfig(nil, f.Config, f.GeneratedConfig, nil, constants.DefaultConfigPath), nil
 }
 
 func (f *FakeConfigLoader) ConfigPath() string {

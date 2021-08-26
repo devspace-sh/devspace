@@ -2,14 +2,15 @@ package loader
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/mitchellh/go-homedir"
@@ -84,7 +85,7 @@ func (l *configLoader) LoadGenerated(options *ConfigOptions) (*generated.Config,
 	generatedConfig := options.GeneratedConfig
 	if generatedConfig == nil {
 		if options.generatedLoader == nil {
-			generatedConfig, err = generated.NewConfigLoader(options.Profile).Load()
+			generatedConfig, err = generated.NewConfigLoaderFromDevSpacePath(options.Profile, l.configPath).Load()
 		} else {
 			generatedConfig, err = options.generatedLoader.Load()
 		}
@@ -122,7 +123,7 @@ func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log
 		return nil, errors.Wrap(err, "require versions")
 	}
 
-	return config.NewConfig(data, parsedConfig, generatedConfig, resolver.ResolvedVariables()), nil
+	return config.NewConfig(data, parsedConfig, generatedConfig, resolver.ResolvedVariables(), l.configPath), nil
 }
 
 func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) error {
@@ -282,7 +283,7 @@ func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, parser
 
 	// Save generated config
 	if options.generatedLoader == nil {
-		err = generated.NewConfigLoader(options.Profile).Save(generatedConfig)
+		err = generated.NewConfigLoaderFromDevSpacePath(options.Profile, l.configPath).Save(generatedConfig)
 	} else {
 		err = options.generatedLoader.Save(generatedConfig)
 	}
