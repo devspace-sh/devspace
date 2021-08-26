@@ -316,7 +316,7 @@ func (s *Sync) sendChangesToUpstream(changes []*FileInformation, remove bool) {
 		for i := j; i < (j+initialUpstreamBatchSize) && i < len(changes); i++ {
 			if remove {
 				sendBatch = append(sendBatch, changes[i])
-			} else if s.fileIndex.fileMap[changes[i].Name] == nil || changes[i].Mtime > s.fileIndex.fileMap[changes[i].Name].Mtime || changes[i].Size != s.fileIndex.fileMap[changes[i].Name].Size {
+			} else if s.fileIndex.fileMap[changes[i].Name] == nil || changes[i].Mtime != s.fileIndex.fileMap[changes[i].Name].Mtime || changes[i].Size != s.fileIndex.fileMap[changes[i].Name].Size {
 				sendBatch = append(sendBatch, changes[i])
 			}
 		}

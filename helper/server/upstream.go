@@ -5,6 +5,7 @@ import (
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/helper/util"
+	"github.com/loft-sh/devspace/helper/util/crc32"
 	"github.com/loft-sh/devspace/helper/util/stderrlog"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -123,6 +124,26 @@ func (u *Upstream) Remove(stream remote.Upstream_RemoveServer) error {
 			return err
 		}
 	}
+}
+
+func (u *Upstream) Checksums(ctx context.Context, paths *remote.Paths) (*remote.PathsChecksum, error) {
+	if paths != nil {
+		checksums := make([]uint32, 0, len(paths.Paths))
+		for _, path := range paths.Paths {
+			// Just remove everything inside and ignore any errors
+			absolutePath := filepath.Join(u.options.UploadPath, path)
+			checksum, err := crc32.Checksum(absolutePath)
+			if err != nil && os.IsNotExist(err) == false {
+				stderrlog.Logf("Error checksum %s: %v", path, err)
+			}
+
+			checksums = append(checksums, checksum)
+		}
+
+		return &remote.PathsChecksum{Checksums: checksums}, nil
+	}
+
+	return &remote.PathsChecksum{Checksums: []uint32{}}, nil
 }
 
 func (u *Upstream) removeRecursive(absolutePath string) error {

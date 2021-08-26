@@ -50,10 +50,15 @@ service Downstream {
 }
 
 service Upstream {
+    rpc Checksums (Paths) returns (PathsChecksum) {}
     rpc Upload (stream Chunk) returns (Empty) {}
     rpc RestartContainer (Empty) returns (Empty) {}
     rpc Remove (stream Paths) returns (Empty) {}
     rpc Ping (Empty) returns (Empty) {}
+}
+
+message PathsChecksum {
+    repeated uint32 Checksums = 1;
 }
 
 message Watch {
