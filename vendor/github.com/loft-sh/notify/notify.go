@@ -19,7 +19,7 @@
 
 package notify
 
-var defaultTree = newTree()
+var defaultTree = NewTree()
 
 type DoNotWatchFn func(string) bool
 

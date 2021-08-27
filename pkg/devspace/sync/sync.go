@@ -54,6 +54,7 @@ type Sync struct {
 	LocalPath string
 	Options   Options
 
+	tree      notify.Tree
 	fileIndex *fileIndex
 
 	ignoreMatcher         ignoreparser.IgnoreParser
@@ -204,9 +205,10 @@ func (s *Sync) mainLoop(onInitUploadDone chan struct{}, onInitDownloadDone chan 
 
 func (s *Sync) startUpstream() {
 	defer s.Stop(nil)
+	s.tree = notify.NewTree()
 
 	// Set up a watchpoint listening for events within a directory tree rooted at specified directory
-	err := notify.WatchWithFilter(s.LocalPath+"/...", s.upstream.events, func(path string) bool {
+	err := s.tree.Watch(s.LocalPath+"/...", s.upstream.events, func(path string) bool {
 		if s.ignoreMatcher == nil || s.ignoreMatcher.RequireFullScan() {
 			return false
 		}
@@ -222,9 +224,7 @@ func (s *Sync) startUpstream() {
 		s.Stop(err)
 		return
 	}
-
-	defer notify.Stop(s.upstream.events)
-
+	defer s.tree.Stop(s.upstream.events)
 	if s.readyChan != nil {
 		s.readyChan <- true
 	}
@@ -316,7 +316,7 @@ func (s *Sync) sendChangesToUpstream(changes []*FileInformation, remove bool) {
 		for i := j; i < (j+initialUpstreamBatchSize) && i < len(changes); i++ {
 			if remove {
 				sendBatch = append(sendBatch, changes[i])
-			} else if s.fileIndex.fileMap[changes[i].Name] == nil || changes[i].Mtime != s.fileIndex.fileMap[changes[i].Name].Mtime || changes[i].Size != s.fileIndex.fileMap[changes[i].Name].Size {
+			} else if s.fileIndex.fileMap[changes[i].Name] == nil || changes[i].Mtime > s.fileIndex.fileMap[changes[i].Name].Mtime || changes[i].Size != s.fileIndex.fileMap[changes[i].Name].Size {
 				sendBatch = append(sendBatch, changes[i])
 			}
 		}

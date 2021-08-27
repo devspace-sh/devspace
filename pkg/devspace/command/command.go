@@ -3,7 +3,7 @@ package command
 import (
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/shell"
-	"os"
+	"io"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -12,13 +12,15 @@ import (
 )
 
 // ExecuteCommand executes a command from the config
-func ExecuteCommand(commands []*latest.CommandConfig, name string, args []string) error {
+func ExecuteCommand(commands []*latest.CommandConfig, name string, args []string, stdout io.Writer, stderr io.Writer) error {
 	shellCommand := ""
 	var shellArgs []string
-	for _, command := range commands {
-		if command.Name == name {
-			shellCommand = command.Command
-			shellArgs = command.Args
+	var appendArgs bool
+	for _, cmd := range commands {
+		if cmd.Name == name {
+			shellCommand = cmd.Command
+			shellArgs = cmd.Args
+			appendArgs = cmd.AppendArgs == nil || *cmd.AppendArgs == true
 			break
 		}
 	}
@@ -28,17 +30,19 @@ func ExecuteCommand(commands []*latest.CommandConfig, name string, args []string
 	}
 
 	if shellArgs == nil {
-		// Append args to shell command
-		for _, arg := range args {
-			arg = strings.Replace(arg, "'", "'\"'\"'", -1)
+		if appendArgs {
+			// Append args to shell command
+			for _, arg := range args {
+				arg = strings.Replace(arg, "'", "'\"'\"'", -1)
 
-			shellCommand += " '" + arg + "'"
+				shellCommand += " '" + arg + "'"
+			}
 		}
 
 		// execute the command in a shell
-		return shell.ExecuteShellCommand(shellCommand, os.Stdout, os.Stderr, nil)
+		return shell.ExecuteShellCommand(shellCommand, args, stdout, stderr, nil)
 	}
 
 	shellArgs = append(shellArgs, args...)
-	return command.ExecuteCommand(shellCommand, shellArgs, os.Stdout, os.Stderr)
+	return command.ExecuteCommand(shellCommand, shellArgs, stdout, stderr)
 }

@@ -555,6 +555,7 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 			continue
 		}
 
+		alreadyUsed[f.Name] = true
 		needCheck = append(needCheck, f)
 	}
 

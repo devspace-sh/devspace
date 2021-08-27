@@ -1,0 +1,7 @@
+version: v1beta10
+commands:
+  - name: test1
+    command: echo -n
+  - name: test2
+    appendArgs: false
+    command: echo -n $@

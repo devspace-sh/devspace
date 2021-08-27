@@ -64,6 +64,24 @@ While you can run any `devspace` command, you can also run other commands (if in
 Write all commands in `bash` style. DevSpace is using a library to make them cross-platform executable.
 :::
 
+### `appendArgs`
+The `appendArgs` option expects either true or false and will append given arguments to the command. If not specified, this option to true.
+
+Example:
+```yaml
+commands:
+# Running 'devspace run append my-value' will print 'my-value'
+- name: append
+  command: echo
+# Running 'devspace run append2 my-value' will print 'my-value my-value'
+- name: append2
+  command: echo $@
+# Running 'devspace run no-append my-value' will print 'my-value'
+- name: append2
+  appendArgs: false
+  command: echo $@
+```
+
 ### `description`
 The `description` option is optional and expects a string with a description of what this command does and when it should be used. This is only used for helping other users to understand the meaning of a command and will be shown when the user runs: `devspace list commands`
 
