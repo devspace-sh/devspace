@@ -48,7 +48,7 @@ require (
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/krishicks/yaml-patch v0.0.10
 	github.com/lib/pq v1.10.0 // indirect
-	github.com/loft-sh/notify v0.0.0-20210720071614-e401a229e34a
+	github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 	github.com/mattn/go-sqlite3 v1.14.6 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/miekg/pkcs11 v1.0.3 // indirect

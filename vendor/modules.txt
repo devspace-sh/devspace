@@ -280,7 +280,7 @@ github.com/kevinburke/ssh_config
 github.com/krishicks/yaml-patch
 # github.com/lib/pq v1.10.0
 ## explicit
-# github.com/loft-sh/notify v0.0.0-20210720071614-e401a229e34a
+# github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 ## explicit
 github.com/loft-sh/notify
 # github.com/mattn/go-colorable v0.1.6
