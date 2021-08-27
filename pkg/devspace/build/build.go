@@ -1,9 +1,9 @@
 package build
 
 import (
-	"bufio"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"io"
 	"strings"
 
@@ -185,7 +185,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 
 				// read from the reader
 				go func() {
-					scanner := bufio.NewScanner(reader)
+					scanner := scanner.NewScanner(reader)
 					for scanner.Scan() {
 						logsLog.Info(scanner.Text())
 					}

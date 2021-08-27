@@ -1,7 +1,6 @@
 package services
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -12,6 +11,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
+	"github.com/loft-sh/devspace/pkg/util/scanner"
 	appsv1 "k8s.io/api/apps/v1"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -159,7 +159,7 @@ func (l *logManager) Start() error {
 				}
 
 				if reader != nil {
-					scanner := bufio.NewScanner(reader)
+					scanner := scanner.NewScanner(reader)
 					for scanner.Scan() {
 						logsLog.Info(scanner.Text())
 					}

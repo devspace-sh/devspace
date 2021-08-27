@@ -2,11 +2,11 @@ package helper
 
 import (
 	"archive/tar"
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"github.com/docker/docker/builder/dockerignore"
 	"github.com/docker/docker/pkg/fileutils"
+	scanner2 "github.com/loft-sh/devspace/pkg/util/scanner"
 	"io"
 	"io/ioutil"
 	"os"
@@ -333,7 +333,7 @@ func GetEntrypointAndCmd(content string, target string) ([]string, []string, err
 }
 
 func parseLastOccurence(content string) ([]string, []string, error) {
-	scanner := bufio.NewScanner(strings.NewReader(content))
+	scanner := scanner2.NewScanner(strings.NewReader(content))
 
 	var lastOccurenceEntrypoint []string
 	var lastOccurenceCmd []string

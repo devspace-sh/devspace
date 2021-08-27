@@ -1,7 +1,6 @@
 package synccontroller
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -16,6 +15,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/sync"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/pkg/errors"
 	"io"
 	v1 "k8s.io/api/core/v1"
@@ -436,9 +436,7 @@ func startStream(client kubectl.Client, pod *v1.Pod, container string, command [
 	go func() {
 		defer stderrReader.Close()
 
-		scanner := bufio.NewScanner(stderrReader)
-		buf := make([]byte, 0, 64*1024)
-		scanner.Buffer(buf, 1024*1024)
+		scanner := scanner.NewScanner(stderrReader)
 		for scanner.Scan() {
 			log.Info("Helper - " + scanner.Text())
 		}
