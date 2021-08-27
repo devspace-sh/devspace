@@ -1,0 +1,44 @@
+version: v1beta10
+deployments:
+- name: test
+  kubectl:
+    manifests:
+      - test.yaml
+profiles:
+  - name: one
+    patches:
+      - op: add
+        path: deployments
+        value:
+          name: test1
+          kubectl:
+            manifests:
+              - test1.yaml
+  - name: two
+    patches:
+      - op: add
+        path: deployments
+        value:
+          name: test2
+          kubectl:
+            manifests:
+              - test2.yaml
+  - name: three
+    patches:
+      - op: add
+        path: deployments
+        value:
+          name: test3
+          kubectl:
+            manifests:
+              - test3.yaml
+  - name: four
+    patches:
+      - op: add
+        path: deployments
+        value:
+          name: test4
+          kubectl:
+            manifests:
+              - test4.yaml
+  

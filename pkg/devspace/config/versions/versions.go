@@ -60,14 +60,26 @@ func ParseProfile(basePath string, data map[interface{}]interface{}, profile str
 		profileParents = profileParents[:len(profileParents)-1]
 	}
 
+	// filter flag activated profile parents
+	profileParentsFromFlags := filterProfileFromProfileParents(profile, profileParents)
+	profileParentsFromFlags = filterProfileParents(profileParentsFromFlags)
+
 	// auto activated root level profiles
+	activatedProfiles := []string{}
 	if !disableProfileActivation {
-		activatedProfiles, err := getActivatedProfiles(data)
+		var err error
+		activatedProfiles, err = getActivatedProfiles(data)
 		if err != nil {
 			return nil, err
 		}
-		profileParents = append(activatedProfiles, profileParents...)
+
+		// filter auto activated profile parents
+		activatedProfiles = filterProfileFromProfileParents(profile, activatedProfiles)
+		activatedProfiles = filterProfileParents(activatedProfiles)
 	}
+
+	// Combine auto activated profiles with flag activated profiles
+	profileParents = filterProfileParents(append(activatedProfiles, profileParentsFromFlags...))
 
 	// explicitly activated profile
 	if err := getProfiles(basePath, data, profile, &profiles, 1, update, log); err != nil {
@@ -351,4 +363,18 @@ func matchEnvironment(env map[string]string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func filterProfileFromProfileParents(profile string, profileParents []string) []string {
+	return util.Filter(profileParents, func(idx int, s string) bool {
+		return s != profile
+	})
+}
+
+func filterProfileParents(profileParents []string) []string {
+	return util.Filter(profileParents, func(oidx int, os string) bool {
+		return !util.Contains(profileParents, func(iidx int, is string) bool {
+			return os == is
+		}, oidx+1)
+	})
 }
