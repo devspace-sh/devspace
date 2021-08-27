@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func ExecuteShellCommand(command string, stdout io.Writer, stderr io.Writer, extraEnvVars map[string]string) error {
+func ExecuteShellCommand(command string, args []string, stdout io.Writer, stderr io.Writer, extraEnvVars map[string]string) error {
 	env := os.Environ()
 	for k, v := range extraEnvVars {
 		env = append(env, k+"="+v)
@@ -34,6 +34,7 @@ func ExecuteShellCommand(command string, stdout io.Writer, stderr io.Writer, ext
 	if err != nil {
 		return errors.Wrap(err, "create shell runner")
 	}
+	r.Params = args
 
 	// Run command
 	err = r.Run(context.Background(), file)

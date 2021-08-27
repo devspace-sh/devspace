@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"io"
 	"os"
 	"strings"
 
@@ -22,11 +23,17 @@ type RunCmd struct {
 	*flags.GlobalFlags
 
 	Dependency string
+	Stdout     io.Writer
+	Stderr     io.Writer
 }
 
 // NewRunCmd creates a new run command
 func NewRunCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
-	cmd := &RunCmd{GlobalFlags: globalFlags}
+	cmd := &RunCmd{
+		GlobalFlags: globalFlags,
+		Stdout:      os.Stdout,
+		Stderr:      os.Stderr,
+	}
 
 	runCmd := &cobra.Command{
 		Use:                "run",
@@ -148,5 +155,5 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Execute command
-	return dependency.ExecuteCommand(commands, args[0], args[1:])
+	return dependency.ExecuteCommand(commands, args[0], args[1:], cmd.Stdout, cmd.Stderr)
 }

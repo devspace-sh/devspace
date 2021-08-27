@@ -138,7 +138,7 @@ func (m *manager) Command(options CommandOptions) error {
 		defer os.Chdir(currentWorkingDirectory)
 
 		found = true
-		return ExecuteCommand(dependency.localConfig.Config().Commands, options.Command, options.Args)
+		return ExecuteCommand(dependency.localConfig.Config().Commands, options.Command, options.Args, os.Stdout, os.Stderr)
 	})
 	if !found {
 		return fmt.Errorf("couldn't find dependency %s", options.Dependency)
@@ -148,8 +148,8 @@ func (m *manager) Command(options CommandOptions) error {
 }
 
 // ExecuteCommand executes a given command from the available commands
-func ExecuteCommand(commands []*latest.CommandConfig, cmd string, args []string) error {
-	err := command.ExecuteCommand(commands, cmd, args)
+func ExecuteCommand(commands []*latest.CommandConfig, cmd string, args []string, stdout io.Writer, stderr io.Writer) error {
+	err := command.ExecuteCommand(commands, cmd, args, stdout, stderr)
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok {
 			return &exit.ReturnCodeError{

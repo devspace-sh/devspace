@@ -1063,6 +1063,10 @@ type CommandConfig struct {
 	// and rather directly.
 	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
 
+	// AppendArgs will append arguments passed to the DevSpace command automatically to
+	// the specified command.
+	AppendArgs *bool `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty"`
+
 	// Description describes what the command is doing and can be seen in `devspace list commands`
 	Description string `yaml:"description" json:"description"`
 }

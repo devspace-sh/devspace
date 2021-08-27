@@ -9,6 +9,7 @@ import (
 
 	// Register tests
 	_ "github.com/loft-sh/devspace/e2e/new/tests/build"
+	_ "github.com/loft-sh/devspace/e2e/new/tests/command"
 	_ "github.com/loft-sh/devspace/e2e/new/tests/config"
 	_ "github.com/loft-sh/devspace/e2e/new/tests/dependencies"
 	_ "github.com/loft-sh/devspace/e2e/new/tests/deploy"
