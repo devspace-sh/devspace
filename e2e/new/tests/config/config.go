@@ -149,7 +149,29 @@ var _ = DevSpaceDescribe("config", func() {
 		// validate no profile was activated
 		framework.ExpectEqual(len(latestConfig.Deployments), 0)
 
-		// run with environment variable set.
+		// run with non-matching environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "default.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "false")
+		defer os.Unsetenv("FOO")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate no profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+
+		// run with matching environment variable set.
 		configBuffer = &bytes.Buffer{}
 		printCmd = &cmd.PrintCmd{
 			GlobalFlags: &flags.GlobalFlags{
@@ -168,7 +190,59 @@ var _ = DevSpaceDescribe("config", func() {
 		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
 		framework.ExpectNoError(err)
 
-		// validate config
+		// validate profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 2)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test2")
+	})
+
+	ginkgo.It("should auto activate profile using regular expression matching environment variable", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run with non-matching vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "regexp.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "false")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+		os.Unsetenv("FOO")
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate no profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+
+		// run with environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "regexp.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "truthy")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+		os.Unsetenv("FOO")
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate profile was activated
 		framework.ExpectEqual(len(latestConfig.Deployments), 2)
 		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
 		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test2")
