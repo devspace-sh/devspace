@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/loft-sh/devspace/e2e/new/framework"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/onsi/ginkgo"
 )
@@ -77,6 +78,25 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		framework.ExpectEqual(len(dependencies), 1)
 		framework.ExpectEqual(dependencies[0].Name(), "nested")
 		framework.ExpectEqual(len(dependencies[0].Config().Config().Deployments), 2)
+	})
+
+	ginkgo.It("should resolve dependencies and deactivate activated dependency profiles with --disable-profile-activation", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// load activated dependencies with --disable-profile-activation
+		os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO")
+		_, dependencies, err := framework.LoadConfigWithOptions(f, filepath.Join(tempDir, "activated.yaml"), &loader.ConfigOptions{
+			DisableProfileActivation: true,
+		})
+		framework.ExpectNoError(err)
+
+		// check if dependencies were loaded correctly with profile activation
+		framework.ExpectEqual(len(dependencies), 1)
+		framework.ExpectEqual(dependencies[0].Name(), "nested")
+		framework.ExpectEqual(len(dependencies[0].Config().Config().Deployments), 1)
 	})
 
 	ginkgo.It("should resolve dependencies and deactivate dependency profiles", func() {
