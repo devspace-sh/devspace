@@ -91,7 +91,7 @@ var fnTypeInformationMap = map[logFunctionType]*fnTypeInformation{
 func formatInt(i int) string {
 	formatted := strconv.Itoa(i)
 	if len(formatted) == 1 {
-		formatted = "0"+formatted
+		formatted = "0" + formatted
 	}
 	return formatted
 }
@@ -105,7 +105,7 @@ func (s *stdoutLogger) writeMessage(fnType logFunctionType, message string) {
 
 		if os.Getenv(DEVSPACE_LOG_TIMESTAMPS) == "true" {
 			now := time.Now()
-			fnInformation.stream.Write([]byte(ansi.Color(formatInt(now.Hour()) + ":" + formatInt(now.Minute()) + ":" + formatInt(now.Second()) + " ", "white+b")))
+			fnInformation.stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
 		}
 		fnInformation.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
 		fnInformation.stream.Write([]byte(message))
@@ -168,6 +168,11 @@ func (s *stdoutLogger) writeMessageToFileLoggerf(fnType logFunctionType, format 
 
 // StartWait prints a wait message until StopWait is called
 func (s *stdoutLogger) StartWait(message string) {
+	if !tty.IsTerminalIn() {
+		s.Info(message)
+		return
+	}
+
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
@@ -190,8 +195,12 @@ func (s *stdoutLogger) StartWait(message string) {
 	}
 }
 
-// StartWait prints a wait message until StopWait is called
+// StopWait stops printing a message
 func (s *stdoutLogger) StopWait() {
+	if !tty.IsTerminalIn() {
+		return
+	}
+
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
