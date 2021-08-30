@@ -85,7 +85,7 @@ func (l *configLoader) LoadGenerated(options *ConfigOptions) (*generated.Config,
 	generatedConfig := options.GeneratedConfig
 	if generatedConfig == nil {
 		if options.generatedLoader == nil {
-			generatedConfig, err = generated.NewConfigLoaderFromDevSpacePath(options.Profile, l.configPath).Load()
+			generatedConfig, err = generated.NewConfigLoaderFromDevSpacePath(GetLastProfile(options.Profiles), l.configPath).Load()
 		} else {
 			generatedConfig, err = options.generatedLoader.Load()
 		}
@@ -235,8 +235,8 @@ func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, parser
 	}
 
 	// check if we should load the profile from the generated config
-	if generatedConfig.ActiveProfile != "" && options.Profile == "" {
-		options.Profile = generatedConfig.ActiveProfile
+	if generatedConfig.ActiveProfile != "" && len(options.Profiles) == 0 {
+		options.Profiles = []string{generatedConfig.ActiveProfile}
 	}
 
 	// create a new variable resolver
@@ -283,7 +283,7 @@ func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, parser
 
 	// Save generated config
 	if options.generatedLoader == nil {
-		err = generated.NewConfigLoaderFromDevSpacePath(options.Profile, l.configPath).Save(generatedConfig)
+		err = generated.NewConfigLoaderFromDevSpacePath(GetLastProfile(options.Profiles), l.configPath).Save(generatedConfig)
 	} else {
 		err = options.generatedLoader.Save(generatedConfig)
 	}
@@ -304,7 +304,7 @@ func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, parser
 
 func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *ConfigOptions, log log.Logger) (map[interface{}]interface{}, error) {
 	// Get profile
-	profiles, err := versions.ParseProfile(filepath.Dir(l.configPath), data, options.Profile, options.ProfileParents, options.ProfileRefresh, options.DisableProfileActivation, log)
+	profiles, err := versions.ParseProfile(filepath.Dir(l.configPath), data, options.Profiles, options.ProfileRefresh, options.DisableProfileActivation, log)
 	if err != nil {
 		return nil, err
 	}
@@ -349,8 +349,15 @@ func (l *configLoader) newVariableResolver(generatedConfig *generated.Config, op
 		KubeContextFlag:  options.KubeContext,
 		NamespaceFlag:    options.Namespace,
 		KubeConfigLoader: l.kubeConfigLoader,
-		Profile:          options.Profile,
+		Profile:          GetLastProfile(options.Profiles),
 	}, log)
+}
+
+func GetLastProfile(profiles []string) string {
+	if len(profiles) == 0 {
+		return ""
+	}
+	return profiles[len(profiles)-1]
 }
 
 // configExistsInPath checks whether a devspace configuration exists at a certain path

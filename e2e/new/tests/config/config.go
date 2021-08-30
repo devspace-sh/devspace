@@ -207,7 +207,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectEqual(len(config.Config().Deployments), 1)
 
 		// reload it and set it through config options
-		config, _, err = framework.LoadConfigWithOptions(f, "devspace.yaml", &loader.ConfigOptions{Profile: "add-deployment"})
+		config, _, err = framework.LoadConfigWithOptions(f, "devspace.yaml", &loader.ConfigOptions{Profiles: []string{"add-deployment"}})
 		framework.ExpectNoError(err)
 
 		// check profile was loaded

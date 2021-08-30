@@ -58,18 +58,12 @@ func (gf *GlobalFlags) ToConfigOptions(log log.Logger) *loader.ConfigOptions {
 		log.Infof("--profile-parent is deprecated, please use --profile instead")
 	}
 
-	if gf.ProfileParents == nil {
-		gf.ProfileParents = []string{}
-	}
-	profile := ""
-	if len(gf.Profiles) > 0 {
-		profile = gf.Profiles[len(gf.Profiles)-1]
-		gf.ProfileParents = append(gf.ProfileParents, gf.Profiles[:len(gf.Profiles)-1]...)
-	}
+	profiles := []string{}
+	profiles = append(profiles, gf.ProfileParents...)
+	profiles = append(profiles, gf.Profiles...)
 	return &loader.ConfigOptions{
-		Profile:                  profile,
+		Profiles:                 profiles,
 		ProfileRefresh:           gf.ProfileRefresh,
-		ProfileParents:           gf.ProfileParents,
 		DisableProfileActivation: gf.DisableProfileActivation,
 		KubeContext:              gf.KubeContext,
 		Namespace:                gf.Namespace,

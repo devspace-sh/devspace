@@ -27,9 +27,7 @@ type ConfigOptions struct {
 	// path where the base config was loaded from
 	BasePath string
 	// The profile that should be loaded
-	Profile string
-	// If specified profiles that should be loaded before the actual profile
-	ProfileParents []string
+	Profiles []string
 	// If the profile parents that are loaded from other sources should be refreshed
 	ProfileRefresh bool
 	// If the profile activations should be disabled

@@ -65,8 +65,8 @@ func TestToConfigOptions(t *testing.T) {
 		Vars:        []string{"var1", "var2"},
 	}).ToConfigOptions(log.Discard)
 
-	assert.Equal(t, configOptions.Profile, "myProfile", "ConfigOptions has wrong profile")
-	assert.Equal(t, len(configOptions.ProfileParents), 1)
+	assert.Equal(t, configOptions.Profiles[0], "myProfile2", "ConfigOptions has wrong profiles")
+	assert.Equal(t, configOptions.Profiles[1], "myProfile", "ConfigOptions has wrong profiles")
 	assert.Equal(t, configOptions.KubeContext, "myKubeContext", "ConfigOptions has wrong kube context")
 	assert.Equal(t, len(configOptions.Vars), 2, "ConfigOptions has wrong vars")
 	assert.Equal(t, configOptions.Vars[0], "var1", "ConfigOptions has wrong vars")

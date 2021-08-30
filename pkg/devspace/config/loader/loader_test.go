@@ -117,11 +117,11 @@ func TestClone(t *testing.T) {
 		cloneTestCase{
 			name: "Clone ConfigOptions",
 			cloner: ConfigOptions{
-				Profile:     "clonerProf",
+				Profiles:    []string{"clonerProf"},
 				KubeContext: "clonerContext",
 			},
 			expectedClone: &ConfigOptions{
-				Profile:     "clonerProf",
+				Profiles:    []string{"clonerProf"},
 				KubeContext: "clonerContext",
 			},
 		},
@@ -670,7 +670,7 @@ profiles:
 			component:
 				containers:
 				- image: ubuntu`,
-				options: &ConfigOptions{Profile: "testprofile"},
+				options: &ConfigOptions{Profiles: []string{"testprofile"}},
 				generatedConfig: &generated.Config{Vars: map[string]string{
 					"test_var": "test",
 				}},
@@ -720,7 +720,7 @@ profiles:
 	- op: replace
 		path: deployments[0].name
 		value: ${test_var_2}`,
-				options: &ConfigOptions{Profile: "testprofile", Vars: []string{"test_var=ubuntu"}},
+				options: &ConfigOptions{Profiles: []string{"testprofile"}, Vars: []string{"test_var=ubuntu"}},
 				generatedConfig: &generated.Config{Vars: map[string]string{
 					"test_var_2": "test",
 				}},
@@ -817,7 +817,7 @@ profiles:
 	- op: replace
 		path: vars[0].name
 		value: new`,
-				options:         &ConfigOptions{Profile: "testprofile"},
+				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
 				generatedConfig: &generated.Config{Vars: map[string]string{"new": "newdefault"}},
 			},
 			expected: &latest.Config{
@@ -902,7 +902,7 @@ profiles:
 	- op: replace
 		path: deployments[0].name
 		value: replaced2`,
-				options:         &ConfigOptions{Profile: "test"},
+				options:         &ConfigOptions{Profiles: []string{"test"}},
 				generatedConfig: &generated.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
@@ -959,7 +959,7 @@ profiles:
 	- op: replace
 		path: deployments[1].name
 		value: replaced2`,
-				options:         &ConfigOptions{Profile: "test"},
+				options:         &ConfigOptions{Profiles: []string{"test"}},
 				generatedConfig: &generated.Config{Vars: map[string]string{}},
 			},
 			expectedErr: true,
@@ -1003,7 +1003,7 @@ profiles:
         values:
           containers:
           - image: test123/test123`,
-				options:         &ConfigOptions{Profile: "test"},
+				options:         &ConfigOptions{Profiles: []string{"test"}},
 				generatedConfig: &generated.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
@@ -1068,7 +1068,7 @@ profiles:
   - op: replace
     path: dev.ports.name=devbackend.imageSelector
     value: john/prodbackend`,
-				options:         &ConfigOptions{Profile: "production"},
+				options:         &ConfigOptions{Profiles: []string{"production"}},
 				generatedConfig: &generated.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{
@@ -1108,7 +1108,7 @@ profiles:
   - op: replace
     path: dev.sync.name=devbackend.imageSelector
     value: john/prodbackend`,
-				options:         &ConfigOptions{Profile: "production"},
+				options:         &ConfigOptions{Profiles: []string{"production"}},
 				generatedConfig: &generated.Config{Vars: map[string]string{}},
 			},
 			expected: &latest.Config{

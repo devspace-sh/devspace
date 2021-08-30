@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 )
 
 var _ = DevSpaceDescribe("dependencies", func() {
@@ -114,5 +115,15 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		framework.ExpectEqual(len(dependencies), 1)
 		framework.ExpectEqual(dependencies[0].Name(), "nested")
 		framework.ExpectEqual(len(dependencies[0].Config().Config().Deployments), 1)
+	})
+
+	ginkgo.FIt("should throw error when profile, profiles, and profile-parents are used together", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/profiles")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		_, _, err = framework.LoadConfig(f, filepath.Join(tempDir, "validate-error.yaml"))
+		framework.ExpectError(err)
+		framework.Expect(err).Should(gomega.MatchError("dependencies[0].profiles and dependencies[0].profile & dependencies[0].profileParents cannot be used together"))
 	})
 })

@@ -53,16 +53,8 @@ var versionLoader = map[string]*loader{
 }
 
 // ParseProfile loads the base config & a certain profile
-func ParseProfile(basePath string, data map[interface{}]interface{}, profile string, profileParents []string, update bool, disableProfileActivation bool, log log.Logger) ([]map[interface{}]interface{}, error) {
-	profiles := []map[interface{}]interface{}{}
-	if len(profileParents) > 0 && profile == "" {
-		profile = profileParents[len(profileParents)-1]
-		profileParents = profileParents[:len(profileParents)-1]
-	}
-
-	// filter flag activated profile parents
-	profileParentsFromFlags := filterProfileFromProfileParents(profile, profileParents)
-	profileParentsFromFlags = filterProfileParents(profileParentsFromFlags)
+func ParseProfile(basePath string, data map[interface{}]interface{}, profiles []string, update bool, disableProfileActivation bool, log log.Logger) ([]map[interface{}]interface{}, error) {
+	parsedProfiles := []map[interface{}]interface{}{}
 
 	// auto activated root level profiles
 	activatedProfiles := []string{}
@@ -72,29 +64,21 @@ func ParseProfile(basePath string, data map[interface{}]interface{}, profile str
 		if err != nil {
 			return nil, err
 		}
-
-		// filter auto activated profile parents
-		activatedProfiles = filterProfileFromProfileParents(profile, activatedProfiles)
-		activatedProfiles = filterProfileParents(activatedProfiles)
 	}
 
 	// Combine auto activated profiles with flag activated profiles
-	profileParents = filterProfileParents(append(activatedProfiles, profileParentsFromFlags...))
-
-	// explicitly activated profile
-	if err := getProfiles(basePath, data, profile, &profiles, 1, update, log); err != nil {
-		return nil, err
-	}
+	profiles = append(activatedProfiles, profiles...)
+	profiles = filterProfileParents(profiles)
 
 	// check if there are profile parents
-	for i := len(profileParents) - 1; i >= 0; i-- {
-		err := getProfiles(basePath, data, profileParents[i], &profiles, 1, update, log)
+	for i := len(profiles) - 1; i >= 0; i-- {
+		err := getProfiles(basePath, data, profiles[i], &parsedProfiles, 1, update, log)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return profiles, nil
+	return parsedProfiles, nil
 }
 
 // ParseCommands parses only the commands from the config
@@ -363,12 +347,6 @@ func matchEnvironment(env map[string]string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func filterProfileFromProfileParents(profile string, profileParents []string) []string {
-	return util.Filter(profileParents, func(idx int, s string) bool {
-		return s != profile
-	})
 }
 
 func filterProfileParents(profileParents []string) []string {

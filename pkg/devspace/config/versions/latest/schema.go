@@ -906,6 +906,7 @@ type DependencyConfig struct {
 	Name                     string          `yaml:"name" json:"name"`
 	Source                   *SourceConfig   `yaml:"source" json:"source"`
 	Profile                  string          `yaml:"profile,omitempty" json:"profile,omitempty"`
+	Profiles                 []string        `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 	ProfileParents           []string        `yaml:"profileParents,omitempty" json:"profileParents,omitempty"`
 	DisableProfileActivation bool            `yaml:"disableProfileActivation,omitempty" json:"disableProfileActivation,omitempty"`
 	Vars                     []DependencyVar `yaml:"vars,omitempty" json:"vars,omitempty"`
