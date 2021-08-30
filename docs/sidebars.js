@@ -125,6 +125,7 @@ module.exports = {
             'configuration/profiles/strategic-merge',
             'configuration/profiles/patches',
             'configuration/profiles/parents',
+            'configuration/profiles/activation',
           ],
         },
         'configuration/pullSecrets/basics',
