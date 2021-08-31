@@ -2,6 +2,7 @@ package targetselector
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	v1 "k8s.io/api/core/v1"
 	"sort"
@@ -38,7 +39,7 @@ func (u *untilNewestRunning) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *v
 	}
 
 	sort.Slice(pods, func(i, j int) bool {
-		return kubectl.SortPodsByNewest(pods, i, j)
+		return selector.SortPodsByNewest(pods, i, j)
 	})
 	if HasPodProblem(pods[0]) {
 		u.printPodWarning(pods[0], log)
@@ -51,7 +52,7 @@ func (u *untilNewestRunning) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *v
 	return true, pods[0], nil
 }
 
-func (u *untilNewestRunning) SelectContainer(containers []*kubectl.SelectedPodContainer, log log.Logger) (bool, *kubectl.SelectedPodContainer, error) {
+func (u *untilNewestRunning) SelectContainer(containers []*selector.SelectedPodContainer, log log.Logger) (bool, *selector.SelectedPodContainer, error) {
 	now := time.Now()
 	if now.Before(u.initialDelay) {
 		return false, nil, nil
@@ -64,7 +65,7 @@ func (u *untilNewestRunning) SelectContainer(containers []*kubectl.SelectedPodCo
 	}
 
 	sort.Slice(containers, func(i, j int) bool {
-		return kubectl.SortContainersByNewest(containers, i, j)
+		return selector.SortContainersByNewest(containers, i, j)
 	})
 	if HasPodProblem(containers[0].Pod) {
 		u.printPodWarning(containers[0].Pod, log)
@@ -90,7 +91,7 @@ func (u *untilNewestRunning) printPodWarning(pod *v1.Pod, log log.Logger) {
 	})
 }
 
-func IsContainerRunning(container *kubectl.SelectedPodContainer) bool {
+func IsContainerRunning(container *selector.SelectedPodContainer) bool {
 	if container.Pod.DeletionTimestamp != nil {
 		return false
 	}

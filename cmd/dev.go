@@ -7,16 +7,15 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
@@ -50,6 +49,9 @@ type DevCmd struct {
 	SkipPushLocalKubernetes bool
 	VerboseDependencies     bool
 	Open                    bool
+
+	Dependency     []string
+	SkipDependency []string
 
 	ForceBuild          bool
 	SkipBuild           bool
@@ -116,6 +118,8 @@ Open terminal instead of logs:
 		},
 	}
 
+	devCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips the following dependencies for deployment")
+	devCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Deploys only the specified named dependencies")
 	devCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Deploys the dependencies verbosely")
 	devCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 
@@ -266,6 +270,8 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 			SkipBuild:               cmd.SkipBuild,
 			ForceDeploy:             cmd.ForceDeploy,
 			Verbose:                 cmd.VerboseDependencies,
+			Dependencies:            cmd.Dependency,
+			SkipDependencies:        cmd.SkipDependency,
 
 			BuildOptions: build.Options{
 				SkipPush:                  cmd.SkipPush,
@@ -278,9 +284,6 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 		if err != nil {
 			return 0, errors.Errorf("error deploying dependencies: %v", err)
 		}
-
-		// add dev config from dependencies
-		addDependenciesDevConfig(config, dependencies)
 
 		// Create Pull Secrets
 		err = pullsecrets.NewClient(configInterface, dependencies, client, dockerClient, cmd.log).CreatePullSecrets()
@@ -407,16 +410,13 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 	if err != nil {
 		return 0, err
 	}
-
-	if cmd.Portforwarding {
-		cmd.Portforwarding = false
-		err := servicesClient.StartPortForwarding(cmd.Interrupt)
-		if err != nil {
-			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
+	for _, d := range dependencies {
+		if d.DependencyConfig().Dev == nil || d.DependencyConfig().Dev.ReplacePods == false {
+			continue
 		}
-		err = servicesClient.StartReversePortForwarding(cmd.Interrupt)
+		err = d.ReplacePods(client, logger)
 		if err != nil {
-			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
+			return 0, err
 		}
 	}
 
@@ -433,17 +433,51 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 
 		// Create server
 		uiLogger := log.GetFileLogger("ui")
-		server, err := server.NewServer(configInterface, dependencies, "localhost", false, client.CurrentContext(), client.Namespace(), port, uiLogger)
+		serv, err := server.NewServer(configInterface, dependencies, "localhost", false, client.CurrentContext(), client.Namespace(), port, uiLogger)
+		logger.StopWait()
 		if err != nil {
 			logger.Warnf("Couldn't start UI server: %v", err)
 		} else {
 			// Start server
-			go func() { server.ListenAndServe() }()
+			go func() { serv.ListenAndServe() }()
 
-			logger.StopWait()
 			logger.WriteString("\n#########################################################\n")
-			logger.Infof("DevSpace UI available at: %s", ansi.Color("http://"+server.Server.Addr, "white+b"))
+			logger.Infof("DevSpace UI available at: %s", ansi.Color("http://"+serv.Server.Addr, "white+b"))
 			logger.WriteString("#########################################################\n\n")
+		}
+	}
+
+	if cmd.Portforwarding {
+		cmd.Portforwarding = false
+
+		// start port forwarding
+		err := servicesClient.StartPortForwarding(cmd.Interrupt)
+		if err != nil {
+			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
+		}
+		for _, d := range dependencies {
+			if d.DependencyConfig().Dev == nil || d.DependencyConfig().Dev.Ports == false {
+				continue
+			}
+			err = d.StartPortForwarding(client, cmd.Interrupt, logger)
+			if err != nil {
+				return 0, err
+			}
+		}
+
+		// start reverse port forwarding
+		err = servicesClient.StartReversePortForwarding(cmd.Interrupt)
+		if err != nil {
+			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
+		}
+		for _, d := range dependencies {
+			if d.DependencyConfig().Dev == nil || d.DependencyConfig().Dev.Ports == false {
+				continue
+			}
+			err = d.StartReversePortForwarding(client, cmd.Interrupt, logger)
+			if err != nil {
+				return 0, err
+			}
 		}
 	}
 
@@ -454,9 +488,20 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 			printSyncLog = true
 		}
 
-		err := servicesClient.StartSync(cmd.Interrupt, printSyncLog, cmd.VerboseSync)
+		err := servicesClient.StartSync(cmd.Interrupt, printSyncLog, cmd.VerboseSync, services.DefaultPrefixFn)
 		if err != nil {
 			return 0, errors.Wrap(err, "start sync")
+		}
+
+		// start in dependencies
+		for _, d := range dependencies {
+			if d.DependencyConfig().Dev == nil || d.DependencyConfig().Dev.Sync == false {
+				continue
+			}
+			err = d.StartSync(client, cmd.Interrupt, printSyncLog, cmd.VerboseSync, logger)
+			if err != nil {
+				return 0, err
+			}
 		}
 	}
 
@@ -754,70 +799,4 @@ func updateLastKubeContext(configLoader loader.ConfigLoader, client kubectl.Clie
 	}
 
 	return nil
-}
-
-func addDependenciesDevConfig(config *latest.Config, dependencies []types.Dependency) {
-	for _, d := range config.Dependencies {
-		if d.Dev == nil {
-			continue
-		}
-
-		// find the dependency in the deployed ones and it
-		for _, e := range dependencies {
-			if e.Name() != d.Name {
-				continue
-			}
-
-			// ports
-			if d.Dev != nil && d.Dev.Ports {
-				for _, p := range e.Config().Config().Dev.Ports {
-					if config.Dev.Ports == nil {
-						config.Dev.Ports = []*latest.PortForwardingConfig{}
-					}
-
-					imageName := p.ImageName
-					if imageName != "" {
-						imageName = e.Name() + "." + imageName
-					}
-
-					config.Dev.Ports = append(config.Dev.Ports, &latest.PortForwardingConfig{
-						ImageName:           imageName,
-						ImageSelector:       p.ImageSelector,
-						LabelSelector:       p.LabelSelector,
-						ContainerName:       p.ContainerName,
-						Namespace:           p.Namespace,
-						Arch:                p.Arch,
-						PortMappings:        p.PortMappings,
-						PortMappingsReverse: p.PortMappingsReverse,
-					})
-				}
-			}
-
-			// sync
-			if d.Dev != nil && d.Dev.Sync == true {
-				for _, p := range e.Config().Config().Dev.Sync {
-					if config.Dev.Sync == nil {
-						config.Dev.Sync = []*latest.SyncConfig{}
-					}
-
-					// set the correct image name
-					imageName := p.ImageName
-					if imageName != "" {
-						imageName = e.Name() + "." + imageName
-					}
-
-					// set the correct local sub path
-					if p.LocalSubPath != "" {
-						p.LocalSubPath = filepath.Join(e.LocalPath(), p.LocalSubPath)
-					} else {
-						p.LocalSubPath = e.LocalPath()
-					}
-
-					config.Dev.Sync = append(config.Dev.Sync, p)
-				}
-			}
-
-			break
-		}
-	}
 }

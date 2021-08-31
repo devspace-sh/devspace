@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"io"
 	"mvdan.cc/sh/v3/interp"
@@ -96,6 +97,7 @@ func (m *manager) UpdateAll() error {
 }
 
 type ResolveOptions struct {
+	SkipDependencies   []string
 	Dependencies       []string
 	UpdateDependencies bool
 	Silent             bool
@@ -103,7 +105,7 @@ type ResolveOptions struct {
 }
 
 func (m *manager) ResolveAll(options ResolveOptions) ([]types.Dependency, error) {
-	dependencies, err := m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, options.Silent, options.Verbose, "Resolve", func(dependency *Dependency, log log.Logger) error {
+	dependencies, err := m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, options.Silent, options.Verbose, "Resolve", func(dependency *Dependency, log log.Logger) error {
 		return nil
 	})
 	if err != nil {
@@ -125,7 +127,7 @@ type CommandOptions struct {
 // Command will execute a dependency command
 func (m *manager) Command(options CommandOptions) error {
 	found := false
-	_, err := m.handleDependencies([]string{options.Dependency}, false, options.UpdateDependencies, true, options.Verbose, "Command", func(dependency *Dependency, log log.Logger) error {
+	_, err := m.handleDependencies(nil, []string{options.Dependency}, false, options.UpdateDependencies, true, options.Verbose, "Command", func(dependency *Dependency, log log.Logger) error {
 		// Switch current working directory
 		currentWorkingDirectory, err := dependency.prepare(true)
 		if err != nil {
@@ -167,6 +169,7 @@ func ExecuteCommand(commands []*latest.CommandConfig, cmd string, args []string,
 type BuildOptions struct {
 	BuildOptions build.Options
 
+	SkipDependencies        []string
 	Dependencies            []string
 	UpdateDependencies      bool
 	ForceDeployDependencies bool
@@ -175,7 +178,7 @@ type BuildOptions struct {
 
 // BuildAll will build all dependencies if there are any
 func (m *manager) BuildAll(options BuildOptions) ([]types.Dependency, error) {
-	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Build", func(dependency *Dependency, log log.Logger) error {
+	return m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Build", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Build(options.ForceDeployDependencies, &options.BuildOptions, log)
 	})
 }
@@ -184,6 +187,7 @@ func (m *manager) BuildAll(options BuildOptions) ([]types.Dependency, error) {
 type DeployOptions struct {
 	BuildOptions build.Options
 
+	SkipDependencies        []string
 	Dependencies            []string
 	UpdateDependencies      bool
 	ForceDeployDependencies bool
@@ -200,7 +204,7 @@ func (m *manager) DeployAll(options DeployOptions) ([]types.Dependency, error) {
 		return nil, err
 	}
 
-	dependencies, err := m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
+	dependencies, err := m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
 		err = dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
 		if err != nil {
 			return err
@@ -223,19 +227,21 @@ func (m *manager) DeployAll(options DeployOptions) ([]types.Dependency, error) {
 
 // PurgeOptions has all options for purging all dependencies
 type PurgeOptions struct {
-	Dependencies []string
-	Verbose      bool
+	SkipDependencies []string
+	Dependencies     []string
+	Verbose          bool
 }
 
 // PurgeAll purges all dependencies in reverse order
 func (m *manager) PurgeAll(options PurgeOptions) ([]types.Dependency, error) {
-	return m.handleDependencies(options.Dependencies, true, false, false, options.Verbose, "Purge", func(dependency *Dependency, log log.Logger) error {
+	return m.handleDependencies(options.SkipDependencies, options.Dependencies, true, false, false, options.Verbose, "Purge", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Purge(log)
 	})
 }
 
 // RenderOptions has all options for rendering all dependencies
 type RenderOptions struct {
+	SkipDependencies   []string
 	Dependencies       []string
 	Verbose            bool
 	UpdateDependencies bool
@@ -246,12 +252,12 @@ type RenderOptions struct {
 }
 
 func (m *manager) RenderAll(options RenderOptions) ([]types.Dependency, error) {
-	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Render", func(dependency *Dependency, log log.Logger) error {
+	return m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Render", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Render(options.SkipBuild, &options.BuildOptions, options.Writer, log)
 	})
 }
 
-func (m *manager) handleDependencies(filterDependencies []string, reverse, updateDependencies, silent, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) ([]types.Dependency, error) {
+func (m *manager) handleDependencies(skipDependencies, filterDependencies []string, reverse, updateDependencies, silent, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) ([]types.Dependency, error) {
 	if m.config == nil || m.config.Dependencies == nil || len(m.config.Dependencies) == 0 {
 		return nil, nil
 	}
@@ -485,7 +491,6 @@ func (d *Dependency) Purge(log log.Logger) error {
 	if err != nil {
 		return errors.Wrap(err, "getwd")
 	}
-
 	defer os.Chdir(currentWorkingDirectory)
 
 	// Purge the deployments
@@ -502,6 +507,53 @@ func (d *Dependency) Purge(log log.Logger) error {
 	}
 
 	delete(d.dependencyCache.GetActive().Dependencies, d.id)
+	return nil
+}
+
+func (d *Dependency) StartSync(client kubectl.Client, interrupt chan error, printSyncLog, verboseSync bool, logger log.Logger) error {
+	currentWorkingDirectory, err := d.changeWorkingDirectory()
+	if err != nil {
+		return errors.Wrap(err, "getwd")
+	}
+	defer os.Chdir(currentWorkingDirectory)
+
+	err = services.NewClient(d.localConfig, d.children, client, logger).StartSync(interrupt, printSyncLog, verboseSync, func(idx int, syncConfig *latest.SyncConfig) string {
+		prefix := fmt.Sprintf("[%s:%d:sync] ", d.Name(), idx)
+		if syncConfig.Name != "" {
+			prefix = fmt.Sprintf("[%s:%s] ", d.Name(), syncConfig.Name)
+		} else if syncConfig.ImageName != "" {
+			prefix = fmt.Sprintf("[%s:%d:sync:%s] ", d.Name(), idx, syncConfig.ImageName)
+		}
+
+		return prefix
+	})
+	if err != nil {
+		return errors.Wrapf(err, "start sync in dependency %s", d.Name())
+	}
+	return nil
+}
+
+func (d *Dependency) StartPortForwarding(client kubectl.Client, interrupt chan error, logger log.Logger) error {
+	err := services.NewClient(d.localConfig, d.children, client, logger).StartPortForwarding(interrupt)
+	if err != nil {
+		return errors.Wrapf(err, "start port-forwarding in dependency %s", d.Name())
+	}
+	return nil
+}
+
+func (d *Dependency) StartReversePortForwarding(client kubectl.Client, interrupt chan error, logger log.Logger) error {
+	err := services.NewClient(d.localConfig, d.children, client, logger).StartReversePortForwarding(interrupt)
+	if err != nil {
+		return errors.Wrapf(err, "start reverse port-forwarding in dependency %s", d.Name())
+	}
+	return nil
+}
+
+func (d *Dependency) ReplacePods(client kubectl.Client, logger log.Logger) error {
+	err := services.NewClient(d.localConfig, d.children, client, logger).ReplacePods()
+	if err != nil {
+		return errors.Wrapf(err, "replace pods in dependency %s", d.Name())
+	}
 	return nil
 }
 

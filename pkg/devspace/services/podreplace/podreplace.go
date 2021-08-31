@@ -11,6 +11,7 @@ import (
 	dependencytypes "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/loft-sh/devspace/pkg/util/hash"
@@ -45,7 +46,7 @@ type PodReplacer interface {
 	ReplacePod(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) error
 
 	// RevertReplacePod will try to revert a pod replacement with the given config
-	RevertReplacePod(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (*kubectl.SelectedPodContainer, error)
+	RevertReplacePod(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (*selector.SelectedPodContainer, error)
 }
 
 func NewPodReplacer() PodReplacer {
@@ -54,7 +55,7 @@ func NewPodReplacer() PodReplacer {
 
 type replacer struct{}
 
-func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (*kubectl.SelectedPodContainer, error) {
+func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (*selector.SelectedPodContainer, error) {
 	// check if there is a replaced pod in the target namespace
 	log.StartWait("Try to find replaced pod...")
 	defer log.StopWait()
@@ -250,7 +251,7 @@ func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config
 	return nil
 }
 
-func updateNeeded(ctx context.Context, client kubectl.Client, pod *kubectl.SelectedPodContainer, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (bool, error) {
+func updateNeeded(ctx context.Context, client kubectl.Client, pod *selector.SelectedPodContainer, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (bool, error) {
 	if pod.Pod.Annotations == nil || pod.Pod.Annotations[ParentKindAnnotation] == "" || pod.Pod.Annotations[ParentNameAnnotation] == "" {
 		return true, deleteAndWait(ctx, client, pod.Pod, log)
 	}
@@ -407,7 +408,7 @@ func deleteAndWait(ctx context.Context, client kubectl.Client, pod *corev1.Pod, 
 	return nil
 }
 
-func replace(ctx context.Context, client kubectl.Client, pod *kubectl.SelectedPodContainer, parent runtime.Object, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) error {
+func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedPodContainer, parent runtime.Object, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) error {
 	parentHash, err := hashParentPodSpec(parent, config, dependencies, replacePod)
 	if err != nil {
 		return errors.Wrap(err, "hash parent pod spec")
@@ -453,14 +454,14 @@ func replace(ctx context.Context, client kubectl.Client, pod *kubectl.SelectedPo
 	delete(copiedPod.Labels, "controller-revision-hash")
 	delete(copiedPod.Labels, "statefulset.kubernetes.io/pod-name")
 
-	copiedPod.Labels[kubectl.ReplacedLabel] = "true"
+	copiedPod.Labels[selector.ReplacedLabel] = "true"
 	if replacePod.ImageName != "" {
-		copiedPod.Labels[kubectl.ImageNameLabel] = replacePod.ImageName
+		copiedPod.Labels[selector.ImageNameLabel] = replacePod.ImageName
 	}
 	if replacePod.ImageSelector != "" {
-		copiedPod.Labels[kubectl.ImageSelectorLabel] = hash.String(replacePod.ImageSelector)[:32]
+		copiedPod.Labels[selector.ImageSelectorLabel] = hash.String(replacePod.ImageSelector)[:32]
 	}
-	copiedPod.Annotations[kubectl.MatchedContainerAnnotation] = pod.Container.Name
+	copiedPod.Annotations[selector.MatchedContainerAnnotation] = pod.Container.Name
 	copiedPod.Annotations[ParentHashAnnotation] = parentHash
 	copiedPod.Annotations[ReplaceConfigHashAnnotation] = configHash
 
@@ -759,14 +760,14 @@ func convertToInterface(str runtime.Object) map[interface{}]interface{} {
 	return ret
 }
 
-func findSingleReplacedPod(ctx context.Context, client kubectl.Client, replacePod *latest.ReplacePod, timeout int64, log log.Logger) (*kubectl.SelectedPodContainer, error) {
+func findSingleReplacedPod(ctx context.Context, client kubectl.Client, replacePod *latest.ReplacePod, timeout int64, log log.Logger) (*selector.SelectedPodContainer, error) {
 	labelSelector := map[string]string{
-		kubectl.ReplacedLabel: "true",
+		selector.ReplacedLabel: "true",
 	}
 	if replacePod.ImageName != "" {
-		labelSelector[kubectl.ImageNameLabel] = replacePod.ImageName
+		labelSelector[selector.ImageNameLabel] = replacePod.ImageName
 	} else if replacePod.ImageSelector != "" {
-		labelSelector[kubectl.ImageSelectorLabel] = hash.String(replacePod.ImageSelector)[:32]
+		labelSelector[selector.ImageSelectorLabel] = hash.String(replacePod.ImageSelector)[:32]
 	} else if len(replacePod.LabelSelector) > 0 {
 		for k, v := range replacePod.LabelSelector {
 			labelSelector[k] = v
@@ -793,7 +794,7 @@ func findSingleReplacedPod(ctx context.Context, client kubectl.Client, replacePo
 	return selected, nil
 }
 
-func findSingleReplaceablePodParent(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (*kubectl.SelectedPodContainer, runtime.Object, error) {
+func findSingleReplaceablePodParent(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (*selector.SelectedPodContainer, runtime.Object, error) {
 	var err error
 
 	// create selector

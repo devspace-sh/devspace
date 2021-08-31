@@ -6,7 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -18,7 +18,7 @@ import (
 
 // RemoteHook is a hook that is executed in a container
 type RemoteHook interface {
-	ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *kubectl.SelectedPodContainer, log logpkg.Logger) error
+	ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, log logpkg.Logger) error
 }
 
 func NewRemoteHook(hook RemoteHook) Hook {
@@ -104,7 +104,7 @@ func (r *remoteHook) execute(ctx Context, hook *latest.HookConfig, imageSelector
 	// select the container
 	targetSelector := targetselector.NewTargetSelector(ctx.Client)
 	podContainer, err := targetSelector.SelectSingleContainer(context.TODO(), targetselector.Options{
-		Selector: kubectl.Selector{
+		Selector: selector.Selector{
 			ImageSelector: imageSelector,
 			LabelSelector: labelSelector,
 			Pod:           hook.Where.Container.Pod,
@@ -113,8 +113,8 @@ func (r *remoteHook) execute(ctx Context, hook *latest.HookConfig, imageSelector
 		},
 		Wait:            &wait,
 		Timeout:         timeout,
-		SortPods:        kubectl.SortPodsByNewest,
-		SortContainers:  kubectl.SortContainersByNewest,
+		SortPods:        selector.SortPodsByNewest,
+		SortContainers:  selector.SortContainersByNewest,
 		WaitingStrategy: r.WaitingStrategy,
 	}, log)
 	if err != nil {

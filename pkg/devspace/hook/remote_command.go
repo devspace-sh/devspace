@@ -3,6 +3,7 @@ package hook
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"io"
@@ -20,7 +21,7 @@ type remoteCommandHook struct {
 	Stderr io.Writer
 }
 
-func (r *remoteCommandHook) ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *kubectl.SelectedPodContainer, log logpkg.Logger) error {
+func (r *remoteCommandHook) ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, log logpkg.Logger) error {
 	cmd := []string{hook.Command}
 	if hook.Args == nil {
 		cmd = []string{"sh", "-c", hook.Command}

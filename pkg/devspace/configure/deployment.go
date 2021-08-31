@@ -260,7 +260,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				m.log.WriteString("\n")
 				m.log.Infof("Cloning external repo `%s` containing to retrieve Helm chart", gitRepo)
 
-				err = shell.ExecuteShellCommand(gitCommand, nil, os.Stdout, os.Stderr, nil)
+				err = shell.ExecuteShellCommand(gitCommand, nil, "", os.Stdout, os.Stderr, nil)
 				if err != nil {
 					m.log.WriteString("\n")
 					m.log.Errorf("Unable to clone repository `%s` (branch: %s)", gitRepo, gitBranch)

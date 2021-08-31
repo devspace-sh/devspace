@@ -17,7 +17,9 @@ var (
 	tagRegEx   = regexp.MustCompile(`tag\("?'?([^)"']+)"?'?\)`)
 )
 
-func replaceWithRegEx(in string, config config2.Config, dependencies []types.Dependency, builtImages map[string]string, regEx *regexp.Regexp, onlyImage, onlyTag bool) (bool, string, error) {
+type replaceFn func(match string) (bool, bool, string, error)
+
+func replaceWithRegEx(in string, replaceFn replaceFn, regEx *regexp.Regexp) (bool, string, error) {
 	matches := regEx.FindAllStringSubmatch(in, -1)
 	if len(matches) == 0 {
 		return false, in, nil
@@ -30,7 +32,7 @@ func replaceWithRegEx(in string, config config2.Config, dependencies []types.Dep
 			continue
 		}
 
-		found, shouldRedeploy, resolvedImage, err := resolveImage(match[1], config, dependencies, builtImages, true, onlyImage, onlyTag)
+		found, shouldRedeploy, resolvedImage, err := replaceFn(match[1])
 		if err != nil {
 			return false, "", err
 		} else if !found {
@@ -132,6 +134,7 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 		if tag == "" {
 			return true, shouldRedeploy, image, nil
 		}
+
 		return true, shouldRedeploy, image + ":" + tag, nil
 	}
 
@@ -170,14 +173,18 @@ func Replace(value string, config config2.Config, dependencies []types.Dependenc
 	}
 
 	// replace the image() helpers
-	shouldRedeploy, value, err = replaceWithRegEx(value, config, dependencies, builtImages, imageRegEx, true, false)
+	shouldRedeploy, value, err = replaceWithRegEx(value, func(match string) (bool, bool, string, error) {
+		return resolveImage(match, config, dependencies, builtImages, true, true, false)
+	}, imageRegEx)
 	if err != nil {
 		return false, nil, err
 	}
 
 	// replace the tag() helpers
 	imageShouldRedeploy := shouldRedeploy
-	shouldRedeploy, value, err = replaceWithRegEx(value, config, dependencies, builtImages, tagRegEx, false, true)
+	shouldRedeploy, value, err = replaceWithRegEx(value, func(match string) (bool, bool, string, error) {
+		return resolveImage(match, config, dependencies, builtImages, true, false, true)
+	}, tagRegEx)
 	if err != nil {
 		return false, nil, err
 	}

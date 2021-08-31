@@ -3,6 +3,7 @@ package targetselector
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"time"
@@ -22,7 +23,7 @@ const DefaultContainerQuestion = "Select a container"
 
 // Options holds the options for a target selector
 type Options struct {
-	kubectl.Selector
+	selector.Selector
 
 	AllowPick bool
 	Question  string
@@ -31,8 +32,8 @@ type Options struct {
 	Timeout int64
 
 	FailIfMultiple bool
-	SortPods       kubectl.SortPods
-	SortContainers kubectl.SortContainers
+	SortPods       selector.SortPods
+	SortContainers selector.SortContainers
 
 	WaitingStrategy WaitingStrategy
 }
@@ -44,27 +45,27 @@ func NewEmptyOptions() Options {
 func NewDefaultOptions() Options {
 	return Options{
 		AllowPick: true,
-		Selector: kubectl.Selector{
-			FilterContainer: kubectl.FilterNonRunningContainers,
+		Selector: selector.Selector{
+			FilterContainer: selector.FilterNonRunningContainers,
 		},
-		SortPods:       kubectl.SortPodsByNewest,
-		SortContainers: kubectl.SortContainersByNewest,
+		SortPods:       selector.SortPodsByNewest,
+		SortContainers: selector.SortContainersByNewest,
 	}
 }
 
 func NewOptionsFromFlags(containerName string, labelSelector string, namespace string, pod string, allowPick bool) Options {
 	return Options{
 		AllowPick: allowPick,
-		Selector: kubectl.Selector{
+		Selector: selector.Selector{
 			LabelSelector:      labelSelector,
 			Pod:                pod,
 			ContainerName:      containerName,
 			Namespace:          namespace,
 			SkipInitContainers: false,
-			FilterContainer:    kubectl.FilterNonRunningContainers,
+			FilterContainer:    selector.FilterNonRunningContainers,
 		},
-		SortPods:       kubectl.SortPodsByNewest,
-		SortContainers: kubectl.SortContainersByNewest,
+		SortPods:       selector.SortPodsByNewest,
+		SortContainers: selector.SortContainersByNewest,
 	}
 }
 
@@ -104,7 +105,7 @@ func (o Options) ApplyCmdParameter(containerName string, labelSelector string, n
 
 type TargetSelector interface {
 	SelectSinglePod(ctx context.Context, options Options, log log.Logger) (*v1.Pod, error)
-	SelectSingleContainer(ctx context.Context, options Options, log log.Logger) (*kubectl.SelectedPodContainer, error)
+	SelectSingleContainer(ctx context.Context, options Options, log log.Logger) (*selector.SelectedPodContainer, error)
 }
 
 // targetSelector is the struct that will select a target
@@ -119,7 +120,7 @@ func NewTargetSelector(client kubectl.Client) TargetSelector {
 	}
 }
 
-func (t *targetSelector) SelectSingleContainer(ctx context.Context, options Options, log log.Logger) (*kubectl.SelectedPodContainer, error) {
+func (t *targetSelector) SelectSingleContainer(ctx context.Context, options Options, log log.Logger) (*selector.SelectedPodContainer, error) {
 	container, err := t.selectSingle(ctx, options, log, t.selectSingleContainer)
 	if err != nil {
 		return nil, err
@@ -127,7 +128,7 @@ func (t *targetSelector) SelectSingleContainer(ctx context.Context, options Opti
 		return nil, nil
 	}
 
-	return container.(*kubectl.SelectedPodContainer), nil
+	return container.(*selector.SelectedPodContainer), nil
 }
 
 func (t *targetSelector) SelectSinglePod(ctx context.Context, options Options, log log.Logger) (*v1.Pod, error) {
@@ -189,7 +190,7 @@ func (t *targetSelector) selectSingle(ctx context.Context, options Options, log 
 }
 
 func (t *targetSelector) selectSingleContainer(ctx context.Context, options Options, log log.Logger) (bool, interface{}, error) {
-	containers, err := kubectl.NewFilterWithSort(t.client, options.SortPods, options.SortContainers).SelectContainers(ctx, options.Selector)
+	containers, err := selector.NewFilterWithSort(t.client, options.SortPods, options.SortContainers).SelectContainers(ctx, options.Selector)
 	if err != nil {
 		return false, nil, err
 	} else if options.WaitingStrategy != nil {
@@ -239,7 +240,7 @@ func (t *targetSelector) selectSingleContainer(ctx context.Context, options Opti
 }
 
 func (t *targetSelector) selectSinglePod(ctx context.Context, options Options, log log.Logger) (bool, interface{}, error) {
-	pods, err := kubectl.NewFilterWithSort(t.client, options.SortPods, options.SortContainers).SelectPods(ctx, options.Selector)
+	pods, err := selector.NewFilterWithSort(t.client, options.SortPods, options.SortContainers).SelectPods(ctx, options.Selector)
 	if err != nil {
 		return false, nil, err
 	} else if options.WaitingStrategy != nil {

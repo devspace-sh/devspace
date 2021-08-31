@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"github.com/loft-sh/devspace/pkg/util/hash"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -31,6 +32,7 @@ type resolverTestCase struct {
 	updateParam     bool
 	allowCyclic     bool
 
+	skipIds              bool
 	expectedDependencies []Dependency
 	expectedErr          string
 }
@@ -98,11 +100,9 @@ func TestResolver(t *testing.T) {
 			},
 			expectedDependencies: []Dependency{
 				Dependency{
-					id:        filepath.Join(dir, "dependency1"),
 					localPath: filepath.Join(dir, "dependency1"),
 				},
 				Dependency{
-					id:        filepath.Join(dir, "dependency2"),
 					localPath: filepath.Join(dir, "dependency2"),
 				},
 			},
@@ -124,21 +124,39 @@ func TestResolver(t *testing.T) {
 			},
 			expectedDependencies: []Dependency{
 				Dependency{
-					id:        "https://github.com/devspace-cloud/example-dependency.git@f8b2aa8cf8ac03238a28e8f78382b214d619893f:mysubpath",
-					localPath: filepath.Join(util.DependencyFolderPath, "84e3f5121aa5a99b3d26752f40e3935f494312ad82d0e85afc9b6e23c762c705", "mysubpath"),
+					localPath: filepath.Join(util.DependencyFolderPath, hash.String(mustGetDependencyID(dir, &latest.DependencyConfig{
+						Name: "test",
+						Source: &latest.SourceConfig{
+							Git:      "https://github.com/devspace-cloud/example-dependency.git",
+							Revision: "f8b2aa8cf8ac03238a28e8f78382b214d619893f",
+							SubPath:  "mysubpath",
+						},
+					})), "mysubpath"),
 				},
 			},
 		},
 		resolverTestCase{
-			name: "Cyclic allowed dependency",
+			name:    "Cyclic allowed dependency",
+			skipIds: true,
 			files: map[string]*latest.Config{
+				"dependency2/devspace.yaml": &latest.Config{
+					Version: latest.Version,
+					Dependencies: []*latest.DependencyConfig{
+						&latest.DependencyConfig{
+							Name: "test",
+							Source: &latest.SourceConfig{
+								Path: "../dependency1",
+							},
+						},
+					},
+				},
 				"dependency1/devspace.yaml": &latest.Config{
 					Version: latest.Version,
 					Dependencies: []*latest.DependencyConfig{
 						&latest.DependencyConfig{
 							Name: "test",
 							Source: &latest.SourceConfig{
-								Path: "..",
+								Path: "../dependency2",
 							},
 						},
 					},
@@ -155,7 +173,9 @@ func TestResolver(t *testing.T) {
 			allowCyclic: true,
 			expectedDependencies: []Dependency{
 				Dependency{
-					id:        filepath.Join(dir, "dependency1"),
+					localPath: filepath.Join(dir, "dependency2"),
+				},
+				Dependency{
 					localPath: filepath.Join(dir, "dependency1"),
 				},
 			},
@@ -190,7 +210,10 @@ func TestResolver(t *testing.T) {
 
 		assert.Equal(t, len(testCase.expectedDependencies), len(dependencies), "Wrong dependency length in testCase %s", testCase.name)
 		for index, expected := range testCase.expectedDependencies {
-			assert.Equal(t, expected.id, dependencies[index].id, "Dependency has wrong id in testCase %s", testCase.name)
+			if testCase.skipIds == false {
+				id, _ := util.GetDependencyID(dir, testCase.dependencyTasks[index])
+				assert.Equal(t, id, dependencies[index].id, "Dependency has wrong id in testCase %s", testCase.name)
+			}
 			assert.Equal(t, expected.localPath, dependencies[index].localPath, "Dependency has wrong local path in testCase %s", testCase.name)
 		}
 
@@ -201,6 +224,11 @@ func TestResolver(t *testing.T) {
 		os.RemoveAll(util.DependencyFolderPath) //No error catch because it doesn't need to exist
 
 	}
+}
+
+func mustGetDependencyID(basePath string, config *latest.DependencyConfig) string {
+	id, _ := util.GetDependencyID(basePath, config)
+	return id
 }
 
 func includes(arr []string, needle string) bool {
@@ -231,7 +259,7 @@ func TestGetDependencyID(t *testing.T) {
 					Tag: "myTag",
 				},
 			},
-			expectedID: "someTagGit@myTag",
+			expectedID: "e8fb9810c53ca0986d12ec5d078e38659a1700425a292cefe4f77bffa351667c",
 		},
 		getDependencyIDTestCase{
 			name: "git with branch",
@@ -241,7 +269,7 @@ func TestGetDependencyID(t *testing.T) {
 					Branch: "myBranch",
 				},
 			},
-			expectedID: "someBranchGit@myBranch",
+			expectedID: "9a5ed87e8fec108a03b592058f7eec3a0b1c9fe431cfe1d03a5d37333fb07b2d",
 		},
 		getDependencyIDTestCase{
 			name: "git with revision, subpath and profile",
@@ -253,19 +281,20 @@ func TestGetDependencyID(t *testing.T) {
 				},
 				Profile: "myProfile",
 			},
-			expectedID: "someRevisionGit@myRevision:mySubPath - profile myProfile",
+			expectedID: "bb783d78de53d3bcb1533d239a3d1d685070f22b9f25e5c487a83425be586900",
 		},
 		getDependencyIDTestCase{
 			name: "empty",
 			dependency: &latest.DependencyConfig{
 				Source: &latest.SourceConfig{},
 			},
-			expectedID: "",
+			expectedID: "cc4af1ccc6f0bba9d05b89a8ac9bfdca135653f86d9535756b8c219bc7fdd9a1",
 		},
 	}
 
 	for _, testCase := range testCases {
-		id := util.GetDependencyID(testCase.baseBath, testCase.dependency.Source, testCase.dependency.Profile, nil)
+		id, err := util.GetDependencyID(testCase.baseBath, testCase.dependency)
+		assert.NilError(t, err)
 		assert.Equal(t, testCase.expectedID, id, "Dependency has wrong id in testCase %s", testCase.name)
 	}
 }

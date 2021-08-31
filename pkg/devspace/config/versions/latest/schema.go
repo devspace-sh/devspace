@@ -927,6 +927,10 @@ type DependencyDev struct {
 	// If sync is true, DevSpace will run the specified sync paths
 	// from the dependency's dev.sync config
 	Sync bool `yaml:"sync,omitempty" json:"sync,omitempty"`
+
+	// If replacePods is true, DevSpace will replace the specified pods
+	// from the dependency's dev.replacePods config
+	ReplacePods bool `yaml:"replacePods,omitempty" json:"replacePods,omitempty"`
 }
 
 // DependencyVar holds an override value for a config variable

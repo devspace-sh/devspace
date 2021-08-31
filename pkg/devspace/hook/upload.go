@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"io"
@@ -21,7 +22,7 @@ func NewUploadHook() RemoteHook {
 
 type remoteUploadHook struct{}
 
-func (r *remoteUploadHook) ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *kubectl.SelectedPodContainer, log logpkg.Logger) error {
+func (r *remoteUploadHook) ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, log logpkg.Logger) error {
 	containerPath := "."
 	if hook.Upload.ContainerPath != "" {
 		containerPath = hook.Upload.ContainerPath

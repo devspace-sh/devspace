@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -82,7 +83,7 @@ func (r *waitHook) execute(ctx Context, hook *latest.HookConfig, imageSelector [
 
 	// wait until the defined condition will be true, this will wait initially 2 seconds
 	err := wait.Poll(time.Second*2, time.Duration(timeout)*time.Second, func() (done bool, err error) {
-		podContainers, err := kubectl.NewFilter(ctx.Client).SelectContainers(context.TODO(), kubectl.Selector{
+		podContainers, err := selector.NewFilter(ctx.Client).SelectContainers(context.TODO(), selector.Selector{
 			ImageSelector: imageSelector,
 			LabelSelector: labelSelector,
 			Pod:           hook.Where.Container.Pod,
@@ -116,7 +117,7 @@ func (r *waitHook) execute(ctx Context, hook *latest.HookConfig, imageSelector [
 	return nil
 }
 
-func isWaitConditionTrue(condition *latest.HookWaitConfig, podContainer *kubectl.SelectedPodContainer) bool {
+func isWaitConditionTrue(condition *latest.HookWaitConfig, podContainer *selector.SelectedPodContainer) bool {
 	if podContainer.Pod.DeletionTimestamp != nil {
 		return false
 	}

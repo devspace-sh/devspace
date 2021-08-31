@@ -23,7 +23,7 @@ type Exec func(command string, args []string) Interface
 // Interface is the command interface
 type Interface interface {
 	Run(stdout io.Writer, stderr io.Writer, stdin io.Reader) error
-	RunWithEnv(stdout io.Writer, stderr io.Writer, stdin io.Reader, env map[string]string) error
+	RunWithEnv(stdout io.Writer, stderr io.Writer, stdin io.Reader, dir string, env map[string]string) error
 	Output() ([]byte, error)
 	CombinedOutput() ([]byte, error)
 }
@@ -44,7 +44,7 @@ func (f *FakeCommand) Output() ([]byte, error) {
 }
 
 // Run implements interface
-func (f *FakeCommand) RunWithEnv(stdout io.Writer, stderr io.Writer, stdin io.Reader, extraEnvVars map[string]string) error {
+func (f *FakeCommand) RunWithEnv(stdout io.Writer, stderr io.Writer, stdin io.Reader, dir string, extraEnvVars map[string]string) error {
 	return nil
 }
 
@@ -76,7 +76,8 @@ func (s *StreamCommand) Output() ([]byte, error) {
 }
 
 // Run runs a stream command
-func (s *StreamCommand) RunWithEnv(stdout io.Writer, stderr io.Writer, stdin io.Reader, extraEnvVars map[string]string) error {
+func (s *StreamCommand) RunWithEnv(stdout io.Writer, stderr io.Writer, stdin io.Reader, dir string, extraEnvVars map[string]string) error {
+	s.cmd.Dir = dir
 	env := os.Environ()
 	for k, v := range extraEnvVars {
 		env = append(env, k+"="+v)
@@ -104,7 +105,7 @@ func (s *StreamCommand) RunWithEnv(stdout io.Writer, stderr io.Writer, stdin io.
 
 // Run runs a stream command
 func (s *StreamCommand) Run(stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
-	return s.RunWithEnv(stdout, stderr, stdin, nil)
+	return s.RunWithEnv(stdout, stderr, stdin, "", nil)
 }
 
 func ShouldExecuteOnOS(os string) bool {
@@ -127,8 +128,8 @@ func ShouldExecuteOnOS(os string) bool {
 	return true
 }
 
-func ExecuteCommandWithEnv(cmd string, args []string, stdout io.Writer, stderr io.Writer, extraEnvVars map[string]string) error {
-	err := NewStreamCommand(cmd, args).RunWithEnv(stdout, stderr, nil, extraEnvVars)
+func ExecuteCommandWithEnv(cmd string, args []string, dir string, stdout io.Writer, stderr io.Writer, extraEnvVars map[string]string) error {
+	err := NewStreamCommand(cmd, args).RunWithEnv(stdout, stderr, nil, dir, extraEnvVars)
 	if err != nil {
 		if errr, ok := err.(*exec.ExitError); ok {
 			return errors.Errorf("error executing command '%s %s': code: %d, error: %s, %s", cmd, strings.Join(args, " "), errr.ExitCode(), string(errr.Stderr), errr)
@@ -141,5 +142,5 @@ func ExecuteCommandWithEnv(cmd string, args []string, stdout io.Writer, stderr i
 }
 
 func ExecuteCommand(cmd string, args []string, stdout io.Writer, stderr io.Writer) error {
-	return ExecuteCommandWithEnv(cmd, args, stdout, stderr, nil)
+	return ExecuteCommandWithEnv(cmd, args, "", stdout, stderr, nil)
 }

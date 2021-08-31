@@ -1,6 +1,7 @@
 package util
 
 import (
+	"gopkg.in/yaml.v2"
 	"io"
 	"net/http"
 	"os"
@@ -32,9 +33,7 @@ func init() {
 	DependencyFolderPath = filepath.Join(homedir, filepath.FromSlash(DependencyFolder))
 }
 
-func DownloadDependency(basePath string, source *latest.SourceConfig, profile string, vars []latest.DependencyVar, update bool, log log.Logger) (ID string, localPath string, err error) {
-	ID = GetDependencyID(basePath, source, profile, vars)
-
+func DownloadDependency(ID, basePath string, source *latest.SourceConfig, update bool, log log.Logger) (localPath string, err error) {
 	// Resolve source
 	if source.Git != "" {
 		gitPath := strings.TrimSpace(source.Git)
@@ -52,7 +51,7 @@ func DownloadDependency(basePath string, source *latest.SourceConfig, profile st
 		if update {
 			repo, err := git.NewGitCLIRepository(localPath)
 			if err != nil {
-				return "", "", err
+				return "", err
 			}
 
 			err = repo.Clone(git.CloneOptions{
@@ -64,7 +63,7 @@ func DownloadDependency(basePath string, source *latest.SourceConfig, profile st
 				DisableShallow: source.DisableShallow,
 			})
 			if err != nil {
-				return "", "", errors.Wrap(err, "clone repository")
+				return "", errors.Wrap(err, "clone repository")
 			}
 
 			log.Donef("Pulled %s", ID)
@@ -85,21 +84,21 @@ func DownloadDependency(basePath string, source *latest.SourceConfig, profile st
 				// Create the file
 				out, err := os.Create(configPath)
 				if err != nil {
-					return "", "", err
+					return "", err
 				}
 				defer out.Close()
 
 				// Get the data
 				resp, err := http.Get(source.Path)
 				if err != nil {
-					return "", "", errors.Wrapf(err, "request %s", source.Path)
+					return "", errors.Wrapf(err, "request %s", source.Path)
 				}
 				defer resp.Body.Close()
 
 				// Write the body to file
 				_, err = io.Copy(out, resp.Body)
 				if err != nil {
-					return "", "", errors.Wrapf(err, "download %s", source.Path)
+					return "", errors.Wrapf(err, "download %s", source.Path)
 				}
 			}
 		} else {
@@ -108,7 +107,7 @@ func DownloadDependency(basePath string, source *latest.SourceConfig, profile st
 			} else {
 				localPath, err = filepath.Abs(filepath.Join(basePath, filepath.FromSlash(source.Path)))
 				if err != nil {
-					return "", "", errors.Wrap(err, "filepath absolute")
+					return "", errors.Wrap(err, "filepath absolute")
 				}
 			}
 		}
@@ -118,10 +117,42 @@ func DownloadDependency(basePath string, source *latest.SourceConfig, profile st
 		localPath = filepath.Join(localPath, filepath.FromSlash(source.SubPath))
 	}
 
-	return ID, localPath, nil
+	return localPath, nil
 }
 
-func GetDependencyID(basePath string, source *latest.SourceConfig, profile string, vars []latest.DependencyVar) string {
+func GetDependencyID(basePath string, config *latest.DependencyConfig) (string, error) {
+	// copy config
+	out, err := yaml.Marshal(config)
+	if err != nil {
+		return "", err
+	}
+	outConfig := &latest.DependencyConfig{}
+	err = yaml.Unmarshal(out, outConfig)
+	if err != nil {
+		return "", err
+	}
+
+	// replace relative path with absolute path
+	if outConfig.Source != nil && outConfig.Source.Path != "" {
+		if isUrl(outConfig.Source.Path) == false {
+			filePath := outConfig.Source.Path
+			if !filepath.IsAbs(outConfig.Source.Path) {
+				filePath = filepath.Join(basePath, outConfig.Source.Path)
+			}
+
+			outConfig.Source.Path = filePath
+		}
+	}
+
+	// hash config
+	out, err = yaml.Marshal(outConfig)
+	if err != nil {
+		return "", err
+	}
+	return hash.String(string(out)), nil
+}
+
+func GetParentProfileID(basePath string, source *latest.SourceConfig, profile string, vars []latest.DependencyVar) string {
 	if source.Git != "" {
 		// Erase authentication credentials
 		id := strings.TrimSpace(source.Git)

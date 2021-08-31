@@ -109,9 +109,9 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 // ResetPods deletes the pods created by dev.replacePods
 func ResetPods(client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, log log.Logger) {
 	// create pod replacer
-	podReplacer := podreplace.NewPodReplacer()
 	resetted := 0
 	errored := false
+	podReplacer := podreplace.NewPodReplacer()
 	for _, replacePod := range config.Config().Dev.ReplacePods {
 		deletedPod, err := podReplacer.RevertReplacePod(context.TODO(), client, config, dependencies, replacePod, log)
 		if err != nil {

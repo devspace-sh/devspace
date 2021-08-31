@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/shell"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 func NewLocalCommandHook(stdout io.Writer, stderr io.Writer) Hook {
@@ -40,12 +41,13 @@ func (l *localCommandHook) Execute(ctx Context, hook *latest.HookConfig, config 
 	if ctx.Error != nil {
 		extraEnv[ErrorEnv] = ctx.Error.Error()
 	}
+	dir := filepath.Dir(config.Path())
 
 	// if args are nil we execute the command in a shell
 	if hook.Args == nil {
-		return shell.ExecuteShellCommand(hook.Command, nil, l.Stdout, l.Stderr, extraEnv)
+		return shell.ExecuteShellCommand(hook.Command, nil, dir, l.Stdout, l.Stderr, extraEnv)
 	}
 
 	// else we execute it directly
-	return command.ExecuteCommandWithEnv(hook.Command, hook.Args, l.Stdout, l.Stderr, extraEnv)
+	return command.ExecuteCommandWithEnv(hook.Command, hook.Args, dir, l.Stdout, l.Stderr, extraEnv)
 }
