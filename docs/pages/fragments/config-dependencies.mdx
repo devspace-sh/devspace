@@ -9,7 +9,7 @@ dependencies:                       # struct[]  | Array of dependencies (other p
     disableShallow: false           # bool      | Allows to disable shallow git clones using "--depth 1"
     cloneArgs: []                   # string[]  | Array of args for the "git clone" command for retrieving git based dependencies
     path: ../../my-projects/repo    # string    | Path to a project on your local computer (not recommended, instead of using git-related options)
-  profile: default                  # string    | Name of the profile used to deploy this dependency (when multiple profiles are defined in the devspace.yaml of the dependency)
+  profiles: []                      # string[]  | Profiles used to deploy this dependency (when multiple profiles are defined in the devspace.yaml of the dependency)
   skipBuild: false                  # bool      | Do not build images of this dependency (= only start deployments)
   ignoreDependencies: false         # bool      | Do not build and deploy dependencies of this dependency
   namespace: ""                     # string    | Kubernetes namespace to deploy dependency to (Default: default namespace of current kube-context)
@@ -20,4 +20,5 @@ dependencies:                       # struct[]  | Array of dependencies (other p
   vars:                             # struct[]  | Variables in the dependency config that should be overriden with the specified values 
   - name: NAME
     value: value
+  disableProfileActivation: true    # bool      | If true will ignore profile activations for this dependency
 ```

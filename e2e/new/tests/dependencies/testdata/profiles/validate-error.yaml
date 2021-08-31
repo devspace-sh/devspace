@@ -1,0 +1,20 @@
+version: v1beta10
+deployments:
+- name: nginx
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+dependencies:
+  - name: nested
+    profile: one
+    profiles:
+      - one
+      - two
+    profileParents:
+      - three
+      - four
+    source:
+      path: dep1
+      configName: dev.yaml

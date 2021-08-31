@@ -44,3 +44,8 @@ func ExpectHaveKey(actual interface{}, key interface{}, explain ...interface{}) 
 func ExpectEmpty(actual interface{}, explain ...interface{}) {
 	gomega.ExpectWithOffset(1, actual).To(gomega.BeEmpty(), explain...)
 }
+
+// Expect returns a gomega assertion with offset
+func Expect(actual interface{}) gomega.Assertion {
+	return gomega.ExpectWithOffset(1, actual)
+}

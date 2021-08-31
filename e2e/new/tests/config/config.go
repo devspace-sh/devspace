@@ -3,12 +3,13 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"gopkg.in/yaml.v2"
-	"os"
-	"path/filepath"
 
 	"github.com/loft-sh/devspace/cmd/use"
 	"github.com/loft-sh/devspace/e2e/new/framework"
@@ -57,13 +58,13 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectEqual(len(latestConfig.Deployments), 2)
 		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
 		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test3")
-		
+
 		// run without profile
 		configBuffer = &bytes.Buffer{}
 		printCmd = &cmd.PrintCmd{
 			GlobalFlags: &flags.GlobalFlags{},
-			Out:      configBuffer,
-			SkipInfo: true,
+			Out:         configBuffer,
+			SkipInfo:    true,
 		}
 
 		err = printCmd.Run(f, nil, nil, nil)
@@ -75,6 +76,97 @@ var _ = DevSpaceDescribe("config", func() {
 
 		// validate config
 		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+	})
+
+	ginkgo.It("should filter duplicate profiles via --profile", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/multiple-profiles")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				Profiles: []string{"one", "three", "three"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(len(latestConfig.Deployments), 3)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test2")
+		framework.ExpectEqual(latestConfig.Deployments[2].Name, "test3")
+	})
+
+	ginkgo.It("should filter duplicate profiles via --profile and --profile-parent", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/multiple-profiles")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath:     "profiles.yaml",
+				Profiles:       []string{"two"},
+				ProfileParents: []string{"one", "one", "three", "one", "two"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(len(latestConfig.Deployments), 4)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test3")
+		framework.ExpectEqual(latestConfig.Deployments[2].Name, "test1")
+		framework.ExpectEqual(latestConfig.Deployments[3].Name, "test2")
+	})
+
+	ginkgo.It("should order profiles correctly via --profile and --profile-parent", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/multiple-profiles")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath:     "profiles.yaml",
+				Profiles:       []string{"one", "two"},
+				ProfileParents: []string{"three", "four"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(len(latestConfig.Deployments), 5)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test3")
+		framework.ExpectEqual(latestConfig.Deployments[2].Name, "test4")
+		framework.ExpectEqual(latestConfig.Deployments[3].Name, "test1")
+		framework.ExpectEqual(latestConfig.Deployments[4].Name, "test2")
 	})
 
 	ginkgo.It("should load profile cached and uncached", func() {
@@ -115,12 +207,629 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectEqual(len(config.Config().Deployments), 1)
 
 		// reload it and set it through config options
-		config, _, err = framework.LoadConfigWithOptions(f, "devspace.yaml", &loader.ConfigOptions{Profile: "add-deployment"})
+		config, _, err = framework.LoadConfigWithOptions(f, "devspace.yaml", &loader.ConfigOptions{Profiles: []string{"add-deployment"}})
 		framework.ExpectNoError(err)
 
 		// check profile was loaded
 		framework.ExpectEqual(len(config.Config().Images), 1)
 		framework.ExpectEqual(len(config.Config().Deployments), 2)
+	})
+
+	ginkgo.It("should auto activate profile using single environment variable", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run without vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "default.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate no profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+
+		// run with non-matching environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "default.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "false")
+		defer os.Unsetenv("FOO")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate no profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+
+		// run with matching environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "default.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 2)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test2")
+	})
+
+	ginkgo.It("should auto activate profile using regular expression matching environment variable", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run with non-matching vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "regexp.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "false")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+		os.Unsetenv("FOO")
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate no profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+
+		// run with environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "regexp.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "truthy")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+		os.Unsetenv("FOO")
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 2)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test2")
+	})
+
+	ginkgo.It("should not auto activate profile using single environment variable with --disable-profile-activation", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run without vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath:               "default.yaml",
+				DisableProfileActivation: true,
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate no profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+
+		// run with environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath:               "default.yaml",
+				DisableProfileActivation: true,
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate no profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+	})
+
+	ginkgo.It("should auto activate profile using multiple environment variables", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run without vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "and.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate no profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+
+		// run with single environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "and.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+
+		// run with both environment variables set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "and.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("BAR", "true")
+		defer os.Unsetenv("BAR")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(latestConfig.Deployments), 2)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test2")
+	})
+
+	ginkgo.It("should auto activate profile using multiple environment variable activations", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run without vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "or.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate no profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+
+		// run with FOO environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "or.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "true")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+		os.Unsetenv("FOO")
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(len(latestConfig.Deployments), 2)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test2")
+
+		// run with BAR environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "or.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("BAR", "true")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+		os.Unsetenv("BAR")
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(latestConfig.Deployments), 2)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test2")
+	})
+
+	ginkgo.It("should auto activate multiple profiles using single environment variable", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run without vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "multiple.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate no profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+
+		// run with environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "multiple.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(len(latestConfig.Deployments), 1)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+	})
+
+	ginkgo.It("should auto activate multiple profiles using single environment variable and --profile flag", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run without vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "multiple.yaml",
+				Profiles:   []string{"three"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate no profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 1)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test3")
+
+		// run with environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "multiple.yaml",
+				Profiles:   []string{"three"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(len(latestConfig.Deployments), 2)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test3")
+	})
+
+	ginkgo.It("should auto activate profile once using single environment variable and multiple --profile flags", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run without vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "multiple.yaml",
+				Profiles:   []string{"three"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate profile three was activated once
+		framework.ExpectEqual(len(latestConfig.Deployments), 1)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test3")
+
+		// run with environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "multiple.yaml",
+				Profiles:   []string{"three"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("BAR", "true")
+		defer os.Unsetenv("BAR")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate profile three was activated once
+		framework.ExpectEqual(len(latestConfig.Deployments), 1)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test3")
+	})
+
+	ginkgo.It("should auto activate profile once using single environment variable and multiple --profile and --profile-parent flags", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run without vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath:     "multiple.yaml",
+				Profiles:       []string{"three"},
+				ProfileParents: []string{"three"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate profile three was activated once
+		framework.ExpectEqual(len(latestConfig.Deployments), 1)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test3")
+
+		// run with environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath:     "multiple.yaml",
+				Profiles:       []string{"three"},
+				ProfileParents: []string{"three"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("BAR", "true")
+		defer os.Unsetenv("BAR")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate profile three was activated once
+		framework.ExpectEqual(len(latestConfig.Deployments), 1)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test3")
+	})
+
+	ginkgo.It("should auto activate multiple profiles using single environment variable and --profile flags in order", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run without vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "multiple.yaml",
+				Profiles:   []string{"four", "three"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(len(latestConfig.Deployments), 2)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test4")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test3")
+
+		// run with environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "multiple.yaml",
+				Profiles:   []string{"four", "three"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(len(latestConfig.Deployments), 3)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test4")
+		framework.ExpectEqual(latestConfig.Deployments[2].Name, "test3")
+	})
+
+	ginkgo.It("should auto activate multiple profiles using single environment variable and --profile and --profile-parent flags in order", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run without vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath:     "profiles.yaml",
+				Profiles:       []string{"two"},
+				ProfileParents: []string{"one", "one", "three", "one", "two"},
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		// run with environment variable set.
+		os.Setenv("FOO", "true")
+		defer os.Unsetenv("FOO")
+		err = printCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(len(latestConfig.Deployments), 5)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test5")
+		framework.ExpectEqual(latestConfig.Deployments[2].Name, "test3")
+		framework.ExpectEqual(latestConfig.Deployments[3].Name, "test1")
+		framework.ExpectEqual(latestConfig.Deployments[4].Name, "test2")
 	})
 
 	ginkgo.It("should resolve variables correctly", func() {

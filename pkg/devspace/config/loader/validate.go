@@ -2,6 +2,9 @@ package loader
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
+
 	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm/merge"
@@ -10,8 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	k8sv1 "k8s.io/api/core/v1"
-	"path/filepath"
-	"strings"
 )
 
 // ValidInitialSyncStrategy checks if strategy is valid
@@ -131,6 +132,9 @@ func validateDependencies(config *latest.Config) error {
 		}
 		if dep.Source.Git == "" && dep.Source.Path == "" {
 			return errors.Errorf("dependencies[%d].source.git or dependencies[%d].source.path is required", index, index)
+		}
+		if len(dep.Profiles) > 0 && (dep.Profile != "" || len(dep.ProfileParents) > 0) {
+			return errors.Errorf("dependencies[%d].profiles and dependencies[%d].profile & dependencies[%d].profileParents cannot be used together", index, index, index)
 		}
 	}
 

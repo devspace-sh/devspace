@@ -2,6 +2,11 @@ package versions
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"regexp"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -21,8 +26,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta9"
 	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"io/ioutil"
-	"path/filepath"
 
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
@@ -50,27 +53,32 @@ var versionLoader = map[string]*loader{
 }
 
 // ParseProfile loads the base config & a certain profile
-func ParseProfile(basePath string, data map[interface{}]interface{}, profile string, profileParents []string, update bool, log log.Logger) ([]map[interface{}]interface{}, error) {
-	profiles := []map[interface{}]interface{}{}
-	if len(profileParents) > 0 && profile == "" {
-		profile = profileParents[len(profileParents)-1]
-		profileParents = profileParents[:len(profileParents)-1]
-	}
+func ParseProfile(basePath string, data map[interface{}]interface{}, profiles []string, update bool, disableProfileActivation bool, log log.Logger) ([]map[interface{}]interface{}, error) {
+	parsedProfiles := []map[interface{}]interface{}{}
 
-	err := getProfiles(basePath, data, profile, &profiles, 1, update, log)
-	if err != nil {
-		return nil, err
-	}
-
-	// check if there are profile parents
-	for i := len(profileParents) - 1; i >= 0; i-- {
-		err := getProfiles(basePath, data, profileParents[i], &profiles, 1, update, log)
+	// auto activated root level profiles
+	activatedProfiles := []string{}
+	if !disableProfileActivation {
+		var err error
+		activatedProfiles, err = getActivatedProfiles(data)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return profiles, nil
+	// Combine auto activated profiles with flag activated profiles
+	profiles = append(activatedProfiles, profiles...)
+	profiles = filterProfileParents(profiles)
+
+	// check if there are profile parents
+	for i := len(profiles) - 1; i >= 0; i-- {
+		err := getProfiles(basePath, data, profiles[i], &parsedProfiles, 1, update, log)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return parsedProfiles, nil
 }
 
 // ParseCommands parses only the commands from the config
@@ -281,4 +289,70 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 
 	// Couldn't find config
 	return errors.Errorf("Couldn't find profile '%s'", profile)
+}
+
+func getActivatedProfiles(data map[interface{}]interface{}) ([]string, error) {
+	activatedProfiles := []string{}
+
+	// Check if there are profiles
+	if data["profiles"] == nil {
+		return activatedProfiles, nil
+	}
+
+	// Convert to array
+	profiles, ok := data["profiles"].([]interface{})
+	if !ok {
+		return activatedProfiles, errors.Errorf("Couldn't load profiles: no profiles found")
+	}
+
+	// Select which profiles are activated
+	for i, profileMap := range profiles {
+		profileConfig := &latest.ProfileConfig{}
+
+		o, err := yaml.Marshal(profileMap)
+		if err != nil {
+			return activatedProfiles, err
+		}
+
+		err = yaml.UnmarshalStrict(o, profileConfig)
+		if err != nil {
+			return activatedProfiles, fmt.Errorf("error parsing profile at profiles[%d]: %v", i, err)
+		}
+
+		for _, activation := range profileConfig.Activation {
+			activated, err := matchEnvironment(activation.Environment)
+			if err != nil {
+				return activatedProfiles, err
+			}
+
+			if activated {
+				activatedProfiles = append(activatedProfiles, profileConfig.Name)
+			}
+		}
+	}
+
+	return activatedProfiles, nil
+}
+
+func matchEnvironment(env map[string]string) (bool, error) {
+	for k, v := range env {
+		match, err := regexp.MatchString(v, os.Getenv(k))
+		if err != nil {
+			return false, err
+		}
+
+		if !match {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+func filterProfileParents(profileParents []string) []string {
+	return util.Filter(profileParents, func(oidx int, os string) bool {
+		return !util.Contains(profileParents, func(iidx int, is string) bool {
+			return os == is
+		}, oidx+1)
+	})
 }

@@ -210,8 +210,13 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	}
 
 	// set dependency profile
-	cloned.Profile = dependency.Profile
-	cloned.ProfileParents = dependency.ProfileParents
+	cloned.Profiles = []string{}
+	cloned.Profiles = append(cloned.Profiles, dependency.ProfileParents...)
+	if dependency.Profile != "" {
+		cloned.Profiles = append(cloned.Profiles, dependency.Profile)
+	}
+	cloned.Profiles = append(cloned.Profiles, dependency.Profiles...)
+	cloned.DisableProfileActivation = dependency.DisableProfileActivation || r.ConfigOptions.DisableProfileActivation
 
 	// construct load path
 	configPath := filepath.Join(localPath, constants.DefaultConfigPath)
@@ -305,7 +310,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 		kubeClient:     client,
 		dockerClient:   dockerClient,
-		generatedSaver: generated.NewConfigLoaderFromDevSpacePath(dependency.Profile, configPath),
+		generatedSaver: generated.NewConfigLoaderFromDevSpacePath(loader.GetLastProfile(cloned.Profiles), configPath),
 	}, nil
 }
 
