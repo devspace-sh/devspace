@@ -48,7 +48,7 @@ func execCommand(varName string, definition *latest.Variable, cmd string, args [
 	stdErrWriter := &bytes.Buffer{}
 	var err error
 	if args == nil {
-		err = shell.ExecuteShellCommand(cmd, nil, writer, stdErrWriter, nil)
+		err = shell.ExecuteShellCommand(cmd, nil, "", writer, stdErrWriter, nil)
 	} else {
 		err = command.ExecuteCommand(cmd, args, writer, stdErrWriter)
 	}

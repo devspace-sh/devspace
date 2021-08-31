@@ -1,7 +1,8 @@
-package kubectl
+package selector
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/pkg/errors"
@@ -29,7 +30,7 @@ var SortContainersByNewest = func(pods []*SelectedPodContainer, i, j int) bool {
 }
 
 var FilterNonRunningPods = func(p *k8sv1.Pod) bool {
-	return GetPodStatus(p) != "Running"
+	return kubectl.GetPodStatus(p) != "Running"
 }
 
 var FilterNonRunningContainers = func(p *k8sv1.Pod, c *k8sv1.Container) bool {
@@ -106,19 +107,19 @@ type Filter interface {
 }
 
 type filter struct {
-	client Client
+	client kubectl.Client
 
 	sortPods       SortPods
 	sortContainers SortContainers
 }
 
-func NewFilter(client Client) Filter {
+func NewFilter(client kubectl.Client) Filter {
 	return &filter{
 		client: client,
 	}
 }
 
-func NewFilterWithSort(client Client, sortPods SortPods, sortContainers SortContainers) Filter {
+func NewFilterWithSort(client kubectl.Client, sortPods SortPods, sortContainers SortContainers) Filter {
 	return &filter{
 		client:         client,
 		sortPods:       sortPods,
@@ -225,7 +226,7 @@ func key(namespace string, pod string, container string) string {
 	return namespace + "/" + pod + "/" + container
 }
 
-func byPodName(ctx context.Context, client Client, namespace string, name string, containerName string, skipPod FilterPod, skipContainer FilterContainer, skipInit bool) ([]*SelectedPodContainer, error) {
+func byPodName(ctx context.Context, client kubectl.Client, namespace string, name string, containerName string, skipPod FilterPod, skipContainer FilterContainer, skipInit bool) ([]*SelectedPodContainer, error) {
 	if name == "" {
 		return nil, nil
 	}
@@ -277,7 +278,7 @@ func byPodName(ctx context.Context, client Client, namespace string, name string
 	return retPods, nil
 }
 
-func byLabelSelector(ctx context.Context, client Client, namespace string, labelSelector string, containerName string, skipPod FilterPod, skipContainer FilterContainer, skipInit bool) ([]*SelectedPodContainer, error) {
+func byLabelSelector(ctx context.Context, client kubectl.Client, namespace string, labelSelector string, containerName string, skipPod FilterPod, skipContainer FilterContainer, skipInit bool) ([]*SelectedPodContainer, error) {
 	retPods := []*SelectedPodContainer{}
 	podList, err := client.KubeClient().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
@@ -325,7 +326,7 @@ func byLabelSelector(ctx context.Context, client Client, namespace string, label
 	return retPods, nil
 }
 
-func byImageName(ctx context.Context, client Client, namespace string, imageSelector []imageselector.ImageSelector, skipPod FilterPod, skipContainer FilterContainer, skipInit bool) ([]*SelectedPodContainer, error) {
+func byImageName(ctx context.Context, client kubectl.Client, namespace string, imageSelector []imageselector.ImageSelector, skipPod FilterPod, skipContainer FilterContainer, skipInit bool) ([]*SelectedPodContainer, error) {
 	retPods := []*SelectedPodContainer{}
 	if len(imageSelector) > 0 {
 		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})

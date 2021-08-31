@@ -40,7 +40,7 @@ func ExecuteCommand(commands []*latest.CommandConfig, name string, args []string
 		}
 
 		// execute the command in a shell
-		return shell.ExecuteShellCommand(shellCommand, args, stdout, stderr, nil)
+		return shell.ExecuteShellCommand(shellCommand, args, "", stdout, stderr, nil)
 	}
 
 	shellArgs = append(shellArgs, args...)

@@ -1,6 +1,8 @@
 package dependencies
 
 import (
+	"fmt"
+	"gopkg.in/yaml.v2"
 	"os"
 	"path/filepath"
 
@@ -24,6 +26,23 @@ var _ = DevSpaceDescribe("dependencies", func() {
 
 	ginkgo.BeforeEach(func() {
 		f = framework.NewDefaultFactory()
+	})
+
+	ginkgo.It("should resolve dependencies with dev configuration and hooks", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/dev-sync")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// load it from the regular path first
+		config, dependencies, err := framework.LoadConfig(f, filepath.Join(tempDir, "devspace.yaml"))
+		framework.ExpectNoError(err)
+
+		// check if dependencies were loaded correctly
+		framework.ExpectEqual(len(dependencies), 1)
+		framework.ExpectEqual(dependencies[0].Name(), "dep1")
+
+		out, _ := yaml.Marshal(config.Config().Dev.Sync)
+		fmt.Println(string(out))
 	})
 
 	ginkgo.It("should resolve dependencies with local path and nested structure", func() {

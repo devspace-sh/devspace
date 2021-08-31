@@ -140,12 +140,14 @@ func (r *resolver) resolveRecursive(basePath, parentID string, currentDependency
 		currentDependency.children = []types.Dependency{}
 	}
 	for _, dependencyConfig := range dependencies {
-		ID := util.GetDependencyID(basePath, dependencyConfig.Source, dependencyConfig.Profile, dependencyConfig.Vars)
+		ID, err := util.GetDependencyID(basePath, dependencyConfig)
+		if err != nil {
+			return err
+		}
 
 		// Try to insert new edge
 		var (
 			child *Dependency
-			err   error
 		)
 		if n, ok := r.DependencyGraph.Nodes[ID]; ok {
 			err := r.DependencyGraph.addEdge(parentID, ID)
@@ -198,7 +200,12 @@ func (r *resolver) resolveRecursive(basePath, parentID string, currentDependency
 }
 
 func (r *resolver) resolveDependency(basePath string, dependency *latest.DependencyConfig, update bool) (*Dependency, error) {
-	ID, localPath, err := util.DownloadDependency(basePath, dependency.Source, dependency.Profile, dependency.Vars, update, r.log)
+	ID, err := util.GetDependencyID(basePath, dependency)
+	if err != nil {
+		return nil, err
+	}
+
+	localPath, err := util.DownloadDependency(ID, basePath, dependency.Source, update, r.log)
 	if err != nil {
 		return nil, err
 	}
@@ -219,9 +226,14 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	cloned.DisableProfileActivation = dependency.DisableProfileActivation || r.ConfigOptions.DisableProfileActivation
 
 	// construct load path
-	configPath := filepath.Join(localPath, constants.DefaultConfigPath)
+	var configPath string
 	if dependency.Source.ConfigName != "" {
 		configPath = filepath.Join(localPath, dependency.Source.ConfigName)
+	} else if strings.HasSuffix(localPath, ".yaml") || strings.HasSuffix(localPath, ".yml") {
+		configPath = localPath
+		localPath = filepath.Dir(localPath)
+	} else {
+		configPath = filepath.Join(localPath, constants.DefaultConfigPath)
 	}
 
 	// load config
@@ -265,8 +277,9 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 
 	// Override complete dev config
 	dConfig.Dev = latest.DevConfig{
-		Ports: dConfig.Dev.Ports,
-		Sync:  dConfig.Dev.Sync,
+		Ports:       dConfig.Dev.Ports,
+		Sync:        dConfig.Dev.Sync,
+		ReplacePods: dConfig.Dev.ReplacePods,
 	}
 
 	// Check if we should skip building

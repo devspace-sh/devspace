@@ -1,0 +1,14 @@
+version: v1beta10
+images:
+  test:
+    image: abc/abc
+    tags:
+      - dep2
+dev:
+  sync:
+    - name: test
+      imageSelector: image(test):tag(test)
+dependencies:
+  - name: dep2
+    source:
+      path: dep2.yaml

@@ -124,7 +124,7 @@ func TestResolver(t *testing.T) {
 			},
 			expectedDependencies: []Dependency{
 				Dependency{
-					id:        "https://github.com/devspace-cloud/example-dependency.git@f8b2aa8cf8ac03238a28e8f78382b214d619893f:mysubpath",
+					id:        "6f6b8b240599fff48a4009c3f78825881deb0306ab09c8ae3e10bf5bef390325",
 					localPath: filepath.Join(util.DependencyFolderPath, "84e3f5121aa5a99b3d26752f40e3935f494312ad82d0e85afc9b6e23c762c705", "mysubpath"),
 				},
 			},
@@ -231,7 +231,7 @@ func TestGetDependencyID(t *testing.T) {
 					Tag: "myTag",
 				},
 			},
-			expectedID: "someTagGit@myTag",
+			expectedID: "2255ee093fea082d8f3cdc8095a723bb0d1104c1b28a017b636ff4aaa806a064",
 		},
 		getDependencyIDTestCase{
 			name: "git with branch",
@@ -241,7 +241,7 @@ func TestGetDependencyID(t *testing.T) {
 					Branch: "myBranch",
 				},
 			},
-			expectedID: "someBranchGit@myBranch",
+			expectedID: "6a475ccc660b39e1f8e7b701a206a19e9347457b0ee80910b3fece44a2867598",
 		},
 		getDependencyIDTestCase{
 			name: "git with revision, subpath and profile",
@@ -253,19 +253,20 @@ func TestGetDependencyID(t *testing.T) {
 				},
 				Profile: "myProfile",
 			},
-			expectedID: "someRevisionGit@myRevision:mySubPath - profile myProfile",
+			expectedID: "947020214d9a41c68c3947e5fdbaf3d0541fca84ceee9a7b7bbf5300fb053f9e",
 		},
 		getDependencyIDTestCase{
 			name: "empty",
 			dependency: &latest.DependencyConfig{
 				Source: &latest.SourceConfig{},
 			},
-			expectedID: "",
+			expectedID: "5c7bed9afdec33b1d734b7dce7666bc43c5d389373af94a463b1aaebac61f013",
 		},
 	}
 
 	for _, testCase := range testCases {
-		id := util.GetDependencyID(testCase.baseBath, testCase.dependency.Source, testCase.dependency.Profile, nil)
+		id, err := util.GetDependencyID(testCase.baseBath, testCase.dependency)
+		assert.NilError(t, err)
 		assert.Equal(t, testCase.expectedID, id, "Dependency has wrong id in testCase %s", testCase.name)
 	}
 }

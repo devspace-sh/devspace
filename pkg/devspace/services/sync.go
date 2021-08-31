@@ -46,8 +46,17 @@ func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Optio
 	return nil
 }
 
+func DefaultPrefixFn(idx int, syncConfig *latest.SyncConfig) string {
+	prefix := fmt.Sprintf("[%d:sync] ", idx)
+	if syncConfig.ImageName != "" {
+		prefix = fmt.Sprintf("[%d:sync:%s] ", idx, syncConfig.ImageName)
+	}
+
+	return prefix
+}
+
 // StartSync starts the syncing functionality
-func (serviceClient *client) StartSync(interrupt chan error, printSyncLog bool, verboseSync bool) error {
+func (serviceClient *client) StartSync(interrupt chan error, printSyncLog, verboseSync bool, prefixFn func(idx int, syncConfig *latest.SyncConfig) string) error {
 	if serviceClient.config == nil || serviceClient.config.Config() == nil {
 		return fmt.Errorf("DevSpace config is nil")
 	}
@@ -74,11 +83,7 @@ func (serviceClient *client) StartSync(interrupt chan error, printSyncLog bool, 
 		}
 
 		// should we print the logs?
-		prefix := fmt.Sprintf("[%d:sync] ", idx)
-		if syncConfig.ImageName != "" {
-			prefix = fmt.Sprintf("[%d:sync:%s] ", idx, syncConfig.ImageName)
-		}
-
+		prefix := prefixFn(idx, syncConfig)
 		log := logpkg.NewPrefixLogger(prefix, logpkg.Colors[idx%len(logpkg.Colors)], serviceClient.log)
 		if printSyncLog {
 			options.SyncLog = log
@@ -90,7 +95,7 @@ func (serviceClient *client) StartSync(interrupt chan error, printSyncLog bool, 
 		}
 
 		waitGroup.Add(1)
-		go func() {
+		go func(options *synccontroller.Options) {
 			defer waitGroup.Done()
 
 			err := synccontroller.NewController(serviceClient.config, serviceClient.dependencies, serviceClient.client, serviceClient.log).Start(options, log)
@@ -99,7 +104,7 @@ func (serviceClient *client) StartSync(interrupt chan error, printSyncLog bool, 
 				errs = append(errs, errors.Errorf("unable to start sync: %v", err))
 				errsMutex.Unlock()
 			}
-		}()
+		}(options)
 
 		// every 5 we wait
 		if idx%5 == 4 {

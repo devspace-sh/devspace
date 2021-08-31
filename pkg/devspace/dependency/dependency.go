@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"io"
 	"mvdan.cc/sh/v3/interp"
@@ -485,7 +486,6 @@ func (d *Dependency) Purge(log log.Logger) error {
 	if err != nil {
 		return errors.Wrap(err, "getwd")
 	}
-
 	defer os.Chdir(currentWorkingDirectory)
 
 	// Purge the deployments
@@ -502,6 +502,53 @@ func (d *Dependency) Purge(log log.Logger) error {
 	}
 
 	delete(d.dependencyCache.GetActive().Dependencies, d.id)
+	return nil
+}
+
+func (d *Dependency) StartSync(client kubectl.Client, interrupt chan error, printSyncLog, verboseSync bool, logger log.Logger) error {
+	currentWorkingDirectory, err := d.changeWorkingDirectory()
+	if err != nil {
+		return errors.Wrap(err, "getwd")
+	}
+	defer os.Chdir(currentWorkingDirectory)
+
+	err = services.NewClient(d.localConfig, d.children, client, logger).StartSync(interrupt, printSyncLog, verboseSync, func(idx int, syncConfig *latest.SyncConfig) string {
+		prefix := fmt.Sprintf("[%s:%d:sync] ", d.Name(), idx)
+		if syncConfig.Name != "" {
+			prefix = fmt.Sprintf("[%s:%s] ", d.Name(), syncConfig.Name)
+		} else if syncConfig.ImageName != "" {
+			prefix = fmt.Sprintf("[%s:%d:sync:%s] ", d.Name(), idx, syncConfig.ImageName)
+		}
+
+		return prefix
+	})
+	if err != nil {
+		return errors.Wrapf(err, "start sync in dependency %s", d.Name())
+	}
+	return nil
+}
+
+func (d *Dependency) StartPortForwarding(client kubectl.Client, interrupt chan error, logger log.Logger) error {
+	err := services.NewClient(d.localConfig, d.children, client, logger).StartPortForwarding(interrupt)
+	if err != nil {
+		return errors.Wrapf(err, "start port-forwarding in dependency %s", d.Name())
+	}
+	return nil
+}
+
+func (d *Dependency) StartReversePortForwarding(client kubectl.Client, interrupt chan error, logger log.Logger) error {
+	err := services.NewClient(d.localConfig, d.children, client, logger).StartReversePortForwarding(interrupt)
+	if err != nil {
+		return errors.Wrapf(err, "start reverse port-forwarding in dependency %s", d.Name())
+	}
+	return nil
+}
+
+func (d *Dependency) ReplacePods(client kubectl.Client, logger log.Logger) error {
+	err := services.NewClient(d.localConfig, d.children, client, logger).ReplacePods()
+	if err != nil {
+		return errors.Wrapf(err, "replace pods in dependency %s", d.Name())
+	}
 	return nil
 }
 

@@ -3,6 +3,8 @@ package types
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
 type Dependency interface {
@@ -11,6 +13,9 @@ type Dependency interface {
 
 	// Name will return the dependency name
 	Name() string
+
+	// Config holds the dependency config
+	Config() config.Config
 
 	// Children returns dependency children if any
 	Children() []Dependency
@@ -24,9 +29,18 @@ type Dependency interface {
 	// BuiltImages returns the images that were built by this dependency
 	BuiltImages() map[string]string
 
-	// Config holds the dependency config
-	Config() config.Config
-
 	// DependencyConfig is the config this dependency was created from
 	DependencyConfig() *latest.DependencyConfig
+
+	// ReplacePods replaces the dependencies pods from dev.replacePods
+	ReplacePods(client kubectl.Client, logger log.Logger) error
+
+	// StartSync starts the dependency sync
+	StartSync(client kubectl.Client, interrupt chan error, printSyncLog, verboseSync bool, logger log.Logger) error
+
+	// StartPortForwarding starts the dependency port-forwarding
+	StartPortForwarding(client kubectl.Client, interrupt chan error, logger log.Logger) error
+
+	// StartReversePortForwarding starts the dependency port-forwarding
+	StartReversePortForwarding(client kubectl.Client, interrupt chan error, logger log.Logger) error
 }

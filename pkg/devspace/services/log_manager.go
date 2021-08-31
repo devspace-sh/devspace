@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
@@ -205,16 +206,16 @@ type podInfo struct {
 
 func (l *logManager) gatherPods() ([]podInfo, error) {
 	returnList := []podInfo{}
-	selectors := []kubectl.Selector{}
+	selectors := []selector.Selector{}
 	filterPod := func(p *k8sv1.Pod) bool {
 		return kubectl.GetPodStatus(p) != "Running"
 	}
 
 	// first gather all pods by image
-	for _, selector := range l.imageSelectors {
-		selectors = append(selectors, kubectl.Selector{
-			ImageSelector:      []imageselector.ImageSelector{selector.ImageSelector},
-			Namespace:          selector.Namespace,
+	for _, s := range l.imageSelectors {
+		selectors = append(selectors, selector.Selector{
+			ImageSelector:      []imageselector.ImageSelector{s.ImageSelector},
+			Namespace:          s.Namespace,
 			FilterPod:          filterPod,
 			SkipInitContainers: true,
 		})
@@ -227,7 +228,7 @@ func (l *logManager) gatherPods() ([]podInfo, error) {
 			labelSelector = labels.Set(s.LabelSelector).String()
 		}
 
-		selectors = append(selectors, kubectl.Selector{
+		selectors = append(selectors, selector.Selector{
 			LabelSelector:      labelSelector,
 			ContainerName:      s.ContainerName,
 			Namespace:          s.Namespace,
@@ -237,7 +238,7 @@ func (l *logManager) gatherPods() ([]podInfo, error) {
 	}
 
 	if len(selectors) > 0 {
-		selectedPodsContainers, err := kubectl.NewFilter(l.client).SelectContainers(context.TODO(), selectors...)
+		selectedPodsContainers, err := selector.NewFilter(l.client).SelectContainers(context.TODO(), selectors...)
 		if err != nil {
 			return nil, err
 		}
@@ -253,7 +254,7 @@ func (l *logManager) gatherPods() ([]podInfo, error) {
 	return returnList, nil
 }
 
-func getDisplayName(client kubectl.Client, podContainer *kubectl.SelectedPodContainer) string {
+func getDisplayName(client kubectl.Client, podContainer *selector.SelectedPodContainer) string {
 	controller := metav1.GetControllerOf(podContainer.Pod)
 
 	// pod name by default, or deployment or statefulset name if found

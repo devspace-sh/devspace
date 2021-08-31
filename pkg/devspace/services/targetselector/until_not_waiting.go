@@ -1,7 +1,7 @@
 package targetselector
 
 import (
-	kubectl "github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	v1 "k8s.io/api/core/v1"
 	"sort"
@@ -36,7 +36,7 @@ func (u *untilNotWaiting) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *v1.P
 	}
 
 	sort.Slice(pods, func(i, j int) bool {
-		return kubectl.SortPodsByNewest(pods, i, j)
+		return selector.SortPodsByNewest(pods, i, j)
 	})
 	if isPodWaiting(pods[0]) {
 		return false, nil, nil
@@ -45,7 +45,7 @@ func (u *untilNotWaiting) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *v1.P
 	return true, pods[0], nil
 }
 
-func (u *untilNotWaiting) SelectContainer(containers []*kubectl.SelectedPodContainer, log log.Logger) (bool, *kubectl.SelectedPodContainer, error) {
+func (u *untilNotWaiting) SelectContainer(containers []*selector.SelectedPodContainer, log log.Logger) (bool, *selector.SelectedPodContainer, error) {
 	now := time.Now()
 	if now.Before(u.initialDelay) {
 		return false, nil, nil
@@ -58,7 +58,7 @@ func (u *untilNotWaiting) SelectContainer(containers []*kubectl.SelectedPodConta
 	}
 
 	sort.Slice(containers, func(i, j int) bool {
-		return kubectl.SortContainersByNewest(containers, i, j)
+		return selector.SortContainersByNewest(containers, i, j)
 	})
 	if isContainerWaiting(containers[0]) {
 		return false, nil, nil
@@ -77,7 +77,7 @@ func isPodWaiting(pod *v1.Pod) bool {
 	if pod.DeletionTimestamp != nil {
 		return true
 	}
-	
+
 	for _, containerStatus := range pod.Status.InitContainerStatuses {
 		if containerStatus.State.Waiting != nil {
 			return true
@@ -92,11 +92,11 @@ func isPodWaiting(pod *v1.Pod) bool {
 	return false
 }
 
-func isContainerWaiting(container *kubectl.SelectedPodContainer) bool {
+func isContainerWaiting(container *selector.SelectedPodContainer) bool {
 	if container.Pod.DeletionTimestamp != nil {
 		return true
 	}
-	
+
 	for _, containerStatus := range container.Pod.Status.InitContainerStatuses {
 		if containerStatus.Name == container.Container.Name && containerStatus.State.Waiting != nil {
 			return true

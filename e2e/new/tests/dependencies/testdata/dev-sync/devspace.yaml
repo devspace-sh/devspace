@@ -1,0 +1,13 @@
+version: v1beta10
+images: 
+  test:
+    image: abc/abc
+    tags:
+      - latest
+dependencies:
+  - name: dep1
+    source:
+      path: dep1.yaml
+    dev:
+      sync: true
+      ports: true
