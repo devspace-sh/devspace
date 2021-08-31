@@ -24,6 +24,7 @@ type BuildCmd struct {
 	SkipPush                bool
 	SkipPushLocalKubernetes bool
 	VerboseDependencies     bool
+	SkipDependency          []string
 	Dependency              []string
 
 	ForceBuild          bool
@@ -58,6 +59,7 @@ Builds all defined images and pushes them
 	buildCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Builds the dependencies verbosely")
 
 	buildCmd.Flags().StringSliceVarP(&cmd.Tags, "tag", "t", []string{}, "Use the given tag for all built images")
+	buildCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips building the following dependencies")
 	buildCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Builds only the specific named dependencies")
 
 	buildCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
@@ -128,6 +130,7 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	// Dependencies
 	dependencies, err := f.NewDependencyManager(configInterface, client, configOptions, log).BuildAll(dependency.BuildOptions{
 		Dependencies:            cmd.Dependency,
+		SkipDependencies:        cmd.SkipDependency,
 		ForceDeployDependencies: cmd.ForceDependencies,
 		Verbose:                 cmd.VerboseDependencies,
 

@@ -97,6 +97,7 @@ func (m *manager) UpdateAll() error {
 }
 
 type ResolveOptions struct {
+	SkipDependencies   []string
 	Dependencies       []string
 	UpdateDependencies bool
 	Silent             bool
@@ -104,7 +105,7 @@ type ResolveOptions struct {
 }
 
 func (m *manager) ResolveAll(options ResolveOptions) ([]types.Dependency, error) {
-	dependencies, err := m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, options.Silent, options.Verbose, "Resolve", func(dependency *Dependency, log log.Logger) error {
+	dependencies, err := m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, options.Silent, options.Verbose, "Resolve", func(dependency *Dependency, log log.Logger) error {
 		return nil
 	})
 	if err != nil {
@@ -126,7 +127,7 @@ type CommandOptions struct {
 // Command will execute a dependency command
 func (m *manager) Command(options CommandOptions) error {
 	found := false
-	_, err := m.handleDependencies([]string{options.Dependency}, false, options.UpdateDependencies, true, options.Verbose, "Command", func(dependency *Dependency, log log.Logger) error {
+	_, err := m.handleDependencies(nil, []string{options.Dependency}, false, options.UpdateDependencies, true, options.Verbose, "Command", func(dependency *Dependency, log log.Logger) error {
 		// Switch current working directory
 		currentWorkingDirectory, err := dependency.prepare(true)
 		if err != nil {
@@ -168,6 +169,7 @@ func ExecuteCommand(commands []*latest.CommandConfig, cmd string, args []string,
 type BuildOptions struct {
 	BuildOptions build.Options
 
+	SkipDependencies        []string
 	Dependencies            []string
 	UpdateDependencies      bool
 	ForceDeployDependencies bool
@@ -176,7 +178,7 @@ type BuildOptions struct {
 
 // BuildAll will build all dependencies if there are any
 func (m *manager) BuildAll(options BuildOptions) ([]types.Dependency, error) {
-	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Build", func(dependency *Dependency, log log.Logger) error {
+	return m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Build", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Build(options.ForceDeployDependencies, &options.BuildOptions, log)
 	})
 }
@@ -185,6 +187,7 @@ func (m *manager) BuildAll(options BuildOptions) ([]types.Dependency, error) {
 type DeployOptions struct {
 	BuildOptions build.Options
 
+	SkipDependencies        []string
 	Dependencies            []string
 	UpdateDependencies      bool
 	ForceDeployDependencies bool
@@ -201,7 +204,7 @@ func (m *manager) DeployAll(options DeployOptions) ([]types.Dependency, error) {
 		return nil, err
 	}
 
-	dependencies, err := m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
+	dependencies, err := m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
 		err = dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
 		if err != nil {
 			return err
@@ -224,19 +227,21 @@ func (m *manager) DeployAll(options DeployOptions) ([]types.Dependency, error) {
 
 // PurgeOptions has all options for purging all dependencies
 type PurgeOptions struct {
-	Dependencies []string
-	Verbose      bool
+	SkipDependencies []string
+	Dependencies     []string
+	Verbose          bool
 }
 
 // PurgeAll purges all dependencies in reverse order
 func (m *manager) PurgeAll(options PurgeOptions) ([]types.Dependency, error) {
-	return m.handleDependencies(options.Dependencies, true, false, false, options.Verbose, "Purge", func(dependency *Dependency, log log.Logger) error {
+	return m.handleDependencies(options.SkipDependencies, options.Dependencies, true, false, false, options.Verbose, "Purge", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Purge(log)
 	})
 }
 
 // RenderOptions has all options for rendering all dependencies
 type RenderOptions struct {
+	SkipDependencies   []string
 	Dependencies       []string
 	Verbose            bool
 	UpdateDependencies bool
@@ -247,12 +252,12 @@ type RenderOptions struct {
 }
 
 func (m *manager) RenderAll(options RenderOptions) ([]types.Dependency, error) {
-	return m.handleDependencies(options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Render", func(dependency *Dependency, log log.Logger) error {
+	return m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Render", func(dependency *Dependency, log log.Logger) error {
 		return dependency.Render(options.SkipBuild, &options.BuildOptions, options.Writer, log)
 	})
 }
 
-func (m *manager) handleDependencies(filterDependencies []string, reverse, updateDependencies, silent, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) ([]types.Dependency, error) {
+func (m *manager) handleDependencies(skipDependencies, filterDependencies []string, reverse, updateDependencies, silent, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) ([]types.Dependency, error) {
 	if m.config == nil || m.config.Dependencies == nil || len(m.config.Dependencies) == 0 {
 		return nil, nil
 	}

@@ -41,6 +41,7 @@ type DeployCmd struct {
 	SkipPush                bool
 	SkipPushLocalKubernetes bool
 	Dependency              []string
+	SkipDependency          []string
 
 	Wait    bool
 	Timeout int
@@ -92,6 +93,7 @@ devspace deploy --kube-context=deploy-context
 	deployCmd.Flags().BoolVar(&cmd.SkipDeploy, "skip-deploy", false, "Skips deploying and only builds images")
 	deployCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specifc deployment (You can specify multiple deployments comma-separated")
 
+	deployCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips deploying the following dependencies")
 	deployCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Deploys only the specific named dependencies")
 
 	deployCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "If true will wait for pods to be running or fails after given timeout")
@@ -186,6 +188,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	// deploy dependencies
 	dependencies, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).DeployAll(dependency.DeployOptions{
 		Dependencies:            cmd.Dependency,
+		SkipDependencies:        cmd.SkipDependency,
 		ForceDeployDependencies: cmd.ForceDependencies,
 		SkipBuild:               cmd.SkipBuild,
 		SkipDeploy:              cmd.SkipDeploy,

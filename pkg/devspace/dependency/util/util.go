@@ -121,12 +121,35 @@ func DownloadDependency(ID, basePath string, source *latest.SourceConfig, update
 }
 
 func GetDependencyID(basePath string, config *latest.DependencyConfig) (string, error) {
+	// copy config
 	out, err := yaml.Marshal(config)
 	if err != nil {
 		return "", err
 	}
+	outConfig := &latest.DependencyConfig{}
+	err = yaml.Unmarshal(out, outConfig)
+	if err != nil {
+		return "", err
+	}
 
-	return hash.String(basePath + ";" + string(out)), nil
+	// replace relative path with absolute path
+	if outConfig.Source != nil && outConfig.Source.Path != "" {
+		if isUrl(outConfig.Source.Path) == false {
+			filePath := outConfig.Source.Path
+			if !filepath.IsAbs(outConfig.Source.Path) {
+				filePath = filepath.Join(basePath, outConfig.Source.Path)
+			}
+
+			outConfig.Source.Path = filePath
+		}
+	}
+
+	// hash config
+	out, err = yaml.Marshal(outConfig)
+	if err != nil {
+		return "", err
+	}
+	return hash.String(string(out)), nil
 }
 
 func GetParentProfileID(basePath string, source *latest.SourceConfig, profile string, vars []latest.DependencyVar) string {

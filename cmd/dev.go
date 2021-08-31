@@ -50,6 +50,9 @@ type DevCmd struct {
 	VerboseDependencies     bool
 	Open                    bool
 
+	Dependency     []string
+	SkipDependency []string
+
 	ForceBuild          bool
 	SkipBuild           bool
 	BuildSequential     bool
@@ -115,6 +118,8 @@ Open terminal instead of logs:
 		},
 	}
 
+	devCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips the following dependencies for deployment")
+	devCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Deploys only the specified named dependencies")
 	devCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Deploys the dependencies verbosely")
 	devCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 
@@ -265,6 +270,8 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 			SkipBuild:               cmd.SkipBuild,
 			ForceDeploy:             cmd.ForceDeploy,
 			Verbose:                 cmd.VerboseDependencies,
+			Dependencies:            cmd.Dependency,
+			SkipDependencies:        cmd.SkipDependency,
 
 			BuildOptions: build.Options{
 				SkipPush:                  cmd.SkipPush,

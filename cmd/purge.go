@@ -26,7 +26,8 @@ type PurgeCmd struct {
 	PurgeDependencies   bool
 	All                 bool
 
-	Dependency []string
+	SkipDependency []string
+	Dependency     []string
 
 	log log.Logger
 }
@@ -62,6 +63,7 @@ devspace purge -d my-deployment
 	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", false, "DEPRECATED: Please use --all instead")
 	purgeCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Builds the dependencies verbosely")
 
+	purgeCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips the following dependencies from purging")
 	purgeCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Purges only the specific named dependencies")
 
 	return purgeCmd
@@ -129,8 +131,9 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	var dependencies []types.Dependency
 	if cmd.All || len(cmd.Dependency) > 0 {
 		dependencies, err = f.NewDependencyManager(configInterface, client, configOptions, cmd.log).PurgeAll(dependency.PurgeOptions{
-			Dependencies: cmd.Dependency,
-			Verbose:      cmd.VerboseDependencies,
+			SkipDependencies: cmd.SkipDependency,
+			Dependencies:     cmd.Dependency,
+			Verbose:          cmd.VerboseDependencies,
 		})
 		if err != nil {
 			cmd.log.Errorf("Error purging dependencies: %v", err)

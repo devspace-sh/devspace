@@ -39,6 +39,7 @@ type RenderCmd struct {
 	Deployments string
 
 	SkipDependencies bool
+	SkipDependency   []string
 	Dependency       []string
 
 	Writer io.Writer
@@ -78,6 +79,7 @@ deployment.
 	renderCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specifc deployment (You can specify multiple deployments comma-separated")
 
 	renderCmd.Flags().BoolVar(&cmd.SkipDependencies, "skip-dependencies", false, "Skips rendering the dependencies")
+	renderCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips rendering the following dependencies")
 	renderCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Renders only the specific named dependencies")
 
 	return renderCmd
@@ -146,10 +148,11 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	var dependencies []types.Dependency
 	if cmd.SkipDependencies == false {
 		dependencies, err = f.NewDependencyManager(configInterface, client, configOptions, log).RenderAll(dependency.RenderOptions{
-			Dependencies: cmd.Dependency,
-			SkipBuild:    cmd.SkipBuild,
-			Verbose:      cmd.VerboseDependencies,
-			Writer:       cmd.Writer,
+			Dependencies:     cmd.Dependency,
+			SkipDependencies: cmd.SkipDependency,
+			SkipBuild:        cmd.SkipBuild,
+			Verbose:          cmd.VerboseDependencies,
+			Writer:           cmd.Writer,
 
 			BuildOptions: build.Options{
 				SkipPush:                  cmd.SkipPush,
