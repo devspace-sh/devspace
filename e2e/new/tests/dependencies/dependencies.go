@@ -136,7 +136,7 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		framework.ExpectEqual(len(dependencies[0].Config().Config().Deployments), 1)
 	})
 
-	ginkgo.FIt("should throw error when profile, profiles, and profile-parents are used together", func() {
+	ginkgo.It("should throw error when profile, profiles, and profile-parents are used together", func() {
 		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/profiles")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
