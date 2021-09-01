@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -25,7 +26,7 @@ func BeforeAll(body func()) {
 	})
 }
 
-func LoadConfigWithOptions(f factory.Factory, configPath string, configOptions *loader.ConfigOptions) (config.Config, []types.Dependency, error) {
+func LoadConfigWithOptionsAndResolve(f factory.Factory, configPath string, configOptions *loader.ConfigOptions, resolveOptions dependency.ResolveOptions) (config.Config, []types.Dependency, error) {
 	before, err := os.Getwd()
 	if err != nil {
 		return nil, nil, err
@@ -49,12 +50,16 @@ func LoadConfigWithOptions(f factory.Factory, configPath string, configOptions *
 	}
 
 	// resolve dependencies
-	dependencies, err := dependency.NewManager(loadedConfig, nil, configOptions, log).ResolveAll(dependency.ResolveOptions{})
+	dependencies, err := dependency.NewManager(loadedConfig, nil, configOptions, log).ResolveAll(resolveOptions)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error resolving dependencies: %v", err)
 	}
 
 	return loadedConfig, dependencies, nil
+}
+
+func LoadConfigWithOptions(f factory.Factory, configPath string, configOptions *loader.ConfigOptions) (config.Config, []types.Dependency, error) {
+	return LoadConfigWithOptionsAndResolve(f, configPath, configOptions, dependency.ResolveOptions{})
 }
 
 func LoadConfig(f factory.Factory, configPath string) (config.Config, []types.Dependency, error) {
@@ -86,6 +91,11 @@ func CleanupTempDir(initialDir, tempDir string) {
 
 func CopyToTempDir(relativePath string) (string, error) {
 	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return "", err
+	}
+
+	dir, err = filepath.EvalSymlinks(dir)
 	if err != nil {
 		return "", err
 	}

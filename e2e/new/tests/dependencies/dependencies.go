@@ -1,8 +1,7 @@
 package dependencies
 
 import (
-	"fmt"
-	"gopkg.in/yaml.v2"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"os"
 	"path/filepath"
 
@@ -28,21 +27,33 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		f = framework.NewDefaultFactory()
 	})
 
+	ginkgo.It("should skip dependencies", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/skip")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// load it from the regular path first
+		config, dependencies, err := framework.LoadConfigWithOptionsAndResolve(f, "", &loader.ConfigOptions{}, dependency.ResolveOptions{SkipDependencies: []string{"flat"}})
+		framework.ExpectNoError(err)
+
+		// check if dependencies were loaded correctly
+		framework.ExpectEqual(len(dependencies), 1)
+		framework.ExpectEqual(dependencies[0].Name(), "flat2")
+		framework.ExpectEqual(config.Path(), filepath.Join(tempDir, "devspace.yaml"))
+	})
+
 	ginkgo.It("should resolve dependencies with dev configuration and hooks", func() {
 		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/dev-sync")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		// load it from the regular path first
-		config, dependencies, err := framework.LoadConfig(f, filepath.Join(tempDir, "devspace.yaml"))
+		_, dependencies, err := framework.LoadConfig(f, filepath.Join(tempDir, "devspace.yaml"))
 		framework.ExpectNoError(err)
 
 		// check if dependencies were loaded correctly
 		framework.ExpectEqual(len(dependencies), 1)
 		framework.ExpectEqual(dependencies[0].Name(), "dep1")
-
-		out, _ := yaml.Marshal(config.Config().Dev.Sync)
-		fmt.Println(string(out))
 	})
 
 	ginkgo.It("should resolve dependencies with local path and nested structure", func() {
@@ -91,13 +102,14 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		// load it from the regular path first
 		os.Setenv("FOO", "true")
 		defer os.Unsetenv("FOO")
-		_, dependencies, err := framework.LoadConfig(f, filepath.Join(tempDir, "activated.yaml"))
+		config, dependencies, err := framework.LoadConfig(f, filepath.Join(tempDir, "activated.yaml"))
 		framework.ExpectNoError(err)
 
 		// check if dependencies were loaded correctly with profile activation
 		framework.ExpectEqual(len(dependencies), 1)
 		framework.ExpectEqual(dependencies[0].Name(), "nested")
 		framework.ExpectEqual(len(dependencies[0].Config().Config().Deployments), 2)
+		framework.ExpectEqual(config.Path(), filepath.Join(tempDir, "activated.yaml"))
 	})
 
 	ginkgo.It("should resolve dependencies and deactivate activated dependency profiles with --disable-profile-activation", func() {
