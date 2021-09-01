@@ -1,0 +1,43 @@
+version: v1beta10
+vars:
+  - name: IMAGE
+    value: node:13.14-alpine
+deployments:
+  - name: test
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: ${IMAGE}
+            command: ["sleep"]
+            args: ["999999999999"]
+dev:
+  sync:
+    - name: test
+      imageSelector: ${IMAGE}
+      containerPath: "/app"
+      excludeFile: .gitignore
+      downloadExcludeFile: .gitignore-download
+      uploadExcludeFile: .gitignore-upload
+hooks:
+  - command: mkdir /app
+    where:
+      container:
+        imageSelector: ${IMAGE}
+    when:
+      before:
+        initialSync: test
+  - command: echo -n Hello World > /app/file-download-exclude.txt
+    where:
+      container:
+        imageSelector: ${IMAGE}
+    when:
+      after:
+        initialSync: test
+  - command: echo -n Hello World > /app/initial-sync-done.txt
+    where:
+      container:
+        imageSelector: ${IMAGE}
+    when:
+      after:
+        initialSync: test

@@ -309,4 +309,65 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectNoError(err)
 		framework.ExpectRemoteContainerFileContents("e2e=sync-containers", "container2", ns, "/app2/watching.txt", payload)
 	})
+
+	ginkgo.It("should sync to a pod container with excludeFile, downloadExcludeFile, and uploadExcludeFile configuration", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-exclude-file")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// deploy app to sync
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+		}
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// sync command
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+			NoWatch: true,
+		}
+
+		// start the command
+		err = syncCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// wait for initial sync to complete
+		framework.ExpectLocalFileContents(filepath.Join(tempDir, "initial-sync-done.txt"), "Hello World")
+
+		// check that included file was synced
+		framework.ExpectRemoteFileContents("node", ns, "/app/file-include.txt", "Hello World")
+
+		// check that excluded file was not synced
+		framework.ExpectRemoteFileNotFound("node", ns, "/app/file-exclude.txt")
+
+		// check that upload exluded file was not synced
+		framework.ExpectLocalFileContents(filepath.Join(tempDir, "file-upload-exclude.txt"), "Hello World")
+		framework.ExpectRemoteFileNotFound("node", ns, "/app/file-upload-exclude.txt")
+
+		// check that download excluded file was not synced
+		framework.ExpectLocalFileNotFound(filepath.Join(tempDir, "file-download-exclude.txt"))
+		framework.ExpectRemoteFileContents("node", ns, "/app/file-download-exclude.txt", "Hello World")
+
+		// write a file and check that it got synced
+		payload := randutil.GenerateRandomString(10000)
+		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+		framework.ExpectRemoteFileContents("node", ns, "/app/watching.txt", payload)
+	})
 })
