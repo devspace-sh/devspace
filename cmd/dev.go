@@ -291,59 +291,62 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 			cmd.log.Warn(err)
 		}
 
-		// Build image if necessary
-		builtImages := make(map[string]string)
-		if cmd.SkipBuild == false {
-			builtImages, err = f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
-				SkipPush:                  cmd.SkipPush,
-				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
-				ForceRebuild:              cmd.ForceBuild,
-				Sequential:                cmd.BuildSequential,
-				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
-			}, cmd.log)
-			if err != nil {
-				if strings.Index(err.Error(), "no space left on device") != -1 {
-					return 0, errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
+		// Only execute pipeline if we are not focused on a dependency
+		if len(cmd.Dependency) == 0 {
+			// Build image if necessary
+			builtImages := make(map[string]string)
+			if cmd.SkipBuild == false {
+				builtImages, err = f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
+					SkipPush:                  cmd.SkipPush,
+					SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
+					ForceRebuild:              cmd.ForceBuild,
+					Sequential:                cmd.BuildSequential,
+					MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
+				}, cmd.log)
+				if err != nil {
+					if strings.Index(err.Error(), "no space left on device") != -1 {
+						return 0, errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
+					}
+
+					return 0, err
 				}
 
-				return 0, err
+				// Save config if an image was built
+				if len(builtImages) > 0 {
+					err := cmd.configLoader.SaveGenerated(generatedConfig)
+					if err != nil {
+						return 0, errors.Errorf("error saving generated config: %v", err)
+					}
+				}
 			}
 
-			// Save config if an image was built
-			if len(builtImages) > 0 {
-				err := cmd.configLoader.SaveGenerated(generatedConfig)
+			// Deploy all defined deployments
+			if config.Deployments != nil {
+				// What deployments should be deployed
+				deployments := []string{}
+				if cmd.Deployments != "" {
+					deployments = strings.Split(cmd.Deployments, ",")
+					for index := range deployments {
+						deployments[index] = strings.TrimSpace(deployments[index])
+					}
+				}
+
+				// Deploy all
+				err = f.NewDeployController(configInterface, dependencies, client).Deploy(&deploy.Options{
+					IsDev:       true,
+					ForceDeploy: cmd.ForceDeploy,
+					BuiltImages: builtImages,
+					Deployments: deployments,
+				}, cmd.log)
+				if err != nil {
+					return 0, errors.Errorf("error deploying: %v", err)
+				}
+
+				// Save Config
+				err = cmd.configLoader.SaveGenerated(generatedConfig)
 				if err != nil {
 					return 0, errors.Errorf("error saving generated config: %v", err)
 				}
-			}
-		}
-
-		// Deploy all defined deployments
-		if config.Deployments != nil {
-			// What deployments should be deployed
-			deployments := []string{}
-			if cmd.Deployments != "" {
-				deployments = strings.Split(cmd.Deployments, ",")
-				for index := range deployments {
-					deployments[index] = strings.TrimSpace(deployments[index])
-				}
-			}
-
-			// Deploy all
-			err = f.NewDeployController(configInterface, dependencies, client).Deploy(&deploy.Options{
-				IsDev:       true,
-				ForceDeploy: cmd.ForceDeploy,
-				BuiltImages: builtImages,
-				Deployments: deployments,
-			}, cmd.log)
-			if err != nil {
-				return 0, errors.Errorf("error deploying: %v", err)
-			}
-
-			// Save Config
-			err = cmd.configLoader.SaveGenerated(generatedConfig)
-			if err != nil {
-				return 0, errors.Errorf("error saving generated config: %v", err)
 			}
 		}
 
