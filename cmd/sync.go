@@ -5,6 +5,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
+	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"k8s.io/apimachinery/pkg/labels"
 	"os"
@@ -109,14 +110,23 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	configOptions := cmd.ToConfigOptions(logger)
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
 	if configLoader.Exists() {
-		generatedConfig, err = configLoader.LoadGenerated(configOptions)
-		if err != nil {
-			return err
-		}
+		if cmd.GlobalFlags.ConfigPath != "" {
+			configExists, err := configLoader.SetDevSpaceRoot(logger)
+			if err != nil {
+				return err
+			} else if !configExists {
+				return errors.New(message.ConfigNotFound)
+			}
 
-		configOptions.GeneratedConfig = generatedConfig
-	} else {
-		logger.Warnf("If you want to use the sync paths from `devspace.yaml`, use the `--config=devspace.yaml` flag for this command.")
+			generatedConfig, err = configLoader.LoadGenerated(configOptions)
+			if err != nil {
+				return err
+			}
+
+			configOptions.GeneratedConfig = generatedConfig
+		} else {
+			logger.Warnf("If you want to use the sync paths from `devspace.yaml`, use the `--config=devspace.yaml` flag for this command.")
+		}
 	}
 
 	// Use last context if specified
@@ -139,7 +149,7 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 
 	var configInterface config.Config
 	var config *latest.Config
-	if configLoader.Exists() {
+	if configLoader.Exists() && cmd.GlobalFlags.ConfigPath != "" {
 		configInterface, err = configLoader.Load(configOptions, logger)
 		if err != nil {
 			return err
