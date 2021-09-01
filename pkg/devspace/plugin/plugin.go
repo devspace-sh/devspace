@@ -92,6 +92,15 @@ func (c *client) PluginFolder() (string, error) {
 }
 
 func (c *client) Add(path, version string) (*Metadata, error) {
+	// resolve path if it's a local one
+	var err error
+	if isLocalReference(path) {
+		path, err = filepath.Abs(path)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	metadata, err := c.Get(path)
 	if err != nil {
 		return nil, err
