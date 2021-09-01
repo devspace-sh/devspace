@@ -3,7 +3,9 @@ package kube
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/e2e/new/framework"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
@@ -13,8 +15,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"strings"
-	"time"
 )
 
 func NewKubeHelper() (*KubeHelper, error) {
@@ -61,6 +61,26 @@ func (k *KubeHelper) ExecByImageSelector(imageSelector, namespace string, comman
 	return string(stdout), nil
 }
 
+func (k *KubeHelper) ExecByContainer(labelSelector, containerName, namespace string, command []string) (string, error) {
+	targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(nil, namespace, "", "")
+	targetOptions.AllowPick = false
+	targetOptions.Timeout = 120
+	targetOptions.LabelSelector = labelSelector
+	targetOptions.ContainerName = containerName
+	targetOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
+	container, err := targetselector.NewTargetSelector(k.client).SelectSingleContainer(context.TODO(), targetOptions, log.Discard)
+	if err != nil {
+		return "", err
+	}
+
+	stdout, stderr, err := k.client.ExecBuffered(container.Pod, container.Container.Name, command, nil)
+	if err != nil {
+		return "", fmt.Errorf("exec error: %v %s", err, string(stderr))
+	}
+
+	return string(stdout), nil
+}
+
 func (k *KubeHelper) CreateNamespace(name string) (string, error) {
 	name = strings.ToLower(name + "-" + randutil.GenerateRandomString(5))
 	_, err := k.client.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{
@@ -75,9 +95,10 @@ func (k *KubeHelper) CreateNamespace(name string) (string, error) {
 	return name, nil
 }
 
-func (k *KubeHelper) DeleteNamespace(name string) {
+func (k *KubeHelper) DeleteNamespace(name string) error {
 	err := k.client.KubeClient().CoreV1().Namespaces().Delete(context.TODO(), name, metav1.DeleteOptions{})
 	if err != nil && kerrors.IsNotFound(err) == false {
-		framework.ExpectNoError(err)
+		return err
 	}
+	return nil
 }

@@ -2,6 +2,8 @@ package deploy
 
 import (
 	"context"
+	"os"
+
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/new/framework"
@@ -9,10 +11,9 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/onsi/ginkgo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"os"
 )
 
-var _ = DevSpaceDescribe("sync", func() {
+var _ = DevSpaceDescribe("deploy", func() {
 	initialDir, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -42,7 +43,10 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		ns, err := kubeClient.CreateNamespace("deploy")
 		framework.ExpectNoError(err)
-		defer kubeClient.DeleteNamespace(ns)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
 
 		// create a new dev command
 		deployCmd := &cmd.DeployCmd{
@@ -69,7 +73,10 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		ns, err := kubeClient.CreateNamespace("deploy")
 		framework.ExpectNoError(err)
-		defer kubeClient.DeleteNamespace(ns)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
 
 		// create a new dev command
 		deployCmd := &cmd.DeployCmd{

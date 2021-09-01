@@ -1,0 +1,46 @@
+version: v1beta10
+vars:
+  - name: IMAGE1
+    value: node:13.14-alpine
+  - name: IMAGE2
+    value: node:13.14-alpine
+deployments:
+  - name: test
+    helm:
+      componentChart: true
+      values:
+        labels:
+          e2e: sync-containers
+        containers:
+          - name: container1
+            image: ${IMAGE1}
+            command: ["sleep"]
+            args: ["999999999999"]
+          - name: container2
+            image: ${IMAGE2}
+            command: ["sleep"]
+            args: ["999999999999"]
+dev:
+  sync:
+    - name: test
+      containerName: container1
+      containerPath: "/app1"
+      labelSelector:
+        e2e: sync-containers
+      uploadExcludePaths:
+        - test.txt
+hooks:
+  - command: mkdir /app1
+    where:
+      container:
+        imageSelector: ${IMAGE1}
+    when:
+      before:
+        initialSync: test
+  - command: echo -n Hello World > /app1/initial-sync-done.txt
+    where:
+      container:
+        imageSelector: ${IMAGE1}
+    when:
+      after:
+        initialSync: test
