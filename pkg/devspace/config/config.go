@@ -20,7 +20,7 @@ type Config interface {
 	// loading the config
 	Variables() map[string]interface{}
 
-	// Path returns the path from which the config was loaded
+	// Path returns the absolute path from which the config was loaded
 	Path() string
 }
 

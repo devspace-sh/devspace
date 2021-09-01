@@ -138,12 +138,18 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 		if err != nil {
 			cmd.log.Errorf("Error purging dependencies: %v", err)
 		}
+		for _, dep := range dependencies {
+			if dep.DependencyConfig().Dev != nil && dep.DependencyConfig().Dev.ReplacePods && len(dep.Config().Config().Dev.ReplacePods) > 0 {
+				reset.ResetPods(client, dep.Config(), dep.Children(), cmd.log)
+			}
+		}
 	}
 
 	// Only purge if we don't specify dependency
 	if len(cmd.Dependency) == 0 {
 		// Resolve dependencies
 		dep, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).ResolveAll(dependency.ResolveOptions{
+			SkipDependencies:   cmd.SkipDependency,
 			UpdateDependencies: false,
 			Verbose:            false,
 		})

@@ -84,7 +84,7 @@ func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, 
 
 	parent, err := getParentFromReplaced(ctx, client, selectedPod.Pod)
 	if err != nil {
-		log.Infof("Error getting Parent of replaced Pod %s/%s: %v", selectedPod.Pod.Namespace, selectedPod.Pod.Name, err)
+		// log.Infof("Error getting Parent of replaced Pod %s/%s: %v", selectedPod.Pod.Namespace, selectedPod.Pod.Name, err)
 		return selectedPod, deleteAndWait(ctx, client, selectedPod.Pod, log)
 	}
 

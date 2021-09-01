@@ -311,7 +311,10 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 		}
 
 		// Check if we should act on this dependency
-		if foundDependency(dependency.dependencyConfig.Name, filterDependencies) == false {
+		if foundDependency(dependency.Name(), filterDependencies) == false {
+			continue
+		} else if skipDependency(dependency.Name(), skipDependencies) {
+			m.log.Infof("Skip dependency %s", dependency.Name())
 			continue
 		}
 
@@ -612,6 +615,15 @@ func (d *Dependency) prepare(forceDependencies bool) (string, error) {
 
 	d.dependencyCache.GetActive().Dependencies[d.id] = directoryHash
 	return d.changeWorkingDirectory()
+}
+
+func skipDependency(name string, skipDependencies []string) bool {
+	for _, sd := range skipDependencies {
+		if sd == name {
+			return true
+		}
+	}
+	return false
 }
 
 func foundDependency(name string, dependencies []string) bool {

@@ -54,7 +54,13 @@ service Upstream {
     rpc Upload (stream Chunk) returns (Empty) {}
     rpc RestartContainer (Empty) returns (Empty) {}
     rpc Remove (stream Paths) returns (Empty) {}
+    rpc Execute (Command) returns (Empty) {}
     rpc Ping (Empty) returns (Empty) {}
+}
+
+message Command {
+    string Cmd = 1;
+    repeated string Args = 2;
 }
 
 message PathsChecksum {

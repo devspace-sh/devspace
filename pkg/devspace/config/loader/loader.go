@@ -123,7 +123,12 @@ func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log
 		return nil, errors.Wrap(err, "require versions")
 	}
 
-	return config.NewConfig(data, parsedConfig, generatedConfig, resolver.ResolvedVariables(), l.configPath), nil
+	absPath, err := filepath.Abs(ConfigPath(l.configPath))
+	if err != nil {
+		return nil, err
+	}
+
+	return config.NewConfig(data, parsedConfig, generatedConfig, resolver.ResolvedVariables(), absPath), nil
 }
 
 func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) error {

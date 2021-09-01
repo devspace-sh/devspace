@@ -168,7 +168,7 @@ func (d *downstream) mainLoop() error {
 		}
 
 		// Compare change amount
-		if lastAmountChanges > 0 && (time.Now().After(changeTimer) || changeAmount.Amount > 50000 || changeAmount.Amount == lastAmountChanges) {
+		if lastAmountChanges > 0 && (time.Now().After(changeTimer) || changeAmount.Amount > 25000 || changeAmount.Amount == lastAmountChanges) {
 			d.sync.fileIndex.fileMapMutex.Lock()
 			changes, err := d.collectChanges()
 			d.sync.fileIndex.fileMapMutex.Unlock()

@@ -187,7 +187,7 @@ func (u *upstream) mainLoop() error {
 			select {
 			case <-u.interrupt:
 				return nil
-			case <-time.After(time.Millisecond * 400):
+			case <-time.After(time.Millisecond * 600):
 				break
 			}
 
@@ -209,7 +209,7 @@ func (u *upstream) mainLoop() error {
 
 			// We gather changes till there are no more changes or
 			// a certain amount of changes is reached
-			if changeAmount > 0 && (time.Now().After(changeTimer) || len(changes) > 50000 || changeAmount == len(changes)) {
+			if changeAmount > 0 && (time.Now().After(changeTimer) || len(changes) > 25000 || changeAmount == len(changes)) {
 				break
 			}
 
@@ -448,6 +448,12 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 		return nil
 	}
 
+	// execute batch command
+	err := u.ExecuteBatchCommand()
+	if err != nil {
+		return err
+	}
+
 	u.sync.log.Infof("Upstream - Successfully processed %d change(s)", changeAmount)
 
 	// Restart container if needed
@@ -465,6 +471,27 @@ func (u *upstream) RestartContainer() error {
 		if err != nil {
 			return errors.Wrap(err, "restart container")
 		}
+	}
+
+	return nil
+}
+
+func (u *upstream) ExecuteBatchCommand() error {
+	if u.sync.Options.UploadBatchCmd != "" {
+		u.sync.log.Infof("Upstream - Execute batch command '%s %s'", u.sync.Options.UploadBatchCmd, strings.Join(u.sync.Options.UploadBatchArgs, " "))
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
+		defer cancel()
+
+		_, err := u.client.Execute(ctx, &remote.Command{
+			Cmd:  u.sync.Options.UploadBatchCmd,
+			Args: u.sync.Options.UploadBatchArgs,
+		})
+		if err != nil {
+			return errors.Wrap(err, "execute batch command")
+		}
+
+		u.sync.log.Infof("Upstream - Done executing batch command")
 	}
 
 	return nil
@@ -549,7 +576,7 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 	for _, f := range files {
 		if alreadyUsed[f.Name] {
 			continue
-		} else if f.IsDirectory || u.sync.fileIndex.fileMap[f.Name] == nil || u.sync.fileIndex.fileMap[f.Name].Size != f.Size {
+		} else if f.IsDirectory || u.sync.fileIndex.fileMap[f.Name] == nil || u.sync.fileIndex.fileMap[f.Name].Size != f.Size || f.Size < 1024 {
 			newChanges = append(newChanges, f)
 			alreadyUsed[f.Name] = true
 			continue

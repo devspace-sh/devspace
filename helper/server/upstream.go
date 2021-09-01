@@ -23,9 +23,6 @@ type UpstreamOptions struct {
 	UploadPath  string
 	ExludePaths []string
 
-	BatchCmd  string
-	BatchArgs []string
-
 	FileChangeCmd  string
 	FileChangeArgs []string
 
@@ -112,12 +109,6 @@ func (u *Upstream) Remove(stream remote.Upstream_RemoveServer) error {
 		}
 
 		if err == io.EOF {
-			// execute a batch command if needed
-			err = u.executeBatchCommand()
-			if err != nil {
-				return err
-			}
-
 			return stream.SendAndClose(&remote.Empty{})
 		}
 		if err != nil {
@@ -204,12 +195,6 @@ func (u *Upstream) Upload(stream remote.Upstream_UploadServer) error {
 		return errors.Wrap(err, "write tar")
 	}
 
-	// execute a batch command if needed
-	err = u.executeBatchCommand()
-	if err != nil {
-		return err
-	}
-
 	return stream.SendAndClose(&remote.Empty{})
 }
 
@@ -241,16 +226,11 @@ func (u *Upstream) writeTar(writer io.WriteCloser, stream remote.Upstream_Upload
 	}
 }
 
-func (u *Upstream) executeBatchCommand() error {
-	if u.options.BatchCmd != "" {
-		stderrlog.Logf("Execute batch command '%s %s'", u.options.BatchCmd, strings.Join(u.options.BatchArgs, " "))
-		out, err := exec.Command(u.options.BatchCmd, u.options.BatchArgs...).CombinedOutput()
-		if err != nil {
-			return errors.Errorf("Error executing command '%s %s': %s => %v", u.options.BatchCmd, strings.Join(u.options.BatchArgs, " "), string(out), err)
-		}
-
-		stderrlog.Logf("Done executing batch command")
+func (u *Upstream) Execute(ctx context.Context, cmd *remote.Command) (*remote.Empty, error) {
+	out, err := exec.Command(cmd.Cmd, cmd.Args...).CombinedOutput()
+	if err != nil {
+		return nil, errors.Errorf("Error executing command '%s %s': %s => %v", cmd.Cmd, strings.Join(cmd.Args, " "), string(out), err)
 	}
 
-	return nil
+	return &remote.Empty{}, nil
 }

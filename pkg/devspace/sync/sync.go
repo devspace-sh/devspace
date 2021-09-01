@@ -16,7 +16,7 @@ import (
 )
 
 var syncRetries = 5
-var initialUpstreamBatchSize = 1000
+var initialUpstreamBatchSize = 5000
 
 const waitForMoreChangesTimeout = time.Minute
 
@@ -35,6 +35,9 @@ type Options struct {
 
 	DirCreateCmd  string
 	DirCreateArgs []string
+
+	UploadBatchCmd  string
+	UploadBatchArgs []string
 
 	UpstreamLimit   int64
 	DownstreamLimit int64

@@ -240,7 +240,7 @@ func configPath(devspaceConfigPath string) string {
 	}
 
 	fileName := filepath.Base(devspaceConfigPath)
-	if fileName == constants.DefaultConfigPath {
+	if fileName == constants.DefaultConfigPath || fileName == "" {
 		return filepath.Join(fileDir, constants.DefaultCacheFolder, "generated.yaml")
 	}
 
