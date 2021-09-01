@@ -111,8 +111,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
 		return err
-	}
-	if !configExists {
+	} else if !configExists {
 		return errors.New(message.ConfigNotFound)
 	}
 
