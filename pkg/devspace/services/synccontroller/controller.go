@@ -317,6 +317,10 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 	if syncConfig.OnUpload != nil && syncConfig.OnUpload.RestartContainer {
 		options.RestartContainer = true
 	}
+	if syncConfig.OnUpload != nil && syncConfig.OnUpload.ExecRemote != nil && syncConfig.OnUpload.ExecRemote.OnBatch != nil && syncConfig.OnUpload.ExecRemote.OnBatch.Command != "" {
+		options.UploadBatchCmd = syncConfig.OnUpload.ExecRemote.OnBatch.Command
+		options.UploadBatchArgs = syncConfig.OnUpload.ExecRemote.OnBatch.Args
+	}
 
 	syncClient, err := sync.NewSync(localPath, options)
 	if err != nil {
@@ -347,12 +351,6 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 			upstreamArgs = append(upstreamArgs, "--dircreatecmd", dirCmd)
 			for _, arg := range dirArgs {
 				upstreamArgs = append(upstreamArgs, "--dircreateargs", arg)
-			}
-		}
-		if onUpload.OnBatch != nil && onUpload.OnBatch.Command != "" {
-			upstreamArgs = append(upstreamArgs, "--batchcmd", onUpload.OnBatch.Command)
-			for _, arg := range onUpload.OnBatch.Args {
-				upstreamArgs = append(upstreamArgs, "--batchargs", arg)
 			}
 		}
 	}

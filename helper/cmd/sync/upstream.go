@@ -39,9 +39,6 @@ func NewUpstreamCmd() *cobra.Command {
 	upstreamCmd.Flags().StringVar(&cmd.DirCreateCmd, "dircreatecmd", "", "Command that should be run during a directory create")
 	upstreamCmd.Flags().StringSliceVar(&cmd.DirCreateArgs, "dircreateargs", []string{}, "Args that should be used for the command that is run during a directory create")
 
-	upstreamCmd.Flags().StringVar(&cmd.BatchCmd, "batchcmd", "", "Command that should be run after a batch of changes is processed")
-	upstreamCmd.Flags().StringSliceVar(&cmd.BatchArgs, "batchargs", []string{}, "Args that should be used for the command that is run after a batch of changes is processed")
-
 	upstreamCmd.Flags().BoolVar(&cmd.OverridePermissions, "override-permissions", false, "If enabled will override file permissions")
 	upstreamCmd.Flags().StringSliceVar(&cmd.Exclude, "exclude", []string{}, "The exclude paths for upstream watching")
 	return upstreamCmd
@@ -57,9 +54,6 @@ func (cmd *UpstreamCmd) Run(cobraCmd *cobra.Command, args []string) error {
 	return server.StartUpstreamServer(os.Stdin, os.Stdout, &server.UpstreamOptions{
 		UploadPath:  absolutePath,
 		ExludePaths: cmd.Exclude,
-
-		BatchCmd:  cmd.BatchCmd,
-		BatchArgs: cmd.BatchArgs,
 
 		FileChangeCmd:  cmd.FileChangeCmd,
 		FileChangeArgs: cmd.FileChangeArgs,
