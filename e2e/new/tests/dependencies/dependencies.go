@@ -9,7 +9,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
 )
 
 var _ = DevSpaceDescribe("dependencies", func() {
@@ -154,7 +153,6 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		_, _, err = framework.LoadConfig(f, filepath.Join(tempDir, "validate-error.yaml"))
-		framework.ExpectError(err)
-		framework.Expect(err).Should(gomega.MatchError("dependencies[0].profiles and dependencies[0].profile & dependencies[0].profileParents cannot be used together"))
+		framework.ExpectErrorMatch(err, "dependencies[0].profiles and dependencies[0].profile & dependencies[0].profileParents cannot be used together")
 	})
 })

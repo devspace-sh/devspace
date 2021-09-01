@@ -2,10 +2,11 @@ package services
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/services/synccontroller"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/services/synccontroller"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
@@ -15,7 +16,7 @@ import (
 )
 
 // StartSyncFromCmd starts a new sync from command
-func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Options, syncConfig *latest.SyncConfig, interrupt chan error, verbose bool) error {
+func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Options, syncConfig *latest.SyncConfig, interrupt chan error, noWatch, verbose bool) error {
 	syncDone := make(chan struct{})
 	options := &synccontroller.Options{
 		Interrupt: interrupt,
@@ -37,8 +38,21 @@ func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Optio
 		return err
 	}
 
-	if syncConfig.WaitInitialSync == nil || *syncConfig.WaitInitialSync == true {
+	// Handle no watch
+	if noWatch {
 		return nil
+	}
+
+	// Handle interrupt
+	if options.Interrupt != nil {
+		for {
+			select {
+			case <-syncDone:
+				return nil
+			case <-options.Interrupt:
+				return nil
+			}
+		}
 	}
 
 	// Wait till sync is finished

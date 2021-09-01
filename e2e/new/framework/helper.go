@@ -1,7 +1,13 @@
 package framework
 
 import (
+	"io/ioutil"
+	"os"
+	"time"
+
+	"github.com/loft-sh/devspace/e2e/new/kube"
 	"github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // ExpectEqual expects the specified two are the same, otherwise an exception raises
@@ -17,6 +23,12 @@ func ExpectNotEqual(actual interface{}, extra interface{}, explain ...interface{
 // ExpectError expects an error happens, otherwise an exception raises
 func ExpectError(err error, explain ...interface{}) {
 	gomega.ExpectWithOffset(1, err).To(gomega.HaveOccurred(), explain...)
+}
+
+// ExpectMatchError expects an error happens and has a message matching the given string, otherwise an exception raises
+func ExpectErrorMatch(err error, msg string, explain ...interface{}) {
+	ExpectError(err, explain...)
+	gomega.ExpectWithOffset(1, err, explain...).To(gomega.MatchError(msg), explain...)
 }
 
 // ExpectNoError checks if "err" is set, and if so, fails assertion while logging the error.
@@ -45,7 +57,47 @@ func ExpectEmpty(actual interface{}, explain ...interface{}) {
 	gomega.ExpectWithOffset(1, actual).To(gomega.BeEmpty(), explain...)
 }
 
-// Expect returns a gomega assertion with offset
-func Expect(actual interface{}) gomega.Assertion {
-	return gomega.ExpectWithOffset(1, actual)
+func ExpectRemoteFileContents(imageSelector string, namespace string, filePath string, contents string) {
+	kubeClient, err := kube.NewKubeHelper()
+	ExpectNoError(err)
+
+	err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		out, err := kubeClient.ExecByImageSelector(imageSelector, namespace, []string{"cat", filePath})
+		if err != nil {
+			return false, nil
+		}
+
+		return out == contents, nil
+	})
+	ExpectNoError(err)
+}
+
+func ExpectRemoteContainerFileContents(labelSelector, container string, namespace string, filePath string, contents string) {
+	kubeClient, err := kube.NewKubeHelper()
+	ExpectNoError(err)
+
+	err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		out, err := kubeClient.ExecByContainer(labelSelector, container, namespace, []string{"cat", filePath})
+		if err != nil {
+			return false, nil
+		}
+		return out == contents, nil
+	})
+	ExpectNoError(err)
+}
+
+func ExpectLocalFileContents(filePath string, contents string) {
+	err := wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		out, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				return false, err
+			}
+
+			return false, nil
+		}
+
+		return string(out) == contents, nil
+	})
+	ExpectNoError(err)
 }
