@@ -741,8 +741,11 @@ type SyncConfig struct {
 	LocalSubPath         string               `yaml:"localSubPath,omitempty" json:"localSubPath,omitempty"`
 	ContainerPath        string               `yaml:"containerPath,omitempty" json:"containerPath,omitempty"`
 	ExcludePaths         []string             `yaml:"excludePaths,omitempty" json:"excludePaths,omitempty"`
+	ExcludeFile          string               `yaml:"excludeFile,omitempty" json:"excludeFile,omitempty"`
 	DownloadExcludePaths []string             `yaml:"downloadExcludePaths,omitempty" json:"downloadExcludePaths,omitempty"`
+	DownloadExcludeFile  string               `yaml:"downloadExcludeFile,omitempty" json:"downloadExcludeFile,omitempty"`
 	UploadExcludePaths   []string             `yaml:"uploadExcludePaths,omitempty" json:"uploadExcludePaths,omitempty"`
+	UploadExcludeFile    string               `yaml:"uploadExcludeFile,omitempty" json:"uploadExcludeFile,omitempty"`
 	InitialSync          InitialSyncStrategy  `yaml:"initialSync,omitempty" json:"initialSync,omitempty"`
 	InitialSyncCompareBy InitialSyncCompareBy `yaml:"initialSyncCompareBy,omitempty" json:"initialSyncCompareBy,omitempty"`
 

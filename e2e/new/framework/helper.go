@@ -1,12 +1,15 @@
 package framework
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/loft-sh/devspace/e2e/new/kube"
 	"github.com/onsi/gomega"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -27,7 +30,7 @@ func ExpectError(err error, explain ...interface{}) {
 
 // ExpectMatchError expects an error happens and has a message matching the given string, otherwise an exception raises
 func ExpectErrorMatch(err error, msg string, explain ...interface{}) {
-	ExpectError(err, explain...)
+	gomega.ExpectWithOffset(1, err).To(gomega.HaveOccurred(), explain...)
 	gomega.ExpectWithOffset(1, err, explain...).To(gomega.MatchError(msg), explain...)
 }
 
@@ -59,7 +62,7 @@ func ExpectEmpty(actual interface{}, explain ...interface{}) {
 
 func ExpectRemoteFileContents(imageSelector string, namespace string, filePath string, contents string) {
 	kubeClient, err := kube.NewKubeHelper()
-	ExpectNoError(err)
+	ExpectNoErrorWithOffset(1, err)
 
 	err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
 		out, err := kubeClient.ExecByImageSelector(imageSelector, namespace, []string{"cat", filePath})
@@ -69,12 +72,36 @@ func ExpectRemoteFileContents(imageSelector string, namespace string, filePath s
 
 		return out == contents, nil
 	})
-	ExpectNoError(err)
+	ExpectNoErrorWithOffset(1, err)
+}
+
+func ExpectRemoteFileNotFound(imageSelector string, namespace string, filePath string) {
+	kubeClient, err := kube.NewKubeHelper()
+	ExpectNoErrorWithOffset(1, err)
+
+	fileExists := "file exists"
+	fileNotFound := "file not found"
+	err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+		test := []string{"sh", "-c", fmt.Sprintf("test -e %s && echo %s || echo %s", filePath, fileExists, fileNotFound)}
+		out, err := kubeClient.ExecByImageSelector(imageSelector, namespace, test)
+		if err != nil {
+			return false, err
+		}
+
+		out = strings.Trim(out, "\n")
+
+		if out == fileExists {
+			return false, errors.New("file should not exist")
+		}
+
+		return out == fileNotFound, nil
+	})
+	ExpectNoErrorWithOffset(1, err)
 }
 
 func ExpectRemoteContainerFileContents(labelSelector, container string, namespace string, filePath string, contents string) {
 	kubeClient, err := kube.NewKubeHelper()
-	ExpectNoError(err)
+	ExpectNoErrorWithOffset(1, err)
 
 	err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
 		out, err := kubeClient.ExecByContainer(labelSelector, container, namespace, []string{"cat", filePath})
@@ -83,7 +110,7 @@ func ExpectRemoteContainerFileContents(labelSelector, container string, namespac
 		}
 		return out == contents, nil
 	})
-	ExpectNoError(err)
+	ExpectNoErrorWithOffset(1, err)
 }
 
 func ExpectLocalFileContents(filePath string, contents string) {
@@ -99,5 +126,10 @@ func ExpectLocalFileContents(filePath string, contents string) {
 
 		return string(out) == contents, nil
 	})
-	ExpectNoError(err)
+	ExpectNoErrorWithOffset(1, err)
+}
+
+func ExpectLocalFileNotFound(filePath string) {
+	_, err := os.Stat(filePath)
+	gomega.ExpectWithOffset(1, os.IsNotExist(err)).Should(gomega.BeTrue())
 }

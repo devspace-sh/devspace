@@ -4,6 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/docker/docker/builder/dockerignore"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -18,13 +27,7 @@ import (
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/pkg/errors"
-	"io"
 	v1 "k8s.io/api/core/v1"
-	"os"
-	"runtime"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type Controller interface {
@@ -370,12 +373,36 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 		options.ExcludePaths = syncConfig.ExcludePaths
 	}
 
+	if syncConfig.ExcludeFile != "" {
+		paths, err := parseExcludeFile(filepath.Join(syncConfig.LocalSubPath, syncConfig.ExcludeFile))
+		if err != nil {
+			return nil, errors.Wrap(err, "parse exclude file")
+		}
+		options.ExcludePaths = append(options.ExcludePaths, paths...)
+	}
+
 	if len(syncConfig.DownloadExcludePaths) > 0 {
 		options.DownloadExcludePaths = syncConfig.DownloadExcludePaths
 	}
 
+	if syncConfig.DownloadExcludeFile != "" {
+		paths, err := parseExcludeFile(filepath.Join(syncConfig.LocalSubPath, syncConfig.DownloadExcludeFile))
+		if err != nil {
+			return nil, errors.Wrap(err, "parse download exclude file")
+		}
+		options.DownloadExcludePaths = append(options.DownloadExcludePaths, paths...)
+	}
+
 	if len(syncConfig.UploadExcludePaths) > 0 {
 		options.UploadExcludePaths = syncConfig.UploadExcludePaths
+	}
+
+	if syncConfig.UploadExcludeFile != "" {
+		paths, err := parseExcludeFile(filepath.Join(syncConfig.LocalSubPath, syncConfig.UploadExcludeFile))
+		if err != nil {
+			return nil, errors.Wrap(err, "parse upload exclude file")
+		}
+		options.UploadExcludePaths = append(options.UploadExcludePaths, paths...)
 	}
 
 	if syncConfig.BandwidthLimits != nil {
@@ -499,6 +526,21 @@ func getSyncCommands(cmd *latest.SyncExecCommand) (string, []string, string, []s
 	}
 
 	return onFileChange.Command, onFileChange.Args, onDirCreate.Command, onDirCreate.Args
+}
+
+func parseExcludeFile(path string) ([]string, error) {
+	reader, err := os.Open(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "open exclude file")
+	}
+	defer reader.Close()
+
+	paths, err := dockerignore.ReadAll(reader)
+	if err != nil {
+		return nil, errors.Wrap(err, "read exclude file")
+	}
+
+	return paths, nil
 }
 
 func StartStream(client kubectl.Client, pod *v1.Pod, container string, command []string, reader io.Reader, stdoutWriter io.Writer, buffer bool, log logpkg.Logger) error {
