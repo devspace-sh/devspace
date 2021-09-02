@@ -47,6 +47,8 @@ func NewRootCmd(f factory.Factory, plugins []plugin.Metadata) *cobra.Command {
 			log := f.GetLog()
 			if globalFlags.Silent {
 				log.SetLevel(logrus.FatalLevel)
+			} else if globalFlags.Debug {
+				log.SetLevel(logrus.DebugLevel)
 			}
 
 			// parse the .env file

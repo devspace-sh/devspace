@@ -10,7 +10,7 @@ import (
 
 var defaultLog Logger = &stdoutLogger{
 	survey: survey.NewSurvey(),
-	level:  logrus.DebugLevel,
+	level:  logrus.InfoLevel,
 }
 
 // Discard is a logger implementation that just discards every log statement

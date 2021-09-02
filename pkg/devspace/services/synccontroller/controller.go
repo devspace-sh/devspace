@@ -361,7 +361,7 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 	upStdoutReader, upStdoutWriter := io.Pipe()
 
 	go func() {
-		err := startStream(c.client, pod, container, upstreamArgs, upStdinReader, upStdoutWriter, options.Log)
+		err := StartStream(c.client, pod, container, upstreamArgs, upStdinReader, upStdoutWriter, true, options.Log)
 		if err != nil {
 			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
@@ -392,7 +392,7 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 	downStdoutReader, downStdoutWriter := io.Pipe()
 
 	go func() {
-		err := startStream(c.client, pod, container, downstreamArgs, downStdinReader, downStdoutWriter, options.Log)
+		err := StartStream(c.client, pod, container, downstreamArgs, downStdinReader, downStdoutWriter, true, options.Log)
 		if err != nil {
 			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
@@ -426,7 +426,7 @@ func getSyncCommands(cmd *latest.SyncExecCommand) (string, []string, string, []s
 	return onFileChange.Command, onFileChange.Args, onDirCreate.Command, onDirCreate.Args
 }
 
-func startStream(client kubectl.Client, pod *v1.Pod, container string, command []string, reader io.Reader, stdoutWriter io.Writer, log logpkg.Logger) error {
+func StartStream(client kubectl.Client, pod *v1.Pod, container string, command []string, reader io.Reader, stdoutWriter io.Writer, buffer bool, log logpkg.Logger) error {
 	stderrBuffer := &bytes.Buffer{}
 	stderrReader, stderrWriter := io.Pipe()
 	defer stderrWriter.Close()
@@ -443,13 +443,18 @@ func startStream(client kubectl.Client, pod *v1.Pod, container string, command [
 		}
 	}()
 
+	var stdErr io.Writer = stderrWriter
+	if buffer {
+		stdErr = io.MultiWriter(stderrBuffer, stderrWriter)
+	}
+
 	err := client.ExecStream(&kubectl.ExecStreamOptions{
 		Pod:       pod,
 		Container: container,
 		Command:   command,
 		Stdin:     reader,
 		Stdout:    stdoutWriter,
-		Stderr:    io.MultiWriter(stderrBuffer, stderrWriter),
+		Stderr:    stdErr,
 	})
 	if err != nil {
 		return fmt.Errorf("%s %v", stderrBuffer.String(), err)

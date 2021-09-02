@@ -41,6 +41,7 @@ func GetFileLogger(filename string) Logger {
 			MaxSize:    10 * 1024 * 1024,
 		})
 
+		newLogger.SetLevel(GetInstance().GetLevel())
 		logs[filename] = newLogger
 	}
 

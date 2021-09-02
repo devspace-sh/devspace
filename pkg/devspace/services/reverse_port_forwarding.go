@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
+	"github.com/loft-sh/devspace/pkg/devspace/services/synccontroller"
 	"github.com/loft-sh/devspace/pkg/devspace/tunnel"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"io"
@@ -84,8 +85,9 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
+	logFile := logpkg.GetFileLogger("reverse-portforwarding")
 	go func() {
-		err := inject.StartStream(serviceClient.client, container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "tunnel"}, stdinReader, stdoutWriter)
+		err := synccontroller.StartStream(serviceClient.client, container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "tunnel"}, stdinReader, stdoutWriter, false, logFile)
 		if err != nil {
 			errorChan <- errors.Errorf("Reverse Port Forwarding - connection lost to pod %s/%s: %v", container.Pod.Namespace, container.Pod.Name, err)
 		}
@@ -98,7 +100,6 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 		}
 	}()
 
-	logFile := logpkg.GetFileLogger("reverse-portforwarding")
 	go func(portForwarding *latest.PortForwardingConfig, interrupt chan error) {
 		select {
 		case err := <-errorChan:

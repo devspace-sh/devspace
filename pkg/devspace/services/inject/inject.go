@@ -99,22 +99,6 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 	return nil
 }
 
-func StartStream(client kubectl.Client, pod *v1.Pod, container string, command []string, reader io.Reader, writer io.Writer) error {
-	stderrBuffer := &bytes.Buffer{}
-	err := client.ExecStream(&kubectl.ExecStreamOptions{
-		Pod:       pod,
-		Container: container,
-		Command:   command,
-		Stdin:     reader,
-		Stdout:    writer,
-		Stderr:    stderrBuffer,
-	})
-	if err != nil {
-		return fmt.Errorf("%s %v", stderrBuffer.String(), err)
-	}
-	return nil
-}
-
 func downloadSyncHelper(helperName, syncBinaryFolder, version string, log logpkg.Logger) error {
 	filepath := filepath.Join(syncBinaryFolder, helperName)
 
