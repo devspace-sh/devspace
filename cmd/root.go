@@ -124,11 +124,11 @@ func Execute() {
 		}
 
 		// call root plugin hook
-		err = plugin.ExecutePluginHookWithContext("root.errorExecution", map[string]interface{}{
+		pluginErr := plugin.ExecutePluginHookWithContext("root.errorExecution", map[string]interface{}{
 			"error": err,
 		})
-		if err != nil {
-			f.GetLog().Fatal(err)
+		if pluginErr != nil {
+			f.GetLog().Fatal(pluginErr)
 		}
 
 		if globalFlags.Debug {
