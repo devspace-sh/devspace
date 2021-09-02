@@ -26,7 +26,8 @@ devspace update plugin my-plugin
 	`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run(f, args)
 		}}
 
 	pluginCmd.Flags().StringVar(&cmd.Version, "version", "", "The git tag to use")
@@ -34,14 +35,14 @@ devspace update plugin my-plugin
 }
 
 // Run executes the command logic
-func (cmd *pluginCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *pluginCmd) Run(f factory.Factory, args []string) error {
 	pluginManager := f.NewPluginManager(f.GetLog())
 	_, oldPlugin, err := pluginManager.GetByName(args[0])
 	if err != nil {
 		return err
 	} else if oldPlugin != nil {
 		// Execute plugin hook
-		err = plugin.ExecutePluginHook([]plugin.Metadata{*oldPlugin}, cobraCmd, args, "before_update", "", "", nil)
+		err = plugin.ExecutePluginHookAt(*oldPlugin, "before_update")
 		if err != nil {
 			return err
 		}
@@ -64,7 +65,7 @@ func (cmd *pluginCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	f.GetLog().Donef("Successfully updated plugin %s", args[0])
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook([]plugin.Metadata{*updatedPlugin}, cobraCmd, args, "after_update", "", "", nil)
+	err = plugin.ExecutePluginHookAt(*updatedPlugin, "after_update")
 	if err != nil {
 		return err
 	}

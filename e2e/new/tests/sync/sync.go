@@ -78,7 +78,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		waitGroup.Add(1)
 		go func() {
 			defer waitGroup.Done()
-			err = devCmd.Run(f, nil, nil, nil)
+			err = devCmd.Run(f, nil)
 			framework.ExpectNoError(err)
 		}()
 

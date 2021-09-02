@@ -25,6 +25,7 @@ devspace remove plugin my-plugin
 	`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			plugin.SetPluginCommand(cobraCmd, args)
 			return cmd.Run(f, cobraCmd, args)
 		}}
 
@@ -39,7 +40,7 @@ func (cmd *pluginCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 		return err
 	} else if oldPlugin != nil {
 		// Execute plugin hook
-		err = plugin.ExecutePluginHook([]plugin.Metadata{*oldPlugin}, cobraCmd, args, "before_remove", "", "", nil)
+		err = plugin.ExecutePluginHookAt(*oldPlugin, "before_remove")
 		if err != nil {
 			return err
 		}

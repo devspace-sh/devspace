@@ -47,7 +47,7 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig := &latest.Config{}
@@ -67,7 +67,7 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo:    true,
 		}
 
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig = &latest.Config{}
@@ -92,7 +92,7 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig := &latest.Config{}
@@ -122,7 +122,7 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig := &latest.Config{}
@@ -153,7 +153,7 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig := &latest.Config{}
@@ -230,7 +230,7 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig := &latest.Config{}
@@ -252,7 +252,7 @@ var _ = DevSpaceDescribe("config", func() {
 
 		os.Setenv("FOO", "false")
 		defer os.Unsetenv("FOO")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig = &latest.Config{}
@@ -274,7 +274,7 @@ var _ = DevSpaceDescribe("config", func() {
 
 		os.Setenv("FOO", "true")
 		defer os.Unsetenv("FOO")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig = &latest.Config{}
@@ -303,7 +303,7 @@ var _ = DevSpaceDescribe("config", func() {
 		}
 
 		os.Setenv("FOO", "false")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 		os.Unsetenv("FOO")
 
@@ -325,7 +325,7 @@ var _ = DevSpaceDescribe("config", func() {
 		}
 
 		os.Setenv("FOO", "truthy")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 		os.Unsetenv("FOO")
 
@@ -355,7 +355,7 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig := &latest.Config{}
@@ -378,7 +378,7 @@ var _ = DevSpaceDescribe("config", func() {
 
 		os.Setenv("FOO", "true")
 		defer os.Unsetenv("FOO")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig = &latest.Config{}
@@ -404,7 +404,7 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig := &latest.Config{}
@@ -426,7 +426,7 @@ var _ = DevSpaceDescribe("config", func() {
 
 		os.Setenv("FOO", "true")
 		defer os.Unsetenv("FOO")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig = &latest.Config{}
@@ -448,7 +448,7 @@ var _ = DevSpaceDescribe("config", func() {
 
 		os.Setenv("BAR", "true")
 		defer os.Unsetenv("BAR")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig = &latest.Config{}
@@ -475,7 +475,7 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig := &latest.Config{}
@@ -496,7 +496,7 @@ var _ = DevSpaceDescribe("config", func() {
 		}
 
 		os.Setenv("FOO", "true")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 		os.Unsetenv("FOO")
 
@@ -520,7 +520,7 @@ var _ = DevSpaceDescribe("config", func() {
 		}
 
 		os.Setenv("BAR", "true")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 		os.Unsetenv("BAR")
 
@@ -548,7 +548,7 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig := &latest.Config{}
@@ -570,7 +570,7 @@ var _ = DevSpaceDescribe("config", func() {
 
 		os.Setenv("FOO", "true")
 		defer os.Unsetenv("FOO")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig = &latest.Config{}
@@ -598,7 +598,7 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig := &latest.Config{}
@@ -622,7 +622,7 @@ var _ = DevSpaceDescribe("config", func() {
 
 		os.Setenv("FOO", "true")
 		defer os.Unsetenv("FOO")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig = &latest.Config{}
@@ -651,7 +651,7 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig := &latest.Config{}
@@ -675,7 +675,7 @@ var _ = DevSpaceDescribe("config", func() {
 
 		os.Setenv("BAR", "true")
 		defer os.Unsetenv("BAR")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig = &latest.Config{}
@@ -704,7 +704,7 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig := &latest.Config{}
@@ -729,7 +729,7 @@ var _ = DevSpaceDescribe("config", func() {
 
 		os.Setenv("BAR", "true")
 		defer os.Unsetenv("BAR")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig = &latest.Config{}
@@ -757,7 +757,7 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig := &latest.Config{}
@@ -782,7 +782,7 @@ var _ = DevSpaceDescribe("config", func() {
 
 		os.Setenv("FOO", "true")
 		defer os.Unsetenv("FOO")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig = &latest.Config{}
@@ -816,7 +816,7 @@ var _ = DevSpaceDescribe("config", func() {
 		// run with environment variable set.
 		os.Setenv("FOO", "true")
 		defer os.Unsetenv("FOO")
-		err = printCmd.Run(f, nil, nil, nil)
+		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		latestConfig := &latest.Config{}

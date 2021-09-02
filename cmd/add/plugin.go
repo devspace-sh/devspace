@@ -26,7 +26,8 @@ devspace add plugin https://github.com/my-plugin/plugin
 	`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run(f, args)
 		}}
 
 	pluginCmd.Flags().StringVar(&cmd.Version, "version", "", "The git tag to use")
@@ -34,7 +35,7 @@ devspace add plugin https://github.com/my-plugin/plugin
 }
 
 // Run executes the command logic
-func (cmd *pluginCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *pluginCmd) Run(f factory.Factory, args []string) error {
 	f.GetLog().StartWait("Installing plugin " + args[0])
 	defer f.GetLog().StopWait()
 
@@ -47,7 +48,7 @@ func (cmd *pluginCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	f.GetLog().Donef("Successfully installed plugin %s", args[0])
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook([]plugin.Metadata{*addedPlugin}, cobraCmd, args, "after_install", "", "", nil)
+	err = plugin.ExecutePluginHookAt(*addedPlugin, "after_install")
 	if err != nil {
 		return err
 	}

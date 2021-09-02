@@ -68,7 +68,7 @@ type InitCmd struct {
 }
 
 // NewInitCmd creates a new init command
-func NewInitCmd(f factory.Factory, plugins []plugin.Metadata) *cobra.Command {
+func NewInitCmd(f factory.Factory) *cobra.Command {
 	cmd := &InitCmd{
 		log: f.GetLog(),
 	}
@@ -86,7 +86,8 @@ folder. Creates a devspace.yaml with all configuration.
 	`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run(f)
 		},
 	}
 
@@ -99,7 +100,7 @@ folder. Creates a devspace.yaml with all configuration.
 }
 
 // Run executes the command logic
-func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *InitCmd) Run(f factory.Factory) error {
 	// Check if config already exists
 	cmd.log = f.GetLog()
 	configLoader := f.NewConfigLoader("")
@@ -123,7 +124,7 @@ func (cmd *InitCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	os.Remove(constants.DefaultVarsPath)
 
 	// Execute plugin hook
-	err := plugin.ExecutePluginHook(plugins, cobraCmd, args, "init", "", "", nil)
+	err := plugin.ExecutePluginHook("init")
 	if err != nil {
 		return err
 	}

@@ -32,7 +32,7 @@ import (
 )
 
 // NewRootCmd returns a new root command
-func NewRootCmd(f factory.Factory, plugins []plugin.Metadata) *cobra.Command {
+func NewRootCmd(f factory.Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:           "devspace",
 		SilenceUsage:  true,
@@ -78,7 +78,7 @@ func NewRootCmd(f factory.Factory, plugins []plugin.Metadata) *cobra.Command {
 			}
 
 			// call root plugin hook
-			err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "root", "", "", nil)
+			err = plugin.ExecutePluginHook("root")
 			if err != nil {
 				return err
 			}
@@ -108,8 +108,14 @@ func Execute() {
 	// set version for --version flag
 	rootCmd.Version = upgrade.GetVersion()
 
+	// call root plugin hook
+	err := plugin.ExecutePluginHook("root.beforeExecute")
+	if err != nil {
+		f.GetLog().Fatal(err)
+	}
+
 	// execute command
-	err := rootCmd.Execute()
+	err = rootCmd.Execute()
 	if err != nil {
 		// Check if return code error
 		retCode, ok := errors.Cause(err).(*exit.ReturnCodeError)
@@ -117,11 +123,25 @@ func Execute() {
 			os.Exit(retCode.ExitCode)
 		}
 
+		// call root plugin hook
+		err = plugin.ExecutePluginHookWithContext("root.errorExecution", map[string]interface{}{
+			"error": err,
+		})
+		if err != nil {
+			f.GetLog().Fatal(err)
+		}
+
 		if globalFlags.Debug {
 			f.GetLog().Fatalf("%+v", err)
 		} else {
 			f.GetLog().Fatal(err)
 		}
+	}
+
+	// call root plugin hook
+	err = plugin.ExecutePluginHook("root.afterExecute")
+	if err != nil {
+		f.GetLog().Fatal(err)
 	}
 }
 
@@ -137,10 +157,12 @@ func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 		if err != nil {
 			f.GetLog().Fatal(err)
 		}
+
+		plugin.SetPlugins(plugins)
 	}
 
 	// build the root cmd
-	rootCmd := NewRootCmd(f, plugins)
+	rootCmd := NewRootCmd(f)
 	persistentFlags := rootCmd.PersistentFlags()
 	globalFlags = flags.SetGlobalFlags(persistentFlags)
 
@@ -157,23 +179,23 @@ func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 	rootCmd.AddCommand(restore.NewRestoreCmd(f, globalFlags, plugins))
 
 	// Add main commands
-	rootCmd.AddCommand(NewInitCmd(f, plugins))
-	rootCmd.AddCommand(NewRestartCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewDevCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewBuildCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewSyncCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewRenderCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewPurgeCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewUpgradeCmd(plugins))
-	rootCmd.AddCommand(NewDeployCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewEnterCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewAnalyzeCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewLogsCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewOpenCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewUICmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(NewInitCmd(f))
+	rootCmd.AddCommand(NewRestartCmd(f, globalFlags))
+	rootCmd.AddCommand(NewDevCmd(f, globalFlags))
+	rootCmd.AddCommand(NewBuildCmd(f, globalFlags))
+	rootCmd.AddCommand(NewSyncCmd(f, globalFlags))
+	rootCmd.AddCommand(NewRenderCmd(f, globalFlags))
+	rootCmd.AddCommand(NewPurgeCmd(f, globalFlags))
+	rootCmd.AddCommand(NewUpgradeCmd())
+	rootCmd.AddCommand(NewDeployCmd(f, globalFlags))
+	rootCmd.AddCommand(NewEnterCmd(f, globalFlags))
+	rootCmd.AddCommand(NewAnalyzeCmd(f, globalFlags))
+	rootCmd.AddCommand(NewLogsCmd(f, globalFlags))
+	rootCmd.AddCommand(NewOpenCmd(f, globalFlags))
+	rootCmd.AddCommand(NewUICmd(f, globalFlags))
 	rootCmd.AddCommand(NewRunCmd(f, globalFlags))
-	rootCmd.AddCommand(NewAttachCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(NewPrintCmd(f, globalFlags, plugins))
+	rootCmd.AddCommand(NewAttachCmd(f, globalFlags))
+	rootCmd.AddCommand(NewPrintCmd(f, globalFlags))
 
 	// Add plugin commands
 	plugin.AddPluginCommands(rootCmd, plugins, "")

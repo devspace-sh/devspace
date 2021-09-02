@@ -34,7 +34,7 @@ type BuildCmd struct {
 }
 
 // NewBuildCmd creates a new devspace build command
-func NewBuildCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
+func NewBuildCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &BuildCmd{GlobalFlags: globalFlags}
 
 	buildCmd := &cobra.Command{
@@ -47,7 +47,8 @@ func NewBuildCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []pl
 Builds all defined images and pushes them
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run(f, cobraCmd, args)
 		},
 	}
 
@@ -69,7 +70,7 @@ Builds all defined images and pushes them
 }
 
 // Run executes the command logic
-func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *BuildCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
 	configOptions := cmd.ToConfigOptions(log)
@@ -107,7 +108,7 @@ func (cmd *BuildCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	config := configInterface.Config()
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "build", cmd.KubeContext, cmd.Namespace, config)
+	err = plugin.ExecutePluginHook("build")
 	if err != nil {
 		return err
 	}

@@ -14,7 +14,7 @@ type UpgradeCmd struct {
 }
 
 // NewUpgradeCmd creates a new upgrade command
-func NewUpgradeCmd(plugins []plugin.Metadata) *cobra.Command {
+func NewUpgradeCmd() *cobra.Command {
 	cmd := &UpgradeCmd{}
 
 	upgradeCmd := &cobra.Command{
@@ -28,7 +28,8 @@ Upgrades the DevSpace CLI to the newest version
 #######################################################`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run()
 		},
 	}
 
@@ -37,9 +38,9 @@ Upgrades the DevSpace CLI to the newest version
 }
 
 // Run executes the command logic
-func (cmd *UpgradeCmd) Run(plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *UpgradeCmd) Run() error {
 	// Execute plugin hook
-	err := plugin.ExecutePluginHook(plugins, cobraCmd, args, "upgrade", "", "", nil)
+	err := plugin.ExecutePluginHook("upgrade")
 	if err != nil {
 		return err
 	}

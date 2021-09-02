@@ -153,7 +153,13 @@ func (f *DefaultFactoryImpl) NewKubeDefaultClient() (kubectl.Client, error) {
 // NewKubeClientFromContext implements interface
 func (f *DefaultFactoryImpl) NewKubeClientFromContext(context, namespace string, switchContext bool) (kubectl.Client, error) {
 	kubeLoader := f.NewKubeConfigLoader()
-	return kubectl.NewClientFromContext(context, namespace, switchContext, kubeLoader)
+	client, err := kubectl.NewClientFromContext(context, namespace, switchContext, kubeLoader)
+	if err != nil {
+		return nil, err
+	}
+
+	plugin.SetPluginKubeContext(client.CurrentContext(), client.Namespace())
+	return client, nil
 }
 
 // NewKubeClientBySelect implements interface

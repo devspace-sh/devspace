@@ -33,7 +33,7 @@ type RestartCmd struct {
 }
 
 // NewRestartCmd creates a new purge command
-func NewRestartCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
+func NewRestartCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &RestartCmd{
 		GlobalFlags: globalFlags,
 		log:         log.GetInstance(),
@@ -54,7 +54,8 @@ devspace restart -n my-namespace
 #######################################################`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run(f)
 		},
 	}
 	restartCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod to restart")
@@ -66,7 +67,7 @@ devspace restart -n my-namespace
 }
 
 // Run executes the purge command logic
-func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *RestartCmd) Run(f factory.Factory) error {
 	// Set config root
 	cmd.log = f.GetLog()
 	configOptions := cmd.ToConfigOptions(cmd.log)
@@ -117,7 +118,7 @@ func (cmd *RestartCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCm
 	config := configInterface.Config()
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "restart", client.CurrentContext(), client.Namespace(), config)
+	err = plugin.ExecutePluginHook("restart")
 	if err != nil {
 		return err
 	}

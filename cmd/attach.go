@@ -24,7 +24,7 @@ type AttachCmd struct {
 }
 
 // NewAttachCmd creates a new attach command
-func NewAttachCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
+func NewAttachCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &AttachCmd{GlobalFlags: globalFlags}
 
 	attachCmd := &cobra.Command{
@@ -42,7 +42,8 @@ devspace attach -c my-container
 devspace attach -n my-namespace
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run(f, cobraCmd, args)
 		},
 	}
 
@@ -57,7 +58,7 @@ devspace attach -n my-namespace
 }
 
 // Run executes the command logic
-func (cmd *AttachCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
 	configOptions := cmd.ToConfigOptions(log)
@@ -90,7 +91,7 @@ func (cmd *AttachCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "attach", client.CurrentContext(), client.Namespace(), nil)
+	err = plugin.ExecutePluginHook("attach")
 	if err != nil {
 		return err
 	}

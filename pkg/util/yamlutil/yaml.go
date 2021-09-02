@@ -11,6 +11,12 @@ import (
 // Convert converts an map[interface{}] to map[string] type
 func Convert(i interface{}) interface{} {
 	switch x := i.(type) {
+	case map[string]interface{}:
+		m2 := map[string]interface{}{}
+		for k, v := range x {
+			m2[k] = Convert(v)
+		}
+		return m2
 	case map[interface{}]interface{}:
 		m2 := map[string]interface{}{}
 		for k, v := range x {
