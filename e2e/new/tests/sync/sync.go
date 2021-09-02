@@ -1,6 +1,12 @@
 package sync
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
+
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/new/framework"
@@ -8,12 +14,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/onsi/ginkgo"
-	"io/ioutil"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"os"
-	"path/filepath"
-	"sync"
-	"time"
 )
 
 var _ = DevSpaceDescribe("sync", func() {
@@ -56,7 +57,10 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		ns, err := kubeClient.CreateNamespace("sync")
 		framework.ExpectNoError(err)
-		defer kubeClient.DeleteNamespace(ns)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
 
 		// interrupt chan for the dev command
 		interrupt, stop := framework.InterruptChan()
@@ -77,6 +81,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		waitGroup := sync.WaitGroup{}
 		waitGroup.Add(1)
 		go func() {
+			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
 			err = devCmd.Run(f, nil)
 			framework.ExpectNoError(err)
@@ -143,5 +148,165 @@ var _ = DevSpaceDescribe("sync", func() {
 
 		// wait for the command to finish
 		waitGroup.Wait()
+	})
+
+	ginkgo.It("should sync to a pod and watch changes", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-simple")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// deploy app to sync
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "watch.yaml",
+			},
+		}
+		err = deployCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		// interrupt chan for the sync command
+		interrupt, stop := framework.InterruptChan()
+		defer stop()
+
+		// sync with watch
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "watch.yaml",
+			},
+			Interrupt: interrupt,
+		}
+
+		// start the command
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(1)
+		go func() {
+			defer ginkgo.GinkgoRecover()
+			defer waitGroup.Done()
+
+			err := syncCmd.Run(f, nil, nil, nil)
+			framework.ExpectNoError(err)
+		}()
+
+		// wait until files were synced
+		framework.ExpectRemoteFileContents("node", ns, "/watch/file1.txt", "Hello World")
+
+		// check if file was downloaded through after hook
+		framework.ExpectLocalFileContents(filepath.Join(tempDir, "initial-sync-done.txt"), "Hello World")
+
+		// write a file and check that it got synced
+		payload := randutil.GenerateRandomString(10000)
+		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+		framework.ExpectRemoteFileContents("node", ns, "/watch/watching.txt", payload)
+
+		// stop command
+		stop()
+
+		// wait for the command to finish
+		waitGroup.Wait()
+	})
+
+	ginkgo.It("should sync to a pod and not watch changes with --no-watch", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-simple")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// deploy app to sync
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "no-watch.yaml",
+			},
+		}
+		err = deployCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		// sync with no-watch
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "no-watch.yaml",
+			},
+			NoWatch: true,
+		}
+
+		// start the command
+		err = syncCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		// wait until files were synced
+		framework.ExpectRemoteFileContents("node", ns, "/no-watch/file1.txt", "Hello World")
+
+		// check if file was downloaded through after hook
+		framework.ExpectLocalFileContents(filepath.Join(tempDir, "initial-sync-done.txt"), "Hello World")
+	})
+
+	ginkgo.It("should sync to a pod container with --container and --container-path", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-containers")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// deploy app to sync
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+		}
+		err = deployCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		// sync with --container and --container-path
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+			Container:     "container2",
+			ContainerPath: "/app2",
+			NoWatch:       true,
+		}
+
+		// start the command
+		err = syncCmd.Run(f, nil, nil, nil)
+		framework.ExpectNoError(err)
+
+		// wait until files were synced
+		framework.ExpectRemoteContainerFileContents("e2e=sync-containers", "container2", ns, "/app2/file1.txt", "Hello World")
+
+		// write a file and check that it got synced
+		payload := randutil.GenerateRandomString(10000)
+		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+		framework.ExpectRemoteContainerFileContents("e2e=sync-containers", "container2", ns, "/app2/watching.txt", payload)
 	})
 })

@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"k8s.io/apimachinery/pkg/labels"
-	"os"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
@@ -42,6 +43,9 @@ type SyncCmd struct {
 	DownloadOnInitialSync bool
 	DownloadOnly          bool
 	UploadOnly            bool
+
+	// used for testing to allow interruption
+	Interrupt chan error
 }
 
 // NewSyncCmd creates a new init command
@@ -172,31 +176,15 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 		return errors.New("--upload-only cannot be used together with --download-only")
 	}
 
-	syncConfig := &latest.SyncConfig{
-		LocalSubPath:    cmd.LocalPath,
-		ContainerPath:   cmd.ContainerPath,
-		DisableDownload: &cmd.UploadOnly,
-		DisableUpload:   &cmd.DownloadOnly,
-		WaitInitialSync: &cmd.NoWatch,
-		ExcludePaths:    cmd.Exclude,
-	}
-
-	if cmd.DownloadOnInitialSync {
-		syncConfig.InitialSync = latest.InitialSyncStrategyPreferLocal
-	} else {
-		syncConfig.InitialSync = latest.InitialSyncStrategyMirrorLocal
-	}
-	if cmd.InitialSync != "" {
-		if loader.ValidInitialSyncStrategy(latest.InitialSyncStrategy(cmd.InitialSync)) == false {
-			return errors.Errorf("--initial-sync is not valid '%s'", cmd.InitialSync)
+	// Create the sync config to apply
+	syncConfig := &latest.SyncConfig{}
+	if cmd.GlobalFlags.ConfigPath != "" && config != nil {
+		if len(config.Dev.Sync) == 0 {
+			return fmt.Errorf("No sync config found in %s", cmd.GlobalFlags.ConfigPath)
 		}
 
-		syncConfig.InitialSync = latest.InitialSyncStrategy(cmd.InitialSync)
-	}
-
-	if cmd.GlobalFlags.ConfigPath != "" && config != nil && len(config.Dev.Sync) > 0 {
 		// Check which sync config should be used
-		loadedSyncConfig := config.Dev.Sync[0]
+		syncConfig = config.Dev.Sync[0]
 		if len(config.Dev.Sync) > 1 {
 			// Select syncConfig to use
 			syncConfigNames := []string{}
@@ -234,47 +222,69 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 
 			for idx, n := range syncConfigNames {
 				if answer == n {
-					loadedSyncConfig = config.Dev.Sync[idx]
+					syncConfig = config.Dev.Sync[idx]
 					break
 				}
 			}
 		}
-
-		loadedSyncConfig.InitialSync = syncConfig.InitialSync
-		if syncConfig.WaitInitialSync == nil || *syncConfig.WaitInitialSync == true {
-			loadedSyncConfig.WaitInitialSync = ptr.Bool(true)
-		}
-		if syncConfig.LocalSubPath != "" {
-			loadedSyncConfig.LocalSubPath = syncConfig.LocalSubPath
-		}
-		if syncConfig.ContainerPath != "" {
-			loadedSyncConfig.ContainerPath = syncConfig.ContainerPath
-		}
-		if len(syncConfig.ExcludePaths) > 0 {
-			loadedSyncConfig.ExcludePaths = syncConfig.ExcludePaths
-		}
-		if options.ContainerName != "" {
-			loadedSyncConfig.ContainerName = options.ContainerName
-		}
-		if options.LabelSelector != "" || options.Pod != "" {
-			loadedSyncConfig.LabelSelector = nil
-			loadedSyncConfig.ImageName = ""
-			loadedSyncConfig.ImageSelector = ""
-		}
-		if options.Namespace != "" {
-			loadedSyncConfig.Namespace = ""
-		}
-		if *syncConfig.DisableDownload {
-			loadedSyncConfig.DisableDownload = syncConfig.DisableDownload
-		}
-		if *syncConfig.DisableUpload {
-			loadedSyncConfig.DisableUpload = syncConfig.DisableUpload
-		}
-
-		syncConfig = loadedSyncConfig
-		options = options.ApplyConfigParameter(syncConfig.LabelSelector, syncConfig.Namespace, syncConfig.ContainerName, "")
 	}
 
-	// Start terminal
-	return f.NewServicesClient(configInterface, nil, client, logger).StartSyncFromCmd(options, syncConfig, nil, cmd.Verbose)
+	// apply the flags to the empty sync config or loaded sync config from the devspace.yaml
+	err = cmd.applyFlagsToSyncConfig(syncConfig)
+	if err != nil {
+		return errors.Wrap(err, "apply flags to sync config")
+	}
+
+	options = options.ApplyConfigParameter(syncConfig.LabelSelector, syncConfig.Namespace, syncConfig.ContainerName, "")
+
+	// Start sync
+	return f.NewServicesClient(configInterface, nil, client, logger).StartSyncFromCmd(options, syncConfig, cmd.Interrupt, cmd.NoWatch, cmd.Verbose)
+}
+
+func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig) error {
+	if cmd.LocalPath != "" {
+		syncConfig.LocalSubPath = cmd.LocalPath
+	}
+	if cmd.ContainerPath != "" {
+		syncConfig.ContainerPath = cmd.ContainerPath
+	}
+	if len(cmd.Exclude) > 0 {
+		syncConfig.ExcludePaths = cmd.Exclude
+	}
+	if cmd.UploadOnly {
+		syncConfig.DisableDownload = &cmd.UploadOnly
+	}
+	if cmd.DownloadOnly {
+		syncConfig.DisableUpload = &cmd.DownloadOnly
+	}
+
+	// if selection is specified through flags, we don't want to use the loaded
+	// sync config selection from the devspace.yaml.
+	if cmd.Container != "" {
+		syncConfig.ContainerName = ""
+	}
+	if cmd.LabelSelector != "" || cmd.Pod != "" {
+		syncConfig.LabelSelector = nil
+		syncConfig.ImageName = ""
+		syncConfig.ImageSelector = ""
+	}
+	if cmd.Namespace != "" {
+		syncConfig.Namespace = ""
+	}
+
+	if cmd.DownloadOnInitialSync {
+		syncConfig.InitialSync = latest.InitialSyncStrategyPreferLocal
+	} else {
+		syncConfig.InitialSync = latest.InitialSyncStrategyMirrorLocal
+	}
+
+	if cmd.InitialSync != "" {
+		if !loader.ValidInitialSyncStrategy(latest.InitialSyncStrategy(cmd.InitialSync)) {
+			return errors.Errorf("--initial-sync is not valid '%s'", cmd.InitialSync)
+		}
+
+		syncConfig.InitialSync = latest.InitialSyncStrategy(cmd.InitialSync)
+	}
+
+	return nil
 }
