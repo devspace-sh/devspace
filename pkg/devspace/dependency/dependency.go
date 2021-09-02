@@ -324,18 +324,8 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 			dependencyLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
 		}
 
-		pluginErr := plugin.ExecutePluginHookWithContext("dependencies.before"+actionName, map[string]interface{}{
-			"dependency_name":        dependency.Name(),
-			"dependency_config":      dependency.Config().Config(),
-			"dependency_config_path": dependency.Config().Path(),
-		})
-		if pluginErr != nil {
-			return nil, pluginErr
-		}
-
-		err := action(dependency, dependencyLogger)
-		if err != nil {
-			pluginErr := plugin.ExecutePluginHookWithContext("dependencies.error"+actionName, map[string]interface{}{
+		if dependency.Config() != nil {
+			pluginErr := plugin.ExecutePluginHookWithContext("dependencies.before"+actionName, map[string]interface{}{
 				"dependency_name":        dependency.Name(),
 				"dependency_config":      dependency.Config().Config(),
 				"dependency_config_path": dependency.Config().Path(),
@@ -343,17 +333,33 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 			if pluginErr != nil {
 				return nil, pluginErr
 			}
+		}
+
+		err := action(dependency, dependencyLogger)
+		if err != nil {
+			if dependency.Config() != nil {
+				pluginErr := plugin.ExecutePluginHookWithContext("dependencies.error"+actionName, map[string]interface{}{
+					"dependency_name":        dependency.Name(),
+					"dependency_config":      dependency.Config().Config(),
+					"dependency_config_path": dependency.Config().Path(),
+				})
+				if pluginErr != nil {
+					return nil, pluginErr
+				}
+			}
 
 			return nil, errors.Wrapf(err, "%s dependency %s error %s", actionName, dependency.Name(), buff.String())
 		}
 
-		pluginErr = plugin.ExecutePluginHookWithContext("dependencies.after"+actionName, map[string]interface{}{
-			"dependency_name":        dependency.Name(),
-			"dependency_config":      dependency.Config().Config(),
-			"dependency_config_path": dependency.Config().Path(),
-		})
-		if pluginErr != nil {
-			return nil, pluginErr
+		if dependency.Config() != nil {
+			pluginErr := plugin.ExecutePluginHookWithContext("dependencies.after"+actionName, map[string]interface{}{
+				"dependency_name":        dependency.Name(),
+				"dependency_config":      dependency.Config().Config(),
+				"dependency_config_path": dependency.Config().Path(),
+			})
+			if pluginErr != nil {
+				return nil, pluginErr
+			}
 		}
 
 		executedDependencies = append(executedDependencies, dependency)
