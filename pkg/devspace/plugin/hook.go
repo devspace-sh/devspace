@@ -2,8 +2,8 @@ package plugin
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
+	json "github.com/json-iterator/go"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"github.com/loft-sh/devspace/pkg/util/log"
