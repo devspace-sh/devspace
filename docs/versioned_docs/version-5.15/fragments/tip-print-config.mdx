@@ -1,0 +1,5 @@
+The following command is useful to verify that the profile modifies the config as intended:
+```bash
+devspace print -p profile-1 -p profile-2
+```
+The above command would print the config after applying all profile `patches` and `replace` statements from `profile-1` first and then `profile-2`.

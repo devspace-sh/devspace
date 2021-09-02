@@ -1,0 +1,109 @@
+---
+title: Required Versions
+sidebar_label: require
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+DevSpace allows you to define certain requirements that must be met to use DevSpace for a certain project. This is useful if you want to ensure that all developers that use DevSpace in a project have a certain DevSpace version, specific plugins or commands installed. You can define one or multiple of:
+
+- **DevSpace Version** (`require.devspace`): You can define a required DevSpace version 
+- **Installed Plugins** (`require.plugins`): You can define required plugins and their version
+- **Installed Commands** (`require.commands`): You can define arbitrary commands such as `kubectl` or `helm` that need to be present locally in a specific version or range
+
+Requirements are defined in the `require` section of the `devspace.yaml`.
+
+<Tabs
+    defaultValue="devspace"
+    values={[        
+        { label: 'DevSpace Version', value: 'devspace', },
+        { label: 'Plugins', value: 'plugins', },
+        { label: 'Commands', value: 'commands', },
+    ]
+    }>
+<TabItem value="devspace">
+
+```yaml
+# You can either specify an exact version or a version range or even
+# multiple versions.
+require: 
+  devspace: '>= 4.0, < 6.0'
+```
+
+</TabItem>
+<TabItem value="plugins">
+
+```yaml
+# Each plugin that is defined under plugins needs to be installed 
+# in the required version.
+require:
+  plugins:
+  - name: loft
+    version: ">= 1.11.0"
+```
+
+</TabItem>
+<TabItem value="commands">
+
+```yaml
+require:
+  # By default devspace will try to call the command 'NAME version' 
+  # and use the regex '(v\\d+\\.\\d+\\.\\d+)' to find the version
+  commands:
+  - name: helm
+    version: '> 3.0.0'
+  - name: my-custom-command
+    # Override the default args
+    versionArgs: ["--version"]
+    # Override the default reg ex
+    versionRegEx: "Version: (v?\\d+\\.\\d+\\.\\d+)"
+    version: '4.6.7'
+```
+
+</TabItem>
+</Tabs>
+
+## Configuration
+
+### `devspace`
+The `devspace` option can be used to define a version constraint for the DevSpace version that is required to use this config. Constraints can have `=`, `!=`, `<`, `>`, `>=` or `<=` in front of them and can be chained for a logical AND:
+- **Exact Version**: `v1.0.0`
+- **Newer Versions**: `>= v1.0.0`
+- **Older Versions**: `< v1.0.0`
+- **Multiple**: `>= v4.0.0, <= v8.0.0, != v5.0.0`
+
+### `plugins`
+The `plugins` option takes an array of required plugins that need to be installed. For each plugin a name (`require.plugins[*].name`) and version constraint (`require.plugins[*].version`) is required.
+
+For example:
+```yaml
+# Each plugin that is defined under plugins needs to be installed 
+# in the required version.
+require:
+  plugins:
+  # Requires that the plugin loft is installed with at least version v1.11.0
+  - name: loft
+    version: ">= 1.11.0"
+```
+
+### `commands`
+The `commands` option takes an array of required commands that need to be installed. For each command a name (`require.commands[*].name`) and version constraint (`require.commands[*].version`) is required. By default, DevSpace will try to call the command via `NAME version` to figure out its version. DevSpace will use the regex `(v\\d+\\.\\d+\\.\\d+)` to parse the command version and assumes the first matching group contains the version. If no matching group can be found or the command does not exist, DevSpace will fail.
+
+You can override the arguments used by DevSpace to retrieve the command version via `require.commands[*].versionArgs`. You can also override the regex that is used by DevSpace to parse the command version via `require.commands[*].versionRegEx`. The version regex needs to define a single matching group that specifies the version. The first match of that matching group will be handled as command version by DevSpace.
+
+For example:
+```yaml
+require:
+  # By default devspace will try to call the command 'NAME version' 
+  # and use the regex '(v\\d+\\.\\d+\\.\\d+)' to find the version
+  commands:
+  - name: helm
+    version: '> 3.0.0'
+  - name: my-custom-command
+    # Override the default args
+    versionArgs: ["--version"]
+    # Override the default reg ex
+    versionRegEx: "Version: (v?\\d+\\.\\d+\\.\\d+)"
+    version: '4.6.7'
+```
