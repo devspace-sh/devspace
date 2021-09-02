@@ -61,7 +61,7 @@ func (cg *DockerfileGenerator) ContainerizeApplication(dockerfilePath string) er
 	// Check if the user already has a dockerfile
 	_, err := os.Stat(dockerfilePath)
 	if os.IsNotExist(err) == false {
-		return fmt.Errorf("Dockerfile at %s already exists", dockerfilePath)
+		return fmt.Errorf("dockerfile at %s already exists", dockerfilePath)
 	}
 
 	cg.log.StartWait("Detecting programming language")
@@ -128,7 +128,12 @@ func (cg *DockerfileGenerator) IsSupportedLanguage(language string) bool {
 func (cg *DockerfileGenerator) GetSupportedLanguages() ([]string, error) {
 	err := cg.gitRepo.Update(true)
 	if err != nil {
-		return nil, errors.Errorf("Error updating git repo %s: %v", cg.gitRepo.RemoteURL, err)
+		// try to remove and re-clone
+		_ = os.RemoveAll(cg.gitRepo.LocalPath)
+		err = cg.gitRepo.Update(true)
+		if err != nil {
+			return nil, errors.Errorf("Error updating git repo %s: %v", cg.gitRepo.RemoteURL, err)
+		}
 	}
 
 	if len(cg.supportedLanguages) == 0 {
@@ -145,6 +150,7 @@ func (cg *DockerfileGenerator) GetSupportedLanguages() ([]string, error) {
 			}
 		}
 	}
+
 	return cg.supportedLanguages, nil
 }
 
