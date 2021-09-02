@@ -57,7 +57,7 @@ var _ = DevSpaceDescribe("deploy", func() {
 		}
 
 		// run the command
-		err = deployCmd.Run(f, nil, nil, nil)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// wait until nginx pod is reachable
@@ -87,7 +87,7 @@ var _ = DevSpaceDescribe("deploy", func() {
 		}
 
 		// run the command
-		err = deployCmd.Run(f, nil, nil, nil)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// wait until nginx pod is reachable

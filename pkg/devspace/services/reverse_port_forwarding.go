@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
+	"github.com/loft-sh/devspace/pkg/devspace/services/synccontroller"
 	"github.com/loft-sh/devspace/pkg/devspace/tunnel"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"io"
@@ -30,9 +32,24 @@ func (serviceClient *client) StartReversePortForwarding(interrupt chan error) er
 			continue
 		}
 
+		pluginErr := plugin.ExecutePluginHookWithContext("reversePortForwarding.start", map[string]interface{}{
+			"reverse_port_forwarding_config": portForwarding,
+		})
+		if pluginErr != nil {
+			return pluginErr
+		}
+
 		// start reverse port forwarding
 		err := serviceClient.startReversePortForwarding(cache, portForwarding, interrupt, serviceClient.log)
 		if err != nil {
+			pluginErr := plugin.ExecutePluginHookWithContext("reversePortForwarding.error", map[string]interface{}{
+				"reverse_port_forwarding_config": portForwarding,
+				"error":                          err,
+			})
+			if pluginErr != nil {
+				return pluginErr
+			}
+
 			return err
 		}
 	}
@@ -84,8 +101,9 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
+	logFile := logpkg.GetFileLogger("reverse-portforwarding")
 	go func() {
-		err := inject.StartStream(serviceClient.client, container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "tunnel"}, stdinReader, stdoutWriter)
+		err := synccontroller.StartStream(serviceClient.client, container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "tunnel"}, stdinReader, stdoutWriter, false, logFile)
 		if err != nil {
 			errorChan <- errors.Errorf("Reverse Port Forwarding - connection lost to pod %s/%s: %v", container.Pod.Namespace, container.Pod.Name, err)
 		}
@@ -98,7 +116,6 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 		}
 	}()
 
-	logFile := logpkg.GetFileLogger("reverse-portforwarding")
 	go func(portForwarding *latest.PortForwardingConfig, interrupt chan error) {
 		select {
 		case err := <-errorChan:
@@ -107,9 +124,18 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 				stdinWriter.Close()
 				stdoutWriter.Close()
 				logFile.Error(err)
+				plugin.LogExecutePluginHookWithContext("reversePortForwarding.restart", map[string]interface{}{
+					"reverse_port_forwarding_config": portForwarding,
+					"error":                          err,
+				})
+
 				for {
 					err = serviceClient.startReversePortForwarding(cache, portForwarding, interrupt, logpkg.Discard)
 					if err != nil {
+						plugin.LogExecutePluginHookWithContext("reversePortForwarding.restart", map[string]interface{}{
+							"reverse_port_forwarding_config": portForwarding,
+							"error":                          err,
+						})
 						serviceClient.log.Errorf("Error restarting reverse port-forwarding: %v", err)
 						serviceClient.log.Errorf("Will try again in 15 seconds")
 						time.Sleep(time.Second * 15)
@@ -124,6 +150,9 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 			close(closeChan)
 			stdinWriter.Close()
 			stdoutWriter.Close()
+			plugin.LogExecutePluginHookWithContext("reversePortForwarding.stop", map[string]interface{}{
+				"reverse_port_forwarding_config": portForwarding,
+			})
 		}
 	}(portForwarding, interrupt)
 

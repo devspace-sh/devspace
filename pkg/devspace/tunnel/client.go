@@ -16,10 +16,6 @@ import (
 	"time"
 )
 
-const (
-	bufferSize = 1024 * 32
-)
-
 type Message struct {
 	c *net.Conn
 	d *[]byte
@@ -28,126 +24,160 @@ type Message struct {
 func ReceiveData(stream remote.Tunnel_InitTunnelClient, closeStream <-chan bool, sessionsOut chan<- *tunnel.Session, port int32, scheme string, log logpkg.Logger) error {
 loop:
 	for {
+		m, err := stream.Recv()
 		select {
 		case <-closeStream:
+			log.Debugf("closing listener on %d", port)
+			_ = stream.CloseSend()
+			break loop
+		case <-stream.Context().Done():
 			_ = stream.CloseSend()
 			break loop
 		default:
-			m, err := stream.Recv()
 			if err != nil {
 				return fmt.Errorf("error reading from stream: %v", err)
 			}
+
 			requestId, err := uuid.Parse(m.RequestId)
 			if err != nil {
 				log.Errorf("%s; failed parsing session uuid from stream, skipping", m.RequestId)
 				continue
 			}
+
 			session, exists := tunnel.GetSession(requestId)
 			if exists == false {
-				if m.ShouldClose == false {
-					// new session
-					conn, err := net.DialTimeout(strings.ToLower(scheme), fmt.Sprintf("localhost:%d", port), time.Millisecond*500)
-					if err != nil {
-						log.Errorf("failed connecting to localhost on port %d scheme %s: %v", port, scheme, err)
-						continue
+				log.Debugf("new connection %s", requestId)
+
+				// new session
+				conn, err := net.DialTimeout(strings.ToLower(scheme), fmt.Sprintf("localhost:%d", port), time.Millisecond*500)
+				if err != nil {
+					log.Errorf("failed connecting to localhost on port %d scheme %s: %v", port, scheme, err)
+					// close the remote connection
+					resp := &remote.SocketDataRequest{
+						RequestId:   requestId.String(),
+						ShouldClose: true,
 					}
-					session = tunnel.NewSessionFromStream(requestId, conn)
-					go ReadFromSession(session, sessionsOut, log)
-				} else {
-					session = tunnel.NewSessionFromStream(requestId, nil)
-					session.Open = false
+					err := stream.Send(resp)
+					if err != nil {
+						log.Errorf("failed sending close message to tunnel stream: %v", err)
+					}
+
+					continue
 				}
+
+				session, err = tunnel.NewSessionFromStream(requestId, conn)
+				if err != nil {
+					log.Errorf("%s; error creating new session from stream: %v", m.RequestId, err)
+					continue
+				}
+
+				go ReadFromSession(session, sessionsOut, log)
+			} else if m.ShouldClose {
+				session.Open = false
 			}
+
+			// process the data from the server
 			handleStreamData(m, session, log)
 		}
 	}
-
 	return nil
 }
 
 func handleStreamData(m *remote.SocketDataResponse, session *tunnel.Session, log logpkg.Logger) {
 	if session.Open == false {
-		if session.Conn != nil {
-			ok, err := tunnel.CloseSession(session.Id)
-			if ok != true {
-				log.Warnf("%s: failed closing session: %v", session.Id.String(), err)
-			}
-		}
-	} else {
-		c := session.Conn
-		data := m.GetData()
-		if len(data) > 0 {
-			session.Lock.Lock()
-			_, err := c.Write(data)
-			session.Lock.Unlock()
-			if err != nil {
-				log.Warnf("%s: failed writing to socket, closing session: %v", session.Id.String(), err)
-				ok, err := tunnel.CloseSession(session.Id)
-				if ok != true {
-					log.Warnf("%s: failed closing session: %v", session.Id.String(), err)
-				}
-			}
+		session.Close()
+		return
+	}
+
+	data := m.GetData()
+	log.Debugf("received %d bytes from server", len(data))
+	if len(data) > 0 {
+		session.Lock()
+		_, err := session.Conn.Write(data)
+		session.Unlock()
+		log.Debugf("wrote %d bytes to conn", len(data))
+		if err != nil {
+			log.Warnf("%s: failed writing to socket, closing session: %v", session.Id.String(), err)
+			session.Close()
+			return
 		}
 	}
 }
 
 func ReadFromSession(session *tunnel.Session, sessionsOut chan<- *tunnel.Session, log logpkg.Logger) {
+	log.Debugf("started reading conn %s", session.Id)
+	defer log.Debugf("finished reading conn %s", session.Id)
+
 	conn := session.Conn
-	buff := make([]byte, bufferSize)
+	buff := make([]byte, tunnel.BufferSize)
+
+loop:
 	for {
 		br, err := conn.Read(buff)
-		if err != nil {
-			if err != io.EOF {
-				log.Errorf("%s: failed reading from socket, exiting: %v", session.Id.String(), err)
+		select {
+		case <-session.Context.Done():
+			return
+		default:
+			if err != nil {
+				if err != io.EOF {
+					log.Errorf("%s: failed reading from socket, exiting: %v", session.Id.String(), err)
+				} else {
+					log.Debugf("read EOF from conn")
+				}
+				session.Open = false
+				sessionsOut <- session
+				break loop
 			}
-			session.Open = false
+
+			log.Debugf("read %d bytes from conn", br)
+			if br > 0 {
+				session.Lock()
+				_, err = session.Buf.Write(buff[0:br])
+				session.Unlock()
+				log.Debugf("wrote %d bytes to session", br)
+			}
+			if err != nil {
+				log.Errorf("%s: failed writing to session buffer: %v", session.Id, err)
+				break loop
+			}
+
 			sessionsOut <- session
-			break
 		}
-		if br > 0 {
-			session.Lock.Lock()
-			_, err = session.Buf.Write(buff[:br])
-			session.Lock.Unlock()
-			if br == len(buff) {
-				newSize := len(buff) * 2
-				buff = make([]byte, newSize)
-			}
-		}
-		if err != nil {
-			log.Errorf("%s: failed writing to session buffer: %v", session.Id, err)
-			break
-		}
-		sessionsOut <- session
 	}
 }
 
-func SendData(stream remote.Tunnel_InitTunnelClient, sessions <-chan *tunnel.Session, closeChan <-chan bool) error {
-	errorChan := make(chan error, 10)
+func SendData(stream remote.Tunnel_InitTunnelClient, sessions <-chan *tunnel.Session, closeChan <-chan bool, log logpkg.Logger) error {
 	for {
 		select {
-		case err := <-errorChan:
-			return err
+		case <-stream.Context().Done():
+			return nil
 		case <-closeChan:
 			return nil
 		case session := <-sessions:
-			session.Lock.Lock()
+			// read the bytes from the buffer
+			// but allow it to keep growing while we send the response
+			session.Lock()
 			bys := session.Buf.Len()
 			bytes := make([]byte, bys)
-			_, _ = session.Buf.Read(bytes)
-
+			_, err := session.Buf.Read(bytes)
+			if err != nil {
+				session.Unlock()
+				return fmt.Errorf("failed reading stream from session %v, exiting", err)
+			}
+			log.Debugf("read %d from buffer out of %d available", len(bytes), bys)
 			resp := &remote.SocketDataRequest{
 				RequestId:   session.Id.String(),
 				Data:        bytes,
-				ShouldClose: false,
+				ShouldClose: !session.Open,
 			}
-			if session.Open == false {
-				resp.ShouldClose = true
-			}
-			session.Lock.Unlock()
-			err := stream.Send(resp)
+			session.Unlock()
+
+			log.Debugf("sending %d bytes to server", len(bytes))
+			err = stream.Send(resp)
 			if err != nil {
-				errorChan <- fmt.Errorf("failed sending message to tunnel stream, exiting; %v", err)
+				return fmt.Errorf("failed sending message to tunnel stream, exiting")
 			}
+			log.Debugf("sent %d bytes to server", len(bytes))
 		}
 	}
 }
@@ -218,7 +248,7 @@ func StartReverseForward(reader io.ReadCloser, writer io.WriteCloser, tunnels []
 				}
 			}()
 			go func() {
-				err = SendData(stream, sessions, closeStream)
+				err = SendData(stream, sessions, closeStream, logFile)
 				if err != nil {
 					errorsChan <- err
 				}

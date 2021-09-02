@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/devspace/sync"
@@ -63,7 +64,27 @@ type Options struct {
 }
 
 func (c *controller) Start(options *Options, log logpkg.Logger) error {
-	return c.startWithWait(options, log)
+	pluginErr := plugin.ExecutePluginHookWithContext("sync.start", map[string]interface{}{
+		"sync_config": options.SyncConfig,
+	})
+	if pluginErr != nil {
+		return pluginErr
+	}
+
+	err := c.startWithWait(options, log)
+	if err != nil {
+		pluginErr := plugin.ExecutePluginHookWithContext("sync.error", map[string]interface{}{
+			"sync_config": options.SyncConfig,
+			"ERROR":       err,
+		})
+		if pluginErr != nil {
+			return pluginErr
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
@@ -84,11 +105,26 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				return err
 			}
 		}
+
+		pluginErr := plugin.ExecutePluginHookWithContext("sync.beforeInitialSync", map[string]interface{}{
+			"sync_config": options.SyncConfig,
+		})
+		if pluginErr != nil {
+			return pluginErr
+		}
 	}
 
 	// start the sync
 	client, err := c.startSync(options, onInitUploadDone, onInitDownloadDone, onDone, onError, log)
 	if err != nil {
+		pluginErr := plugin.ExecutePluginHookWithContext("sync.errorInitialSync", map[string]interface{}{
+			"sync_config": options.SyncConfig,
+			"ERROR":       err,
+		})
+		if pluginErr != nil {
+			return pluginErr
+		}
+
 		return err
 	}
 
@@ -102,6 +138,13 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 		for {
 			select {
 			case err := <-onError:
+				pluginErr := plugin.ExecutePluginHookWithContext("sync.errorInitialSync", map[string]interface{}{
+					"sync_config": options.SyncConfig,
+					"ERROR":       err,
+				})
+				if pluginErr != nil {
+					return pluginErr
+				}
 				return errors.Wrap(err, "initial sync")
 			case <-onInitUploadDone:
 				uploadDone = true
@@ -109,10 +152,22 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				downloadDone = true
 			case <-options.Interrupt:
 				client.Stop(nil)
+				pluginErr := plugin.ExecutePluginHookWithContext("sync.stop", map[string]interface{}{
+					"sync_config": options.SyncConfig,
+				})
+				if pluginErr != nil {
+					return pluginErr
+				}
 				return nil
 			case <-onDone:
 				if options.Done != nil {
 					close(options.Done)
+				}
+				pluginErr := plugin.ExecutePluginHookWithContext("sync.stop", map[string]interface{}{
+					"sync_config": options.SyncConfig,
+				})
+				if pluginErr != nil {
+					return pluginErr
 				}
 				return nil
 			}
@@ -126,6 +181,12 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				return err
 			}
 		}
+		pluginErr := plugin.ExecutePluginHookWithContext("sync.afterInitialSync", map[string]interface{}{
+			"sync_config": options.SyncConfig,
+		})
+		if pluginErr != nil {
+			return pluginErr
+		}
 	}
 
 	// should we restart the client on error?
@@ -133,6 +194,10 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 		go func(syncClient *sync.Sync, options *Options) {
 			select {
 			case err = <-onError:
+				plugin.LogExecutePluginHookWithContext("sync.restart", map[string]interface{}{
+					"sync_config": options.SyncConfig,
+					"ERROR":       err,
+				})
 				if c.isFatalSyncError(err) {
 					c.log.Fatalf("Fatal error in sync: %v", err)
 				}
@@ -141,6 +206,10 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				for {
 					err := c.startWithWait(options, options.RestartLog)
 					if err != nil {
+						plugin.LogExecutePluginHookWithContext("sync.restart", map[string]interface{}{
+							"sync_config": options.SyncConfig,
+							"ERROR":       err,
+						})
 						c.log.Errorf("Error restarting sync: %v", err)
 						c.log.Errorf("Will try again in 15 seconds")
 						time.Sleep(time.Second * 15)
@@ -151,10 +220,16 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				}
 			case <-options.Interrupt:
 				syncClient.Stop(nil)
+				plugin.LogExecutePluginHookWithContext("sync.stop", map[string]interface{}{
+					"sync_config": options.SyncConfig,
+				})
 			case <-onDone:
 				if options.Done != nil {
 					close(options.Done)
 				}
+				plugin.LogExecutePluginHookWithContext("sync.stop", map[string]interface{}{
+					"sync_config": options.SyncConfig,
+				})
 			}
 		}(client, options)
 	}
@@ -361,7 +436,7 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 	upStdoutReader, upStdoutWriter := io.Pipe()
 
 	go func() {
-		err := startStream(c.client, pod, container, upstreamArgs, upStdinReader, upStdoutWriter, options.Log)
+		err := StartStream(c.client, pod, container, upstreamArgs, upStdinReader, upStdoutWriter, true, options.Log)
 		if err != nil {
 			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
@@ -392,7 +467,7 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 	downStdoutReader, downStdoutWriter := io.Pipe()
 
 	go func() {
-		err := startStream(c.client, pod, container, downstreamArgs, downStdinReader, downStdoutWriter, options.Log)
+		err := StartStream(c.client, pod, container, downstreamArgs, downStdinReader, downStdoutWriter, true, options.Log)
 		if err != nil {
 			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
@@ -426,7 +501,7 @@ func getSyncCommands(cmd *latest.SyncExecCommand) (string, []string, string, []s
 	return onFileChange.Command, onFileChange.Args, onDirCreate.Command, onDirCreate.Args
 }
 
-func startStream(client kubectl.Client, pod *v1.Pod, container string, command []string, reader io.Reader, stdoutWriter io.Writer, log logpkg.Logger) error {
+func StartStream(client kubectl.Client, pod *v1.Pod, container string, command []string, reader io.Reader, stdoutWriter io.Writer, buffer bool, log logpkg.Logger) error {
 	stderrBuffer := &bytes.Buffer{}
 	stderrReader, stderrWriter := io.Pipe()
 	defer stderrWriter.Close()
@@ -443,13 +518,18 @@ func startStream(client kubectl.Client, pod *v1.Pod, container string, command [
 		}
 	}()
 
+	var stdErr io.Writer = stderrWriter
+	if buffer {
+		stdErr = io.MultiWriter(stderrBuffer, stderrWriter)
+	}
+
 	err := client.ExecStream(&kubectl.ExecStreamOptions{
 		Pod:       pod,
 		Container: container,
 		Command:   command,
 		Stdin:     reader,
 		Stdout:    stdoutWriter,
-		Stderr:    io.MultiWriter(stderrBuffer, stderrWriter),
+		Stderr:    stdErr,
 	})
 	if err != nil {
 		return fmt.Errorf("%s %v", stderrBuffer.String(), err)

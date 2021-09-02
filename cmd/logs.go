@@ -33,7 +33,7 @@ type LogsCmd struct {
 }
 
 // NewLogsCmd creates a new login command
-func NewLogsCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
+func NewLogsCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &LogsCmd{GlobalFlags: globalFlags}
 
 	logsCmd := &cobra.Command{
@@ -53,7 +53,8 @@ devspace logs --namespace=mynamespace
 	`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.RunLogs(f, plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.RunLogs(f)
 		},
 	}
 
@@ -70,7 +71,7 @@ devspace logs --namespace=mynamespace
 }
 
 // RunLogs executes the functionality devspace logs
-func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 	// Set config root
 	log := f.GetLog()
 	configOptions := cmd.ToConfigOptions(log)
@@ -103,7 +104,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory, plugins []plugin.Metadata, cobraC
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "logs", client.CurrentContext(), client.Namespace(), nil)
+	err = plugin.ExecutePluginHook("logs")
 	if err != nil {
 		return err
 	}

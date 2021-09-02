@@ -50,7 +50,7 @@ type DeployCmd struct {
 }
 
 // NewDeployCmd creates a new deploy command
-func NewDeployCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
+func NewDeployCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &DeployCmd{
 		GlobalFlags: globalFlags,
 		log:         f.GetLog(),
@@ -73,8 +73,8 @@ devspace deploy --kube-context=deploy-context
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			// Print upgrade message if new version available
 			upgrade.PrintUpgradeMessage()
-
-			return cmd.Run(f, plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run(f)
 		},
 	}
 
@@ -103,7 +103,7 @@ devspace deploy --kube-context=deploy-context
 }
 
 // Run executes the down command logic
-func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *DeployCmd) Run(f factory.Factory) error {
 	// set config root
 	cmd.log = f.GetLog()
 	configOptions := cmd.ToConfigOptions(cmd.log)
@@ -167,7 +167,7 @@ func (cmd *DeployCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	config := configInterface.Config()
 
 	// execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "deploy", client.CurrentContext(), client.Namespace(), config)
+	err = plugin.ExecutePluginHook("deploy")
 	if err != nil {
 		return err
 	}

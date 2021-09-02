@@ -54,7 +54,7 @@ type OpenCmd struct {
 }
 
 // NewOpenCmd creates a new open command
-func NewOpenCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
+func NewOpenCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &OpenCmd{
 		GlobalFlags: globalFlags,
 		log:         log.GetInstance(),
@@ -75,7 +75,8 @@ devspace open
 	`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.RunOpen(f, plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.RunOpen(f)
 		},
 	}
 
@@ -86,7 +87,7 @@ devspace open
 }
 
 // RunOpen executes the functionality "devspace open"
-func (cmd *OpenCmd) RunOpen(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 	// Set config root
 	cmd.log = f.GetLog()
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
@@ -130,7 +131,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory, plugins []plugin.Metadata, cobraC
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "open", client.CurrentContext(), client.Namespace(), nil)
+	err = plugin.ExecutePluginHook("open")
 	if err != nil {
 		return err
 	}

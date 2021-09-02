@@ -26,7 +26,7 @@ type EnterCmd struct {
 }
 
 // NewEnterCmd creates a new enter command
-func NewEnterCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
+func NewEnterCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &EnterCmd{GlobalFlags: globalFlags}
 
 	enterCmd := &cobra.Command{
@@ -47,7 +47,8 @@ devspace enter bash -n my-namespace
 devspace enter bash -l release=test
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run(f, cobraCmd, args)
 		},
 	}
 
@@ -64,7 +65,7 @@ devspace enter bash -l release=test
 }
 
 // Run executes the command logic
-func (cmd *EnterCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	logger := f.GetLog()
 	configOptions := cmd.ToConfigOptions(logger)
@@ -97,7 +98,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "enter", client.CurrentContext(), client.Namespace(), nil)
+	err = plugin.ExecutePluginHook("enter")
 	if err != nil {
 		return err
 	}

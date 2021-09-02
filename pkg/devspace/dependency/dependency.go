@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"io"
@@ -323,9 +324,42 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 			dependencyLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
 		}
 
+		if dependency.Config() != nil {
+			pluginErr := plugin.ExecutePluginHookWithContext("dependencies.before"+actionName, map[string]interface{}{
+				"dependency_name":        dependency.Name(),
+				"dependency_config":      dependency.Config().Config(),
+				"dependency_config_path": dependency.Config().Path(),
+			})
+			if pluginErr != nil {
+				return nil, pluginErr
+			}
+		}
+
 		err := action(dependency, dependencyLogger)
 		if err != nil {
+			if dependency.Config() != nil {
+				pluginErr := plugin.ExecutePluginHookWithContext("dependencies.error"+actionName, map[string]interface{}{
+					"dependency_name":        dependency.Name(),
+					"dependency_config":      dependency.Config().Config(),
+					"dependency_config_path": dependency.Config().Path(),
+				})
+				if pluginErr != nil {
+					return nil, pluginErr
+				}
+			}
+
 			return nil, errors.Wrapf(err, "%s dependency %s error %s", actionName, dependency.Name(), buff.String())
+		}
+
+		if dependency.Config() != nil {
+			pluginErr := plugin.ExecutePluginHookWithContext("dependencies.after"+actionName, map[string]interface{}{
+				"dependency_name":        dependency.Name(),
+				"dependency_config":      dependency.Config().Config(),
+				"dependency_config_path": dependency.Config().Path(),
+			})
+			if pluginErr != nil {
+				return nil, pluginErr
+			}
 		}
 
 		executedDependencies = append(executedDependencies, dependency)

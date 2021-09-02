@@ -33,7 +33,7 @@ type PurgeCmd struct {
 }
 
 // NewPurgeCmd creates a new purge command
-func NewPurgeCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
+func NewPurgeCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &PurgeCmd{
 		GlobalFlags: globalFlags,
 		log:         log.GetInstance(),
@@ -54,7 +54,8 @@ devspace purge -d my-deployment
 #######################################################`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run(f)
 		},
 	}
 
@@ -70,7 +71,7 @@ devspace purge -d my-deployment
 }
 
 // Run executes the purge command logic
-func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *PurgeCmd) Run(f factory.Factory) error {
 	// Set config root
 	cmd.log = f.GetLog()
 	configOptions := cmd.ToConfigOptions(cmd.log)
@@ -116,7 +117,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "purge", client.CurrentContext(), client.Namespace(), nil)
+	err = plugin.ExecutePluginHook("purge")
 	if err != nil {
 		return err
 	}

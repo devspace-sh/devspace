@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"io"
 	"os"
 	"strings"
@@ -88,7 +89,9 @@ devspace --dependency my-dependency run any-command --any-command-flag
 				log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
 			}
 
-			return cmd.RunRun(f, cobraCmd, os.Args[index:])
+			args = os.Args[index:]
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.RunRun(f, cobraCmd, args)
 		},
 	}
 
@@ -118,6 +121,12 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 	if len(commandSplitted) == 2 {
 		cmd.Dependency = commandSplitted[0]
 		args[0] = commandSplitted[1]
+	}
+
+	// Execute plugin hook
+	err = plugin.ExecutePluginHook("run")
+	if err != nil {
+		return err
 	}
 
 	// check if we should execute a dependency command

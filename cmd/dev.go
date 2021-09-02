@@ -6,8 +6,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/legacy"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
+	"github.com/loft-sh/devspace/pkg/devspace/dev"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
-	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"os"
@@ -87,7 +87,7 @@ type DevCmd struct {
 }
 
 // NewDevCmd creates a new devspace dev command
-func NewDevCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
+func NewDevCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &DevCmd{
 		GlobalFlags: globalFlags,
 		log:         log.GetInstance(),
@@ -113,8 +113,8 @@ Open terminal instead of logs:
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			// Print upgrade message if new version available
 			upgrade.PrintUpgradeMessage()
-
-			return cmd.Run(f, plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run(f, args)
 		},
 	}
 
@@ -156,7 +156,7 @@ Open terminal instead of logs:
 }
 
 // Run executes the command logic
-func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 	if cmd.Interactive {
 		cmd.log.Warn("Interactive mode flag is deprecated and will be removed in the future. Please take a look at https://devspace.sh/cli/docs/guides/interactive-mode on how to transition to an interactive profile")
 	}
@@ -225,7 +225,7 @@ func (cmd *DevCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *c
 	config := configInterface.Config()
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "dev", client.CurrentContext(), client.Namespace(), config)
+	err = plugin.ExecutePluginHook("dev")
 	if err != nil {
 		return err
 	}
@@ -263,7 +263,17 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 		dependencies    = []types.Dependency{}
 	)
 
+	pluginErr := plugin.ExecutePluginHook("dev.beforePipeline")
+	if pluginErr != nil {
+		return 0, pluginErr
+	}
+
 	if cmd.SkipPipeline == false {
+		pluginErr := plugin.ExecutePluginHook("dev.beforeDependencies")
+		if pluginErr != nil {
+			return 0, pluginErr
+		}
+
 		// Dependencies
 		dependencies, err = f.NewDependencyManager(configInterface, client, cmd.ToConfigOptions(cmd.log), cmd.log).DeployAll(dependency.DeployOptions{
 			ForceDeployDependencies: cmd.ForceDependencies,
@@ -285,6 +295,11 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 			return 0, errors.Errorf("error deploying dependencies: %v", err)
 		}
 
+		pluginErr = plugin.ExecutePluginHook("dev.afterDependencies")
+		if pluginErr != nil {
+			return 0, pluginErr
+		}
+
 		// Create Pull Secrets
 		err = pullsecrets.NewClient(configInterface, dependencies, client, dockerClient, cmd.log).CreatePullSecrets()
 		if err != nil {
@@ -293,6 +308,11 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 
 		// Only execute pipeline if we are not focused on a dependency
 		if len(cmd.Dependency) == 0 {
+			pluginErr := plugin.ExecutePluginHook("dev.beforeBuild")
+			if pluginErr != nil {
+				return 0, pluginErr
+			}
+
 			// Build image if necessary
 			builtImages := make(map[string]string)
 			if cmd.SkipBuild == false {
@@ -318,6 +338,16 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 						return 0, errors.Errorf("error saving generated config: %v", err)
 					}
 				}
+			}
+
+			pluginErr = plugin.ExecutePluginHook("dev.afterBuild")
+			if pluginErr != nil {
+				return 0, pluginErr
+			}
+
+			pluginErr = plugin.ExecutePluginHook("dev.beforeDeploy")
+			if pluginErr != nil {
+				return 0, pluginErr
 			}
 
 			// Deploy all defined deployments
@@ -348,6 +378,11 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 					return 0, errors.Errorf("error saving generated config: %v", err)
 				}
 			}
+
+			pluginErr = plugin.ExecutePluginHook("dev.afterDeploy")
+			if pluginErr != nil {
+				return 0, pluginErr
+			}
 		}
 
 		// Update last used kube context
@@ -355,6 +390,11 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 		if err != nil {
 			return 0, errors.Wrap(err, "update last kube context")
 		}
+	}
+
+	pluginErr = plugin.ExecutePluginHook("dev.afterPipeline")
+	if pluginErr != nil {
+		return 0, pluginErr
 	}
 
 	// Wait if necessary
@@ -409,78 +449,27 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 	}
 
 	// replace pods
-	err := servicesClient.ReplacePods()
+	err := dev.ReplacePods(servicesClient)
 	if err != nil {
 		return 0, err
-	}
-	for _, d := range dependencies {
-		if d.DependencyConfig().Dev == nil || d.DependencyConfig().Dev.ReplacePods == false {
-			continue
-		}
-		err = d.ReplacePods(client, logger)
-		if err != nil {
-			return 0, err
-		}
 	}
 
 	// Open UI if configured
 	if cmd.UI {
 		cmd.UI = false
-		logger.StartWait("Starting the ui server...")
-		defer logger.StopWait()
 
-		var port *int
-		if cmd.UIPort != 0 {
-			port = &cmd.UIPort
-		}
-
-		// Create server
-		uiLogger := log.GetFileLogger("ui")
-		serv, err := server.NewServer(configInterface, dependencies, "localhost", false, client.CurrentContext(), client.Namespace(), port, uiLogger)
-		logger.StopWait()
+		err := dev.UI(servicesClient, cmd.UIPort)
 		if err != nil {
-			logger.Warnf("Couldn't start UI server: %v", err)
-		} else {
-			// Start server
-			go func() { serv.ListenAndServe() }()
-
-			logger.WriteString("\n#########################################################\n")
-			logger.Infof("DevSpace UI available at: %s", ansi.Color("http://"+serv.Server.Addr, "white+b"))
-			logger.WriteString("#########################################################\n\n")
+			return 0, err
 		}
 	}
 
 	if cmd.Portforwarding {
 		cmd.Portforwarding = false
 
-		// start port forwarding
-		err := servicesClient.StartPortForwarding(cmd.Interrupt)
+		err := dev.PortForwarding(servicesClient, cmd.Interrupt)
 		if err != nil {
-			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
-		}
-		for _, d := range dependencies {
-			if d.DependencyConfig().Dev == nil || d.DependencyConfig().Dev.Ports == false {
-				continue
-			}
-			err = d.StartPortForwarding(client, cmd.Interrupt, logger)
-			if err != nil {
-				return 0, err
-			}
-		}
-
-		// start reverse port forwarding
-		err = servicesClient.StartReversePortForwarding(cmd.Interrupt)
-		if err != nil {
-			return 0, errors.Errorf("Unable to start portforwarding: %v", err)
-		}
-		for _, d := range dependencies {
-			if d.DependencyConfig().Dev == nil || d.DependencyConfig().Dev.Ports == false {
-				continue
-			}
-			err = d.StartReversePortForwarding(client, cmd.Interrupt, logger)
-			if err != nil {
-				return 0, err
-			}
+			return 0, err
 		}
 	}
 
@@ -491,20 +480,9 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 			printSyncLog = true
 		}
 
-		err := servicesClient.StartSync(cmd.Interrupt, printSyncLog, cmd.VerboseSync, services.DefaultPrefixFn)
+		err := dev.Sync(servicesClient, cmd.Interrupt, printSyncLog, cmd.VerboseSync)
 		if err != nil {
-			return 0, errors.Wrap(err, "start sync")
-		}
-
-		// start in dependencies
-		for _, d := range dependencies {
-			if d.DependencyConfig().Dev == nil || d.DependencyConfig().Dev.Sync == false {
-				continue
-			}
-			err = d.StartSync(client, cmd.Interrupt, printSyncLog, cmd.VerboseSync, logger)
-			if err != nil {
-				return 0, err
-			}
+			return 0, err
 		}
 	}
 

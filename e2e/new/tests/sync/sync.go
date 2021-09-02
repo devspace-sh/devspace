@@ -83,7 +83,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		go func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
-			err = devCmd.Run(f, nil, nil, nil)
+			err = devCmd.Run(f, nil)
 			framework.ExpectNoError(err)
 		}()
 
@@ -170,7 +170,7 @@ var _ = DevSpaceDescribe("sync", func() {
 				ConfigPath: "watch.yaml",
 			},
 		}
-		err = deployCmd.Run(f, nil, nil, nil)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// interrupt chan for the sync command
@@ -194,7 +194,7 @@ var _ = DevSpaceDescribe("sync", func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
 
-			err := syncCmd.Run(f, nil, nil, nil)
+			err := syncCmd.Run(f)
 			framework.ExpectNoError(err)
 		}()
 
@@ -237,7 +237,7 @@ var _ = DevSpaceDescribe("sync", func() {
 				ConfigPath: "no-watch.yaml",
 			},
 		}
-		err = deployCmd.Run(f, nil, nil, nil)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// sync with no-watch
@@ -251,7 +251,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		}
 
 		// start the command
-		err = syncCmd.Run(f, nil, nil, nil)
+		err = syncCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// wait until files were synced
@@ -281,7 +281,7 @@ var _ = DevSpaceDescribe("sync", func() {
 				ConfigPath: "devspace.yaml",
 			},
 		}
-		err = deployCmd.Run(f, nil, nil, nil)
+		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// sync with --container and --container-path
@@ -297,7 +297,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		}
 
 		// start the command
-		err = syncCmd.Run(f, nil, nil, nil)
+		err = syncCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// wait until files were synced

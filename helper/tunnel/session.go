@@ -2,21 +2,42 @@ package tunnel
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"net"
-	"strconv"
-	"strings"
 	"sync"
+	"time"
+
+	"github.com/google/uuid"
 )
 
+const (
+	BufferSize = 1024 * 10
+)
+
+var openSessions = sync.Map{}
+
 type Session struct {
-	Id   uuid.UUID
-	Conn net.Conn
-	Buf  bytes.Buffer
-	Open bool
-	Lock sync.RWMutex
+	Id         uuid.UUID
+	Conn       net.Conn
+	Buf        bytes.Buffer
+	Context    context.Context
+	cancelFunc context.CancelFunc
+	Open       bool
+	sync.Mutex
+}
+
+func (s *Session) Close() {
+	s.cancelFunc()
+	if s.Conn != nil {
+		_ = s.Conn.Close()
+		s.Open = false
+	}
+	go func() {
+		<-time.After(5 * time.Second)
+		openSessions.Delete(s.Id)
+	}()
 }
 
 type RedirectRequest struct {
@@ -24,40 +45,46 @@ type RedirectRequest struct {
 	Target int32
 }
 
-func NewSession(conn net.Conn) *Session {
+func NewSession(conn net.Conn) (*Session, error) {
+	ctx, cancel := context.WithCancel(context.Background())
 	r := &Session{
-		Id:   uuid.New(),
-		Conn: conn,
-		Buf:  bytes.Buffer{},
-		Open: true,
+		Id:         uuid.New(),
+		Conn:       conn,
+		Context:    ctx,
+		cancelFunc: cancel,
+		Buf:        bytes.Buffer{},
+		Open:       true,
 	}
-	ok, err := AddSession(r)
-	if ok != true {
-		logErrorf("%s; failed registering request: %v", r.Id.String(), err)
+	err := addSession(r)
+	if err != nil {
+		return nil, err
 	}
-	return r
+	return r, nil
 }
 
-func NewSessionFromStream(id uuid.UUID, conn net.Conn) *Session {
+func NewSessionFromStream(id uuid.UUID, conn net.Conn) (*Session, error) {
+	ctx, cancel := context.WithCancel(context.Background())
 	r := &Session{
-		Id:   id,
-		Conn: conn,
-		Buf:  bytes.Buffer{},
-		Open: true,
+		Id:         id,
+		Conn:       conn,
+		Context:    ctx,
+		cancelFunc: cancel,
+		Buf:        bytes.Buffer{},
+		Open:       true,
 	}
-	ok, err := AddSession(r)
-	if ok != true {
-		logErrorf("%s; failed registering request: %v", r.Id.String(), err)
+	err := addSession(r)
+	if err != nil {
+		return nil, err
 	}
-	return r
+	return r, nil
 }
 
-func AddSession(r *Session) (bool, error) {
+func addSession(r *Session) error {
 	if _, ok := GetSession(r.Id); ok != false {
-		return false, errors.New(fmt.Sprintf("Session %s already exists", r.Id.String()))
+		return errors.New(fmt.Sprintf("Session %s already exists", r.Id.String()))
 	}
 	openSessions.Store(r.Id, r)
-	return true, nil
+	return nil
 }
 
 func GetSession(id uuid.UUID) (*Session, bool) {
@@ -66,51 +93,4 @@ func GetSession(id uuid.UUID) (*Session, bool) {
 		return request.(*Session), ok
 	}
 	return nil, ok
-}
-
-var openSessions = sync.Map{}
-
-func CloseSession(id uuid.UUID) (bool, error) {
-	session, ok := GetSession(id)
-	if ok == false {
-		return true, nil
-	}
-	session.Lock.Lock()
-	conn := session.Conn
-	err := conn.Close()
-	session.Lock.Unlock()
-	openSessions.Delete(id)
-	return true, err
-}
-
-func ParsePorts(s string) (*RedirectRequest, error) {
-	raw := strings.Split(s, ":")
-	if len(raw) == 0 {
-		return nil, errors.New(fmt.Sprintf("failed parsing redirect request: %s", s))
-	}
-	if len(raw) == 1 {
-		p, err := strconv.ParseInt(raw[0], 10, 32)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf("failed to parse port %s, %v", raw[0], err))
-		}
-		return &RedirectRequest{
-			Source: int32(p),
-			Target: int32(p),
-		}, nil
-	}
-	if len(raw) == 2 {
-		s, err := strconv.ParseInt(raw[0], 10, 32)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf("failed to parse port %s, %v", raw[0], err))
-		}
-		t, err := strconv.ParseInt(raw[1], 10, 32)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf("failed to parse port %s, %v", raw[1], err))
-		}
-		return &RedirectRequest{
-			Source: int32(s),
-			Target: int32(t),
-		}, nil
-	}
-	return nil, errors.New(fmt.Sprintf("Error, bad tunnel format: %s", s))
 }

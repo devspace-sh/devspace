@@ -21,7 +21,7 @@ type AnalyzeCmd struct {
 }
 
 // NewAnalyzeCmd creates a new analyze command
-func NewAnalyzeCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
+func NewAnalyzeCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &AnalyzeCmd{GlobalFlags: globalFlags}
 
 	analyzeCmd := &cobra.Command{
@@ -41,7 +41,8 @@ devspace analyze --namespace=mynamespace
 	`,
 		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.RunAnalyze(f, plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.RunAnalyze(f, cobraCmd, args)
 		},
 	}
 
@@ -54,7 +55,7 @@ devspace analyze --namespace=mynamespace
 }
 
 // RunAnalyze executes the functionality "devspace analyze"
-func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
@@ -91,7 +92,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, plugins []plugin.Metadata, 
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "analyze", client.CurrentContext(), client.Namespace(), nil)
+	err = plugin.ExecutePluginHook("analyze")
 	if err != nil {
 		return err
 	}

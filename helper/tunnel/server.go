@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"context"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/loft-sh/devspace/helper/remote"
@@ -16,12 +17,16 @@ import (
 
 type tunnelServer struct{}
 
-const (
-	bufferSize = 1024 * 32
-)
+var debugModeEnabled = os.Getenv("DEVSPACE_HELPER_DEBUG") == "true"
 
 func logErrorf(message string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stderr, message, args...)
+	_, _ = fmt.Fprintf(os.Stderr, message+"\n", args...)
+}
+
+func logDebugf(message string, args ...interface{}) {
+	if debugModeEnabled {
+		_, _ = fmt.Fprintf(os.Stderr, message+"\n", args...)
+	}
 }
 
 func StartTunnelServer(reader io.Reader, writer io.Writer, exitOnClose bool) error {
@@ -46,91 +51,123 @@ func NewServer() *tunnelServer {
 	return &tunnelServer{}
 }
 
-func SendData(stream *remote.Tunnel_InitTunnelServer, sessions <-chan *Session, closeChan chan<- bool) {
+func SendData(stream remote.Tunnel_InitTunnelServer, sessions <-chan *Session, closeChan chan<- bool) {
 	for {
-		session := <-sessions
-		session.Lock.Lock()
-		resp := &remote.SocketDataResponse{
-			HasErr:      false,
-			LogMessage:  nil,
-			RequestId:   session.Id.String(),
-			Data:        session.Buf.Bytes(),
-			ShouldClose: !session.Open,
-		}
-		session.Buf.Reset()
-		session.Lock.Unlock()
-		st := *stream
-		err := st.Send(resp)
-		if err != nil {
-			logErrorf("failed sending message to tunnel stream, exitin ; %v", err)
-			closeChan <- true
+		select {
+		case <-stream.Context().Done():
 			return
+		case session := <-sessions:
+			// read the bytes from the buffer
+			// but allow it to keep growing while we send the response
+			session.Lock()
+			bys := session.Buf.Len()
+			bytes := make([]byte, bys)
+			_, _ = session.Buf.Read(bytes)
+			resp := &remote.SocketDataResponse{
+				HasErr:      false,
+				LogMessage:  nil,
+				Data:        bytes,
+				RequestId:   session.Id.String(),
+				ShouldClose: !session.Open,
+			}
+			session.Unlock()
+
+			logDebugf("sending %d bytes to client", len(bytes))
+			err := stream.Send(resp)
+			if err != nil {
+				logErrorf("failed sending message to tunnel stream")
+				closeChan <- true
+				return
+			}
+			logDebugf("sent %d bytes to client", len(bytes))
 		}
 	}
 }
 
-func ReceiveData(stream *remote.Tunnel_InitTunnelServer, closeChan chan<- bool) {
-	st := *stream
+func ReceiveData(stream remote.Tunnel_InitTunnelServer, closeChan chan<- bool) {
 	for {
-		message, err := st.Recv()
-		if err != nil {
-			logErrorf("failed receiving message from stream, exiting: %v", err)
-			closeChan <- true
+		select {
+		case <-stream.Context().Done():
 			return
-		}
-		reqId, err := uuid.Parse(message.GetRequestId())
-		if err != nil {
-			logErrorf(" %s; failed to parse requestId, %v", message.GetRequestId(), err)
-		} else {
+		default:
+			message, err := stream.Recv()
+			if err != nil {
+				logErrorf("failed receiving message from stream, exiting: %v", err)
+				closeChan <- true
+				continue
+			}
+
+			reqId, err := uuid.Parse(message.GetRequestId())
+			if err != nil {
+				logErrorf(" %s; failed to parse requestId, %v", message.GetRequestId(), err)
+				continue
+			}
+
 			session, ok := GetSession(reqId)
-			if ok != true {
+			if ok != true && !message.ShouldClose {
 				logErrorf("%s; session not found in openRequests", reqId)
-			} else {
-				data := message.GetData()
-				if len(data) > 0 {
-					conn := session.Conn
-					_, err := conn.Write(data)
-					if err != nil {
-						logErrorf("%s; failed writing data to socket", reqId)
-					}
+				continue
+			}
+
+			data := message.GetData()
+			br := len(data)
+
+			logDebugf("received %d bytes from client", len(data))
+
+			// send data if we received any
+			if br > 0 && session.Open {
+				logDebugf("writing %d bytes to conn", br)
+				_, err := session.Conn.Write(data)
+				if err != nil {
+					logErrorf("%s; failed writing data to socket", reqId)
+					message.ShouldClose = true
+				} else {
+					logDebugf("wrote %d bytes to conn", br)
 				}
-				if message.ShouldClose == true {
-					ok, _ := CloseSession(reqId)
-					if ok != true {
-						logErrorf("%s; failed closing session", reqId)
-					}
-				}
+			}
+
+			if message.ShouldClose == true {
+				logDebugf("closing session")
+				session.Close()
+				logDebugf("closed session")
 			}
 		}
 	}
 }
 
-func readConn(session *Session, sessions chan<- *Session) {
-	sessions <- session
-	// We want to inform the client that we accepted a connection - some weird ass protocols wait for data from the server when connecting
-	// Read from socket in a loop and push messages to the sessions channel
-	// If the socket is closed, signal the channel to close connection
-	buff := make([]byte, bufferSize)
+func readConn(ctx context.Context, session *Session, sessions chan<- *Session) {
 	for {
+		buff := make([]byte, BufferSize)
 		br, err := session.Conn.Read(buff)
-		session.Lock.Lock()
-		logErrorf("read %d bytes from socket, err: %v", br, err)
-		if err != nil {
-			session.Open = false
-		}
-		if br > 0 {
-			session.Buf.Write(buff[:br])
-			if br == len(buff) {
-				newSize := len(buff) * 2
-				buff = make([]byte, newSize)
+
+		select {
+		case <-ctx.Done():
+			logDebugf("closing connection")
+			session.Close()
+			return
+		default:
+			session.Lock()
+			if err != nil {
+				if err != io.EOF {
+					logErrorf("failed to read from conn: %v", err)
+				}
+
+				// setting Open to false triggers SendData() to
+				// send ShouldClose
+				session.Open = false
+			}
+
+			// write the data to the session buffer, if we have data
+			if br > 0 {
+				session.Buf.Write(buff[0:br])
+			}
+			session.Unlock()
+
+			sessions <- session
+			if session.Open == false {
+				return
 			}
 		}
-		session.Lock.Unlock()
-		if !session.Open {
-			_, _ = CloseSession(session.Id)
-			return
-		}
-		sessions <- session
 	}
 }
 
@@ -173,16 +210,23 @@ func (t *tunnelServer) InitTunnel(stream remote.Tunnel_InitTunnelServer) error {
 		_ = ln.Close()
 	}(closeChan)
 
-	go ReceiveData(&stream, closeChan)
-	go SendData(&stream, sessions, closeChan)
+	go ReceiveData(stream, closeChan)
+	go SendData(stream, sessions, closeChan)
 
 	for {
 		connection, err := ln.Accept()
 		if err != nil {
 			return err
 		}
+		logDebugf("accepted new connection on ::%d", port)
+
 		// socket -> stream
-		session := NewSession(connection)
-		go readConn(session, sessions)
+		session, err := NewSession(connection)
+		if err != nil {
+			logErrorf("create new session: %v", err)
+			continue
+		}
+
+		go readConn(stream.Context(), session, sessions)
 	}
 }

@@ -3,6 +3,7 @@ package deploy
 import (
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"io"
 	"strings"
 
@@ -76,40 +77,69 @@ func (c *controller) Render(options *Options, out io.Writer, log log.Logger) err
 				}
 			}
 
-			var (
-				deployClient deployer.Interface
-				err          error
-			)
+			deployClient, err := c.getDeployClient(deployConfig, helmV2Clients, log)
+			if err != nil {
+				return err
+			}
 
-			if deployConfig.Kubectl != nil {
-				deployClient, err = kubectl.New(c.config, c.dependencies, c.client, deployConfig, log)
-				if err != nil {
-					return errors.Errorf("error render: deployment %s error: %v", deployConfig.Name, err)
-				}
-
-			} else if deployConfig.Helm != nil {
-				// Get helm client
-				helmClient, err := GetCachedHelmClient(c.config.Config(), deployConfig, c.client, helmV2Clients, true, log)
-				if err != nil {
-					return errors.Wrap(err, "get cached helm client")
-				}
-
-				deployClient, err = helm.New(c.config, c.dependencies, helmClient, c.client, deployConfig, log)
-				if err != nil {
-					return errors.Errorf("error render: deployment %s error: %v", deployConfig.Name, err)
-				}
-			} else {
-				return errors.Errorf("error render: deployment %s has no deployment method", deployConfig.Name)
+			pluginErr := plugin.ExecutePluginHookWithContext("deploy.beforeRender", map[string]interface{}{
+				"DEPLOY_CONFIG": deployConfig,
+			})
+			if pluginErr != nil {
+				return pluginErr
 			}
 
 			err = deployClient.Render(options.BuiltImages, out)
 			if err != nil {
+				pluginErr := plugin.ExecutePluginHookWithContext("deploy.errorRender", map[string]interface{}{
+					"DEPLOY_CONFIG": deployConfig,
+					"ERROR":         err,
+				})
+				if pluginErr != nil {
+					return pluginErr
+				}
+
 				return errors.Errorf("error deploying %s: %v", deployConfig.Name, err)
+			}
+
+			pluginErr = plugin.ExecutePluginHookWithContext("deploy.afterRender", map[string]interface{}{
+				"DEPLOY_CONFIG": deployConfig,
+			})
+			if pluginErr != nil {
+				return pluginErr
 			}
 		}
 	}
 
 	return nil
+}
+
+func (c *controller) getDeployClient(deployConfig *latest.DeploymentConfig, helmV2Clients map[string]helmtypes.Client, log log.Logger) (deployer.Interface, error) {
+	var (
+		deployClient deployer.Interface
+		err          error
+	)
+	if deployConfig.Kubectl != nil {
+		deployClient, err = kubectl.New(c.config, c.dependencies, c.client, deployConfig, log)
+		if err != nil {
+			return nil, errors.Errorf("error render: deployment %s error: %v", deployConfig.Name, err)
+		}
+
+	} else if deployConfig.Helm != nil {
+		// Get helm client
+		helmClient, err := GetCachedHelmClient(c.config.Config(), deployConfig, c.client, helmV2Clients, true, log)
+		if err != nil {
+			return nil, errors.Wrap(err, "get cached helm client")
+		}
+
+		deployClient, err = helm.New(c.config, c.dependencies, helmClient, c.client, deployConfig, log)
+		if err != nil {
+			return nil, errors.Errorf("error render: deployment %s error: %v", deployConfig.Name, err)
+		}
+	} else {
+		return nil, errors.Errorf("error render: deployment %s has no deployment method", deployConfig.Name)
+	}
+	return deployClient, nil
 }
 
 // Deploy deploys all deployments in the config
@@ -175,10 +205,23 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 			if err != nil {
 				return err
 			}
+			pluginErr := plugin.ExecutePluginHookWithContext("deploy.beforeDeploy", map[string]interface{}{
+				"DEPLOY_CONFIG": deployConfig,
+			})
+			if pluginErr != nil {
+				return pluginErr
+			}
 
 			wasDeployed, err := deployClient.Deploy(options.ForceDeploy, options.BuiltImages)
 			if err != nil {
 				c.hookExecuter.OnError(hook.StageDeployments, []string{hook.All, deployConfig.Name}, hook.Context{Client: c.client, Error: err}, log)
+				pluginErr := plugin.ExecutePluginHookWithContext("deploy.errorDeploy", map[string]interface{}{
+					"DEPLOY_CONFIG": deployConfig,
+					"ERROR":         err,
+				})
+				if pluginErr != nil {
+					return pluginErr
+				}
 				return errors.Errorf("error deploying %s: %v", deployConfig.Name, err)
 			}
 
@@ -189,6 +232,12 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 				err = c.hookExecuter.Execute(hook.After, hook.StageDeployments, deployConfig.Name, hook.Context{Client: c.client}, log)
 				if err != nil {
 					return err
+				}
+				pluginErr := plugin.ExecutePluginHookWithContext("deploy.afterDeploy", map[string]interface{}{
+					"DEPLOY_CONFIG": deployConfig,
+				})
+				if pluginErr != nil {
+					return pluginErr
 				}
 			} else {
 				log.Infof("Skipping deployment %s", deployConfig.Name)
@@ -270,12 +319,25 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 			if err != nil {
 				return err
 			}
+			pluginErr := plugin.ExecutePluginHookWithContext("deploy.beforePurge", map[string]interface{}{
+				"DEPLOY_CONFIG": deployConfig,
+			})
+			if pluginErr != nil {
+				return pluginErr
+			}
 
 			log.StartWait("Deleting deployment " + deployConfig.Name)
 			err = deployClient.Delete()
 			log.StopWait()
 			if err != nil {
 				// Execute on error deployment purge hook
+				pluginErr := plugin.ExecutePluginHookWithContext("deploy.errorPurge", map[string]interface{}{
+					"DEPLOY_CONFIG": deployConfig,
+					"ERROR":         err,
+				})
+				if pluginErr != nil {
+					return pluginErr
+				}
 				hookErr := c.hookExecuter.Execute(hook.OnError, hook.StagePurgeDeployments, deployConfig.Name, hook.Context{Client: c.client}, log)
 				if hookErr != nil {
 					return hookErr
@@ -283,6 +345,12 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 
 				log.Warnf("Error deleting deployment %s: %v", deployConfig.Name, err)
 			} else {
+				pluginErr := plugin.ExecutePluginHookWithContext("deploy.afterPurge", map[string]interface{}{
+					"DEPLOY_CONFIG": deployConfig,
+				})
+				if pluginErr != nil {
+					return pluginErr
+				}
 				// Execute after deployment purge hook
 				err = c.hookExecuter.Execute(hook.After, hook.StagePurgeDeployments, deployConfig.Name, hook.Context{Client: c.client}, log)
 				if err != nil {

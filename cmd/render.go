@@ -46,7 +46,7 @@ type RenderCmd struct {
 }
 
 // NewRenderCmd creates a new devspace render command
-func NewRenderCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
+func NewRenderCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &RenderCmd{
 		GlobalFlags: globalFlags,
 		Writer:      os.Stdout,
@@ -64,7 +64,8 @@ be deployed via helm and kubectl, but skips actual
 deployment.
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run(f)
 		},
 	}
 
@@ -86,7 +87,7 @@ deployment.
 }
 
 // Run executes the command logic
-func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *RenderCmd) Run(f factory.Factory) error {
 	// Set config root
 	log := f.GetLog()
 	if cmd.Silent {
@@ -139,7 +140,7 @@ func (cmd *RenderCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "render", client.CurrentContext(), client.Namespace(), config)
+	err = plugin.ExecutePluginHook("render")
 	if err != nil {
 		return err
 	}

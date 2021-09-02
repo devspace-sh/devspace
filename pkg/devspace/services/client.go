@@ -28,6 +28,11 @@ type Client interface {
 	StartTerminal(options targetselector.Options, args []string, workDir string, interrupt chan error, wait bool) (int, error)
 
 	ReplacePods() error
+
+	Log() log.Logger
+	KubeClient() kubectl.Client
+	Config() config.Config
+	Dependencies() []dependencytypes.Dependency
 }
 
 type client struct {
@@ -48,4 +53,17 @@ func NewClient(config config.Config, dependencies []dependencytypes.Dependency, 
 		podReplacer:  podreplace.NewPodReplacer(),
 		log:          log,
 	}
+}
+
+func (serviceClient *client) Config() config.Config {
+	return serviceClient.config
+}
+func (serviceClient *client) Log() log.Logger {
+	return serviceClient.log
+}
+func (serviceClient *client) KubeClient() kubectl.Client {
+	return serviceClient.client
+}
+func (serviceClient *client) Dependencies() []dependencytypes.Dependency {
+	return serviceClient.dependencies
 }

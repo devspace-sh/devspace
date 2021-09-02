@@ -108,27 +108,59 @@ func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log
 		options = &ConfigOptions{}
 	}
 
-	data, err := l.LoadRaw()
-	if err != nil {
-		return nil, err
-	}
-
-	parsedConfig, generatedConfig, resolver, err := l.parseConfig(data, parser, options, log)
-	if err != nil {
-		return nil, err
-	}
-
-	err = l.ensureRequires(parsedConfig, log)
-	if err != nil {
-		return nil, errors.Wrap(err, "require versions")
-	}
-
 	absPath, err := filepath.Abs(ConfigPath(l.configPath))
 	if err != nil {
 		return nil, err
 	}
 
-	return config.NewConfig(data, parsedConfig, generatedConfig, resolver.ResolvedVariables(), absPath), nil
+	// call plugin hook
+	pluginErr := plugin.ExecutePluginHookWithContext("config.beforeLoad", map[string]interface{}{"LOAD_PATH": absPath})
+	if pluginErr != nil {
+		return nil, pluginErr
+	}
+
+	data, err := l.LoadRaw()
+	if err != nil {
+		pluginErr = plugin.ExecutePluginHookWithContext("config.errorLoad", map[string]interface{}{"ERROR": err, "LOAD_PATH": absPath})
+		if pluginErr != nil {
+			return nil, pluginErr
+		}
+
+		return nil, err
+	}
+
+	parsedConfig, generatedConfig, resolver, err := l.parseConfig(data, parser, options, log)
+	if err != nil {
+		pluginErr = plugin.ExecutePluginHookWithContext("config.errorLoad", map[string]interface{}{"ERROR": err, "LOAD_PATH": absPath})
+		if pluginErr != nil {
+			return nil, pluginErr
+		}
+
+		return nil, err
+	}
+
+	err = l.ensureRequires(parsedConfig, log)
+	if err != nil {
+		pluginErr = plugin.ExecutePluginHookWithContext("config.errorLoad", map[string]interface{}{"ERROR": err, "LOAD_PATH": absPath})
+		if pluginErr != nil {
+			return nil, pluginErr
+		}
+
+		return nil, errors.Wrap(err, "require versions")
+	}
+
+	c := config.NewConfig(data, parsedConfig, generatedConfig, resolver.ResolvedVariables(), absPath)
+	pluginErr = plugin.ExecutePluginHookWithContext("config.afterLoad", map[string]interface{}{
+		"LOAD_PATH":     absPath,
+		"LOADED_CONFIG": c.Config(),
+		"LOADED_VARS":   c.Variables(),
+		"LOADED_RAW":    c.Raw(),
+	})
+	if pluginErr != nil {
+		return nil, pluginErr
+	}
+	plugin.SetPluginConfig(c)
+	return c, nil
 }
 
 func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) error {

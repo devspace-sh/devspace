@@ -49,7 +49,7 @@ type SyncCmd struct {
 }
 
 // NewSyncCmd creates a new init command
-func NewSyncCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
+func NewSyncCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &SyncCmd{GlobalFlags: globalFlags}
 
 	syncCmd := &cobra.Command{
@@ -72,7 +72,8 @@ devspace sync --container-path=/my-path
 			// Print upgrade message if new version available
 			upgrade.PrintUpgradeMessage()
 
-			return cmd.Run(f, plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run(f)
 		},
 	}
 
@@ -98,7 +99,7 @@ devspace sync --container-path=/my-path
 }
 
 // Run executes the command logic
-func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *SyncCmd) Run(f factory.Factory) error {
 	// Switch working directory
 	if cmd.GlobalFlags.ConfigPath != "" {
 		_, err := os.Stat(cmd.GlobalFlags.ConfigPath)
@@ -163,7 +164,7 @@ func (cmd *SyncCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "sync", client.CurrentContext(), client.Namespace(), config)
+	err = plugin.ExecutePluginHook("sync")
 	if err != nil {
 		return err
 	}

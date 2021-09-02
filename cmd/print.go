@@ -29,7 +29,7 @@ type PrintCmd struct {
 }
 
 // NewPrintCmd creates a new devspace print command
-func NewPrintCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plugin.Metadata) *cobra.Command {
+func NewPrintCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &PrintCmd{
 		GlobalFlags: globalFlags,
 		Out:         os.Stdout,
@@ -46,7 +46,8 @@ Prints the configuration for the current or given
 profile after all patching and variable substitution
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(f, plugins, cobraCmd, args)
+			plugin.SetPluginCommand(cobraCmd, args)
+			return cmd.Run(f)
 		},
 	}
 
@@ -56,7 +57,7 @@ profile after all patching and variable substitution
 }
 
 // Run executes the command logic
-func (cmd *PrintCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd *cobra.Command, args []string) error {
+func (cmd *PrintCmd) Run(f factory.Factory) error {
 	// Set config root
 	log := f.GetLog()
 	configOptions := cmd.ToConfigOptions(log)
@@ -90,7 +91,7 @@ func (cmd *PrintCmd) Run(f factory.Factory, plugins []plugin.Metadata, cobraCmd 
 	}
 
 	// execute plugin hook
-	err = plugin.ExecutePluginHook(plugins, cobraCmd, args, "print", "", "", loadedConfig.Config())
+	err = plugin.ExecutePluginHook("print")
 	if err != nil {
 		return err
 	}
