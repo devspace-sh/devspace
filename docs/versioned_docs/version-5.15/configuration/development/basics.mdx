@@ -1,0 +1,218 @@
+---
+title: Development Mode
+sidebar_label: Basics
+---
+
+import FragmentWarningMultipleDev from '../../fragments/warning-multiple-dev.mdx';
+import FragmentWorkflowDeployDependencies from '../../fragments/workflow-deploy-dependencies.mdx';
+import FragmentWorkflowBuildImages from '../../fragments/workflow-build-images.mdx';
+import FragmentWorkflowReplaceTags from '../../fragments/workflow-replace-tags.mdx';
+import FragmentWorkflowDeployProject from '../../fragments/workflow-deploy-project.mdx';
+import FragmentNoteGeneralPurposeCommand from '../../fragments/note-general-purpose-command.mdx';
+import FragmentWorkflowOpenLinks from '../../fragments/workflow-open-links.mdx';
+
+## Why?
+The biggest advantages of developing directly inside Kubernetes is that your dev environment will be very similar to your production environment and you can have a much greater confidence that everything will work in production when shipping new features.
+
+Kubernetes-based development can be useful in the following cases:
+- Your applications needs to access cluster-internal services (e.g. Cluster DNS)
+- You want to test your application in a production-like environment
+- You want to debug issues that are hard to reproduce on your local machine
+
+The development experience is very similar to using `docker-compose`, so if you are already familiar on how to develop with `docker-compose`, DevSpace will behave very similar. One of the major benefits of DevSpace versus docker-compose is that DevSpace allows you to develop in any Kubernetes cluster, either locally using minikube, Docker Kubernetes etc. or in any remote Kubernetes cluster.  
+
+
+## Start Development Mode
+Start the development mode using this command:
+```bash
+devspace dev
+```
+
+<FragmentWarningMultipleDev/>
+
+### Important Flags for `devspace dev`
+The following flags are available for all commands that trigger image building:
+- `-t / --terminal` starts a terminal to a container
+- `-d / --force-deploy` redeploy all deployments (even if they could be skipped because they have not changed)
+- `-b / --force-build` rebuild all images (even if they could be skipped because context and Dockerfile have not changed)
+
+
+
+## Development Process
+The development process first runs the [deployment process](../../configuration/deployments/basics.mdx) (1. - 4.) and then continues with starting the development-specific features.
+
+### 1. Deploy Dependencies
+
+<FragmentWorkflowDeployDependencies/>
+
+
+### 2. Build, Tag &amp; Push Images
+
+<FragmentWorkflowBuildImages/>
+
+
+### 3. Tag Replacement
+
+<FragmentWorkflowReplaceTags/>
+
+
+### 4. Deploy Project
+
+<FragmentWorkflowDeployProject/>
+
+
+### 5. Start Port-Forwarding
+DevSpace iterates over every item in the `dev.ports` array defined in the `devspace.yaml` and starts port-forwarding for each of the entries and the port mappings they define in the `forward` section.
+
+:::note
+Before starting the actual port-forwarding threads, DevSpace waits until the containers and services are ready.
+:::
+
+:::info
+Port-Fowarding allows you to access your containers and Kubernetes services via localhost.
+:::
+
+For detailed logs about the port-forwarding, take a look at `.devspace/logs/portforwarding.log`.
+
+
+### 6. Start File Synchronization
+DevSpace iterates over every item in the `dev.sync` array defined in the `devspace.yaml` and starts a bi-directional, real-time code synchronization for each of the entries and the path mappings they define.
+
+:::note Initial Sync
+Right after starting the file synchronization, DevSpace runs the so-called initial sync which quickly computes the differences between your local folders and the remote container filesystems. If DevSpace detects changes, it synchronizes them first to get a clean state before starting the real-time synchronization which is invoked every time a file changes.
+:::
+
+For detailed logs about the file synchronzation, take a look at `.devspace/logs/sync.log` for the current session and `.devspace/logs/sync.log.old` for previous logs.
+
+
+### 7. Stream Logs or Open Terminal
+DevSpace provides two options to develop applications in Kubernetes:
+- using multi-container log streaming (default)
+- using an interactive terminal session (run `devspace dev -i`)
+
+:::note Multi-Container Log Streaming (default)
+The first option starts your application as defined in your Dockerfile or in your Kubernetes pod definition. After the pods are started, DevSpace streams the logs of all containers that are started with an image that was built during the image building process. Each log line is prefixed with the image name or alternatively with the pod name of the container. Before starting the actual log streaming, DevSpace prints the last 50 log lines of each container by default.
+
+Learn how to [customize which containers should be included in the log stream and how many log lines should be shown in the beginning](../../configuration/development/log-streaming.mdx).
+:::
+
+:::note Terminal Session
+To start a terminal mode, run:
+```bash
+devspace dev -t
+```
+Instead of starting the multi-container log streaming, you can also start development mode using a terminal session.
+
+Terminal is configurable by [using the `dev.terminal` configuration section](../../configuration/development/terminal.mdx).
+:::
+
+### 8. Open Links (optional)
+DevSpace iterates over every item in the `dev.open` array defined in the `devspace.yaml` and tries to open the URL you provide for each item using the following method:
+
+<FragmentWorkflowOpenLinks/>
+
+Learn more about [configuring auto-opening links](../../configuration/development/open-links.mdx).
+
+
+
+## Useful Commands
+
+### `devspace enter`
+The command `devspace dev -t` starts a terminal but it also starts port-forwarding and file synchronization which can only be opened once. However, you often need additional terminal sessions. To open a simple terminal session without starting port-forwarding and file sync, run the following command:
+```bash
+devspace enter
+```
+
+If you do not provide a selector (e.g. pod name, label selector or image selector), DevSpace will show a picker with all available pods and containers.
+
+<FragmentNoteGeneralPurposeCommand/>
+
+
+### `devspace logs [-f]`
+If you want to print or stream the logs of a single container, run:
+```bash
+# Print logs
+devspace logs
+
+# Stream logs
+devspace logs -f
+```
+
+If you do not provide a selector (e.g. pod name, label selector or image selector), DevSpace will show a picker with all available pods and containers.
+
+<FragmentNoteGeneralPurposeCommand/>
+
+
+### `devspace sync`
+If you want to start code synchronization on-demand (and even outside a DevSpace project), you can run commands like the ones shown here:
+```bash
+devspace sync --local-path=subfolder --container-path=/app
+devspace sync --exclude=node_modules --exclude=test
+devspace sync --pod=my-pod --container=my-container
+```
+
+If you do not provide a selector (e.g. pod name, label selector or image selector), DevSpace will show a picker with all available pods and containers.
+
+<FragmentNoteGeneralPurposeCommand/>
+
+
+### `devspace open`
+To view your project in the browser either via port-forwarding or via ingress (domain), run the following command:
+```bash
+devspace open
+```
+When DevSpace asks you how to open your application, you have two options as shown here:
+```bash
+? How do you want to open your application?
+  [Use arrows to move, space to select, type to filter]
+> via localhost (provides private access only on your computer via port-forwarding)
+  via domain (makes your application publicly available via ingress)
+```
+To use the second option, you need to make sure that the DNS of your domain points to your Kubernetes cluster and that you have an ingress-controller running in your cluster.
+
+:::info Automatic Error Analytics
+If your application does not open as exepected, run [`devspace analyze` and DevSpace will try to identify the issue](#devspace-analyze).
+:::
+
+
+### `devspace analyze`
+If your application is not starting as expected or there seems to be some kind of networking issue, you can let DevSpace run an automated analysis of your namespace using the following command:
+```bash
+devspace analyze
+```
+After analyzing your namespace, DevSpace compiles a report with potential issues, which is a good starting point for debugging and fixing issues with your deployments.
+
+
+### `devspace list commands`
+DevSpace allows you to share commands for common development tasks which can be executed with `devspace run [command-name]`. To get a list of available commands, run:
+```bash
+devspace list commands
+```
+Learn how to [configure shared commands for `devspace run`](../../configuration/commands/basics.mdx).
+
+
+### `devspace list deployments`
+To get a list of all deployments as well as their status and other information, run the following command:
+```bash
+devspace list deployments
+```
+
+
+### `devspace purge`
+If you want to delete a deployment from Kubernetes you can run:
+```bash
+# Removes all deployments remotely
+devspace purge
+# Removes deployment with given name
+devspace purge --deployments=my-deployment-1,my-deployment-2
+```
+
+:::warning
+Purging a deployment does not remove it from the `deployments` section in the `devspace.yaml`. It just removes the deployment from the Kubernetes cluster. To remove a deployment from `devspace.yaml`, run `devspace remove deployment [NAME]`.
+:::
+
+### `devspace update dependencies`
+If you are using dependencies from other git repositories, use the following command to update the cached git repositories of dependencies:
+```bash
+devspace update dependencies
+```
