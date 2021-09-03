@@ -36,6 +36,7 @@ type Client interface {
 
 	DeleteImageByName(imageName string, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
 	DeleteImageByFilter(filter filters.Args, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
+	DockerApiClient() dockerclient.CommonAPIClient
 }
 
 //Client is a client for docker
@@ -172,6 +173,10 @@ func GetMinikubeEnvironment() (map[string]string, error) {
 	}
 
 	return env, nil
+}
+
+func (c *client) DockerApiClient() dockerclient.CommonAPIClient {
+	return c.CommonAPIClient
 }
 
 // ParseProxyConfig parses the proxy config from the ~/.docker/config.json
