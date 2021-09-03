@@ -3,6 +3,7 @@ package plugin
 import (
 	"bytes"
 	"fmt"
+	"github.com/google/uuid"
 	json "github.com/json-iterator/go"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/util/exit"
@@ -25,6 +26,7 @@ func logErrorf(message string, args ...interface{}) {
 }
 
 const (
+	SessionEnv           = "DEVSPACE_PLUGIN_SESSION"
 	KubeContextFlagEnv   = "DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG"
 	KubeNamespaceFlagEnv = "DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG"
 	ConfigEnv            = "DEVSPACE_PLUGIN_CONFIG"
@@ -47,6 +49,11 @@ var pluginsOnce sync.Once
 func SetPlugins(p []Metadata) {
 	pluginsOnce.Do(func() {
 		plugins = p
+
+		pluginContextLock.Lock()
+		defer pluginContextLock.Unlock()
+
+		pluginContext[SessionEnv] = uuid.New().String()
 	})
 }
 

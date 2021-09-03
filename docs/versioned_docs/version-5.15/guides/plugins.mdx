@@ -119,6 +119,7 @@ This section specifies certain plugin commands that should be executed at certai
 * `background` if true will execute the hook in the background and continue DevSpace command execution
 
 If a non-background hook fails (exit code unequals zero) DevSpace will stop command execution and the complete DevSpace command fails. Furthermore when executing the plugin-binary, DevSpace will set the following environment variables (if they apply for the event):
+- `DEVSPACE_PLUGIN_SESSION` a unique identifier that stays the complete duration of a command but will change each time DevSpace is re-executed
 - `DEVSPACE_PLUGIN_OS_ARGS` all arguments that were used to call the current command encoded as JSON (e.g. `["devspace", "dev", "--wait", "--force-build"]`)
 - `DEVSPACE_PLUGIN_CONFIG` the config that was loaded for the command as yaml encoded (all profiles and variables are resolved at this point)
 - `DEVSPACE_PLUGIN_COMMAND` the name of the DevSpace command that was executed (e.g. `dev`)
