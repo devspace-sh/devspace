@@ -35,26 +35,28 @@ var _ = DevSpaceDescribe("build", func() {
 		f = framework.NewDefaultFactory()
 	})
 
+	// Test cases:
+
 	ginkgo.It("should build dockerfile with docker", func() {
 		tempDir, err := framework.CopyToTempDir("tests/build/testdata/docker")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
+		// create build command
 		buildCmd := &cmd.BuildCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
 			},
 			SkipPush: true,
 		}
-
 		err = buildCmd.Run(f, nil, nil)
 		framework.ExpectNoError(err)
 
+		// create devspace docker client to access docker APIs
 		devspaceDockerClient, err := docker.NewClient(log)
 		framework.ExpectNoError(err)
 
 		dockerClient := devspaceDockerClient.DockerApiClient()
-
 		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
 		framework.ExpectNoError(err)
 
@@ -70,7 +72,37 @@ var _ = DevSpaceDescribe("build", func() {
 	})
 
 	ginkgo.It("should build dockerfile with buildkit", func() {
-		// TODO
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/buildkit")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// create build command
+		buildCmd := &cmd.BuildCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn: true,
+			},
+			SkipPush: true,
+		}
+		err = buildCmd.Run(f, nil, nil)
+		framework.ExpectNoError(err)
+
+		// create devspace docker client to access docker APIs
+		devspaceDockerClient, err := docker.NewClient(log)
+		framework.ExpectNoError(err)
+
+		dockerClient := devspaceDockerClient.DockerApiClient()
+		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		framework.ExpectNoError(err)
+
+		for _, image := range imageList {
+			if image.RepoTags[0] == "my-docker-username/helloworld-buildkit:latest" {
+				err = nil
+				break
+			} else {
+				err = errors.New("image not found")
+			}
+		}
+		framework.ExpectNoError(err)
 	})
 
 	ginkgo.It("should build dockerfile with kaniko", func() {
