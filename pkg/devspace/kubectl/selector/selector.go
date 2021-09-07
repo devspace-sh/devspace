@@ -15,7 +15,6 @@ import (
 
 const (
 	MatchedContainerAnnotation = "devspace.sh/container"
-	ImageNameLabel             = "devspace.sh/imageName"
 	ImageSelectorLabel         = "devspace.sh/imageSelector"
 
 	ReplacedLabel = "devspace.sh/replaced"
@@ -76,11 +75,7 @@ func (s Selector) String() string {
 	if len(s.ImageSelector) > 0 {
 		sa := []string{}
 		for _, c := range s.ImageSelector {
-			if c.ConfigImageName != "" {
-				sa = append(sa, c.ConfigImageName+"="+c.Image)
-			} else {
-				sa = append(sa, c.Image)
-			}
+			sa = append(sa, c.Image)
 		}
 
 		strs = append(strs, "image selector: "+strings.Join(sa, ","))
@@ -365,14 +360,7 @@ func byImageName(ctx context.Context, client kubectl.Client, namespace string, i
 
 					// check if it is a replaced pod and if yes, check if the imageName and container name matches
 					if pod.Labels != nil && pod.Labels[ReplacedLabel] == "true" && pod.Annotations != nil && pod.Annotations[MatchedContainerAnnotation] == container.Name {
-						if pod.Labels[ImageNameLabel] != "" && pod.Labels[ImageNameLabel] == imageName.ConfigImageName {
-							retPod := pod
-							retContainer := container
-							retPods = append(retPods, &SelectedPodContainer{
-								Pod:       &retPod,
-								Container: &retContainer,
-							})
-						} else if pod.Labels[ImageSelectorLabel] != "" && pod.Labels[ImageSelectorLabel] == hash.String(imageName.ImageSelector)[:32] {
+						if pod.Labels[ImageSelectorLabel] != "" && pod.Labels[ImageSelectorLabel] == hash.String(imageName.Image)[:32] {
 							retPod := pod
 							retContainer := container
 							retPods = append(retPods, &SelectedPodContainer{

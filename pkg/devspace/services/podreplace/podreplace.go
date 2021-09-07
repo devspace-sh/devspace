@@ -61,7 +61,7 @@ func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, 
 	defer log.StopWait()
 
 	// try to find a single patched pod
-	selectedPod, err := findSingleReplacedPod(ctx, client, replacePod, 4, log)
+	selectedPod, err := findSingleReplacedPod(ctx, client, replacePod, 4, config, dependencies, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "find patched pod")
 	} else if selectedPod == nil {
@@ -70,6 +70,11 @@ func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, 
 			return nil, err
 		} else if parent == nil {
 			return nil, nil
+		}
+
+		err = deleteLeftOverReplacedPods(ctx, client, replacePod, parent, log)
+		if err != nil {
+			return nil, err
 		}
 
 		accessor, _ := meta.Accessor(parent)
@@ -88,10 +93,10 @@ func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, 
 		return selectedPod, deleteAndWait(ctx, client, selectedPod.Pod, log)
 	}
 
-	// delete replaced pod
-	err = deleteAndWait(ctx, client, selectedPod.Pod, log)
+	// delete replaced pods
+	err = deleteLeftOverReplacedPods(ctx, client, replacePod, parent, log)
 	if err != nil {
-		return nil, errors.Wrap(err, "delete replaced pod")
+		return nil, err
 	}
 
 	// scale up parent
@@ -208,7 +213,7 @@ func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config
 	defer log.StopWait()
 
 	// try to find a single patched pod
-	selectedPod, err := findSingleReplacedPod(ctx, client, replacePod, 2, log)
+	selectedPod, err := findSingleReplacedPod(ctx, client, replacePod, 2, config, dependencies, log)
 	if err != nil {
 		return errors.Wrap(err, "find patched pod")
 	} else if selectedPod != nil {
@@ -225,6 +230,11 @@ func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config
 	if err != nil {
 		return err
 	} else if parent != nil {
+		err = deleteLeftOverReplacedPods(ctx, client, replacePod, parent, log)
+		if err != nil {
+			return err
+		}
+
 		accessor, _ := meta.Accessor(parent)
 		typeAccessor, _ := meta.TypeAccessor(parent)
 		log.Infof("Reset %s %s/%s", typeAccessor.GetKind(), accessor.GetNamespace(), accessor.GetName())
@@ -248,6 +258,36 @@ func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config
 	}
 
 	log.Donef("Successfully replaced pod %s/%s", container.Pod.Namespace, container.Pod.Name)
+	return nil
+}
+
+func deleteLeftOverReplacedPods(ctx context.Context, client kubectl.Client, replacePod *latest.ReplacePod, parent runtime.Object, log log.Logger) error {
+	accessor, _ := meta.Accessor(parent)
+	typeAccessor, _ := meta.TypeAccessor(parent)
+
+	parentName := accessor.GetName()
+	parentKind := typeAccessor.GetKind()
+
+	namespace := client.Namespace()
+	if replacePod.Namespace != "" {
+		namespace = replacePod.Namespace
+	}
+
+	replacedPods, err := client.KubeClient().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: selector.ReplacedLabel + "=true"})
+	if err != nil {
+		return err
+	}
+
+	for _, rp := range replacedPods.Items {
+		if rp.DeletionTimestamp == nil && rp.Annotations != nil && rp.Annotations[ParentNameAnnotation] == parentName && rp.Annotations[ParentKindAnnotation] == parentKind {
+			log.Infof("Delete replaced pod %s/%s", rp.Namespace, rp.Name)
+			err = client.KubeClient().CoreV1().Pods(rp.Namespace).Delete(ctx, rp.Name, metav1.DeleteOptions{})
+			if err != nil {
+				return errors.Wrap(err, "delete pod")
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -315,6 +355,9 @@ func getParentFromReplaced(ctx context.Context, client kubectl.Client, pod *core
 	default:
 		return nil, fmt.Errorf("unrecognized parent kind")
 	}
+
+	typeAccessor, _ := meta.TypeAccessor(parent)
+	typeAccessor.SetKind(pod.Annotations[ParentKindAnnotation])
 	return parent, err
 }
 
@@ -455,11 +498,11 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 	delete(copiedPod.Labels, "statefulset.kubernetes.io/pod-name")
 
 	copiedPod.Labels[selector.ReplacedLabel] = "true"
-	if replacePod.ImageName != "" {
-		copiedPod.Labels[selector.ImageNameLabel] = replacePod.ImageName
-	}
-	if replacePod.ImageSelector != "" {
-		copiedPod.Labels[selector.ImageSelectorLabel] = hash.String(replacePod.ImageSelector)[:32]
+	imageSelector, err := getImageSelector(replacePod, config, dependencies)
+	if err != nil {
+		return err
+	} else if imageSelector != "" {
+		copiedPod.Labels[selector.ImageSelectorLabel] = imageSelector
 	}
 	copiedPod.Annotations[selector.MatchedContainerAnnotation] = pod.Container.Name
 	copiedPod.Annotations[ParentHashAnnotation] = parentHash
@@ -760,14 +803,39 @@ func convertToInterface(str runtime.Object) map[interface{}]interface{} {
 	return ret
 }
 
-func findSingleReplacedPod(ctx context.Context, client kubectl.Client, replacePod *latest.ReplacePod, timeout int64, log log.Logger) (*selector.SelectedPodContainer, error) {
+func getImageSelector(replacePod *latest.ReplacePod, config config.Config, dependencies []dependencytypes.Dependency) (string, error) {
+	if replacePod.ImageName != "" {
+		imageSelector, err := imageselector.Resolve(replacePod.ImageName, config, dependencies)
+		if err != nil {
+			return "", err
+		} else if imageSelector == nil {
+			return "", fmt.Errorf("couldn't resolve image name: %v", replacePod.ImageName)
+		}
+
+		return hash.String(imageSelector.Image)[:32], nil
+	} else if replacePod.ImageSelector != "" {
+		imageSelector, err := util.ResolveImageAsImageSelector(replacePod.ImageSelector, config, dependencies)
+		if err != nil {
+			return "", err
+		} else if imageSelector == nil {
+			return "", fmt.Errorf("couldn't resolve image selector: %v", replacePod.ImageSelector)
+		}
+
+		return hash.String(imageSelector.Image)[:32], nil
+	}
+
+	return "", nil
+}
+
+func findSingleReplacedPod(ctx context.Context, client kubectl.Client, replacePod *latest.ReplacePod, timeout int64, config config.Config, dependencies []dependencytypes.Dependency, log log.Logger) (*selector.SelectedPodContainer, error) {
 	labelSelector := map[string]string{
 		selector.ReplacedLabel: "true",
 	}
-	if replacePod.ImageName != "" {
-		labelSelector[selector.ImageNameLabel] = replacePod.ImageName
-	} else if replacePod.ImageSelector != "" {
-		labelSelector[selector.ImageSelectorLabel] = hash.String(replacePod.ImageSelector)[:32]
+	imageSelector, err := getImageSelector(replacePod, config, dependencies)
+	if err != nil {
+		return nil, err
+	} else if imageSelector != "" {
+		labelSelector[selector.ImageSelectorLabel] = imageSelector
 	} else if len(replacePod.LabelSelector) > 0 {
 		for k, v := range replacePod.LabelSelector {
 			labelSelector[k] = v
