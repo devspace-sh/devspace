@@ -158,8 +158,7 @@ func ResolveImageAsImageSelector(imageSelector string, config config2.Config, de
 	}
 
 	return &imageselector.ImageSelector{
-		ImageSelector: imageSelector,
-		Image:         image,
+		Image: image,
 	}, nil
 }
 

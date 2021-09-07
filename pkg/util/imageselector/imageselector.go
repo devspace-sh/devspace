@@ -11,10 +11,6 @@ import (
 )
 
 type ImageSelector struct {
-	// ConfigImageName is the image config name (from images.*)
-	ConfigImageName string
-	// ImageSelector is the original image selector string
-	ImageSelector string
 	// Image is the resolved docker image inclusive tag
 	Image string
 	// Dependency is the dependency this image selector was loaded from
@@ -31,8 +27,7 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 		// check if cached
 		if generated.Images != nil && generated.Images[configImageName] != nil && generated.Images[configImageName].ImageName != "" && generated.Images[configImageName].Tag != "" && c.Images != nil && c.Images[configImageName] != nil {
 			return &ImageSelector{
-				ConfigImageName: configImageName,
-				Image:           generated.Images[configImageName].ImageName + ":" + generated.Images[configImageName].Tag,
+				Image: generated.Images[configImageName].ImageName + ":" + generated.Images[configImageName].Tag,
 			}, nil
 		}
 
@@ -40,14 +35,12 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 		if c.Images != nil && c.Images[configImageName] != nil {
 			if len(c.Images[configImageName].Tags) > 0 {
 				return &ImageSelector{
-					ConfigImageName: configImageName,
-					Image:           c.Images[configImageName].Image + ":" + strings.Replace(c.Images[configImageName].Tags[0], "#", "x", -1),
+					Image: c.Images[configImageName].Image + ":" + strings.Replace(c.Images[configImageName].Tags[0], "#", "x", -1),
 				}, nil
 			}
 
 			return &ImageSelector{
-				ConfigImageName: configImageName,
-				Image:           c.Images[configImageName].Image,
+				Image: c.Images[configImageName].Image,
 			}, nil
 		}
 
@@ -71,7 +64,6 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 					}
 
 					// make sure the selector has the correct original name
-					imageSelector.ConfigImageName = configImageName
 					return imageSelector, nil
 				}
 			}
