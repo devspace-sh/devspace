@@ -18,7 +18,7 @@ import (
 
 // RemoteHook is a hook that is executed in a container
 type RemoteHook interface {
-	ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, log logpkg.Logger) error
+	ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error
 }
 
 func NewRemoteHook(hook RemoteHook) Hook {
@@ -74,7 +74,7 @@ func (r *remoteHook) Execute(ctx Context, hook *latest.HookConfig, config config
 		}
 	}
 
-	executed, err := r.execute(ctx, hook, imageSelectors, log)
+	executed, err := r.execute(ctx, hook, imageSelectors, config, dependencies, log)
 	if err != nil {
 		return err
 	} else if executed == false {
@@ -84,7 +84,7 @@ func (r *remoteHook) Execute(ctx Context, hook *latest.HookConfig, config config
 	return nil
 }
 
-func (r *remoteHook) execute(ctx Context, hook *latest.HookConfig, imageSelector []imageselector.ImageSelector, log logpkg.Logger) (bool, error) {
+func (r *remoteHook) execute(ctx Context, hook *latest.HookConfig, imageSelector []imageselector.ImageSelector, config config.Config, dependencies []types.Dependency, log logpkg.Logger) (bool, error) {
 	labelSelector := ""
 	if len(hook.Where.Container.LabelSelector) > 0 {
 		labelSelector = labels.Set(hook.Where.Container.LabelSelector).String()
@@ -127,7 +127,7 @@ func (r *remoteHook) execute(ctx Context, hook *latest.HookConfig, imageSelector
 
 	// execute the hook in the container
 	log.Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
-	err = r.Hook.ExecuteRemotely(ctx, hook, podContainer, log)
+	err = r.Hook.ExecuteRemotely(ctx, hook, podContainer, config, dependencies, log)
 	if err != nil {
 		return false, err
 	}

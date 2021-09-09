@@ -124,7 +124,7 @@ type variableParser struct {
 	Used        map[string]bool
 }
 
-func (v *variableParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *loader.ConfigOptions, log log.Logger) (*latest.Config, error) {
+func (v *variableParser) Parse(configPath string, originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *loader.ConfigOptions, log log.Logger) (*latest.Config, error) {
 	// Find out what vars are really used
 	varsUsed, err := resolver.FindVariables(rawConfig, vars)
 	if err != nil {

@@ -1143,7 +1143,7 @@ profiles:
 		testCase.in.options.generatedLoader = &fakeGeneratedLoader{}
 
 		configLoader := NewConfigLoader("").(*configLoader)
-		newConfig, _, _, err := configLoader.parseConfig(testMap, NewDefaultParser(), testCase.in.options, log.Discard)
+		newConfig, _, _, err := configLoader.parseConfig("", testMap, NewDefaultParser(), testCase.in.options, log.Discard)
 		if testCase.expectedErr {
 			if err == nil {
 				t.Fatalf("TestCase %s: expected error, but got none", index)
