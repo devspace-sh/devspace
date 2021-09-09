@@ -1,7 +1,9 @@
 package hook
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -21,15 +23,20 @@ type remoteCommandHook struct {
 	Stderr io.Writer
 }
 
-func (r *remoteCommandHook) ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, log logpkg.Logger) error {
-	cmd := []string{hook.Command}
-	if hook.Args == nil {
-		cmd = []string{"sh", "-c", hook.Command}
-	} else {
-		cmd = append(cmd, hook.Args...)
+func (r *remoteCommandHook) ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error {
+	hookCommand, hookArgs, err := resolveCommand(hook.Command, hook.Args, config, dependencies)
+	if err != nil {
+		return err
 	}
 
-	err := ctx.Client.ExecStream(&kubectl.ExecStreamOptions{
+	cmd := []string{hookCommand}
+	if hook.Args == nil {
+		cmd = []string{"sh", "-c", hookCommand}
+	} else {
+		cmd = append(cmd, hookArgs...)
+	}
+
+	err = ctx.Client.ExecStream(&kubectl.ExecStreamOptions{
 		Pod:       podContainer.Pod,
 		Container: podContainer.Container.Name,
 		Command:   cmd,

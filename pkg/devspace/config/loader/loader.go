@@ -129,7 +129,7 @@ func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log
 		return nil, err
 	}
 
-	parsedConfig, generatedConfig, resolver, err := l.parseConfig(data, parser, options, log)
+	parsedConfig, generatedConfig, resolver, err := l.parseConfig(absPath, data, parser, options, log)
 	if err != nil {
 		pluginErr = plugin.ExecutePluginHookWithContext("config.errorLoad", map[string]interface{}{"ERROR": err, "LOAD_PATH": absPath})
 		if pluginErr != nil {
@@ -254,7 +254,7 @@ func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) err
 	return nil
 }
 
-func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, parser Parser, options *ConfigOptions, log log.Logger) (*latest.Config, *generated.Config, variable.Resolver, error) {
+func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]interface{}, parser Parser, options *ConfigOptions, log log.Logger) (*latest.Config, *generated.Config, variable.Resolver, error) {
 	// load the generated config
 	generatedConfig, err := l.LoadGenerated(options)
 	if err != nil {
@@ -307,7 +307,7 @@ func (l *configLoader) parseConfig(rawConfig map[interface{}]interface{}, parser
 	delete(copiedRawConfig, "vars")
 
 	// parse the config
-	latestConfig, err := parser.Parse(rawConfig, copiedRawConfig, vars, resolver, options, log)
+	latestConfig, err := parser.Parse(absPath, rawConfig, copiedRawConfig, vars, resolver, options, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}

@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	imageRegEx = regexp.MustCompile(`image\("?'?([^)"']+)"?'?\)`)
-	tagRegEx   = regexp.MustCompile(`tag\("?'?([^)"']+)"?'?\)`)
+	imageRegEx = regexp.MustCompile(`(?m)image\("?'?([^)"']+)"?'?\)`)
+	tagRegEx   = regexp.MustCompile(`(?m)tag\("?'?([^)"']+)"?'?\)`)
 )
 
 type replaceFn func(match string) (bool, bool, string, error)
@@ -142,6 +142,15 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 	return false, shouldRedeploy, value, nil
 }
 
+func ResolveImageHelpers(value string, config config2.Config, dependencies []types.Dependency) (string, error) {
+	_, image, err := ReplaceHelpers(value, config, dependencies, map[string]string{})
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%v", image), nil
+}
+
 func ResolveImage(imageSelector string, config config2.Config, dependencies []types.Dependency) (string, error) {
 	_, image, err := Replace(imageSelector, config, dependencies, map[string]string{})
 	if err != nil {
@@ -171,8 +180,12 @@ func Replace(value string, config config2.Config, dependencies []types.Dependenc
 		return shouldRedeploy, resolvedImage, nil
 	}
 
+	return ReplaceHelpers(value, config, dependencies, builtImages)
+}
+
+func ReplaceHelpers(value string, config config2.Config, dependencies []types.Dependency, builtImages map[string]string) (bool, interface{}, error) {
 	// replace the image() helpers
-	shouldRedeploy, value, err = replaceWithRegEx(value, func(match string) (bool, bool, string, error) {
+	shouldRedeploy, value, err := replaceWithRegEx(value, func(match string) (bool, bool, string, error) {
 		return resolveImage(match, config, dependencies, builtImages, true, true, false)
 	}, imageRegEx)
 	if err != nil {

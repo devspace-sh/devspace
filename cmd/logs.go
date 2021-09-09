@@ -3,9 +3,12 @@ package cmd
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/cmd/flags"
+	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
@@ -22,6 +25,7 @@ type LogsCmd struct {
 	*flags.GlobalFlags
 
 	LabelSelector string
+	ImageSelector string
 	Image         string
 	Container     string
 	Pod           string
@@ -61,6 +65,7 @@ devspace logs --namespace=mynamespace
 	logsCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
 	logsCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to print the logs of")
 	logsCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
+	logsCmd.Flags().StringVar(&cmd.ImageSelector, "image-selector", "", "The image to search a pod for (e.g. nginx, nginx:latest, image(app), nginx:tag(app))")
 	logsCmd.Flags().StringVar(&cmd.Image, "image", "", "Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage")
 	logsCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
 	logsCmd.Flags().BoolVarP(&cmd.Follow, "follow", "f", false, "Attach to logs afterwards")
@@ -113,7 +118,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
 	// get image selector if specified
-	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, log)
+	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, cmd.ImageSelector, log)
 	if err != nil {
 		return err
 	}
@@ -130,9 +135,39 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 	return nil
 }
 
-func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, image string, log log.Logger) ([]imageselector.ImageSelector, error) {
+func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, image, imageSelector string, log log.Logger) ([]imageselector.ImageSelector, error) {
 	var imageSelectors []imageselector.ImageSelector
-	if image != "" {
+	if imageSelector != "" {
+		var (
+			err          error
+			config       config2.Config
+			dependencies []types.Dependency
+		)
+		if configLoader.Exists() == false {
+			config = config2.Ensure(nil)
+		} else {
+			config, err = configLoader.Load(configOptions, log)
+			if err != nil {
+				return nil, err
+			}
+
+			dependencies, err = dependency.NewManager(config, client, configOptions, log).ResolveAll(dependency.ResolveOptions{
+				Silent: true,
+			})
+			if err != nil {
+				log.Warnf("Error resolving dependencies: %v", err)
+			}
+		}
+
+		resolved, err := util.ResolveImageAsImageSelector(imageSelector, config, dependencies)
+		if err != nil {
+			return nil, err
+		}
+
+		imageSelectors = append(imageSelectors, *resolved)
+	} else if image != "" {
+		log.Warnf("Flag --image is deprecated, please use --image-selector instead")
+
 		if configLoader.Exists() == false {
 			return nil, errors.New(message.ConfigNotFound)
 		}

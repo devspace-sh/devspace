@@ -17,6 +17,7 @@ type AttachCmd struct {
 	*flags.GlobalFlags
 
 	LabelSelector string
+	ImageSelector string
 	Image         string
 	Container     string
 	Pod           string
@@ -49,6 +50,7 @@ devspace attach -n my-namespace
 
 	attachCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
 	attachCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
+	attachCmd.Flags().StringVar(&cmd.ImageSelector, "image-selector", "", "The image to search a pod for (e.g. nginx, nginx:latest, image(app), nginx:tag(app))")
 	attachCmd.Flags().StringVar(&cmd.Image, "image", "", "Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage")
 	attachCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 
@@ -100,7 +102,7 @@ func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
 	// get image selector if specified
-	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, log)
+	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, cmd.ImageSelector, log)
 	if err != nil {
 		return err
 	}

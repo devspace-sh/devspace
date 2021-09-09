@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -24,7 +26,7 @@ func NewDownloadHook() RemoteHook {
 
 type remoteDownloadHook struct{}
 
-func (r *remoteDownloadHook) ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, log logpkg.Logger) error {
+func (r *remoteDownloadHook) ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error {
 	containerPath := "."
 	if hook.Download.ContainerPath != "" {
 		containerPath = hook.Download.ContainerPath

@@ -31,7 +31,7 @@ func (h *handler) command(w http.ResponseWriter, r *http.Request) {
 
 	// Open logs connection
 	stream := &wsStream{WebSocket: ws}
-	cmd := exec.Command("devspace", "run", name[0])
+	cmd := exec.Command("devspace", "--namespace", h.defaultNamespace, "--kube-context", h.defaultContext, "run", name[0])
 	done := make(chan bool)
 	defer close(done)
 

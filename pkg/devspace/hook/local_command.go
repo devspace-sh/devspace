@@ -5,9 +5,11 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/shell"
+	"github.com/pkg/errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -43,11 +45,42 @@ func (l *localCommandHook) Execute(ctx Context, hook *latest.HookConfig, config 
 	}
 	dir := filepath.Dir(config.Path())
 
+	// resolve hook command and args
+	hookCommand, hookArgs, err := resolveCommand(hook.Command, hook.Args, config, dependencies)
+	if err != nil {
+		return err
+	}
+
 	// if args are nil we execute the command in a shell
 	if hook.Args == nil {
-		return shell.ExecuteShellCommand(hook.Command, nil, dir, l.Stdout, l.Stderr, extraEnv)
+		return shell.ExecuteShellCommand(hookCommand, nil, dir, l.Stdout, l.Stderr, extraEnv)
 	}
 
 	// else we execute it directly
-	return command.ExecuteCommandWithEnv(hook.Command, hook.Args, dir, l.Stdout, l.Stderr, extraEnv)
+	return command.ExecuteCommandWithEnv(hookCommand, hookArgs, dir, l.Stdout, l.Stderr, extraEnv)
+}
+
+func resolveCommand(command string, args []string, config config.Config, dependencies []types.Dependency) (string, []string, error) {
+	// resolve hook command
+	hookCommand, err := util.ResolveImageHelpers(command, config, dependencies)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "resolve image helpers")
+	}
+
+	// resolve args
+	if args != nil {
+		newArgs := []string{}
+		for _, a := range args {
+			newArg, err := util.ResolveImageHelpers(a, config, dependencies)
+			if err != nil {
+				return "", nil, errors.Wrap(err, "resolve image helpers")
+			}
+
+			newArgs = append(newArgs, newArg)
+		}
+
+		return hookCommand, newArgs, nil
+	}
+
+	return hookCommand, nil, nil
 }
