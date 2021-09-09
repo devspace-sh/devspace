@@ -16,6 +16,7 @@ type EnterCmd struct {
 	*flags.GlobalFlags
 
 	LabelSelector string
+	ImageSelector string
 	Image         string
 	Container     string
 	Pod           string
@@ -45,6 +46,8 @@ devspace enter bash
 devspace enter -c my-container
 devspace enter bash -n my-namespace
 devspace enter bash -l release=test
+devspace enter bash --image-selector nginx:latest
+devspace enter bash --image-selector "image(app):tag(app)"
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			plugin.SetPluginCommand(cobraCmd, args)
@@ -56,6 +59,7 @@ devspace enter bash -l release=test
 	enterCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
 	enterCmd.Flags().StringVar(&cmd.Image, "image", "", "Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage")
 	enterCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
+	enterCmd.Flags().StringVar(&cmd.ImageSelector, "image-selector", "", "The image to search a pod for (e.g. nginx, nginx:latest, image(app), nginx:tag(app))")
 	enterCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
 
 	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod / container if multiple are found")
@@ -107,7 +111,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	selectorOptions := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 
 	// get image selector if specified
-	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, logger)
+	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, cmd.ImageSelector, logger)
 	if err != nil {
 		return err
 	}
