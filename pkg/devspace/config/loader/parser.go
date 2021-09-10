@@ -110,6 +110,12 @@ func fillVariablesAndParse(configPath string, preparedConfig map[interface{}]int
 		return nil, err
 	}
 
+	// fill in variables again
+	err = fillVariables(resolver, preparedConfig, vars, options)
+	if err != nil {
+		return nil, err
+	}
+
 	// Now convert the whole config to latest
 	latestConfig, err := versions.Parse(preparedConfig, log)
 	if err != nil {

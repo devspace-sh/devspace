@@ -6,7 +6,7 @@ import (
 )
 
 // VarMatchRegex is the regex to check if a value matches the devspace var format
-var VarMatchRegex = regexp.MustCompile("(\\$+!?\\{[^\\{\\}]+\\})")
+var VarMatchRegex = regexp.MustCompile(`(\$+!?\{[a-zA-Z0-9\-\_\.]+\})`)
 
 // ReplaceVarFn defines the replace function
 type ReplaceVarFn func(value string) (interface{}, error)

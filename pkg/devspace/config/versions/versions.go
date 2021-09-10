@@ -145,7 +145,94 @@ func Parse(data map[interface{}]interface{}, log log.Logger) (*latest.Config, er
 	// Update version to latest
 	latestConfigConverted.Version = latest.Version
 
+	// Filter out empty images, deployments etc.
+	filterOutEmpty(latestConfigConverted)
+
 	return latestConfigConverted, nil
+}
+
+func filterOutEmpty(config *latest.Config) {
+	if config.Images != nil {
+		newObjs := map[string]*latest.ImageConfig{}
+		for k, v := range config.Images {
+			if v != nil {
+				newObjs[k] = v
+			}
+		}
+		config.Images = newObjs
+	}
+	if config.Deployments != nil {
+		newObjs := []*latest.DeploymentConfig{}
+		for _, v := range config.Deployments {
+			if v != nil {
+				newObjs = append(newObjs, v)
+			}
+		}
+		config.Deployments = newObjs
+	}
+	if config.Dependencies != nil {
+		newObjs := []*latest.DependencyConfig{}
+		for _, v := range config.Dependencies {
+			if v != nil {
+				newObjs = append(newObjs, v)
+			}
+		}
+		config.Dependencies = newObjs
+	}
+	if config.Hooks != nil {
+		newObjs := []*latest.HookConfig{}
+		for _, v := range config.Hooks {
+			if v != nil {
+				newObjs = append(newObjs, v)
+			}
+		}
+		config.Hooks = newObjs
+	}
+	if config.PullSecrets != nil {
+		newObjs := []*latest.PullSecretConfig{}
+		for _, v := range config.PullSecrets {
+			if v != nil {
+				newObjs = append(newObjs, v)
+			}
+		}
+		config.PullSecrets = newObjs
+	}
+	if config.Commands != nil {
+		newObjs := []*latest.CommandConfig{}
+		for _, v := range config.Commands {
+			if v != nil {
+				newObjs = append(newObjs, v)
+			}
+		}
+		config.Commands = newObjs
+	}
+	if config.Dev.Ports != nil {
+		newObjs := []*latest.PortForwardingConfig{}
+		for _, v := range config.Dev.Ports {
+			if v != nil {
+				newObjs = append(newObjs, v)
+			}
+		}
+		config.Dev.Ports = newObjs
+	}
+	if config.Dev.Sync != nil {
+		newObjs := []*latest.SyncConfig{}
+		for _, v := range config.Dev.Sync {
+			if v != nil {
+				newObjs = append(newObjs, v)
+			}
+		}
+		config.Dev.Sync = newObjs
+	}
+	if config.Dev.Open != nil {
+		newObjs := []*latest.OpenConfig{}
+		for _, v := range config.Dev.Open {
+			if v != nil {
+				newObjs = append(newObjs, v)
+			}
+		}
+		config.Dev.Open = newObjs
+	}
 }
 
 // getVariables returns only the variables from the config

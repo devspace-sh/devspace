@@ -13,7 +13,7 @@ import (
 )
 
 // ExpressionMatchRegex is the regex to check if a value matches the devspace var format
-var ExpressionMatchRegex = regexp.MustCompile("(?ms)\\$\\#?\\!?\\{\\{(.+?)\\}\\}")
+var ExpressionMatchRegex = regexp.MustCompile(`(?ms)^\$\#?\!?\((.+?)\)$`)
 
 func expressionMatchFn(key, value string) bool {
 	return ExpressionMatchRegex.MatchString(value)
@@ -58,7 +58,7 @@ func ResolveExpressions(value, dir string) (interface{}, error) {
 	}
 
 	// try to convert to an object
-	if len(matches) == 1 && len(matches[0][0]) == len(value) && value[1] != '!' && value[2] != '!' {
+	if value[1] != '!' && value[2] != '!' {
 		// is boolean?
 		a, err := strconv.ParseBool(out)
 		if err == nil {
@@ -70,12 +70,12 @@ func ResolveExpressions(value, dir string) (interface{}, error) {
 		if err == nil {
 			return i, nil
 		}
-		
+
 		// is null?
-		if out == "null" || out == "undefined" {
+		if out == "" || out == "null" || out == "undefined" {
 			return nil, nil
 		}
-		
+
 		// is yaml object?
 		m := map[interface{}]interface{}{}
 		err = yaml.Unmarshal([]byte(out), &m)
