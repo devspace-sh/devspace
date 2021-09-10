@@ -1,33 +1,30 @@
 ---
-title: "Command - devspace enter"
-sidebar_label: devspace enter
+title: "Command - devspace sync"
+sidebar_label: devspace sync
 ---
 
 
-Open a shell to a container
+Starts a bi-directional sync between the target container and the local path
 
 ## Synopsis
 
 
 ```
-devspace enter [flags]
+devspace sync [flags]
 ```
 
 ```
 #######################################################
-################## devspace enter #####################
+################### devspace sync #####################
 #######################################################
-Execute a command or start a new terminal in your 
-devspace:
+Starts a bi-directionaly sync between the target container
+and the current path:
 
-devspace enter
-devspace enter --pick # Select pod to enter
-devspace enter bash
-devspace enter -c my-container
-devspace enter bash -n my-namespace
-devspace enter bash -l release=test
-devspace enter bash --image-selector nginx:latest
-devspace enter bash --image-selector "image(app):tag(app)"
+devspace sync
+devspace sync --local-path=subfolder --container-path=/app
+devspace sync --exclude=node_modules --exclude=test
+devspace sync --pod=my-pod --container=my-container
+devspace sync --container-path=/my-path
 #######################################################
 ```
 
@@ -35,15 +32,20 @@ devspace enter bash --image-selector "image(app):tag(app)"
 ## Flags
 
 ```
-  -c, --container string        Container name within pod where to execute command
-  -h, --help                    help for enter
-      --image string            Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage
-      --image-selector string   The image to search a pod for (e.g. nginx, nginx:latest, image(app), nginx:tag(app))
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --pick                    Select a pod / container if multiple are found (default true)
-      --pod string              Pod to open a shell to
-      --wait                    Wait for the pod(s) to start if they are not running
-      --workdir string          The working directory where to open the terminal or execute the command
+  -c, --container string           Container name within pod where to sync to
+      --container-path string      Container path to use (Default is working directory)
+      --download-on-initial-sync   DEPRECATED: Downloads all locally non existing remote files in the beginning (default true)
+      --download-only              If set DevSpace will only download files
+  -e, --exclude strings            Exclude directory from sync
+  -h, --help                       help for sync
+      --initial-sync string        The initial sync strategy to use (mirrorLocal, mirrorRemote, preferLocal, preferRemote, preferNewest, keepAll)
+  -l, --label-selector string      Comma separated key=value selector list (e.g. release=test)
+      --local-path string          Local path to use (Default is current directory
+      --no-watch                   Synchronizes local and remote and then stops
+      --pick                       Select a pod (default true)
+      --pod string                 Pod to sync to
+      --upload-only                If set DevSpace will only upload files
+      --verbose                    Shows every file that is synced
 ```
 
 

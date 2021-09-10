@@ -1,33 +1,26 @@
 ---
-title: "Command - devspace enter"
-sidebar_label: devspace enter
+title: "Command - devspace use namespace"
+sidebar_label: devspace use namespace
 ---
 
 
-Open a shell to a container
+Tells DevSpace which namespace to use
 
 ## Synopsis
 
 
 ```
-devspace enter [flags]
+devspace use namespace [flags]
 ```
 
 ```
 #######################################################
-################## devspace enter #####################
+############## devspace use namespace #################
 #######################################################
-Execute a command or start a new terminal in your 
-devspace:
+Set the default namespace to deploy to
 
-devspace enter
-devspace enter --pick # Select pod to enter
-devspace enter bash
-devspace enter -c my-container
-devspace enter bash -n my-namespace
-devspace enter bash -l release=test
-devspace enter bash --image-selector nginx:latest
-devspace enter bash --image-selector "image(app):tag(app)"
+Example:
+devspace use namespace my-namespace
 #######################################################
 ```
 
@@ -35,15 +28,8 @@ devspace enter bash --image-selector "image(app):tag(app)"
 ## Flags
 
 ```
-  -c, --container string        Container name within pod where to execute command
-  -h, --help                    help for enter
-      --image string            Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage
-      --image-selector string   The image to search a pod for (e.g. nginx, nginx:latest, image(app), nginx:tag(app))
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --pick                    Select a pod / container if multiple are found (default true)
-      --pod string              Pod to open a shell to
-      --wait                    Wait for the pod(s) to start if they are not running
-      --workdir string          The working directory where to open the terminal or execute the command
+  -h, --help    help for namespace
+      --reset   Resets the default namespace of the current kube-context
 ```
 
 

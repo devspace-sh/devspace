@@ -1,58 +1,25 @@
 ---
-title: "Command - devspace enter"
-sidebar_label: devspace enter
+title: "Command - devspace"
+sidebar_label: devspace
 ---
 
+## devspace
 
-Open a shell to a container
+Welcome to the DevSpace!
 
-## Synopsis
+### Synopsis
 
+DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
+	
+		devspace init
 
-```
-devspace enter [flags]
-```
-
-```
-#######################################################
-################## devspace enter #####################
-#######################################################
-Execute a command or start a new terminal in your 
-devspace:
-
-devspace enter
-devspace enter --pick # Select pod to enter
-devspace enter bash
-devspace enter -c my-container
-devspace enter bash -n my-namespace
-devspace enter bash -l release=test
-devspace enter bash --image-selector nginx:latest
-devspace enter bash --image-selector "image(app):tag(app)"
-#######################################################
-```
-
-
-## Flags
-
-```
-  -c, --container string        Container name within pod where to execute command
-  -h, --help                    help for enter
-      --image string            Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage
-      --image-selector string   The image to search a pod for (e.g. nginx, nginx:latest, image(app), nginx:tag(app))
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --pick                    Select a pod / container if multiple are found (default true)
-      --pod string              Pod to open a shell to
-      --wait                    Wait for the pod(s) to start if they are not running
-      --workdir string          The working directory where to open the terminal or execute the command
-```
-
-
-## Global & Inherited Flags
+### Options
 
 ```
       --config string                The devspace config file to use
       --debug                        Prints the stack trace if an error occurs
       --disable-profile-activation   If true will ignore all profile activations
+  -h, --help                         help for devspace
       --inactivity-timeout int       Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems (default 180)
       --kube-context string          The kubernetes context to use
   -n, --namespace string             The kubernetes namespace to use
@@ -68,3 +35,10 @@ devspace enter bash --image-selector "image(app):tag(app)"
       --vars-secret string           The secret to restore/save the variables from/to, if --restore-vars or --save-vars is enabled (default "devspace-vars")
 ```
 
+```
+
+```
+
+
+## Flags
+## Global & Inherited Flags

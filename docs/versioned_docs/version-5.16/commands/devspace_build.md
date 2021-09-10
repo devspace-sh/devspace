@@ -1,33 +1,23 @@
 ---
-title: "Command - devspace enter"
-sidebar_label: devspace enter
+title: "Command - devspace build"
+sidebar_label: devspace build
 ---
 
 
-Open a shell to a container
+Builds all defined images and pushes them
 
 ## Synopsis
 
 
 ```
-devspace enter [flags]
+devspace build [flags]
 ```
 
 ```
 #######################################################
-################## devspace enter #####################
+################## devspace build #####################
 #######################################################
-Execute a command or start a new terminal in your 
-devspace:
-
-devspace enter
-devspace enter --pick # Select pod to enter
-devspace enter bash
-devspace enter -c my-container
-devspace enter bash -n my-namespace
-devspace enter bash -l release=test
-devspace enter bash --image-selector nginx:latest
-devspace enter bash --image-selector "image(app):tag(app)"
+Builds all defined images and pushes them
 #######################################################
 ```
 
@@ -35,15 +25,17 @@ devspace enter bash --image-selector "image(app):tag(app)"
 ## Flags
 
 ```
-  -c, --container string        Container name within pod where to execute command
-  -h, --help                    help for enter
-      --image string            Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage
-      --image-selector string   The image to search a pod for (e.g. nginx, nginx:latest, image(app), nginx:tag(app))
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --pick                    Select a pod / container if multiple are found (default true)
-      --pod string              Pod to open a shell to
-      --wait                    Wait for the pod(s) to start if they are not running
-      --workdir string          The working directory where to open the terminal or execute the command
+      --build-sequential            Builds the images one after another instead of in parallel
+      --dependency strings          Builds only the specific named dependencies
+  -b, --force-build                 Forces to build every image
+      --force-dependencies          Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies) (default true)
+  -h, --help                        help for build
+      --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
+      --skip-dependency strings     Skips building the following dependencies
+      --skip-push                   Skips image pushing, useful for minikube deployment
+      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected
+  -t, --tag strings                 Use the given tag for all built images
+      --verbose-dependencies        Builds the dependencies verbosely (default true)
 ```
 
 

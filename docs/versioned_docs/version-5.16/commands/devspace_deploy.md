@@ -1,33 +1,27 @@
 ---
-title: "Command - devspace enter"
-sidebar_label: devspace enter
+title: "Command - devspace deploy"
+sidebar_label: devspace deploy
 ---
 
 
-Open a shell to a container
+Deploy the project
 
 ## Synopsis
 
 
 ```
-devspace enter [flags]
+devspace deploy [flags]
 ```
 
 ```
 #######################################################
-################## devspace enter #####################
+################## devspace deploy ####################
 #######################################################
-Execute a command or start a new terminal in your 
-devspace:
+Deploys the current project to a Space or namespace:
 
-devspace enter
-devspace enter --pick # Select pod to enter
-devspace enter bash
-devspace enter -c my-container
-devspace enter bash -n my-namespace
-devspace enter bash -l release=test
-devspace enter bash --image-selector nginx:latest
-devspace enter bash --image-selector "image(app):tag(app)"
+devspace deploy
+devspace deploy -n some-namespace
+devspace deploy --kube-context=deploy-context
 #######################################################
 ```
 
@@ -35,15 +29,22 @@ devspace enter bash --image-selector "image(app):tag(app)"
 ## Flags
 
 ```
-  -c, --container string        Container name within pod where to execute command
-  -h, --help                    help for enter
-      --image string            Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage
-      --image-selector string   The image to search a pod for (e.g. nginx, nginx:latest, image(app), nginx:tag(app))
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --pick                    Select a pod / container if multiple are found (default true)
-      --pod string              Pod to open a shell to
-      --wait                    Wait for the pod(s) to start if they are not running
-      --workdir string          The working directory where to open the terminal or execute the command
+      --build-sequential            Builds the images one after another instead of in parallel
+      --dependency strings          Deploys only the specific named dependencies
+      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
+  -b, --force-build                 Forces to (re-)build every image
+      --force-dependencies          Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies) (default true)
+  -d, --force-deploy                Forces to (re-)deploy every deployment
+  -h, --help                        help for deploy
+      --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
+      --skip-build                  Skips building of images
+      --skip-dependency strings     Skips deploying the following dependencies
+      --skip-deploy                 Skips deploying and only builds images
+      --skip-push                   Skips image pushing, useful for minikube deployment
+      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
+      --timeout int                 Timeout until deploy should stop waiting (default 120)
+      --verbose-dependencies        Deploys the dependencies verbosely (default true)
+      --wait                        If true will wait for pods to be running or fails after given timeout
 ```
 
 

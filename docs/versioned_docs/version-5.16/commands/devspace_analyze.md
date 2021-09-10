@@ -1,33 +1,28 @@
 ---
-title: "Command - devspace enter"
-sidebar_label: devspace enter
+title: "Command - devspace analyze"
+sidebar_label: devspace analyze
 ---
 
 
-Open a shell to a container
+Analyzes a kubernetes namespace and checks for potential problems
 
 ## Synopsis
 
 
 ```
-devspace enter [flags]
+devspace analyze [flags]
 ```
 
 ```
 #######################################################
-################## devspace enter #####################
+################## devspace analyze ###################
 #######################################################
-Execute a command or start a new terminal in your 
-devspace:
+Analyze checks a namespaces events, replicasets, services
+and pods for potential problems
 
-devspace enter
-devspace enter --pick # Select pod to enter
-devspace enter bash
-devspace enter -c my-container
-devspace enter bash -n my-namespace
-devspace enter bash -l release=test
-devspace enter bash --image-selector nginx:latest
-devspace enter bash --image-selector "image(app):tag(app)"
+Example:
+devspace analyze
+devspace analyze --namespace=mynamespace
 #######################################################
 ```
 
@@ -35,15 +30,11 @@ devspace enter bash --image-selector "image(app):tag(app)"
 ## Flags
 
 ```
-  -c, --container string        Container name within pod where to execute command
-  -h, --help                    help for enter
-      --image string            Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage
-      --image-selector string   The image to search a pod for (e.g. nginx, nginx:latest, image(app), nginx:tag(app))
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --pick                    Select a pod / container if multiple are found (default true)
-      --pod string              Pod to open a shell to
-      --wait                    Wait for the pod(s) to start if they are not running
-      --workdir string          The working directory where to open the terminal or execute the command
+  -h, --help                  help for analyze
+      --ignore-pod-restarts   If true, analyze will ignore the restart events of running pods
+      --patient               If true, analyze will ignore failing pods and events until every deployment, statefulset, replicaset and pods are ready or the timeout is reached
+      --timeout int           Timeout until analyze should stop waiting (default 120)
+      --wait                  Wait for pods to get ready if they are just starting (default true)
 ```
 
 
