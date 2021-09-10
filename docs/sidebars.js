@@ -132,6 +132,7 @@ module.exports = {
         'configuration/commands/basics',
         'configuration/hooks/basics',
         'configuration/require/basics',
+        'configuration/expressions',
         'configuration/env-file',
       ],
     },
