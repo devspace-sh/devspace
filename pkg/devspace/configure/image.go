@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	v1 "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/generator"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
@@ -20,7 +19,6 @@ import (
 
 const dockerHubHostname = "hub.docker.com"
 const githubContainerRegistry = "ghcr.io"
-const noRegistryImage = "devspace"
 
 // addImage adds an image to the provided config
 func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, dockerfileGenerator *generator.DockerfileGenerator) error {
@@ -28,7 +26,8 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 		useDockerHub          = "Use " + dockerHubHostname
 		useGithubRegistry     = "Use GitHub image registry"
 		useOtherRegistry      = "Use other registry"
-		registryDefaultOption = useDockerHub
+		skipRegistry          = "Skip Registry"
+		registryDefaultOption = skipRegistry
 		registryUsernameHint  = " => you are logged in as %s"
 		providedDockerfile    = "Based on this existing Dockerfile: " + dockerfile
 		differentDockerfile   = "Based on a different existing Dockerfile (e.g. ./backend/Dockerfile)"
@@ -41,7 +40,7 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 	imageConfig := &latest.ImageConfig{
 		Image:      strings.ToLower(image),
 		Dockerfile: dockerfile,
-		Build: &v1.BuildConfig{
+		Build: &latest.BuildConfig{
 			Disabled: true,
 		},
 	}
@@ -49,7 +48,7 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 	buildMethods := []string{createNewDockerfile, subPathDockerfile}
 
 	stat, err := os.Stat(imageConfig.Dockerfile)
-	if err == nil && stat.IsDir() == false {
+	if err == nil && !stat.IsDir() {
 		buildMethods = []string{providedDockerfile, differentDockerfile}
 	}
 
@@ -72,9 +71,9 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 
 		buildCommandSplit := strings.Split(strings.TrimSpace(buildCommand), " ")
 
-		imageConfig.Build = &v1.BuildConfig{
+		imageConfig.Build = &latest.BuildConfig{
 			Disabled: true,
-			Custom: &v1.CustomConfig{
+			Custom: &latest.CustomConfig{
 				Command: buildCommandSplit[0],
 				Args:    buildCommandSplit[1:],
 			},
@@ -92,7 +91,7 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 					Question: "Please enter the path to this Dockerfile",
 					ValidationFunc: func(value string) error {
 						stat, err := os.Stat(value)
-						if err == nil && stat.IsDir() == false {
+						if err == nil && !stat.IsDir() {
 							return nil
 						}
 						return errors.New(fmt.Sprintf("Dockerfile `%s` does not exist or is not a file", value))
@@ -107,7 +106,7 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 					DefaultValue: path.Dir(imageConfig.Dockerfile) + "/",
 					ValidationFunc: func(value string) error {
 						stat, err := os.Stat(value)
-						if err != nil && stat.IsDir() == false {
+						if err != nil && !stat.IsDir() {
 							return errors.New("Context path does not exist or is not a directory")
 						}
 						return nil
@@ -136,20 +135,35 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 		m.log.WriteString("\n")
 		m.log.Info("DevSpace does *not* require pushing your images to a registry but let's assume you wanted to do that (optional)")
 
+		registryOptions := []string{skipRegistry, useDockerHub, useGithubRegistry, useOtherRegistry}
+
+		// Check if user is logged into docker hub
+		isLoggedIntoDockerHub := false
 		authConfig, err := dockerClient.GetAuthConfig(dockerHubHostname, true)
 		if err == nil && authConfig.Username != "" {
 			useDockerHub = useDockerHub + fmt.Sprintf(registryUsernameHint, authConfig.Username)
-			registryDefaultOption = useDockerHub
+			isLoggedIntoDockerHub = true
 		}
 
+		// Check if user is logged into GitHub
+		isLoggedIntoGitHub := false
 		authConfig, err = dockerClient.GetAuthConfig(githubContainerRegistry, true)
 		if err == nil && authConfig.Username != "" {
 			useGithubRegistry = useGithubRegistry + fmt.Sprintf(registryUsernameHint, authConfig.Username)
+			isLoggedIntoGitHub = true
 		}
 
-		registryOptions := []string{useDockerHub, useGithubRegistry, useOtherRegistry}
+		// Set ansewer options according to logged in status of dockerhub and github
+		if isLoggedIntoDockerHub {
+			registryDefaultOption = useDockerHub
+			registryOptions = []string{useDockerHub, useGithubRegistry, useOtherRegistry, skipRegistry}
+		} else if isLoggedIntoGitHub {
+			registryDefaultOption = useGithubRegistry
+			registryOptions = []string{useGithubRegistry, useDockerHub, useOtherRegistry, skipRegistry}
+		}
+
 		selectedRegistry, err := m.log.Question(&survey.QuestionOptions{
-			Question:     "Which registry would you want to use to push images to? (optional, choose any)",
+			Question:     "Which registry would you want to use to push images to?",
 			DefaultValue: registryDefaultOption,
 			Options:      registryOptions,
 		})
@@ -157,44 +171,47 @@ func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, doc
 			return err
 		}
 
-		registryHostname := ""
-
-		if selectedRegistry == useDockerHub {
-			// nothing to do here
-		} else if selectedRegistry == useGithubRegistry {
-			registryHostname = githubContainerRegistry
-		} else {
-			registryHostname, err = m.log.Question(&survey.QuestionOptions{
-				Question:     "Please provide the registry hostname without the image path (e.g. gcr.io, ghcr.io, ecr.io)",
-				DefaultValue: "gcr.io",
-			})
-			if err != nil {
-				return err
-			}
-		}
-
-		registryUsername, err := m.addPullSecretConfig(dockerClient, strings.Trim(registryHostname+"/test/test", "/"))
-		if err != nil {
-			return err
-		}
-
-		if registryUsername == "" {
-			registryUsername = "username"
-		}
-
-		if selectedRegistry == useDockerHub {
-			imageConfig.Image = registryUsername + "/" + imageName
-		} else {
-			projectPath := registryUsername + "/project"
-			if regexp.MustCompile("^(.+\\.)?gcr.io$").Match([]byte(registryHostname)) {
-				project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
-
-				if err == nil {
-					projectPath = strings.TrimSpace(string(project))
+		if selectedRegistry != skipRegistry {
+			registryHostname := ""
+			if selectedRegistry == useDockerHub {
+				registryHostname = dockerHubHostname
+			} else if selectedRegistry == useGithubRegistry {
+				registryHostname = githubContainerRegistry
+			} else {
+				registryHostname, err = m.log.Question(&survey.QuestionOptions{
+					Question:     "Please provide the registry hostname without the image path (e.g. gcr.io, ghcr.io, ecr.io)",
+					DefaultValue: "gcr.io",
+				})
+				if err != nil {
+					return err
 				}
 			}
 
-			imageConfig.Image = registryHostname + "/" + projectPath + "/" + imageName
+			registryUsername, err := m.addPullSecretConfig(dockerClient, strings.Trim(registryHostname+"/test/test", "/"))
+			if err != nil {
+				return err
+			}
+
+			if registryUsername == "" {
+				registryUsername = "username"
+			}
+
+			if selectedRegistry == useDockerHub {
+				imageConfig.Image = registryUsername + "/" + imageName
+			} else {
+				projectPath := registryUsername + "/project"
+				if regexp.MustCompile(`^(.+\.)?gcr.io$`).Match([]byte(registryHostname)) {
+					project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
+
+					if err == nil {
+						projectPath = strings.TrimSpace(string(project))
+					}
+				}
+
+				imageConfig.Image = registryHostname + "/" + projectPath + "/" + imageName
+			}
+		} else {
+			imageConfig.Image = "username" + "/" + imageName
 		}
 	} else {
 		m.log.WriteString("\n")
@@ -242,7 +259,7 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 	registryUsername := ""
 	registryPassword := ""
 
-	for true {
+	for {
 		m.log.StartWait("Checking registry authentication for " + registryHostnamePrintable)
 		authConfig, err := dockerClient.Login(registryHostname, registryUsername, registryPassword, true, false, false)
 		m.log.StopWait()
@@ -279,7 +296,7 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 		m.log.WriteString("\n")
 
 		// Check if docker is running
-		runErr := exec.Command("docker version").Run()
+		runErr := exec.Command("docker", "version").Run()
 		if runErr != nil || registryUsername == "" {
 			if registryUsername == "" {
 				m.log.Warn("Skipping image registry authentication.")
@@ -300,7 +317,7 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 				},
 			}
 
-			m.config.Vars = append(m.config.Vars, &v1.Variable{
+			m.config.Vars = append(m.config.Vars, &latest.Variable{
 				Name:     passwordVar,
 				Password: true,
 			})

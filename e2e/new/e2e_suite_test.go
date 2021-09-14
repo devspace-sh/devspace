@@ -1,11 +1,12 @@
 package e2e
 
 import (
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 
 	// Register tests
 	_ "github.com/loft-sh/devspace/e2e/new/tests/build"
@@ -13,6 +14,7 @@ import (
 	_ "github.com/loft-sh/devspace/e2e/new/tests/config"
 	_ "github.com/loft-sh/devspace/e2e/new/tests/dependencies"
 	_ "github.com/loft-sh/devspace/e2e/new/tests/deploy"
+	_ "github.com/loft-sh/devspace/e2e/new/tests/init"
 	_ "github.com/loft-sh/devspace/e2e/new/tests/sync"
 )
 
