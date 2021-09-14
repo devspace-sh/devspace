@@ -324,8 +324,46 @@ dev:
     - '!/my-folder-2/'
 ```
 **Explanation:**  
-- All files will be execluded except those in folders `./my-folder-1/` and `./my-folder-2/`
+- All files will be excluded except those in folders `./my-folder-1/` and `./my-folder-2/`
 
+### `excludeFile`
+The `excludeFile` option expects a path to a file from which the exclude paths can be loaded. Once loaded, the behavior is identical to the `excludePaths` option. This is useful for sharing a common list of exclude paths between many components. The earlier example, [Exclude Paths from Synchronization](#example-exclude-paths-from-synchronization), can be converted to files as follows:
+
+#### Example: Exclude Paths from Synchronization using files
+```yaml {14-20}
+images:
+  backend:
+    image: john/devbackend
+deployments:
+- name: app-backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+dev:
+  sync:
+  - imageSelector: john/devbackend
+    excludeFile: .gitignore
+    uploadExcludeFile: upload.gitignore
+    downloadExcludeFile: download.gitignore
+```
+
+#### Example: `.gitignore`
+```
+log/
+more/logs/
+```
+
+#### Example: `upload.gitignore`
+```
+node_modules/
+```
+
+#### Example: `download.gitignore`
+```
+tmp/
+```
 
 ### `downloadExcludePaths`
 The `downloadExcludePaths` option expects an array of strings with paths that should not be synchronized from the remote container filesystem to the local filesystem.
@@ -337,6 +375,17 @@ downloadExcludePaths: [] # Do not exclude anything from file synchronization
 
 #### Example
 **See "[Example: Exclude Paths from Synchronization](#example-exclude-paths-from-synchronization)"**
+
+### `downloadExcludeFile`
+The `downloadExcludeFile` option expects a path to a file from which the exclude paths can be loaded. These paths should not be synchronized from the remote container filesystem to the local filesystem.
+
+#### Default Value For `downloadExcludeFile`
+```yaml
+downloadExcludeFile: "" # Do not load exclude paths from a file
+```
+
+#### Example
+**See "[Example: Exclude Paths from Synchronization using files](#example-exclude-paths-from-synchronization-using-files)"**
 
 ### `uploadExcludePaths`
 The `uploadExcludePaths` option expects an array of strings with paths that should not be synchronized from the local filesystem to the remote container filesystem.
@@ -353,6 +402,16 @@ uploadExcludePaths: [] # Do not exclude anything from file synchronization
 #### Example
 **See "[Example: Exclude Paths from Synchronization](#example-exclude-paths-from-synchronization)"**
 
+### `uploadExcludeFile`
+The `uploadExcludeFile` option expects a path to a file from which the exclude paths can be loaded. These paths should not be synchronized from the local filesystem to the remote container filesystem.
+
+#### Default Value For `uploadExcludeFile`
+```yaml
+uploadExcludeFile: "" # Do not load exclude paths from a file
+```
+
+#### Example
+**See "[Example: Exclude Paths from Synchronization using files](#example-exclude-paths-from-synchronization-using-files)"**
 
 <br/>
 

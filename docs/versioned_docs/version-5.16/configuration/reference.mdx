@@ -268,8 +268,11 @@ sync:                               # struct[] | Array of file sync settings for
   disableUpload: false              # bool     | If true will disable uploading files
   containerPath: /app               # string   | Path in the container that should be synchronized with localSubPath (Default is working directory of container ("."))
   excludePaths: []                  # string[] | Paths to exclude files/folders from sync in .gitignore syntax
+  excludeFile : ""                  # string   | Path to a file using .gitignore syntax to exclude files/folders from sync
   downloadExcludePaths: []          # string[] | Paths to exclude files/folders from download in .gitignore syntax
+  downloadExcludeFile : ""          # string   | Path to a file using .gitignore syntax to exclude files/folders from download
   uploadExcludePaths: []            # string[] | Paths to exclude files/folders from upload in .gitignore syntax
+  uploadExcludeFile : ""            # string   | Path to a file using .gitignore syntax to exclude files/folders from upload
   initialSync: mirrorLocal          # enum     | Specifies the initialSync algorithm: mirrorLocal, mirrorRemote, preferLocal, preferRemote, preferNewest, keepAll (Default: mirrorLocal)
   initialSyncCompareBy: mtime       # enum     | Specifies how the initialSync determines if a file has changed: mtime / size
   waitInitialSync: false            # bool     | Wait until initial sync is completed before continuing (Default: false)
