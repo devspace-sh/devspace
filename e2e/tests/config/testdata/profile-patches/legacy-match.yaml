@@ -1,0 +1,15 @@
+version: v1beta10
+deployments:
+- name: test
+  helm:
+    componentChart: true
+- name: test2
+profiles:
+  - name: test
+    patches:
+      - op: add
+        path: deployments.name=test2
+        value:
+          kubectl:
+            manifests:
+              - network-policy.yaml

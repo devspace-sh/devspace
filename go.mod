@@ -47,7 +47,6 @@ require (
 	github.com/juju/ratelimit v1.0.1
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
-	github.com/krishicks/yaml-patch v0.0.10
 	github.com/lib/pq v1.10.0 // indirect
 	github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
 	github.com/mattn/go-sqlite3 v1.14.6 // indirect
@@ -76,6 +75,7 @@ require (
 	github.com/theupdateframework/notary v0.6.1 // indirect
 	github.com/toqueteos/trie v1.0.0 // indirect
 	github.com/ulikunitz/xz v0.5.7 // indirect
+	github.com/vmware-labs/yaml-jsonpath v0.3.2
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
 	gomodules.xyz/jsonpatch/v2 v2.1.0 // indirect
 	google.golang.org/grpc v1.29.1
@@ -87,6 +87,7 @@ require (
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/toqueteos/substring.v1 v1.0.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.21.2
 	k8s.io/apimachinery v0.21.2

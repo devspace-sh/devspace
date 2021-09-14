@@ -3,17 +3,18 @@ package loader
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"regexp"
+	"strings"
+
 	jsonpatch "github.com/evanphx/json-patch/v5"
-	yamlpatch "github.com/krishicks/yaml-patch"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/patch"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
+	"github.com/vmware-labs/yaml-jsonpath/pkg/yamlpath"
+	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
-	"reflect"
-	"regexp"
-	"strconv"
-	"strings"
 )
 
 // ApplyStrategicMerge applies the strategic merge patches
@@ -138,47 +139,45 @@ func ApplyPatchesOnObject(data map[interface{}]interface{}, configPatches []*lat
 		return nil, err
 	}
 
-	patches := yamlpatch.Patch{}
-	for idx, patch := range configPatches {
-		if patch.Operation == "" {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(out, &doc); err != nil {
+		return nil, err
+	}
+
+	patches := patch.Patch{}
+	for idx, patchConfig := range configPatches {
+		if patchConfig.Operation == "" {
 			return nil, errors.Errorf("patches.%d.op is missing", idx)
-		} else if patch.Path == "" {
+		} else if patchConfig.Path == "" {
 			return nil, errors.Errorf("patches.%d.path is missing", idx)
 		}
 
-		newPatch := yamlpatch.Operation{
-			Op:   yamlpatch.Op(patch.Operation),
-			Path: yamlpatch.OpPath(transformPath(patch.Path)),
-			From: yamlpatch.OpPath(transformPath(patch.From)),
+		newPatch := patch.Operation{
+			Op:   patch.Op(patchConfig.Operation),
+			Path: patch.OpPath(transformPath(patchConfig.Path)),
 		}
 
-		if patch.Value != nil {
-			newPatch.Value = yamlpatch.NewNode(&patch.Value)
+		if patchConfig.Value != nil {
+			value, err := patch.NewNode(&patchConfig.Value)
+			if err != nil {
+				return nil, errors.Errorf("patches.%d.value is invalid", idx)
+			}
+			newPatch.Value = value
 		}
 
-		if string(newPatch.Op) == "remove" && patch.Path[0] != '/' {
+		if string(newPatch.Op) == "remove" && patchConfig.Path[0] != '/' {
 			// figure out automatically if the path to remove is not there and just skip the patch
-			target, _ := findPath(&newPatch.Path, data)
+			target, _ := findPath(&newPatch.Path, &doc)
 			if target == nil {
 				continue
 			}
 		}
 
-		if string(newPatch.Op) == "replace" && patch.Path[0] != '/' {
+		if string(newPatch.Op) == "replace" && patchConfig.Path[0] != '/' {
 			// figure out automatically if to use add or replace based on if the target path exists or not
-			target, _ := findPath(&newPatch.Path, data)
+			target, _ := findPath(&newPatch.Path, &doc)
 			if target == nil {
-				newPatch.Op = yamlpatch.Op("add")
-			}
-		}
-
-		if string(newPatch.Op) == "add" && patch.Path[0] != '/' {
-			// In yamlpath the user has to add a '/-' to append to an array which is often confusing
-			// if the '/-' is not added the operation is essentially an replace. So what we do here is check
-			// if the operation is add, the path points to an array and the specified path was not XPath -> then we will just append the /-
-			target, _ := findPath(&newPatch.Path, data)
-			if _, ok := target.([]interface{}); ok {
-				newPatch.Path = yamlpatch.OpPath(strings.TrimSuffix(string(newPatch.Path), "/-") + "/-")
+				newPatch.Op = patch.Op("add")
 			}
 		}
 
@@ -199,76 +198,59 @@ func ApplyPatchesOnObject(data map[interface{}]interface{}, configPatches []*lat
 	return newConfig, nil
 }
 
-var replaceArrayRegEx = regexp.MustCompile("\\[\\\"?([^\\]\\\"]+)\\\"?\\]")
-
-func findPath(path *yamlpatch.OpPath, c interface{}) (interface{}, error) {
-	container := yamlpatch.NewNode(&c).Container()
-	if path.ContainsExtendedSyntax() {
-		paths := yamlpatch.NewPathFinder(container).Find(path.String())
-		if paths == nil {
-			return nil, fmt.Errorf("could not expand pointer: %s", path.String())
-		}
-
-		for _, p := range paths {
-			op := yamlpatch.OpPath(p)
-			return findPath(&op, c)
-		}
-
-		return nil, nil
-	}
-
-	parts, key, err := path.Decompose()
+func findPath(path *patch.OpPath, doc *yaml.Node) (interface{}, error) {
+	pathFinder, err := yamlpath.NewPath(string(*path))
 	if err != nil {
 		return nil, err
 	}
 
-	parts = append(parts, key)
-	foundContainer := c
-	for _, part := range parts {
-		// If map
-		iMap, ok := foundContainer.(map[interface{}]interface{})
-		if ok {
-			foundContainer, ok = iMap[part]
-			if ok == false {
-				return nil, errors.Errorf("cannot find key %s in object", part)
-			}
-
-			continue
-		}
-
-		iArray, ok := foundContainer.([]interface{})
-		if ok {
-			i, err := strconv.Atoi(part)
-			if err != nil {
-				return nil, err
-			}
-
-			if i >= 0 && i <= len(iArray)-1 {
-				foundContainer = iArray[i]
-				continue
-			}
-
-			return nil, errors.Errorf("unable to access invalid index: %d", i)
-		}
-
-		return nil, errors.Errorf("cannot access part %s because value is not an object or array", part)
+	matches, err := pathFinder.Find(doc)
+	if err != nil {
+		return nil, err
 	}
 
-	return foundContainer, nil
+	if len(matches) > 0 {
+		return matches[0], nil
+	}
+
+	return nil, nil
 }
 
+var legacyExtendedSyntaxRegEx = regexp.MustCompile(`(?i)([^\=]+)=([^\.\=\>\<\~]+)`)
+var hasFilterRegEx = regexp.MustCompile(`(?i)\[\?.*\)\]`)
+var indexXPathRegEx = regexp.MustCompile(`\/(\d+|\*)\/`)
+var trailingIndexXPathRegEx = regexp.MustCompile(`\/(\d+|\*)$`)
+var rootXPathRegEx = regexp.MustCompile(`^\/`)
+
 func transformPath(path string) string {
-	// Test if XPath
-	if path == "" || path[0] == '/' {
+	if path == "" {
 		return path
 	}
 
-	// Replace t[0] -> t/0
-	path = replaceArrayRegEx.ReplaceAllString(path, "/$1")
-	path = strings.Replace(path, ".", "/", -1)
-	path = "/" + path
+	rewrittenPath := path
 
-	return path
+	if legacyExtendedSyntaxRegEx.MatchString(path) {
+		// Using property=value selectors
+		rewriteTokens := []string{}
+		tokens := strings.Split(path, ".")
+		for _, token := range tokens {
+			rewriteToken := token
+			if legacyExtendedSyntaxRegEx.MatchString(token) {
+				filterTokens := legacyExtendedSyntaxRegEx.FindStringSubmatch(token)
+				rewriteToken = fmt.Sprintf("[?(@.%s=='%s')]", filterTokens[1], filterTokens[2])
+			}
+			rewriteTokens = append(rewriteTokens, rewriteToken)
+		}
+		rewrittenPath = strings.Join(rewriteTokens, ".")
+		rewrittenPath = strings.ReplaceAll(rewrittenPath, ".[?", "[?")
+	} else if strings.Contains(path, "/") && !hasFilterRegEx.MatchString(path) {
+		// Is XPath
+		rewrittenPath = indexXPathRegEx.ReplaceAllString(path, "[$1].")
+		rewrittenPath = trailingIndexXPathRegEx.ReplaceAllString(rewrittenPath, "[$1]")
+		rewrittenPath = rootXPathRegEx.ReplaceAllLiteralString(rewrittenPath, "$.")
+	}
+
+	return rewrittenPath
 }
 
 func convertBack(v interface{}) interface{} {

@@ -1129,6 +1129,80 @@ profiles:
 				},
 			},
 		},
+		"Patch root path doesn't exist": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta10
+dev:
+  sync:
+  - name: devbackend
+    imageSelector: john/devbackend
+    localSubPath: ./
+    containerPath: /app
+    excludePaths:
+    - node_modules/
+    - logs/
+profiles:
+- name: production
+  patches:
+  - op: add
+    path: /images
+    value:
+      image1:
+        image: node:14
+`,
+				options:         &ConfigOptions{Profiles: []string{"production"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Images: map[string]*latest.ImageConfig{
+					"image1": &latest.ImageConfig{
+						Image: "node:14",
+					},
+				},
+				Dev: latest.DevConfig{
+					Sync: []*latest.SyncConfig{
+						{
+							Name:          "devbackend",
+							ImageSelector: "john/devbackend",
+							LocalSubPath:  "./",
+							ContainerPath: "/app",
+							ExcludePaths: []string{
+								"node_modules/",
+								"logs/",
+							},
+						},
+					},
+				},
+			},
+		},
+		"Patch subpath doesn't exist": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta10
+dev:
+  sync:
+  - name: devbackend
+    imageSelector: john/devbackend
+    localSubPath: ./
+    containerPath: /app
+    excludePaths:
+    - node_modules/
+    - logs/
+profiles:
+- name: production
+  patches:
+  - op: add
+    path: /images/image1
+    value:
+      image: node:14
+`,
+				options:         &ConfigOptions{Profiles: []string{"production"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expectedErr: true,
+		},
 	}
 
 	// Execute test cases

@@ -1,0 +1,13 @@
+version: v1beta10
+deployments:
+- name: test
+  helm:
+    componentChart: true
+- name: test2
+  kubectl: {}
+profiles:
+  - name: test
+    patches:
+      - op: add
+        path: deployments[*].kubectl.manifests
+        value: ["test2.yaml"]
