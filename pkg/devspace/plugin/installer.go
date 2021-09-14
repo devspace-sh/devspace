@@ -28,6 +28,8 @@ func (i *installer) DownloadBinary(metadataPath, version, binaryPath, outFile st
 		localPath := filepath.Join(filepath.Dir(metadataPath), binaryPath)
 		if isLocalReference(localPath) {
 			return copy.Copy(localPath, outFile)
+		} else if isLocalReference(binaryPath) {
+			return copy.Copy(binaryPath, outFile)
 		}
 
 		return i.downloadTo(binaryPath, outFile)
