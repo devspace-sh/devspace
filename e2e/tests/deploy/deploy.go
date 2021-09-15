@@ -2,213 +2,106 @@ package deploy
 
 import (
 	"context"
-	"path/filepath"
-	"time"
+	"os"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/e2e/utils"
-	"github.com/loft-sh/devspace/pkg/devspace/build"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/pkg/errors"
+	"github.com/loft-sh/devspace/e2e/framework"
+	"github.com/loft-sh/devspace/e2e/kube"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/onsi/ginkgo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type testSuite []test
-
-type test struct {
-	name         string
-	deployConfig *cmd.DeployCmd
-	postCheck    func(f *customFactory, t *test) error
-}
-
-type customFactory struct {
-	*utils.BaseCustomFactory
-	ctrl        build.Controller
-	builtImages map[string]string
-}
-
-// NewBuildController implements interface
-func (c *customFactory) NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller {
-	c.ctrl = build.NewController(config, cache, client)
-	return c
-}
-func (c *customFactory) Build(options *build.Options, log log.Logger) (map[string]string, error) {
-	m, err := c.ctrl.Build(options, log)
-	c.builtImages = m
-
-	return m, err
-}
-
-type Runner struct{}
-
-var RunNew = &Runner{}
-
-func (r *Runner) SubTests() []string {
-	subTests := []string{}
-	for k := range availableSubTests {
-		subTests = append(subTests, k)
+var _ = DevSpaceDescribe("deploy", func() {
+	initialDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
 	}
 
-	return subTests
-}
+	// create a new factory
+	var (
+		f          factory.Factory
+		kubeClient *kube.KubeHelper
+	)
 
-var availableSubTests = map[string]func(factory *customFactory, logger log.Logger) error{
-	"default": RunDefault,
-	"profile": RunProfile,
-	"kubectl": RunKubectl,
-	"helm":    RunHelm,
-	"helm-v2": RunHelmV2,
-}
+	ginkgo.BeforeEach(func() {
+		f = framework.NewDefaultFactory()
 
-func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error {
-	logger.Info("Run 'deploy' test")
+		kubeClient, err = kube.NewKubeHelper()
+		framework.ExpectNoError(err)
+	})
 
-	// Populates the tests to run with all the available sub tests if no sub tests are specified
-	if len(subTests) == 0 {
-		for subTestName := range availableSubTests {
-			subTests = append(subTests, subTestName)
-		}
-	}
+	ginkgo.It("should deploy kustomize application", func() {
+		// TODO
+	})
 
-	f := &customFactory{
-		BaseCustomFactory: &utils.BaseCustomFactory{
-			Namespace: ns,
-			Pwd:       pwd,
-			Verbose:   verbose,
-			Timeout:   timeout,
-		},
-	}
+	ginkgo.It("should deploy helm application", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
 
-	// Runs the tests
-	for _, subTestName := range subTests {
-		f.ResetLog()
-		c1 := make(chan error)
-
-		go func() {
-			err := func() error {
-				f.Namespace = utils.GenerateNamespaceName("test-deploy-" + subTestName)
-				err := availableSubTests[subTestName](f, logger)
-				utils.PrintTestResult("deploy", subTestName, err, logger)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			}()
-			c1 <- err
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
 		}()
 
-		select {
-		case err := <-c1:
-			if err != nil {
-				return err
-			}
-		case <-time.After(time.Duration(timeout) * time.Second):
-			return errors.Errorf("Timeout error - the test did not return within the specified timeout of %v seconds: %s", timeout, f.GetLogContents())
+		// create a new dev command
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
 		}
-	}
 
-	return nil
-}
+		// run the command
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
 
-// Used by the different sub tests
-func runTest(f *customFactory, t *test) error {
-	// 1. Create kube client
-	// 2. Deploy config
-	// 3. Analyze pods
-	// 4. Optional - Run the postCheck
+		// wait until nginx pod is reachable
+		out, err := kubeClient.ExecByImageSelector("nginx", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "test")
+	})
 
-	// 1. Create kube client
-	client, err := f.NewKubeClientFromContext(t.deployConfig.KubeContext, t.deployConfig.Namespace, t.deployConfig.SwitchContext)
-	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
-	}
+	ginkgo.It("should deploy kubectl application", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/kubectl")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
 
-	f.Client = client
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
 
-	// 2. Deploy config
-	err = t.deployConfig.Run(f, nil, nil, nil)
-	if err != nil {
-		return err
-	}
-
-	// 3. Analyze pods
-	err = utils.AnalyzePods(client, f.Namespace, f.GetLog())
-	if err != nil {
-		return err
-	}
-
-	// 4. Optional - Run the postCheck
-	if t.postCheck != nil {
-		err = t.postCheck(f, t)
-		if err != nil {
-			return err
+		// create a new dev command
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
 		}
-	}
 
-	return nil
-}
+		// run the command
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
 
-func testPurge(f *customFactory) error {
-	purgeCmd := &cmd.PurgeCmd{
-		GlobalFlags: &flags.GlobalFlags{
-			Namespace: f.Namespace,
-			NoWarn:    true,
-		},
-	}
+		// wait until nginx pod is reachable
+		out, err := kubeClient.ExecByImageSelector("nginx", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "test")
 
-	err := purgeCmd.Run(f, nil, nil, nil)
-	if err != nil {
-		return err
-	}
+		// wait until nginx pod is reachable
+		out, err = kubeClient.ExecByImageSelector("busybox", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "test")
 
-	client, err := f.NewKubeClientFromContext("", f.Namespace, false)
-	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
-	}
-
-	for start := time.Now(); time.Since(start) < time.Second*30; {
-		p, _ := client.KubeClient().CoreV1().Pods(f.Namespace).List(context.TODO(), metav1.ListOptions{})
-
-		if len(p.Items) == 0 || (len(p.Items) == 1 && p.Items[0].Status.ContainerStatuses[0].Name == "tiller") {
-			return nil
-		}
-	}
-
-	p, _ := client.KubeClient().CoreV1().Pods(f.Namespace).List(context.TODO(), metav1.ListOptions{})
-	return errors.Errorf("purge command failed, expected 1 (tiller) pod but found %v (%s)", len(p.Items), p.Items[0].Status.ContainerStatuses[0].Name)
-}
-
-func beforeTest(f *customFactory, logger log.Logger, testDir string) error {
-	testDir = filepath.FromSlash(testDir)
-
-	dirPath, _, err := utils.CreateTempDir()
-	if err != nil {
-		return err
-	}
-
-	f.DirPath = dirPath
-
-	// Copy the testdata into the temp dir
-	err = utils.Copy(testDir, dirPath)
-	if err != nil {
-		return err
-	}
-
-	// Change working directory
-	err = utils.ChangeWorkingDir(dirPath, f.GetLog())
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func afterTest(f *customFactory) {
-	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.GetLog())
-	utils.DeleteNamespace(f.Client, f.Namespace)
-}
+		// check if service is there
+		_, err = kubeClient.RawClient().CoreV1().Services(ns).Get(context.TODO(), "webserver-simple-service", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+	})
+})

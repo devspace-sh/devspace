@@ -1,0 +1,40 @@
+name: PR checks
+
+on: 
+  pull_request:
+    branches: [ master ]
+
+env:
+  GO111MODULE: on
+  GOFLAGS: -mod=vendor
+
+jobs:
+  test-e2e:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - name: Checkout repo
+      uses: actions/checkout@v2
+
+    # Creates KinD with using k8s versions from the matrix above
+    - name: Set up kind with K8s version v1.21.1
+      uses: engineerd/setup-kind@v0.5.0
+      with:
+        version: "v0.11.0"
+        image: kindest/node:v1.21.1
+    - name: Testing kind cluster set-up
+      run: |
+          kubectl cluster-info
+          kubectl get pods -n kube-system
+          echo "current-context:" $(kubectl config current-context)
+          echo "environment-kubeconfig:" ${KUBECONFIG}
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: e2e test
+      working-directory: ./e2e
+      run: go test -v 
