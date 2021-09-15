@@ -237,6 +237,8 @@ func byPodName(ctx context.Context, client kubectl.Client, namespace string, nam
 	}
 	if skipPod != nil && skipPod(pod) {
 		return nil, nil
+	} else if pod.DeletionTimestamp != nil {
+		return nil, nil
 	}
 
 	if !skipInit {
@@ -282,6 +284,8 @@ func byLabelSelector(ctx context.Context, client kubectl.Client, namespace strin
 
 	for _, pod := range podList.Items {
 		if skipPod != nil && skipPod(&pod) {
+			continue
+		} else if pod.DeletionTimestamp != nil {
 			continue
 		}
 
@@ -331,6 +335,8 @@ func byImageName(ctx context.Context, client kubectl.Client, namespace string, i
 
 		for _, pod := range podList.Items {
 			if skipPod != nil && skipPod(&pod) {
+				continue
+			} else if pod.DeletionTimestamp != nil {
 				continue
 			}
 

@@ -15,7 +15,9 @@ import (
 	_ "github.com/loft-sh/devspace/e2e/tests/dependencies"
 	_ "github.com/loft-sh/devspace/e2e/tests/deploy"
 	_ "github.com/loft-sh/devspace/e2e/tests/init"
+	_ "github.com/loft-sh/devspace/e2e/tests/replacepods"
 	_ "github.com/loft-sh/devspace/e2e/tests/sync"
+	_ "github.com/loft-sh/devspace/e2e/tests/terminal"
 )
 
 // TestRunE2ETests checks configuration parameters (specified through flags) and then runs

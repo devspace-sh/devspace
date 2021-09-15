@@ -133,3 +133,8 @@ func ExpectLocalFileNotFound(filePath string) {
 	_, err := os.Stat(filePath)
 	gomega.ExpectWithOffset(1, os.IsNotExist(err)).Should(gomega.BeTrue())
 }
+
+func ExpectDeleteNamespace(k *kube.KubeHelper, name string) {
+	err := k.DeleteNamespace(name)
+	ExpectNoError(err)
+}

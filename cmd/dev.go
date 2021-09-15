@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/survey"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -73,6 +74,7 @@ type DevCmd struct {
 	UIPort int
 
 	Terminal         bool
+	TerminalRestart  bool
 	WorkingDirectory string
 	Interactive      bool
 
@@ -84,6 +86,9 @@ type DevCmd struct {
 
 	// used for testing to allow interruption
 	Interrupt chan error
+	Stdout    io.Writer
+	Stderr    io.Writer
+	Stdin     io.Reader
 }
 
 // NewDevCmd creates a new devspace dev command
@@ -147,6 +152,7 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
 	devCmd.Flags().BoolVarP(&cmd.Interactive, "interactive", "i", false, "DEPRECATED: DO NOT USE ANYMORE")
 	devCmd.Flags().BoolVarP(&cmd.Terminal, "terminal", "t", false, "Open a terminal instead of showing logs")
+	devCmd.Flags().BoolVar(&cmd.TerminalRestart, "terminal-restart", true, "Will try to restart the terminal if a non zero exit code was encountered")
 	devCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
 
 	devCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "If true will wait first for pods to be running or fails after given timeout")
@@ -418,7 +424,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 		exitCode, err = cmd.startServices(f, configInterface, client, args, dependencies, cmd.log)
 		if err != nil {
 			// Check if we should reload
-			if _, ok := err.(*reloadError); ok {
+			if _, ok := err.(*services.InterruptError); ok {
 				// Get the config
 				configInterface, err := cmd.loadConfig(configOptions)
 				if err != nil {
@@ -505,7 +511,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 					logger.Infof("Change detected in '%s', will reload", path)
 				}
 
-				exitChan <- &reloadError{}
+				exitChan <- &services.InterruptError{}
 			})
 
 			return nil
@@ -578,7 +584,9 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 			}
 
 			selectorOptions.ImageSelector = imageSelectors
-			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true)
+
+			stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
+			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalRestart, stdout, stderr, stdin)
 		} else if config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
 			// Log multiple images at once
 			manager, err := services.NewLogManager(client, configInterface, dependencies, exitChan, logger)
@@ -589,7 +597,7 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 			err = manager.Start()
 			if err != nil {
 				// Check if we should reload
-				if _, ok := err.(*reloadError); ok {
+				if _, ok := err.(*services.InterruptError); ok {
 					return 0, err
 				}
 
@@ -690,13 +698,6 @@ func GetPaths(config *latest.Config) []string {
 	return removeDuplicates(paths)
 }
 
-type reloadError struct {
-}
-
-func (r *reloadError) Error() string {
-	return ""
-}
-
 func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Config, error) {
 	// Load config
 	configInterface, err := cmd.configLoader.Load(configOptions, cmd.log)
@@ -744,6 +745,19 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 	}
 
 	return configInterface, nil
+}
+
+func defaultStdStreams(stdout io.Writer, stderr io.Writer, stdin io.Reader) (io.Writer, io.Writer, io.Reader) {
+	if stdout == nil {
+		stdout = os.Stdout
+	}
+	if stderr == nil {
+		stderr = os.Stderr
+	}
+	if stdin == nil {
+		stdin = os.Stdin
+	}
+	return stdout, stderr, stdin
 }
 
 func removeDuplicates(arr []string) []string {
