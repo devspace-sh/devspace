@@ -127,6 +127,7 @@ func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client ku
 			return nil, err
 		} else if matched {
 			d.Kind = "Deployment"
+			fmt.Println("MATCHED DEPLOYMENT")
 			return &d, nil
 		}
 	}
@@ -142,6 +143,7 @@ func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client ku
 			return nil, err
 		} else if matched {
 			d.Kind = "ReplicaSet"
+			fmt.Println("MATCHED REPLICASET")
 			return &d, nil
 		}
 	}
@@ -224,24 +226,24 @@ func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config
 		} else if shouldUpdate == false {
 			return nil
 		}
-	}
-
-	// try to find a single patchable object
-	parent, err := p.findScaledDownParentBySelector(ctx, client, config, dependencies, replacePod, log)
-	if err != nil {
-		return err
-	} else if parent != nil {
-		err = deleteLeftOverReplicaSets(ctx, client, replacePod, parent, log)
+	} else {
+		// try to find a single patchable object
+		parent, err := p.findScaledDownParentBySelector(ctx, client, config, dependencies, replacePod, log)
 		if err != nil {
 			return err
-		}
+		} else if parent != nil {
+			err = deleteLeftOverReplicaSets(ctx, client, replacePod, parent, log)
+			if err != nil {
+				return err
+			}
 
-		accessor, _ := meta.Accessor(parent)
-		typeAccessor, _ := meta.TypeAccessor(parent)
-		log.Infof("Reset %s %s/%s", typeAccessor.GetKind(), accessor.GetNamespace(), accessor.GetName())
-		err = scaleUpParent(ctx, client, parent)
-		if err != nil {
-			return err
+			accessor, _ := meta.Accessor(parent)
+			typeAccessor, _ := meta.TypeAccessor(parent)
+			log.Infof("Reset %s %s/%s", typeAccessor.GetKind(), accessor.GetNamespace(), accessor.GetName())
+			err = scaleUpParent(ctx, client, parent)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

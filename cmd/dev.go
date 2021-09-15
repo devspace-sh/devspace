@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/survey"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -85,6 +86,9 @@ type DevCmd struct {
 
 	// used for testing to allow interruption
 	Interrupt chan error
+	Stdout    io.Writer
+	Stderr    io.Writer
+	Stdin     io.Reader
 }
 
 // NewDevCmd creates a new devspace dev command
@@ -580,7 +584,9 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 			}
 
 			selectorOptions.ImageSelector = imageSelectors
-			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalRestart)
+
+			stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
+			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalRestart, stdout, stderr, stdin)
 		} else if config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
 			// Log multiple images at once
 			manager, err := services.NewLogManager(client, configInterface, dependencies, exitChan, logger)
@@ -739,6 +745,19 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 	}
 
 	return configInterface, nil
+}
+
+func defaultStdStreams(stdout io.Writer, stderr io.Writer, stdin io.Reader) (io.Writer, io.Writer, io.Reader) {
+	if stdout == nil {
+		stdout = os.Stdout
+	}
+	if stderr == nil {
+		stderr = os.Stderr
+	}
+	if stdin == nil {
+		stdin = os.Stdin
+	}
+	return stdout, stderr, stdin
 }
 
 func removeDuplicates(arr []string) []string {

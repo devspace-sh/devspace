@@ -3,8 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
+	"io"
 	kubectlExec "k8s.io/client-go/util/exec"
-	"os"
 	"strings"
 	"time"
 
@@ -21,7 +21,17 @@ func (r *InterruptError) Error() string {
 }
 
 // StartTerminal opens a new terminal
-func (serviceClient *client) StartTerminal(options targetselector.Options, args []string, workDir string, interrupt chan error, wait, restart bool) (int, error) {
+func (serviceClient *client) StartTerminal(
+	options targetselector.Options,
+	args []string,
+	workDir string,
+	interrupt chan error,
+	wait,
+	restart bool,
+	stdout io.Writer,
+	stderr io.Writer,
+	stdin io.Reader,
+) (int, error) {
 	command := serviceClient.getCommand(args, workDir)
 	targetSelector := targetselector.NewTargetSelector(serviceClient.client)
 	if wait == false {
@@ -53,9 +63,9 @@ func (serviceClient *client) StartTerminal(options targetselector.Options, args 
 				Container: container.Container.Name,
 				Command:   command,
 				TTY:       true,
-				Stdin:     os.Stdin,
-				Stdout:    os.Stdout,
-				Stderr:    os.Stderr,
+				Stdin:     stdin,
+				Stdout:    stdout,
+				Stderr:    stderr,
 			},
 			Transport:   wrapper,
 			Upgrader:    upgradeRoundTripper,
@@ -77,14 +87,14 @@ func (serviceClient *client) StartTerminal(options targetselector.Options, args 
 				if restart && exitError.Code != 0 {
 					serviceClient.log.WriteString("\n")
 					serviceClient.log.Infof("Restarting terminal because: %s", err)
-					return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart)
+					return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart, stdout, stderr, stdin)
 				}
 
 				return exitError.Code, nil
 			} else if restart {
 				serviceClient.log.WriteString("\n")
 				serviceClient.log.Infof("Restarting terminal because: %s", err)
-				return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart)
+				return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart, stdout, stderr, stdin)
 			}
 
 			return 0, err

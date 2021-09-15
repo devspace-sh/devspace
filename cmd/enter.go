@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"io"
 )
 
 // EnterCmd is a struct that defines a command call for "enter"
@@ -25,6 +26,11 @@ type EnterCmd struct {
 	Restart       bool
 
 	WorkingDirectory string
+
+	// used for testing
+	Stdout io.Writer
+	Stderr io.Writer
+	Stdin  io.Reader
 }
 
 // NewEnterCmd creates a new enter command
@@ -122,7 +128,8 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	selectorOptions.ImageSelector = imageSelector
 
 	// Start terminal
-	exitCode, err := f.NewServicesClient(nil, nil, client, logger).StartTerminal(selectorOptions, args, cmd.WorkingDirectory, make(chan error), cmd.Wait, cmd.Restart)
+	stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
+	exitCode, err := f.NewServicesClient(nil, nil, client, logger).StartTerminal(selectorOptions, args, cmd.WorkingDirectory, make(chan error), cmd.Wait, cmd.Restart, stdout, stderr, stdin)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {
