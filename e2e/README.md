@@ -1,12 +1,19 @@
-=== RUN ALL TESTS ===
-go run . test
+### Run the e2e tests
 
-=== ONLY RUN SPECIFIC TEST SUITES ===
-go run . test --test=deploy,init
+Make sure you have ginkgo installed on your local machine:
+```
+go get github.com/onsi/ginkgo/ginkgo
+```
 
-=== ONLY RUN SPECIFIC SUB TESTS FOR A SPECIFIC TEST SUITE ===
-go run . test --test-deploy=default,deploy
-go run . test --test-init=use_chart,use_dockerfile
+#### Run all e2e tests
+```
+# Install ginkgo and run in this folder
+ginkgo
+```
 
+#### Run a specific e2e test
+```
+# Install ginkgo and run in this folder
+ginkgo -focus="should load profile cached and uncached"
+```
 
-go run . test 
