@@ -48,7 +48,7 @@ Builds all defined images and pushes them
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			plugin.SetPluginCommand(cobraCmd, args)
-			return cmd.Run(f, cobraCmd, args)
+			return cmd.Run(f)
 		},
 	}
 
@@ -70,7 +70,7 @@ Builds all defined images and pushes them
 }
 
 // Run executes the command logic
-func (cmd *BuildCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *BuildCmd) Run(f factory.Factory) error {
 	// Set config root
 	log := f.GetLog()
 	configOptions := cmd.ToConfigOptions(log)

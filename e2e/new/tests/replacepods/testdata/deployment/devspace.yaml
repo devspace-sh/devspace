@@ -1,0 +1,28 @@
+version: v1beta10
+vars:
+  - name: IMAGE
+    value: john/devbackend
+deployments:
+  - name: very-long-name-very-long-name-very-long-name
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - name: container-0
+            image: ${IMAGE}
+dev:
+  replacePods:
+    - imageSelector: ${IMAGE}
+      replaceImage: ubuntu:18.04
+      patches:
+        - op: add
+          path: spec.containers[0].command
+          value: ["sleep"]
+        - op: add
+          path: spec.containers[0].args
+          value: ["9999999999"]
+        - op: add
+          path: spec.containers[0].workingDir
+          value: "/workdir"
+  terminal:
+    imageSelector: ${IMAGE}

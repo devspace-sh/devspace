@@ -49,7 +49,7 @@ var _ = DevSpaceDescribe("build", func() {
 			},
 			SkipPush: true,
 		}
-		err = buildCmd.Run(f, nil, nil)
+		err = buildCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// create devspace docker client to access docker APIs
@@ -83,7 +83,7 @@ var _ = DevSpaceDescribe("build", func() {
 			},
 			SkipPush: true,
 		}
-		err = buildCmd.Run(f, nil, nil)
+		err = buildCmd.Run(f)
 		framework.ExpectNoError(err)
 
 		// create devspace docker client to access docker APIs

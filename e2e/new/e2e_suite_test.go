@@ -15,6 +15,7 @@ import (
 	_ "github.com/loft-sh/devspace/e2e/new/tests/dependencies"
 	_ "github.com/loft-sh/devspace/e2e/new/tests/deploy"
 	_ "github.com/loft-sh/devspace/e2e/new/tests/init"
+	_ "github.com/loft-sh/devspace/e2e/new/tests/replacepods"
 	_ "github.com/loft-sh/devspace/e2e/new/tests/sync"
 )
 

@@ -13,7 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
-	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -39,6 +38,8 @@ const (
 	ReplaceConfigHashAnnotation = "devspace.sh/config-hash"
 
 	ReplicasAnnotation = "devspace.sh/replicas"
+
+	ReplicaSetLabel = "devspace.sh/replaced"
 )
 
 type PodReplacer interface {
@@ -72,7 +73,7 @@ func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, 
 			return nil, nil
 		}
 
-		err = deleteLeftOverReplacedPods(ctx, client, replacePod, parent, log)
+		err = deleteLeftOverReplicaSets(ctx, client, replacePod, parent, log)
 		if err != nil {
 			return nil, err
 		}
@@ -94,7 +95,7 @@ func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, 
 	}
 
 	// delete replaced pods
-	err = deleteLeftOverReplacedPods(ctx, client, replacePod, parent, log)
+	err = deleteLeftOverReplicaSets(ctx, client, replacePod, parent, log)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +231,7 @@ func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config
 	if err != nil {
 		return err
 	} else if parent != nil {
-		err = deleteLeftOverReplacedPods(ctx, client, replacePod, parent, log)
+		err = deleteLeftOverReplicaSets(ctx, client, replacePod, parent, log)
 		if err != nil {
 			return err
 		}
@@ -261,7 +262,7 @@ func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config
 	return nil
 }
 
-func deleteLeftOverReplacedPods(ctx context.Context, client kubectl.Client, replacePod *latest.ReplacePod, parent runtime.Object, log log.Logger) error {
+func deleteLeftOverReplicaSets(ctx context.Context, client kubectl.Client, replacePod *latest.ReplacePod, parent runtime.Object, log log.Logger) error {
 	accessor, _ := meta.Accessor(parent)
 	typeAccessor, _ := meta.TypeAccessor(parent)
 
@@ -273,15 +274,15 @@ func deleteLeftOverReplacedPods(ctx context.Context, client kubectl.Client, repl
 		namespace = replacePod.Namespace
 	}
 
-	replacedPods, err := client.KubeClient().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: selector.ReplacedLabel + "=true"})
+	replicaSets, err := client.KubeClient().AppsV1().ReplicaSets(namespace).List(ctx, metav1.ListOptions{LabelSelector: ReplicaSetLabel + "=true"})
 	if err != nil {
 		return err
 	}
 
-	for _, rp := range replacedPods.Items {
-		if rp.DeletionTimestamp == nil && rp.Annotations != nil && rp.Annotations[ParentNameAnnotation] == parentName && rp.Annotations[ParentKindAnnotation] == parentKind {
-			log.Infof("Delete replaced pod %s/%s", rp.Namespace, rp.Name)
-			err = client.KubeClient().CoreV1().Pods(rp.Namespace).Delete(ctx, rp.Name, metav1.DeleteOptions{})
+	for _, rs := range replicaSets.Items {
+		if rs.DeletionTimestamp == nil && rs.Annotations != nil && rs.Annotations[ParentNameAnnotation] == parentName && rs.Annotations[ParentKindAnnotation] == parentKind {
+			log.Infof("Delete replaced replica set %s/%s", rs.Namespace, rs.Name)
+			err = client.KubeClient().AppsV1().ReplicaSets(rs.Namespace).Delete(ctx, rs.Name, metav1.DeleteOptions{})
 			if err != nil {
 				return errors.Wrap(err, "delete pod")
 			}
@@ -420,18 +421,29 @@ func scaleUpParent(ctx context.Context, client kubectl.Client, parent runtime.Ob
 }
 
 func deleteAndWait(ctx context.Context, client kubectl.Client, pod *corev1.Pod, log log.Logger) error {
-	log.StartWait(fmt.Sprintf("Waiting for replaced pod " + pod.Namespace + "/" + pod.Name + " to get terminated..."))
-	err := client.KubeClient().CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
-	if err != nil {
-		if kerrors.IsNotFound(err) {
-			return nil
-		}
+	// delete the owning replica set or pod
+	if pod.DeletionTimestamp == nil {
+		owner := metav1.GetControllerOf(pod)
+		if owner != nil && owner.Kind == "ReplicaSet" {
+			err := client.KubeClient().AppsV1().ReplicaSets(pod.Namespace).Delete(ctx, owner.Name, metav1.DeleteOptions{})
+			if err != nil {
+				return errors.Wrap(err, "delete replica set")
+			}
+		} else {
+			err := client.KubeClient().CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+			if err != nil {
+				if kerrors.IsNotFound(err) {
+					return nil
+				}
 
-		return err
+				return err
+			}
+		}
 	}
 
-	err = wait.Poll(time.Second, time.Minute*2, func() (bool, error) {
-		_, err = client.KubeClient().CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
+	log.StartWait(fmt.Sprintf("Waiting for replaced pod " + pod.Namespace + "/" + pod.Name + " to get terminated..."))
+	err := wait.Poll(time.Second, time.Minute*2, func() (bool, error) {
+		_, err := client.KubeClient().CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				return true, nil
@@ -480,7 +492,7 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 
 	// reset the metadata
 	copiedPod.ObjectMeta = metav1.ObjectMeta{
-		Name:        encoding.SafeConcatName(copiedPod.Name, "devspace"),
+		Name:        copiedPod.Name,
 		Namespace:   copiedPod.Namespace,
 		Labels:      copiedPod.Labels,
 		Annotations: copiedPod.Annotations,
@@ -553,8 +565,32 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 		return errors.Wrap(err, "wait for original pod to terminate")
 	}
 
-	// create the new pod
-	_, err = client.KubeClient().CoreV1().Pods(copiedPod.Namespace).Create(ctx, copiedPod, metav1.CreateOptions{})
+	// create a replica set
+	_, err = client.KubeClient().AppsV1().ReplicaSets(copiedPod.Namespace).Create(ctx, &appsv1.ReplicaSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      copiedPod.Name,
+			Namespace: copiedPod.Namespace,
+			Annotations: map[string]string{
+				ParentKindAnnotation: copiedPod.Annotations[ParentKindAnnotation],
+				ParentNameAnnotation: copiedPod.Annotations[ParentNameAnnotation],
+			},
+			Labels: map[string]string{
+				ReplicaSetLabel: "true",
+			},
+		},
+		Spec: appsv1.ReplicaSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: copiedPod.Labels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      copiedPod.Labels,
+					Annotations: copiedPod.Annotations,
+				},
+				Spec: copiedPod.Spec,
+			},
+		},
+	}, metav1.CreateOptions{})
 	if err != nil {
 		return errors.Wrap(err, "create copied pod")
 	}
