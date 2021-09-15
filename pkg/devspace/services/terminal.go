@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	kubectlExec "k8s.io/client-go/util/exec"
 	"os"
 	"strings"
 	"time"
@@ -11,11 +12,16 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 
 	"github.com/mgutz/ansi"
-	kubectlExec "k8s.io/client-go/util/exec"
 )
 
+type InterruptError struct{}
+
+func (r *InterruptError) Error() string {
+	return ""
+}
+
 // StartTerminal opens a new terminal
-func (serviceClient *client) StartTerminal(options targetselector.Options, args []string, workDir string, interrupt chan error, wait bool) (int, error) {
+func (serviceClient *client) StartTerminal(options targetselector.Options, args []string, workDir string, interrupt chan error, wait, restart bool) (int, error) {
 	command := serviceClient.getCommand(args, workDir)
 	targetSelector := targetselector.NewTargetSelector(serviceClient.client)
 	if wait == false {
@@ -38,8 +44,10 @@ func (serviceClient *client) StartTerminal(options targetselector.Options, args 
 	}
 
 	serviceClient.log.Infof("Opening shell to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
+
+	done := make(chan error)
 	go func() {
-		interrupt <- serviceClient.client.ExecStreamWithTransport(&kubectl.ExecStreamWithTransportOptions{
+		done <- serviceClient.client.ExecStreamWithTransport(&kubectl.ExecStreamWithTransportOptions{
 			ExecStreamOptions: kubectl.ExecStreamOptions{
 				Pod:       container.Pod,
 				Container: container.Container.Name,
@@ -55,14 +63,32 @@ func (serviceClient *client) StartTerminal(options targetselector.Options, args 
 		})
 	}()
 
-	err = <-interrupt
-	upgradeRoundTripper.Close()
-	if err != nil {
-		if exitError, ok := err.(kubectlExec.CodeExitError); ok {
-			return exitError.Code, nil
-		}
-
+	// wait until either client has finished or we got interrupted
+	select {
+	case err = <-interrupt:
+		_ = upgradeRoundTripper.Close()
+		<-done
 		return 0, err
+	case err = <-done:
+		if err != nil {
+			if _, ok := err.(*InterruptError); ok {
+				return 0, err
+			} else if exitError, ok := err.(kubectlExec.CodeExitError); ok {
+				if restart && exitError.Code != 0 {
+					serviceClient.log.WriteString("\n")
+					serviceClient.log.Infof("Restarting terminal because: %s", err)
+					return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart)
+				}
+
+				return exitError.Code, nil
+			} else if restart {
+				serviceClient.log.WriteString("\n")
+				serviceClient.log.Infof("Restarting terminal because: %s", err)
+				return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart)
+			}
+
+			return 0, err
+		}
 	}
 
 	return 0, nil

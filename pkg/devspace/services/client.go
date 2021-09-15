@@ -25,7 +25,7 @@ type Client interface {
 	StartSync(interrupt chan error, printSyncLog bool, verboseSync bool, prefixFn func(idx int, syncConfig *latest.SyncConfig) string) error
 
 	StartSyncFromCmd(options targetselector.Options, syncConfig *latest.SyncConfig, interrupt chan error, noWatch, verbose bool) error
-	StartTerminal(options targetselector.Options, args []string, workDir string, interrupt chan error, wait bool) (int, error)
+	StartTerminal(options targetselector.Options, args []string, workDir string, interrupt chan error, wait, restart bool) (int, error)
 
 	ReplacePods() error
 

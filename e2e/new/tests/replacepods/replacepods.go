@@ -38,7 +38,7 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.FIt("should replace deployment pod", func() {
+	ginkgo.It("should replace deployment pod", func() {
 		tempDir, err := framework.CopyToTempDir("tests/replacepods/testdata/deployment")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
