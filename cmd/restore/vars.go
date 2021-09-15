@@ -2,6 +2,7 @@ package restore
 
 import (
 	"fmt"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -84,7 +85,7 @@ func (cmd *varsCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 	vars, restored, err := loader.RestoreVarsFromSecret(client, cmd.SecretName)
 	if err != nil {
 		return err
-	} else if restored == false {
+	} else if !restored {
 		logger.Infof("No saved variables found in namespace %s", client.Namespace())
 		return nil
 	}

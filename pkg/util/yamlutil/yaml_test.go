@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	
+
 	"gotest.tools/assert"
 )
 
@@ -34,7 +34,7 @@ func TestWriteRead(t *testing.T) {
 			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
-	
+
 	inputObj := make(map[string]interface{})
 	arr0 := make(map[string]interface{})
 	arr0["testString"] = "hello"
@@ -50,7 +50,6 @@ func TestWriteRead(t *testing.T) {
 	inputObj["testBoolString"] = "false"
 	inputObj["testEmptyString"] = ""
 	inputObj["testInt"] = 1
-	
 
 	err = WriteYamlToFile(inputObj, "yaml.yaml")
 	if err != nil {

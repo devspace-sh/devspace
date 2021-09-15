@@ -4,9 +4,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	"github.com/loft-sh/devspace/helper/server/ignoreparser"
-	"github.com/loft-sh/devspace/helper/util/stderrlog"
-	"github.com/loft-sh/notify"
 	"io"
 	"io/ioutil"
 	"log"
@@ -15,6 +12,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
+	"github.com/loft-sh/devspace/helper/util/stderrlog"
+	"github.com/loft-sh/notify"
 
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/util"
@@ -61,7 +62,7 @@ func StartDownstreamServer(reader io.Reader, writer io.Writer, options *Downstre
 
 		// start watcher if this we should use it
 		watchStop := make(chan struct{})
-		if options.Polling == false {
+		if !options.Polling {
 			stderrlog.Logf("Use inotify as watching method in container")
 
 			go func() {
@@ -128,9 +129,7 @@ func (d *Downstream) Download(stream remote.Downstream_DownloadServer) error {
 	for {
 		paths, err := stream.Recv()
 		if paths != nil {
-			for _, path := range paths.Paths {
-				filesToCompress = append(filesToCompress, path)
-			}
+			filesToCompress = append(filesToCompress, paths.Paths...)
 		}
 
 		if err == io.EOF {
@@ -187,7 +186,7 @@ func (d *Downstream) compress(writer io.WriteCloser, files []string) error {
 
 	writtenFiles := make(map[string]bool)
 	for _, path := range files {
-		if _, ok := writtenFiles[path]; ok == false {
+		if _, ok := writtenFiles[path]; !ok {
 			err := recursiveTar(d.options.RemotePath, path, writtenFiles, tarWriter, true)
 			if err != nil {
 				return errors.Wrapf(err, "compress %s", path)
@@ -283,7 +282,7 @@ func (d *Downstream) Changes(empty *remote.Empty, stream remote.Downstream_Chang
 	throttle := time.Duration(d.options.Throttle) * time.Millisecond
 
 	// Walk through the dir
-	if d.options.Polling == false {
+	if !d.options.Polling {
 		newState = d.getWatchState()
 	} else {
 		walkDir(d.options.RemotePath, d.options.RemotePath, d.ignoreMatcher, newState, throttle)
@@ -306,7 +305,7 @@ func (d *Downstream) watch(stopChan chan struct{}) {
 		case <-stopChan:
 			return
 		case event, ok := <-d.events:
-			if ok == false {
+			if !ok {
 				return
 			}
 
@@ -336,9 +335,7 @@ func (d *Downstream) watch(stopChan chan struct{}) {
 }
 
 func (d *Downstream) applyChange(newState map[string]*remote.Change, fullPath string) {
-	if strings.HasSuffix(fullPath, "/") {
-		fullPath = fullPath[:len(fullPath)-1]
-	}
+	fullPath = strings.TrimSuffix(fullPath, "/")
 
 	relativePath := fullPath[len(d.options.RemotePath):]
 
@@ -355,12 +352,12 @@ func (d *Downstream) applyChange(newState map[string]*remote.Change, fullPath st
 	stat, err := os.Stat(fullPath)
 	if err != nil {
 		return
-	} else if d.ignoreMatcher != nil && d.ignoreMatcher.RequireFullScan() == false && d.ignoreMatcher.Matches(relativePath, stat.IsDir()) {
+	} else if d.ignoreMatcher != nil && !d.ignoreMatcher.RequireFullScan() && d.ignoreMatcher.Matches(relativePath, stat.IsDir()) {
 		return
 	}
 
 	if stat.IsDir() {
-		if d.ignoreMatcher == nil || d.ignoreMatcher.RequireFullScan() == false || d.ignoreMatcher.Matches(relativePath, true) == false {
+		if d.ignoreMatcher == nil || !d.ignoreMatcher.RequireFullScan() || !d.ignoreMatcher.Matches(relativePath, true) {
 			newState[fullPath] = &remote.Change{
 				Path:  fullPath,
 				IsDir: true,
@@ -369,7 +366,7 @@ func (d *Downstream) applyChange(newState map[string]*remote.Change, fullPath st
 
 		walkDir(d.options.RemotePath, fullPath, d.ignoreMatcher, newState, time.Duration(d.options.Throttle)*time.Millisecond)
 	} else {
-		if d.ignoreMatcher == nil || d.ignoreMatcher.RequireFullScan() == false || d.ignoreMatcher.Matches(relativePath, false) == false {
+		if d.ignoreMatcher == nil || !d.ignoreMatcher.RequireFullScan() || !d.ignoreMatcher.Matches(relativePath, false) {
 			newState[fullPath] = &remote.Change{
 				Path:          fullPath,
 				Size:          stat.Size(),
@@ -467,7 +464,7 @@ func streamChanges(basePath string, oldState map[string]*remote.Change, newState
 			time.Sleep(throttle)
 		}
 
-		if _, ok := newState[oldFile.Path]; ok == false {
+		if _, ok := newState[oldFile.Path]; !ok {
 			if stream != nil {
 				changes = append(changes, &remote.Change{
 					ChangeType:    remote.ChangeType_DELETE,
@@ -522,7 +519,7 @@ func walkDir(basePath string, path string, ignoreMatcher ignoreparser.IgnorePars
 		}
 
 		// Check if ignored
-		if ignoreMatcher != nil && ignoreMatcher.RequireFullScan() == false && ignoreMatcher.Matches(absolutePath[len(basePath):], stat.IsDir()) {
+		if ignoreMatcher != nil && !ignoreMatcher.RequireFullScan() && ignoreMatcher.Matches(absolutePath[len(basePath):], stat.IsDir()) {
 			continue
 		}
 
@@ -534,7 +531,7 @@ func walkDir(basePath string, path string, ignoreMatcher ignoreparser.IgnorePars
 		// Check if directory
 		if stat.IsDir() {
 			// Check if not ignored
-			if ignoreMatcher == nil || ignoreMatcher.RequireFullScan() == false || ignoreMatcher.Matches(absolutePath[len(basePath):], true) == false {
+			if ignoreMatcher == nil || !ignoreMatcher.RequireFullScan() || !ignoreMatcher.Matches(absolutePath[len(basePath):], true) {
 				state[absolutePath] = &remote.Change{
 					Path:  absolutePath,
 					IsDir: true,
@@ -544,7 +541,7 @@ func walkDir(basePath string, path string, ignoreMatcher ignoreparser.IgnorePars
 			walkDir(basePath, absolutePath, ignoreMatcher, state, throttle)
 		} else {
 			// Check if not ignored
-			if ignoreMatcher == nil || ignoreMatcher.RequireFullScan() == false || ignoreMatcher.Matches(absolutePath[len(basePath):], false) == false {
+			if ignoreMatcher == nil || !ignoreMatcher.RequireFullScan() || !ignoreMatcher.Matches(absolutePath[len(basePath):], false) {
 				state[absolutePath] = &remote.Change{
 					Path:          absolutePath,
 					Size:          stat.Size(),

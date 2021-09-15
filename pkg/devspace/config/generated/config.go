@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	DEVSPACE_DISABLE_VARS_ENCRYPTION_ENV = "DEVSPACE_DISABLE_VARS_ENCRYPTION"
+	DevspaceDisableVarsEncryptionEnv = "DEVSPACE_DISABLE_VARS_ENCRYPTION"
 )
 
 // EncryptionKey is the key to encrypt generated variables with. This will be compiled into the binary during the pipeline.
@@ -132,7 +132,7 @@ func (l *configLoader) Save(config *Config) error {
 	}
 
 	// encrypt variables
-	if os.Getenv(DEVSPACE_DISABLE_VARS_ENCRYPTION_ENV) != "true" && EncryptionKey != "" {
+	if os.Getenv(DevspaceDisableVarsEncryptionEnv) != "true" && EncryptionKey != "" {
 		for k, v := range copiedConfig.Vars {
 			if len(v) == 0 {
 				continue
@@ -211,7 +211,7 @@ func (cache *CacheConfig) GetDeploymentCache(deploymentName string) *DeploymentC
 
 // InitDevSpaceConfig verifies a given config name is set
 func InitDevSpaceConfig(config *Config, configName string) {
-	if cache, ok := config.Profiles[configName]; ok == false || cache == nil {
+	if cache, ok := config.Profiles[configName]; !ok || cache == nil {
 		config.Profiles[configName] = NewCache()
 		return
 	}

@@ -1,8 +1,9 @@
 package reset
 
 import (
-	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"os"
+
+	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 
 	"github.com/loft-sh/devspace/pkg/util/factory"
 

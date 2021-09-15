@@ -4,9 +4,6 @@ import (
 	"archive/tar"
 	"encoding/json"
 	"fmt"
-	"github.com/docker/docker/builder/dockerignore"
-	"github.com/docker/docker/pkg/fileutils"
-	scanner2 "github.com/loft-sh/devspace/pkg/util/scanner"
 	"io"
 	"io/ioutil"
 	"os"
@@ -14,6 +11,10 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/docker/docker/pkg/fileutils"
+	scanner2 "github.com/loft-sh/devspace/pkg/util/scanner"
+	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 

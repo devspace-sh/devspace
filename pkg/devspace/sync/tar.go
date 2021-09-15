@@ -3,7 +3,6 @@ package sync
 import (
 	"archive/tar"
 	"compress/gzip"
-	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"io"
 	"io/ioutil"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 
 	"github.com/loft-sh/devspace/pkg/util/log"
 
@@ -53,7 +54,7 @@ func (u *Unarchiver) Untar(fromReader io.ReadCloser, toPath string) error {
 		shouldContinue, err := u.untarNext(toPath, tarReader)
 		if err != nil {
 			return errors.Wrapf(err, "decompress %s", toPath)
-		} else if shouldContinue == false {
+		} else if !shouldContinue {
 			return nil
 		}
 
@@ -83,7 +84,7 @@ func (u *Unarchiver) untarNext(destPath string, tarReader *tar.Reader) (bool, er
 
 	// Check if newer file is there and then don't override?
 	stat, err := os.Stat(outFileName)
-	if err == nil && u.forceOverride == false {
+	if err == nil && !u.forceOverride {
 		if stat.ModTime().Unix() > header.FileInfo().ModTime().Unix() {
 			// Update filemap otherwise we download and download again
 			u.syncConfig.fileIndex.fileMap[relativePath] = &FileInformation{
@@ -94,7 +95,7 @@ func (u *Unarchiver) untarNext(destPath string, tarReader *tar.Reader) (bool, er
 				IsDirectory: stat.IsDir(),
 			}
 
-			if stat.IsDir() == false {
+			if !stat.IsDir() {
 				u.syncConfig.log.Infof("Downstream - Don't override %s because file has newer mTime timestamp", relativePath)
 			}
 			return true, nil
@@ -263,7 +264,7 @@ func (a *Archiver) AddToArchive(relativePath string) error {
 	}
 
 	// Exclude files on the exclude list if it does not have a negate pattern, otherwise we will check below
-	if a.ignoreMatcher != nil && a.ignoreMatcher.RequireFullScan() == false && a.ignoreMatcher.Matches(relativePath, stat.IsDir()) {
+	if a.ignoreMatcher != nil && !a.ignoreMatcher.RequireFullScan() && a.ignoreMatcher.Matches(relativePath, stat.IsDir()) {
 		return nil
 	}
 
@@ -274,7 +275,7 @@ func (a *Archiver) AddToArchive(relativePath string) error {
 	}
 
 	// exclude file?
-	if a.ignoreMatcher == nil || a.ignoreMatcher.RequireFullScan() == false || a.ignoreMatcher.Matches(relativePath, false) == false {
+	if a.ignoreMatcher == nil || !a.ignoreMatcher.RequireFullScan() || !a.ignoreMatcher.Matches(relativePath, false) {
 		return a.tarFile(fileInformation, stat)
 	}
 
@@ -291,7 +292,7 @@ func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) er
 
 	if len(files) == 0 && target.Name != "" {
 		// check if not excluded
-		if a.ignoreMatcher == nil || a.ignoreMatcher.RequireFullScan() == false || a.ignoreMatcher.Matches(target.Name, true) == false {
+		if a.ignoreMatcher == nil || !a.ignoreMatcher.RequireFullScan() || !a.ignoreMatcher.Matches(target.Name, true) {
 			// Case empty directory
 			hdr, _ := tar.FileInfoHeader(targetStat, filepath)
 			hdr.Uid = 0

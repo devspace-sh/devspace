@@ -9,9 +9,24 @@ env:
   GOFLAGS: -mod=vendor
 
 jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.29
+          args:
+            -v
+            --config=.golangci.yml
+            --max-same-issues=10
+          
+
   test-e2e:
     runs-on: ubuntu-latest
-    
+
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - name: Checkout repo

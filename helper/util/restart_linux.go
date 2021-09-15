@@ -1,16 +1,18 @@
+//go:build linux
 // +build linux
 
 package util
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
+	"github.com/pkg/errors"
 )
 
 type containerRestarter struct {

@@ -24,3 +24,8 @@
 
 /ui/node_modules
 /ui/build/static/js/*.js.map
+
+# Created by running unit tests ./hack/coverage.bash
+coverage.txt
+main
+profile.out

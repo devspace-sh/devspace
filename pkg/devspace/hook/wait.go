@@ -2,6 +2,9 @@ package hook
 
 import (
 	"context"
+	"sync"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -15,8 +18,6 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"sync"
-	"time"
 )
 
 func NewWaitHook() Hook {
@@ -103,7 +104,7 @@ func (r *waitHook) execute(ctx Context, hook *latest.HookConfig, imageSelector [
 				})
 			}
 
-			if isWaitConditionTrue(hook.Wait, pc) == false {
+			if !isWaitConditionTrue(hook.Wait, pc) {
 				return false, nil
 			}
 		}

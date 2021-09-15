@@ -5,16 +5,16 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"github.com/loft-sh/devspace/assets"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devspace/assets"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
@@ -107,7 +107,7 @@ func downloadFile(version string, folder string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Unexpected response status: %d", resp.StatusCode)
+		return fmt.Errorf("unexpected response status: %d", resp.StatusCode)
 	}
 
 	return untar(resp.Body, folder)
@@ -168,7 +168,7 @@ func untar(r io.Reader, dir string) (err error) {
 				modTime = t0
 			}
 			if !modTime.IsZero() {
-				os.Chtimes(abs, modTime, modTime)
+				_ = os.Chtimes(abs, modTime, modTime)
 			}
 			nFiles++
 		case mode.IsDir():
@@ -181,17 +181,6 @@ func untar(r io.Reader, dir string) (err error) {
 		}
 	}
 	return nil
-}
-
-func validRelativeDir(dir string) bool {
-	if strings.Contains(dir, `\`) || path.IsAbs(dir) {
-		return false
-	}
-	dir = path.Clean(dir)
-	if strings.HasPrefix(dir, "../") || strings.HasSuffix(dir, "/..") || dir == ".." {
-		return false
-	}
-	return true
 }
 
 func validRelPath(p string) bool {

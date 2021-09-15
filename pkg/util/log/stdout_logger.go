@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const DEVSPACE_LOG_TIMESTAMPS = "DEVSPACE_LOG_TIMESTAMPS"
+const DevspaceLogTimestamps = "DEVSPACE_LOG_TIMESTAMPS"
 
 var stdout = goansi.NewAnsiStdout()
 var stderr = goansi.NewAnsiStderr()
@@ -103,12 +103,12 @@ func (s *stdoutLogger) writeMessage(fnType logFunctionType, message string) {
 			s.loadingText.Stop()
 		}
 
-		if os.Getenv(DEVSPACE_LOG_TIMESTAMPS) == "true" {
+		if os.Getenv(DevspaceLogTimestamps) == "true" {
 			now := time.Now()
-			fnInformation.stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
+			_, _ = fnInformation.stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
 		}
-		fnInformation.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
-		fnInformation.stream.Write([]byte(message))
+		_, _ = fnInformation.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
+		_, _ = fnInformation.stream.Write([]byte(message))
 
 		if s.loadingText != nil && fnType != fatalFn {
 			s.loadingText.Start()
@@ -437,7 +437,7 @@ func (s *stdoutLogger) WriteString(message string) {
 			s.loadingText.Stop()
 		}
 
-		fnTypeInformationMap[infoFn].stream.Write([]byte(message))
+		_, _ = fnTypeInformationMap[infoFn].stream.Write([]byte(message))
 
 		if s.loadingText != nil {
 			s.loadingText.Start()

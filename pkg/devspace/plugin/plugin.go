@@ -3,20 +3,22 @@ package plugin
 import (
 	"encoding/base32"
 	"fmt"
+
 	"github.com/blang/semver"
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/util/log"
 
-	"github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+
+	"github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 )
 
 var encoding = base32.StdEncoding.WithPadding('0')
@@ -108,7 +110,7 @@ func (c *client) install(path, version string) (*Metadata, error) {
 			break
 		}
 	}
-	if found == false {
+	if !found {
 		return nil, fmt.Errorf("plugin %s does not support %s/%s", metadata.Name, runtime.GOOS, runtime.GOARCH)
 	}
 

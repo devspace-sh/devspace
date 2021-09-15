@@ -24,7 +24,7 @@ func (serviceClient *client) StartAttach(options targetselector.Options, interru
 		return err
 	}
 
-	if container.Container.TTY == false || container.Container.Stdin == false {
+	if !container.Container.TTY || !container.Container.Stdin {
 		serviceClient.log.Warnf("To be able to interact with the container its options tty (currently `%t`) and stdin (currently `%t`) must both be `true`", container.Container.TTY, container.Container.Stdin)
 	}
 

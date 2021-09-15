@@ -16,6 +16,4 @@ func (f *FakeHook) ExecuteMultiple(when hook.When, stage hook.Stage, whichs []st
 	return nil
 }
 
-func (f *FakeHook) OnError(stage hook.Stage, whichs []string, context hook.Context, log log.Logger) {
-	return
-}
+func (f *FakeHook) OnError(stage hook.Stage, whichs []string, context hook.Context, log log.Logger) {}

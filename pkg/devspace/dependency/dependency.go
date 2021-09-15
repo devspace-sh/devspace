@@ -3,6 +3,9 @@ package dependency
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"os"
+
 	"github.com/loft-sh/devspace/pkg/devspace/command"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -11,9 +14,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"github.com/loft-sh/devspace/pkg/util/exit"
-	"io"
 	"mvdan.cc/sh/v3/interp"
-	"os"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
@@ -138,7 +139,7 @@ func (m *manager) Command(options CommandOptions) error {
 		}
 
 		// Change back to original working directory
-		defer os.Chdir(currentWorkingDirectory)
+		defer func() { _ = os.Chdir(currentWorkingDirectory) }()
 
 		found = true
 		return ExecuteCommand(dependency.localConfig.Config().Commands, options.Command, options.Args, os.Stdout, os.Stderr)
@@ -263,7 +264,7 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 		return nil, nil
 	}
 
-	if silent == false {
+	if !silent {
 		m.log.Infof("Start resolving dependencies")
 	}
 
@@ -275,10 +276,10 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 
 	defer m.log.StopWait()
 
-	if silent == false {
+	if !silent {
 		m.log.Donef("Resolved %d dependencies", len(dependencies))
 	}
-	if silent == false && verbose == false {
+	if !silent && !verbose {
 		m.log.Infof("To display the complete dependency execution log run with the '--verbose-dependencies' flag")
 	}
 
@@ -294,7 +295,7 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 	}
 
 	executedDependencies := []types.Dependency{}
-	if silent == false && verbose == false {
+	if !silent && !verbose {
 		m.log.StartWait(fmt.Sprintf("%s %d dependencies", actionName, numDependencies))
 	}
 	for i >= 0 && i < len(dependencies) {
@@ -312,7 +313,7 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 		}
 
 		// Check if we should act on this dependency
-		if foundDependency(dependency.Name(), filterDependencies) == false {
+		if !foundDependency(dependency.Name(), filterDependencies) {
 			continue
 		} else if skipDependency(dependency.Name(), skipDependencies) {
 			m.log.Infof("Skip dependency %s", dependency.Name())
@@ -320,7 +321,7 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 		}
 
 		// If not verbose log to a stream
-		if verbose == false {
+		if !verbose {
 			dependencyLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
 		}
 
@@ -363,12 +364,12 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 		}
 
 		executedDependencies = append(executedDependencies, dependency)
-		if silent == false {
+		if !silent {
 			m.log.Donef("%s dependency %s completed", actionName, dependency.Name())
 		}
 	}
 	m.log.StopWait()
-	if silent == false {
+	if !silent {
 		if len(executedDependencies) > 0 {
 			m.log.Donef("Successfully processed %d dependencies", len(executedDependencies))
 		} else {
@@ -438,7 +439,7 @@ func (d *Dependency) Build(forceDependencies bool, buildOptions *build.Options, 
 	}
 
 	// Change back to original working directory
-	defer os.Chdir(currentWorkingDirectory)
+	defer func() { _ = os.Chdir(currentWorkingDirectory) }()
 
 	// Check if image build is enabled
 	_, err = d.buildImages(false, buildOptions, log)
@@ -459,7 +460,7 @@ func (d *Dependency) Deploy(forceDependencies, skipBuild, skipDeploy, forceDeplo
 	}
 
 	// Change back to original working directory
-	defer os.Chdir(currentWorkingDirectory)
+	defer func() { _ = os.Chdir(currentWorkingDirectory) }()
 
 	// Create namespace if necessary
 	err = d.kubeClient.EnsureDeployNamespaces(d.localConfig.Config(), log)
@@ -480,7 +481,7 @@ func (d *Dependency) Deploy(forceDependencies, skipBuild, skipDeploy, forceDeplo
 	}
 
 	// Deploy all defined deployments
-	if skipDeploy == false {
+	if !skipDeploy {
 		err = d.deployController.Deploy(&deploy.Options{
 			ForceDeploy: forceDeploy,
 			BuiltImages: builtImages,
@@ -507,7 +508,7 @@ func (d *Dependency) Render(skipBuild bool, buildOptions *build.Options, out io.
 		return errors.Wrap(err, "getwd")
 	}
 
-	defer os.Chdir(currentWorkingDirectory)
+	defer func() { _ = os.Chdir(currentWorkingDirectory) }()
 
 	// Check if image build is enabled
 	builtImages, err := d.buildImages(skipBuild, buildOptions, log)
@@ -528,7 +529,7 @@ func (d *Dependency) Purge(log log.Logger) error {
 	if err != nil {
 		return errors.Wrap(err, "getwd")
 	}
-	defer os.Chdir(currentWorkingDirectory)
+	defer func() { _ = os.Chdir(currentWorkingDirectory) }()
 
 	// Purge the deployments
 	err = d.deployController.Purge(nil, log)
@@ -552,7 +553,7 @@ func (d *Dependency) StartSync(client kubectl.Client, interrupt chan error, prin
 	if err != nil {
 		return errors.Wrap(err, "getwd")
 	}
-	defer os.Chdir(currentWorkingDirectory)
+	defer func() { _ = os.Chdir(currentWorkingDirectory) }()
 
 	err = services.NewClient(d.localConfig, d.children, client, logger).StartSync(interrupt, printSyncLog, verboseSync, func(idx int, syncConfig *latest.SyncConfig) string {
 		prefix := fmt.Sprintf("[%s:%d:sync] ", d.Name(), idx)
@@ -599,7 +600,7 @@ func (d *Dependency) buildImages(skipBuild bool, buildOptions *build.Options, lo
 
 	// Check if image build is enabled
 	builtImages := make(map[string]string)
-	if skipBuild == false && d.dependencyConfig.SkipBuild == false {
+	if !skipBuild && !d.dependencyConfig.SkipBuild {
 		// Build images
 		builtImages, err = d.buildController.Build(buildOptions, log)
 		if err != nil {
@@ -643,7 +644,7 @@ func (d *Dependency) prepare(forceDependencies bool) (string, error) {
 	}
 
 	// Check if we skip the dependency deploy
-	if forceDependencies == false && directoryHash == d.dependencyCache.GetActive().Dependencies[d.id] {
+	if !forceDependencies && directoryHash == d.dependencyCache.GetActive().Dependencies[d.id] {
 		return "", nil
 	}
 

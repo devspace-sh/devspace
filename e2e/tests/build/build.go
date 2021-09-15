@@ -56,7 +56,7 @@ var _ = DevSpaceDescribe("build", func() {
 		devspaceDockerClient, err := docker.NewClient(log)
 		framework.ExpectNoError(err)
 
-		dockerClient := devspaceDockerClient.DockerApiClient()
+		dockerClient := devspaceDockerClient.DockerAPIClient()
 		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
 		framework.ExpectNoError(err)
 
@@ -90,7 +90,7 @@ var _ = DevSpaceDescribe("build", func() {
 		devspaceDockerClient, err := docker.NewClient(log)
 		framework.ExpectNoError(err)
 
-		dockerClient := devspaceDockerClient.DockerApiClient()
+		dockerClient := devspaceDockerClient.DockerAPIClient()
 		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
 		framework.ExpectNoError(err)
 

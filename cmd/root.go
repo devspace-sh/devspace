@@ -2,6 +2,11 @@ package cmd
 
 import (
 	"flag"
+	"io/ioutil"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/joho/godotenv"
 	"github.com/loft-sh/devspace/cmd/add"
 	"github.com/loft-sh/devspace/cmd/cleanup"
@@ -24,11 +29,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"io/ioutil"
 	"k8s.io/klog"
-	"os"
-	"strings"
-	"time"
 )
 
 // NewRootCmd returns a new root command
@@ -53,12 +54,12 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 
 			// parse the .env file
 			err := godotenv.Load()
-			if err != nil && os.IsNotExist(err) == false {
+			if err != nil && !os.IsNotExist(err) {
 				log.Warnf("Error loading .env: %v", err)
 			}
 
 			// apply extra flags
-			if cobraCmd.DisableFlagParsing == false {
+			if !cobraCmd.DisableFlagParsing {
 				extraFlags, err := flagspkg.ApplyExtraFlags(cobraCmd, os.Args, false)
 				if err != nil {
 					log.Warnf("Error applying extra flags: %v", err)
@@ -206,6 +207,6 @@ func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 func disableKlog() {
 	flagSet := &flag.FlagSet{}
 	klog.InitFlags(flagSet)
-	flagSet.Set("logtostderr", "false")
+	_ = flagSet.Set("logtostderr", "false")
 	klog.SetOutput(ioutil.Discard)
 }

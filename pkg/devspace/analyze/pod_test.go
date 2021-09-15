@@ -32,7 +32,7 @@ type podTestCase struct {
 
 func TestPods(t *testing.T) {
 	testCases := []podTestCase{
-		podTestCase{
+		{
 			name: "Wait for pod in creation",
 			wait: true,
 			pod: k8sv1.Pod{
@@ -53,7 +53,7 @@ func TestPods(t *testing.T) {
 				},
 			},
 		},
-		podTestCase{
+		{
 			name: "Wait for pod in initialization",
 			wait: true,
 			pod: k8sv1.Pod{
@@ -74,7 +74,7 @@ func TestPods(t *testing.T) {
 				},
 			},
 		},
-		podTestCase{
+		{
 			name: "Wait for minimalPodAge to pass",
 			wait: true,
 			pod: k8sv1.Pod{
@@ -96,7 +96,7 @@ func TestPods(t *testing.T) {
 				},
 			},
 		},
-		podTestCase{
+		{
 			name: "Analyze pod with many problems",
 			wait: false,
 			pod: k8sv1.Pod{
@@ -106,7 +106,7 @@ func TestPods(t *testing.T) {
 				Status: k8sv1.PodStatus{
 					Reason: "Error",
 					ContainerStatuses: []k8sv1.ContainerStatus{
-						k8sv1.ContainerStatus{
+						{
 							Ready:        true,
 							RestartCount: 1,
 							LastTerminationState: k8sv1.ContainerState{
@@ -118,7 +118,7 @@ func TestPods(t *testing.T) {
 								},
 							},
 						},
-						k8sv1.ContainerStatus{
+						{
 							State: k8sv1.ContainerState{
 								Terminated: &k8sv1.ContainerStateTerminated{
 									FinishedAt: metav1.Time{Time: time.Now().Add(-IgnoreRestartsSince * 2)},
@@ -130,10 +130,10 @@ func TestPods(t *testing.T) {
 						},
 					},
 					InitContainerStatuses: []k8sv1.ContainerStatus{
-						k8sv1.ContainerStatus{
+						{
 							Ready: true,
 						},
-						k8sv1.ContainerStatus{
+						{
 							State: k8sv1.ContainerState{
 								Waiting: &k8sv1.ContainerStateWaiting{
 									Message: "someMessage3",
@@ -166,12 +166,12 @@ func TestPods(t *testing.T) {
 		kubeClient := &fakekube.Client{
 			Client: fake.NewSimpleClientset(),
 		}
-		kubeClient.Client.CoreV1().Namespaces().Create(context.TODO(), &k8sv1.Namespace{
+		_, _ = kubeClient.Client.CoreV1().Namespaces().Create(context.TODO(), &k8sv1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: namespace,
 			},
 		}, metav1.CreateOptions{})
-		kubeClient.Client.CoreV1().Pods(namespace).Create(context.TODO(), &testCase.pod, metav1.CreateOptions{})
+		_, _ = kubeClient.Client.CoreV1().Pods(namespace).Create(context.TODO(), &testCase.pod, metav1.CreateOptions{})
 
 		analyzer := &analyzer{
 			client: kubeClient,
@@ -181,7 +181,7 @@ func TestPods(t *testing.T) {
 		go func() {
 			time.Sleep(time.Second / 2)
 			if testCase.updatedPod != nil {
-				kubeClient.Client.CoreV1().Pods(namespace).Update(context.TODO(), testCase.updatedPod, metav1.UpdateOptions{})
+				_, _ = kubeClient.Client.CoreV1().Pods(namespace).Update(context.TODO(), testCase.updatedPod, metav1.UpdateOptions{})
 			}
 		}()
 

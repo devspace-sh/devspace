@@ -75,7 +75,7 @@ type Client interface {
 	ReadLogs(namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error)
 
 	// Starts a new logs request to the given pod and container and returns a ReadCloser interface
-	// to allow continous reading. Can also follow a log if specified.
+	// to allow continuous reading. Can also follow a log if specified.
 	Logs(ctx context.Context, namespace, podName, containerName string, lastContainerLog bool, tail *int64, follow bool) (io.ReadCloser, error)
 
 	// Creates a new round tripper and upgrade wrapper for the current kube config
@@ -159,7 +159,7 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, kubeLoader kubecon
 	}
 
 	sort.Strings(options)
-	for true {
+	for {
 		kubeContext, err := log.Question(&survey.QuestionOptions{
 			Question:     "Which kube context do you want to use",
 			DefaultValue: kubeConfig.CurrentContext,
@@ -170,7 +170,7 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, kubeLoader kubecon
 		}
 
 		// Check if cluster is in private network
-		if allowPrivate == false {
+		if !allowPrivate {
 			context := kubeConfig.Contexts[kubeContext]
 			cluster := kubeConfig.Clusters[context.Cluster]
 
@@ -190,8 +190,6 @@ func NewClientBySelect(allowPrivate bool, switchContext bool, kubeLoader kubecon
 
 		return NewClientFromContext(kubeContext, "", switchContext, kubeLoader)
 	}
-
-	return nil, errors.New("We should not reach this point")
 }
 
 // Returns the underlying kube client config
@@ -206,7 +204,7 @@ func (client *client) IsInCluster() bool {
 
 // PrintWarning prints a warning if the last kube context is different than this one
 func (client *client) PrintWarning(generatedConfig *generated.Config, noWarning, shouldWait bool, log log.Logger) error {
-	if generatedConfig != nil && log.GetLevel() >= logrus.InfoLevel && noWarning == false {
+	if generatedConfig != nil && log.GetLevel() >= logrus.InfoLevel && !noWarning {
 		// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
 		if generatedConfig.GetActive().LastContext != nil {
 			wait := false

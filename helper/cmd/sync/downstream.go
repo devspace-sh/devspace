@@ -1,9 +1,10 @@
 package sync
 
 import (
+	"os"
+
 	"github.com/loft-sh/devspace/helper/server"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 // DownstreamCmd holds the downstream cmd flags

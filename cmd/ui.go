@@ -3,11 +3,12 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
@@ -76,7 +77,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 	}
 
 	// Search for an already existing server
-	if cmd.ForceServer == false && cmd.Dev == false && cmd.Host == "localhost" {
+	if !cmd.ForceServer && !cmd.Dev && cmd.Host == "localhost" {
 		checkPort := server.DefaultPort
 		if cmd.Port != 0 {
 			checkPort = cmd.Port
@@ -84,7 +85,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 
 		for i := 0; i < 20; i++ {
 			unused, err := port.CheckHostPort(cmd.Host, checkPort)
-			if unused == false {
+			if !unused {
 				if i+1 == 20 {
 					return errors.Wrap(err, "check for open port")
 				}
@@ -114,7 +115,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 
 				if serverVersion.DevSpace {
 					cmd.log.Infof("Found running UI server at %s", domain)
-					open.Start(domain)
+					_ = open.Start(domain)
 					return nil
 				}
 
@@ -189,7 +190,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 	}
 
 	// Open the browser
-	if cmd.Dev == false {
+	if !cmd.Dev {
 		go func(domain string) {
 			time.Sleep(time.Second * 2)
 			_ = open.Start("http://" + domain)

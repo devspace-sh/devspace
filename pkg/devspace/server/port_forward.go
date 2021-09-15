@@ -67,7 +67,7 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 	if h.ports[key] != nil {
 		// Check if the pod is the same
 		if h.ports[key].podUUID == string(pod.UID) {
-			w.Write([]byte(strconv.Itoa(h.ports[key].portForwarderPort)))
+			_, _ = w.Write([]byte(strconv.Itoa(h.ports[key].portForwarderPort)))
 			return
 		}
 
@@ -92,6 +92,12 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 	ports := []string{strconv.Itoa(checkPort) + ":" + targetPort[0]}
 
 	pf, err := client.NewPortForwarder(pod, ports, []string{"127.0.0.1"}, stopChan, readyChan, nil)
+
+	if err != nil {
+		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	go func(key string, port int) {
 		defer h.log.Infof("Stop listening on on %d", port)
@@ -128,7 +134,7 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 			podUUID:           string(pod.UID),
 		}
 
-		w.Write([]byte(strconv.Itoa(h.ports[key].portForwarderPort)))
+		_, _ = w.Write([]byte(strconv.Itoa(h.ports[key].portForwarderPort)))
 		return
 	case <-time.After(10 * time.Second):
 		h.log.Errorf("Error in %s: %v", r.URL.String(), "Timeout waiting for port forwarding to start")

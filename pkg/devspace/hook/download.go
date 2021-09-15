@@ -5,6 +5,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"io"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -12,12 +18,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"io"
 	k8sv1 "k8s.io/api/core/v1"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
 )
 
 func NewDownloadHook() RemoteHook {

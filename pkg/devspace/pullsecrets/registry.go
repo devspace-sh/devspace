@@ -5,11 +5,12 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"regexp"
 	"strings"
 	"time"
+
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/pkg/errors"
 
@@ -21,7 +22,7 @@ const registryAuthSecretNamePrefix = "devspace-auth-"
 
 var registryNameReplaceRegex = regexp.MustCompile(`[^a-z0-9\\-]`)
 
-// PullSecretOptions has all options neccessary to create a pullSecret
+// PullSecretOptions has all options necessary to create a pullSecret
 type PullSecretOptions struct {
 	Namespace       string
 	RegistryURL     string

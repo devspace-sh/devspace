@@ -130,7 +130,7 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	output, err := c.genericHelm.Exec(args, helmConfig)
 
 	if helmConfig.DisplayOutput {
-		c.log.Write(output)
+		_, _ = c.log.Write(output)
 	}
 
 	if err != nil {

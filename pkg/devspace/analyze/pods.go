@@ -34,7 +34,7 @@ func (a *analyzer) pods(namespace string, options Options) ([]string, error) {
 	}
 
 	// Waiting for pods to become active
-	if options.Wait == true {
+	if options.Wait {
 		for loop := true; loop && time.Since(now) < timeout; {
 			loop = false
 
@@ -143,8 +143,8 @@ func checkPod(client kubectl.Client, pod *v1.Pod, ignoreContainerRestarts bool) 
 	}
 
 	// Check for unusual status
-	if _, ok := kubectl.OkayStatus[podProblem.Status]; ok == false {
-		if strings.HasPrefix(podProblem.Status, "Init") == false {
+	if _, ok := kubectl.OkayStatus[podProblem.Status]; !ok {
+		if !strings.HasPrefix(podProblem.Status, "Init") {
 			hasProblem = true
 		}
 	}
@@ -202,7 +202,7 @@ func getContainerProblem(client kubectl.Client, pod *v1.Pod, containerStatus *v1
 	}
 
 	// Check if restarted
-	if containerStatus.RestartCount > 0 && ignoreContainerRestarts == false {
+	if containerStatus.RestartCount > 0 && !ignoreContainerRestarts {
 		if containerStatus.LastTerminationState.Terminated != nil && (time.Since(containerStatus.LastTerminationState.Terminated.FinishedAt.Time) < IgnoreRestartsSince) {
 			hasProblem = true
 
@@ -218,7 +218,7 @@ func getContainerProblem(client kubectl.Client, pod *v1.Pod, containerStatus *v1
 	}
 
 	// Check if ready
-	if containerStatus.Ready == false {
+	if !containerStatus.Ready {
 		containerProblem.Ready = false
 
 		if containerStatus.State.Terminated != nil {

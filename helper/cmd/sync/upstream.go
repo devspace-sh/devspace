@@ -2,10 +2,11 @@ package sync
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/helper/server"
-	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
+
+	"github.com/loft-sh/devspace/helper/server"
+	"github.com/spf13/cobra"
 )
 
 // UpstreamCmd holds the upstream cmd flags

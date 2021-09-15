@@ -3,6 +3,13 @@ package plugin
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"sync"
+
 	"github.com/google/uuid"
 	json "github.com/json-iterator/go"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -12,12 +19,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
-	"io"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
-	"sync"
 )
 
 func logErrorf(message string, args ...interface{}) {
@@ -251,7 +252,7 @@ func CallPluginExecutableInBackground(main string, argv []string, extraEnvVars m
 	prog.Env = env
 	prog.Stderr = stderrOut
 	if err := prog.Start(); err != nil {
-		if strings.Index(err.Error(), "no such file or directory") != -1 {
+		if strings.Contains(err.Error(), "no such file or directory") {
 			return fmt.Errorf("the plugin's binary was not found (%v). Please uninstall and reinstall the plugin and make sure there are no other conflicting plugins installed (run 'devspace list plugins' to see all installed plugins)", err)
 		}
 
@@ -286,7 +287,7 @@ func CallPluginExecutable(main string, argv []string, extraEnvVars map[string]st
 		if eerr, ok := err.(*exec.ExitError); ok {
 			os.Stderr.Write(eerr.Stderr)
 			return &exit.ReturnCodeError{ExitCode: eerr.ExitCode()}
-		} else if strings.Index(err.Error(), "no such file or directory") != -1 {
+		} else if strings.Contains(err.Error(), "no such file or directory") {
 			return fmt.Errorf("the plugin's binary was not found (%v). Please uninstall and reinstall the plugin and make sure there are no other conflicting plugins installed (run 'devspace list plugins' to see all installed plugins)", err)
 		}
 

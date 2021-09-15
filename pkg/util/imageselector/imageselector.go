@@ -2,12 +2,13 @@ package imageselector
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/docker/distribution/reference"
 	dockerregistry "github.com/docker/docker/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"regexp"
-	"strings"
 )
 
 type ImageSelector struct {
@@ -97,7 +98,7 @@ func CompareImageNames(selector ImageSelector, image2 string) bool {
 		}
 
 		// if the tag consists of a # we build a regex
-		if strings.Index(image1, "#") != -1 {
+		if strings.Contains(image1, "#") {
 			regex := "^" + strings.Replace(image1, "#", "[a-zA-Z]", -1) + "$"
 			exp, err := regexp.Compile(regex)
 			if err == nil {

@@ -2,13 +2,14 @@ package shell
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"io"
+	"os"
+	"strings"
+
+	"github.com/pkg/errors"
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/interp"
 	"mvdan.cc/sh/v3/syntax"
-	"os"
-	"strings"
 )
 
 func ExecuteShellCommand(command string, args []string, dir string, stdout io.Writer, stderr io.Writer, extraEnvVars map[string]string) error {

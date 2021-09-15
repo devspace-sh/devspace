@@ -1,14 +1,15 @@
 package targetselector
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	v1 "k8s.io/api/core/v1"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	v1 "k8s.io/api/core/v1"
 )
 
 // NewUntilNewestRunningWaitingStrategy creates a new waiting strategy
@@ -71,7 +72,7 @@ func (u *untilNewestRunning) SelectContainer(containers []*selector.SelectedPodC
 		u.printPodWarning(containers[0].Pod, log)
 		return false, nil, nil
 	}
-	if IsContainerRunning(containers[0]) == false {
+	if !IsContainerRunning(containers[0]) {
 		return false, nil, nil
 	}
 
@@ -110,9 +111,6 @@ func IsContainerRunning(container *selector.SelectedPodContainer) bool {
 
 func HasPodProblem(pod *v1.Pod) bool {
 	status := kubectl.GetPodStatus(pod)
-	if strings.HasPrefix(status, "Init:") {
-		status = status[5:]
-	}
-
+	status = strings.TrimPrefix(status, "Init:")
 	return kubectl.CriticalStatus[status]
 }

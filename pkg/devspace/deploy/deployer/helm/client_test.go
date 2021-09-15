@@ -32,7 +32,7 @@ type newTestCase struct {
 
 func TestNew(t *testing.T) {
 	testCases := []newTestCase{
-		newTestCase{
+		{
 			name:       "new client with kubeClient and chart",
 			kubeClient: &fakekube.Client{},
 			deployConfig: &latest.DeploymentConfig{
@@ -90,14 +90,14 @@ type deleteTestCase struct {
 
 func TestDelete(t *testing.T) {
 	testCases := []deleteTestCase{
-		deleteTestCase{
+		{
 			name:   "try to delete without tiller deployed",
 			helmV2: true,
 		},
-		deleteTestCase{
+		{
 			name: "delete deployment",
 			releasesBefore: []*helmtypes.Release{
-				&helmtypes.Release{
+				{
 					Name: "deleteThisRelease",
 				},
 			},
@@ -105,7 +105,7 @@ func TestDelete(t *testing.T) {
 			chart:      "deleteThisDeployment",
 			cache: &generated.CacheConfig{
 				Deployments: map[string]*generated.DeploymentCache{
-					"deleteThisDeployment": &generated.DeploymentCache{},
+					"deleteThisDeployment": {},
 				},
 			},
 		},

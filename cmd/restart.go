@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"

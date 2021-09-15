@@ -2,12 +2,13 @@ package variable
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	varspkg "github.com/loft-sh/devspace/pkg/util/vars"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 // NewResolver creates a new resolver that caches resolved variables in memory and in the provided cache

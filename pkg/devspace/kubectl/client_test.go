@@ -66,7 +66,7 @@ func createTestResources(client kubernetes.Interface) error {
 		Status: v1.PodStatus{
 			Phase: v1.PodRunning,
 			ContainerStatuses: []v1.ContainerStatus{
-				v1.ContainerStatus{
+				{
 					Name:  "test",
 					Ready: true,
 					Image: "nginx",

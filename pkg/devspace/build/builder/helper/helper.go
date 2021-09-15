@@ -1,9 +1,10 @@
 package helper
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"os"
 	"path/filepath"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/pkg/archive"

@@ -36,7 +36,7 @@ func (k kanikoLogger) Write(p []byte) (n int, err error) {
 		if strings.HasSuffix(trimmedLine, "No files changed in this command, skipping snapshotting.") {
 			continue
 		}
-		if strings.Index(trimmedLine, "Error while retrieving image from cache: getting file info") != -1 {
+		if strings.Contains(trimmedLine, "Error while retrieving image from cache: getting file info") {
 			continue
 		}
 

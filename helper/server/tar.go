@@ -35,7 +35,7 @@ func untarAll(reader io.ReadCloser, options *UpstreamOptions) error {
 		shouldContinue, err := untarNext(tarReader, options)
 		if err != nil {
 			return errors.Wrap(err, "decompress")
-		} else if shouldContinue == false {
+		} else if !shouldContinue {
 			return nil
 		}
 	}
@@ -211,7 +211,7 @@ func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles m
 		writtenFiles[fileInformation.Name] = true
 	}
 
-	if skipContents == false {
+	if !skipContents {
 		for _, f := range files {
 			if err := recursiveTar(basePath, path.Join(fileInformation.Name, f.Name()), writtenFiles, tw, skipContents); err != nil {
 				return errors.Wrap(err, "recursive tar")

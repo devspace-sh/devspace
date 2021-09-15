@@ -3,6 +3,10 @@ package hook
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -13,10 +17,7 @@ import (
 	"github.com/mgutz/ansi"
 	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
-	"io"
 	"k8s.io/apimachinery/pkg/labels"
-	"strings"
-	"time"
 )
 
 const (
@@ -59,7 +60,7 @@ const (
 	Before When = "before"
 	// After is used to tell devspace to execute a hook after a certain stage
 	After When = "after"
-	// OnError is used to tell devspace to execute a hook after a certain error occured
+	// OnError is used to tell devspace to execute a hook after a certain error occurred
 	OnError When = "onError"
 )
 
@@ -85,7 +86,7 @@ const (
 const All = "all"
 
 var (
-	_, stdout, stderr = dockerterm.StdStreams()
+	_, stdout, _ = dockerterm.StdStreams()
 )
 
 // Context holds hook context information
@@ -106,8 +107,8 @@ func (e *executer) ExecuteMultiple(when When, stage Stage, whichs []string, cont
 	return nil
 }
 
-// OnError is a convience method to handle the resulting error of a hook execution. Since we mostly return anyways after
-// an error has occured this only prints additonal information why the hook failed
+// OnError is a convenient method to handle the resulting error of a hook execution.
+// Since we mostly return anyways after an error has occurred this only prints additional information why the hook failed
 func (e *executer) OnError(stage Stage, whichs []string, context Context, log logpkg.Logger) {
 	err := e.ExecuteMultiple(OnError, stage, whichs, context, log)
 	if err != nil {
@@ -176,7 +177,7 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 
 		// Execute hooks
 		for _, hookConfig := range hooksToExecute {
-			if command.ShouldExecuteOnOS(hookConfig.OperatingSystem) == false {
+			if !command.ShouldExecuteOnOS(hookConfig.OperatingSystem) {
 				continue
 			}
 
@@ -263,9 +264,8 @@ func executeHook(ctx Context, hookConfig *latest.HookConfig, hookWriter io.Write
 	if err != nil {
 		if hookConfig.Silent {
 			return errors.Wrapf(err, "in hook '%s': %s", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(*bytes.Buffer).String())
-		} else {
-			return errors.Wrapf(err, "in hook '%s'", ansi.Color(hookName(hookConfig), "white+b"))
 		}
+		return errors.Wrapf(err, "in hook '%s'", ansi.Color(hookName(hookConfig), "white+b"))
 	}
 
 	return nil
@@ -345,7 +345,7 @@ func hookName(hook *latest.HookConfig) string {
 			return fmt.Sprintf("logs from image %s", hook.Where.Container.ImageSelector)
 		}
 
-		return fmt.Sprintf("logs from first container found")
+		return "logs from first container found"
 	}
 	if hook.Wait != nil && hook.Where.Container != nil {
 		if hook.Where.Container.Pod != "" {
@@ -361,7 +361,7 @@ func hookName(hook *latest.HookConfig) string {
 			return fmt.Sprintf("wait for image %s", hook.Where.Container.ImageSelector)
 		}
 
-		return fmt.Sprintf("wait for everything")
+		return "wait for everything"
 	}
 	return "hook"
 }

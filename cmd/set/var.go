@@ -1,10 +1,11 @@
 package set
 
 import (
+	"strings"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -79,7 +80,7 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 			return errors.Errorf("Unexpected variable format. Expected key=value, got %s", v)
 		} else if variable.IsPredefinedVariable(splitted[0]) {
 			return errors.Errorf("cannot set predefined variable %s", splitted[0])
-		} else if variableParser.Used[splitted[0]] == false {
+		} else if !variableParser.Used[splitted[0]] {
 			allowedVarsArr := []string{}
 			for k := range variableParser.Used {
 				if variable.IsPredefinedVariable(k) {

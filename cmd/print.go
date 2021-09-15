@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency"
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"

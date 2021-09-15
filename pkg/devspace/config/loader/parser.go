@@ -1,6 +1,9 @@
 package loader
 
 import (
+	"path/filepath"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/expression"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
@@ -8,8 +11,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
-	"path/filepath"
-	"strings"
 )
 
 type Parser interface {

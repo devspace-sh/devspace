@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"io"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -9,7 +11,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"io"
 )
 
 // EnterCmd is a struct that defines a command call for "enter"

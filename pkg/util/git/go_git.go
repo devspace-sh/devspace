@@ -2,10 +2,11 @@ package git
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/pkg/errors"
 	git "gopkg.in/src-d/go-git.v4"
 	plumbing "gopkg.in/src-d/go-git.v4/plumbing"
-	"os"
 )
 
 // GoGitRepository holds the information about a repository
@@ -59,10 +60,13 @@ func (gr *GoGitRepository) Update(merge bool) error {
 		}
 
 		// Make sure master is checked out
-		repoWorktree.Checkout(&git.CheckoutOptions{
+		err = repoWorktree.Checkout(&git.CheckoutOptions{
 			Branch: plumbing.ReferenceName("refs/heads/master"),
 			Create: false,
 		})
+		if err != nil {
+			return err
+		}
 
 		err = repoWorktree.Pull(&git.PullOptions{
 			RemoteName: "origin",
@@ -103,7 +107,10 @@ func (gr *GoGitRepository) Checkout(tag, branch, revision string) error {
 		}
 
 		newRef := plumbing.NewHashReference(plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)), remoteRef.Hash())
-		r.Storer.SetReference(newRef)
+		err = r.Storer.SetReference(newRef)
+		if err != nil {
+			return err
+		}
 
 		// Checkout the branch
 		w, err := r.Worktree()

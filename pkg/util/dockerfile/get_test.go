@@ -2,9 +2,9 @@ package dockerfile
 
 import (
 	"io/ioutil"
-	"testing"
 	"os"
-	
+	"testing"
+
 	"gotest.tools/assert"
 )
 
@@ -56,6 +56,5 @@ EXPOSE `))
 	}
 	assert.Equal(t, 1, len(ports), "Wrong number of ports returned")
 	assert.Equal(t, 8080, ports[0], "Wrong port returned")
-
 
 }

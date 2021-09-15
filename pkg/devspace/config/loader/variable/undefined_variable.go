@@ -2,11 +2,12 @@ package variable
 
 import (
 	"fmt"
+	"os"
+	"strconv"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
-	"os"
-	"strconv"
 )
 
 // NewUndefinedVariable creates a new variable that is loaded without definition

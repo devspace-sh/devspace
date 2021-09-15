@@ -2,6 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/legacy"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -10,11 +16,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/survey"
-	"io"
-	"os"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services"
@@ -274,7 +275,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 		return 0, pluginErr
 	}
 
-	if cmd.SkipPipeline == false {
+	if !cmd.SkipPipeline {
 		pluginErr := plugin.ExecutePluginHook("dev.beforeDependencies")
 		if pluginErr != nil {
 			return 0, pluginErr
@@ -321,7 +322,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 
 			// Build image if necessary
 			builtImages := make(map[string]string)
-			if cmd.SkipBuild == false {
+			if !cmd.SkipBuild {
 				builtImages, err = f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
 					SkipPush:                  cmd.SkipPush,
 					SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
@@ -330,7 +331,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 					MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
 				}, cmd.log)
 				if err != nil {
-					if strings.Index(err.Error(), "no space left on device") != -1 {
+					if strings.Contains(err.Error(), "no space left on device") {
 						return 0, errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
 					}
 
@@ -417,7 +418,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 
 	// Start services
 	exitCode := 0
-	if cmd.ExitAfterDeploy == false {
+	if !cmd.ExitAfterDeploy {
 		var err error
 
 		// Start services
@@ -448,7 +449,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 		servicesClient  = f.NewServicesClient(configInterface, dependencies, client, logger)
 		exitChan        = make(chan error)
 		autoReloadPaths = GetPaths(config)
-		useTerminal     = config.Dev.Terminal != nil && config.Dev.Terminal.Disabled == false
+		useTerminal     = config.Dev.Terminal != nil && !config.Dev.Terminal.Disabled
 	)
 	if cmd.Interrupt != nil {
 		exitChan = cmd.Interrupt
@@ -482,7 +483,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 	if cmd.Sync {
 		cmd.Sync = false
 		printSyncLog := cmd.PrintSyncLog
-		if useTerminal == false && (config.Dev.Logs == nil || config.Dev.Logs.Sync == nil || *config.Dev.Logs.Sync == true) {
+		if !useTerminal && (config.Dev.Logs == nil || config.Dev.Logs.Sync == nil || *config.Dev.Logs.Sync) {
 			printSyncLog = true
 		}
 
@@ -493,7 +494,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 	}
 
 	// Start watcher if we have at least one auto reload path and if we should not skip the pipeline
-	if cmd.SkipPipeline == false && len(autoReloadPaths) > 0 {
+	if !cmd.SkipPipeline && len(autoReloadPaths) > 0 {
 		var once sync.Once
 		watcher, err := watch.New(autoReloadPaths, []string{".devspace/"}, time.Second, func(changed []string, deleted []string) error {
 			path := ""
@@ -525,7 +526,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 	}
 
 	// Run dev.open configs
-	if config != nil && config.Dev.Open != nil && cmd.Open == true {
+	if config != nil && config.Dev.Open != nil && cmd.Open {
 		// Skip executing open config next time (e.g. when automatic redeployment is enabled)
 		cmd.Open = false
 
@@ -541,6 +542,7 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 						// Use warn instead of fatal to prevent exit
 						// Do not print warning
 						// log.Warn(err)
+						_ = err // just to avoid empty branch (SA9003) lint error
 					}
 				}(openConfig.URL)
 			}
@@ -559,8 +561,8 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 	config := configInterface.Config()
 
 	// Check if we should open a terminal or stream logs
-	if cmd.PrintSyncLog == false {
-		if config.Dev.Terminal != nil && config.Dev.Terminal.Disabled == false {
+	if !cmd.PrintSyncLog {
+		if config.Dev.Terminal != nil && !config.Dev.Terminal.Disabled {
 			selectorOptions := targetselector.NewDefaultOptions().ApplyCmdParameter("", "", cmd.Namespace, "")
 			if config.Dev.Terminal != nil {
 				selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Terminal.LabelSelector, config.Dev.Terminal.Namespace, config.Dev.Terminal.ContainerName, "")
@@ -587,7 +589,7 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 
 			stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
 			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalRestart, stdout, stderr, stdin)
-		} else if config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
+		} else if config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || !*config.Dev.Logs.Disabled {
 			// Log multiple images at once
 			manager, err := services.NewLogManager(client, configInterface, dependencies, exitChan, logger)
 			if err != nil {
@@ -633,9 +635,7 @@ func GetPaths(config *latest.Config) []string {
 					if deployName == deployConf.Name {
 						if deployConf.Helm != nil {
 							// Watch values files
-							for _, p := range deployConf.Helm.ValuesFiles {
-								paths = append(paths, p)
-							}
+							paths = append(paths, deployConf.Helm.ValuesFiles...)
 
 							if deployConf.Helm.Chart.Name != "" {
 								_, err := os.Stat(deployConf.Helm.Chart.Name)
@@ -689,9 +689,7 @@ func GetPaths(config *latest.Config) []string {
 
 		// Add the additional paths
 		if config.Dev.AutoReload.Paths != nil {
-			for _, path := range config.Dev.AutoReload.Paths {
-				paths = append(paths, path)
-			}
+			paths = append(paths, config.Dev.AutoReload.Paths...)
 		}
 	}
 
@@ -715,7 +713,7 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 
 	// check if terminal is enabled
 	c := configInterface.Config()
-	if cmd.Terminal || (c.Dev.Terminal != nil && c.Dev.Terminal.Disabled == false) {
+	if cmd.Terminal || (c.Dev.Terminal != nil && !c.Dev.Terminal.Disabled) {
 		if c.Dev.Terminal == nil || (c.Dev.Terminal.ImageSelector == "" && c.Dev.Terminal.ImageName == "" && len(c.Dev.Terminal.LabelSelector) == 0) {
 			imageNames := make([]string, 0, len(c.Images))
 			for k := range c.Images {
@@ -763,7 +761,7 @@ func defaultStdStreams(stdout io.Writer, stderr io.Writer, stdin io.Reader) (io.
 func removeDuplicates(arr []string) []string {
 	newArr := []string{}
 	for _, v := range arr {
-		if contains(newArr, v) == false {
+		if !contains(newArr, v) {
 			newArr = append(newArr, v)
 		}
 	}

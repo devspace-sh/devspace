@@ -15,7 +15,7 @@ type GitCLIRepository struct {
 
 // NewGitCLIRepository creates a new git repository struct with the given parameters
 func NewGitCLIRepository(localPath string) (*GitCLIRepository, error) {
-	if isGitCommandAvailable() == false {
+	if !isGitCommandAvailable() {
 		return nil, errors.New("git not found in path. Please make sure you have git installed to clone git dependencies")
 	}
 
@@ -26,11 +26,7 @@ func NewGitCLIRepository(localPath string) (*GitCLIRepository, error) {
 
 func isGitCommandAvailable() bool {
 	_, err := exec.Command("git", "version").Output()
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 type CloneOptions struct {
@@ -61,7 +57,7 @@ func (gr *GitCLIRepository) Clone(options CloneOptions) error {
 		}
 
 		// do a shallow clone by default
-		if options.Commit == "" && options.DisableShallow == false {
+		if options.Commit == "" && !options.DisableShallow {
 			args = append(args, "--depth", "1")
 		}
 

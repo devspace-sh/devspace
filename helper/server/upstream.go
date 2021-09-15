@@ -2,6 +2,13 @@ package server
 
 import (
 	"context"
+	"io"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/helper/util"
@@ -10,12 +17,6 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"io"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 )
 
 // UpstreamOptions holds the upstream server options
@@ -124,7 +125,7 @@ func (u *Upstream) Checksums(ctx context.Context, paths *remote.Paths) (*remote.
 			// Just remove everything inside and ignore any errors
 			absolutePath := filepath.Join(u.options.UploadPath, path)
 			checksum, err := crc32.Checksum(absolutePath)
-			if err != nil && os.IsNotExist(err) == false {
+			if err != nil && !os.IsNotExist(err) {
 				stderrlog.Logf("Error checksum %s: %v", path, err)
 			}
 
@@ -148,7 +149,7 @@ func (u *Upstream) removeRecursive(absolutePath string) error {
 		absoluteChildPath := filepath.Join(absolutePath, f.Name())
 
 		// Check if ignored
-		if u.ignoreMatcher != nil && u.ignoreMatcher.RequireFullScan() == false && u.ignoreMatcher.Matches(absolutePath[len(u.options.UploadPath):], f.IsDir()) {
+		if u.ignoreMatcher != nil && !u.ignoreMatcher.RequireFullScan() && u.ignoreMatcher.Matches(absolutePath[len(u.options.UploadPath):], f.IsDir()) {
 			continue
 		}
 
@@ -158,14 +159,14 @@ func (u *Upstream) removeRecursive(absolutePath string) error {
 			_ = u.removeRecursive(absoluteChildPath)
 		} else {
 			// Check if not ignored
-			if u.ignoreMatcher == nil || u.ignoreMatcher.RequireFullScan() == false || u.ignoreMatcher.Matches(absolutePath[len(u.options.UploadPath):], false) == false {
+			if u.ignoreMatcher == nil || !u.ignoreMatcher.RequireFullScan() || !u.ignoreMatcher.Matches(absolutePath[len(u.options.UploadPath):], false) {
 				_ = os.Remove(absoluteChildPath)
 			}
 		}
 	}
 
 	// Check if not ignored
-	if u.ignoreMatcher == nil || u.ignoreMatcher.RequireFullScan() == false || u.ignoreMatcher.Matches(absolutePath[len(u.options.UploadPath):], true) == false {
+	if u.ignoreMatcher == nil || !u.ignoreMatcher.RequireFullScan() || !u.ignoreMatcher.Matches(absolutePath[len(u.options.UploadPath):], true) {
 		// This will not remove the directory if there is still a file or directory in it
 		return os.Remove(absolutePath)
 	}

@@ -3,7 +3,6 @@ package tunnel
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -19,7 +18,7 @@ const (
 var openSessions = sync.Map{}
 
 type Session struct {
-	Id         uuid.UUID
+	ID         uuid.UUID
 	Conn       net.Conn
 	Buf        bytes.Buffer
 	Context    context.Context
@@ -36,7 +35,7 @@ func (s *Session) Close() {
 	}
 	go func() {
 		<-time.After(5 * time.Second)
-		openSessions.Delete(s.Id)
+		openSessions.Delete(s.ID)
 	}()
 }
 
@@ -48,7 +47,7 @@ type RedirectRequest struct {
 func NewSession(conn net.Conn) (*Session, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Session{
-		Id:         uuid.New(),
+		ID:         uuid.New(),
 		Conn:       conn,
 		Context:    ctx,
 		cancelFunc: cancel,
@@ -65,7 +64,7 @@ func NewSession(conn net.Conn) (*Session, error) {
 func NewSessionFromStream(id uuid.UUID, conn net.Conn) (*Session, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Session{
-		Id:         id,
+		ID:         id,
 		Conn:       conn,
 		Context:    ctx,
 		cancelFunc: cancel,
@@ -80,10 +79,10 @@ func NewSessionFromStream(id uuid.UUID, conn net.Conn) (*Session, error) {
 }
 
 func addSession(r *Session) error {
-	if _, ok := GetSession(r.Id); ok != false {
-		return errors.New(fmt.Sprintf("Session %s already exists", r.Id.String()))
+	if _, ok := GetSession(r.ID); ok {
+		return fmt.Errorf("session %s already exists", r.ID.String())
 	}
-	openSessions.Store(r.Id, r)
+	openSessions.Store(r.ID, r)
 	return nil
 }
 

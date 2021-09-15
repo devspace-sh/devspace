@@ -1,7 +1,5 @@
 package kaniko
 
-import ()
-
 /*const testNamespace = "test-kaniko-build"
 
 func TestKanikoBuildWithEntrypointOverride(t *testing.T) {
@@ -179,7 +177,7 @@ var app = express();
 app.get('/', async (req, res) => {
   var body = await new Promise((resolve, reject) => {
     request('http://php/index.php', (err, res, body) => {
-      if (err) { 
+      if (err) {
         reject(err);
         return;
       }

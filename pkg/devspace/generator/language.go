@@ -60,7 +60,7 @@ func NewDockerfileGenerator(localPath, templateRepoURL string, log log.Logger) (
 func (cg *DockerfileGenerator) ContainerizeApplication(dockerfilePath string) error {
 	// Check if the user already has a dockerfile
 	_, err := os.Stat(dockerfilePath)
-	if os.IsNotExist(err) == false {
+	if !os.IsNotExist(err) {
 		return fmt.Errorf("dockerfile at %s already exists", dockerfilePath)
 	}
 
@@ -178,7 +178,7 @@ func (cg *DockerfileGenerator) CreateDockerfile(language string) error {
 
 func (cg *DockerfileGenerator) detectLanguage() error {
 	contentReadLimit := int64(16 * 1024 * 1024)
-	bytesByLanguage := make(map[string]int64, 0)
+	bytesByLanguage := make(map[string]int64)
 
 	// Cancel the language detection after 10sec
 	cancelDetect := false

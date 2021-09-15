@@ -29,10 +29,10 @@ type renderTestCase struct {
 
 func TestRender(t *testing.T) {
 	testCases := []renderTestCase{
-		renderTestCase{
+		{
 			name: "Skip deployment",
 			deployments: []*latest.DeploymentConfig{
-				&latest.DeploymentConfig{
+				{
 					Name: "skippedDeployment",
 				},
 			},
@@ -40,10 +40,10 @@ func TestRender(t *testing.T) {
 				Deployments: []string{"unskippedDeployment"},
 			},
 		},
-		renderTestCase{
+		{
 			name: "No deployment method",
 			deployments: []*latest.DeploymentConfig{
-				&latest.DeploymentConfig{
+				{
 					Name: "noMethod",
 				},
 			},
@@ -52,10 +52,10 @@ func TestRender(t *testing.T) {
 			},
 			expectedErr: "error render: deployment noMethod has no deployment method",
 		},
-		renderTestCase{
+		{
 			name: "Render with kubectl",
 			deployments: []*latest.DeploymentConfig{
-				&latest.DeploymentConfig{
+				{
 					Name: "kubectlRender",
 					Kubectl: &latest.KubectlConfig{
 						Manifests: []string{},
@@ -101,10 +101,10 @@ type deployTestCase struct {
 
 func TestDeploy(t *testing.T) {
 	testCases := []deployTestCase{
-		deployTestCase{
+		{
 			name: "Skip deployment",
 			deployments: []*latest.DeploymentConfig{
-				&latest.DeploymentConfig{
+				{
 					Name: "skippedDeployment",
 				},
 			},
@@ -112,10 +112,10 @@ func TestDeploy(t *testing.T) {
 				Deployments: []string{"unskippedDeployment"},
 			},
 		},
-		deployTestCase{
+		{
 			name: "No deployment method",
 			deployments: []*latest.DeploymentConfig{
-				&latest.DeploymentConfig{
+				{
 					Name: "noMethod",
 				},
 			},
@@ -124,10 +124,10 @@ func TestDeploy(t *testing.T) {
 			},
 			expectedErr: "error deploying: deployment noMethod has no deployment method",
 		},
-		deployTestCase{
+		{
 			name: "Deploy with kubectl",
 			deployments: []*latest.DeploymentConfig{
-				&latest.DeploymentConfig{
+				{
 					Name: "kubectlDeploy",
 					Kubectl: &latest.KubectlConfig{
 						Manifests: []string{},
@@ -182,29 +182,29 @@ type purgeTestCase struct {
 
 func TestPurge(t *testing.T) {
 	testCases := []purgeTestCase{
-		purgeTestCase{
+		{
 			name: "Skip deployment",
 			configDeployments: []*latest.DeploymentConfig{
-				&latest.DeploymentConfig{
+				{
 					Name: "skippedDeployment",
 				},
 			},
 			deployments: []string{"unskippedDeployment"},
 		},
-		purgeTestCase{
+		{
 			name: "No deployment method",
 			configDeployments: []*latest.DeploymentConfig{
-				&latest.DeploymentConfig{
+				{
 					Name: "noMethod",
 				},
 			},
 			deployments: []string{},
 			expectedErr: "error purging: deployment noMethod has no deployment method",
 		},
-		purgeTestCase{
+		{
 			name: "Purge with kubectl",
 			configDeployments: []*latest.DeploymentConfig{
-				&latest.DeploymentConfig{
+				{
 					Name: "kubectlPurge",
 					Kubectl: &latest.KubectlConfig{
 						Manifests: []string{},
@@ -213,7 +213,7 @@ func TestPurge(t *testing.T) {
 			},
 			cache: &generated.CacheConfig{
 				Deployments: map[string]*generated.DeploymentCache{
-					"kubectlPurge": &generated.DeploymentCache{},
+					"kubectlPurge": {},
 				},
 			},
 		},
@@ -259,7 +259,7 @@ type getCachedHelmClientTestCase struct {
 
 func TestGetCachedHelmClient(t *testing.T) {
 	testCases := []getCachedHelmClientTestCase{
-		getCachedHelmClientTestCase{
+		{
 			name: "Get cached client",
 			deployConfig: &latest.DeploymentConfig{
 				Helm: &latest.HelmConfig{
@@ -270,7 +270,7 @@ func TestGetCachedHelmClient(t *testing.T) {
 			helmV2Clients: map[string]helmtypes.Client{
 				"tillerns": &fakehelm.Client{
 					Releases: []*helmtypes.Release{
-						&helmtypes.Release{
+						{
 							Name: "predefinedRelease",
 						},
 					},
@@ -278,7 +278,7 @@ func TestGetCachedHelmClient(t *testing.T) {
 			},
 			expectedClient: &fakehelm.Client{
 				Releases: []*helmtypes.Release{
-					&helmtypes.Release{
+					{
 						Name: "predefinedRelease",
 					},
 				},

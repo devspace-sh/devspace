@@ -10,8 +10,8 @@ import (
 )
 
 func websocketError(ws *websocket.Conn, err error) {
-	ws.SetWriteDeadline(time.Now().Add(time.Second * 2))
-	ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
+	_ = ws.SetWriteDeadline(time.Now().Add(time.Second * 2))
+	_ = ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseInternalServerErr, err.Error()))
 }
 
 func (h *handler) command(w http.ResponseWriter, r *http.Request) {
@@ -46,14 +46,14 @@ func (h *handler) command(w http.ResponseWriter, r *http.Request) {
 	cmd.Stderr = stream
 
 	go func(done chan bool) {
-		io.Copy(stdinWriter, stream)
+		_, _ = io.Copy(stdinWriter, stream)
 
 		select {
 		case <-done:
 		case <-time.After(time.Second):
 			proc := cmd.Process
 			if proc != nil {
-				proc.Kill()
+				_ = proc.Kill()
 			}
 		}
 	}(done)
@@ -65,6 +65,6 @@ func (h *handler) command(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ws.SetWriteDeadline(time.Now().Add(time.Second * 5))
-	ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	_ = ws.SetWriteDeadline(time.Now().Add(time.Second * 5))
+	_ = ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 }

@@ -1,9 +1,10 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/loft-sh/devspace/helper/tunnel"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 // TunnelCmd holds the tunnel cmd flags

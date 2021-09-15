@@ -2,10 +2,11 @@ package helm
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 
 	yaml "gopkg.in/yaml.v2"
 
@@ -70,7 +71,7 @@ func (d *DeployConfig) Deploy(forceDeploy bool, builtImages map[string]string) (
 
 	// Check if redeploying is necessary
 	forceDeploy = forceDeploy || deployCache.HelmOverridesHash != helmOverridesHash || deployCache.HelmChartHash != hash || deployCache.DeploymentConfigHash != deploymentConfigHash
-	if forceDeploy == false {
+	if !forceDeploy {
 		releases, err := d.Helm.ListReleases(d.DeploymentConfig.Helm)
 		if err != nil {
 			return false, err
@@ -150,20 +151,20 @@ func (d *DeployConfig) internalDeploy(forceDeploy bool, builtImages map[string]s
 	}
 
 	// Add devspace specific values
-	if d.DeploymentConfig.Helm.ReplaceImageTags == nil || *d.DeploymentConfig.Helm.ReplaceImageTags == true {
+	if d.DeploymentConfig.Helm.ReplaceImageTags == nil || *d.DeploymentConfig.Helm.ReplaceImageTags {
 		// Replace image names
 		shouldRedeploy, err := util.ReplaceImageNames(overwriteValues, d.config, d.dependencies, builtImages, nil)
 		if err != nil {
 			return false, nil, err
 		}
 
-		if forceDeploy == false && shouldRedeploy {
+		if !forceDeploy && shouldRedeploy {
 			forceDeploy = true
 		}
 	}
 
 	// Deployment is not necessary
-	if forceDeploy == false {
+	if !forceDeploy {
 		return false, nil, nil
 	}
 
@@ -173,7 +174,7 @@ func (d *DeployConfig) internalDeploy(forceDeploy bool, builtImages map[string]s
 			return false, nil, err
 		}
 
-		out.Write([]byte("\n" + str + "\n"))
+		_, _ = out.Write([]byte("\n" + str + "\n"))
 		return true, nil, nil
 	}
 

@@ -120,7 +120,7 @@ type VolumeMountConfig struct {
 	Volume        *VolumeMountVolumeConfig `yaml:"volume,omitempty"`
 }
 
-// VolumeMountVolumeConfig holds the configuration for a specfic mount path volume
+// VolumeMountVolumeConfig holds the configuration for a specific mount path volume
 type VolumeMountVolumeConfig struct {
 	Name     *string `yaml:"name,omitempty"`
 	SubPath  *string `yaml:"subPath,omitempty"`
