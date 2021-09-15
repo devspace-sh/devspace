@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/loft-sh/devspace/cmd/reset"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"strings"
 
@@ -116,14 +117,14 @@ func (cmd *PurgeCmd) Run(f factory.Factory) error {
 		return err
 	}
 
-	// Execute plugin hook
-	err = plugin.ExecutePluginHook("purge")
+	// Get config with adjusted cluster config
+	configInterface, err := configLoader.Load(configOptions, cmd.log)
 	if err != nil {
 		return err
 	}
 
-	// Get config with adjusted cluster config
-	configInterface, err := configLoader.Load(configOptions, cmd.log)
+	// Execute plugin hook
+	err = hook.ExecuteHooks(client, configInterface, nil, nil, cmd.log, "purge")
 	if err != nil {
 		return err
 	}

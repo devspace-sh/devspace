@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/dev"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"io"
@@ -230,12 +231,6 @@ func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 	}
 	config := configInterface.Config()
 
-	// Execute plugin hook
-	err = plugin.ExecutePluginHook("dev")
-	if err != nil {
-		return err
-	}
-
 	// Create namespace if necessary
 	err = client.EnsureDeployNamespaces(config, cmd.log)
 	if err != nil {
@@ -246,6 +241,12 @@ func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 	dockerClient, err := f.NewDockerClient(cmd.log)
 	if err != nil {
 		dockerClient = nil
+	}
+
+	// Execute plugin hook
+	err = hook.ExecuteHooks(client, nil, nil, nil, nil, "dev")
+	if err != nil {
+		return err
 	}
 
 	// Build and deploy images
@@ -269,13 +270,14 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 		dependencies    = []types.Dependency{}
 	)
 
-	pluginErr := plugin.ExecutePluginHook("dev.beforePipeline")
-	if pluginErr != nil {
-		return 0, pluginErr
+	// execute plugin hook
+	err = hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "dev.beforePipeline", "devCommand:before:runPipeline")
+	if err != nil {
+		return 0, err
 	}
 
 	if cmd.SkipPipeline == false {
-		pluginErr := plugin.ExecutePluginHook("dev.beforeDependencies")
+		pluginErr := hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "dev.beforeDependencies", "devCommand:before:deployDependencies")
 		if pluginErr != nil {
 			return 0, pluginErr
 		}
@@ -301,7 +303,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 			return 0, errors.Errorf("error deploying dependencies: %v", err)
 		}
 
-		pluginErr = plugin.ExecutePluginHook("dev.afterDependencies")
+		pluginErr = hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "dev.afterDependencies", "devCommand:after:deployDependencies")
 		if pluginErr != nil {
 			return 0, pluginErr
 		}
@@ -314,7 +316,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 
 		// Only execute pipeline if we are not focused on a dependency
 		if len(cmd.Dependency) == 0 {
-			pluginErr := plugin.ExecutePluginHook("dev.beforeBuild")
+			pluginErr = hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "dev.beforeBuild", "devCommand:before:build")
 			if pluginErr != nil {
 				return 0, pluginErr
 			}
@@ -346,12 +348,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 				}
 			}
 
-			pluginErr = plugin.ExecutePluginHook("dev.afterBuild")
-			if pluginErr != nil {
-				return 0, pluginErr
-			}
-
-			pluginErr = plugin.ExecutePluginHook("dev.beforeDeploy")
+			pluginErr = hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "dev.afterBuild", "devCommand:after:build", "dev.beforeDeploy", "devCommand:before:deploy")
 			if pluginErr != nil {
 				return 0, pluginErr
 			}
@@ -385,7 +382,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 				}
 			}
 
-			pluginErr = plugin.ExecutePluginHook("dev.afterDeploy")
+			pluginErr = hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "dev.afterDeploy", "devCommand:after:deploy")
 			if pluginErr != nil {
 				return 0, pluginErr
 			}
@@ -398,7 +395,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 		}
 	}
 
-	pluginErr = plugin.ExecutePluginHook("dev.afterPipeline")
+	pluginErr := hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "dev.afterPipeline", "devCommand:after:runPipeline")
 	if pluginErr != nil {
 		return 0, pluginErr
 	}
@@ -567,14 +564,7 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 			}
 
 			var imageSelectors []imageselector.ImageSelector
-			if config.Dev.Terminal != nil && config.Dev.Terminal.ImageName != "" {
-				imageSelector, err := imageselector.Resolve(config.Dev.Terminal.ImageName, configInterface, dependencies)
-				if err != nil {
-					return 0, err
-				} else if imageSelector != nil {
-					imageSelectors = append(imageSelectors, *imageSelector)
-				}
-			} else if config.Dev.Terminal != nil && config.Dev.Terminal.ImageSelector != "" {
+			if config.Dev.Terminal != nil && config.Dev.Terminal.ImageSelector != "" {
 				imageSelector, err := util.ResolveImageAsImageSelector(config.Dev.Terminal.ImageSelector, configInterface, dependencies)
 				if err != nil {
 					return 0, err
@@ -716,7 +706,7 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 	// check if terminal is enabled
 	c := configInterface.Config()
 	if cmd.Terminal || (c.Dev.Terminal != nil && c.Dev.Terminal.Disabled == false) {
-		if c.Dev.Terminal == nil || (c.Dev.Terminal.ImageSelector == "" && c.Dev.Terminal.ImageName == "" && len(c.Dev.Terminal.LabelSelector) == 0) {
+		if c.Dev.Terminal == nil || (c.Dev.Terminal.ImageSelector == "" && len(c.Dev.Terminal.LabelSelector) == 0) {
 			imageNames := make([]string, 0, len(c.Images))
 			for k := range c.Images {
 				imageNames = append(imageNames, k)
@@ -737,7 +727,7 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 			}
 
 			c.Dev.Terminal = &latest.Terminal{
-				ImageName: imageName,
+				ImageSelector: fmt.Sprintf("image(%s):tag(%s)", imageName, imageName),
 			}
 		} else {
 			c.Dev.Terminal.Disabled = false

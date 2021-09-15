@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -93,7 +94,7 @@ func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook("attach")
+	err = hook.ExecuteHooks(client, nil, nil, nil, nil, "attach")
 	if err != nil {
 		return err
 	}

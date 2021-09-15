@@ -7,7 +7,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"github.com/loft-sh/devspace/pkg/util/exit"
@@ -55,23 +54,21 @@ type Manager interface {
 }
 
 type manager struct {
-	config       *latest.Config
-	cache        *generated.CacheConfig
-	log          log.Logger
-	resolver     ResolverInterface
-	hookExecuter hook.Executer
-	client       kubectl.Client
+	config   *latest.Config
+	cache    *generated.CacheConfig
+	log      log.Logger
+	resolver ResolverInterface
+	client   kubectl.Client
 }
 
 // NewManager creates a new instance of the interface Manager
 func NewManager(config config.Config, client kubectl.Client, configOptions *loader.ConfigOptions, logger log.Logger) Manager {
 	return &manager{
-		config:       config.Config(),
-		cache:        config.Generated().GetActive(),
-		log:          logger,
-		resolver:     NewResolver(config, client, configOptions, logger),
-		hookExecuter: hook.NewExecuter(config, nil),
-		client:       client,
+		config:   config.Config(),
+		cache:    config.Generated().GetActive(),
+		log:      logger,
+		resolver: NewResolver(config, client, configOptions, logger),
+		client:   client,
 	}
 }
 
@@ -200,25 +197,14 @@ type DeployOptions struct {
 
 // DeployAll will deploy all dependencies if there are any
 func (m *manager) DeployAll(options DeployOptions) ([]types.Dependency, error) {
-	err := m.hookExecuter.Execute(hook.Before, hook.StageDependencies, hook.All, hook.Context{Client: m.client}, m.log)
-	if err != nil {
-		return nil, err
-	}
-
 	dependencies, err := m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
-		err = dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
+		err := dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
 		if err != nil {
 			return err
 		}
 
 		return nil
 	})
-	if err != nil {
-		m.hookExecuter.OnError(hook.StageDependencies, []string{hook.All}, hook.Context{Client: m.client, Error: err}, m.log)
-		return nil, err
-	}
-
-	err = m.hookExecuter.Execute(hook.After, hook.StageDependencies, hook.All, hook.Context{Client: m.client}, m.log)
 	if err != nil {
 		return nil, err
 	}
@@ -558,8 +544,6 @@ func (d *Dependency) StartSync(client kubectl.Client, interrupt chan error, prin
 		prefix := fmt.Sprintf("[%s:%d:sync] ", d.Name(), idx)
 		if syncConfig.Name != "" {
 			prefix = fmt.Sprintf("[%s:%s] ", d.Name(), syncConfig.Name)
-		} else if syncConfig.ImageName != "" {
-			prefix = fmt.Sprintf("[%s:%d:sync:%s] ", d.Name(), idx, syncConfig.ImageName)
 		}
 
 		return prefix

@@ -4,6 +4,7 @@ import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -107,12 +108,6 @@ func (cmd *BuildCmd) Run(f factory.Factory) error {
 	}
 	config := configInterface.Config()
 
-	// Execute plugin hook
-	err = plugin.ExecutePluginHook("build")
-	if err != nil {
-		return err
-	}
-
 	// create namespaces if we have a client
 	if client != nil {
 		err = client.EnsureDeployNamespaces(config, log)
@@ -145,6 +140,12 @@ func (cmd *BuildCmd) Run(f factory.Factory) error {
 	})
 	if err != nil {
 		return errors.Wrap(err, "build dependencies")
+	}
+
+	// Execute plugin hook
+	err = hook.ExecuteHooks(client, configInterface, dependencies, nil, log, "build")
+	if err != nil {
+		return err
 	}
 
 	// Build images if necessary

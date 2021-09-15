@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"io/ioutil"
 	"net/http"
@@ -171,7 +172,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 	log.OverrideRuntimeErrorHandler(true)
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook("ui")
+	err = hook.ExecuteHooks(nil, nil, nil, nil, nil, "ui")
 	if err != nil {
 		return err
 	}

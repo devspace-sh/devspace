@@ -23,7 +23,7 @@ type remoteCommandHook struct {
 	Stderr io.Writer
 }
 
-func (r *remoteCommandHook) ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error {
+func (r *remoteCommandHook) ExecuteRemotely(hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, client kubectl.Client, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error {
 	hookCommand, hookArgs, err := resolveCommand(hook.Command, hook.Args, config, dependencies)
 	if err != nil {
 		return err
@@ -36,7 +36,7 @@ func (r *remoteCommandHook) ExecuteRemotely(ctx Context, hook *latest.HookConfig
 		cmd = append(cmd, hookArgs...)
 	}
 
-	err = ctx.Client.ExecStream(&kubectl.ExecStreamOptions{
+	err = client.ExecStream(&kubectl.ExecStreamOptions{
 		Pod:       podContainer.Pod,
 		Container: podContainer.Container.Name,
 		Command:   cmd,

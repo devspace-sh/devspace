@@ -15,6 +15,7 @@ import (
 	"github.com/loft-sh/devspace/cmd/update"
 	"github.com/loft-sh/devspace/cmd/use"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/exit"
@@ -77,12 +78,6 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 				}
 			}
 
-			// call root plugin hook
-			err = plugin.ExecutePluginHook("root")
-			if err != nil {
-				return err
-			}
-
 			return nil
 		},
 		Long: `DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
@@ -109,7 +104,7 @@ func Execute() {
 	rootCmd.Version = upgrade.GetVersion()
 
 	// call root plugin hook
-	err := plugin.ExecutePluginHook("root.beforeExecute")
+	err := hook.ExecuteHooks(nil, nil, nil, nil, nil, "root", "root.beforeExecution", "command:before:execute")
 	if err != nil {
 		f.GetLog().Fatal(err)
 	}
@@ -120,13 +115,19 @@ func Execute() {
 		// Check if return code error
 		retCode, ok := errors.Cause(err).(*exit.ReturnCodeError)
 		if ok {
+			// call root plugin hook
+			err = hook.ExecuteHooks(nil, nil, nil, nil, nil, "root.afterExecute", "command:after:execute")
+			if err != nil {
+				f.GetLog().Fatal(err)
+			}
+
 			os.Exit(retCode.ExitCode)
 		}
 
 		// call root plugin hook
-		pluginErr := plugin.ExecutePluginHookWithContext("root.errorExecution", map[string]interface{}{
+		pluginErr := hook.ExecuteHooks(nil, nil, nil, map[string]interface{}{
 			"error": err,
-		})
+		}, nil, "command:error:execute", "root.errorExecution")
 		if pluginErr != nil {
 			f.GetLog().Fatal(pluginErr)
 		}
@@ -139,7 +140,7 @@ func Execute() {
 	}
 
 	// call root plugin hook
-	err = plugin.ExecutePluginHook("root.afterExecute")
+	err = hook.ExecuteHooks(nil, nil, nil, nil, nil, "root.afterExecute", "command:after:execute")
 	if err != nil {
 		f.GetLog().Fatal(err)
 	}

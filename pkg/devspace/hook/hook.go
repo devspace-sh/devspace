@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -19,157 +20,98 @@ import (
 	"time"
 )
 
-const (
-	KubeContextEnv   = "DEVSPACE_HOOK_KUBE_CONTEXT"
-	KubeNamespaceEnv = "DEVSPACE_HOOK_KUBE_NAMESPACE"
-	ErrorEnv         = "DEVSPACE_HOOK_ERROR"
-	OsArgsEnv        = "DEVSPACE_HOOK_OS_ARGS"
-)
-
-// Hook is an interface to execute a specific hook type
-type Hook interface {
-	Execute(ctx Context, hook *latest.HookConfig, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error
-}
-
-// Executer executes configured commands locally
-type Executer interface {
-	OnError(stage Stage, whichs []string, context Context, log logpkg.Logger)
-	Execute(when When, stage Stage, which string, context Context, log logpkg.Logger) error
-	ExecuteMultiple(when When, stage Stage, whichs []string, context Context, log logpkg.Logger) error
-}
-
-type executer struct {
-	config       config.Config
-	dependencies []types.Dependency
-}
-
-// NewExecuter creates an instance of Executer for the specified config
-func NewExecuter(config config.Config, dependencies []types.Dependency) Executer {
-	return &executer{
-		config:       config,
-		dependencies: dependencies,
-	}
-}
-
-// When is the type that is used to tell devspace when relatively to a stage a hook should be executed
-type When string
-
-const (
-	// Before is used to tell devspace to execute a hook before a certain stage
-	Before When = "before"
-	// After is used to tell devspace to execute a hook after a certain stage
-	After When = "after"
-	// OnError is used to tell devspace to execute a hook after a certain error occured
-	OnError When = "onError"
-)
-
-// Stage is the type that defines the stage at when to execute a hook
-type Stage string
-
-const (
-	// StageImages is the image building stage
-	StageImages Stage = "images"
-	// StageDeployments is the deploying stage
-	StageDeployments Stage = "deployments"
-	// StagePurgeDeployments is the purging stage
-	StagePurgeDeployments Stage = "purgeDeployments"
-	// StageDependencies is the dependency stage
-	StageDependencies Stage = "dependencies"
-	// StagePullSecrets is the pull secrets stage
-	StagePullSecrets Stage = "pullSecrets"
-	// StageInitialSync is the initial sync stage
-	StageInitialSync Stage = "initialSync"
-)
-
-// All is used to tell devspace to execute a hook before or after all images, deployments
-const All = "all"
-
 var (
 	_, stdout, stderr = dockerterm.StdStreams()
 )
 
-// Context holds hook context information
-type Context struct {
-	Error  error
-	Client kubectl.Client
+const (
+	KubeContextEnv   = "DEVSPACE_HOOK_KUBE_CONTEXT"
+	KubeNamespaceEnv = "DEVSPACE_HOOK_KUBE_NAMESPACE"
+	OsArgsEnv        = "DEVSPACE_HOOK_OS_ARGS"
+)
+
+type Events []string
+
+func (e Events) With(name string) Events {
+	return append(e, name)
 }
 
-// ExecuteMultiple executes multiple hooks at a specific time
-func (e *executer) ExecuteMultiple(when When, stage Stage, whichs []string, context Context, log logpkg.Logger) error {
-	for _, which := range whichs {
-		err := e.Execute(when, stage, which, context, log)
+func EventsForSingle(base, name string) Events {
+	return []string{base + ":*", base + ":" + name}
+}
+
+// Hook is an interface to execute a specific hook type
+type Hook interface {
+	Execute(hook *latest.HookConfig, client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]string, log logpkg.Logger) error
+}
+
+// LogExecuteHooks executes plugin hooks and config hooks and prints errors to the log
+func LogExecuteHooks(client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]interface{}, log logpkg.Logger, events ...string) {
+	// call plugin first
+	for _, e := range events {
+		plugin.LogExecutePluginHookWithContext(e, extraEnv)
+	}
+
+	// now execute hooks
+	if config != nil {
+		if log == nil {
+			log = logpkg.GetInstance()
+		}
+
+		convertedExtraEnv := plugin.ConvertExtraEnv("DEVSPACE_HOOK", extraEnv)
+		for _, e := range events {
+			err := executeSingle(client, config, dependencies, convertedExtraEnv, log, e)
+			if err != nil {
+				log.Warn(err)
+			}
+		}
+	}
+}
+
+// ExecuteHooks executes plugin hooks and config hooks
+func ExecuteHooks(client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]interface{}, log logpkg.Logger, events ...string) error {
+	// call plugin first
+	for _, e := range events {
+		err := plugin.ExecutePluginHookWithContext(e, extraEnv)
 		if err != nil {
 			return err
+		}
+	}
+
+	// now execute hooks
+	if config != nil {
+		if log == nil {
+			log = logpkg.GetInstance()
+		}
+
+		convertedExtraEnv := plugin.ConvertExtraEnv("DEVSPACE_HOOK", extraEnv)
+		for _, e := range events {
+			err := executeSingle(client, config, dependencies, convertedExtraEnv, log, e)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-// OnError is a convience method to handle the resulting error of a hook execution. Since we mostly return anyways after
-// an error has occured this only prints additonal information why the hook failed
-func (e *executer) OnError(stage Stage, whichs []string, context Context, log logpkg.Logger) {
-	err := e.ExecuteMultiple(OnError, stage, whichs, context, log)
-	if err != nil {
-		log.Warnf("Hook failed: %v", err)
-	}
-}
-
-// Execute executes hooks at a specific time
-func (e *executer) Execute(when When, stage Stage, which string, context Context, log logpkg.Logger) error {
-	if e.config == nil {
+// executeSingle executes hooks at a specific time
+func executeSingle(client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]string, log logpkg.Logger, event string) error {
+	if config == nil {
 		return nil
 	}
 
-	c := e.config.Config()
+	c := config.Config()
 	if c.Hooks != nil && len(c.Hooks) > 0 {
 		hooksToExecute := []*latest.HookConfig{}
 
 		// Gather all hooks we should execute
 		for _, hook := range c.Hooks {
-			if hook.When != nil {
-				if when == Before && hook.When.Before != nil {
-					if stage == StageDeployments && hook.When.Before.Deployments != "" && compareWhich(which, hook.When.Before.Deployments) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StagePurgeDeployments && hook.When.Before.PurgeDeployments != "" && compareWhich(which, hook.When.Before.PurgeDeployments) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageImages && hook.When.Before.Images != "" && compareWhich(which, hook.When.Before.Images) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageDependencies && hook.When.Before.Dependencies != "" && compareWhich(which, hook.When.Before.Dependencies) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StagePullSecrets && hook.When.Before.PullSecrets != "" && compareWhich(which, hook.When.Before.PullSecrets) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageInitialSync && hook.When.Before.InitialSync != "" && compareWhich(which, hook.When.Before.InitialSync) {
-						hooksToExecute = append(hooksToExecute, hook)
-					}
-				} else if when == After && hook.When.After != nil {
-					if stage == StageDeployments && hook.When.After.Deployments != "" && compareWhich(which, hook.When.After.Deployments) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StagePurgeDeployments && hook.When.After.PurgeDeployments != "" && compareWhich(which, hook.When.After.PurgeDeployments) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageImages && hook.When.After.Images != "" && compareWhich(which, hook.When.After.Images) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageDependencies && hook.When.After.Dependencies != "" && compareWhich(which, hook.When.After.Dependencies) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StagePullSecrets && hook.When.After.PullSecrets != "" && compareWhich(which, hook.When.After.PullSecrets) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageInitialSync && hook.When.After.InitialSync != "" && compareWhich(which, hook.When.After.InitialSync) {
-						hooksToExecute = append(hooksToExecute, hook)
-					}
-				} else if when == OnError && hook.When.OnError != nil {
-					if stage == StageDeployments && hook.When.OnError.Deployments != "" && compareWhich(which, hook.When.OnError.Deployments) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StagePurgeDeployments && hook.When.OnError.PurgeDeployments != "" && compareWhich(which, hook.When.OnError.PurgeDeployments) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageImages && hook.When.OnError.Images != "" && compareWhich(which, hook.When.OnError.Images) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageDependencies && hook.When.OnError.Dependencies != "" && compareWhich(which, hook.When.OnError.Dependencies) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StagePullSecrets && hook.When.OnError.PullSecrets != "" && compareWhich(which, hook.When.OnError.PullSecrets) {
-						hooksToExecute = append(hooksToExecute, hook)
-					} else if stage == StageInitialSync && hook.When.OnError.InitialSync != "" && compareWhich(which, hook.When.OnError.InitialSync) {
-						hooksToExecute = append(hooksToExecute, hook)
-					}
+			for _, e := range hook.Events {
+				if e == event {
+					hooksToExecute = append(hooksToExecute, hook)
+					break
 				}
 			}
 		}
@@ -196,7 +138,7 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 
 			// Decide which hook type to use
 			var hook Hook
-			if hookConfig.Where.Container != nil {
+			if hookConfig.Container != nil {
 				if hookConfig.Upload != nil {
 					hook = NewRemoteHook(NewUploadHook())
 				} else if hookConfig.Download != nil {
@@ -214,7 +156,7 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 			}
 
 			// Execute the hook
-			err := executeHook(context, hookConfig, hookWriter, e.config, e.dependencies, log, hook)
+			err := executeHook(hookConfig, hookWriter, client, config, dependencies, extraEnv, log, hook)
 			if err != nil {
 				return err
 			}
@@ -224,19 +166,7 @@ func (e *executer) Execute(when When, stage Stage, which string, context Context
 	return nil
 }
 
-func compareWhich(current, fromConfig string) bool {
-	current = strings.TrimSpace(current)
-	splitted := strings.Split(fromConfig, ",")
-	for _, s := range splitted {
-		if strings.TrimSpace(s) == current {
-			return true
-		}
-	}
-
-	return false
-}
-
-func executeHook(ctx Context, hookConfig *latest.HookConfig, hookWriter io.Writer, config config.Config, dependencies []types.Dependency, log logpkg.Logger, hook Hook) error {
+func executeHook(hookConfig *latest.HookConfig, hookWriter io.Writer, client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]string, log logpkg.Logger, hook Hook) error {
 	hookLog := log
 	if hookConfig.Silent {
 		hookLog = logpkg.Discard
@@ -245,7 +175,7 @@ func executeHook(ctx Context, hookConfig *latest.HookConfig, hookWriter io.Write
 	if hookConfig.Background {
 		log.Infof("Execute hook '%s' in background", ansi.Color(hookName(hookConfig), "white+b"))
 		go func() {
-			err := hook.Execute(ctx, hookConfig, config, dependencies, hookLog)
+			err := hook.Execute(hookConfig, client, config, dependencies, extraEnv, hookLog)
 			if err != nil {
 				if hookConfig.Silent {
 					log.Warnf("Error executing hook '%s' in background: %s %v", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(*bytes.Buffer).String(), err)
@@ -259,7 +189,7 @@ func executeHook(ctx Context, hookConfig *latest.HookConfig, hookWriter io.Write
 	}
 
 	log.Infof("Execute hook '%s'", ansi.Color(hookName(hookConfig), "white+b"))
-	err := hook.Execute(ctx, hookConfig, config, dependencies, hookLog)
+	err := hook.Execute(hookConfig, client, config, dependencies, extraEnv, hookLog)
 	if err != nil {
 		if hookConfig.Silent {
 			return errors.Wrapf(err, "in hook '%s': %s", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(*bytes.Buffer).String())
@@ -281,7 +211,7 @@ func hookName(hook *latest.HookConfig) string {
 
 		return commandString
 	}
-	if hook.Upload != nil && hook.Where.Container != nil {
+	if hook.Upload != nil && hook.Container != nil {
 		localPath := "."
 		if hook.Upload.LocalPath != "" {
 			localPath = hook.Upload.LocalPath
@@ -291,22 +221,19 @@ func hookName(hook *latest.HookConfig) string {
 			containerPath = hook.Upload.ContainerPath
 		}
 
-		if hook.Where.Container.Pod != "" {
-			return fmt.Sprintf("copy %s to pod %s", localPath, hook.Where.Container.Pod)
+		if hook.Container.Pod != "" {
+			return fmt.Sprintf("copy %s to pod %s", localPath, hook.Container.Pod)
 		}
-		if len(hook.Where.Container.LabelSelector) > 0 {
-			return fmt.Sprintf("copy %s to selector %s", localPath, labels.Set(hook.Where.Container.LabelSelector).String())
+		if len(hook.Container.LabelSelector) > 0 {
+			return fmt.Sprintf("copy %s to selector %s", localPath, labels.Set(hook.Container.LabelSelector).String())
 		}
-		if hook.Where.Container.ImageName != "" {
-			return fmt.Sprintf("copy %s to imageName %s", localPath, hook.Where.Container.ImageName)
-		}
-		if hook.Where.Container.ImageSelector != "" {
-			return fmt.Sprintf("copy %s to image %s", localPath, hook.Where.Container.ImageSelector)
+		if hook.Container.ImageSelector != "" {
+			return fmt.Sprintf("copy %s to image %s", localPath, hook.Container.ImageSelector)
 		}
 
 		return fmt.Sprintf("copy %s to %s", localPath, containerPath)
 	}
-	if hook.Download != nil && hook.Where.Container != nil {
+	if hook.Download != nil && hook.Container != nil {
 		localPath := "."
 		if hook.Download.LocalPath != "" {
 			localPath = hook.Download.LocalPath
@@ -316,49 +243,40 @@ func hookName(hook *latest.HookConfig) string {
 			containerPath = hook.Download.ContainerPath
 		}
 
-		if hook.Where.Container.Pod != "" {
-			return fmt.Sprintf("download from pod %s to %s", hook.Where.Container.Pod, localPath)
+		if hook.Container.Pod != "" {
+			return fmt.Sprintf("download from pod %s to %s", hook.Container.Pod, localPath)
 		}
-		if len(hook.Where.Container.LabelSelector) > 0 {
-			return fmt.Sprintf("download from selector %s to %s", labels.Set(hook.Where.Container.LabelSelector).String(), localPath)
+		if len(hook.Container.LabelSelector) > 0 {
+			return fmt.Sprintf("download from selector %s to %s", labels.Set(hook.Container.LabelSelector).String(), localPath)
 		}
-		if hook.Where.Container.ImageName != "" {
-			return fmt.Sprintf("download from imageName %s to %s", hook.Where.Container.ImageName, localPath)
-		}
-		if hook.Where.Container.ImageSelector != "" {
-			return fmt.Sprintf("download from image %s to %s", hook.Where.Container.ImageSelector, localPath)
+		if hook.Container.ImageSelector != "" {
+			return fmt.Sprintf("download from image %s to %s", hook.Container.ImageSelector, localPath)
 		}
 
 		return fmt.Sprintf("download from container:%s to local:%s", containerPath, localPath)
 	}
-	if hook.Logs != nil && hook.Where.Container != nil {
-		if hook.Where.Container.Pod != "" {
-			return fmt.Sprintf("logs from pod %s", hook.Where.Container.Pod)
+	if hook.Logs != nil && hook.Container != nil {
+		if hook.Container.Pod != "" {
+			return fmt.Sprintf("logs from pod %s", hook.Container.Pod)
 		}
-		if len(hook.Where.Container.LabelSelector) > 0 {
-			return fmt.Sprintf("logs from selector %s", labels.Set(hook.Where.Container.LabelSelector).String())
+		if len(hook.Container.LabelSelector) > 0 {
+			return fmt.Sprintf("logs from selector %s", labels.Set(hook.Container.LabelSelector).String())
 		}
-		if hook.Where.Container.ImageName != "" {
-			return fmt.Sprintf("logs from imageName %s", hook.Where.Container.ImageName)
-		}
-		if hook.Where.Container.ImageSelector != "" {
-			return fmt.Sprintf("logs from image %s", hook.Where.Container.ImageSelector)
+		if hook.Container.ImageSelector != "" {
+			return fmt.Sprintf("logs from image %s", hook.Container.ImageSelector)
 		}
 
 		return fmt.Sprintf("logs from first container found")
 	}
-	if hook.Wait != nil && hook.Where.Container != nil {
-		if hook.Where.Container.Pod != "" {
-			return fmt.Sprintf("wait for pod %s", hook.Where.Container.Pod)
+	if hook.Wait != nil && hook.Container != nil {
+		if hook.Container.Pod != "" {
+			return fmt.Sprintf("wait for pod %s", hook.Container.Pod)
 		}
-		if len(hook.Where.Container.LabelSelector) > 0 {
-			return fmt.Sprintf("wait for selector %s", labels.Set(hook.Where.Container.LabelSelector).String())
+		if len(hook.Container.LabelSelector) > 0 {
+			return fmt.Sprintf("wait for selector %s", labels.Set(hook.Container.LabelSelector).String())
 		}
-		if hook.Where.Container.ImageName != "" {
-			return fmt.Sprintf("wait for imageName %s", hook.Where.Container.ImageName)
-		}
-		if hook.Where.Container.ImageSelector != "" {
-			return fmt.Sprintf("wait for image %s", hook.Where.Container.ImageSelector)
+		if hook.Container.ImageSelector != "" {
+			return fmt.Sprintf("wait for image %s", hook.Container.ImageSelector)
 		}
 
 		return fmt.Sprintf("wait for everything")

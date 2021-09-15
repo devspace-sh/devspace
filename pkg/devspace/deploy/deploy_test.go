@@ -10,7 +10,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	fakehelm "github.com/loft-sh/devspace/pkg/devspace/helm/testing"
 	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"
-	fakehook "github.com/loft-sh/devspace/pkg/devspace/hook/testing"
 	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"gopkg.in/yaml.v2"
@@ -152,9 +151,8 @@ func TestDeploy(t *testing.T) {
 		cache := generated.New()
 		cache.Profiles[""] = testCase.cache
 		controller := &controller{
-			config:       config2.NewConfig(nil, config, cache, nil, constants.DefaultConfigPath),
-			hookExecuter: &fakehook.FakeHook{},
-			client:       kubeClient,
+			config: config2.NewConfig(nil, config, cache, nil, constants.DefaultConfigPath),
+			client: kubeClient,
 		}
 
 		if testCase.options == nil {
@@ -231,9 +229,8 @@ func TestPurge(t *testing.T) {
 		cache := generated.New()
 		cache.Profiles[""] = testCase.cache
 		controller := &controller{
-			config:       config2.NewConfig(nil, config, cache, nil, constants.DefaultConfigPath),
-			hookExecuter: &fakehook.FakeHook{},
-			client:       kubeClient,
+			config: config2.NewConfig(nil, config, cache, nil, constants.DefaultConfigPath),
+			client: kubeClient,
 		}
 
 		err := controller.Purge(testCase.deployments, log.Discard)

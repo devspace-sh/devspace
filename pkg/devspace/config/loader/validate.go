@@ -171,20 +171,8 @@ func validateCommands(config *latest.Config) error {
 
 func validateHooks(config *latest.Config) error {
 	for index, hookConfig := range config.Hooks {
-		if hookConfig.When == nil {
-			return errors.Errorf("hooks[%d].when is required", index)
-		}
-		if hookConfig.When.After == nil && hookConfig.When.Before == nil && hookConfig.When.OnError == nil {
-			return errors.Errorf("hooks[%d].when.after or hooks[%d].when.before or hooks[%d].when.onError is required", index, index, index)
-		}
-		if hookConfig.When != nil && hookConfig.When.OnError != nil && hookConfig.When.OnError.InitialSync != "" {
-			return errors.Errorf("hooks[%d].when.onError.initialSync is not yet supported", index)
-		}
-		if hookConfig.When != nil && hookConfig.When.After != nil && hookConfig.When.After.InitialSync == "all" {
-			return errors.Errorf("hooks[%d].when.after.initialSync all is not yet supported", index)
-		}
-		if hookConfig.When != nil && hookConfig.When.Before != nil && hookConfig.When.Before.InitialSync == "all" {
-			return errors.Errorf("hooks[%d].when.before.initialSync all is not yet supported", index)
+		if len(hookConfig.Events) == 0 {
+			return errors.Errorf("hooks[%d].events is required", index)
 		}
 		if hookConfig.Command == "" && hookConfig.Upload == nil && hookConfig.Download == nil && hookConfig.Logs == nil && hookConfig.Wait == nil {
 			return errors.Errorf("hooks[%d].command, hooks[%d].logs, hooks[%d].wait, hooks[%d].download or hooks[%d].upload is required", index, index, index, index, index)
@@ -208,17 +196,17 @@ func validateHooks(config *latest.Config) error {
 		if enabled > 1 {
 			return errors.Errorf("you can only use one of hooks[%d].command, hooks[%d].logs, hooks[%d].wait, hooks[%d].upload and hooks[%d].download per hook", index, index, index, index, index)
 		}
-		if hookConfig.Upload != nil && hookConfig.Where.Container == nil {
-			return errors.Errorf("hooks[%d].where.container is required if hooks[%d].upload is used", index, index)
+		if hookConfig.Upload != nil && hookConfig.Container == nil {
+			return errors.Errorf("hooks[%d].container is required if hooks[%d].upload is used", index, index)
 		}
-		if hookConfig.Download != nil && hookConfig.Where.Container == nil {
-			return errors.Errorf("hooks[%d].where.container is required if hooks[%d].download is used", index, index)
+		if hookConfig.Download != nil && hookConfig.Container == nil {
+			return errors.Errorf("hooks[%d].container is required if hooks[%d].download is used", index, index)
 		}
-		if hookConfig.Logs != nil && hookConfig.Where.Container == nil {
-			return errors.Errorf("hooks[%d].where.container is required if hooks[%d].logs is used", index, index)
+		if hookConfig.Logs != nil && hookConfig.Container == nil {
+			return errors.Errorf("hooks[%d].container is required if hooks[%d].logs is used", index, index)
 		}
-		if hookConfig.Wait != nil && hookConfig.Where.Container == nil {
-			return errors.Errorf("hooks[%d].where.container is required if hooks[%d].wait is used", index, index)
+		if hookConfig.Wait != nil && hookConfig.Container == nil {
+			return errors.Errorf("hooks[%d].container is required if hooks[%d].wait is used", index, index)
 		}
 		if hookConfig.Wait != nil && hookConfig.Wait.Running == false && hookConfig.Wait.TerminatedWithCode == nil {
 			return errors.Errorf("hooks[%d].wait.running or hooks[%d].wait.terminatedWithCode is required if hooks[%d].wait is used", index, index, index)
@@ -340,8 +328,6 @@ func isReplacePodsUnique(index int, rp *latest.ReplacePod, rps []*latest.Replace
 
 		if r.ImageSelector != "" && r.ImageSelector == rp.ImageSelector {
 			return false
-		} else if r.ImageName != "" && r.ImageName == rp.ImageName {
-			return false
 		} else if len(r.LabelSelector) > 0 && len(rp.LabelSelector) > 0 && strMapEquals(r.LabelSelector, rp.LabelSelector) {
 			return false
 		}
@@ -366,13 +352,10 @@ func strMapEquals(a, b map[string]string) bool {
 
 func validateDev(config *latest.Config) error {
 	for index, rp := range config.Dev.ReplacePods {
-		if rp.ImageName == "" && len(rp.LabelSelector) == 0 && rp.ImageSelector == "" {
+		if len(rp.LabelSelector) == 0 && rp.ImageSelector == "" {
 			return errors.Errorf("Error in config: image selector and label selector are nil in replace pods at index %d", index)
 		}
 		definedSelectors := 0
-		if rp.ImageName != "" {
-			definedSelectors++
-		}
 		if rp.ImageSelector != "" {
 			definedSelectors++
 		}
@@ -390,10 +373,8 @@ func validateDev(config *latest.Config) error {
 	if config.Dev.Ports != nil {
 		for index, port := range config.Dev.Ports {
 			// Validate imageName and label selector
-			if port.ImageName == "" && len(port.LabelSelector) == 0 && port.ImageSelector == "" {
+			if len(port.LabelSelector) == 0 && port.ImageSelector == "" {
 				return errors.Errorf("Error in config: image selector and label selector are nil in ports config at index %d", index)
-			} else if port.ImageName != "" && findImageName(config, port.ImageName) == false {
-				return errors.Errorf("Error in config: dev.ports[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, port.ImageName)
 			}
 
 			if len(port.PortMappings) == 0 && len(port.PortMappingsReverse) == 0 {
@@ -408,10 +389,8 @@ func validateDev(config *latest.Config) error {
 	if config.Dev.Sync != nil {
 		for index, sync := range config.Dev.Sync {
 			// Validate imageName and label selector
-			if sync.ImageName == "" && len(sync.LabelSelector) == 0 && sync.ImageSelector == "" {
+			if len(sync.LabelSelector) == 0 && sync.ImageSelector == "" {
 				return errors.Errorf("Error in config: image selector and label selector are nil in sync config at index %d", index)
-			} else if sync.ImageName != "" && findImageName(config, sync.ImageName) == false {
-				return errors.Errorf("Error in config: dev.sync[%d].imageName '%s' couldn't be found. Please make sure the image name exists under 'images'", index, sync.ImageName)
 			}
 
 			// Validate initial sync strategy

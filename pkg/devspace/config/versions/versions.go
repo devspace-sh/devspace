@@ -2,6 +2,7 @@ package versions
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta10"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -49,6 +50,7 @@ var versionLoader = map[string]*loader{
 	v1beta7.Version:  &loader{New: v1beta7.New},
 	v1beta8.Version:  &loader{New: v1beta8.New},
 	v1beta9.Version:  &loader{New: v1beta9.New},
+	v1beta10.Version: &loader{New: v1beta10.New},
 	latest.Version:   &loader{New: latest.New},
 }
 

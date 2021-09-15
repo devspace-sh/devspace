@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/shell"
@@ -27,7 +28,7 @@ type localCommandHook struct {
 	Stderr io.Writer
 }
 
-func (l *localCommandHook) Execute(ctx Context, hook *latest.HookConfig, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error {
+func (l *localCommandHook) Execute(hook *latest.HookConfig, client kubectl.Client, config config.Config, dependencies []types.Dependency, cmdExtraEnv map[string]string, log logpkg.Logger) error {
 	// Create extra env variables
 	osArgsBytes, err := json.Marshal(os.Args)
 	if err != nil {
@@ -36,13 +37,14 @@ func (l *localCommandHook) Execute(ctx Context, hook *latest.HookConfig, config 
 	extraEnv := map[string]string{
 		OsArgsEnv: string(osArgsBytes),
 	}
-	if ctx.Client != nil {
-		extraEnv[KubeContextEnv] = ctx.Client.CurrentContext()
-		extraEnv[KubeNamespaceEnv] = ctx.Client.Namespace()
+	if client != nil {
+		extraEnv[KubeContextEnv] = client.CurrentContext()
+		extraEnv[KubeNamespaceEnv] = client.Namespace()
 	}
-	if ctx.Error != nil {
-		extraEnv[ErrorEnv] = ctx.Error.Error()
+	for k, v := range cmdExtraEnv {
+		extraEnv[k] = v
 	}
+
 	dir := filepath.Dir(config.Path())
 
 	// resolve hook command and args

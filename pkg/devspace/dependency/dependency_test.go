@@ -7,10 +7,8 @@ import (
 	"testing"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
-
 	fakebuild "github.com/loft-sh/devspace/pkg/devspace/build/testing"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	fakegeneratedloader "github.com/loft-sh/devspace/pkg/devspace/config/generated/testing"
@@ -340,9 +338,6 @@ func TestDeployAll(t *testing.T) {
 			resolver: &fakeResolver{
 				resolvedDependencies: testCase.resolvedDependencies,
 			},
-			hookExecuter: hook.NewExecuter(config.NewConfig(nil, &latest.Config{
-				Dependencies: testCase.dependencyTasks,
-			}, nil, nil, constants.DefaultConfigPath), nil),
 		}
 
 		_, err = manager.DeployAll(testCase.options)

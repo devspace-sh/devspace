@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"io"
 	"os"
@@ -83,15 +84,15 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 	}
 
 	// resolve dependencies
-	_, err = dependency.NewManager(loadedConfig, client, configOptions, log).ResolveAll(dependency.ResolveOptions{
+	dependencies, err := dependency.NewManager(loadedConfig, client, configOptions, log).ResolveAll(dependency.ResolveOptions{
 		Silent: true,
 	})
 	if err != nil {
 		log.Warnf("Error resolving dependencies: %v", err)
 	}
 
-	// execute plugin hook
-	err = plugin.ExecutePluginHook("print")
+	// Execute plugin hook
+	err = hook.ExecuteHooks(client, loadedConfig, dependencies, nil, log, "print")
 	if err != nil {
 		return err
 	}

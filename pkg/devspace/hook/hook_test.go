@@ -11,86 +11,50 @@ import (
 )
 
 func TestHookWithoutExecution(t *testing.T) {
-	//Execute 0 hooks
-	executer := NewExecuter(config.NewConfig(nil, &latest.Config{}, nil, nil, constants.DefaultConfigPath), nil)
-	err := executer.Execute("", "", "", Context{}, log.Discard)
+	// Execute 0 hooks
+	conf := config.NewConfig(nil, &latest.Config{}, nil, nil, constants.DefaultConfigPath)
+	err := ExecuteHooks(nil, conf, nil, nil, log.Discard)
 	if err != nil {
 		t.Fatalf("Failed to execute 0 hooks with error: %v", err)
 	}
 
-	//Execute 1 hook with no when
-	executer = NewExecuter(config.NewConfig(nil, &latest.Config{
+	// Execute 1 hook with no when
+	conf = config.NewConfig(nil, &latest.Config{
 		Hooks: []*latest.HookConfig{
 			&latest.HookConfig{},
 		},
-	}, nil, nil, constants.DefaultConfigPath), nil)
-	err = executer.Execute("", "", "", Context{}, log.Discard)
+	}, nil, nil, constants.DefaultConfigPath)
+	err = ExecuteHooks(nil, conf, nil, nil, log.Discard)
 	if err != nil {
 		t.Fatalf("Failed to execute 1 hook without when with error: %v", err)
 	}
 
-	//Execute 1 hook with no When.Before and no When.After
-	executer = NewExecuter(config.NewConfig(nil, &latest.Config{
+	// Execute 1 hook with no When.Before and no When.After
+	conf = config.NewConfig(nil, &latest.Config{
 		Hooks: []*latest.HookConfig{
 			&latest.HookConfig{
-				When: &latest.HookWhenConfig{},
+				Events: []string{"before:deploy"},
 			},
 		},
-	}, nil, nil, constants.DefaultConfigPath), nil)
-	err = executer.Execute("", "", "", Context{}, log.Discard)
+	}, nil, nil, constants.DefaultConfigPath)
+	err = ExecuteHooks(nil, conf, nil, nil, log.Discard)
 	if err != nil {
 		t.Fatalf("Failed to execute 1 hook without When.Before and When.After with error: %v", err)
 	}
-
-	//Execute 1 hook with empty When.Before
-	executer = NewExecuter(config.NewConfig(nil, &latest.Config{
-		Hooks: []*latest.HookConfig{
-			&latest.HookConfig{
-				When: &latest.HookWhenConfig{
-					Before: &latest.HookWhenAtConfig{},
-				},
-			},
-		},
-	}, nil, nil, constants.DefaultConfigPath), nil)
-	err = executer.Execute(Before, "", "", Context{}, log.Discard)
-	if err != nil {
-		t.Fatalf("Failed to execute 1 hook with empty When.Before: %v", err)
-	}
-
-	//Execute 1 hook with empty When.After
-	executer = NewExecuter(config.NewConfig(nil, &latest.Config{
-		Hooks: []*latest.HookConfig{
-			&latest.HookConfig{
-				When: &latest.HookWhenConfig{
-					After: &latest.HookWhenAtConfig{},
-				},
-			},
-		},
-	}, nil, nil, constants.DefaultConfigPath), nil)
-	err = executer.Execute(After, "", "", Context{}, log.Discard)
-	if err != nil {
-		t.Fatalf("Failed to execute 1 hook with empty When.After: %v", err)
-	}
-
 }
 
 func TestHookWithExecution(t *testing.T) {
-	executer := NewExecuter(config.NewConfig(nil, &latest.Config{
+	conf := config.NewConfig(nil, &latest.Config{
 		Hooks: []*latest.HookConfig{
 			&latest.HookConfig{
-				When: &latest.HookWhenConfig{
-					Before: &latest.HookWhenAtConfig{
-						Deployments: "theseDeployments",
-					},
-				},
+				Events:  []string{"my-event"},
 				Command: "echo",
 				Args:    []string{"hello"},
 			},
 		},
-	}, nil, nil, constants.DefaultConfigPath), nil)
-	err := executer.Execute(Before, StageDeployments, "theseDeployments", Context{}, log.Discard)
+	}, nil, nil, constants.DefaultConfigPath)
+	err := ExecuteHooks(nil, conf, nil, nil, log.Discard, "my-event")
 	if err != nil {
 		t.Fatalf("Failed to execute 1 hook with empty When.After: %v", err)
 	}
-
 }

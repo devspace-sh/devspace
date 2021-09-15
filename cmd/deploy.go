@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"strconv"
@@ -166,12 +167,6 @@ func (cmd *DeployCmd) Run(f factory.Factory) error {
 	}
 	config := configInterface.Config()
 
-	// execute plugin hook
-	err = plugin.ExecutePluginHook("deploy")
-	if err != nil {
-		return err
-	}
-
 	// create namespace if necessary
 	err = client.EnsureDeployNamespaces(config, cmd.log)
 	if err != nil {
@@ -204,6 +199,12 @@ func (cmd *DeployCmd) Run(f factory.Factory) error {
 	})
 	if err != nil {
 		return errors.Wrap(err, "deploy dependencies")
+	}
+
+	// execute plugin hook
+	err = hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "deploy")
+	if err != nil {
+		return err
 	}
 
 	// create pull secrets if necessary

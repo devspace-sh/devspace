@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
@@ -118,7 +119,7 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 	config := configInterface.Config()
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook("restart")
+	err = hook.ExecuteHooks(client, configInterface, nil, nil, cmd.log, "restart")
 	if err != nil {
 		return err
 	}
@@ -142,12 +143,6 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 		// create target selector options
 		options := targetselector.NewOptionsFromFlags("", "", cmd.Namespace, "", cmd.Pick).ApplyConfigParameter(syncPath.LabelSelector, syncPath.Namespace, syncPath.ContainerName, "")
 		options.ImageSelector = []imageselector.ImageSelector{}
-		imageSelector, err := imageselector.Resolve(syncPath.ImageName, configInterface, dep)
-		if err != nil {
-			return err
-		} else if imageSelector != nil {
-			options.ImageSelector = append(options.ImageSelector, *imageSelector)
-		}
 		if syncPath.ImageSelector != "" {
 			imageSelector, err := util.ResolveImageAsImageSelector(syncPath.ImageSelector, configInterface, dep)
 			if err != nil {

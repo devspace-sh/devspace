@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
@@ -40,7 +41,7 @@ Upgrades the DevSpace CLI to the newest version
 // Run executes the command logic
 func (cmd *UpgradeCmd) Run() error {
 	// Execute plugin hook
-	err := plugin.ExecutePluginHook("upgrade")
+	err := hook.ExecuteHooks(nil, nil, nil, nil, nil, "upgrade")
 	if err != nil {
 		return err
 	}
