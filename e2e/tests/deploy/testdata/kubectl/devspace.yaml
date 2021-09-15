@@ -1,18 +1,8 @@
-version: v1beta5
-images:
-  default:
-    image: dscr.io/yourusername/quickstart
+version: v1beta10
 deployments:
-- name: devspace-default
-  kubectl:
-    manifests:
-    - kube
-dev:
-  ports:
-  - imageName: default
-    forward:
-    - port: 3000
-  sync:
-  - imageName: default
-    excludePaths:
-    - node_modules
+  - name: test
+    kubectl:
+      manifests:
+        - deployment.yaml
+        - service.yaml
+        - https://raw.githubusercontent.com/ContainerSolutions/kubernetes-examples/cdf024abb19fa005ad8bccb762e238f10ba0511e/Pod/simple.yaml

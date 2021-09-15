@@ -1,122 +1,115 @@
 package build
 
 import (
-	"time"
+	"context"
+	"errors"
+	"os"
 
-	"github.com/loft-sh/devspace/e2e/utils"
-	"github.com/loft-sh/devspace/pkg/devspace/build"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/docker/docker/api/types"
+	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/e2e/framework"
+	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/pkg/errors"
+	"github.com/onsi/ginkgo"
 )
 
-type customFactory struct {
-	*utils.BaseCustomFactory
-	ctrl        build.Controller
-	builtImages map[string]string
-}
+var _ = DevSpaceDescribe("build", func() {
 
-// NewBuildController implements interface
-func (c *customFactory) NewBuildController(config *latest.Config, cache *generated.CacheConfig, client kubectl.Client) build.Controller {
-	c.ctrl = build.NewController(config, cache, client)
-	return c
-}
-func (c *customFactory) Build(options *build.Options, log log.Logger) (map[string]string, error) {
-	m, err := c.ctrl.Build(options, log)
-	c.builtImages = m
-
-	return m, err
-}
-
-type Runner struct{}
-
-var RunNew = &Runner{}
-
-func (r *Runner) SubTests() []string {
-	subTests := []string{}
-	for k := range availableSubTests {
-		subTests = append(subTests, k)
+	initialDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
 	}
 
-	return subTests
-}
+	// create a new factory
+	var f factory.Factory
 
-var availableSubTests = map[string]func(factory *customFactory, logger log.Logger) error{
-	"default": runDefault,
-}
+	// create logger
+	var log log.Logger
 
-func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error {
-	logger.Info("Run test 'build'")
+	// create context
+	ctx := context.Background()
 
-	// Populates the tests to run with all the available sub tests if no sub tests are specified
-	if len(subTests) == 0 {
-		for subTestName := range availableSubTests {
-			subTests = append(subTests, subTestName)
+	ginkgo.BeforeEach(func() {
+		f = framework.NewDefaultFactory()
+	})
+
+	// Test cases:
+
+	ginkgo.It("should build dockerfile with docker", func() {
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/docker")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// create build command
+		buildCmd := &cmd.BuildCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn: true,
+			},
+			SkipPush: true,
 		}
-	}
+		err = buildCmd.Run(f, nil, nil)
+		framework.ExpectNoError(err)
 
-	f := &customFactory{
-		BaseCustomFactory: &utils.BaseCustomFactory{
-			Pwd:     pwd,
-			Verbose: verbose,
-			Timeout: timeout,
-		},
-	}
+		// create devspace docker client to access docker APIs
+		devspaceDockerClient, err := docker.NewClient(log)
+		framework.ExpectNoError(err)
 
-	// Runs the tests
-	for _, subTestName := range subTests {
-		f.ResetLog()
-		c1 := make(chan error, 1)
+		dockerClient := devspaceDockerClient.DockerApiClient()
+		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		framework.ExpectNoError(err)
 
-		go func() {
-			err := func() error {
-				// f.Namespace = utils.GenerateNamespaceName("test-build-" + subTestName)
-
-				err := availableSubTests[subTestName](f, logger)
-				utils.PrintTestResult("build", subTestName, err, logger)
-				if err != nil {
-					return errors.Errorf("test 'build' failed: %s %v", f.GetLogContents(), err)
-				}
-
-				return nil
-			}()
-			c1 <- err
-		}()
-
-		select {
-		case err := <-c1:
-			if err != nil {
-				return err
+		for _, image := range imageList {
+			if image.RepoTags[0] == "my-docker-username/helloworld:latest" {
+				err = nil
+				break
+			} else {
+				err = errors.New("image not found")
 			}
-		case <-time.After(time.Duration(timeout) * time.Second):
-			return errors.Errorf("Timeout error - the test did not return within the specified timeout of %v seconds: %s", timeout, f.GetLogContents())
 		}
-	}
+		framework.ExpectNoError(err)
+	})
 
-	return nil
-}
+	ginkgo.It("should build dockerfile with buildkit", func() {
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/buildkit")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
 
-func beforeTest(f *customFactory, testFolder string) error {
-	dirPath, _, err := utils.CreateTempDir()
-	if err != nil {
-		return err
-	}
+		// create build command
+		buildCmd := &cmd.BuildCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn: true,
+			},
+			SkipPush: true,
+		}
+		err = buildCmd.Run(f, nil, nil)
+		framework.ExpectNoError(err)
 
-	err = utils.Copy(f.Pwd+"/tests/build/testdata/"+testFolder, dirPath)
-	if err != nil {
-		return err
-	}
+		// create devspace docker client to access docker APIs
+		devspaceDockerClient, err := docker.NewClient(log)
+		framework.ExpectNoError(err)
 
-	err = utils.ChangeWorkingDir(dirPath, f.GetLog())
-	if err != nil {
-		return err
-	}
+		dockerClient := devspaceDockerClient.DockerApiClient()
+		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		framework.ExpectNoError(err)
 
-	return nil
-}
+		for _, image := range imageList {
+			if image.RepoTags[0] == "my-docker-username/helloworld-buildkit:latest" {
+				err = nil
+				break
+			} else {
+				err = errors.New("image not found")
+			}
+		}
+		framework.ExpectNoError(err)
+	})
 
-func afterTest(f *customFactory) {
-	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.GetLog())
-}
+	ginkgo.It("should build dockerfile with kaniko", func() {
+		// TODO
+	})
+
+	ginkgo.It("should build dockerfile with custom builder", func() {
+		// TODO
+	})
+})

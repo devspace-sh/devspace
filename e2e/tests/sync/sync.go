@@ -1,187 +1,373 @@
 package sync
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/e2e/utils"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/devspace/services"
-	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/pkg/errors"
+	"github.com/loft-sh/devspace/e2e/framework"
+	"github.com/loft-sh/devspace/e2e/kube"
+	"github.com/loft-sh/devspace/pkg/util/factory"
+	"github.com/loft-sh/devspace/pkg/util/randutil"
+	"github.com/onsi/ginkgo"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-type customFactory struct {
-	*utils.BaseCustomFactory
-	interrupt chan error
-}
-
-type fakeServiceClient struct {
-	services.Client
-	factory           *customFactory
-	selectorParameter *targetselector.SelectorParameter
-}
-
-// NewFakeServiceClient implements
-func (c *customFactory) NewServicesClient(config *latest.Config, generated *generated.Config, kubeClient kubectl.Client, selectorParameter *targetselector.SelectorParameter, log log.Logger) services.Client {
-	c.interrupt = make(chan error)
-
-	return &fakeServiceClient{
-		Client:            services.NewClient(config, generated, kubeClient, selectorParameter, log),
-		factory:           c,
-		selectorParameter: selectorParameter,
-	}
-}
-
-func (s *fakeServiceClient) StartPortForwarding(interrupt chan error) error {
-	err := s.Client.StartPortForwarding(s.factory.interrupt)
-	return err
-}
-
-func (s *fakeServiceClient) StartSyncFromCmd(syncConfig *latest.SyncConfig, interrupt chan error, verbose bool) error {
-	err := s.Client.StartSyncFromCmd(syncConfig, s.factory.interrupt, verbose)
-	return err
-}
-
-func (s *fakeServiceClient) StartSync(interrupt chan error, printSync, verboseSync bool) error {
-	err := s.Client.StartSync(s.factory.interrupt, printSync, verboseSync)
-	return err
-}
-
-type Runner struct{}
-
-var RunNew = &Runner{}
-
-func (r *Runner) SubTests() []string {
-	subTests := []string{}
-	for k := range availableSubTests {
-		subTests = append(subTests, k)
+var _ = DevSpaceDescribe("sync", func() {
+	initialDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
 	}
 
-	return subTests
-}
+	// create a new factory
+	var (
+		f          factory.Factory
+		kubeClient *kube.KubeHelper
+	)
 
-var availableSubTests = map[string]func(factory *customFactory, logger log.Logger) error{
-	"default":       runDefault,
-	"download-only": runDownloadOnly,
-	"upload-only":   runUploadOnly,
-}
+	ginkgo.BeforeEach(func() {
+		f = framework.NewDefaultFactory()
 
-func (r *Runner) Run(subTests []string, ns string, pwd string, logger log.Logger, verbose bool, timeout int) error {
-	logger.Info("Run 'sync' test")
+		kubeClient, err = kube.NewKubeHelper()
+		framework.ExpectNoError(err)
+	})
 
-	// Populates the tests to run with all the available sub tests if no sub tests are specified
-	if len(subTests) == 0 {
-		for subTestName := range availableSubTests {
-			subTests = append(subTests, subTestName)
-		}
-	}
+	ginkgo.It("devspace sync should work with and without config", func() {
+		// TODO:
+		// test devspace sync command with devspace.yaml and without devspace.yaml
+	})
 
-	f := &customFactory{
-		BaseCustomFactory: &utils.BaseCustomFactory{
-			Namespace: ns,
-			Pwd:       pwd,
-			Verbose:   verbose,
-			Timeout:   timeout,
-		},
-	}
+	ginkgo.It("should execute a command after sync", func() {
+		// TODO:
+		// test config options dev.sync.onUpload.execRemote, dev.sync.onUpload.execRemote.onFileChange, dev.sync.onUpload.execRemote.onDirCreate, dev.sync.onUpload.execRemote.onBatch
+		// test config options dev.sync.onDownload.execLocal, dev.sync.onDownload.execLocal.onFileChange, dev.sync.onDownload.execLocal.onDirCreate, dev.sync.onDownload.execLocal.onBatch
+		// test config option dev.sync.onUpload.restartContainer
+	})
 
-	// Runs the tests
-	for _, subTestName := range subTests {
-		f.ResetLog()
-		c1 := make(chan error)
+	ginkgo.It("should sync to a pod and detect changes", func() {
+		// TODO: test exclude / downloadExclude paths & file / folder deletion
 
-		go func() {
-			err := func() error {
-				f.Namespace = utils.GenerateNamespaceName("test-sync-" + subTestName)
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/dev-simple")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
 
-				err := beforeTest(f)
-				defer afterTest(f)
-				if err != nil {
-					return errors.Errorf("test 'sync' failed: %s %v", f.GetLogContents(), err)
-				}
-
-				err = availableSubTests[subTestName](f, logger)
-				utils.PrintTestResult("sync", subTestName, err, logger)
-				if err != nil {
-					return errors.Errorf("test 'sync' failed: %s %v", f.GetLogContents(), err)
-				}
-
-				return nil
-			}()
-			c1 <- err
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
 		}()
 
-		select {
-		case err := <-c1:
-			if err != nil {
-				return err
-			}
-		case <-time.After(time.Duration(timeout) * time.Second):
-			return errors.Errorf("Timeout error - the test did not return within the specified timeout of %v seconds: %s", timeout, f.GetLogContents())
+		// interrupt chan for the dev command
+		interrupt, stop := framework.InterruptChan()
+		defer stop()
+
+		// create a new dev command
+		devCmd := &cmd.DevCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Portforwarding: true,
+			Sync:           true,
+			Interrupt:      interrupt,
 		}
-	}
 
-	return nil
-}
+		// start the command
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(1)
+		go func() {
+			defer ginkgo.GinkgoRecover()
+			defer waitGroup.Done()
+			err = devCmd.Run(f, nil)
+			framework.ExpectNoError(err)
+		}()
 
-func beforeTest(f *customFactory) error {
-	deployConfig := &cmd.DeployCmd{
-		GlobalFlags: &flags.GlobalFlags{
-			Namespace: f.Namespace,
-			NoWarn:    true,
-		},
-		ForceBuild:  false,
-		ForceDeploy: false,
-		SkipPush:    true,
-	}
+		// wait until files were synced
+		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/file1.txt"})
+			if err != nil {
+				return false, nil
+			}
 
-	dirPath, _, err := utils.CreateTempDir()
-	if err != nil {
-		return err
-	}
+			return out == "Hello World", nil
+		})
+		framework.ExpectNoError(err)
 
-	f.DirPath = dirPath
+		// check if sub file was synced
+		out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/folder1/file2.txt"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "Hello World 2")
 
-	err = utils.Copy(f.Pwd+"/tests/sync/testdata", dirPath)
-	if err != nil {
-		return err
-	}
+		// check if excluded file was synced
+		out, err = kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/test.txt"})
+		framework.ExpectError(err)
 
-	err = utils.ChangeWorkingDir(dirPath+"/test", f.GetLog())
-	if err != nil {
-		return err
-	}
+		// write a file and check that it got synced
+		payload := randutil.GenerateRandomString(10000)
+		err = ioutil.WriteFile(filepath.Join(tempDir, "file3.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
 
-	// Create kubectl client
-	client, err := f.NewKubeClientFromContext(deployConfig.KubeContext, deployConfig.Namespace, deployConfig.SwitchContext)
-	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
-	}
+		// wait for sync
+		err = wait.PollImmediate(time.Second, time.Minute*2, func() (done bool, err error) {
+			out, err := kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/file3.txt"})
+			if err != nil {
+				return false, nil
+			}
 
-	f.Client = client
+			return out == payload, nil
+		})
+		framework.ExpectNoError(err)
 
-	err = deployConfig.Run(f, nil, nil, nil)
-	if err != nil {
-		return err
-	}
+		// check if file was downloaded through before hook
+		_, err = ioutil.ReadFile(filepath.Join(tempDir, "file4.txt"))
+		framework.ExpectError(err)
+		framework.ExpectEqual(os.IsNotExist(err), true)
 
-	time.Sleep(time.Second * 5)
+		// check if file was downloaded through after hook
+		err = wait.PollImmediate(time.Second, time.Minute, func() (done bool, err error) {
+			out, err := ioutil.ReadFile(filepath.Join(tempDir, "file5.txt"))
+			if err != nil {
+				if os.IsNotExist(err) == false {
+					return false, err
+				}
 
-	// Checking if pods are running correctly
-	err = utils.AnalyzePods(client, f.Namespace, f.GetLog())
-	if err != nil {
-		return err
-	}
+				return false, nil
+			}
 
-	return nil
-}
+			return string(out) == "Hello World", nil
+		})
+		framework.ExpectNoError(err)
 
-func afterTest(f *customFactory) {
-	utils.DeleteTempAndResetWorkingDir(f.DirPath, f.Pwd, f.GetLog())
-	utils.DeleteNamespace(f.Client, f.Namespace)
-}
+		// stop command
+		stop()
+
+		// wait for the command to finish
+		waitGroup.Wait()
+	})
+
+	ginkgo.It("should sync to a pod and watch changes", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-simple")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// deploy app to sync
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "watch.yaml",
+			},
+		}
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// interrupt chan for the sync command
+		interrupt, stop := framework.InterruptChan()
+		defer stop()
+
+		// sync with watch
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "watch.yaml",
+			},
+			Interrupt: interrupt,
+		}
+
+		// start the command
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(1)
+		go func() {
+			defer ginkgo.GinkgoRecover()
+			defer waitGroup.Done()
+
+			err := syncCmd.Run(f)
+			framework.ExpectNoError(err)
+		}()
+
+		// wait until files were synced
+		framework.ExpectRemoteFileContents("node", ns, "/watch/file1.txt", "Hello World")
+
+		// check if file was downloaded through after hook
+		framework.ExpectLocalFileContents(filepath.Join(tempDir, "initial-sync-done.txt"), "Hello World")
+
+		// write a file and check that it got synced
+		payload := randutil.GenerateRandomString(10000)
+		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+		framework.ExpectRemoteFileContents("node", ns, "/watch/watching.txt", payload)
+
+		// stop command
+		stop()
+
+		// wait for the command to finish
+		waitGroup.Wait()
+	})
+
+	ginkgo.It("should sync to a pod and not watch changes with --no-watch", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-simple")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// deploy app to sync
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "no-watch.yaml",
+			},
+		}
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// sync with no-watch
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "no-watch.yaml",
+			},
+			NoWatch: true,
+		}
+
+		// start the command
+		err = syncCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// wait until files were synced
+		framework.ExpectRemoteFileContents("node", ns, "/no-watch/file1.txt", "Hello World")
+
+		// check if file was downloaded through after hook
+		framework.ExpectLocalFileContents(filepath.Join(tempDir, "initial-sync-done.txt"), "Hello World")
+	})
+
+	ginkgo.It("should sync to a pod container with --container and --container-path", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-containers")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// deploy app to sync
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+		}
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// sync with --container and --container-path
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+			Container:     "container2",
+			ContainerPath: "/app2",
+			NoWatch:       true,
+		}
+
+		// start the command
+		err = syncCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// wait until files were synced
+		framework.ExpectRemoteContainerFileContents("e2e=sync-containers", "container2", ns, "/app2/file1.txt", "Hello World")
+
+		// write a file and check that it got synced
+		payload := randutil.GenerateRandomString(10000)
+		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+		framework.ExpectRemoteContainerFileContents("e2e=sync-containers", "container2", ns, "/app2/watching.txt", payload)
+	})
+
+	ginkgo.It("should sync to a pod container with excludeFile, downloadExcludeFile, and uploadExcludeFile configuration", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-exclude-file")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// deploy app to sync
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+		}
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// sync command
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "devspace.yaml",
+			},
+			NoWatch: true,
+		}
+
+		// start the command
+		err = syncCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// wait for initial sync to complete
+		framework.ExpectLocalFileContents(filepath.Join(tempDir, "initial-sync-done.txt"), "Hello World")
+
+		// check that included file was synced
+		framework.ExpectRemoteFileContents("node", ns, "/app/file-include.txt", "Hello World")
+
+		// check that excluded file was not synced
+		framework.ExpectRemoteFileNotFound("node", ns, "/app/file-exclude.txt")
+
+		// check that upload exluded file was not synced
+		framework.ExpectLocalFileContents(filepath.Join(tempDir, "file-upload-exclude.txt"), "Hello World")
+		framework.ExpectRemoteFileNotFound("node", ns, "/app/file-upload-exclude.txt")
+
+		// check that download excluded file was not synced
+		framework.ExpectLocalFileNotFound(filepath.Join(tempDir, "file-download-exclude.txt"))
+		framework.ExpectRemoteFileContents("node", ns, "/app/file-download-exclude.txt", "Hello World")
+
+		// write a file and check that it got synced
+		payload := randutil.GenerateRandomString(10000)
+		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
+		framework.ExpectNoError(err)
+		framework.ExpectRemoteFileContents("node", ns, "/app/watching.txt", payload)
+	})
+})
