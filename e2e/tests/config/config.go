@@ -16,6 +16,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 )
 
 var _ = DevSpaceDescribe("config", func() {
@@ -934,5 +935,154 @@ var _ = DevSpaceDescribe("config", func() {
 		// reload custom config with cache
 		_, _, err = framework.LoadConfig(f, filepath.Join(tempDir, "custom.yaml"))
 		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should replace and add deployments using profile patches", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-patches")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		config, _, err := framework.LoadConfigWithOptions(f, filepath.Join(tempDir, "replace-and-add-deployments.yaml"), &loader.ConfigOptions{
+			Profiles: []string{"test"},
+		})
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(config.Config().Deployments), 2)
+
+		deployment1 := config.Config().Deployments[0]
+		framework.ExpectEqual(deployment1.Name, "test")
+		framework.ExpectEqual(deployment1.Kubectl.Manifests[0], "test.yaml")
+
+		deployment2 := config.Config().Deployments[1]
+		framework.ExpectEqual(deployment2.Name, "test2")
+		framework.ExpectEqual(deployment2.Kubectl.Manifests[0], "test2.yaml")
+	})
+
+	ginkgo.It("should apply patch to all deployments using wildcard profile patches", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-patches")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		config, _, err := framework.LoadConfigWithOptions(f, filepath.Join(tempDir, "wildcard-match.yaml"), &loader.ConfigOptions{
+			Profiles: []string{"test"},
+		})
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(config.Config().Deployments), 2)
+
+		deployment1 := config.Config().Deployments[0]
+		framework.ExpectEqual(deployment1.Name, "test")
+		framework.ExpectEqual(deployment1.Kubectl.Manifests[0], "network-policy.yaml")
+
+		deployment2 := config.Config().Deployments[1]
+		framework.ExpectEqual(deployment2.Name, "test2")
+		framework.ExpectEqual(deployment2.Kubectl.Manifests[0], "network-policy.yaml")
+	})
+
+	ginkgo.It("should apply patch to all deployments using regexp profile patches", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-patches")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		config, _, err := framework.LoadConfigWithOptions(f, filepath.Join(tempDir, "wildcard-match-regexp.yaml"), &loader.ConfigOptions{
+			Profiles: []string{"test"},
+		})
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(config.Config().Deployments), 3)
+
+		deployment1 := config.Config().Deployments[0]
+		framework.ExpectEqual(deployment1.Name, "development1")
+		gomega.Expect(deployment1.Kubectl).To(gomega.BeNil())
+
+		deployment2 := config.Config().Deployments[1]
+		framework.ExpectEqual(deployment2.Name, "staging1")
+		gomega.Expect(deployment2.Kubectl).To(gomega.BeNil())
+
+		deployment3 := config.Config().Deployments[2]
+		framework.ExpectEqual(deployment3.Name, "production1")
+		framework.ExpectEqual(deployment3.Kubectl.Manifests[0], "network-policy.yaml")
+	})
+
+	ginkgo.It("should apply patch to deployments using legacy property match profile patches", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-patches")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		config, _, err := framework.LoadConfigWithOptions(f, filepath.Join(tempDir, "legacy-match.yaml"), &loader.ConfigOptions{
+			Profiles: []string{"test"},
+		})
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(config.Config().Deployments), 2)
+
+		deployment1 := config.Config().Deployments[0]
+		framework.ExpectEqual(deployment1.Name, "test")
+		gomega.Expect(deployment1.Kubectl).To(gomega.BeNil())
+
+		deployment2 := config.Config().Deployments[1]
+		framework.ExpectEqual(deployment2.Name, "test2")
+		framework.ExpectEqual(deployment2.Kubectl.Manifests[0], "network-policy.yaml")
+	})
+
+	ginkgo.It("should apply patch to all deployments using comparison profile patches", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-patches")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		config, _, err := framework.LoadConfigWithOptions(f, filepath.Join(tempDir, "wildcard-match-comparison.yaml"), &loader.ConfigOptions{
+			Profiles: []string{"test"},
+		})
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(config.Config().Deployments), 1)
+
+		deployment1 := config.Config().Deployments[0]
+		framework.ExpectEqual(deployment1.Name, "development1")
+		framework.ExpectEqual(deployment1.Helm.CleanupOnFail, false)
+		framework.ExpectEqual(*deployment1.Helm.Timeout, int64(1000))
+		gomega.Expect(*deployment1.Helm.ComponentChart).To(gomega.BeTrue())
+	})
+
+	ginkgo.It("should apply patch to some deployments using wildcard profile patches", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-patches")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		config, _, err := framework.LoadConfigWithOptions(f, filepath.Join(tempDir, "wildcard-match-some.yaml"), &loader.ConfigOptions{
+			Profiles: []string{"test"},
+		})
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(config.Config().Deployments), 2)
+
+		deployment1 := config.Config().Deployments[0]
+		framework.ExpectEqual(deployment1.Name, "test")
+		gomega.Expect(deployment1.Kubectl).To(gomega.BeNil())
+		gomega.Expect(*deployment1.Helm.ComponentChart).To(gomega.BeTrue())
+
+		deployment2 := config.Config().Deployments[1]
+		framework.ExpectEqual(deployment2.Name, "test2")
+		framework.ExpectEqual(deployment2.Kubectl.Manifests[0], "test2.yaml")
+	})
+
+	ginkgo.It("should apply patch to some deployments using recursive descent profile patches", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-patches")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		config, _, err := framework.LoadConfigWithOptions(f, filepath.Join(tempDir, "recursive-descent.yaml"), &loader.ConfigOptions{
+			Profiles: []string{"staging"},
+		})
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(config.Config().Images["backend"].Image, "john/stagingbackend")
+
+		framework.ExpectEqual(len(config.Config().Deployments), 1)
+
+		deployment1 := config.Config().Deployments[0]
+		framework.ExpectEqual(deployment1.Name, "backend")
+		gomega.Expect(deployment1.Kubectl).To(gomega.BeNil())
+		gomega.Expect(*deployment1.Helm.ComponentChart).To(gomega.BeTrue())
 	})
 })

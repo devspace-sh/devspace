@@ -18,7 +18,6 @@ profiles:                             # struct[]  | Array of config profiles
   - op: "replace"                     # enum      | Patch operation (replace, add, remove)
     path: "images.backend.cmd"        # string    | Jsonpath or xpath to config option that should be patched
     value: ""                         # arbitrary | Value to use for patch operation
-    from: ""                          # string    | Jsonpath or xpath to config option which should be used as value for operation
   replace:                            # struct    | Array of replacements for entire config sections
     images: {}                        # struct    | Replacement for entire `images` section
     deployments: {}                   # struct    | Replacement for entire `deployments` section

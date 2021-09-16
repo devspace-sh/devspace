@@ -168,6 +168,8 @@ github.com/docker/go-units
 ## explicit
 # github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96
 ## explicit
+# github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
+github.com/dprotaso/go-yit
 # github.com/emirpasic/gods v1.12.0
 github.com/emirpasic/gods/containers
 github.com/emirpasic/gods/lists
@@ -276,9 +278,6 @@ github.com/k0kubun/go-ansi
 github.com/kballard/go-shellquote
 # github.com/kevinburke/ssh_config v0.0.0-20190725054713-01f96b0aa0cd
 github.com/kevinburke/ssh_config
-# github.com/krishicks/yaml-patch v0.0.10
-## explicit
-github.com/krishicks/yaml-patch
 # github.com/lib/pq v1.10.0
 ## explicit
 # github.com/loft-sh/notify v0.0.0-20210827094439-0720dcc7feee
@@ -436,6 +435,9 @@ github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash
 github.com/ulikunitz/xz/internal/xlog
 github.com/ulikunitz/xz/lzma
+# github.com/vmware-labs/yaml-jsonpath v0.3.2
+## explicit
+github.com/vmware-labs/yaml-jsonpath/pkg/yamlpath
 # github.com/xanzy/ssh-agent v0.2.1
 github.com/xanzy/ssh-agent
 # go.opencensus.io v0.22.3
@@ -691,6 +693,9 @@ gopkg.in/warnings.v0
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
+# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+## explicit
+gopkg.in/yaml.v3
 # gotest.tools v2.2.0+incompatible
 ## explicit
 gotest.tools/assert
