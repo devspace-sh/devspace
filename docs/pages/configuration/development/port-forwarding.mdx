@@ -65,7 +65,6 @@ profiles:
 ## Pod Selection
 The following config options are needed to determine the pod to which the traffic should be forwarded:
 - [`imageSelector`](#imageselector)
-- [`imageName`](#imagename)
 - [`labelSelector`](#labelselector)
 - [`namespace`](#namespace)
 
@@ -79,9 +78,6 @@ If DevSpace is unable to establish a port-forwarding connection to the selected 
 
 ### `imageSelector`
 <FragmentImageSelector/>
-
-### `imageName`
-<FragmentImageName/>
 
 #### Example: Select Pod by Image Name
 ```yaml {2,4,18,22}
@@ -102,16 +98,16 @@ deployments:
         image: john/debugger
 dev:
   ports:
-  - imageName: backend
+  - imageSelector: john/devbackend
     forward:
     - port: 8080
       remotePort: 80
-  - imageName: backend-debugger
+  - imageSelector: john/debugger
     forward:
     - port: 3000
 ```
 **Explanation:**
-- The above example defines two images that can be used as `imageName`: `backend` and `backend-debugger`
+- The above example defines two images that can be used as `imageSelector`: `john/devbackend` and `john/debugger`
 - The deployment starts two containers and each of them uses an image from the `images` section.
 - The `imageName` option of the first port-forwarding configuration in the `dev.ports` section references `backend`. That means DevSpace would select the first container for port-forwarding, as this container uses the `image: john/devbackend` which belongs to the `backend` image as defined in the `images` section.
 - The `imageName` option of the second port-forwarding configuration in the `dev.ports` section references `backend-debugger`. That means DevSpace would select the second container for port-forwarding, as this container uses the `image: john/debugger` which belongs to the `backend-debugger` image as defined in the `images` section.

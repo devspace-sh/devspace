@@ -45,9 +45,6 @@ You will need to make sure that the container has a terminal equipped and is sle
 ### `imageSelector`
 <FragmentImageSelector />
 
-### `imageName`
-<FragmentImageName />
-
 #### Example: Setting imageName
 ```yaml {25-34}
 images:
@@ -72,7 +69,7 @@ deployments:
         args: ["999999999"]
 dev:
   terminal: 
-    imageName: backend
+    imageSelector: myregistry/appbackend
 ```
 
 ### `labelSelector`
