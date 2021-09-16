@@ -19,28 +19,30 @@ func (r *client) CreatePullSecrets() error {
 	createPullSecrets := []*latest.PullSecretConfig{}
 
 	// execute before pull secrets hooks
-	err := r.hookExecuter.Execute(hook.Before, hook.StagePullSecrets, hook.All, hook.Context{Client: r.kubeClient}, r.log)
-	if err != nil {
-		return err
+	pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, nil, r.log, "before:createPullSecret")
+	if pluginErr != nil {
+		return pluginErr
 	}
 
 	// gather pull secrets from pullSecrets
-	for _, pullSecret := range r.config.PullSecrets {
-		createPullSecrets = append(createPullSecrets, pullSecret)
-	}
+	if r.config != nil {
+		for _, pullSecret := range r.config.Config().PullSecrets {
+			createPullSecrets = append(createPullSecrets, pullSecret)
+		}
 
-	// gather pull secrets from images
-	for _, imageConf := range r.config.Images {
-		if imageConf.CreatePullSecret == nil || *imageConf.CreatePullSecret == true {
-			registryURL, err := GetRegistryFromImageName(imageConf.Image)
-			if err != nil {
-				return err
-			}
+		// gather pull secrets from images
+		for _, imageConf := range r.config.Config().Images {
+			if imageConf.CreatePullSecret == nil || *imageConf.CreatePullSecret == true {
+				registryURL, err := GetRegistryFromImageName(imageConf.Image)
+				if err != nil {
+					return err
+				}
 
-			if contains(registryURL, createPullSecrets) == false {
-				createPullSecrets = append(createPullSecrets, &latest.PullSecretConfig{
-					Registry: registryURL,
-				})
+				if contains(registryURL, createPullSecrets) == false {
+					createPullSecrets = append(createPullSecrets, &latest.PullSecretConfig{
+						Registry: registryURL,
+					})
+				}
 			}
 		}
 	}
@@ -60,7 +62,11 @@ func (r *client) CreatePullSecrets() error {
 		r.log.StopWait()
 		if err != nil {
 			// execute on error pull secrets hooks
-			r.hookExecuter.OnError(hook.StagePullSecrets, []string{hook.All}, hook.Context{Client: r.kubeClient, Error: err}, r.log)
+			pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{"error": err}, r.log, "error:createPullSecret")
+			if pluginErr != nil {
+				return pluginErr
+			}
+
 			return errors.Errorf("failed to create pull secret for registry: %v", err)
 		}
 
@@ -69,7 +75,11 @@ func (r *client) CreatePullSecrets() error {
 				err = r.addPullSecretsToServiceAccount(pullSecretConf.Secret, serviceAccount)
 				if err != nil {
 					// execute on error pull secrets hooks
-					r.hookExecuter.OnError(hook.StagePullSecrets, []string{hook.All}, hook.Context{Client: r.kubeClient, Error: err}, r.log)
+					pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{"error": err}, r.log, "error:createPullSecret")
+					if pluginErr != nil {
+						return pluginErr
+					}
+
 					return errors.Wrap(err, "add pull secrets to service account")
 				}
 			}
@@ -77,16 +87,20 @@ func (r *client) CreatePullSecrets() error {
 			err = r.addPullSecretsToServiceAccount(pullSecretConf.Secret, "default")
 			if err != nil {
 				// execute on error pull secrets hooks
-				r.hookExecuter.OnError(hook.StagePullSecrets, []string{hook.All}, hook.Context{Client: r.kubeClient, Error: err}, r.log)
+				pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{"error": err}, r.log, "error:createPullSecret")
+				if pluginErr != nil {
+					return pluginErr
+				}
+
 				return errors.Wrap(err, "add pull secrets to service account")
 			}
 		}
 	}
 
 	// execute after pull secrets hooks
-	err = r.hookExecuter.Execute(hook.After, hook.StagePullSecrets, hook.All, hook.Context{Client: r.kubeClient}, r.log)
-	if err != nil {
-		return err
+	pluginErr = hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, nil, r.log, "after:createPullSecret")
+	if pluginErr != nil {
+		return pluginErr
 	}
 
 	return nil
@@ -181,24 +195,26 @@ func (r *client) createPullSecretForRegistry(pullSecret *latest.PullSecretConfig
 		namespaces := map[string]bool{
 			defaultNamespace: true,
 		}
-		for _, deployConfig := range r.config.Deployments {
-			if deployConfig.Namespace == "" || namespaces[deployConfig.Namespace] {
-				continue
-			}
+		if r.config != nil {
+			for _, deployConfig := range r.config.Config().Deployments {
+				if deployConfig.Namespace == "" || namespaces[deployConfig.Namespace] {
+					continue
+				}
 
-			err := r.CreatePullSecret(&PullSecretOptions{
-				Namespace:       deployConfig.Namespace,
-				RegistryURL:     pullSecret.Registry,
-				Username:        username,
-				PasswordOrToken: password,
-				Email:           email,
-				Secret:          pullSecret.Secret,
-			})
-			if err != nil {
-				return err
-			}
+				err := r.CreatePullSecret(&PullSecretOptions{
+					Namespace:       deployConfig.Namespace,
+					RegistryURL:     pullSecret.Registry,
+					Username:        username,
+					PasswordOrToken: password,
+					Email:           email,
+					Secret:          pullSecret.Secret,
+				})
+				if err != nil {
+					return err
+				}
 
-			namespaces[deployConfig.Namespace] = true
+				namespaces[deployConfig.Namespace] = true
+			}
 		}
 	}
 

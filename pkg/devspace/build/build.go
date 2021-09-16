@@ -3,7 +3,6 @@ package build
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"io"
 	"strings"
@@ -37,18 +36,16 @@ type Controller interface {
 }
 
 type controller struct {
-	config config.Config
-
-	hookExecuter hook.Executer
+	config       config.Config
+	dependencies []types.Dependency
 	client       kubectl.Client
 }
 
 // NewController creates a new image build controller
 func NewController(config config.Config, dependencies []types.Dependency, client kubectl.Client) Controller {
 	return &controller{
-		config: config,
-
-		hookExecuter: hook.NewExecuter(config, dependencies),
+		config:       config,
+		dependencies: dependencies,
 		client:       client,
 	}
 }
@@ -84,9 +81,9 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	// Execute before images build hook
-	err := c.hookExecuter.Execute(hook.Before, hook.StageImages, hook.All, hook.Context{Client: c.client}, log)
-	if err != nil {
-		return nil, err
+	pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{}, log, "before:build")
+	if pluginErr != nil {
+		return nil, pluginErr
 	}
 
 	imagesToBuild := 0
@@ -123,6 +120,17 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 			return nil, errors.Wrap(err, "create builder")
 		}
 
+		// Execute before images build hook
+		pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+			"IMAGE_CONFIG_NAME": imageConfigName,
+			"IMAGE_NAME":        imageName,
+			"IMAGE_CONFIG":      cImageConf,
+			"IMAGE_TAGS":        imageTags,
+		}, log, hook.EventsForSingle("before:build", imageConfigName).With("build.beforeBuild")...)
+		if pluginErr != nil {
+			return nil, pluginErr
+		}
+
 		// Check if rebuild is needed
 		needRebuild, err := builder.ShouldRebuild(c.config.Generated().GetActive(), options.ForceRebuild)
 		if err != nil {
@@ -130,25 +138,19 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		}
 
 		if options.ForceRebuild == false && needRebuild == false {
+			// Execute before images build hook
+			pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+				"IMAGE_CONFIG_NAME": imageConfigName,
+				"IMAGE_NAME":        imageName,
+				"IMAGE_CONFIG":      cImageConf,
+				"IMAGE_TAGS":        imageTags,
+			}, log, hook.EventsForSingle("skip:build", imageConfigName)...)
+			if pluginErr != nil {
+				return nil, pluginErr
+			}
+			
 			log.Infof("Skip building image '%s'", imageConfigName)
 			continue
-		}
-
-		// Execute before images build hook
-		err = c.hookExecuter.Execute(hook.Before, hook.StageImages, imageConfigName, hook.Context{Client: c.client}, log)
-		if err != nil {
-			return nil, err
-		}
-
-		// Execute plugin hook
-		pluginErr := plugin.ExecutePluginHookWithContext("build.beforeBuild", map[string]interface{}{
-			"IMAGE_CONFIG_NAME": imageConfigName,
-			"IMAGE_NAME":        imageName,
-			"IMAGE_CONFIG":      cImageConf,
-			"IMAGE_TAGS":        imageTags,
-		})
-		if pluginErr != nil {
-			return nil, pluginErr
 		}
 
 		// Sequential or parallel build?
@@ -156,17 +158,16 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 			// Build the image
 			err = builder.Build(log)
 			if err != nil {
-				pluginErr := plugin.ExecutePluginHookWithContext("build.errorBuild", map[string]interface{}{
+				pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 					"IMAGE_CONFIG_NAME": imageConfigName,
 					"IMAGE_NAME":        imageName,
 					"IMAGE_CONFIG":      cImageConf,
 					"IMAGE_TAGS":        imageTags,
 					"ERROR":             err,
-				})
+				}, log, hook.EventsForSingle("error:build", imageConfigName).With("build.errorBuild")...)
 				if pluginErr != nil {
 					return nil, pluginErr
 				}
-				c.hookExecuter.OnError(hook.StageImages, []string{hook.All, imageConfigName}, hook.Context{Client: c.client, Error: err}, log)
 				return nil, errors.Wrapf(err, "error building image %s:%s", imageName, imageTags[0])
 			}
 
@@ -183,18 +184,14 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 			builtImages[imageName] = imageTags[0]
 
 			// Execute before images build hook
-			pluginErr := plugin.ExecutePluginHookWithContext("build.afterBuild", map[string]interface{}{
+			pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 				"IMAGE_CONFIG_NAME": imageConfigName,
 				"IMAGE_NAME":        imageName,
 				"IMAGE_CONFIG":      cImageConf,
 				"IMAGE_TAGS":        imageTags,
-			})
+			}, log, hook.EventsForSingle("after:build", imageConfigName).With("build.afterBuild")...)
 			if pluginErr != nil {
 				return nil, pluginErr
-			}
-			err = c.hookExecuter.Execute(hook.After, hook.StageImages, imageConfigName, hook.Context{Client: c.client}, log)
-			if err != nil {
-				return nil, err
 			}
 		} else {
 			// wait until we are below the MaxConcurrency
@@ -226,34 +223,26 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 				err := builder.Build(streamLog)
 				_ = writer.Close()
 				if err != nil {
-					_ = plugin.ExecutePluginHookWithContext("build.errorBuild", map[string]interface{}{
+					hook.LogExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 						"IMAGE_CONFIG_NAME": imageConfigName,
 						"IMAGE_NAME":        imageName,
 						"IMAGE_CONFIG":      cImageConf,
 						"IMAGE_TAGS":        imageTags,
 						"ERROR":             err,
-					})
-					c.hookExecuter.OnError(hook.StageImages, []string{imageConfigName}, hook.Context{Client: c.client, Error: err}, log)
+					}, log, hook.EventsForSingle("error:build", imageConfigName).With("build.errorBuild")...)
 					errChan <- errors.Errorf("error building image %s:%s: %v", imageName, imageTags[0], err)
 					return
 				}
 
 				// Execute plugin hook
-				pluginErr := plugin.ExecutePluginHookWithContext("build.afterBuild", map[string]interface{}{
+				pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 					"IMAGE_CONFIG_NAME": imageConfigName,
 					"IMAGE_NAME":        imageName,
 					"IMAGE_CONFIG":      cImageConf,
 					"IMAGE_TAGS":        imageTags,
-				})
+				}, log, hook.EventsForSingle("after:build", imageConfigName).With("build.afterBuild")...)
 				if pluginErr != nil {
 					errChan <- pluginErr
-				}
-
-				// Execute before images build hook
-				err = c.hookExecuter.Execute(hook.After, hook.StageImages, imageConfigName, hook.Context{Client: c.client}, log)
-				if err != nil {
-					errChan <- errors.Errorf("error executing image hook %s:%s: %v", imageName, imageTags[0], err)
-					return
 				}
 
 				// Send the reponse
@@ -269,7 +258,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	// wait for the builds to finish
 	if options.Sequential == false {
 		for imagesToBuild > 0 {
-			err = c.waitForBuild(errChan, cacheChan, builtImages, log)
+			err := c.waitForBuild(errChan, cacheChan, builtImages, log)
 			if err != nil {
 				return nil, err
 			}
@@ -279,9 +268,9 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	// Execute after images build hook
-	err = c.hookExecuter.Execute(hook.After, hook.StageImages, hook.All, hook.Context{Client: c.client}, log)
-	if err != nil {
-		return nil, err
+	pluginErr = hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{}, log, "after:build")
+	if pluginErr != nil {
+		return nil, pluginErr
 	}
 
 	return builtImages, nil
@@ -290,7 +279,6 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 func (c *controller) waitForBuild(errChan <-chan error, cacheChan <-chan imageNameAndTag, builtImages map[string]string, log logpkg.Logger) error {
 	select {
 	case err := <-errChan:
-		c.hookExecuter.OnError(hook.StageImages, []string{hook.All}, hook.Context{Client: c.client, Error: err}, log)
 		return err
 	case done := <-cacheChan:
 		log.Donef("Done building image %s:%s (%s)", done.imageName, done.imageTag, done.imageConfigName)

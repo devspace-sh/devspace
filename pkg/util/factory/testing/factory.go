@@ -13,7 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
@@ -33,7 +32,6 @@ type Factory struct {
 	DeployController  deploy.Controller
 	KubeconfigLoader  kubeconfig.Loader
 	Log               log.Logger
-	HookExecutor      hook.Executer
 	DependencyManager dependency.Manager
 	PullSecretClient  pullsecrets.Client
 	ConfigLoader      loader.ConfigLoader
@@ -73,11 +71,6 @@ func (f *Factory) NewKubeConfigLoader() kubeconfig.Loader {
 // GetLog implements interface
 func (f *Factory) GetLog() log.Logger {
 	return f.Log
-}
-
-// NewHookExecutor implements interface
-func (f *Factory) NewHookExecutor(config config.Config, dependencies []dependencytypes.Dependency) hook.Executer {
-	return f.HookExecutor
 }
 
 // NewDependencyManager implements interface

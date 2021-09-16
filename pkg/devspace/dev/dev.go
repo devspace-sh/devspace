@@ -1,7 +1,7 @@
 package dev
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -37,7 +37,7 @@ func UI(servicesClient services.Client, port int) error {
 }
 
 func Sync(servicesClient services.Client, interrupt chan error, printSyncLog, verbose bool) error {
-	pluginErr := plugin.ExecutePluginHook("dev.beforeSync")
+	pluginErr := hook.ExecuteHooks(servicesClient.KubeClient(), servicesClient.Config(), servicesClient.Dependencies(), map[string]interface{}{}, servicesClient.Log(), "devCommand:before:sync", "dev.beforeSync")
 	if pluginErr != nil {
 		return pluginErr
 	}
@@ -58,7 +58,7 @@ func Sync(servicesClient services.Client, interrupt chan error, printSyncLog, ve
 		}
 	}
 
-	pluginErr = plugin.ExecutePluginHook("dev.afterSync")
+	pluginErr = hook.ExecuteHooks(servicesClient.KubeClient(), servicesClient.Config(), servicesClient.Dependencies(), map[string]interface{}{}, servicesClient.Log(), "devCommand:after:sync", "dev.beforeSync")
 	if pluginErr != nil {
 		return pluginErr
 	}
@@ -67,7 +67,7 @@ func Sync(servicesClient services.Client, interrupt chan error, printSyncLog, ve
 }
 
 func PortForwarding(servicesClient services.Client, interrupt chan error) error {
-	pluginErr := plugin.ExecutePluginHook("dev.beforePortForwarding")
+	pluginErr := hook.ExecuteHooks(servicesClient.KubeClient(), servicesClient.Config(), servicesClient.Dependencies(), map[string]interface{}{}, servicesClient.Log(), "devCommand:before:portForwarding", "dev.beforePortForwarding")
 	if pluginErr != nil {
 		return pluginErr
 	}
@@ -102,7 +102,7 @@ func PortForwarding(servicesClient services.Client, interrupt chan error) error 
 		}
 	}
 
-	pluginErr = plugin.ExecutePluginHook("dev.afterPortForwarding")
+	pluginErr = hook.ExecuteHooks(servicesClient.KubeClient(), servicesClient.Config(), servicesClient.Dependencies(), map[string]interface{}{}, servicesClient.Log(), "devCommand:after:portForwarding", "dev.afterPortForwarding")
 	if pluginErr != nil {
 		return pluginErr
 	}
@@ -110,7 +110,7 @@ func PortForwarding(servicesClient services.Client, interrupt chan error) error 
 }
 
 func ReplacePods(servicesClient services.Client) error {
-	pluginErr := plugin.ExecutePluginHook("dev.beforeReplacePods")
+	pluginErr := hook.ExecuteHooks(servicesClient.KubeClient(), servicesClient.Config(), servicesClient.Dependencies(), map[string]interface{}{}, servicesClient.Log(), "devCommand:before:replacePods", "dev.beforeReplacePods")
 	if pluginErr != nil {
 		return pluginErr
 	}
@@ -130,10 +130,9 @@ func ReplacePods(servicesClient services.Client) error {
 		}
 	}
 
-	pluginErr = plugin.ExecutePluginHook("dev.afterReplacePods")
+	pluginErr = hook.ExecuteHooks(servicesClient.KubeClient(), servicesClient.Config(), servicesClient.Dependencies(), map[string]interface{}{}, servicesClient.Log(), "devCommand:after:replacePods", "dev.afterReplacePods")
 	if pluginErr != nil {
 		return pluginErr
 	}
-
 	return nil
 }

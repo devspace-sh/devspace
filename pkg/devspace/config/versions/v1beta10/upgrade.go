@@ -17,15 +17,6 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		return nil, err
 	}
 
-	// convert commands
-	for i, cmd := range c.Commands {
-		if cmd.AppendArgs == nil {
-			nextConfig.Commands[i].AppendArgs = true
-		} else {
-			nextConfig.Commands[i].AppendArgs = *cmd.AppendArgs
-		}
-	}
-
 	// replace pod
 	for i, rp := range c.Dev.ReplacePods {
 		if rp.ImageName != "" {

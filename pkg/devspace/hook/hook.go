@@ -37,6 +37,10 @@ func (e Events) With(name string) Events {
 }
 
 func EventsForSingle(base, name string) Events {
+	if name == "" {
+		return []string{base + ":*"}
+	}
+
 	return []string{base + ":*", base + ":" + name}
 }
 

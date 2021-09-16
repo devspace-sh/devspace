@@ -63,12 +63,6 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 	options := targetselector.NewEmptyOptions().ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, "", "")
 	options.AllowPick = false
 	options.ImageSelector = []imageselector.ImageSelector{}
-	imageSelector, err := imageselector.Resolve(portForwarding.ImageName, serviceClient.config, serviceClient.dependencies)
-	if err != nil {
-		return err
-	} else if imageSelector != nil {
-		options.ImageSelector = append(options.ImageSelector, *imageSelector)
-	}
 	if portForwarding.ImageSelector != "" {
 		imageSelector, err := util.ResolveImageAsImageSelector(portForwarding.ImageSelector, serviceClient.config, serviceClient.dependencies)
 		if err != nil {

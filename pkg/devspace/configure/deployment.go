@@ -12,7 +12,6 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	v1 "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/loft-sh/devspace/pkg/util/shell"
 	"github.com/loft-sh/devspace/pkg/util/survey"
@@ -278,11 +277,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				helmConfig.Chart.Name = chartFolder
 				m.config.Hooks = append(m.config.Hooks, &v1.HookConfig{
 					Command: gitCommand,
-					When: &v1.HookWhenConfig{
-						Before: &v1.HookWhenAtConfig{
-							Deployments: hook.All,
-						},
-					},
+					Events:  []string{"before:deploy"},
 				})
 
 				break

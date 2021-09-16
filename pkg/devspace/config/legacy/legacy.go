@@ -36,7 +36,7 @@ func LegacyInteractiveMode(config *latest.Config, forceInteractiveMode bool, for
 			if len(imageNames) == 1 {
 				imageName = imageNames[0]
 			} else {
-				question := "Which image do you want to build using the 'ENTRPOINT [sleep, 999999]' override?"
+				question := "Which image do you want to build using the 'ENTRYPOINT [sleep, 999999]' override?"
 				imageName, err = log.Question(&survey.QuestionOptions{
 					Question: question,
 					Options:  imageNames,

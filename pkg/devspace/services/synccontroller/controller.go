@@ -19,7 +19,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/devspace/sync"
@@ -36,7 +35,6 @@ type Controller interface {
 
 func NewController(config config.Config, dependencies []types.Dependency, client kubectl.Client, log logpkg.Logger) Controller {
 	return &controller{
-		hookExecuter: hook.NewExecuter(config, dependencies),
 		config:       config,
 		dependencies: dependencies,
 		client:       client,
@@ -45,7 +43,6 @@ func NewController(config config.Config, dependencies []types.Dependency, client
 }
 
 type controller struct {
-	hookExecuter hook.Executer
 	config       config.Config
 	dependencies []types.Dependency
 	client       kubectl.Client
@@ -67,19 +64,19 @@ type Options struct {
 }
 
 func (c *controller) Start(options *Options, log logpkg.Logger) error {
-	pluginErr := plugin.ExecutePluginHookWithContext("sync.start", map[string]interface{}{
+	pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 		"sync_config": options.SyncConfig,
-	})
+	}, log, hook.EventsForSingle("start:sync", options.SyncConfig.Name).With("sync.start")...)
 	if pluginErr != nil {
 		return pluginErr
 	}
 
 	err := c.startWithWait(options, log)
 	if err != nil {
-		pluginErr := plugin.ExecutePluginHookWithContext("sync.error", map[string]interface{}{
+		pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 			"sync_config": options.SyncConfig,
 			"ERROR":       err,
-		})
+		}, log, hook.EventsForSingle("error:sync", options.SyncConfig.Name).With("sync.error")...)
 		if pluginErr != nil {
 			return pluginErr
 		}
@@ -102,16 +99,9 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 	if options.SyncConfig.WaitInitialSync == nil || *options.SyncConfig.WaitInitialSync == true {
 		onInitUploadDone = make(chan struct{})
 		onInitDownloadDone = make(chan struct{})
-		if options.SyncConfig.Name != "" {
-			err := c.hookExecuter.Execute(hook.Before, hook.StageInitialSync, options.SyncConfig.Name, hook.Context{Client: c.client}, log)
-			if err != nil {
-				return err
-			}
-		}
-
-		pluginErr := plugin.ExecutePluginHookWithContext("sync.beforeInitialSync", map[string]interface{}{
+		pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 			"sync_config": options.SyncConfig,
-		})
+		}, log, hook.EventsForSingle("before:initialSync", options.SyncConfig.Name).With("sync.beforeInitialSync")...)
 		if pluginErr != nil {
 			return pluginErr
 		}
@@ -120,10 +110,10 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 	// start the sync
 	client, err := c.startSync(options, onInitUploadDone, onInitDownloadDone, onDone, onError, log)
 	if err != nil {
-		pluginErr := plugin.ExecutePluginHookWithContext("sync.errorInitialSync", map[string]interface{}{
+		pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 			"sync_config": options.SyncConfig,
 			"ERROR":       err,
-		})
+		}, log, hook.EventsForSingle("error:initialSync", options.SyncConfig.Name).With("sync.errorInitialSync")...)
 		if pluginErr != nil {
 			return pluginErr
 		}
@@ -141,10 +131,10 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 		for {
 			select {
 			case err := <-onError:
-				pluginErr := plugin.ExecutePluginHookWithContext("sync.errorInitialSync", map[string]interface{}{
+				pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 					"sync_config": options.SyncConfig,
 					"ERROR":       err,
-				})
+				}, log, hook.EventsForSingle("error:initialSync", options.SyncConfig.Name).With("sync.errorInitialSync")...)
 				if pluginErr != nil {
 					return pluginErr
 				}
@@ -155,9 +145,9 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				downloadDone = true
 			case <-options.Interrupt:
 				client.Stop(nil)
-				pluginErr := plugin.ExecutePluginHookWithContext("sync.stop", map[string]interface{}{
+				pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 					"sync_config": options.SyncConfig,
-				})
+				}, log, hook.EventsForSingle("stop:sync", options.SyncConfig.Name).With("sync.stop")...)
 				if pluginErr != nil {
 					return pluginErr
 				}
@@ -166,9 +156,9 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				if options.Done != nil {
 					close(options.Done)
 				}
-				pluginErr := plugin.ExecutePluginHookWithContext("sync.stop", map[string]interface{}{
+				pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 					"sync_config": options.SyncConfig,
-				})
+				}, log, hook.EventsForSingle("stop:sync", options.SyncConfig.Name).With("sync.stop")...)
 				if pluginErr != nil {
 					return pluginErr
 				}
@@ -178,15 +168,9 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				break
 			}
 		}
-		if options.SyncConfig.Name != "" {
-			err := c.hookExecuter.Execute(hook.After, hook.StageInitialSync, options.SyncConfig.Name, hook.Context{Client: c.client}, log)
-			if err != nil {
-				return err
-			}
-		}
-		pluginErr := plugin.ExecutePluginHookWithContext("sync.afterInitialSync", map[string]interface{}{
+		pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 			"sync_config": options.SyncConfig,
-		})
+		}, log, hook.EventsForSingle("after:initialSync", options.SyncConfig.Name).With("sync.afterInitialSync")...)
 		if pluginErr != nil {
 			return pluginErr
 		}
@@ -197,22 +181,20 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 		go func(syncClient *sync.Sync, options *Options) {
 			select {
 			case err = <-onError:
-				plugin.LogExecutePluginHookWithContext("sync.restart", map[string]interface{}{
+				hook.LogExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 					"sync_config": options.SyncConfig,
 					"ERROR":       err,
-				})
-				if c.isFatalSyncError(err) {
-					c.log.Fatalf("Fatal error in sync: %v", err)
-				}
+				}, c.log, hook.EventsForSingle("restart:sync", options.SyncConfig.Name).With("sync.restart")...)
 
 				options.RestartLog.Info("Restarting sync...")
 				for {
 					err := c.startWithWait(options, options.RestartLog)
 					if err != nil {
-						plugin.LogExecutePluginHookWithContext("sync.restart", map[string]interface{}{
+
+						hook.LogExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 							"sync_config": options.SyncConfig,
 							"ERROR":       err,
-						})
+						}, c.log, hook.EventsForSingle("restart:sync", options.SyncConfig.Name).With("sync.restart")...)
 						c.log.Errorf("Error restarting sync: %v", err)
 						c.log.Errorf("Will try again in 15 seconds")
 						time.Sleep(time.Second * 15)
@@ -223,16 +205,16 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				}
 			case <-options.Interrupt:
 				syncClient.Stop(nil)
-				plugin.LogExecutePluginHookWithContext("sync.stop", map[string]interface{}{
+				hook.LogExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 					"sync_config": options.SyncConfig,
-				})
+				}, c.log, hook.EventsForSingle("stop:sync", options.SyncConfig.Name).With("sync.stop")...)
 			case <-onDone:
 				if options.Done != nil {
 					close(options.Done)
 				}
-				plugin.LogExecutePluginHookWithContext("sync.stop", map[string]interface{}{
+				hook.LogExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 					"sync_config": options.SyncConfig,
-				})
+				}, c.log, hook.EventsForSingle("stop:sync", options.SyncConfig.Name).With("sync.stop")...)
 			}
 		}(client, options)
 	}
@@ -265,12 +247,6 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 	}
 
 	options.TargetOptions.ImageSelector = []imageselector.ImageSelector{}
-	imageSelector, err := imageselector.Resolve(syncConfig.ImageName, c.config, c.dependencies)
-	if err != nil {
-		return nil, err
-	} else if imageSelector != nil {
-		options.TargetOptions.ImageSelector = append(options.TargetOptions.ImageSelector, *imageSelector)
-	}
 	if syncConfig.ImageSelector != "" {
 		imageSelector, err := util.ResolveImageAsImageSelector(syncConfig.ImageSelector, c.config, c.dependencies)
 		if err != nil {

@@ -64,12 +64,6 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 	options := targetselector.NewEmptyOptions().ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, portForwarding.ContainerName, "")
 	options.AllowPick = false
 	options.ImageSelector = []imageselector.ImageSelector{}
-	imageSelector, err := imageselector.Resolve(portForwarding.ImageName, serviceClient.config, serviceClient.dependencies)
-	if err != nil {
-		return err
-	} else if imageSelector != nil {
-		options.ImageSelector = append(options.ImageSelector, *imageSelector)
-	}
 	if portForwarding.ImageSelector != "" {
 		imageSelector, err := util.ResolveImageAsImageSelector(portForwarding.ImageSelector, serviceClient.config, serviceClient.dependencies)
 		if err != nil {

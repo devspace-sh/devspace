@@ -14,7 +14,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
@@ -41,9 +40,6 @@ type Factory interface {
 
 	// NewDependencyManager creates a new dependency manager
 	NewDependencyManager(config config.Config, client kubectl.Client, configOptions *loader.ConfigOptions, logger log.Logger) dependency.Manager
-
-	// NewHookExecutor creates a new hook executor
-	NewHookExecutor(config config.Config, dependencies []dependencytypes.Dependency) hook.Executer
 
 	// NewPullSecretClient creates a new pull secrets client
 	NewPullSecretClient(config config.Config, dependencies []dependencytypes.Dependency, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client
@@ -108,11 +104,6 @@ func (f *DefaultFactoryImpl) NewKubeConfigLoader() kubeconfig.Loader {
 // GetLog implements interface
 func (f *DefaultFactoryImpl) GetLog() log.Logger {
 	return log.GetInstance()
-}
-
-// NewHookExecutor implements interface
-func (f *DefaultFactoryImpl) NewHookExecutor(config config.Config, dependencies []dependencytypes.Dependency) hook.Executer {
-	return hook.NewExecuter(config, dependencies)
 }
 
 // NewDependencyManager implements interface
