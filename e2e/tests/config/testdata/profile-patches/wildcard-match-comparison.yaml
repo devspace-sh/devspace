@@ -1,0 +1,15 @@
+version: v1beta10
+deployments:
+- name: development1
+  helm:
+    componentChart: true
+    timeout: 1000
+- name: staging1
+  helm:
+    componentChart: true
+    timeout: 2000
+profiles:
+  - name: test
+    patches:
+      - op: remove
+        path: deployments[?(@.helm.timeout > 1000)]

@@ -1,0 +1,20 @@
+version: v1beta10
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
+profiles:
+- name: staging
+  patches:
+  - op: replace
+    path: ..[?(@.image=='john/devbackend')].image
+    value: john/stagingbackend
