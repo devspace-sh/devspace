@@ -48,7 +48,7 @@ func (cmd *pluginCmd) Run(f factory.Factory, args []string) error {
 	f.GetLog().Donef("Successfully installed plugin %s", args[0])
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHookAt(*addedPlugin, "after_install")
+	err = plugin.ExecutePluginHookAt(*addedPlugin, "after:installPlugin", "after_install")
 	if err != nil {
 		return err
 	}

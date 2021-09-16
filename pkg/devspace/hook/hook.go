@@ -52,9 +52,7 @@ type Hook interface {
 // LogExecuteHooks executes plugin hooks and config hooks and prints errors to the log
 func LogExecuteHooks(client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]interface{}, log logpkg.Logger, events ...string) {
 	// call plugin first
-	for _, e := range events {
-		plugin.LogExecutePluginHookWithContext(e, extraEnv)
-	}
+	plugin.LogExecutePluginHookWithContext(extraEnv, events...)
 
 	// now execute hooks
 	if config != nil {
@@ -75,11 +73,9 @@ func LogExecuteHooks(client kubectl.Client, config config.Config, dependencies [
 // ExecuteHooks executes plugin hooks and config hooks
 func ExecuteHooks(client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]interface{}, log logpkg.Logger, events ...string) error {
 	// call plugin first
-	for _, e := range events {
-		err := plugin.ExecutePluginHookWithContext(e, extraEnv)
-		if err != nil {
-			return err
-		}
+	err := plugin.ExecutePluginHookWithContext(extraEnv, events...)
+	if err != nil {
+		return err
 	}
 
 	// now execute hooks

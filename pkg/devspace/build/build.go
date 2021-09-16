@@ -81,7 +81,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	// Execute before images build hook
-	pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{}, log, "before:build")
+	pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{}, log, "before:buildAll")
 	if pluginErr != nil {
 		return nil, pluginErr
 	}
@@ -148,7 +148,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 			if pluginErr != nil {
 				return nil, pluginErr
 			}
-			
+
 			log.Infof("Skip building image '%s'", imageConfigName)
 			continue
 		}
@@ -268,7 +268,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	// Execute after images build hook
-	pluginErr = hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{}, log, "after:build")
+	pluginErr = hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{}, log, "after:buildAll")
 	if pluginErr != nil {
 		return nil, pluginErr
 	}

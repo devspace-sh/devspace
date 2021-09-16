@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"strconv"
 	"strings"
@@ -31,9 +31,9 @@ func (serviceClient *client) StartPortForwarding(interrupt chan error) error {
 			continue
 		}
 
-		pluginErr := plugin.ExecutePluginHookWithContext("portForwarding.start", map[string]interface{}{
+		pluginErr := hook.ExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 			"port_forwarding_config": portForwarding,
-		})
+		}, serviceClient.log, hook.EventsForSingle("start:portForwarding", portForwarding.Name).With("portForwarding.start")...)
 		if pluginErr != nil {
 			return pluginErr
 		}
@@ -41,10 +41,10 @@ func (serviceClient *client) StartPortForwarding(interrupt chan error) error {
 		// start port forwarding
 		err := serviceClient.startForwarding(cache, portForwarding, interrupt, serviceClient.log)
 		if err != nil {
-			pluginErr := plugin.ExecutePluginHookWithContext("portForwarding.error", map[string]interface{}{
+			pluginErr := hook.ExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 				"port_forwarding_config": portForwarding,
 				"error":                  err,
-			})
+			}, serviceClient.log, hook.EventsForSingle("error:portForwarding", portForwarding.Name).With("portForwarding.error")...)
 			if pluginErr != nil {
 				return pluginErr
 			}
@@ -140,18 +140,18 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 		case err := <-errorChan:
 			if err != nil {
 				pf.Close()
-				plugin.LogExecutePluginHookWithContext("portForwarding.restart", map[string]interface{}{
+				hook.LogExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 					"port_forwarding_config": portForwarding,
 					"error":                  err,
-				})
+				}, serviceClient.log, hook.EventsForSingle("restart:portForwarding", portForwarding.Name).With("portForwarding.restart")...)
 
 				for {
 					err = serviceClient.startForwarding(cache, portForwarding, interrupt, logpkg.Discard)
 					if err != nil {
-						plugin.LogExecutePluginHookWithContext("portForwarding.restart", map[string]interface{}{
+						hook.LogExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 							"port_forwarding_config": portForwarding,
 							"error":                  err,
-						})
+						}, serviceClient.log, hook.EventsForSingle("restart:portForwarding", portForwarding.Name).With("portForwarding.restart")...)
 						serviceClient.log.Errorf("Error restarting port-forwarding: %v", err)
 						serviceClient.log.Errorf("Will try again in 15 seconds")
 						time.Sleep(time.Second * 15)
@@ -164,10 +164,9 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 			}
 		case <-interrupt:
 			pf.Close()
-			plugin.LogExecutePluginHookWithContext("portForwarding.stop", map[string]interface{}{
+			hook.LogExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 				"port_forwarding_config": portForwarding,
-				"error":                  err,
-			})
+			}, serviceClient.log, hook.EventsForSingle("stop:portForwarding", portForwarding.Name).With("portForwarding.stop")...)
 		}
 	}(portForwarding, interrupt)
 

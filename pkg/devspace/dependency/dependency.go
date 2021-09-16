@@ -7,12 +7,14 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"io"
 	"mvdan.cc/sh/v3/interp"
 	"os"
+	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
@@ -311,11 +313,11 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 		}
 
 		if dependency.Config() != nil {
-			pluginErr := plugin.ExecutePluginHookWithContext("dependencies.before"+actionName, map[string]interface{}{
+			pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{
 				"dependency_name":        dependency.Name(),
 				"dependency_config":      dependency.Config().Config(),
 				"dependency_config_path": dependency.Config().Path(),
-			})
+			}, hook.EventsForSingle("before:"+strings.ToLower(actionName)+"Dependency", dependency.Name()).With("dependencies.before"+actionName)...)
 			if pluginErr != nil {
 				return nil, pluginErr
 			}
@@ -324,11 +326,11 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 		err := action(dependency, dependencyLogger)
 		if err != nil {
 			if dependency.Config() != nil {
-				pluginErr := plugin.ExecutePluginHookWithContext("dependencies.error"+actionName, map[string]interface{}{
+				pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{
 					"dependency_name":        dependency.Name(),
 					"dependency_config":      dependency.Config().Config(),
 					"dependency_config_path": dependency.Config().Path(),
-				})
+				}, hook.EventsForSingle("error:"+strings.ToLower(actionName)+"Dependency", dependency.Name()).With("dependencies.error"+actionName)...)
 				if pluginErr != nil {
 					return nil, pluginErr
 				}
@@ -338,11 +340,11 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 		}
 
 		if dependency.Config() != nil {
-			pluginErr := plugin.ExecutePluginHookWithContext("dependencies.after"+actionName, map[string]interface{}{
+			pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{
 				"dependency_name":        dependency.Name(),
 				"dependency_config":      dependency.Config().Config(),
 				"dependency_config_path": dependency.Config().Path(),
-			})
+			}, hook.EventsForSingle("after:"+strings.ToLower(actionName)+"Dependency", dependency.Name()).With("dependencies.after"+actionName)...)
 			if pluginErr != nil {
 				return nil, pluginErr
 			}

@@ -24,17 +24,26 @@ func TestSimple(t *testing.T) {
 				Hooks: []*HookConfig{
 					{
 						When: &HookWhenConfig{
-							Before: &HookWhenAtConfig{
-								Images:           "all",
-								PurgeDeployments: "test,test2",
-							},
 							After: &HookWhenAtConfig{
 								Images:           "all",
+								Deployments:      "test",
 								PurgeDeployments: "test,test2",
+								PullSecrets:      "test",
+								InitialSync:      "abc",
+							},
+							Before: &HookWhenAtConfig{
+								Images:           "all",
+								Deployments:      "all",
+								PurgeDeployments: "test,test2",
+								PullSecrets:      "all",
+								InitialSync:      "all",
 							},
 							OnError: &HookWhenAtConfig{
 								Images:           "all",
+								Deployments:      "test",
 								PurgeDeployments: "test,test2",
+								PullSecrets:      "all",
+								InitialSync:      "all",
 							},
 						},
 					},
@@ -43,7 +52,26 @@ func TestSimple(t *testing.T) {
 			expected: &next.Config{
 				Hooks: []*next.HookConfig{
 					{
-						Events: []string{"after:build", "after:purge:test", "after:purge:test2", "before:build", "before:purge:test", "before:purge:test2", "error:build", "error:purge:test", "error:purge:test2"},
+						Events: []string{
+							"after:buildAll",
+							"after:deploy:test",
+							"after:purge:test",
+							"after:purge:test2",
+							"after:createAllPullSecrets",
+							"after:initialSync:abc",
+							"before:buildAll",
+							"before:deployAll",
+							"before:purge:test",
+							"before:purge:test2",
+							"before:createAllPullSecrets",
+							"before:initialSync:*",
+							"error:buildAll",
+							"error:deploy:test",
+							"error:purge:test",
+							"error:purge:test2",
+							"error:createAllPullSecrets",
+							"error:initialSync:*",
+						},
 					},
 				},
 			},

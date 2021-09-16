@@ -103,7 +103,7 @@ func (l *configLoader) Load(options *ConfigOptions, log log.Logger) (config.Conf
 }
 
 // LoadWithParser loads the config with the given parser
-func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log log.Logger) (config.Config, error) {
+func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log log.Logger) (_ config.Config, err error) {
 	if options == nil {
 		options = &ConfigOptions{}
 	}
@@ -113,49 +113,44 @@ func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log
 		return nil, err
 	}
 
+	defer func() {
+		if err != nil {
+			pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{"ERROR": err, "LOAD_PATH": absPath}, "config.errorLoad", "error:loadConfig")
+			if pluginErr != nil {
+				log.Warnf("Error executing plugin hook: %v", pluginErr)
+				return
+			}
+		}
+	}()
+
 	// call plugin hook
-	pluginErr := plugin.ExecutePluginHookWithContext("config.beforeLoad", map[string]interface{}{"LOAD_PATH": absPath})
+	pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{"LOAD_PATH": absPath}, "config.beforeLoad", "before:loadConfig")
 	if pluginErr != nil {
 		return nil, pluginErr
 	}
 
 	data, err := l.LoadRaw()
 	if err != nil {
-		pluginErr = plugin.ExecutePluginHookWithContext("config.errorLoad", map[string]interface{}{"ERROR": err, "LOAD_PATH": absPath})
-		if pluginErr != nil {
-			return nil, pluginErr
-		}
-
 		return nil, err
 	}
 
 	parsedConfig, generatedConfig, resolver, err := l.parseConfig(absPath, data, parser, options, log)
 	if err != nil {
-		pluginErr = plugin.ExecutePluginHookWithContext("config.errorLoad", map[string]interface{}{"ERROR": err, "LOAD_PATH": absPath})
-		if pluginErr != nil {
-			return nil, pluginErr
-		}
-
 		return nil, err
 	}
 
 	err = l.ensureRequires(parsedConfig, log)
 	if err != nil {
-		pluginErr = plugin.ExecutePluginHookWithContext("config.errorLoad", map[string]interface{}{"ERROR": err, "LOAD_PATH": absPath})
-		if pluginErr != nil {
-			return nil, pluginErr
-		}
-
 		return nil, errors.Wrap(err, "require versions")
 	}
 
 	c := config.NewConfig(data, parsedConfig, generatedConfig, resolver.ResolvedVariables(), absPath)
-	pluginErr = plugin.ExecutePluginHookWithContext("config.afterLoad", map[string]interface{}{
+	pluginErr = plugin.ExecutePluginHookWithContext(map[string]interface{}{
 		"LOAD_PATH":     absPath,
 		"LOADED_CONFIG": c.Config(),
 		"LOADED_VARS":   c.Variables(),
 		"LOADED_RAW":    c.Raw(),
-	})
+	}, "config.afterLoad", "after:loadConfig")
 	if pluginErr != nil {
 		return nil, pluginErr
 	}

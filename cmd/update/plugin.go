@@ -42,7 +42,7 @@ func (cmd *pluginCmd) Run(f factory.Factory, args []string) error {
 		return err
 	} else if oldPlugin != nil {
 		// Execute plugin hook
-		err = plugin.ExecutePluginHookAt(*oldPlugin, "before_update")
+		err = plugin.ExecutePluginHookAt(*oldPlugin, "before:updatePlugin", "before_update")
 		if err != nil {
 			return err
 		}
@@ -65,7 +65,7 @@ func (cmd *pluginCmd) Run(f factory.Factory, args []string) error {
 	f.GetLog().Donef("Successfully updated plugin %s", args[0])
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHookAt(*updatedPlugin, "after_update")
+	err = plugin.ExecutePluginHookAt(*updatedPlugin, "after:updatePlugin", "after_update")
 	if err != nil {
 		return err
 	}

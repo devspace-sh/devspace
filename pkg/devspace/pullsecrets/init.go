@@ -19,7 +19,7 @@ func (r *client) CreatePullSecrets() error {
 	createPullSecrets := []*latest.PullSecretConfig{}
 
 	// execute before pull secrets hooks
-	pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, nil, r.log, "before:createPullSecret")
+	pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, nil, r.log, "before:createAllPullSecrets")
 	if pluginErr != nil {
 		return pluginErr
 	}
@@ -62,7 +62,7 @@ func (r *client) CreatePullSecrets() error {
 		r.log.StopWait()
 		if err != nil {
 			// execute on error pull secrets hooks
-			pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{"error": err}, r.log, "error:createPullSecret")
+			pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{"error": err}, r.log, "error:createAllPullSecrets")
 			if pluginErr != nil {
 				return pluginErr
 			}
@@ -75,7 +75,7 @@ func (r *client) CreatePullSecrets() error {
 				err = r.addPullSecretsToServiceAccount(pullSecretConf.Secret, serviceAccount)
 				if err != nil {
 					// execute on error pull secrets hooks
-					pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{"error": err}, r.log, "error:createPullSecret")
+					pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{"error": err}, r.log, "error:createAllPullSecrets")
 					if pluginErr != nil {
 						return pluginErr
 					}
@@ -87,7 +87,7 @@ func (r *client) CreatePullSecrets() error {
 			err = r.addPullSecretsToServiceAccount(pullSecretConf.Secret, "default")
 			if err != nil {
 				// execute on error pull secrets hooks
-				pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{"error": err}, r.log, "error:createPullSecret")
+				pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{"error": err}, r.log, "error:createAllPullSecrets")
 				if pluginErr != nil {
 					return pluginErr
 				}
@@ -98,7 +98,7 @@ func (r *client) CreatePullSecrets() error {
 	}
 
 	// execute after pull secrets hooks
-	pluginErr = hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, nil, r.log, "after:createPullSecret")
+	pluginErr = hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, nil, r.log, "after:createAllPullSecrets")
 	if pluginErr != nil {
 		return pluginErr
 	}

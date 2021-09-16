@@ -153,14 +153,14 @@ func SetPluginConfig(config config.Config) {
 	})
 }
 
-func LogExecutePluginHookWithContext(event string, extraEnv map[string]interface{}) {
-	err := ExecutePluginHookWithContext(event, extraEnv)
+func LogExecutePluginHookWithContext(extraEnv map[string]interface{}, events ...string) {
+	err := ExecutePluginHookWithContext(extraEnv, events...)
 	if err != nil {
 		logErrorf("%v", err)
 	}
 }
 
-func ExecutePluginHookWithContext(event string, extraEnv map[string]interface{}) error {
+func ExecutePluginHookWithContext(extraEnv map[string]interface{}, events ...string) error {
 	if len(plugins) == 0 {
 		return nil
 	}
@@ -180,9 +180,11 @@ func ExecutePluginHookWithContext(event string, extraEnv map[string]interface{})
 	}
 
 	for _, plugin := range plugins {
-		err := executePluginHookAt(plugin, event, newEnv)
-		if err != nil {
-			return err
+		for _, e := range events {
+			err := executePluginHookAt(plugin, e, newEnv)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -215,16 +217,23 @@ func ConvertExtraEnv(base string, extraEnv map[string]interface{}) map[string]st
 	return out
 }
 
-func ExecutePluginHookAt(plugin Metadata, event string) error {
-	// apply global plugin context
-	newEnv := map[string]string{}
-	pluginContextLock.Lock()
-	for k, v := range pluginContext {
-		newEnv[k] = v
-	}
-	pluginContextLock.Unlock()
+func ExecutePluginHookAt(plugin Metadata, events ...string) error {
+	for _, e := range events {
+		// apply global plugin context
+		newEnv := map[string]string{}
+		pluginContextLock.Lock()
+		for k, v := range pluginContext {
+			newEnv[k] = v
+		}
+		pluginContextLock.Unlock()
 
-	return executePluginHookAt(plugin, event, newEnv)
+		err := executePluginHookAt(plugin, e, newEnv)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func executePluginHookAt(plugin Metadata, event string, env map[string]string) error {

@@ -57,7 +57,7 @@ func (c *controller) Render(options *Options, out io.Writer, log log.Logger) err
 		helmV2Clients := map[string]helmtypes.Client{}
 
 		// Execute before deployments deploy hook
-		err := hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "before:render")
+		err := hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "before:renderAll")
 		if err != nil {
 			return err
 		}
@@ -111,7 +111,7 @@ func (c *controller) Render(options *Options, out io.Writer, log log.Logger) err
 			}
 		}
 
-		err = hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "after:render")
+		err = hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "after:renderAll")
 		if err != nil {
 			return err
 		}
@@ -155,7 +155,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 		helmV2Clients := map[string]helmtypes.Client{}
 
 		// Execute before deployments deploy hook
-		err := hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "before:deploy")
+		err := hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "before:deployAll")
 		if err != nil {
 			return err
 		}
@@ -251,7 +251,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 		}
 
 		// Execute after deployments deploy hook
-		err = hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "after:deploy")
+		err = hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "after:deployAll")
 		if err != nil {
 			return err
 		}
@@ -271,7 +271,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 		helmV2Clients := map[string]helmtypes.Client{}
 
 		// Execute before deployments purge hook
-		err := hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "before:purge")
+		err := hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "before:purgeAll")
 		if err != nil {
 			return err
 		}
@@ -355,7 +355,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 		}
 
 		// Execute after deployments purge hook
-		err = hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "after:purge")
+		err = hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "after:purgeAll")
 		if err != nil {
 			return err
 		}
