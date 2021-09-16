@@ -156,7 +156,7 @@ func executeSingle(client kubectl.Client, config config.Config, dependencies []t
 			}
 
 			// Execute the hook
-			err := executeHook(hookConfig, hookWriter, client, config, dependencies, extraEnv, log, hook)
+			err := executeHook(hookConfig, hookWriter, client, config, dependencies, extraEnv, log, hook, event)
 			if err != nil {
 				return err
 			}
@@ -166,14 +166,14 @@ func executeSingle(client kubectl.Client, config config.Config, dependencies []t
 	return nil
 }
 
-func executeHook(hookConfig *latest.HookConfig, hookWriter io.Writer, client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]string, log logpkg.Logger, hook Hook) error {
+func executeHook(hookConfig *latest.HookConfig, hookWriter io.Writer, client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]string, log logpkg.Logger, hook Hook, event string) error {
 	hookLog := log
 	if hookConfig.Silent {
 		hookLog = logpkg.Discard
 	}
 
 	if hookConfig.Background {
-		log.Infof("Execute hook '%s' in background", ansi.Color(hookName(hookConfig), "white+b"))
+		log.Infof("Execute hook '%s' in background at %s", ansi.Color(hookName(hookConfig), "white+b"), ansi.Color(event, "white+b"))
 		go func() {
 			err := hook.Execute(hookConfig, client, config, dependencies, extraEnv, hookLog)
 			if err != nil {
@@ -188,7 +188,7 @@ func executeHook(hookConfig *latest.HookConfig, hookWriter io.Writer, client kub
 		return nil
 	}
 
-	log.Infof("Execute hook '%s'", ansi.Color(hookName(hookConfig), "white+b"))
+	log.Infof("Execute hook '%s' at %s", ansi.Color(hookName(hookConfig), "white+b"), ansi.Color(event, "white+b"))
 	err := hook.Execute(hookConfig, client, config, dependencies, extraEnv, hookLog)
 	if err != nil {
 		if hookConfig.Silent {

@@ -13,7 +13,6 @@ profiles:                             # struct[]  | Array of config profiles
       cloneArgs: []                   # string[]  | Array of args for the "git clone" command for retrieving git based dependencies
       path: ../../my-projects/repo    # string    | Path to a project on your local computer or an URL to a devspace.yaml
   merge: {}                           # struct    | Merge the provided object into the config
-  strategicMerge: {}                  # struct    | Strategic Merge the provided object into the config
   patches:                            # struct[]  | Array of config patches
   - op: "replace"                     # enum      | Patch operation (replace, add, remove)
     path: "images.backend.cmd"        # string    | Jsonpath or xpath to config option that should be patched

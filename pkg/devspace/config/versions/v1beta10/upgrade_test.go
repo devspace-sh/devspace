@@ -78,6 +78,30 @@ func TestSimple(t *testing.T) {
 		},
 		{
 			in: &Config{
+				Hooks: []*HookConfig{
+					{
+						When: &HookWhenConfig{
+							After: &HookWhenAtConfig{},
+							Before: &HookWhenAtConfig{},
+							OnError: &HookWhenAtConfig{
+								PullSecrets:      "all",
+							},
+						},
+					},
+				},
+			},
+			expected: &next.Config{
+				Hooks: []*next.HookConfig{
+					{
+						Events: []string{
+							"error:createAllPullSecrets",
+						},
+					},
+				},
+			},
+		},
+		{
+			in: &Config{
 				Dev: DevConfig{
 					Ports: []*PortForwardingConfig{
 						{

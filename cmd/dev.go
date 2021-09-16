@@ -74,10 +74,10 @@ type DevCmd struct {
 	UI     bool
 	UIPort int
 
-	Terminal         bool
-	TerminalRestart  bool
-	WorkingDirectory string
-	Interactive      bool
+	Terminal          bool
+	TerminalReconnect bool
+	WorkingDirectory  string
+	Interactive       bool
 
 	Wait    bool
 	Timeout int
@@ -153,7 +153,7 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
 	devCmd.Flags().BoolVarP(&cmd.Interactive, "interactive", "i", false, "DEPRECATED: DO NOT USE ANYMORE")
 	devCmd.Flags().BoolVarP(&cmd.Terminal, "terminal", "t", false, "Open a terminal instead of showing logs")
-	devCmd.Flags().BoolVar(&cmd.TerminalRestart, "terminal-restart", true, "Will try to restart the terminal if a non zero exit code was encountered")
+	devCmd.Flags().BoolVar(&cmd.TerminalReconnect, "terminal-reconnect", true, "Will try to reconnect the terminal if a non zero exit code was encountered")
 	devCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
 
 	devCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "If true will wait first for pods to be running or fails after given timeout")
@@ -576,7 +576,7 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 			selectorOptions.ImageSelector = imageSelectors
 
 			stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
-			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalRestart, stdout, stderr, stdin)
+			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalReconnect, stdout, stderr, stdin)
 		} else if config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
 			// Log multiple images at once
 			manager, err := services.NewLogManager(client, configInterface, dependencies, exitChan, logger)

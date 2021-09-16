@@ -13,7 +13,7 @@ Config expressions are a powerful feature to load the `devspace.yaml` in a more 
     values={[
         { label: 'Load From File', value: 'file', },
         { label: 'If Else', value: 'if', },
-        { label: 'If Dev', value: 'command', },
+        { label: 'Only in dev', value: 'command', },
         { label: 'If Variable', value: 'variable', },
         { label: 'Generate Section', value: 'generate', },
         { label: 'Return JSON', value: 'json', },
@@ -122,7 +122,7 @@ deployments:
 </Tabs>
 
 :::info
-Expressions are evaluated in a golang shell that is syntax compatible to a regular POSIX shell and works on all operating systems.
+Expressions are run in a golang shell that is syntax compatible to a regular POSIX shell and works on all operating systems. Check the [github repository](https://github.com/mvdan/sh/blob/master/interp/builtin.go#L23) for a complete list of available commands
 :::
 
 :::info
