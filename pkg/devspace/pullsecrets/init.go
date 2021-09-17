@@ -21,9 +21,7 @@ func (r *client) CreatePullSecrets() (err error) {
 
 	// gather pull secrets from pullSecrets
 	if r.config != nil {
-		for _, pullSecret := range r.config.Config().PullSecrets {
-			createPullSecrets = append(createPullSecrets, pullSecret)
-		}
+		createPullSecrets = append(createPullSecrets, r.config.Config().PullSecrets...)
 
 		// gather pull secrets from images
 		for _, imageConf := range r.config.Config().Images {
@@ -33,7 +31,7 @@ func (r *client) CreatePullSecrets() (err error) {
 					return err
 				}
 
-				if contains(registryURL, createPullSecrets) == false {
+				if !contains(registryURL, createPullSecrets) {
 					createPullSecrets = append(createPullSecrets, &latest.PullSecretConfig{
 						Registry: registryURL,
 					})

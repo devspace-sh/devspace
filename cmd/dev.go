@@ -16,6 +16,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
+	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -264,26 +265,35 @@ func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 	})
 }
 
-func runWithHooks(command string, client kubectl.Client, configInterface config.Config, log log.Logger, fn func() error) (err error) {
-	err = hook.ExecuteHooks(client, configInterface, nil, nil, log, command+":before:execute")
+func runWithHooks(command string, client kubectl.Client, configInterface config.Config, logger log.Logger, fn func() error) (err error) {
+	err = hook.ExecuteHooks(client, configInterface, nil, nil, logger, command+":before:execute")
 	if err != nil {
 		return err
 	}
 
 	defer func() {
-		if err != nil {
-			hook.LogExecuteHooks(client, configInterface, nil, map[string]interface{}{"error": err}, log, command+":after:execute", command+":error:execute")
+		if logger == nil {
+			log.GetInstance().StopWait()
 		} else {
-			err = hook.ExecuteHooks(client, configInterface, nil, nil, log, command+":after:execute")
+			logger.StopWait()
+		}
+		
+		if err != nil {
+			hook.LogExecuteHooks(client, configInterface, nil, map[string]interface{}{"error": err}, logger, command+":after:execute", command+":error")
+		} else {
+			err = hook.ExecuteHooks(client, configInterface, nil, nil, logger, command+":after:execute")
 		}
 	}()
 
-	return fn()
-	//rootHandler = interrupt.Chain(rootHandler, func() {
-	//	hook.LogExecuteHooks(client, configInterface, nil, nil, log, command+":interrupt:execute")
-	//})
-	//
-	//return rootHandler.Run(fn)
+	return interrupt.Global.Run(fn, func() {
+		if logger == nil {
+			log.GetInstance().StopWait()
+		} else {
+			logger.StopWait()
+		}
+		
+		hook.LogExecuteHooks(client, configInterface, nil, nil, logger, command+":interrupt")
+	})
 }
 
 func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Config, configOptions *loader.ConfigOptions, client kubectl.Client, dockerClient docker.Client, args []string) (int, error) {
@@ -605,7 +615,6 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 
 			selectorOptions.ImageSelector = imageSelectors
 			stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
-
 			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalReconnect, stdout, stderr, stdin)
 		} else if config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || !*config.Dev.Logs.Disabled {
 			pluginErr := hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "devCommand:before:streamLogs")

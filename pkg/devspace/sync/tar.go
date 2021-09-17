@@ -323,6 +323,12 @@ func (a *Archiver) tarFile(target *FileInformation, targetStat os.FileInfo) erro
 		if filepath, err = os.Readlink(filepath); err != nil {
 			return nil
 		}
+
+		targetStat, err = os.Stat(filepath)
+		if err != nil {
+			// We ignore open file and just treat it as okay
+			return nil
+		}
 	}
 
 	// Case regular file
@@ -331,7 +337,6 @@ func (a *Archiver) tarFile(target *FileInformation, targetStat os.FileInfo) erro
 		// We ignore open file and just treat it as okay
 		return nil
 	}
-
 	defer f.Close()
 
 	hdr, err := tar.FileInfoHeader(targetStat, filepath)
@@ -353,7 +358,8 @@ func (a *Archiver) tarFile(target *FileInformation, targetStat os.FileInfo) erro
 		return nil
 	}
 
-	if copied, err := io.CopyN(a.writer, f, targetStat.Size()); err != nil {
+	copied, err := io.CopyN(a.writer, f, targetStat.Size())
+	if err != nil {
 		return errors.Wrap(err, "tar copy file")
 	} else if copied != targetStat.Size() {
 		return errors.New("tar: file truncated during read")

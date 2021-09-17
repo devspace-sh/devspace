@@ -991,7 +991,7 @@ type HookConfig struct {
 	// the captured output streams of the hook.
 	Silent bool `yaml:"silent,omitempty" json:"silent,omitempty"`
 
-	// Container specifies where the hook should be run. If this is ommitted DevSpace expects a
+	// Container specifies where the hook should be run. If this is omitted DevSpace expects a
 	// local command hook.
 	Container *HookContainer `yaml:"container,omitempty" json:"container,omitempty"`
 }

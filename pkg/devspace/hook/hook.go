@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	_, stdout, stderr = dockerterm.StdStreams()
+	_, stdout, _ = dockerterm.StdStreams()
 )
 
 const (

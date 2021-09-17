@@ -92,6 +92,11 @@ func NewSync(localPath string, options Options) (*Sync, error) {
 		return nil, errors.Wrap(err, "absolute path")
 	}
 
+	absoluteRealLocalPath, err := filepath.EvalSymlinks(absoluteLocalPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "eval symlinks")
+	}
+
 	if options.ExcludePaths == nil {
 		options.ExcludePaths = []string{}
 	}
@@ -101,7 +106,7 @@ func NewSync(localPath string, options Options) (*Sync, error) {
 
 	// Create sync structure
 	s := &Sync{
-		LocalPath: absoluteLocalPath,
+		LocalPath: absoluteRealLocalPath,
 		Options:   options,
 
 		fileIndex: newFileIndex(),

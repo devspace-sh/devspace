@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"flag"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"io/ioutil"
-	"k8s.io/kubectl/pkg/util/interrupt"
 	"os"
 	"strings"
 	"time"
@@ -32,8 +33,6 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/klog"
 )
-
-var rootHandler *interrupt.Handler
 
 // NewRootCmd returns a new root command
 func NewRootCmd(f factory.Factory) *cobra.Command {
@@ -94,8 +93,8 @@ var globalFlags *flags.GlobalFlags
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	rootHandler = interrupt.New(nil)
-
+	interrupt.Global.Start()
+	
 	// disable klog
 	disableKlog()
 
@@ -107,11 +106,18 @@ func Execute() {
 
 	// set version for --version flag
 	rootCmd.Version = upgrade.GetVersion()
+	
+	// before hooks
+	pluginErr := hook.ExecuteHooks(nil, nil, nil, nil, nil, "root", "root.beforeExecute", "command:before:execute")
+	if pluginErr != nil {
+		f.GetLog().Fatalf("%+v", pluginErr)
+	}
 
 	// execute command
-	err := runWithHooks("command", nil, nil, nil, func() error {
-		return rootCmd.Execute()
-	})
+	err := rootCmd.Execute()
+	
+	// after hooks
+	pluginErr = hook.ExecuteHooks(nil, nil, nil, map[string]interface{}{"error": err}, nil, "root.afterExecute", "command:after:execute")
 	if err != nil {
 		// Check if return code error
 		retCode, ok := errors.Cause(err).(*exit.ReturnCodeError)
@@ -119,11 +125,19 @@ func Execute() {
 			os.Exit(retCode.ExitCode)
 		}
 
+		// error hooks
+		pluginErr := hook.ExecuteHooks(nil, nil, nil, map[string]interface{}{"error": err}, nil, "root.errorExecution", "command:error")
+		if pluginErr != nil {
+			f.GetLog().Fatalf("%+v", pluginErr)
+		}
+
 		if globalFlags.Debug {
 			f.GetLog().Fatalf("%+v", err)
 		} else {
 			f.GetLog().Fatal(err)
 		}
+	} else if pluginErr != nil {
+		f.GetLog().Fatalf("%+v", pluginErr)
 	}
 }
 

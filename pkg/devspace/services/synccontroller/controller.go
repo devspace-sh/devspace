@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -280,11 +279,6 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 
 	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, container.Pod.Namespace, container.Pod.Name)
 	return syncClient, nil
-}
-
-func (c *controller) isFatalSyncError(err error) bool {
-	return strings.Contains(err.Error(), "You are trying to sync the complete container root")
-
 }
 
 func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, customLog logpkg.Logger) (*sync.Sync, error) {

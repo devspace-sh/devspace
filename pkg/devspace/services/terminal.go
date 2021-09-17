@@ -11,6 +11,7 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	interruptpkg "github.com/loft-sh/devspace/pkg/util/interrupt"
 
 	"github.com/mgutz/ansi"
 )
@@ -58,6 +59,9 @@ func (serviceClient *client) StartTerminal(
 
 	done := make(chan error)
 	go func() {
+		interruptpkg.Global.Stop()
+		defer interruptpkg.Global.Start()
+		
 		done <- serviceClient.client.ExecStreamWithTransport(&kubectl.ExecStreamWithTransportOptions{
 			ExecStreamOptions: kubectl.ExecStreamOptions{
 				Pod:       container.Pod,
@@ -85,11 +89,11 @@ func (serviceClient *client) StartTerminal(
 			if _, ok := err.(*InterruptError); ok {
 				return 0, err
 			} else if exitError, ok := err.(kubectlExec.CodeExitError); ok {
-				if restart && exitError.Code != 0 {
-					serviceClient.log.WriteString("\n")
-					serviceClient.log.Infof("Restarting terminal because: %s", err)
-					return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart, stdout, stderr, stdin)
-				}
+				//if restart && exitError.Code != 0 {
+				//	serviceClient.log.WriteString("\n")
+				//	serviceClient.log.Infof("Restarting terminal because: %s", err)
+				//	return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart, stdout, stderr, stdin)
+				//}
 
 				return exitError.Code, nil
 			} else if restart {

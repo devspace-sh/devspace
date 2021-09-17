@@ -21,7 +21,7 @@ jobs:
           args:
             -v
             --config=.golangci.yml
-            --max-same-issues=10
+            --max-same-issues=50
           
 
   test-e2e:
