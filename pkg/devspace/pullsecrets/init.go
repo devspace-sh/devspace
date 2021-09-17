@@ -15,14 +15,8 @@ import (
 )
 
 // CreatePullSecrets creates the image pull secrets
-func (r *client) CreatePullSecrets() error {
+func (r *client) CreatePullSecrets() (err error) {
 	createPullSecrets := []*latest.PullSecretConfig{}
-
-	// execute before pull secrets hooks
-	pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, nil, r.log, "before:createAllPullSecrets")
-	if pluginErr != nil {
-		return pluginErr
-	}
 
 	// gather pull secrets from pullSecrets
 	if r.config != nil {
@@ -47,6 +41,27 @@ func (r *client) CreatePullSecrets() error {
 		}
 	}
 
+	defer func() {
+		if err != nil {
+			// execute on error pull secrets hooks
+			pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{
+				"PULL_SECRETS": createPullSecrets,
+				"error":        err,
+			}, r.log, "error:createPullSecrets")
+			if pluginErr != nil {
+				return
+			}
+		}
+	}()
+
+	// execute before pull secrets hooks
+	pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{
+		"PULL_SECRETS": createPullSecrets,
+	}, r.log, "before:createPullSecrets")
+	if pluginErr != nil {
+		return pluginErr
+	}
+
 	// create pull secrets
 	for _, pullSecretConf := range createPullSecrets {
 		displayRegistryURL := pullSecretConf.Registry
@@ -61,12 +76,6 @@ func (r *client) CreatePullSecrets() error {
 		err := r.createPullSecretForRegistry(pullSecretConf)
 		r.log.StopWait()
 		if err != nil {
-			// execute on error pull secrets hooks
-			pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{"error": err}, r.log, "error:createAllPullSecrets")
-			if pluginErr != nil {
-				return pluginErr
-			}
-
 			return errors.Errorf("failed to create pull secret for registry: %v", err)
 		}
 
@@ -74,31 +83,21 @@ func (r *client) CreatePullSecrets() error {
 			for _, serviceAccount := range pullSecretConf.ServiceAccounts {
 				err = r.addPullSecretsToServiceAccount(pullSecretConf.Secret, serviceAccount)
 				if err != nil {
-					// execute on error pull secrets hooks
-					pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{"error": err}, r.log, "error:createAllPullSecrets")
-					if pluginErr != nil {
-						return pluginErr
-					}
-
 					return errors.Wrap(err, "add pull secrets to service account")
 				}
 			}
 		} else {
 			err = r.addPullSecretsToServiceAccount(pullSecretConf.Secret, "default")
 			if err != nil {
-				// execute on error pull secrets hooks
-				pluginErr := hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{"error": err}, r.log, "error:createAllPullSecrets")
-				if pluginErr != nil {
-					return pluginErr
-				}
-
 				return errors.Wrap(err, "add pull secrets to service account")
 			}
 		}
 	}
 
 	// execute after pull secrets hooks
-	pluginErr = hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, nil, r.log, "after:createAllPullSecrets")
+	pluginErr = hook.ExecuteHooks(r.kubeClient, r.config, r.dependencies, map[string]interface{}{
+		"PULL_SECRETS": createPullSecrets,
+	}, r.log, "after:createPullSecrets")
 	if pluginErr != nil {
 		return pluginErr
 	}

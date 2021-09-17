@@ -4,6 +4,7 @@ import (
 	"github.com/ghodss/yaml"
 	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"reflect"
 	"testing"
 )
@@ -53,23 +54,23 @@ func TestSimple(t *testing.T) {
 				Hooks: []*next.HookConfig{
 					{
 						Events: []string{
-							"after:buildAll",
+							"after:build",
 							"after:deploy:test",
 							"after:purge:test",
 							"after:purge:test2",
-							"after:createAllPullSecrets",
+							"after:createPullSecrets",
 							"after:initialSync:abc",
-							"before:buildAll",
-							"before:deployAll",
+							"before:build",
+							"before:deploy",
 							"before:purge:test",
 							"before:purge:test2",
-							"before:createAllPullSecrets",
+							"before:createPullSecrets",
 							"before:initialSync:*",
-							"error:buildAll",
+							"error:build",
 							"error:deploy:test",
 							"error:purge:test",
 							"error:purge:test2",
-							"error:createAllPullSecrets",
+							"error:createPullSecrets",
 							"error:initialSync:*",
 						},
 					},
@@ -81,10 +82,10 @@ func TestSimple(t *testing.T) {
 				Hooks: []*HookConfig{
 					{
 						When: &HookWhenConfig{
-							After: &HookWhenAtConfig{},
+							After:  &HookWhenAtConfig{},
 							Before: &HookWhenAtConfig{},
 							OnError: &HookWhenAtConfig{
-								PullSecrets:      "all",
+								PullSecrets: "all",
 							},
 						},
 					},
@@ -94,7 +95,7 @@ func TestSimple(t *testing.T) {
 				Hooks: []*next.HookConfig{
 					{
 						Events: []string{
-							"error:createAllPullSecrets",
+							"error:createPullSecrets",
 						},
 					},
 				},
@@ -102,6 +103,24 @@ func TestSimple(t *testing.T) {
 		},
 		{
 			in: &Config{
+				Dependencies: []*DependencyConfig{
+					{
+						Name: "test",
+					},
+					{
+						Name:          "test2",
+						OverwriteVars: ptr.Bool(false),
+					},
+				},
+				Commands: []*CommandConfig{
+					{
+						Name: "test",
+					},
+					{
+						Name:       "test2",
+						AppendArgs: ptr.Bool(false),
+					},
+				},
 				Dev: DevConfig{
 					Ports: []*PortForwardingConfig{
 						{
@@ -136,6 +155,26 @@ func TestSimple(t *testing.T) {
 				},
 			},
 			expected: &next.Config{
+				Dependencies: []*next.DependencyConfig{
+					{
+						Name:          "test",
+						OverwriteVars: true,
+					},
+					{
+						Name:          "test2",
+						OverwriteVars: false,
+					},
+				},
+				Commands: []*next.CommandConfig{
+					{
+						Name:       "test",
+						AppendArgs: true,
+					},
+					{
+						Name:       "test2",
+						AppendArgs: false,
+					},
+				},
 				Dev: next.DevConfig{
 					Ports: []*next.PortForwardingConfig{
 						{

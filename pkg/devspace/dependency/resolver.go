@@ -242,7 +242,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	if cloned.Vars == nil {
 		cloned.Vars = []string{}
 	}
-	if dependency.OverwriteVars == nil || *dependency.OverwriteVars == true {
+	if dependency.OverwriteVars {
 		for k, v := range r.BaseVars {
 			cloned.Vars = append(cloned.Vars, strings.TrimSpace(k)+"="+strings.TrimSpace(fmt.Sprintf("%v", v)))
 		}
@@ -268,10 +268,12 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	dConfig := dConfigWrapper.Config()
 
 	// set parsed variables in parent config
-	for k, v := range dConfigWrapper.Variables() {
-		_, ok := r.BaseVars[k]
-		if !ok {
-			r.BaseVars[k] = v
+	if dependency.OverwriteVars {
+		for k, v := range dConfigWrapper.Variables() {
+			_, ok := r.BaseVars[k]
+			if !ok {
+				r.BaseVars[k] = v
+			}
 		}
 	}
 

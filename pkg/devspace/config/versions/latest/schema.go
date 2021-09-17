@@ -908,7 +908,7 @@ type DependencyConfig struct {
 	ProfileParents           []string        `yaml:"profileParents,omitempty" json:"profileParents,omitempty"`
 	DisableProfileActivation bool            `yaml:"disableProfileActivation,omitempty" json:"disableProfileActivation,omitempty"`
 	Vars                     []DependencyVar `yaml:"vars,omitempty" json:"vars,omitempty"`
-	OverwriteVars            *bool           `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
+	OverwriteVars            bool            `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
 	SkipBuild                bool            `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
 	IgnoreDependencies       bool            `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
 	Namespace                string          `yaml:"namespace,omitempty" json:"namespace,omitempty"`
@@ -1065,7 +1065,7 @@ type CommandConfig struct {
 
 	// AppendArgs will append arguments passed to the DevSpace command automatically to
 	// the specified command.
-	AppendArgs *bool `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty"`
+	AppendArgs bool `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty"`
 
 	// Description describes what the command is doing and can be seen in `devspace list commands`
 	Description string `yaml:"description" json:"description"`

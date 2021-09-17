@@ -62,6 +62,7 @@ func LogExecuteHooks(client kubectl.Client, config config.Config, dependencies [
 
 		convertedExtraEnv := plugin.ConvertExtraEnv("DEVSPACE_HOOK", extraEnv)
 		for _, e := range events {
+			convertedExtraEnv["DEVSPACE_HOOK_EVENT"] = e
 			err := executeSingle(client, config, dependencies, convertedExtraEnv, log, e)
 			if err != nil {
 				log.Warn(err)
@@ -86,6 +87,7 @@ func ExecuteHooks(client kubectl.Client, config config.Config, dependencies []ty
 
 		convertedExtraEnv := plugin.ConvertExtraEnv("DEVSPACE_HOOK", extraEnv)
 		for _, e := range events {
+			convertedExtraEnv["DEVSPACE_HOOK_EVENT"] = e
 			err := executeSingle(client, config, dependencies, convertedExtraEnv, log, e)
 			if err != nil {
 				return err

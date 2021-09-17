@@ -17,6 +17,20 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		return nil, err
 	}
 
+	// dependencies
+	for i, d := range c.Dependencies {
+		if d.OverwriteVars == nil || *d.OverwriteVars {
+			nextConfig.Dependencies[i].OverwriteVars = true
+		}
+	}
+
+	// commands
+	for i, c := range c.Commands {
+		if c.AppendArgs == nil || *c.AppendArgs {
+			nextConfig.Commands[i].AppendArgs = true
+		}
+	}
+
 	// replace pod
 	for i, rp := range c.Dev.ReplacePods {
 		if rp.ImageName != "" {
@@ -82,7 +96,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				events = append(events, getEventsFrom("after:deploy", h.When.After.Deployments)...)
 				events = append(events, getEventsFrom("after:purge", h.When.After.PurgeDeployments)...)
 				if h.When.After.PullSecrets != "" {
-					events = append(events, "after:createAllPullSecrets")
+					events = append(events, "after:createPullSecrets")
 				}
 				events = append(events, getEventsFrom("after:initialSync", h.When.After.InitialSync)...)
 			}
@@ -91,7 +105,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				events = append(events, getEventsFrom("before:deploy", h.When.Before.Deployments)...)
 				events = append(events, getEventsFrom("before:purge", h.When.Before.PurgeDeployments)...)
 				if h.When.Before.PullSecrets != "" {
-					events = append(events, "before:createAllPullSecrets")
+					events = append(events, "before:createPullSecrets")
 				}
 				events = append(events, getEventsFrom("before:initialSync", h.When.Before.InitialSync)...)
 			}
@@ -100,7 +114,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				events = append(events, getEventsFrom("error:deploy", h.When.OnError.Deployments)...)
 				events = append(events, getEventsFrom("error:purge", h.When.OnError.PurgeDeployments)...)
 				if h.When.OnError.PullSecrets != "" {
-					events = append(events, "error:createAllPullSecrets")
+					events = append(events, "error:createPullSecrets")
 				}
 				events = append(events, getEventsFrom("error:initialSync", h.When.OnError.InitialSync)...)
 			}
@@ -119,7 +133,7 @@ func getEventsFrom(base string, val string) []string {
 		return []string{base + ":*"}
 	}
 	if val == "all" {
-		return []string{base + "All"}
+		return []string{base}
 	}
 
 	s := strings.Split(val, ",")

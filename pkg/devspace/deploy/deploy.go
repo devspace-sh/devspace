@@ -57,7 +57,7 @@ func (c *controller) Render(options *Options, out io.Writer, log log.Logger) err
 		helmV2Clients := map[string]helmtypes.Client{}
 
 		// Execute before deployments deploy hook
-		err := hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "before:renderAll")
+		err := hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "before:render")
 		if err != nil {
 			return err
 		}
@@ -84,6 +84,7 @@ func (c *controller) Render(options *Options, out io.Writer, log log.Logger) err
 			}
 
 			hookErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+				"DEPLOY_NAME":   deployConfig.Name,
 				"DEPLOY_CONFIG": deployConfig,
 			}, log, hook.EventsForSingle("before:render", deployConfig.Name).With("deploy.beforeRender")...)
 			if hookErr != nil {
@@ -93,6 +94,7 @@ func (c *controller) Render(options *Options, out io.Writer, log log.Logger) err
 			err = deployClient.Render(options.BuiltImages, out)
 			if err != nil {
 				hookErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+					"DEPLOY_NAME":   deployConfig.Name,
 					"DEPLOY_CONFIG": deployConfig,
 					"ERROR":         err,
 				}, log, hook.EventsForSingle("error:render", deployConfig.Name).With("deploy.errorRender")...)
@@ -104,6 +106,7 @@ func (c *controller) Render(options *Options, out io.Writer, log log.Logger) err
 			}
 
 			hookErr = hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+				"DEPLOY_NAME":   deployConfig.Name,
 				"DEPLOY_CONFIG": deployConfig,
 			}, log, hook.EventsForSingle("after:render", deployConfig.Name).With("deploy.afterRender")...)
 			if hookErr != nil {
@@ -111,7 +114,7 @@ func (c *controller) Render(options *Options, out io.Writer, log log.Logger) err
 			}
 		}
 
-		err = hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "after:renderAll")
+		err = hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "after:render")
 		if err != nil {
 			return err
 		}
@@ -155,7 +158,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 		helmV2Clients := map[string]helmtypes.Client{}
 
 		// Execute before deployments deploy hook
-		err := hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "before:deployAll")
+		err := hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "before:deploy")
 		if err != nil {
 			return err
 		}
@@ -208,6 +211,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 
 			// Execute before deployment deploy hook
 			err = hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+				"DEPLOY_NAME":   deployConfig.Name,
 				"DEPLOY_CONFIG": deployConfig,
 			}, log, hook.EventsForSingle("before:deploy", deployConfig.Name).With("deploy.beforeDeploy")...)
 			if err != nil {
@@ -217,6 +221,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 			wasDeployed, err := deployClient.Deploy(options.ForceDeploy, options.BuiltImages)
 			if err != nil {
 				hookErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+					"DEPLOY_NAME":   deployConfig.Name,
 					"DEPLOY_CONFIG": deployConfig,
 					"ERROR":         err,
 				}, log, hook.EventsForSingle("error:deploy", deployConfig.Name).With("deploy.errorDeploy")...)
@@ -232,6 +237,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 
 				// Execute after deployment deploy hook
 				err = hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+					"DEPLOY_NAME":   deployConfig.Name,
 					"DEPLOY_CONFIG": deployConfig,
 				}, log, hook.EventsForSingle("after:deploy", deployConfig.Name).With("deploy.afterDeploy")...)
 				if err != nil {
@@ -242,6 +248,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 
 				// Execute after deployment deploy hook
 				err = hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+					"DEPLOY_NAME":   deployConfig.Name,
 					"DEPLOY_CONFIG": deployConfig,
 				}, log, hook.EventsForSingle("skip:deploy", deployConfig.Name)...)
 				if err != nil {
@@ -251,7 +258,7 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 		}
 
 		// Execute after deployments deploy hook
-		err = hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "after:deployAll")
+		err = hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "after:deploy")
 		if err != nil {
 			return err
 		}
@@ -271,7 +278,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 		helmV2Clients := map[string]helmtypes.Client{}
 
 		// Execute before deployments purge hook
-		err := hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "before:purgeAll")
+		err := hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "before:purge")
 		if err != nil {
 			return err
 		}
@@ -322,6 +329,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 
 			// Execute before deployment purge hook
 			err = hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+				"DEPLOY_NAME":   deployConfig.Name,
 				"DEPLOY_CONFIG": deployConfig,
 			}, log, hook.EventsForSingle("before:purge", deployConfig.Name).With("deploy.beforePurge")...)
 			if err != nil {
@@ -334,6 +342,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 			if err != nil {
 				// Execute on error deployment purge hook
 				hookErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+					"DEPLOY_NAME":   deployConfig.Name,
 					"DEPLOY_CONFIG": deployConfig,
 					"ERROR":         err,
 				}, log, hook.EventsForSingle("error:purge", deployConfig.Name).With("deploy.errorPurge")...)
@@ -344,6 +353,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 				log.Warnf("Error deleting deployment %s: %v", deployConfig.Name, err)
 			} else {
 				err = hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+					"DEPLOY_NAME":   deployConfig.Name,
 					"DEPLOY_CONFIG": deployConfig,
 				}, log, hook.EventsForSingle("after:purge", deployConfig.Name).With("deploy.afterPurge")...)
 				if err != nil {
@@ -355,7 +365,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 		}
 
 		// Execute after deployments purge hook
-		err = hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "after:purgeAll")
+		err = hook.ExecuteHooks(c.client, c.config, c.dependencies, nil, log, "after:purge")
 		if err != nil {
 			return err
 		}

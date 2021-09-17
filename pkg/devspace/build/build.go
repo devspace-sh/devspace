@@ -81,7 +81,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	// Execute before images build hook
-	pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{}, log, "before:buildAll")
+	pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{}, log, "before:build")
 	if pluginErr != nil {
 		return nil, pluginErr
 	}
@@ -268,7 +268,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	// Execute after images build hook
-	pluginErr = hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{}, log, "after:buildAll")
+	pluginErr = hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{}, log, "after:build")
 	if pluginErr != nil {
 		return nil, pluginErr
 	}

@@ -27,6 +27,7 @@ func logErrorf(message string, args ...interface{}) {
 
 const (
 	SessionEnv           = "DEVSPACE_PLUGIN_SESSION"
+	ExecutionIDEnv       = "DEVSPACE_PLUGIN_EXECUTION_ID"
 	KubeContextFlagEnv   = "DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG"
 	KubeNamespaceFlagEnv = "DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG"
 	ConfigEnv            = "DEVSPACE_PLUGIN_CONFIG"
@@ -54,6 +55,7 @@ func SetPlugins(p []Metadata) {
 		defer pluginContextLock.Unlock()
 
 		pluginContext[SessionEnv] = uuid.New().String()
+		pluginContext[ExecutionIDEnv] = pluginContext[SessionEnv]
 	})
 }
 
@@ -181,6 +183,7 @@ func ExecutePluginHookWithContext(extraEnv map[string]interface{}, events ...str
 
 	for _, plugin := range plugins {
 		for _, e := range events {
+			newEnv["DEVSPACE_PLUGIN_EVENT"] = e
 			err := executePluginHookAt(plugin, e, newEnv)
 			if err != nil {
 				return err
