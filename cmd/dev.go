@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"io"
+	"k8s.io/kubectl/pkg/util/interrupt"
 	"os"
 	"strings"
 	"sync"
@@ -229,37 +230,57 @@ func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 	if err != nil {
 		return err
 	}
-	config := configInterface.Config()
 
-	// Create namespace if necessary
-	err = client.EnsureDeployNamespaces(config, cmd.log)
-	if err != nil {
-		return errors.Errorf("Unable to create namespace: %v", err)
-	}
-
-	// Create the image pull secrets and add them to the default service account
-	dockerClient, err := f.NewDockerClient(cmd.log)
-	if err != nil {
-		dockerClient = nil
-	}
-
-	// Execute plugin hook
-	err = hook.ExecuteHooks(client, nil, nil, nil, nil, "dev")
-	if err != nil {
-		return err
-	}
-
-	// Build and deploy images
-	exitCode, err := cmd.buildAndDeploy(f, configInterface, configOptions, client, dockerClient, args)
-	if err != nil {
-		return err
-	} else if exitCode != 0 {
-		return &exit.ReturnCodeError{
-			ExitCode: exitCode,
+	return runWithHooks("devCommand", client, configInterface, cmd.log, func() error {
+		// Create namespace if necessary
+		err = client.EnsureDeployNamespaces(configInterface.Config(), cmd.log)
+		if err != nil {
+			return errors.Errorf("Unable to create namespace: %v", err)
 		}
+
+		// Create the image pull secrets and add them to the default service account
+		dockerClient, err := f.NewDockerClient(cmd.log)
+		if err != nil {
+			dockerClient = nil
+		}
+
+		// Execute plugin hook
+		err = hook.ExecuteHooks(client, nil, nil, nil, nil, "dev")
+		if err != nil {
+			return err
+		}
+
+		// Build and deploy images
+		exitCode, err := cmd.buildAndDeploy(f, configInterface, configOptions, client, dockerClient, args)
+		if err != nil {
+			return err
+		} else if exitCode != 0 {
+			return &exit.ReturnCodeError{
+				ExitCode: exitCode,
+			}
+		}
+
+		return nil
+	})
+}
+
+func runWithHooks(command string, client kubectl.Client, configInterface config.Config, log log.Logger, fn func() error) (err error) {
+	err = hook.ExecuteHooks(client, configInterface, nil, nil, log, command+":before:execute")
+	if err != nil {
+		return err
 	}
 
-	return nil
+	defer func() {
+		if err != nil {
+			hook.LogExecuteHooks(client, configInterface, nil, map[string]interface{}{"error": err}, log, command+":after:execute", command+":error:execute")
+		} else {
+			err = hook.ExecuteHooks(client, configInterface, nil, nil, log, command+":after:execute")
+		}
+	}()
+
+	return interrupt.New(nil, func() {
+		hook.LogExecuteHooks(client, configInterface, nil, nil, log, command+":interrupt:execute")
+	}).Run(fn)
 }
 
 func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Config, configOptions *loader.ConfigOptions, client kubectl.Client, dockerClient docker.Client, args []string) (int, error) {
@@ -558,6 +579,11 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 	// Check if we should open a terminal or stream logs
 	if cmd.PrintSyncLog == false {
 		if config.Dev.Terminal != nil && config.Dev.Terminal.Disabled == false {
+			pluginErr := hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "devCommand:before:openTerminal")
+			if pluginErr != nil {
+				return 0, pluginErr
+			}
+
 			selectorOptions := targetselector.NewDefaultOptions().ApplyCmdParameter("", "", cmd.Namespace, "")
 			if config.Dev.Terminal != nil {
 				selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Terminal.LabelSelector, config.Dev.Terminal.Namespace, config.Dev.Terminal.ContainerName, "")
@@ -574,10 +600,14 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 			}
 
 			selectorOptions.ImageSelector = imageSelectors
-
 			stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
 			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalReconnect, stdout, stderr, stdin)
 		} else if config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || *config.Dev.Logs.Disabled == false {
+			pluginErr := hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "devCommand:before:streamLogs")
+			if pluginErr != nil {
+				return 0, pluginErr
+			}
+
 			// Log multiple images at once
 			manager, err := services.NewLogManager(client, configInterface, dependencies, exitChan, logger)
 			if err != nil {

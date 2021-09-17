@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
@@ -165,10 +167,15 @@ func (cmd *DeployCmd) Run(f factory.Factory) error {
 	if err != nil {
 		return err
 	}
-	config := configInterface.Config()
 
+	return runWithHooks("deployCommand", client, configInterface, cmd.log, func() error {
+		return cmd.runCommand(f, client, configInterface, configLoader, configOptions)
+	})
+}
+
+func (cmd *DeployCmd) runCommand(f factory.Factory, client kubectl.Client, configInterface config.Config, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions) error {
 	// create namespace if necessary
-	err = client.EnsureDeployNamespaces(config, cmd.log)
+	err := client.EnsureDeployNamespaces(configInterface.Config(), cmd.log)
 	if err != nil {
 		return errors.Errorf("unable to create namespace: %v", err)
 	}
@@ -235,7 +242,7 @@ func (cmd *DeployCmd) Run(f factory.Factory) error {
 
 			// save cache if an image was built
 			if len(builtImages) > 0 {
-				err := configLoader.SaveGenerated(generatedConfig)
+				err := configLoader.SaveGenerated(configInterface.Generated())
 				if err != nil {
 					return errors.Errorf("error saving generated config: %v", err)
 				}
@@ -265,7 +272,7 @@ func (cmd *DeployCmd) Run(f factory.Factory) error {
 	}
 
 	// update last used kube context & save generated yaml
-	err = updateLastKubeContext(configLoader, client, generatedConfig)
+	err = updateLastKubeContext(configLoader, client, configInterface.Generated())
 	if err != nil {
 		return errors.Wrap(err, "update last kube context")
 	}
