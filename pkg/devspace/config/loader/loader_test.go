@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -339,7 +340,7 @@ func TestSetDevSpaceRoot(t *testing.T) {
 				"subdir/custom.yaml": "",
 			},
 			expectedExists:     true,
-			expectedWorkDir:    filepath.Join(dir, "subdir"),
+			expectedWorkDir:    filepath.Join(dir, "subDir"),
 			expectedConfigPath: "custom.yaml",
 		},
 	}
@@ -383,6 +384,9 @@ func testSetDevSpaceRoot(testCase setDevSpaceRootTestCase, t *testing.T) {
 	assert.Equal(t, exists, testCase.expectedExists, "Unexpected existence answer in testCase %s", testCase.name)
 
 	wd, err := os.Getwd()
+	if runtime.GOOS == "darwin" {
+		wd = strings.ReplaceAll(wd, "/private", "")
+	}
 	assert.NilError(t, err, "Error getting wd in testCase %s", testCase.name)
 	assert.Equal(t, wd, testCase.expectedWorkDir, "Unexpected work dir in testCase %s", testCase.name)
 
