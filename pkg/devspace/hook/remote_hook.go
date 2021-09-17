@@ -2,6 +2,8 @@ package hook
 
 import (
 	"context"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -14,7 +16,6 @@ import (
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"time"
 )
 
 // RemoteHook is a hook that is executed in a container
@@ -68,7 +69,7 @@ func (r *remoteHook) Execute(hook *latest.HookConfig, client kubectl.Client, con
 	executed, err := r.execute(hook, imageSelectors, client, config, dependencies, log)
 	if err != nil {
 		return err
-	} else if executed == false {
+	} else if !executed {
 		log.Infof("Skip hook '%s', because no running containers were found", ansi.Color(hookName(hook), "white+b"))
 	}
 
@@ -87,7 +88,7 @@ func (r *remoteHook) execute(hook *latest.HookConfig, imageSelector []imageselec
 	}
 
 	wait := false
-	if hook.Container.Wait == nil || *hook.Container.Wait == true {
+	if hook.Container.Wait == nil || *hook.Container.Wait {
 		log.Infof("Waiting for running containers for hook '%s'", ansi.Color(hookName(hook), "white+b"))
 		wait = true
 	}

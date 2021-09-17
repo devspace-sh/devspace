@@ -1,7 +1,5 @@
 package cmd
 
-import ()
-
 /*type attachTestCase struct {
 	name string
 
@@ -74,7 +72,7 @@ func TestAttach(t *testing.T) {
 				},
 			},
 			expectedErr:    "Couldn't find a running pod in namespace someNamespace",
-		},*//*
+		},*/ /*
 	}
 
 	log.SetInstance(&log.DiscardLogger{PanicOnExit: true})

@@ -36,23 +36,23 @@ type deployTestCase struct {
 
 func TestDeploy(t *testing.T) {
 	testCases := []deployTestCase{
-		deployTestCase{
+		{
 			name:       "Don't deploy anything",
 			deployment: "deploy1",
 			cache: &generated.CacheConfig{
 				Deployments: map[string]*generated.DeploymentCache{
-					"deploy1": &generated.DeploymentCache{
+					"deploy1": {
 						DeploymentConfigHash: "42d471330d96e55ab8d144d52f11e3c319ae2661e50266fa40592bb721689a3a",
 					},
 				},
 			},
 			releasesBefore: []*helmtypes.Release{
-				&helmtypes.Release{
+				{
 					Name: "deploy1",
 				},
 			},
 		},
-		deployTestCase{
+		{
 			name:        "Deploy one deployment",
 			deployment:  "deploy2",
 			chart:       ".",
@@ -63,7 +63,7 @@ func TestDeploy(t *testing.T) {
 			expectedDeployed: true,
 			expectedCache: &generated.CacheConfig{
 				Deployments: map[string]*generated.DeploymentCache{
-					"deploy2": &generated.DeploymentCache{
+					"deploy2": {
 						DeploymentConfigHash: "2f0fdaa77956604c97de5cb343051fab738ac36052956ae3cb16e8ec529ab154",
 						HelmReleaseRevision:  "1",
 					},

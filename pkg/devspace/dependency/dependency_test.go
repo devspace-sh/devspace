@@ -50,29 +50,27 @@ func (r *fakeResolver) Resolve(update bool) ([]*Dependency, error) {
 }
 
 type updateAllTestCase struct {
-	name string
-
+	name             string
 	files            map[string]string
 	dependencyTasks  []*latest.DependencyConfig
 	activeConfig     *generated.CacheConfig
 	allowCyclicParam bool
-
-	expectedErr string
+	expectedErr      string
 }
 
 func TestUpdateAll(t *testing.T) {
 	testCases := []updateAllTestCase{
-		updateAllTestCase{
+		{
 			name: "No Dependencies to update",
 		},
-		updateAllTestCase{
+		{
 			name: "Update one dependency",
 			files: map[string]string{
 				"devspace.yaml":         "version: v1beta3",
 				"someDir/devspace.yaml": "version: v1beta3",
 			},
 			dependencyTasks: []*latest.DependencyConfig{
-				&latest.DependencyConfig{
+				{
 					Source: &latest.SourceConfig{
 						Path: "someDir",
 					},
@@ -80,7 +78,7 @@ func TestUpdateAll(t *testing.T) {
 			},
 			activeConfig: &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
-					"default": &generated.ImageCache{
+					"default": {
 						Tag: "1.15", // This will be appended to nginx during deploy
 					},
 				},
@@ -195,23 +193,23 @@ func TestBuildAll(t *testing.T) {
 	}()
 
 	testCases := []buildAllTestCase{
-		buildAllTestCase{
+		{
 			name: "No Dependencies to build",
 		},
-		buildAllTestCase{
+		{
 			name:  "Build one dependency",
 			files: map[string]string{},
 			dependencyTasks: []*latest.DependencyConfig{
-				&latest.DependencyConfig{},
+				{},
 			},
 			resolvedDependencies: []*Dependency{
-				&Dependency{
+				{
 					localPath:        "./",
 					dependencyConfig: &latest.DependencyConfig{},
 					dependencyCache: &generated.Config{
 						ActiveProfile: "",
 						Profiles: map[string]*generated.CacheConfig{
-							"": &generated.CacheConfig{
+							"": {
 								Dependencies: map[string]string{
 									"": replaceWithHash,
 								},
@@ -296,23 +294,23 @@ func TestDeployAll(t *testing.T) {
 	}()
 
 	testCases := []deployAllTestCase{
-		deployAllTestCase{
+		{
 			name: "No Dependencies to deploy",
 		},
-		deployAllTestCase{
+		{
 			name:  "Deploy one dependency",
 			files: map[string]string{},
 			dependencyTasks: []*latest.DependencyConfig{
-				&latest.DependencyConfig{},
+				{},
 			},
 			resolvedDependencies: []*Dependency{
-				&Dependency{
+				{
 					localPath:        "./",
 					dependencyConfig: &latest.DependencyConfig{},
 					dependencyCache: &generated.Config{
 						ActiveProfile: "",
 						Profiles: map[string]*generated.CacheConfig{
-							"": &generated.CacheConfig{
+							"": {
 								Dependencies: map[string]string{
 									"": replaceWithHash,
 								},
@@ -397,26 +395,26 @@ func TestPurgeAll(t *testing.T) {
 	}()
 
 	testCases := []purgeAllTestCase{
-		purgeAllTestCase{
+		{
 			name: "No Dependencies to purge",
 		},
-		purgeAllTestCase{
+		{
 			name: "Purge one dependency",
 			files: map[string]string{
 				"devspace.yaml":         "",
 				"someDir/devspace.yaml": "",
 			},
 			dependencyTasks: []*latest.DependencyConfig{
-				&latest.DependencyConfig{},
+				{},
 			},
 			resolvedDependencies: []*Dependency{
-				&Dependency{
+				{
 					localPath:        "./",
 					dependencyConfig: &latest.DependencyConfig{},
 					dependencyCache: &generated.Config{
 						ActiveProfile: "",
 						Profiles: map[string]*generated.CacheConfig{
-							"": &generated.CacheConfig{
+							"": {
 								Dependencies: map[string]string{
 									"": replaceWithHash,
 								},
@@ -502,14 +500,14 @@ func TestBuild(t *testing.T) {
 	}()
 
 	testCases := []buildTestCase{
-		buildTestCase{
+		{
 			name: "Skipped",
 			dependency: &Dependency{
 				localPath: "./",
 				dependencyCache: &generated.Config{
 					ActiveProfile: "",
 					Profiles: map[string]*generated.CacheConfig{
-						"": &generated.CacheConfig{
+						"": {
 							Dependencies: map[string]string{
 								"": replaceWithHash,
 							},
@@ -518,7 +516,7 @@ func TestBuild(t *testing.T) {
 				},
 			},
 		},
-		buildTestCase{
+		{
 			name: "Build dependency",
 			dependency: &Dependency{
 				localPath:        "./",
@@ -526,7 +524,7 @@ func TestBuild(t *testing.T) {
 				dependencyCache: &generated.Config{
 					ActiveProfile: "",
 					Profiles: map[string]*generated.CacheConfig{
-						"": &generated.CacheConfig{
+						"": {
 							Dependencies: map[string]string{
 								"": "",
 							},
@@ -623,14 +621,14 @@ func TestDeploy(t *testing.T) {
 	}()
 
 	testCases := []deployTestCase{
-		deployTestCase{
+		{
 			name: "Skipped",
 			dependency: &Dependency{
 				localPath: "./",
 				dependencyCache: &generated.Config{
 					ActiveProfile: "",
 					Profiles: map[string]*generated.CacheConfig{
-						"": &generated.CacheConfig{
+						"": {
 							Dependencies: map[string]string{
 								"": replaceWithHash,
 							},
@@ -639,7 +637,7 @@ func TestDeploy(t *testing.T) {
 				},
 			},
 		},
-		deployTestCase{
+		{
 			name: "Deploy dependency",
 			dependency: &Dependency{
 				localPath:        "./",
@@ -647,7 +645,7 @@ func TestDeploy(t *testing.T) {
 				dependencyCache: &generated.Config{
 					ActiveProfile: "",
 					Profiles: map[string]*generated.CacheConfig{
-						"": &generated.CacheConfig{
+						"": {
 							Dependencies: map[string]string{
 								"": "",
 							},

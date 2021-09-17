@@ -1,12 +1,13 @@
 package targetselector
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	v1 "k8s.io/api/core/v1"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	v1 "k8s.io/api/core/v1"
 )
 
 // NewUntilNotTerminatingStrategy creates a new waiting strategy
@@ -73,9 +74,5 @@ func (u *untilNotTerminating) printNotFoundWarning(log log.Logger) {
 }
 
 func isPodTerminating(pod *v1.Pod) bool {
-	if pod.DeletionTimestamp != nil {
-		return true
-	}
-
-	return false
+	return pod.DeletionTimestamp != nil
 }

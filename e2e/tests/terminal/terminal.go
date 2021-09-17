@@ -3,20 +3,21 @@ package terminal
 import (
 	"bytes"
 	"context"
+	"io/ioutil"
+	"os"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/onsi/ginkgo"
-	"io/ioutil"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"os"
-	"strings"
-	"sync"
-	"time"
 )
 
 var _ = DevSpaceDescribe("terminal", func() {

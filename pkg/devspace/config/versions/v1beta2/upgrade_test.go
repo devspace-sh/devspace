@@ -107,7 +107,7 @@ func TestSimple(t *testing.T) {
 					},
 				},
 				Images: &map[string]*ImageConfig{
-					"default": &ImageConfig{},
+					"default": {},
 				},
 			},
 			expected: &next.Config{
@@ -143,7 +143,7 @@ func TestSimple(t *testing.T) {
 					},
 				},
 				Images: map[string]*next.ImageConfig{
-					"default": &next.ImageConfig{
+					"default": {
 						CreatePullSecret: ptr.Bool(false),
 					},
 				},

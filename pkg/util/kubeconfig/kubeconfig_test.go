@@ -36,7 +36,9 @@ func TestSaveLoadKubeConfig(t *testing.T) {
 	err = fsutil.Copy(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename(), "configBackup", true)
 	if !os.IsNotExist(err) {
 		os.Remove(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename())
-		defer fsutil.Copy("configBackup", clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename(), true)
+		defer func() {
+			_ = fsutil.Copy("configBackup", clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename(), true)
+		}()
 	} else if err != nil {
 		defer os.Remove(clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename())
 	} else {
@@ -76,7 +78,7 @@ func TestSaveLoadKubeConfig(t *testing.T) {
 		TokenFile:             "someTokenFile",
 		Impersonate:           "testImpersonate",
 		ImpersonateGroups:     []string{"testIG"},
-		ImpersonateUserExtra:  map[string][]string{"testIUEKey": []string{"testIUE"}},
+		ImpersonateUserExtra:  map[string][]string{"testIUEKey": {"testIUE"}},
 		Password:              "password",
 		LocationOfOrigin:      "config",
 		AuthProvider: &api.AuthProviderConfig{
@@ -87,7 +89,7 @@ func TestSaveLoadKubeConfig(t *testing.T) {
 			Command: "Do",
 			Args:    []string{"something"},
 			Env: []api.ExecEnvVar{
-				api.ExecEnvVar{
+				{
 					Name:  "testExecEnvVarKey",
 					Value: "testExecEnvVarValue",
 				},

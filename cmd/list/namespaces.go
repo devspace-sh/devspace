@@ -97,7 +97,7 @@ func (cmd *namespacesCmd) RunListNamespaces(f factory.Factory, cobraCmd *cobra.C
 		}
 	}
 
-	if defaultFound == false {
+	if !defaultFound {
 		namespaceRows = append(namespaceRows, []string{
 			client.Namespace(),
 			"true",

@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 
 	"github.com/docker/cli/cli/streams"
 
@@ -96,7 +97,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Authenticate
-	if b.skipPush == false && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == false) {
+	if !b.skipPush && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || !b.helper.ImageConf.Build.Docker.SkipPush) {
 		log.StartWait("Authenticating (" + displayRegistryURL + ")")
 		_, err = b.Authenticate()
 		log.StopWait()
@@ -129,11 +130,11 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 	// Should we build with cli?
 	useBuildKit := false
-	useDockerCli := b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && b.helper.ImageConf.Build.Docker.UseCLI == true
+	useDockerCli := b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && b.helper.ImageConf.Build.Docker.UseCLI
 	cliArgs := []string{}
 	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil {
 		cliArgs = b.helper.ImageConf.Build.Docker.Args
-		if b.helper.ImageConf.Build.Docker.UseBuildKit == true {
+		if b.helper.ImageConf.Build.Docker.UseBuildKit {
 			useBuildKit = true
 		}
 	}
@@ -159,7 +160,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// Check if we skip push
-	if b.skipPush == false && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || b.helper.ImageConf.Build.Docker.SkipPush == false) {
+	if !b.skipPush && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || !b.helper.ImageConf.Build.Docker.SkipPush) {
 		for _, tag := range buildOptions.Tags {
 			err = b.pushImage(writer, tag)
 			if err != nil {

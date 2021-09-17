@@ -1,13 +1,14 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/loft-sh/devspace/cmd/reset"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-	"strings"
 
 	"github.com/loft-sh/devspace/pkg/util/factory"
 

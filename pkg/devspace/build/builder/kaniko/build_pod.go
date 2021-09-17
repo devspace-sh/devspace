@@ -2,10 +2,11 @@ package kaniko
 
 import (
 	"context"
+	"path/filepath"
+
 	"github.com/docker/distribution/reference"
 	jsonyaml "github.com/ghodss/yaml"
 	"gopkg.in/yaml.v2"
-	"path/filepath"
 
 	"github.com/docker/docker/api/types"
 	"github.com/pkg/errors"
@@ -107,7 +108,7 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 	}
 
 	// cache flags
-	if kanikoOptions.Cache == nil || *kanikoOptions.Cache == true {
+	if kanikoOptions.Cache == nil || *kanikoOptions.Cache {
 		ref, err := reference.ParseNormalizedNamed(b.FullImageName)
 		if err != nil {
 			return nil, err

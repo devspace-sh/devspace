@@ -3,6 +3,12 @@ package hook
 import (
 	"archive/tar"
 	"compress/gzip"
+	"io"
+	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -10,12 +16,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"io"
-	"io/ioutil"
 	v1 "k8s.io/api/core/v1"
-	"os"
-	"path"
-	"path/filepath"
 )
 
 func NewUploadHook() RemoteHook {

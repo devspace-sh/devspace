@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -13,7 +15,6 @@ import (
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/mgutz/ansi"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -166,7 +167,7 @@ func (cmd *BuildCmd) runCommand(f factory.Factory, client kubectl.Client, config
 			MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
 		}, log)
 		if err != nil {
-			if strings.Index(err.Error(), "no space left on device") != -1 {
+			if strings.Contains(err.Error(), "no space left on device") {
 				return errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
 			}
 

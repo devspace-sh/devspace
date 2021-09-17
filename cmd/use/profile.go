@@ -68,7 +68,7 @@ func (cmd *ProfileCmd) RunUseProfile(f factory.Factory, cobraCmd *cobra.Command,
 	}
 
 	profileName := ""
-	if cmd.Reset == false {
+	if !cmd.Reset {
 		if len(args) > 0 {
 			profileName = args[0]
 		} else {
@@ -90,7 +90,7 @@ func (cmd *ProfileCmd) RunUseProfile(f factory.Factory, cobraCmd *cobra.Command,
 			}
 		}
 
-		if found == false {
+		if !found {
 			return errors.Errorf("Profile '%s' does not exist in devspace.yaml", profileName)
 		}
 	}

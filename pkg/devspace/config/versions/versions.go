@@ -37,21 +37,21 @@ type loader struct {
 }
 
 var versionLoader = map[string]*loader{
-	v1alpha1.Version: &loader{New: v1alpha1.New},
-	v1alpha2.Version: &loader{New: v1alpha2.New},
-	v1alpha3.Version: &loader{New: v1alpha3.New},
-	v1alpha4.Version: &loader{New: v1alpha4.New},
-	v1beta1.Version:  &loader{New: v1beta1.New},
-	v1beta2.Version:  &loader{New: v1beta2.New},
-	v1beta3.Version:  &loader{New: v1beta3.New},
-	v1beta4.Version:  &loader{New: v1beta4.New},
-	v1beta5.Version:  &loader{New: v1beta5.New},
-	v1beta6.Version:  &loader{New: v1beta6.New},
-	v1beta7.Version:  &loader{New: v1beta7.New},
-	v1beta8.Version:  &loader{New: v1beta8.New},
-	v1beta9.Version:  &loader{New: v1beta9.New},
-	v1beta10.Version: &loader{New: v1beta10.New},
-	latest.Version:   &loader{New: latest.New},
+	v1alpha1.Version: {New: v1alpha1.New},
+	v1alpha2.Version: {New: v1alpha2.New},
+	v1alpha3.Version: {New: v1alpha3.New},
+	v1alpha4.Version: {New: v1alpha4.New},
+	v1beta1.Version:  {New: v1beta1.New},
+	v1beta2.Version:  {New: v1beta2.New},
+	v1beta3.Version:  {New: v1beta3.New},
+	v1beta4.Version:  {New: v1beta4.New},
+	v1beta5.Version:  {New: v1beta5.New},
+	v1beta6.Version:  {New: v1beta6.New},
+	v1beta7.Version:  {New: v1beta7.New},
+	v1beta8.Version:  {New: v1beta8.New},
+	v1beta9.Version:  {New: v1beta9.New},
+	v1beta10.Version: {New: v1beta10.New},
+	latest.Version:   {New: latest.New},
 }
 
 // ParseProfile loads the base config & a certain profile
@@ -106,12 +106,12 @@ func ParseVariables(data map[interface{}]interface{}, log log.Logger) ([]*latest
 // Parse parses the data into the latest config
 func Parse(data map[interface{}]interface{}, log log.Logger) (*latest.Config, error) {
 	version, ok := data["version"].(string)
-	if ok == false {
+	if !ok {
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
 	}
 
 	loader, ok := versionLoader[version]
-	if ok == false {
+	if !ok {
 		return nil, errors.Errorf("Unrecognized config version %s. Please upgrade devspace with `devspace upgrade`", version)
 	}
 
@@ -140,7 +140,7 @@ func Parse(data map[interface{}]interface{}, log log.Logger) (*latest.Config, er
 
 	// Convert
 	latestConfigConverted, ok := latestConfig.(*latest.Config)
-	if ok == false {
+	if !ok {
 		return nil, errors.Errorf("Error converting config, latest config is not the latest version")
 	}
 

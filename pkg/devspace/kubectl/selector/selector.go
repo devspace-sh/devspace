@@ -2,6 +2,9 @@ package selector
 
 import (
 	"context"
+	"sort"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
@@ -9,8 +12,6 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sort"
-	"strings"
 )
 
 const (

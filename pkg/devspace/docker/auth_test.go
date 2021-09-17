@@ -188,7 +188,7 @@ func TestGetAuthConfig(t *testing.T) {
 		authAsYaml, err := yaml.Marshal(auth)
 		assert.NilError(t, err, "Error parsing authConfig to yaml in testCase %s", testCase.name)
 		expectedAsYaml, err := yaml.Marshal(testCase.expectedAuthConfig)
-		assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+		assert.NilError(t, err, "Error parsing exception to yaml in testCase %s", testCase.name)
 		assert.Equal(t, string(authAsYaml), string(expectedAsYaml), "Unexpected authConfig in testCase %s", testCase.name)
 
 		err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {
@@ -286,7 +286,7 @@ func TestLogin(t *testing.T) {
 		authAsYaml, err := yaml.Marshal(auth)
 		assert.NilError(t, err, "Error parsing authConfig to yaml in testCase %s", testCase.name)
 		expectedAsYaml, err := yaml.Marshal(testCase.expectedAuthConfig)
-		assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+		assert.NilError(t, err, "Error parsing exception to yaml in testCase %s", testCase.name)
 		assert.Equal(t, string(authAsYaml), string(expectedAsYaml), "Unexpected authConfig in testCase %s", testCase.name)
 
 		err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {

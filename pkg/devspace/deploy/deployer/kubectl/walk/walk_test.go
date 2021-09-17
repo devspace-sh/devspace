@@ -38,7 +38,7 @@ test2:
 		return "replaced", nil
 	})
 
-	Walk(inputObj, match, replace)
+	_ = Walk(inputObj, match, replace)
 
 	output, err := yaml.Marshal(inputObj)
 	if err != nil {

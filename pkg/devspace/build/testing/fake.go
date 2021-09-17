@@ -16,7 +16,7 @@ type FakeController struct {
 func NewFakeController(config *latest.Config) build.Controller {
 	builtImages := map[string]string{}
 	for _, imageConf := range config.Images {
-		if imageConf.Build != nil && imageConf.Build.Disabled == true {
+		if imageConf.Build != nil && imageConf.Build.Disabled {
 			continue
 		}
 

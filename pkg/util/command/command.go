@@ -1,12 +1,13 @@
 package command
 
 import (
-	"github.com/pkg/errors"
 	"io"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	goansi "github.com/k0kubun/go-ansi"
 )
@@ -120,7 +121,7 @@ func ShouldExecuteOnOS(os string) bool {
 				break
 			}
 		}
-		if found == false {
+		if !found {
 			return false
 		}
 	}

@@ -2,13 +2,14 @@ package hook
 
 import (
 	"context"
+	"io"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
-	"io"
 )
 
 func NewLogsHook(writer io.Writer) RemoteHook {

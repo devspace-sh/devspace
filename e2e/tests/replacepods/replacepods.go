@@ -2,6 +2,11 @@ package replacepods
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
@@ -10,13 +15,9 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/podreplace"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/onsi/ginkgo"
-	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"os"
-	"strings"
-	"time"
 )
 
 var _ = DevSpaceDescribe("replacepods", func() {
@@ -122,6 +123,7 @@ var _ = DevSpaceDescribe("replacepods", func() {
 			},
 		}
 		err = purgeCmd.Run(f)
+		framework.ExpectNoError(err)
 
 		// wait until all pods are killed
 		err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {

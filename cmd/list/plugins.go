@@ -1,10 +1,11 @@
 package list
 
 import (
+	"strconv"
+
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 type pluginsCmd struct {

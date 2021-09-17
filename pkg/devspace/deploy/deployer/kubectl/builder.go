@@ -2,14 +2,15 @@ package kubectl
 
 import (
 	"fmt"
+	"os/exec"
+	"regexp"
+	"strings"
+
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"os/exec"
-	"regexp"
-	"strings"
 )
 
 // Builder is the manifest builder interface
@@ -73,7 +74,7 @@ func NewKubectlBuilder(path string, config *latest.DeploymentConfig, context, na
 
 func (k *kubectlBuilder) Build(manifest string, cmd RunCommand) ([]*unstructured.Unstructured, error) {
 	args := []string{"create"}
-	if k.context != "" && k.isInCluster == false {
+	if k.context != "" && !k.isInCluster {
 		args = append(args, "--context", k.context)
 	}
 	if k.namespace != "" {
@@ -81,7 +82,7 @@ func (k *kubectlBuilder) Build(manifest string, cmd RunCommand) ([]*unstructured
 	}
 
 	args = append(args, "--dry-run", "--output", "yaml", "--validate=false")
-	if k.config.Kubectl.Kustomize != nil && *k.config.Kubectl.Kustomize == true {
+	if k.config.Kubectl.Kustomize != nil && *k.config.Kubectl.Kustomize {
 		args = append(args, "--kustomize", manifest)
 	} else {
 		args = append(args, "--filename", manifest)

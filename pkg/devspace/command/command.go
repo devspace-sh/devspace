@@ -1,10 +1,11 @@
 package command
 
 import (
-	"github.com/loft-sh/devspace/pkg/util/command"
-	"github.com/loft-sh/devspace/pkg/util/shell"
 	"io"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/shell"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 

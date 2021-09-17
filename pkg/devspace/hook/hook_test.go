@@ -21,7 +21,7 @@ func TestHookWithoutExecution(t *testing.T) {
 	// Execute 1 hook with no when
 	conf = config.NewConfig(nil, &latest.Config{
 		Hooks: []*latest.HookConfig{
-			&latest.HookConfig{},
+			{},
 		},
 	}, nil, nil, constants.DefaultConfigPath)
 	err = ExecuteHooks(nil, conf, nil, nil, log.Discard)
@@ -32,7 +32,7 @@ func TestHookWithoutExecution(t *testing.T) {
 	// Execute 1 hook with no When.Before and no When.After
 	conf = config.NewConfig(nil, &latest.Config{
 		Hooks: []*latest.HookConfig{
-			&latest.HookConfig{
+			{
 				Events: []string{"before:deploy"},
 			},
 		},
@@ -46,7 +46,7 @@ func TestHookWithoutExecution(t *testing.T) {
 func TestHookWithExecution(t *testing.T) {
 	conf := config.NewConfig(nil, &latest.Config{
 		Hooks: []*latest.HookConfig{
-			&latest.HookConfig{
+			{
 				Events:  []string{"my-event"},
 				Command: "echo",
 				Args:    []string{"hello"},

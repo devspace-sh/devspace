@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
@@ -54,7 +55,7 @@ devspace --dependency my-dependency run any-command --any-command-flag
 #######################################################
 	`,
 		Args: cobra.MinimumNArgs(1),
-		RunE: func(cobraCmd *cobra.Command, args []string) error {
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			log := f.GetLog()
 
 			// get all flags till "run"
@@ -90,7 +91,7 @@ devspace --dependency my-dependency run any-command --any-command-flag
 				log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
 			}
 
-			args = os.Args[index:]
+			args := os.Args[index:]
 			plugin.SetPluginCommand(cobraCmd, args)
 			return cmd.RunRun(f, cobraCmd, args)
 		},

@@ -3,6 +3,10 @@ package services
 import (
 	"context"
 	"fmt"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -17,9 +21,6 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"strings"
-	"sync"
-	"time"
 )
 
 const k8sComponentLabel = "app.kubernetes.io/component"
@@ -183,8 +184,6 @@ func (l *logManager) Start() error {
 		case <-time.After(time.Second * 5):
 		}
 	}
-
-	return nil
 }
 
 type podInfo struct {

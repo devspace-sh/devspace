@@ -3,10 +3,11 @@ package kubectl
 import (
 	"archive/tar"
 	"compress/gzip"
-	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 
 	"github.com/loft-sh/devspace/pkg/devspace/sync"
 
@@ -74,7 +75,7 @@ func writeTar(writer io.Writer, localPath string, exclude []string) error {
 	defer tarWriter.Close()
 
 	// When its a file we copy the file to the toplevel of the tar
-	if stat.IsDir() == false {
+	if !stat.IsDir() {
 		return sync.NewArchiver(filepath.Dir(absolute), tarWriter, ignoreMatcher).AddToArchive(filepath.Base(absolute))
 	}
 

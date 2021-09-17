@@ -3,6 +3,10 @@ package hook
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -14,10 +18,7 @@ import (
 	"github.com/mgutz/ansi"
 	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
-	"io"
 	"k8s.io/apimachinery/pkg/labels"
-	"strings"
-	"time"
 )
 
 var (
@@ -120,7 +121,7 @@ func executeSingle(client kubectl.Client, config config.Config, dependencies []t
 
 		// Execute hooks
 		for _, hookConfig := range hooksToExecute {
-			if command.ShouldExecuteOnOS(hookConfig.OperatingSystem) == false {
+			if !command.ShouldExecuteOnOS(hookConfig.OperatingSystem) {
 				continue
 			}
 
@@ -195,9 +196,8 @@ func executeHook(hookConfig *latest.HookConfig, hookWriter io.Writer, client kub
 	if err != nil {
 		if hookConfig.Silent {
 			return errors.Wrapf(err, "in hook '%s': %s", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(*bytes.Buffer).String())
-		} else {
-			return errors.Wrapf(err, "in hook '%s'", ansi.Color(hookName(hookConfig), "white+b"))
 		}
+		return errors.Wrapf(err, "in hook '%s'", ansi.Color(hookName(hookConfig), "white+b"))
 	}
 
 	return nil
@@ -268,7 +268,7 @@ func hookName(hook *latest.HookConfig) string {
 			return fmt.Sprintf("logs from image %s", hook.Container.ImageSelector)
 		}
 
-		return fmt.Sprintf("logs from first container found")
+		return "logs from first container found"
 	}
 	if hook.Wait != nil && hook.Container != nil {
 		if hook.Container.Pod != "" {
@@ -281,7 +281,7 @@ func hookName(hook *latest.HookConfig) string {
 			return fmt.Sprintf("wait for image %s", hook.Container.ImageSelector)
 		}
 
-		return fmt.Sprintf("wait for everything")
+		return "wait for everything"
 	}
 	return "hook"
 }

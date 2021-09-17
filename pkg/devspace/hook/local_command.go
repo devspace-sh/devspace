@@ -2,6 +2,10 @@ package hook
 
 import (
 	"encoding/json"
+	"io"
+	"os"
+	"path/filepath"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -11,9 +15,6 @@ import (
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/shell"
 	"github.com/pkg/errors"
-	"io"
-	"os"
-	"path/filepath"
 )
 
 func NewLocalCommandHook(stdout io.Writer, stderr io.Writer) Hook {

@@ -1,11 +1,12 @@
 package watch
 
 import (
-	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 
 	"github.com/bmatcuk/doublestar"
 	"github.com/loft-sh/devspace/pkg/util/log"

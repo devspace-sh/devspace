@@ -2,22 +2,20 @@ package build
 
 import (
 	"testing"
-
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
 
-type createBuilderTestCase struct {
-	name string
+// type createBuilderTestCase struct {
+// 	name string
 
-	imageConfigName string
-	imageConf       *latest.ImageConfig
-	imageTag        string
-	options         Options
-	pingErr         error
+// 	imageConfigName string
+// 	imageConf       *latest.ImageConfig
+// 	imageTag        string
+// 	options         Options
+// 	pingErr         error
 
-	expectedErr     string
-	expectedBuilder interface{}
-}
+// 	expectedErr     string
+// 	expectedBuilder interface{}
+// }
 
 func TestCreateBuilder(t *testing.T) {
 	/*fakeDocker := &fakedocker.FakeClient{

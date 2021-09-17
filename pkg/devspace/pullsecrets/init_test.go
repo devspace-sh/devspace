@@ -1,7 +1,5 @@
 package pullsecrets
 
-import ()
-
 /*type createPullSecretTestCase struct {
 	name string
 

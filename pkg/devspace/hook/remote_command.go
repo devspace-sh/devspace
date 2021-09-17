@@ -1,6 +1,8 @@
 package hook
 
 import (
+	"io"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -8,7 +10,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"io"
 )
 
 func NewRemoteCommandHook(stdout io.Writer, stderr io.Writer) RemoteHook {

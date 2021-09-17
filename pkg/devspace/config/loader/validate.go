@@ -145,7 +145,7 @@ func isDependencyNameUnique(name string, dependencies []*latest.DependencyConfig
 	found := false
 	for _, d := range dependencies {
 		if d.Name == name {
-			if found == true {
+			if found {
 				return false
 			}
 
@@ -208,7 +208,7 @@ func validateHooks(config *latest.Config) error {
 		if hookConfig.Wait != nil && hookConfig.Container == nil {
 			return errors.Errorf("hooks[%d].container is required if hooks[%d].wait is used", index, index)
 		}
-		if hookConfig.Wait != nil && hookConfig.Wait.Running == false && hookConfig.Wait.TerminatedWithCode == nil {
+		if hookConfig.Wait != nil && !hookConfig.Wait.Running && hookConfig.Wait.TerminatedWithCode == nil {
 			return errors.Errorf("hooks[%d].wait.running or hooks[%d].wait.terminatedWithCode is required if hooks[%d].wait is used", index, index, index)
 		}
 	}
@@ -224,13 +224,13 @@ func validateDeployments(config *latest.Config) error {
 		if deployConfig.Helm == nil && deployConfig.Kubectl == nil {
 			return errors.Errorf("Please specify either helm or kubectl as deployment type in deployment %s", deployConfig.Name)
 		}
-		if deployConfig.Helm != nil && (deployConfig.Helm.Chart == nil || deployConfig.Helm.Chart.Name == "") && (deployConfig.Helm.ComponentChart == nil || *deployConfig.Helm.ComponentChart == false) {
+		if deployConfig.Helm != nil && (deployConfig.Helm.Chart == nil || deployConfig.Helm.Chart.Name == "") && (deployConfig.Helm.ComponentChart == nil || !*deployConfig.Helm.ComponentChart) {
 			return errors.Errorf("deployments[%d].helm.chart and deployments[%d].helm.chart.name or deployments[%d].helm.componentChart is required", index, index, index)
 		}
 		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
 			return errors.Errorf("deployments[%d].kubectl.manifests is required", index)
 		}
-		if deployConfig.Helm != nil && deployConfig.Helm.ComponentChart != nil && *deployConfig.Helm.ComponentChart == true {
+		if deployConfig.Helm != nil && deployConfig.Helm.ComponentChart != nil && *deployConfig.Helm.ComponentChart {
 			// Load override values from path
 			overwriteValues := map[interface{}]interface{}{}
 			if deployConfig.Helm.ValuesFiles != nil {
@@ -365,7 +365,7 @@ func validateDev(config *latest.Config) error {
 		if definedSelectors > 1 {
 			return errors.Errorf("Error in config: image selector and label selector cannot both be defined in replace pods at index %d", index)
 		}
-		if isReplacePodsUnique(index, rp, config.Dev.ReplacePods) == false {
+		if !isReplacePodsUnique(index, rp, config.Dev.ReplacePods) {
 			return errors.Errorf("Error in config: image selector or label selector is not unique in replace pods at index %d", index)
 		}
 	}
@@ -380,7 +380,7 @@ func validateDev(config *latest.Config) error {
 			if len(port.PortMappings) == 0 && len(port.PortMappingsReverse) == 0 {
 				return errors.Errorf("Error in config: portMappings is empty in port config at index %d", index)
 			}
-			if ValidContainerArch(port.Arch) == false {
+			if !ValidContainerArch(port.Arch) {
 				return errors.Errorf("Error in config: ports.arch is not valid '%s' at index %d", port.Arch, index)
 			}
 		}
@@ -394,10 +394,10 @@ func validateDev(config *latest.Config) error {
 			}
 
 			// Validate initial sync strategy
-			if ValidInitialSyncStrategy(sync.InitialSync) == false {
+			if !ValidInitialSyncStrategy(sync.InitialSync) {
 				return errors.Errorf("Error in config: sync.initialSync is not valid '%s' at index %d", sync.InitialSync, index)
 			}
-			if ValidContainerArch(sync.Arch) == false {
+			if !ValidContainerArch(sync.Arch) {
 				return errors.Errorf("Error in config: sync.arch is not valid '%s' at index %d", sync.Arch, index)
 			}
 		}

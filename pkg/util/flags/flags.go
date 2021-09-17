@@ -1,11 +1,11 @@
 package flags
 
 import (
-	"errors"
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
 // ApplyExtraFlags args parses the flags for a certain command from the environment variables
@@ -96,7 +96,7 @@ func ParseCommandLine(command string) ([]string, error) {
 	}
 
 	if state == "quotes" {
-		return []string{}, errors.New(fmt.Sprintf("Unclosed quote in command line: %s", command))
+		return []string{}, fmt.Errorf("unclosed quote in command line: %s", command)
 	}
 
 	if current != "" {

@@ -1,6 +1,6 @@
 package cmd
 
-type devTestCase struct{}
+// type devTestCase struct{}
 
 /*func TestDev(t *testing.T) {
 dir, err := ioutil.TempDir("", "test")

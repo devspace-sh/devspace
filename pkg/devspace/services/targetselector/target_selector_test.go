@@ -1,7 +1,5 @@
 package targetselector
 
-import ()
-
 /*func TestTargetSelector(t *testing.T) {
 	namespace := "test"
 	selectedContainerName := "TestContainer2"

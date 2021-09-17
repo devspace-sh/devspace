@@ -5,6 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/util"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -13,11 +19,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/mitchellh/go-homedir"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // PredefinedVariableOptions holds the options for a predefined variable to load

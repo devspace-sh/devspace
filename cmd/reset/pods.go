@@ -2,6 +2,7 @@ package reset
 
 import (
 	"context"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
@@ -123,7 +124,7 @@ func ResetPods(client kubectl.Client, config config.Config, dependencies []depen
 	}
 
 	if resetted == 0 {
-		if errored == false {
+		if !errored {
 			log.Info("No pods to reset found")
 		}
 	} else {

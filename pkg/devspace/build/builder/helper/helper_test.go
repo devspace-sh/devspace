@@ -1,7 +1,5 @@
 package helper
 
-import ()
-
 /*var expectedAbsoluteContextPath, expectedAbsoluteDockerfilePath string
 var expectedEntryPoint *[]*string
 var expectedLog log.Logger

@@ -1,11 +1,12 @@
 package docker
 
 import (
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	dockertypes "github.com/docker/docker/api/types"
 )
@@ -36,9 +37,7 @@ func (c *client) ImageBuildCLI(useBuildKit bool, context io.Reader, writer io.Wr
 		args = append(args, "--target", options.Target)
 	}
 
-	for _, arg := range additionalArgs {
-		args = append(args, arg)
-	}
+	args = append(args, additionalArgs...)
 
 	args = append(args, "-")
 

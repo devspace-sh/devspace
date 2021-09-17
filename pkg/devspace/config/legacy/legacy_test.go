@@ -1,11 +1,12 @@
 package legacy
 
 import (
+	"testing"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
-	"testing"
 )
 
 type testCase struct {

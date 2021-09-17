@@ -2,11 +2,12 @@ package pullsecrets
 
 import (
 	"context"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -26,7 +27,7 @@ func (r *client) CreatePullSecrets() (err error) {
 
 		// gather pull secrets from images
 		for _, imageConf := range r.config.Config().Images {
-			if imageConf.CreatePullSecret == nil || *imageConf.CreatePullSecret == true {
+			if imageConf.CreatePullSecret == nil || *imageConf.CreatePullSecret {
 				registryURL, err := GetRegistryFromImageName(imageConf.Image)
 				if err != nil {
 					return err
@@ -139,7 +140,7 @@ func (r *client) addPullSecretsToServiceAccount(pullSecretName string, serviceAc
 				break
 			}
 		}
-		if found == false {
+		if !found {
 			sa.ImagePullSecrets = append(sa.ImagePullSecrets, v1.LocalObjectReference{Name: pullSecretName})
 			_, err := r.kubeClient.KubeClient().CoreV1().ServiceAccounts(r.kubeClient.Namespace()).Update(context.TODO(), sa, metav1.UpdateOptions{})
 			if err != nil {

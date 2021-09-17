@@ -181,7 +181,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 	syncConfig := &latest.SyncConfig{}
 	if cmd.GlobalFlags.ConfigPath != "" && config != nil {
 		if len(config.Dev.Sync) == 0 {
-			return fmt.Errorf("No sync config found in %s", cmd.GlobalFlags.ConfigPath)
+			return fmt.Errorf("no sync config found in %s", cmd.GlobalFlags.ConfigPath)
 		}
 
 		// Check which sync config should be used

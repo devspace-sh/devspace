@@ -27,7 +27,7 @@ func UI(servicesClient services.Client, port int) error {
 		logger.Warnf("Couldn't start UI server: %v", err)
 	} else {
 		// Start server
-		go func() { serv.ListenAndServe() }()
+		go func() { _ = serv.ListenAndServe() }()
 
 		logger.WriteString("\n#########################################################\n")
 		logger.Infof("DevSpace UI available at: %s", ansi.Color("http://"+serv.Server.Addr, "white+b"))
@@ -49,7 +49,7 @@ func Sync(servicesClient services.Client, interrupt chan error, printSyncLog, ve
 
 	// start in dependencies
 	for _, d := range servicesClient.Dependencies() {
-		if d.DependencyConfig().Dev == nil || d.DependencyConfig().Dev.Sync == false {
+		if d.DependencyConfig().Dev == nil || !d.DependencyConfig().Dev.Sync {
 			continue
 		}
 		err = d.StartSync(servicesClient.KubeClient(), interrupt, printSyncLog, verbose, servicesClient.Log())
@@ -78,7 +78,7 @@ func PortForwarding(servicesClient services.Client, interrupt chan error) error 
 		return errors.Errorf("Unable to start portforwarding: %v", err)
 	}
 	for _, d := range servicesClient.Dependencies() {
-		if d.DependencyConfig().Dev == nil || d.DependencyConfig().Dev.Ports == false {
+		if d.DependencyConfig().Dev == nil || !d.DependencyConfig().Dev.Ports {
 			continue
 		}
 		err = d.StartPortForwarding(servicesClient.KubeClient(), interrupt, servicesClient.Log())
@@ -93,7 +93,7 @@ func PortForwarding(servicesClient services.Client, interrupt chan error) error 
 		return errors.Errorf("Unable to start portforwarding: %v", err)
 	}
 	for _, d := range servicesClient.Dependencies() {
-		if d.DependencyConfig().Dev == nil || d.DependencyConfig().Dev.Ports == false {
+		if d.DependencyConfig().Dev == nil || !d.DependencyConfig().Dev.Ports {
 			continue
 		}
 		err = d.StartReversePortForwarding(servicesClient.KubeClient(), interrupt, servicesClient.Log())
@@ -121,7 +121,7 @@ func ReplacePods(servicesClient services.Client) error {
 		return err
 	}
 	for _, d := range servicesClient.Dependencies() {
-		if d.DependencyConfig().Dev == nil || d.DependencyConfig().Dev.ReplacePods == false {
+		if d.DependencyConfig().Dev == nil || !d.DependencyConfig().Dev.ReplacePods {
 			continue
 		}
 		err = d.ReplacePods(servicesClient.KubeClient(), servicesClient.Log())

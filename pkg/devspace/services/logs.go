@@ -2,11 +2,12 @@ package services
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
-	"github.com/mgutz/ansi"
 	"io"
 	"os"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	"github.com/mgutz/ansi"
 )
 
 // StartLogs print the logs and then attaches to the container
@@ -18,7 +19,7 @@ func (serviceClient *client) StartLogs(options targetselector.Options, follow bo
 func (serviceClient *client) StartLogsWithWriter(options targetselector.Options, follow bool, tail int64, wait bool, writer io.Writer) error {
 	targetSelector := targetselector.NewTargetSelector(serviceClient.client)
 	options.Wait = &wait
-	if wait == false {
+	if !wait {
 		options.FilterContainer = nil
 	} else {
 		options.FilterPod = nil

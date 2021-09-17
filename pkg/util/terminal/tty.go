@@ -1,8 +1,9 @@
 package terminal
 
 import (
-	dockerterm "github.com/moby/term"
 	"io"
+
+	dockerterm "github.com/moby/term"
 	"k8s.io/kubectl/pkg/util/term"
 )
 

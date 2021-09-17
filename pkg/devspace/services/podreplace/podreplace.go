@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"time"
+
 	yaml2 "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
@@ -27,8 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"strconv"
-	"time"
 )
 
 const (
@@ -216,7 +217,7 @@ func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config
 		shouldUpdate, err := updateNeeded(ctx, client, selectedPod, config, dependencies, replacePod, log)
 		if err != nil {
 			return err
-		} else if shouldUpdate == false {
+		} else if !shouldUpdate {
 			return nil
 		}
 	} else {
@@ -604,9 +605,9 @@ func applyPodPatches(pod *corev1.Pod, replacePod *latest.ReplacePod) (*corev1.Po
 	}
 
 	// convert back
-	rawJson := convertFromInterface(raw)
+	rawJSON := convertFromInterface(raw)
 	retPod := &corev1.Pod{}
-	err = json.Unmarshal(rawJson, retPod)
+	err = json.Unmarshal(rawJSON, retPod)
 	if err != nil {
 		return nil, err
 	}

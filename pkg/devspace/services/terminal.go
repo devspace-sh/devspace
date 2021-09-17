@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	kubectlExec "k8s.io/client-go/util/exec"
 	"strings"
 	"time"
+
+	kubectlExec "k8s.io/client-go/util/exec"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
@@ -34,7 +35,7 @@ func (serviceClient *client) StartTerminal(
 ) (int, error) {
 	command := serviceClient.getCommand(args, workDir)
 	targetSelector := targetselector.NewTargetSelector(serviceClient.client)
-	if wait == false {
+	if !wait {
 		options.Wait = &wait
 	} else {
 		options.FilterPod = nil
@@ -107,9 +108,7 @@ func (serviceClient *client) StartTerminal(
 func (serviceClient *client) getCommand(args []string, workDir string) []string {
 	if serviceClient.config != nil && serviceClient.config.Config() != nil && serviceClient.config.Config().Dev.Terminal != nil {
 		if len(args) == 0 {
-			for _, cmd := range serviceClient.config.Config().Dev.Terminal.Command {
-				args = append(args, cmd)
-			}
+			args = append(args, serviceClient.config.Config().Dev.Terminal.Command...)
 		}
 		if workDir == "" {
 			workDir = serviceClient.config.Config().Dev.Terminal.WorkDir

@@ -28,7 +28,7 @@ func (f *FakeSurvey) Question(params *surveypkg.QuestionOptions) (string, error)
 		return params.DefaultValue, nil
 	}
 
-	return "", errors.New("No answer to return specified")
+	return "", errors.New("no answer to return specified")
 }
 
 // SetNextAnswer will set the next answer for the question function

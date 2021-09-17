@@ -5,10 +5,11 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"strconv"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
@@ -224,7 +225,7 @@ func (cmd *DeployCmd) runCommand(f factory.Factory, client kubectl.Client, confi
 	if len(cmd.Dependency) == 0 {
 		// build images
 		builtImages := make(map[string]string)
-		if cmd.SkipBuild == false {
+		if !cmd.SkipBuild {
 			builtImages, err = f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
 				SkipPush:                  cmd.SkipPush,
 				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
@@ -233,7 +234,7 @@ func (cmd *DeployCmd) runCommand(f factory.Factory, client kubectl.Client, confi
 				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
 			}, cmd.log)
 			if err != nil {
-				if strings.Index(err.Error(), "no space left on device") != -1 {
+				if strings.Contains(err.Error(), "no space left on device") {
 					err = errors.Errorf("%v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
 				}
 
@@ -251,7 +252,7 @@ func (cmd *DeployCmd) runCommand(f factory.Factory, client kubectl.Client, confi
 
 		// what deployments should be deployed
 		deployments := []string{}
-		if cmd.SkipDeploy == false {
+		if !cmd.SkipDeploy {
 			if cmd.Deployments != "" {
 				deployments = strings.Split(cmd.Deployments, ",")
 				for index := range deployments {

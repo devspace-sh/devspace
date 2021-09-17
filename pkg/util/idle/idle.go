@@ -1,9 +1,10 @@
 package idle
 
 import (
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"time"
 )
 
 type Monitor interface {

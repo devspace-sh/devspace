@@ -2,13 +2,13 @@ package kubectl
 
 import (
 	"bytes"
-	"github.com/loft-sh/devspace/pkg/util/terminal"
 	"io"
-	"k8s.io/kubectl/pkg/util/term"
 	"net/http"
 
+	"github.com/loft-sh/devspace/pkg/util/terminal"
+	"k8s.io/kubectl/pkg/util/term"
+
 	corev1 "k8s.io/api/core/v1"
-	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/transport/spdy"
 	kubectlExec "k8s.io/client-go/util/exec"
@@ -112,7 +112,7 @@ func (client *client) ExecStreamWithTransport(options *ExecStreamWithTransportOp
 
 // ExecStreamOptions are the options for ExecStream
 type ExecStreamOptions struct {
-	Pod *k8sv1.Pod
+	Pod *corev1.Pod
 
 	Container string
 	Command   []string
@@ -142,7 +142,7 @@ func (client *client) ExecStream(options *ExecStreamOptions) error {
 }
 
 // ExecBuffered executes a command for kubernetes and returns the output and error buffers
-func (client *client) ExecBuffered(pod *k8sv1.Pod, container string, command []string, stdin io.Reader) ([]byte, []byte, error) {
+func (client *client) ExecBuffered(pod *corev1.Pod, container string, command []string, stdin io.Reader) ([]byte, []byte, error) {
 	stdoutBuffer := &bytes.Buffer{}
 	stderrBuffer := &bytes.Buffer{}
 
@@ -155,7 +155,7 @@ func (client *client) ExecBuffered(pod *k8sv1.Pod, container string, command []s
 		Stderr:    stderrBuffer,
 	})
 	if kubeExecError != nil {
-		if _, ok := kubeExecError.(kubectlExec.CodeExitError); ok == false {
+		if _, ok := kubeExecError.(kubectlExec.CodeExitError); !ok {
 			return nil, nil, kubeExecError
 		}
 	}

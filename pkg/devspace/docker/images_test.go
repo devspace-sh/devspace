@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 	log "github.com/loft-sh/devspace/pkg/util/log/testing"
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -14,8 +13,6 @@ type deleteImageTestCase struct {
 	name string
 
 	deletedImageName string
-	filter           filters.Args
-
 	expectedResponse []types.ImageDeleteResponseItem
 	expectedErr      bool
 }
@@ -26,7 +23,7 @@ func TestDeleteImage(t *testing.T) {
 			name:             "Delete by name",
 			deletedImageName: "deleteThis",
 			expectedResponse: []types.ImageDeleteResponseItem{
-				types.ImageDeleteResponseItem{
+				{
 					Deleted:  "deleteThis",
 					Untagged: "deleteThis",
 				},
@@ -57,7 +54,7 @@ func TestDeleteImage(t *testing.T) {
 		authsAsYaml, err := yaml.Marshal(response)
 		assert.NilError(t, err, "Error parsing response to yaml in testCase %s", testCase.name)
 		expectedAsYaml, err := yaml.Marshal(testCase.expectedResponse)
-		assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+		assert.NilError(t, err, "Error parsing exception to yaml in testCase %s", testCase.name)
 		assert.Equal(t, string(authsAsYaml), string(expectedAsYaml), "Unexpected response in testCase %s", testCase.name)
 	}
 }

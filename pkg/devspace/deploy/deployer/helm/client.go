@@ -58,7 +58,7 @@ func New(config config2.Config, dependencies []types.Dependency, helmClient helm
 	}
 
 	// Exchange chart
-	if deployConfig.Helm.ComponentChart != nil && *deployConfig.Helm.ComponentChart == true {
+	if deployConfig.Helm.ComponentChart != nil && *deployConfig.Helm.ComponentChart {
 		// extract component chart if possible
 		filename := "component-chart-" + DevSpaceChartConfig.Version + ".tgz"
 		componentChartBytes, err := assets.Asset(filename)
@@ -102,9 +102,9 @@ func New(config config2.Config, dependencies []types.Dependency, helmClient helm
 // Delete deletes the release
 func (d *DeployConfig) Delete() error {
 	// Delete with helm engine
-	if d.DeploymentConfig.Helm.V2 == true {
+	if d.DeploymentConfig.Helm.V2 {
 		isDeployed := helmv2.IsTillerDeployed(d.Kube, d.TillerNamespace)
-		if isDeployed == false {
+		if !isDeployed {
 			return nil
 		}
 	}

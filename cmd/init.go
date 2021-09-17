@@ -32,12 +32,11 @@ import (
 // SpaceNameValidationRegEx is the sapace name validation regex
 var SpaceNameValidationRegEx = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9-]{1,30}[a-zA-Z0-9]$")
 
-var gitFolderIgnoreRegex = regexp.MustCompile("/?\\.git/?")
+var gitFolderIgnoreRegex = regexp.MustCompile(`/?\.git/?`)
 
 const gitIgnoreFile = ".gitignore"
-const dockerIgnoreFile = ".dockerignore"
+
 const devspaceFolderGitignore = "\n\n# Ignore DevSpace cache and log folder\n.devspace/\n"
-const configDockerignore = "\n\n# Ignore devspace.yaml file to prevent image rebuilding after config changes\ndevspace.yaml\n.devspace/\n"
 
 const (
 	// Dockerfile not found options
@@ -51,9 +50,6 @@ const (
 
 	// The default name for the production profile
 	productionProfileName = "production"
-
-	// The default name for the interactive profile
-	interactiveProfileName = "interactive"
 )
 
 // InitCmd is a struct that defines a command call for "init"
@@ -63,9 +59,7 @@ type InitCmd struct {
 	Dockerfile  string
 	Context     string
 	Provider    string
-
-	dockerfileGenerator *generator.DockerfileGenerator
-	log                 log.Logger
+	log         log.Logger
 }
 
 // NewInitCmd creates a new init command
@@ -106,7 +100,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	cmd.log = f.GetLog()
 	configLoader := f.NewConfigLoader("")
 	configExists := configLoader.Exists()
-	if configExists && cmd.Reconfigure == false {
+	if configExists && !cmd.Reconfigure {
 		cmd.log.Info("Config already exists. If you want to recreate the config please run `devspace init --reconfigure`")
 		cmd.log.Infof("\r         \nIf you want to continue with the existing config, run:\n- `%s` to develop application\n- `%s` to deploy application\n", ansi.Color("devspace dev", "white+b"), ansi.Color("devspace deploy", "white+b"))
 		return nil
@@ -133,6 +127,9 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	// Create config
 	config := latest.New().(*latest.Config)
 	generated, err := configLoader.LoadGenerated(nil)
+	if err != nil {
+		return err
+	}
 
 	// Create ConfigureManager
 	configureManager := f.NewConfigureManager(config, generated, cmd.log)
@@ -150,7 +147,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	imageQuestion := ""
 	selectedDeploymentOption := ""
 
-	for true {
+	for {
 		selectedDeploymentOption, err = cmd.log.Question(&survey.QuestionOptions{
 			Question:     "How do you want to deploy this project?",
 			DefaultValue: ComponentChartOption,
@@ -166,9 +163,6 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		}
 
 		if selectedDeploymentOption == HelmChartOption {
-			imageQuestion = "What is the main container image of this project which is deployed by this Helm chart? (e.g. ecr.io/project/image)"
-			err = configureManager.AddHelmDeployment(deploymentName)
-		} else if selectedDeploymentOption == HelmChartOption {
 			imageQuestion = "What is the main container image of this project which is deployed by this Helm chart? (e.g. ecr.io/project/image)"
 			err = configureManager.AddHelmDeployment(deploymentName)
 		} else if selectedDeploymentOption == ManifestsOption || selectedDeploymentOption == KustomizeOption {
@@ -199,7 +193,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	imageVarName := "IMAGE"
 	imageVar := "${" + imageVarName + "}"
 
-	for true {
+	for {
 		image := ""
 		if imageQuestion != "" {
 			image, err = cmd.log.Question(&survey.QuestionOptions{
@@ -370,7 +364,7 @@ func appendToIgnoreFile(ignoreFile, content string) error {
 	// Check if ignoreFile exists
 	_, err := os.Stat(ignoreFile)
 	if os.IsNotExist(err) {
-		fsutil.WriteToFile([]byte(content), ignoreFile)
+		_ = fsutil.WriteToFile([]byte(content), ignoreFile)
 	} else {
 		fileContent, err := ioutil.ReadFile(ignoreFile)
 		if err != nil {
@@ -378,7 +372,7 @@ func appendToIgnoreFile(ignoreFile, content string) error {
 		}
 
 		// append only if not found in file content
-		if strings.Contains(string(fileContent), content) == false {
+		if !strings.Contains(string(fileContent), content) {
 			file, err := os.OpenFile(ignoreFile, os.O_APPEND|os.O_WRONLY, 0600)
 			if err != nil {
 				return errors.Errorf("Error writing file %s: %v", ignoreFile, err)
@@ -405,7 +399,7 @@ func getDeploymentName() (string, error) {
 	dirname = regexp.MustCompile("[^a-zA-Z0-9-]+").ReplaceAllString(dirname, "-")
 	dirname = strings.Trim(dirname, "-")
 
-	if SpaceNameValidationRegEx.MatchString(dirname) == false || len(dirname) > 42 {
+	if !SpaceNameValidationRegEx.MatchString(dirname) || len(dirname) > 42 {
 		dirname = "devspace"
 	}
 
@@ -476,7 +470,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 			dockerignoreRules := strings.Split(string(dockerignore), "\n")
 			for _, ignoreRule := range dockerignoreRules {
 				ignoreRule = strings.TrimSpace(ignoreRule)
-				if len(ignoreRule) > 0 && ignoreRule[0] != "#"[0] && gitFolderIgnoreRegex.MatchString(ignoreRule) == false {
+				if len(ignoreRule) > 0 && ignoreRule[0] != "#"[0] && !gitFolderIgnoreRegex.MatchString(ignoreRule) {
 					excludePaths = append(excludePaths, ignoreRule)
 				}
 			}
@@ -507,7 +501,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 
 			if language == "java" {
 				stat, err := os.Stat("build.gradle")
-				if err == nil && stat.IsDir() == false {
+				if err == nil && !stat.IsDir() {
 					language += "-gradle"
 				} else {
 					language += "-maven"

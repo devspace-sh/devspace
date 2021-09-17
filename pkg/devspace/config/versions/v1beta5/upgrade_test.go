@@ -20,7 +20,7 @@ func TestSimple(t *testing.T) {
 		{
 			in: &Config{
 				Images: map[string]*ImageConfig{
-					"test": &ImageConfig{
+					"test": {
 						Image: "Test",
 						Build: &BuildConfig{
 							Disabled: ptr.Bool(true),
@@ -30,10 +30,10 @@ func TestSimple(t *testing.T) {
 							},
 						},
 					},
-					"test2": &ImageConfig{
+					"test2": {
 						Image: "Test",
 					},
-					"test3": &ImageConfig{
+					"test3": {
 						Image: "Test",
 						Build: &BuildConfig{
 							Custom: &CustomConfig{
@@ -45,7 +45,7 @@ func TestSimple(t *testing.T) {
 			},
 			expected: &next.Config{
 				Images: map[string]*next.ImageConfig{
-					"test": &next.ImageConfig{
+					"test": {
 						Image: "Test",
 						Build: &next.BuildConfig{
 							Disabled: ptr.Bool(true),
@@ -55,10 +55,10 @@ func TestSimple(t *testing.T) {
 							},
 						},
 					},
-					"test2": &next.ImageConfig{
+					"test2": {
 						Image: "Test",
 					},
-					"test3": &next.ImageConfig{
+					"test3": {
 						Image: "Test",
 						Build: &next.BuildConfig{
 							Custom: &next.CustomConfig{

@@ -2,6 +2,13 @@ package server
 
 import (
 	"encoding/json"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -16,12 +23,6 @@ import (
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"sync"
 )
 
 // Server is listens on a given port for the ui functionality
@@ -51,7 +52,7 @@ func NewServer(config config.Config, dependencies []types.Dependency, host strin
 
 		if host == "localhost" {
 			unused, err := port.CheckHostPort(host, usePort)
-			if unused == false {
+			if !unused {
 				return nil, errors.Errorf("Port %d already in use: %v", usePort, err)
 			}
 		}
@@ -217,7 +218,7 @@ func (h *handler) version(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(b)
+	_, _ = w.Write(b)
 }
 
 type returnConfig struct {
@@ -274,7 +275,7 @@ func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(b)
+	_, _ = w.Write(b)
 }
 
 func (h *handler) request(w http.ResponseWriter, r *http.Request) {
@@ -340,7 +341,7 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(out))
+	_, _ = w.Write([]byte(out))
 }
 
 func (h *handler) getClientFromCache(kubeContext, kubeNamespace string) (kubectl.Client, error) {

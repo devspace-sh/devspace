@@ -56,7 +56,7 @@ type Config struct {
 	// Commands are custom commands that can be executed via 'devspace run COMMAND'
 	Commands []*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
-	// Profiles can be used to change the current configuration and change the behaviour of devspace
+	// Profiles can be used to change the current configuration and change the behavior of devspace
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 
 	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
@@ -102,7 +102,7 @@ type ImageConfig struct {
 	// for example myregistry.com/mynamespace/myimage
 	Image string `yaml:"image" json:"image"`
 
-	// Tags is an array that specifes all tags that should be build during
+	// Tags is an array that specifies all tags that should be build during
 	// the build process. If this is empty, devspace will generate a random tag
 	Tags []string `yaml:"tags,omitempty" json:"tags,omitempty"`
 
@@ -476,7 +476,7 @@ type ComponentConfig struct {
 	TopologySpreadConstraints     []map[interface{}]interface{} `yaml:"topologySpreadConstraints,omitempty" json:"topologySpreadConstraints,omitempty"`
 	ActiveDeadlineSeconds         *int                          `yaml:"activeDeadlineSeconds,omitempty" json:"activeDeadlineSeconds,omitempty"`
 	AutomountServiceAccountToken  *bool                         `yaml:"automountServiceAccountToken,omitempty" json:"automountServiceAccountToken,omitempty"`
-	DnsPolicy                     *string                       `yaml:"dnsPolicy,omitempty" json:"dnsPolicy,omitempty"`
+	DNSPolicy                     *string                       `yaml:"dnsPolicy,omitempty" json:"dnsPolicy,omitempty"`
 	EnableServiceLinks            *bool                         `yaml:"enableServiceLinks,omitempty" json:"enableServiceLinks,omitempty"`
 	HostIPC                       *bool                         `yaml:"hostIPC,omitempty" json:"hostIPC,omitempty"`
 	HostNetwork                   *bool                         `yaml:"hostNetwork,omitempty" json:"hostNetwork,omitempty"`
@@ -528,7 +528,7 @@ type VolumeMountConfig struct {
 	Volume        *VolumeMountVolumeConfig `yaml:"volume,omitempty" json:"volume,omitempty"`
 }
 
-// VolumeMountVolumeConfig holds the configuration for a specfic mount path volume
+// VolumeMountVolumeConfig holds the configuration for a specific mount path volume
 type VolumeMountVolumeConfig struct {
 	Name     string `yaml:"name,omitempty" json:"name,omitempty"`
 	SubPath  string `yaml:"subPath,omitempty" json:"subPath,omitempty"`
@@ -562,7 +562,7 @@ type ServiceConfig struct {
 	ExternalName             string                      `yaml:"externalName,omitempty" json:"externalName,omitempty"`
 	ExternalTrafficPolicy    string                      `yaml:"externalTrafficPolicy,omitempty" json:"externalTrafficPolicy,omitempty"`
 	HealthCheckNodePort      int                         `yaml:"healthCheckNodePort,omitempty" json:"healthCheckNodePort,omitempty"`
-	IpFamily                 *string                     `yaml:"ipFamily,omitempty" json:"ipFamily,omitempty"`
+	IPFamily                 *string                     `yaml:"ipFamily,omitempty" json:"ipFamily,omitempty"`
 	LoadBalancerIP           *string                     `yaml:"loadBalancerIP,omitempty" json:"loadBalancerIP,omitempty"`
 	LoadBalancerSourceRanges []string                    `yaml:"loadBalancerSourceRanges,omitempty" json:"loadBalancerSourceRanges,omitempty"`
 	PublishNotReadyAddresses bool                        `yaml:"publishNotReadyAddresses,omitempty" json:"publishNotReadyAddresses,omitempty"`

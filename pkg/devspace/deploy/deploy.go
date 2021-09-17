@@ -1,10 +1,11 @@
 package deploy
 
 import (
-	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"io"
 	"strings"
+
+	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
@@ -14,7 +15,6 @@ import (
 	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	kubectlclient "github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	kubectlpkg "github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
@@ -302,7 +302,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 					}
 				}
 
-				if found == false {
+				if !found {
 					continue
 				}
 			}
@@ -375,7 +375,7 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 }
 
 // GetCachedHelmClient returns a helm client that could be cached in a helmV2Clients map. If not found it will add it to the map and create it
-func GetCachedHelmClient(config *latest.Config, deployConfig *latest.DeploymentConfig, client kubectlpkg.Client, helmV2Clients map[string]helmtypes.Client, dryInit bool, log log.Logger) (helmtypes.Client, error) {
+func GetCachedHelmClient(config *latest.Config, deployConfig *latest.DeploymentConfig, client kubectlclient.Client, helmV2Clients map[string]helmtypes.Client, dryInit bool, log log.Logger) (helmtypes.Client, error) {
 	var (
 		err        error
 		helmClient helmtypes.Client
@@ -398,8 +398,8 @@ func GetCachedHelmClient(config *latest.Config, deployConfig *latest.DeploymentC
 	return helmClient, nil
 }
 
-func getTillerNamespace(kubeClient kubectlpkg.Client, deployConfig *latest.DeploymentConfig) string {
-	if kubeClient != nil && deployConfig.Helm != nil && deployConfig.Helm.V2 == true {
+func getTillerNamespace(kubeClient kubectlclient.Client, deployConfig *latest.DeploymentConfig) string {
+	if kubeClient != nil && deployConfig.Helm != nil && deployConfig.Helm.V2 {
 		tillerNamespace := kubeClient.Namespace()
 		if deployConfig.Helm.TillerNamespace != "" {
 			tillerNamespace = deployConfig.Helm.TillerNamespace

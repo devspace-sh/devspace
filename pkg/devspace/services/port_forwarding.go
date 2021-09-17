@@ -3,13 +3,14 @@ package services
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
-	"strconv"
-	"strings"
-	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
@@ -98,7 +99,7 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 		}
 
 		open, _ := port.Check(*value.LocalPort)
-		if open == false {
+		if !open {
 			serviceClient.log.Warnf("Seems like port %d is already in use. Is another application using that port?", *value.LocalPort)
 		}
 

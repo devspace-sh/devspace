@@ -200,5 +200,5 @@ func (f *fileLogger) WriteString(message string) {
 }
 
 func (f *fileLogger) Question(params *survey.QuestionOptions) (string, error) {
-	return "", errors.New("Questions in file logger not supported")
+	return "", errors.New("questions in file logger not supported")
 }

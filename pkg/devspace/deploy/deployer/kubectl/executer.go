@@ -1,8 +1,9 @@
 package kubectl
 
 import (
-	"github.com/loft-sh/devspace/pkg/util/command"
 	"os/exec"
+
+	"github.com/loft-sh/devspace/pkg/util/command"
 )
 
 // These functions are detached from the DeployConfig so they can be faked by testers.

@@ -1,9 +1,10 @@
 package variable
 
 import (
+	"os"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/pkg/errors"
-	"os"
 )
 
 // NewEnvVariable creates a new variable that is loaded without definition

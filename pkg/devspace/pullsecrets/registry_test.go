@@ -1,7 +1,5 @@
 package pullsecrets
 
-import ()
-
 /*func TestCreatePullSecret(t *testing.T) {
 	namespace := "myns"
 	//Setting up kubeClient

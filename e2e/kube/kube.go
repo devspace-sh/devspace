@@ -44,9 +44,11 @@ func (k *KubeHelper) ExecByImageSelector(imageSelector, namespace string, comman
 	targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(nil, namespace, "", "")
 	targetOptions.AllowPick = false
 	targetOptions.Timeout = 120
-	targetOptions.ImageSelector = []imageselector.ImageSelector{imageselector.ImageSelector{
-		Image: imageSelector,
-	}}
+	targetOptions.ImageSelector = []imageselector.ImageSelector{
+		{
+			Image: imageSelector,
+		},
+	}
 	targetOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
 	container, err := targetselector.NewTargetSelector(k.client).SelectSingleContainer(context.TODO(), targetOptions, log.Discard)
 	if err != nil {
@@ -88,7 +90,7 @@ func (k *KubeHelper) CreateNamespace(name string) (string, error) {
 			Name: name,
 		},
 	}, metav1.CreateOptions{})
-	if err != nil && kerrors.IsAlreadyExists(err) == false {
+	if err != nil && !kerrors.IsAlreadyExists(err) {
 		return "", err
 	}
 
@@ -97,7 +99,7 @@ func (k *KubeHelper) CreateNamespace(name string) (string, error) {
 
 func (k *KubeHelper) DeleteNamespace(name string) error {
 	err := k.client.KubeClient().CoreV1().Namespaces().Delete(context.TODO(), name, metav1.DeleteOptions{})
-	if err != nil && kerrors.IsNotFound(err) == false {
+	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
 	return nil

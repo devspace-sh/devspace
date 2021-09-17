@@ -3,16 +3,17 @@ package tunnel
 import (
 	"context"
 	"fmt"
+	"io"
+	"net"
+	"os"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/util"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"io"
-	"net"
-	"os"
-	"strings"
 )
 
 type tunnelServer struct{}
@@ -37,7 +38,7 @@ func StartTunnelServer(reader io.Reader, writer io.Writer, exitOnClose bool) err
 	go func() {
 		s := grpc.NewServer()
 
-		remote.RegisterTunnelServer(s, NewServer())
+		remote.RegisterTunnelServer(s, newServer())
 		reflection.Register(s)
 
 		done <- s.Serve(lis)
@@ -47,7 +48,7 @@ func StartTunnelServer(reader io.Reader, writer io.Writer, exitOnClose bool) err
 	return <-done
 }
 
-func NewServer() *tunnelServer {
+func newServer() *tunnelServer {
 	return &tunnelServer{}
 }
 
@@ -67,7 +68,7 @@ func SendData(stream remote.Tunnel_InitTunnelServer, sessions <-chan *Session, c
 				HasErr:      false,
 				LogMessage:  nil,
 				Data:        bytes,
-				RequestId:   session.Id.String(),
+				RequestId:   session.ID.String(),
 				ShouldClose: !session.Open,
 			}
 			session.Unlock()
@@ -97,15 +98,15 @@ func ReceiveData(stream remote.Tunnel_InitTunnelServer, closeChan chan<- bool) {
 				continue
 			}
 
-			reqId, err := uuid.Parse(message.GetRequestId())
+			reqID, err := uuid.Parse(message.GetRequestId())
 			if err != nil {
 				logErrorf(" %s; failed to parse requestId, %v", message.GetRequestId(), err)
 				continue
 			}
 
-			session, ok := GetSession(reqId)
-			if ok != true && !message.ShouldClose {
-				logErrorf("%s; session not found in openRequests", reqId)
+			session, ok := GetSession(reqID)
+			if !ok && !message.ShouldClose {
+				logErrorf("%s; session not found in openRequests", reqID)
 				continue
 			}
 
@@ -119,14 +120,14 @@ func ReceiveData(stream remote.Tunnel_InitTunnelServer, closeChan chan<- bool) {
 				logDebugf("writing %d bytes to conn", br)
 				_, err := session.Conn.Write(data)
 				if err != nil {
-					logErrorf("%s; failed writing data to socket", reqId)
+					logErrorf("%s; failed writing data to socket", reqID)
 					message.ShouldClose = true
 				} else {
 					logDebugf("wrote %d bytes to conn", br)
 				}
 			}
 
-			if message.ShouldClose == true {
+			if message.ShouldClose {
 				logDebugf("closing session")
 				session.Close()
 				logDebugf("closed session")
@@ -164,7 +165,7 @@ func readConn(ctx context.Context, session *Session, sessions chan<- *Session) {
 			session.Unlock()
 
 			sessions <- session
-			if session.Open == false {
+			if !session.Open {
 				return
 			}
 		}

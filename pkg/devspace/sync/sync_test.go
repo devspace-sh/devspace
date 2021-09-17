@@ -1,9 +1,9 @@
+//go:build !windows
 // +build !windows
 
 package sync
 
 import (
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"io/ioutil"
 	"os"
 	"path"
@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/loft-sh/devspace/helper/server"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -113,7 +115,7 @@ func TestInitialSync(t *testing.T) {
 				ExitOnClose:  false,
 			})
 			if err != nil {
-				t.Fatal(err)
+				panic(err)
 			}
 		}()
 
@@ -138,7 +140,7 @@ func TestInitialSync(t *testing.T) {
 				ExitOnClose: false,
 			})
 			if err != nil {
-				t.Fatal(err)
+				panic(err)
 			}
 		}()
 
@@ -202,7 +204,7 @@ func TestNormalSync(t *testing.T) {
 			ExitOnClose:  false,
 		})
 		if err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
 	}()
 
@@ -227,10 +229,9 @@ func TestNormalSync(t *testing.T) {
 			ExitOnClose: false,
 		})
 		if err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
 	}()
-
 	// Start upstream client
 	err = syncClient.InitUpstream(upClientReader, upServerWriter)
 	if err != nil {
@@ -421,7 +422,7 @@ func makeRemoveAndRenameTestCases(filesToCheck testCaseList, foldersToCheck test
 			}
 			array = append(array, renameEquivalent)
 
-			isFullyIncluded, _ := regexp.Compile("(testFolder\\/)?(testFile|testFolder)(Local|Remote)$")
+			isFullyIncluded, _ := regexp.Compile(`(testFolder\/)?(testFile|testFolder)(Local|Remote)$`)
 			if isFullyIncluded.MatchString(f.path) {
 				renameEquivalent = checkedFileOrFolder{
 					path:                f.path + "_RenameToOutside",
@@ -517,7 +518,7 @@ func makeRemoteTestCases(testCases testCaseList) testCaseList {
 	for _, f := range testCases {
 		if strings.Contains(f.path, "Upload") {
 			f.path = strings.Replace(f.path, "Upload", "Download", -1)
-		} else if strings.Contains(f.path, "Download") {
+		} else {
 			f.path = strings.Replace(f.path, "Download", "Upload", -1)
 		}
 

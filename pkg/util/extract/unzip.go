@@ -38,7 +38,7 @@ func (e *extractor) UntarGz(src, dest string) error {
 	}
 
 	tarReader := tar.NewReader(uncompressedStream)
-	for true {
+	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
 			break
@@ -85,7 +85,7 @@ func (e *extractor) Unzip(src, dest string) error {
 		}
 	}()
 
-	os.MkdirAll(dest, 0755)
+	_ = os.MkdirAll(dest, 0755)
 
 	// Closure to address file descriptors issue with all the deferred .Close() methods
 	extractAndWriteFile := func(f *archivezip.File) error {
@@ -97,9 +97,9 @@ func (e *extractor) Unzip(src, dest string) error {
 
 		path := filepath.Join(dest, f.Name)
 		if f.FileInfo().IsDir() {
-			os.MkdirAll(path, f.Mode())
+			_ = os.MkdirAll(path, f.Mode())
 		} else {
-			os.MkdirAll(filepath.Dir(path), f.Mode())
+			_ = os.MkdirAll(filepath.Dir(path), f.Mode())
 			f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 			if err != nil {
 				return err

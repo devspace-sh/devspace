@@ -72,7 +72,7 @@ func (cmd *contextsCmd) RunListContexts(f factory.Factory, cobraCmd *cobra.Comma
 		}
 	}
 
-	if defaultFound == false {
+	if !defaultFound {
 		contextRows = append(contextRows, []string{
 			kubeConfig.CurrentContext,
 			"true",

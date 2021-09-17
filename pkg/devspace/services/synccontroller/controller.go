@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/builder/dockerignore"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -25,6 +24,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
+	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 )
@@ -96,7 +96,7 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 	)
 
 	// should wait for initial sync?
-	if options.SyncConfig.WaitInitialSync == nil || *options.SyncConfig.WaitInitialSync == true {
+	if options.SyncConfig.WaitInitialSync == nil || *options.SyncConfig.WaitInitialSync {
 		onInitUploadDone = make(chan struct{})
 		onInitDownloadDone = make(chan struct{})
 		pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
@@ -122,7 +122,7 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 	}
 
 	// should wait for initial sync?
-	if options.SyncConfig.WaitInitialSync == nil || *options.SyncConfig.WaitInitialSync == true {
+	if options.SyncConfig.WaitInitialSync == nil || *options.SyncConfig.WaitInitialSync {
 		log.Info("Waiting for initial sync to complete")
 		var (
 			uploadDone   = false
@@ -283,11 +283,8 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 }
 
 func (c *controller) isFatalSyncError(err error) bool {
-	if strings.Index(err.Error(), "You are trying to sync the complete container root") != -1 {
-		return true
-	}
+	return strings.Contains(err.Error(), "You are trying to sync the complete container root")
 
-	return false
 }
 
 func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, customLog logpkg.Logger) (*sync.Sync, error) {

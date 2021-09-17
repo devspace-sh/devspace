@@ -3,14 +3,15 @@ package kaniko
 import (
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"strings"
+
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"io"
-	"io/ioutil"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"strings"
 
 	"k8s.io/client-go/util/exec"
 
@@ -43,7 +44,7 @@ import (
 const EngineName = "kaniko"
 
 var (
-	_, stdout, stderr = dockerterm.StdStreams()
+	_, stdout, _ = dockerterm.StdStreams()
 )
 
 // Builder holds the necessary information to build and push docker images
@@ -123,14 +124,13 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 		return err
 	}
 
-	email := "noreply@devspace.cloud"
 	authConfig, err := b.dockerClient.GetAuthConfig(registryURL, true)
 	if err != nil {
 		return err
 	}
 
 	username = authConfig.Username
-	email = authConfig.Email
+	email := authConfig.Email
 
 	if authConfig.Password != "" {
 		password = authConfig.Password
@@ -395,7 +395,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 
 		log.StartWait("Checking build status")
-		for true {
+		for {
 			time.Sleep(time.Second)
 
 			// Check if build was successful
@@ -427,7 +427,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			return err
 		}
 		for _, pod := range pods.Items {
-			b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
+			_ = b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
 		}
 
 		return err

@@ -2,14 +2,15 @@ package util
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
+
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
-	"regexp"
-	"strings"
 )
 
 var (
@@ -50,7 +51,7 @@ func replaceWithRegEx(in string, replaceFn replaceFn, regEx *regexp.Regexp) (boo
 }
 
 func Match(key, value string, keys map[string]bool) bool {
-	if len(keys) > 0 && keys[key] == false {
+	if len(keys) > 0 && !keys[key] {
 		return false
 	}
 

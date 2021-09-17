@@ -20,14 +20,14 @@ func TestSimple(t *testing.T) {
 		{
 			in: &Config{
 				Images: &map[string]*ImageConfig{
-					"test-1": &ImageConfig{
+					"test-1": {
 						Image: ptr.String("test-1"),
 					},
 				},
 			},
 			expected: &next.Config{
 				Images: &map[string]*next.ImageConfig{
-					"test-1": &next.ImageConfig{
+					"test-1": {
 						Image: ptr.String("test-1"),
 					},
 				},
@@ -36,7 +36,7 @@ func TestSimple(t *testing.T) {
 		{
 			in: &Config{
 				Images: &map[string]*ImageConfig{
-					"test-1": &ImageConfig{
+					"test-1": {
 						Image: ptr.String("test-1"),
 						Build: &BuildConfig{
 							Dockerfile: ptr.String("dockerfile"),
@@ -46,7 +46,7 @@ func TestSimple(t *testing.T) {
 			},
 			expected: &next.Config{
 				Images: &map[string]*next.ImageConfig{
-					"test-1": &next.ImageConfig{
+					"test-1": {
 						Image:      ptr.String("test-1"),
 						Dockerfile: ptr.String("dockerfile"),
 						Build:      &next.BuildConfig{},
@@ -57,7 +57,7 @@ func TestSimple(t *testing.T) {
 		{
 			in: &Config{
 				Images: &map[string]*ImageConfig{
-					"test-1": &ImageConfig{
+					"test-1": {
 						Image: ptr.String("test-1"),
 						Build: &BuildConfig{
 							Dockerfile: ptr.String("dockerfile"),
@@ -67,7 +67,7 @@ func TestSimple(t *testing.T) {
 			},
 			expected: &next.Config{
 				Images: &map[string]*next.ImageConfig{
-					"test-1": &next.ImageConfig{
+					"test-1": {
 						Image:      ptr.String("test-1"),
 						Dockerfile: ptr.String("dockerfile"),
 						Build:      &next.BuildConfig{},
@@ -78,7 +78,7 @@ func TestSimple(t *testing.T) {
 		{
 			in: &Config{
 				Images: &map[string]*ImageConfig{
-					"test-1": &ImageConfig{
+					"test-1": {
 						Image:    ptr.String("test-1"),
 						Insecure: ptr.Bool(true),
 						SkipPush: ptr.Bool(true),
@@ -87,7 +87,7 @@ func TestSimple(t *testing.T) {
 			},
 			expected: &next.Config{
 				Images: &map[string]*next.ImageConfig{
-					"test-1": &next.ImageConfig{
+					"test-1": {
 						Image: ptr.String("test-1"),
 						Build: &next.BuildConfig{
 							Kaniko: &next.KanikoConfig{
@@ -104,7 +104,7 @@ func TestSimple(t *testing.T) {
 		{
 			in: &Config{
 				Images: &map[string]*ImageConfig{
-					"test-1": &ImageConfig{
+					"test-1": {
 						Image:    ptr.String("test-1"),
 						Insecure: ptr.Bool(true),
 						SkipPush: ptr.Bool(true),
@@ -123,7 +123,7 @@ func TestSimple(t *testing.T) {
 			},
 			expected: &next.Config{
 				Images: &map[string]*next.ImageConfig{
-					"test-1": &next.ImageConfig{
+					"test-1": {
 						Image: ptr.String("test-1"),
 						Build: &next.BuildConfig{
 							Kaniko: &next.KanikoConfig{

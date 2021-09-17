@@ -3,6 +3,9 @@ package services
 import (
 	"context"
 	"fmt"
+	"io"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
@@ -10,8 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/synccontroller"
 	"github.com/loft-sh/devspace/pkg/devspace/tunnel"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
-	"io"
-	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"

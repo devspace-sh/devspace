@@ -177,7 +177,7 @@ func (r *resolver) resolveRecursive(basePath, parentID string, currentDependency
 			}
 
 			// load dependencies from dependency
-			if dependencyConfig.IgnoreDependencies == false && child.localConfig.Config().Dependencies != nil && len(child.localConfig.Config().Dependencies) > 0 {
+			if !dependencyConfig.IgnoreDependencies && child.localConfig.Config().Dependencies != nil && len(child.localConfig.Config().Dependencies) > 0 {
 				err = r.resolveRecursive(child.localPath, ID, child, child.localConfig.Config().Dependencies, update)
 				if err != nil {
 					return err
@@ -242,6 +242,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	if cloned.Vars == nil {
 		cloned.Vars = []string{}
 	}
+
 	if dependency.OverwriteVars {
 		for k, v := range r.BaseVars {
 			cloned.Vars = append(cloned.Vars, strings.TrimSpace(k)+"="+strings.TrimSpace(fmt.Sprintf("%v", v)))
@@ -285,7 +286,7 @@ func (r *resolver) resolveDependency(basePath string, dependency *latest.Depende
 	}
 
 	// Check if we should skip building
-	if dependency.SkipBuild == true {
+	if dependency.SkipBuild {
 		for _, b := range dConfig.Images {
 			if b.Build == nil {
 				b.Build = &latest.BuildConfig{}
@@ -340,6 +341,6 @@ func executeInDirectory(dir string, fn func() error) error {
 		return err
 	}
 
-	defer os.Chdir(oldWorkingDirectory)
+	defer func() { _ = os.Chdir(oldWorkingDirectory) }()
 	return fn()
 }

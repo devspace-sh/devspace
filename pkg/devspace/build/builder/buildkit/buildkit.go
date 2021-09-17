@@ -4,6 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"math/rand"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
 	cliconfig "github.com/docker/cli/cli/config"
 	"github.com/docker/docker/api/types"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/docker"
@@ -15,16 +25,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"io"
-	"io/ioutil"
 	"k8s.io/client-go/tools/clientcmd"
-	"math/rand"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // EngineName is the name of the building engine
@@ -32,10 +33,7 @@ const EngineName = "buildkit"
 
 // Builder holds the necessary information to build and push docker images
 type Builder struct {
-	helper *helper.BuildHelper
-
-	authConfig *types.AuthConfig
-
+	helper                    *helper.BuildHelper
 	skipPush                  bool
 	skipPushOnLocalKubernetes bool
 }
@@ -98,7 +96,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 	// Should we use the minikube docker daemon?
 	useMinikubeDocker := false
-	if b.helper.KubeClient != nil && b.helper.KubeClient.CurrentContext() == "minikube" && (buildKitConfig.PreferMinikube == nil || *buildKitConfig.PreferMinikube == true) {
+	if b.helper.KubeClient != nil && b.helper.KubeClient.CurrentContext() == "minikube" && (buildKitConfig.PreferMinikube == nil || *buildKitConfig.PreferMinikube) {
 		useMinikubeDocker = true
 	}
 
@@ -134,12 +132,12 @@ func buildWithCLI(context io.Reader, writer io.Writer, kubeClient kubectl.Client
 	for _, tag := range options.Tags {
 		args = append(args, "--tag", tag)
 	}
-	if imageConf.SkipPush == false {
+	if !imageConf.SkipPush {
 		if len(options.Tags) > 0 {
 			args = append(args, "--push")
 		}
 	} else if builder != "" {
-		if imageConf.InCluster == nil || imageConf.InCluster.NoLoad == false {
+		if imageConf.InCluster == nil || !imageConf.InCluster.NoLoad {
 			args = append(args, "--load")
 		}
 	}
@@ -166,9 +164,7 @@ func buildWithCLI(context io.Reader, writer io.Writer, kubeClient kubectl.Client
 		// is created in parallel.
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(3000)+500))
 	}
-	for _, arg := range imageConf.Args {
-		args = append(args, arg)
-	}
+	args = append(args, imageConf.Args...)
 
 	args = append(args, "-")
 
@@ -334,7 +330,7 @@ func ensureBuilder(kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, 
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		if strings.Contains(string(out), "existing instance") == false {
+		if !strings.Contains(string(out), "existing instance") {
 			return "", fmt.Errorf("error creating BuildKit builder: %s => %v", string(out), err)
 		}
 	}

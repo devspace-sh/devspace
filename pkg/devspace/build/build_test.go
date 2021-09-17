@@ -1,26 +1,20 @@
 package build
 
 import (
-	"sort"
 	"testing"
-
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"gopkg.in/yaml.v2"
-	"gotest.tools/assert"
 )
 
-type buildTestCase struct {
-	name string
+// type buildTestCase struct {
+// 	name string
 
-	options Options
-	cache   *generated.CacheConfig
-	images  map[string]*latest.ImageConfig
+// 	options Options
+// 	cache   *generated.CacheConfig
+// 	images  map[string]*latest.ImageConfig
 
-	expectedErr         string
-	expectedBuiltImages map[string]string
-	expectedCache       *generated.CacheConfig
-}
+// 	expectedErr         string
+// 	expectedBuiltImages map[string]string
+// 	expectedCache       *generated.CacheConfig
+// }
 
 func TestBuild(t *testing.T) {
 	/*testCases := []buildTestCase{
@@ -120,33 +114,33 @@ func TestBuild(t *testing.T) {
 	}*/
 }
 
-func getKeys(targetMap map[string]string) string {
-	arr := []string{}
-	for key := range targetMap {
-		arr = append(arr, key)
-	}
-	sort.Strings(arr)
+// func getKeys(targetMap map[string]string) string {
+// 	arr := []string{}
+// 	for key := range targetMap {
+// 		arr = append(arr, key)
+// 	}
+// 	sort.Strings(arr)
 
-	result := ""
-	for _, key := range arr {
-		result += key + ", "
-	}
-	return result
-}
+// 	result := ""
+// 	for _, key := range arr {
+// 		result += key + ", "
+// 	}
+// 	return result
+// }
 
-func isCacheEqual(t *testing.T, cache1 *generated.CacheConfig, cache2 *generated.CacheConfig, testCase string) {
-	if cache1 != nil && cache2 != nil && cache1.Images != nil && cache2.Images != nil {
-		for key, imageConfig := range cache2.Images {
-			if cache1ImageConfig, ok := cache1.Images[key]; ok {
-				imageConfig.Tag = cache1ImageConfig.Tag
-			}
-		}
-	}
+// func isCacheEqual(t *testing.T, cache1 *generated.CacheConfig, cache2 *generated.CacheConfig, testCase string) {
+// 	if cache1 != nil && cache2 != nil && cache1.Images != nil && cache2.Images != nil {
+// 		for key, imageConfig := range cache2.Images {
+// 			if cache1ImageConfig, ok := cache1.Images[key]; ok {
+// 				imageConfig.Tag = cache1ImageConfig.Tag
+// 			}
+// 		}
+// 	}
 
-	cache1AsYaml, err := yaml.Marshal(cache1)
-	assert.NilError(t, err, "Error marshaling cache in testCase %s", testCase)
-	cache2AsYaml, err := yaml.Marshal(cache2)
-	assert.NilError(t, err, "Error marshaling expected cache in testCase %s", testCase)
-	assert.Equal(t, string(cache1AsYaml), string(cache2AsYaml), "Unexpected cache in testCase %s", testCase)
+// 	cache1AsYaml, err := yaml.Marshal(cache1)
+// 	assert.NilError(t, err, "Error marshaling cache in testCase %s", testCase)
+// 	cache2AsYaml, err := yaml.Marshal(cache2)
+// 	assert.NilError(t, err, "Error marshaling expected cache in testCase %s", testCase)
+// 	assert.Equal(t, string(cache1AsYaml), string(cache2AsYaml), "Unexpected cache in testCase %s", testCase)
 
-}
+// }

@@ -2,9 +2,10 @@ package util
 
 import (
 	"context"
-	"google.golang.org/grpc"
 	"io"
 	"net"
+
+	"google.golang.org/grpc"
 )
 
 // NewClientConnection creates a new client connection for the given reader and writer

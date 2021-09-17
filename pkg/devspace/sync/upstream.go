@@ -5,8 +5,6 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/helper/server/ignoreparser"
-	"github.com/loft-sh/devspace/helper/util/crc32"
 	"io"
 	"os"
 	"path"
@@ -14,6 +12,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
+	"github.com/loft-sh/devspace/helper/util/crc32"
 
 	"github.com/juju/ratelimit"
 	"github.com/loft-sh/devspace/helper/remote"
@@ -130,14 +131,14 @@ func (u *upstream) startEventsLoop(doneChan chan struct{}) {
 			case <-doneChan:
 				return
 			case event, ok := <-u.events:
-				if ok == false {
+				if !ok {
 					return
 				}
 
 				// We need this loop to catch up if we got a lot of change events
 				u.eventBufferMutex.Lock()
 				u.eventBuffer = append(u.eventBuffer, event)
-				for eventsLeft := true; eventsLeft == true; {
+				for eventsLeft := true; eventsLeft; {
 					select {
 					case event := <-u.events:
 						u.eventBuffer = append(u.eventBuffer, event)
@@ -301,7 +302,7 @@ func (u *upstream) evaluateChange(relativePath, fullpath string) (*FileInformati
 			}
 
 			// Only crawl if symlink wasn't there before and it is a directory
-			if symlinkExists == false && stat.IsDir() {
+			if !symlinkExists && stat.IsDir() {
 				// Crawl all linked files & folders
 				err = u.symlinks[fullpath].Crawl()
 				if err != nil {
@@ -634,7 +635,7 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 			// Just remove everything inside and ignore any errors
 			absolutePath := path.Join(u.sync.LocalPath, c.Name)
 			checksum, err := crc32.Checksum(absolutePath)
-			if err != nil && os.IsNotExist(err) == false {
+			if err != nil && !os.IsNotExist(err) {
 				u.sync.log.Infof("Error hashing file %s: %v", c.Name, err)
 			}
 

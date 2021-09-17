@@ -9,7 +9,6 @@ func NewCachedValueVariable(value interface{}) Variable {
 }
 
 type cachedValueVariable struct {
-	name  string
 	value interface{}
 }
 

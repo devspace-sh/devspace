@@ -1,8 +1,9 @@
 package sync
 
 import (
-	"github.com/loft-sh/devspace/helper/remote"
 	"os"
+
+	"github.com/loft-sh/devspace/helper/remote"
 )
 
 // s.fileIndex needs to be locked before this function is called
@@ -85,7 +86,7 @@ func shouldDownload(change *remote.Change, s *Sync) bool {
 	// Does file already exist in the filemap?
 	if s.fileIndex.fileMap[change.Path] != nil {
 		// Don't override folders that exist in the filemap
-		if change.IsDir == false {
+		if !change.IsDir {
 			// Redownload file if mtime is newer than saved one
 			if change.MtimeUnix > s.fileIndex.fileMap[change.Path].Mtime {
 				return true
@@ -123,7 +124,7 @@ func shouldRemoveLocal(absFilepath string, fileInformation *FileInformation, s *
 	// Only delete if mtime and size did not change
 	stat, err := os.Lstat(absFilepath)
 	if err != nil {
-		if os.IsNotExist(err) == false {
+		if !os.IsNotExist(err) {
 			s.log.Infof("Skip %s because stat returned %v", absFilepath, err)
 		}
 
@@ -144,7 +145,7 @@ func shouldRemoveLocal(absFilepath string, fileInformation *FileInformation, s *
 			return false
 		}
 
-		if fileInformation.IsDirectory == false {
+		if !fileInformation.IsDirectory {
 			// We don't delete the file if it has changed in the map since we collected changes
 			if fileInformation.Mtime == s.fileIndex.fileMap[fileInformation.Name].Mtime && fileInformation.Size == s.fileIndex.fileMap[fileInformation.Name].Size {
 				// We don't delete the file if it has changed on the filesystem meanwhile
