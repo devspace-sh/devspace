@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"flag"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"io/ioutil"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/util/interrupt"
 
 	"github.com/joho/godotenv"
 	"github.com/loft-sh/devspace/cmd/add"
@@ -94,7 +95,7 @@ var globalFlags *flags.GlobalFlags
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	interrupt.Global.Start()
-	
+
 	// disable klog
 	disableKlog()
 
@@ -106,7 +107,7 @@ func Execute() {
 
 	// set version for --version flag
 	rootCmd.Version = upgrade.GetVersion()
-	
+
 	// before hooks
 	pluginErr := hook.ExecuteHooks(nil, nil, nil, nil, nil, "root", "root.beforeExecute", "command:before:execute")
 	if pluginErr != nil {
@@ -115,7 +116,7 @@ func Execute() {
 
 	// execute command
 	err := rootCmd.Execute()
-	
+
 	// after hooks
 	pluginErr = hook.ExecuteHooks(nil, nil, nil, map[string]interface{}{"error": err}, nil, "root.afterExecute", "command:after:execute")
 	if err != nil {

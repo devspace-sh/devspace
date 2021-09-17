@@ -61,7 +61,7 @@ func (serviceClient *client) StartTerminal(
 	go func() {
 		interruptpkg.Global.Stop()
 		defer interruptpkg.Global.Start()
-		
+
 		done <- serviceClient.client.ExecStreamWithTransport(&kubectl.ExecStreamWithTransportOptions{
 			ExecStreamOptions: kubectl.ExecStreamOptions{
 				Pod:       container.Pod,

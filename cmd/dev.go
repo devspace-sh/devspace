@@ -277,7 +277,7 @@ func runWithHooks(command string, client kubectl.Client, configInterface config.
 		} else {
 			logger.StopWait()
 		}
-		
+
 		if err != nil {
 			hook.LogExecuteHooks(client, configInterface, nil, map[string]interface{}{"error": err}, logger, command+":after:execute", command+":error")
 		} else {
@@ -291,7 +291,7 @@ func runWithHooks(command string, client kubectl.Client, configInterface config.
 		} else {
 			logger.StopWait()
 		}
-		
+
 		hook.LogExecuteHooks(client, configInterface, nil, nil, logger, command+":interrupt")
 	})
 }
