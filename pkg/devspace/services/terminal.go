@@ -61,7 +61,7 @@ func (serviceClient *client) StartTerminal(
 	go func() {
 		interruptpkg.Global.Stop()
 		defer interruptpkg.Global.Start()
-		
+
 		done <- serviceClient.client.ExecStreamWithTransport(&kubectl.ExecStreamWithTransportOptions{
 			ExecStreamOptions: kubectl.ExecStreamOptions{
 				Pod:       container.Pod,
@@ -89,11 +89,18 @@ func (serviceClient *client) StartTerminal(
 			if _, ok := err.(*InterruptError); ok {
 				return 0, err
 			} else if exitError, ok := err.(kubectlExec.CodeExitError); ok {
-				//if restart && exitError.Code != 0 {
-				//	serviceClient.log.WriteString("\n")
-				//	serviceClient.log.Infof("Restarting terminal because: %s", err)
-				//	return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart, stdout, stderr, stdin)
-				//}
+				// Expected exit codes are (https://shapeshed.com/unix-exit-codes/):
+				// 1 - Catchall for general errors
+				// 2 - Misuse of shell builtins (according to Bash documentation)
+				// 126 - Command invoked cannot execute
+				// 127 - “command not found”
+				// 128 - Invalid argument to exit
+				// 130 - Script terminated by Control-C
+				if restart && exitError.Code != 0 && exitError.Code != 1 && exitError.Code != 2 && exitError.Code != 126 && exitError.Code != 127 && exitError.Code != 128 && exitError.Code != 130 {
+					serviceClient.log.WriteString("\n")
+					serviceClient.log.Infof("Restarting terminal because: %s", err)
+					return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart, stdout, stderr, stdin)
+				}
 
 				return exitError.Code, nil
 			} else if restart {
