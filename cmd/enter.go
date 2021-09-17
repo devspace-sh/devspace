@@ -73,7 +73,7 @@ devspace enter bash --image-selector "image(app):tag(app)"
 
 	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod / container if multiple are found")
 	enterCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "Wait for the pod(s) to start if they are not running")
-	enterCmd.Flags().BoolVar(&cmd.Reconnect, "reconnect", false, "Will reconnect the terminal if a non zero return code is encountered")
+	enterCmd.Flags().BoolVar(&cmd.Reconnect, "reconnect", false, "Will reconnect the terminal if an unexpected return code is encountered")
 
 	return enterCmd
 }

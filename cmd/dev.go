@@ -155,7 +155,7 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
 	devCmd.Flags().BoolVarP(&cmd.Interactive, "interactive", "i", false, "DEPRECATED: DO NOT USE ANYMORE")
 	devCmd.Flags().BoolVarP(&cmd.Terminal, "terminal", "t", false, "Open a terminal instead of showing logs")
-	devCmd.Flags().BoolVar(&cmd.TerminalReconnect, "terminal-reconnect", true, "Will try to reconnect the terminal if a non zero exit code was encountered")
+	devCmd.Flags().BoolVar(&cmd.TerminalReconnect, "terminal-reconnect", true, "Will try to reconnect the terminal if an unexpected exit code was encountered")
 	devCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
 
 	devCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "If true will wait first for pods to be running or fails after given timeout")
@@ -277,7 +277,7 @@ func runWithHooks(command string, client kubectl.Client, configInterface config.
 		} else {
 			logger.StopWait()
 		}
-		
+
 		if err != nil {
 			hook.LogExecuteHooks(client, configInterface, nil, map[string]interface{}{"error": err}, logger, command+":after:execute", command+":error")
 		} else {
@@ -291,7 +291,7 @@ func runWithHooks(command string, client kubectl.Client, configInterface config.
 		} else {
 			logger.StopWait()
 		}
-		
+
 		hook.LogExecuteHooks(client, configInterface, nil, nil, logger, command+":interrupt")
 	})
 }
@@ -615,7 +615,12 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 
 			selectorOptions.ImageSelector = imageSelectors
 			stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
-			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalReconnect, stdout, stderr, stdin)
+			code, err := servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalReconnect, stdout, stderr, stdin)
+			if code != 0 {
+				cmd.log.Warnf("Command terminated with exit code %d", code)
+			}
+
+			return code, err
 		} else if config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || !*config.Dev.Logs.Disabled {
 			pluginErr := hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "devCommand:before:streamLogs")
 			if pluginErr != nil {
