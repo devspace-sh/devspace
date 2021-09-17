@@ -36,7 +36,7 @@ type GlobalFlags struct {
 
 // UseLastContext uses the last context
 func (gf *GlobalFlags) UseLastContext(generatedConfig *generated.Config, log log.Logger) error {
-	if gf.KubeContext == "" && gf.Namespace == "" && gf.SwitchContext == true {
+	if gf.KubeContext == "" && gf.Namespace == "" && gf.SwitchContext {
 		if generatedConfig == nil || generatedConfig.GetActive().LastContext == nil {
 			log.Warn("There is no last context to use. Only use the '--switch-context / -s' flag if you already have deployed the project before")
 		} else {

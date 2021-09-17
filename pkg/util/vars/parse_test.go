@@ -16,12 +16,12 @@ type testCase struct {
 
 func TestParse(t *testing.T) {
 	testCases := map[string]*testCase{
-		"Single Replace": &testCase{
+		"Single Replace": {
 			input:   " test abc ${Test} ",
 			replace: func(value string) (interface{}, error) { return "test", nil },
 			output:  " test abc test ",
 		},
-		"Var Name 2": &testCase{
+		"Var Name 2": {
 			input: " test abc ${Test} ",
 			replace: func(value string) (interface{}, error) {
 				if value != "Test" {
@@ -31,7 +31,7 @@ func TestParse(t *testing.T) {
 			},
 			output: " test abc test ",
 		},
-		"Var Name": &testCase{
+		"Var Name": {
 			input: " test abc $!{Test} ",
 			replace: func(value string) (interface{}, error) {
 				if value != "Test" {
@@ -41,57 +41,57 @@ func TestParse(t *testing.T) {
 			},
 			output: " test abc test ",
 		},
-		"Single Escape": &testCase{
+		"Single Escape": {
 			input:   " test abc $${Test} ",
 			replace: func(value string) (interface{}, error) { return "", errors.New("Shouldn't match at all") },
 			output:  " test abc ${Test} ",
 		},
-		"Single Escape 2": &testCase{
+		"Single Escape 2": {
 			input:   " test abc $$${Test} ",
 			replace: func(value string) (interface{}, error) { return "", errors.New("Shouldn't match at all") },
 			output:  " test abc $${Test} ",
 		},
-		"Multiple Replace": &testCase{
+		"Multiple Replace": {
 			input:   " test ${ABC}${Test} abc $${Test}${Test} ",
 			replace: func(value string) (interface{}, error) { return "test", nil },
 			output:  " test testtest abc ${Test}test ",
 		},
-		"Multiple Replace 2": &testCase{
+		"Multiple Replace 2": {
 			input:   "${Test}${Test}${Test}",
 			replace: func(value string) (interface{}, error) { return value, nil },
 			output:  "TestTestTest",
 		},
-		"Return integer": &testCase{
+		"Return integer": {
 			input:   "${integer}",
 			replace: func(value string) (interface{}, error) { return "1", nil },
 			output:  "1",
 		},
-		"Return bool": &testCase{
+		"Return bool": {
 			input:   "${bool}",
 			replace: func(value string) (interface{}, error) { return "true", nil },
 			output:  "true",
 		},
-		"Return error": &testCase{
+		"Return error": {
 			input:   "${bool}",
 			replace: func(value string) (interface{}, error) { return "", errors.New("Test Error") },
 			err:     ptr.String("Test Error"),
 		},
-		"No match": &testCase{
+		"No match": {
 			input:   "Test",
 			replace: func(value string) (interface{}, error) { return "", errors.New("Test Error") },
 			output:  "Test",
 		},
-		"Force String": &testCase{
+		"Force String": {
 			input:   "$!{Test}",
 			replace: func(value string) (interface{}, error) { return 123, nil },
 			output:  "123",
 		},
-		"Force String 2": &testCase{
+		"Force String 2": {
 			input:   "$!{Test}",
 			replace: func(value string) (interface{}, error) { return "123", nil },
 			output:  "123",
 		},
-		"Force String 3": &testCase{
+		"Force String 3": {
 			input:   "${Test}",
 			replace: func(value string) (interface{}, error) { return "123", nil },
 			output:  "123",

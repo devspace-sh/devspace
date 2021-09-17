@@ -3,10 +3,11 @@ package targetselector
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -143,7 +144,7 @@ func (t *targetSelector) SelectSinglePod(ctx context.Context, options Options, l
 }
 
 func (t *targetSelector) selectSingle(ctx context.Context, options Options, log log.Logger, selectFn func(ctx context.Context, options Options, log log.Logger) (bool, interface{}, error)) (interface{}, error) {
-	if options.Wait == nil || *options.Wait == true {
+	if options.Wait == nil || *options.Wait {
 		timeout := time.Minute * 10
 		if options.Timeout > 0 {
 			timeout = time.Duration(options.Timeout) * time.Second

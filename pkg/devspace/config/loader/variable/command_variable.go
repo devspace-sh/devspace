@@ -2,11 +2,12 @@ package variable
 
 import (
 	"bytes"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/shell"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 // NewCommandVariable creates a new variable that is loaded from a command
@@ -30,7 +31,7 @@ func (c *commandVariable) Load(definition *latest.Variable) (interface{}, error)
 
 func variableFromCommand(varName string, definition *latest.Variable) (interface{}, error) {
 	for _, c := range definition.Commands {
-		if command.ShouldExecuteOnOS(c.OperatingSystem) == false {
+		if !command.ShouldExecuteOnOS(c.OperatingSystem) {
 			continue
 		}
 
@@ -55,10 +56,10 @@ func execCommand(varName string, definition *latest.Variable, cmd string, args [
 	if err != nil {
 		errMsg := "fill variable " + varName + ": " + err.Error()
 		if len(writer.Bytes()) > 0 {
-			errMsg = errMsg + "\n\nstdout: \n" + string(writer.Bytes())
+			errMsg = errMsg + "\n\nstdout: \n" + writer.String()
 		}
 		if len(stdErrWriter.Bytes()) > 0 {
-			errMsg = errMsg + "\n\nstderr: \n" + string(stdErrWriter.Bytes())
+			errMsg = errMsg + "\n\nstderr: \n" + stdErrWriter.String()
 		}
 
 		return "", errors.New(errMsg)

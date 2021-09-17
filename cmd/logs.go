@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/loft-sh/devspace/cmd/flags"
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
@@ -143,7 +144,7 @@ func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, c
 			config       config2.Config
 			dependencies []types.Dependency
 		)
-		if configLoader.Exists() == false {
+		if !configLoader.Exists() {
 			config = config2.Ensure(nil)
 		} else {
 			config, err = configLoader.Load(configOptions, log)
@@ -168,7 +169,7 @@ func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, c
 	} else if image != "" {
 		log.Warnf("Flag --image is deprecated, please use --image-selector instead")
 
-		if configLoader.Exists() == false {
+		if !configLoader.Exists() {
 			return nil, errors.New(message.ConfigNotFound)
 		}
 

@@ -2,9 +2,10 @@ package v2
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
-	"time"
 )
 
 // Client implements Interface
@@ -25,7 +26,7 @@ func (f *Client) DeleteRelease(releaseName string, releaseNamespace string, helm
 			return nil
 		}
 	}
-	return fmt.Errorf("Release %s not found", releaseName)
+	return fmt.Errorf("release %s not found", releaseName)
 }
 
 // ListReleases lists all helm Releases

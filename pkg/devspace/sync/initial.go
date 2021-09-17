@@ -1,10 +1,11 @@
 package sync
 
 import (
-	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"io/ioutil"
 	"os"
 	"path"
+
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -60,7 +61,7 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation) error {
 
 	// Upstream initial sync
 	go func() {
-		if i.o.UpstreamDisabled == false {
+		if !i.o.UpstreamDisabled {
 			// Remove remote if mirror local
 			if len(download) > 0 && i.o.Strategy == latest.InitialSyncStrategyMirrorLocal {
 				deleteRemote := make([]*FileInformation, 0, len(download))
@@ -101,7 +102,7 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation) error {
 	}()
 
 	// Download changes if enabled
-	if i.o.DownstreamDisabled == false {
+	if !i.o.DownstreamDisabled {
 		// Remove local if mirror remote
 		if len(upload) > 0 && i.o.Strategy == latest.InitialSyncStrategyMirrorRemote {
 			remoteChanges := make([]*remote.Change, 0, len(upload))
@@ -221,7 +222,7 @@ func (i *initialSyncer) deltaPath(absPath string, remoteState map[string]*FileIn
 	}
 
 	// Check for symlinks
-	if ignore == false {
+	if !ignore {
 		// Retrieve the real stat instead of the symlink one
 		lstat, err := os.Lstat(absPath)
 		if err == nil && lstat.Mode()&os.ModeSymlink != 0 {
@@ -242,7 +243,7 @@ func (i *initialSyncer) deltaPath(absPath string, remoteState map[string]*FileIn
 	// Check if stat is somehow not there
 	if stat == nil {
 		return nil, nil
-	} else if i.o.IgnoreMatcher != nil && i.o.IgnoreMatcher.RequireFullScan() == false && i.o.IgnoreMatcher.Matches(relativePath, stat.IsDir()) {
+	} else if i.o.IgnoreMatcher != nil && !i.o.IgnoreMatcher.RequireFullScan() && i.o.IgnoreMatcher.Matches(relativePath, stat.IsDir()) {
 		return nil, nil
 	}
 
@@ -253,7 +254,7 @@ func (i *initialSyncer) deltaPath(absPath string, remoteState map[string]*FileIn
 		return i.deltaDir(absPath, stat, remoteState, strategy, ignore)
 	}
 
-	if ignore == false {
+	if !ignore {
 		fileInfo := &FileInformation{
 			Name:           relativePath,
 			Mtime:          stat.ModTime().Unix(),
@@ -291,7 +292,7 @@ func (i *initialSyncer) deltaDir(filepath string, stat os.FileInfo, remoteState 
 	}
 
 	upload := []*FileInformation{}
-	if len(files) == 0 && relativePath != "" && ignore == false && stat != nil {
+	if len(files) == 0 && relativePath != "" && !ignore && stat != nil {
 		fileInfo := &FileInformation{
 			Name:           relativePath,
 			Mtime:          stat.ModTime().Unix(),

@@ -36,7 +36,7 @@ type Client interface {
 
 	DeleteImageByName(imageName string, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
 	DeleteImageByFilter(filter filters.Args, log log.Logger) ([]dockertypes.ImageDeleteResponseItem, error)
-	DockerApiClient() dockerclient.CommonAPIClient
+	DockerAPIClient() dockerclient.CommonAPIClient
 }
 
 //Client is a client for docker
@@ -62,7 +62,7 @@ func NewClientWithMinikube(currentKubeContext string, preferMinikube bool, log l
 			log.Warnf("Error creating minikube docker client: %v", err)
 		}
 	}
-	if preferMinikube == false || err != nil {
+	if !preferMinikube || err != nil {
 		cli, err = newDockerClientFromEnvironment()
 		if err != nil {
 			log.Warnf("Error creating docker client from environment: %v", err)
@@ -175,7 +175,7 @@ func GetMinikubeEnvironment() (map[string]string, error) {
 	return env, nil
 }
 
-func (c *client) DockerApiClient() dockerclient.CommonAPIClient {
+func (c *client) DockerAPIClient() dockerclient.CommonAPIClient {
 	return c.CommonAPIClient
 }
 

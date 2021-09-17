@@ -14,7 +14,7 @@ func TestSimple(t *testing.T) {
 			CloudProvider: ptr.String("test"),
 		},
 		Images: &map[string]*ImageConfig{
-			"default": &ImageConfig{
+			"default": {
 				Image: ptr.String("test"),
 				Build: &BuildConfig{
 					DockerfilePath: ptr.String("mydockerfile"),

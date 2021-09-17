@@ -1,17 +1,19 @@
+//go:build !windows
 // +build !windows
 
 package server
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/helper/remote"
-	"github.com/loft-sh/devspace/helper/util"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/loft-sh/devspace/helper/remote"
+	"github.com/loft-sh/devspace/helper/util"
 )
 
 func TestDownstreamServer(t *testing.T) {
@@ -49,7 +51,7 @@ func TestDownstreamServer(t *testing.T) {
 			Polling:      true,
 		})
 		if err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
 	}()
 
@@ -193,9 +195,7 @@ func getAllChanges(changesClient remote.Downstream_ChangesClient) ([]*remote.Cha
 	for {
 		changeChunk, err := changesClient.Recv()
 		if changeChunk != nil {
-			for _, change := range changeChunk.Changes {
-				changes = append(changes, change)
-			}
+			changes = append(changes, changeChunk.Changes...)
 		}
 
 		if err == io.EOF {

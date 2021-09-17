@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var findExposePortsRegEx = regexp.MustCompile("^EXPOSE\\s(.*)$")
+var findExposePortsRegEx = regexp.MustCompile(`^EXPOSE\s(.*)$`)
 
 // GetPorts retrieves all the exported ports from a dockerfile
 func GetPorts(filename string) ([]int, error) {

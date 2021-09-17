@@ -3,6 +3,7 @@ package loader
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
@@ -19,7 +20,7 @@ const (
 func RestoreVarsFromSecret(client kubectl.Client, secretName string) (map[string]string, bool, error) {
 	secret, err := client.KubeClient().CoreV1().Secrets(client.Namespace()).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
-		if kerrors.IsNotFound(err) == false {
+		if !kerrors.IsNotFound(err) {
 			return nil, false, err
 		}
 
@@ -72,7 +73,7 @@ func SaveVarsInSecret(client kubectl.Client, vars map[string]string, secretName 
 	// check if secret exists
 	secret, err := client.KubeClient().CoreV1().Secrets(client.Namespace()).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
-		if kerrors.IsNotFound(err) == false {
+		if !kerrors.IsNotFound(err) {
 			return err
 		}
 

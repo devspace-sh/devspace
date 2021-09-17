@@ -27,7 +27,7 @@ func doWalk(d interface{}, match MatchFn, replace ReplaceFn) error {
 	case []interface{}:
 		for idx, val := range t {
 			value, ok := val.(string)
-			if ok == false {
+			if !ok {
 				err = doWalk(val, match, replace)
 				if err != nil {
 					return err
@@ -46,7 +46,7 @@ func doWalk(d interface{}, match MatchFn, replace ReplaceFn) error {
 	case map[string]interface{}:
 		for key, v := range t {
 			value, ok := v.(string)
-			if ok == false {
+			if !ok {
 				err = doWalk(v, match, replace)
 				if err != nil {
 					return err
@@ -66,7 +66,7 @@ func doWalk(d interface{}, match MatchFn, replace ReplaceFn) error {
 		for k, v := range t {
 			key := k.(string)
 			value, ok := v.(string)
-			if ok == false {
+			if !ok {
 				err = doWalk(v, match, replace)
 				if err != nil {
 					return err

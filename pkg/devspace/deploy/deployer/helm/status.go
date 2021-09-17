@@ -2,6 +2,7 @@ package helm
 
 import (
 	"fmt"
+
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
 )
@@ -32,7 +33,7 @@ func (d *DeployConfig) Status() (*deployer.StatusResult, error) {
 		}, nil
 	}
 
-	if releases == nil || len(releases) == 0 {
+	if len(releases) == 0 {
 		return &deployer.StatusResult{
 			Name:   d.DeploymentConfig.Name,
 			Type:   "Helm",

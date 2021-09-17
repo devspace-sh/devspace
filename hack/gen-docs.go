@@ -63,7 +63,14 @@ func main() {
 	}
 
 	err = filepath.Walk(cliDocsDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		stat, err := os.Stat(path)
+		if err != nil {
+			return err
+		}
+
 		if stat.IsDir() {
 			return nil
 		}

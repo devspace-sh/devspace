@@ -81,7 +81,7 @@ func Copy(sourcePath string, targetPath string, overwrite bool) error {
 		}
 
 		if fileInfo.IsDir() {
-			os.MkdirAll(nextTargetPath, os.ModePerm)
+			_ = os.MkdirAll(nextTargetPath, os.ModePerm)
 			return Copy(nextSourcePath, nextTargetPath, overwrite)
 		}
 

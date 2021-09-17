@@ -2,12 +2,13 @@ package log
 
 import (
 	"fmt"
-	"github.com/mgutz/ansi"
-	"github.com/sirupsen/logrus"
 	"math/rand"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/mgutz/ansi"
+	"github.com/sirupsen/logrus"
 )
 
 var Colors = []string{
@@ -47,7 +48,7 @@ type prefixLogger struct {
 }
 
 func (s *prefixLogger) writeMessage(message string) {
-	if os.Getenv(DEVSPACE_LOG_TIMESTAMPS) == "true" {
+	if os.Getenv(DevspaceLogTimestamps) == "true" {
 		now := time.Now()
 		if s.color != "" {
 			s.WriteString(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b") + ansi.Color(s.prefix, s.color) + message)

@@ -104,7 +104,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectEqual(out, "Hello World 2")
 
 		// check if excluded file was synced
-		out, err = kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/test.txt"})
+		_, err = kubeClient.ExecByImageSelector("node", ns, []string{"cat", "/app/test.txt"})
 		framework.ExpectError(err)
 
 		// write a file and check that it got synced
@@ -132,7 +132,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		err = wait.PollImmediate(time.Second, time.Minute, func() (done bool, err error) {
 			out, err := ioutil.ReadFile(filepath.Join(tempDir, "file5.txt"))
 			if err != nil {
-				if os.IsNotExist(err) == false {
+				if !os.IsNotExist(err) {
 					return false, err
 				}
 

@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	_, stdout, stderr = dockerterm.StdStreams()
+	_, stdout, _ = dockerterm.StdStreams()
 )
 
 // Builder holds all the relevant information for a custom build
@@ -88,18 +88,16 @@ func (b *Builder) Build(log logpkg.Logger) error {
 	args := []string{}
 
 	// add args
-	for _, arg := range b.imageConf.Build.Custom.Args {
-		args = append(args, arg)
-	}
+	args = append(args, b.imageConf.Build.Custom.Args...)
 
 	// add image arg
-	if b.imageConf.Build.Custom.SkipImageArg == false {
+	if !b.imageConf.Build.Custom.SkipImageArg {
 		for _, tag := range b.imageTags {
 			if b.imageConf.Build.Custom.ImageFlag != "" {
 				args = append(args, b.imageConf.Build.Custom.ImageFlag)
 			}
 
-			if b.imageConf.Build.Custom.ImageTagOnly == false {
+			if !b.imageConf.Build.Custom.ImageTagOnly {
 				args = append(args, b.imageConf.Image+":"+tag)
 			} else {
 				args = append(args, tag)
@@ -108,14 +106,12 @@ func (b *Builder) Build(log logpkg.Logger) error {
 	}
 
 	// append the rest
-	for _, arg := range b.imageConf.Build.Custom.AppendArgs {
-		args = append(args, arg)
-	}
+	args = append(args, b.imageConf.Build.Custom.AppendArgs...)
 
 	// get the command
 	commandPath := b.imageConf.Build.Custom.Command
 	for _, c := range b.imageConf.Build.Custom.Commands {
-		if command.ShouldExecuteOnOS(c.OperatingSystem) == false {
+		if !command.ShouldExecuteOnOS(c.OperatingSystem) {
 			continue
 		}
 

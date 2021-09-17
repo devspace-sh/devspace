@@ -139,7 +139,7 @@ func (d *downstream) mainLoop() error {
 
 	lastAmountChanges := int64(0)
 	recheckInterval := 1700
-	if d.sync.Options.Polling == false {
+	if !d.sync.Options.Polling {
 		recheckInterval = 500
 	}
 
@@ -396,7 +396,7 @@ func (d *downstream) remove(remove []*remote.Change, force bool) {
 			} else {
 				err := os.Remove(absFilepath)
 				if err != nil {
-					if os.IsNotExist(err) == false {
+					if !os.IsNotExist(err) {
 						d.sync.log.Infof("Downstream - Skip file delete '.%s': %v", change.Path, err)
 					}
 				}
@@ -420,8 +420,8 @@ func (d *downstream) deleteSafeRecursive(relativePath string, deleteChanges []*r
 	}
 
 	// We don't delete the folder or the contents if we haven't tracked it
-	if force == false {
-		if d.sync.fileIndex.fileMap[relativePath] == nil || found == false {
+	if !force {
+		if d.sync.fileIndex.fileMap[relativePath] == nil || !found {
 			d.sync.log.Infof("Downstream - Skip delete directory '.%s'", relativePath)
 			return
 		}

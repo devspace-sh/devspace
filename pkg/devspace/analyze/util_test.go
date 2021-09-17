@@ -19,7 +19,7 @@ type printPodProblemTestCase struct {
 
 func TestPrintPodProblem(t *testing.T) {
 	testCases := []printPodProblemTestCase{
-		printPodProblemTestCase{
+		{
 			name: "Pod with lots of problems",
 			podProblem: podProblem{
 				Name:           "testPod1",
@@ -27,7 +27,7 @@ func TestPrintPodProblem(t *testing.T) {
 				ContainerTotal: 2,
 				ContainerReady: 1,
 				ContainerProblems: []*containerProblem{
-					&containerProblem{
+					{
 						Name:                   "testContainer1",
 						Waiting:                true,
 						Reason:                 "testReason1",
@@ -40,7 +40,7 @@ func TestPrintPodProblem(t *testing.T) {
 					},
 				},
 				InitContainerProblems: []*containerProblem{
-					&containerProblem{
+					{
 						Name:       "testContainer2",
 						Terminated: true,
 						Reason:     "testReason2",
@@ -67,7 +67,7 @@ func TestPrintPodProblem(t *testing.T) {
 				fmt.Sprintf("        Terminated: %s ago", ansi.Color("0s", "white+b")),
 			},
 		},
-		printPodProblemTestCase{
+		{
 			name: "Critical status pod",
 			podProblem: podProblem{
 				Name:   "testPod2",
@@ -79,7 +79,7 @@ func TestPrintPodProblem(t *testing.T) {
 				fmt.Sprintf("    Created: %s ago", ansi.Color("", "white+b")),
 			},
 		},
-		printPodProblemTestCase{
+		{
 			name: "Uncertain status pod",
 			podProblem: podProblem{
 				Name:   "testPod3",

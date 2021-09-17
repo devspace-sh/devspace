@@ -21,13 +21,13 @@ func TestGraph(t *testing.T) {
 		t.Fatal("insertNodeAt error expected")
 	}
 
-	testGraph.insertNodeAt(root.ID, rootChild1.ID, nil)
-	testGraph.insertNodeAt(root.ID, rootChild2.ID, nil)
-	testGraph.insertNodeAt(root.ID, rootChild3.ID, nil)
+	_, _ = testGraph.insertNodeAt(root.ID, rootChild1.ID, nil)
+	_, _ = testGraph.insertNodeAt(root.ID, rootChild2.ID, nil)
+	_, _ = testGraph.insertNodeAt(root.ID, rootChild3.ID, nil)
 
-	testGraph.insertNodeAt(rootChild2.ID, rootChild2Child1.ID, nil)
-	testGraph.insertNodeAt(rootChild2Child1.ID, rootChild2Child1Child1.ID, nil)
-	testGraph.insertNodeAt(rootChild3.ID, rootChild2.ID, nil)
+	_, _ = testGraph.insertNodeAt(rootChild2.ID, rootChild2Child1.ID, nil)
+	_, _ = testGraph.insertNodeAt(rootChild2Child1.ID, rootChild2Child1Child1.ID, nil)
+	_, _ = testGraph.insertNodeAt(rootChild3.ID, rootChild2.ID, nil)
 
 	// Cyclic graph error
 	_, err = testGraph.insertNodeAt(rootChild2Child1Child1.ID, rootChild3.ID, nil)

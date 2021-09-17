@@ -2,6 +2,11 @@ package framework
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"sync"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
@@ -11,10 +16,6 @@ import (
 	"github.com/onsi/ginkgo"
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"sync"
 )
 
 func BeforeAll(body func()) {

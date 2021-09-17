@@ -2,13 +2,14 @@ package generic
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -85,7 +86,7 @@ func (c *client) Exec(args []string, helmConfig *latest.HelmConfig) ([]byte, err
 		return nil, err
 	}
 
-	if c.versionedClient.IsInCluster() == false {
+	if !c.versionedClient.IsInCluster() {
 		args = append(args, "--kube-context", c.versionedClient.KubeContext())
 	}
 
@@ -155,10 +156,10 @@ func (c *client) installHelmClient(archiveFile, installPath, installFromURL stri
 
 	// Copy file to target location
 	if runtime.GOOS == "windows" {
-		return copy.Copy(filepath.Join(t, runtime.GOOS + "-" + runtime.GOARCH, "helm.exe"), installPath)
+		return copy.Copy(filepath.Join(t, runtime.GOOS+"-"+runtime.GOARCH, "helm.exe"), installPath)
 	}
 
-	return copy.Copy(filepath.Join(t, runtime.GOOS+ "-" + runtime.GOARCH, "helm"), installPath)
+	return copy.Copy(filepath.Join(t, runtime.GOOS+"-"+runtime.GOARCH, "helm"), installPath)
 }
 
 func (c *client) FetchChart(helmConfig *latest.HelmConfig) (bool, string, error) {
@@ -182,7 +183,7 @@ func (c *client) FetchChart(helmConfig *latest.HelmConfig) (bool, string, error)
 	if helmConfig.Chart.Password != "" {
 		args = append(args, "--password", helmConfig.Chart.Password)
 	}
-	if helmConfig.V2 == false {
+	if !helmConfig.V2 {
 		args = append(args, "--repository-config=''")
 	}
 

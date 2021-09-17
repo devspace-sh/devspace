@@ -1,11 +1,12 @@
 package v1beta7
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/ghodss/yaml"
 	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta8"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"reflect"
-	"testing"
 )
 
 type testCase struct {
@@ -46,7 +47,7 @@ func TestSimple(t *testing.T) {
 		{
 			in: &Config{
 				Deployments: []*DeploymentConfig{
-					&DeploymentConfig{
+					{
 						Kubectl: &KubectlConfig{
 							Flags: []string{"test", "test2"},
 						},
@@ -55,7 +56,7 @@ func TestSimple(t *testing.T) {
 			},
 			expected: &next.Config{
 				Deployments: []*next.DeploymentConfig{
-					&next.DeploymentConfig{
+					{
 						Kubectl: &next.KubectlConfig{
 							ApplyArgs: []string{"test", "test2"},
 						},

@@ -99,7 +99,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 	var (
 		domain                   string
 		tls                      bool
-		ingressControllerWarning = ""
+		ingressControllerWarning string
 	)
 
 	// Load generated config if possible
@@ -189,12 +189,12 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 			ObjectMeta: metav1.ObjectMeta{Name: ingressName},
 			Spec: v1beta1.IngressSpec{
 				Rules: []v1beta1.IngressRule{
-					v1beta1.IngressRule{
+					{
 						Host: domain,
 						IngressRuleValue: v1beta1.IngressRuleValue{
 							HTTP: &v1beta1.HTTPIngressRuleValue{
 								Paths: []v1beta1.HTTPIngressPath{
-									v1beta1.HTTPIngressPath{
+									{
 										Backend: v1beta1.IngressBackend{
 											ServiceName: serviceName,
 											ServicePort: intstr.FromInt(servicePort),
@@ -251,7 +251,7 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 		if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
 			log.StopWait()
 			time.Sleep(time.Second * 1)
-			open.Start(url)
+			_ = open.Start(url)
 			log.Donef("Successfully opened %s", url)
 			return nil
 		}
@@ -289,7 +289,7 @@ func (cmd *OpenCmd) openLocal(f factory.Factory, client kubectl.Client, domain s
 
 		// Check if port is open
 		portOpen, _ := port.Check(localPort)
-		for portOpen == false {
+		for !portOpen {
 			localPort++
 			portOpen, _ = port.Check(localPort)
 		}
@@ -297,7 +297,7 @@ func (cmd *OpenCmd) openLocal(f factory.Factory, client kubectl.Client, domain s
 
 	domain = "http://localhost:" + strconv.Itoa(localPort)
 	portMappings := []*latest.PortMapping{
-		&latest.PortMapping{
+		{
 			LocalPort:  &localPort,
 			RemotePort: &servicePort,
 		},
@@ -309,7 +309,7 @@ func (cmd *OpenCmd) openLocal(f factory.Factory, client kubectl.Client, domain s
 	}
 
 	portforwardingConfig := []*latest.PortForwardingConfig{
-		&latest.PortForwardingConfig{
+		{
 			PortMappings:  portMappings,
 			LabelSelector: labelSelector,
 		},

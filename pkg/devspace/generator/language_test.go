@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -101,26 +102,6 @@ func TestDockerfileGenerator(t *testing.T) {
 	}
 
 	t.Log(dockerfileGenerator.gitRepo.LocalPath)
-	//dockerfileGenerator.gitRepo.LocalPath = "./gitLocal"
-	err = fsutil.WriteToFile([]byte(`FROM node:8.11.4
-
-RUN mkdir /app
-WORKDIR /app
-
-COPY package.json .
-RUN npm install
-
-COPY . .
-
-CMD ["npm", "start"]
-`), dockerfileGenerator.gitRepo.LocalPath+"/javascript/Dockerfile")
-	if err != nil {
-		t.Fatalf("Error writing to file: %v", err)
-	}
-	//err = fsutil.WriteToFile([]byte(`ref: refs/heads/master`), "gitLocal/javascript/.git/HEAD")
-	//if err != nil {
-	//t.Fatalf("Error writing to file: %v", err)
-	//}
 
 	//Test IsLanguageSupported with unsupported Language
 	supported := dockerfileGenerator.IsSupportedLanguage("unsupportedLanguage")
@@ -135,17 +116,33 @@ CMD ["npm", "start"]
 	if err != nil {
 		t.Fatalf("Error reading Dockerfile. Maybe dockerfileGenerator.CreateDockerfile didn't create it? : %v", err)
 	}
-	assert.Equal(t, string(content), `FROM node:8.11.4
+	fmt.Println(string(content))
+	assert.Equal(t, string(content), `FROM node:13.14-alpine
 
-RUN mkdir /app
+# Set working directory
 WORKDIR /app
 
-COPY package.json .
+# Add package.json to WORKDIR and install dependencies
+COPY package*.json ./
 RUN npm install
 
+# Add source code files to WORKDIR
 COPY . .
 
+# Application port (optional)
+EXPOSE 3000
+
+# Debugging port (optional)
+# For remote debugging, add this port to devspace.yaml: dev.ports[*].forward[*].port: 9229
+EXPOSE 9229
+
+# Container start command (DO NOT CHANGE and see note below)
 CMD ["npm", "start"]
+
+# To start using a different `+"`npm run [name]` "+`command (e.g. to use nodemon + debugger),
+# edit devspace.yaml:
+# 1) remove: images.app.injectRestartHelper (or set to false)
+# 2) add this: images.app.cmd: ["npm", "run", "dev"]
 `, "Created Dockerfile has wrong content")
 
 	//Test CreateDockerFile with unavailable language

@@ -34,7 +34,7 @@ type existsTestCase struct {
 
 func TestExists(t *testing.T) {
 	testCases := []existsTestCase{
-		existsTestCase{
+		{
 			name:       "Only custom file name exists",
 			configPath: "mypath.yaml",
 			files: map[string]interface{}{
@@ -42,7 +42,7 @@ func TestExists(t *testing.T) {
 			},
 			expectedanswer: true,
 		},
-		existsTestCase{
+		{
 			name: "Default file name does not exist",
 			files: map[string]interface{}{
 				"mypath.yaml": "",
@@ -114,7 +114,7 @@ type cloneTestCase struct {
 
 func TestClone(t *testing.T) {
 	testCases := []cloneTestCase{
-		cloneTestCase{
+		{
 			name: "Clone ConfigOptions",
 			cloner: ConfigOptions{
 				Profiles:    []string{"clonerProf"},
@@ -139,7 +139,7 @@ func TestClone(t *testing.T) {
 		configAsYaml, err := yaml.Marshal(clone)
 		assert.NilError(t, err, "Error parsing clone in testCase %s", testCase.name)
 		expectedAsYaml, err := yaml.Marshal(testCase.expectedClone)
-		assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+		assert.NilError(t, err, "Error parsing exception to yaml in testCase %s", testCase.name)
 		assert.Equal(t, string(configAsYaml), string(expectedAsYaml), "Unexpected clone in testCase %s", testCase.name)
 	}
 }
@@ -159,7 +159,7 @@ type loadTestCase struct {
 
 func TestLoad(t *testing.T) {
 	testCases := []loadTestCase{
-		loadTestCase{
+		{
 			name:       "Get from custom config file with profile",
 			configPath: "custom.yaml",
 			options:    ConfigOptions{},
@@ -167,7 +167,7 @@ func TestLoad(t *testing.T) {
 				"custom.yaml": latest.Config{
 					Version: latest.Version,
 					Profiles: []*latest.ProfileConfig{
-						&latest.ProfileConfig{
+						{
 							Name: "active",
 						},
 					},
@@ -182,7 +182,7 @@ func TestLoad(t *testing.T) {
 				Dev:     latest.DevConfig{},
 			},
 		},
-		loadTestCase{
+		{
 			name:    "Get from default file without profile",
 			options: ConfigOptions{},
 			files: map[string]interface{}{
@@ -250,7 +250,7 @@ func testLoad(testCase loadTestCase, t *testing.T) {
 
 	var config config2.Config
 	var err error
-	testCase.options.generatedLoader = &fakegenerated.Loader{
+	testCase.options.GeneratedLoader = &fakegenerated.Loader{
 		Config: testCase.returnedGenerated,
 	}
 	config, err = loader.Load(&testCase.options, log.Discard)
@@ -263,7 +263,7 @@ func testLoad(testCase loadTestCase, t *testing.T) {
 	configAsYaml, err := yaml.Marshal(config.Config())
 	assert.NilError(t, err, "Error parsing config in testCase %s", testCase.name)
 	expectedAsYaml, err := yaml.Marshal(testCase.expectedConfig)
-	assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+	assert.NilError(t, err, "Error parsing exception to yaml in testCase %s", testCase.name)
 	assert.Equal(t, string(configAsYaml), string(expectedAsYaml), "Unexpected config in testCase %s", testCase.name)
 }
 
@@ -308,7 +308,7 @@ func TestSetDevSpaceRoot(t *testing.T) {
 	}()
 
 	testCases := []setDevSpaceRootTestCase{
-		setDevSpaceRootTestCase{
+		{
 			name:       "No custom.yaml",
 			configPath: "custom.yaml",
 			files: map[string]interface{}{
@@ -318,12 +318,12 @@ func TestSetDevSpaceRoot(t *testing.T) {
 			expectedWorkDir:    dir,
 			expectedConfigPath: "custom.yaml",
 		},
-		setDevSpaceRootTestCase{
+		{
 			name:            "No devspace.yaml",
 			expectedExists:  false,
 			expectedWorkDir: dir,
 		},
-		setDevSpaceRootTestCase{
+		{
 			name: "Config exists",
 			files: map[string]interface{}{
 				"devspace.yaml": "",
@@ -332,7 +332,7 @@ func TestSetDevSpaceRoot(t *testing.T) {
 			expectedExists:  true,
 			expectedWorkDir: dir,
 		},
-		setDevSpaceRootTestCase{
+		{
 			name:       "Custom config in subdir exists",
 			configPath: "subdir/custom.yaml",
 			files: map[string]interface{}{
@@ -353,9 +353,9 @@ func testSetDevSpaceRoot(testCase setDevSpaceRootTestCase, t *testing.T) {
 	wdBackup, err := os.Getwd()
 	assert.NilError(t, err, "Error getting current working directory")
 	defer func() {
-		os.Chdir(wdBackup)
+		_ = os.Chdir(wdBackup)
 		for _, path := range []string{"devspace.yaml", "custom.yaml"} {
-			os.Remove(path)
+			_ = os.Remove(path)
 		}
 	}()
 	for path, data := range testCase.files {
@@ -365,8 +365,8 @@ func testSetDevSpaceRoot(testCase setDevSpaceRootTestCase, t *testing.T) {
 		assert.NilError(t, err, "Error writing file %s in testCase %s", path, testCase.name)
 	}
 	if testCase.startDir != "" {
-		os.Mkdir(testCase.startDir, os.ModePerm)
-		os.Chdir(testCase.startDir)
+		_ = os.Mkdir(testCase.startDir, os.ModePerm)
+		_ = os.Chdir(testCase.startDir)
 	}
 
 	loader := &configLoader{
@@ -401,7 +401,7 @@ type getProfilesTestCase struct {
 
 func TestGetProfiles(t *testing.T) {
 	testCases := []getProfilesTestCase{
-		getProfilesTestCase{
+		{
 			name: "Empty file",
 			files: map[string]interface{}{
 				"devspace.yaml": map[interface{}]interface{}{
@@ -409,7 +409,7 @@ func TestGetProfiles(t *testing.T) {
 				},
 			},
 		},
-		getProfilesTestCase{
+		{
 			name:       "Parse several profiles",
 			configPath: "custom.yaml",
 			files: map[string]interface{}{
@@ -503,7 +503,7 @@ type parseCommandsTestCase struct {
 // TODO: Finish this test!
 func TestParseCommands(t *testing.T) {
 	testCases := []parseCommandsTestCase{
-		parseCommandsTestCase{
+		{
 			data: map[interface{}]interface{}{
 				"version": latest.Version,
 			},
@@ -551,7 +551,7 @@ func TestParseCommands(t *testing.T) {
 			commandsAsYaml, err := yaml.Marshal(commands)
 			assert.NilError(t, err, "Error parsing commands in testCase %s", testCase.name)
 			expectedAsYaml, err := yaml.Marshal(testCase.expectedCommands)
-			assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+			assert.NilError(t, err, "Error parsing exception to yaml in testCase %s", testCase.name)
 			assert.Equal(t, string(commandsAsYaml), string(expectedAsYaml), "Unexpected commands in testCase %s", testCase.name)
 		})
 	}
@@ -927,7 +927,7 @@ profiles:
 					},
 				},
 				Images: map[string]*latest.ImageConfig{
-					"test": &latest.ImageConfig{
+					"test": {
 						Image: "test",
 					},
 				},
@@ -1157,7 +1157,7 @@ profiles:
 			expected: &latest.Config{
 				Version: latest.Version,
 				Images: map[string]*latest.ImageConfig{
-					"image1": &latest.ImageConfig{
+					"image1": {
 						Image: "node:14",
 					},
 				},
@@ -1214,7 +1214,7 @@ profiles:
 		}
 
 		testCase.in.options.GeneratedConfig = testCase.in.generatedConfig
-		testCase.in.options.generatedLoader = &fakeGeneratedLoader{}
+		testCase.in.options.GeneratedLoader = &fakeGeneratedLoader{}
 
 		configLoader := NewConfigLoader("").(*configLoader)
 		newConfig, _, _, err := configLoader.parseConfig("", testMap, NewDefaultParser(), testCase.in.options, log.Discard)
@@ -1240,12 +1240,12 @@ profiles:
 
 type fakeGeneratedLoader struct{}
 
-func (l *fakeGeneratedLoader) ForDevspace(path string) generated.ConfigLoader {
-	return l
+func (fl *fakeGeneratedLoader) ForDevspace(path string) generated.ConfigLoader {
+	return fl
 }
-func (f *fakeGeneratedLoader) Load() (*generated.Config, error) {
+func (fl *fakeGeneratedLoader) Load() (*generated.Config, error) {
 	panic("unimplemented")
 }
-func (f *fakeGeneratedLoader) Save(config *generated.Config) error {
+func (fl *fakeGeneratedLoader) Save(config *generated.Config) error {
 	return nil
 }

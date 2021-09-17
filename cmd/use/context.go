@@ -80,7 +80,7 @@ func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command,
 
 	if oldContext != context {
 		// Save updated kube-config
-		kubeLoader.SaveConfig(kubeConfig)
+		_ = kubeLoader.SaveConfig(kubeConfig)
 
 		log.Infof("Your kube-context has been updated to '%s'", ansi.Color(kubeConfig.CurrentContext, "white+b"))
 		log.Infof("\r         To revert this operation, run: %s\n", ansi.Color("devspace use context "+oldContext, "white+b"))

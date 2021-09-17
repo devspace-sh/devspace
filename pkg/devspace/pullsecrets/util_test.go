@@ -22,7 +22,7 @@ func TestGetRegistryFromImageName(t *testing.T) {
 	assert.Equal(t, "reg.example.com", reg, "Unofficial repo can't be detected")
 
 	//Test with invalid
-	reg, err = GetRegistryFromImageName("")
+	_, err = GetRegistryFromImageName("")
 	if err == nil {
 		t.Fatalf("No Error calling GetRegistryFromImageName with empty image name")
 	}

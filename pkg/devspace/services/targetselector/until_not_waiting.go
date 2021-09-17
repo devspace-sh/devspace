@@ -1,12 +1,13 @@
 package targetselector
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	v1 "k8s.io/api/core/v1"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	v1 "k8s.io/api/core/v1"
 )
 
 // NewUntilNotWaitingStrategy creates a new waiting strategy

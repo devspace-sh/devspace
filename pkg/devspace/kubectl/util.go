@@ -3,21 +3,21 @@ package kubectl
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/http"
+	"os/exec"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
-	k8sv1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/transport/spdy"
-	"net"
-	"net/http"
-	"os/exec"
-	"strings"
 )
 
 // ClusterRoleBindingName is the name of the cluster role binding that ensures that the user has enough rights
@@ -101,7 +101,7 @@ func (client *client) EnsureDeployNamespaces(config *latest.Config, log log.Logg
 	for _, namespace := range namespaces {
 		_, err := client.KubeClient().CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
 		if err != nil {
-			if kerrors.IsNotFound(err) == false {
+			if !kerrors.IsNotFound(err) {
 				if kerrors.IsForbidden(err) {
 					continue
 				}
@@ -110,12 +110,12 @@ func (client *client) EnsureDeployNamespaces(config *latest.Config, log log.Logg
 			}
 
 			// create namespace
-			_, err = client.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
+			_, err = client.KubeClient().CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 				},
 			}, metav1.CreateOptions{})
-			if err != nil && kerrors.IsAlreadyExists(err) == false {
+			if err != nil && !kerrors.IsAlreadyExists(err) {
 				return err
 			}
 
@@ -182,7 +182,7 @@ func (client *client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error 
 
 // GetPodStatus returns the pod status as a string
 // Taken from https://github.com/kubernetes/kubernetes/pkg/printers/internalversion/printers.go
-func GetPodStatus(pod *k8sv1.Pod) string {
+func GetPodStatus(pod *corev1.Pod) string {
 	reason := string(pod.Status.Phase)
 
 	if pod.Status.Reason != "" {
@@ -255,7 +255,7 @@ func GetPodStatus(pod *k8sv1.Pod) string {
 }
 
 // NewPortForwarder creates a new port forwarder object for the specified pods, ports and addresses
-func (client *client) NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}, errorChan chan error) (*portforward.PortForwarder, error) {
+func (client *client) NewPortForwarder(pod *corev1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}, errorChan chan error) (*portforward.PortForwarder, error) {
 	execRequest := client.KubeClient().CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).

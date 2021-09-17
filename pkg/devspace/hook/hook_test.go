@@ -21,7 +21,7 @@ func TestHookWithoutExecution(t *testing.T) {
 	//Execute 1 hook with no when
 	executer = NewExecuter(config.NewConfig(nil, &latest.Config{
 		Hooks: []*latest.HookConfig{
-			&latest.HookConfig{},
+			{},
 		},
 	}, nil, nil, constants.DefaultConfigPath), nil)
 	err = executer.Execute("", "", "", Context{}, log.Discard)
@@ -32,7 +32,7 @@ func TestHookWithoutExecution(t *testing.T) {
 	//Execute 1 hook with no When.Before and no When.After
 	executer = NewExecuter(config.NewConfig(nil, &latest.Config{
 		Hooks: []*latest.HookConfig{
-			&latest.HookConfig{
+			{
 				When: &latest.HookWhenConfig{},
 			},
 		},
@@ -45,7 +45,7 @@ func TestHookWithoutExecution(t *testing.T) {
 	//Execute 1 hook with empty When.Before
 	executer = NewExecuter(config.NewConfig(nil, &latest.Config{
 		Hooks: []*latest.HookConfig{
-			&latest.HookConfig{
+			{
 				When: &latest.HookWhenConfig{
 					Before: &latest.HookWhenAtConfig{},
 				},
@@ -60,7 +60,7 @@ func TestHookWithoutExecution(t *testing.T) {
 	//Execute 1 hook with empty When.After
 	executer = NewExecuter(config.NewConfig(nil, &latest.Config{
 		Hooks: []*latest.HookConfig{
-			&latest.HookConfig{
+			{
 				When: &latest.HookWhenConfig{
 					After: &latest.HookWhenAtConfig{},
 				},
@@ -77,7 +77,7 @@ func TestHookWithoutExecution(t *testing.T) {
 func TestHookWithExecution(t *testing.T) {
 	executer := NewExecuter(config.NewConfig(nil, &latest.Config{
 		Hooks: []*latest.HookConfig{
-			&latest.HookConfig{
+			{
 				When: &latest.HookWhenConfig{
 					Before: &latest.HookWhenAtConfig{
 						Deployments: "theseDeployments",

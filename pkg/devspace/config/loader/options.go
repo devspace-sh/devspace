@@ -40,7 +40,7 @@ type ConfigOptions struct {
 	VarsSecretName string
 
 	// can be used for testing
-	generatedLoader generated.ConfigLoader `yaml:"-" json:"-"`
+	GeneratedLoader generated.ConfigLoader `yaml:"-" json:"-"`
 }
 
 // Clone clones the config options

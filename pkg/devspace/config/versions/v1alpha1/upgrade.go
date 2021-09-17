@@ -186,7 +186,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 
 				// Get registry
 				registry, ok := (*c.Registries)[*image.Registry]
-				if ok == false {
+				if !ok {
 					return nil, errors.Errorf("Couldn't find registry %s in registries", *image.Registry)
 				}
 				if registry.Auth != nil {
@@ -199,7 +199,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				(*nextConfig.Images)[key].Image = ptr.String(*registry.URL + "/" + *image.Name)
 			}
 
-			if image.AutoReload == nil || image.AutoReload.Disabled == nil || *image.AutoReload.Disabled == false {
+			if image.AutoReload == nil || image.AutoReload.Disabled == nil || !*image.AutoReload.Disabled {
 				if nextConfig.Dev == nil {
 					nextConfig.Dev = &next.DevConfig{}
 				}

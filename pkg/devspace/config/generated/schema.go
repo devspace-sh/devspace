@@ -12,8 +12,8 @@ type Config struct {
 }
 
 // DeepCopy creates a deep copy of the config
-func (c *Config) DeepCopy() *Config {
-	o, _ := yaml.Marshal(c)
+func (config *Config) DeepCopy() *Config {
+	o, _ := yaml.Marshal(config)
 	n := &Config{}
 	_ = yaml.Unmarshal(o, n)
 	return n

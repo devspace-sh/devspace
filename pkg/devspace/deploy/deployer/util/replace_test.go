@@ -26,21 +26,21 @@ type replaceContainerNamesTestCase struct {
 
 func TestReplaceContainerNames(t *testing.T) {
 	testCases := []replaceContainerNamesTestCase{
-		replaceContainerNamesTestCase{
+		{
 			name: "invalid image name",
 			overwriteValues: map[interface{}]interface{}{
 				"": "",
 			},
 			cache: &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
-					"": &generated.ImageCache{},
+					"": {},
 				},
 			},
 			expectedOverwriteValues: map[interface{}]interface{}{
 				"": "",
 			},
 		},
-		replaceContainerNamesTestCase{
+		{
 			name: "Image not in cache",
 			overwriteValues: map[interface{}]interface{}{
 				"": "myimage",
@@ -64,7 +64,7 @@ func TestReplaceContainerNames(t *testing.T) {
 			},
 			cache: &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
-					"test": &generated.ImageCache{
+					"test": {
 						ImageName: "myimage",
 						Tag:       "someTag",
 					},
@@ -90,7 +90,7 @@ func TestReplaceContainerNames(t *testing.T) {
 			},
 			cache: &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
-					"test": &generated.ImageCache{
+					"test": {
 						ImageName: "myimage",
 						Tag:       "someTag",
 					},
@@ -116,7 +116,7 @@ func TestReplaceContainerNames(t *testing.T) {
 			},
 			cache: &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
-					"test": &generated.ImageCache{
+					"test": {
 						ImageName: "myimage",
 						Tag:       "someTag",
 					},
@@ -142,7 +142,7 @@ func TestReplaceContainerNames(t *testing.T) {
 			},
 			cache: &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
-					"test": &generated.ImageCache{
+					"test": {
 						ImageName: "myimage",
 						Tag:       "someTag",
 					},

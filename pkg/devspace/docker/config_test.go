@@ -34,7 +34,7 @@ func TestGetAllAuthConfigs(t *testing.T) {
 			files: map[string]interface{}{
 				"config.json": configfile.ConfigFile{
 					AuthConfigs: map[string]configtypes.AuthConfig{
-						"key": configtypes.AuthConfig{
+						"key": {
 							Username:      "ValUser",
 							Password:      "ValPass",
 							Email:         "ValEmail",
@@ -46,7 +46,7 @@ func TestGetAllAuthConfigs(t *testing.T) {
 				},
 			},
 			expectedAuthConfigs: map[string]types.AuthConfig{
-				"key": types.AuthConfig{
+				"key": {
 					Username:      "ValUser",
 					Password:      "ValPass",
 					Email:         "ValEmail",
@@ -111,7 +111,7 @@ func TestGetAllAuthConfigs(t *testing.T) {
 		authsAsYaml, err := yaml.Marshal(authconfigs)
 		assert.NilError(t, err, "Error parsing authConfigs to yaml in testCase %s", testCase.name)
 		expectedAsYaml, err := yaml.Marshal(testCase.expectedAuthConfigs)
-		assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+		assert.NilError(t, err, "Error parsing exception to yaml in testCase %s", testCase.name)
 		assert.Equal(t, string(authsAsYaml), string(expectedAsYaml), "Unexpected authConfigs in testCase %s", testCase.name)
 
 		err = filepath.Walk(".", func(path string, f os.FileInfo, err error) error {

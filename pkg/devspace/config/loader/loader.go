@@ -84,10 +84,10 @@ func (l *configLoader) LoadGenerated(options *ConfigOptions) (*generated.Config,
 
 	generatedConfig := options.GeneratedConfig
 	if generatedConfig == nil {
-		if options.generatedLoader == nil {
+		if options.GeneratedLoader == nil {
 			generatedConfig, err = generated.NewConfigLoaderFromDevSpacePath(GetLastProfile(options.Profiles), l.configPath).Load()
 		} else {
-			generatedConfig, err = options.generatedLoader.Load()
+			generatedConfig, err = options.GeneratedLoader.Load()
 		}
 		if err != nil {
 			return nil, err
@@ -179,7 +179,7 @@ func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) err
 			return errors.Wrap(err, "parsing devspace version")
 		}
 
-		if constraint.Check(v) == false {
+		if !constraint.Check(v) {
 			return fmt.Errorf("DevSpace version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have installed DevSpace with version %s", upgrade.GetVersion(), config.Require.DevSpace, config.Require.DevSpace)
 		}
 	}
@@ -204,7 +204,7 @@ func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) err
 				return errors.Wrapf(err, "parsing plugin %s version", p.Name)
 			}
 
-			if constraint.Check(v) == false {
+			if !constraint.Check(v) {
 				return fmt.Errorf("plugin '%s' version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have installed the plugin '%s' with version %s", p.Name, metadata.Version, p.Version, p.Name, p.Version)
 			}
 		}
@@ -246,7 +246,7 @@ func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) err
 			return fmt.Errorf("command %s %s output does not return a semver version, however the command is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, strings.Join(versionArgs, " "), c.Name, c.Version)
 		}
 
-		if constraint.Check(v) == false {
+		if !constraint.Check(v) {
 			return fmt.Errorf("command '%s' version mismatch: %s (currently installed) does not match %s (required by config). Please make sure you have correctly installed '%s' with version %s", c.Name, matches[1], c.Version, c.Name, c.Version)
 		}
 	}
@@ -319,10 +319,10 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 	}
 
 	// Save generated config
-	if options.generatedLoader == nil {
+	if options.GeneratedLoader == nil {
 		err = generated.NewConfigLoaderFromDevSpacePath(GetLastProfile(options.Profiles), l.configPath).Save(generatedConfig)
 	} else {
-		err = options.generatedLoader.Save(generatedConfig)
+		err = options.GeneratedLoader.Save(generatedConfig)
 	}
 	if err != nil {
 		return nil, nil, nil, err
@@ -401,11 +401,7 @@ func GetLastProfile(profiles []string) string {
 func configExistsInPath(path string) bool {
 	// check devspace.yaml
 	_, err := os.Stat(path)
-	if err == nil {
-		return true
-	}
-
-	return false // no config file found
+	return err == nil // false, no config file found
 }
 
 // LoadRaw loads the raw config

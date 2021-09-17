@@ -23,11 +23,11 @@ type loadTestCase struct {
 
 func TestLoad(t *testing.T) {
 	testCases := []loadTestCase{
-		loadTestCase{
+		{
 			name:           "no config file",
 			expectedConfig: &Config{},
 		},
-		loadTestCase{
+		{
 			name: "load empty config file",
 			files: map[string]interface{}{
 				".devspace/generated.yaml": struct{}{},
@@ -96,7 +96,7 @@ func testLoad(testCase loadTestCase, t *testing.T) {
 	configAsYaml, err := yaml.Marshal(config)
 	assert.NilError(t, err, "Error parsing config in testCase %s", testCase.name)
 	expectedAsYaml, err := yaml.Marshal(testCase.expectedConfig)
-	assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+	assert.NilError(t, err, "Error parsing exception to yaml in testCase %s", testCase.name)
 	assert.Equal(t, string(configAsYaml), string(expectedAsYaml), "Unexpected config in testCase %s", testCase.name)
 }
 
@@ -113,7 +113,7 @@ type saveTestCase struct {
 
 func TestSave(t *testing.T) {
 	testCases := []saveTestCase{
-		saveTestCase{
+		{
 			name: "Save config default",
 			config: &Config{
 				OverrideProfile: ptr.String("overrideProf"),
@@ -131,7 +131,7 @@ func TestSave(t *testing.T) {
 				},
 			},
 		},
-		saveTestCase{
+		{
 			name:               "Save config test.yaml",
 			devspaceConfigPath: "test.yaml",
 			config: &Config{
@@ -197,7 +197,7 @@ func TestSave(t *testing.T) {
 		fileContent, err := ioutil.ReadFile(testCase.expectedConfigFileName)
 		assert.NilError(t, err, "Error reading file in testCase %s", testCase.name)
 		expectedAsYaml, err := yaml.Marshal(testCase.expectedConfigFile)
-		assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+		assert.NilError(t, err, "Error parsing exception to yaml in testCase %s", testCase.name)
 		assert.Equal(t, string(fileContent), string(expectedAsYaml), "Unexpected config file in testCase %s", testCase.name)
 	}
 }
@@ -214,9 +214,9 @@ type getActiveTestCase struct {
 
 func TestGetActive(t *testing.T) {
 	testCases := []getActiveTestCase{
-		getActiveTestCase{
-			name:     "Get overriden profile that is not there",
-			active:   "acttive",
+		{
+			name:     "Get overridden profile that is not there",
+			active:   "active",
 			override: ptr.String("override"),
 			profiles: map[string]*CacheConfig{},
 
@@ -236,7 +236,7 @@ func TestGetActive(t *testing.T) {
 		activeAsYaml, err := yaml.Marshal(active)
 		assert.NilError(t, err, "Error parsing active provider in testCase %s", testCase.name)
 		expectedAsYaml, err := yaml.Marshal(testCase.expectedCache)
-		assert.NilError(t, err, "Error parsing expection to yaml in testCase %s", testCase.name)
+		assert.NilError(t, err, "Error parsing exception to yaml in testCase %s", testCase.name)
 		assert.Equal(t, string(activeAsYaml), string(expectedAsYaml), "Unexpected config file in testCase %s", testCase.name)
 	}
 }
@@ -244,7 +244,7 @@ func TestGetActive(t *testing.T) {
 func TestGetCaches(t *testing.T) {
 	dsConfig := &Config{
 		Profiles: map[string]*CacheConfig{
-			"SomeConfig": &CacheConfig{},
+			"SomeConfig": {},
 		},
 	}
 	InitDevSpaceConfig(dsConfig, "SomeConfig")

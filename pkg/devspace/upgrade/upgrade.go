@@ -2,10 +2,11 @@ package upgrade
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
 	"regexp"
 	"sync"
+
+	"github.com/pkg/errors"
 
 	"github.com/loft-sh/devspace/pkg/util/log"
 

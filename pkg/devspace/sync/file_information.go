@@ -1,19 +1,19 @@
 package sync
 
 import (
+	"os"
+
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/notify"
-	"os"
 )
 
 // FileInformation describes a path or file that is synced either in the remote container or locally
 type FileInformation struct {
-	Name      string
-	Size      int64
-	Mtime     int64
-	MtimeNano int64
-	Mode      os.FileMode
-
+	Name           string
+	Size           int64
+	Mtime          int64
+	MtimeNano      int64
+	Mode           os.FileMode
 	IsSymbolicLink bool
 	IsDirectory    bool
 }

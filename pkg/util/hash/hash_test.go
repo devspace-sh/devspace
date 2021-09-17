@@ -57,7 +57,7 @@ func TestHashDirectory(t *testing.T) {
 	}
 
 	//Use on file
-	fsutil.WriteToFile([]byte(""), "someFile")
+	_ = fsutil.WriteToFile([]byte(""), "someFile")
 	_, err = Directory("someFile")
 	if err != nil {
 		t.Fatalf("Error creating hash of file: %v", err)
@@ -92,9 +92,9 @@ func TestHashDirectoryExcludes(t *testing.T) {
 		}
 	}()
 
-	fsutil.WriteToFile([]byte(""), "inludedFile")
-	fsutil.WriteToFile([]byte(""), "excludedFile")
-	fsutil.WriteToFile([]byte(""), "excludedDir/someFile")
+	_ = fsutil.WriteToFile([]byte(""), "inludedFile")
+	_ = fsutil.WriteToFile([]byte(""), "excludedFile")
+	_ = fsutil.WriteToFile([]byte(""), "excludedDir/someFile")
 	_, err = DirectoryExcludes(".", []string{"excludedFile", "excludedDir"}, false)
 	if err != nil {
 		t.Fatalf("Error creating hash of directory: %v", err)

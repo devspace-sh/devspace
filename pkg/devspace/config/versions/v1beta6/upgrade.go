@@ -21,7 +21,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				continue
 			}
 
-			if config.DownloadOnInitialSync != nil && *config.DownloadOnInitialSync == true {
+			if config.DownloadOnInitialSync != nil && *config.DownloadOnInitialSync {
 				nextConfig.Dev.Sync[key].InitialSync = next.InitialSyncStrategyPreferLocal
 			}
 		}

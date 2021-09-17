@@ -1,13 +1,14 @@
 package util
 
 import (
-	"gopkg.in/yaml.v2"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -18,7 +19,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var authRegEx = regexp.MustCompile("^(https?:\\/\\/)[^:]+:[^@]+@(.*)$")
+var authRegEx = regexp.MustCompile(`^(https?:\/\/)[^:]+:[^@]+@(.*)$`)
 
 // DependencyFolder is the dependency folder in the home directory of the user
 const DependencyFolder = ".devspace/dependencies"
@@ -38,7 +39,7 @@ func DownloadDependency(ID, basePath string, source *latest.SourceConfig, update
 	if source.Git != "" {
 		gitPath := strings.TrimSpace(source.Git)
 
-		os.MkdirAll(DependencyFolderPath, 0755)
+		_ = os.MkdirAll(DependencyFolderPath, 0755)
 		localPath = filepath.Join(DependencyFolderPath, hash.String(ID))
 
 		// Check if dependency exists
@@ -69,9 +70,9 @@ func DownloadDependency(ID, basePath string, source *latest.SourceConfig, update
 			log.Donef("Pulled %s", ID)
 		}
 	} else if source.Path != "" {
-		if isUrl(source.Path) {
+		if isURL(source.Path) {
 			localPath = filepath.Join(DependencyFolderPath, hash.String(ID))
-			os.MkdirAll(localPath, 0755)
+			_ = os.MkdirAll(localPath, 0755)
 
 			// Check if dependency exists
 			configPath := filepath.Join(localPath, constants.DefaultConfigPath)
@@ -134,7 +135,7 @@ func GetDependencyID(basePath string, config *latest.DependencyConfig) (string, 
 
 	// replace relative path with absolute path
 	if outConfig.Source != nil && outConfig.Source.Path != "" {
-		if isUrl(outConfig.Source.Path) == false {
+		if !isURL(outConfig.Source.Path) {
 			filePath := outConfig.Source.Path
 			if !filepath.IsAbs(outConfig.Source.Path) {
 				filePath = filepath.Join(basePath, outConfig.Source.Path)
@@ -180,7 +181,7 @@ func GetParentProfileID(basePath string, source *latest.SourceConfig, profile st
 
 		return id
 	} else if source.Path != "" {
-		if isUrl(source.Path) {
+		if isURL(source.Path) {
 			id := strings.TrimSpace(source.Path)
 
 			if profile != "" {
@@ -222,6 +223,6 @@ func GetParentProfileID(basePath string, source *latest.SourceConfig, profile st
 	return ""
 }
 
-func isUrl(path string) bool {
+func isURL(path string) bool {
 	return strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://")
 }

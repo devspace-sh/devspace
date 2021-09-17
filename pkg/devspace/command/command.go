@@ -1,10 +1,11 @@
 package command
 
 import (
-	"github.com/loft-sh/devspace/pkg/util/command"
-	"github.com/loft-sh/devspace/pkg/util/shell"
 	"io"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/shell"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 
@@ -20,7 +21,7 @@ func ExecuteCommand(commands []*latest.CommandConfig, name string, args []string
 		if cmd.Name == name {
 			shellCommand = cmd.Command
 			shellArgs = cmd.Args
-			appendArgs = cmd.AppendArgs == nil || *cmd.AppendArgs == true
+			appendArgs = cmd.AppendArgs == nil || *cmd.AppendArgs
 			break
 		}
 	}

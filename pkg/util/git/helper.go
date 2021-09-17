@@ -1,11 +1,12 @@
 package git
 
 import (
-	"github.com/pkg/errors"
-	"gopkg.in/src-d/go-git.v4"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/pkg/errors"
+	"gopkg.in/src-d/go-git.v4"
 )
 
 // GetBranch retrieves the current HEADs name

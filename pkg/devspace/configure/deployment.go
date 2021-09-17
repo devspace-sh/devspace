@@ -7,11 +7,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	v1 "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/loft-sh/devspace/pkg/util/shell"
@@ -19,64 +17,59 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 )
 
-var imageNameCleaningRegex = regexp.MustCompile("[^a-z0-9]")
-
 // AddKubectlDeployment adds a new kubectl deployment to the provided config
 func (m *manager) AddKubectlDeployment(deploymentName string, isKustomization bool) error {
-	for true {
-		question := "Please enter the paths to your Kubernetes manifests (comma separated, glob patterns are allowed, e.g. 'manifests/**' or 'kube/pod.yaml')"
-		if isKustomization {
-			question = "Please enter path to your Kustomization folder (e.g. ./kube/kustomization/)"
-		}
-
-		manifests, err := m.log.Question(&survey.QuestionOptions{
-			Question: question,
-			ValidationFunc: func(value string) error {
-				if isKustomization {
-					stat, err := os.Stat(path.Join(value, "kustomization.yaml"))
-					if err == nil && stat.IsDir() == false {
-						return nil
-					}
-					return errors.New(fmt.Sprintf("Path `%s` is not a Kustomization (kustomization.yaml missing)", value))
-				}
-				return nil
-			},
-		})
-		if err != nil {
-			return err
-		}
-
-		splitted := strings.Split(manifests, ",")
-		splittedPointer := []string{}
-
-		for _, s := range splitted {
-			trimmed := strings.TrimSpace(s)
-			splittedPointer = append(splittedPointer, trimmed)
-		}
-
-		m.config.Deployments = append([]*v1.DeploymentConfig{
-			{
-				Name: deploymentName,
-				Kubectl: &v1.KubectlConfig{
-					Manifests: splittedPointer,
-				},
-			},
-		}, m.config.Deployments...)
-
-		if isKustomization {
-			m.config.Deployments[0].Kubectl.Kustomize = ptr.Bool(isKustomization)
-		}
-
-		break
+	question := "Please enter the paths to your Kubernetes manifests (comma separated, glob patterns are allowed, e.g. 'manifests/**' or 'kube/pod.yaml')"
+	if isKustomization {
+		question = "Please enter path to your Kustomization folder (e.g. ./kube/kustomization/)"
 	}
+
+	manifests, err := m.log.Question(&survey.QuestionOptions{
+		Question: question,
+		ValidationFunc: func(value string) error {
+			if isKustomization {
+				stat, err := os.Stat(path.Join(value, "kustomization.yaml"))
+				if err == nil && !stat.IsDir() {
+					return nil
+				}
+				return fmt.Errorf("path `%s` is not a Kustomization (kustomization.yaml missing)", value)
+			}
+			return nil
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	splitted := strings.Split(manifests, ",")
+	splittedPointer := []string{}
+
+	for _, s := range splitted {
+		trimmed := strings.TrimSpace(s)
+		splittedPointer = append(splittedPointer, trimmed)
+	}
+
+	m.config.Deployments = append([]*latest.DeploymentConfig{
+		{
+			Name: deploymentName,
+			Kubectl: &latest.KubectlConfig{
+				Manifests: splittedPointer,
+			},
+		},
+	}, m.config.Deployments...)
+
+	if isKustomization {
+		m.config.Deployments[0].Kubectl.Kustomize = ptr.Bool(isKustomization)
+	}
+
 	return nil
 }
 
 // AddHelmDeployment adds a new helm deployment to the provided config
 func (m *manager) AddHelmDeployment(deploymentName string) error {
-	for true {
-		helmConfig := &v1.HelmConfig{
-			Chart: &v1.ChartConfig{},
+	for {
+		helmConfig := &latest.HelmConfig{
+			Chart: &latest.ChartConfig{},
 			Values: map[interface{}]interface{}{
 				"someChartValue": "",
 			},
@@ -136,7 +129,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 			helmConfig.Chart.Name = localChartPathRel
 		} else if chartLocation == chartRepo || chartLocation == archiveURL {
 		ChartRepoLoop:
-			for true {
+			for {
 				requestURL := ""
 
 				if chartLocation == chartRepo {
@@ -172,7 +165,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				username := ""
 				password := ""
 
-				for true {
+				for {
 					httpClient := &http.Client{}
 					req, err := http.NewRequest("GET", requestURL, nil)
 					if err != nil {
@@ -216,7 +209,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 							helmConfig.Chart.Username = fmt.Sprintf("${%s}", usernameVar)
 							helmConfig.Chart.Password = fmt.Sprintf("${%s}", passwordVar)
 
-							m.config.Vars = append(m.config.Vars, &v1.Variable{
+							m.config.Vars = append(m.config.Vars, &latest.Variable{
 								Name:     passwordVar,
 								Password: true,
 							})
@@ -230,7 +223,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				}
 			}
 		} else {
-			for true {
+			for {
 				chartTempPath := ".devspace/chart-repo"
 
 				gitRepo, err := m.log.Question(&survey.QuestionOptions{
@@ -269,17 +262,17 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 
 				chartFolder := path.Join(chartTempPath, gitSubFolder)
 				stat, err := os.Stat(chartFolder)
-				if err != nil || stat.IsDir() == false {
+				if err != nil || !stat.IsDir() {
 					m.log.WriteString("\n")
 					m.log.Errorf("Local path `%s` does not exist or is not a directory", chartFolder)
 					continue
 				}
 
 				helmConfig.Chart.Name = chartFolder
-				m.config.Hooks = append(m.config.Hooks, &v1.HookConfig{
+				m.config.Hooks = append(m.config.Hooks, &latest.HookConfig{
 					Command: gitCommand,
-					When: &v1.HookWhenConfig{
-						Before: &v1.HookWhenAtConfig{
+					When: &latest.HookWhenConfig{
+						Before: &latest.HookWhenAtConfig{
 							Deployments: hook.All,
 						},
 					},
@@ -289,7 +282,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 			}
 		}
 
-		m.config.Deployments = append([]*v1.DeploymentConfig{
+		m.config.Deployments = append([]*latest.DeploymentConfig{
 			{
 				Name: deploymentName,
 				Helm: helmConfig,
@@ -313,8 +306,8 @@ func (m *manager) AddComponentDeployment(deploymentName, image string, servicePo
 	}
 
 	if servicePort > 0 {
-		componentConfig.Service = &v1.ServiceConfig{
-			Ports: []*v1.ServicePortConfig{
+		componentConfig.Service = &latest.ServiceConfig{
+			Ports: []*latest.ServicePortConfig{
 				{
 					Port: &servicePort,
 				},
@@ -327,10 +320,10 @@ func (m *manager) AddComponentDeployment(deploymentName, image string, servicePo
 		return err
 	}
 
-	m.config.Deployments = append([]*v1.DeploymentConfig{
+	m.config.Deployments = append([]*latest.DeploymentConfig{
 		{
 			Name: deploymentName,
-			Helm: &v1.HelmConfig{
+			Helm: &latest.HelmConfig{
 				ComponentChart: ptr.Bool(true),
 				Values:         chartValues,
 			},

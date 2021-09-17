@@ -29,7 +29,7 @@ type analyzeTestCase struct {
 
 func TestAnalyze(t *testing.T) {
 	testCases := []analyzeTestCase{
-		analyzeTestCase{},
+		{},
 	}
 
 	for _, testCase := range testCases {
@@ -68,25 +68,25 @@ type createReportTestCase struct {
 The fake client returns nil. Therefore it's not possible to let events return problems.*/
 func TestCreateReport(t *testing.T) {
 	testCases := []createReportTestCase{
-		createReportTestCase{
+		{
 			name:           "Nothing to report",
 			wait:           true,
 			kubeNamespaces: []string{"ns1"},
 			kubeReplicasets: map[string][]appsv1.ReplicaSet{
-				"ns1": []appsv1.ReplicaSet{
-					appsv1.ReplicaSet{
+				"ns1": {
+					{
 						Spec: appsv1.ReplicaSetSpec{},
 					},
 				},
 			},
 		},
-		createReportTestCase{
+		{
 			name:           "Error in pods",
 			wait:           true,
 			kubeNamespaces: []string{"ns1"},
 			kubePods: map[string][]k8sv1.Pod{
-				"ns1": []k8sv1.Pod{
-					k8sv1.Pod{
+				"ns1": {
+					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "ErrorPod",
 						},
@@ -97,26 +97,26 @@ func TestCreateReport(t *testing.T) {
 				},
 			},
 			kubeEvents: map[string][]k8sv1.Event{
-				"ns1": []k8sv1.Event{
-					k8sv1.Event{
+				"ns1": {
+					{
 						Type: "Normal",
 					},
 				},
 			},
 			expectedReport: []*ReportItem{
-				&ReportItem{
+				{
 					Name:     "Pods",
 					Problems: []string{fmt.Sprintf("  Pod %s:  \n    Status: %s  \n    Created: %s ago\n", ansi.Color("ErrorPod", "white+b"), ansi.Color("Error", "red+b"), ansi.Color("2s", "white+b"))},
 				},
 			},
 		},
-		createReportTestCase{
+		{
 			name:           "Error in replicasets",
 			wait:           true,
 			kubeNamespaces: []string{"ns1"},
 			kubeReplicasets: map[string][]appsv1.ReplicaSet{
-				"ns1": []appsv1.ReplicaSet{
-					appsv1.ReplicaSet{
+				"ns1": {
+					{
 						Spec: appsv1.ReplicaSetSpec{
 							Replicas: ptr.Int32(4),
 						},
@@ -127,13 +127,13 @@ func TestCreateReport(t *testing.T) {
 				},
 			},
 		},
-		createReportTestCase{
+		{
 			name:           "Error in statefulsets",
 			wait:           true,
 			kubeNamespaces: []string{"ns1"},
 			kubeStatefulsets: map[string][]appsv1.StatefulSet{
-				"ns1": []appsv1.StatefulSet{
-					appsv1.StatefulSet{
+				"ns1": {
+					{
 						Spec: appsv1.StatefulSetSpec{
 							Replicas: ptr.Int32(4),
 						},
@@ -151,7 +151,7 @@ func TestCreateReport(t *testing.T) {
 			Client: fake.NewSimpleClientset(),
 		}
 		for _, namespace := range testCase.kubeNamespaces {
-			kubeClient.Client.CoreV1().Namespaces().Create(context.TODO(), &k8sv1.Namespace{
+			_, _ = kubeClient.Client.CoreV1().Namespaces().Create(context.TODO(), &k8sv1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 				},
@@ -160,22 +160,22 @@ func TestCreateReport(t *testing.T) {
 		for namespace, podList := range testCase.kubePods {
 			for _, pod := range podList {
 				pod.ObjectMeta.CreationTimestamp.Time = time.Now()
-				kubeClient.Client.CoreV1().Pods(namespace).Create(context.TODO(), &pod, metav1.CreateOptions{})
+				_, _ = kubeClient.Client.CoreV1().Pods(namespace).Create(context.TODO(), &pod, metav1.CreateOptions{})
 			}
 		}
 		for namespace, replicasetList := range testCase.kubeReplicasets {
 			for _, replicaset := range replicasetList {
-				kubeClient.Client.AppsV1().ReplicaSets(namespace).Create(context.TODO(), &replicaset, metav1.CreateOptions{})
+				_, _ = kubeClient.Client.AppsV1().ReplicaSets(namespace).Create(context.TODO(), &replicaset, metav1.CreateOptions{})
 			}
 		}
 		for namespace, statefulsetList := range testCase.kubeStatefulsets {
 			for _, statefulset := range statefulsetList {
-				kubeClient.Client.AppsV1().StatefulSets(namespace).Create(context.TODO(), &statefulset, metav1.CreateOptions{})
+				_, _ = kubeClient.Client.AppsV1().StatefulSets(namespace).Create(context.TODO(), &statefulset, metav1.CreateOptions{})
 			}
 		}
 		for namespace, eventList := range testCase.kubeEvents {
 			for _, pod := range eventList {
-				kubeClient.Client.CoreV1().Events(namespace).Create(context.TODO(), &pod, metav1.CreateOptions{})
+				_, _ = kubeClient.Client.CoreV1().Events(namespace).Create(context.TODO(), &pod, metav1.CreateOptions{})
 			}
 		}
 
@@ -208,14 +208,14 @@ type reportToStringTestCase struct {
 
 func TestReportToString(t *testing.T) {
 	testCases := []reportToStringTestCase{
-		reportToStringTestCase{
+		{
 			name:           "No items",
 			expectedString: fmt.Sprintf("\n%sNo problems found.\n%sRun `%s` if you want show pod logs\n\n", paddingLeft, paddingLeft, ansi.Color("devspace logs --pick", "white+b")),
 		},
-		reportToStringTestCase{
+		{
 			name: "testReport",
 			report: []*ReportItem{
-				&ReportItem{
+				{
 					Name: "testReport",
 					Problems: []string{
 						"Somethings wrong, I guess...",

@@ -26,7 +26,7 @@ func TestSimple(t *testing.T) {
 	oldConfig := &Config{
 		DevSpace: &DevSpaceConfig{
 			Deployments: &[]*DeploymentConfig{
-				&DeploymentConfig{
+				{
 					Name: ptr.String("test"),
 					Helm: &HelmConfig{
 						DevOverwrite: ptr.String("overwrite"),
@@ -51,13 +51,13 @@ func TestSimple(t *testing.T) {
 			},
 		},
 		Images: &map[string]*ImageConfig{
-			"test": &ImageConfig{
+			"test": {
 				Name:     ptr.String("test"),
 				Registry: ptr.String("test"),
 			},
 		},
 		Registries: &map[string]*RegistryConfig{
-			"test": &RegistryConfig{
+			"test": {
 				URL: ptr.String("test.io"),
 			},
 		},

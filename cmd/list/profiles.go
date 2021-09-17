@@ -1,8 +1,9 @@
 package list
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"strconv"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -24,7 +25,7 @@ func newProfilesCmd(f factory.Factory) *cobra.Command {
 #######################################################
 ############## devspace list profiles #################
 #######################################################
-Lists all DevSpace configuartions for this project
+Lists all DevSpace configurations for this project
 #######################################################
 	`,
 		Args: cobra.NoArgs,

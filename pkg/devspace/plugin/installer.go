@@ -1,15 +1,16 @@
 package plugin
 
 import (
-	"github.com/ghodss/yaml"
-	"github.com/loft-sh/devspace/pkg/util/git"
-	"github.com/otiai10/copy"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/ghodss/yaml"
+	"github.com/loft-sh/devspace/pkg/util/git"
+	"github.com/otiai10/copy"
 )
 
 type Installer interface {

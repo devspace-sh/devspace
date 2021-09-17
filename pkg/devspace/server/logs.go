@@ -2,12 +2,13 @@ package server
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/services"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/services"
+	"github.com/sirupsen/logrus"
 
 	"github.com/gorilla/websocket"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -100,8 +101,8 @@ func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ws.SetWriteDeadline(time.Now().Add(time.Second * 5))
-	ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	_ = ws.SetWriteDeadline(time.Now().Add(time.Second * 5))
+	_ = ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 }
 
 func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
@@ -166,6 +167,6 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ws.SetWriteDeadline(time.Now().Add(time.Second * 5))
-	ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	_ = ws.SetWriteDeadline(time.Now().Add(time.Second * 5))
+	_ = ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 }

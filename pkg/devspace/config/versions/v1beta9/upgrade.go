@@ -1,12 +1,13 @@
 package v1beta9
 
 import (
+	"strconv"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
-	"strconv"
 )
 
 // Upgrade upgrades the config
@@ -69,13 +70,13 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				nextConfig.Dev.Terminal.Namespace = c.Dev.Interactive.Terminal.Namespace
 				nextConfig.Dev.Terminal.Command = c.Dev.Interactive.Terminal.Command
 				nextConfig.Dev.Terminal.WorkDir = c.Dev.Interactive.Terminal.WorkDir
-				if c.Dev.Interactive.DefaultEnabled == nil || *c.Dev.Interactive.DefaultEnabled == false {
+				if c.Dev.Interactive.DefaultEnabled == nil || !*c.Dev.Interactive.DefaultEnabled {
 					nextConfig.Dev.Terminal.Disabled = true
 				}
 			}
 
 			// is disabled by default?
-			if c.Dev.Interactive.DefaultEnabled != nil && *c.Dev.Interactive.DefaultEnabled == true {
+			if c.Dev.Interactive.DefaultEnabled != nil && *c.Dev.Interactive.DefaultEnabled {
 				nextConfig.Dev.InteractiveEnabled = true
 			}
 

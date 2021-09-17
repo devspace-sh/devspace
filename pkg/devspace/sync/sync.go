@@ -1,12 +1,13 @@
 package sync
 
 import (
-	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -69,7 +70,6 @@ type Sync struct {
 	upstream   *upstream
 	downstream *downstream
 
-	silent   bool
 	stopOnce sync.Once
 
 	onError chan error
@@ -187,7 +187,7 @@ func (s *Sync) mainLoop(onInitUploadDone chan struct{}, onInitDownloadDone chan 
 	s.log.Info("Start syncing")
 
 	// Start upstream as early as possible
-	if s.Options.UpstreamDisabled == false {
+	if !s.Options.UpstreamDisabled {
 		go s.startUpstream()
 	}
 
@@ -199,7 +199,7 @@ func (s *Sync) mainLoop(onInitUploadDone chan struct{}, onInitDownloadDone chan 
 			return
 		}
 
-		if s.Options.DownstreamDisabled == false {
+		if !s.Options.DownstreamDisabled {
 			s.startDownstream()
 			s.Stop(nil)
 		}
@@ -284,7 +284,7 @@ func (s *Sync) initialSync(onInitUploadDone chan struct{}, onInitDownloadDone ch
 
 		UpstreamDone: func() {
 			if onInitUploadDone != nil {
-				if s.Options.UpstreamDisabled == false {
+				if !s.Options.UpstreamDisabled {
 					for len(s.upstream.events) > 0 || s.upstream.IsBusy() {
 						time.Sleep(time.Millisecond * 100)
 					}

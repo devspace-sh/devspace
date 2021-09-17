@@ -98,6 +98,10 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 		Silent: true,
 	})
 
+	if err != nil {
+		return err
+	}
+
 	config := configInterface.Config()
 	if config.Deployments != nil {
 		helmV2Clients := map[string]helmtypes.Client{}

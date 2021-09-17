@@ -81,7 +81,7 @@ func (s *survey) Question(params *QuestionOptions) (string, error) {
 			}
 
 			// Check regex
-			if compiledRegex.MatchString(str) == false {
+			if !compiledRegex.MatchString(str) {
 				if params.ValidationMessage != "" {
 					return errors.New(params.ValidationMessage)
 				}
@@ -124,8 +124,6 @@ func (s *survey) Question(params *QuestionOptions) (string, error) {
 
 func copyStringArray(strings []string) []string {
 	retStrings := []string{}
-	for _, str := range strings {
-		retStrings = append(retStrings, str)
-	}
+	retStrings = append(retStrings, strings...)
 	return retStrings
 }

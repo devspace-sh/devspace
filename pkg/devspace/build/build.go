@@ -1,12 +1,13 @@
 package build
 
 import (
+	"io"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
-	"io"
-	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -70,11 +71,11 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	// Build not in parallel when we only have one image to build
-	if options.Sequential == false {
+	if !options.Sequential {
 		// check if all images are disabled besides one
 		imagesToBuild := 0
 		for _, image := range config.Images {
-			if image.Build == nil || image.Build.Disabled == false {
+			if image.Build == nil || !image.Build.Disabled {
 				imagesToBuild++
 			}
 		}
@@ -92,7 +93,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	imagesToBuild := 0
 
 	for key, imageConf := range config.Images {
-		if imageConf.Build != nil && imageConf.Build.Disabled == true {
+		if imageConf.Build != nil && imageConf.Build.Disabled {
 			log.Infof("Skipping building image %s", key)
 			continue
 		}
@@ -129,7 +130,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 			return nil, errors.Errorf("error during shouldRebuild check: %v", err)
 		}
 
-		if options.ForceRebuild == false && needRebuild == false {
+		if !options.ForceRebuild && !needRebuild {
 			log.Infof("Skip building image '%s'", imageConfigName)
 			continue
 		}
@@ -256,7 +257,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 					return
 				}
 
-				// Send the reponse
+				// Send the response
 				cacheChan <- imageNameAndTag{
 					imageConfigName: imageConfigName,
 					imageName:       imageName,
@@ -267,7 +268,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	// wait for the builds to finish
-	if options.Sequential == false {
+	if !options.Sequential {
 		for imagesToBuild > 0 {
 			err = c.waitForBuild(errChan, cacheChan, builtImages, log)
 			if err != nil {

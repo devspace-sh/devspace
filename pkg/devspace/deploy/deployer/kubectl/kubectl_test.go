@@ -35,7 +35,7 @@ type newTestCase struct {
 
 func TestNew(t *testing.T) {
 	testCases := []newTestCase{
-		newTestCase{
+		{
 			name: "No kubeClient",
 			deployConfig: &latest.DeploymentConfig{
 				Name: "someDeploy",
@@ -60,7 +60,7 @@ func TestNew(t *testing.T) {
 				},
 			},
 		},
-		newTestCase{
+		{
 			name: "Everything given",
 			deployConfig: &latest.DeploymentConfig{
 				Name:      "someDeploy2",
@@ -168,7 +168,7 @@ type renderTestCase struct {
 
 func TestRender(t *testing.T) {
 	testCases := []renderTestCase{
-		renderTestCase{
+		{
 			name:                 "render one empty manifest",
 			manifests:            []string{"mymanifest"},
 			expectedStreamOutput: "\n---\n",
@@ -225,7 +225,7 @@ type statusTestCase struct {
 
 func TestStatus(t *testing.T) {
 	testCases := []statusTestCase{
-		statusTestCase{
+		{
 			name:         "Too long manifests",
 			deployername: "longManifestDeployer",
 			manifests:    []string{"ThatIsAVeryLongManifestNameHereJustTooLargeToFitOnAConsole"},
@@ -277,14 +277,14 @@ type deleteTestCase struct {
 
 func TestDelete(t *testing.T) {
 	testCases := []deleteTestCase{
-		deleteTestCase{
+		{
 			name:          "delete with one manifest",
 			manifests:     []string{"oneManifest"},
 			cmdPath:       "myPath",
 			expectedPaths: []string{"myPath", "myPath"},
 			expectedArgs: [][]string{
-				[]string{"create", "--dry-run", "--output", "yaml", "--validate=false", "--filename", "oneManifest"},
-				[]string{"delete", "--ignore-not-found=true", "-f", "-"},
+				{"create", "--dry-run", "--output", "yaml", "--validate=false", "--filename", "oneManifest"},
+				{"delete", "--ignore-not-found=true", "-f", "-"},
 			},
 		},
 	}
@@ -355,7 +355,7 @@ type deployTestCase struct {
 
 func TestDeploy(t *testing.T) {
 	testCases := []deployTestCase{
-		deployTestCase{
+		{
 			name:             "deploy one manifest",
 			cmdPath:          "myPath",
 			context:          "myContext",
@@ -365,8 +365,8 @@ func TestDeploy(t *testing.T) {
 			expectedDeployed: true,
 			expectedPaths:    []string{"myPath", "myPath"},
 			expectedArgs: [][]string{
-				[]string{"create", "--context", "myContext", "--namespace", "myNamespace", "--dry-run", "--output", "yaml", "--validate=false", "--filename", "."},
-				[]string{"--context", "myContext", "--namespace", "myNamespace", "apply", "--force", "-f", "-", "someFlag"},
+				{"create", "--context", "myContext", "--namespace", "myNamespace", "--dry-run", "--output", "yaml", "--validate=false", "--filename", "."},
+				{"--context", "myContext", "--namespace", "myNamespace", "apply", "--force", "-f", "-", "someFlag"},
 			},
 		},
 	}
@@ -431,11 +431,11 @@ type getReplacedManifestTestCase struct {
 
 func TestGetReplacedManifest(t *testing.T) {
 	testCases := []getReplacedManifestTestCase{
-		getReplacedManifestTestCase{
+		{
 			name:      "All empty",
 			cmdOutput: "",
 		},
-		getReplacedManifestTestCase{
+		{
 			name: "one replaced resource",
 			cmdOutput: map[string]interface{}{
 				"apiVersion": "v1",
@@ -444,14 +444,14 @@ func TestGetReplacedManifest(t *testing.T) {
 			},
 			cache: &generated.CacheConfig{
 				Images: map[string]*generated.ImageCache{
-					"myimage": &generated.ImageCache{
+					"myimage": {
 						ImageName: "myimage",
 						Tag:       "mytag",
 					},
 				},
 			},
 			imageConfigs: map[string]*latest.ImageConfig{
-				"myimage": &latest.ImageConfig{
+				"myimage": {
 					Image: "myimage",
 				},
 			},

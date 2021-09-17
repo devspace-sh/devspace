@@ -1,11 +1,12 @@
 package dependency
 
 import (
-	"github.com/loft-sh/devspace/pkg/util/hash"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/loft-sh/devspace/pkg/util/hash"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/util"
@@ -27,11 +28,10 @@ import (
 type resolverTestCase struct {
 	name string
 
-	files           map[string]*latest.Config
-	dependencyTasks []*latest.DependencyConfig
-	updateParam     bool
-	allowCyclic     bool
-
+	files                map[string]*latest.Config
+	dependencyTasks      []*latest.DependencyConfig
+	updateParam          bool
+	allowCyclic          bool
 	skipIds              bool
 	expectedDependencies []Dependency
 	expectedErr          string
@@ -71,27 +71,27 @@ func TestResolver(t *testing.T) {
 	}()
 
 	testCases := []resolverTestCase{
-		resolverTestCase{
+		{
 			name: "No depependency tasks",
 		},
-		resolverTestCase{
+		{
 			name: "Simple local dependency",
 			files: map[string]*latest.Config{
-				"dependency1/devspace.yaml": &latest.Config{
+				"dependency1/devspace.yaml": {
 					Version: latest.Version,
 				},
-				"dependency2/devspace.yaml": &latest.Config{
+				"dependency2/devspace.yaml": {
 					Version: latest.Version,
 				},
 			},
 			dependencyTasks: []*latest.DependencyConfig{
-				&latest.DependencyConfig{
+				{
 					Name: "test",
 					Source: &latest.SourceConfig{
 						Path: "dependency1",
 					},
 				},
-				&latest.DependencyConfig{
+				{
 					Name: "test",
 					Source: &latest.SourceConfig{
 						Path: "dependency2",
@@ -99,21 +99,21 @@ func TestResolver(t *testing.T) {
 				},
 			},
 			expectedDependencies: []Dependency{
-				Dependency{
+				{
 					localPath: filepath.Join(dir, "dependency1"),
 				},
-				Dependency{
+				{
 					localPath: filepath.Join(dir, "dependency2"),
 				},
 			},
 		},
-		resolverTestCase{
+		{
 			name: "Simple git dependency",
 			files: map[string]*latest.Config{
-				"dependency1/devspace.yaml": &latest.Config{},
+				"dependency1/devspace.yaml": {},
 			},
 			dependencyTasks: []*latest.DependencyConfig{
-				&latest.DependencyConfig{
+				{
 					Name: "test",
 					Source: &latest.SourceConfig{
 						Git:      "https://github.com/devspace-cloud/example-dependency.git",
@@ -123,7 +123,7 @@ func TestResolver(t *testing.T) {
 				},
 			},
 			expectedDependencies: []Dependency{
-				Dependency{
+				{
 					localPath: filepath.Join(util.DependencyFolderPath, hash.String(mustGetDependencyID(dir, &latest.DependencyConfig{
 						Name: "test",
 						Source: &latest.SourceConfig{
@@ -135,14 +135,14 @@ func TestResolver(t *testing.T) {
 				},
 			},
 		},
-		resolverTestCase{
+		{
 			name:    "Cyclic allowed dependency",
 			skipIds: true,
 			files: map[string]*latest.Config{
-				"dependency2/devspace.yaml": &latest.Config{
+				"dependency2/devspace.yaml": {
 					Version: latest.Version,
 					Dependencies: []*latest.DependencyConfig{
-						&latest.DependencyConfig{
+						{
 							Name: "test",
 							Source: &latest.SourceConfig{
 								Path: "../dependency1",
@@ -150,10 +150,10 @@ func TestResolver(t *testing.T) {
 						},
 					},
 				},
-				"dependency1/devspace.yaml": &latest.Config{
+				"dependency1/devspace.yaml": {
 					Version: latest.Version,
 					Dependencies: []*latest.DependencyConfig{
-						&latest.DependencyConfig{
+						{
 							Name: "test",
 							Source: &latest.SourceConfig{
 								Path: "../dependency2",
@@ -163,7 +163,7 @@ func TestResolver(t *testing.T) {
 				},
 			},
 			dependencyTasks: []*latest.DependencyConfig{
-				&latest.DependencyConfig{
+				{
 					Name: "test",
 					Source: &latest.SourceConfig{
 						Path: "dependency1",
@@ -172,10 +172,10 @@ func TestResolver(t *testing.T) {
 			},
 			allowCyclic: true,
 			expectedDependencies: []Dependency{
-				Dependency{
+				{
 					localPath: filepath.Join(dir, "dependency2"),
 				},
-				Dependency{
+				{
 					localPath: filepath.Join(dir, "dependency1"),
 				},
 			},
@@ -231,15 +231,6 @@ func mustGetDependencyID(basePath string, config *latest.DependencyConfig) strin
 	return id
 }
 
-func includes(arr []string, needle string) bool {
-	for _, suspect := range arr {
-		if suspect == needle {
-			return true
-		}
-	}
-	return false
-}
-
 type getDependencyIDTestCase struct {
 	name string
 
@@ -251,7 +242,7 @@ type getDependencyIDTestCase struct {
 
 func TestGetDependencyID(t *testing.T) {
 	testCases := []getDependencyIDTestCase{
-		getDependencyIDTestCase{
+		{
 			name: "git with tag",
 			dependency: &latest.DependencyConfig{
 				Source: &latest.SourceConfig{
@@ -261,7 +252,7 @@ func TestGetDependencyID(t *testing.T) {
 			},
 			expectedID: "e8fb9810c53ca0986d12ec5d078e38659a1700425a292cefe4f77bffa351667c",
 		},
-		getDependencyIDTestCase{
+		{
 			name: "git with branch",
 			dependency: &latest.DependencyConfig{
 				Source: &latest.SourceConfig{
@@ -271,7 +262,7 @@ func TestGetDependencyID(t *testing.T) {
 			},
 			expectedID: "9a5ed87e8fec108a03b592058f7eec3a0b1c9fe431cfe1d03a5d37333fb07b2d",
 		},
-		getDependencyIDTestCase{
+		{
 			name: "git with revision, subpath and profile",
 			dependency: &latest.DependencyConfig{
 				Source: &latest.SourceConfig{
@@ -283,7 +274,7 @@ func TestGetDependencyID(t *testing.T) {
 			},
 			expectedID: "bb783d78de53d3bcb1533d239a3d1d685070f22b9f25e5c487a83425be586900",
 		},
-		getDependencyIDTestCase{
+		{
 			name: "empty",
 			dependency: &latest.DependencyConfig{
 				Source: &latest.SourceConfig{},

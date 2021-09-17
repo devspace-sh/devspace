@@ -1,16 +1,17 @@
 package kubectl
 
 import (
+	"io"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/downloader"
 	"github.com/mitchellh/go-homedir"
-	"io"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"path/filepath"
-	"runtime"
-	"strings"
 
 	"github.com/ghodss/yaml"
 	"github.com/otiai10/copy"
@@ -65,7 +66,7 @@ func New(config config2.Config, dependencies []types.Dependency, kubeClient kube
 		isValidKubectl = func(command string) (bool, error) {
 			return isValidKubectl(command, executer)
 		}
-		cmdPath = ""
+		cmdPath string
 	)
 	if deployConfig.Kubectl.CmdPath != "" {
 		cmdPath = deployConfig.Kubectl.CmdPath
@@ -91,7 +92,7 @@ func New(config config2.Config, dependencies []types.Dependency, kubeClient kube
 	manifests := []string{}
 	for _, ptrManifest := range deployConfig.Kubectl.Manifests {
 		manifest := strings.Replace(ptrManifest, "*", "", -1)
-		if deployConfig.Kubectl.Kustomize != nil && *deployConfig.Kubectl.Kustomize == true {
+		if deployConfig.Kubectl.Kustomize != nil && *deployConfig.Kubectl.Kustomize {
 			manifest = strings.TrimSuffix(manifest, "kustomization.yaml")
 		}
 
@@ -143,7 +144,7 @@ func isValidKubectl(command string, executer *executer) (bool, error) {
 		return false, nil
 	}
 
-	return strings.Index(string(out), `Client Version`) != -1, nil
+	return strings.Contains(string(out), `Client Version`), nil
 }
 
 func installKubectl(downloadedFile, installPath, installFromURL string) error {
@@ -158,8 +159,8 @@ func (d *DeployConfig) Render(builtImages map[string]string, out io.Writer) erro
 			return errors.Errorf("%v\nPlease make sure `kubectl apply` does work locally with manifest `%s`", err, manifest)
 		}
 
-		out.Write([]byte(replacedManifest))
-		out.Write([]byte("\n---\n"))
+		_, _ = out.Write([]byte(replacedManifest))
+		_, _ = out.Write([]byte("\n---\n"))
 	}
 
 	return nil
@@ -209,7 +210,7 @@ func (d *DeployConfig) Delete() error {
 }
 
 // Deploy deploys all specified manifests via kubectl apply and adds to the specified image names the corresponding tags
-func (d *DeployConfig) Deploy(forceDeploy bool, builtImages map[string]string) (bool, error) {
+func (d *DeployConfig) Deploy(_ bool, builtImages map[string]string) (bool, error) {
 	deployCache := d.config.Generated().GetActive().GetDeploymentCache(d.DeploymentConfig.Name)
 
 	// Hash the manifests
@@ -240,7 +241,7 @@ func (d *DeployConfig) Deploy(forceDeploy bool, builtImages map[string]string) (
 	// We force the redeploy of kubectl deployments for now, because we don't know if they are already currently deployed or not,
 	// so it is better to force deploy them, which usually takes almost no time and is better than taking the risk of skipping a needed deployment
 	// forceDeploy = forceDeploy || deployCache.KubectlManifestsHash != manifestsHash || deployCache.DeploymentConfigHash != deploymentConfigHash
-	forceDeploy = true
+	forceDeploy := true
 
 	d.Log.StartWait("Applying manifests with kubectl")
 	defer d.Log.StopWait()
@@ -293,7 +294,7 @@ func (d *DeployConfig) getReplacedManifest(manifest string, builtImages map[stri
 			continue
 		}
 
-		if d.DeploymentConfig.Kubectl.ReplaceImageTags == nil || *d.DeploymentConfig.Kubectl.ReplaceImageTags == true {
+		if d.DeploymentConfig.Kubectl.ReplaceImageTags == nil || *d.DeploymentConfig.Kubectl.ReplaceImageTags {
 			redeploy, err := util.ReplaceImageNamesStringMap(resource.Object, d.config, d.dependencies, builtImages, map[string]bool{"image": true})
 			if err != nil {
 				return false, "", err
@@ -315,7 +316,7 @@ func (d *DeployConfig) getReplacedManifest(manifest string, builtImages map[stri
 
 func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []string {
 	args := []string{}
-	if d.Context != "" && d.IsInCluster == false {
+	if d.Context != "" && !d.IsInCluster {
 		args = append(args, "--context", d.Context)
 	}
 	if d.Namespace != "" {
@@ -333,7 +334,7 @@ func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []str
 
 func (d *DeployConfig) buildManifests(manifest string) ([]*unstructured.Unstructured, error) {
 	// Check if we should use kustomize or kubectl
-	if d.DeploymentConfig.Kubectl.Kustomize != nil && *d.DeploymentConfig.Kubectl.Kustomize == true && d.isKustomizeInstalled("kustomize") {
+	if d.DeploymentConfig.Kubectl.Kustomize != nil && *d.DeploymentConfig.Kubectl.Kustomize && d.isKustomizeInstalled("kustomize") {
 		return NewKustomizeBuilder("kustomize", d.DeploymentConfig, d.Log).Build(manifest, d.commandExecuter.RunCommand)
 	}
 
@@ -343,9 +344,5 @@ func (d *DeployConfig) buildManifests(manifest string) ([]*unstructured.Unstruct
 
 func (d *DeployConfig) isKustomizeInstalled(path string) bool {
 	_, err := d.commandExecuter.RunCommand(path, []string{"version"})
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }

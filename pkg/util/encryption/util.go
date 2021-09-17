@@ -5,13 +5,13 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"io"
-	
+
 	"github.com/pkg/errors"
 )
 
 // PadKey formats the key to the correct padding (32 byte)
 func PadKey(key []byte) []byte {
-	if len(key) == 32 { 
+	if len(key) == 32 {
 		return key
 	} else if len(key) > 32 {
 		return key[:32]

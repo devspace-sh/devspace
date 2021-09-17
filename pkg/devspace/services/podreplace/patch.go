@@ -2,6 +2,7 @@ package podreplace
 
 import (
 	"encoding/json"
+
 	jsonpatch "github.com/evanphx/json-patch"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"

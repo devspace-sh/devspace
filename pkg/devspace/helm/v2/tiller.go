@@ -2,9 +2,10 @@ package v2
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"regexp"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/loft-sh/devspace/pkg/util/log"
 	k8sv1 "k8s.io/api/core/v1"
@@ -162,7 +163,7 @@ func addDeployAccessToTiller(client kubectl.Client, tillerNamespace, namespace s
 			},
 		},
 	}, metav1.CreateOptions{})
-	if err != nil && alreadyExistsRegexp.Match([]byte(err.Error())) == false {
+	if err != nil && !alreadyExistsRegexp.Match([]byte(err.Error())) {
 		return err
 	}
 
@@ -184,7 +185,7 @@ func addDeployAccessToTiller(client kubectl.Client, tillerNamespace, namespace s
 			Name:     TillerRoleName,
 		},
 	}, metav1.CreateOptions{})
-	if err != nil && alreadyExistsRegexp.Match([]byte(err.Error())) == false {
+	if err != nil && !alreadyExistsRegexp.Match([]byte(err.Error())) {
 		return err
 	}
 

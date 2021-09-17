@@ -24,7 +24,7 @@ type statusTestCase struct {
 
 func TestStatus(t *testing.T) {
 	testCases := []statusTestCase{
-		statusTestCase{
+		{
 			name:       "No releases",
 			deployment: "depl",
 			expectedStatus: deployer.StatusResult{
@@ -34,11 +34,11 @@ func TestStatus(t *testing.T) {
 				Status: "Not deployed",
 			},
 		},
-		statusTestCase{
+		{
 			name:       "Deployment not in releases",
 			deployment: "undeployed",
 			releases: []*helmtypes.Release{
-				&helmtypes.Release{
+				{
 					Name: "otherRelease",
 				},
 			},
@@ -55,11 +55,11 @@ func TestStatus(t *testing.T) {
 				Status: "Not deployed",
 			},
 		},
-		statusTestCase{
+		{
 			name:       "Deployment in releases with other status than deployed",
 			deployment: "release1",
 			releases: []*helmtypes.Release{
-				&helmtypes.Release{
+				{
 					Name:   "release1",
 					Status: "otherThanDeployed",
 				},

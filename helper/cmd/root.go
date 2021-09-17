@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/loft-sh/devspace/helper/cmd/sync"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 // NewRootCmd returns a new root command

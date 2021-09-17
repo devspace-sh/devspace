@@ -1,15 +1,15 @@
 package fsutil
 
-import(
+import (
 	"io/ioutil"
 	"os"
 	"testing"
-	
+
 	"gotest.tools/assert"
 )
 
-func TestWriteReadFile(t *testing.T){
-	
+func TestWriteReadFile(t *testing.T) {
+
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -60,7 +60,7 @@ func TestWriteReadFile(t *testing.T){
 }
 
 func TestCopy(t *testing.T) {
-	
+
 	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %v", err)
@@ -92,7 +92,7 @@ func TestCopy(t *testing.T) {
 		t.Fatalf("Error using WriteToFile: %v", err)
 	}
 
-	Copy("someDir", "copiedDir", false)
+	_ = Copy("someDir", "copiedDir", false)
 
 	dirInfo, err := os.Stat("copiedDir")
 	assert.Equal(t, false, os.IsNotExist(err), "Copy called but no copied dir appeared")

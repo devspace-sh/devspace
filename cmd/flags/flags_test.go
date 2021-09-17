@@ -20,7 +20,7 @@ type useLastContextTestCase struct {
 
 func TestUseLastContext(t *testing.T) {
 	testCases := []useLastContextTestCase{
-		useLastContextTestCase{
+		{
 			name: "Switch context to existent",
 			globalFlags: GlobalFlags{
 				SwitchContext: true,
@@ -28,7 +28,7 @@ func TestUseLastContext(t *testing.T) {
 			generatedConfig: &generated.Config{
 				ActiveProfile: "someProfile",
 				Profiles: map[string]*generated.CacheConfig{
-					"someProfile": &generated.CacheConfig{
+					"someProfile": {
 						LastContext: &generated.LastContextConfig{
 							Context:   "myKubeContext",
 							Namespace: "myNamespace",
@@ -37,7 +37,7 @@ func TestUseLastContext(t *testing.T) {
 				},
 			},
 		},
-		useLastContextTestCase{
+		{
 			name:        "Nothing happens",
 			globalFlags: GlobalFlags{},
 		},

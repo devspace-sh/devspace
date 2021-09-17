@@ -89,7 +89,7 @@ func LegacyInteractiveMode(config *latest.Config, forceInteractiveMode bool, for
 			if len(config.Dev.InteractiveImages) > 0 {
 				config.Dev.Terminal.ImageName = config.Dev.InteractiveImages[0].Name
 			}
-		} else if config.Dev.Terminal.Disabled == true {
+		} else if config.Dev.Terminal.Disabled {
 			config.Dev.Terminal.Disabled = false
 		}
 

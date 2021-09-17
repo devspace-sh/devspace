@@ -1,10 +1,11 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/loft-sh/devspace/cmd/reset"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-	"strings"
 
 	"github.com/loft-sh/devspace/pkg/util/factory"
 

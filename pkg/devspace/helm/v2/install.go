@@ -1,12 +1,13 @@
 package v2
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
@@ -83,7 +84,7 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	for {
 		_, err = c.genericHelm.Exec(args, helmConfig)
 		if err != nil {
-			if strings.Index(err.Error(), "could not find a ready tiller pod") != -1 {
+			if strings.Contains(err.Error(), "could not find a ready tiller pod") {
 				time.Sleep(time.Second * 3)
 				err = c.ensureTiller(helmConfig)
 				if err != nil {
@@ -189,7 +190,7 @@ func (c *client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, 
 	}
 	out, err := c.genericHelm.Exec(args, helmConfig)
 	if err != nil {
-		if strings.Index(string(out), "could not find a ready tiller pod") > -1 {
+		if strings.Contains(string(out), "could not find a ready tiller pod") {
 			c.log.Info("Couldn't find a ready tiller pod, will wait 3 seconds more")
 			time.Sleep(time.Second * 3)
 			return c.ListReleases(helmConfig)

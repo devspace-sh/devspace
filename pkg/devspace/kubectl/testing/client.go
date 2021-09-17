@@ -2,13 +2,14 @@ package testing
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"io"
 	"io/ioutil"
-	"k8s.io/client-go/tools/clientcmd"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -178,7 +179,7 @@ type FakeFakeDiscovery struct {
 func (f *FakeFakeDiscovery) ServerResources() ([]*metav1.APIResourceList, error) {
 	if f.RBACEnabled {
 		return []*metav1.APIResourceList{
-			&metav1.APIResourceList{
+			{
 				GroupVersion: "rbac.authorization.k8s.io/v1beta1",
 			},
 		}, nil

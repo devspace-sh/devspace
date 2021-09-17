@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
@@ -147,7 +148,7 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 
 	// Render dependencies
 	var dependencies []types.Dependency
-	if cmd.SkipDependencies == false {
+	if !cmd.SkipDependencies {
 		dependencies, err = f.NewDependencyManager(configInterface, client, configOptions, log).RenderAll(dependency.RenderOptions{
 			Dependencies:     cmd.Dependency,
 			SkipDependencies: cmd.SkipDependency,
@@ -174,7 +175,7 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 
 	// Build images if necessary
 	builtImages := map[string]string{}
-	if cmd.SkipBuild == false {
+	if !cmd.SkipBuild {
 		builtImages, err = f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
 			SkipPush:                  cmd.SkipPush,
 			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
@@ -183,7 +184,7 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 			Sequential:                cmd.BuildSequential,
 		}, log)
 		if err != nil {
-			if strings.Index(err.Error(), "no space left on device") != -1 {
+			if strings.Contains(err.Error(), "no space left on device") {
 				return errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
 			}
 
