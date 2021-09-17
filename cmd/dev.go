@@ -12,7 +12,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"io"
-	"k8s.io/kubectl/pkg/util/interrupt"
 	"os"
 	"strings"
 	"sync"
@@ -278,9 +277,12 @@ func runWithHooks(command string, client kubectl.Client, configInterface config.
 		}
 	}()
 
-	return interrupt.New(nil, func() {
-		hook.LogExecuteHooks(client, configInterface, nil, nil, log, command+":interrupt:execute")
-	}).Run(fn)
+	return fn()
+	//rootHandler = interrupt.Chain(rootHandler, func() {
+	//	hook.LogExecuteHooks(client, configInterface, nil, nil, log, command+":interrupt:execute")
+	//})
+	//
+	//return rootHandler.Run(fn)
 }
 
 func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Config, configOptions *loader.ConfigOptions, client kubectl.Client, dockerClient docker.Client, args []string) (int, error) {

@@ -1,48 +1,32 @@
-version: v1beta9
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: mydockeruser/devspace
 images:
   default:
-    image: mydockeruser/devspace
+    image: ${IMAGE}
 deployments:
 - name: my-deployment
   helm:
     componentChart: true
     values:
       containers:
-      - image: mydockeruser/devspace
+      - image: ${IMAGE}
 hooks:
-- command: echo
-  args:
-  - before image building
-  when:
-    before:
-      images: all
-- command: echo
-  args:
-  - after image building
-  when:
-    after:
-      images: all
-- command: echo
-  args:
-  - before deploying
-  when:
-    before:
-      deployments: all
-- command: echo
-  args:
-  - after deploying
-  when:
-    after:
-      deployments: all
-- command: echo
-  args:
-  - before deployment my-deployment
-  when:
-    before:
-      deployments: my-deployment
-- command: echo
-  args:
-  - after deployment my-deployment
-  when:
-    after:
-      deployments: my-deployment
+- command: |-
+    echo Before building image: $DEVSPACE_HOOK_IMAGE_NAME
+    echo Config Name: $DEVSPACE_HOOK_IMAGE_CONFIG_NAME
+    echo Image Config: $DEVSPACE_HOOK_IMAGE_CONFIG
+  events: ["before:build:*"]
+- command: echo After image building $DEVSPACE_HOOK_IMAGE_NAME
+  events: ["after:build:*"]
+- command: "echo Error occurred during image build: $DEVSPACE_HOOK_ERROR"
+  events: ["error:build:*"]
+- command: echo Before deploying my-deployment
+  events: ["before:deploy:my-deployment"]
+- command: echo After deploying all deployments
+  events: ["after:deploy"]
+- command: echo Hello From Within the Pod $HOSTNAME
+  events: ["after:deploy"]
+  container:
+    imageSelector: ${IMAGE}

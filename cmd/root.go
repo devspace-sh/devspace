@@ -26,10 +26,13 @@ import (
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"k8s.io/klog"
+	"k8s.io/kubectl/pkg/util/interrupt"
 	"os"
 	"strings"
 	"time"
 )
+
+var rootHandler *interrupt.Handler
 
 // NewRootCmd returns a new root command
 func NewRootCmd(f factory.Factory) *cobra.Command {
@@ -90,6 +93,8 @@ var globalFlags *flags.GlobalFlags
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	rootHandler = interrupt.New(nil)
+
 	// disable klog
 	disableKlog()
 

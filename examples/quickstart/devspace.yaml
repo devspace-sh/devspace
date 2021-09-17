@@ -1,4 +1,4 @@
-version: v1beta10
+version: v1beta11
 vars:
   - name: IMAGE
     value: myusername/devspace
@@ -24,3 +24,8 @@ dev:
     - imageSelector: ${IMAGE}
       uploadExcludePaths:
         - node_modules
+  terminal:
+    imageSelector: ${IMAGE}
+hooks:
+  - events: ["devCommand:interrupt:execute"]
+    command: echo I got interrupted && sleep 1

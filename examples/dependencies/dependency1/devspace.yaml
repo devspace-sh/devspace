@@ -1,17 +1,17 @@
-version: v1beta9
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: mydockeruser/devspace
 images:
   default:
-    image: mydockeruser/devspace
-    createPullSecret: true
+    image: ${IMAGE}
 deployments:
 - name: dependency1
   helm:
     componentChart: true
     values:
       containers:
-      - image: mydockeruser/devspace
+      - image: ${IMAGE}
 hooks:
   - command: "echo 'Hello from dependency1'"
-    when:
-      before:
-        images: default
+    events: ["before:build:*"]

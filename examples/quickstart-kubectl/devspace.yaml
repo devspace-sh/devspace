@@ -1,7 +1,10 @@
-version: v1beta10
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: mydockeruser/quickstart
 images:
   default:
-    image: mydockeruser/quickstart
+    image: ${IMAGE}
 deployments:
 - name: devspace-default
   kubectl:
@@ -9,10 +12,10 @@ deployments:
     - kube
 dev:
   ports:
-  - imageName: default
+  - imageSelector: ${IMAGE}
     forward:
     - port: 3000
   sync:
-  - imageName: default
+  - imageSelector: ${IMAGE}
     excludePaths:
     - node_modules
