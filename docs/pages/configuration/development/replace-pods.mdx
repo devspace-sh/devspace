@@ -67,7 +67,6 @@ DevSpace will automatically recognize changes to the parent Deployment, ReplicaS
 ## Pod/Container Selection
 The following config options are needed to determine the container which should be replaced:
 - [`imageSelector`](#imageselector)
-- [`imageName`](#imagename)
 - [`labelSelector`](#labelselector)
 - [`containerName`](#containername)
 - [`namespace`](#namespace)
@@ -101,42 +100,6 @@ dev:
       value: "/workdir"
   terminal:
     imageSelector: john/devbackend
-```
-
-### `imageName`
-<FragmentImageName />
-
-#### Example: Select Container by Image Name
-```yaml
-images:
-  backend:
-    image: john/devbackend
-    build:
-      disabled: true
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - name: container-0
-        image: john/devbackend
-dev:
-  replacePods:
-  - imageName: backend
-    replaceImage: ubuntu:latest
-    patches:
-    - op: replace
-      path: spec.containers[0].command
-      value: ["sleep"]
-    - op: replace
-      path: spec.containers[0].args
-      value: ["9999999999"]
-    - op: replace
-      path: spec.containers[0].workingDir
-      value: "/workdir"
-  terminal:
-    imageName: backend
 ```
 
 ### `labelSelector`

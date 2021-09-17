@@ -13,7 +13,7 @@ linters:
     - varcheck
     - staticcheck
     - errcheck
-    - goimports
+    # - goimports
     - dupl
     - nakedret
     - stylecheck

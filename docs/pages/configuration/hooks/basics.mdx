@@ -16,71 +16,55 @@ Hooks can be defined in the `hooks` section of `devspace.yaml`:
 hooks:
 # Execute the hook in a golang shell (cross operating system compatible)
 - command: "echo before image building"
-  when:
-    before:
-      images: all
+  events: ["before:build"]
 # Execute the hook in a golang shell (cross operating system compatible)
 - command: |
     echo Built Image image(image-1):tag(image-1)
-  when:
-    after:
-      images: image-1
+  events: ["after:build:image-1"]
 # Execute the hook directly on the system (echo binary must exist)
 - command: "echo"
   args: ["before image building"]
-  when:
-    before:
-      images: image-1,image-2
+  events: ["before:build:image-1", "before:build:image-2"]
 # Execute the hook only on windows
-- command: "echo before image building"
+- command: "echo before each image"
   os: windows
-  when:
-    before:
-      images: all
+  events: ["before:build:*"]
 ```
 
-:::note Example Project
-For a complete example take a look at [this example project on GitHub](https://github.com/loft-sh/devspace/tree/master/examples/hooks).
-:::
+This tells DevSpace to execute the command `echo before image building` before any image will be built. 
 
-This tells DevSpace to execute the command `echo before image building` before any image will be built. You are able to define hooks for the following life cycle events that can be triggered either before (`when.before`) or after (`when.after`) the event:
-- **pull secret creation**: Will be executed before or after creating any image pull secrets. Example: `when.before.pullSecrets: all`
-- **dependency deployment**: Will be executed before or after deploying any dependencies. Example: `when.before.dependencies: all`
-- **image building**: Will be executed before or after building any images. Example: `when.before.images: all`
-- **specific image build**: Will be executed before or after a certain image is built. The hook `when.after.images: my-image` is only executed if the image actually was built and not skipped. Example: `when.before.images: my-image`
-- **deploying**: Will be executed before or after any deployment is deployed. Example: `when.before.deployments: all`
-- **specific deployment**: Will be executed before or after a certain deployment is deployed. The hook `when.after.deployments: my-deployment` is only executed if the deployment was actually deployed and not skipped. Example: `when.before.deployments: my-deployment`
-- **deployment purging**: Will be executed before or after any deployment is purged. Example: `when.before.purgeDeployments: all`
-- **specific deployment purging**: Will be executed before or after a certain deployment is purged. Example: `when.before.purgeDeployments: my-deployment`
-- **initial sync**: Will be executed before or after a certain sync configuration finished merging remote and local state. Example: `when.before.initialSync: my-sync-config`
+## Lifecycle Events  
+
+You are able to define hooks for the following lifecycle events:
+- `before:deploy`, `after:deploy`, `before:deploy:[name]`, `after:deploy:[name]`, `error:deploy:[name]`, `skip:deploy:[name]`: executed while DevSpace deploys `deployments`. `[name]` can be replaced with the config name of a deployment or `*` to match all.
+- `before:render`, `after:render`, `before:render:[name]`, `after:render:[name]`, `error:render:[name]`: executed while DevSpace renders `deployments` during `devspace render`. `[name]` can be replaced with the config name of a deployment or `*` to match all.
+- `before:purge`, `after:purge`, `before:purge:[name]`, `after:purge:[name]`, `error:purge:[name]`: executed while DevSpace purges `deployments` during `devspace purge`. `[name]` can be replaced with the config name of a deployment or `*` to match all.
+- `before:build`, `after:build`, `before:build:[name]`, `after:build:[name]`, `error:build:[name]`, `skip:build:[name]`: executed while DevSpace builds `images`. `[name]` can be replaced with the config name of an image or `*` to match all.
+- `start:sync:[name]`, `stop:sync:[name]`, `error:sync:[name]`, `restart:sync:[name]`, `before:initialSync:[name]`, `after:initialSync:[name]`, `error:initialSync:[name]`: executed while DevSpace syncs files with `dev.sync`. `[name]` can be replaced with the config name of a sync configuration or `*` to match all.
+- `start:portForwarding:[name]`, `restart:portForwarding:[name]`, `error:portForwarding:[name]`, `stop:portForwarding:[name]`: executed while DevSpace port forwards with `dev.ports`. `[name]` can be replaced with the config name of a port forwarding configuration or `*` to match all.
+- `start:reversePortForwarding:[name]`, `restart:reversePortForwarding:[name]`, `error:reversePortForwarding:[name]`, `stop:reversePortForwarding:[name]`: executed while DevSpace reverse port forwards with `dev.ports`. `[name]` can be replaced with the config name of a port forwarding configuration or `*` to match all.
+- `before:createPullSecrets`, `after:createPullSecrets`, `error:createPullSecrets`: executed while DevSpace creates `pullSecrets`
+- `devCommand:before:execute`, `devCommand:after:execute`, `devCommand:error`, `devCommand:interrupt`, `devCommand:before:sync`, `devCommand:after:sync`, `devCommand:before:portForwarding`, `devCommand:after:portForwarding`, `devCommand:before:replacePods`, `devCommand:after:replacePods`, `devCommand:before:runPipeline`, `devCommand:after:runPipeline`, `devCommand:before:deployDependencies`, `devCommand:after:deployDependencies`, `devCommand:before:build`, `devCommand:after:build`, `devCommand:before:deploy`, `devCommand:after:deploy`, `devCommand:before:openTerminal`, `devCommand:before:streamLogs`: executed at certain lifecycle events during the `devspace dev` command
+- `deployCommand:before:execute`, `deployCommand:after:execute`, `deployCommand:error`, `deployCommand:interrupt` executed at different checkpoints when `devspace deploy` is executed
+- `purgeCommand:before:execute`, `purgeCommand:after:execute`, `purgeCommand:error`, `purgeCommand:interrupt` executed at different checkpoints when `devspace purge` is executed
+- `buildCommand:before:execute`, `buildCommand:after:execute`, `buildCommand:error`, `buildCommand:interrupt` executed at different checkpoints when `devspace build` is executed
 
 :::info Errors in Hooks
 If any hook returns a non zero exit code, DevSpace will abort and print an error message.
 :::
 
-## Execute hooks if an error occured
-
-DevSpace allows you to execute hooks after certain steps have failed:
-- **pull secret creation**: Will be executed if creating image pull secrets fails. Value: `when.onError.pullSecrets: all`
-- **dependency deployment**: Will be executed if deploying any dependencies fail. Value: `when.onError.dependencies: all`
-- **image building**: Will be executed if building any images fails. Value: `when.onError.images: all`
-- **deploying**: Will be executed if any deployment fails. Value: `when.onError.deployments: all`
-- **certain deployment**: Will be executed if a certain deployment fails.  Value: `when.onError.deployments: my-deployment`
-
-The actual error will be passed to the hook via the environment variable `DEVSPACE_HOOK_ERROR`. For example:
+For `error:` events the actual error will be passed to the hook via the environment variable `DEVSPACE_HOOK_ERROR`. For example:
 ```yaml
 # This will print the error to the console that has occured during a deployment
 hooks:
-- command: "echo The following error has occured: $DEVSPACE_HOOK_ERROR"
+- events: ["error:deploy:*"]
+  command: "echo The following error has occurred during deploying $DEVSPACE_HOOK_DEPLOY_NAME: $DEVSPACE_HOOK_ERROR"
   os: darwin,windows
-  when:
-    onError:
-      deployments: all
 ```
 
 ## Execute hooks in a container
 
-DevSpace allows you to execute commands directly in a container instead of the local system. You can specify this in the `where` section of the hook:
+DevSpace allows you to execute commands directly in a container instead of the local system. You can specify this in the `container` section of the hook:
 
 ```yaml
 ...
@@ -88,20 +72,14 @@ hooks:
 - command: |
     echo Hello World!
     echo From within the container!
-  where: 
-    container:
-      imageSelector: nginx
-      # Or select via labelSelector etc.
-      # labelSelector: ...
-      # namespace: ...
-      # containerName: ...
-      # pod: ...
-
-      # If you are using dependencies, you can also select a dependency via
-      # imageName: dependency1.my-image
-  when:
-    after:
-      deployments: my-deployment
+  container:
+    imageSelector: nginx
+    # Or select via labelSelector etc.
+    # labelSelector: ...
+    # namespace: ...
+    # containerName: ...
+    # pod: ...
+  events: ["after:deploy:my-deployment"]
 ...
 ```
 
@@ -112,19 +90,16 @@ By default, DevSpace will wait for all pods / containers that were selected with
 hooks:
 - command: "echo"
   args: ["Hello from within the container!"]
-  where: 
-    container:
-      imageName: default
-      # Or select via labelSelector etc.
-      # labelSelector: ...
-      # namespace: ...
-      # containerName: ...
-      # pod: ...
-      wait: true   # This is the default
-      timeout: 300 # Timeout in seconds
-  when:
-    after:
-      deployments: my-deployment
+  container:
+    imageSelector: image(app):tag(app)
+    # Or select via labelSelector etc.
+    # labelSelector: ...
+    # namespace: ...
+    # containerName: ...
+    # pod: ...
+    wait: true   # This is the default
+    timeout: 300 # Timeout in seconds
+  events: ["after:deploy:my-deployment"]
 ...
 ```
 
@@ -137,22 +112,16 @@ hooks:
 - upload:
     localPath: bin
     containerPath: bin
-  where:
-    container:
-      imageName: default
-  when:
-    after:
-      deployments: deployment-1
+  container:
+    imageSelector: image(test):tag(test)
+  events: ["after:deploy:my-deployment"]
 # Download a single file from the container to the local path
 - download:
     localPath: build/artifact.jar
     containerPath: /abs/path/build/artifact-test.jar
-  where:
-    container:
-      imageName: java
-  when:
-    after:
-      deployments: deployment-2
+  container:
+    imageSelector: image(java):tag(java)
+  events: ["after:deploy:my-deployment-2"]
 ```
 
 ## Wait for a pod to be running
@@ -178,15 +147,12 @@ hooks:
     # This can be needed if there are for example init containers
     # that terminate instead of become running.
     terminatedWithCode: 0
-  where:
-    container:
-      labelSelector:
-        app.kubernetes.io/component: my-database
-        # You could also select just a specific container with
-        # containerName: database-container
-  when:
-    after:
-      deployments: my-database
+  container:
+    labelSelector:
+      app.kubernetes.io/component: my-database
+      # You could also select just a specific container with
+      # containerName: database-container
+  events: ["after:deploy:my-database"]
 ...
 ```
 
@@ -223,13 +189,10 @@ hooks:
 # This hook will wait until the selected container is either running or already  
 # terminated and then print the logs of it until it terminates.
 - logs: {}
-  where:
-    container:
-      labelSelector:
-        app.kubernetes.io/component: my-job
-  when:
-    after:
-      deployments: my-job
+  container:
+    labelSelector:
+      app.kubernetes.io/component: my-job
+  events: ["after:deploy:my-job"]
 ```
 
 ## Execute hooks in the background
@@ -242,9 +205,7 @@ hooks:
 - command: "sh"
   args: ["-c", "sleep 10 && echo 'Hello, I was run inside the background!'"]
   background: true
-  when:
-    after:
-      deployments: all
+  events: ["after:deploy"]
 ...
 ```
 
@@ -256,9 +217,7 @@ hooks:
   args: ["-c", "sleep 10 && echo 'Hello, I was run inside the background!'"]
   background: true
   silent: true
-  when:
-    after:
-      deployments: all
+  events: ["after:deploy"]
 ...
 ```
 
@@ -266,22 +225,14 @@ hooks:
 
 Hooks can be executed only on certain operating systems:
 
-```yaml {5,12}
+```yaml {3,6}
 hooks:
-- command: echo
-  args:
-    - before image building on windows
+- command: echo before image building on windows
   os: windows
-  when:
-    before:
-      images: all
-- command: echo
-  args:
-    - before image building on mac and linux
+  events: ["after:build"]
+- command: echo before image building on mac and linux
   os: darwin,linux
-  when:
-    before:
-      images: all
+  events: ["after:build"]
 ```
 
 ## Hook Context Information
@@ -291,3 +242,6 @@ DevSpace passes certain environment variables to the hook execution:
 - **DEVSPACE_HOOK_KUBE_NAMESPACE**: the name of the kube namespace that was used
 - **DEVSPACE_HOOK_OS_ARGS**: json encoded os.Args that were used to call devspace
 - **DEVSPACE_HOOK_ERROR**: if an error has occured contains the error string (only for onError hooks)
+- **DEVSPACE_HOOK_EVENT**: the event that has triggered the hook
+
+Depending on the hook there will be other context variables set that are prefixed with `DEVSPACE_HOOK_`. 

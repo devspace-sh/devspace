@@ -64,8 +64,6 @@ func DefaultPrefixFn(idx int, syncConfig *latest.SyncConfig) string {
 	prefix := fmt.Sprintf("[%d:sync] ", idx)
 	if syncConfig.Name != "" {
 		prefix = fmt.Sprintf("[%s] ", syncConfig.Name)
-	} else if syncConfig.ImageName != "" {
-		prefix = fmt.Sprintf("[%d:sync:%s] ", idx, syncConfig.ImageName)
 	}
 
 	return prefix

@@ -5,7 +5,7 @@ import (
 )
 
 // Version is the current api version
-const Version string = "v1beta10"
+const Version string = "v1beta11"
 
 // GetVersion returns the version
 func (c *Config) GetVersion() string {
@@ -693,7 +693,6 @@ type DevConfig struct {
 // ReplacePod will replace the selected target pod/container with a new image and optionally apply
 // pod patches.
 type ReplacePod struct {
-	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
@@ -707,7 +706,6 @@ type ReplacePod struct {
 type PortForwardingConfig struct {
 	Name          string            `yaml:"name,omitempty" json:"name,omitempty"`
 	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
@@ -735,7 +733,6 @@ type OpenConfig struct {
 type SyncConfig struct {
 	Name                 string               `yaml:"name,omitempty" json:"name,omitempty"`
 	ImageSelector        string               `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	ImageName            string               `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	LabelSelector        map[string]string    `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	ContainerName        string               `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 	Namespace            string               `yaml:"namespace,omitempty" json:"namespace,omitempty"`
@@ -850,7 +847,6 @@ type LogsConfig struct {
 	Disabled  *bool          `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 	ShowLast  *int           `yaml:"showLast,omitempty" json:"showLast,omitempty"`
 	Sync      *bool          `yaml:"sync,omitempty" json:"sync,omitempty"`
-	Images    []string       `yaml:"images,omitempty" json:"images,omitempty"`
 	Selectors []LogsSelector `yaml:"selectors,omitempty" json:"selectors,omitempty"`
 }
 
@@ -879,7 +875,6 @@ type InteractiveImageConfig struct {
 // Terminal describes the terminal options
 type Terminal struct {
 	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
@@ -893,7 +888,6 @@ type Terminal struct {
 // PodPatch will patch a pod's owning ReplicaSet, Deployment or StatefulSet with the givens patches or image
 type PodPatch struct {
 	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
@@ -914,7 +908,7 @@ type DependencyConfig struct {
 	ProfileParents           []string        `yaml:"profileParents,omitempty" json:"profileParents,omitempty"`
 	DisableProfileActivation bool            `yaml:"disableProfileActivation,omitempty" json:"disableProfileActivation,omitempty"`
 	Vars                     []DependencyVar `yaml:"vars,omitempty" json:"vars,omitempty"`
-	OverwriteVars            *bool           `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
+	OverwriteVars            bool            `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
 	SkipBuild                bool            `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
 	IgnoreDependencies       bool            `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
 	Namespace                string          `yaml:"namespace,omitempty" json:"namespace,omitempty"`
@@ -962,13 +956,21 @@ type SourceConfig struct {
 
 // HookConfig defines a hook
 type HookConfig struct {
+	// Events are the events when the hook should be executed
+	Events []string `yaml:"events" json:"events"`
+
 	// Command is the base command that is either executed locally or in a remote container.
 	// Command is mutually exclusive with other hook actions. In the case this is defined
 	// together with where.container, DevSpace will until the target container is running and
 	// only then execute the command. If the container does not start in time, DevSpace will fail.
-	Command string `yaml:"command" json:"command"`
+	Command string `yaml:"command,omitempty" json:"command,omitempty"`
 	// Args are additional arguments passed together with the command to execute.
 	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
+
+	// If an operating system is defined, the hook will only be executed for the given os.
+	// All supported golang OS types are supported and multiple can be combined with ','.
+	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
+
 	// If Upload is specified, DevSpace will upload certain local files or folders into a
 	// remote container.
 	Upload *HookSyncConfig `yaml:"upload,omitempty" json:"upload,omitempty"`
@@ -982,10 +984,6 @@ type HookConfig struct {
 	// with a certain exit code.
 	Wait *HookWaitConfig `yaml:"wait,omitempty" json:"wait,omitempty"`
 
-	// If an operating system is defined, the hook will only be executed for the given os.
-	// All supported golang OS types are supported and multiple can be combined with ','.
-	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
-
 	// If true, the hook will be executed in the background.
 	Background bool `yaml:"background,omitempty" json:"background,omitempty"`
 	// If true, the hook will not output anything to the standard out of DevSpace except
@@ -993,11 +991,9 @@ type HookConfig struct {
 	// the captured output streams of the hook.
 	Silent bool `yaml:"silent,omitempty" json:"silent,omitempty"`
 
-	// Specifies where the hook should be run. If this is omitted DevSpace expects a
+	// Container specifies where the hook should be run. If this is omitted DevSpace expects a
 	// local command hook.
-	Where HookWhereConfig `yaml:"where,omitempty" json:"where,omitempty"`
-	// Specifies when the hook should be run.
-	When *HookWhenConfig `yaml:"when,omitempty" json:"when,omitempty"`
+	Container *HookContainer `yaml:"container,omitempty" json:"container,omitempty"`
 }
 
 // HookWaitConfig defines a hook wait config
@@ -1026,18 +1022,12 @@ type HookSyncConfig struct {
 	ContainerPath string `yaml:"containerPath,omitempty" json:"containerPath,omitempty"`
 }
 
-// HookWhereConfig defines where to execute the hook
-type HookWhereConfig struct {
-	Container *HookContainer `yaml:"container,omitempty" json:"container,omitempty"`
-}
-
 // HookContainer defines how to select one or more containers to execute a hook in
 type HookContainer struct {
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	Pod           string            `yaml:"pod,omitempty" json:"pod,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	ImageName     string            `yaml:"imageName,omitempty" json:"imageName,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 
 	Wait    *bool `yaml:"wait,omitempty" json:"wait,omitempty"`
@@ -1075,7 +1065,7 @@ type CommandConfig struct {
 
 	// AppendArgs will append arguments passed to the DevSpace command automatically to
 	// the specified command.
-	AppendArgs *bool `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty"`
+	AppendArgs bool `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty"`
 
 	// Description describes what the command is doing and can be seen in `devspace list commands`
 	Description string `yaml:"description" json:"description"`

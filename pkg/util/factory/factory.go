@@ -14,7 +14,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
@@ -25,13 +24,13 @@ import (
 
 // Factory is the main interface for various client creations
 type Factory interface {
-	// Config Loader
+	// NewConfigLoader creates a new config loader
 	NewConfigLoader(configPath string) loader.ConfigLoader
 
-	// ConfigureManager
+	// NewConfigureManager creates a new configure manager
 	NewConfigureManager(config *latest.Config, generated *generated.Config, log log.Logger) configure.Manager
 
-	// Kubernetes Clients
+	// NewKubeDefaultClient creates a new kube client
 	NewKubeDefaultClient() (kubectl.Client, error)
 	NewKubeClientFromContext(context, namespace string, switchContext bool) (kubectl.Client, error)
 	NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error)
@@ -42,33 +41,30 @@ type Factory interface {
 	// NewDependencyManager creates a new dependency manager
 	NewDependencyManager(config config.Config, client kubectl.Client, configOptions *loader.ConfigOptions, logger log.Logger) dependency.Manager
 
-	// NewHookExecutor creates a new hook executor
-	NewHookExecutor(config config.Config, dependencies []dependencytypes.Dependency) hook.Executer
-
 	// NewPullSecretClient creates a new pull secrets client
 	NewPullSecretClient(config config.Config, dependencies []dependencytypes.Dependency, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client
 
-	// Docker
+	// NewDockerClient creates a new docker API client
 	NewDockerClient(log log.Logger) (docker.Client, error)
 	NewDockerClientWithMinikube(currentKubeContext string, preferMinikube bool, log log.Logger) (docker.Client, error)
 
 	// NewServicesClient creates a new services client
 	NewServicesClient(config config.Config, dependencies []dependencytypes.Dependency, kubeClient kubectl.Client, log log.Logger) services.Client
 
-	// Build & Deploy
+	// NewBuildController & NewDeployController
 	NewBuildController(config config.Config, dependencies []dependencytypes.Dependency, client kubectl.Client) build.Controller
 	NewDeployController(config config.Config, dependencies []dependencytypes.Dependency, client kubectl.Client) deploy.Controller
 
-	// Analyzer
+	// NewAnalyzer creates a new analyzer
 	NewAnalyzer(client kubectl.Client, log log.Logger) analyze.Analyzer
 
-	// Kubeconfig
+	// NewKubeConfigLoader creates a new kube config loader
 	NewKubeConfigLoader() kubeconfig.Loader
 
-	// Plugin
+	// NewPluginManager creates a new plugin manager
 	NewPluginManager(log log.Logger) plugin.Interface
 
-	// Log
+	// GetLog retrieves the log instance
 	GetLog() log.Logger
 }
 
@@ -80,7 +76,7 @@ func DefaultFactory() Factory {
 	return &DefaultFactoryImpl{}
 }
 
-// NewPluginsManager creates a new plugin manager
+// NewPluginManager creates a new plugin manager
 func (f *DefaultFactoryImpl) NewPluginManager(log log.Logger) plugin.Interface {
 	return plugin.NewClient(log)
 }
@@ -108,11 +104,6 @@ func (f *DefaultFactoryImpl) NewKubeConfigLoader() kubeconfig.Loader {
 // GetLog implements interface
 func (f *DefaultFactoryImpl) GetLog() log.Logger {
 	return log.GetInstance()
-}
-
-// NewHookExecutor implements interface
-func (f *DefaultFactoryImpl) NewHookExecutor(config config.Config, dependencies []dependencytypes.Dependency) hook.Executer {
-	return hook.NewExecuter(config, dependencies)
 }
 
 // NewDependencyManager implements interface

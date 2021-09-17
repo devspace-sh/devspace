@@ -1,4 +1,4 @@
-version: v1beta9
+version: v1beta11
 deployments:
 - name: nginx
   helm:
@@ -8,9 +8,7 @@ deployments:
       - image: nginx
 dev:
   ports:
-  - labelSelector:
-      app.kubernetes.io/component: nginx
+  - imageSelector: nginx
     forward:
       - port: 8080
         remotePort: 80
-    

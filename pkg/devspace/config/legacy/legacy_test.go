@@ -40,7 +40,7 @@ images:
     - "999999999"
 dev:
   terminal:
-    imageName: default
+    imageSelector: image(default):tag(default)
 `,
 		},
 		{

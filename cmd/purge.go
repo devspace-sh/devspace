@@ -4,7 +4,10 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devspace/cmd/reset"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -117,22 +120,22 @@ func (cmd *PurgeCmd) Run(f factory.Factory) error {
 		return err
 	}
 
-	// Execute plugin hook
-	err = plugin.ExecutePluginHook("purge")
-	if err != nil {
-		return err
-	}
-
 	// Get config with adjusted cluster config
 	configInterface, err := configLoader.Load(configOptions, cmd.log)
 	if err != nil {
 		return err
 	}
 
+	return runWithHooks("purgeCommand", client, configInterface, cmd.log, func() error {
+		return cmd.runCommand(f, client, configInterface, configLoader, configOptions)
+	})
+}
+
+func (cmd *PurgeCmd) runCommand(f factory.Factory, client kubectl.Client, configInterface config.Config, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions) error {
 	// Purge dependencies
 	var dependencies []types.Dependency
 	if cmd.All || len(cmd.Dependency) > 0 {
-		dependencies, err = f.NewDependencyManager(configInterface, client, configOptions, cmd.log).PurgeAll(dependency.PurgeOptions{
+		dependencies, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).PurgeAll(dependency.PurgeOptions{
 			SkipDependencies: cmd.SkipDependency,
 			Dependencies:     cmd.Dependency,
 			Verbose:          cmd.VerboseDependencies,
@@ -179,7 +182,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory) error {
 		}
 	}
 
-	err = configLoader.SaveGenerated(generatedConfig)
+	err := configLoader.SaveGenerated(configInterface.Generated())
 	if err != nil {
 		cmd.log.Errorf("Error saving generated.yaml: %v", err)
 	}

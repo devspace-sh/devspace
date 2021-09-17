@@ -14,7 +14,9 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/dev"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
+	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -74,10 +76,10 @@ type DevCmd struct {
 	UI     bool
 	UIPort int
 
-	Terminal         bool
-	TerminalRestart  bool
-	WorkingDirectory string
-	Interactive      bool
+	Terminal          bool
+	TerminalReconnect bool
+	WorkingDirectory  string
+	Interactive       bool
 
 	Wait    bool
 	Timeout int
@@ -153,7 +155,7 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
 	devCmd.Flags().BoolVarP(&cmd.Interactive, "interactive", "i", false, "DEPRECATED: DO NOT USE ANYMORE")
 	devCmd.Flags().BoolVarP(&cmd.Terminal, "terminal", "t", false, "Open a terminal instead of showing logs")
-	devCmd.Flags().BoolVar(&cmd.TerminalRestart, "terminal-restart", true, "Will try to restart the terminal if a non zero exit code was encountered")
+	devCmd.Flags().BoolVar(&cmd.TerminalReconnect, "terminal-reconnect", true, "Will try to reconnect the terminal if a non zero exit code was encountered")
 	devCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
 
 	devCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "If true will wait first for pods to be running or fails after given timeout")
@@ -229,37 +231,69 @@ func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 	if err != nil {
 		return err
 	}
-	config := configInterface.Config()
 
-	// Execute plugin hook
-	err = plugin.ExecutePluginHook("dev")
-	if err != nil {
-		return err
-	}
-
-	// Create namespace if necessary
-	err = client.EnsureDeployNamespaces(config, cmd.log)
-	if err != nil {
-		return errors.Errorf("Unable to create namespace: %v", err)
-	}
-
-	// Create the image pull secrets and add them to the default service account
-	dockerClient, err := f.NewDockerClient(cmd.log)
-	if err != nil {
-		dockerClient = nil
-	}
-
-	// Build and deploy images
-	exitCode, err := cmd.buildAndDeploy(f, configInterface, configOptions, client, dockerClient, args)
-	if err != nil {
-		return err
-	} else if exitCode != 0 {
-		return &exit.ReturnCodeError{
-			ExitCode: exitCode,
+	return runWithHooks("devCommand", client, configInterface, cmd.log, func() error {
+		// Create namespace if necessary
+		err = client.EnsureDeployNamespaces(configInterface.Config(), cmd.log)
+		if err != nil {
+			return errors.Errorf("Unable to create namespace: %v", err)
 		}
+
+		// Create the image pull secrets and add them to the default service account
+		dockerClient, err := f.NewDockerClient(cmd.log)
+		if err != nil {
+			dockerClient = nil
+		}
+
+		// Execute plugin hook
+		err = hook.ExecuteHooks(client, nil, nil, nil, nil, "dev")
+		if err != nil {
+			return err
+		}
+
+		// Build and deploy images
+		exitCode, err := cmd.buildAndDeploy(f, configInterface, configOptions, client, dockerClient, args)
+		if err != nil {
+			return err
+		} else if exitCode != 0 {
+			return &exit.ReturnCodeError{
+				ExitCode: exitCode,
+			}
+		}
+
+		return nil
+	})
+}
+
+func runWithHooks(command string, client kubectl.Client, configInterface config.Config, logger log.Logger, fn func() error) (err error) {
+	err = hook.ExecuteHooks(client, configInterface, nil, nil, logger, command+":before:execute")
+	if err != nil {
+		return err
 	}
 
-	return nil
+	defer func() {
+		if logger == nil {
+			log.GetInstance().StopWait()
+		} else {
+			logger.StopWait()
+		}
+		
+		if err != nil {
+			hook.LogExecuteHooks(client, configInterface, nil, map[string]interface{}{"error": err}, logger, command+":after:execute", command+":error")
+		} else {
+			err = hook.ExecuteHooks(client, configInterface, nil, nil, logger, command+":after:execute")
+		}
+	}()
+
+	return interrupt.Global.Run(fn, func() {
+		if logger == nil {
+			log.GetInstance().StopWait()
+		} else {
+			logger.StopWait()
+		}
+		
+		hook.LogExecuteHooks(client, configInterface, nil, nil, logger, command+":interrupt")
+	})
 }
 
 func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Config, configOptions *loader.ConfigOptions, client kubectl.Client, dockerClient docker.Client, args []string) (int, error) {
@@ -270,13 +304,14 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 		dependencies    = []types.Dependency{}
 	)
 
-	pluginErr := plugin.ExecutePluginHook("dev.beforePipeline")
-	if pluginErr != nil {
-		return 0, pluginErr
+	// execute plugin hook
+	err = hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "dev.beforePipeline", "devCommand:before:runPipeline")
+	if err != nil {
+		return 0, err
 	}
 
 	if !cmd.SkipPipeline {
-		pluginErr := plugin.ExecutePluginHook("dev.beforeDependencies")
+		pluginErr := hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "dev.beforeDependencies", "devCommand:before:deployDependencies")
 		if pluginErr != nil {
 			return 0, pluginErr
 		}
@@ -302,7 +337,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 			return 0, errors.Errorf("error deploying dependencies: %v", err)
 		}
 
-		pluginErr = plugin.ExecutePluginHook("dev.afterDependencies")
+		pluginErr = hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "dev.afterDependencies", "devCommand:after:deployDependencies")
 		if pluginErr != nil {
 			return 0, pluginErr
 		}
@@ -315,7 +350,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 
 		// Only execute pipeline if we are not focused on a dependency
 		if len(cmd.Dependency) == 0 {
-			pluginErr := plugin.ExecutePluginHook("dev.beforeBuild")
+			pluginErr = hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "dev.beforeBuild", "devCommand:before:build")
 			if pluginErr != nil {
 				return 0, pluginErr
 			}
@@ -347,12 +382,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 				}
 			}
 
-			pluginErr = plugin.ExecutePluginHook("dev.afterBuild")
-			if pluginErr != nil {
-				return 0, pluginErr
-			}
-
-			pluginErr = plugin.ExecutePluginHook("dev.beforeDeploy")
+			pluginErr = hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "dev.afterBuild", "devCommand:after:build", "dev.beforeDeploy", "devCommand:before:deploy")
 			if pluginErr != nil {
 				return 0, pluginErr
 			}
@@ -386,7 +416,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 				}
 			}
 
-			pluginErr = plugin.ExecutePluginHook("dev.afterDeploy")
+			pluginErr = hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "dev.afterDeploy", "devCommand:after:deploy")
 			if pluginErr != nil {
 				return 0, pluginErr
 			}
@@ -399,7 +429,7 @@ func (cmd *DevCmd) buildAndDeploy(f factory.Factory, configInterface config.Conf
 		}
 	}
 
-	pluginErr = plugin.ExecutePluginHook("dev.afterPipeline")
+	pluginErr := hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "dev.afterPipeline", "devCommand:after:runPipeline")
 	if pluginErr != nil {
 		return 0, pluginErr
 	}
@@ -563,20 +593,18 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 	// Check if we should open a terminal or stream logs
 	if !cmd.PrintSyncLog {
 		if config.Dev.Terminal != nil && !config.Dev.Terminal.Disabled {
+			pluginErr := hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "devCommand:before:openTerminal")
+			if pluginErr != nil {
+				return 0, pluginErr
+			}
+
 			selectorOptions := targetselector.NewDefaultOptions().ApplyCmdParameter("", "", cmd.Namespace, "")
 			if config.Dev.Terminal != nil {
 				selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Terminal.LabelSelector, config.Dev.Terminal.Namespace, config.Dev.Terminal.ContainerName, "")
 			}
 
 			var imageSelectors []imageselector.ImageSelector
-			if config.Dev.Terminal != nil && config.Dev.Terminal.ImageName != "" {
-				imageSelector, err := imageselector.Resolve(config.Dev.Terminal.ImageName, configInterface, dependencies)
-				if err != nil {
-					return 0, err
-				} else if imageSelector != nil {
-					imageSelectors = append(imageSelectors, *imageSelector)
-				}
-			} else if config.Dev.Terminal != nil && config.Dev.Terminal.ImageSelector != "" {
+			if config.Dev.Terminal != nil && config.Dev.Terminal.ImageSelector != "" {
 				imageSelector, err := util.ResolveImageAsImageSelector(config.Dev.Terminal.ImageSelector, configInterface, dependencies)
 				if err != nil {
 					return 0, err
@@ -586,10 +614,14 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 			}
 
 			selectorOptions.ImageSelector = imageSelectors
-
 			stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
-			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalRestart, stdout, stderr, stdin)
+			return servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalReconnect, stdout, stderr, stdin)
 		} else if config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || !*config.Dev.Logs.Disabled {
+			pluginErr := hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "devCommand:before:streamLogs")
+			if pluginErr != nil {
+				return 0, pluginErr
+			}
+
 			// Log multiple images at once
 			manager, err := services.NewLogManager(client, configInterface, dependencies, exitChan, logger)
 			if err != nil {
@@ -713,8 +745,9 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 
 	// check if terminal is enabled
 	c := configInterface.Config()
+
 	if cmd.Terminal || (c.Dev.Terminal != nil && !c.Dev.Terminal.Disabled) {
-		if c.Dev.Terminal == nil || (c.Dev.Terminal.ImageSelector == "" && c.Dev.Terminal.ImageName == "" && len(c.Dev.Terminal.LabelSelector) == 0) {
+		if c.Dev.Terminal == nil || (c.Dev.Terminal.ImageSelector == "" && len(c.Dev.Terminal.LabelSelector) == 0) {
 			imageNames := make([]string, 0, len(c.Images))
 			for k := range c.Images {
 				imageNames = append(imageNames, k)
@@ -735,7 +768,7 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 			}
 
 			c.Dev.Terminal = &latest.Terminal{
-				ImageName: imageName,
+				ImageSelector: fmt.Sprintf("image(%s):tag(%s)", imageName, imageName),
 			}
 		} else {
 			c.Dev.Terminal.Disabled = false

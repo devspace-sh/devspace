@@ -5,6 +5,7 @@ import (
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/exit"
@@ -24,7 +25,7 @@ type EnterCmd struct {
 	Pod           string
 	Pick          bool
 	Wait          bool
-	Restart       bool
+	Reconnect     bool
 
 	WorkingDirectory string
 
@@ -72,7 +73,7 @@ devspace enter bash --image-selector "image(app):tag(app)"
 
 	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod / container if multiple are found")
 	enterCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "Wait for the pod(s) to start if they are not running")
-	enterCmd.Flags().BoolVar(&cmd.Restart, "restart", false, "Will restart the terminal if a non zero return code is encountered")
+	enterCmd.Flags().BoolVar(&cmd.Reconnect, "reconnect", false, "Will reconnect the terminal if a non zero return code is encountered")
 
 	return enterCmd
 }
@@ -111,7 +112,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook("enter")
+	err = hook.ExecuteHooks(client, nil, nil, nil, nil, "enter")
 	if err != nil {
 		return err
 	}
@@ -130,7 +131,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 
 	// Start terminal
 	stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
-	exitCode, err := f.NewServicesClient(nil, nil, client, logger).StartTerminal(selectorOptions, args, cmd.WorkingDirectory, make(chan error), cmd.Wait, cmd.Restart, stdout, stderr, stdin)
+	exitCode, err := f.NewServicesClient(nil, nil, client, logger).StartTerminal(selectorOptions, args, cmd.WorkingDirectory, make(chan error), cmd.Wait, cmd.Reconnect, stdout, stderr, stdin)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {

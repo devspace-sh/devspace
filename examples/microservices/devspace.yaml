@@ -2,7 +2,7 @@
 # If you want to try this example in other
 # Clusters you have to exchange the image names
 # and enable image pushing
-version: v1beta9
+version: v1beta11
 images:
   node:
     image: node
@@ -23,17 +23,15 @@ deployments:
       name: php/chart
 dev:
   ports:
-  - imageName: node
+  - imageSelector: image(node):tag(node)
     forward:
     - port: 3000
   sync:
-  - imageName: node
+  - imageSelector: image(node):tag(node)
     localSubPath: ./node
     excludePaths:
     - node_modules
-  - imageName: php
+  - imageSelector: image(php):tag(php)
     localSubPath: ./php
-  interactive:
-    defaultEnabled: true
-    images:
-    - name: node
+  terminal:
+    imageSelector: image(node):tag(node)

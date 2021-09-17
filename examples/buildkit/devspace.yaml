@@ -1,7 +1,10 @@
-version: v1beta10
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: myusername/devspace
 images:
   default:
-    image: myusername/devspace
+    image: ${IMAGE}
     build:
       buildKit: {}
 deployments:
@@ -10,16 +13,16 @@ deployments:
       componentChart: true
       values:
         containers:
-          - image: myusername/devspace
+          - image: ${IMAGE}
         service:
           ports:
             - port: 3000
 dev:
   ports:
-    - imageName: default
+    - imageSelector: ${IMAGE}
       forward:
         - port: 3000
   sync:
-    - imageName: default
+    - imageSelector: ${IMAGE}
       excludePaths:
         - node_modules

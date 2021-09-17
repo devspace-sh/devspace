@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"io"
 	"os"
 	"strings"
@@ -140,12 +141,6 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 		}
 	}
 
-	// Execute plugin hook
-	err = plugin.ExecutePluginHook("render")
-	if err != nil {
-		return err
-	}
-
 	// Render dependencies
 	var dependencies []types.Dependency
 	if !cmd.SkipDependencies {
@@ -168,9 +163,14 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 			return errors.Wrap(err, "render dependencies")
 		}
 	}
-
 	if len(cmd.Dependency) > 0 {
 		return nil
+	}
+
+	// Execute plugin hook
+	err = hook.ExecuteHooks(client, configInterface, dependencies, nil, log, "render")
+	if err != nil {
+		return err
 	}
 
 	// Build images if necessary

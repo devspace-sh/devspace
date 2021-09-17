@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -118,7 +119,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	os.Remove(constants.DefaultVarsPath)
 
 	// Execute plugin hook
-	err := plugin.ExecutePluginHook("init")
+	err := hook.ExecuteHooks(nil, nil, nil, nil, nil, "init")
 	if err != nil {
 		return err
 	}

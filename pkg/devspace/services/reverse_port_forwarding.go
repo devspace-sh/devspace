@@ -8,7 +8,7 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
-	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
 	"github.com/loft-sh/devspace/pkg/devspace/services/synccontroller"
 	"github.com/loft-sh/devspace/pkg/devspace/tunnel"
@@ -33,9 +33,9 @@ func (serviceClient *client) StartReversePortForwarding(interrupt chan error) er
 			continue
 		}
 
-		pluginErr := plugin.ExecutePluginHookWithContext("reversePortForwarding.start", map[string]interface{}{
+		pluginErr := hook.ExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 			"reverse_port_forwarding_config": portForwarding,
-		})
+		}, serviceClient.log, hook.EventsForSingle("start:reversePortForwarding", portForwarding.Name).With("reversePortForwarding.start")...)
 		if pluginErr != nil {
 			return pluginErr
 		}
@@ -43,10 +43,10 @@ func (serviceClient *client) StartReversePortForwarding(interrupt chan error) er
 		// start reverse port forwarding
 		err := serviceClient.startReversePortForwarding(cache, portForwarding, interrupt, serviceClient.log)
 		if err != nil {
-			pluginErr := plugin.ExecutePluginHookWithContext("reversePortForwarding.error", map[string]interface{}{
+			pluginErr := hook.ExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 				"reverse_port_forwarding_config": portForwarding,
 				"error":                          err,
-			})
+			}, serviceClient.log, hook.EventsForSingle("error:reversePortForwarding", portForwarding.Name).With("reversePortForwarding.error")...)
 			if pluginErr != nil {
 				return pluginErr
 			}
@@ -65,12 +65,6 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 	options := targetselector.NewEmptyOptions().ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, portForwarding.ContainerName, "")
 	options.AllowPick = false
 	options.ImageSelector = []imageselector.ImageSelector{}
-	imageSelector, err := imageselector.Resolve(portForwarding.ImageName, serviceClient.config, serviceClient.dependencies)
-	if err != nil {
-		return err
-	} else if imageSelector != nil {
-		options.ImageSelector = append(options.ImageSelector, *imageSelector)
-	}
 	if portForwarding.ImageSelector != "" {
 		imageSelector, err := util.ResolveImageAsImageSelector(portForwarding.ImageSelector, serviceClient.config, serviceClient.dependencies)
 		if err != nil {
@@ -125,18 +119,18 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 				stdinWriter.Close()
 				stdoutWriter.Close()
 				logFile.Error(err)
-				plugin.LogExecutePluginHookWithContext("reversePortForwarding.restart", map[string]interface{}{
+				hook.LogExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 					"reverse_port_forwarding_config": portForwarding,
 					"error":                          err,
-				})
+				}, serviceClient.log, hook.EventsForSingle("restart:reversePortForwarding", portForwarding.Name).With("reversePortForwarding.restart")...)
 
 				for {
 					err = serviceClient.startReversePortForwarding(cache, portForwarding, interrupt, logpkg.Discard)
 					if err != nil {
-						plugin.LogExecutePluginHookWithContext("reversePortForwarding.restart", map[string]interface{}{
+						hook.LogExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 							"reverse_port_forwarding_config": portForwarding,
 							"error":                          err,
-						})
+						}, serviceClient.log, hook.EventsForSingle("restart:reversePortForwarding", portForwarding.Name).With("reversePortForwarding.restart")...)
 						serviceClient.log.Errorf("Error restarting reverse port-forwarding: %v", err)
 						serviceClient.log.Errorf("Will try again in 15 seconds")
 						time.Sleep(time.Second * 15)
@@ -151,9 +145,9 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 			close(closeChan)
 			stdinWriter.Close()
 			stdoutWriter.Close()
-			plugin.LogExecutePluginHookWithContext("reversePortForwarding.stop", map[string]interface{}{
+			hook.LogExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 				"reverse_port_forwarding_config": portForwarding,
-			})
+			}, serviceClient.log, hook.EventsForSingle("stop:reversePortForwarding", portForwarding.Name).With("reversePortForwarding.stop")...)
 		}
 	}(portForwarding, interrupt)
 

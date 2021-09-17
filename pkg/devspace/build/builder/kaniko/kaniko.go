@@ -3,6 +3,7 @@ package kaniko
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -37,7 +38,6 @@ import (
 	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubectl/pkg/util/interrupt"
 )
 
 // EngineName is the name of the building engine
@@ -199,8 +199,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 	}
 
-	intr := interrupt.New(nil, deleteBuildPod)
-	err = intr.Run(func() error {
+	err = interrupt.Global.RunAlways(func() error {
 		defer log.StopWait()
 
 		buildPodCreated, err := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Create(context.TODO(), buildPod, metav1.CreateOptions{})
@@ -417,7 +416,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 		log.Done("Done building image")
 		return nil
-	})
+	}, deleteBuildPod)
 	if err != nil {
 		// Delete all build pods on error
 		pods, getErr := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).List(context.TODO(), metav1.ListOptions{

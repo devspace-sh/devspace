@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
@@ -110,7 +111,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook("logs")
+	err = hook.ExecuteHooks(client, nil, nil, nil, nil, "logs")
 	if err != nil {
 		return err
 	}

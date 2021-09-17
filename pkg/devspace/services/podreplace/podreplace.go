@@ -181,17 +181,10 @@ func matchesSelector(annotations map[string]string, pod *corev1.PodTemplateSpec,
 		}
 
 		return selector.Matches(labels.Set(pod.Labels)), nil
-	} else if replacePod.ImageName != "" || replacePod.ImageSelector != "" {
+	} else if replacePod.ImageSelector != "" {
 		var imageSelector *imageselector.ImageSelector
 		var err error
-		if replacePod.ImageName != "" {
-			imageSelector, err = imageselector.Resolve(replacePod.ImageName, config, dependencies)
-			if err != nil {
-				return false, err
-			} else if imageSelector == nil {
-				return false, fmt.Errorf("cannot find image name: %#+v", replacePod.ImageName)
-			}
-		} else if replacePod.ImageSelector != "" {
+		if replacePod.ImageSelector != "" {
 			imageSelector, err = util.ResolveImageAsImageSelector(replacePod.ImageSelector, config, dependencies)
 			if err != nil {
 				return false, err
@@ -688,16 +681,9 @@ func replaceImageInPodSpec(podSpec *corev1.PodSpec, config config.Config, depend
 				break
 			}
 		}
-	} else if replacePod.ImageName != "" || replacePod.ImageSelector != "" {
+	} else if replacePod.ImageSelector != "" {
 		var imageSelector *imageselector.ImageSelector
-		if replacePod.ImageName != "" {
-			imageSelector, err = imageselector.Resolve(replacePod.ImageName, config, dependencies)
-			if err != nil {
-				return err
-			} else if imageSelector == nil {
-				return fmt.Errorf("cannot find image name: %#+v", replacePod.ImageName)
-			}
-		} else if replacePod.ImageSelector != "" {
+		if replacePod.ImageSelector != "" {
 			imageSelector, err = util.ResolveImageAsImageSelector(replacePod.ImageSelector, config, dependencies)
 			if err != nil {
 				return err
@@ -843,16 +829,7 @@ func convertToInterface(str runtime.Object) map[interface{}]interface{} {
 }
 
 func getImageSelector(replacePod *latest.ReplacePod, config config.Config, dependencies []dependencytypes.Dependency) (string, error) {
-	if replacePod.ImageName != "" {
-		imageSelector, err := imageselector.Resolve(replacePod.ImageName, config, dependencies)
-		if err != nil {
-			return "", err
-		} else if imageSelector == nil {
-			return "", fmt.Errorf("couldn't resolve image name: %v", replacePod.ImageName)
-		}
-
-		return hash.String(imageSelector.Image)[:32], nil
-	} else if replacePod.ImageSelector != "" {
+	if replacePod.ImageSelector != "" {
 		imageSelector, err := util.ResolveImageAsImageSelector(replacePod.ImageSelector, config, dependencies)
 		if err != nil {
 			return "", err
@@ -911,12 +888,6 @@ func findSingleReplaceablePodParent(ctx context.Context, client kubectl.Client, 
 	targetOptions.WaitingStrategy = targetselector.NewUntilNotTerminatingStrategy(time.Second * 2)
 	targetOptions.SkipInitContainers = true
 	targetOptions.ImageSelector = []imageselector.ImageSelector{}
-	imageSelector, err := imageselector.Resolve(replacePod.ImageName, config, dependencies)
-	if err != nil {
-		return nil, nil, err
-	} else if imageSelector != nil {
-		targetOptions.ImageSelector = append(targetOptions.ImageSelector, *imageSelector)
-	}
 	if replacePod.ImageSelector != "" {
 		imageSelector, err := util.ResolveImageAsImageSelector(replacePod.ImageSelector, config, dependencies)
 		if err != nil {

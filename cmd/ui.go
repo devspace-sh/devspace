@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -172,7 +173,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 	log.OverrideRuntimeErrorHandler(true)
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook("ui")
+	err = hook.ExecuteHooks(nil, nil, nil, nil, nil, "ui")
 	if err != nil {
 		return err
 	}

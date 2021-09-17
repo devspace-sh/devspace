@@ -1,7 +1,10 @@
-version: v1beta9
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: mydockeruser/devspace
 images:
   default:
-    image: mydockeruser/devspace
+    image: ${IMAGE}
 deployments:
 - name: mysql
   helm:
@@ -31,15 +34,15 @@ deployments:
     componentChart: true
     values:
       containers:
-      - image: mydockeruser/devspace
+      - image: ${IMAGE}
       service:
         ports:
         - port: 80
 dev:
   ports:
-  - imageName: default
+  - imageSelector: ${IMAGE}
     forward:
     - port: 8080
       remotePort: 80
   sync:
-  - imageName: default
+  - imageName: ${IMAGE}

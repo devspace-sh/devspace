@@ -27,7 +27,7 @@ func NewDownloadHook() RemoteHook {
 
 type remoteDownloadHook struct{}
 
-func (r *remoteDownloadHook) ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error {
+func (r *remoteDownloadHook) ExecuteRemotely(hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, client kubectl.Client, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error {
 	containerPath := "."
 	if hook.Download.ContainerPath != "" {
 		containerPath = hook.Download.ContainerPath
@@ -45,7 +45,7 @@ func (r *remoteDownloadHook) ExecuteRemotely(ctx Context, hook *latest.HookConfi
 	}
 
 	// Download the files
-	err := download(ctx.Client, podContainer.Pod, podContainer.Container.Name, localPath, containerPath, log)
+	err := download(client, podContainer.Pod, podContainer.Container.Name, localPath, containerPath, log)
 	if err != nil {
 		return errors.Errorf("error in container '%s/%s/%s': %v", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
 	}

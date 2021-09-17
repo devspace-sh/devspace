@@ -1,7 +1,10 @@
-version: v1beta9
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: yourusername/devspace
 images:
   default:
-    image: yourusername/devspace
+    image: ${IMAGE}
 deployments:
 - name: devspace-app
   kubectl:
@@ -10,14 +13,12 @@ deployments:
     kustomize: true
 dev:
   ports:
-  - imageName: default
+  - imageSelector: ${IMAGE}
     forward:
     - port: 3000
   sync:
-  - imageName: default
+  - imageSelector: ${IMAGE}
     excludePaths:
     - node_modules
-  interactive:
-    defaultEnabled: true
-    images:
-    - name: default
+  terminal:
+    imageSelector: ${IMAGE}

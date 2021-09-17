@@ -28,6 +28,7 @@ func logErrorf(message string, args ...interface{}) {
 
 const (
 	SessionEnv           = "DEVSPACE_PLUGIN_SESSION"
+	ExecutionIDEnv       = "DEVSPACE_PLUGIN_EXECUTION_ID"
 	KubeContextFlagEnv   = "DEVSPACE_PLUGIN_KUBE_CONTEXT_FLAG"
 	KubeNamespaceFlagEnv = "DEVSPACE_PLUGIN_KUBE_NAMESPACE_FLAG"
 	ConfigEnv            = "DEVSPACE_PLUGIN_CONFIG"
@@ -55,6 +56,7 @@ func SetPlugins(p []Metadata) {
 		defer pluginContextLock.Unlock()
 
 		pluginContext[SessionEnv] = uuid.New().String()
+		pluginContext[ExecutionIDEnv] = pluginContext[SessionEnv]
 	})
 }
 
@@ -154,18 +156,14 @@ func SetPluginConfig(config config.Config) {
 	})
 }
 
-func LogExecutePluginHookWithContext(event string, extraEnv map[string]interface{}) {
-	err := ExecutePluginHookWithContext(event, extraEnv)
+func LogExecutePluginHookWithContext(extraEnv map[string]interface{}, events ...string) {
+	err := ExecutePluginHookWithContext(extraEnv, events...)
 	if err != nil {
 		logErrorf("%v", err)
 	}
 }
 
-func ExecutePluginHook(event string) error {
-	return ExecutePluginHookWithContext(event, nil)
-}
-
-func ExecutePluginHookWithContext(event string, extraEnv map[string]interface{}) error {
+func ExecutePluginHookWithContext(extraEnv map[string]interface{}, events ...string) error {
 	if len(plugins) == 0 {
 		return nil
 	}
@@ -179,48 +177,67 @@ func ExecutePluginHookWithContext(event string, extraEnv map[string]interface{})
 	pluginContextLock.Unlock()
 
 	// apply extra context
-	for k, v := range extraEnv {
-		if v == nil {
-			continue
-		}
-
-		k = strings.TrimSpace(strings.ToUpper("DEVSPACE_PLUGIN_" + k))
-		switch t := v.(type) {
-		case string:
-			newEnv[k] = t
-		case int:
-			newEnv[k] = fmt.Sprintf("%d", t)
-		case error:
-			newEnv[k] = fmt.Sprintf("%v", t)
-		default:
-			out, err := json.Marshal(yamlutil.Convert(t))
-			if err != nil {
-				logErrorf("error marshal extra env %s: %v", k, err)
-			}
-			newEnv[k] = string(out)
-		}
+	convertedExtraEnv := ConvertExtraEnv("DEVSPACE_PLUGIN", extraEnv)
+	for k, v := range convertedExtraEnv {
+		newEnv[k] = v
 	}
 
 	for _, plugin := range plugins {
-		err := executePluginHookAt(plugin, event, newEnv)
-		if err != nil {
-			return err
+		for _, e := range events {
+			newEnv["DEVSPACE_PLUGIN_EVENT"] = e
+			err := executePluginHookAt(plugin, e, newEnv)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func ExecutePluginHookAt(plugin Metadata, event string) error {
-	// apply global plugin context
-	newEnv := map[string]string{}
-	pluginContextLock.Lock()
-	for k, v := range pluginContext {
-		newEnv[k] = v
-	}
-	pluginContextLock.Unlock()
+func ConvertExtraEnv(base string, extraEnv map[string]interface{}) map[string]string {
+	out := map[string]string{}
+	for k, v := range extraEnv {
+		if v == nil {
+			continue
+		}
 
-	return executePluginHookAt(plugin, event, newEnv)
+		k = strings.TrimSpace(strings.ToUpper(base + "_" + k))
+		switch t := v.(type) {
+		case string:
+			out[k] = t
+		case int:
+			out[k] = fmt.Sprintf("%d", t)
+		case error:
+			out[k] = fmt.Sprintf("%v", t)
+		default:
+			outBytes, err := json.Marshal(yamlutil.Convert(t))
+			if err != nil {
+				logErrorf("error marshal extra env %s: %v", k, err)
+			}
+			out[k] = string(outBytes)
+		}
+	}
+	return out
+}
+
+func ExecutePluginHookAt(plugin Metadata, events ...string) error {
+	for _, e := range events {
+		// apply global plugin context
+		newEnv := map[string]string{}
+		pluginContextLock.Lock()
+		for k, v := range pluginContext {
+			newEnv[k] = v
+		}
+		pluginContextLock.Unlock()
+
+		err := executePluginHookAt(plugin, e, newEnv)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func executePluginHookAt(plugin Metadata, event string, env map[string]string) error {

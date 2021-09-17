@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"os"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -164,7 +165,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook("sync")
+	err = hook.ExecuteHooks(nil, nil, nil, nil, nil, "sync")
 	if err != nil {
 		return err
 	}
@@ -200,9 +201,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 				}
 
 				selector := ""
-				if sc.ImageName != "" {
-					selector = "image: " + sc.ImageName
-				} else if sc.ImageSelector != "" {
+				if sc.ImageSelector != "" {
 					selector = "img-selector: " + sc.ImageSelector
 				} else if len(sc.LabelSelector) > 0 {
 					selector = "selector: " + labels.Set(sc.LabelSelector).String()
@@ -265,7 +264,6 @@ func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig) error 
 	}
 	if cmd.LabelSelector != "" || cmd.Pod != "" {
 		syncConfig.LabelSelector = nil
-		syncConfig.ImageName = ""
 		syncConfig.ImageSelector = ""
 	}
 	if cmd.Namespace != "" {

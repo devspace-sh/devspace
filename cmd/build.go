@@ -5,7 +5,11 @@ import (
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -106,17 +110,16 @@ func (cmd *BuildCmd) Run(f factory.Factory) error {
 	if err != nil {
 		return err
 	}
-	config := configInterface.Config()
 
-	// Execute plugin hook
-	err = plugin.ExecutePluginHook("build")
-	if err != nil {
-		return err
-	}
+	return runWithHooks("buildCommand", client, configInterface, log, func() error {
+		return cmd.runCommand(f, client, configInterface, configLoader, configOptions, log)
+	})
+}
 
+func (cmd *BuildCmd) runCommand(f factory.Factory, client kubectl.Client, configInterface config.Config, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, log logpkg.Logger) error {
 	// create namespaces if we have a client
 	if client != nil {
-		err = client.EnsureDeployNamespaces(config, log)
+		err := client.EnsureDeployNamespaces(configInterface.Config(), log)
 		if err != nil {
 			return errors.Errorf("unable to create namespace: %v", err)
 		}
@@ -124,7 +127,7 @@ func (cmd *BuildCmd) Run(f factory.Factory) error {
 
 	// Force tag
 	if len(cmd.Tags) > 0 {
-		for _, imageConfig := range config.Images {
+		for _, imageConfig := range configInterface.Config().Images {
 			imageConfig.Tags = cmd.Tags
 		}
 	}
@@ -148,6 +151,12 @@ func (cmd *BuildCmd) Run(f factory.Factory) error {
 		return errors.Wrap(err, "build dependencies")
 	}
 
+	// Execute plugin hook
+	err = hook.ExecuteHooks(client, configInterface, dependencies, nil, log, "build")
+	if err != nil {
+		return err
+	}
+
 	// Build images if necessary
 	if len(cmd.Dependency) == 0 {
 		builtImages, err := f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
@@ -167,7 +176,7 @@ func (cmd *BuildCmd) Run(f factory.Factory) error {
 
 		// Save config if an image was built
 		if len(builtImages) > 0 {
-			err := configLoader.SaveGenerated(generatedConfig)
+			err := configLoader.SaveGenerated(configInterface.Generated())
 			if err != nil {
 				return err
 			}

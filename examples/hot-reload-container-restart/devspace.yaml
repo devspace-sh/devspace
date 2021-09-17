@@ -1,7 +1,10 @@
-version: v1beta9
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: myusername/devspace
 images:
   default:
-    image: myusername/devspace
+    image: ${IMAGE}
     # this option tells devspace to automatically wrap the Dockerfile entrypoint in memory
     # with a small restart helper script so that the process can be easily restarted from within the
     # container. This should work with most Dockerfiles that have an ENTRYPOINT statement.
@@ -18,17 +21,17 @@ deployments:
     componentChart: true
     values:
       containers:
-      - image: myusername/devspace
+      - image: ${IMAGE}
       service:
         ports:
         - port: 8080
 dev:
   ports:
-  - imageName: default
+  - imageSelector: ${IMAGE}
     forward:
     - port: 8080
   sync:
-  - imageName: default
+  - imageSelector: ${IMAGE}
     onUpload:
       # this option tells devspace to restart the container process if something changes within
       # the container. This obviously only works if the restart helper script is present in the container.

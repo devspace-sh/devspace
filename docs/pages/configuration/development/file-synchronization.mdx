@@ -72,7 +72,6 @@ hooks:
 ## Pod/Container Selection
 The following config options are needed to determine the container which the file synchronization should be established to:
 - [`imageSelector`](#imageselector)
-- [`imageName`](#imagename)
 - [`labelSelector`](#labelselector)
 - [`containerName`](#containername)
 - [`namespace`](#namespace)
@@ -127,51 +126,6 @@ dev:
 In consequence, the following sync processes would be started when using the above config example assuming the local project root directoy `/my/project/`:
 
 1. `localhost:/my/project/` forwards to `container-0:$WORKDIR` **\***
-2. `localhost:/my/project/debug-logs/` forwards to `container-1:/logs`
-
-**\* Changes on either side (local and container filesystem) that occur within the sub-folders `node_modules/` and `logs/` would be ingored.**
-
-### `imageName`
-<FragmentImageName />
-
-#### Example: Select Container by Image Name
-```yaml {2,4,18,22}
-images:
-  backend:
-    image: john/devbackend
-  backend-debugger:
-    image: john/debugger
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - name: container-0
-        image: john/devbackend
-      - name: container-1
-        image: john/debugger
-dev:
-  sync:
-  - imageName: backend
-    excludePaths:
-    - node_modules/
-    - logs/
-  - imageName: backend-debugger
-    localSubPath: ./debug-logs
-    containerPath: /logs
-```
-**Explanation:**  
-- The above example defines two images that can be used as `imageName`: `backend` and `backend-debugger`
-- The deployment starts two containers and each of them uses an image from the `images` section.
-- The `imageName` option of the first sync configuration in the `dev.sync` section references `backend`. That means DevSpace would select the first container for file synchronization, as this container uses the `image: john/devbackend` which belongs to the `backend` image as defined in the `images` section.
-- The first sync configuration does not define `localSubPath`, so it defaults to the project's root directory (location of `devspace.yaml`).
-- The first sync configuration does not define `containerPath`, so it defaults to the container's working directory (i.e. `WORKDIR`).
-- The `imageName` option of the second sync configuration in the `dev.sync` section references `backend-debugger`. That means DevSpace would select the second container for file synchronization, as this container uses the `image: john/debugger` which belongs to the `backend-debugger` image as defined in the `images` section.
-
-In consequence, the following sync processes would be started when using the above config example assuming the local project root directoy `/my/project/`:
-
-1. `localhost:/my/project/` forwards to `container-0:$WORKDIR` **\*** 
 2. `localhost:/my/project/debug-logs/` forwards to `container-1:/logs`
 
 **\* Changes on either side (local and container filesystem) that occur within the sub-folders `node_modules/` and `logs/` would be ingored.**

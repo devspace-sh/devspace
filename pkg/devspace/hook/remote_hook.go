@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/imageselector"
@@ -19,7 +20,7 @@ import (
 
 // RemoteHook is a hook that is executed in a container
 type RemoteHook interface {
-	ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error
+	ExecuteRemotely(hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, client kubectl.Client, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error
 }
 
 func NewRemoteHook(hook RemoteHook) Hook {
@@ -41,8 +42,8 @@ type remoteHook struct {
 	WaitingStrategy targetselector.WaitingStrategy
 }
 
-func (r *remoteHook) Execute(ctx Context, hook *latest.HookConfig, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error {
-	if ctx.Client == nil {
+func (r *remoteHook) Execute(hook *latest.HookConfig, client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]string, log logpkg.Logger) error {
+	if client == nil {
 		return errors.Errorf("Cannot execute hook '%s': kube client is not initialized", ansi.Color(hookName(hook), "white+b"))
 	}
 
@@ -50,23 +51,13 @@ func (r *remoteHook) Execute(ctx Context, hook *latest.HookConfig, config config
 		imageSelectors []imageselector.ImageSelector
 		err            error
 	)
-	if hook.Where.Container.ImageName != "" || hook.Where.Container.ImageSelector != "" {
+	if hook.Container.ImageSelector != "" {
 		if config == nil || config.Generated() == nil {
 			return errors.Errorf("Cannot execute hook '%s': config is not loaded", ansi.Color(hookName(hook), "white+b"))
 		}
 
-		if hook.Where.Container.ImageName != "" {
-			imageSelectorFromConfig, err := imageselector.Resolve(hook.Where.Container.ImageName, config, dependencies)
-			if err != nil {
-				return err
-			}
-			if imageSelectorFromConfig != nil {
-				imageSelectors = append(imageSelectors, *imageSelectorFromConfig)
-			}
-		}
-
-		if hook.Where.Container.ImageSelector != "" {
-			imageSelector, err := util.ResolveImageAsImageSelector(hook.Where.Container.ImageSelector, config, dependencies)
+		if hook.Container.ImageSelector != "" {
+			imageSelector, err := util.ResolveImageAsImageSelector(hook.Container.ImageSelector, config, dependencies)
 			if err != nil {
 				return err
 			}
@@ -75,7 +66,7 @@ func (r *remoteHook) Execute(ctx Context, hook *latest.HookConfig, config config
 		}
 	}
 
-	executed, err := r.execute(ctx, hook, imageSelectors, config, dependencies, log)
+	executed, err := r.execute(hook, imageSelectors, client, config, dependencies, log)
 	if err != nil {
 		return err
 	} else if !executed {
@@ -85,32 +76,32 @@ func (r *remoteHook) Execute(ctx Context, hook *latest.HookConfig, config config
 	return nil
 }
 
-func (r *remoteHook) execute(ctx Context, hook *latest.HookConfig, imageSelector []imageselector.ImageSelector, config config.Config, dependencies []types.Dependency, log logpkg.Logger) (bool, error) {
+func (r *remoteHook) execute(hook *latest.HookConfig, imageSelector []imageselector.ImageSelector, client kubectl.Client, config config.Config, dependencies []types.Dependency, log logpkg.Logger) (bool, error) {
 	labelSelector := ""
-	if len(hook.Where.Container.LabelSelector) > 0 {
-		labelSelector = labels.Set(hook.Where.Container.LabelSelector).String()
+	if len(hook.Container.LabelSelector) > 0 {
+		labelSelector = labels.Set(hook.Container.LabelSelector).String()
 	}
 
 	timeout := int64(150)
-	if hook.Where.Container.Timeout > 0 {
-		timeout = hook.Where.Container.Timeout
+	if hook.Container.Timeout > 0 {
+		timeout = hook.Container.Timeout
 	}
 
 	wait := false
-	if hook.Where.Container.Wait == nil || *hook.Where.Container.Wait {
+	if hook.Container.Wait == nil || *hook.Container.Wait {
 		log.Infof("Waiting for running containers for hook '%s'", ansi.Color(hookName(hook), "white+b"))
 		wait = true
 	}
 
 	// select the container
-	targetSelector := targetselector.NewTargetSelector(ctx.Client)
+	targetSelector := targetselector.NewTargetSelector(client)
 	podContainer, err := targetSelector.SelectSingleContainer(context.TODO(), targetselector.Options{
 		Selector: selector.Selector{
 			ImageSelector: imageSelector,
 			LabelSelector: labelSelector,
-			Pod:           hook.Where.Container.Pod,
-			ContainerName: hook.Where.Container.ContainerName,
-			Namespace:     hook.Where.Container.Namespace,
+			Pod:           hook.Container.Pod,
+			ContainerName: hook.Container.ContainerName,
+			Namespace:     hook.Container.Namespace,
 		},
 		Wait:            &wait,
 		Timeout:         timeout,
@@ -128,7 +119,7 @@ func (r *remoteHook) execute(ctx Context, hook *latest.HookConfig, imageSelector
 
 	// execute the hook in the container
 	log.Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
-	err = r.Hook.ExecuteRemotely(ctx, hook, podContainer, config, dependencies, log)
+	err = r.Hook.ExecuteRemotely(hook, podContainer, client, config, dependencies, log)
 	if err != nil {
 		return false, err
 	}

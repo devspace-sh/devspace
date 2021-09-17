@@ -68,18 +68,6 @@ func NewLogManager(client kubectl.Client, config config.Config, dependencies []t
 			tail = ptr.Int64(int64(*c.Dev.Logs.ShowLast))
 		}
 
-		// resolve image names
-		for _, configImageName := range c.Dev.Logs.Images {
-			selector, err := imageselector.Resolve(configImageName, config, dependencies)
-			if err != nil {
-				return nil, err
-			} else if selector != nil {
-				imageSelectors = append(imageSelectors, namespacedImageSelector{
-					ImageSelector: *selector,
-				})
-			}
-		}
-
 		// resolve selectors
 		for _, selector := range c.Dev.Logs.Selectors {
 			if selector.ImageSelector != "" {

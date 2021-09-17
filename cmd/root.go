@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"flag"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -78,12 +80,6 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 				}
 			}
 
-			// call root plugin hook
-			err = plugin.ExecutePluginHook("root")
-			if err != nil {
-				return err
-			}
-
 			return nil
 		},
 		Long: `DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
@@ -97,6 +93,8 @@ var globalFlags *flags.GlobalFlags
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	interrupt.Global.Start()
+	
 	// disable klog
 	disableKlog()
 
@@ -108,15 +106,18 @@ func Execute() {
 
 	// set version for --version flag
 	rootCmd.Version = upgrade.GetVersion()
-
-	// call root plugin hook
-	err := plugin.ExecutePluginHook("root.beforeExecute")
-	if err != nil {
-		f.GetLog().Fatal(err)
+	
+	// before hooks
+	pluginErr := hook.ExecuteHooks(nil, nil, nil, nil, nil, "root", "root.beforeExecute", "command:before:execute")
+	if pluginErr != nil {
+		f.GetLog().Fatalf("%+v", pluginErr)
 	}
 
 	// execute command
-	err = rootCmd.Execute()
+	err := rootCmd.Execute()
+	
+	// after hooks
+	pluginErr = hook.ExecuteHooks(nil, nil, nil, map[string]interface{}{"error": err}, nil, "root.afterExecute", "command:after:execute")
 	if err != nil {
 		// Check if return code error
 		retCode, ok := errors.Cause(err).(*exit.ReturnCodeError)
@@ -124,12 +125,10 @@ func Execute() {
 			os.Exit(retCode.ExitCode)
 		}
 
-		// call root plugin hook
-		pluginErr := plugin.ExecutePluginHookWithContext("root.errorExecution", map[string]interface{}{
-			"error": err,
-		})
+		// error hooks
+		pluginErr := hook.ExecuteHooks(nil, nil, nil, map[string]interface{}{"error": err}, nil, "root.errorExecution", "command:error")
 		if pluginErr != nil {
-			f.GetLog().Fatal(pluginErr)
+			f.GetLog().Fatalf("%+v", pluginErr)
 		}
 
 		if globalFlags.Debug {
@@ -137,12 +136,8 @@ func Execute() {
 		} else {
 			f.GetLog().Fatal(err)
 		}
-	}
-
-	// call root plugin hook
-	err = plugin.ExecutePluginHook("root.afterExecute")
-	if err != nil {
-		f.GetLog().Fatal(err)
+	} else if pluginErr != nil {
+		f.GetLog().Fatalf("%+v", pluginErr)
 	}
 }
 

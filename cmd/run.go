@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"io"
 	"os"
 	"strings"
@@ -125,7 +126,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook("run")
+	err = hook.ExecuteHooks(nil, nil, nil, nil, nil, "run")
 	if err != nil {
 		return err
 	}

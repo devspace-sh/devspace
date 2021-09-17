@@ -1,4 +1,4 @@
-version: v1beta10
+version: v1beta11
 # This stateful set exists just for demo purposes, you don't even need one here
 deployments:
   - name: replaced

@@ -1,6 +1,7 @@
 package legacy
 
 import (
+	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
@@ -35,7 +36,7 @@ func LegacyInteractiveMode(config *latest.Config, forceInteractiveMode bool, for
 			if len(imageNames) == 1 {
 				imageName = imageNames[0]
 			} else {
-				question := "Which image do you want to build using the 'ENTRPOINT [sleep, 999999]' override?"
+				question := "Which image do you want to build using the 'ENTRYPOINT [sleep, 999999]' override?"
 				imageName, err = log.Question(&survey.QuestionOptions{
 					Question: question,
 					Options:  imageNames,
@@ -87,7 +88,7 @@ func LegacyInteractiveMode(config *latest.Config, forceInteractiveMode bool, for
 		if config.Dev.Terminal == nil {
 			config.Dev.Terminal = &latest.Terminal{}
 			if len(config.Dev.InteractiveImages) > 0 {
-				config.Dev.Terminal.ImageName = config.Dev.InteractiveImages[0].Name
+				config.Dev.Terminal.ImageSelector = fmt.Sprintf("image(%s):tag(%s)", config.Dev.InteractiveImages[0].Name, config.Dev.InteractiveImages[0].Name)
 			}
 		} else if config.Dev.Terminal.Disabled {
 			config.Dev.Terminal.Disabled = false

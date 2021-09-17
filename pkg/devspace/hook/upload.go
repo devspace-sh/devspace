@@ -25,7 +25,7 @@ func NewUploadHook() RemoteHook {
 
 type remoteUploadHook struct{}
 
-func (r *remoteUploadHook) ExecuteRemotely(ctx Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error {
+func (r *remoteUploadHook) ExecuteRemotely(hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, client kubectl.Client, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error {
 	containerPath := "."
 	if hook.Upload.ContainerPath != "" {
 		containerPath = hook.Upload.ContainerPath
@@ -39,14 +39,14 @@ func (r *remoteUploadHook) ExecuteRemotely(ctx Context, hook *latest.HookConfig,
 	// Make sure the target folder exists
 	destDir := path.Dir(containerPath)
 	if len(destDir) > 0 {
-		_, stderr, err := ctx.Client.ExecBuffered(podContainer.Pod, podContainer.Container.Name, []string{"mkdir", "-p", destDir}, nil)
+		_, stderr, err := client.ExecBuffered(podContainer.Pod, podContainer.Container.Name, []string{"mkdir", "-p", destDir}, nil)
 		if err != nil {
 			return errors.Errorf("error in container '%s/%s/%s': %v: %s", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err, string(stderr))
 		}
 	}
 
 	// Upload the files
-	err := upload(ctx.Client, podContainer.Pod, podContainer.Container.Name, localPath, containerPath)
+	err := upload(client, podContainer.Pod, podContainer.Container.Name, localPath, containerPath)
 	if err != nil {
 		return errors.Errorf("error in container '%s/%s/%s': %v", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
 	}

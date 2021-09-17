@@ -39,8 +39,6 @@ type upstream struct {
 	eventBuffer      []notify.EventInfo
 	eventBufferMutex sync.Mutex
 
-	workingDirectory string
-
 	ignoreMatcher ignoreparser.IgnoreParser
 }
 
@@ -79,7 +77,6 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 		return nil, errors.Wrap(err, "compile paths")
 	}
 
-	workingDirectory, _ := os.Getwd()
 	return &upstream{
 		events:      make(chan notify.EventInfo, 1000), // High buffer size so we don't miss any fsevents if there are a lot of changes
 		eventBuffer: make([]notify.EventInfo, 0, 64),
@@ -92,8 +89,7 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 		writer: writer,
 		client: remote.NewUpstreamClient(conn),
 
-		workingDirectory: workingDirectory,
-		ignoreMatcher:    ignoreMatcher,
+		ignoreMatcher: ignoreMatcher,
 	}, nil
 }
 
@@ -244,7 +240,13 @@ func (u *upstream) getFileInformationFromEvent(events []notify.EventInfo) ([]*Fi
 		if ok {
 			changes = append(changes, fileInfo)
 		} else {
+			// check if path is correct
 			fullPath := event.Path()
+			if !strings.HasPrefix(filepath.ToSlash(fullPath), filepath.ToSlash(u.sync.LocalPath)+"/") {
+				u.sync.log.Infof("Upstream - unexpected upload path %s", fullPath)
+				continue
+			}
+
 			relativePath := getRelativeFromFullPath(fullPath, u.sync.LocalPath)
 
 			// Determine what kind of change we got (Create or Remove)
@@ -797,11 +799,5 @@ func (u *upstream) getRelativeUpstreamPath(uploadPath string) string {
 		return uploadPath
 	}
 
-	uploadPath = uploadPath[1:]
-	out, err := filepath.Rel(filepath.FromSlash(u.workingDirectory), filepath.Join(filepath.FromSlash(u.sync.LocalPath), filepath.FromSlash(uploadPath)))
-	if err != nil {
-		return "./" + uploadPath
-	}
-
-	return out
+	return uploadPath[1:]
 }

@@ -4,6 +4,7 @@ import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/pkg/errors"
@@ -92,7 +93,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, cobraCmd *cobra.Command, ar
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook("analyze")
+	err = hook.ExecuteHooks(client, nil, nil, nil, nil, "analyze")
 	if err != nil {
 		return err
 	}

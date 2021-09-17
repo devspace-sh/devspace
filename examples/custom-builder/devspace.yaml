@@ -1,9 +1,12 @@
 # Note: This example only works in minikube, since the custom builder
 # does not push the image
-version: v1beta7
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: myusername/devspace
 images:
   default:
-    image: devspace
+    image: ${IMAGE}
     build:
       custom:
         command: ./custom/build
@@ -24,8 +27,8 @@ deployments:
     - kube
 dev:
   ports:
-  - imageName: default
+  - imageSelector: ${IMAGE}
     forward:
     - port: 8080
   sync:
-  - imageName: default
+  - imageSelector: ${IMAGE}

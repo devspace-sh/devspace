@@ -1,4 +1,4 @@
-version: v1beta10
+version: v1beta11
 vars:
   - name: IMAGE
     value: node:13.14-alpine
@@ -22,16 +22,10 @@ hooks:
   - command: |
       mkdir /app
       echo -n Hello World > /app/file4.txt
-    where:
-      container:
-        imageSelector: ${IMAGE}
-    when:
-      before:
-        initialSync: test,test2
+    container:
+      imageSelector: ${IMAGE}
+    events: ["before:initialSync:*"]
   - command: "echo -n Hello World > /app/file5.txt"
-    where:
-      container:
-        imageSelector: ${IMAGE}
-    when:
-      after:
-        initialSync: test,test2
+    container:
+      imageSelector: ${IMAGE}
+    events: ["after:initialSync:test", "after:initialSync:test2"]

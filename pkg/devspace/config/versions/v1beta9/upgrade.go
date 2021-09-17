@@ -4,8 +4,8 @@ import (
 	"strconv"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
-	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
+	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta10"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 )

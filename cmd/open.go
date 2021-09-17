@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"net/http"
 	"os"
 	"strconv"
@@ -131,7 +132,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 	}
 
 	// Execute plugin hook
-	err = plugin.ExecutePluginHook("open")
+	err = hook.ExecuteHooks(client, nil, nil, nil, nil, "open")
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-version: v1beta9
+version: v1beta11
 deployments:
   # This will be filled with a question on `devspace deploy` or `devspace dev`, alternatevly you could also set the
   # environment variable SELECT to avoid the question and fill it automatically
@@ -27,3 +27,5 @@ vars:
   source: input
 - name: UNUSED
   question: This variable is not asked
+- name: NOT_ASKED
+  value: "variable will not get asked and other variables can be used inside here: ${SELECT}"
