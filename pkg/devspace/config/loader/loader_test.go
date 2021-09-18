@@ -342,7 +342,7 @@ func TestSetDevSpaceRoot(t *testing.T) {
 			expectedExists: true,
 			expectedWorkDir: func() string {
 				if runtime.GOOS == "darwin" {
-					return "subDir"
+					return filepath.Join(dir, "subDir")
 				}
 				return filepath.Join(dir, "subdir")
 			}(),
