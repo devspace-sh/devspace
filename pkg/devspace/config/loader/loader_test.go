@@ -329,7 +329,7 @@ func TestSetDevSpaceRoot(t *testing.T) {
 			files: map[string]interface{}{
 				"devspace.yaml": "",
 			},
-			startDir:        "subdir",
+			startDir:        "subDir",
 			expectedExists:  true,
 			expectedWorkDir: dir,
 		},
@@ -340,7 +340,7 @@ func TestSetDevSpaceRoot(t *testing.T) {
 				"subdir/custom.yaml": "",
 			},
 			expectedExists:     true,
-			expectedWorkDir:    filepath.Join(dir, "subDir"),
+			expectedWorkDir:    filepath.Join(dir, "subdir"),
 			expectedConfigPath: "custom.yaml",
 		},
 	}
