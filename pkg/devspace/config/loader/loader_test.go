@@ -339,8 +339,13 @@ func TestSetDevSpaceRoot(t *testing.T) {
 			files: map[string]interface{}{
 				"subdir/custom.yaml": "",
 			},
-			expectedExists:     true,
-			expectedWorkDir:    filepath.Join(dir, "subdir"),
+			expectedExists: true,
+			expectedWorkDir: func() string {
+				if runtime.GOOS == "darwin" {
+					return "subDir"
+				}
+				return filepath.Join(dir, "subdir")
+			}(),
 			expectedConfigPath: "custom.yaml",
 		},
 	}
