@@ -17,7 +17,7 @@ linters:
     - dupl
     - nakedret
     - stylecheck
-    - gofmt
+    # - gofmt
     # - golint
     # - structcheck
   
