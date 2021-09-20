@@ -1,4 +1,6 @@
-
-
-# Exclude .devspace generated files
+Dockerfile
 .devspace/
+chart/
+node_modules/
+test/
+devspace.yaml
