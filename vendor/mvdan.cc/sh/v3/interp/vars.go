@@ -4,6 +4,7 @@
 package interp
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"strconv"
@@ -16,20 +17,61 @@ import (
 type overlayEnviron struct {
 	parent expand.Environ
 	values map[string]expand.Variable
+
+	// We need to know if the current scope is a function's scope, because
+	// functions can modify global variables.
+	funcScope bool
 }
 
-func (o overlayEnviron) Get(name string) expand.Variable {
+func (o *overlayEnviron) Get(name string) expand.Variable {
 	if vr, ok := o.values[name]; ok {
 		return vr
 	}
 	return o.parent.Get(name)
 }
 
-func (o overlayEnviron) Set(name string, vr expand.Variable) {
+func (o *overlayEnviron) Set(name string, vr expand.Variable) error {
+	// "foo=bar" in a function updates the global scope, unless the variable
+	// has been declared as local.
+	if o.funcScope && vr.IsSet() && !vr.Local && !o.values[name].Local {
+		return o.parent.(expand.WriteEnviron).Set(name, vr)
+	}
+
+	prev := o.Get(name)
+	if o.values == nil {
+		o.values = make(map[string]expand.Variable)
+	}
+	if !vr.IsSet() && (vr.Exported || vr.Local || vr.ReadOnly) {
+		// marking as exported/local/readonly
+		prev.Exported = prev.Exported || vr.Exported
+		prev.Local = prev.Local || vr.Local
+		prev.ReadOnly = prev.ReadOnly || vr.ReadOnly
+		vr = prev
+		o.values[name] = vr
+		return nil
+	}
+	if prev.ReadOnly {
+		return fmt.Errorf("readonly variable")
+	}
+	if !vr.IsSet() { // unsetting
+		if prev.Local {
+			vr.Local = true
+			o.values[name] = vr
+			return nil
+		}
+		delete(o.values, name)
+		if writeEnv, _ := o.parent.(expand.WriteEnviron); writeEnv != nil {
+			writeEnv.Set(name, vr)
+			return nil
+		}
+	}
+	// modifying the entire variable
+	vr.Local = prev.Local || vr.Local
 	o.values[name] = vr
+	return nil
 }
 
-func (o overlayEnviron) Each(f func(name string, vr expand.Variable) bool) {
+func (o *overlayEnviron) Each(f func(name string, vr expand.Variable) bool) {
 	o.parent.Each(f)
 	for name, vr := range o.values {
 		if !f(name, vr) {
@@ -53,7 +95,7 @@ func execEnv(env expand.Environ) []string {
 				}
 			}
 		}
-		if vr.Exported {
+		if vr.Exported && vr.Kind == expand.String {
 			list = append(list, name+"="+vr.String())
 		}
 		return true
@@ -104,29 +146,14 @@ func (r *Runner) lookupVar(name string) expand.Variable {
 	if vr.IsSet() {
 		return vr
 	}
-	if value, e := r.cmdVars[name]; e {
-		return expand.Variable{Kind: expand.String, Str: value}
-	}
-	if vr, e := r.funcVars[name]; e {
-		vr.Local = true
-		return vr
-	}
-	if vr, e := r.Vars[name]; e {
-		return vr
-	}
-	if vr := r.Env.Get(name); vr.IsSet() {
+	if vr := r.writeEnv.Get(name); vr.IsSet() {
 		return vr
 	}
 	if runtime.GOOS == "windows" {
 		upper := strings.ToUpper(name)
-		if vr := r.Env.Get(upper); vr.IsSet() {
+		if vr := r.writeEnv.Get(upper); vr.IsSet() {
 			return vr
 		}
-	}
-	if r.opts[optNoUnset] {
-		r.errf("%s: unbound variable\n", name)
-		r.exit = 1
-		r.exitShell = true
 	}
 	return expand.Variable{}
 }
@@ -136,17 +163,10 @@ func (r *Runner) envGet(name string) string {
 }
 
 func (r *Runner) delVar(name string) {
-	vr := r.lookupVar(name)
-	if vr.ReadOnly {
-		r.errf("%s: readonly variable\n", name)
+	if err := r.writeEnv.Set(name, expand.Variable{}); err != nil {
+		r.errf("%s: %v\n", name, err)
 		r.exit = 1
 		return
-	}
-	if vr.Local {
-		// don't overwrite a non-local var with the same name
-		r.funcVars[name] = expand.Variable{}
-	} else {
-		r.Vars[name] = expand.Variable{} // to not query r.Env
 	}
 }
 
@@ -155,31 +175,19 @@ func (r *Runner) setVarString(name, value string) {
 }
 
 func (r *Runner) setVarInternal(name string, vr expand.Variable) {
-	if vr.Kind == expand.String {
-		if r.opts[optAllExport] {
-			vr.Exported = true
-		}
-	} else {
-		vr.Exported = false
+	if r.opts[optAllExport] {
+		vr.Exported = true
 	}
-	if vr.Local {
-		if r.funcVars == nil {
-			r.funcVars = make(map[string]expand.Variable)
-		}
-		r.funcVars[name] = vr
-	} else {
-		r.Vars[name] = vr
+	if err := r.writeEnv.Set(name, vr); err != nil {
+		r.errf("%s: %v\n", name, err)
+		r.exit = 1
+		return
 	}
 }
 
 func (r *Runner) setVar(name string, index syntax.ArithmExpr, vr expand.Variable) {
 	cur := r.lookupVar(name)
-	if cur.ReadOnly {
-		r.errf("%s: readonly variable\n", name)
-		r.exit = 1
-		return
-	}
-	if name2, var2 := cur.Resolve(r.Env); name2 != "" {
+	if name2, var2 := cur.Resolve(r.writeEnv); name2 != "" {
 		name = name2
 		cur = var2
 	}
@@ -254,11 +262,10 @@ func stringIndex(index syntax.ArithmExpr) bool {
 	return false
 }
 
+// TODO: make assignVal and setVar consistent with the WriteEnviron interface
+
 func (r *Runner) assignVal(as *syntax.Assign, valType string) expand.Variable {
 	prev := r.lookupVar(as.Name.Value)
-	if as.Naked {
-		return prev
-	}
 	if as.Value != nil {
 		s := r.literal(as.Value)
 		if !as.Append || !prev.IsSet() {
@@ -291,6 +298,7 @@ func (r *Runner) assignVal(as *syntax.Assign, valType string) expand.Variable {
 		prev.Str = ""
 		return prev
 	}
+	// Array assignment.
 	elems := as.Array.Elems
 	if valType == "" {
 		valType = "-a" // indexed
@@ -312,22 +320,33 @@ func (r *Runner) assignVal(as *syntax.Assign, valType string) expand.Variable {
 		// TODO
 		return prev
 	}
-	maxIndex := len(elems) - 1
-	indexes := make([]int, len(elems))
+	// Evaluate values for each array element.
+	elemValues := make([]struct {
+		index  int
+		values []string
+	}, len(elems))
+	var index, maxIndex int
 	for i, elem := range elems {
-		if elem.Index == nil {
-			indexes[i] = i
-			continue
+		if elem.Index != nil {
+			// Index resets our index with a literal value.
+			index = r.arithm(elem.Index)
+			elemValues[i].values = []string{r.literal(elem.Value)}
+		} else {
+			// Implicit index, advancing for every word.
+			elemValues[i].values = r.fields(elem.Value)
 		}
-		k := r.arithm(elem.Index)
-		indexes[i] = k
-		if k > maxIndex {
-			maxIndex = k
+		elemValues[i].index = index
+		index += len(elemValues[i].values)
+		if index > maxIndex {
+			maxIndex = index
 		}
 	}
-	strs := make([]string, maxIndex+1)
-	for i, elem := range elems {
-		strs[indexes[i]] = r.literal(elem.Value)
+	// Flatten down the values.
+	strs := make([]string, maxIndex)
+	for _, ev := range elemValues {
+		for i, str := range ev.values {
+			strs[ev.index+i] = str
+		}
 	}
 	if !as.Append {
 		prev.Kind = expand.Indexed
@@ -335,6 +354,9 @@ func (r *Runner) assignVal(as *syntax.Assign, valType string) expand.Variable {
 		return prev
 	}
 	switch prev.Kind {
+	case expand.Unset:
+		prev.Kind = expand.Indexed
+		prev.List = strs
 	case expand.String:
 		prev.Kind = expand.Indexed
 		prev.List = append([]string{prev.Str}, strs...)
@@ -342,6 +364,8 @@ func (r *Runner) assignVal(as *syntax.Assign, valType string) expand.Variable {
 		prev.List = append(prev.List, strs...)
 	case expand.Associative:
 		// TODO
+	default:
+		panic(fmt.Sprintf("unhandled conversion of kind %d", prev.Kind))
 	}
 	return prev
 }

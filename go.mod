@@ -53,7 +53,7 @@ require (
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/miekg/pkcs11 v1.0.3 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/moby/buildkit v0.8.2 // indirect
+	github.com/moby/buildkit v0.8.2
 	github.com/moby/spdystream v0.2.0 // indirect
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/moby/sys/symlink v0.1.0 // indirect
@@ -94,7 +94,7 @@ require (
 	k8s.io/client-go v0.21.2
 	k8s.io/klog v1.0.0
 	k8s.io/kubectl v0.21.2
-	mvdan.cc/sh/v3 v3.2.4
+	mvdan.cc/sh/v3 v3.3.1
 )
 
 replace github.com/agl/ed25519 => github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412
