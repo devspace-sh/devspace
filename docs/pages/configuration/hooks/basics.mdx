@@ -235,6 +235,23 @@ hooks:
   events: ["after:build"]
 ```
 
+## Execute hooks once
+
+Hooks can be executed once per deployment when executing a command in a container. This can be useful for running one-time development tasks without init containers. In the following example, the command would only run once in in all containers running with the image `nginx:1.21`.
+
+```yaml {8}
+...
+hooks:
+- command: |
+    echo Hello World!
+    echo From within the container!
+  container:
+    imageSelector: nginx:1.21
+    once: true
+  events: ["after:deploy"]
+...
+```
+
 ## Hook Context Information
 
 DevSpace passes certain environment variables to the hook execution:

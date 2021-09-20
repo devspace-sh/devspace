@@ -1032,6 +1032,7 @@ type HookContainer struct {
 
 	Wait    *bool `yaml:"wait,omitempty" json:"wait,omitempty"`
 	Timeout int64 `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+	Once    *bool `yaml:"once,omitempty" json:"once,omitempty"`
 }
 
 // HookWhenConfig defines when the hook should be executed
