@@ -20,8 +20,8 @@ import (
 const dockerHubHostname = "hub.docker.com"
 const githubContainerRegistry = "ghcr.io"
 
-// addImage adds an image to the provided config
-func (m *manager) AddImage(imageName, image, dockerfile, contextPath string, dockerfileGenerator *generator.DockerfileGenerator) error {
+// AddImage adds an image to the provided config
+func (m *manager) AddImage(imageName, image, dockerfile string, dockerfileGenerator *generator.DockerfileGenerator) error {
 	var (
 		useDockerHub          = "Use " + dockerHubHostname
 		useGithubRegistry     = "Use GitHub image registry"
