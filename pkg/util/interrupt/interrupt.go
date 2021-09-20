@@ -17,11 +17,12 @@ limitations under the License.
 package interrupt
 
 import (
-	"github.com/google/uuid"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/google/uuid"
 )
 
 // Global is the global interrupt handler
@@ -41,7 +42,7 @@ type Handler struct {
 	notify      []notify
 	final       func(os.Signal)
 	once        sync.Once
-	
+
 	channelMutex sync.Mutex
 	channel      chan os.Signal
 }
@@ -82,7 +83,7 @@ func (h *Handler) Signal(s os.Signal) {
 func (h *Handler) register(id string, fn func()) {
 	h.notifyMutex.Lock()
 	defer h.notifyMutex.Unlock()
-	
+
 	h.notify = append(h.notify, notify{
 		id: id,
 		fn: fn,
@@ -92,13 +93,13 @@ func (h *Handler) register(id string, fn func()) {
 func (h *Handler) unregister(id string) {
 	h.notifyMutex.Lock()
 	defer h.notifyMutex.Unlock()
-	
+
 	newNotify := []notify{}
 	for _, n := range h.notify {
 		if id == n.id {
 			continue
 		}
-		
+
 		newNotify = append(newNotify, n)
 	}
 	h.notify = newNotify
@@ -109,14 +110,14 @@ func (h *Handler) Run(fn func() error, notify func()) error {
 	id := uuid.New().String()
 	h.register(id, notify)
 	defer h.unregister(id)
-	
+
 	return fn()
 }
 
 // RunAlways ensures that the function fn is run and runs the notify function if interrupted meanwhile or the function has ended
 func (h *Handler) RunAlways(fn func() error, notify func()) error {
 	defer notify()
-	
+
 	id := uuid.New().String()
 	h.register(id, notify)
 	defer h.unregister(id)
@@ -128,11 +129,11 @@ func (h *Handler) RunAlways(fn func() error, notify func()) error {
 func (h *Handler) Start() {
 	h.channelMutex.Lock()
 	defer h.channelMutex.Unlock()
-	
+
 	if h.channel != nil {
 		return
 	}
-	
+
 	h.channel = make(chan os.Signal, 1)
 	signal.Notify(h.channel, terminationSignals...)
 	go func(channel chan os.Signal) {
@@ -148,7 +149,7 @@ func (h *Handler) Start() {
 func (h *Handler) Stop() {
 	h.channelMutex.Lock()
 	defer h.channelMutex.Unlock()
-	
+
 	if h.channel != nil {
 		signal.Stop(h.channel)
 		close(h.channel)
