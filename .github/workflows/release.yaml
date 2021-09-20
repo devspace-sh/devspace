@@ -23,7 +23,6 @@ on:
 jobs:
   release-ui:
     if: startsWith(github.ref, 'refs/tags/v') == true
-    needs: [ test-linux ]
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
@@ -100,7 +99,6 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
   publish-next-image:
     if: github.ref == 'refs/heads/master'
-    needs: [test-linux]
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
