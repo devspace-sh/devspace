@@ -14,7 +14,7 @@ import (
 )
 
 // ExpressionMatchRegex is the regex to check if a value matches the devspace var format
-var ExpressionMatchRegex = regexp.MustCompile(`(?ms)^\$\#?\!?\((.+?)\)$`)
+var ExpressionMatchRegex = regexp.MustCompile(`(?ms)^\$\#?\!?\((.+)\)$`)
 
 func expressionMatchFn(key, value string) bool {
 	return ExpressionMatchRegex.MatchString(value)

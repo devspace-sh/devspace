@@ -209,7 +209,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 			}
 		}
 
-		err = configureManager.AddImage(imageName, image, cmd.Dockerfile, cmd.Context, dockerfileGenerator)
+		err = configureManager.AddImage(imageName, image, cmd.Dockerfile, dockerfileGenerator)
 		if err != nil {
 			if err.Error() != "" {
 				cmd.log.Errorf("Error: %s", err.Error())
@@ -509,20 +509,26 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 			}
 
 			startScriptName := "devspace_start.sh"
-			startScriptContent, err := getScriptContent(language, startScriptName)
+			_, err = os.Stat(startScriptName)
 			if err != nil {
-				// try fall back language
-				startScriptContent, err = getScriptContent(fallbackLanguage, startScriptName)
+				startScriptContent, err := getScriptContent(language, startScriptName)
 				if err != nil {
-					startScriptContent = []byte("#!/bin/bash\nbash")
+					// try fall back language
+					startScriptContent, err = getScriptContent(fallbackLanguage, startScriptName)
+					if err != nil {
+						startScriptContent = []byte("#!/bin/bash\nbash")
+					}
+
+					language = fallbackLanguage
 				}
 
-				language = fallbackLanguage
-			}
-
-			err = ioutil.WriteFile(startScriptName, startScriptContent, 0755)
-			if err != nil {
-				return err
+				err = ioutil.WriteFile(startScriptName, startScriptContent, 0755)
+				if err != nil {
+					return err
+				}
+			} else {
+				// make sure the script is executable
+				_ = os.Chmod(startScriptName, 0777)
 			}
 
 			config.Dev.Terminal = &latest.Terminal{

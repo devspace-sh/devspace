@@ -616,7 +616,7 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 			selectorOptions.ImageSelector = imageSelectors
 			stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
 			code, err := servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalReconnect, stdout, stderr, stdin)
-			if code != 0 {
+			if services.IsUnexpectedExitCode(code) {
 				cmd.log.Warnf("Command terminated with exit code %d", code)
 			}
 

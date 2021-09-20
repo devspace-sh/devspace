@@ -17,7 +17,7 @@ devspace list profiles [flags]
 #######################################################
 ############## devspace list profiles #################
 #######################################################
-Lists all DevSpace configuartions for this project
+Lists all DevSpace configurations for this project
 #######################################################
 ```
 

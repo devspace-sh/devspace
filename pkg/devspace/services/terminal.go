@@ -96,7 +96,7 @@ func (serviceClient *client) StartTerminal(
 				// 127 - “command not found”
 				// 128 - Invalid argument to exit
 				// 130 - Script terminated by Control-C
-				if restart && exitError.Code != 0 && exitError.Code != 1 && exitError.Code != 2 && exitError.Code != 126 && exitError.Code != 127 && exitError.Code != 128 && exitError.Code != 130 {
+				if restart && IsUnexpectedExitCode(exitError.Code) {
 					serviceClient.log.WriteString("\n")
 					serviceClient.log.Infof("Restarting terminal because: %s", err)
 					return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart, stdout, stderr, stdin)
@@ -114,6 +114,17 @@ func (serviceClient *client) StartTerminal(
 	}
 
 	return 0, nil
+}
+
+func IsUnexpectedExitCode(code int) bool {
+	// Expected exit codes are (https://shapeshed.com/unix-exit-codes/):
+	// 1 - Catchall for general errors
+	// 2 - Misuse of shell builtins (according to Bash documentation)
+	// 126 - Command invoked cannot execute
+	// 127 - “command not found”
+	// 128 - Invalid argument to exit
+	// 130 - Script terminated by Control-C
+	return code != 0 && code != 1 && code != 2 && code != 126 && code != 127 && code != 128 && code != 130
 }
 
 func (serviceClient *client) getCommand(args []string, workDir string) []string {

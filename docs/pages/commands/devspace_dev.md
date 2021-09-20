@@ -53,6 +53,7 @@ Open terminal instead of logs:
       --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
       --sync                        Enable code synchronization (default true)
   -t, --terminal                    Open a terminal instead of showing logs
+      --terminal-reconnect          Will try to reconnect the terminal if an unexpected exit code was encountered (default true)
       --timeout int                 Timeout until dev should stop waiting and fail (default 120)
       --ui                          Start the ui server (default true)
       --ui-port int                 The port to use when opening the ui server

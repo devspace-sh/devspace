@@ -14,7 +14,7 @@ type Manager interface {
 	AddKubectlDeployment(deploymentName string, isKustomization bool) error
 	AddHelmDeployment(deploymentName string) error
 	AddComponentDeployment(deploymentName, image string, servicePort int) error
-	AddImage(imageName, image, dockerfile, contextPath string, dockerfileGenerator *generator.DockerfileGenerator) error
+	AddImage(imageName, image, dockerfile string, dockerfileGenerator *generator.DockerfileGenerator) error
 }
 
 // Factory defines the factory methods needed by the configure manager to create new configuration

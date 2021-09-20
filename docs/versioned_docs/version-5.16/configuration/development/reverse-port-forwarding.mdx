@@ -3,7 +3,6 @@ title: Configure Reverse Port-Forwarding
 sidebar_label: ports[].reverseForward
 ---
 
-import FragmentImageName from '../../fragments/selector-image-name.mdx';
 import FragmentImageSelector from '../../fragments/selector-image-selector.mdx';
 import FragmentLabelSelector from '../../fragments/selector-label-selector.mdx';
 
@@ -73,7 +72,6 @@ profiles:
 ## Pod Selection
 The following config options are needed to determine the pod from which the traffic should be forwarded to localhost:
 - [`imageSelector`](#imageselector)
-- [`imageName`](#imagename)
 - [`labelSelector`](#labelselector)
 - [`containerName`](#containername)
 - [`namespace`](#namespace)
@@ -89,10 +87,7 @@ If DevSpace is unable to establish a reverse port-forwarding connection to the s
 ### `imageSelector`
 <FragmentImageSelector/>
 
-### `imageName`
-<FragmentImageName />
-
-#### Example: Select Pod by Image Name
+#### Example: Select Pod by Image
 ```yaml {2,4,18,22}
 images:
   backend:
@@ -111,19 +106,19 @@ deployments:
         image: john/debugger
 dev:
   ports:
-  - imageName: backend
+  - imageSelector: john/devbackend
     reverseForward:
     - port: 8080
       remotePort: 80
-  - imageName: backend-debugger
+  - imageSelector: john/debugger
     reverseForward:
     - port: 3000
 ```
 **Explanation:**
-- The above example defines two images that can be used as `imageName`: `backend` and `backend-debugger`
+- The above example defines two images that can be used as `imageSelector`: `john/devbackend` and `john/debugger`
 - The deployment starts two containers and each of them uses an image from the `images` section.
-- The `imageName` option of the first reverse port-forwarding configuration in the `dev.ports` section references `backend`. That means DevSpace would select the first container for reverse port-forwarding, as this container uses the `image: john/devbackend` which belongs to the `backend` image as defined in the `images` section.
-- The `imageName` option of the second reverse port-forwarding configuration in the `dev.ports` section references `backend-debugger`. That means DevSpace would select the second container for reverse port-forwarding, as this container uses the `image: john/debugger` which belongs to the `backend-debugger` image as defined in the `images` section.
+- The `imageSelector` option of the first reverse port-forwarding configuration in the `dev.ports` section references `backend`. That means DevSpace would select the first container for reverse port-forwarding, as this container uses the `image: john/devbackend` which belongs to the `backend` image as defined in the `images` section.
+- The `imageSelector` option of the second reverse port-forwarding configuration in the `dev.ports` section references `backend-debugger`. That means DevSpace would select the second container for reverse port-forwarding, as this container uses the `image: john/debugger` which belongs to the `backend-debugger` image as defined in the `images` section.
 
 In consequence, the following reverse port-forwarding processes would be started when using the above config example:
 - `localhost:80` inside the container will forward to `localhost:8080` on your local machine
@@ -191,7 +186,7 @@ Using a `port` < 1024 is likely to cause problems as these ports are reserved as
 :::
 
 #### Example
-**See "[Example: Select Pod by Image Name](#example-select-pod-by-image-name)"**
+**See "[Example: Select Pod by Image Name](#example-select-pod-by-image)"**
 
 
 ### `remotePort`

@@ -6,10 +6,10 @@ package interp
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -51,21 +51,23 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 	case "false":
 		return 1
 	case "exit":
-		r.exitShell = true
+		exit := 0
 		switch len(args) {
 		case 0:
-			return r.lastExit
+			exit = r.lastExit
 		case 1:
 			n, err := strconv.Atoi(args[0])
 			if err != nil {
 				r.errf("invalid exit status code: %q\n", args[0])
 				return 2
 			}
-			return n
+			exit = n
 		default:
 			r.errf("exit cannot take multiple arguments\n")
 			return 1
 		}
+		r.exitShell(ctx, exit)
+		return exit
 	case "set":
 		if err := Params(args...)(r); err != nil {
 			r.errf("set: %v\n", err)
@@ -108,11 +110,9 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 		}
 
 		for _, arg := range args {
-			if vr := r.lookupVar(arg); vr.IsSet() && vars {
+			if vars && r.lookupVar(arg).IsSet() {
 				r.delVar(arg)
-				continue
-			}
-			if _, ok := r.Funcs[arg]; ok && funcs {
+			} else if _, ok := r.Funcs[arg]; ok && funcs {
 				delete(r.Funcs, arg)
 			}
 		}
@@ -215,7 +215,38 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 		return r.builtinCode(ctx, pos, args[0], args[1:])
 	case "type":
 		anyNotFound := false
+		mode := ""
+		fp := flagParser{remaining: args}
+		for fp.more() {
+			switch flag := fp.flag(); flag {
+			case "-a", "-f", "-P", "--help":
+				r.errf("command: NOT IMPLEMENTED\n")
+				return 3
+			case "-p", "-t":
+				mode = flag
+			default:
+				r.errf("command: invalid option %q\n", flag)
+				return 2
+			}
+		}
+		args := fp.args()
 		for _, arg := range args {
+			if mode == "-p" {
+				if path, err := LookPathDir(r.Dir, r.writeEnv, arg); err == nil {
+					r.outf("%s\n", path)
+				} else {
+					anyNotFound = true
+				}
+				continue
+			}
+			if syntax.IsKeyword(arg) {
+				if mode == "-t" {
+					r.out("keyword\n")
+				} else {
+					r.outf("%s is a shell keyword\n", arg)
+				}
+				continue
+			}
 			if als, ok := r.alias[arg]; ok && r.opts[optExpandAliases] {
 				var buf bytes.Buffer
 				if len(als.args) > 0 {
@@ -227,22 +258,40 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 				if als.blank {
 					buf.WriteByte(' ')
 				}
-				r.outf("%s is aliased to `%s'\n", arg, &buf)
+				if mode == "-t" {
+					r.out("alias\n")
+				} else {
+					r.outf("%s is aliased to `%s'\n", arg, &buf)
+				}
 				continue
 			}
 			if _, ok := r.Funcs[arg]; ok {
-				r.outf("%s is a function\n", arg)
+				if mode == "-t" {
+					r.out("function\n")
+				} else {
+					r.outf("%s is a function\n", arg)
+				}
 				continue
 			}
 			if isBuiltin(arg) {
-				r.outf("%s is a shell builtin\n", arg)
+				if mode == "-t" {
+					r.out("builtin\n")
+				} else {
+					r.outf("%s is a shell builtin\n", arg)
+				}
 				continue
 			}
-			if path, err := LookPath(expandEnv{r}, arg); err == nil {
-				r.outf("%s is %s\n", arg, path)
+			if path, err := LookPathDir(r.Dir, r.writeEnv, arg); err == nil {
+				if mode == "-t" {
+					r.out("file\n")
+				} else {
+					r.outf("%s is %s\n", arg, path)
+				}
 				continue
 			}
-			r.errf("type: %s: not found\n", arg)
+			if mode != "-t" {
+				r.errf("type: %s: not found\n", arg)
+			}
 			anyNotFound = true
 		}
 		if anyNotFound {
@@ -338,21 +387,22 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 			r.keepRedirs = true
 			break
 		}
-		r.exitShell = true
+		r.exitShell(ctx, 1)
 		r.exec(ctx, args)
 		return r.exit
 	case "command":
 		show := false
-		for len(args) > 0 && strings.HasPrefix(args[0], "-") {
-			switch args[0] {
+		fp := flagParser{remaining: args}
+		for fp.more() {
+			switch flag := fp.flag(); flag {
 			case "-v":
 				show = true
 			default:
-				r.errf("command: invalid option %s\n", args[0])
+				r.errf("command: invalid option %q\n", flag)
 				return 2
 			}
-			args = args[1:]
 		}
+		args := fp.args()
 		if len(args) == 0 {
 			break
 		}
@@ -368,7 +418,7 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 			last = 0
 			if r.Funcs[arg] != nil || isBuiltin(arg) {
 				r.outf("%s\n", arg)
-			} else if path, err := exec.LookPath(arg); err == nil {
+			} else if path, err := LookPathDir(r.Dir, r.writeEnv, arg); err == nil {
 				r.outf("%s\n", path)
 			} else {
 				last = 1
@@ -469,17 +519,18 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 		r.setErr(returnStatus(code))
 	case "read":
 		raw := false
-		for len(args) > 0 && strings.HasPrefix(args[0], "-") {
-			switch args[0] {
+		fp := flagParser{remaining: args}
+		for fp.more() {
+			switch flag := fp.flag(); flag {
 			case "-r":
 				raw = true
 			default:
-				r.errf("read: invalid option %q\n", args[0])
+				r.errf("read: invalid option %q\n", flag)
 				return 2
 			}
-			args = args[1:]
 		}
 
+		args := fp.args()
 		for _, name := range args {
 			if !syntax.ValidName(name) {
 				r.errf("read: invalid identifier %q\n", name)
@@ -501,14 +552,14 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 			if i < len(values) {
 				val = values[i]
 			}
-			r.setVar(name, nil, expand.Variable{Kind: expand.String, Str: val})
+			r.setVarString(name, val)
 		}
 
 		return 0
 
 	case "getopts":
 		if len(args) < 2 {
-			r.errf("getopts: usage: getopts optstring name [arg]\n")
+			r.errf("getopts: usage: getopts optstring name [arg ...]\n")
 			return 2
 		}
 		optind, _ := strconv.Atoi(r.envGet("OPTIND"))
@@ -530,7 +581,7 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 		}
 		diagnostics := !strings.HasPrefix(optstr, ":")
 
-		opt, optarg, done := r.optState.Next(optstr, args)
+		opt, optarg, done := r.optState.next(optstr, args)
 
 		r.setVarString(name, string(opt))
 		r.delVar("OPTARG")
@@ -553,20 +604,21 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 	case "shopt":
 		mode := ""
 		posixOpts := false
-		for len(args) > 0 && strings.HasPrefix(args[0], "-") {
-			switch args[0] {
+		fp := flagParser{remaining: args}
+		for fp.more() {
+			switch flag := fp.flag(); flag {
 			case "-s", "-u":
-				mode = args[0]
+				mode = flag
 			case "-o":
 				posixOpts = true
 			case "-p", "-q":
-				panic(fmt.Sprintf("unhandled shopt flag: %s", args[0]))
+				panic(fmt.Sprintf("unhandled shopt flag: %s", flag))
 			default:
-				r.errf("shopt: invalid option %q\n", args[0])
+				r.errf("shopt: invalid option %q\n", flag)
 				return 2
 			}
-			args = args[1:]
 		}
+		args := fp.args()
 		if len(args) == 0 {
 			if !posixOpts {
 				for i, name := range bashOptsTable {
@@ -652,8 +704,56 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 			delete(r.alias, name)
 		}
 
+	case "trap":
+		fp := flagParser{remaining: args}
+		callback := "-"
+		for fp.more() {
+			switch flag := fp.flag(); flag {
+			case "-l", "-p":
+				r.errf("trap: %q: NOT IMPLEMENTED flag\n", flag)
+				return 2
+			case "-":
+				// default signal
+			default:
+				r.errf("trap: %q: invalid option\n", flag)
+				r.errf("trap: usage: trap [-lp] [[arg] signal_spec ...]\n")
+				return 2
+			}
+		}
+		args := fp.args()
+		switch len(args) {
+		case 0:
+			// Print non-default signals
+			if r.callbackExit != "" {
+				r.outf("trap -- %q EXIT\n", r.callbackExit)
+			}
+			if r.callbackErr != "" {
+				r.outf("trap -- %q ERR\n", r.callbackErr)
+			}
+		case 1:
+			// assume it's a signal, the default will be restored
+		default:
+			callback = args[0]
+			args = args[1:]
+		}
+		// For now, treat both empty and - the same since ERR and EXIT have no
+		// default callback.
+		if callback == "-" {
+			callback = ""
+		}
+		for _, arg := range args {
+			switch arg {
+			case "ERR":
+				r.callbackErr = callback
+			case "EXIT":
+				r.callbackExit = callback
+			default:
+				r.errf("trap: %s: invalid signal specification\n", arg)
+				return 2
+			}
+		}
 	default:
-		// "trap", "umask", "fg", "bg",
+		// "umask", "fg", "bg",
 		panic(fmt.Sprintf("unhandled builtin: %s", name))
 	}
 	return 0
@@ -668,6 +768,10 @@ func (r *Runner) printOptLine(name string, enabled bool) {
 }
 
 func (r *Runner) readLine(raw bool) ([]byte, error) {
+	if r.stdin == nil {
+		return nil, errors.New("interp: can't read, there's no stdin")
+	}
+
 	var line []byte
 	esc := false
 
@@ -710,8 +814,8 @@ func (r *Runner) changeDir(path string) int {
 		return 1
 	}
 	r.Dir = path
-	r.Vars["OLDPWD"] = r.Vars["PWD"]
-	r.Vars["PWD"] = expand.Variable{Kind: expand.String, Str: path}
+	r.setVarString("OLDPWD", r.envGet("PWD"))
+	r.setVarString("PWD", path)
 	return 0
 }
 
@@ -722,12 +826,74 @@ func (r *Runner) absPath(path string) string {
 	return filepath.Clean(path)
 }
 
+// flagParser is used to parse builtin flags.
+//
+// It's similar to the getopts implementation, but with some key differences.
+// First, the API is designed for Go loops, making it easier to use directly.
+// Second, it doesn't require the awkward ":ab" syntax that getopts uses.
+// Third, it supports "-a" flags as well as "+a".
+type flagParser struct {
+	current   string
+	remaining []string
+}
+
+func (p *flagParser) more() bool {
+	if p.current != "" {
+		// We're still parsing part of "-ab".
+		return true
+	}
+	if len(p.remaining) == 0 {
+		// Nothing left.
+		p.remaining = nil
+		return false
+	}
+	arg := p.remaining[0]
+	if arg == "--" {
+		// We explicitly stop parsing flags.
+		p.remaining = p.remaining[1:]
+		return false
+	}
+	if len(arg) == 0 || (arg[0] != '-' && arg[0] != '+') {
+		// The next argument is not a flag.
+		return false
+	}
+	// More flags to come.
+	return true
+}
+
+func (p *flagParser) flag() string {
+	arg := p.current
+	if arg == "" {
+		arg = p.remaining[0]
+		p.remaining = p.remaining[1:]
+	} else {
+		p.current = ""
+	}
+	if len(arg) > 2 {
+		// We have "-ab", so return "-a" and keep "-b".
+		p.current = arg[:1] + arg[2:]
+		arg = arg[:2]
+	}
+	return arg
+}
+
+func (p *flagParser) value() string {
+	if len(p.remaining) == 0 {
+		return ""
+	}
+	arg := p.remaining[0]
+	p.remaining = p.remaining[1:]
+	return arg
+}
+
+func (p *flagParser) args() []string { return p.remaining }
+
 type getopts struct {
 	argidx  int
 	runeidx int
 }
 
-func (g *getopts) Next(optstr string, args []string) (opt rune, optarg string, done bool) {
+func (g *getopts) next(optstr string, args []string) (opt rune, optarg string, done bool) {
 	if len(args) == 0 || g.argidx >= len(args) {
 		return '?', "", true
 	}

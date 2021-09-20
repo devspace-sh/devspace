@@ -38,9 +38,11 @@ import (
 // configured via runner options; once a Runner has been created, the fields
 // should be treated as read-only.
 type Runner struct {
-	// Env specifies the environment of the interpreter, which must be
-	// non-nil.
+	// Env specifies the initial environment for the interpreter, which must
+	// be non-nil.
 	Env expand.Environ
+
+	writeEnv expand.WriteEnviron
 
 	// Dir specifies the working directory of the command, which must be an
 	// absolute path.
@@ -51,7 +53,9 @@ type Runner struct {
 	Params []string
 
 	// Separate maps - note that bash allows a name to be both a var and a
-	// func simultaneously
+	// func simultaneously.
+	// Vars is mostly superseded by Env at this point.
+	// TODO(v4): remove these
 
 	Vars  map[string]expand.Variable
 	Funcs map[string]*syntax.Stmt
@@ -87,12 +91,6 @@ type Runner struct {
 
 	filename string // only if Node was a File
 
-	// like Vars, but local to a func i.e. "local foo=bar"
-	funcVars map[string]expand.Variable
-
-	// like Vars, but local to a cmd i.e. "foo=bar prog args..."
-	cmdVars map[string]string
-
 	// >0 to break or continue out of N enclosing loops
 	breakEnclosing, contnEnclosing int
 
@@ -104,8 +102,9 @@ type Runner struct {
 	// track if a sourced script set positional parameters
 	sourceSetParams bool
 
-	err       error // current shell exit code or fatal error
-	exitShell bool  // whether the shell needs to exit
+	err          error // current shell exit code or fatal error
+	handlingTrap bool  // whether we're currently in a trap callback
+	shellExited  bool  // whether the shell needs to exit
 
 	// The current and last exit status code. They can only be different if
 	// the interpreter is in the middle of running a statement. In that
@@ -135,6 +134,10 @@ type Runner struct {
 	// keepRedirs is used so that "exec" can make any redirections
 	// apply to the current shell, and not just the command.
 	keepRedirs bool
+
+	// Fake signal callbacks
+	callbackErr  string
+	callbackExit string
 }
 
 type alias struct {
@@ -142,7 +145,7 @@ type alias struct {
 	blank bool
 }
 
-func (r *Runner) optByFlag(flag string) *bool {
+func (r *Runner) optByFlag(flag byte) *bool {
 	for i, opt := range &shellOptsTable {
 		if opt.flag == flag {
 			return &r.opts[i]
@@ -236,49 +239,42 @@ func Dir(path string) RunnerOption {
 // This is similar to what the interpreter's "set" builtin does.
 func Params(args ...string) RunnerOption {
 	return func(r *Runner) error {
-		onlyFlags := true
-		for len(args) > 0 {
-			arg := args[0]
-			if arg == "" || (arg[0] != '-' && arg[0] != '+') {
-				onlyFlags = false
-				break
-			}
-			if arg == "--" {
-				onlyFlags = false
-				args = args[1:]
-				break
-			}
-			enable := arg[0] == '-'
-			var opt *bool
-			if flag := arg[1:]; flag == "o" {
-				args = args[1:]
-				if len(args) == 0 && enable {
-					for i, opt := range &shellOptsTable {
-						r.printOptLine(opt.name, r.opts[i])
-					}
-					break
+		fp := flagParser{remaining: args}
+		for fp.more() {
+			flag := fp.flag()
+			enable := flag[0] == '-'
+			if flag[1] != 'o' {
+				opt := r.optByFlag(flag[1])
+				if opt == nil {
+					return fmt.Errorf("invalid option: %q", flag)
 				}
-				if len(args) == 0 && !enable {
-					for i, opt := range &shellOptsTable {
-						setFlag := "+o"
-						if r.opts[i] {
-							setFlag = "-o"
-						}
-						r.outf("set %s %s\n", setFlag, opt.name)
-					}
-					break
-				}
-				opt = r.optByName(args[0], false)
-			} else {
-				opt = r.optByFlag(flag)
+				*opt = enable
+				continue
 			}
+			value := fp.value()
+			if value == "" && enable {
+				for i, opt := range &shellOptsTable {
+					r.printOptLine(opt.name, r.opts[i])
+				}
+				continue
+			}
+			if value == "" && !enable {
+				for i, opt := range &shellOptsTable {
+					setFlag := "+o"
+					if r.opts[i] {
+						setFlag = "-o"
+					}
+					r.outf("set %s %s\n", setFlag, opt.name)
+				}
+				continue
+			}
+			opt := r.optByName(value, false)
 			if opt == nil {
-				return fmt.Errorf("invalid option: %q", arg)
+				return fmt.Errorf("invalid option: %q", value)
 			}
 			*opt = enable
-			args = args[1:]
 		}
-		if !onlyFlags {
+		if args := fp.args(); args != nil {
 			// If "--" wasn't given and there were zero arguments,
 			// we don't want to override the current parameters.
 			r.Params = args
@@ -345,22 +341,24 @@ func (r *Runner) optByName(name string, bash bool) *bool {
 type runnerOpts [len(shellOptsTable) + len(bashOptsTable)]bool
 
 var shellOptsTable = [...]struct {
-	flag, name string
+	flag byte
+	name string
 }{
 	// sorted alphabetically by name; use a space for the options
 	// that have no flag form
-	{"a", "allexport"},
-	{"e", "errexit"},
-	{"n", "noexec"},
-	{"f", "noglob"},
-	{"u", "nounset"},
-	{" ", "pipefail"},
+	{'a', "allexport"},
+	{'e', "errexit"},
+	{'n', "noexec"},
+	{'f', "noglob"},
+	{'u', "nounset"},
+	{' ', "pipefail"},
 }
 
 var bashOptsTable = [...]string{
 	// sorted alphabetically by name
 	"expand_aliases",
 	"globstar",
+	"nullglob",
 }
 
 // To access the shell options arrays without a linear search when we
@@ -376,6 +374,7 @@ const (
 
 	optExpandAliases
 	optGlobStar
+	optNullGlob
 )
 
 // Reset returns a runner to its initial state, right before the first call to
@@ -422,7 +421,6 @@ func (r *Runner) Reset() {
 
 		// emptied below, to reuse the space
 		Vars:     r.Vars,
-		cmdVars:  r.cmdVars,
 		dirStack: r.dirStack[:0],
 		usedNew:  r.usedNew,
 	}
@@ -433,31 +431,28 @@ func (r *Runner) Reset() {
 			delete(r.Vars, k)
 		}
 	}
-	if r.cmdVars == nil {
-		r.cmdVars = make(map[string]string)
-	} else {
-		for k := range r.cmdVars {
-			delete(r.cmdVars, k)
-		}
-	}
-	if vr := r.Env.Get("HOME"); !vr.IsSet() {
+	// TODO(v4): Use the supplied Env directly if it implements enough methods.
+	r.writeEnv = &overlayEnviron{parent: r.Env}
+	if !r.writeEnv.Get("HOME").IsSet() {
 		home, _ := os.UserHomeDir()
-		r.Vars["HOME"] = expand.Variable{Kind: expand.String, Str: home}
+		r.setVarString("HOME", home)
 	}
-	r.Vars["UID"] = expand.Variable{
-		Kind:     expand.String,
-		ReadOnly: true,
-		Str:      strconv.Itoa(os.Getuid()),
+	if !r.writeEnv.Get("UID").IsSet() {
+		r.setVar("UID", nil, expand.Variable{
+			Kind:     expand.String,
+			ReadOnly: true,
+			Str:      strconv.Itoa(os.Getuid()),
+		})
 	}
-	r.Vars["PWD"] = expand.Variable{Kind: expand.String, Str: r.Dir}
-	r.Vars["IFS"] = expand.Variable{Kind: expand.String, Str: " \t\n"}
-	r.Vars["OPTIND"] = expand.Variable{Kind: expand.String, Str: "1"}
+	r.setVarString("PWD", r.Dir)
+	r.setVarString("IFS", " \t\n")
+	r.setVarString("OPTIND", "1")
 
 	if runtime.GOOS == "windows" {
 		// convert $PATH to a unix path list
-		path := r.Env.Get("PATH").String()
+		path := r.writeEnv.Get("PATH").String()
 		path = strings.Join(filepath.SplitList(path), ":")
-		r.Vars["PATH"] = expand.Variable{Kind: expand.String, Str: path}
+		r.setVarString("PATH", path)
 	}
 
 	r.dirStack = append(r.dirStack, r.Dir)
@@ -484,24 +479,30 @@ func IsExitStatus(err error) (status uint8, ok bool) {
 }
 
 // Run interprets a node, which can be a *File, *Stmt, or Command. If a non-nil
-// error is returned, it will typically contain commands exit status,
-// which can be retrieved with IsExitStatus.
+// error is returned, it will typically contain a command's exit status, which
+// can be retrieved with IsExitStatus.
 //
 // Run can be called multiple times synchronously to interpret programs
 // incrementally. To reuse a Runner without keeping the internal shell state,
 // call Reset.
+//
+// Calling Run on an entire *File implies an exit, meaning that an exit trap may
+// run.
 func (r *Runner) Run(ctx context.Context, node syntax.Node) error {
 	if !r.didReset {
 		r.Reset()
 	}
 	r.fillExpandConfig(ctx)
 	r.err = nil
-	r.exitShell = false
+	r.shellExited = false
 	r.filename = ""
 	switch x := node.(type) {
 	case *syntax.File:
 		r.filename = x.Name
 		r.stmts(ctx, x.Stmts)
+		if !r.shellExited {
+			r.exitShell(ctx, r.exit)
+		}
 	case *syntax.Stmt:
 		r.stmt(ctx, x)
 	case syntax.Command:
@@ -512,6 +513,12 @@ func (r *Runner) Run(ctx context.Context, node syntax.Node) error {
 	if r.exit != 0 {
 		r.setErr(NewExitStatus(uint8(r.exit)))
 	}
+	if r.Vars != nil {
+		r.writeEnv.Each(func(name string, vr expand.Variable) bool {
+			r.Vars[name] = vr
+			return true
+		})
+	}
 	return r.err
 }
 
@@ -521,24 +528,26 @@ func (r *Runner) Run(ctx context.Context, node syntax.Node) error {
 // Note that this state is overwritten at every Run call, so it should be
 // checked immediately after each Run call.
 func (r *Runner) Exited() bool {
-	return r.exitShell
+	return r.shellExited
 }
 
 // Subshell makes a copy of the given Runner, suitable for use concurrently
-// with the original.  The copy will have the same environment, including
+// with the original. The copy will have the same environment, including
 // variables and functions, but they can all be modified without affecting the
 // original.
 //
-// Subshell is not safe to use concurrently with Run.  Orchestrating this is
+// Subshell is not safe to use concurrently with Run. Orchestrating this is
 // left up to the caller; no locking is performed.
 //
 // To replace e.g. stdin/out/err, do StdIO(r.stdin, r.stdout, r.stderr)(r) on
 // the copy.
 func (r *Runner) Subshell() *Runner {
+	if !r.didReset {
+		r.Reset()
+	}
 	// Keep in sync with the Runner type. Manually copy fields, to not copy
 	// sensitive ones like errgroup.Group, and to do deep copies of slices.
 	r2 := &Runner{
-		Env:         r.Env,
 		Dir:         r.Dir,
 		Params:      r.Params,
 		execHandler: r.execHandler,
@@ -554,32 +563,33 @@ func (r *Runner) Subshell() *Runner {
 
 		origStdout: r.origStdout, // used for process substitutions
 	}
-	r2.Vars = make(map[string]expand.Variable, len(r.Vars))
-	for k, v := range r.Vars {
-		v2 := v
+	// Env vars and funcs are copied, since they might be modified.
+	// TODO(v4): lazy copying? it would probably be enough to add a
+	// copyOnWrite bool field to Variable, then a Modify method that must be
+	// used when one needs to modify a variable. ideally with some way to
+	// catch direct modifications without the use of Modify and panic,
+	// perhaps via a check when getting or setting vars at some level.
+	oenv := &overlayEnviron{parent: expand.ListEnviron()}
+	r.writeEnv.Each(func(name string, vr expand.Variable) bool {
+		vr2 := vr
 		// Make deeper copies of List and Map, but ensure that they remain nil
-		// if they are nil in v.
-		v2.List = append([]string(nil), v.List...)
-		if v.Map != nil {
-			v2.Map = make(map[string]string, len(v.Map))
-			for k, v := range v.Map {
-				v2.Map[k] = v
+		// if they are nil in vr.
+		vr2.List = append([]string(nil), vr.List...)
+		if vr.Map != nil {
+			vr2.Map = make(map[string]string, len(vr.Map))
+			for k, vr := range vr.Map {
+				vr2.Map[k] = vr
 			}
 		}
-		r2.Vars[k] = v2
-	}
-	r2.funcVars = make(map[string]expand.Variable, len(r.funcVars))
-	for k, v := range r.funcVars {
-		r2.funcVars[k] = v
-	}
-	r2.cmdVars = make(map[string]string, len(r.cmdVars))
-	for k, v := range r.cmdVars {
-		r2.cmdVars[k] = v
-	}
+		oenv.Set(name, vr2)
+		return true
+	})
+	r2.writeEnv = oenv
 	r2.Funcs = make(map[string]*syntax.Stmt, len(r.Funcs))
 	for k, v := range r.Funcs {
 		r2.Funcs[k] = v
 	}
+	r2.Vars = make(map[string]expand.Variable)
 	if l := len(r.alias); l > 0 {
 		r2.alias = make(map[string]alias, l)
 		for k, v := range r.alias {
