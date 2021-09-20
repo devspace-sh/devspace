@@ -257,10 +257,6 @@
             },
             {
               "type": "doc",
-              "id": "version-5.16/configuration/profiles/strategic-merge"
-            },
-            {
-              "type": "doc",
               "id": "version-5.16/configuration/profiles/patches"
             },
             {

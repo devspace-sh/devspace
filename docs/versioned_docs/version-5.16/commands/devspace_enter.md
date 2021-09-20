@@ -42,6 +42,7 @@ devspace enter bash --image-selector "image(app):tag(app)"
   -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
       --pick                    Select a pod / container if multiple are found (default true)
       --pod string              Pod to open a shell to
+      --reconnect               Will reconnect the terminal if an unexpected return code is encountered
       --wait                    Wait for the pod(s) to start if they are not running
       --workdir string          The working directory where to open the terminal or execute the command
 ```
