@@ -40,7 +40,7 @@ dev:
   - imageSelector: ${IMAGE} # Select the Pod that runs our `${IMAGE}`
     excludePaths:
     - .git/
-    uploadExcludeFile: .gitignore
+    uploadExcludeFile: .gitignore # Exclude everything defined in .gitignore
 
   # `dev.terminal` tells DevSpace to open a terminal as a last step during `devspace dev`
   terminal:
