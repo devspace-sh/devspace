@@ -98,12 +98,13 @@ func (serviceClient *client) StartSync(interrupt chan error, printSyncLog, verbo
 
 		// should we print the logs?
 		prefix := prefixFn(idx, syncConfig)
+		fileLog := logpkg.NewPrefixLogger(prefix, "", logpkg.GetFileLogger("sync"))
 		log := logpkg.NewPrefixLogger(prefix, logpkg.Colors[idx%len(logpkg.Colors)], serviceClient.log)
 		if printSyncLog {
-			options.SyncLog = log
-			options.RestartLog = log
+			unionLog := logpkg.NewUnionLogger(log, fileLog)
+			options.SyncLog = unionLog
+			options.RestartLog = unionLog
 		} else {
-			fileLog := logpkg.NewPrefixLogger(prefix, "", logpkg.GetFileLogger("sync"))
 			options.SyncLog = fileLog
 			options.RestartLog = fileLog
 		}
