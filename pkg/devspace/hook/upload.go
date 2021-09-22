@@ -15,6 +15,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 )
@@ -35,6 +36,7 @@ func (r *remoteUploadHook) ExecuteRemotely(hook *latest.HookConfig, podContainer
 		localPath = hook.Upload.LocalPath
 	}
 
+	log.Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
 	log.Infof("Copy local '%s' -> container '%s'", localPath, containerPath)
 	// Make sure the target folder exists
 	destDir := path.Dir(containerPath)

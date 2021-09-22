@@ -118,7 +118,6 @@ func (r *remoteHook) execute(hook *latest.HookConfig, imageSelector []imageselec
 	}
 
 	// execute the hook in the container
-	log.Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
 	err = r.Hook.ExecuteRemotely(hook, podContainer, client, config, dependencies, log)
 	if err != nil {
 		return false, err
