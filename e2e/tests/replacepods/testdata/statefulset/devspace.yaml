@@ -1,0 +1,25 @@
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: john/devbackend
+deployments:
+  - name: test
+    kubectl:
+      manifests:
+        - statefulset.yaml
+dev:
+  replacePods:
+    - imageSelector: ${IMAGE}
+      replaceImage: ubuntu:18.04
+      patches:
+        - op: add
+          path: spec.containers[0].command
+          value: ["sleep"]
+        - op: add
+          path: spec.containers[0].args
+          value: ["9999999999"]
+        - op: add
+          path: spec.containers[0].workingDir
+          value: "/workdir"
+  terminal:
+    imageSelector: ${IMAGE}

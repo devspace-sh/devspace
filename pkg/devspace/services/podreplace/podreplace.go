@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	yaml2 "github.com/ghodss/yaml"
@@ -471,6 +472,9 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 	}
 
 	copiedPod := pod.Pod.DeepCopyObject().(*corev1.Pod)
+	if _, ok := parent.(*appsv1.StatefulSet); ok {
+		copiedPod.Spec.Hostname = strings.Replace(pod.Pod.Name, ".", "-", -1)
+	}
 
 	// replace the image name
 	if replacePod.ReplaceImage != "" {
