@@ -98,6 +98,9 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				if h.When.After.PullSecrets != "" {
 					events = append(events, "after:createPullSecrets")
 				}
+				if h.When.After.Dependencies != "" {
+					events = append(events, "after:deployDependencies")
+				}
 				events = append(events, getEventsFrom("after:initialSync", h.When.After.InitialSync)...)
 			}
 			if h.When.Before != nil {
@@ -107,6 +110,9 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				if h.When.Before.PullSecrets != "" {
 					events = append(events, "before:createPullSecrets")
 				}
+				if h.When.Before.Dependencies != "" {
+					events = append(events, "before:deployDependencies")
+				}
 				events = append(events, getEventsFrom("before:initialSync", h.When.Before.InitialSync)...)
 			}
 			if h.When.OnError != nil {
@@ -115,6 +121,9 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				events = append(events, getEventsFrom("error:purge", h.When.OnError.PurgeDeployments)...)
 				if h.When.OnError.PullSecrets != "" {
 					events = append(events, "error:createPullSecrets")
+				}
+				if h.When.OnError.Dependencies != "" {
+					events = append(events, "error:deployDependencies")
 				}
 				events = append(events, getEventsFrom("error:initialSync", h.When.OnError.InitialSync)...)
 			}

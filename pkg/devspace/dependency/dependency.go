@@ -57,8 +57,7 @@ type Manager interface {
 }
 
 type manager struct {
-	config   *latest.Config
-	cache    *generated.CacheConfig
+	config   config.Config
 	log      log.Logger
 	resolver ResolverInterface
 	client   kubectl.Client
@@ -67,8 +66,7 @@ type manager struct {
 // NewManager creates a new instance of the interface Manager
 func NewManager(config config.Config, client kubectl.Client, configOptions *loader.ConfigOptions, logger log.Logger) Manager {
 	return &manager{
-		config:   config.Config(),
-		cache:    config.Generated().GetActive(),
+		config:   config,
 		log:      logger,
 		resolver: NewResolver(config, client, configOptions, logger),
 		client:   client,
@@ -77,7 +75,7 @@ func NewManager(config config.Config, client kubectl.Client, configOptions *load
 
 // UpdateAll will update all dependencies if there are any
 func (m *manager) UpdateAll() error {
-	if m.config == nil || m.config.Dependencies == nil || len(m.config.Dependencies) == 0 {
+	if m.config == nil || m.config.Config() == nil || len(m.config.Config().Dependencies) == 0 {
 		return nil
 	}
 
@@ -200,6 +198,11 @@ type DeployOptions struct {
 
 // DeployAll will deploy all dependencies if there are any
 func (m *manager) DeployAll(options DeployOptions) ([]types.Dependency, error) {
+	pluginErr := hook.ExecuteHooks(m.client, m.config, nil, nil, m.log, "before:deployDependencies")
+	if pluginErr != nil {
+		return nil, pluginErr
+	}
+
 	dependencies, err := m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
 		err := dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
 		if err != nil {
@@ -209,7 +212,17 @@ func (m *manager) DeployAll(options DeployOptions) ([]types.Dependency, error) {
 		return nil
 	})
 	if err != nil {
+		pluginErr := hook.ExecuteHooks(m.client, m.config, nil, map[string]interface{}{"error": err}, m.log, "error:deployDependencies")
+		if pluginErr != nil {
+			return nil, pluginErr
+		}
+
 		return nil, err
+	}
+
+	pluginErr = hook.ExecuteHooks(m.client, m.config, dependencies, nil, m.log, "after:deployDependencies")
+	if pluginErr != nil {
+		return nil, pluginErr
 	}
 
 	return dependencies, nil
@@ -248,7 +261,7 @@ func (m *manager) RenderAll(options RenderOptions) ([]types.Dependency, error) {
 }
 
 func (m *manager) handleDependencies(skipDependencies, filterDependencies []string, reverse, updateDependencies, silent, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) ([]types.Dependency, error) {
-	if m.config == nil || m.config.Dependencies == nil || len(m.config.Dependencies) == 0 {
+	if m.config == nil || m.config.Config() == nil || len(m.config.Config().Dependencies) == 0 {
 		return nil, nil
 	}
 

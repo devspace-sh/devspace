@@ -228,9 +228,9 @@ func TestBuildAll(t *testing.T) {
 		}
 
 		manager := &manager{
-			config: &latest.Config{
+			config: config.Ensure(config.NewConfig(nil, &latest.Config{
 				Dependencies: testCase.dependencyTasks,
-			},
+			}, nil, nil, "")),
 			log: log.Discard,
 			resolver: &fakeResolver{
 				resolvedDependencies: testCase.resolvedDependencies,
@@ -329,9 +329,9 @@ func TestDeployAll(t *testing.T) {
 		}
 
 		manager := &manager{
-			config: &latest.Config{
+			config: config.Ensure(config.NewConfig(nil, &latest.Config{
 				Dependencies: testCase.dependencyTasks,
-			},
+			}, nil, nil, "")),
 			log: log.Discard,
 			resolver: &fakeResolver{
 				resolvedDependencies: testCase.resolvedDependencies,
@@ -433,9 +433,9 @@ func TestPurgeAll(t *testing.T) {
 		}
 
 		manager := &manager{
-			config: &latest.Config{
+			config: config.Ensure(config.NewConfig(nil, &latest.Config{
 				Dependencies: testCase.dependencyTasks,
-			},
+			}, nil, nil, "")),
 			log: log.Discard,
 			resolver: &fakeResolver{
 				resolvedDependencies: testCase.resolvedDependencies,
