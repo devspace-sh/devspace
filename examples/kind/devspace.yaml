@@ -1,0 +1,26 @@
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: localhost:5000/app
+images:
+  default:
+    image: ${IMAGE}
+deployments:
+  - name: quickstart
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: ${IMAGE}
+        service:
+          ports:
+            - port: 3000
+dev:
+  ports:
+    - imageSelector: ${IMAGE}
+      forward:
+        - port: 3000
+  sync:
+    - imageSelector: ${IMAGE}
+      excludePaths:
+        - node_modules
