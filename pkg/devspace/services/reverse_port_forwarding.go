@@ -41,7 +41,7 @@ func (serviceClient *client) StartReversePortForwarding(interrupt chan error) er
 		}
 
 		// start reverse port forwarding
-		err := serviceClient.startReversePortForwarding(cache, portForwarding, interrupt, serviceClient.log)
+		err := serviceClient.startReversePortForwarding(cache, portForwarding, interrupt, logpkg.NewUnionLogger(serviceClient.log, logpkg.GetFileLogger("reverse-portforwarding")))
 		if err != nil {
 			pluginErr := hook.ExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 				"reverse_port_forwarding_config": portForwarding,
@@ -84,8 +84,8 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 	}
 
 	// make sure the devspace helper binary is injected
-	log.StartWait("Reverse-Port-Forwarding: Upload devspace helper...")
-	err = inject.InjectDevSpaceHelper(serviceClient.client, container.Pod, container.Container.Name, string(portForwarding.Arch), serviceClient.log)
+	log.StartWait("Reverse-Port-Forwarding: Inject devspacehelper...")
+	err = inject.InjectDevSpaceHelper(serviceClient.client, container.Pod, container.Container.Name, string(portForwarding.Arch), log)
 	log.StopWait()
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 	go func() {
 		err := synccontroller.StartStream(serviceClient.client, container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "tunnel"}, stdinReader, stdoutWriter, false, logFile)
 		if err != nil {
-			errorChan <- errors.Errorf("Reverse Port Forwarding - connection lost to pod %s/%s: %v", container.Pod.Namespace, container.Pod.Name, err)
+			errorChan <- errors.Errorf("connection lost to pod %s/%s: %v", container.Pod.Namespace, container.Pod.Name, err)
 		}
 	}()
 
@@ -115,24 +115,24 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 		select {
 		case err := <-errorChan:
 			if err != nil {
+				logFile.Errorf("Reverse portforwarding restarting, because: %v", err)
 				close(closeChan)
-				stdinWriter.Close()
-				stdoutWriter.Close()
-				logFile.Error(err)
+				_ = stdinWriter.Close()
+				_ = stdoutWriter.Close()
 				hook.LogExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 					"reverse_port_forwarding_config": portForwarding,
 					"error":                          err,
 				}, serviceClient.log, hook.EventsForSingle("restart:reversePortForwarding", portForwarding.Name).With("reversePortForwarding.restart")...)
 
 				for {
-					err = serviceClient.startReversePortForwarding(cache, portForwarding, interrupt, logpkg.Discard)
+					err = serviceClient.startReversePortForwarding(cache, portForwarding, interrupt, logFile)
 					if err != nil {
 						hook.LogExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 							"reverse_port_forwarding_config": portForwarding,
 							"error":                          err,
 						}, serviceClient.log, hook.EventsForSingle("restart:reversePortForwarding", portForwarding.Name).With("reversePortForwarding.restart")...)
-						serviceClient.log.Errorf("Error restarting reverse port-forwarding: %v", err)
-						serviceClient.log.Errorf("Will try again in 15 seconds")
+						logFile.Errorf("Error restarting reverse port-forwarding: %v", err)
+						logFile.Errorf("Will try again in 15 seconds")
 						time.Sleep(time.Second * 15)
 						continue
 					}
@@ -143,11 +143,12 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 			}
 		case <-interrupt:
 			close(closeChan)
-			stdinWriter.Close()
-			stdoutWriter.Close()
+			_ = stdinWriter.Close()
+			_ = stdoutWriter.Close()
 			hook.LogExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 				"reverse_port_forwarding_config": portForwarding,
 			}, serviceClient.log, hook.EventsForSingle("stop:reversePortForwarding", portForwarding.Name).With("reversePortForwarding.stop")...)
+			logFile.Done("Stopped reverse port forwarding %s", portForwarding.Name)
 		}
 	}(portForwarding, interrupt)
 
