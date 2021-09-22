@@ -237,7 +237,7 @@ hooks:
 
 ## Execute hooks once
 
-Hooks can be executed once per deployment when executing a command in a container. This can be useful for running one-time development tasks without init containers. In the following example, the command would only run once in in all containers running with the image `nginx:1.21`.
+Hooks can be executed only once for each targeted container. This means as long as the container where the hook was executed stays running, the hook will not be executed for this container again until it restarts. This can be useful for running one-time development tasks without using init containers. In the following example, the command would only run once for the newest container running with the image `nginx:1.21`.
 
 ```yaml {8}
 ...
@@ -251,6 +251,8 @@ hooks:
   events: ["after:deploy"]
 ...
 ```
+
+If you run `devspace dev` or `devspace deploy` now multiple times and the container is not replaced or restarted, the hook is only executed once.
 
 ## Hook Context Information
 
