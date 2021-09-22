@@ -40,7 +40,7 @@ func (serviceClient *client) StartPortForwarding(interrupt chan error) error {
 		}
 
 		// start port forwarding
-		err := serviceClient.startForwarding(cache, portForwarding, interrupt, serviceClient.log)
+		err := serviceClient.startForwarding(cache, portForwarding, interrupt, logpkg.NewUnionLogger(serviceClient.log, logpkg.GetFileLogger("portforwarding")))
 		if err != nil {
 			pluginErr := hook.ExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 				"port_forwarding_config": portForwarding,
@@ -100,7 +100,7 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 
 		open, _ := port.Check(*value.LocalPort)
 		if !open {
-			serviceClient.log.Warnf("Seems like port %d is already in use. Is another application using that port?", *value.LocalPort)
+			log.Warnf("Seems like port %d is already in use. Is another application using that port?", *value.LocalPort)
 		}
 
 		ports[index] = localPort + ":" + remotePort
@@ -114,6 +114,7 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 	readyChan := make(chan struct{})
 	errorChan := make(chan error)
 
+	logFile := logpkg.GetFileLogger("portforwarding")
 	pf, err := serviceClient.client.NewPortForwarder(pod, ports, addresses, make(chan struct{}), readyChan, errorChan)
 	if err != nil {
 		return errors.Errorf("Error starting port forwarding: %v", err)
@@ -140,6 +141,7 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 		select {
 		case err := <-errorChan:
 			if err != nil {
+				logFile.Errorf("Portforwarding restarting, because: %v", err)
 				pf.Close()
 				hook.LogExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 					"port_forwarding_config": portForwarding,
@@ -147,14 +149,14 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 				}, serviceClient.log, hook.EventsForSingle("restart:portForwarding", portForwarding.Name).With("portForwarding.restart")...)
 
 				for {
-					err = serviceClient.startForwarding(cache, portForwarding, interrupt, logpkg.Discard)
+					err = serviceClient.startForwarding(cache, portForwarding, interrupt, logFile)
 					if err != nil {
 						hook.LogExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 							"port_forwarding_config": portForwarding,
 							"error":                  err,
 						}, serviceClient.log, hook.EventsForSingle("restart:portForwarding", portForwarding.Name).With("portForwarding.restart")...)
-						serviceClient.log.Errorf("Error restarting port-forwarding: %v", err)
-						serviceClient.log.Errorf("Will try again in 15 seconds")
+						logFile.Errorf("Error restarting port-forwarding: %v", err)
+						logFile.Errorf("Will try again in 15 seconds")
 						time.Sleep(time.Second * 15)
 						continue
 					}
@@ -168,6 +170,7 @@ func (serviceClient *client) startForwarding(cache *generated.CacheConfig, portF
 			hook.LogExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 				"port_forwarding_config": portForwarding,
 			}, serviceClient.log, hook.EventsForSingle("stop:portForwarding", portForwarding.Name).With("portForwarding.stop")...)
+			logFile.Done("Stopped port forwarding %s", portForwarding.Name)
 		}
 	}(portForwarding, interrupt)
 
