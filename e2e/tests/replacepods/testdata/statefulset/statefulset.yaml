@@ -1,0 +1,38 @@
+# https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  clusterIP: None
+  ports:
+    - name: web
+      port: 80
+  selector:
+    app: nginx
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: test-statefulset
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx  # has to match .spec.template.metadata.labels
+  serviceName: "nginx"
+  template:
+    metadata:
+      labels:
+        app: nginx  # has to match .spec.selector.matchLabels
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - image: john/devbackend
+          name: nginx
+          ports:
+            - containerPort: 80
+              name: web
