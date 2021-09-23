@@ -1,0 +1,42 @@
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: myusername/devspace
+images:
+  default:
+    image: ${IMAGE}
+    build:
+      buildKit: {}
+deployments:
+  - name: quickstart
+    helm:
+      chart: 
+        name: doesnotexist
+hooks:
+  - command: |-
+      echo -n "before1" > before1.txt
+    events: ["before:build:*"]
+  - command: |-
+      echo -n "error1" > error1.txt
+    events: ["error:build:*"]
+  - command: |-
+      echo -n "after1" > after1.txt
+    events: ["after:build:*"]
+  - command: |-
+      echo -n "before2" > before2.txt
+    events: ["before:deploy:*"]
+  - command: |-
+      echo -n "error2" > error2.txt
+    events: ["error:deploy:quickstart"]
+  - command: |-
+      echo -n "after2" > after2.txt
+    events: ["after:after:*"]
+  - command: |-
+      echo -n "before3" > before3.txt
+    events: ["devCommand:after:execute"]
+  - command: |-
+      echo -n "error3" > error3.txt
+    events: ["devCommand:error"]
+  - command: |-
+      echo -n "after3" > after3.txt
+    events: ["devCommand:after:execute"]

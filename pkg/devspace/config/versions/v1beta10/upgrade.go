@@ -92,40 +92,40 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		events := []string{}
 		if h.When != nil {
 			if h.When.After != nil {
-				events = append(events, getEventsFrom("after:build", h.When.After.Images)...)
-				events = append(events, getEventsFrom("after:deploy", h.When.After.Deployments)...)
-				events = append(events, getEventsFrom("after:purge", h.When.After.PurgeDeployments)...)
+				events = append(events, getEventsFrom("after:build", h.When.After.Images, false)...)
+				events = append(events, getEventsFrom("after:deploy", h.When.After.Deployments, false)...)
+				events = append(events, getEventsFrom("after:purge", h.When.After.PurgeDeployments, false)...)
 				if h.When.After.PullSecrets != "" {
 					events = append(events, "after:createPullSecrets")
 				}
 				if h.When.After.Dependencies != "" {
 					events = append(events, "after:deployDependencies")
 				}
-				events = append(events, getEventsFrom("after:initialSync", h.When.After.InitialSync)...)
+				events = append(events, getEventsFrom("after:initialSync", h.When.After.InitialSync, true)...)
 			}
 			if h.When.Before != nil {
-				events = append(events, getEventsFrom("before:build", h.When.Before.Images)...)
-				events = append(events, getEventsFrom("before:deploy", h.When.Before.Deployments)...)
-				events = append(events, getEventsFrom("before:purge", h.When.Before.PurgeDeployments)...)
+				events = append(events, getEventsFrom("before:build", h.When.Before.Images, false)...)
+				events = append(events, getEventsFrom("before:deploy", h.When.Before.Deployments, false)...)
+				events = append(events, getEventsFrom("before:purge", h.When.Before.PurgeDeployments, false)...)
 				if h.When.Before.PullSecrets != "" {
 					events = append(events, "before:createPullSecrets")
 				}
 				if h.When.Before.Dependencies != "" {
 					events = append(events, "before:deployDependencies")
 				}
-				events = append(events, getEventsFrom("before:initialSync", h.When.Before.InitialSync)...)
+				events = append(events, getEventsFrom("before:initialSync", h.When.Before.InitialSync, true)...)
 			}
 			if h.When.OnError != nil {
-				events = append(events, getEventsFrom("error:build", h.When.OnError.Images)...)
-				events = append(events, getEventsFrom("error:deploy", h.When.OnError.Deployments)...)
-				events = append(events, getEventsFrom("error:purge", h.When.OnError.PurgeDeployments)...)
+				events = append(events, getEventsFrom("error:build", h.When.OnError.Images, true)...)
+				events = append(events, getEventsFrom("error:deploy", h.When.OnError.Deployments, true)...)
+				events = append(events, getEventsFrom("error:purge", h.When.OnError.PurgeDeployments, true)...)
 				if h.When.OnError.PullSecrets != "" {
 					events = append(events, "error:createPullSecrets")
 				}
 				if h.When.OnError.Dependencies != "" {
 					events = append(events, "error:deployDependencies")
 				}
-				events = append(events, getEventsFrom("error:initialSync", h.When.OnError.InitialSync)...)
+				events = append(events, getEventsFrom("error:initialSync", h.When.OnError.InitialSync, true)...)
 			}
 		}
 		nextConfig.Hooks[i].Events = events
@@ -134,11 +134,11 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	return nextConfig, nil
 }
 
-func getEventsFrom(base string, val string) []string {
+func getEventsFrom(base string, val string, each bool) []string {
 	if val == "" {
 		return []string{}
 	}
-	if val == "all" && strings.HasSuffix(base, "initialSync") {
+	if val == "all" && each {
 		return []string{base + ":*"}
 	}
 	if val == "all" {
