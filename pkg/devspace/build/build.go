@@ -135,6 +135,16 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		// Check if rebuild is needed
 		needRebuild, err := builder.ShouldRebuild(c.config.Generated().GetActive(), options.ForceRebuild)
 		if err != nil {
+			pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+				"IMAGE_CONFIG_NAME": imageConfigName,
+				"IMAGE_NAME":        imageName,
+				"IMAGE_CONFIG":      cImageConf,
+				"IMAGE_TAGS":        imageTags,
+				"ERROR":             err,
+			}, log, hook.EventsForSingle("error:build", imageConfigName).With("build.errorBuild")...)
+			if pluginErr != nil {
+				return nil, pluginErr
+			}
 			return nil, errors.Errorf("error during shouldRebuild check: %v", err)
 		}
 
