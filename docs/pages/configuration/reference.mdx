@@ -92,6 +92,7 @@ kaniko:                             # struct   | Options for building images wit
   initImage: ""                     # string   | Allows to change the init container kaniko image (defaults to alpine)
   serviceAccount: ""                # string   | The service account to use for this build pod
   nodeSelector: {}                  # map      | A key value map of node labels to select a node for the build pod
+  tolerations: []                   # struct[] | Array of node tolerations that should be used to schedule the build pod
   pullSecret: ""                    # string   | Mount this Kubernetes secret instead of creating one to authenticate to the registry (default: "")
   additionalMounts: []              # struct[] | Array of mount configurations for Kubernetes Secrets and ConfigMaps that should be mounted into the kaniko build container
   namespace: ""                     # string   | Kubernetes namespace to run kaniko build pod in (Default: "" = deployment namespace)
