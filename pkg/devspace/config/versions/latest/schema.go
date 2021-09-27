@@ -2,6 +2,7 @@ package latest
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
+	k8sv1 "k8s.io/api/core/v1"
 )
 
 // Version is the current api version
@@ -283,6 +284,9 @@ type KanikoConfig struct {
 
 	// the node selector to use for the kaniko pod
 	NodeSelector map[string]string `yaml:"nodeSelector,omitempty" json:"nodeSelector,omitempty"`
+
+	// tolerations list to use for the kaniko pod
+	Tolerations []k8sv1.Toleration `yaml:"tolerations,omitempty" json:"tolerations,omitempty"`
 
 	// the service account to use for the kaniko pod
 	ServiceAccount string `yaml:"serviceAccount,omitempty" json:"serviceAccount,omitempty"`
