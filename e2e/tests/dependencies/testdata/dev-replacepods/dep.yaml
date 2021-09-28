@@ -1,0 +1,26 @@
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: username/app
+deployments:
+  - name: dep-devspace
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - name: container-0
+            image: ${IMAGE}
+dev:
+  replacePods:
+    - imageSelector: ${IMAGE}
+      replaceImage: alpine:latest
+      patches:
+        - op: add
+          path: spec.containers[0].command
+          value: ["sleep"]
+        - op: add
+          path: spec.containers[0].args
+          value: ["9999999999"]
+        - op: add
+          path: spec.containers[0].workingDir
+          value: "/workdir"
