@@ -1,0 +1,14 @@
+version: v1beta11
+deployments:
+- name: db
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: mysql/mysql-server:8.0.19
+      hostAliases:
+      - ip: "162.242.195.82"
+        hostnames:
+        - "some1host"
+        - "some2host"
+      

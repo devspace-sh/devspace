@@ -32,5 +32,5 @@ hooks:                              # struct[]  | Array of hooks to be executed.
     labelSelector: ...              # struct    | Key Value map of labels and values to select pods with
     containerName: ""               # string    | Container name to use after selecting a pod
     namespace: ""                   # string    | Kubernetes namespace to select pods in
-    once: ""                        # bool      | If true the command will execute once - unless the targeted container is restarted and the hook is re-executing according to its lifecycle events (default false)
+    once: false                     # bool      | If true the command will execute once - unless the targeted container is restarted and the hook is re-executing according to its lifecycle events (default false)
 ```

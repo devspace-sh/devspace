@@ -1,0 +1,12 @@
+services:
+  db:
+    image: mysql/mysql-server:8.0.19
+    ports:
+    - target: 80
+      published: 8080
+      protocol: tcp
+      mode: host
+    - target: 9090
+      published: 9090
+      protocol: udp
+      mode: host

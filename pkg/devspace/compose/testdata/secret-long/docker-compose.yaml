@@ -1,0 +1,13 @@
+services:
+  db:
+    image: mysql/mysql-server:8.0.19
+    secrets:
+      - source: db-password
+        target: db_secret
+        # uid: '103'
+        # gid: '103'
+        # mode: 0440
+
+secrets:
+  db-password:
+    file: db/password.txt

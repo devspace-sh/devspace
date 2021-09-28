@@ -1,0 +1,22 @@
+services:
+  db:
+    image: mysql/mysql-server:8.0.19
+    volumes:
+      # Just specify a path and let the Engine create a volume
+      - /var/lib/mydata
+
+      # Specify an absolute path mapping
+      - /opt/data:/var/lib/mysql
+
+      # Path on the host, relative to the Compose file
+      - ./cache:/tmp/cache
+
+      # User-relative path
+      - ~/configs:/etc/configs/:ro
+
+      # Named volume
+      - datavolume:/var/lib/mysql
+
+
+volumes:
+  datavolume:

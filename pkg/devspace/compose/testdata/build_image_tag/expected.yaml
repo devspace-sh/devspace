@@ -1,0 +1,14 @@
+version: v1beta11
+images:
+  foo:
+    image: loft.sh/foo:latest
+    context: foo
+    dockerfile: foo/Dockerfile
+
+deployments:
+- name: foo
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: loft.sh/foo:latest

@@ -1,0 +1,25 @@
+version: v1beta11
+deployments:
+- name: db
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: mysql/mysql-server:8.0.19
+        volumeMounts:
+        - containerPath: /run/secrets/db-password
+          volume:
+            name: db-password
+            readOnly: true
+            subPath: db-password
+      volumes:
+      - name: db-password
+        secret:
+          secretName: db-password
+hooks:
+- events:
+  - before:deploy
+  command: kubectl create secret generic db-password --dry-run=client --from-file=db-password=db/password.txt -o yaml | kubectl apply -f -
+- events:
+  - after:purge
+  command: kubectl delete secret db-password --ignore-not-found

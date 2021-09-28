@@ -1,0 +1,15 @@
+version: v1beta11
+deployments:
+- name: db
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: mysql/mysql-server:8.0.19
+        env:
+        - name: COMMON
+          value: multiple
+        - name: ENV_FILE
+          value: multiple
+        - name: WEB
+          value: multiple

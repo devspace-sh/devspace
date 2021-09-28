@@ -1,0 +1,19 @@
+version: v1beta11
+deployments:
+- name: db
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: mysql/mysql-server:8.0.19
+      service:
+        ports:
+        - port: 3306
+        - port: 33060
+dev:
+  ports:
+  - labelSelector:
+      app.kubernetes.io/component: db
+    forward:
+    - port: 3306
+    - port: 33060

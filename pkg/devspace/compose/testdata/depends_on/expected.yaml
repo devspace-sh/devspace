@@ -1,0 +1,80 @@
+version: v1beta11
+deployments:
+- name: db
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: mysql/mysql-server:8.0.19
+- name: cache
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: redis:latest
+- name: messaging
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: rabbitmq:latest
+- name: worker
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: rails:latest
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: rails:latest
+- name: frontend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx:latest
+- name: proxy
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: haproxy:latest
+hooks:
+- events: ["after:deploy:db"]
+  container:
+    labelSelector:
+      app.kubernetes.io/component: db
+  wait:
+    running: true
+    terminatedWithCode: 0
+- events: ["after:deploy:cache"]
+  container:
+    labelSelector:
+      app.kubernetes.io/component: cache
+  wait:
+    running: true
+    terminatedWithCode: 0
+- events: ["after:deploy:messaging"]
+  container:
+    labelSelector:
+      app.kubernetes.io/component: messaging
+  wait:
+    running: true
+    terminatedWithCode: 0
+- events: ["after:deploy:backend"]
+  container:
+    labelSelector:
+      app.kubernetes.io/component: backend
+  wait:
+    running: true
+    terminatedWithCode: 0
+- events: ["after:deploy:frontend"]
+  container:
+    labelSelector:
+      app.kubernetes.io/component: frontend
+  wait:
+    running: true
+    terminatedWithCode: 0

@@ -1,0 +1,7 @@
+services:
+  db:
+    image: mysql/mysql-server:8.0.19
+    env_file:
+    - common.env
+    - app/web.env
+    - .env
