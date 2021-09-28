@@ -35,6 +35,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    environment:
+      - FLASK_ENV=development
+    volumes:
+      - ./backend:/code/
   proxy:
     build: proxy
     restart: always
@@ -44,6 +48,9 @@ services:
       - backend
     networks:
       - frontnet
+    volumes:
+      - ./proxy:/etc/nginx/conf.d/
+      - ~/configs:/etc/configs/
 volumes:
   db-data:
 secrets:

@@ -58,6 +58,9 @@ deployments:
     values:
       containers:
       - image: backend
+        env:
+        - name: FLASK_ENV
+          value: development
         volumeMounts:
         - containerPath: /run/secrets/db-password
           volume:
@@ -96,12 +99,24 @@ dev:
     forward:
     - port: 8080
       remotePort: 80
+  sync:
+  - imageSelector: backend
+    localSubPath: ./backend
+    containerPath: /code/
+    excludeFile: .dockerignore
+  - imageSelector: proxy
+    localSubPath: ./proxy
+    containerPath: /etc/nginx/conf.d/
+    excludeFile: .dockerignore
+  - imageSelector: proxy
+    localSubPath: '$!(echo "$HOME/configs")'
+    containerPath: /etc/configs/
 
 hooks:
 - events:
   - before:deploy
   command: |
-    kubectl create secret generic db-password --from-file=db-password=./db/password.txt -o yaml | kubectl apply -f -
+    kubectl create secret generic db-password --dry-run=client --from-file=db-password=./db/password.txt -o yaml | kubectl apply -f -
 - events:
   - after:purge
   command: kubectl delete secret db-password --ignore-not-found
