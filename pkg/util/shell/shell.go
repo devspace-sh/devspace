@@ -2,9 +2,11 @@ package shell
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"mvdan.cc/sh/v3/expand"
@@ -33,7 +35,9 @@ func ExecuteShellCommand(command string, args []string, dir string, stdout io.Wr
 	}
 
 	// Create shell runner
-	r, err := interp.New(interp.Dir(dir), interp.StdIO(os.Stdin, stdout, stderr), interp.Env(expand.ListEnviron(env...)))
+	r, err := interp.New(interp.Dir(dir), interp.StdIO(os.Stdin, stdout, stderr),
+		interp.Env(expand.ListEnviron(env...)),
+		interp.ExecHandler(DevSpaceExecHandler))
 	if err != nil {
 		return errors.Wrap(err, "create shell runner")
 	}
@@ -50,4 +54,29 @@ func ExecuteShellCommand(command string, args []string, dir string, stdout io.Wr
 	}
 
 	return nil
+}
+
+var lookPathDir = interp.LookPathDir
+
+func DevSpaceExecHandler(ctx context.Context, args []string) error {
+	if len(args) > 0 {
+		hc := interp.HandlerCtx(ctx)
+		_, err := lookPathDir(hc.Dir, hc.Env, args[0])
+		if err != nil {
+			switch args[0] {
+			case "cat":
+				err = cat(&hc, args[1:])
+				if err != nil {
+					fmt.Fprintln(hc.Stderr, err)
+					return interp.NewExitStatus(1)
+				}
+				return interp.NewExitStatus(0)
+			default:
+				fmt.Fprintln(hc.Stderr, "command is not found.")
+				return interp.NewExitStatus(127)
+			}
+		}
+	}
+
+	return interp.DefaultExecHandler(2*time.Second)(ctx, args)
 }
