@@ -5,14 +5,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
+	configTesting "github.com/loft-sh/devspace/pkg/util/kubeconfig/testing"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
+	"gotest.tools/assert"
 
 	v1beta1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 const testNamespace = "test"
@@ -106,4 +110,28 @@ func TestGetPodStatus(t *testing.T) {
 	if status != "Running" {
 		t.Fatalf("Unexpected status: %s", status)
 	}
+}
+
+func TestUserAgent(t *testing.T) {
+	clusters := make(map[string]*api.Cluster)
+	clusters["fake-cluster"] = &api.Cluster{
+		Server: "fake-server",
+	}
+
+	contexts := make(map[string]*api.Context)
+	contexts["fake-context"] = &api.Context{
+		Cluster: "fake-cluster",
+	}
+
+	loader := &configTesting.Loader{
+		RawConfig: &api.Config{
+			Clusters: clusters,
+			Contexts: contexts,
+		},
+	}
+	client, err := NewClientFromContext("fake-context", "", false, loader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, client.RestConfig().UserAgent, "DevSpace Version "+upgrade.GetVersion())
 }
