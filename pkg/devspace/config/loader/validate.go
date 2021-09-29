@@ -8,6 +8,7 @@ import (
 	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm/merge"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
@@ -291,6 +292,9 @@ func validateImages(config *latest.Config) error {
 		}
 		if imageConf.Image == "" {
 			return errors.Errorf("images.%s.image is required", imageConfigName)
+		}
+		if _, tag, _ := imageselector.GetStrippedDockerImageName(imageConf.Image); tag != "" {
+			return errors.Errorf("images.%s.image '%s' can not have tag '%s'", imageConfigName, imageConf.Image, tag)
 		}
 		if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == "" && len(imageConf.Build.Custom.Commands) == 0 {
 			return errors.Errorf("images.%s.build.custom.command or images.%s.build.custom.commands is required", imageConfigName, imageConfigName)

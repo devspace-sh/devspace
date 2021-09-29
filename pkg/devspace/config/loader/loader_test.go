@@ -1158,7 +1158,7 @@ profiles:
     path: /images
     value:
       image1:
-        image: node:14
+        image: node
 `,
 				options:         &ConfigOptions{Profiles: []string{"production"}},
 				generatedConfig: &generated.Config{Vars: map[string]string{}},
@@ -1167,7 +1167,7 @@ profiles:
 				Version: latest.Version,
 				Images: map[string]*latest.ImageConfig{
 					"image1": {
-						Image: "node:14",
+						Image: "node",
 					},
 				},
 				Dev: latest.DevConfig{
