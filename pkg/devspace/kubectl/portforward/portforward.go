@@ -19,18 +19,18 @@ package portforward
 import (
 	"errors"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"io"
 	"io/ioutil"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/httpstream"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"net"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
-
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/httpstream"
-	"k8s.io/apimachinery/pkg/util/runtime"
 )
 
 // PortForwardProtocolV1Name is the subprotocol used for port forwarding.
@@ -54,6 +54,8 @@ type PortForwarder struct {
 	requestID     int
 	out           io.Writer
 	errOut        io.Writer
+
+	log log.Logger
 }
 
 // ForwardedPort contains a Local:Remote port pairing.
@@ -183,6 +185,7 @@ func NewOnAddresses(dialer httpstream.Dialer, addresses []string, ports []string
 		out:       out,
 		errChan:   errChan,
 		errOut:    errOut,
+		log:       log.GetFileLogger("portforwarding"),
 	}, nil
 }
 
@@ -190,6 +193,8 @@ func (pf *PortForwarder) raiseError(err error) {
 	if pf.errChan != nil {
 		pf.errChan <- err
 	}
+
+	_ = pf.streamConn.Close()
 }
 
 // ForwardPorts formats and executes a port forwarding request. The connection will remain
@@ -330,7 +335,7 @@ func (pf *PortForwarder) nextRequestID() int {
 
 // handleConnection copies data between the local connection and the stream to
 // the remote server.
-func (pf *PortForwarder) handleConnection(conn net.Conn, port ForwardedPort) {
+func (pf *PortForwarder) handleConnection(conn io.ReadWriteCloser, port ForwardedPort) {
 	defer conn.Close()
 
 	if pf.out != nil {
@@ -380,7 +385,8 @@ func (pf *PortForwarder) handleConnection(conn net.Conn, port ForwardedPort) {
 	go func() {
 		// Copy from the remote side to the local port.
 		if _, err := io.Copy(conn, dataStream); err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-			pf.raiseError(fmt.Errorf("error copying from remote stream to local connection: %v", err))
+			pf.log.Errorf("error copying from remote stream to local connection: %v", err)
+			//pf.raiseError(fmt.Errorf("error copying from remote stream to local connection: %v", err))
 			// runtime.HandleError(fmt.Errorf("error copying from remote stream to local connection: %v", err))
 		}
 
@@ -394,7 +400,8 @@ func (pf *PortForwarder) handleConnection(conn net.Conn, port ForwardedPort) {
 
 		// Copy from the local port to the remote side.
 		if _, err := io.Copy(dataStream, conn); err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-			pf.raiseError(fmt.Errorf("error copying from local connection to remote stream: %v", err))
+			pf.log.Errorf("error copying from local connection to remote stream: %v", err)
+			//pf.raiseError(fmt.Errorf("error copying from local connection to remote stream: %v", err))
 			// runtime.HandleError(fmt.Errorf("error copying from local connection to remote stream: %v", err))
 			// break out of the select below without waiting for the other copy to finish
 			close(localError)
@@ -410,8 +417,12 @@ func (pf *PortForwarder) handleConnection(conn net.Conn, port ForwardedPort) {
 	// always expect something on errorChan (it may be nil)
 	err = <-errorChan
 	if err != nil {
-		pf.raiseError(err)
-		// runtime.HandleError(err)
+		// Fail for errors like container not running or No such container
+		if strings.Contains(err.Error(), "container") {
+			pf.raiseError(err)
+		} else {
+			pf.log.Error(err)
+		}
 	}
 }
 

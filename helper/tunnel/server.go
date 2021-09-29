@@ -52,9 +52,11 @@ func newServer() *tunnelServer {
 	return &tunnelServer{}
 }
 
-func SendData(stream remote.Tunnel_InitTunnelServer, sessions <-chan *Session, closeChan chan<- bool) {
+func SendData(stream remote.Tunnel_InitTunnelServer, sessions <-chan *Session, closeChan chan struct{}) {
 	for {
 		select {
+		case <-closeChan:
+			return
 		case <-stream.Context().Done():
 			return
 		case session := <-sessions:
@@ -76,8 +78,8 @@ func SendData(stream remote.Tunnel_InitTunnelServer, sessions <-chan *Session, c
 			logDebugf("sending %d bytes to client", len(bytes))
 			err := stream.Send(resp)
 			if err != nil {
-				logErrorf("failed sending message to tunnel stream")
-				closeChan <- true
+				logErrorf("failed sending message to tunnel stream: %v", err)
+				close(closeChan)
 				return
 			}
 			logDebugf("sent %d bytes to client", len(bytes))
@@ -85,16 +87,18 @@ func SendData(stream remote.Tunnel_InitTunnelServer, sessions <-chan *Session, c
 	}
 }
 
-func ReceiveData(stream remote.Tunnel_InitTunnelServer, closeChan chan<- bool) {
+func ReceiveData(stream remote.Tunnel_InitTunnelServer, closeChan chan struct{}) {
 	for {
 		select {
+		case <-closeChan:
+			return
 		case <-stream.Context().Done():
 			return
 		default:
 			message, err := stream.Recv()
 			if err != nil {
 				logErrorf("failed receiving message from stream, exiting: %v", err)
-				closeChan <- true
+				close(closeChan)
 				continue
 			}
 
@@ -205,10 +209,11 @@ func (t *tunnelServer) InitTunnel(stream remote.Tunnel_InitTunnelServer) error {
 	}
 
 	sessions := make(chan *Session)
-	closeChan := make(chan bool, 1)
-	go func(close <-chan bool) {
+	closeChan := make(chan struct{})
+	go func(close chan struct{}) {
 		<-close
 		_ = ln.Close()
+		os.Exit(1)
 	}(closeChan)
 
 	go ReceiveData(stream, closeChan)
