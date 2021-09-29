@@ -1,0 +1,10 @@
+version: v1beta11
+dev:
+  terminal:
+    imageSelector: username/app
+dependencies:
+  - name: dep
+    source:
+      path: dep.yaml
+    dev:
+      replacePods: true
