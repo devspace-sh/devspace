@@ -1,0 +1,40 @@
+version: v1beta11
+
+dependencies:
+- name: backend
+  source:
+    path: ../backend
+  dev:
+    sync: true
+    ports: true
+
+images:
+  proxy:
+    image: proxy
+
+deployments:
+- name: proxy
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: proxy
+      restartPolicy: Always
+      service:
+        ports:
+        - port: 80
+
+dev:
+  ports:
+  - imageSelector: proxy
+    forward:
+    - port: 8080
+      remotePort: 80
+  sync:
+  - imageSelector: proxy
+    localSubPath: ./
+    containerPath: /etc/nginx/conf.d/
+    excludeFile: .dockerignore
+  - imageSelector: proxy
+    localSubPath: '$!(echo "$HOME/configs")'
+    containerPath: /etc/configs/

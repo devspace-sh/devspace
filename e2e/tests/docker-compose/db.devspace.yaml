@@ -1,15 +1,5 @@
 version: v1beta11
 
-images:
-  proxy:
-    image: proxy
-    context: ./proxy
-    dockerfile: ./proxy/Dockerfile
-  backend:
-    image: backend
-    context: ./backend
-    dockerfile: ./backend/Dockerfile
-
 deployments:
 - name: db
   helm:
@@ -52,39 +42,6 @@ deployments:
       - name: db-password
         secret:
           secretName: db-password
-- name: backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: backend
-        env:
-        - name: FLASK_ENV
-          value: development
-        volumeMounts:
-        - containerPath: /run/secrets/db-password
-          volume:
-            name: db-password
-            subPath: db-password
-            readOnly: true
-      restartPolicy: Always
-      service:
-        ports:
-        - port: 5000
-      volumes:
-      - name: db-password
-        secret:
-          secretName: db-password
-- name: proxy
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: proxy
-      restartPolicy: Always
-      service:
-        ports:
-        - port: 80
 
 dev:
   ports:
@@ -92,25 +49,6 @@ dev:
     forward:
     - port: 3306
     - port: 33060
-  - imageSelector: backend
-    forward:
-    - port: 5000
-  - imageSelector: proxy
-    forward:
-    - port: 8080
-      remotePort: 80
-  sync:
-  - imageSelector: backend
-    localSubPath: ./backend
-    containerPath: /code/
-    excludeFile: .dockerignore
-  - imageSelector: proxy
-    localSubPath: ./proxy
-    containerPath: /etc/nginx/conf.d/
-    excludeFile: .dockerignore
-  - imageSelector: proxy
-    localSubPath: '$!(echo "$HOME/configs")'
-    containerPath: /etc/configs/
 
 hooks:
 - events:
@@ -126,9 +64,3 @@ hooks:
   container:
     imageSelector: mysql/mysql-server
   events: ["after:deploy:db"]
-- wait:
-    running: true
-    terminatedWithCode: 0
-  container:
-    imageSelector: backend
-  events: ["after:deploy:backend"]
