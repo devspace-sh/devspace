@@ -11,6 +11,7 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/util"
+	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
@@ -124,7 +125,7 @@ func NewClientFromContext(context, namespace string, switchContext bool, kubeLoa
 	if err != nil {
 		return nil, err
 	}
-
+	restConfig.UserAgent = "DevSpace Version " + upgrade.GetVersion()
 	kubeClient, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "new client")
