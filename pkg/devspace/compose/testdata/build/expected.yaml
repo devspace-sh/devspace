@@ -1,0 +1,14 @@
+version: v1beta11
+images:
+  foo:
+    image: foo
+    context: foo
+    dockerfile: foo/Dockerfile
+
+deployments:
+- name: foo
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: foo

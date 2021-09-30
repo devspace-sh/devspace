@@ -1,0 +1,16 @@
+version: v1beta11
+deployments:
+- name: db
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - env:
+        - name: MYSQL_DATABASE
+          value: example
+        - name: MYSQL_ROOT_HOST
+          value: '%'
+        - name: MYSQL_ROOT_PASSWORD
+          value: /run/secrets/db-password
+        image: mysql/mysql-server:8.0.19
+        

@@ -1,0 +1,4 @@
+services:
+  foo:
+    build:
+      context: foo

@@ -1,0 +1,23 @@
+services:
+  cmd:
+    image: mysql/mysql-server:8.0.19
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 3s
+      retries: 5
+      start_period: 3s
+  cmd-shell:
+    image: mysql/mysql-server:8.0.19
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent"]
+      interval: 3s
+      retries: 5
+      start_period: 3s
+  none:
+    image: mysql/mysql-server:8.0.19
+    healthcheck:
+      test: ["NONE"]
+  # disable:
+  #   image: mysql/mysql-server:8.0.19
+  #   healthcheck:
+  #     disable: true

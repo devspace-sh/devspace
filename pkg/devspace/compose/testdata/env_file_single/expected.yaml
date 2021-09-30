@@ -1,0 +1,18 @@
+version: v1beta11
+deployments:
+- name: db
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: mysql/mysql-server:8.0.19
+        envFrom:
+        - configMapRef:
+            name: db-env-file
+hooks:
+- events:
+  - before:deploy:db
+  command: kubectl create configmap db-env-file --dry-run=client --from-file=.env -o yaml | kubectl apply -f -
+- events:
+  - after:purge:db
+  command: kubectl delete configmap db-env-file --ignore-not-found

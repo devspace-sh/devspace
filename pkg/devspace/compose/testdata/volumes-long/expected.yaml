@@ -1,0 +1,51 @@
+version: v1beta11
+deployments:
+- name: db
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: mysql/mysql-server:8.0.19
+        volumeMounts:
+        - containerPath: /var/lib/mydata
+          volume:
+            name: db-0
+            readOnly: false
+        - containerPath: /var/lib/mysql
+          volume:
+            name: datavolume
+            readOnly: false
+        - containerPath: /var/lib/readonly
+          volume:
+            name: datavolume
+            readOnly: true
+        - containerPath: /var/lib/tmpfs
+          volume:
+            name: db-1
+            readOnly: false
+        - containerPath: /var/lib/tmpfs-1000
+          volume:
+            name: db-2
+            readOnly: false
+      volumes:
+      - name: datavolume
+        size: 5Gi
+      - name: db-0
+        size: 5Gi
+      - name: db-1
+        emptyDir: {}
+      - name: db-2
+        emptyDir:
+          sizeLimit: "1000"
+
+dev:
+  sync:
+  - imageSelector: mysql/mysql-server:8.0.19
+    localSubPath: /opt/data
+    containerPath: /var/lib/mysql
+  - imageSelector: mysql/mysql-server:8.0.19
+    localSubPath: ./cache
+    containerPath: /tmp/cache
+  - imageSelector: mysql/mysql-server:8.0.19
+    localSubPath: $!(echo "$HOME/configs")
+    containerPath: /etc/configs/

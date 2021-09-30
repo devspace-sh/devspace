@@ -1,0 +1,7 @@
+services:
+  db:
+    image: mysql/mysql-server:8.0.19
+    environment:
+    - MYSQL_DATABASE=example
+    - MYSQL_ROOT_HOST=%
+    - MYSQL_ROOT_PASSWORD=/run/secrets/db-password

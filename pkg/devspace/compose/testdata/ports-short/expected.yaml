@@ -1,0 +1,68 @@
+version: v1beta11
+deployments:
+- name: db
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: mysql/mysql-server:8.0.19
+      service:
+        ports:
+        - containerPort: 80
+          port: 8080
+          protocol: TCP
+        - containerPort: 81
+          port: 8081
+          protocol: TCP
+        - containerPort: 82
+          port: 8082
+          protocol: UDP
+        - containerPort: 83
+          port: 8083
+          protocol: TCP
+        - containerPort: 84
+          port: 8084
+          protocol: TCP
+        - containerPort: 85
+          port: 8085
+          protocol: UDP
+        - containerPort: 6003
+          port: 5003
+          protocol: TCP
+        - containerPort: 6004
+          port: 5004
+          protocol: TCP
+        - containerPort: 1240
+          port: 5005
+          protocol: TCP
+        - containerPort: 1240
+          port: 5006
+          protocol: TCP
+
+dev:
+  ports:
+  - imageSelector: mysql/mysql-server:8.0.19
+    forward:
+    - port: 8080
+      remotePort: 80
+    - port: 8081
+      remotePort: 81
+    - port: 8082
+      remotePort: 82
+    - port: 8083
+      remotePort: 83
+      bindAddress: 127.0.0.1
+    - port: 8084
+      remotePort: 84
+      bindAddress: 127.0.0.1
+    - port: 8085
+      remotePort: 85
+      bindAddress: 127.0.0.1
+    - port: 5003
+      remotePort: 6003
+    - port: 5004
+      remotePort: 6004
+    - port: 5005
+      remotePort: 1240
+    - port: 5006
+      remotePort: 1240

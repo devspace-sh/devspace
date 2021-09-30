@@ -1,0 +1,23 @@
+version: v1beta11
+deployments:
+- name: db
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: mysql/mysql-server:8.0.19
+      service:
+        ports:
+        - containerPort: 80
+          port: 8080
+          protocol: TCP
+        - containerPort: 9090
+          port: 9090
+          protocol: UDP
+dev:
+  ports:
+  - imageSelector: mysql/mysql-server:8.0.19
+    forward:
+    - port: 8080
+      remotePort: 80
+    - port: 9090
