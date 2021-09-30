@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"strconv"
 	"strings"
 	"time"
@@ -121,7 +122,7 @@ func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client ku
 	// deployments
 	deployments, err := client.KubeClient().AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, errors.Wrap(err, "list deployments")
+		return nil, errors.Wrap(err, "list Deployments")
 	}
 	for _, d := range deployments.Items {
 		matched, err := matchesSelector(d.Annotations, &d.Spec.Template, config, dependencies, replacePod)
@@ -129,33 +130,31 @@ func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client ku
 			return nil, err
 		} else if matched {
 			d.Kind = "Deployment"
-			fmt.Println("MATCHED DEPLOYMENT")
 			return &d, nil
 		}
 	}
 
-	// replicasets
-	replicasets, err := client.KubeClient().AppsV1().ReplicaSets(namespace).List(ctx, metav1.ListOptions{})
+	// replicaSets
+	replicaSets, err := client.KubeClient().AppsV1().ReplicaSets(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, errors.Wrap(err, "list replicasets")
+		return nil, errors.Wrap(err, "list ReplicaSets")
 	}
-	for _, d := range replicasets.Items {
+	for _, d := range replicaSets.Items {
 		matched, err := matchesSelector(d.Annotations, &d.Spec.Template, config, dependencies, replacePod)
 		if err != nil {
 			return nil, err
 		} else if matched {
 			d.Kind = "ReplicaSet"
-			fmt.Println("MATCHED REPLICASET")
 			return &d, nil
 		}
 	}
 
-	// statefulsets
-	statefulsets, err := client.KubeClient().AppsV1().StatefulSets(namespace).List(ctx, metav1.ListOptions{})
+	// statefulSets
+	statefulSets, err := client.KubeClient().AppsV1().StatefulSets(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, errors.Wrap(err, "list statefulsets")
+		return nil, errors.Wrap(err, "list StatefulSets")
 	}
-	for _, d := range statefulsets.Items {
+	for _, d := range statefulSets.Items {
 		matched, err := matchesSelector(d.Annotations, &d.Spec.Template, config, dependencies, replacePod)
 		if err != nil {
 			return nil, err
@@ -490,6 +489,48 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 		return errors.Wrap(err, "apply pod patches")
 	}
 
+	// replace paths
+	if len(replacePod.PersistPaths) > 0 {
+		copiedPod.Spec.Volumes = append(copiedPod.Spec.Volumes, corev1.Volume{
+			Name: "devspace-persistence",
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: pod.Pod.Name,
+				},
+			},
+		})
+
+		for i, path := range replacePod.PersistPaths {
+			if path.Path == "" {
+				continue
+			}
+
+			subPath := path.VolumePath
+			if subPath == "" {
+				subPath = fmt.Sprintf("path-%d", i)
+			}
+
+			for i, con := range copiedPod.Spec.InitContainers {
+				if path.Container == "" || path.Container == con.Name {
+					copiedPod.Spec.InitContainers[i].VolumeMounts = append(copiedPod.Spec.InitContainers[i].VolumeMounts, corev1.VolumeMount{
+						Name:      "devspace-persistence",
+						MountPath: path.Path,
+						SubPath:   subPath,
+					})
+				}
+			}
+			for i, con := range copiedPod.Spec.Containers {
+				if path.Container == "" || path.Container == con.Name {
+					copiedPod.Spec.Containers[i].VolumeMounts = append(copiedPod.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
+						Name:      "devspace-persistence",
+						MountPath: path.Path,
+						SubPath:   subPath,
+					})
+				}
+			}
+		}
+	}
+
 	// reset the metadata
 	copiedPod.ObjectMeta = metav1.ObjectMeta{
 		Name:        copiedPod.Name,
@@ -566,7 +607,7 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 	}
 
 	// create a replica set
-	_, err = client.KubeClient().AppsV1().ReplicaSets(copiedPod.Namespace).Create(ctx, &appsv1.ReplicaSet{
+	replicaSet, err := client.KubeClient().AppsV1().ReplicaSets(copiedPod.Namespace).Create(ctx, &appsv1.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      copiedPod.Name,
 			Namespace: copiedPod.Namespace,
@@ -593,6 +634,81 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 	}, metav1.CreateOptions{})
 	if err != nil {
 		return errors.Wrap(err, "create copied pod")
+	}
+
+	// create a pvc if needed
+	if len(replacePod.PersistPaths) > 0 {
+		err = createPVC(ctx, client, copiedPod, replicaSet, replacePod)
+		if err != nil {
+			if kerrors.IsAlreadyExists(err) {
+				// delete the old one and wait
+				_ = client.KubeClient().CoreV1().PersistentVolumeClaims(copiedPod.Namespace).Delete(ctx, copiedPod.Name, metav1.DeleteOptions{})
+				log.Infof("Waiting for old persistent volume claim to terminate")
+				err = wait.Poll(time.Second, time.Minute*2, func() (done bool, err error) {
+					_, err = client.KubeClient().CoreV1().PersistentVolumeClaims(copiedPod.Namespace).Get(ctx, copiedPod.Name, metav1.GetOptions{})
+					return kerrors.IsNotFound(err), nil
+				})
+				if err != nil {
+					return errors.Wrap(err, "waiting for pvc to terminate")
+				}
+
+				// create the new one
+				err = createPVC(ctx, client, copiedPod, replicaSet, replacePod)
+				if err != nil {
+					return errors.Wrap(err, "create persistent volume claim")
+				}
+			} else {
+				return errors.Wrap(err, "create persistent volume claim")
+			}
+		}
+	}
+
+	return nil
+}
+
+func createPVC(ctx context.Context, client kubectl.Client, copiedPod *corev1.Pod, replicaSet *appsv1.ReplicaSet, replacePod *latest.ReplacePod) error {
+	var err error
+	size := resource.MustParse("10Gi")
+	if replacePod.PersistOptions != nil && replacePod.PersistOptions.Size != "" {
+		size, err = resource.ParseQuantity(replacePod.PersistOptions.Size)
+		if err != nil {
+			return fmt.Errorf("error parsing persistent volume size %s: %v", replacePod.PersistOptions.Size, err)
+		}
+	}
+
+	var storageClassName *string
+	if replacePod.PersistOptions != nil && replacePod.PersistOptions.StorageClassName != "" {
+		storageClassName = &replacePod.PersistOptions.StorageClassName
+	}
+
+	_, err = client.KubeClient().CoreV1().PersistentVolumeClaims(copiedPod.Namespace).Create(ctx, &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      copiedPod.Name,
+			Namespace: copiedPod.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "ReplicaSet",
+					Name:       replicaSet.Name,
+					UID:        replicaSet.UID,
+					Controller: ptr.Bool(true),
+				},
+			},
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteOnce,
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: map[corev1.ResourceName]resource.Quantity{
+					corev1.ResourceStorage: size,
+				},
+			},
+			StorageClassName: storageClassName,
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		return err
 	}
 
 	return nil

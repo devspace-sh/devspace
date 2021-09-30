@@ -368,6 +368,11 @@ func validateDev(config *latest.Config) error {
 		if !isReplacePodsUnique(index, rp, config.Dev.ReplacePods) {
 			return errors.Errorf("Error in config: image selector or label selector is not unique in replace pods at index %d", index)
 		}
+		for j, p := range rp.PersistPaths {
+			if p.Path == "" {
+				return errors.Errorf("Error in config: dev.replacePods[%d].persistPaths[%d].path is required", index, j)
+			}
+		}
 	}
 
 	if config.Dev.Ports != nil {
@@ -399,6 +404,13 @@ func validateDev(config *latest.Config) error {
 			}
 			if !ValidContainerArch(sync.Arch) {
 				return errors.Errorf("Error in config: sync.arch is not valid '%s' at index %d", sync.Arch, index)
+			}
+			if sync.OnUpload != nil {
+				for j, e := range sync.OnUpload.Exec {
+					if e.Command == "" {
+						return errors.Errorf("Error in config: dev.sync[%d].exec[%d].command is required", index, j)
+					}
+				}
 			}
 		}
 	}

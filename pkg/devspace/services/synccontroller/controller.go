@@ -327,6 +327,11 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 		options.Log = logpkg.GetFileLogger("sync")
 	}
 
+	// add exec hooks
+	if syncConfig.OnUpload != nil {
+		options.Exec = syncConfig.OnUpload.Exec
+	}
+
 	// Add onDownload hooks
 	if syncConfig.OnDownload != nil && syncConfig.OnDownload.ExecLocal != nil {
 		fileCmd, fileArgs, dirCmd, dirArgs := getSyncCommands(syncConfig.OnDownload.ExecLocal)

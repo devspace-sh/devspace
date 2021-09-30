@@ -702,8 +702,21 @@ type ReplacePod struct {
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 
-	ReplaceImage string         `yaml:"replaceImage,omitempty" json:"replaceImage,omitempty"`
-	Patches      []*PatchConfig `yaml:"patches,omitempty" json:"patches,omitempty"`
+	ReplaceImage   string           `yaml:"replaceImage,omitempty" json:"replaceImage,omitempty"`
+	PersistPaths   []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
+	PersistOptions *PersistOptions  `yaml:"persistOptions,omitempty" json:"persistOptions,omitempty"`
+	Patches        []*PatchConfig   `yaml:"patches,omitempty" json:"patches,omitempty"`
+}
+
+type PersistOptions struct {
+	Size             string `yaml:"size,omitempty" json:"size,omitempty"`
+	StorageClassName string `yaml:"storageClassName,omitempty" json:"storageClassName,omitempty"`
+}
+
+type PersistentPath struct {
+	Path       string `yaml:"path,omitempty" json:"path,omitempty"`
+	Container  string `yaml:"container,omitempty" json:"container,omitempty"`
+	VolumePath string `yaml:"volumePath,omitempty" json:"volumePath,omitempty"`
 }
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
@@ -783,9 +796,19 @@ type SyncOnUpload struct {
 	// script is present in the container root folder.
 	RestartContainer bool `yaml:"restartContainer,omitempty" json:"restartContainer,omitempty"`
 
+	// Exec will execute the given commands in order after a sync operation
+	Exec []SyncExec `yaml:"exec,omitempty" json:"exec,omitempty"`
+
 	// Defines what commands should be executed on the container side if a change is uploaded and applied in the target
 	// container
 	ExecRemote *SyncExecCommand `yaml:"execRemote,omitempty" json:"execRemote,omitempty"`
+}
+
+type SyncExec struct {
+	Command     string   `yaml:"command,omitempty" json:"command,omitempty"`
+	Args        []string `yaml:"args,omitempty" json:"args,omitempty"`
+	FailOnError bool     `yaml:"failOnError,omitempty" json:"failOnError,omitempty"`
+	OnChange    []string `yaml:"onChange,omitempty" json:"onChange,omitempty"`
 }
 
 // SyncOnDownload defines the struct for the command that should be executed when files / folders are downloaded
