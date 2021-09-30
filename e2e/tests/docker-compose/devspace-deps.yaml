@@ -1,9 +1,0 @@
-version: v1beta11
-
-dependencies:
-- name: proxy
-  source:
-    path: proxy
-  dev:
-    sync: true
-    ports: true
