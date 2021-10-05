@@ -71,6 +71,20 @@ func DevSpaceExecHandler(ctx context.Context, args []string) error {
 					return interp.NewExitStatus(1)
 				}
 				return interp.NewExitStatus(0)
+			case "kubectl":
+				path, err := installKubectlCommand()
+				if err != nil {
+					fmt.Fprintln(hc.Stderr, err)
+					return interp.NewExitStatus(127)
+				}
+				args[0] = path
+			case "helm":
+				path, err := installHelmCommand()
+				if err != nil {
+					fmt.Fprintln(hc.Stderr, err)
+					return interp.NewExitStatus(127)
+				}
+				args[0] = path
 			default:
 				fmt.Fprintln(hc.Stderr, "command is not found.")
 				return interp.NewExitStatus(127)

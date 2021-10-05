@@ -22,7 +22,7 @@ var (
 	helmDownload = "https://get.helm.sh/helm-" + helmVersion + "-" + runtime.GOOS + "-" + runtime.GOARCH
 )
 
-type client struct {
+type Client struct {
 	exec        command.Exec
 	kubeClient  kubectl.Client
 	genericHelm generic.Client
@@ -30,9 +30,9 @@ type client struct {
 	log log.Logger
 }
 
-// NewClient creates a new helm v3 client
+// NewClient creates a new helm v3 Client
 func NewClient(kubeClient kubectl.Client, log log.Logger) (types.Client, error) {
-	c := &client{
+	c := &Client{
 		exec:       command.NewStreamCommand,
 		kubeClient: kubeClient,
 		log:        log,
@@ -42,23 +42,23 @@ func NewClient(kubeClient kubectl.Client, log log.Logger) (types.Client, error) 
 	return c, nil
 }
 
-func (c *client) IsInCluster() bool {
+func (c *Client) IsInCluster() bool {
 	return c.kubeClient.IsInCluster()
 }
 
-func (c *client) KubeContext() string {
+func (c *Client) KubeContext() string {
 	return c.kubeClient.CurrentContext()
 }
 
-func (c *client) Command() string {
+func (c *Client) Command() string {
 	return "helm"
 }
 
-func (c *client) DownloadURL() string {
+func (c *Client) DownloadURL() string {
 	return helmDownload
 }
 
-func (c *client) IsValidHelm(path string) (bool, error) {
+func (c *Client) IsValidHelm(path string) (bool, error) {
 	out, err := c.exec(path, []string{"version"}).Output()
 	if err != nil {
 		return false, nil
@@ -68,7 +68,7 @@ func (c *client) IsValidHelm(path string) (bool, error) {
 }
 
 // InstallChart installs the given chart via helm v3
-func (c *client) InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
+func (c *Client) InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
 	valuesFile, err := c.genericHelm.WriteValues(values)
 	if err != nil {
 		return nil, err
@@ -151,7 +151,7 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	return nil, nil
 }
 
-func (c *client) Template(releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error) {
+func (c *Client) Template(releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error) {
 	cleanup, chartDir, err := c.genericHelm.FetchChart(helmConfig)
 	if err != nil {
 		return "", err
@@ -187,7 +187,7 @@ func (c *client) Template(releaseName, releaseNamespace string, values map[inter
 	return string(result), nil
 }
 
-func (c *client) DeleteRelease(releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error {
+func (c *Client) DeleteRelease(releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error {
 	if releaseNamespace == "" {
 		releaseNamespace = c.kubeClient.Namespace()
 	}
@@ -207,7 +207,7 @@ func (c *client) DeleteRelease(releaseName string, releaseNamespace string, helm
 	return nil
 }
 
-func (c *client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, error) {
+func (c *Client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, error) {
 	args := []string{
 		"list",
 		"--namespace",

@@ -28,7 +28,7 @@ import (
 
 var (
 	kubectlVersion  = "v1.21.2"
-	kubectlDownload = "https://storage.googleapis.com/kubernetes-release/release/" + kubectlVersion + "/bin/" + runtime.GOOS + "/" + runtime.GOARCH + "/kubectl"
+	KubectlDownload = "https://storage.googleapis.com/kubernetes-release/release/" + kubectlVersion + "/bin/" + runtime.GOOS + "/" + runtime.GOARCH + "/kubectl"
 )
 
 // DeployConfig holds the necessary information for kubectl deployment
@@ -77,13 +77,13 @@ func New(config config2.Config, dependencies []types.Dependency, kubeClient kube
 		}
 
 		installPath := filepath.Join(home, constants.DefaultHomeDevSpaceFolder, "bin", "kubectl")
-		url := kubectlDownload
+		url := KubectlDownload
 		if runtime.GOOS == "windows" {
 			url += ".exe"
 			installPath += ".exe"
 		}
 
-		cmdPath, err = downloader.NewDownloader(installKubectl, isValidKubectl, log).EnsureCLI("kubectl", installPath, url)
+		cmdPath, err = downloader.NewDownloader(InstallKubectl, isValidKubectl, log).EnsureCLI("kubectl", installPath, url)
 		if err != nil {
 			return nil, err
 		}
@@ -147,7 +147,7 @@ func isValidKubectl(command string, executer *executer) (bool, error) {
 	return strings.Contains(string(out), `Client Version`), nil
 }
 
-func installKubectl(downloadedFile, installPath, installFromURL string) error {
+func InstallKubectl(downloadedFile, installPath, installFromURL string) error {
 	return copy.Copy(downloadedFile, installPath)
 }
 

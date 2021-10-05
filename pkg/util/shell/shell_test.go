@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -105,4 +106,40 @@ func TestShellCatEnforce(t *testing.T) {
 		}
 		assert.Equal(t, stdout.String(), testCase.expectedOutput)
 	}
+}
+
+func TestKubectlDownload(t *testing.T) {
+	lookPathDir = func(cwd string, env expand.Environ, file string) (string, error) {
+		return "", errors.New("not found")
+	}
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	err := ExecuteShellCommand("kubectl", nil, ".", stdout, stderr, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout1 := &bytes.Buffer{}
+	err = ExecuteShellCommand("kubectl version", nil, ".", stdout1, stderr, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Assert(t, strings.Contains(stdout1.String(), `Client Version`))
+}
+
+func TestHelmDownload(t *testing.T) {
+	lookPathDir = func(cwd string, env expand.Environ, file string) (string, error) {
+		return "", errors.New("not found")
+	}
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	err := ExecuteShellCommand("helm", nil, ".", stdout, stderr, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout1 := &bytes.Buffer{}
+	err = ExecuteShellCommand("helm version", nil, ".", stdout1, stderr, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Assert(t, strings.Contains(stdout1.String(), `Version:"v3`))
 }

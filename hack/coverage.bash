@@ -13,7 +13,7 @@ PKGS=$(go list ./... | grep -v /vendor/ | grep -v /examples/ | grep -v /e2e)
 
 fail=false
 for pkg in $PKGS; do
- go test -race -coverprofile=profile.out -covermode=atomic $pkg
+ go test -timeout 30m -race -coverprofile=profile.out -covermode=atomic $pkg
  if [ $? -ne 0 ]; then
    fail=true
  fi
