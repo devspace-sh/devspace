@@ -2,17 +2,12 @@ package services
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/services/synccontroller"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/services/synccontroller"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
-
-	"github.com/pkg/errors"
 )
 
 // StartSyncFromCmd starts a new sync from command
@@ -25,7 +20,6 @@ func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Optio
 		TargetOptions: targetOptions,
 
 		RestartOnError: true,
-		RestartLog:     serviceClient.log,
 
 		Done:    syncDone,
 		SyncLog: serviceClient.log,
@@ -33,7 +27,7 @@ func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Optio
 		Verbose: verbose,
 	}
 
-	err := synccontroller.NewController(serviceClient.config, serviceClient.dependencies, serviceClient.client, serviceClient.log).Start(options, serviceClient.log)
+	err := synccontroller.NewController(serviceClient.config, serviceClient.dependencies, serviceClient.client).Start(options, serviceClient.log)
 	if err != nil {
 		return err
 	}
@@ -60,25 +54,36 @@ func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Optio
 	return nil
 }
 
-func DefaultPrefixFn(idx int, syncConfig *latest.SyncConfig) string {
-	prefix := fmt.Sprintf("[%d:sync] ", idx)
-	if syncConfig.Name != "" {
-		prefix = fmt.Sprintf("[%s] ", syncConfig.Name)
+type PrefixFn func(idx int, name, operation string) string
+
+func DependencyPrefixFn(dependency string) PrefixFn {
+	return func(idx int, name, operation string) string {
+		prefix := fmt.Sprintf("[%s:%d:%s] ", dependency, idx, operation)
+		if name != "" {
+			prefix = fmt.Sprintf("[%s:%s] ", dependency, name)
+		}
+
+		return prefix
+	}
+}
+
+func DefaultPrefixFn(idx int, name, operation string) string {
+	prefix := fmt.Sprintf("[%d:%s] ", idx, operation)
+	if name != "" {
+		prefix = fmt.Sprintf("[%s] ", name)
 	}
 
 	return prefix
 }
 
 // StartSync starts the syncing functionality
-func (serviceClient *client) StartSync(interrupt chan error, printSyncLog, verboseSync bool, prefixFn func(idx int, syncConfig *latest.SyncConfig) string) error {
+func (serviceClient *client) StartSync(interrupt chan error, printSyncLog, verboseSync bool, prefixFn PrefixFn) error {
 	if serviceClient.config == nil || serviceClient.config.Config() == nil {
 		return fmt.Errorf("DevSpace config is nil")
 	}
 
 	// Start sync client
-	waitGroup := sync.WaitGroup{}
-	errs := []error{}
-	errsMutex := sync.Mutex{}
+	runner := NewRunner(5)
 	for idx, syncConfig := range serviceClient.config.Config().Dev.Sync {
 		targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(syncConfig.LabelSelector, syncConfig.Namespace, syncConfig.ContainerName, "")
 		targetOptions.AllowPick = false
@@ -92,41 +97,27 @@ func (serviceClient *client) StartSync(interrupt chan error, printSyncLog, verbo
 			TargetOptions: targetOptions,
 
 			RestartOnError: true,
-			RestartLog:     logpkg.Discard,
 			Verbose:        verboseSync,
 		}
 
 		// should we print the logs?
-		prefix := prefixFn(idx, syncConfig)
+		prefix := prefixFn(idx, syncConfig.Name, "sync")
 		fileLog := logpkg.NewPrefixLogger(prefix, "", logpkg.GetFileLogger("sync"))
-		log := logpkg.NewPrefixLogger(prefix, logpkg.Colors[idx%len(logpkg.Colors)], serviceClient.log)
+		log := logpkg.NewDefaultPrefixLogger(prefix, serviceClient.log)
 		if printSyncLog {
 			unionLog := logpkg.NewUnionLogger(log, fileLog)
 			options.SyncLog = unionLog
-			options.RestartLog = unionLog
 		} else {
 			options.SyncLog = fileLog
-			options.RestartLog = fileLog
 		}
 
-		waitGroup.Add(1)
-		go func(options *synccontroller.Options) {
-			defer waitGroup.Done()
-
-			err := synccontroller.NewController(serviceClient.config, serviceClient.dependencies, serviceClient.client, serviceClient.log).Start(options, log)
-			if err != nil {
-				errsMutex.Lock()
-				errs = append(errs, errors.Errorf("unable to start sync: %v", err))
-				errsMutex.Unlock()
-			}
-		}(options)
-
-		// every 5 we wait
-		if idx%5 == 4 {
-			waitGroup.Wait()
+		err := runner.Run(func() error {
+			return synccontroller.NewController(serviceClient.config, serviceClient.dependencies, serviceClient.client).Start(options, log)
+		})
+		if err != nil {
+			return err
 		}
 	}
 
-	waitGroup.Wait()
-	return utilerrors.NewAggregate(errs)
+	return runner.Wait()
 }

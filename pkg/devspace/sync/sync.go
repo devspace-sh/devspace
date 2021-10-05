@@ -27,6 +27,8 @@ type Options struct {
 
 	Exec []latest.SyncExec
 
+	ResolveCommand func(command string, args []string) (string, []string, error)
+
 	ExcludePaths         []string
 	DownloadExcludePaths []string
 	UploadExcludePaths   []string

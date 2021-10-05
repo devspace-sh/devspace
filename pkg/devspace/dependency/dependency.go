@@ -556,14 +556,7 @@ func (d *Dependency) StartSync(client kubectl.Client, interrupt chan error, prin
 	}
 	defer func() { _ = os.Chdir(currentWorkingDirectory) }()
 
-	err = services.NewClient(d.localConfig, d.children, client, logger).StartSync(interrupt, printSyncLog, verboseSync, func(idx int, syncConfig *latest.SyncConfig) string {
-		prefix := fmt.Sprintf("[%s:%d:sync] ", d.Name(), idx)
-		if syncConfig.Name != "" {
-			prefix = fmt.Sprintf("[%s:%s] ", d.Name(), syncConfig.Name)
-		}
-
-		return prefix
-	})
+	err = services.NewClient(d.localConfig, d.children, client, logger).StartSync(interrupt, printSyncLog, verboseSync, services.DependencyPrefixFn(d.Name()))
 	if err != nil {
 		return errors.Wrapf(err, "start sync in dependency %s", d.Name())
 	}
@@ -571,23 +564,15 @@ func (d *Dependency) StartSync(client kubectl.Client, interrupt chan error, prin
 }
 
 func (d *Dependency) StartPortForwarding(client kubectl.Client, interrupt chan error, logger log.Logger) error {
-	err := services.NewClient(d.localConfig, d.children, client, logger).StartPortForwarding(interrupt)
+	err := services.NewClient(d.localConfig, d.children, client, logger).StartPortForwarding(interrupt, services.DependencyPrefixFn(d.Name()))
 	if err != nil {
 		return errors.Wrapf(err, "start port-forwarding in dependency %s", d.Name())
 	}
 	return nil
 }
 
-func (d *Dependency) StartReversePortForwarding(client kubectl.Client, interrupt chan error, logger log.Logger) error {
-	err := services.NewClient(d.localConfig, d.children, client, logger).StartReversePortForwarding(interrupt)
-	if err != nil {
-		return errors.Wrapf(err, "start reverse port-forwarding in dependency %s", d.Name())
-	}
-	return nil
-}
-
 func (d *Dependency) ReplacePods(client kubectl.Client, logger log.Logger) error {
-	err := services.NewClient(d.localConfig, d.children, client, logger).ReplacePods()
+	err := services.NewClient(d.localConfig, d.children, client, logger).ReplacePods(services.DependencyPrefixFn(d.Name()))
 	if err != nil {
 		return errors.Wrapf(err, "replace pods in dependency %s", d.Name())
 	}

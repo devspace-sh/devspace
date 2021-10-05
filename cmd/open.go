@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"net/http"
 	"os"
 	"strconv"
@@ -322,7 +323,7 @@ func (cmd *OpenCmd) openLocal(f factory.Factory, client kubectl.Client, domain s
 			Ports: portforwardingConfig,
 		},
 	}, nil, nil, constants.DefaultConfigPath)), nil, client, cmd.log)
-	err = servicesClient.StartPortForwarding(nil)
+	err = servicesClient.StartPortForwarding(nil, services.DefaultPrefixFn)
 	if err != nil {
 		return errors.Wrap(err, "start port forwarding")
 	}

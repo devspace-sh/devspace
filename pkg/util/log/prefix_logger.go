@@ -2,7 +2,7 @@ package log
 
 import (
 	"fmt"
-	"math/rand"
+	"github.com/loft-sh/devspace/pkg/util/hash"
 	"os"
 	"sync"
 	"time"
@@ -23,8 +23,7 @@ var Colors = []string{
 func NewDefaultPrefixLogger(prefix string, base Logger) Logger {
 	return &prefixLogger{
 		Logger: base,
-
-		color:  Colors[rand.Intn(len(Colors))],
+		color:  Colors[(int(hash.StringToNumber(prefix))*-1)%len(Colors)],
 		prefix: prefix,
 	}
 }

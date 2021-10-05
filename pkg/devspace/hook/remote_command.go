@@ -31,7 +31,7 @@ type remoteCommandHook struct {
 }
 
 func (r *remoteCommandHook) ExecuteRemotely(hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, client kubectl.Client, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error {
-	hookCommand, hookArgs, err := resolveCommand(hook.Command, hook.Args, config, dependencies)
+	hookCommand, hookArgs, err := ResolveCommand(hook.Command, hook.Args, config, dependencies)
 	if err != nil {
 		return err
 	}

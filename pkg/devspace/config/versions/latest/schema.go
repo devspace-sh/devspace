@@ -697,26 +697,31 @@ type DevConfig struct {
 // ReplacePod will replace the selected target pod/container with a new image and optionally apply
 // pod patches.
 type ReplacePod struct {
+	Name          string            `yaml:"name,omitempty" json:"name,omitempty"`
 	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 
-	ReplaceImage   string           `yaml:"replaceImage,omitempty" json:"replaceImage,omitempty"`
-	PersistPaths   []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
-	PersistOptions *PersistOptions  `yaml:"persistOptions,omitempty" json:"persistOptions,omitempty"`
-	Patches        []*PatchConfig   `yaml:"patches,omitempty" json:"patches,omitempty"`
+	ReplaceImage       string              `yaml:"replaceImage,omitempty" json:"replaceImage,omitempty"`
+	PersistPaths       []PersistentPath    `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
+	PersistenceOptions *PersistenceOptions `yaml:"persistenceOptions,omitempty" json:"persistenceOptions,omitempty"`
+	Patches            []*PatchConfig      `yaml:"patches,omitempty" json:"patches,omitempty"`
 }
 
-type PersistOptions struct {
-	Size             string `yaml:"size,omitempty" json:"size,omitempty"`
-	StorageClassName string `yaml:"storageClassName,omitempty" json:"storageClassName,omitempty"`
+type PersistenceOptions struct {
+	Size             string   `yaml:"size,omitempty" json:"size,omitempty"`
+	StorageClassName string   `yaml:"storageClassName,omitempty" json:"storageClassName,omitempty"`
+	AccessModes      []string `yaml:"accessModes,omitempty" json:"accessModes,omitempty"`
+	ReadOnly         bool     `yaml:"readOnly,omitempty" json:"readOnly,omitempty"`
+	Name             string   `yaml:"name,omitempty" json:"name,omitempty"`
 }
 
 type PersistentPath struct {
-	Path       string `yaml:"path,omitempty" json:"path,omitempty"`
-	Container  string `yaml:"container,omitempty" json:"container,omitempty"`
-	VolumePath string `yaml:"volumePath,omitempty" json:"volumePath,omitempty"`
+	Path          string `yaml:"path,omitempty" json:"path,omitempty"`
+	ContainerName string `yaml:"containerName,omitempty" json:"containerName,omitempty"`
+	VolumePath    string `yaml:"volumePath,omitempty" json:"volumePath,omitempty"`
+	ReadOnly      bool   `yaml:"readOnly,omitempty" json:"readOnly,omitempty"`
 }
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
@@ -808,6 +813,7 @@ type SyncExec struct {
 	Command     string   `yaml:"command,omitempty" json:"command,omitempty"`
 	Args        []string `yaml:"args,omitempty" json:"args,omitempty"`
 	FailOnError bool     `yaml:"failOnError,omitempty" json:"failOnError,omitempty"`
+	Local       bool     `yaml:"local,omitempty" json:"local,omitempty"`
 	OnChange    []string `yaml:"onChange,omitempty" json:"onChange,omitempty"`
 }
 

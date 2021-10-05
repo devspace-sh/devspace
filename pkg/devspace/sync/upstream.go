@@ -2,11 +2,13 @@ package sync
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/shell"
 	"io"
 	"os"
 	"path"
@@ -291,13 +293,6 @@ func (u *upstream) execCommands(changedFiles []string) error {
 }
 
 func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) error {
-	cmd := exec.Command
-	args := exec.Args
-	if args == nil {
-		args = []string{"-c", cmd}
-		cmd = "sh"
-	}
-
 	if len(exec.OnChange) > 0 {
 		matched := false
 	Outer:
@@ -319,10 +314,52 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 		}
 	}
 
+	execCommand := exec.Command
+	execArgs := exec.Args
+	if u.sync.Options.ResolveCommand != nil {
+		var err error
+		execCommand, execArgs, err = u.sync.Options.ResolveCommand(execCommand, execArgs)
+		if err != nil {
+			return errors.Wrap(err, "resolve command")
+		}
+	}
+
+	if exec.Local {
+		u.sync.log.Infof("Upstream - Execute command '%s' locally", command.FormatCommandName(execCommand, execArgs))
+
+		// if args are nil we execute the command in a shell
+		var (
+			err error
+			out = &bytes.Buffer{}
+		)
+		if exec.Args == nil {
+			err = shell.ExecuteShellCommand(execCommand, nil, u.sync.LocalPath, out, out, nil)
+		} else {
+			err = command.ExecuteCommandWithEnv(execCommand, exec.Args, u.sync.LocalPath, out, out, nil)
+		}
+		if err != nil {
+			if exec.FailOnError {
+				return fmt.Errorf("error executing command %s: %s %v", command.FormatCommandName(execCommand, execArgs), out.String(), err)
+			}
+
+			u.sync.log.Infof("Upstream - Error executing command: %s %v", out.String(), err)
+		}
+
+		u.sync.log.Infof("Upstream - Done executing command")
+		return nil
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
 	defer cancel()
 
-	u.sync.log.Infof("Upstream - Execute command '%s'", command.FormatCommandName(exec.Command, exec.Args))
+	cmd := execCommand
+	args := execArgs
+	if args == nil {
+		args = []string{"-c", cmd}
+		cmd = "sh"
+	}
+
+	u.sync.log.Infof("Upstream - Execute command '%s'", command.FormatCommandName(execCommand, execArgs))
 	_, err := u.client.Execute(ctx, &remote.Command{
 		Cmd:  cmd,
 		Args: args,
@@ -335,7 +372,6 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 		u.sync.log.Infof("Upstream - Error executing command: %v", err)
 	}
 	u.sync.log.Infof("Upstream - Done executing command")
-
 	return nil
 }
 

@@ -40,7 +40,4 @@ type Dependency interface {
 
 	// StartPortForwarding starts the dependency port-forwarding
 	StartPortForwarding(client kubectl.Client, interrupt chan error, logger log.Logger) error
-
-	// StartReversePortForwarding starts the dependency port-forwarding
-	StartReversePortForwarding(client kubectl.Client, interrupt chan error, logger log.Logger) error
 }

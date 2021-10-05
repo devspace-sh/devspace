@@ -491,11 +491,17 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 
 	// replace paths
 	if len(replacePod.PersistPaths) > 0 {
+		name := pod.Pod.Name
+		if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Name != "" {
+			name = replacePod.PersistenceOptions.Name
+		}
+
 		copiedPod.Spec.Volumes = append(copiedPod.Spec.Volumes, corev1.Volume{
 			Name: "devspace-persistence",
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: pod.Pod.Name,
+					ClaimName: name,
+					ReadOnly:  replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.ReadOnly,
 				},
 			},
 		})
@@ -511,20 +517,22 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 			}
 
 			for i, con := range copiedPod.Spec.InitContainers {
-				if path.Container == "" || path.Container == con.Name {
+				if path.ContainerName == "" || path.ContainerName == con.Name {
 					copiedPod.Spec.InitContainers[i].VolumeMounts = append(copiedPod.Spec.InitContainers[i].VolumeMounts, corev1.VolumeMount{
 						Name:      "devspace-persistence",
 						MountPath: path.Path,
 						SubPath:   subPath,
+						ReadOnly:  path.ReadOnly,
 					})
 				}
 			}
 			for i, con := range copiedPod.Spec.Containers {
-				if path.Container == "" || path.Container == con.Name {
+				if path.ContainerName == "" || path.ContainerName == con.Name {
 					copiedPod.Spec.Containers[i].VolumeMounts = append(copiedPod.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
 						Name:      "devspace-persistence",
 						MountPath: path.Path,
 						SubPath:   subPath,
+						ReadOnly:  path.ReadOnly,
 					})
 				}
 			}
@@ -669,21 +677,34 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 func createPVC(ctx context.Context, client kubectl.Client, copiedPod *corev1.Pod, replicaSet *appsv1.ReplicaSet, replacePod *latest.ReplacePod) error {
 	var err error
 	size := resource.MustParse("10Gi")
-	if replacePod.PersistOptions != nil && replacePod.PersistOptions.Size != "" {
-		size, err = resource.ParseQuantity(replacePod.PersistOptions.Size)
+	if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Size != "" {
+		size, err = resource.ParseQuantity(replacePod.PersistenceOptions.Size)
 		if err != nil {
-			return fmt.Errorf("error parsing persistent volume size %s: %v", replacePod.PersistOptions.Size, err)
+			return fmt.Errorf("error parsing persistent volume size %s: %v", replacePod.PersistenceOptions.Size, err)
 		}
 	}
 
 	var storageClassName *string
-	if replacePod.PersistOptions != nil && replacePod.PersistOptions.StorageClassName != "" {
-		storageClassName = &replacePod.PersistOptions.StorageClassName
+	if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.StorageClassName != "" {
+		storageClassName = &replacePod.PersistenceOptions.StorageClassName
+	}
+
+	accessModes := []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+	if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.AccessModes != nil {
+		accessModes = []corev1.PersistentVolumeAccessMode{}
+		for _, accessMode := range replacePod.PersistenceOptions.AccessModes {
+			accessModes = append(accessModes, corev1.PersistentVolumeAccessMode(accessMode))
+		}
+	}
+
+	name := copiedPod.Name
+	if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Name != "" {
+		name = replacePod.PersistenceOptions.Name
 	}
 
 	_, err = client.KubeClient().CoreV1().PersistentVolumeClaims(copiedPod.Namespace).Create(ctx, &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      copiedPod.Name,
+			Name:      name,
 			Namespace: copiedPod.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -696,9 +717,7 @@ func createPVC(ctx context.Context, client kubectl.Client, copiedPod *corev1.Pod
 			},
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{
-				corev1.ReadWriteOnce,
-			},
+			AccessModes: accessModes,
 			Resources: corev1.ResourceRequirements{
 				Requests: map[corev1.ResourceName]resource.Quantity{
 					corev1.ResourceStorage: size,
@@ -708,6 +727,10 @@ func createPVC(ctx context.Context, client kubectl.Client, copiedPod *corev1.Pod
 		},
 	}, metav1.CreateOptions{})
 	if err != nil {
+		if kerrors.IsAlreadyExists(err) && replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Name != "" {
+			return nil
+		}
+
 		return err
 	}
 
