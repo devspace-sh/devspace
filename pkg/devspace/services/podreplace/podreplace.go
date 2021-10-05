@@ -61,15 +61,14 @@ type replacer struct{}
 
 func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (*selector.SelectedPodContainer, error) {
 	// check if there is a replaced pod in the target namespace
-	log.StartWait("Try to find replaced pod...")
-	defer log.StopWait()
+	log.Info("Try to find replaced pod...")
 
 	// try to find a single patched pod
 	selectedPod, err := findSingleReplacedPod(ctx, client, replacePod, 4, config, dependencies, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "find patched pod")
 	} else if selectedPod == nil {
-		parent, err := p.findScaledDownParentBySelector(ctx, client, config, dependencies, replacePod, log)
+		parent, err := p.findScaledDownParentBySelector(ctx, client, config, dependencies, replacePod)
 		if err != nil {
 			return nil, err
 		} else if parent == nil {
@@ -104,7 +103,7 @@ func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, 
 	}
 
 	// scale up parent
-	log.StartWait("Scaling up parent of replaced pod...")
+	log.Info("Scaling up parent of replaced pod...")
 	err = scaleUpParent(ctx, client, parent)
 	if err != nil {
 		return nil, err
@@ -113,7 +112,7 @@ func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, 
 	return selectedPod, nil
 }
 
-func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (runtime.Object, error) {
+func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod) (runtime.Object, error) {
 	namespace := client.Namespace()
 	if replacePod.Namespace != "" {
 		namespace = replacePod.Namespace
@@ -222,7 +221,7 @@ func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config
 		}
 	} else {
 		// try to find a single patchable object
-		parent, err := p.findScaledDownParentBySelector(ctx, client, config, dependencies, replacePod, log)
+		parent, err := p.findScaledDownParentBySelector(ctx, client, config, dependencies, replacePod)
 		if err != nil {
 			return err
 		} else if parent != nil {
@@ -241,14 +240,14 @@ func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config
 		}
 	}
 
-	log.StartWait("Try to find replaceable pod...")
+	log.Info("Try to find replaceable pod...")
 	container, parent, err := findSingleReplaceablePodParent(ctx, client, config, dependencies, replacePod, log)
 	if err != nil {
 		return err
 	}
 
 	// replace the pod
-	log.StartWait(fmt.Sprintf("Replacing Pod %s/%s...", container.Pod.Namespace, container.Pod.Name))
+	log.Info(fmt.Sprintf("Replacing Pod %s/%s...", container.Pod.Namespace, container.Pod.Name))
 	err = replace(ctx, client, container, parent, config, dependencies, replacePod, log)
 	if err != nil {
 		return err
@@ -328,7 +327,7 @@ func updateNeeded(ctx context.Context, client kubectl.Client, pod *selector.Sele
 	}
 
 	// scale up parent
-	log.StartWait("Scaling up parent of replaced pod...")
+	log.Info("Scaling up parent of replaced pod...")
 	err = scaleUpParent(ctx, client, parent)
 	if err != nil {
 		return false, err
@@ -437,7 +436,7 @@ func deleteAndWait(ctx context.Context, client kubectl.Client, pod *corev1.Pod, 
 		}
 	}
 
-	log.StartWait(fmt.Sprintf("Waiting for replaced pod " + pod.Namespace + "/" + pod.Name + " to get terminated..."))
+	log.Infof("Waiting for replaced pod " + pod.Namespace + "/" + pod.Name + " to get terminated...")
 	err := wait.Poll(time.Second, time.Minute*2, func() (bool, error) {
 		_, err := client.KubeClient().CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 		if err != nil {
@@ -592,7 +591,7 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 	log.Donef("Scaled down %s %s/%s", copiedPod.Annotations[ParentKindAnnotation], copiedPod.Namespace, copiedPod.Annotations[ParentNameAnnotation])
 
 	// wait until pod is in terminating mode
-	log.StartWait("Waiting for Pod " + pod.Pod.Name + " to get terminated...")
+	log.Info("Waiting for Pod " + pod.Pod.Name + " to get terminated...")
 	err = wait.Poll(time.Second*2, time.Minute*2, func() (bool, error) {
 		pod, err := client.KubeClient().CoreV1().Pods(pod.Pod.Namespace).Get(ctx, pod.Pod.Name, metav1.GetOptions{})
 		if err != nil {

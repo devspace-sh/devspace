@@ -6,9 +6,6 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/command"
-	"github.com/loft-sh/devspace/pkg/util/shell"
 	"io"
 	"os"
 	"path"
@@ -17,12 +14,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/loft-sh/devspace/helper/server/ignoreparser"
-	"github.com/loft-sh/devspace/helper/util/crc32"
-
+	"github.com/bmatcuk/doublestar"
 	"github.com/juju/ratelimit"
 	"github.com/loft-sh/devspace/helper/remote"
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/helper/util"
+	"github.com/loft-sh/devspace/helper/util/crc32"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/shell"
 	"github.com/loft-sh/notify"
 	"github.com/pkg/errors"
 )
@@ -293,8 +293,8 @@ func (u *upstream) execCommands(changedFiles []string) error {
 }
 
 func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) error {
+	matched := ""
 	if len(exec.OnChange) > 0 {
-		matched := false
 	Outer:
 		for _, pattern := range exec.OnChange {
 			pattern = path.Clean(pattern)
@@ -303,13 +303,14 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 					continue
 				}
 
-				matched, _ = path.Match(pattern, file[1:])
-				if matched {
+				hasMatched, _ := doublestar.Match(pattern, file[1:])
+				if hasMatched {
+					matched = file[1:]
 					break Outer
 				}
 			}
 		}
-		if !matched {
+		if matched == "" {
 			return nil
 		}
 	}
@@ -325,7 +326,11 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 	}
 
 	if exec.Local {
-		u.sync.log.Infof("Upstream - Execute command '%s' locally", command.FormatCommandName(execCommand, execArgs))
+		if matched != "" {
+			u.sync.log.Infof("Upstream - Execute command '%s' locally, because '%s' changed", command.FormatCommandName(execCommand, execArgs), matched)
+		} else {
+			u.sync.log.Infof("Upstream - Execute command '%s' locally", command.FormatCommandName(execCommand, execArgs))
+		}
 
 		// if args are nil we execute the command in a shell
 		var (
@@ -359,7 +364,12 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 		cmd = "sh"
 	}
 
-	u.sync.log.Infof("Upstream - Execute command '%s'", command.FormatCommandName(execCommand, execArgs))
+	if matched != "" {
+		u.sync.log.Infof("Upstream - Execute command '%s', because '%s' changed", command.FormatCommandName(execCommand, execArgs), matched)
+	} else {
+		u.sync.log.Infof("Upstream - Execute command '%s'", command.FormatCommandName(execCommand, execArgs))
+	}
+
 	_, err := u.client.Execute(ctx, &remote.Command{
 		Cmd:  cmd,
 		Args: args,
