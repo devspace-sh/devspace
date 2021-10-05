@@ -50,7 +50,7 @@ var defaultResources = &availableResources{
 	EphemeralStorage: resource.MustParse("10Gi"),
 }
 
-func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
+func (b *Builder) getBuildPod(buildID string, devspaceID string, options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
 	kanikoOptions := b.helper.ImageConf.Build.Kaniko
 
 	registryURL, err := pullsecrets.GetRegistryFromImageName(b.FullImageName)
@@ -209,7 +209,6 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 			SubPath:   mount.SubPath,
 		})
 	}
-
 	// create the build pod
 	pod := &k8sv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -218,6 +217,7 @@ func (b *Builder) getBuildPod(buildID string, options *types.ImageBuildOptions, 
 			Labels: map[string]string{
 				"devspace-build":    "true",
 				"devspace-build-id": buildID,
+				"devspace-id":       devspaceID,
 			},
 		},
 		Spec: k8sv1.PodSpec{

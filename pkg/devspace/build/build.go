@@ -88,6 +88,8 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 	}
 
 	imagesToBuild := 0
+	randString := randutil.GenerateRandomString(12)
+	devspaceID := strings.ToLower(randString)
 
 	for key, imageConf := range config.Images {
 		if imageConf.Build != nil && imageConf.Build.Disabled {
@@ -166,7 +168,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		// Sequential or parallel build?
 		if options.Sequential {
 			// Build the image
-			err = builder.Build(log)
+			err = builder.Build(devspaceID, log)
 			if err != nil {
 				pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 					"IMAGE_CONFIG_NAME": imageConfigName,
@@ -230,7 +232,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 				}()
 
 				// Build the image
-				err := builder.Build(streamLog)
+				err := builder.Build(devspaceID, streamLog)
 				_ = writer.Close()
 				if err != nil {
 					hook.LogExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
