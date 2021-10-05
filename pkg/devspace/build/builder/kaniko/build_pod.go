@@ -217,7 +217,7 @@ func (b *Builder) getBuildPod(buildID string, devspacePID string, options *types
 			Labels: map[string]string{
 				"devspace-build":    "true",
 				"devspace-build-id": buildID,
-				"devspace-id":       devspacePID,
+				"devspace-pid":      devspacePID,
 			},
 		},
 		Spec: k8sv1.PodSpec{
