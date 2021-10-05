@@ -5,7 +5,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
@@ -20,7 +19,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (serviceClient *client) startReversePortForwarding(cache *generated.CacheConfig, portForwarding *latest.PortForwardingConfig, interrupt chan error, fileLog, log logpkg.Logger) error {
+func (serviceClient *client) startReversePortForwarding(portForwarding *latest.PortForwardingConfig, interrupt chan error, fileLog, log logpkg.Logger) error {
 	var err error
 
 	// apply config & set image selector
@@ -38,17 +37,15 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 	options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
 	options.SkipInitContainers = true
 
-	log.StartWait("Reverse-Port-Forwarding: Waiting for containers to start...")
+	log.Info("Reverse-Port-Forwarding: Waiting for containers to start...")
 	container, err := targetselector.NewTargetSelector(serviceClient.client).SelectSingleContainer(context.TODO(), options, log)
-	log.StopWait()
 	if err != nil {
 		return errors.Errorf("%s: %s", message.SelectorErrorPod, err.Error())
 	}
 
 	// make sure the devspace helper binary is injected
-	log.StartWait("Reverse-Port-Forwarding: Inject devspacehelper...")
+	log.Info("Reverse-Port-Forwarding: Inject devspacehelper...")
 	err = inject.InjectDevSpaceHelper(serviceClient.client, container.Pod, container.Container.Name, string(portForwarding.Arch), log)
-	log.StopWait()
 	if err != nil {
 		return err
 	}
@@ -86,7 +83,7 @@ func (serviceClient *client) startReversePortForwarding(cache *generated.CacheCo
 				}, fileLog, hook.EventsForSingle("restart:reversePortForwarding", portForwarding.Name).With("reversePortForwarding.restart")...)
 
 				for {
-					err = serviceClient.startReversePortForwarding(cache, portForwarding, interrupt, fileLog, fileLog)
+					err = serviceClient.startReversePortForwarding(portForwarding, interrupt, fileLog, fileLog)
 					if err != nil {
 						hook.LogExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 							"reverse_port_forwarding_config": portForwarding,

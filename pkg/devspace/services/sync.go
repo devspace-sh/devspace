@@ -85,6 +85,17 @@ func (serviceClient *client) StartSync(interrupt chan error, printSyncLog, verbo
 	// Start sync client
 	runner := NewRunner(5)
 	for idx, syncConfig := range serviceClient.config.Config().Dev.Sync {
+		err := runner.Run(serviceClient.newSyncFn(idx, syncConfig, interrupt, printSyncLog, verboseSync, prefixFn))
+		if err != nil {
+			return err
+		}
+	}
+
+	return runner.Wait()
+}
+
+func (serviceClient *client) newSyncFn(idx int, syncConfig *latest.SyncConfig, interrupt chan error, printSyncLog, verboseSync bool, prefixFn PrefixFn) func() error {
+	return func() error {
 		targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(syncConfig.LabelSelector, syncConfig.Namespace, syncConfig.ContainerName, "")
 		targetOptions.AllowPick = false
 		targetOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
@@ -111,13 +122,6 @@ func (serviceClient *client) StartSync(interrupt chan error, printSyncLog, verbo
 			options.SyncLog = fileLog
 		}
 
-		err := runner.Run(func() error {
-			return synccontroller.NewController(serviceClient.config, serviceClient.dependencies, serviceClient.client).Start(options, log)
-		})
-		if err != nil {
-			return err
-		}
+		return synccontroller.NewController(serviceClient.config, serviceClient.dependencies, serviceClient.client).Start(options, log)
 	}
-
-	return runner.Wait()
 }

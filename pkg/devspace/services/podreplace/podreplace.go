@@ -206,8 +206,7 @@ func matchesSelector(annotations map[string]string, pod *corev1.PodTemplateSpec,
 
 func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) error {
 	// check if there is a replaced pod in the target namespace
-	log.StartWait("Try to find replaced pod...")
-	defer log.StopWait()
+	log.Info("Try to find replaced pod...")
 
 	// try to find a single patched pod
 	selectedPod, err := findSingleReplacedPod(ctx, client, replacePod, 2, config, dependencies, log)
@@ -218,6 +217,7 @@ func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config
 		if err != nil {
 			return err
 		} else if !shouldUpdate {
+			log.Infof("Found replaced pod %s/%s", selectedPod.Pod.Namespace, selectedPod.Pod.Name)
 			return nil
 		}
 	} else {
