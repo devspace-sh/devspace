@@ -8,6 +8,7 @@ import (
 	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm/merge"
+	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
@@ -211,6 +212,14 @@ func validateHooks(config *latest.Config) error {
 		if hookConfig.Wait != nil && !hookConfig.Wait.Running && hookConfig.Wait.TerminatedWithCode == nil {
 			return errors.Errorf("hooks[%d].wait.running or hooks[%d].wait.terminatedWithCode is required if hooks[%d].wait is used", index, index, index)
 		}
+		if hookConfig.Container != nil {
+			if hookConfig.Container.ContainerName != "" && len(hookConfig.Container.LabelSelector) == 0 {
+				return errors.Errorf("hooks[%d].container.containerName is defined but hooks[%d].container.labelSelector is not defined", index, index)
+			}
+			if len(hookConfig.Container.LabelSelector) == 0 && hookConfig.Container.ImageSelector == "" {
+				return errors.Errorf("hooks[%d].container.labelSelector and hooks[%d].container.imageSelector are not defined", index, index)
+			}
+		}
 	}
 
 	return nil
@@ -292,6 +301,9 @@ func validateImages(config *latest.Config) error {
 		if imageConf.Image == "" {
 			return errors.Errorf("images.%s.image is required", imageConfigName)
 		}
+		if _, tag, _ := imageselector.GetStrippedDockerImageName(imageConf.Image); tag != "" {
+			return errors.Errorf("images.%s.image '%s' can not have tag '%s'", imageConfigName, imageConf.Image, tag)
+		}
 		if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == "" && len(imageConf.Build.Custom.Commands) == 0 {
 			return errors.Errorf("images.%s.build.custom.command or images.%s.build.custom.commands is required", imageConfigName, imageConfigName)
 		}
@@ -352,9 +364,14 @@ func strMapEquals(a, b map[string]string) bool {
 
 func validateDev(config *latest.Config) error {
 	for index, rp := range config.Dev.ReplacePods {
+		if rp.ContainerName != "" && len(rp.LabelSelector) == 0 {
+			return errors.Errorf("Error in config: containerName is defined but label selector is nil in replace pods at index %d", index)
+		}
+
 		if len(rp.LabelSelector) == 0 && rp.ImageSelector == "" {
 			return errors.Errorf("Error in config: image selector and label selector are nil in replace pods at index %d", index)
 		}
+
 		definedSelectors := 0
 		if rp.ImageSelector != "" {
 			definedSelectors++
@@ -378,6 +395,10 @@ func validateDev(config *latest.Config) error {
 	if config.Dev.Ports != nil {
 		for index, port := range config.Dev.Ports {
 			// Validate imageName and label selector
+			if port.ContainerName != "" && len(port.LabelSelector) == 0 {
+				return errors.Errorf("Error in config: containerName is defined but label selector is nil in ports config at index %d", index)
+			}
+
 			if len(port.LabelSelector) == 0 && port.ImageSelector == "" {
 				return errors.Errorf("Error in config: image selector and label selector are nil in ports config at index %d", index)
 			}
@@ -394,6 +415,10 @@ func validateDev(config *latest.Config) error {
 	if config.Dev.Sync != nil {
 		for index, sync := range config.Dev.Sync {
 			// Validate imageName and label selector
+			if sync.ContainerName != "" && len(sync.LabelSelector) == 0 {
+				return errors.Errorf("Error in config: containerName is defined but label selector is nil in sync config at index %d", index)
+			}
+
 			if len(sync.LabelSelector) == 0 && sync.ImageSelector == "" {
 				return errors.Errorf("Error in config: image selector and label selector are nil in sync config at index %d", index)
 			}
