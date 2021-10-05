@@ -283,44 +283,14 @@ sync:                               # struct[] | Array of file sync settings for
     upload: 0                       # int64    | Max file upload speed in kilobytes / second (e.g. 100 means 100 KB/s)
   onUpload:                         # struct   | After a file/folder has been uploaded to the container...
     restartContainer: true          # bool     | Restart container after uploading files (requires images.*.injectRestartHelper: true)
-    execRemote:                     # struct   | ...execute the following command inside the container:
-      command: chmod                # string   | Command to execute for files and folders
-      args:                         # string[] | Argument list
-      - +x                          # string   | Argument 1
-      - {}                          # string   | Argument 2: {} will be replaced with path of the file/folder
-      onFileChange:                 # struct   | Command to execute ONLY for files
-        command: chmod              # string   | Command
-        args:                       # string[] | Argument list
-        - +x                        # string   | Argument 1
-        - {}                        # string   | Argument 2: {} will be replaced with path of the file/folder
-      onDirCreate:                  # struct   | Command to execute ONLY for newly created directories
-        command: chmod              # string   | Command
-        args:                       # string[] | Argument list
-        - +x                        # string   | Argument 1
-        - {}                        # string   | Argument 2: {} will be replaced with path of the file/folder
-      onBatch:                      # struct   | Command to execute after sync has processed a full batch of files and folders
-        command: recompile          # string   | Command
-        args:                       # string[] | Argument list (NOTE: {} is NOT available for onBatch)
-        - assets                    # string   | Arument 1
-        - --minify                  # string   | Argument 2
-  onDownload:                       # struct   | After a file/folder has been downloaded from the container to the local filesystem...
-    execLocal:                      # struct   | ...execute the following command on the local machine:
-      command: chmod                # string   | Command to execute for files and folders
-      args:                         # string[] | Argument list
-      - +x                          # string   | Argument 1
-      - {}                          # string   | Argument 2: {} will be replaced with path of the file/folder
-      onFileChange:                 # struct   | Command to execute ONLY for files
-        command: chmod              # string   | Command
-        args:                       # string[] | Argument list
-        - +x                        # string   | Argument 1
-        - {}                        # string   | Argument 2: {} will be replaced with path of the file/folder
-      onDirCreate:                  # struct   | Command to execute ONLY for newly created directories
-        command: chmod              # string   | Command
-        args:                       # string[] | Argument list
-        - +x                        # string   | Argument 1
-        - {}                        # string   | Argument 2: {} will be replaced with path of the file/folder
+    exec:
+    - command: "touch abc.txt"      # string   | Command that should be executed after DevSpace made changes
+      args: []                      # string[] | Optional args that will force DevSpace to not execute the command in a shell
+      failOnError: false            # bool     | If true, DevSpace will restart the sync if the command fails (default: false)
+	  local: false                  # bool     | If true, DevSpace will run the command locally instead of in the container (default: false)
+	  onChange: ["package.json"]    # string[] | Optional array of file patterns that will trigger this command
 ```
-[Learn more about confguring the file synchronization.](../configuration/development/file-synchronization.mdx)
+[Learn more about configuring the file synchronization.](../configuration/development/file-synchronization.mdx)
 
 ### `dev.logs`
 ```yaml
@@ -367,6 +337,17 @@ replacePods:                              # struct[] | Which pods should be repl
   containerName: ""                       # string   | Container name to use after selecting a pod
   namespace: ""                           # string   | Kubernetes namespace to select pods in
   replaceImage: ""                        # string   | The image that should be used for the pod
+  persistPaths:                           # struct[] | Paths that should get persisted in the replaced pod
+  - path: /app                            # string   | The container path that should get persisted
+    volumePath: /my-volume/app            # string   | Optional path on the persistent volume to mount
+    containerName: ""                     # string   | Optional container name in the replaced pod to persist the path
+    readOnly: false                       # bool     | If the path should get mounted read only
+  persistenceOptions:                     # struct   | Additional options for persistPaths
+    name: ""                              # string   | Optional name of the pvc to reuse / create
+    size: "10Gi"                          # string   | Size of the pvc to create 
+    readOnly: false                       # bool     | If all defined persistPaths should get mounted read only
+    storageClassName: ""                  # string   | StorageClassName to use for the persistent volume claim
+    accessModes: ["ReadWriteOnce"]        # string[] | Access modes to use for the persistent volume claim
   patches:                                # struct[] | Other patches that should be applied on the pod
   - op: add                               # enum     | Patch operation (replace, add, remove)
     path: "spec.containers[0].command"    # string    | Jsonpath or xpath to config option that should be patched
