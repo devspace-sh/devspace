@@ -50,7 +50,7 @@ var defaultResources = &availableResources{
 	EphemeralStorage: resource.MustParse("10Gi"),
 }
 
-func (b *Builder) getBuildPod(buildID string, devspaceID string, options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
+func (b *Builder) getBuildPod(buildID string, devspacePID string, options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
 	kanikoOptions := b.helper.ImageConf.Build.Kaniko
 
 	registryURL, err := pullsecrets.GetRegistryFromImageName(b.FullImageName)
@@ -217,7 +217,7 @@ func (b *Builder) getBuildPod(buildID string, devspaceID string, options *types.
 			Labels: map[string]string{
 				"devspace-build":    "true",
 				"devspace-build-id": buildID,
-				"devspace-id":       devspaceID,
+				"devspace-id":       devspacePID,
 			},
 		},
 		Spec: k8sv1.PodSpec{

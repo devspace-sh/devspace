@@ -48,8 +48,8 @@ func NewBuilder(config config.Config, kubeClient kubectl.Client, imageConfigName
 }
 
 // Build implements the interface
-func (b *Builder) Build(devspaceID string, log logpkg.Logger) error {
-	return b.helper.Build(b, devspaceID, log)
+func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
+	return b.helper.Build(b, devspacePID, log)
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
@@ -60,7 +60,7 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool)
 // BuildImage builds a dockerimage with the docker cli
 // contextPath is the absolute path to the context path
 // dockerfilePath is the absolute path to the dockerfile WITHIN the contextPath
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, devspaceID string, log logpkg.Logger) error {
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, devspacePID string, log logpkg.Logger) error {
 	// build options
 	options := &types.ImageBuildOptions{}
 	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.BuildKit != nil && b.helper.ImageConf.Build.BuildKit.Options != nil {

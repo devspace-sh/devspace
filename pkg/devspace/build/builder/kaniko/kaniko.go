@@ -103,8 +103,8 @@ func NewBuilder(config config.Config, dockerClient docker.Client, kubeClient kub
 }
 
 // Build implements the interface
-func (b *Builder) Build(devspaceID string, log logpkg.Logger) error {
-	return b.helper.Build(b, devspaceID, log)
+func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
+	return b.helper.Build(b, devspacePID, log)
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
@@ -149,7 +149,7 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 }
 
 // BuildImage builds a dockerimage within a kaniko pod
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, devspaceID string, log logpkg.Logger) error {
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, devspacePID string, log logpkg.Logger) error {
 	var err error
 
 	// Buildoptions
@@ -179,7 +179,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	// Generate the build pod spec
 	randString := randutil.GenerateRandomString(12)
 	buildID := strings.ToLower(randString)
-	buildPod, err := b.getBuildPod(buildID, devspaceID, options, dockerfilePath)
+	buildPod, err := b.getBuildPod(buildID, devspacePID, options, dockerfilePath)
 	if err != nil {
 		return errors.Wrap(err, "get build pod")
 	}
@@ -421,7 +421,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	if err != nil {
 		// Delete all build pods on error
 
-		labelSelector := fmt.Sprintf("devspace-id=%s", devspaceID)
+		labelSelector := fmt.Sprintf("devspace-id=%s", devspacePID)
 		pods, getErr := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).List(context.TODO(), metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})

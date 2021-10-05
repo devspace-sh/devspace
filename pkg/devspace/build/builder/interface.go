@@ -8,5 +8,5 @@ import (
 // Interface defines methods for builders docker, kaniko and custom
 type Interface interface {
 	ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool) (bool, error)
-	Build(devspaceID string, log log.Logger) error
+	Build(devspacePID string, log log.Logger) error
 }
