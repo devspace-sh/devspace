@@ -1,6 +1,7 @@
 package downloader
 
 import (
+	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -12,44 +13,45 @@ import (
 )
 
 type Downloader interface {
-	EnsureCLI(command, installPath, installFromURL string) (string, error)
+	EnsureCommand() (string, error)
 }
 
 type downloader struct {
 	httpGet getRequest
-	isValid IsValid
-	install Install
+	command commands.Command
 	log     logpkg.Logger
 }
 
-type IsValid func(string) (bool, error)
-type Install func(archiveFile, installPath, installFromURL string) error
-
-func NewDownloader(install Install, isValid IsValid, log logpkg.Logger) Downloader {
+func NewDownloader(command commands.Command, log logpkg.Logger) Downloader {
 	return &downloader{
 		httpGet: http.Get,
-		install: install,
-		isValid: isValid,
+		command: command,
 		log:     log,
 	}
 }
 
-func (d *downloader) EnsureCLI(command, installPath, installFromURL string) (string, error) {
-	valid, err := d.isValid(command)
+func (d *downloader) EnsureCommand() (string, error) {
+	command := d.command.Name()
+	valid, err := d.command.IsValid(command)
 	if err != nil {
 		return "", err
 	} else if valid {
 		return command, nil
 	}
 
-	valid, err = d.isValid(installPath)
+	installPath, err := d.command.InstallPath()
+	if err != nil {
+		return "", err
+	}
+
+	valid, err = d.command.IsValid(installPath)
 	if err != nil {
 		return "", err
 	} else if valid {
 		return installPath, nil
 	}
 
-	return installPath, d.downloadExecutable(command, installPath, installFromURL)
+	return installPath, d.downloadExecutable(command, installPath, d.command.DownloadURL())
 }
 
 func (d *downloader) downloadExecutable(command, installPath, installFromURL string) error {
@@ -108,5 +110,5 @@ func (d *downloader) downloadFile(command, installPath, installFromURL string) e
 	}
 
 	// install the file
-	return d.install(archiveFile, installPath, installFromURL)
+	return d.command.Install(archiveFile)
 }

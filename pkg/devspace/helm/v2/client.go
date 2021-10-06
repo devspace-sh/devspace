@@ -1,21 +1,13 @@
 package v2
 
 import (
-	"runtime"
-	"strings"
-
-	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/log"
-)
-
-var (
-	helmVersion  = "v2.17.0"
-	helmDownload = "https://get.helm.sh/helm-" + helmVersion + "-" + runtime.GOOS + "-" + runtime.GOARCH
 )
 
 type client struct {
@@ -56,19 +48,6 @@ func (c *client) KubeContext() string {
 	return c.kubeClient.CurrentContext()
 }
 
-func (c *client) Command() string {
-	return "helm2"
-}
-
-func (c *client) DownloadURL() string {
-	return helmDownload
-}
-
-func (c *client) IsValidHelm(path string) (bool, error) {
-	out, err := c.exec(path, []string{"version", "--client"}).Output()
-	if err != nil {
-		return false, nil
-	}
-
-	return strings.Contains(string(out), `:"v2.`), nil
+func (c *client) Command() commands.Command {
+	return commands.NewHelmV2Command()
 }

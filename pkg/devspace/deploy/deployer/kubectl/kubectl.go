@@ -2,19 +2,15 @@ package kubectl
 
 import (
 	"io"
-	"path/filepath"
-	"runtime"
 	"strings"
 
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/helm/downloader"
-	"github.com/mitchellh/go-homedir"
+	"github.com/loft-sh/devspace/pkg/util/downloader"
+	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/ghodss/yaml"
-	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
@@ -24,11 +20,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/loft-sh/devspace/pkg/util/log"
-)
-
-var (
-	kubectlVersion  = "v1.21.2"
-	kubectlDownload = "https://storage.googleapis.com/kubernetes-release/release/" + kubectlVersion + "/bin/" + runtime.GOOS + "/" + runtime.GOARCH + "/kubectl"
 )
 
 // DeployConfig holds the necessary information for kubectl deployment
@@ -62,28 +53,14 @@ func New(config config2.Config, dependencies []types.Dependency, kubeClient kube
 
 	// make sure kubectl exists
 	var (
-		executer       = &executer{}
-		isValidKubectl = func(command string) (bool, error) {
-			return isValidKubectl(command, executer)
-		}
-		cmdPath string
+		err      error
+		executer = &executer{}
+		cmdPath  string
 	)
 	if deployConfig.Kubectl.CmdPath != "" {
 		cmdPath = deployConfig.Kubectl.CmdPath
 	} else {
-		home, err := homedir.Dir()
-		if err != nil {
-			return nil, err
-		}
-
-		installPath := filepath.Join(home, constants.DefaultHomeDevSpaceFolder, "bin", "kubectl")
-		url := kubectlDownload
-		if runtime.GOOS == "windows" {
-			url += ".exe"
-			installPath += ".exe"
-		}
-
-		cmdPath, err = downloader.NewDownloader(installKubectl, isValidKubectl, log).EnsureCLI("kubectl", installPath, url)
+		cmdPath, err = downloader.NewDownloader(commands.NewKubectlCommand(), log).EnsureCommand()
 		if err != nil {
 			return nil, err
 		}
@@ -136,19 +113,6 @@ func New(config config2.Config, dependencies []types.Dependency, kubeClient kube
 
 		commandExecuter: executer,
 	}, nil
-}
-
-func isValidKubectl(command string, executer *executer) (bool, error) {
-	out, err := executer.RunCommand(command, []string{"version", "--client"})
-	if err != nil {
-		return false, nil
-	}
-
-	return strings.Contains(string(out), `Client Version`), nil
-}
-
-func installKubectl(downloadedFile, installPath, installFromURL string) error {
-	return copy.Copy(downloadedFile, installPath)
 }
 
 // Render writes the generated manifests to the out stream

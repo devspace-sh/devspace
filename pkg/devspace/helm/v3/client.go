@@ -11,15 +11,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/log"
-
-	"runtime"
-	"strings"
-)
-
-var (
-	helmVersion  = "v3.6.2"
-	helmDownload = "https://get.helm.sh/helm-" + helmVersion + "-" + runtime.GOOS + "-" + runtime.GOARCH
 )
 
 type client struct {
@@ -30,7 +23,7 @@ type client struct {
 	log log.Logger
 }
 
-// NewClient creates a new helm v3 client
+// NewClient creates a new helm v3 Client
 func NewClient(kubeClient kubectl.Client, log log.Logger) (types.Client, error) {
 	c := &client{
 		exec:       command.NewStreamCommand,
@@ -50,21 +43,8 @@ func (c *client) KubeContext() string {
 	return c.kubeClient.CurrentContext()
 }
 
-func (c *client) Command() string {
-	return "helm"
-}
-
-func (c *client) DownloadURL() string {
-	return helmDownload
-}
-
-func (c *client) IsValidHelm(path string) (bool, error) {
-	out, err := c.exec(path, []string{"version"}).Output()
-	if err != nil {
-		return false, nil
-	}
-
-	return strings.Contains(string(out), `:"v3.`), nil
+func (c *client) Command() commands.Command {
+	return commands.NewHelmV3Command()
 }
 
 // InstallChart installs the given chart via helm v3
