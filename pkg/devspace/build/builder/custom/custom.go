@@ -83,7 +83,7 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool)
 }
 
 // Build implements interface
-func (b *Builder) Build(log logpkg.Logger) error {
+func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
 	// Build arguments
 	args := []string{}
 

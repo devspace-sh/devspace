@@ -37,7 +37,7 @@ type BuildHelper struct {
 
 // BuildHelperInterface is the interface the build helper uses to build an image
 type BuildHelperInterface interface {
-	BuildImage(absoluteContextPath string, absoluteDockerfilePath string, entrypoint []string, cmd []string, log log.Logger) error
+	BuildImage(absoluteContextPath string, absoluteDockerfilePath string, entrypoint []string, cmd []string, devspacePID string, log log.Logger) error
 }
 
 // NewBuildHelper creates a new build helper for a certain engine
@@ -80,7 +80,7 @@ func NewBuildHelper(config config.Config, kubeClient kubectl.Client, engineName 
 }
 
 // Build builds a new image
-func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, log log.Logger) error {
+func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, devspacePID string, log log.Logger) error {
 	// Get absolute paths
 	absoluteDockerfilePath, err := filepath.Abs(b.DockerfilePath)
 	if err != nil {
@@ -95,7 +95,7 @@ func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, log log.Logger) e
 	log.Infof("Building image '%s:%s' with engine '%s'", b.ImageName, b.ImageTags[0], b.EngineName)
 
 	// Build Image
-	err = imageBuilder.BuildImage(absoluteContextPath, absoluteDockerfilePath, b.Entrypoint, b.Cmd, log)
+	err = imageBuilder.BuildImage(absoluteContextPath, absoluteDockerfilePath, b.Entrypoint, b.Cmd, devspacePID, log)
 	if err != nil {
 		return err
 	}
