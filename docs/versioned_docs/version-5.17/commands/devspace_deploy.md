@@ -1,27 +1,27 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace deploy"
+sidebar_label: devspace deploy
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Deploy the project
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace deploy [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+################## devspace deploy ####################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
+Deploys the current project to a Space or namespace:
 
-devspace restart
-devspace restart -n my-namespace
+devspace deploy
+devspace deploy -n some-namespace
+devspace deploy --kube-context=deploy-context
 #######################################################
 ```
 
@@ -29,12 +29,22 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+      --build-sequential            Builds the images one after another instead of in parallel
+      --dependency strings          Deploys only the specific named dependencies
+      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
+  -b, --force-build                 Forces to (re-)build every image
+      --force-dependencies          Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies) (default true)
+  -d, --force-deploy                Forces to (re-)deploy every deployment
+  -h, --help                        help for deploy
+      --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
+      --skip-build                  Skips building of images
+      --skip-dependency strings     Skips deploying the following dependencies
+      --skip-deploy                 Skips deploying and only builds images
+      --skip-push                   Skips image pushing, useful for minikube deployment
+      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
+      --timeout int                 Timeout until deploy should stop waiting (default 120)
+      --verbose-dependencies        Deploys the dependencies verbosely (default true)
+      --wait                        If true will wait for pods to be running or fails after given timeout
 ```
 
 

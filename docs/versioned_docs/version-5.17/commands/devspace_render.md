@@ -1,27 +1,25 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace render"
+sidebar_label: devspace render
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Render builds all defined images and shows the yamls that would be deployed
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace render [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+################## devspace render #####################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
-
-devspace restart
-devspace restart -n my-namespace
+Builds all defined images and shows the yamls that would
+be deployed via helm and kubectl, but skips actual 
+deployment.
 #######################################################
 ```
 
@@ -29,12 +27,19 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+      --build-sequential            Builds the images one after another instead of in parallel
+      --dependency strings          Renders only the specific named dependencies
+      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
+  -b, --force-build                 Forces to build every image
+  -h, --help                        help for render
+      --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
+      --skip-build                  Skips image building
+      --skip-dependencies           Skips rendering the dependencies
+      --skip-dependency strings     Skips rendering the following dependencies
+      --skip-push                   Skips image pushing, useful for minikube deployment
+      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected (default true)
+  -t, --tag strings                 Use the given tag for all built images
+      --verbose-dependencies        Builds the dependencies verbosely
 ```
 
 

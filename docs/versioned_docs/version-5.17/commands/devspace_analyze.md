@@ -1,27 +1,28 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace analyze"
+sidebar_label: devspace analyze
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Analyzes a kubernetes namespace and checks for potential problems
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace analyze [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+################## devspace analyze ###################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
+Analyze checks a namespaces events, replicasets, services
+and pods for potential problems
 
-devspace restart
-devspace restart -n my-namespace
+Example:
+devspace analyze
+devspace analyze --namespace=mynamespace
 #######################################################
 ```
 
@@ -29,12 +30,11 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -h, --help                  help for analyze
+      --ignore-pod-restarts   If true, analyze will ignore the restart events of running pods
+      --patient               If true, analyze will ignore failing pods and events until every deployment, statefulset, replicaset and pods are ready or the timeout is reached
+      --timeout int           Timeout until analyze should stop waiting (default 120)
+      --wait                  Wait for pods to get ready if they are just starting (default true)
 ```
 
 

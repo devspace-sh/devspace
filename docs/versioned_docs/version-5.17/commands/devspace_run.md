@@ -1,27 +1,28 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace run"
+sidebar_label: devspace run
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Run executes a predefined command
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace run [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+##################### devspace run ####################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
+Run executes a predefined command from the devspace.yaml
 
-devspace restart
-devspace restart -n my-namespace
+Examples:
+devspace run mycommand --myarg 123
+devspace run mycommand2 1 2 3
+devspace --dependency my-dependency run any-command --any-command-flag
 #######################################################
 ```
 
@@ -29,12 +30,8 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+      --dependency string   Run a command from a specific dependency
+  -h, --help                help for run
 ```
 
 

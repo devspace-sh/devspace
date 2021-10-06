@@ -1,27 +1,28 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace attach"
+sidebar_label: devspace attach
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Attaches to a container
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace attach [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+################# devspace attach #####################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
+Attaches to a running container
 
-devspace restart
-devspace restart -n my-namespace
+devspace attach
+devspace attach --pick # Select pod to enter
+devspace attach -c my-container
+devspace attach -n my-namespace
 #######################################################
 ```
 
@@ -29,12 +30,13 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
+  -c, --container string        Container name within pod where to execute command
+  -h, --help                    help for attach
+      --image string            Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage
+      --image-selector string   The image to search a pod for (e.g. nginx, nginx:latest, image(app), nginx:tag(app))
   -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
       --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+      --pod string              Pod to open a shell to
 ```
 
 

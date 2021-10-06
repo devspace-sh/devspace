@@ -1,0 +1,108 @@
+---
+title: Custom Commands
+sidebar_label: commands
+---
+
+The idea of custom commands is that someone on a team defines a set of useful commands and stores them in the `devspace.yaml`, then commits and pushes this config to the code repository. Now, others can run these custom commands without having to remember all the details or having to read through endless pages of documentation.
+
+Custom commands are being shared in the `commands` section of `devspace.yaml`:
+```yaml
+# File: devspace.yaml
+images:
+  default:
+    image: john/backend
+commands:
+- name: debug-backend
+  command: "devspace dev --profile=debug-backend $@"
+profiles:
+- name: debug-backend
+  patches:
+  - op: replace
+    path: images.default.entrypoint
+    value: ["npm", "run", "debug"]
+```
+
+:::note
+Custom commands can be used for more than just running `devspace` commands, e.g. they can run any other script or command, set environment variables etc. If you are familiar with the `scripts` section of the `package.json` for Node.js, you will find that `devspace run [name]` works pretty much the same way as `npm run [name]`
+:::
+
+The above example configuration would allow everyone to run the custom command `debug-backend` like this:
+```bash
+devspace run debug-backend
+devspace run debug-backend --verbose-dependencies
+devspace run debug-backend -- --verbose-dependencies -s
+```
+
+And `devspace run` would execute the following commands internally:
+```bash
+devspace dev --profile=debug-backend
+devspace dev --profile=debug-backend --verbose-dependencies
+devspace dev --profile=debug-backend --verbose-dependencies -s
+```
+
+:::note `--` End of Options Separator
+The `--` between the command name and the additional flags for the command tells your terminal that the arguments and flags that follow after the `--` do not belong to `devspace run` and should not be parsed. It is not required but often helpful to use `--` when executing commands using `devspace run`.
+:::
+
+:::info Interactive Commands
+Custom commands proxy input and output streams, so you can even share interactive commands such as `devspace enter`.
+:::
+
+
+## Configuration
+
+### `name`
+The `name` option is mandatory and expects a string with name that serves as an alias for the command provided in the `command` option.
+
+
+### `command`
+The `command` option is mandatory and expects a string with an arbitrary terminal command.
+
+While you can run any `devspace` command, you can also run other commands (if installed), set environment variables or use `bash` style expressions such as `&&`, `||` or `;`. To ensure that many of your team mates can run the command on any platform, it is highly recommended to keep your command expressions as simple as possible.
+
+:::info Cross-Platform
+Write all commands in `bash` style. DevSpace is using a library to make them cross-platform executable.
+:::
+
+### `appendArgs`
+The `appendArgs` option expects either true or false and will append given arguments to the command. If not specified, this option defaults to false.
+
+Example:
+```yaml
+commands:
+# Running 'devspace run append my-value' will print 'my-value'
+- name: append
+  command: echo $@
+# Running 'devspace run no-append my-value' will print ''
+- name: no-append
+  command: echo
+# Running 'devspace run append-option my-value' will print 'my-value'
+- name: append-option
+  appendArgs: true
+  command: echo
+```
+
+### `description`
+The `description` option is optional and expects a string with a description of what this command does and when it should be used. This is only used for helping other users to understand the meaning of a command and will be shown when the user runs: `devspace list commands`
+
+
+<br/>
+
+## Useful Commands
+
+### `devspace list commands`
+Run this command to list all custom commands that are configured:
+```bash
+devspace list commands
+```
+
+
+### `devspace run dependency1.command`
+You can run a command defined in one of the dependencies of the current project like this:
+```bash
+devspace run [dependency].[command] [command-flags-and-args]
+```
+
+:::note Working Directory
+When running a command of a dependency, DevSpace will use the root folder of the dependency as current working directory when executing the command.
+:::

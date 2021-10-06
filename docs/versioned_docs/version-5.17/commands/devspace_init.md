@@ -1,27 +1,24 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace init"
+sidebar_label: devspace init
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Initializes DevSpace in the current folder
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace init [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+#################### devspace init ####################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
-
-devspace restart
-devspace restart -n my-namespace
+Initializes a new devspace project within the current
+folder. Creates a devspace.yaml with all configuration.
 #######################################################
 ```
 
@@ -29,12 +26,11 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+      --context string      Context path to use for intialization
+      --dockerfile string   Dockerfile to use for initialization (default "./Dockerfile")
+  -h, --help                help for init
+      --provider string     The cloud provider to use
+  -r, --reconfigure         Change existing configuration
 ```
 
 

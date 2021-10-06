@@ -1,27 +1,27 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace purge"
+sidebar_label: devspace purge
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Delete deployed resources
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace purge [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+################### devspace purge ####################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
+Deletes the deployed kuberenetes resources:
 
-devspace restart
-devspace restart -n my-namespace
+devspace purge
+devspace purge --dependencies
+devspace purge -d my-deployment
 #######################################################
 ```
 
@@ -29,12 +29,13 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -a, --all                       When enabled purges the dependencies as well
+      --dependencies              DEPRECATED: Please use --all instead
+      --dependency strings        Purges only the specific named dependencies
+  -d, --deployments string        The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)
+  -h, --help                      help for purge
+      --skip-dependency strings   Skips the following dependencies from purging
+      --verbose-dependencies      Builds the dependencies verbosely (default true)
 ```
 
 

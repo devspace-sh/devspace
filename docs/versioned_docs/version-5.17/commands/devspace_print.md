@@ -1,27 +1,24 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace print"
+sidebar_label: devspace print
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Print displays the configuration
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace print [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+################## devspace print #####################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
-
-devspace restart
-devspace restart -n my-namespace
+Prints the configuration for the current or given 
+profile after all patching and variable substitution
 #######################################################
 ```
 
@@ -29,12 +26,8 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -h, --help        help for print
+      --skip-info   When enabled, only prints the configuration without additional information
 ```
 
 

@@ -1,27 +1,28 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace logs"
+sidebar_label: devspace logs
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Prints the logs of a pod and attaches to it
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace logs [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+#################### devspace logs ####################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
+Logs prints the last log of a pod container and attachs 
+to it
 
-devspace restart
-devspace restart -n my-namespace
+Example:
+devspace logs
+devspace logs --namespace=mynamespace
 #######################################################
 ```
 
@@ -29,12 +30,16 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
+  -c, --container string        Container name within pod where to execute command
+  -f, --follow                  Attach to logs afterwards
+  -h, --help                    help for logs
+      --image string            Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage
+      --image-selector string   The image to search a pod for (e.g. nginx, nginx:latest, image(app), nginx:tag(app))
   -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
+      --lines int               Max amount of lines to print from the last log (default 200)
       --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+      --pod string              Pod to print the logs of
+      --wait                    Wait for the pod(s) to start if they are not running
 ```
 
 

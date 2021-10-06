@@ -1,27 +1,24 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace list vars"
+sidebar_label: devspace list vars
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Lists the vars in the active config
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace list vars [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+############### devspace list vars ####################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
-
-devspace restart
-devspace restart -n my-namespace
+Lists the defined vars in the devspace config with their
+values
 #######################################################
 ```
 
@@ -29,12 +26,8 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -h, --help            help for vars
+  -o, --output string   The output format of the command. Can be either empty, keyvalue or json
 ```
 
 
