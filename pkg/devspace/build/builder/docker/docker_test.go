@@ -15,8 +15,8 @@ type buildImageTestCase struct {
 	dockerfilePath string
 	entrypoint     []string
 	cmd            []string
-
-	expectedErr string
+	devspacePID    string
+	expectedErr    string
 }
 
 func TestBuildImage(t *testing.T) {
@@ -25,7 +25,7 @@ func TestBuildImage(t *testing.T) {
 	for _, testCase := range testCases {
 		builder := &Builder{}
 
-		err := builder.BuildImage(testCase.contextPath, testCase.dockerfilePath, testCase.entrypoint, testCase.cmd, log.Discard)
+		err := builder.BuildImage(testCase.contextPath, testCase.dockerfilePath, testCase.entrypoint, testCase.cmd, testCase.devspacePID, log.Discard)
 
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error  in testCase %s", testCase.name)

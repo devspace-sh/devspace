@@ -73,7 +73,7 @@ func PortForwarding(servicesClient services.Client, interrupt chan error) error 
 	}
 
 	// start port forwarding
-	err := servicesClient.StartPortForwarding(interrupt)
+	err := servicesClient.StartPortForwarding(interrupt, services.DefaultPrefixFn)
 	if err != nil {
 		return errors.Errorf("Unable to start portforwarding: %v", err)
 	}
@@ -82,21 +82,6 @@ func PortForwarding(servicesClient services.Client, interrupt chan error) error 
 			continue
 		}
 		err = d.StartPortForwarding(servicesClient.KubeClient(), interrupt, servicesClient.Log())
-		if err != nil {
-			return err
-		}
-	}
-
-	// start reverse port forwarding
-	err = servicesClient.StartReversePortForwarding(interrupt)
-	if err != nil {
-		return errors.Errorf("Unable to start portforwarding: %v", err)
-	}
-	for _, d := range servicesClient.Dependencies() {
-		if d.DependencyConfig().Dev == nil || !d.DependencyConfig().Dev.Ports {
-			continue
-		}
-		err = d.StartReversePortForwarding(servicesClient.KubeClient(), interrupt, servicesClient.Log())
 		if err != nil {
 			return err
 		}
@@ -116,7 +101,7 @@ func ReplacePods(servicesClient services.Client) error {
 	}
 
 	// replace pods
-	err := servicesClient.ReplacePods()
+	err := servicesClient.ReplacePods(services.DefaultPrefixFn)
 	if err != nil {
 		return err
 	}

@@ -3,10 +3,11 @@ package kaniko
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"io"
 	"io/ioutil"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/util/interrupt"
 
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
@@ -102,8 +103,8 @@ func NewBuilder(config config.Config, dockerClient docker.Client, kubeClient kub
 }
 
 // Build implements the interface
-func (b *Builder) Build(log logpkg.Logger) error {
-	return b.helper.Build(b, log)
+func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
+	return b.helper.Build(b, devspacePID, log)
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
@@ -148,7 +149,7 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 }
 
 // BuildImage builds a dockerimage within a kaniko pod
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, log logpkg.Logger) error {
+func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, devspacePID string, log logpkg.Logger) error {
 	var err error
 
 	// Buildoptions
@@ -178,7 +179,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	// Generate the build pod spec
 	randString := randutil.GenerateRandomString(12)
 	buildID := strings.ToLower(randString)
-	buildPod, err := b.getBuildPod(buildID, options, dockerfilePath)
+	buildPod, err := b.getBuildPod(buildID, devspacePID, options, dockerfilePath)
 	if err != nil {
 		return errors.Wrap(err, "get build pod")
 	}
@@ -419,8 +420,10 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}, deleteBuildPod)
 	if err != nil {
 		// Delete all build pods on error
+
+		labelSelector := fmt.Sprintf("devspace-pid=%s", devspacePID)
 		pods, getErr := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).List(context.TODO(), metav1.ListOptions{
-			LabelSelector: "devspace-build=true",
+			LabelSelector: labelSelector,
 		})
 		if getErr != nil {
 			return err

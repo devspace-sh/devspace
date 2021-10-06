@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"strconv"
 	"strings"
 	"time"
@@ -60,15 +61,14 @@ type replacer struct{}
 
 func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (*selector.SelectedPodContainer, error) {
 	// check if there is a replaced pod in the target namespace
-	log.StartWait("Try to find replaced pod...")
-	defer log.StopWait()
+	log.Info("Try to find replaced pod...")
 
 	// try to find a single patched pod
 	selectedPod, err := findSingleReplacedPod(ctx, client, replacePod, 4, config, dependencies, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "find patched pod")
 	} else if selectedPod == nil {
-		parent, err := p.findScaledDownParentBySelector(ctx, client, config, dependencies, replacePod, log)
+		parent, err := p.findScaledDownParentBySelector(ctx, client, config, dependencies, replacePod)
 		if err != nil {
 			return nil, err
 		} else if parent == nil {
@@ -103,7 +103,7 @@ func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, 
 	}
 
 	// scale up parent
-	log.StartWait("Scaling up parent of replaced pod...")
+	log.Info("Scaling up parent of replaced pod...")
 	err = scaleUpParent(ctx, client, parent)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, 
 	return selectedPod, nil
 }
 
-func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (runtime.Object, error) {
+func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod) (runtime.Object, error) {
 	namespace := client.Namespace()
 	if replacePod.Namespace != "" {
 		namespace = replacePod.Namespace
@@ -121,7 +121,7 @@ func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client ku
 	// deployments
 	deployments, err := client.KubeClient().AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, errors.Wrap(err, "list deployments")
+		return nil, errors.Wrap(err, "list Deployments")
 	}
 	for _, d := range deployments.Items {
 		matched, err := matchesSelector(d.Annotations, &d.Spec.Template, config, dependencies, replacePod)
@@ -129,33 +129,31 @@ func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client ku
 			return nil, err
 		} else if matched {
 			d.Kind = "Deployment"
-			fmt.Println("MATCHED DEPLOYMENT")
 			return &d, nil
 		}
 	}
 
-	// replicasets
-	replicasets, err := client.KubeClient().AppsV1().ReplicaSets(namespace).List(ctx, metav1.ListOptions{})
+	// replicaSets
+	replicaSets, err := client.KubeClient().AppsV1().ReplicaSets(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, errors.Wrap(err, "list replicasets")
+		return nil, errors.Wrap(err, "list ReplicaSets")
 	}
-	for _, d := range replicasets.Items {
+	for _, d := range replicaSets.Items {
 		matched, err := matchesSelector(d.Annotations, &d.Spec.Template, config, dependencies, replacePod)
 		if err != nil {
 			return nil, err
 		} else if matched {
 			d.Kind = "ReplicaSet"
-			fmt.Println("MATCHED REPLICASET")
 			return &d, nil
 		}
 	}
 
-	// statefulsets
-	statefulsets, err := client.KubeClient().AppsV1().StatefulSets(namespace).List(ctx, metav1.ListOptions{})
+	// statefulSets
+	statefulSets, err := client.KubeClient().AppsV1().StatefulSets(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, errors.Wrap(err, "list statefulsets")
+		return nil, errors.Wrap(err, "list StatefulSets")
 	}
-	for _, d := range statefulsets.Items {
+	for _, d := range statefulSets.Items {
 		matched, err := matchesSelector(d.Annotations, &d.Spec.Template, config, dependencies, replacePod)
 		if err != nil {
 			return nil, err
@@ -207,8 +205,7 @@ func matchesSelector(annotations map[string]string, pod *corev1.PodTemplateSpec,
 
 func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) error {
 	// check if there is a replaced pod in the target namespace
-	log.StartWait("Try to find replaced pod...")
-	defer log.StopWait()
+	log.Info("Try to find replaced pod...")
 
 	// try to find a single patched pod
 	selectedPod, err := findSingleReplacedPod(ctx, client, replacePod, 2, config, dependencies, log)
@@ -219,11 +216,12 @@ func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config
 		if err != nil {
 			return err
 		} else if !shouldUpdate {
+			log.Infof("Found replaced pod %s/%s", selectedPod.Pod.Namespace, selectedPod.Pod.Name)
 			return nil
 		}
 	} else {
 		// try to find a single patchable object
-		parent, err := p.findScaledDownParentBySelector(ctx, client, config, dependencies, replacePod, log)
+		parent, err := p.findScaledDownParentBySelector(ctx, client, config, dependencies, replacePod)
 		if err != nil {
 			return err
 		} else if parent != nil {
@@ -242,14 +240,14 @@ func (p *replacer) ReplacePod(ctx context.Context, client kubectl.Client, config
 		}
 	}
 
-	log.StartWait("Try to find replaceable pod...")
+	log.Info("Try to find replaceable pod...")
 	container, parent, err := findSingleReplaceablePodParent(ctx, client, config, dependencies, replacePod, log)
 	if err != nil {
 		return err
 	}
 
 	// replace the pod
-	log.StartWait(fmt.Sprintf("Replacing Pod %s/%s...", container.Pod.Namespace, container.Pod.Name))
+	log.Info(fmt.Sprintf("Replacing Pod %s/%s...", container.Pod.Namespace, container.Pod.Name))
 	err = replace(ctx, client, container, parent, config, dependencies, replacePod, log)
 	if err != nil {
 		return err
@@ -329,7 +327,7 @@ func updateNeeded(ctx context.Context, client kubectl.Client, pod *selector.Sele
 	}
 
 	// scale up parent
-	log.StartWait("Scaling up parent of replaced pod...")
+	log.Info("Scaling up parent of replaced pod...")
 	err = scaleUpParent(ctx, client, parent)
 	if err != nil {
 		return false, err
@@ -438,7 +436,7 @@ func deleteAndWait(ctx context.Context, client kubectl.Client, pod *corev1.Pod, 
 		}
 	}
 
-	log.StartWait(fmt.Sprintf("Waiting for replaced pod " + pod.Namespace + "/" + pod.Name + " to get terminated..."))
+	log.Infof("Waiting for replaced pod " + pod.Namespace + "/" + pod.Name + " to get terminated...")
 	err := wait.Poll(time.Second, time.Minute*2, func() (bool, error) {
 		_, err := client.KubeClient().CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 		if err != nil {
@@ -488,6 +486,56 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 	copiedPod, err = applyPodPatches(copiedPod, replacePod)
 	if err != nil {
 		return errors.Wrap(err, "apply pod patches")
+	}
+
+	// replace paths
+	if len(replacePod.PersistPaths) > 0 {
+		name := pod.Pod.Name
+		if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Name != "" {
+			name = replacePod.PersistenceOptions.Name
+		}
+
+		copiedPod.Spec.Volumes = append(copiedPod.Spec.Volumes, corev1.Volume{
+			Name: "devspace-persistence",
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: name,
+					ReadOnly:  replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.ReadOnly,
+				},
+			},
+		})
+
+		for i, path := range replacePod.PersistPaths {
+			if path.Path == "" {
+				continue
+			}
+
+			subPath := path.VolumePath
+			if subPath == "" {
+				subPath = fmt.Sprintf("path-%d", i)
+			}
+
+			for i, con := range copiedPod.Spec.InitContainers {
+				if path.ContainerName == "" || path.ContainerName == con.Name {
+					copiedPod.Spec.InitContainers[i].VolumeMounts = append(copiedPod.Spec.InitContainers[i].VolumeMounts, corev1.VolumeMount{
+						Name:      "devspace-persistence",
+						MountPath: path.Path,
+						SubPath:   subPath,
+						ReadOnly:  path.ReadOnly,
+					})
+				}
+			}
+			for i, con := range copiedPod.Spec.Containers {
+				if path.ContainerName == "" || path.ContainerName == con.Name {
+					copiedPod.Spec.Containers[i].VolumeMounts = append(copiedPod.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
+						Name:      "devspace-persistence",
+						MountPath: path.Path,
+						SubPath:   subPath,
+						ReadOnly:  path.ReadOnly,
+					})
+				}
+			}
+		}
 	}
 
 	// reset the metadata
@@ -543,7 +591,7 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 	log.Donef("Scaled down %s %s/%s", copiedPod.Annotations[ParentKindAnnotation], copiedPod.Namespace, copiedPod.Annotations[ParentNameAnnotation])
 
 	// wait until pod is in terminating mode
-	log.StartWait("Waiting for Pod " + pod.Pod.Name + " to get terminated...")
+	log.Info("Waiting for Pod " + pod.Pod.Name + " to get terminated...")
 	err = wait.Poll(time.Second*2, time.Minute*2, func() (bool, error) {
 		pod, err := client.KubeClient().CoreV1().Pods(pod.Pod.Namespace).Get(ctx, pod.Pod.Name, metav1.GetOptions{})
 		if err != nil {
@@ -566,7 +614,7 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 	}
 
 	// create a replica set
-	_, err = client.KubeClient().AppsV1().ReplicaSets(copiedPod.Namespace).Create(ctx, &appsv1.ReplicaSet{
+	replicaSet, err := client.KubeClient().AppsV1().ReplicaSets(copiedPod.Namespace).Create(ctx, &appsv1.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      copiedPod.Name,
 			Namespace: copiedPod.Namespace,
@@ -593,6 +641,96 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 	}, metav1.CreateOptions{})
 	if err != nil {
 		return errors.Wrap(err, "create copied pod")
+	}
+
+	// create a pvc if needed
+	if len(replacePod.PersistPaths) > 0 {
+		err = createPVC(ctx, client, copiedPod, replicaSet, replacePod)
+		if err != nil {
+			if kerrors.IsAlreadyExists(err) {
+				// delete the old one and wait
+				_ = client.KubeClient().CoreV1().PersistentVolumeClaims(copiedPod.Namespace).Delete(ctx, copiedPod.Name, metav1.DeleteOptions{})
+				log.Infof("Waiting for old persistent volume claim to terminate")
+				err = wait.Poll(time.Second, time.Minute*2, func() (done bool, err error) {
+					_, err = client.KubeClient().CoreV1().PersistentVolumeClaims(copiedPod.Namespace).Get(ctx, copiedPod.Name, metav1.GetOptions{})
+					return kerrors.IsNotFound(err), nil
+				})
+				if err != nil {
+					return errors.Wrap(err, "waiting for pvc to terminate")
+				}
+
+				// create the new one
+				err = createPVC(ctx, client, copiedPod, replicaSet, replacePod)
+				if err != nil {
+					return errors.Wrap(err, "create persistent volume claim")
+				}
+			} else {
+				return errors.Wrap(err, "create persistent volume claim")
+			}
+		}
+	}
+
+	return nil
+}
+
+func createPVC(ctx context.Context, client kubectl.Client, copiedPod *corev1.Pod, replicaSet *appsv1.ReplicaSet, replacePod *latest.ReplacePod) error {
+	var err error
+	size := resource.MustParse("10Gi")
+	if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Size != "" {
+		size, err = resource.ParseQuantity(replacePod.PersistenceOptions.Size)
+		if err != nil {
+			return fmt.Errorf("error parsing persistent volume size %s: %v", replacePod.PersistenceOptions.Size, err)
+		}
+	}
+
+	var storageClassName *string
+	if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.StorageClassName != "" {
+		storageClassName = &replacePod.PersistenceOptions.StorageClassName
+	}
+
+	accessModes := []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+	if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.AccessModes != nil {
+		accessModes = []corev1.PersistentVolumeAccessMode{}
+		for _, accessMode := range replacePod.PersistenceOptions.AccessModes {
+			accessModes = append(accessModes, corev1.PersistentVolumeAccessMode(accessMode))
+		}
+	}
+
+	name := copiedPod.Name
+	if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Name != "" {
+		name = replacePod.PersistenceOptions.Name
+	}
+
+	_, err = client.KubeClient().CoreV1().PersistentVolumeClaims(copiedPod.Namespace).Create(ctx, &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: copiedPod.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "ReplicaSet",
+					Name:       replicaSet.Name,
+					UID:        replicaSet.UID,
+					Controller: ptr.Bool(true),
+				},
+			},
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: accessModes,
+			Resources: corev1.ResourceRequirements{
+				Requests: map[corev1.ResourceName]resource.Quantity{
+					corev1.ResourceStorage: size,
+				},
+			},
+			StorageClassName: storageClassName,
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		if kerrors.IsAlreadyExists(err) && replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Name != "" {
+			return nil
+		}
+
+		return err
 	}
 
 	return nil

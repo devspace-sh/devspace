@@ -80,20 +80,16 @@ devspace --dependency my-dependency run any-command --any-command-flag
 			cobraCmd.DisableFlagParsing = false
 
 			// apply extra flags
-			extraFlags, err := flagspkg.ApplyExtraFlags(cobraCmd, osArgs, true)
+			_, err := flagspkg.ApplyExtraFlags(cobraCmd, osArgs, true)
 			if err != nil {
 				return err
 			} else if cmd.Silent {
 				log.SetLevel(logrus.FatalLevel)
 			}
 
-			if len(extraFlags) > 0 {
-				log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
-			}
-
 			args := os.Args[index:]
 			plugin.SetPluginCommand(cobraCmd, args)
-			return cmd.RunRun(f, cobraCmd, args)
+			return cmd.RunRun(f, args)
 		},
 	}
 
@@ -102,7 +98,7 @@ devspace --dependency my-dependency run any-command --any-command-flag
 }
 
 // RunRun executes the functionality "devspace run"
-func (cmd *RunCmd) RunRun(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("run requires at least one argument")
 	}

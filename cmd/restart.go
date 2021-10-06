@@ -30,6 +30,7 @@ type RestartCmd struct {
 	Pod           string
 	Pick          bool
 	LabelSelector string
+	Name          string
 
 	log log.Logger
 }
@@ -63,6 +64,7 @@ devspace restart -n my-namespace
 	restartCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod to restart")
 	restartCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to restart")
 	restartCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
+	restartCmd.Flags().StringVar(&cmd.Name, "name", "", "The sync path name to restart")
 	restartCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
 
 	return restartCmd
@@ -138,6 +140,8 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 	restarts := 0
 	for _, syncPath := range config.Dev.Sync {
 		if syncPath.OnUpload == nil || !syncPath.OnUpload.RestartContainer {
+			continue
+		} else if cmd.Name != "" && syncPath.Name != cmd.Name {
 			continue
 		}
 

@@ -27,7 +27,7 @@ func NewClientByContext(context, namespace string, switchContext bool, kubeLoade
 		// try to load in cluster config
 		config, err := rest.InClusterConfig()
 		if err != nil {
-			return nil, "", "", false, errors.Errorf("kube config is invalid: please make sure you have an existing valid kube config")
+			return nil, "", "", false, errors.Errorf("kube config is invalid: please make sure you have an existing valid kube config. You might want to check one of the following things:\n\n* Make sure you can use 'kubectl get namespaces' locally\n* If you are using Loft, you might want to run 'devspace create space' or 'loft create space'\n")
 		}
 
 		currentNamespace, err := inClusterNamespace()

@@ -32,12 +32,11 @@ type Controller interface {
 	Start(options *Options, log logpkg.Logger) error
 }
 
-func NewController(config config.Config, dependencies []types.Dependency, client kubectl.Client, log logpkg.Logger) Controller {
+func NewController(config config.Config, dependencies []types.Dependency, client kubectl.Client) Controller {
 	return &controller{
 		config:       config,
 		dependencies: dependencies,
 		client:       client,
-		log:          log,
 	}
 }
 
@@ -45,7 +44,6 @@ type controller struct {
 	config       config.Config
 	dependencies []types.Dependency
 	client       kubectl.Client
-	log          logpkg.Logger
 }
 
 type Options struct {
@@ -56,9 +54,8 @@ type Options struct {
 	Done      chan struct{}
 
 	RestartOnError bool
-	RestartLog     logpkg.Logger
+	SyncLog        logpkg.Logger
 
-	SyncLog logpkg.Logger
 	Verbose bool
 }
 
@@ -183,19 +180,18 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				hook.LogExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 					"sync_config": options.SyncConfig,
 					"ERROR":       err,
-				}, c.log, hook.EventsForSingle("restart:sync", options.SyncConfig.Name).With("sync.restart")...)
+				}, options.SyncLog, hook.EventsForSingle("restart:sync", options.SyncConfig.Name).With("sync.restart")...)
 
-				options.RestartLog.Info("Restarting sync...")
+				options.SyncLog.Info("Restarting sync...")
 				for {
-					err := c.startWithWait(options, options.RestartLog)
+					err := c.startWithWait(options, options.SyncLog)
 					if err != nil {
-
 						hook.LogExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 							"sync_config": options.SyncConfig,
 							"ERROR":       err,
-						}, c.log, hook.EventsForSingle("restart:sync", options.SyncConfig.Name).With("sync.restart")...)
-						c.log.Errorf("Error restarting sync: %v", err)
-						c.log.Errorf("Will try again in 15 seconds")
+						}, options.SyncLog, hook.EventsForSingle("restart:sync", options.SyncConfig.Name).With("sync.restart")...)
+						options.SyncLog.Errorf("Error restarting sync: %v", err)
+						options.SyncLog.Errorf("Will try again in 15 seconds")
 						time.Sleep(time.Second * 15)
 						continue
 					}
@@ -206,14 +202,14 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				syncClient.Stop(nil)
 				hook.LogExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 					"sync_config": options.SyncConfig,
-				}, c.log, hook.EventsForSingle("stop:sync", options.SyncConfig.Name).With("sync.stop")...)
+				}, options.SyncLog, hook.EventsForSingle("stop:sync", options.SyncConfig.Name).With("sync.stop")...)
 			case <-onDone:
 				if options.Done != nil {
 					close(options.Done)
 				}
 				hook.LogExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 					"sync_config": options.SyncConfig,
-				}, c.log, hook.EventsForSingle("stop:sync", options.SyncConfig.Name).With("sync.stop")...)
+				}, options.SyncLog, hook.EventsForSingle("stop:sync", options.SyncConfig.Name).With("sync.stop")...)
 			}
 		}(client, options)
 	}
@@ -256,7 +252,7 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 	}
 
 	log.Info("Waiting for pods...")
-	container, err := targetselector.NewTargetSelector(c.client).SelectSingleContainer(context.TODO(), options.TargetOptions, c.log)
+	container, err := targetselector.NewTargetSelector(c.client).SelectSingleContainer(context.TODO(), options.TargetOptions, log)
 	if err != nil {
 		return nil, errors.Errorf("Error selecting pod: %v", err)
 	}
@@ -320,11 +316,19 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 		DownstreamDisabled:   downstreamDisabled,
 		Log:                  customLog,
 		Polling:              syncConfig.Polling,
+		ResolveCommand: func(command string, args []string) (string, []string, error) {
+			return hook.ResolveCommand(command, args, c.config, c.dependencies)
+		},
 	}
 
 	// Initialize log
 	if options.Log == nil {
 		options.Log = logpkg.GetFileLogger("sync")
+	}
+
+	// add exec hooks
+	if syncConfig.OnUpload != nil {
+		options.Exec = syncConfig.OnUpload.Exec
 	}
 
 	// Add onDownload hooks
