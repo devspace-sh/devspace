@@ -110,6 +110,36 @@ var _ = DevSpaceDescribe("build", func() {
 	})
 
 	ginkgo.It("should build dockerfile with custom builder", func() {
-		// TODO
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/custom_build")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// create build command
+		buildCmd := &cmd.BuildCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn: true,
+			},
+			SkipPush: true,
+		}
+		err = buildCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// create devspace docker client to access docker APIs
+		devspaceDockerClient, err := docker.NewClient(log)
+		framework.ExpectNoError(err)
+
+		dockerClient := devspaceDockerClient.DockerAPIClient()
+		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		framework.ExpectNoError(err)
+
+		for _, image := range imageList {
+			if image.RepoTags[0] == "my-docker-username/helloworld-custom-build:latest" {
+				err = nil
+				break
+			} else {
+				err = errors.New("image not found")
+			}
+		}
+		framework.ExpectNoError(err)
 	})
 })
