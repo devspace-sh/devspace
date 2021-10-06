@@ -106,7 +106,19 @@ var _ = DevSpaceDescribe("build", func() {
 	})
 
 	ginkgo.It("should build dockerfile with kaniko", func() {
-		// TODO
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/kaniko")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// create build command
+		buildCmd := &cmd.BuildCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn: true,
+			},
+			SkipPush: true,
+		}
+		err = buildCmd.Run(f)
+		framework.ExpectNoError(err)
 	})
 
 	ginkgo.It("should build dockerfile with custom builder", func() {
