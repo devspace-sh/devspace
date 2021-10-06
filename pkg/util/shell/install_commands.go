@@ -22,7 +22,6 @@ import (
 func devSpaceDefaultBin() string {
 	home, _ := homedir.Dir()
 	return filepath.Join(home, constants.DefaultHomeDevSpaceFolder, "bin")
-
 }
 
 func isCommandValid(command string) (bool, error) {
