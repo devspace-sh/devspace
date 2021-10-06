@@ -119,11 +119,10 @@ func TestKubectlDownload(t *testing.T) {
 		t.Fatal(err)
 	}
 	stdout1 := &bytes.Buffer{}
-	err = ExecuteShellCommand("kubectl version", nil, ".", stdout1, stderr, nil)
+	err = ExecuteShellCommand("kubectl -h", nil, ".", stdout1, stderr, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Assert(t, strings.Contains(stdout1.String(), `Client Version`))
 }
 
 func TestHelmDownload(t *testing.T) {

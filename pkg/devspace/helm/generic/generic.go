@@ -6,31 +6,26 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/helm/downloader"
 	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/downloader"
+	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/extract"
 	"github.com/loft-sh/devspace/pkg/util/log"
 
-	"github.com/mitchellh/go-homedir"
-	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 )
 
 const stableChartRepo = "https://charts.helm.sh/stable"
 
 type VersionedClient interface {
-	IsValidHelm(path string) (bool, error)
 	IsInCluster() bool
 	KubeContext() string
-	Command() string
-	DownloadURL() string
+	Command() commands.Command
 }
 
 type Client interface {
@@ -47,7 +42,7 @@ func NewGenericClient(versionedClient VersionedClient, log log.Logger) Client {
 		extract:         extract.NewExtractor(),
 	}
 
-	c.downloader = downloader.NewDownloader(c.installHelmClient, c.versionedClient.IsValidHelm, log)
+	c.downloader = downloader.NewDownloader(versionedClient.Command(), log)
 	return c
 }
 
@@ -109,7 +104,7 @@ func (c *client) ensureHelmBinary(helmConfig *latest.HelmConfig) error {
 	}
 
 	if helmConfig != nil && helmConfig.Path != "" {
-		valid, err := c.versionedClient.IsValidHelm(helmConfig.Path)
+		valid, err := c.versionedClient.Command().IsValid(helmConfig.Path)
 		if err != nil {
 			return err
 		} else if !valid {
@@ -120,46 +115,9 @@ func (c *client) ensureHelmBinary(helmConfig *latest.HelmConfig) error {
 		return nil
 	}
 
-	home, err := homedir.Dir()
-	if err != nil {
-		return err
-	}
-
-	installPath := filepath.Join(home, constants.DefaultHomeDevSpaceFolder, "bin", c.versionedClient.Command())
-	url := c.versionedClient.DownloadURL()
-	if runtime.GOOS == "windows" {
-		url += ".zip"
-		installPath += ".exe"
-	} else {
-		url += ".tar.gz"
-	}
-
-	c.helmPath, err = c.downloader.EnsureCLI("helm", installPath, url)
+	var err error
+	c.helmPath, err = c.downloader.EnsureCommand()
 	return err
-}
-
-func (c *client) installHelmClient(archiveFile, installPath, installFromURL string) error {
-	t := filepath.Dir(archiveFile)
-
-	// Extract the binary
-	if strings.HasSuffix(installFromURL, ".tar.gz") {
-		err := c.extract.UntarGz(archiveFile, t)
-		if err != nil {
-			return errors.Wrap(err, "extract tar.gz")
-		}
-	} else if strings.HasSuffix(installFromURL, ".zip") {
-		err := c.extract.Unzip(archiveFile, t)
-		if err != nil {
-			return errors.Wrap(err, "extract zip")
-		}
-	}
-
-	// Copy file to target location
-	if runtime.GOOS == "windows" {
-		return copy.Copy(filepath.Join(t, runtime.GOOS+"-"+runtime.GOARCH, "helm.exe"), installPath)
-	}
-
-	return copy.Copy(filepath.Join(t, runtime.GOOS+"-"+runtime.GOARCH, "helm"), installPath)
 }
 
 func (c *client) FetchChart(helmConfig *latest.HelmConfig) (bool, string, error) {
