@@ -1,0 +1,97 @@
+---
+title: Config Profiles
+sidebar_label: Basics
+---
+
+import FragmentInfoPrintConfig from '../../fragments/tip-print-config.mdx';
+import FragmentApplyMultiple from '../../fragments/profiles-apply-multiple.mdx';
+
+DevSpace allows you to define different profiles for different use cases (e.g. working on different services in the same project, starting certain debugging environments) or for different deployment targets (e.g. dev, staging production). 
+
+Profiles allow you to define:
+- [`replace`](../../configuration/profiles/replace.mdx) statements to override entire sections of the config.
+- [`merge`](../../configuration/profiles/merge.mdx) patches ([JSON Merge Patch, RFC 7386](https://tools.ietf.org/html/rfc7386)) to change specific parts of the config.
+- [`patches`](../../configuration/profiles/patches.mdx) ([JSON Patch, RFC 6902](https://tools.ietf.org/html/rfc6902)) to modify certain paths in the config.
+
+:::note Combine several strategies
+It is possible to use several strategies together within one profile. The execution order inside a single profile is:  
+1. `replace`  
+2. `merge`  
+3. `patches`  
+
+You can also apply multiple profiles through the `--profile` flag
+:::
+
+:::tip Debug Profiles
+
+<FragmentInfoPrintConfig/>
+
+:::
+
+A profile has to be configured in the `profiles` section of the `devspace.yaml`.
+```yaml {15-25}
+images:
+  backend:
+    image: john/devbackend
+  backend-debugger:
+    image: john/debugger
+deployments:
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: john/devbackend
+      - image: john/debugger
+profiles:
+- name: production
+  patches:
+  - op: replace
+    path: images.backend.image
+    value: john/prodbackend
+  - op: remove
+    path: deployments.name=backend.helm.values.containers[1]
+  - op: add
+    path: deployments.name=backend.helm.values.containers
+    value:
+      image: john/cache
+```
+
+## Useful Commands
+
+### `devspace print -p [profile]`
+
+<FragmentInfoPrintConfig/>
+
+<FragmentApplyMultiple/>
+
+### `devspace list profiles`
+To get a list of available profiles, you can run this command:
+```bash
+devspace list profiles
+```
+
+### `devspace use profile [profile]`
+To permanently switch to a different profile, you can run this command:
+```bash
+devspace use profile [PROFILE_NAME]
+```
+
+:::note
+Permanently switching to a profile means that all future commands (e.g. `devspace deploy` or `devspace dev`) will be executed using this profile until the user [resets the profile](#devspace-use-profile---reset) (see below).
+:::
+
+### `devspace use profile --reset`
+To permanently switch back to the default configuration (no profile replaces and patches active), you can run this command:
+```bash
+devspace use profile --reset
+```
+
+### `devspace [deploy] -p [profile]`
+Most DevSpace commands support the `-p / --profile` flag. Using this flag, you can run a single command with a different profile without switching your profile permenantly:
+```bash
+devspace build -p [PROFILE_NAME]
+devspace deploy -p [PROFILE_NAME]
+devspace dev -p [PROFILE_NAME]
+devspace dev -i -p [PROFILE_NAME]
+```

@@ -1,27 +1,30 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace sync"
+sidebar_label: devspace sync
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Starts a bi-directional sync between the target container and the local path
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace sync [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+################### devspace sync #####################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
+Starts a bi-directionaly sync between the target container
+and the current path:
 
-devspace restart
-devspace restart -n my-namespace
+devspace sync
+devspace sync --local-path=subfolder --container-path=/app
+devspace sync --exclude=node_modules --exclude=test
+devspace sync --pod=my-pod --container=my-container
+devspace sync --container-path=/my-path
 #######################################################
 ```
 
@@ -29,12 +32,20 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -c, --container string           Container name within pod where to sync to
+      --container-path string      Container path to use (Default is working directory)
+      --download-on-initial-sync   DEPRECATED: Downloads all locally non existing remote files in the beginning (default true)
+      --download-only              If set DevSpace will only download files
+  -e, --exclude strings            Exclude directory from sync
+  -h, --help                       help for sync
+      --initial-sync string        The initial sync strategy to use (mirrorLocal, mirrorRemote, preferLocal, preferRemote, preferNewest, keepAll)
+  -l, --label-selector string      Comma separated key=value selector list (e.g. release=test)
+      --local-path string          Local path to use (Default is current directory
+      --no-watch                   Synchronizes local and remote and then stops
+      --pick                       Select a pod (default true)
+      --pod string                 Pod to sync to
+      --upload-only                If set DevSpace will only upload files
+      --verbose                    Shows every file that is synced
 ```
 
 

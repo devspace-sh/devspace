@@ -1,27 +1,25 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace update plugin"
+sidebar_label: devspace update plugin
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Updates a devspace plugin
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace update plugin [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+############# devspace update plugin ##################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
+Updates a plugin
 
-devspace restart
-devspace restart -n my-namespace
+devspace update plugin my-plugin 
 #######################################################
 ```
 
@@ -29,12 +27,8 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -h, --help             help for plugin
+      --version string   The git tag to use
 ```
 
 

@@ -1,0 +1,101 @@
+---
+title: Configure Terminal
+sidebar_label: terminal
+---
+
+import FragmentImageSelector from '../../fragments/selector-image-selector.mdx';
+import FragmentLabelSelector from '../../fragments/selector-label-selector.mdx';
+
+There are two main modes how to develop with DevSpace, by streaming the log output of pods in DevSpace or by opening a terminal to the pod you would like to develop with. If you prefer the latter, you can configure the `dev.terminal` option to tell DevSpace to open a terminal to a target container. 
+
+In the `dev.terminal` section in the `devspace.yaml` you can configure the terminal:
+```yaml {18-23}
+images:
+  frontend:
+    image: myregistry/appfrontend
+dependencies:
+- name: backend
+  source:
+    path: backend
+deployments:
+- name: frontend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: myregistry/appfrontend
+        command: ["sleep"]
+        args: ["999999999"]
+dev:
+  terminal: 
+    imageSelector: myregistry/appfrontend
+    workDir: '/path/to/my/workdir'
+    # If you would like to open a different shell or start
+    # it with a different command you can also use
+    command: ["bash"]
+```
+
+:::warning Sleeping Container
+You will need to make sure that the container has a terminal equipped and is sleeping so that you can start your application.  
+:::
+
+## Configuration
+
+### `imageSelector`
+<FragmentImageSelector />
+
+#### Example: Setting imageName
+```yaml {25-34}
+images:
+  frontend:
+    image: myregistry/appfrontend
+  backend:
+    image: myregistry/appbackend
+deployments:
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: myregistry/appbackend
+- name: frontend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: myregistry/appfrontend
+        command: ["sleep"]
+        args: ["999999999"]
+dev:
+  terminal: 
+    imageSelector: myregistry/appbackend
+```
+
+### `labelSelector`
+<FragmentLabelSelector />
+
+#### Example: Setting labelSelector
+```yaml {25-34}
+dev:
+  terminal: 
+    labelSelector: 
+      app: my-app
+    # If the pod has multiple containers make sure to set this
+    containerName: container1
+```
+
+### `containerName` 
+If you select a pod via `labelSelector` and the pod has multiple containers, you'll need to specify a container name with this option.
+
+### `namespace`
+If this option is specified DevSpace will search the pod in this namespace.
+
+### `workDir`
+If this option is specified DevSpace will open the shell in the specified working directory.
+
+### `command`
+The `command` option expects a string array as optional configuration for how to open the shell for terminal forwarding. If this option is specified, `workDir` will not work anymore.
+
+:::note Command Termination
+If `command` is a non-interactive command that terminates, DevSpace will run the command and exits after the command has terminated.
+:::

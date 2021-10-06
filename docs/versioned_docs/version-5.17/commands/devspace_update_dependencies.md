@@ -1,27 +1,24 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace update dependencies"
+sidebar_label: devspace update dependencies
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Updates the git repositories of the dependencies defined in the devspace.yaml
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace update dependencies [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+############ devspace update dependencies #############
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
-
-devspace restart
-devspace restart -n my-namespace
+Updates the git repositories of the dependencies defined
+in the devspace.yaml
 #######################################################
 ```
 
@@ -29,12 +26,7 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -h, --help   help for dependencies
 ```
 
 

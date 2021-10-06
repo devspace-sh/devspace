@@ -1,27 +1,30 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace save vars"
+sidebar_label: devspace save vars
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Saves variable values to kubernetes
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace save vars [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+################ devspace save vars ###################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
+Saves devspace config variable values into a kubernetes 
+secret. Variable values can be shared or restored via
+devspace restore vars.
 
-devspace restart
-devspace restart -n my-namespace
+Examples:
+devspace save vars
+devspace save vars --namespace test 
+devspace save vars --vars-secret my-secret
 #######################################################
 ```
 
@@ -29,12 +32,7 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -h, --help   help for vars
 ```
 
 

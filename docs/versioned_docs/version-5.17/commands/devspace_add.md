@@ -1,40 +1,26 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace add"
+sidebar_label: devspace add
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Convenience command: adds something to devspace.yaml
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
-```
-
-```
 #######################################################
-################## devspace restart ###################
+#################### devspace add #####################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
-
-devspace restart
-devspace restart -n my-namespace
-#######################################################
+Adds config sections to devspace.yaml
 ```
 
 
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -h, --help   help for add
 ```
 
 

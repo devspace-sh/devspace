@@ -1,49 +1,25 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace"
+sidebar_label: devspace
 ---
 
+## devspace
 
-Restarts containers where the sync restart helper is injected
+Welcome to the DevSpace!
 
-## Synopsis
+### Synopsis
 
+DevSpace accelerates developing, deploying and debugging applications with Docker and Kubernetes. Get started by running the init command in one of your projects:
+	
+		devspace init
 
-```
-devspace restart [flags]
-```
-
-```
-#######################################################
-################## devspace restart ###################
-#######################################################
-Restarts containers where the sync restart helper
-is injected:
-
-devspace restart
-devspace restart -n my-namespace
-#######################################################
-```
-
-
-## Flags
-
-```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
-```
-
-
-## Global & Inherited Flags
+### Options
 
 ```
       --config string                The devspace config file to use
       --debug                        Prints the stack trace if an error occurs
       --disable-profile-activation   If true will ignore all profile activations
+  -h, --help                         help for devspace
       --inactivity-timeout int       Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems (default 180)
       --kube-context string          The kubernetes context to use
   -n, --namespace string             The kubernetes namespace to use
@@ -59,3 +35,10 @@ devspace restart -n my-namespace
       --vars-secret string           The secret to restore/save the variables from/to, if --restore-vars or --save-vars is enabled (default "devspace-vars")
 ```
 
+```
+
+```
+
+
+## Flags
+## Global & Inherited Flags

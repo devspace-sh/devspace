@@ -1,27 +1,23 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace build"
+sidebar_label: devspace build
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Builds all defined images and pushes them
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace build [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+################## devspace build #####################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
-
-devspace restart
-devspace restart -n my-namespace
+Builds all defined images and pushes them
 #######################################################
 ```
 
@@ -29,12 +25,17 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+      --build-sequential            Builds the images one after another instead of in parallel
+      --dependency strings          Builds only the specific named dependencies
+  -b, --force-build                 Forces to build every image
+      --force-dependencies          Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies) (default true)
+  -h, --help                        help for build
+      --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
+      --skip-dependency strings     Skips building the following dependencies
+      --skip-push                   Skips image pushing, useful for minikube deployment
+      --skip-push-local-kube        Skips image pushing, if a local kubernetes environment is detected
+  -t, --tag strings                 Use the given tag for all built images
+      --verbose-dependencies        Builds the dependencies verbosely (default true)
 ```
 
 

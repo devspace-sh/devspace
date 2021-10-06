@@ -1,27 +1,23 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace list namespaces"
+sidebar_label: devspace list namespaces
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Lists all namespaces in the current context
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace list namespaces [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+############ devspace list namespaces #################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
-
-devspace restart
-devspace restart -n my-namespace
+Lists all namespaces in the selected kube context
 #######################################################
 ```
 
@@ -29,12 +25,7 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -h, --help   help for namespaces
 ```
 
 

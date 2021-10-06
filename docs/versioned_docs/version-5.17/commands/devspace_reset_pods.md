@@ -1,27 +1,26 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace reset pods"
+sidebar_label: devspace reset pods
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Resets the replaced pods
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace reset pods [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+############### devspace reset pods ###################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
+Resets the replaced pods to its original state
 
-devspace restart
-devspace restart -n my-namespace
+Examples:
+devspace reset pods
 #######################################################
 ```
 
@@ -29,12 +28,7 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -h, --help   help for pods
 ```
 
 

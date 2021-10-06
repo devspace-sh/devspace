@@ -1,0 +1,114 @@
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Step from '@site/src/components/Step/Step';
+import FragmentTipUseNamespace from './tip-use-namespace.mdx';
+import FragmentNoteCreateSpace from './note-create-space.mdx';
+
+<Tabs
+  defaultValue="local"
+  values={[
+    { label: 'Local Cluster', value: 'local', },
+    { label: 'Remote Cluster', value: 'remote', },
+  ]
+}>
+<TabItem value="local">
+
+:::note Local Clusters
+Local clusters run on your local dev machine and include: minikube, kind, k3s, mikrok8s etc.
+:::
+
+If you want to deploy to a local Kubernetes cluster, make sure your **current kube-context** points to this cluster and tell DevSpace which namespace to use:
+
+```bash
+devspace use context                  # to select the right k8s cluster
+devspace use namespace my-namespace   # will be automatically created during deployment
+```
+
+<FragmentTipUseNamespace/>
+
+</TabItem>
+<TabItem value="remote">
+
+:::note Remote Clusters
+Remote clusters run in a cloud or private data center and include: GKE, EKS, AKS, bare metal etc.
+:::
+
+<Tabs
+  defaultValue="alone"
+  values={[
+    { label: 'Use cluster alone', value: 'alone', },
+    { label: 'Share cluster with others', value: 'shared', },
+  ]
+}>
+<TabItem value="alone">
+
+```bash
+devspace use context                  # to select the right k8s cluster
+devspace use namespace my-namespace   # will be automatically created during deployment
+```
+
+<FragmentTipUseNamespace/>
+
+</TabItem>
+<TabItem value="shared">
+
+#### Kubernetes multi-tenancy
+
+One of the options for setting up a multi-tenant Kubernetes environment would be to use [Loft](https://loft.sh/).
+It allows the developers to create isolated Kubernetes environments in a self-service fashion.
+
+[Loft](https://loft.sh/) offers a wide range of features to facilitate multi-tenancy in Kubernetes. One of such features is the ability to create [Virtual Clusters](https://loft.sh/features/virtual-kubernetes-clusters) - a lightweight, fully functional and certified Kubernetes distribution that runs fully within the host cluster. 
+
+[Loft](https://loft.sh/) also adds a resource called "Space" into your Kubernetes cluster. A "Space" is a virtual representation of a Kubernetes namespace, and we will be creating one in the steps below.
+
+
+#### How to use Loft
+
+<Step>1</Step>
+
+#### Setup Loft and connect your cluster
+
+See the [Loft getting started guide](https://loft.sh/docs/getting-started/setup) for details.
+
+<br/>
+<Step>2</Step>
+
+#### Install the Loft plugin for DevSpace
+
+```bash
+devspace add plugin https://github.com/loft-sh/loft-devspace-plugin
+```
+
+<br/>
+<Step>3</Step>
+
+#### Login to Loft via DevSpace
+
+```bash
+devspace login https://your-loft-instance.tld
+```
+
+<br/>
+<Step>4</Step>
+
+#### Create isolated namespaces (= Spaces)
+
+```bash
+devspace create space my-app
+```
+
+<FragmentNoteCreateSpace/>
+
+<br/>
+<Step>5</Step>
+
+#### Add cluster users and allow them to create Spaces
+
+Learn more about how to do this in the [Loft documentation](https://loft.sh/docs/getting-started/cluster-accounts).
+
+</TabItem>
+</Tabs>
+
+</TabItem>
+</Tabs>

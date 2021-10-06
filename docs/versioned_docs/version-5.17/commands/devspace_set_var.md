@@ -1,27 +1,27 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace set var"
+sidebar_label: devspace set var
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Sets a variable
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace set var [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+################# devspace set var ####################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
+Sets a specific variable 
 
-devspace restart
-devspace restart -n my-namespace
+Examples:
+devspace set var key=value
+devspace set var key=value key2=value2
 #######################################################
 ```
 
@@ -29,12 +29,8 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -h, --help        help for var
+      --overwrite   If true will overwrite the variables value even if its set already (default true)
 ```
 
 

@@ -1,27 +1,25 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace list plugins"
+sidebar_label: devspace list plugins
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Lists all installed devspace plugins
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace list plugins [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+############# devspace list plugins ##################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
+Lists all installed plugins
 
-devspace restart
-devspace restart -n my-namespace
+devspace list plugins
 #######################################################
 ```
 
@@ -29,12 +27,7 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -h, --help   help for plugins
 ```
 
 

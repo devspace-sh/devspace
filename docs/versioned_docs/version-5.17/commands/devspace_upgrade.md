@@ -1,27 +1,23 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace upgrade"
+sidebar_label: devspace upgrade
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Upgrade the DevSpace CLI to the newest version
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace upgrade [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+################## devspace upgrade ###################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
-
-devspace restart
-devspace restart -n my-namespace
+Upgrades the DevSpace CLI to the newest version
 #######################################################
 ```
 
@@ -29,12 +25,8 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+  -h, --help             help for upgrade
+      --version string   The version to update devspace to. Defaults to the latest stable version available
 ```
 
 

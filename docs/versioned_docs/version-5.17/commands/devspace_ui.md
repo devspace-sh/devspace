@@ -1,27 +1,23 @@
 ---
-title: "Command - devspace restart"
-sidebar_label: devspace restart
+title: "Command - devspace ui"
+sidebar_label: devspace ui
 ---
 
 
-Restarts containers where the sync restart helper is injected
+Opens the localhost UI in the browser
 
 ## Synopsis
 
 
 ```
-devspace restart [flags]
+devspace ui [flags]
 ```
 
 ```
 #######################################################
-################## devspace restart ###################
+##################### devspace ui #####################
 #######################################################
-Restarts containers where the sync restart helper
-is injected:
-
-devspace restart
-devspace restart -n my-namespace
+Opens the localhost UI in the browser
 #######################################################
 ```
 
@@ -29,12 +25,11 @@ devspace restart -n my-namespace
 ## Flags
 
 ```
-  -c, --container string        Container name within pod to restart
-  -h, --help                    help for restart
-  -l, --label-selector string   Comma separated key=value selector list (e.g. release=test)
-      --name string             The sync path name to restart
-      --pick                    Select a pod (default true)
-      --pod string              Pod to restart
+      --dev           Ignore errors when downloading UI
+  -h, --help          help for ui
+      --host string   The host to use when opening the ui server (default "localhost")
+      --port int      The port to use when opening the ui server
+      --server        If enabled will force start a server (otherwise an existing UI server is searched)
 ```
 
 
