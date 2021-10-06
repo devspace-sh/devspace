@@ -2,7 +2,7 @@ package log
 
 import (
 	"fmt"
-	"math/rand"
+	"github.com/loft-sh/devspace/pkg/util/hash"
 	"os"
 	"sync"
 	"time"
@@ -21,10 +21,14 @@ var Colors = []string{
 }
 
 func NewDefaultPrefixLogger(prefix string, base Logger) Logger {
+	hashNumber := int(hash.StringToNumber(prefix))
+	if hashNumber < 0 {
+		hashNumber = hashNumber * -1
+	}
+
 	return &prefixLogger{
 		Logger: base,
-
-		color:  Colors[rand.Intn(len(Colors))],
+		color:  Colors[hashNumber%len(Colors)],
 		prefix: prefix,
 	}
 }
@@ -45,6 +49,17 @@ type prefixLogger struct {
 	color  string
 
 	logMutex sync.Mutex
+}
+
+func (s *prefixLogger) StartWait(message string) {
+	s.logMutex.Lock()
+	defer s.logMutex.Unlock()
+
+	s.writeMessage("Wait: " + message + "\n")
+}
+
+func (s *prefixLogger) StopWait() {
+
 }
 
 func (s *prefixLogger) writeMessage(message string) {

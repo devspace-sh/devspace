@@ -145,3 +145,13 @@ func ExecuteCommandWithEnv(cmd string, args []string, dir string, stdout io.Writ
 func ExecuteCommand(cmd string, args []string, stdout io.Writer, stderr io.Writer) error {
 	return ExecuteCommandWithEnv(cmd, args, "", stdout, stderr, nil)
 }
+
+func FormatCommandName(cmd string, args []string) string {
+	commandString := strings.TrimSpace(cmd + " " + strings.Join(args, " "))
+	splitted := strings.Split(commandString, "\n")
+	if len(splitted) > 1 {
+		return splitted[0] + "..."
+	}
+
+	return commandString
+}

@@ -49,7 +49,7 @@ func (l *localCommandHook) Execute(hook *latest.HookConfig, client kubectl.Clien
 	dir := filepath.Dir(config.Path())
 
 	// resolve hook command and args
-	hookCommand, hookArgs, err := resolveCommand(hook.Command, hook.Args, config, dependencies)
+	hookCommand, hookArgs, err := ResolveCommand(hook.Command, hook.Args, config, dependencies)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (l *localCommandHook) Execute(hook *latest.HookConfig, client kubectl.Clien
 	return command.ExecuteCommandWithEnv(hookCommand, hookArgs, dir, l.Stdout, l.Stderr, extraEnv)
 }
 
-func resolveCommand(command string, args []string, config config.Config, dependencies []types.Dependency) (string, []string, error) {
+func ResolveCommand(command string, args []string, config config.Config, dependencies []types.Dependency) (string, []string, error) {
 	// resolve hook command
 	hookCommand, err := util.ResolveImageHelpers(command, config, dependencies)
 	if err != nil {

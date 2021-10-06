@@ -44,7 +44,10 @@ Every sync configuration consists of two essential parts:
 
 ## Configuration
 ### `name`
-The `name` option is optional and expects a string stating the name of this sync configuration. This can be used as a steady identifier when using profile patches or when targeting this sync configuration with the before or after initial sync hook.
+The `name` option is optional and expects a string stating the name of this sync configuration. This can be used as a:
+* Steady identifier when using profile patches 
+* When targeting this sync configuration with the before or after initial sync hook 
+* To override the log message prefix for this sync configuration.
 
 For example:
 ```yaml {3}
@@ -58,14 +61,11 @@ dev:
     - node_modules/
     - logs/
 hooks:
-- command: |
+- events: ["after:initialSync:devbackend"]
+  command: |-
     /app/rebuild.sh
-  when:
-    after:
-      initialSync: devbackend
-  where:
-    container:
-      imageSelector: john/devbackend
+  container:
+    imageSelector: john/devbackend
 ```
 
 ## Pod/Container Selection
@@ -369,7 +369,7 @@ uploadExcludeFile: "" # Do not load exclude paths from a file
 <br/>
 
 ## Post-Sync Commands
-Sometimes it is useful to execute commands after the sync downloads or uploads files/directories between container and local filesystem.
+Sometimes it is useful to execute commands after the sync uploads files/directories between the local filesystem and the container.
 
 :::warning
 Make sure that post-sync commands will **<u>not</u>** trigger a new sync process which could lead to an **endless loop**.
@@ -407,8 +407,10 @@ dev:
 ```
 
 
-### `onUpload`
-The `onUpload` option defines command(s) that should be executed after a file/directory was uploaded from the local filesystem to the container.
+### `onUpload.exec`
+The `onUpload.exec` option defines command(s) that should be executed after DevSpace uploaded files and folder to the container. DevSpace will make sure that those commands are not executed while initially syncing the state and command execution will also halt any syncing activities.
+
+If this is defined together with `onUpload.restartContainer`, DevSpace will make sure that the commands are always executed **before** the container is restarted. 
 
 #### Example: Post-Upload Commands
 ```yaml {14-29}
@@ -426,66 +428,20 @@ dev:
   sync:
   - imageSelector: john/devbackend
     onUpload:
-      execRemote:         # These post-sync commands will be executed inside the affected container
-        command: chmod    # Command to execute for files and folders
-        args:
-        - +x
-        - {}              # {} will be replaced with the path of the synced file/directory
-        onFileChange:     # Command to execute ONLY for files
-          command: chmod
-          args:
-          - +x
-          - {}            # {} will be replaced with the path of the synced file/directory
-        onDirCreate:      # Command to execute ONLY for newly created directories
-          command: chmod
-          args:
-          - +x
-          - {}            # {} will be replaced with the path of the synced file/directory
-        onBatch:          # Command to execute after sync has processed a full batch of files and folders
-          command: recompile
-          args:           # NOTE: {} is NOT available for onBatch
-          - assets
-          - --minify
+      # These post-sync commands will be executed after DevSpace synced changes to the container in the given order
+      exec: 
+      - command: |-
+          npm install
+        onChange: ["./package.json"]
+      - command: |-
+          echo 123 > local.txt
+        local: true                   # Execute this command locally instead of in the container
+      - command: "touch abc.txt"      # string   | Command that should be executed after DevSpace made changes
+        args: []                      # string[] | Optional args that will force DevSpace to not execute the command in a shell
+        failOnError: false            # bool     | If true, DevSpace will restart the sync if the command fails (default: false)
+	    local: false                  # bool     | If true, DevSpace will run the command locally instead of in the container (default: false)
+	    onChange: ["package.json"]    # string[] | Optional array of file patterns that will trigger this command
 ```
-
-### `onDownload`
-The `onDownload` option defines command(s) that should be executed after a file/directory was downloaded from the container to the local filesystem.
-
-#### Example: Post-Download Commands
-```yaml {14-29}
-images:
-  backend:
-    image: john/devbackend
-deployments:
-- name: app-backend
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: john/devbackend
-dev:
-  sync:
-  - imageSelector: john/devbackend
-    onDownload:
-      execLocal:          # These post-sync commands will be executed on the local dev machine
-        command: chmod    # Command to execute for files and folders
-        args:
-        - +x
-        - {}              # {} will be replaced with the path of the synced file/directory
-        onFileChange:     # Command to execute ONLY for files
-          command: chmod
-          args:
-          - +x
-          - {}            # {} will be replaced with the path of the synced file/directory
-        onDirCreate:      # Command to execute ONLY for newly created directories
-          command: chmod
-          args:
-          - +x
-          - {}            # {} will be replaced with the path of the synced file/directory
-```
-
-
-<br/>
 
 ## One-Directional Sync
 These flags allow for local or remote container filesystems to be ignored during synchronization.

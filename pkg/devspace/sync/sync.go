@@ -25,6 +25,10 @@ const waitForMoreChangesTimeout = time.Minute
 type Options struct {
 	Polling bool
 
+	Exec []latest.SyncExec
+
+	ResolveCommand func(command string, args []string) (string, []string, error)
+
 	ExcludePaths         []string
 	DownloadExcludePaths []string
 	UploadExcludePaths   []string
@@ -288,13 +292,25 @@ func (s *Sync) initialSync(onInitUploadDone chan struct{}, onInitDownloadDone ch
 		Log:         s.log,
 
 		UpstreamDone: func() {
-			if onInitUploadDone != nil {
-				if !s.Options.UpstreamDisabled {
-					for len(s.upstream.events) > 0 || s.upstream.IsBusy() {
-						time.Sleep(time.Millisecond * 100)
-					}
+			if !s.Options.UpstreamDisabled {
+				for s.upstream.IsBusy() {
+					time.Sleep(time.Millisecond * 100)
 				}
+			}
 
+			// signal upstream that initial sync is done
+			s.upstream.initialSyncCompletedMutex.Lock()
+			s.upstream.initialSyncCompleted = true
+			s.upstream.initialSyncCompletedMutex.Unlock()
+
+			// wait until initial sync commands were executed
+			if !s.Options.UpstreamDisabled {
+				for s.upstream.IsInitialSyncing() {
+					time.Sleep(time.Millisecond * 100)
+				}
+			}
+
+			if onInitUploadDone != nil {
 				s.log.Info("Upstream - Initial sync completed")
 				close(onInitUploadDone)
 			}

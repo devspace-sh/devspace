@@ -2,6 +2,7 @@ package sync
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
 	"fmt"
@@ -13,12 +14,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/loft-sh/devspace/helper/server/ignoreparser"
-	"github.com/loft-sh/devspace/helper/util/crc32"
-
+	"github.com/bmatcuk/doublestar"
 	"github.com/juju/ratelimit"
 	"github.com/loft-sh/devspace/helper/remote"
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
 	"github.com/loft-sh/devspace/helper/util"
+	"github.com/loft-sh/devspace/helper/util/crc32"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/shell"
 	"github.com/loft-sh/notify"
 	"github.com/pkg/errors"
 )
@@ -40,6 +44,10 @@ type upstream struct {
 	eventBufferMutex sync.Mutex
 
 	ignoreMatcher ignoreparser.IgnoreParser
+
+	initialSyncCompletedMutex sync.Mutex
+	initialSyncChanges        []string
+	initialSyncCompleted      bool
 }
 
 const (
@@ -97,7 +105,14 @@ func (u *upstream) IsBusy() bool {
 	u.isBusyMutex.Lock()
 	defer u.isBusyMutex.Unlock()
 
-	return u.isBusy
+	return len(u.events) > 0 || u.isBusy
+}
+
+func (u *upstream) IsInitialSyncing() bool {
+	u.initialSyncCompletedMutex.Lock()
+	defer u.initialSyncCompletedMutex.Unlock()
+
+	return len(u.initialSyncChanges) > 0 || !u.initialSyncCompleted
 }
 
 func (u *upstream) startPing(doneChan chan struct{}) {
@@ -218,6 +233,11 @@ func (u *upstream) mainLoop() error {
 				}
 				u.isBusyMutex.Unlock()
 			}
+
+			err := u.execCommandsAfterInitialSync()
+			if err != nil {
+				return errors.Wrap(err, "exec after initial sync")
+			}
 		}
 
 		// apply the changes
@@ -226,6 +246,143 @@ func (u *upstream) mainLoop() error {
 			return errors.Wrap(err, "apply changes")
 		}
 	}
+}
+
+func (u *upstream) execCommandsAfterInitialSync() error {
+	u.initialSyncCompletedMutex.Lock()
+	defer u.initialSyncCompletedMutex.Unlock()
+
+	if !u.initialSyncCompleted || len(u.initialSyncChanges) == 0 {
+		return nil
+	}
+
+	changedFiles := u.initialSyncChanges
+	u.initialSyncChanges = nil
+	return u.execCommands(changedFiles)
+}
+
+func (u *upstream) execCommandsAfterApply(changedFiles []string) error {
+	u.initialSyncCompletedMutex.Lock()
+	defer u.initialSyncCompletedMutex.Unlock()
+
+	if !u.initialSyncCompleted {
+		u.initialSyncChanges = append(u.initialSyncChanges, changedFiles...)
+		return nil
+	}
+
+	return u.execCommands(changedFiles)
+}
+
+func (u *upstream) execCommands(changedFiles []string) error {
+	// execute exec commands
+	for _, exec := range u.sync.Options.Exec {
+		err := u.execCommand(exec, changedFiles)
+		if err != nil {
+			return err
+		}
+	}
+
+	// execute batch command
+	err := u.ExecuteBatchCommand()
+	if err != nil {
+		return err
+	}
+
+	// Restart container if needed
+	return u.RestartContainer()
+}
+
+func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) error {
+	matched := ""
+	if len(exec.OnChange) > 0 {
+	Outer:
+		for _, pattern := range exec.OnChange {
+			pattern = path.Clean(pattern)
+			for _, file := range changedFiles {
+				if len(file) == 1 {
+					continue
+				}
+
+				hasMatched, _ := doublestar.Match(pattern, file[1:])
+				if hasMatched {
+					matched = file[1:]
+					break Outer
+				}
+			}
+		}
+		if matched == "" {
+			return nil
+		}
+	}
+
+	execCommand := exec.Command
+	execArgs := exec.Args
+	if u.sync.Options.ResolveCommand != nil {
+		var err error
+		execCommand, execArgs, err = u.sync.Options.ResolveCommand(execCommand, execArgs)
+		if err != nil {
+			return errors.Wrap(err, "resolve command")
+		}
+	}
+
+	if exec.Local {
+		if matched != "" {
+			u.sync.log.Infof("Upstream - Execute command '%s' locally, because '%s' changed", command.FormatCommandName(execCommand, execArgs), matched)
+		} else {
+			u.sync.log.Infof("Upstream - Execute command '%s' locally", command.FormatCommandName(execCommand, execArgs))
+		}
+
+		// if args are nil we execute the command in a shell
+		var (
+			err error
+			out = &bytes.Buffer{}
+		)
+		if exec.Args == nil {
+			err = shell.ExecuteShellCommand(execCommand, nil, u.sync.LocalPath, out, out, nil)
+		} else {
+			err = command.ExecuteCommandWithEnv(execCommand, exec.Args, u.sync.LocalPath, out, out, nil)
+		}
+		if err != nil {
+			if exec.FailOnError {
+				return fmt.Errorf("error executing command %s: %s %v", command.FormatCommandName(execCommand, execArgs), out.String(), err)
+			}
+
+			u.sync.log.Infof("Upstream - Error executing command: %s %v", out.String(), err)
+		}
+
+		u.sync.log.Infof("Upstream - Done executing command")
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
+	defer cancel()
+
+	cmd := execCommand
+	args := execArgs
+	if args == nil {
+		args = []string{"-c", cmd}
+		cmd = "sh"
+	}
+
+	if matched != "" {
+		u.sync.log.Infof("Upstream - Execute command '%s', because '%s' changed", command.FormatCommandName(execCommand, execArgs), matched)
+	} else {
+		u.sync.log.Infof("Upstream - Execute command '%s'", command.FormatCommandName(execCommand, execArgs))
+	}
+
+	_, err := u.client.Execute(ctx, &remote.Command{
+		Cmd:  cmd,
+		Args: args,
+	})
+	if err != nil {
+		if exec.FailOnError {
+			return errors.Wrap(err, "execute command")
+		}
+
+		u.sync.log.Infof("Upstream - Error executing command: %v", err)
+	}
+	u.sync.log.Infof("Upstream - Done executing command")
+	return nil
 }
 
 func (u *upstream) getFileInformationFromEvent(events []notify.EventInfo) ([]*FileInformation, error) {
@@ -415,10 +572,10 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 	}
 
 	// Apply creates
-	var writtenChanges int
+	var writtenChanges map[string]*FileInformation
 	if len(creates) > 0 {
 		var err error
-		writtenChanges, err = func() (int, error) {
+		writtenChanges, err = func() (map[string]*FileInformation, error) {
 			u.sync.fileIndex.fileMapMutex.Lock()
 			defer u.sync.fileIndex.fileMapMutex.Unlock()
 
@@ -427,9 +584,9 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 				if err == nil {
 					return changes, nil
 				} else if i+1 >= syncRetries {
-					return 0, errors.Wrap(err, "apply creates")
+					return nil, errors.Wrap(err, "apply creates")
 				} else if strings.HasSuffix(err.Error(), "transport is closing") || strings.HasSuffix(err.Error(), "broken pipe") {
-					return 0, errors.Wrap(err, "apply creates")
+					return nil, errors.Wrap(err, "apply creates")
 				}
 
 				u.sync.log.Infof("Upstream - Retry upload because of error: %v", err)
@@ -439,28 +596,28 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 				}
 			}
 
-			return 0, nil
+			return nil, nil
 		}()
 		if err != nil {
 			return err
 		}
 	}
 
-	changeAmount := len(removes) + writtenChanges
+	changeAmount := len(removes) + len(writtenChanges)
 	if changeAmount == 0 {
 		return nil
 	}
 
-	// execute batch command
-	err := u.ExecuteBatchCommand()
-	if err != nil {
-		return err
+	u.sync.log.Infof("Upstream - Successfully processed %d change(s)", changeAmount)
+	changeNames := make([]string, 0, changeAmount)
+	for _, c := range removes {
+		changeNames = append(changeNames, c.Name)
+	}
+	for n := range writtenChanges {
+		changeNames = append(changeNames, n)
 	}
 
-	u.sync.log.Infof("Upstream - Successfully processed %d change(s)", changeAmount)
-
-	// Restart container if needed
-	return u.RestartContainer()
+	return u.execCommandsAfterApply(changeNames)
 }
 
 func (u *upstream) RestartContainer() error {
@@ -481,7 +638,7 @@ func (u *upstream) RestartContainer() error {
 
 func (u *upstream) ExecuteBatchCommand() error {
 	if u.sync.Options.UploadBatchCmd != "" {
-		u.sync.log.Infof("Upstream - Execute batch command '%s %s'", u.sync.Options.UploadBatchCmd, strings.Join(u.sync.Options.UploadBatchArgs, " "))
+		u.sync.log.Infof("Upstream - Execute command '%s %s'", u.sync.Options.UploadBatchCmd, strings.Join(u.sync.Options.UploadBatchArgs, " "))
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
 		defer cancel()
@@ -491,10 +648,10 @@ func (u *upstream) ExecuteBatchCommand() error {
 			Args: u.sync.Options.UploadBatchArgs,
 		})
 		if err != nil {
-			return errors.Wrap(err, "execute batch command")
+			return errors.Wrap(err, "execute command")
 		}
 
-		u.sync.log.Infof("Upstream - Done executing batch command")
+		u.sync.log.Infof("Upstream - Done executing command")
 	}
 
 	return nil
@@ -511,12 +668,12 @@ func (u *upstream) updateUploadChanges(files []*FileInformation) []*FileInformat
 	return newChanges
 }
 
-func (u *upstream) applyCreates(files []*FileInformation) (int, error) {
+func (u *upstream) applyCreates(files []*FileInformation) (map[string]*FileInformation, error) {
 	files, err := u.filterChanges(files)
 	if err != nil {
-		return 0, err
+		return nil, err
 	} else if len(files) == 0 {
-		return 0, nil
+		return nil, nil
 	}
 
 	size := int64(0)
@@ -552,13 +709,13 @@ func (u *upstream) applyCreates(files []*FileInformation) (int, error) {
 	// upload the archive
 	err = u.uploadArchive(reader)
 	if err != nil {
-		return 0, errors.Wrap(err, "upload archive")
+		return nil, errors.Wrap(err, "upload archive")
 	}
 
 	// check if there was a compressing error
 	err = <-errorChan
 	if err != nil {
-		return 0, errors.Wrap(err, "compress archive")
+		return nil, errors.Wrap(err, "compress archive")
 	}
 
 	// finally update written files
@@ -567,7 +724,7 @@ func (u *upstream) applyCreates(files []*FileInformation) (int, error) {
 		u.sync.fileIndex.fileMap[element.Name] = element
 	}
 
-	return len(archiver.WrittenFiles()), nil
+	return archiver.WrittenFiles(), nil
 }
 
 func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, error) {

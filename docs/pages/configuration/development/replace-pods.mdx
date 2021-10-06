@@ -55,13 +55,33 @@ Each entry that you specify under `dev.replacePods` will tell DevSpace to search
 - Copy the pod.metadata and pod.spec of the already running pod
 - Scale down the owning ReplicaSet, Deployment or StatefulSet replicas to 0
 - Apply the patches to the copied pod 
-- Create the copied pod in the cluster
+- Create the copied pod through a replica set in the cluster
 
 Within the `dev` part of DevSpace, replacing pods is the first step that is executed, which means that all other services such as port-forwarding, sync, log streaming or terminal forwarding will wait until DevSpace has either replaced the pods or already found replaced pods. The services will then target the newly created patched pod instead of the old one.
 
 :::note
 DevSpace will automatically recognize changes to the parent Deployment, ReplicaSet or StatefulSet and apply them to the replaced pod automatically in the next run.
 :::
+
+## Configuration
+
+### `name`
+The `name` option is optional and expects a string stating the name of this replace pods configuration. This can be used as a steady identifier when using profile patches or to override the log messages for this replace pods configuration.
+
+For example:
+```yaml {3}
+dev:
+  replacePods:
+  - name: devbackend
+    imageSelector: john/devbackend
+    replaceImage: ubuntu:latest
+profiles:
+- name: production
+  patches:
+  - op: replace
+    path: dev.replacePods.name=devbackend.imageSelector
+    value: john/prodbackend
+```
 
 ## Pod/Container Selection
 The following config options are needed to determine the container which should be replaced:
@@ -207,6 +227,76 @@ dev:
       path: spec.containers[0].args
       value: ["9999999999"]
 ```
+
+**Explanation:**
+- The `labelSelector` would select the pod created for the component deployment `app-backend`.
+
+## Persistence
+
+Replace pods offer you the ability to easily persist certain folders in the exchanged pod through a [persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims). This might be useful if you have to sync large amounts of files that are needed in multiple containers or the replaced pod might get rescheduled or killed often.
+
+:::info Cleanup of Persistent Volume Claims
+If DevSpace creates the persistent volume claim, it will also get cleaned up on a `devspace reset pods` or if config changes in the `replacePods` section are detected.
+:::
+
+### `persistPaths`
+
+The `persistPaths` option expects an array of paths that should get persisted on the replaced pod. 
+
+#### Example: Persist the folders
+```yaml
+dev:
+  replacePods:
+  - imageSelector: my-app/dev
+    persistPaths:
+    - path: /app
+      # Optional path on the persistent volume to mount
+      # volumePath: /my-volume/app
+      # Optional name of the container to persist this path
+      # containerName: my-container
+```
+
+**Explanation:**
+- The `imageSelector` would select the pod with image `my-app/dev`.
+- DevSpace would create a new persistent volume claim for the pod if the pod was not yet replaced
+- DevSpace would replace the pod with a pod which has a volume mount for the path `/app` that references the created persistent volume claim
+
+### `persistenceOptions`
+
+`persistenceOptions` is an object that defines additional options for `persistPaths`. You can configure the following options:
+
+- `size`: the size of the persistent volume to request. (Defaults to `10Gi`)
+- `storageClassName`: the storage class name to use for the persistent volume claim. (Defaults to empty)
+- `accessModes`: the access modes to use for the persistent volume claim. (Defaults to `ReadWriteOnce`)
+- `readOnly`: if the persistent volume claim should get mounted in read only mode. (Defaults to `false`)
+- `name`: the name of the persistent volume claim to use or create. (Defaults to name of the replaced pod)
+
+#### Example: Share a single persistent volume across two pods
+```yaml
+dev:
+  sync:
+  - imageSelector: my-image/frontend
+    containerPath: /app
+  replacePods:
+  - imageSelector: my-image/frontend
+    persistPaths:
+    - path: /app
+      volumePath: /app
+    persistenceOptions:
+      name: my-pvc
+  - imageSelector: my-image/backend
+    persistPaths:
+    - path: /backend
+      volumePath: /app
+    persistenceOptions:
+      name: my-pvc
+      readOnly: true
+```
+
+**Explanation:**
+- DevSpace will create a persistent volume claim `my-pvc` if it does not exist
+- DevSpace will replace the pods with image `my-image/frontend` and `my-image/backend` with pods that mount the persistent volume claim called `my-pvc`
+- DevSpace will sync the local files into the persisted folder `/app` of the replaced pod with image `my-image/frontend`. Since the replaced pods share a common persistent volume claim, also the backend container will get the updated files.
 
 ## Reset replaced pods
 
