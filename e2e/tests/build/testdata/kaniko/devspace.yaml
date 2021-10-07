@@ -1,0 +1,12 @@
+version: v1beta11
+images:
+  app:
+    image: my-docker-username/helloworld-kaniko
+    dockerfile: ./Dockerfile
+    tags:
+    - latest
+    build:
+      kaniko:
+        cache: false
+        args:
+        - --no-push
