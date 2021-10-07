@@ -64,7 +64,7 @@ devspace purge -d my-deployment
 	}
 
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
-	purgeCmd.Flags().BoolVarP(&cmd.All, "all", "a", false, "When enabled purges the dependencies as well")
+	purgeCmd.Flags().BoolVarP(&cmd.All, "all", "a", true, "When enabled purges the dependencies as well")
 	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", false, "DEPRECATED: Please use --all instead")
 	purgeCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Builds the dependencies verbosely")
 
@@ -135,18 +135,29 @@ func (cmd *PurgeCmd) runCommand(f factory.Factory, client kubectl.Client, config
 	// Purge dependencies
 	var dependencies []types.Dependency
 	if cmd.All || len(cmd.Dependency) > 0 {
-		dependencies, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).PurgeAll(dependency.PurgeOptions{
+		// Resolve dependencies
+		dependencies, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).ResolveAll(dependency.ResolveOptions{
+			SkipDependencies:   cmd.SkipDependency,
+			UpdateDependencies: false,
+			Silent:             true,
+			Verbose:            false,
+		})
+		if err != nil {
+			cmd.log.Warnf("Error resolving dependencies: %v", err)
+		}
+		for _, dep := range dependencies {
+			if dep.DependencyConfig().Dev != nil && dep.DependencyConfig().Dev.ReplacePods && len(dep.Config().Config().Dev.ReplacePods) > 0 {
+				reset.ResetPods(client, dep.Config(), dep.Children(), cmd.log)
+			}
+		}
+
+		_, err = f.NewDependencyManager(configInterface, client, configOptions, cmd.log).PurgeAll(dependency.PurgeOptions{
 			SkipDependencies: cmd.SkipDependency,
 			Dependencies:     cmd.Dependency,
 			Verbose:          cmd.VerboseDependencies,
 		})
 		if err != nil {
 			cmd.log.Errorf("Error purging dependencies: %v", err)
-		}
-		for _, dep := range dependencies {
-			if dep.DependencyConfig().Dev != nil && dep.DependencyConfig().Dev.ReplacePods && len(dep.Config().Config().Dev.ReplacePods) > 0 {
-				reset.ResetPods(client, dep.Config(), dep.Children(), cmd.log)
-			}
 		}
 	}
 
@@ -156,6 +167,7 @@ func (cmd *PurgeCmd) runCommand(f factory.Factory, client kubectl.Client, config
 		dep, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).ResolveAll(dependency.ResolveOptions{
 			SkipDependencies:   cmd.SkipDependency,
 			UpdateDependencies: false,
+			Silent:             true,
 			Verbose:            false,
 		})
 		if err != nil {

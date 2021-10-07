@@ -799,7 +799,7 @@ func getImageSelector(replacePod *latest.ReplacePod, config config.Config, depen
 }
 
 func findSingleReplacedPod(ctx context.Context, client kubectl.Client, replacePod *latest.ReplacePod, config config.Config, dependencies []dependencytypes.Dependency, log log.Logger) (*selector.SelectedPodContainer, error) {
-	replicaSet, err := findReplacedPodReplicaSet(ctx, client, replacePod, config, dependencies)
+	replicaSet, err := findReplacedPodReplicaSet(ctx, client, replacePod, config, dependencies, log)
 	if err != nil {
 		return nil, err
 	} else if replicaSet == nil {
@@ -836,7 +836,7 @@ func findSingleReplacedPod(ctx context.Context, client kubectl.Client, replacePo
 	return selected, nil
 }
 
-func findReplacedPodReplicaSet(ctx context.Context, client kubectl.Client, replacePod *latest.ReplacePod, config config.Config, dependencies []dependencytypes.Dependency) (runtime.Object, error) {
+func findReplacedPodReplicaSet(ctx context.Context, client kubectl.Client, replacePod *latest.ReplacePod, config config.Config, dependencies []dependencytypes.Dependency, log log.Logger) (runtime.Object, error) {
 	namespace := client.Namespace()
 	if replacePod.Namespace != "" {
 		namespace = replacePod.Namespace
@@ -851,6 +851,12 @@ func findReplacedPodReplicaSet(ctx context.Context, client kubectl.Client, repla
 		parent, err := getParentFromReplaced(ctx, client, replicaSet.ObjectMeta)
 		if err != nil {
 			if kerrors.IsNotFound(err) {
+				// delete replica set
+				err = client.KubeClient().AppsV1().ReplicaSets(namespace).Delete(ctx, replicaSet.Name, metav1.DeleteOptions{})
+				if err != nil {
+					log.Info("Error deleting replica set %s/%s: %v", namespace, replicaSet.Name, err)
+				}
+
 				continue
 			}
 
