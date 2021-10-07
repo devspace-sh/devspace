@@ -58,7 +58,7 @@ func Sync(servicesClient services.Client, interrupt chan error, printSyncLog, ve
 		}
 	}
 
-	pluginErr = hook.ExecuteHooks(servicesClient.KubeClient(), servicesClient.Config(), servicesClient.Dependencies(), map[string]interface{}{}, servicesClient.Log(), "devCommand:after:sync", "dev.beforeSync")
+	pluginErr = hook.ExecuteHooks(servicesClient.KubeClient(), servicesClient.Config(), servicesClient.Dependencies(), map[string]interface{}{}, servicesClient.Log(), "devCommand:after:sync", "dev.afterSync")
 	if pluginErr != nil {
 		return pluginErr
 	}

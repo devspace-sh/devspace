@@ -722,6 +722,7 @@ type PersistentPath struct {
 	ContainerName string `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 	VolumePath    string `yaml:"volumePath,omitempty" json:"volumePath,omitempty"`
 	ReadOnly      bool   `yaml:"readOnly,omitempty" json:"readOnly,omitempty"`
+	SkipPopulate  bool   `yaml:"skipPopulate,omitempty" json:"skipPopulate,omitempty"`
 }
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
@@ -1066,23 +1067,6 @@ type HookContainer struct {
 	Wait    *bool `yaml:"wait,omitempty" json:"wait,omitempty"`
 	Timeout int64 `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 	Once    *bool `yaml:"once,omitempty" json:"once,omitempty"`
-}
-
-// HookWhenConfig defines when the hook should be executed
-type HookWhenConfig struct {
-	Before  *HookWhenAtConfig `yaml:"before,omitempty" json:"before,omitempty"`
-	After   *HookWhenAtConfig `yaml:"after,omitempty" json:"after,omitempty"`
-	OnError *HookWhenAtConfig `yaml:"onError,omitempty" json:"onError,omitempty"`
-}
-
-// HookWhenAtConfig defines at which stage the hook should be executed
-type HookWhenAtConfig struct {
-	Images           string `yaml:"images,omitempty" json:"images,omitempty"`
-	PurgeDeployments string `yaml:"purgeDeployments,omitempty" json:"purgeDeployments,omitempty"`
-	Deployments      string `yaml:"deployments,omitempty" json:"deployments,omitempty"`
-	Dependencies     string `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
-	PullSecrets      string `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty"`
-	InitialSync      string `yaml:"initialSync,omitempty" json:"initialSync,omitempty"`
 }
 
 // CommandConfig defines the command specification

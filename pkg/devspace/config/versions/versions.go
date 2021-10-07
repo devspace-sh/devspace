@@ -217,6 +217,15 @@ func filterOutEmpty(config *latest.Config) {
 		}
 		config.Dev.Ports = newObjs
 	}
+	if config.Dev.ReplacePods != nil {
+		newObjs := []*latest.ReplacePod{}
+		for _, v := range config.Dev.ReplacePods {
+			if v != nil {
+				newObjs = append(newObjs, v)
+			}
+		}
+		config.Dev.ReplacePods = newObjs
+	}
 	if config.Dev.Sync != nil {
 		newObjs := []*latest.SyncConfig{}
 		for _, v := range config.Dev.Sync {

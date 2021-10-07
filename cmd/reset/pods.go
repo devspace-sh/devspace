@@ -94,16 +94,22 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 	}
 
 	// Resolve dependencies
-	dep, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).ResolveAll(dependency.ResolveOptions{
+	dependencies, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).ResolveAll(dependency.ResolveOptions{
 		UpdateDependencies: false,
+		Silent:             true,
 		Verbose:            false,
 	})
 	if err != nil {
 		cmd.log.Warnf("Error resolving dependencies: %v", err)
 	}
+	for _, dep := range dependencies {
+		if dep.DependencyConfig().Dev != nil && dep.DependencyConfig().Dev.ReplacePods && len(dep.Config().Config().Dev.ReplacePods) > 0 {
+			ResetPods(client, dep.Config(), dep.Children(), cmd.log)
+		}
+	}
 
 	// reset the pods
-	ResetPods(client, configInterface, dep, cmd.log)
+	ResetPods(client, configInterface, dependencies, cmd.log)
 	return nil
 }
 

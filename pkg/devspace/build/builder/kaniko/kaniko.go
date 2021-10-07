@@ -349,6 +349,10 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			} else if len(buildPod.Status.ContainerStatuses) > 0 {
 				status := buildPod.Status.ContainerStatuses[0]
 				if status.State.Terminated != nil {
+					if status.State.Terminated.ExitCode == 0 {
+						return true, nil
+					}
+					
 					errorLog := ""
 					reader, _ := b.helper.KubeClient.Logs(context.TODO(), b.BuildNamespace, buildPodCreated.Name, status.Name, false, nil, false)
 					if reader != nil {

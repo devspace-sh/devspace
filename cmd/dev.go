@@ -613,6 +613,7 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 				imageSelectors = append(imageSelectors, *imageSelector)
 			}
 
+			cmd.log.Info("Terminal: Waiting for containers to start...")
 			selectorOptions.ImageSelector = imageSelectors
 			stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
 			code, err := servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalReconnect, stdout, stderr, stdin)
