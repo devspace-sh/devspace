@@ -152,6 +152,97 @@ func (d *configLoader) Save(config *latest.Config) error {
 	return nil
 }
 
+func addDevConfig(dev *latest.DevConfig, service composetypes.ServiceConfig, baseDir string, log log.Logger) error {
+	devPorts := dev.Ports
+	if devPorts == nil {
+		devPorts = []*latest.PortForwardingConfig{}
+	}
+
+	if len(service.Ports) > 0 {
+		portForwarding := &latest.PortForwardingConfig{
+			ImageSelector: resolveImage(service),
+			PortMappings:  []*latest.PortMapping{},
+		}
+		for _, port := range service.Ports {
+			portMapping := &latest.PortMapping{}
+
+			if port.Published == 0 {
+				log.Warnf("Unassigned port ranges are not supported: %s", port.Target)
+				continue
+			}
+
+			if port.Published != port.Target {
+				portMapping.LocalPort = ptr.Int(int(port.Published))
+				portMapping.RemotePort = ptr.Int(int(port.Target))
+			} else {
+				portMapping.LocalPort = ptr.Int(int(port.Published))
+			}
+
+			if port.HostIP != "" {
+				portMapping.BindAddress = port.HostIP
+			}
+
+			portForwarding.PortMappings = append(portForwarding.PortMappings, portMapping)
+		}
+		devPorts = append(devPorts, portForwarding)
+	}
+
+	if len(service.Expose) > 0 {
+		portForwarding := &latest.PortForwardingConfig{
+			ImageSelector: resolveImage(service),
+			PortMappings:  []*latest.PortMapping{},
+		}
+		for _, expose := range service.Expose {
+			exposePort, err := strconv.Atoi(expose)
+			if err != nil {
+				return fmt.Errorf("expected integer for port number: %s", err.Error())
+			}
+			portForwarding.PortMappings = append(portForwarding.PortMappings, &latest.PortMapping{
+				LocalPort: ptr.Int(exposePort),
+			})
+		}
+		devPorts = append(devPorts, portForwarding)
+	}
+
+	devSync := dev.Sync
+	if devSync == nil {
+		devSync = []*latest.SyncConfig{}
+	}
+
+	for _, volume := range service.Volumes {
+		if volume.Type == composetypes.VolumeTypeBind {
+			localSubPath := volume.Source
+
+			if strings.HasPrefix(localSubPath, "~") {
+				localSubPath = fmt.Sprintf(`$!(echo "$HOME/%s")`, strings.TrimLeft(localSubPath, "~/"))
+			}
+
+			sync := &latest.SyncConfig{
+				ImageSelector: resolveImage(service),
+				LocalSubPath:  localSubPath,
+				ContainerPath: volume.Target,
+			}
+
+			_, err := os.Stat(filepath.Join(baseDir, volume.Source, DockerIgnorePath))
+			if err == nil {
+				sync.ExcludeFile = DockerIgnorePath
+			}
+
+			devSync = append(devSync, sync)
+		}
+	}
+
+	if len(devPorts) > 0 {
+		dev.Ports = devPorts
+	}
+
+	if len(devSync) > 0 {
+		dev.Sync = devSync
+	}
+
+	return nil
+}
+
 func imageConfig(cwd string, service composetypes.ServiceConfig) (*latest.ImageConfig, error) {
 	build := service.Build
 	if build == nil {
@@ -244,10 +335,10 @@ func deleteEnvFileHook(name string) *latest.HookConfig {
 	}
 }
 
-func deploymentConfig(service composetypes.ServiceConfig, mapVolumesConfig map[string]composetypes.VolumeConfig, log log.Logger) (*latest.DeploymentConfig, error) {
+func deploymentConfig(service composetypes.ServiceConfig, composeVolumes map[string]composetypes.VolumeConfig, log log.Logger) (*latest.DeploymentConfig, error) {
 	values := map[interface{}]interface{}{}
 
-	volumes, volumeMounts := volumesConfig(mapVolumesConfig, service.Secrets, service, log)
+	volumes, volumeMounts := volumesConfig(service, composeVolumes, log)
 	if len(volumes) > 0 {
 		values["volumes"] = volumes
 	}
@@ -343,99 +434,48 @@ func deploymentConfig(service composetypes.ServiceConfig, mapVolumesConfig map[s
 }
 
 func volumesConfig(
-	mapVolumesConfig map[string]composetypes.VolumeConfig,
-	secretsConfig []composetypes.ServiceSecretConfig,
 	service composetypes.ServiceConfig,
+	composeVolumes map[string]composetypes.VolumeConfig,
 	log log.Logger,
 ) (volumes []interface{}, volumeMounts []interface{}) {
-	for _, volume := range mapVolumesConfig {
-		deploymentVolume := map[interface{}]interface{}{
-			"name": strings.TrimLeft(volume.Name, "_"),
-			"size": DefaultVolumeSize,
-		}
-		volumes = append(volumes, deploymentVolume)
+	for _, composeVolume := range composeVolumes {
+		volumeName := resolveVolumeName(composeVolume)
+		volume := createVolume(volumeName, DefaultVolumeSize)
+		volumes = append(volumes, volume)
 	}
 
 	for _, secret := range service.Secrets {
-		// Create a volume referencing the secret
-		secretVolume := map[interface{}]interface{}{
-			"name": secret.Source,
-			"secret": map[interface{}]interface{}{
-				"secretName": secret.Source,
-			},
-		}
-		volumes = append(volumes, secretVolume)
+		volume := createSecretVolume(secret)
+		volumes = append(volumes, volume)
 
-		// Add the secret volumeMount
-		target := secret.Source
-		if secret.Target != "" {
-			target = secret.Target
-		}
-		volumeMount := map[interface{}]interface{}{
-			"containerPath": fmt.Sprintf("/run/secrets/%s", target),
-			"volume": map[interface{}]interface{}{
-				"name":     secret.Source,
-				"subPath":  target,
-				"readOnly": true,
-			},
-		}
+		volumeMount := createSecretVolumeMount(secret)
 		volumeMounts = append(volumeMounts, volumeMount)
 	}
 
-	volumeIdx := 0
-	for _, volume := range service.Volumes {
-		volumeName := resolveVolumeName(service, volume, volumeIdx)
+	for _, serviceVolume := range service.Volumes {
+		volumeName := resolveServiceVolumeName(service, serviceVolume, len(volumes)-1)
 
-		switch volume.Type {
+		switch serviceVolume.Type {
 		case composetypes.VolumeTypeTmpfs:
-			// create an emptyDir volume
-			emptyDir := map[interface{}]interface{}{}
-			if volume.Tmpfs != nil {
-				emptyDir["sizeLimit"] = fmt.Sprintf("%d", volume.Tmpfs.Size)
-			}
-			deploymentVolume := map[interface{}]interface{}{
-				"name":     volumeName,
-				"emptyDir": emptyDir,
-			}
-			volumes = append(volumes, deploymentVolume)
-			volumeIdx += 1
+			volume := createEmptyDirVolume(volumeName, serviceVolume)
+			volumes = append(volumes, volume)
 
-			// Add the volumeMount
-			volumeMount := map[interface{}]interface{}{
-				"containerPath": volume.Target,
-				"volume": map[interface{}]interface{}{
-					"name":     volumeName,
-					"readOnly": volume.ReadOnly,
-				},
-			}
+			volumeMount := createServiceVolumeMount(volumeName, serviceVolume)
 			volumeMounts = append(volumeMounts, volumeMount)
 		case composetypes.VolumeTypeVolume:
-			_, hasVolume := mapVolumesConfig[volume.Source]
-			if !hasVolume || volume.Source == "" {
-				// create a volume if the source is unspecified
-				deploymentVolume := map[interface{}]interface{}{
-					"name": volumeName,
-					"size": DefaultVolumeSize,
-				}
-				volumes = append(volumes, deploymentVolume)
-				volumeIdx += 1
+			if needsVolume(serviceVolume, composeVolumes) {
+				volume := createVolume(volumeName, DefaultVolumeSize)
+				volumes = append(volumes, volume)
 			}
 
-			// Add the volumeMount
-			volumeMount := map[interface{}]interface{}{
-				"containerPath": volume.Target,
-				"volume": map[interface{}]interface{}{
-					"name":     volumeName,
-					"readOnly": volume.ReadOnly,
-				},
-			}
+			volumeMount := createServiceVolumeMount(volumeName, serviceVolume)
 			volumeMounts = append(volumeMounts, volumeMount)
 		default:
-			log.Warnf("%s volumes are not supported", volume.Type)
+			log.Warnf("%s volumes are not supported", serviceVolume.Type)
 		}
 	}
 
-	return
+	return volumes, volumeMounts
 }
 
 func containerConfig(service composetypes.ServiceConfig, volumeMounts []interface{}) (map[interface{}]interface{}, error) {
@@ -558,6 +598,68 @@ func containerLivenessProbe(health *composetypes.HealthCheckConfig) (map[interfa
 	return livenessProbe, nil
 }
 
+func createEmptyDirVolume(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
+	// create an emptyDir volume
+	emptyDir := map[interface{}]interface{}{}
+	if volume.Tmpfs != nil {
+		emptyDir["sizeLimit"] = fmt.Sprintf("%d", volume.Tmpfs.Size)
+	}
+	return map[interface{}]interface{}{
+		"name":     volumeName,
+		"emptyDir": emptyDir,
+	}
+}
+
+func createSecretVolume(secret composetypes.ServiceSecretConfig) interface{} {
+	return map[interface{}]interface{}{
+		"name": secret.Source,
+		"secret": map[interface{}]interface{}{
+			"secretName": secret.Source,
+		},
+	}
+}
+
+func createSecretVolumeMount(secret composetypes.ServiceSecretConfig) interface{} {
+	target := secret.Source
+	if secret.Target != "" {
+		target = secret.Target
+	}
+	return map[interface{}]interface{}{
+		"containerPath": fmt.Sprintf("/run/secrets/%s", target),
+		"volume": map[interface{}]interface{}{
+			"name":     secret.Source,
+			"subPath":  target,
+			"readOnly": true,
+		},
+	}
+}
+
+func createServiceVolumeMount(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
+	return map[interface{}]interface{}{
+		"containerPath": volume.Target,
+		"volume": map[interface{}]interface{}{
+			"name":     volumeName,
+			"readOnly": volume.ReadOnly,
+		},
+	}
+}
+
+func createVolume(name string, size string) interface{} {
+	return map[interface{}]interface{}{
+		"name": name,
+		"size": size,
+	}
+}
+
+func needsVolume(volume composetypes.ServiceVolumeConfig, composeVolumes map[string]composetypes.VolumeConfig) bool {
+	if volume.Source == "" {
+		return true
+	}
+
+	_, hasVolume := composeVolumes[volume.Source]
+	return !hasVolume
+}
+
 func resolveImage(service composetypes.ServiceConfig) string {
 	image := service.Name
 	if service.Image != "" {
@@ -566,7 +668,7 @@ func resolveImage(service composetypes.ServiceConfig) string {
 	return image
 }
 
-func resolveVolumeName(service composetypes.ServiceConfig, volume composetypes.ServiceVolumeConfig, idx int) string {
+func resolveServiceVolumeName(service composetypes.ServiceConfig, volume composetypes.ServiceVolumeConfig, idx int) string {
 	volumeName := volume.Source
 	if volumeName == "" {
 		volumeName = fmt.Sprintf("%s-%d", service.Name, idx)
@@ -574,93 +676,6 @@ func resolveVolumeName(service composetypes.ServiceConfig, volume composetypes.S
 	return volumeName
 }
 
-func addDevConfig(dev *latest.DevConfig, service composetypes.ServiceConfig, baseDir string, log log.Logger) error {
-	devPorts := dev.Ports
-	if devPorts == nil {
-		devPorts = []*latest.PortForwardingConfig{}
-	}
-
-	if len(service.Ports) > 0 {
-		portForwarding := &latest.PortForwardingConfig{
-			ImageSelector: resolveImage(service),
-			PortMappings:  []*latest.PortMapping{},
-		}
-		for _, port := range service.Ports {
-			portMapping := &latest.PortMapping{}
-
-			if port.Published == 0 {
-				log.Warnf("Unassigned port ranges are not supported: %s", port.Target)
-				continue
-			}
-
-			if port.Published != port.Target {
-				portMapping.LocalPort = ptr.Int(int(port.Published))
-				portMapping.RemotePort = ptr.Int(int(port.Target))
-			} else {
-				portMapping.LocalPort = ptr.Int(int(port.Published))
-			}
-
-			if port.HostIP != "" {
-				portMapping.BindAddress = port.HostIP
-			}
-
-			portForwarding.PortMappings = append(portForwarding.PortMappings, portMapping)
-		}
-		devPorts = append(devPorts, portForwarding)
-	}
-
-	if len(service.Expose) > 0 {
-		portForwarding := &latest.PortForwardingConfig{
-			ImageSelector: resolveImage(service),
-			PortMappings:  []*latest.PortMapping{},
-		}
-		for _, expose := range service.Expose {
-			exposePort, err := strconv.Atoi(expose)
-			if err != nil {
-				return fmt.Errorf("expected integer for port number: %s", err.Error())
-			}
-			portForwarding.PortMappings = append(portForwarding.PortMappings, &latest.PortMapping{
-				LocalPort: ptr.Int(exposePort),
-			})
-		}
-		devPorts = append(devPorts, portForwarding)
-	}
-
-	devSync := dev.Sync
-	if devSync == nil {
-		devSync = []*latest.SyncConfig{}
-	}
-
-	for _, volume := range service.Volumes {
-		if volume.Type == composetypes.VolumeTypeBind {
-			localSubPath := volume.Source
-
-			if strings.HasPrefix(localSubPath, "~") {
-				localSubPath = fmt.Sprintf(`$!(echo "$HOME/%s")`, strings.TrimLeft(localSubPath, "~/"))
-			}
-
-			sync := &latest.SyncConfig{
-				ImageSelector: resolveImage(service),
-				LocalSubPath:  localSubPath,
-				ContainerPath: volume.Target,
-			}
-
-			_, err := os.Stat(filepath.Join(baseDir, volume.Source, DockerIgnorePath))
-			if err == nil {
-				sync.ExcludeFile = DockerIgnorePath
-			}
-
-			devSync = append(devSync, sync)
-		}
-	}
-
-	if len(devPorts) > 0 {
-		dev.Ports = devPorts
-	}
-
-	if len(devSync) > 0 {
-		dev.Sync = devSync
-	}
-
-	return nil
+func resolveVolumeName(volume composetypes.VolumeConfig) string {
+	return strings.TrimLeft(volume.Name, "_")
 }
