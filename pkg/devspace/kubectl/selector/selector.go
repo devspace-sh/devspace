@@ -26,7 +26,21 @@ var SortPodsByNewest = func(pods []*k8sv1.Pod, i, j int) bool {
 }
 
 var SortContainersByNewest = func(pods []*SelectedPodContainer, i, j int) bool {
+	if pods[i].Pod.Name == pods[j].Pod.Name {
+		// this is needed for containers with the same image where we want to say that normal containers take prio over init containers
+		return initContainerPos(pods[i].Container.Name, pods[i].Pod) < initContainerPos(pods[j].Container.Name, pods[j].Pod)
+	}
+
 	return pods[i].Pod.CreationTimestamp.Unix() > pods[j].Pod.CreationTimestamp.Unix()
+}
+
+func initContainerPos(container string, pod *k8sv1.Pod) int {
+	for i, c := range pod.Spec.InitContainers {
+		if c.Name == container {
+			return i
+		}
+	}
+	return -1
 }
 
 var FilterNonRunningPods = func(p *k8sv1.Pod) bool {

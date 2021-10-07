@@ -722,6 +722,7 @@ type PersistentPath struct {
 	ContainerName string `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 	VolumePath    string `yaml:"volumePath,omitempty" json:"volumePath,omitempty"`
 	ReadOnly      bool   `yaml:"readOnly,omitempty" json:"readOnly,omitempty"`
+	SkipPopulate  bool   `yaml:"skipPopulate,omitempty" json:"skipPopulate,omitempty"`
 }
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace

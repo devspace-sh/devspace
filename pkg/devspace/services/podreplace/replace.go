@@ -345,41 +345,9 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 
 	// replace paths
 	if len(replacePod.PersistPaths) > 0 {
-		name := pod.Pod.Name
-		if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Name != "" {
-			name = replacePod.PersistenceOptions.Name
-		}
-
-		copiedPod.Spec.Volumes = append(copiedPod.Spec.Volumes, corev1.Volume{
-			Name: "devspace-persistence",
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: name,
-					ReadOnly:  replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.ReadOnly,
-				},
-			},
-		})
-
-		for i, path := range replacePod.PersistPaths {
-			if path.Path == "" {
-				continue
-			}
-
-			subPath := path.VolumePath
-			if subPath == "" {
-				subPath = fmt.Sprintf("path-%d", i)
-			}
-
-			for i, con := range copiedPod.Spec.Containers {
-				if path.ContainerName == "" || path.ContainerName == con.Name {
-					copiedPod.Spec.Containers[i].VolumeMounts = append(copiedPod.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
-						Name:      "devspace-persistence",
-						MountPath: path.Path,
-						SubPath:   subPath,
-						ReadOnly:  path.ReadOnly,
-					})
-				}
-			}
+		err := persistPaths(pod.Pod.Name, replacePod, copiedPod)
+		if err != nil {
+			return err
 		}
 	}
 

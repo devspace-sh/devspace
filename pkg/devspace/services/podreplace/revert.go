@@ -98,6 +98,10 @@ func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client ku
 		return nil, errors.Wrap(err, "list ReplicaSets")
 	}
 	for _, d := range replicaSets.Items {
+		if len(d.OwnerReferences) > 0 {
+			continue
+		}
+
 		matched, err := matchesSelector(d.Annotations, &d.Spec.Template, config, dependencies, replacePod)
 		if err != nil {
 			return nil, err
