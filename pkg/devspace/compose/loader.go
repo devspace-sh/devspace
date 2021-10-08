@@ -114,15 +114,6 @@ func (d *configLoader) Load(log log.Logger) (*latest.Config, error) {
 			return err
 		}
 
-		if len(service.EnvFile) > 0 {
-			envFileCreateHook, err := createEnvFileHook(service.Name, cwd, service.EnvFile)
-			if err != nil {
-				return err
-			}
-			hooks = append(hooks, envFileCreateHook)
-			hooks = append(hooks, deleteEnvFileHook(service.Name))
-		}
-
 		_, isDependency := dependentsMap[service.Name]
 		if isDependency {
 			waitHook := createWaitHook(service.Name)
@@ -327,29 +318,6 @@ func deleteSecretHook(name string) *latest.HookConfig {
 	}
 }
 
-func createEnvFileHook(name string, cwd string, envFile composetypes.StringList) (*latest.HookConfig, error) {
-	fromFiles := []string{}
-	for _, envFile := range envFile {
-		file, err := filepath.Rel(cwd, filepath.Join(cwd, envFile))
-		if err != nil {
-			return nil, err
-		}
-		fromFiles = append(fromFiles, fmt.Sprintf("--from-file=%s", filepath.ToSlash(file)))
-	}
-
-	return &latest.HookConfig{
-		Events:  []string{fmt.Sprintf("before:deploy:%s", name)},
-		Command: fmt.Sprintf("kubectl create configmap %s-env-file --dry-run=client %s -o yaml | kubectl apply -f -", name, strings.Join(fromFiles, " ")),
-	}, nil
-}
-
-func deleteEnvFileHook(name string) *latest.HookConfig {
-	return &latest.HookConfig{
-		Events:  []string{fmt.Sprintf("after:purge:%s", name)},
-		Command: fmt.Sprintf("kubectl delete configmap %s-env-file --ignore-not-found", name),
-	}
-}
-
 func deploymentConfig(service composetypes.ServiceConfig, composeVolumes map[string]composetypes.VolumeConfig, log log.Logger) (*latest.DeploymentConfig, error) {
 	values := map[interface{}]interface{}{}
 
@@ -517,10 +485,6 @@ func containerConfig(service composetypes.ServiceConfig, volumeMounts []interfac
 		}
 	}
 
-	if len(service.EnvFile) > 0 {
-		container["envFrom"] = containerEnvFrom(service)
-	}
-
 	if service.HealthCheck != nil {
 		livenessProbe, err := containerLivenessProbe(service.HealthCheck)
 		if err != nil {
@@ -554,16 +518,6 @@ func containerEnv(env composetypes.MappingWithEquals) []interface{} {
 		})
 	}
 	return envs
-}
-
-func containerEnvFrom(service composetypes.ServiceConfig) []interface{} {
-	return []interface{}{
-		map[interface{}]interface{}{
-			"configMapRef": map[interface{}]interface{}{
-				"name": fmt.Sprintf("%s-env-file", service.Name),
-			},
-		},
-	}
 }
 
 func containerLivenessProbe(health *composetypes.HealthCheckConfig) (map[interface{}]interface{}, error) {
