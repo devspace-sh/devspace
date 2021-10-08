@@ -36,61 +36,83 @@ func UI(servicesClient services.Client, port int) error {
 	return nil
 }
 
-func Sync(servicesClient services.Client, interrupt chan error, printSyncLog, verbose bool) error {
-	pluginErr := hook.ExecuteHooks(servicesClient.KubeClient(), servicesClient.Config(), servicesClient.Dependencies(), map[string]interface{}{}, servicesClient.Log(), "devCommand:before:sync", "dev.beforeSync")
+func SyncAndPortForwarding(servicesClient services.Client, interrupt chan error, printSyncLog, verbose, enableSync, enablePortForwarding bool) error {
+	errChan := make(chan error, 1)
+	pluginErr := hook.ExecuteHooks(servicesClient.KubeClient(), servicesClient.Config(), servicesClient.Dependencies(), map[string]interface{}{}, servicesClient.Log(), "devCommand:before:sync", "dev.beforeSync", "devCommand:before:portForwarding", "dev.beforePortForwarding")
 	if pluginErr != nil {
 		return pluginErr
 	}
 
-	err := servicesClient.StartSync(interrupt, printSyncLog, verbose, services.DefaultPrefixFn)
-	if err != nil {
-		return errors.Wrap(err, "start sync")
-	}
-
-	// start in dependencies
-	for _, d := range servicesClient.Dependencies() {
-		if d.DependencyConfig().Dev == nil || !d.DependencyConfig().Dev.Sync {
-			continue
+	// Start sync
+	go func() {
+		if !enableSync {
+			errChan <- nil
+			return
 		}
-		err = d.StartSync(servicesClient.KubeClient(), interrupt, printSyncLog, verbose, servicesClient.Log())
+
+		err := servicesClient.StartSync(interrupt, printSyncLog, verbose, services.DefaultPrefixFn)
+		if err != nil {
+			errChan <- errors.Wrap(err, "start sync")
+			return
+		}
+
+		// start in dependencies
+		for _, d := range servicesClient.Dependencies() {
+			if d.DependencyConfig().Dev == nil || !d.DependencyConfig().Dev.Sync {
+				continue
+			}
+
+			err = d.StartSync(servicesClient.KubeClient(), interrupt, printSyncLog, verbose, servicesClient.Log())
+			if err != nil {
+				errChan <- err
+				return
+			}
+		}
+
+		errChan <- nil
+	}()
+
+	// Start Port Forwarding
+	go func() {
+		if !enablePortForwarding {
+			errChan <- nil
+			return
+		}
+
+		// start port forwarding
+		err := servicesClient.StartPortForwarding(interrupt, services.DefaultPrefixFn)
+		if err != nil {
+			errChan <- errors.Errorf("Unable to start portforwarding: %v", err)
+			return
+		}
+
+		for _, d := range servicesClient.Dependencies() {
+			if d.DependencyConfig().Dev == nil || !d.DependencyConfig().Dev.Ports {
+				continue
+			}
+			err = d.StartPortForwarding(servicesClient.KubeClient(), interrupt, servicesClient.Log())
+			if err != nil {
+				errChan <- err
+				return
+			}
+		}
+
+		errChan <- nil
+	}()
+
+	// wait for sync and port forwarding
+	for i := 0; i < 2; i++ {
+		err := <-errChan
 		if err != nil {
 			return err
 		}
 	}
 
-	pluginErr = hook.ExecuteHooks(servicesClient.KubeClient(), servicesClient.Config(), servicesClient.Dependencies(), map[string]interface{}{}, servicesClient.Log(), "devCommand:after:sync", "dev.afterSync")
+	pluginErr = hook.ExecuteHooks(servicesClient.KubeClient(), servicesClient.Config(), servicesClient.Dependencies(), map[string]interface{}{}, servicesClient.Log(), "devCommand:after:sync", "dev.afterSync", "devCommand:after:portForwarding", "dev.afterPortForwarding")
 	if pluginErr != nil {
 		return pluginErr
 	}
 
-	return nil
-}
-
-func PortForwarding(servicesClient services.Client, interrupt chan error) error {
-	pluginErr := hook.ExecuteHooks(servicesClient.KubeClient(), servicesClient.Config(), servicesClient.Dependencies(), map[string]interface{}{}, servicesClient.Log(), "devCommand:before:portForwarding", "dev.beforePortForwarding")
-	if pluginErr != nil {
-		return pluginErr
-	}
-
-	// start port forwarding
-	err := servicesClient.StartPortForwarding(interrupt, services.DefaultPrefixFn)
-	if err != nil {
-		return errors.Errorf("Unable to start portforwarding: %v", err)
-	}
-	for _, d := range servicesClient.Dependencies() {
-		if d.DependencyConfig().Dev == nil || !d.DependencyConfig().Dev.Ports {
-			continue
-		}
-		err = d.StartPortForwarding(servicesClient.KubeClient(), interrupt, servicesClient.Log())
-		if err != nil {
-			return err
-		}
-	}
-
-	pluginErr = hook.ExecuteHooks(servicesClient.KubeClient(), servicesClient.Config(), servicesClient.Dependencies(), map[string]interface{}{}, servicesClient.Log(), "devCommand:after:portForwarding", "dev.afterPortForwarding")
-	if pluginErr != nil {
-		return pluginErr
-	}
 	return nil
 }
 
