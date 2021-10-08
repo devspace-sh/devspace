@@ -193,6 +193,7 @@ func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 	rootCmd.AddCommand(NewRunCmd(f, globalFlags))
 	rootCmd.AddCommand(NewAttachCmd(f, globalFlags))
 	rootCmd.AddCommand(NewPrintCmd(f, globalFlags))
+	rootCmd.AddCommand(NewCompletionCmd())
 
 	// Add plugin commands
 	plugin.AddPluginCommands(rootCmd, plugins, "")
