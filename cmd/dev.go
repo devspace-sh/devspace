@@ -501,26 +501,19 @@ func (cmd *DevCmd) startServices(f factory.Factory, configInterface config.Confi
 		}
 	}
 
-	if cmd.Portforwarding {
-		cmd.Portforwarding = false
-
-		err := dev.PortForwarding(servicesClient, cmd.Interrupt)
-		if err != nil {
-			return 0, err
-		}
-	}
-
-	if cmd.Sync {
-		cmd.Sync = false
+	if cmd.Portforwarding || cmd.Sync {
 		printSyncLog := cmd.PrintSyncLog
 		if !useTerminal && (config.Dev.Logs == nil || config.Dev.Logs.Sync == nil || *config.Dev.Logs.Sync) {
 			printSyncLog = true
 		}
 
-		err := dev.Sync(servicesClient, cmd.Interrupt, printSyncLog, cmd.VerboseSync)
+		err := dev.SyncAndPortForwarding(servicesClient, cmd.Interrupt, printSyncLog, cmd.VerboseSync, cmd.Sync, cmd.Portforwarding)
 		if err != nil {
 			return 0, err
 		}
+
+		cmd.Portforwarding = false
+		cmd.Sync = false
 	}
 
 	// Start watcher if we have at least one auto reload path and if we should not skip the pipeline

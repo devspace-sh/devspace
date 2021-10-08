@@ -251,7 +251,7 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 		options.TargetOptions.ImageSelector = append(options.TargetOptions.ImageSelector, *imageSelector)
 	}
 
-	log.Info("Waiting for pods...")
+	log.Info("Waiting for containers to start...")
 	container, err := targetselector.NewTargetSelector(c.client).SelectSingleContainer(context.TODO(), options.TargetOptions, log)
 	if err != nil {
 		return nil, errors.Errorf("Error selecting pod: %v", err)

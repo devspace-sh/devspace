@@ -32,7 +32,7 @@ func (u *untilNewestRunning) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *v
 	if now.Before(u.initialDelay) {
 		return false, nil, nil
 	} else if len(pods) == 0 {
-		if now.After(u.initialDelay.Add(time.Second * 6)) {
+		if now.After(u.initialDelay.Add(time.Second * 10)) {
 			u.printNotFoundWarning(log)
 		}
 
@@ -58,7 +58,7 @@ func (u *untilNewestRunning) SelectContainer(containers []*selector.SelectedPodC
 	if now.Before(u.initialDelay) {
 		return false, nil, nil
 	} else if len(containers) == 0 {
-		if now.After(u.initialDelay.Add(time.Second * 6)) {
+		if now.After(u.initialDelay.Add(time.Second * 10)) {
 			u.printNotFoundWarning(log)
 		}
 

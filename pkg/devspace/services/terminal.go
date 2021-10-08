@@ -41,7 +41,7 @@ func (serviceClient *client) StartTerminal(
 	} else {
 		options.FilterPod = nil
 		options.FilterContainer = nil
-		options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
+		options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second)
 	}
 	options.Question = "Which pod do you want to open the terminal for?"
 
