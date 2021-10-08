@@ -500,7 +500,11 @@ func containerConfig(service composetypes.ServiceConfig, volumeMounts []interfac
 	}
 
 	if len(service.Command) > 0 {
-		container["args"] = service.Command
+		container["args"] = shellCommandToSlice(service.Command)
+	}
+
+	if len(service.Entrypoint) > 0 {
+		container["command"] = shellCommandToSlice(service.Entrypoint)
 	}
 
 	if service.Environment != nil {
@@ -722,4 +726,12 @@ func calculateDependentsMap(dockerCompose *composetypes.Project) (map[string][]s
 		return nil
 	})
 	return tree, err
+}
+
+func shellCommandToSlice(command composetypes.ShellCommand) []interface{} {
+	var slice []interface{}
+	for _, item := range command {
+		slice = append(slice, item)
+	}
+	return slice
 }

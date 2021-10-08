@@ -1,0 +1,4 @@
+services:
+  db:
+    image: mysql/mysql-server:8.0.19
+    command: /code/startDb.sh
