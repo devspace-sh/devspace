@@ -1,0 +1,27 @@
+services:
+  db:
+    image: mysql/mysql-server:8.0.19
+  cache:
+    image: redis:latest
+  worker:
+    image: rails:latest
+    depends_on:
+    - db
+    - messaging
+  backend:
+    image: rails:latest
+    depends_on:
+    - db
+    - cache
+    - messaging
+  frontend:
+    image: nginx:latest
+    depends_on:
+    - backend
+  messaging:
+    image: rabbitmq:latest
+  proxy:
+    image: haproxy:latest
+    depends_on:
+    - frontend
+    - backend

@@ -86,10 +86,15 @@ func (d *configLoader) Load(log log.Logger) (*latest.Config, error) {
 		log.Warn("networks are not supported")
 	}
 
-	for _, service := range dockerCompose.Services {
+	dependentsMap, err := calculateDependentsMap(dockerCompose)
+	if err != nil {
+		return nil, err
+	}
+
+	err = dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
 		imageConfig, err := imageConfig(cwd, service)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if imageConfig != nil {
 			if images == nil {
@@ -100,23 +105,33 @@ func (d *configLoader) Load(log log.Logger) (*latest.Config, error) {
 
 		deploymentConfig, err := deploymentConfig(service, dockerCompose.Volumes, log)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		deployments = append(deployments, deploymentConfig)
 
 		err = addDevConfig(&dev, service, baseDir, log)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if len(service.EnvFile) > 0 {
 			envFileCreateHook, err := createEnvFileHook(service.Name, cwd, service.EnvFile)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			hooks = append(hooks, envFileCreateHook)
 			hooks = append(hooks, deleteEnvFileHook(service.Name))
 		}
+
+		_, isDependency := dependentsMap[service.Name]
+		if isDependency {
+			waitHook := createWaitHook(service.Name, resolveContainerName(service))
+			hooks = append(hooks, waitHook)
+		}
+		return err
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	for secretName, secret := range dockerCompose.Secrets {
@@ -480,11 +495,8 @@ func volumesConfig(
 
 func containerConfig(service composetypes.ServiceConfig, volumeMounts []interface{}) (map[interface{}]interface{}, error) {
 	container := map[interface{}]interface{}{
+		"name":  resolveContainerName(service),
 		"image": resolveImage(service),
-	}
-
-	if service.ContainerName != "" {
-		container["name"] = service.ContainerName
 	}
 
 	if len(service.Command) > 0 {
@@ -660,6 +672,14 @@ func needsVolume(volume composetypes.ServiceVolumeConfig, composeVolumes map[str
 	return !hasVolume
 }
 
+func resolveContainerName(service composetypes.ServiceConfig) string {
+	if service.ContainerName != "" {
+		return service.ContainerName
+	}
+
+	return service.Name
+}
+
 func resolveImage(service composetypes.ServiceConfig) string {
 	image := service.Name
 	if service.Image != "" {
@@ -678,4 +698,28 @@ func resolveServiceVolumeName(service composetypes.ServiceConfig, volume compose
 
 func resolveVolumeName(volume composetypes.VolumeConfig) string {
 	return strings.TrimLeft(volume.Name, "_")
+}
+
+func createWaitHook(deploymentName string, containerName string) *latest.HookConfig {
+	return &latest.HookConfig{
+		Events: []string{fmt.Sprintf("after:deploy:%s", deploymentName)},
+		Container: &latest.HookContainer{
+			ContainerName: containerName,
+		},
+		Wait: &latest.HookWaitConfig{
+			Running:            true,
+			TerminatedWithCode: ptr.Int32(0),
+		},
+	}
+}
+
+func calculateDependentsMap(dockerCompose *composetypes.Project) (map[string][]string, error) {
+	tree := map[string][]string{}
+	err := dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
+		for _, name := range service.GetDependencies() {
+			tree[name] = append(tree[name], service.Name)
+		}
+		return nil
+	})
+	return tree, err
 }

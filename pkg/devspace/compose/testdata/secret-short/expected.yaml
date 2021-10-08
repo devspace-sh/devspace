@@ -6,6 +6,7 @@ deployments:
     values:
       containers:
       - image: mysql/mysql-server:8.0.19
+        name: db
         volumeMounts:
         - containerPath: /run/secrets/db-password
           volume:

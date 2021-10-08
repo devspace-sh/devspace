@@ -6,10 +6,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	composeloader "github.com/compose-spec/compose-go/loader"
+	composetypes "github.com/compose-spec/compose-go/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
+	"gotest.tools/assert/cmp"
 )
 
 func TestLoad(t *testing.T) {
@@ -68,11 +71,67 @@ func testLoad(dir string, t *testing.T) {
 		t.Errorf("Error unmarshaling the expected configuration: %s", err.Error())
 	}
 
-	assert.DeepEqual(t, toDeploymentMap(expectedConfig.Deployments), toDeploymentMap(actualConfig.Deployments))
-
+	// Check deployment properties
+	assert.Check(t, cmp.DeepEqual(toDeploymentMap(expectedConfig.Deployments), toDeploymentMap(actualConfig.Deployments)))
+	actualDeployments := actualConfig.Deployments
 	actualConfig.Deployments = nil
 	expectedConfig.Deployments = nil
-	assert.DeepEqual(t, expectedConfig, actualConfig)
+
+	// Check hook properties
+	assert.Check(t, cmp.DeepEqual(toWaitHookMap(expectedConfig.Hooks), toWaitHookMap(actualConfig.Hooks)))
+	actualHooks := actualConfig.Hooks
+	actualConfig.Hooks = nil
+	expectedConfig.Hooks = nil
+
+	// Check other properties
+	assert.Check(t, cmp.DeepEqual(expectedConfig, actualConfig))
+
+	// Load docker compose to determine dependency ordering
+	content, err := ioutil.ReadFile(dockerComposePath)
+	if err != nil {
+		t.Errorf("Unexpected error occurred loading the docker-compose.yaml: %s", err.Error())
+	}
+	dockerCompose, err := composeloader.Load(composetypes.ConfigDetails{
+		ConfigFiles: []composetypes.ConfigFile{
+			{
+				Content: content,
+			},
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Determine which deployments should have wait hooks
+	expectedWaitHooks := map[string]bool{}
+	err = dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
+		for _, dep := range service.GetDependencies() {
+			expectedWaitHooks[dep] = true
+		}
+		return nil
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Iterate services in dependency order
+	err = dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
+		for _, dep := range service.GetDependencies() {
+			// Check deployments order
+			assert.Check(t, GetDeploymentIndex(dep, actualDeployments) < GetDeploymentIndex(service.Name, actualDeployments), "%s deployment should come after %s", service.Name, dep)
+
+			// Check for wait hook order
+			_, ok := expectedWaitHooks[service.Name]
+			if ok {
+				assert.Check(t, GetWaitHookIndex(dep, actualHooks) < GetWaitHookIndex(service.Name, actualHooks), "%s wait hook should come after %s", service.Name, dep)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func toDeploymentMap(deployments []*latest.DeploymentConfig) map[string]latest.DeploymentConfig {
@@ -81,4 +140,32 @@ func toDeploymentMap(deployments []*latest.DeploymentConfig) map[string]latest.D
 		deploymentMap[deployment.Name] = *deployment
 	}
 	return deploymentMap
+}
+
+func toWaitHookMap(hooks []*latest.HookConfig) map[string]latest.HookConfig {
+	hookMap := map[string]latest.HookConfig{}
+	for _, hook := range hooks {
+		if hook.Container != nil {
+			hookMap[hook.Container.ContainerName] = *hook
+		}
+	}
+	return hookMap
+}
+
+func GetDeploymentIndex(name string, deployments []*latest.DeploymentConfig) int {
+	for idx, deployment := range deployments {
+		if deployment.Name == name {
+			return idx
+		}
+	}
+	return -1
+}
+
+func GetWaitHookIndex(name string, hooks []*latest.HookConfig) int {
+	for idx, hook := range hooks {
+		if hook.Container != nil && hook.Container.ContainerName == name {
+			return idx
+		}
+	}
+	return -1
 }

@@ -12,3 +12,4 @@ deployments:
     values:
       containers:
       - image: foo
+        name: foo

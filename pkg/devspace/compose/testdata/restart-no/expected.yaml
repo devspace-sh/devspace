@@ -6,4 +6,5 @@ deployments:
     values:
       containers:
       - image: mysql/mysql-server:8.0.19
+        name: db
       restartPolicy: Never

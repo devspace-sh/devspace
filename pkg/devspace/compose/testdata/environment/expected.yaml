@@ -13,4 +13,4 @@ deployments:
         - name: MYSQL_ROOT_PASSWORD
           value: /run/secrets/db-password
         image: mysql/mysql-server:8.0.19
-        
+        name: db
