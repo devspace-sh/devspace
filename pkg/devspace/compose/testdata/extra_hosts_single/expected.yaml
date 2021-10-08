@@ -6,7 +6,6 @@ deployments:
     values:
       containers:
       - image: mysql/mysql-server:8.0.19
-        name: db
       hostAliases:
       - ip: "50.31.209.229"
         hostnames:

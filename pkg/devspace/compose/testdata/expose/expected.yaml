@@ -6,14 +6,14 @@ deployments:
     values:
       containers:
       - image: mysql/mysql-server:8.0.19
-        name: db
       service:
         ports:
         - port: 3306
         - port: 33060
 dev:
   ports:
-  - imageSelector: mysql/mysql-server:8.0.19
+  - labelSelector:
+      app.kubernetes.io/component: db
     forward:
     - port: 3306
     - port: 33060

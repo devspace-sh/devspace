@@ -145,8 +145,8 @@ func toDeploymentMap(deployments []*latest.DeploymentConfig) map[string]latest.D
 func toWaitHookMap(hooks []*latest.HookConfig) map[string]latest.HookConfig {
 	hookMap := map[string]latest.HookConfig{}
 	for _, hook := range hooks {
-		if hook.Container != nil {
-			hookMap[hook.Container.ContainerName] = *hook
+		if hook.Container != nil && hook.Container.LabelSelector != nil {
+			hookMap[hook.Container.LabelSelector["app.kubernetes.io/component"]] = *hook
 		}
 	}
 	return hookMap
@@ -163,7 +163,7 @@ func GetDeploymentIndex(name string, deployments []*latest.DeploymentConfig) int
 
 func GetWaitHookIndex(name string, hooks []*latest.HookConfig) int {
 	for idx, hook := range hooks {
-		if hook.Container != nil && hook.Container.ContainerName == name {
+		if hook.Container != nil && hook.Container.LabelSelector != nil && hook.Container.LabelSelector["app.kubernetes.io/component"] == name {
 			return idx
 		}
 	}

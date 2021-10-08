@@ -12,4 +12,3 @@ deployments:
     values:
       containers:
       - image: loft.sh/foo
-        name: foo

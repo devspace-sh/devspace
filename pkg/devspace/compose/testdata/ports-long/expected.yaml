@@ -6,7 +6,6 @@ deployments:
     values:
       containers:
       - image: mysql/mysql-server:8.0.19
-        name: db
       service:
         ports:
         - containerPort: 80
@@ -17,7 +16,8 @@ deployments:
           protocol: UDP
 dev:
   ports:
-  - imageSelector: mysql/mysql-server:8.0.19
+  - labelSelector:
+      app.kubernetes.io/component: db
     forward:
     - port: 8080
       remotePort: 80

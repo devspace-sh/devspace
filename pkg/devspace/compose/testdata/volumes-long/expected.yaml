@@ -6,7 +6,6 @@ deployments:
     values:
       containers:
       - image: mysql/mysql-server:8.0.19
-        name: db
         volumeMounts:
         - containerPath: /var/lib/mydata
           volume:
@@ -41,12 +40,15 @@ deployments:
 
 dev:
   sync:
-  - imageSelector: mysql/mysql-server:8.0.19
+  - labelSelector:
+      app.kubernetes.io/component: db
     localSubPath: /opt/data
     containerPath: /var/lib/mysql
-  - imageSelector: mysql/mysql-server:8.0.19
+  - labelSelector:
+      app.kubernetes.io/component: db
     localSubPath: ./cache
     containerPath: /tmp/cache
-  - imageSelector: mysql/mysql-server:8.0.19
+  - labelSelector:
+      app.kubernetes.io/component: db
     localSubPath: $!(echo "$HOME/configs")
     containerPath: /etc/configs/

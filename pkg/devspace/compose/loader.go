@@ -125,7 +125,7 @@ func (d *configLoader) Load(log log.Logger) (*latest.Config, error) {
 
 		_, isDependency := dependentsMap[service.Name]
 		if isDependency {
-			waitHook := createWaitHook(service.Name, resolveContainerName(service))
+			waitHook := createWaitHook(service.Name)
 			hooks = append(hooks, waitHook)
 		}
 		return err
@@ -175,7 +175,7 @@ func addDevConfig(dev *latest.DevConfig, service composetypes.ServiceConfig, bas
 
 	if len(service.Ports) > 0 {
 		portForwarding := &latest.PortForwardingConfig{
-			ImageSelector: resolveImage(service),
+			LabelSelector: labelSelector(service.Name),
 			PortMappings:  []*latest.PortMapping{},
 		}
 		for _, port := range service.Ports {
@@ -204,7 +204,7 @@ func addDevConfig(dev *latest.DevConfig, service composetypes.ServiceConfig, bas
 
 	if len(service.Expose) > 0 {
 		portForwarding := &latest.PortForwardingConfig{
-			ImageSelector: resolveImage(service),
+			LabelSelector: labelSelector(service.Name),
 			PortMappings:  []*latest.PortMapping{},
 		}
 		for _, expose := range service.Expose {
@@ -233,7 +233,7 @@ func addDevConfig(dev *latest.DevConfig, service composetypes.ServiceConfig, bas
 			}
 
 			sync := &latest.SyncConfig{
-				ImageSelector: resolveImage(service),
+				LabelSelector: labelSelector(service.Name),
 				LocalSubPath:  localSubPath,
 				ContainerPath: volume.Target,
 			}
@@ -495,8 +495,11 @@ func volumesConfig(
 
 func containerConfig(service composetypes.ServiceConfig, volumeMounts []interface{}) (map[interface{}]interface{}, error) {
 	container := map[interface{}]interface{}{
-		"name":  resolveContainerName(service),
 		"image": resolveImage(service),
+	}
+
+	if service.ContainerName != "" {
+		container["name"] = formatContainerName(service.ContainerName)
 	}
 
 	if len(service.Command) > 0 {
@@ -676,14 +679,6 @@ func needsVolume(volume composetypes.ServiceVolumeConfig, composeVolumes map[str
 	return !hasVolume
 }
 
-func resolveContainerName(service composetypes.ServiceConfig) string {
-	if service.ContainerName != "" {
-		return service.ContainerName
-	}
-
-	return service.Name
-}
-
 func resolveImage(service composetypes.ServiceConfig) string {
 	image := service.Name
 	if service.Image != "" {
@@ -704,11 +699,11 @@ func resolveVolumeName(volume composetypes.VolumeConfig) string {
 	return strings.TrimLeft(volume.Name, "_")
 }
 
-func createWaitHook(deploymentName string, containerName string) *latest.HookConfig {
+func createWaitHook(deploymentName string) *latest.HookConfig {
 	return &latest.HookConfig{
 		Events: []string{fmt.Sprintf("after:deploy:%s", deploymentName)},
 		Container: &latest.HookContainer{
-			ContainerName: containerName,
+			LabelSelector: labelSelector(deploymentName),
 		},
 		Wait: &latest.HookWaitConfig{
 			Running:            true,
@@ -734,4 +729,14 @@ func shellCommandToSlice(command composetypes.ShellCommand) []interface{} {
 		slice = append(slice, item)
 	}
 	return slice
+}
+
+func formatContainerName(name string) string {
+	return strings.Replace(name, "_", "-", -1)
+}
+
+func labelSelector(serviceName string) map[string]string {
+	return map[string]string{
+		"app.kubernetes.io/component": serviceName,
+	}
 }
