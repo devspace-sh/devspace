@@ -991,6 +991,9 @@ type SourceConfig struct {
 
 // HookConfig defines a hook
 type HookConfig struct {
+	// Name is the name of the hook
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
 	// Events are the events when the hook should be executed
 	Events []string `yaml:"events" json:"events"`
 
