@@ -5,48 +5,56 @@ deployments:
     componentChart: true
     values:
       containers:
-      - image: mysql/mysql-server:8.0.19
+      - name: db-container
+        image: mysql/mysql-server:8.0.19
 - name: cache
   helm:
     componentChart: true
     values:
       containers:
-      - image: redis:latest
+      - name: cache-container
+        image: redis:latest
 - name: messaging
   helm:
     componentChart: true
     values:
       containers:
-      - image: rabbitmq:latest
+      - name: messaging-container
+        image: rabbitmq:latest
 - name: worker
   helm:
     componentChart: true
     values:
       containers:
-      - image: rails:latest
+      - name: worker-container
+        image: rails:latest
 - name: backend
   helm:
     componentChart: true
     values:
       containers:
-      - image: rails:latest
+      - name: backend-container
+        image: rails:latest
 - name: frontend
   helm:
     componentChart: true
     values:
       containers:
-      - image: nginx:latest
+      - name: frontend-container
+        image: nginx:latest
 - name: proxy
   helm:
     componentChart: true
     values:
       containers:
-      - image: haproxy:latest
+      - name: proxy-container
+        image: haproxy:latest
 hooks:
 - events: ["after:deploy:db"]
   container:
     labelSelector:
       app.kubernetes.io/component: db
+    containerName: db-container
   wait:
     running: true
     terminatedWithCode: 0
@@ -54,6 +62,7 @@ hooks:
   container:
     labelSelector:
       app.kubernetes.io/component: cache
+    containerName: cache-container
   wait:
     running: true
     terminatedWithCode: 0
@@ -61,6 +70,7 @@ hooks:
   container:
     labelSelector:
       app.kubernetes.io/component: messaging
+    containerName: messaging-container
   wait:
     running: true
     terminatedWithCode: 0
@@ -68,6 +78,7 @@ hooks:
   container:
     labelSelector:
       app.kubernetes.io/component: backend
+    containerName: backend-container
   wait:
     running: true
     terminatedWithCode: 0
@@ -75,6 +86,7 @@ hooks:
   container:
     labelSelector:
       app.kubernetes.io/component: frontend
+    containerName: frontend-container
   wait:
     running: true
     terminatedWithCode: 0

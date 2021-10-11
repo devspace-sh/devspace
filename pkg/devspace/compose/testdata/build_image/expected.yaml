@@ -11,4 +11,5 @@ deployments:
     componentChart: true
     values:
       containers:
-      - image: loft.sh/foo
+      - name: foo-container
+        image: loft.sh/foo

@@ -15,4 +15,5 @@ deployments:
     componentChart: true
     values:
       containers:
-      - image: foo
+      - name: foo-container
+        image: foo

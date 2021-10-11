@@ -1,6 +1,7 @@
 services:
   db:
-    image: mysql/mysql-server:8.0.19
+    image: loft.sh/mysql-server:8.0.19
+    build: db
     volumes:
       # Just specify a path and let the Engine create a volume
       - type: volume
@@ -10,7 +11,7 @@ services:
       # - /opt/data:/var/lib/mysql
       - type: bind
         source: /opt/data
-        target: /var/lib/mysql
+        target: /var/lib/data
 
       # Path on the host, relative to the Compose file
       # - ./cache:/tmp/cache

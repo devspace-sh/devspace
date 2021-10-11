@@ -547,6 +547,7 @@ type VolumeConfig struct {
 	Size             string                      `yaml:"size,omitempty" json:"size,omitempty"`
 	ConfigMap        map[interface{}]interface{} `yaml:"configMap,omitempty" json:"configMap,omitempty"`
 	Secret           map[interface{}]interface{} `yaml:"secret,omitempty" json:"secret,omitempty"`
+	EmptyDir         map[interface{}]interface{} `yaml:"emptyDir,omitempty" json:"emptyDir,omitempty"`
 	StorageClassName string                      `yaml:"storageClassName,omitempty" json:"storageClassName,omitempty"`
 	VolumeMode       string                      `yaml:"volumeMode,omitempty" json:"volumeMode,omitempty"`
 	VolumeName       string                      `yaml:"volumeName,omitempty" json:"volumeName,omitempty"`

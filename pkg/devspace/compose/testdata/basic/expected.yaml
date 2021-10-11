@@ -5,4 +5,5 @@ deployments:
     componentChart: true
     values:
       containers:
-      - image: mysql/mysql-server:8.0.19
+      - name: db-container
+        image: mysql/mysql-server:8.0.19

@@ -9,6 +9,7 @@ import (
 	composeloader "github.com/compose-spec/compose-go/loader"
 	composetypes "github.com/compose-spec/compose-go/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"gopkg.in/yaml.v2"
 	"gotest.tools/assert"
@@ -71,20 +72,32 @@ func testLoad(dir string, t *testing.T) {
 		t.Errorf("Error unmarshaling the expected configuration: %s", err.Error())
 	}
 
-	// Check deployment properties
-	assert.Check(t, cmp.DeepEqual(toDeploymentMap(expectedConfig.Deployments), toDeploymentMap(actualConfig.Deployments)))
+	assert.Check(
+		t,
+		cmp.DeepEqual(toDeploymentMap(expectedConfig.Deployments), toDeploymentMap(actualConfig.Deployments)),
+		"deployment properties did not match in test case %s",
+		dir,
+	)
 	actualDeployments := actualConfig.Deployments
 	actualConfig.Deployments = nil
 	expectedConfig.Deployments = nil
 
-	// Check hook properties
-	assert.Check(t, cmp.DeepEqual(toWaitHookMap(expectedConfig.Hooks), toWaitHookMap(actualConfig.Hooks)))
+	assert.Check(
+		t,
+		cmp.DeepEqual(toWaitHookMap(expectedConfig.Hooks), toWaitHookMap(actualConfig.Hooks)),
+		"hook properties did not match in test case %s",
+		dir,
+	)
 	actualHooks := actualConfig.Hooks
 	actualConfig.Hooks = nil
 	expectedConfig.Hooks = nil
 
-	// Check other properties
-	assert.Check(t, cmp.DeepEqual(expectedConfig, actualConfig))
+	assert.Check(
+		t,
+		cmp.DeepEqual(expectedConfig, actualConfig),
+		"config properties did not match in test case %s",
+		dir,
+	)
 
 	// Load docker compose to determine dependency ordering
 	content, err := ioutil.ReadFile(dockerComposePath)
@@ -116,14 +129,31 @@ func testLoad(dir string, t *testing.T) {
 
 	// Iterate services in dependency order
 	err = dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
+		waitHookIdx := GetWaitHookIndex(service.Name, actualHooks)
+
 		for _, dep := range service.GetDependencies() {
 			// Check deployments order
-			assert.Check(t, GetDeploymentIndex(dep, actualDeployments) < GetDeploymentIndex(service.Name, actualDeployments), "%s deployment should come after %s", service.Name, dep)
+			assert.Check(t, GetDeploymentIndex(dep, actualDeployments) < GetDeploymentIndex(service.Name, actualDeployments), "%s deployment should come after %s for test case %s", service.Name, dep, dir)
 
 			// Check for wait hook order
 			_, ok := expectedWaitHooks[service.Name]
 			if ok {
-				assert.Check(t, GetWaitHookIndex(dep, actualHooks) < GetWaitHookIndex(service.Name, actualHooks), "%s wait hook should come after %s", service.Name, dep)
+				assert.Check(t, GetWaitHookIndex(dep, actualHooks) < waitHookIdx, "%s wait hook should come after %s", service.Name, dep)
+			}
+		}
+
+		uploadDoneHookIdx := GetUploadDoneHookIndex(service.Name, actualHooks)
+		if uploadDoneHookIdx != -1 {
+			// Check that upload done hooks come before wait hooks
+			if waitHookIdx != -1 {
+				assert.Check(t, uploadDoneHookIdx < waitHookIdx, "%s wait hook should come after upload done hooks for test case %s", service.Name, dir)
+			}
+
+			// Check that upload hooks come before upload done hooks
+			for idx, hook := range actualHooks {
+				if hook.Upload != nil && hook.Container.ContainerName == UploadVolumesContainerName && hook.Container.LabelSelector != nil && hook.Container.LabelSelector["app.kubernetes.io/component"] == service.Name {
+					assert.Check(t, idx < uploadDoneHookIdx, "%s upload done hook should come after upload hooks for test case %s", service.Name, dir)
+				}
 			}
 		}
 
@@ -145,9 +175,9 @@ func toDeploymentMap(deployments []*latest.DeploymentConfig) map[string]latest.D
 func toWaitHookMap(hooks []*latest.HookConfig) map[string]latest.HookConfig {
 	hookMap := map[string]latest.HookConfig{}
 	for _, hook := range hooks {
-		if hook.Container != nil && hook.Container.LabelSelector != nil {
-			hookMap[hook.Container.LabelSelector["app.kubernetes.io/component"]] = *hook
-		}
+		out, _ := yaml.Marshal(hook)
+		hookKey := hash.String(string(out))
+		hookMap[hookKey] = *hook
 	}
 	return hookMap
 }
@@ -163,7 +193,25 @@ func GetDeploymentIndex(name string, deployments []*latest.DeploymentConfig) int
 
 func GetWaitHookIndex(name string, hooks []*latest.HookConfig) int {
 	for idx, hook := range hooks {
-		if hook.Container != nil && hook.Container.LabelSelector != nil && hook.Container.LabelSelector["app.kubernetes.io/component"] == name {
+		if hook.Wait != nil && hook.Container != nil && hook.Container.LabelSelector != nil && hook.Container.LabelSelector["app.kubernetes.io/component"] == name {
+			return idx
+		}
+	}
+	return -1
+}
+
+func GetUploadHookIndex(name string, hooks []*latest.HookConfig) int {
+	for idx, hook := range hooks {
+		if hook.Upload != nil && hook.Container != nil && hook.Container.LabelSelector != nil && hook.Container.LabelSelector["app.kubernetes.io/component"] == name {
+			return idx
+		}
+	}
+	return -1
+}
+
+func GetUploadDoneHookIndex(name string, hooks []*latest.HookConfig) int {
+	for idx, hook := range hooks {
+		if hook.Command == "touch /tmp/done" && hook.Container != nil && hook.Container.LabelSelector != nil && hook.Container.LabelSelector["app.kubernetes.io/component"] == name {
 			return idx
 		}
 	}

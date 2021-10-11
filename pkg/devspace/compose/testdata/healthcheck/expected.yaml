@@ -5,7 +5,8 @@ deployments:
     componentChart: true
     values:
       containers:
-      - image: mysql/mysql-server:8.0.19
+      - name: cmd-container
+        image: mysql/mysql-server:8.0.19
         livenessProbe:
           exec:
             command:
@@ -22,7 +23,8 @@ deployments:
     componentChart: true
     values:
       containers:
-      - image: mysql/mysql-server:8.0.19
+      - name: cmd-shell-container
+        image: mysql/mysql-server:8.0.19
         livenessProbe:
           exec:
             command:
@@ -37,7 +39,8 @@ deployments:
     componentChart: true
     values:
       containers:
-      - image: mysql/mysql-server:8.0.19
+      - name: none-container
+        image: mysql/mysql-server:8.0.19
 # - name: disable
 #   helm:
 #     componentChart: true

@@ -41,6 +41,7 @@ services:
       - ./backend:/code/
   proxy:
     build: proxy
+    entrypoint: ["nginx", "-g", "daemon off;"]
     restart: always
     ports:
       - 8080:80

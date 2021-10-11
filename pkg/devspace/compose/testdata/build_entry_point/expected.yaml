@@ -2,8 +2,9 @@ version: v1beta11
 images:
   foo:
     image: foo
-    context: foo
-    dockerfile: foo/Dockerfile
+    context: .
+    dockerfile: Dockerfile.prod
+    entrypoint: ["nginx", "-g", "daemon off;"]
 
 deployments:
 - name: foo

@@ -1,12 +1,13 @@
 services:
   db:
-    image: mysql/mysql-server:8.0.19
+    image: loft.sh/mysql-server:8.0.19
+    build: db
     volumes:
       # Just specify a path and let the Engine create a volume
       - /var/lib/mydata
 
       # Specify an absolute path mapping
-      - /opt/data:/var/lib/mysql
+      - /opt/data:/var/lib/data
 
       # Path on the host, relative to the Compose file
       - ./cache:/tmp/cache

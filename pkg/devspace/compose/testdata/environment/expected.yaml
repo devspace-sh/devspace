@@ -5,7 +5,8 @@ deployments:
     componentChart: true
     values:
       containers:
-      - env:
+      - name: db-container
+        env:
         - name: MYSQL_DATABASE
           value: example
         - name: MYSQL_ROOT_HOST

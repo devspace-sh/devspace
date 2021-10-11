@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -22,9 +23,10 @@ import (
 )
 
 var (
-	DockerComposePaths = []string{"docker-compose.yaml", "docker-compose.yml"}
-	DockerIgnorePath   = ".dockerignore"
-	DefaultVolumeSize  = "5Gi"
+	DockerComposePaths         = []string{"docker-compose.yaml", "docker-compose.yml"}
+	DockerIgnorePath           = ".dockerignore"
+	DefaultVolumeSize          = "5Gi"
+	UploadVolumesContainerName = "upload-volumes"
 )
 
 type ConfigLoader interface {
@@ -114,11 +116,25 @@ func (d *configLoader) Load(log log.Logger) (*latest.Config, error) {
 			return err
 		}
 
+		bindVolumeHooks := []*latest.HookConfig{}
+		for _, volume := range service.Volumes {
+			if volume.Type == composetypes.VolumeTypeBind {
+				bindVolumeHook := createUploadVolumeHook(service, volume)
+				bindVolumeHooks = append(bindVolumeHooks, bindVolumeHook)
+			}
+		}
+
+		if len(bindVolumeHooks) > 0 {
+			hooks = append(hooks, bindVolumeHooks...)
+			hooks = append(hooks, createUploadDoneHook(service))
+		}
+
 		_, isDependency := dependentsMap[service.Name]
 		if isDependency {
-			waitHook := createWaitHook(service.Name)
+			waitHook := createWaitHook(service)
 			hooks = append(hooks, waitHook)
 		}
+
 		return err
 	})
 	if err != nil {
@@ -217,15 +233,10 @@ func addDevConfig(dev *latest.DevConfig, service composetypes.ServiceConfig, bas
 
 	for _, volume := range service.Volumes {
 		if volume.Type == composetypes.VolumeTypeBind {
-			localSubPath := volume.Source
-
-			if strings.HasPrefix(localSubPath, "~") {
-				localSubPath = fmt.Sprintf(`$!(echo "$HOME/%s")`, strings.TrimLeft(localSubPath, "~/"))
-			}
-
 			sync := &latest.SyncConfig{
 				LabelSelector: labelSelector(service.Name),
-				LocalSubPath:  localSubPath,
+				ContainerName: resolveContainerName(service),
+				LocalSubPath:  resolveLocalPath(volume),
 				ContainerPath: volume.Target,
 			}
 
@@ -296,6 +307,10 @@ func imageConfig(cwd string, service composetypes.ServiceConfig) (*latest.ImageC
 		}
 	}
 
+	if len(service.Entrypoint) > 0 {
+		image.Entrypoint = service.Entrypoint
+	}
+
 	return image, nil
 }
 
@@ -321,9 +336,13 @@ func deleteSecretHook(name string) *latest.HookConfig {
 func deploymentConfig(service composetypes.ServiceConfig, composeVolumes map[string]composetypes.VolumeConfig, log log.Logger) (*latest.DeploymentConfig, error) {
 	values := map[interface{}]interface{}{}
 
-	volumes, volumeMounts := volumesConfig(service, composeVolumes, log)
+	volumes, volumeMounts, bindVolumeMounts := volumesConfig(service, composeVolumes, log)
 	if len(volumes) > 0 {
 		values["volumes"] = volumes
+	}
+
+	if hasLocalSync(service) {
+		values["initContainers"] = []interface{}{initContainerConfig(service, bindVolumeMounts)}
 	}
 
 	container, err := containerConfig(service, volumeMounts)
@@ -420,7 +439,7 @@ func volumesConfig(
 	service composetypes.ServiceConfig,
 	composeVolumes map[string]composetypes.VolumeConfig,
 	log log.Logger,
-) (volumes []interface{}, volumeMounts []interface{}) {
+) (volumes []interface{}, volumeMounts []interface{}, bindVolumeMounts []interface{}) {
 	for _, composeVolume := range composeVolumes {
 		volumeName := resolveVolumeName(composeVolume)
 		volume := createVolume(volumeName, DefaultVolumeSize)
@@ -435,10 +454,13 @@ func volumesConfig(
 		volumeMounts = append(volumeMounts, volumeMount)
 	}
 
+	var bindVolumes []composetypes.ServiceVolumeConfig
 	for _, serviceVolume := range service.Volumes {
 		volumeName := resolveServiceVolumeName(service, serviceVolume, len(volumes)-1)
 
 		switch serviceVolume.Type {
+		case composetypes.VolumeTypeBind:
+			bindVolumes = append(bindVolumes, serviceVolume)
 		case composetypes.VolumeTypeTmpfs:
 			volume := createEmptyDirVolume(volumeName, serviceVolume)
 			volumes = append(volumes, volume)
@@ -458,23 +480,32 @@ func volumesConfig(
 		}
 	}
 
-	return volumes, volumeMounts
+	for idx, bindVolume := range bindVolumes {
+		volumeName := fmt.Sprintf("volume-%d", idx+1)
+		volume := createEmptyDirVolume(volumeName, bindVolume)
+		volumes = append(volumes, volume)
+
+		volumeMount := createServiceVolumeMount(volumeName, bindVolume)
+		volumeMounts = append(volumeMounts, volumeMount)
+
+		bindVolumeMount := createInitVolumeMount(volumeName, bindVolume)
+		bindVolumeMounts = append(bindVolumeMounts, bindVolumeMount)
+	}
+
+	return volumes, volumeMounts, bindVolumeMounts
 }
 
 func containerConfig(service composetypes.ServiceConfig, volumeMounts []interface{}) (map[interface{}]interface{}, error) {
 	container := map[interface{}]interface{}{
+		"name":  resolveContainerName(service),
 		"image": resolveImage(service),
-	}
-
-	if service.ContainerName != "" {
-		container["name"] = formatContainerName(service.ContainerName)
 	}
 
 	if len(service.Command) > 0 {
 		container["args"] = shellCommandToSlice(service.Command)
 	}
 
-	if len(service.Entrypoint) > 0 {
+	if !hasBuild(service) && len(service.Entrypoint) > 0 {
 		container["command"] = shellCommandToSlice(service.Entrypoint)
 	}
 
@@ -617,10 +648,33 @@ func createServiceVolumeMount(volumeName string, volume composetypes.ServiceVolu
 	}
 }
 
+func createInitVolumeMount(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
+	return map[interface{}]interface{}{
+		"containerPath": volume.Target,
+		"volume": map[interface{}]interface{}{
+			"name":     volumeName,
+			"readOnly": false,
+		},
+	}
+}
+
 func createVolume(name string, size string) interface{} {
 	return map[interface{}]interface{}{
 		"name": name,
 		"size": size,
+	}
+}
+
+func initContainerConfig(service composetypes.ServiceConfig, volumeMounts []interface{}) map[interface{}]interface{} {
+	return map[interface{}]interface{}{
+		"name":    UploadVolumesContainerName,
+		"image":   "alpine",
+		"command": []interface{}{"sh"},
+		"args": []interface{}{
+			"-c",
+			"while [ ! -f /tmp/done ]; do sleep 2; done",
+		},
+		"volumeMounts": volumeMounts,
 	}
 }
 
@@ -633,12 +687,32 @@ func needsVolume(volume composetypes.ServiceVolumeConfig, composeVolumes map[str
 	return !hasVolume
 }
 
+func resolveContainerName(service composetypes.ServiceConfig) string {
+	if service.ContainerName != "" {
+		return resolveName(service.ContainerName)
+	}
+	return fmt.Sprintf("%s-container", resolveName(service.Name))
+}
+
 func resolveImage(service composetypes.ServiceConfig) string {
 	image := service.Name
 	if service.Image != "" {
 		image = service.Image
 	}
 	return image
+}
+
+func resolveLocalPath(volume composetypes.ServiceVolumeConfig) string {
+	localSubPath := volume.Source
+
+	if strings.HasPrefix(localSubPath, "~") {
+		localSubPath = fmt.Sprintf(`$!(echo "$HOME/%s")`, strings.TrimLeft(localSubPath, "~/"))
+	}
+	return localSubPath
+}
+
+func resolveName(name string) string {
+	return regexp.MustCompile(`[\._]`).ReplaceAllString(name, "-")
 }
 
 func resolveServiceVolumeName(service composetypes.ServiceConfig, volume composetypes.ServiceVolumeConfig, idx int) string {
@@ -653,15 +727,46 @@ func resolveVolumeName(volume composetypes.VolumeConfig) string {
 	return strings.TrimLeft(volume.Name, "_")
 }
 
-func createWaitHook(deploymentName string) *latest.HookConfig {
+func createWaitHook(service composetypes.ServiceConfig) *latest.HookConfig {
+	serviceName := resolveName(service.Name)
 	return &latest.HookConfig{
-		Events: []string{fmt.Sprintf("after:deploy:%s", deploymentName)},
+		Events: []string{fmt.Sprintf("after:deploy:%s", serviceName)},
 		Container: &latest.HookContainer{
-			LabelSelector: labelSelector(deploymentName),
+			LabelSelector: labelSelector(serviceName),
+			ContainerName: resolveContainerName(service),
 		},
 		Wait: &latest.HookWaitConfig{
 			Running:            true,
 			TerminatedWithCode: ptr.Int32(0),
+		},
+	}
+}
+
+func createUploadVolumeHook(service composetypes.ServiceConfig, volume composetypes.ServiceVolumeConfig) *latest.HookConfig {
+	serviceName := resolveName(service.Name)
+	return &latest.HookConfig{
+		Events: []string{"after:deploy:" + serviceName},
+		Upload: &latest.HookSyncConfig{
+			LocalPath:     resolveLocalPath(volume),
+			ContainerPath: volume.Target,
+		},
+		Container: &latest.HookContainer{
+			LabelSelector: labelSelector(service.Name),
+			ContainerName: UploadVolumesContainerName,
+			Once:          ptr.Bool(true),
+		},
+	}
+}
+
+func createUploadDoneHook(service composetypes.ServiceConfig) *latest.HookConfig {
+	serviceName := resolveName(service.Name)
+	return &latest.HookConfig{
+		Events:  []string{"after:deploy:" + serviceName},
+		Command: "touch /tmp/done",
+		Container: &latest.HookContainer{
+			LabelSelector: labelSelector(service.Name),
+			ContainerName: UploadVolumesContainerName,
+			Once:          ptr.Bool(true),
 		},
 	}
 }
@@ -685,12 +790,21 @@ func shellCommandToSlice(command composetypes.ShellCommand) []interface{} {
 	return slice
 }
 
-func formatContainerName(name string) string {
-	return strings.Replace(name, "_", "-", -1)
-}
-
 func labelSelector(serviceName string) map[string]string {
 	return map[string]string{
 		"app.kubernetes.io/component": serviceName,
 	}
+}
+
+func hasBuild(service composetypes.ServiceConfig) bool {
+	return service.Build != nil
+}
+
+func hasLocalSync(service composetypes.ServiceConfig) bool {
+	for _, volume := range service.Volumes {
+		if volume.Type == composetypes.VolumeTypeBind {
+			return true
+		}
+	}
+	return false
 }
