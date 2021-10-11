@@ -1,0 +1,15 @@
+version: v1beta11
+images:
+  foo:
+    image: foo
+    context: .
+    dockerfile: Dockerfile.prod
+    entrypoint: ["nginx", "-g", "daemon off;"]
+
+deployments:
+- name: foo
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: foo

@@ -1,11 +1,21 @@
 version: v1beta11
+images:
+  db:
+    context: db
+    dockerfile: db/Dockerfile
+    image: loft.sh/mysql-server:8.0.19
+    injectRestartHelper: true
+
 deployments:
 - name: db
   helm:
     componentChart: true
     values:
       containers:
-      - image: mysql/mysql-server:8.0.19
+      - image: loft.sh/mysql-server:8.0.19
+        env:
+        - name: DEVSPACE_MANUAL_START
+          value: "true"
         volumeMounts:
         - containerPath: /var/lib/mydata
           volume:
@@ -20,6 +30,7 @@ deployments:
         size: 5Gi
       - name: db-0
         size: 5Gi
+
 dev:
   sync:
   - labelSelector:
@@ -34,3 +45,12 @@ dev:
       app.kubernetes.io/component: db
     localSubPath: $!(echo "$HOME/configs")
     containerPath: /etc/configs/
+
+hooks:
+- events: ["devCommand:after:sync"]
+  command: /tmp/devspacehelper restart
+  container:
+    labelSelector:
+      app.kubernetes.io/component: db
+    imageSelector: loft.sh/mysql-server:8.0.19
+    once: true

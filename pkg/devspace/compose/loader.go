@@ -119,6 +119,12 @@ func (d *configLoader) Load(log log.Logger) (*latest.Config, error) {
 			waitHook := createWaitHook(service.Name)
 			hooks = append(hooks, waitHook)
 		}
+
+		if hasBuild(service) && hasLocalSync(service) {
+			restartOnceHook := createRestartOnceHook(service)
+			hooks = append(hooks, restartOnceHook)
+		}
+
 		return err
 	})
 	if err != nil {
@@ -294,6 +300,14 @@ func imageConfig(cwd string, service composetypes.ServiceConfig) (*latest.ImageC
 				Options: buildOptions,
 			},
 		}
+	}
+
+	if len(service.Entrypoint) > 0 {
+		image.Entrypoint = service.Entrypoint
+	}
+
+	if hasLocalSync(service) {
+		image.InjectRestartHelper = true
 	}
 
 	return image, nil
@@ -474,8 +488,12 @@ func containerConfig(service composetypes.ServiceConfig, volumeMounts []interfac
 		container["args"] = shellCommandToSlice(service.Command)
 	}
 
-	if len(service.Entrypoint) > 0 {
+	if !hasBuild(service) && len(service.Entrypoint) > 0 {
 		container["command"] = shellCommandToSlice(service.Entrypoint)
+	}
+
+	if hasBuild(service) && hasLocalSync(service) {
+		service.Environment["DEVSPACE_MANUAL_START"] = ptr.String("true")
 	}
 
 	if service.Environment != nil {
@@ -666,6 +684,18 @@ func createWaitHook(deploymentName string) *latest.HookConfig {
 	}
 }
 
+func createRestartOnceHook(service composetypes.ServiceConfig) *latest.HookConfig {
+	return &latest.HookConfig{
+		Events:  []string{"devCommand:after:sync"},
+		Command: "/tmp/devspacehelper restart",
+		Container: &latest.HookContainer{
+			LabelSelector: labelSelector(service.Name),
+			ImageSelector: resolveImage(service),
+			Once:          ptr.Bool(true),
+		},
+	}
+}
+
 func calculateDependentsMap(dockerCompose *composetypes.Project) (map[string][]string, error) {
 	tree := map[string][]string{}
 	err := dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
@@ -693,4 +723,17 @@ func labelSelector(serviceName string) map[string]string {
 	return map[string]string{
 		"app.kubernetes.io/component": serviceName,
 	}
+}
+
+func hasBuild(service composetypes.ServiceConfig) bool {
+	return service.Build != nil
+}
+
+func hasLocalSync(service composetypes.ServiceConfig) bool {
+	for _, volume := range service.Volumes {
+		if volume.Type == composetypes.VolumeTypeBind {
+			return true
+		}
+	}
+	return false
 }

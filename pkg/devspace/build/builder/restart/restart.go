@@ -32,12 +32,25 @@ const HelperScript = `#!/bin/sh
 #
 set -e
 pid=""
+
 trap quit TERM INT
 quit() {
   if [ -n "$pid" ]; then
     kill $pid
   fi
 }
+
+if [ "$DEVSPACE_MANUAL_START" = "true" ]; then
+  setsid sleep 999999 &
+  pid=$!
+  echo "$pid" > /.devspace/devspace-pid
+  set +e
+  wait $pid
+  set -e
+  unset DEVSPACE_MANUAL_START
+  printf "\n################ Start container ################\n\n"
+fi
+
 while true; do
   setsid "$@" &
   pid=$!
