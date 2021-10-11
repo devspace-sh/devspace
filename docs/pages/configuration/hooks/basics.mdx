@@ -15,10 +15,12 @@ Hooks can be defined in the `hooks` section of `devspace.yaml`:
 ```yaml
 hooks:
 # Execute the hook in a golang shell (cross operating system compatible)
-- command: "echo before image building"
+- name: "pre-image-build-hook"
+  command: "echo before image building"
   events: ["before:build"]
 # Execute the hook in a golang shell (cross operating system compatible)
-- command: |
+- name: "post-image-build-hook"
+  command: |
     echo Built Image image(image-1):tag(image-1)
   events: ["after:build:image-1"]
 # Execute the hook directly on the system (echo binary must exist)
@@ -60,6 +62,7 @@ hooks:
 - events: ["error:deploy:*"]
   command: "echo The following error has occurred during deploying $DEVSPACE_HOOK_DEPLOY_NAME: $DEVSPACE_HOOK_ERROR"
   os: darwin,windows
+  name: "error-hook"
 ```
 
 ## Execute hooks in a container
@@ -115,6 +118,7 @@ hooks:
   container:
     imageSelector: image(test):tag(test)
   events: ["after:deploy:my-deployment"]
+  name: "upload-hook"
 # Download a single file from the container to the local path
 - download:
     localPath: build/artifact.jar
@@ -122,6 +126,7 @@ hooks:
   container:
     imageSelector: image(java):tag(java)
   events: ["after:deploy:my-deployment-2"]
+  name: "download-hook"
 ```
 
 ## Wait for a pod to be running
@@ -136,7 +141,7 @@ deployments:
     values:
       ...
 hooks:
-# This hook will ensure that everytime the deployment
+# This hook will ensure that every time the deployment
 # my-database is deployed that DevSpace will wait until
 # all pods and containers that match the labelSelector
 # app.kubernetes.io/component: my-database are running
@@ -153,6 +158,7 @@ hooks:
       # You could also select just a specific container with
       # containerName: database-container
   events: ["after:deploy:my-database"]
+  name: "wait-for-pod-hook"
 ...
 ```
 
@@ -193,6 +199,7 @@ hooks:
     labelSelector:
       app.kubernetes.io/component: my-job
   events: ["after:deploy:my-job"]
+  name: "print-logs-hook"
 ```
 
 ## Execute hooks in the background
@@ -206,6 +213,7 @@ hooks:
   args: ["-c", "sleep 10 && echo 'Hello, I was run inside the background!'"]
   background: true
   events: ["after:deploy"]
+  name: "background-hook"
 ...
 ```
 
@@ -218,6 +226,7 @@ hooks:
   background: true
   silent: true
   events: ["after:deploy"]
+  name: "silent-background-hook"
 ...
 ```
 
@@ -230,9 +239,11 @@ hooks:
 - command: echo before image building on windows
   os: windows
   events: ["after:build"]
+  name: windows-hook
 - command: echo before image building on mac and linux
   os: darwin,linux
   events: ["after:build"]
+  name: darwin-linux-hook
 ```
 
 ## Execute hooks once
@@ -249,6 +260,7 @@ hooks:
     imageSelector: nginx:1.21
     once: true
   events: ["after:deploy"]
+  name: one-time-hook
 ...
 ```
 

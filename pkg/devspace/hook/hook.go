@@ -204,6 +204,9 @@ func executeHook(hookConfig *latest.HookConfig, hookWriter io.Writer, client kub
 }
 
 func hookName(hook *latest.HookConfig) string {
+	if hook.Name != "" {
+		return hook.Name
+	}
 	if hook.Command != "" {
 		commandString := strings.TrimSpace(hook.Command + " " + strings.Join(hook.Args, " "))
 		splitted := strings.Split(commandString, "\n")

@@ -325,11 +325,16 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 		}
 	}
 
+	execCommandName := exec.Name
+	if execCommandName == "" {
+		execCommandName = command.FormatCommandName(execCommand, execArgs)
+	}
+
 	if exec.Local {
 		if matched != "" {
-			u.sync.log.Infof("Upstream - Execute command '%s' locally, because '%s' changed", command.FormatCommandName(execCommand, execArgs), matched)
+			u.sync.log.Infof("Upstream - Execute command '%s' locally, because '%s' changed", execCommandName, matched)
 		} else {
-			u.sync.log.Infof("Upstream - Execute command '%s' locally", command.FormatCommandName(execCommand, execArgs))
+			u.sync.log.Infof("Upstream - Execute command '%s' locally", execCommandName)
 		}
 
 		// if args are nil we execute the command in a shell
@@ -344,7 +349,7 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 		}
 		if err != nil {
 			if exec.FailOnError {
-				return fmt.Errorf("error executing command %s: %s %v", command.FormatCommandName(execCommand, execArgs), out.String(), err)
+				return fmt.Errorf("error executing command %s: %s %v", execCommandName, out.String(), err)
 			}
 
 			u.sync.log.Infof("Upstream - Error executing command: %s %v", out.String(), err)
@@ -365,9 +370,9 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 	}
 
 	if matched != "" {
-		u.sync.log.Infof("Upstream - Execute command '%s', because '%s' changed", command.FormatCommandName(execCommand, execArgs), matched)
+		u.sync.log.Infof("Upstream - Execute command '%s', because '%s' changed", execCommandName, matched)
 	} else {
-		u.sync.log.Infof("Upstream - Execute command '%s'", command.FormatCommandName(execCommand, execArgs))
+		u.sync.log.Infof("Upstream - Execute command '%s'", execCommandName)
 	}
 
 	_, err := u.client.Execute(ctx, &remote.Command{

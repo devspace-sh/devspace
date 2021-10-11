@@ -430,7 +430,8 @@ dev:
     onUpload:
       # These post-sync commands will be executed after DevSpace synced changes to the container in the given order
       exec: 
-      - command: |-
+      - name: npm-install
+        command: |-
           npm install
         onChange: ["./package.json"]
       - command: |-
@@ -444,7 +445,7 @@ dev:
 ```
 
 ## One-Directional Sync
-These flags allow for local or remote container filesystems to be ignored during synchronization.
+These flags allow for local or remote container file systems to be ignored during synchronization.
 
 ### `disableDownload`
 The `disableDownload` option expects a boolean which enables/disables all synchronization from the remote container filesystem to the local filesystem.
