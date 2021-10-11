@@ -1,15 +1,18 @@
 package helper
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 
 	"github.com/docker/cli/cli/command/image/build"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -194,4 +197,19 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, forceRebuild b
 	}
 
 	return mustRebuild, nil
+}
+
+func (b *BuildHelper) IsImageAvailableLocally(cache *generated.CacheConfig, dockerClient dockerclient.Client) (bool, error) {
+	imageName := cache.Images[b.ImageConfigName].ImageName + ":" + cache.Images[b.ImageConfigName].Tag
+	dockerAPIClient := dockerClient.DockerAPIClient()
+	imageList, err := dockerAPIClient.ImageList(context.Background(), types.ImageListOptions{})
+	if err != nil {
+		return false, err
+	}
+	for _, image := range imageList {
+		if image.RepoTags[0] == imageName {
+			return true, nil
+		}
+	}
+	return false, nil
 }

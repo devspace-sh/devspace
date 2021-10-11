@@ -108,7 +108,7 @@ func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool) (bool, error) {
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool, log logpkg.Logger) (bool, error) {
 	return b.helper.ShouldRebuild(cache, forceRebuild)
 }
 
@@ -352,7 +352,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 					if status.State.Terminated.ExitCode == 0 {
 						return true, nil
 					}
-					
+
 					errorLog := ""
 					reader, _ := b.helper.KubeClient.Logs(context.TODO(), b.BuildNamespace, buildPodCreated.Name, status.Name, false, nil, false)
 					if reader != nil {

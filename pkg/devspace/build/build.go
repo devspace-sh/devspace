@@ -135,7 +135,7 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 		}
 
 		// Check if rebuild is needed
-		needRebuild, err := builder.ShouldRebuild(c.config.Generated().GetActive(), options.ForceRebuild)
+		needRebuild, err := builder.ShouldRebuild(c.config.Generated().GetActive(), options.ForceRebuild, log)
 		if err != nil {
 			pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 				"IMAGE_CONFIG_NAME": imageConfigName,
