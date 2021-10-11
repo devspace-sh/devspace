@@ -811,6 +811,7 @@ type SyncOnUpload struct {
 }
 
 type SyncExec struct {
+	Name        string   `yaml:"Name,omitempty" json:"Name,omitempty"`
 	Command     string   `yaml:"command,omitempty" json:"command,omitempty"`
 	Args        []string `yaml:"args,omitempty" json:"args,omitempty"`
 	FailOnError bool     `yaml:"failOnError,omitempty" json:"failOnError,omitempty"`
