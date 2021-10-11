@@ -181,7 +181,7 @@ func SendData(stream remote.Tunnel_InitTunnelClient, sessions <-chan *tunnel.Ses
 func StartReverseForward(reader io.ReadCloser, writer io.WriteCloser, tunnels []*latest.PortMapping, stopChan chan error, namespace string, name string, log logpkg.Logger) error {
 	scheme := "TCP"
 	closeStreams := make([]chan bool, len(tunnels))
-	go func() {
+	defer func() {
 		for _, c := range closeStreams {
 			if c == nil {
 				continue
@@ -199,7 +199,7 @@ func StartReverseForward(reader io.ReadCloser, writer io.WriteCloser, tunnels []
 	client := remote.NewTunnelClient(conn)
 	logFile := logpkg.GetFileLogger("reverse-portforwarding")
 
-	errorsChan := make(chan error, 2*len(tunnels))
+	errorsChan := make(chan error, 3*len(tunnels))
 	for i, portMapping := range tunnels {
 		if portMapping.LocalPort == nil {
 			return fmt.Errorf("local port cannot be undefined")
@@ -237,6 +237,24 @@ func StartReverseForward(reader io.ReadCloser, writer io.WriteCloser, tunnels []
 			}
 
 			sessions := make(chan *tunnel.Session)
+			go func() {
+				for {
+					select {
+					case <-closeStream:
+						return
+					case <-stopChan:
+						return
+					case <-time.After(time.Second * 20):
+						ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+						_, err := client.Ping(ctx, &remote.Empty{})
+						cancel()
+						if err != nil {
+							errorsChan <- errors.Wrap(err, "ping connection")
+							return
+						}
+					}
+				}
+			}()
 			go func() {
 				err = ReceiveData(stream, closeStream, sessions, localPort, scheme, logFile)
 				if err != nil {

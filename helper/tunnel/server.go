@@ -3,17 +3,16 @@ package tunnel
 import (
 	"context"
 	"fmt"
-	"io"
-	"net"
-	"os"
-	"strings"
-
 	"github.com/google/uuid"
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/util"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"io"
+	"net"
+	"os"
+	"strings"
 )
 
 type tunnelServer struct{}
@@ -174,6 +173,11 @@ func readConn(ctx context.Context, session *Session, sessions chan<- *Session) {
 			}
 		}
 	}
+}
+
+// Ping returns empty
+func (t *tunnelServer) Ping(context.Context, *remote.Empty) (*remote.Empty, error) {
+	return &remote.Empty{}, nil
 }
 
 func (t *tunnelServer) InitTunnel(stream remote.Tunnel_InitTunnelServer) error {

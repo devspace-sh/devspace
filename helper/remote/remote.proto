@@ -5,6 +5,7 @@ package remote;
 
 service Tunnel {
     rpc InitTunnel (stream SocketDataRequest) returns (stream SocketDataResponse) {}
+    rpc Ping (Empty) returns (Empty) {}
 }
 
 enum LogLevel {
