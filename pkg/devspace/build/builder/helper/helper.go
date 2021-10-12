@@ -207,7 +207,7 @@ func (b *BuildHelper) IsImageAvailableLocally(cache *generated.CacheConfig, dock
 		return false, err
 	}
 	for _, image := range imageList {
-		if image.RepoTags[0] == imageName {
+		if len(image.RepoTags) > 0 && image.RepoTags[0] == imageName {
 			return true, nil
 		}
 	}

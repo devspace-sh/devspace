@@ -72,13 +72,17 @@ func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
 // ShouldRebuild determines if an image has to be rebuilt
 func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool, log logpkg.Logger) (bool, error) {
 	rebuild, err := b.helper.ShouldRebuild(cache, forceRebuild)
+
 	// Check if image is present in local repository
 	if !rebuild && err == nil {
-		found, err := b.helper.IsImageAvailableLocally(cache, b.client)
-		if !found && err == nil {
-			return true, nil
+		if b.skipPushOnLocalKubernetes && b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
+			found, err := b.helper.IsImageAvailableLocally(cache, b.client)
+			if !found && err == nil {
+				return true, nil
+			}
 		}
 	}
+
 	return rebuild, err
 }
 
