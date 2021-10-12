@@ -1,15 +1,19 @@
 package init
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/loft-sh/devspace/cmd"
+	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/onsi/ginkgo"
+	"gopkg.in/yaml.v2"
 )
 
 var _ = DevSpaceDescribe("init", func() {
@@ -79,5 +83,27 @@ var _ = DevSpaceDescribe("init", func() {
 		// Created a .devspace/generated.yaml
 		_, err = os.Stat(filepath.Join(tempDir, ".devspace", "generated.yaml"))
 		framework.ExpectNoError(err)
+
+		// create a new dev command
+		var configBuffer bytes.Buffer
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn: true,
+			},
+			Out: &configBuffer,
+		}
+
+		err = printCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		generatedConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), generatedConfig)
+		framework.ExpectNoError(err)
+
+		// validate config
+		framework.ExpectEqual(len(generatedConfig.Deployments), 3)
+		framework.ExpectEqual(generatedConfig.Deployments[0].Name, "db")
+		framework.ExpectEqual(generatedConfig.Deployments[1].Name, "backend")
+		framework.ExpectEqual(generatedConfig.Deployments[2].Name, "proxy")
 	})
 })
