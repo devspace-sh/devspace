@@ -116,13 +116,14 @@ func (d *downstream) startPing(doneChan chan struct{}) {
 			select {
 			case <-doneChan:
 				return
-			case <-time.After(time.Second * 20):
+			case <-time.After(time.Second * 15):
 				if d.client != nil {
 					ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 					_, err := d.client.Ping(ctx, &remote.Empty{})
 					cancel()
 					if err != nil {
 						d.sync.Stop(fmt.Errorf("ping connection: %v", err))
+						return
 					}
 				}
 			}
@@ -131,12 +132,6 @@ func (d *downstream) startPing(doneChan chan struct{}) {
 }
 
 func (d *downstream) mainLoop() error {
-	doneChan := make(chan struct{})
-	defer close(doneChan)
-
-	// start pinging the underlying connection
-	d.startPing(doneChan)
-
 	lastAmountChanges := int64(0)
 	recheckInterval := 1700
 	if !d.sync.Options.Polling {

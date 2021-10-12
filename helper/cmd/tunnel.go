@@ -25,5 +25,5 @@ func NewTunnelCmd() *cobra.Command {
 
 // Run runs the command logic
 func (cmd *TunnelCmd) Run(cobraCmd *cobra.Command, args []string) error {
-	return tunnel.StartTunnelServer(os.Stdin, os.Stdout, true)
+	return tunnel.StartTunnelServer(os.Stdin, os.Stdout, true, true)
 }

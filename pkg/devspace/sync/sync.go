@@ -157,6 +157,10 @@ func (s *Sync) Start(onInitUploadDone chan struct{}, onInitDownloadDone chan str
 	s.onError = onError
 	s.onDone = onDone
 
+	// start pinging the underlying connection
+	s.downstream.startPing(onDone)
+	s.upstream.startPing(onDone)
+
 	s.mainLoop(onInitUploadDone, onInitDownloadDone)
 	return nil
 }
