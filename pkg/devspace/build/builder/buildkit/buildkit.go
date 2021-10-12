@@ -55,17 +55,22 @@ func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
 // ShouldRebuild determines if an image has to be rebuilt
 func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool, log logpkg.Logger) (bool, error) {
 	rebuild, err := b.helper.ShouldRebuild(cache, forceRebuild)
+
 	// Check if image is present in local repository
 	if !rebuild && err == nil && b.helper.ImageConf.Build.BuildKit.InCluster == nil {
-		dockerClient, err := dockerpkg.NewClient(log)
-		if err != nil {
-			return false, err
-		}
-		found, err := b.helper.IsImageAvailableLocally(cache, dockerClient)
-		if !found && err == nil {
-			return true, nil
+		if b.skipPushOnLocalKubernetes && b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
+			dockerClient, err := dockerpkg.NewClientWithMinikube(b.helper.KubeClient.CurrentContext(), b.helper.ImageConf.Build.BuildKit.PreferMinikube == nil || *b.helper.ImageConf.Build.BuildKit.PreferMinikube, log)
+			if err != nil {
+				return false, err
+			}
+
+			found, err := b.helper.IsImageAvailableLocally(cache, dockerClient)
+			if !found && err == nil {
+				return true, nil
+			}
 		}
 	}
+
 	return rebuild, err
 }
 
