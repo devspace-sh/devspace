@@ -53,8 +53,20 @@ func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool) (bool, error) {
-	return b.helper.ShouldRebuild(cache, forceRebuild)
+func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool, log logpkg.Logger) (bool, error) {
+	rebuild, err := b.helper.ShouldRebuild(cache, forceRebuild)
+	// Check if image is present in local repository
+	if !rebuild && err == nil && b.helper.ImageConf.Build.BuildKit.InCluster == nil {
+		dockerClient, err := dockerpkg.NewClient(log)
+		if err != nil {
+			return false, err
+		}
+		found, err := b.helper.IsImageAvailableLocally(cache, dockerClient)
+		if !found && err == nil {
+			return true, nil
+		}
+	}
+	return rebuild, err
 }
 
 // BuildImage builds a dockerimage with the docker cli
