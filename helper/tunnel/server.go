@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/util"
+	"github.com/loft-sh/devspace/helper/util/pingtimeout"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -15,7 +16,10 @@ import (
 	"strings"
 )
 
-type tunnelServer struct{}
+type tunnelServer struct {
+	// ping is used to determine if we still have an alive connection
+	ping *pingtimeout.PingTimeout
+}
 
 var debugModeEnabled = os.Getenv("DEVSPACE_HELPER_DEBUG") == "true"
 
@@ -29,7 +33,7 @@ func logDebugf(message string, args ...interface{}) {
 	}
 }
 
-func StartTunnelServer(reader io.Reader, writer io.Writer, exitOnClose bool) error {
+func StartTunnelServer(reader io.Reader, writer io.Writer, exitOnClose, ping bool) error {
 	pipe := util.NewStdStreamJoint(reader, writer, exitOnClose)
 	lis := util.NewStdinListener()
 	done := make(chan error)
@@ -37,7 +41,17 @@ func StartTunnelServer(reader io.Reader, writer io.Writer, exitOnClose bool) err
 	go func() {
 		s := grpc.NewServer()
 
-		remote.RegisterTunnelServer(s, newServer())
+		tunnel := &tunnelServer{
+			ping: &pingtimeout.PingTimeout{},
+		}
+
+		if ping {
+			doneChan := make(chan struct{})
+			defer close(doneChan)
+			tunnel.ping.Start(doneChan)
+		}
+
+		remote.RegisterTunnelServer(s, tunnel)
 		reflection.Register(s)
 
 		done <- s.Serve(lis)
@@ -45,10 +59,6 @@ func StartTunnelServer(reader io.Reader, writer io.Writer, exitOnClose bool) err
 
 	lis.Ready(pipe)
 	return <-done
-}
-
-func newServer() *tunnelServer {
-	return &tunnelServer{}
 }
 
 func SendData(stream remote.Tunnel_InitTunnelServer, sessions <-chan *Session, closeChan chan struct{}) {
@@ -177,6 +187,10 @@ func readConn(ctx context.Context, session *Session, sessions chan<- *Session) {
 
 // Ping returns empty
 func (t *tunnelServer) Ping(context.Context, *remote.Empty) (*remote.Empty, error) {
+	if t.ping != nil {
+		t.ping.Ping()
+	}
+
 	return &remote.Empty{}, nil
 }
 

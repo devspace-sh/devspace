@@ -72,7 +72,7 @@ func (s *StdStreamJoint) Write(b []byte) (n int, err error) {
 func (s *StdStreamJoint) Close() error {
 	if s.exitOnClose {
 		// We kill ourself here because the streams are closed
-		fmt.Fprintf(os.Stderr, "Streams are closed")
+		_, _ = fmt.Fprintf(os.Stderr, "Streams are closed")
 		os.Exit(1)
 	}
 

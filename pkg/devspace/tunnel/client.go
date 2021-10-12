@@ -32,6 +32,13 @@ loop:
 		default:
 			if err != nil {
 				return fmt.Errorf("error reading from stream: %v", err)
+			} else if m.HasErr {
+				_ = stream.CloseSend()
+				if m.LogMessage == nil {
+					return fmt.Errorf("remote error: unknown")
+				}
+
+				return fmt.Errorf("helper error: %s", m.LogMessage.Message)
 			}
 
 			requestID, err := uuid.Parse(m.RequestId)
@@ -196,10 +203,32 @@ func StartReverseForward(reader io.ReadCloser, writer io.WriteCloser, tunnels []
 	if err != nil {
 		return errors.Wrap(err, "new client connection")
 	}
+
 	client := remote.NewTunnelClient(conn)
 	logFile := logpkg.GetFileLogger("reverse-portforwarding")
 
-	errorsChan := make(chan error, 3*len(tunnels))
+	errorsChan := make(chan error, 2*len(tunnels)+1)
+	closeStream := make(chan struct{})
+	defer close(closeStream)
+	go func() {
+		for {
+			select {
+			case <-closeStream:
+				return
+			case <-stopChan:
+				return
+			case <-time.After(time.Second * 20):
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+				_, err := client.Ping(ctx, &remote.Empty{})
+				cancel()
+				if err != nil {
+					errorsChan <- errors.Wrap(err, "ping connection")
+					return
+				}
+			}
+		}
+	}()
+
 	for i, portMapping := range tunnels {
 		if portMapping.LocalPort == nil {
 			return fmt.Errorf("local port cannot be undefined")
@@ -237,24 +266,6 @@ func StartReverseForward(reader io.ReadCloser, writer io.WriteCloser, tunnels []
 			}
 
 			sessions := make(chan *tunnel.Session)
-			go func() {
-				for {
-					select {
-					case <-closeStream:
-						return
-					case <-stopChan:
-						return
-					case <-time.After(time.Second * 20):
-						ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-						_, err := client.Ping(ctx, &remote.Empty{})
-						cancel()
-						if err != nil {
-							errorsChan <- errors.Wrap(err, "ping connection")
-							return
-						}
-					}
-				}
-			}()
 			go func() {
 				err = ReceiveData(stream, closeStream, sessions, localPort, scheme, logFile)
 				if err != nil {

@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"github.com/loft-sh/devspace/helper/util/pingtimeout"
 	"io"
 	"io/ioutil"
 	"log"
@@ -34,6 +35,7 @@ type DownstreamOptions struct {
 	Throttle     int64
 
 	Polling bool
+	Ping    bool
 }
 
 // StartDownstreamServer starts a new downstream server with the given reader and writer
@@ -55,6 +57,13 @@ func StartDownstreamServer(reader io.Reader, writer io.Writer, options *Downstre
 			ignoreMatcher: ignoreMatcher,
 			events:        make(chan notify.EventInfo, 1000),
 			changes:       map[string]bool{},
+			ping:          &pingtimeout.PingTimeout{},
+		}
+
+		if options.Ping {
+			doneChan := make(chan struct{})
+			defer close(doneChan)
+			downStream.ping.Start(doneChan)
 		}
 
 		remote.RegisterDownstreamServer(s, downStream)
@@ -121,6 +130,9 @@ type Downstream struct {
 
 	// lastRescan is used to rescan the complete path from time to time
 	lastRescan *time.Time
+
+	// ping is used to determine if we still have an alive connection
+	ping *pingtimeout.PingTimeout
 }
 
 // Download sends the file at the temp download location to the client
@@ -199,6 +211,10 @@ func (d *Downstream) compress(writer io.WriteCloser, files []string) error {
 
 // Ping returns empty
 func (d *Downstream) Ping(context.Context, *remote.Empty) (*remote.Empty, error) {
+	if d.ping != nil {
+		d.ping.Ping()
+	}
+
 	return &remote.Empty{}, nil
 }
 

@@ -2,21 +2,21 @@ package server
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/helper/remote"
+	"github.com/loft-sh/devspace/helper/server/ignoreparser"
+	"github.com/loft-sh/devspace/helper/util"
+	"github.com/loft-sh/devspace/helper/util/crc32"
+	"github.com/loft-sh/devspace/helper/util/pingtimeout"
+	"github.com/loft-sh/devspace/helper/util/stderrlog"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"github.com/loft-sh/devspace/helper/remote"
-	"github.com/loft-sh/devspace/helper/server/ignoreparser"
-	"github.com/loft-sh/devspace/helper/util"
-	"github.com/loft-sh/devspace/helper/util/crc32"
-	"github.com/loft-sh/devspace/helper/util/stderrlog"
-	"github.com/pkg/errors"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 // UpstreamOptions holds the upstream server options
@@ -32,6 +32,7 @@ type UpstreamOptions struct {
 
 	OverridePermission bool
 	ExitOnClose        bool
+	Ping               bool
 }
 
 // StartUpstreamServer starts a new upstream server with the given reader and writer
@@ -48,11 +49,19 @@ func StartUpstreamServer(reader io.Reader, writer io.Writer, options *UpstreamOp
 
 	go func() {
 		s := grpc.NewServer()
-
-		remote.RegisterUpstreamServer(s, &Upstream{
+		upstream := &Upstream{
 			options:       options,
 			ignoreMatcher: ignoreMatcher,
-		})
+			ping:          &pingtimeout.PingTimeout{},
+		}
+
+		if options.Ping {
+			doneChan := make(chan struct{})
+			defer close(doneChan)
+			upstream.ping.Start(doneChan)
+		}
+
+		remote.RegisterUpstreamServer(s, upstream)
 		reflection.Register(s)
 
 		done <- s.Serve(lis)
@@ -68,10 +77,16 @@ type Upstream struct {
 
 	// ignore matcher is the ignore matcher which matches against excluded files and paths
 	ignoreMatcher ignoreparser.IgnoreParser
+
+	ping *pingtimeout.PingTimeout
 }
 
 // Ping returns empty
 func (u *Upstream) Ping(context.Context, *remote.Empty) (*remote.Empty, error) {
+	if u.ping != nil {
+		u.ping.Ping()
+	}
+
 	return &remote.Empty{}, nil
 }
 

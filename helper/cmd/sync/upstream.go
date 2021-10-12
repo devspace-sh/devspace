@@ -64,6 +64,7 @@ func (cmd *UpstreamCmd) Run(cobraCmd *cobra.Command, args []string) error {
 
 		OverridePermission: cmd.OverridePermissions,
 		ExitOnClose:        true,
+		Ping:               true,
 	})
 }
 

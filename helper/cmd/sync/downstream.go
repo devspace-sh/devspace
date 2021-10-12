@@ -46,5 +46,6 @@ func (cmd *DownstreamCmd) Run(cobraCmd *cobra.Command, args []string) error {
 		Throttle:    cmd.Throttle,
 		Polling:     cmd.Polling,
 		ExitOnClose: true,
+		Ping:        true,
 	})
 }

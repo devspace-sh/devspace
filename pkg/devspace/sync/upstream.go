@@ -121,13 +121,14 @@ func (u *upstream) startPing(doneChan chan struct{}) {
 			select {
 			case <-doneChan:
 				return
-			case <-time.After(time.Second * 20):
+			case <-time.After(time.Second * 15):
 				if u.client != nil {
 					ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 					_, err := u.client.Ping(ctx, &remote.Empty{})
 					cancel()
 					if err != nil {
 						u.sync.Stop(fmt.Errorf("ping connection: %v", err))
+						return
 					}
 				}
 			}
@@ -185,7 +186,6 @@ func (u *upstream) mainLoop() error {
 
 	// start collecting events
 	u.startEventsLoop(doneChan)
-	u.startPing(doneChan)
 
 	for {
 		var (
