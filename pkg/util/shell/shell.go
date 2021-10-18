@@ -3,13 +3,15 @@ package shell
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devspace/pkg/util/downloader"
 	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"io"
-	"os"
-	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	"mvdan.cc/sh/v3/expand"
@@ -89,6 +91,14 @@ func DevSpaceExecHandler(ctx context.Context, args []string) error {
 					return interp.NewExitStatus(127)
 				}
 				args[0] = path
+			case "devspace":
+				bin, err := os.Executable()
+				if err != nil {
+					_, _ = fmt.Fprintln(hc.Stderr, err)
+					return interp.NewExitStatus(1)
+				}
+				path := filepath.Dir(bin)
+				args[0] = filepath.Join(path, os.Args[0])
 			default:
 				_, _ = fmt.Fprintln(hc.Stderr, "command is not found.")
 				return interp.NewExitStatus(127)
