@@ -1,15 +1,19 @@
-version: v1beta10
+version: v1beta11
 deployments:
 - name: development1
   helm:
     componentChart: true
-    timeout: 1000
+    timeout: 1000s
 - name: staging1
   helm:
     componentChart: true
-    timeout: 2000
+    timeout: 2000s
+- name: production1
+  helm:
+    componentChart: true
+    timeout: 2000s
 profiles:
   - name: test
     patches:
       - op: remove
-        path: deployments[?(@.helm.timeout > 1000)]
+        path: deployments[?(@.helm.timeout=="2000s")]
