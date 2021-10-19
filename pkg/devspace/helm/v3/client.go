@@ -3,7 +3,6 @@ package v3
 import (
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -96,8 +95,8 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	if helmConfig.Wait {
 		args = append(args, "--wait")
 	}
-	if helmConfig.Timeout != nil {
-		args = append(args, "--timeout", strconv.FormatInt(*helmConfig.Timeout, 10))
+	if helmConfig.Timeout != "" {
+		args = append(args, "--timeout", helmConfig.Timeout)
 	}
 	if helmConfig.Force {
 		args = append(args, "--force")

@@ -67,8 +67,8 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	if helmConfig.Wait {
 		args = append(args, "--wait")
 	}
-	if helmConfig.Timeout != nil {
-		args = append(args, "--timeout", strconv.FormatInt(*helmConfig.Timeout, 10))
+	if helmConfig.Timeout != "" {
+		args = append(args, "--timeout", helmConfig.Timeout)
 	}
 	if helmConfig.Recreate {
 		args = append(args, "--recreate-pods")
