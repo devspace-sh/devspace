@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"github.com/loft-sh/devspace/assets"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -16,7 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/loft-sh/devspace/assets"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -69,15 +69,23 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 	localHelperName := "devspacehelper" + arch
 	stdout, _, err := client.ExecBuffered(pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
 	if err != nil || version != string(stdout) {
-		// Install devspacehelper inside container
-		log.Infof("Trying to download devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
-		err = installDevSpaceHelperInContainer(client, pod, container, version, localHelperName)
-		if err == nil {
-			log.Donef("Successfully injected devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
-			return nil
+		homedir, err := homedir.Dir()
+		if err != nil {
+			return err
 		}
 
-		log.Warnf("Couldn't download devspacehelper in container, error: %s", err)
+		syncBinaryFolder := filepath.Join(homedir, constants.DefaultHomeDevSpaceFolder, DevSpaceHelperTempFolder, version)
+		if os.Getenv("DEVSPACE_INJECT_LOCAL") != "true" {
+			// Install devspacehelper inside container
+			log.Infof("Trying to download devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
+			err = installDevSpaceHelperInContainer(client, pod, container, version, localHelperName)
+			if err == nil {
+				log.Donef("Successfully injected devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
+				return nil
+			}
+
+			log.Warnf("Couldn't download devspacehelper in container, error: %s", err)
+		}
 
 		log.Info("Trying to inject devspacehelper from local machine")
 
@@ -86,13 +94,6 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 		if err == nil {
 			return injectSyncHelperFromBytes(client, pod, container, helperFileInfo(helperBytes), bytes.NewReader(helperBytes))
 		}
-
-		homedir, err := homedir.Dir()
-		if err != nil {
-			return err
-		}
-
-		syncBinaryFolder := filepath.Join(homedir, constants.DefaultHomeDevSpaceFolder, DevSpaceHelperTempFolder, version)
 
 		// Download sync helper if necessary
 		err = downloadSyncHelper(localHelperName, syncBinaryFolder, version, log)
