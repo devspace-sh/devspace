@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"github.com/loft-sh/devspace/assets"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -16,7 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/loft-sh/devspace/assets"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -69,20 +69,31 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 	localHelperName := "devspacehelper" + arch
 	stdout, _, err := client.ExecBuffered(pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
 	if err != nil || version != string(stdout) {
-		log.Infof("Inject devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
-
-		// check if we can find it in the assets
-		helperBytes, err := assets.Asset("release/" + localHelperName)
-		if err == nil {
-			return injectSyncHelperFromBytes(client, pod, container, helperFileInfo(helperBytes), bytes.NewReader(helperBytes))
-		}
-
 		homedir, err := homedir.Dir()
 		if err != nil {
 			return err
 		}
 
 		syncBinaryFolder := filepath.Join(homedir, constants.DefaultHomeDevSpaceFolder, DevSpaceHelperTempFolder, version)
+		if os.Getenv("DEVSPACE_INJECT_LOCAL") != "true" {
+			// Install devspacehelper inside container
+			log.Infof("Trying to download devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
+			err = installDevSpaceHelperInContainer(client, pod, container, version, localHelperName)
+			if err == nil {
+				log.Donef("Successfully injected devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
+				return nil
+			}
+
+			log.Warnf("Couldn't download devspacehelper in container, error: %s", err)
+		}
+
+		log.Info("Trying to inject devspacehelper from local machine")
+
+		// check if we can find it in the assets
+		helperBytes, err := assets.Asset("release/" + localHelperName)
+		if err == nil {
+			return injectSyncHelperFromBytes(client, pod, container, helperFileInfo(helperBytes), bytes.NewReader(helperBytes))
+		}
 
 		// Download sync helper if necessary
 		err = downloadSyncHelper(localHelperName, syncBinaryFolder, version, log)
@@ -95,9 +106,71 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 		if err != nil {
 			return errors.Wrap(err, "inject devspace helper")
 		}
+
+		log.Donef("Successfully injected devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
+		return nil
 	}
 
 	return nil
+}
+
+func installDevSpaceHelperInContainer(client kubectl.Client, pod *v1.Pod, container, version, filename string) error {
+	url, err := devSpaceHelperDownloadURL(version, filename)
+	if err != nil {
+		return err
+	}
+
+	curl := fmt.Sprintf("curl -L %s -o %s", url, DevSpaceHelperContainerPath)
+	chmod := fmt.Sprintf("chmod +x %s", DevSpaceHelperContainerPath)
+	cmd := curl + " && " + chmod
+
+	_, _, err = client.ExecBuffered(pod, container, []string{"sh", "-c", cmd}, nil)
+	if err != nil {
+		return err
+	}
+
+	stdout, _, err := client.ExecBuffered(pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
+	if err != nil {
+		return err
+	}
+
+	if version != string(stdout) {
+		return fmt.Errorf("devspacehelper(%s) and devspace(%s) differs in version", string(stdout), version)
+	}
+
+	return nil
+}
+
+// getDownloadURL
+func devSpaceHelperDownloadURL(version, filename string) (string, error) {
+	url := ""
+	if version == "latest" {
+		url = fmt.Sprintf("%s/%s", DevSpaceHelperBaseURL, version)
+	} else {
+		url = fmt.Sprintf("%s/tag/%s", DevSpaceHelperBaseURL, version)
+	}
+
+	// Download html
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", errors.Wrap(err, "get url")
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", errors.Wrap(err, "read body")
+	}
+
+	regEx, err := regexp.Compile(fmt.Sprintf(helperBinaryRegEx, filename))
+	if err != nil {
+		return "", err
+	}
+
+	matches := regEx.FindStringSubmatch(string(body))
+	if len(matches) != 2 {
+		return "", errors.Errorf("couldn't find %s in github release %s at url %s", filename, version, url)
+	}
+	return "https://github.com" + matches[1], nil
 }
 
 func downloadSyncHelper(helperName, syncBinaryFolder, version string, log logpkg.Logger) error {
@@ -150,38 +223,14 @@ func downloadSyncHelper(helperName, syncBinaryFolder, version string, log logpkg
 	if err != nil {
 		return errors.Wrap(err, "mkdir helper binary folder")
 	}
-
 	return downloadFile(version, filepath, helperName)
 }
 
 func downloadFile(version string, filepath string, filename string) error {
 	// Create download url
-	url := ""
-	if version == "latest" {
-		url = fmt.Sprintf("%s/%s", DevSpaceHelperBaseURL, version)
-	} else {
-		url = fmt.Sprintf("%s/tag/%s", DevSpaceHelperBaseURL, version)
-	}
-
-	// Download html
-	resp, err := http.Get(url)
+	url, err := devSpaceHelperDownloadURL(version, filename)
 	if err != nil {
-		return errors.Wrap(err, "get url")
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return errors.Wrap(err, "read body")
-	}
-
-	regEx, err := regexp.Compile(fmt.Sprintf(helperBinaryRegEx, filename))
-	if err != nil {
-		return err
-	}
-
-	matches := regEx.FindStringSubmatch(string(body))
-	if len(matches) != 2 {
-		return errors.Errorf("couldn't find %s in github release %s at url %s", filename, version, url)
+		return errors.Wrap(err, "find download URL")
 	}
 
 	out, err := os.Create(filepath)
@@ -190,7 +239,7 @@ func downloadFile(version string, filepath string, filename string) error {
 	}
 	defer out.Close()
 
-	resp, err = http.Get("https://github.com" + matches[1])
+	resp, err := http.Get(url)
 	if err != nil {
 		return errors.Wrap(err, "download devspace helper")
 	}

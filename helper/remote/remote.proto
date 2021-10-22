@@ -51,8 +51,7 @@ service Downstream {
 }
 
 service Upstream {
-    rpc Checksums (Paths) returns (PathsChecksum) {}
-    rpc Touch (TouchPaths) returns (Empty) {}
+    rpc Checksums (TouchPaths) returns (PathsChecksum) {}
     rpc Upload (stream Chunk) returns (Empty) {}
     rpc RestartContainer (Empty) returns (Empty) {}
     rpc Remove (stream Paths) returns (Empty) {}
@@ -67,7 +66,6 @@ message TouchPaths {
 message TouchPath {
     string Path = 1;
     int64 MtimeUnix = 2;
-    int64 MtimeUnixNano = 3;
 }
 
 message Command {

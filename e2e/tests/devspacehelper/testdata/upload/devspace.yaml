@@ -1,0 +1,19 @@
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: username/alpine-upload
+images:
+  app:
+    image: ${IMAGE}
+hooks:
+- events: ["after:build:app"]
+  command: kind load docker-image image(app):tag(app) || true
+deployments:
+  - name: upload
+    helm:
+      componentChart: true
+      values:
+        labels:
+          app: non-curl-container
+        containers:
+          - image: ${IMAGE}

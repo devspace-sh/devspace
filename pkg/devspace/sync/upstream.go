@@ -741,7 +741,7 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 	for _, f := range files {
 		if alreadyUsed[f.Name] {
 			continue
-		} else if f.IsDirectory || u.sync.fileIndex.fileMap[f.Name] == nil || u.sync.fileIndex.fileMap[f.Name].Size != f.Size || f.Size < 1024 {
+		} else if f.IsDirectory || u.sync.fileIndex.fileMap[f.Name] == nil || u.sync.fileIndex.fileMap[f.Name].Size != f.Size {
 			newChanges = append(newChanges, f)
 			alreadyUsed[f.Name] = true
 			continue
@@ -764,19 +764,25 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 		remoteChecksums := make([]uint32, 0, len(needCheck))
 		localChecksums := make([]uint32, 0, len(needCheck))
 		go func() {
-			// send 100 each time
-			for i := 0; i < len(needCheck); i += 100 {
-				batch := make([]string, 0, 100)
-				for j := 0; j < 100; j++ {
+			// send 1000 each time
+			batchSize := 1000
+			for i := 0; i < len(needCheck); i += batchSize {
+				batch := make([]*remote.TouchPath, 0, batchSize)
+				for j := 0; j < batchSize; j++ {
 					if i+j >= len(needCheck) {
 						break
 					}
 
-					batch = append(batch, needCheck[i+j].Name)
+					change := needCheck[i+j]
+					u.sync.fileIndex.fileMap[change.Name].Mtime = change.Mtime
+					batch = append(batch, &remote.TouchPath{
+						Path:      change.Name,
+						MtimeUnix: change.Mtime,
+					})
 				}
 
 				// ask remote for checksums
-				checksums, err := u.client.Checksums(ctx, &remote.Paths{Paths: batch})
+				checksums, err := u.client.Checksums(ctx, &remote.TouchPaths{Paths: batch})
 				if err != nil {
 					done <- err
 					return
@@ -815,39 +821,12 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 		}
 
 		// compare checksums
-		updateTimestamps := []*FileInformation{}
 		for i := range remoteChecksums {
 			if remoteChecksums[i] != 0 && remoteChecksums[i] == localChecksums[i] {
-				updateTimestamps = append(updateTimestamps, needCheck[i])
 				continue
 			}
 
 			newChanges = append(newChanges, needCheck[i])
-		}
-
-		// update timestamps
-		for i := 0; i < len(updateTimestamps); i += 100 {
-			batch := make([]*remote.TouchPath, 0, 100)
-			for j := 0; j < 100; j++ {
-				if i+j >= len(updateTimestamps) {
-					break
-				}
-
-				change := updateTimestamps[i+j]
-				if u.sync.fileIndex.fileMap[change.Name] != nil && u.sync.fileIndex.fileMap[change.Name].Mtime != 0 {
-					batch = append(batch, &remote.TouchPath{
-						Path:          change.Name,
-						MtimeUnix:     u.sync.fileIndex.fileMap[change.Name].Mtime,
-						MtimeUnixNano: u.sync.fileIndex.fileMap[change.Name].MtimeNano,
-					})
-				}
-			}
-
-			// ask remote for checksums
-			_, err := u.client.Touch(ctx, &remote.TouchPaths{Paths: batch})
-			if err != nil {
-				return nil, errors.Wrap(err, "touching remote files")
-			}
 		}
 	}
 

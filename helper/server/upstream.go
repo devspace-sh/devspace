@@ -134,27 +134,38 @@ func (u *Upstream) Remove(stream remote.Upstream_RemoveServer) error {
 	}
 }
 
-func (u *Upstream) Touch(ctx context.Context, paths *remote.TouchPaths) (*remote.Empty, error) {
+func (u *Upstream) Checksums(ctx context.Context, paths *remote.TouchPaths) (*remote.PathsChecksum, error) {
 	if paths != nil {
-		for _, path := range paths.Paths {
-			absolutePath := filepath.Join(u.options.UploadPath, path.Path)
-			t := time.Unix(path.MtimeUnix, path.MtimeUnixNano)
-			_ = os.Chtimes(absolutePath, t, t)
-		}
+		// update timestamps
+		stopChan := make(chan struct{})
+		go func() {
+			for _, path := range paths.Paths {
+				if path.Path == "" {
+					continue
+				}
 
-		return &remote.Empty{}, nil
-	}
+				// Update timestamp if needed
+				if path.MtimeUnix > 0 {
+					absolutePath := filepath.Join(u.options.UploadPath, path.Path)
+					t := time.Unix(path.MtimeUnix, 0)
+					err := os.Chtimes(absolutePath, t, t)
+					if err != nil && !os.IsNotExist(err) {
+						stderrlog.Logf("Error touching %s: %v", path, err)
+					}
+				}
+			}
 
-	return &remote.Empty{}, nil
+			close(stopChan)
+		}()
 
-}
-
-func (u *Upstream) Checksums(ctx context.Context, paths *remote.Paths) (*remote.PathsChecksum, error) {
-	if paths != nil {
 		checksums := make([]uint32, 0, len(paths.Paths))
 		for _, path := range paths.Paths {
+			if path.Path == "" {
+				continue
+			}
+
 			// Just remove everything inside and ignore any errors
-			absolutePath := filepath.Join(u.options.UploadPath, path)
+			absolutePath := filepath.Join(u.options.UploadPath, path.Path)
 			checksum, err := crc32.Checksum(absolutePath)
 			if err != nil && !os.IsNotExist(err) {
 				stderrlog.Logf("Error checksum %s: %v", path, err)
@@ -163,6 +174,7 @@ func (u *Upstream) Checksums(ctx context.Context, paths *remote.Paths) (*remote.
 			checksums = append(checksums, checksum)
 		}
 
+		<-stopChan
 		return &remote.PathsChecksum{Checksums: checksums}, nil
 	}
 
