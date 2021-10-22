@@ -815,12 +815,39 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 		}
 
 		// compare checksums
+		updateTimestamps := []*FileInformation{}
 		for i := range remoteChecksums {
 			if remoteChecksums[i] != 0 && remoteChecksums[i] == localChecksums[i] {
+				updateTimestamps = append(updateTimestamps, needCheck[i])
 				continue
 			}
 
 			newChanges = append(newChanges, needCheck[i])
+		}
+
+		// update timestamps
+		for i := 0; i < len(updateTimestamps); i += 100 {
+			batch := make([]*remote.TouchPath, 0, 100)
+			for j := 0; j < 100; j++ {
+				if i+j >= len(updateTimestamps) {
+					break
+				}
+
+				change := updateTimestamps[i+j]
+				if u.sync.fileIndex.fileMap[change.Name] != nil && u.sync.fileIndex.fileMap[change.Name].Mtime != 0 {
+					batch = append(batch, &remote.TouchPath{
+						Path:          change.Name,
+						MtimeUnix:     u.sync.fileIndex.fileMap[change.Name].Mtime,
+						MtimeUnixNano: u.sync.fileIndex.fileMap[change.Name].MtimeNano,
+					})
+				}
+			}
+
+			// ask remote for checksums
+			_, err := u.client.Touch(ctx, &remote.TouchPaths{Paths: batch})
+			if err != nil {
+				return nil, errors.Wrap(err, "touching remote files")
+			}
 		}
 	}
 

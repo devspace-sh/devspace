@@ -67,7 +67,7 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 				if err != nil {
 					log.Warnf("Error applying extra flags: %v", err)
 				} else if len(extraFlags) > 0 {
-					log.Infof("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
+					log.Debugf("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
 				}
 
 				// call inactivity timeout

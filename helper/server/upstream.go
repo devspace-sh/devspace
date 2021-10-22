@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // UpstreamOptions holds the upstream server options
@@ -131,6 +132,21 @@ func (u *Upstream) Remove(stream remote.Upstream_RemoveServer) error {
 			return err
 		}
 	}
+}
+
+func (u *Upstream) Touch(ctx context.Context, paths *remote.TouchPaths) (*remote.Empty, error) {
+	if paths != nil {
+		for _, path := range paths.Paths {
+			absolutePath := filepath.Join(u.options.UploadPath, path.Path)
+			t := time.Unix(path.MtimeUnix, path.MtimeUnixNano)
+			_ = os.Chtimes(absolutePath, t, t)
+		}
+
+		return &remote.Empty{}, nil
+	}
+
+	return &remote.Empty{}, nil
+
 }
 
 func (u *Upstream) Checksums(ctx context.Context, paths *remote.Paths) (*remote.PathsChecksum, error) {
