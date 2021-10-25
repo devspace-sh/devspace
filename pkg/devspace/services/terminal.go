@@ -10,6 +10,7 @@ import (
 	kubectlExec "k8s.io/client-go/util/exec"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	interruptpkg "github.com/loft-sh/devspace/pkg/util/interrupt"
 
@@ -30,6 +31,7 @@ func (serviceClient *client) StartTerminal(
 	interrupt chan error,
 	wait,
 	restart bool,
+	subcommand string,
 	stdout io.Writer,
 	stderr io.Writer,
 	stdin io.Reader,
@@ -50,12 +52,38 @@ func (serviceClient *client) StartTerminal(
 		return 0, err
 	}
 
+	podContainer := fmt.Sprintf("pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
+
+	// if terminal is invoked by devspace dev then install screen command for persistent session
+	if subcommand == "dev" {
+		// Install screen command
+		serviceClient.log.Debugf("Installing screen command in pod:container %s", podContainer)
+		screenInstalled, err := installScreen(container, serviceClient.client)
+		if err != nil {
+			serviceClient.log.Debugf("Failed to install screen command in %s, error: %v", podContainer, err)
+		} else {
+			serviceClient.log.Done("Successfully installed screen command %s", podContainer)
+		}
+
+		// if screen is installed then it starts the screen session
+		if screenInstalled {
+			serviceClient.log.Infof("Opening a screen persistent session into %s", podContainer)
+			cmd := getScreenCommand(container, serviceClient.client, command)
+			if cmd == nil {
+				serviceClient.log.Errorf("Failed to get screen command")
+				serviceClient.log.Infof("Opening shell to %s", podContainer)
+			} else {
+				command = cmd
+			}
+		}
+	} else {
+		serviceClient.log.Infof("Opening shell to %s", podContainer)
+	}
+
 	wrapper, upgradeRoundTripper, err := serviceClient.client.GetUpgraderWrapper()
 	if err != nil {
 		return 0, err
 	}
-
-	serviceClient.log.Infof("Opening shell to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
 
 	done := make(chan error)
 	go func() {
@@ -99,14 +127,14 @@ func (serviceClient *client) StartTerminal(
 				if restart && IsUnexpectedExitCode(exitError.Code) {
 					serviceClient.log.WriteString("\n")
 					serviceClient.log.Infof("Restarting terminal because: %s", err)
-					return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart, stdout, stderr, stdin)
+					return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart, subcommand, stdout, stderr, stdin)
 				}
 
 				return exitError.Code, nil
 			} else if restart {
 				serviceClient.log.WriteString("\n")
 				serviceClient.log.Infof("Restarting terminal because: %s", err)
-				return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart, stdout, stderr, stdin)
+				return serviceClient.StartTerminal(options, args, workDir, interrupt, wait, restart, subcommand, stdout, stderr, stdin)
 			}
 
 			return 0, err
@@ -159,4 +187,54 @@ func (serviceClient *client) getCommand(args []string, workDir string) []string 
 		"-c",
 		execString,
 	}
+}
+
+// installScreen function check if screen command is present or not
+// if not present then checks for distributor id of container
+// and tries to install screen accordingly
+func installScreen(container *selector.SelectedPodContainer, client kubectl.Client) (bool, error) {
+	installScript := `
+#!/bin/sh
+
+which screen
+if [ $? -eq 0 ]
+then
+	exit $?
+else
+	apt-get update && apt-get install screen -y
+	if [ $? -eq 0 ]
+	then
+		exit $?
+	else
+		apk update && apk add screen
+	fi
+fi
+exit $?
+`
+	cmd := []string{
+		"sh",
+		"-c",
+		installScript,
+	}
+	_, _, err := client.ExecBuffered(container.Pod, container.Container.Name, cmd, nil)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// getScreenCommand function checks if screen socket `dev` is present or not
+// if not present then it creates a new socket `dev` and run the command from terminal.command config
+// if socket `dev` is present then it reattaches it
+func getScreenCommand(container *selector.SelectedPodContainer, client kubectl.Client, command []string) []string {
+	stdout, _, err := client.ExecBuffered(container.Pod, container.Container.Name, []string{"screen", "-ls"}, nil)
+	if err != nil {
+		if strings.Contains(string(stdout), "No Sockets found") {
+			cmd := []string{"screen", "-S", "dev"}
+			cmd = append(cmd, command...)
+			return cmd
+		}
+		return nil
+	}
+	return []string{"screen", "-x", "dev"}
 }

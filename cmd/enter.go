@@ -131,7 +131,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 
 	// Start terminal
 	stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
-	exitCode, err := f.NewServicesClient(nil, nil, client, logger).StartTerminal(selectorOptions, args, cmd.WorkingDirectory, make(chan error), cmd.Wait, cmd.Reconnect, stdout, stderr, stdin)
+	exitCode, err := f.NewServicesClient(nil, nil, client, logger).StartTerminal(selectorOptions, args, cmd.WorkingDirectory, make(chan error), cmd.Wait, cmd.Reconnect, "enter", stdout, stderr, stdin)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {
