@@ -3,6 +3,7 @@ package helper
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -200,6 +201,16 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, forceRebuild b
 }
 
 func (b *BuildHelper) IsImageAvailableLocally(cache *generated.CacheConfig, dockerClient dockerclient.Client) (bool, error) {
+	// Hack to check if docker is present in the system
+	// if docker is not present then skip the image availability check
+	// and return (true, nil) to skip image rebuild
+	// if docker is present then do the image availability check
+	cmd := exec.Command("docker", "buildx")
+	err := cmd.Run()
+	if err != nil {
+		return true, nil
+	}
+
 	imageName := cache.Images[b.ImageConfigName].ImageName + ":" + cache.Images[b.ImageConfigName].Tag
 	dockerAPIClient := dockerClient.DockerAPIClient()
 	imageList, err := dockerAPIClient.ImageList(context.Background(), types.ImageListOptions{})
