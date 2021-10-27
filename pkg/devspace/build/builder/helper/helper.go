@@ -109,13 +109,14 @@ func (b *BuildHelper) Build(imageBuilder BuildHelperInterface, devspacePID strin
 }
 
 // ShouldRebuild determines if the image should be rebuilt
-func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool) (bool, error) {
+func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool, log log.Logger) (bool, error) {
+	imageCache := cache.GetImageCache(b.ImageConfigName)
+
 	// if rebuild strategy is always, we return here
 	if b.ImageConf.RebuildStrategy == latest.RebuildStrategyAlways {
+		log.Debugf("Rebuild image %s because strategy is always rebuild", imageCache.ImageName)
 		return true, nil
 	}
-
-	imageCache := cache.GetImageCache(b.ImageConfigName)
 
 	// Hash dockerfile
 	_, err := os.Stat(b.DockerfilePath)
@@ -153,11 +154,21 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, forceRebuild b
 
 	// only rebuild Docker image when Dockerfile or context has changed since latest build
 	mustRebuild := imageCache.Tag == "" || imageCache.DockerfileHash != dockerfileHash || imageCache.ImageConfigHash != imageConfigHash || imageCache.EntrypointHash != entrypointHash
+	if imageCache.Tag == "" {
+		log.Debugf("Rebuild image %s because tag is missing", imageCache.ImageName)
+	} else if imageCache.DockerfileHash != dockerfileHash {
+		log.Debugf("Rebuild image %s because dockerfile has changed", imageCache.ImageName)
+	} else if imageCache.ImageConfigHash != imageConfigHash {
+		log.Debugf("Rebuild image %s because image config has changed", imageCache.ImageName)
+	} else if imageCache.EntrypointHash != entrypointHash {
+		log.Debugf("Rebuild image %s because entrypoint has changed", imageCache.ImageName)
+	}
 
 	// Okay this check verifies if the previous deploy context was local kubernetes context where we didn't push the image and now have a kubernetes context where we probably push
 	// or use another docker client (e.g. minikube <-> docker-desktop)
 	if b.KubeClient != nil && cache.LastContext != nil && cache.LastContext.Context != b.KubeClient.CurrentContext() && kubectl.IsLocalKubernetes(cache.LastContext.Context) {
 		mustRebuild = true
+		log.Debugf("Rebuild image %s because previous build was local kubernetes", imageCache.ImageName)
 	}
 
 	// Check if should consider context path changes for rebuilding
@@ -179,6 +190,9 @@ func (b *BuildHelper) ShouldRebuild(cache *generated.CacheConfig, forceRebuild b
 			return false, errors.Errorf("Error hashing %s: %v", contextDir, err)
 		}
 
+		if !mustRebuild && imageCache.ContextHash != contextHash {
+			log.Debugf("Rebuild image %s because context has changed", imageCache.ImageName)
+		}
 		mustRebuild = mustRebuild || imageCache.ContextHash != contextHash
 
 		// TODO: This is not an ideal solution since there can be the issue that the user runs

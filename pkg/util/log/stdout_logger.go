@@ -103,7 +103,7 @@ func (s *stdoutLogger) writeMessage(fnType logFunctionType, message string) {
 			s.loadingText.Stop()
 		}
 
-		if os.Getenv(DevspaceLogTimestamps) == "true" {
+		if os.Getenv(DevspaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
 			now := time.Now()
 			_, _ = fnInformation.stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
 		}

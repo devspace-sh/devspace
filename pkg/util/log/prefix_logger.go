@@ -55,26 +55,28 @@ func (s *prefixLogger) StartWait(message string) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage("Wait: " + message + "\n")
+	s.writeMessage(logrus.InfoLevel, "Wait: "+message+"\n")
 }
 
 func (s *prefixLogger) StopWait() {
 
 }
 
-func (s *prefixLogger) writeMessage(message string) {
-	if os.Getenv(DevspaceLogTimestamps) == "true" {
-		now := time.Now()
-		if s.color != "" {
-			s.WriteString(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b") + ansi.Color(s.prefix, s.color) + message)
+func (s *prefixLogger) writeMessage(level logrus.Level, message string) {
+	if s.GetLevel() >= level {
+		if os.Getenv(DevspaceLogTimestamps) == "true" || s.GetLevel() == logrus.DebugLevel {
+			now := time.Now()
+			if s.color != "" {
+				s.WriteString(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b") + ansi.Color(s.prefix, s.color) + message)
+			} else {
+				s.WriteString(formatInt(now.Hour()) + ":" + formatInt(now.Minute()) + ":" + formatInt(now.Second()) + " " + s.prefix + message)
+			}
 		} else {
-			s.WriteString(formatInt(now.Hour()) + ":" + formatInt(now.Minute()) + ":" + formatInt(now.Second()) + " " + s.prefix + message)
-		}
-	} else {
-		if s.color != "" {
-			s.WriteString(ansi.Color(s.prefix, s.color) + message)
-		} else {
-			s.WriteString(s.prefix + message)
+			if s.color != "" {
+				s.WriteString(ansi.Color(s.prefix, s.color) + message)
+			} else {
+				s.WriteString(s.prefix + message)
+			}
 		}
 	}
 }
@@ -83,56 +85,56 @@ func (s *prefixLogger) Debug(args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage(fmt.Sprintln(args...))
+	s.writeMessage(logrus.DebugLevel, fmt.Sprintln(args...))
 }
 
 func (s *prefixLogger) Debugf(format string, args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage(fmt.Sprintf(format, args...) + "\n")
+	s.writeMessage(logrus.DebugLevel, fmt.Sprintf(format, args...)+"\n")
 }
 
 func (s *prefixLogger) Info(args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage(fmt.Sprintln(args...))
+	s.writeMessage(logrus.InfoLevel, fmt.Sprintln(args...))
 }
 
 func (s *prefixLogger) Infof(format string, args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage(fmt.Sprintf(format, args...) + "\n")
+	s.writeMessage(logrus.InfoLevel, fmt.Sprintf(format, args...)+"\n")
 }
 
 func (s *prefixLogger) Warn(args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage("Warning: " + fmt.Sprintln(args...))
+	s.writeMessage(logrus.WarnLevel, "Warning: "+fmt.Sprintln(args...))
 }
 
 func (s *prefixLogger) Warnf(format string, args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage("Warning: " + fmt.Sprintf(format, args...) + "\n")
+	s.writeMessage(logrus.WarnLevel, "Warning: "+fmt.Sprintf(format, args...)+"\n")
 }
 
 func (s *prefixLogger) Error(args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage("Error: " + fmt.Sprintln(args...))
+	s.writeMessage(logrus.ErrorLevel, "Error: "+fmt.Sprintln(args...))
 }
 
 func (s *prefixLogger) Errorf(format string, args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage("Error: " + fmt.Sprintf(format, args...) + "\n")
+	s.writeMessage(logrus.ErrorLevel, "Error: "+fmt.Sprintf(format, args...)+"\n")
 }
 
 func (s *prefixLogger) Fatal(args ...interface{}) {
@@ -140,7 +142,7 @@ func (s *prefixLogger) Fatal(args ...interface{}) {
 	defer s.logMutex.Unlock()
 
 	msg := fmt.Sprintln(args...)
-	s.writeMessage("Fatal: " + msg)
+	s.writeMessage(logrus.FatalLevel, "Fatal: "+msg)
 	os.Exit(1)
 }
 
@@ -149,7 +151,7 @@ func (s *prefixLogger) Fatalf(format string, args ...interface{}) {
 	defer s.logMutex.Unlock()
 
 	msg := fmt.Sprintf(format, args...)
-	s.writeMessage("Fatal: " + msg + "\n")
+	s.writeMessage(logrus.FatalLevel, "Fatal: "+msg+"\n")
 	os.Exit(1)
 }
 
@@ -157,7 +159,7 @@ func (s *prefixLogger) Panic(args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage("Panic: " + fmt.Sprintln(args...))
+	s.writeMessage(logrus.PanicLevel, "Panic: "+fmt.Sprintln(args...))
 	panic(fmt.Sprintln(args...))
 }
 
@@ -165,7 +167,7 @@ func (s *prefixLogger) Panicf(format string, args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage("Panic: " + fmt.Sprintf(format, args...) + "\n")
+	s.writeMessage(logrus.PanicLevel, "Panic: "+fmt.Sprintf(format, args...)+"\n")
 	panic(fmt.Sprintf(format, args...))
 }
 
@@ -173,28 +175,28 @@ func (s *prefixLogger) Done(args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage(fmt.Sprintln(args...))
+	s.writeMessage(logrus.InfoLevel, fmt.Sprintln(args...))
 }
 
 func (s *prefixLogger) Donef(format string, args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage(fmt.Sprintf(format, args...) + "\n")
+	s.writeMessage(logrus.InfoLevel, fmt.Sprintf(format, args...)+"\n")
 }
 
 func (s *prefixLogger) Fail(args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage(fmt.Sprintln(args...))
+	s.writeMessage(logrus.ErrorLevel, fmt.Sprintln(args...))
 }
 
 func (s *prefixLogger) Failf(format string, args ...interface{}) {
 	s.logMutex.Lock()
 	defer s.logMutex.Unlock()
 
-	s.writeMessage(fmt.Sprintf(format, args...) + "\n")
+	s.writeMessage(logrus.ErrorLevel, fmt.Sprintf(format, args...)+"\n")
 }
 
 func (s *prefixLogger) Print(level logrus.Level, args ...interface{}) {

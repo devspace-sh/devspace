@@ -124,6 +124,7 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 			uploadDone   = false
 			downloadDone = false
 		)
+		started := time.Now()
 		for {
 			select {
 			case err := <-onError:
@@ -161,6 +162,7 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				return nil
 			}
 			if uploadDone && downloadDone {
+				log.Debugf("Initial sync took: %s", time.Since(started))
 				break
 			}
 		}

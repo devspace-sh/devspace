@@ -109,7 +109,7 @@ func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
 
 // ShouldRebuild determines if an image has to be rebuilt
 func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool, log logpkg.Logger) (bool, error) {
-	return b.helper.ShouldRebuild(cache, forceRebuild)
+	return b.helper.ShouldRebuild(cache, forceRebuild, log)
 }
 
 // Authenticate authenticates kaniko for pushing to the RegistryURL (if username == "", it will try to get login data from local docker daemon)

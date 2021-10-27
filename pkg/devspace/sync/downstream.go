@@ -80,6 +80,9 @@ func (d *downstream) populateFileMap() error {
 }
 
 func (d *downstream) collectChanges() ([]*remote.Change, error) {
+	d.sync.log.Debugf("Downstream - Start collecting changes")
+	defer d.sync.log.Debugf("Downstream - Done collecting changes")
+
 	changes := make([]*remote.Change, 0, 128)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*30)
 	defer cancel()
@@ -201,6 +204,9 @@ func (d *downstream) shouldKeep(change *remote.Change) bool {
 }
 
 func (d *downstream) applyChanges(changes []*remote.Change, force bool) error {
+	d.sync.log.Debugf("Downstream - Start applying %d changes", len(changes))
+	defer d.sync.log.Debugf("Downstream - Done applying changes")
+
 	var (
 		download = make([]*remote.Change, 0, len(changes)/2)
 		remove   = make([]*remote.Change, 0, len(changes)/2)

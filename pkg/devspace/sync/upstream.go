@@ -52,6 +52,7 @@ type upstream struct {
 
 const (
 	removeFilesBufferSize = 64
+	largeFileSize         = 1024 * 1024 * 10
 )
 
 // newUpstream creates a new upstream handler with the given parameters
@@ -554,6 +555,9 @@ func (u *upstream) RemoveSymlinks(absPath string) {
 }
 
 func (u *upstream) applyChanges(changes []*FileInformation) error {
+	u.sync.log.Debugf("Upstream - Start applying %d changes", len(changes))
+	defer u.sync.log.Debugf("Upstream - Done applying changes")
+
 	var creates []*FileInformation
 	var removes []*FileInformation
 
@@ -697,6 +701,7 @@ func (u *upstream) applyCreates(files []*FileInformation) (map[string]*FileInfor
 		}
 	}
 	u.sync.log.Infof("Upstream - Upload %d create change(s) (Uncompressed ~%0.2f KB)", len(files), float64(size)/1024.0)
+	defer u.sync.log.Debugf("Upstream - Done Uploading")
 
 	// Create a pipe for reading and writing
 	reader, writer := io.Pipe()
@@ -739,6 +744,10 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 
 	// filter them first
 	for _, f := range files {
+		if f.Size > largeFileSize {
+			u.sync.log.Debugf("Large file encountered at %s (%0.2f MB). Please try to avoid syncing large files as this will slow down DevSpace", u.getRelativeUpstreamPath(f.Name), float64(f.Size)/1024.0/1024.0)
+		}
+
 		if alreadyUsed[f.Name] {
 			continue
 		} else if f.IsDirectory || u.sync.fileIndex.fileMap[f.Name] == nil || u.sync.fileIndex.fileMap[f.Name].Size != f.Size {
@@ -753,8 +762,11 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 
 	// now compare crc32 hashes
 	if len(needCheck) > 0 {
+		u.sync.log.Debugf("Start hashing %d files", len(needCheck))
+		defer u.sync.log.Debugf("Done hashing %d files", len(needCheck))
+
 		// cancel after 10 minutes
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*30)
 		defer cancel()
 
 		// create done chan
@@ -909,6 +921,7 @@ func (u *upstream) applyRemoves(files []*FileInformation) error {
 	defer cancel()
 
 	u.sync.log.Infof("Upstream - Handling %d removes", len(files))
+	defer u.sync.log.Debugf("Upstream - Done Handling removes")
 	fileMap := u.sync.fileIndex.fileMap
 
 	removeClient, err := u.client.Remove(ctx)
@@ -918,6 +931,7 @@ func (u *upstream) applyRemoves(files []*FileInformation) error {
 
 	sendFiles := make([]string, 0, removeFilesBufferSize)
 	for _, file := range files {
+		u.sync.log.Infof("Upstream - Remove '%s'", u.getRelativeUpstreamPath(file.Name))
 		sendFiles = append(sendFiles, file.Name)
 
 		if fileMap[file.Name] != nil {
