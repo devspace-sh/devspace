@@ -54,7 +54,7 @@ func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
 
 // ShouldRebuild determines if an image has to be rebuilt
 func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool, log logpkg.Logger) (bool, error) {
-	rebuild, err := b.helper.ShouldRebuild(cache, forceRebuild)
+	rebuild, err := b.helper.ShouldRebuild(cache, forceRebuild, log)
 
 	// Check if image is present in local repository
 	if !rebuild && err == nil && b.helper.ImageConf.Build.BuildKit.InCluster == nil {
@@ -66,6 +66,7 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool,
 
 			found, err := b.helper.IsImageAvailableLocally(cache, dockerClient)
 			if !found && err == nil {
+				log.Debugf("Rebuild image %s because it was not found in local docker daemon", cache.Images[b.helper.ImageConfigName].ImageName)
 				return true, nil
 			}
 		}

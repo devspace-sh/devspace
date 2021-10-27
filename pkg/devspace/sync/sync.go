@@ -261,22 +261,6 @@ func (s *Sync) startDownstream() {
 }
 
 func (s *Sync) initialSync(onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}) error {
-	err := s.downstream.populateFileMap()
-	if err != nil {
-		return errors.Wrap(err, "populate file map")
-	}
-
-	downloadChanges := make(map[string]*FileInformation)
-	s.fileIndex.fileMapMutex.Lock()
-	for key, element := range s.fileIndex.fileMap {
-		if element.IsSymbolicLink {
-			continue
-		}
-
-		downloadChanges[key] = element
-	}
-	s.fileIndex.fileMapMutex.Unlock()
-
 	initialSync := newInitialSyncer(&initialSyncOptions{
 		LocalPath: s.LocalPath,
 		Strategy:  s.Options.InitialSync,
@@ -327,7 +311,37 @@ func (s *Sync) initialSync(onInitUploadDone chan struct{}, onInitDownloadDone ch
 		},
 	})
 
-	return initialSync.Run(downloadChanges)
+	s.log.Debugf("Initial Sync - Retrieve Initial State")
+	errChan := make(chan error)
+	go func() {
+		errChan <- s.downstream.populateFileMap()
+	}()
+
+	localState := make(map[string]*FileInformation)
+	err := initialSync.CalculateLocalState(s.LocalPath, localState, false)
+	if err != nil {
+		<-errChan
+		return err
+	}
+
+	err = <-errChan
+	s.log.Debugf("Initial Sync - Done Retrieving Initial State")
+	if err != nil {
+		return errors.Wrap(err, "populate file map")
+	}
+
+	downloadChanges := make(map[string]*FileInformation)
+	s.fileIndex.fileMapMutex.Lock()
+	for key, element := range s.fileIndex.fileMap {
+		if element.IsSymbolicLink {
+			continue
+		}
+
+		downloadChanges[key] = element
+	}
+	s.fileIndex.fileMapMutex.Unlock()
+
+	return initialSync.Run(downloadChanges, localState)
 }
 
 func (s *Sync) sendChangesToUpstream(changes []*FileInformation, remove bool) {

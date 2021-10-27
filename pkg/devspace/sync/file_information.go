@@ -14,8 +14,10 @@ type FileInformation struct {
 	Mtime          int64
 	MtimeNano      int64
 	Mode           os.FileMode
-	IsSymbolicLink bool
 	IsDirectory    bool
+	IsSymbolicLink bool
+	ResolvedLink   bool
+	Files          int
 }
 
 // Sys implements interface
