@@ -3,6 +3,7 @@ package kubectl
 import (
 	"archive/tar"
 	"compress/gzip"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"io"
 	"os"
 	"path/filepath"
@@ -61,7 +62,7 @@ func writeTar(writer io.Writer, localPath string, exclude []string) error {
 	}
 
 	// Compile ignore paths
-	ignoreMatcher, err := ignoreparser.CompilePaths(exclude)
+	ignoreMatcher, err := ignoreparser.CompilePaths(exclude, log.Discard)
 	if err != nil {
 		return errors.Wrap(err, "compile exclude paths")
 	}

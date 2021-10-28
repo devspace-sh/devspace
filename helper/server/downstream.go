@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"github.com/loft-sh/devspace/helper/util/pingtimeout"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"io"
 	"io/ioutil"
 	"log"
@@ -45,7 +46,7 @@ func StartDownstreamServer(reader io.Reader, writer io.Writer, options *Downstre
 	done := make(chan error)
 
 	// Compile ignore paths
-	ignoreMatcher, err := ignoreparser.CompilePaths(options.ExcludePaths)
+	ignoreMatcher, err := ignoreparser.CompilePaths(options.ExcludePaths, logpkg.Discard)
 	if err != nil {
 		return errors.Wrap(err, "compile paths")
 	}

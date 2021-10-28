@@ -333,11 +333,11 @@ func (i *initialSyncer) CalculateLocalState(absPath string, localState map[strin
 	return nil
 }
 
-func (i *initialSyncer) calculateLocalDirState(filepath string, stat os.FileInfo, localState map[string]*FileInformation, isSymlink, ignore bool) error {
-	relativePath := getRelativeFromFullPath(filepath, i.o.LocalPath)
-	files, err := ioutil.ReadDir(filepath)
+func (i *initialSyncer) calculateLocalDirState(absPath string, stat os.FileInfo, localState map[string]*FileInformation, isSymlink, ignore bool) error {
+	relativePath := getRelativeFromFullPath(absPath, i.o.LocalPath)
+	files, err := ioutil.ReadDir(absPath)
 	if err != nil {
-		i.o.Log.Infof("Couldn't read dir %s: %v", filepath, err)
+		i.o.Log.Infof("Couldn't read dir %s: %v", absPath, err)
 		return nil
 	}
 
@@ -356,7 +356,7 @@ func (i *initialSyncer) calculateLocalDirState(filepath string, stat os.FileInfo
 	}
 
 	for _, f := range files {
-		err := i.CalculateLocalState(path.Join(filepath, f.Name()), localState, ignore)
+		err := i.CalculateLocalState(filepath.Join(absPath, f.Name()), localState, ignore)
 		if err != nil {
 			return errors.Wrap(err, f.Name())
 		}

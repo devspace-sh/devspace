@@ -1,6 +1,7 @@
 package ignoreparser
 
 import (
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"path"
 	"strings"
 
@@ -55,7 +56,7 @@ func (i *ignoreParser) RequireFullScan() bool {
 }
 
 // CompilePaths creates a new ignore parser from a string array
-func CompilePaths(excludePaths []string) (IgnoreParser, error) {
+func CompilePaths(excludePaths []string, log log.Logger) (IgnoreParser, error) {
 	if len(excludePaths) > 0 {
 		requireFullScan := false
 		absoluteNegatePatterns := []string{}
@@ -69,9 +70,11 @@ func CompilePaths(excludePaths []string) (IgnoreParser, error) {
 					if !strings.Contains(p, "**") && !strings.Contains(path.Dir(p), "*") {
 						absoluteNegatePatterns = append(absoluteNegatePatterns, p)
 					} else {
+						log.Warnf("Exclude path '%s' uses a ** or * and thus requires a full initial scan. Please consider using a path in the form of '!/path/to/my/folder/' instead", line)
 						requireFullScan = true
 					}
 				} else {
+					log.Warnf("Exclude path '%s' is not scoped to the directory base and thus requires a full initial scan. Please consider using a path in the form of '!/path/to/my/folder/' instead", line)
 					requireFullScan = true
 				}
 			}

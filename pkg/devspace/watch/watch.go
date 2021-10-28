@@ -40,7 +40,7 @@ type watcher struct {
 
 // New watches a given glob paths array for changes
 func New(paths []string, exclude []string, pollInterval time.Duration, callback Callback, log log.Logger) (Watcher, error) {
-	ignoreMatcher, err := ignoreparser.CompilePaths(exclude)
+	ignoreMatcher, err := ignoreparser.CompilePaths(exclude, log)
 	if err != nil {
 		return nil, err
 	}
