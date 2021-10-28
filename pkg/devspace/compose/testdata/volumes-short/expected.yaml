@@ -94,7 +94,6 @@ hooks:
     containerName: upload-volumes
     labelSelector:
       app.kubernetes.io/component: db
-    once: true
 - events: ["after:deploy:db"]
   upload:
     localPath: ./cache
@@ -103,7 +102,6 @@ hooks:
     containerName: upload-volumes
     labelSelector:
       app.kubernetes.io/component: db
-    once: true
 - events: ["after:deploy:db"]
   upload:
     localPath: $!(echo "$HOME/configs")
@@ -112,11 +110,9 @@ hooks:
     containerName: upload-volumes
     labelSelector:
       app.kubernetes.io/component: db
-    once: true
 - events: ["after:deploy:db"]
   command: touch /tmp/done
   container:
     containerName: upload-volumes
     labelSelector:
       app.kubernetes.io/component: db
-    once: true

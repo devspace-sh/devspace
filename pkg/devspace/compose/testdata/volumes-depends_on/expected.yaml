@@ -80,14 +80,12 @@ hooks:
     containerName: upload-volumes
     labelSelector:
       app.kubernetes.io/component: db
-    once: true
 - events: ["after:deploy:db"]
   command: touch /tmp/done
   container:
     containerName: upload-volumes
     labelSelector:
       app.kubernetes.io/component: db
-    once: true
 - events: ["after:deploy:db"]
   container:
     labelSelector:
@@ -104,11 +102,9 @@ hooks:
     containerName: upload-volumes
     labelSelector:
       app.kubernetes.io/component: backend
-    once: true
 - events: ["after:deploy:backend"]
   command: touch /tmp/done
   container:
     containerName: upload-volumes
     labelSelector:
       app.kubernetes.io/component: backend
-    once: true

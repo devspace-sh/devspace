@@ -753,7 +753,6 @@ func createUploadVolumeHook(service composetypes.ServiceConfig, volume composety
 		Container: &latest.HookContainer{
 			LabelSelector: labelSelector(service.Name),
 			ContainerName: UploadVolumesContainerName,
-			Once:          ptr.Bool(true),
 		},
 	}
 }
@@ -766,7 +765,6 @@ func createUploadDoneHook(service composetypes.ServiceConfig) *latest.HookConfig
 		Container: &latest.HookContainer{
 			LabelSelector: labelSelector(service.Name),
 			ContainerName: UploadVolumesContainerName,
-			Once:          ptr.Bool(true),
 		},
 	}
 }

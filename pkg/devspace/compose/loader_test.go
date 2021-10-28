@@ -129,20 +129,20 @@ func testLoad(dir string, t *testing.T) {
 
 	// Iterate services in dependency order
 	err = dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
-		waitHookIdx := GetWaitHookIndex(service.Name, actualHooks)
+		waitHookIdx := getWaitHookIndex(service.Name, actualHooks)
 
 		for _, dep := range service.GetDependencies() {
 			// Check deployments order
-			assert.Check(t, GetDeploymentIndex(dep, actualDeployments) < GetDeploymentIndex(service.Name, actualDeployments), "%s deployment should come after %s for test case %s", service.Name, dep, dir)
+			assert.Check(t, getDeploymentIndex(dep, actualDeployments) < getDeploymentIndex(service.Name, actualDeployments), "%s deployment should come after %s for test case %s", service.Name, dep, dir)
 
 			// Check for wait hook order
 			_, ok := expectedWaitHooks[service.Name]
 			if ok {
-				assert.Check(t, GetWaitHookIndex(dep, actualHooks) < waitHookIdx, "%s wait hook should come after %s", service.Name, dep)
+				assert.Check(t, getWaitHookIndex(dep, actualHooks) < waitHookIdx, "%s wait hook should come after %s", service.Name, dep)
 			}
 		}
 
-		uploadDoneHookIdx := GetUploadDoneHookIndex(service.Name, actualHooks)
+		uploadDoneHookIdx := getUploadDoneHookIndex(service.Name, actualHooks)
 		if uploadDoneHookIdx != -1 {
 			// Check that upload done hooks come before wait hooks
 			if waitHookIdx != -1 {
@@ -182,7 +182,7 @@ func toWaitHookMap(hooks []*latest.HookConfig) map[string]latest.HookConfig {
 	return hookMap
 }
 
-func GetDeploymentIndex(name string, deployments []*latest.DeploymentConfig) int {
+func getDeploymentIndex(name string, deployments []*latest.DeploymentConfig) int {
 	for idx, deployment := range deployments {
 		if deployment.Name == name {
 			return idx
@@ -191,7 +191,7 @@ func GetDeploymentIndex(name string, deployments []*latest.DeploymentConfig) int
 	return -1
 }
 
-func GetWaitHookIndex(name string, hooks []*latest.HookConfig) int {
+func getWaitHookIndex(name string, hooks []*latest.HookConfig) int {
 	for idx, hook := range hooks {
 		if hook.Wait != nil && hook.Container != nil && hook.Container.LabelSelector != nil && hook.Container.LabelSelector["app.kubernetes.io/component"] == name {
 			return idx
@@ -200,16 +200,7 @@ func GetWaitHookIndex(name string, hooks []*latest.HookConfig) int {
 	return -1
 }
 
-func GetUploadHookIndex(name string, hooks []*latest.HookConfig) int {
-	for idx, hook := range hooks {
-		if hook.Upload != nil && hook.Container != nil && hook.Container.LabelSelector != nil && hook.Container.LabelSelector["app.kubernetes.io/component"] == name {
-			return idx
-		}
-	}
-	return -1
-}
-
-func GetUploadDoneHookIndex(name string, hooks []*latest.HookConfig) int {
+func getUploadDoneHookIndex(name string, hooks []*latest.HookConfig) int {
 	for idx, hook := range hooks {
 		if hook.Command == "touch /tmp/done" && hook.Container != nil && hook.Container.LabelSelector != nil && hook.Container.LabelSelector["app.kubernetes.io/component"] == name {
 			return idx
