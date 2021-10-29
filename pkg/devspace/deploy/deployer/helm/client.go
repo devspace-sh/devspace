@@ -27,7 +27,7 @@ const ComponentChartFolder = "component-chart"
 // DevSpaceChartConfig is the config that holds the devspace chart information
 var DevSpaceChartConfig = &latest.ChartConfig{
 	Name:    "component-chart",
-	Version: "0.9.0",
+	Version: "0.8.4",
 	RepoURL: "https://charts.devspace.sh",
 }
 

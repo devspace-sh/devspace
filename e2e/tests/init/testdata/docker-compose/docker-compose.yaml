@@ -13,6 +13,7 @@ services:
       - db-password
     volumes:
       - db-data:/var/lib/mysql
+      - ./db:/var/lib/db
     networks:
       - backnet
     environment:
@@ -22,36 +23,6 @@ services:
     expose:
       - 3306
       - 33060
-  backend:
-    image: loft.sh/backend
-    build: backend
-    restart: always
-    secrets:
-      - db-password
-    ports:
-      - 5000:5000
-    networks:
-      - backnet
-      - frontnet
-    depends_on:
-      db:
-        condition: service_healthy
-    env_file: flask.env
-    volumes:
-      - ./backend:/code/
-  proxy:
-    build: proxy
-    entrypoint: ["nginx", "-g", "daemon off;"]
-    restart: always
-    ports:
-      - 8080:80
-    depends_on: 
-      - backend
-    networks:
-      - frontnet
-    volumes:
-      - ./proxy:/etc/nginx/conf.d/
-      - ~/configs:/etc/configs/
 volumes:
   db-data:
 secrets:

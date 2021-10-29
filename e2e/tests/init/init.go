@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
+	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/onsi/ginkgo"
@@ -24,11 +25,15 @@ var _ = DevSpaceDescribe("init", func() {
 
 	// create a new factory
 	var (
-		f *framework.DefaultFactory
+		f          *framework.DefaultFactory
+		kubeClient *kube.KubeHelper
 	)
 
 	ginkgo.BeforeEach(func() {
 		f = framework.NewDefaultFactory()
+
+		kubeClient, err = kube.NewKubeHelper()
+		framework.ExpectNoError(err)
 	})
 
 	ginkgo.It("should create devspace.yml without registry details", func() {
@@ -60,6 +65,13 @@ var _ = DevSpaceDescribe("init", func() {
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
+		ns, err := kubeClient.CreateNamespace("init")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
 		// Answer all questions with the default
 		f.SetAnswerFunc(func(params *survey.QuestionOptions) (string, error) {
 			fmt.Println(params.Question)
@@ -84,11 +96,12 @@ var _ = DevSpaceDescribe("init", func() {
 		_, err = os.Stat(filepath.Join(tempDir, ".devspace", "generated.yaml"))
 		framework.ExpectNoError(err)
 
-		// create a new dev command
+		// Print the config to verify the expected deployment
 		var configBuffer bytes.Buffer
 		printCmd := &cmd.PrintCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn: true,
+				Debug:  true,
 			},
 			Out: &configBuffer,
 		}
@@ -101,9 +114,22 @@ var _ = DevSpaceDescribe("init", func() {
 		framework.ExpectNoError(err)
 
 		// validate config
-		framework.ExpectEqual(len(generatedConfig.Deployments), 3)
+		framework.ExpectEqual(len(generatedConfig.Deployments), 1)
 		framework.ExpectEqual(generatedConfig.Deployments[0].Name, "db")
-		framework.ExpectEqual(generatedConfig.Deployments[1].Name, "backend")
-		framework.ExpectEqual(generatedConfig.Deployments[2].Name, "proxy")
-	})
+
+		// ensure valid configuration by deploying the application
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Debug:     true,
+				Namespace: ns,
+			},
+			SkipPush: true,
+			Wait:     true,
+			Timeout:  120,
+		}
+
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+	}, 120)
 })
