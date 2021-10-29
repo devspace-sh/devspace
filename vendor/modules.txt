@@ -977,6 +977,7 @@ k8s.io/client-go/util/workqueue
 ## explicit
 k8s.io/klog
 # k8s.io/klog/v2 v2.9.0
+## explicit
 k8s.io/klog/v2
 # k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e
 k8s.io/kube-openapi/pkg/util/proto
