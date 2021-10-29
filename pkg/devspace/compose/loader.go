@@ -427,7 +427,7 @@ func deploymentConfig(service composetypes.ServiceConfig, composeVolumes map[str
 	}
 
 	return &latest.DeploymentConfig{
-		Name: service.Name,
+		Name: formatName(service.Name),
 		Helm: &latest.HelmConfig{
 			ComponentChart: ptr.Bool(true),
 			Values:         values,
@@ -440,12 +440,6 @@ func volumesConfig(
 	composeVolumes map[string]composetypes.VolumeConfig,
 	log log.Logger,
 ) (volumes []interface{}, volumeMounts []interface{}, bindVolumeMounts []interface{}) {
-	for _, composeVolume := range composeVolumes {
-		volumeName := resolveVolumeName(composeVolume)
-		volume := createVolume(volumeName, DefaultVolumeSize)
-		volumes = append(volumes, volume)
-	}
-
 	for _, secret := range service.Secrets {
 		volume := createSecretVolume(secret)
 		volumes = append(volumes, volume)
@@ -454,30 +448,43 @@ func volumesConfig(
 		volumeMounts = append(volumeMounts, volumeMount)
 	}
 
+	var volumeVolumes []composetypes.ServiceVolumeConfig
 	var bindVolumes []composetypes.ServiceVolumeConfig
+	var tmpfsVolumes []composetypes.ServiceVolumeConfig
 	for _, serviceVolume := range service.Volumes {
-		volumeName := resolveServiceVolumeName(service, serviceVolume, len(volumes)-1)
-
 		switch serviceVolume.Type {
 		case composetypes.VolumeTypeBind:
 			bindVolumes = append(bindVolumes, serviceVolume)
 		case composetypes.VolumeTypeTmpfs:
-			volume := createEmptyDirVolume(volumeName, serviceVolume)
-			volumes = append(volumes, volume)
-
-			volumeMount := createServiceVolumeMount(volumeName, serviceVolume)
-			volumeMounts = append(volumeMounts, volumeMount)
+			tmpfsVolumes = append(tmpfsVolumes, serviceVolume)
 		case composetypes.VolumeTypeVolume:
-			if needsVolume(serviceVolume, composeVolumes) {
-				volume := createVolume(volumeName, DefaultVolumeSize)
-				volumes = append(volumes, volume)
-			}
-
-			volumeMount := createServiceVolumeMount(volumeName, serviceVolume)
-			volumeMounts = append(volumeMounts, volumeMount)
+			volumeVolumes = append(volumeVolumes, serviceVolume)
 		default:
 			log.Warnf("%s volumes are not supported", serviceVolume.Type)
 		}
+	}
+
+	volumeMap := map[string]interface{}{}
+	for idx, volumeVolume := range volumeVolumes {
+		volumeName := resolveServiceVolumeName(service, volumeVolume, idx+1)
+		_, ok := volumeMap[volumeName]
+		if !ok {
+			volume := createVolume(volumeName, DefaultVolumeSize)
+			volumes = append(volumes, volume)
+			volumeMap[volumeName] = volume
+		}
+
+		volumeMount := createServiceVolumeMount(volumeName, volumeVolume)
+		volumeMounts = append(volumeMounts, volumeMount)
+	}
+
+	for _, tmpfsVolume := range tmpfsVolumes {
+		volumeName := resolveServiceVolumeName(service, tmpfsVolume, len(volumes))
+		volume := createEmptyDirVolume(volumeName, tmpfsVolume)
+		volumes = append(volumes, volume)
+
+		volumeMount := createServiceVolumeMount(volumeName, tmpfsVolume)
+		volumeMounts = append(volumeMounts, volumeMount)
 	}
 
 	for idx, bindVolume := range bindVolumes {
@@ -493,6 +500,7 @@ func volumesConfig(
 	}
 
 	return volumes, volumeMounts, bindVolumeMounts
+
 }
 
 func containerConfig(service composetypes.ServiceConfig, volumeMounts []interface{}) (map[interface{}]interface{}, error) {
@@ -665,6 +673,10 @@ func createVolume(name string, size string) interface{} {
 	}
 }
 
+func formatName(name string) string {
+	return regexp.MustCompile(`[\._]`).ReplaceAllString(name, "-")
+}
+
 func initContainerConfig(service composetypes.ServiceConfig, volumeMounts []interface{}) map[interface{}]interface{} {
 	return map[interface{}]interface{}{
 		"name":    UploadVolumesContainerName,
@@ -678,20 +690,11 @@ func initContainerConfig(service composetypes.ServiceConfig, volumeMounts []inte
 	}
 }
 
-func needsVolume(volume composetypes.ServiceVolumeConfig, composeVolumes map[string]composetypes.VolumeConfig) bool {
-	if volume.Source == "" {
-		return true
-	}
-
-	_, hasVolume := composeVolumes[volume.Source]
-	return !hasVolume
-}
-
 func resolveContainerName(service composetypes.ServiceConfig) string {
 	if service.ContainerName != "" {
-		return resolveName(service.ContainerName)
+		return formatName(service.ContainerName)
 	}
-	return fmt.Sprintf("%s-container", resolveName(service.Name))
+	return fmt.Sprintf("%s-container", formatName(service.Name))
 }
 
 func resolveImage(service composetypes.ServiceConfig) string {
@@ -711,24 +714,16 @@ func resolveLocalPath(volume composetypes.ServiceVolumeConfig) string {
 	return localSubPath
 }
 
-func resolveName(name string) string {
-	return regexp.MustCompile(`[\._]`).ReplaceAllString(name, "-")
-}
-
 func resolveServiceVolumeName(service composetypes.ServiceConfig, volume composetypes.ServiceVolumeConfig, idx int) string {
 	volumeName := volume.Source
 	if volumeName == "" {
-		volumeName = fmt.Sprintf("%s-%d", service.Name, idx)
+		volumeName = fmt.Sprintf("%s-%d", formatName(service.Name), idx)
 	}
 	return volumeName
 }
 
-func resolveVolumeName(volume composetypes.VolumeConfig) string {
-	return strings.TrimLeft(volume.Name, "_")
-}
-
 func createWaitHook(service composetypes.ServiceConfig) *latest.HookConfig {
-	serviceName := resolveName(service.Name)
+	serviceName := formatName(service.Name)
 	return &latest.HookConfig{
 		Events: []string{fmt.Sprintf("after:deploy:%s", serviceName)},
 		Container: &latest.HookContainer{
@@ -743,7 +738,7 @@ func createWaitHook(service composetypes.ServiceConfig) *latest.HookConfig {
 }
 
 func createUploadVolumeHook(service composetypes.ServiceConfig, volume composetypes.ServiceVolumeConfig) *latest.HookConfig {
-	serviceName := resolveName(service.Name)
+	serviceName := formatName(service.Name)
 	return &latest.HookConfig{
 		Events: []string{"after:deploy:" + serviceName},
 		Upload: &latest.HookSyncConfig{
@@ -758,7 +753,7 @@ func createUploadVolumeHook(service composetypes.ServiceConfig, volume composety
 }
 
 func createUploadDoneHook(service composetypes.ServiceConfig) *latest.HookConfig {
-	serviceName := resolveName(service.Name)
+	serviceName := formatName(service.Name)
 	return &latest.HookConfig{
 		Events:  []string{"after:deploy:" + serviceName},
 		Command: "touch /tmp/done",

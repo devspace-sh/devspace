@@ -38,7 +38,7 @@ deployments:
         volumeMounts:
         - containerPath: /var/lib/mydata
           volume:
-            name: db-0
+            name: db-1
             readOnly: false
         - containerPath: /var/lib/mysql
           volume:
@@ -50,11 +50,11 @@ deployments:
             readOnly: true
         - containerPath: /var/lib/tmpfs
           volume:
-            name: db-1
+            name: db-2
             readOnly: false
         - containerPath: /var/lib/tmpfs-1000
           volume:
-            name: db-2
+            name: db-3
             readOnly: false
         - containerPath: /var/lib/data
           volume:
@@ -69,13 +69,13 @@ deployments:
             name: volume-3
             readOnly: false
       volumes:
+      - name: db-1
+        size: 5Gi
       - name: datavolume
         size: 5Gi
-      - name: db-0
-        size: 5Gi
-      - name: db-1
-        emptyDir: {}
       - name: db-2
+        emptyDir: {}
+      - name: db-3
         emptyDir:
           sizeLimit: "1000"
       - name: volume-1
@@ -84,6 +84,21 @@ deployments:
         emptyDir: {}
       - name: volume-3
         emptyDir: {}
+- name: backend-1-2
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: backend-1-2-container
+        image: mysql/mysql-server:8.0.19
+        volumeMounts:
+        - containerPath: /var/lib/mydata
+          volume:
+            name: backend-1-2-1
+            readOnly: false
+      volumes:
+      - name: backend-1-2-1
+        size: 5Gi
 
 dev:
   sync:

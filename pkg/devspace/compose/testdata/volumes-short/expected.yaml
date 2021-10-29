@@ -37,7 +37,7 @@ deployments:
         volumeMounts:
         - containerPath: /var/lib/mydata
           volume:
-            name: db-0
+            name: db-1
             readOnly: false
         - containerPath: /var/lib/mysql
           volume:
@@ -56,9 +56,9 @@ deployments:
             name: volume-3
             readOnly: true
       volumes:
-      - name: datavolume
+      - name: db-1
         size: 5Gi
-      - name: db-0
+      - name: datavolume
         size: 5Gi
       - name: volume-1
         emptyDir: {}

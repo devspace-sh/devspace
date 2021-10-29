@@ -51,6 +51,13 @@ services:
         source: datavolume
         target: /var/lib/mysql
 
+  backend_1.2:
+    image: mysql/mysql-server:8.0.19
+    volumes:
+      # Just specify a path and let the Engine create a volume
+      - type: volume
+        target: /var/lib/mydata
+
 
 volumes:
   datavolume:
