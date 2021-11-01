@@ -81,7 +81,7 @@ func newUpstream(reader io.ReadCloser, writer io.WriteCloser, sync *Sync) (*upst
 	excludePaths = append(excludePaths, sync.Options.ExcludePaths...)
 	excludePaths = append(excludePaths, sync.Options.UploadExcludePaths...)
 
-	ignoreMatcher, err := ignoreparser.CompilePaths(excludePaths)
+	ignoreMatcher, err := ignoreparser.CompilePaths(excludePaths, sync.log)
 	if err != nil {
 		return nil, errors.Wrap(err, "compile paths")
 	}

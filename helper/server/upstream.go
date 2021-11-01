@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/helper/util/crc32"
 	"github.com/loft-sh/devspace/helper/util/pingtimeout"
 	"github.com/loft-sh/devspace/helper/util/stderrlog"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -43,7 +44,7 @@ func StartUpstreamServer(reader io.Reader, writer io.Writer, options *UpstreamOp
 	done := make(chan error)
 
 	// Compile ignore paths
-	ignoreMatcher, err := ignoreparser.CompilePaths(options.ExludePaths)
+	ignoreMatcher, err := ignoreparser.CompilePaths(options.ExludePaths, logpkg.Discard)
 	if err != nil {
 		return errors.Wrap(err, "compile paths")
 	}

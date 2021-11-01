@@ -33,6 +33,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/klog"
+	klogv2 "k8s.io/klog/v2"
 )
 
 // NewRootCmd returns a new root command
@@ -206,4 +207,8 @@ func disableKlog() {
 	klog.InitFlags(flagSet)
 	_ = flagSet.Set("logtostderr", "false")
 	klog.SetOutput(ioutil.Discard)
+
+	klogv2.InitFlags(flagSet)
+	_ = flagSet.Set("logtostderr", "false")
+	klogv2.SetOutput(ioutil.Discard)
 }

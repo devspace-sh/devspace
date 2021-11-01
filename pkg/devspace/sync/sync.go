@@ -167,7 +167,7 @@ func (s *Sync) Start(onInitUploadDone chan struct{}, onInitDownloadDone chan str
 
 func (s *Sync) initIgnoreParsers() error {
 	if s.Options.ExcludePaths != nil {
-		ignoreMatcher, err := ignoreparser.CompilePaths(s.Options.ExcludePaths)
+		ignoreMatcher, err := ignoreparser.CompilePaths(s.Options.ExcludePaths, s.log)
 		if err != nil {
 			return errors.Wrap(err, "compile exclude paths")
 		}
@@ -176,7 +176,7 @@ func (s *Sync) initIgnoreParsers() error {
 	}
 
 	if s.Options.DownloadExcludePaths != nil {
-		ignoreMatcher, err := ignoreparser.CompilePaths(s.Options.DownloadExcludePaths)
+		ignoreMatcher, err := ignoreparser.CompilePaths(s.Options.DownloadExcludePaths, s.log)
 		if err != nil {
 			return errors.Wrap(err, "compile download exclude paths")
 		}
@@ -185,7 +185,7 @@ func (s *Sync) initIgnoreParsers() error {
 	}
 
 	if s.Options.UploadExcludePaths != nil {
-		ignoreMatcher, err := ignoreparser.CompilePaths(s.Options.UploadExcludePaths)
+		ignoreMatcher, err := ignoreparser.CompilePaths(s.Options.UploadExcludePaths, s.log)
 		if err != nil {
 			return errors.Wrap(err, "compile upload exclude paths")
 		}
