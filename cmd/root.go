@@ -208,6 +208,7 @@ func disableKlog() {
 	_ = flagSet.Set("logtostderr", "false")
 	klog.SetOutput(ioutil.Discard)
 
+	flagSet = &flag.FlagSet{}
 	klogv2.InitFlags(flagSet)
 	_ = flagSet.Set("logtostderr", "false")
 	klogv2.SetOutput(ioutil.Discard)
