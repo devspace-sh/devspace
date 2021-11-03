@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -73,8 +74,7 @@ func ensureDockerIgnoreAndDockerFile(excludes []string, dockerfile, dockerignore
 	if useDevSpaceDockerignore {
 		excludes = append(excludes, ".dockerignore")
 	} else {
-		paths := strings.Split(dockerignorefilepath, "/")
-		dockerignorefile := paths[len(paths)-1]
+		_, dockerignorefile := path.Split(dockerignorefilepath)
 		if keep, _ := fileutils.Matches(dockerignorefile, excludes); keep {
 			excludes = append(excludes, "!"+dockerignorefile)
 		}

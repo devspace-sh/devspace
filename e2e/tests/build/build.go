@@ -183,7 +183,7 @@ var _ = DevSpaceDescribe("build", func() {
 		dockerClient := devspaceDockerClient.DockerAPIClient()
 		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
 		framework.ExpectNoError(err)
-		imageName := "my-docker-username/helloworld-dokcerignore:latest"
+		imageName := "my-docker-username/helloworld-dockerignore:latest"
 		for _, image := range imageList {
 			if image.RepoTags[0] == imageName {
 				err = nil
@@ -249,7 +249,7 @@ var _ = DevSpaceDescribe("build", func() {
 		dockerClient := devspaceDockerClient.DockerAPIClient()
 		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
 		framework.ExpectNoError(err)
-		imageName := "my-docker-username/helloworld-dokcerignore-rel-path:latest"
+		imageName := "my-docker-username/helloworld-dockerignore-rel-path:latest"
 		for _, image := range imageList {
 			if image.RepoTags[0] == imageName {
 				err = nil
@@ -286,6 +286,70 @@ var _ = DevSpaceDescribe("build", func() {
 
 		err = stdoutContains(stdout.String(), "bar.txt")
 		framework.ExpectError(err)
+
+		err = stdoutContains(stdout.String(), "foo.txt")
+		framework.ExpectError(err)
+	})
+
+	ginkgo.It("should ignore files from outside of context Dockerfile.dockerignore", func() {
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/dockerignore_context")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// create build command
+		buildCmd := &cmd.BuildCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn: true,
+			},
+			SkipPush: true,
+		}
+		err = buildCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// create devspace docker client to access docker APIs
+		devspaceDockerClient, err := docker.NewClient(log)
+		framework.ExpectNoError(err)
+
+		dockerClient := devspaceDockerClient.DockerAPIClient()
+		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
+		framework.ExpectNoError(err)
+		imageName := "my-docker-username/helloworld-dockerignore-context:latest"
+		for _, image := range imageList {
+			if image.RepoTags[0] == imageName {
+				err = nil
+				break
+			} else {
+				err = errors.New("image not found")
+			}
+		}
+		framework.ExpectNoError(err)
+
+		resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
+			Image: imageName,
+			Cmd:   []string{"/bin/ls", "./build"},
+			Tty:   false,
+		}, nil, nil, nil, "")
+		framework.ExpectNoError(err)
+
+		err = dockerClient.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{})
+		framework.ExpectNoError(err)
+
+		statusCh, errCh := dockerClient.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+		select {
+		case err := <-errCh:
+			framework.ExpectNoError(err)
+		case <-statusCh:
+		}
+
+		out, err := dockerClient.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
+		framework.ExpectNoError(err)
+
+		stdout := &bytes.Buffer{}
+		_, err = io.Copy(stdout, out)
+		framework.ExpectNoError(err)
+
+		err = stdoutContains(stdout.String(), "bar.txt")
+		framework.ExpectNoError(err)
 
 		err = stdoutContains(stdout.String(), "foo.txt")
 		framework.ExpectError(err)

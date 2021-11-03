@@ -1,7 +1,7 @@
 version: v1beta11
 images:
   app:
-    image: my-docker-username/helloworld-dokcerignore-rel-path
+    image: my-docker-username/helloworld-dockerignore-rel-path
     tags:
     - latest
     dockerfile: app/Dockerfile.dev
