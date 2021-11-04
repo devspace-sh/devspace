@@ -1,0 +1,6 @@
+version: v1beta11
+images:
+  app:
+    image: my-docker-username/helloworld-dockerignore
+    tags:
+    - latest
