@@ -7,4 +7,4 @@ See the [install instructions for DevSpace](https://devspace.sh/cli/docs/getting
 
 
 ## Reporting a Vulnerability
-Please report vulnerabilities to: [security@devspace.sh](mailto:security@devspace.sh)
+Please report vulnerabilities to: [security@loft.sh](mailto:security@loft.sh)
