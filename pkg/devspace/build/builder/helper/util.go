@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -46,7 +45,11 @@ func ReadDockerignore(contextDir string, dockerfile string) ([]string, error) {
 	if os.IsNotExist(err) {
 		useDevSpaceDockerignore = false
 		dockerignorefilepath = dockerfile + ".dockerignore"
-		f, err = os.Open(filepath.Join(contextDir, dockerignorefilepath))
+		if filepath.IsAbs(dockerignorefilepath) {
+			f, err = os.Open(dockerignorefilepath)
+		} else {
+			f, err = os.Open(filepath.Join(contextDir, dockerignorefilepath))
+		}
 		if os.IsNotExist(err) {
 			dockerignorefilepath = ".dockerignore"
 			f, err = os.Open(filepath.Join(contextDir, dockerignorefilepath))
@@ -74,7 +77,7 @@ func ensureDockerIgnoreAndDockerFile(excludes []string, dockerfile, dockerignore
 	if useDevSpaceDockerignore {
 		excludes = append(excludes, ".dockerignore")
 	} else {
-		_, dockerignorefile := path.Split(dockerignorefilepath)
+		_, dockerignorefile := filepath.Split(dockerignorefilepath)
 		if keep, _ := fileutils.Matches(dockerignorefile, excludes); keep {
 			excludes = append(excludes, "!"+dockerignorefile)
 		}
