@@ -161,7 +161,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.It("should ignore files from Dockerfile.dockerignore", func() {
+	ginkgo.It("should ignore files from Dockerfile.dockerignore only", func() {
 		tempDir, err := framework.CopyToTempDir("tests/build/testdata/dockerignore")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -223,8 +223,6 @@ var _ = DevSpaceDescribe("build", func() {
 
 		err = stdoutContains(stdout.String(), "foo.txt")
 		framework.ExpectError(err)
-
-		fmt.Println(stdout.String())
 	})
 
 	ginkgo.It("should ignore files from Dockerfile.dockerignore relative path", func() {
