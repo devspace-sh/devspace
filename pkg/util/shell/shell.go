@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -97,8 +96,7 @@ func DevSpaceExecHandler(ctx context.Context, args []string) error {
 					_, _ = fmt.Fprintln(hc.Stderr, err)
 					return interp.NewExitStatus(1)
 				}
-				path := filepath.Dir(bin)
-				args[0] = filepath.Join(path, os.Args[0])
+				args[0] = bin
 			default:
 				_, _ = fmt.Fprintln(hc.Stderr, "command is not found.")
 				return interp.NewExitStatus(127)
