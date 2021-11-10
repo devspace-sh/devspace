@@ -104,4 +104,94 @@ var _ = DevSpaceDescribe("deploy", func() {
 		_, err = kubeClient.RawClient().CoreV1().Services(ns).Get(context.TODO(), "webserver-simple-service", metav1.GetOptions{})
 		framework.ExpectNoError(err)
 	})
+
+	ginkgo.It("should deploy helm chart from git repo", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm_git")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+		}
+
+		// run the command
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// wait until nginx pod is reachable
+		out, err := kubeClient.ExecByImageSelector("nginx", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "test")
+	})
+
+	ginkgo.It("should deploy helm chart from specific branch in git repo", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm_git_branch")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+		}
+
+		// run the command
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// wait until nginx pod is reachable
+		out, err := kubeClient.ExecByImageSelector("nginx", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "test")
+	})
+
+	ginkgo.It("should deploy helm chart from subpath in git repo", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm_git_subpath")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+		}
+
+		// run the command
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// wait until nginx pod is reachable
+		out, err := kubeClient.ExecByImageSelector("nginx", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "test")
+	})
 })
