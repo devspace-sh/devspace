@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
+	"github.com/loft-sh/devspace/pkg/util/git"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
@@ -32,11 +34,9 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 		releaseNamespace = c.kubeClient.Namespace()
 	}
 
-	chartName, chartRepo := generic.ChartNameAndRepo(helmConfig)
 	args := []string{
 		"upgrade",
 		releaseName,
-		chartName,
 		"--namespace",
 		releaseNamespace,
 		"--values",
@@ -47,17 +47,47 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	}
 
 	// Chart settings
-	if chartRepo != "" {
-		args = append(args, "--repo", chartRepo)
-	}
-	if helmConfig.Chart.Version != "" {
-		args = append(args, "--version", helmConfig.Chart.Version)
-	}
-	if helmConfig.Chart.Username != "" {
-		args = append(args, "--username", helmConfig.Chart.Username)
-	}
-	if helmConfig.Chart.Password != "" {
-		args = append(args, "--password", helmConfig.Chart.Password)
+	if helmConfig.Chart.Git != nil {
+		chartName, err := ioutil.TempDir("", "")
+		if err != nil {
+			return nil, err
+		}
+
+		defer os.RemoveAll(chartName)
+		repo, err := git.NewGitCLIRepository(chartName)
+		if err != nil {
+			return nil, err
+		}
+		err = repo.Clone(git.CloneOptions{
+			URL:    helmConfig.Chart.Git.URL,
+			Branch: helmConfig.Chart.Git.Branch,
+			Tag:    helmConfig.Chart.Git.Tag,
+			Args:   helmConfig.Chart.Git.CloneArgs,
+			Commit: helmConfig.Chart.Git.Revision,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if helmConfig.Chart.Git.SubPath != "" {
+			chartName = filepath.Join(chartName, helmConfig.Chart.Git.SubPath)
+		}
+		args = append(args, chartName)
+	} else {
+		chartName, chartRepo := generic.ChartNameAndRepo(helmConfig)
+		args = append(args, chartName)
+		if chartRepo != "" {
+			args = append(args, "--repo", chartRepo)
+			args = append(args, "--repository-config=''")
+		}
+		if helmConfig.Chart.Version != "" {
+			args = append(args, "--version", helmConfig.Chart.Version)
+		}
+		if helmConfig.Chart.Username != "" {
+			args = append(args, "--username", helmConfig.Chart.Username)
+		}
+		if helmConfig.Chart.Password != "" {
+			args = append(args, "--password", helmConfig.Chart.Password)
+		}
 	}
 
 	// Upgrade options

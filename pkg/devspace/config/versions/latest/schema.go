@@ -656,11 +656,22 @@ type HelmConfig struct {
 
 // ChartConfig defines the helm chart options
 type ChartConfig struct {
-	Name     string `yaml:"name,omitempty" json:"name,omitempty"`
-	Version  string `yaml:"version,omitempty" json:"version,omitempty"`
-	RepoURL  string `yaml:"repo,omitempty" json:"repo,omitempty"`
-	Username string `yaml:"username,omitempty" json:"username,omitempty"`
-	Password string `yaml:"password,omitempty" json:"password,omitempty"`
+	Name     string     `yaml:"name,omitempty" json:"name,omitempty"`
+	Version  string     `yaml:"version,omitempty" json:"version,omitempty"`
+	RepoURL  string     `yaml:"repo,omitempty" json:"repo,omitempty"`
+	Username string     `yaml:"username,omitempty" json:"username,omitempty"`
+	Password string     `yaml:"password,omitempty" json:"password,omitempty"`
+	Git      *GitSource `yaml:"git,omitempty" json:"git,omitempty"`
+}
+
+//GitSource defines the git repository options
+type GitSource struct {
+	URL       string   `yaml:"url,omitempty" json:"url,omitempty"`
+	CloneArgs []string `yaml:"cloneArgs,omitempty" json:"cloneArgs,omitempty"`
+	Branch    string   `yaml:"branch,omitempty" json:"branch,omitempty"`
+	Tag       string   `yaml:"tag,omitempty" json:"tag,omitempty"`
+	Revision  string   `yaml:"revision,omitempty" json:"revision,omitempty"`
+	SubPath   string   `yaml:"subPath,omitempty" json:"subPath,omitempty"`
 }
 
 // KubectlConfig defines the specific kubectl options used during deployment
