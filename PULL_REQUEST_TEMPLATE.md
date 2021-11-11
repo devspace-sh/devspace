@@ -3,7 +3,7 @@
 /kind enhancement
 /kind feature
 /kind documentation
-
+/kind test
 
 **What does this pull request do? Which issues does it resolve?** (use `resolves #<issue_number>` if possible) 
 resolves #
