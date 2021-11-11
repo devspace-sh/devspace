@@ -5,7 +5,8 @@ hooks:                              # struct[]  | Array of hooks to be executed.
                                     #           | - hooks[*].download which will download files or folder from a container
                                     #           | - hooks[*].wait which will wait for a container to become running or terminate
                                     #           | - hooks[*].logs which will print the logs for a certain container
-- events: ["before:deploy"]         # struct    | Events at which this hook should get executed
+- name: "my-hook-name"              # string    | Optional string stating the name of this hook configuration
+  events: ["before:deploy"]         # struct    | Events at which this hook should get executed
   command: "echo Hello World!"      # string    | Command to be executed when this hook is triggered (if no args a specified, will be executed in a golang shell)
   args: []                          # string[]  | (Optional) Array of arguments for the command of this hook. If this is specified, command has to be present in PATH
   upload:                           # struct    | If defined will upload files or folders into the container.
