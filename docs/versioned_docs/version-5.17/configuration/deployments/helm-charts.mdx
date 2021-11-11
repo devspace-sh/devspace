@@ -352,7 +352,7 @@ The `timeout` option expects an integer representing a number of seconds that wi
 
 #### Default Value for `timeout`
 ```yaml
-timeout: 180
+timeout: 5m0s # defined by helm
 ```
 
 #### Example: Helm Flag Timeout
@@ -362,12 +362,12 @@ deployments:
   helm:
     chart:
       name: bitnami/mysql
-    timeout: 300
+    timeout: 300s
 ```
 **Explanation:**  
 Deploying the above example would roughly be equivalent to this command:
 ```bash
-helm install database bitnami/mysql --timeout=300
+helm install database bitnami/mysql --timeout=300s
 ```
 
 ### `force`

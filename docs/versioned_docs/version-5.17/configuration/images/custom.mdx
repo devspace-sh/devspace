@@ -11,11 +11,7 @@ Make sure your `custom` build command terminates with exit code 0 when the build
 :::
 
 ### `command`
-The `onChange` option expects an array of strings which represent paths to files or folders that should be watched for changes. DevSpace uses these paths and the hash values it stores about these paths for evaluating if an image should be rebuilt or if the image building can be skipped because the context of the image has not changed.
-
-:::info
-It is highly recommended to specify this option when using `custom` as build tool in order to speed up the build process.
-:::
+The `command` option expects a string with the path to a build script or the name of a binary that should be executed in order to build an image.
 
 #### Example: Building Images With `custom` Build Command
 ```yaml
