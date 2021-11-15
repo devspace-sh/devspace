@@ -3,11 +3,18 @@ package flags
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/survey"
+	"github.com/loft-sh/devspace/pkg/util/terminal"
 	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
+	"os"
 
 	flag "github.com/spf13/pflag"
 )
+
+var _, tty = terminal.SetupTTY(os.Stdin, os.Stdout)
 
 // GlobalFlags is the flags that contains the global flags
 type GlobalFlags struct {
@@ -35,14 +42,48 @@ type GlobalFlags struct {
 }
 
 // UseLastContext uses the last context
-func (gf *GlobalFlags) UseLastContext(generatedConfig *generated.Config, log log.Logger) error {
-	if gf.KubeContext == "" && gf.Namespace == "" && gf.SwitchContext {
+func (gf *GlobalFlags) UseLastContext(f factory.Factory, generatedConfig *generated.Config, log log.Logger) error {
+	if gf.SwitchContext {
 		if generatedConfig == nil || generatedConfig.GetActive().LastContext == nil {
 			log.Warn("There is no last context to use. Only use the '--switch-context / -s' flag if you already have deployed the project before")
 		} else {
+			if tty.IsTerminalIn() {
+				client, err := f.NewKubeDefaultClient()
+				if err != nil {
+					return errors.Wrap(err, "create kube client")
+				}
+
+				question := ""
+				if generatedConfig.GetActive().LastContext.Context != "" && generatedConfig.GetActive().LastContext.Context != client.CurrentContext() {
+					log.WriteString("\n")
+					log.Warnf("Current kube context: '%s'", ansi.Color(client.CurrentContext(), "white+b"))
+					log.Warnf("Last    kube context: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Context, "white+b"))
+					question = "Do you want to use the previous kube context '" + generatedConfig.GetActive().LastContext.Context + "'?"
+				} else if generatedConfig.GetActive().LastContext.Namespace != "" && generatedConfig.GetActive().LastContext.Namespace != client.Namespace() {
+					log.WriteString("\n")
+					log.Warnf("Current namespace: '%s'", ansi.Color(client.Namespace(), "white+b"))
+					log.Warnf("Last    namespace: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Namespace, "white+b"))
+					question = "Do you want to use the previous namespace '" + generatedConfig.GetActive().LastContext.Namespace + "'?"
+				} else {
+					return nil
+				}
+
+				answer, err := log.Question(&survey.QuestionOptions{
+					Question:     question,
+					DefaultValue: "yes",
+					Options:      []string{"yes", "no"},
+				})
+				if err != nil {
+					return err
+				} else if answer == "no" {
+					generatedConfig.GetActive().LastContext.Context = client.CurrentContext()
+					generatedConfig.GetActive().LastContext.Namespace = client.Namespace()
+					return nil
+				}
+			}
+
 			gf.KubeContext = generatedConfig.GetActive().LastContext.Context
 			gf.Namespace = generatedConfig.GetActive().LastContext.Namespace
-
 			log.Infof("Switching to context '%s' and namespace '%s'", ansi.Color(gf.KubeContext, "white+b"), ansi.Color(gf.Namespace, "white+b"))
 			return nil
 		}

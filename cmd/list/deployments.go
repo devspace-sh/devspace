@@ -69,7 +69,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 	configOptions.GeneratedConfig = generatedConfig
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, logger)
+	err = cmd.UseLastContext(f, generatedConfig, logger)
 	if err != nil {
 		return err
 	}

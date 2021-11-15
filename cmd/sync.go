@@ -136,7 +136,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, logger)
+	err = cmd.UseLastContext(f, generatedConfig, logger)
 	if err != nil {
 		return err
 	}

@@ -71,7 +71,7 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 	configOptions.GeneratedConfig = generatedConfig
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, cmd.log)
+	err = cmd.UseLastContext(f, generatedConfig, cmd.log)
 	if err != nil {
 		return err
 	}

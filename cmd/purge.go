@@ -104,7 +104,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory) error {
 	configOptions.GeneratedConfig = generatedConfig
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, cmd.log)
+	err = cmd.UseLastContext(f, generatedConfig, cmd.log)
 	if err != nil {
 		return err
 	}

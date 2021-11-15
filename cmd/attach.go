@@ -82,7 +82,7 @@ func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log)
+	err = cmd.UseLastContext(f, generatedConfig, log)
 	if err != nil {
 		return err
 	}

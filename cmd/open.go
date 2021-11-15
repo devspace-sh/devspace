@@ -116,7 +116,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, cmd.log)
+	err = cmd.UseLastContext(f, generatedConfig, cmd.log)
 	if err != nil {
 		return err
 	}

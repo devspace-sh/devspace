@@ -99,7 +99,7 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 	}
 
 	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log)
+	err = cmd.UseLastContext(f, generatedConfig, log)
 	if err != nil {
 		return err
 	}
