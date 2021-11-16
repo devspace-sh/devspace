@@ -724,7 +724,7 @@ The algorithm roughly works like this:
 
 1. Inject a small helper binary via `kubectl cp` into the target container
 2. Run initial sync accoring to the [`initialSync` config option](#initial-sync)
-3. Watch for file changes on both sides (local and remote) and sync them accorind to the [sync path mappings](#sync-path-mapping)
+3. Watch for file changes on both sides (local and remote) and sync them according to the [sync path mappings](#sync-path-mapping)
 4. After every sync process, [restart the container](#onuploadrestartcontainer) or run other custom [post-sync commands](#post-sync-commands) (optional)
 
 <br/>
