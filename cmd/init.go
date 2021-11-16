@@ -333,7 +333,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		"(?m)^(    patches:)":             "    # Besides replacing the container image, let's also apply some patches to the `spec` of our Pod\n    # We are overwriting `command` + `args` for the first container in our selected Pod, so it starts with `sleep 9999999`\n    # Using `sleep 9999999` as PID 1 (instead of the regular ENTRYPOINT), allows you to start the application manually\n$1",
 		"(?m)^(  (-| ) imageSelector:.+)": "$1 # Select the Pod that runs our `$${IMAGE}`",
 		"(?m)^(profiles:)":                "\n# `profiles` lets you modify the config above for different environments (e.g. dev vs production)\n$1",
-		"(?m)^(- name: production)":       "  # This profile is called `production` and you can use it for example using: devspace deploy -p production\n  # We generally recommend to use the base config without any profiles as optimized for development (e.g. image build+push is disabled)\n$1",
+		"(?m)^(- name: production)":       "  # This profile is called `production` and you can use it for example using: devspace deploy -p production\n  # We generally recommend using the base config without any profiles as optimized for development (e.g. image build+push is disabled)\n$1",
 		"(?m)^(  patches:)":               "# This profile applies patches to the config above.\n  # In this case, it enables image building for example by removing the `disabled: true` statement for the image `app`\n$1",
 		"(?m)^(  merge:)":                 "# This profile adds our image to the config so that DevSpace will build, tag and push our image before the deployment\n$1",
 	}
