@@ -218,6 +218,16 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 
 	return nil
 }
+func realWorkDir() (string, error) {
+	if runtime.GOOS == "darwin" {
+		if pwd, present := os.LookupEnv("PWD"); present {
+			os.Unsetenv("PWD")
+			defer os.Setenv("PWD", pwd)
+		}
+		return os.Getwd()
+	}
+	return ".", nil
+}
 
 func (c *controller) startSync(options *Options, onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}, onDone chan struct{}, onError chan error, log logpkg.Logger) (*sync.Sync, error) {
 	options.TargetOptions.SkipInitContainers = true
@@ -225,13 +235,16 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 		syncConfig = options.SyncConfig
 	)
 
-	localPath := "."
+	localPath, err := realWorkDir()
+	if err != nil {
+		return nil, err
+	}
+
 	if syncConfig.LocalSubPath != "" {
 		localPath = syncConfig.LocalSubPath
 	}
-
 	// check if local path exists
-	_, err := os.Stat(localPath)
+	_, err = os.Stat(localPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, err
@@ -285,7 +298,11 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 		return nil, err
 	}
 
-	localPath := "."
+	localPath, err := realWorkDir()
+	if err != nil {
+		return nil, err
+	}
+
 	if syncConfig.LocalSubPath != "" {
 		localPath = syncConfig.LocalSubPath
 	}
