@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/devspace/services"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -127,7 +128,9 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 		return err
 	}
 
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, cmd.log)
+	// If the current kube context or namespace is different than old,
+	// show warnings and reset kube client if necessary
+	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, cmd.log)
 	if err != nil {
 		return err
 	}

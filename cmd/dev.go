@@ -211,11 +211,20 @@ func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 	}
 	configOptions.KubeClient = client
 
-	// Show a warning if necessary
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, cmd.log)
+	// Create kubectl client and switch context if specified
+	client, err = f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	if err != nil {
+		return errors.Errorf("Unable to create new kubectl client: %v", err)
+	}
+
+	// If the current kube context or namespace is different than old,
+	// show warnings and reset kube client if necessary
+	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, cmd.log)
 	if err != nil {
 		return err
 	}
+
+	configOptions.KubeClient = client
 
 	// Clear the dependencies & deployments cache if necessary
 	clearCache(generatedConfig, client)

@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"context"
+	"strconv"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	"strconv"
-	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
@@ -146,13 +147,15 @@ func (cmd *DeployCmd) Run(f factory.Factory) error {
 	if err != nil {
 		return errors.Errorf("unable to create new kubectl client: %v", err)
 	}
-	configOptions.KubeClient = client
 
-	// warn the user if we deployed into a different context before
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, true, cmd.log)
+	// If the current kube context or namespace is different than old,
+	// show warnings and reset kube client if necessary
+	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, cmd.log)
 	if err != nil {
 		return err
 	}
+
+	configOptions.KubeClient = client
 
 	// clear the dependencies & deployments cache if necessary
 	clearCache(generatedConfig, client)

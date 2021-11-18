@@ -73,8 +73,8 @@ func (c *Client) KubeConfigLoader() kubeconfig.Loader {
 }
 
 // PrintWarning is a fake implementation of function
-func (c *Client) PrintWarning(generatedConfig *generated.Config, noWarning, shouldWait bool, log log.Logger) error {
-	return nil
+func (c *Client) CheckKubeContext(generatedConfig *generated.Config, noWarning bool, log log.Logger) (kubectl.Client, error) {
+	return c, nil
 }
 
 // CopyFromReader is a fake implementation of function

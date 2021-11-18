@@ -81,7 +81,9 @@ func (cmd *varsCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []strin
 		return errors.Wrap(err, "new kube client")
 	}
 
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, logger)
+	// If the current kube context or namespace is different than old,
+	// show warnings and reset kube client if necessary
+	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, logger)
 	if err != nil {
 		return err
 	}
