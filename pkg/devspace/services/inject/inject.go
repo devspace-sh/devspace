@@ -124,14 +124,14 @@ func installDevSpaceHelperInContainer(client kubectl.Client, pod *v1.Pod, contai
 	chmod := fmt.Sprintf("chmod +x %s", DevSpaceHelperContainerPath)
 	cmd := curl + " && " + chmod
 
-	_, _, err = client.ExecBuffered(pod, container, []string{"sh", "-c", cmd}, nil)
+	stdout, stderr, err := client.ExecBuffered(pod, container, []string{"sh", "-c", cmd}, nil)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "stdout, stderr: \n%s %s", string(stdout), string(stderr))
 	}
 
-	stdout, _, err := client.ExecBuffered(pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
+	stdout, stderr, err = client.ExecBuffered(pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "stdout, stderr: \n%s %s", string(stdout), string(stderr))
 	}
 
 	if version != string(stdout) {
