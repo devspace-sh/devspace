@@ -112,5 +112,6 @@ func IsContainerRunning(container *selector.SelectedPodContainer) bool {
 func HasPodProblem(pod *v1.Pod) bool {
 	status := kubectl.GetPodStatus(pod)
 	status = strings.TrimPrefix(status, "Init:")
-	return kubectl.CriticalStatus[status]
+	_, ok := kubectl.CriticalStatus[status]
+	return ok
 }

@@ -80,7 +80,7 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 			return errors.Errorf("Unexpected variable format. Expected key=value, got %s", v)
 		} else if variable.IsPredefinedVariable(splitted[0]) {
 			return errors.Errorf("cannot set predefined variable %s", splitted[0])
-		} else if !variableParser.Used[splitted[0]] {
+		} else if _, ok := variableParser.Used[splitted[0]]; !ok {
 			allowedVarsArr := []string{}
 			for k := range variableParser.Used {
 				if variable.IsPredefinedVariable(k) {
@@ -122,7 +122,7 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 
 type variableParser struct {
 	Definitions []*latest.Variable
-	Used        map[string]bool
+	Used        map[string]struct{}
 }
 
 func (v *variableParser) Parse(configPath string, originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, options *loader.ConfigOptions, log log.Logger) (*latest.Config, error) {

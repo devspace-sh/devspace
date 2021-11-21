@@ -169,7 +169,7 @@ func untarNext(tarReader *tar.Reader, options *UpstreamOptions) (bool, error) {
 	return true, nil
 }
 
-func recursiveTar(basePath, relativePath string, writtenFiles map[string]bool, tw *tar.Writer, skipFolderContents bool) error {
+func recursiveTar(basePath, relativePath string, writtenFiles map[string]struct{}, tw *tar.Writer, skipFolderContents bool) error {
 	absFilepath := path.Join(basePath, relativePath)
 	if _, ok := writtenFiles[relativePath]; ok {
 		return nil
@@ -191,7 +191,7 @@ func recursiveTar(basePath, relativePath string, writtenFiles map[string]bool, t
 	return tarFile(basePath, fileInformation, writtenFiles, stat, tw)
 }
 
-func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles map[string]bool, stat os.FileInfo, tw *tar.Writer, skipContents bool) error {
+func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles map[string]struct{}, stat os.FileInfo, tw *tar.Writer, skipContents bool) error {
 	filepath := path.Join(basePath, fileInformation.Name)
 	files, err := ioutil.ReadDir(filepath)
 	if err != nil {
@@ -208,7 +208,7 @@ func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles m
 			return errors.Wrapf(err, "tw write header %s", filepath)
 		}
 
-		writtenFiles[fileInformation.Name] = true
+		writtenFiles[fileInformation.Name] = struct{}{}
 	}
 
 	if !skipContents {
@@ -222,7 +222,7 @@ func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles m
 	return nil
 }
 
-func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map[string]bool, stat os.FileInfo, tw *tar.Writer) error {
+func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map[string]struct{}, stat os.FileInfo, tw *tar.Writer) error {
 	var err error
 	filepath := path.Join(basePath, fileInformation.Name)
 	if stat.Mode()&os.ModeSymlink == os.ModeSymlink {
@@ -265,7 +265,7 @@ func tarFile(basePath string, fileInformation *fileInformation, writtenFiles map
 		return errors.New("tar: file truncated during read")
 	}
 
-	writtenFiles[fileInformation.Name] = true
+	writtenFiles[fileInformation.Name] = struct{}{}
 	return nil
 }
 

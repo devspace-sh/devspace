@@ -152,7 +152,7 @@ func (g *graph) addEdge(fromID string, toID string) error {
 
 // find first path from node to node with DFS
 func findFirstPath(from *node, to *node) []*node {
-	isVisited := map[string]bool{}
+	isVisited := map[string]struct{}{}
 	pathList := []*node{from}
 
 	// Call recursive utility
@@ -169,9 +169,9 @@ func findFirstPath(from *node, to *node) []*node {
 // vertices in current path.
 // localPathList<> stores actual
 // vertices in the current path
-func findFirstPathRecursive(u *node, d *node, isVisited map[string]bool, localPathList *[]*node) bool {
+func findFirstPathRecursive(u *node, d *node, isVisited map[string]struct{}, localPathList *[]*node) bool {
 	// Mark the current node
-	isVisited[u.ID] = true
+	isVisited[u.ID] = struct{}{}
 
 	// Is destination?
 	if u.ID == d.ID {

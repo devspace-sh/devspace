@@ -58,12 +58,12 @@ func (r *resolver) ReplaceString(str string) (interface{}, error) {
 	})
 }
 
-func (r *resolver) FindVariables(haystack map[interface{}]interface{}, vars []*latest.Variable) (map[string]bool, error) {
+func (r *resolver) FindVariables(haystack map[interface{}]interface{}, vars []*latest.Variable) (map[string]struct{}, error) {
 	// find out what vars are really used
-	varsUsed := map[string]bool{}
+	varsUsed := map[string]struct{}{}
 	err := walk.Walk(haystack, varMatchFn, func(value string) (interface{}, error) {
 		_, _ = varspkg.ParseString(value, func(v string) (interface{}, error) {
-			varsUsed[v] = true
+			varsUsed[v] = struct{}{}
 			return "", nil
 		})
 
@@ -77,7 +77,7 @@ func (r *resolver) FindVariables(haystack map[interface{}]interface{}, vars []*l
 	for _, v := range vars {
 		varsUsedInDefinition := r.findVariablesInDefinition(v)
 		for usedVar := range varsUsedInDefinition {
-			varsUsed[usedVar] = true
+			varsUsed[usedVar] = struct{}{}
 		}
 	}
 
@@ -127,8 +127,8 @@ func (r *resolver) Resolve(name string, definition *latest.Variable) (interface{
 	return value, nil
 }
 
-func (r *resolver) findVariablesInDefinition(definition *latest.Variable) map[string]bool {
-	varsUsed := map[string]bool{}
+func (r *resolver) findVariablesInDefinition(definition *latest.Variable) map[string]struct{} {
+	varsUsed := map[string]struct{}{}
 	if definition == nil {
 		return varsUsed
 	}
@@ -136,7 +136,7 @@ func (r *resolver) findVariablesInDefinition(definition *latest.Variable) map[st
 	// check value
 	if strDefault, ok := definition.Value.(string); ok {
 		_, _ = varspkg.ParseString(strDefault, func(v string) (interface{}, error) {
-			varsUsed[v] = true
+			varsUsed[v] = struct{}{}
 			return "", nil
 		})
 	}
@@ -144,21 +144,21 @@ func (r *resolver) findVariablesInDefinition(definition *latest.Variable) map[st
 	// check default value
 	if strDefault, ok := definition.Default.(string); ok {
 		_, _ = varspkg.ParseString(strDefault, func(v string) (interface{}, error) {
-			varsUsed[v] = true
+			varsUsed[v] = struct{}{}
 			return "", nil
 		})
 	}
 
 	// check command
 	_, _ = varspkg.ParseString(definition.Command, func(v string) (interface{}, error) {
-		varsUsed[v] = true
+		varsUsed[v] = struct{}{}
 		return "", nil
 	})
 
 	// check args
 	for _, arg := range definition.Args {
 		_, _ = varspkg.ParseString(arg, func(v string) (interface{}, error) {
-			varsUsed[v] = true
+			varsUsed[v] = struct{}{}
 			return "", nil
 		})
 	}
@@ -167,14 +167,14 @@ func (r *resolver) findVariablesInDefinition(definition *latest.Variable) map[st
 	for _, osDef := range definition.Commands {
 		// check command
 		_, _ = varspkg.ParseString(osDef.Command, func(v string) (interface{}, error) {
-			varsUsed[v] = true
+			varsUsed[v] = struct{}{}
 			return "", nil
 		})
 
 		// check args
 		for _, arg := range osDef.Args {
 			_, _ = varspkg.ParseString(arg, func(v string) (interface{}, error) {
-				varsUsed[v] = true
+				varsUsed[v] = struct{}{}
 				return "", nil
 			})
 		}

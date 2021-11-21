@@ -144,7 +144,7 @@ func fillVariables(resolver variable.Resolver, preparedConfig map[interface{}]in
 	if len(vars) > 0 {
 		newVars := []*latest.Variable{}
 		for _, v := range vars {
-			if varsUsed[strings.TrimSpace(v.Name)] {
+			if _, ok := varsUsed[strings.TrimSpace(v.Name)]; ok {
 				newVars = append(newVars, v)
 			}
 		}

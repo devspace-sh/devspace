@@ -57,7 +57,7 @@ func StartDownstreamServer(reader io.Reader, writer io.Writer, options *Downstre
 			options:       options,
 			ignoreMatcher: ignoreMatcher,
 			events:        make(chan notify.EventInfo, 1000),
-			changes:       map[string]bool{},
+			changes:       map[string]struct{}{},
 			ping:          &pingtimeout.PingTimeout{},
 		}
 
@@ -127,7 +127,7 @@ type Downstream struct {
 	changesMutex sync.Mutex
 
 	// changes is a map of changed paths
-	changes map[string]bool
+	changes map[string]struct{}
 
 	// lastRescan is used to rescan the complete path from time to time
 	lastRescan *time.Time
@@ -197,7 +197,7 @@ func (d *Downstream) compress(writer io.WriteCloser, files []string) error {
 	tarWriter := tar.NewWriter(gw)
 	defer tarWriter.Close()
 
-	writtenFiles := make(map[string]bool)
+	writtenFiles := make(map[string]struct{})
 	for _, path := range files {
 		if _, ok := writtenFiles[path]; !ok {
 			err := recursiveTar(d.options.RemotePath, path, writtenFiles, tarWriter, true)
@@ -265,7 +265,7 @@ func (d *Downstream) getWatchState() map[string]*remote.Change {
 
 	if changeAmount > 100 || shouldRescan {
 		// we rescan so reset all changes
-		d.changes = map[string]bool{}
+		d.changes = map[string]struct{}{}
 		d.lastRescan = &now
 
 		newState := make(map[string]*remote.Change)
@@ -283,7 +283,7 @@ func (d *Downstream) getWatchState() map[string]*remote.Change {
 	for k := range d.changes {
 		changes = append(changes, k)
 	}
-	d.changes = map[string]bool{}
+	d.changes = map[string]struct{}{}
 
 	// apply changes
 	for _, change := range changes {
@@ -337,13 +337,13 @@ func (d *Downstream) watch(stopChan chan struct{}) {
 				found := false
 				for i := len(parts) - 1; i > 0; i-- {
 					path := strings.Join(parts[:i], "/")
-					if d.changes[path] {
+					if _, ok := d.changes[path]; ok {
 						found = true
 						break
 					}
 				}
 				if !found {
-					d.changes[event.Path()] = true
+					d.changes[event.Path()] = struct{}{}
 				}
 			}
 			d.changesMutex.Unlock()

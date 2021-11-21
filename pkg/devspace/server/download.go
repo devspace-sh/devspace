@@ -116,7 +116,7 @@ func downloadFile(version string, folder string) error {
 func untar(r io.Reader, dir string) (err error) {
 	t0 := time.Now()
 	nFiles := 0
-	madeDir := map[string]bool{}
+	madeDir := map[string]struct{}{}
 
 	zr, err := gzip.NewReader(r)
 	if err != nil {
@@ -143,11 +143,11 @@ func untar(r io.Reader, dir string) (err error) {
 		switch {
 		case mode.IsRegular():
 			dir := filepath.Dir(abs)
-			if !madeDir[dir] {
+			if _, ok := madeDir[dir]; !ok {
 				if err := os.MkdirAll(filepath.Dir(abs), 0755); err != nil {
 					return err
 				}
-				madeDir[dir] = true
+				madeDir[dir] = struct{}{}
 			}
 			wf, err := os.OpenFile(abs, os.O_RDWR|os.O_CREATE|os.O_TRUNC, mode.Perm())
 			if err != nil {
@@ -175,7 +175,7 @@ func untar(r io.Reader, dir string) (err error) {
 			if err := os.MkdirAll(abs, 0755); err != nil {
 				return err
 			}
-			madeDir[abs] = true
+			madeDir[abs] = struct{}{}
 		default:
 			return fmt.Errorf("tar file entry %s contained unsupported file type %v", f.Name, mode)
 		}

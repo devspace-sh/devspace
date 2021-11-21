@@ -234,7 +234,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 					return false, fmt.Errorf("kaniko init container %s/%s has unexpectedly exited with code %d: %s", buildPod.Namespace, buildPod.Name, buildPod.Status.InitContainerStatuses[0].State.Terminated.ExitCode, errorLog)
 				} else if status.State.Waiting != nil {
-					if kubectl.CriticalStatus[status.State.Waiting.Reason] {
+					if _, ok := kubectl.CriticalStatus[status.State.Waiting.Reason]; ok {
 						return false, fmt.Errorf("kaniko init container %s/%s cannot start: %s (%s)", buildPod.Namespace, buildPod.Name, status.State.Waiting.Message, status.State.Waiting.Reason)
 					}
 				}
@@ -367,7 +367,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 					return false, fmt.Errorf("kaniko pod %s/%s has unexpectedly exited with code %d: %s", buildPod.Namespace, buildPod.Name, status.State.Terminated.ExitCode, errorLog)
 				} else if status.State.Waiting != nil {
-					if kubectl.CriticalStatus[status.State.Waiting.Reason] {
+					if _, ok := kubectl.CriticalStatus[status.State.Waiting.Reason]; ok {
 						return false, fmt.Errorf("kaniko pod %s/%s cannot start: %s (%s)", buildPod.Namespace, buildPod.Name, status.State.Waiting.Message, status.State.Waiting.Reason)
 					}
 				}

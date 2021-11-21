@@ -175,7 +175,7 @@ func TestUpstreamServer(t *testing.T) {
 	gw := gzip.NewWriter(w)
 	tarWriter := tar.NewWriter(gw)
 
-	writtenFiles := make(map[string]bool)
+	writtenFiles := make(map[string]struct{})
 	err = recursiveTar(fromDir, "", writtenFiles, tarWriter, false)
 	if err != nil {
 		t.Fatal(err)

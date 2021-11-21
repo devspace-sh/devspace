@@ -116,7 +116,7 @@ func DirectoryExcludes(srcPath string, excludePatterns []string, fast bool) (str
 	}
 
 	include := "."
-	seen := make(map[string]bool)
+	seen := make(map[string]struct{})
 
 	walkRoot := filepath.Join(srcPath, include)
 	err = filepath.Walk(walkRoot, func(filePath string, f os.FileInfo, err error) error {
@@ -177,10 +177,10 @@ func DirectoryExcludes(srcPath string, excludePatterns []string, fast bool) (str
 			return filepath.SkipDir
 		}
 
-		if seen[relFilePath] {
+		if _, ok := seen[relFilePath]; ok {
 			return nil
 		}
-		seen[relFilePath] = true
+		seen[relFilePath] = struct{}{}
 		if f.IsDir() {
 			// Path is enough
 			_, _ = io.WriteString(hash, filePath)

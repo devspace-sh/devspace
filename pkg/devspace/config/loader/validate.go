@@ -290,7 +290,7 @@ func validatePullSecrets(config *latest.Config) error {
 
 func validateImages(config *latest.Config) error {
 	// images lists all the image names in order to check for duplicates
-	images := map[string]bool{}
+	images := map[string]struct{}{}
 	for imageConfigName, imageConf := range config.Images {
 		if imageConfigName == "" {
 			return errors.Errorf("images keys cannot be an empty string")
@@ -307,7 +307,7 @@ func validateImages(config *latest.Config) error {
 		if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == "" && len(imageConf.Build.Custom.Commands) == 0 {
 			return errors.Errorf("images.%s.build.custom.command or images.%s.build.custom.commands is required", imageConfigName, imageConfigName)
 		}
-		if images[imageConf.Image] {
+		if _, ok := images[imageConf.Image]; ok {
 			return errors.Errorf("multiple image definitions with the same image name are not allowed")
 		}
 		if imageConf.RebuildStrategy != latest.RebuildStrategyDefault && imageConf.RebuildStrategy != latest.RebuildStrategyAlways && imageConf.RebuildStrategy != latest.RebuildStrategyIgnoreContextChanges {
@@ -326,7 +326,7 @@ func validateImages(config *latest.Config) error {
 				}
 			}
 		}
-		images[imageConf.Image] = true
+		images[imageConf.Image] = struct{}{}
 	}
 
 	return nil

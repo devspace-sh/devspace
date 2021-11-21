@@ -738,7 +738,7 @@ func (u *upstream) applyCreates(files []*FileInformation) (map[string]*FileInfor
 }
 
 func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, error) {
-	alreadyUsed := map[string]bool{}
+	alreadyUsed := map[string]struct{}{}
 	newChanges := make([]*FileInformation, 0, len(files))
 	needCheck := []*FileInformation{}
 
@@ -748,15 +748,15 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 			u.sync.log.Debugf("Large file encountered at %s (%0.2f MB). Please try to avoid syncing large files as this will slow down DevSpace", u.getRelativeUpstreamPath(f.Name), float64(f.Size)/1024.0/1024.0)
 		}
 
-		if alreadyUsed[f.Name] {
+		if _, ok := alreadyUsed[f.Name]; ok {
 			continue
 		} else if f.IsDirectory || u.sync.fileIndex.fileMap[f.Name] == nil || u.sync.fileIndex.fileMap[f.Name].Size != f.Size {
 			newChanges = append(newChanges, f)
-			alreadyUsed[f.Name] = true
+			alreadyUsed[f.Name] = struct{}{}
 			continue
 		}
 
-		alreadyUsed[f.Name] = true
+		alreadyUsed[f.Name] = struct{}{}
 		needCheck = append(needCheck, f)
 	}
 

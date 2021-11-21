@@ -190,12 +190,15 @@ func (r *client) createPullSecretForRegistry(pullSecret *latest.PullSecretConfig
 		}
 
 		// create pull secrets in other namespaces if there are any
-		namespaces := map[string]bool{
-			defaultNamespace: true,
+		namespaces := map[string]struct{}{
+			defaultNamespace: {},
 		}
 		if r.config != nil {
 			for _, deployConfig := range r.config.Config().Deployments {
-				if deployConfig.Namespace == "" || namespaces[deployConfig.Namespace] {
+				if deployConfig.Namespace == "" {
+					continue
+				}
+				if _, ok := namespaces[deployConfig.Namespace]; ok {
 					continue
 				}
 
@@ -211,7 +214,7 @@ func (r *client) createPullSecretForRegistry(pullSecret *latest.PullSecretConfig
 					return err
 				}
 
-				namespaces[deployConfig.Namespace] = true
+				namespaces[deployConfig.Namespace] = struct{}{}
 			}
 		}
 	}

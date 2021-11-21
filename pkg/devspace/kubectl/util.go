@@ -36,21 +36,21 @@ var WaitStatus = []string{
 }
 
 // CriticalStatus container status
-var CriticalStatus = map[string]bool{
-	"Error":                      true,
-	"Unknown":                    true,
-	"ImagePullBackOff":           true,
-	"CrashLoopBackOff":           true,
-	"RunContainerError":          true,
-	"ErrImagePull":               true,
-	"CreateContainerConfigError": true,
-	"InvalidImageName":           true,
+var CriticalStatus = map[string]struct{}{
+	"Error":                      {},
+	"Unknown":                    {},
+	"ImagePullBackOff":           {},
+	"CrashLoopBackOff":           {},
+	"RunContainerError":          {},
+	"ErrImagePull":               {},
+	"CreateContainerConfigError": {},
+	"InvalidImageName":           {},
 }
 
 // OkayStatus container status
-var OkayStatus = map[string]bool{
-	"Completed": true,
-	"Running":   true,
+var OkayStatus = map[string]struct{}{
+	"Completed": {},
+	"Running":   {},
 }
 
 var privateIPBlocks []*net.IPNet
@@ -81,7 +81,7 @@ func IsPrivateIP(ip net.IP) bool {
 	return false
 }
 
-// EnsureDefaultNamespace makes sure the default namespace exists or will be created
+// EnsureDeployNamespaces makes sure the default namespace exists or will be created
 func (client *client) EnsureDeployNamespaces(config *latest.Config, log log.Logger) error {
 	namespaces := []string{client.Namespace()}
 	for _, imageConfig := range config.Images {
