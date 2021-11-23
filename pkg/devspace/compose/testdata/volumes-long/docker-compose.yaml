@@ -1,0 +1,63 @@
+services:
+  db:
+    image: loft.sh/mysql-server:8.0.19
+    build: db
+    volumes:
+      # Just specify a path and let the Engine create a volume
+      - type: volume
+        target: /var/lib/mydata
+      
+      # Specify an absolute path mapping
+      # - /opt/data:/var/lib/mysql
+      - type: bind
+        source: /opt/data
+        target: /var/lib/data
+
+      # Path on the host, relative to the Compose file
+      # - ./cache:/tmp/cache
+      - type: bind
+        source: ./cache
+        target: /tmp/cache
+
+      # Home dir bind
+      # - ~/configs:/etc/configs/:ro
+      - type: bind
+        source: ~/configs
+        target: /etc/configs/
+
+      # Named volume
+      - type: volume
+        source: datavolume
+        target: /var/lib/mysql
+      
+      # Readonly named volume
+      - type: volume
+        source: datavolume
+        target: /var/lib/readonly
+        read_only: true
+      
+      # tmpfs (emptyDir)
+      - type: tmpfs
+        target: /var/lib/tmpfs
+      
+      # tmpfs (emptyDir) with size
+      - type: tmpfs
+        target: /var/lib/tmpfs-1000
+        tmpfs:
+          size: 1000
+      
+      # Unsupported
+      - type: npipe
+        source: datavolume
+        target: /var/lib/mysql
+
+  backend_1.2:
+    image: mysql/mysql-server:8.0.19
+    volumes:
+      # Just specify a path and let the Engine create a volume
+      - type: volume
+        target: /var/lib/mydata
+
+
+volumes:
+  datavolume:

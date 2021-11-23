@@ -1,0 +1,50 @@
+version: v1beta11
+deployments:
+- name: cmd
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: cmd-container
+        image: mysql/mysql-server:8.0.19
+        livenessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - 127.0.0.1
+            - --silent
+          failureThreshold: 5
+          initialDelaySeconds: 3
+          periodSeconds: 3
+- name: cmd-shell
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: cmd-shell-container
+        image: mysql/mysql-server:8.0.19
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - mysqladmin ping -h 127.0.0.1 --silent
+          failureThreshold: 5
+          initialDelaySeconds: 3
+          periodSeconds: 3
+- name: none
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: none-container
+        image: mysql/mysql-server:8.0.19
+# - name: disable
+#   helm:
+#     componentChart: true
+#     values:
+#       containers:
+#       - image: mysql/mysql-server:8.0.19
+        

@@ -1,0 +1,6 @@
+services:
+  db:
+    image: mysql/mysql-server:8.0.19
+    extra_hosts:
+    - "some1host:162.242.195.82"
+    - "some2host:162.242.195.82"

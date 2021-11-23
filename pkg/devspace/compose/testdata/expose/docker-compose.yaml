@@ -1,0 +1,6 @@
+services:
+  db:
+    image: mysql/mysql-server:8.0.19
+    expose:
+    - 3306
+    - 33060

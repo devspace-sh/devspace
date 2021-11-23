@@ -1,0 +1,118 @@
+version: v1beta11
+images:
+  db:
+    context: db
+    dockerfile: db/Dockerfile
+    image: loft.sh/mysql-server:8.0.19
+
+deployments:
+- name: db
+  helm:
+    componentChart: true
+    values:
+      initContainers:
+      - name: upload-volumes
+        image: alpine
+        command:
+        - sh
+        args:
+        - -c
+        - while [ ! -f /tmp/done ]; do sleep 2; done
+        volumeMounts:
+        - containerPath: /var/lib/data
+          volume:
+            name: volume-1
+            readOnly: false
+        - containerPath: /tmp/cache
+          volume:
+            name: volume-2
+            readOnly: false
+        - containerPath: /etc/configs/
+          volume:
+            name: volume-3
+            readOnly: false
+      containers:
+      - name: db-container
+        image: loft.sh/mysql-server:8.0.19
+        volumeMounts:
+        - containerPath: /var/lib/mydata
+          volume:
+            name: db-1
+            readOnly: false
+        - containerPath: /var/lib/mysql
+          volume:
+            name: datavolume
+            readOnly: false
+        - containerPath: /var/lib/data
+          volume:
+            name: volume-1
+            readOnly: false
+        - containerPath: /tmp/cache
+          volume:
+            name: volume-2
+            readOnly: false
+        - containerPath: /etc/configs/
+          volume:
+            name: volume-3
+            readOnly: true
+      volumes:
+      - name: db-1
+        size: 5Gi
+      - name: datavolume
+        size: 5Gi
+      - name: volume-1
+        emptyDir: {}
+      - name: volume-2
+        emptyDir: {}
+      - name: volume-3
+        emptyDir: {}
+
+dev:
+  sync:
+  - containerName: db-container
+    labelSelector:
+      app.kubernetes.io/component: db
+    localSubPath: /opt/data
+    containerPath: /var/lib/data
+  - containerName: db-container
+    labelSelector:
+      app.kubernetes.io/component: db
+    localSubPath: ./cache
+    containerPath: /tmp/cache
+  - containerName: db-container
+    labelSelector:
+      app.kubernetes.io/component: db
+    localSubPath: $!(echo "$HOME/configs")
+    containerPath: /etc/configs/
+
+hooks:
+- events: ["after:deploy:db"]
+  upload:
+    localPath: /opt/data
+    containerPath: /var/lib/data
+  container:
+    containerName: upload-volumes
+    labelSelector:
+      app.kubernetes.io/component: db
+- events: ["after:deploy:db"]
+  upload:
+    localPath: ./cache
+    containerPath: /tmp/cache
+  container:
+    containerName: upload-volumes
+    labelSelector:
+      app.kubernetes.io/component: db
+- events: ["after:deploy:db"]
+  upload:
+    localPath: $!(echo "$HOME/configs")
+    containerPath: /etc/configs/
+  container:
+    containerName: upload-volumes
+    labelSelector:
+      app.kubernetes.io/component: db
+- events: ["after:deploy:db"]
+  command: touch /tmp/done
+  container:
+    containerName: upload-volumes
+    labelSelector:
+      app.kubernetes.io/component: db

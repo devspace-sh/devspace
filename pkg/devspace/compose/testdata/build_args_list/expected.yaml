@@ -1,0 +1,21 @@
+version: v1beta11
+images:
+  foo:
+    image: foo
+    context: foo
+    dockerfile: foo/Dockerfile
+    build:
+      docker:
+        options:
+          buildArgs:
+            buildno: 1
+            gitcommithash: cdc3b19
+
+deployments:
+- name: foo
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: foo-container
+        image: foo

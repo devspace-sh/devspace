@@ -1,0 +1,15 @@
+version: v1beta11
+images:
+  foo:
+    image: foo
+    context: .
+    dockerfile: Dockerfile.prod
+
+deployments:
+- name: foo
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: foo-container
+        image: foo

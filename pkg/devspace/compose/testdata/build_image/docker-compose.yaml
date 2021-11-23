@@ -1,0 +1,4 @@
+services:
+  foo:
+    build: foo
+    image: loft.sh/foo

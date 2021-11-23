@@ -1,0 +1,16 @@
+version: v1beta11
+deployments:
+- name: db
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: my-db-1
+        image: mysql/mysql-server:8.0.19
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: my-backend-1
+        image: mysql/mysql-server:8.0.19

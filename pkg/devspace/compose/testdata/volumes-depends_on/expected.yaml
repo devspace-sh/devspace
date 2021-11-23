@@ -1,0 +1,110 @@
+version: v1beta11
+
+deployments:
+- name: db
+  helm:
+    componentChart: true
+    values:
+      initContainers:
+      - name: upload-volumes
+        image: alpine
+        command:
+        - sh
+        args:
+        - -c
+        - while [ ! -f /tmp/done ]; do sleep 2; done
+        volumeMounts:
+        - containerPath: /tmp/cache
+          volume:
+            name: volume-1
+            readOnly: false
+      containers:
+      - name: db-container
+        image: loft.sh/mysql-server:8.0.19
+        volumeMounts:
+        - containerPath: /tmp/cache
+          volume:
+            name: volume-1
+            readOnly: false
+      volumes:
+      - name: volume-1
+        emptyDir: {}
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      initContainers:
+      - name: upload-volumes
+        image: alpine
+        command:
+        - sh
+        args:
+        - -c
+        - while [ ! -f /tmp/done ]; do sleep 2; done
+        volumeMounts:
+        - containerPath: /tmp/cache
+          volume:
+            name: volume-1
+            readOnly: false
+      containers:
+      - name: backend-container
+        image: rails:latest
+        volumeMounts:
+        - containerPath: /tmp/cache
+          volume:
+            name: volume-1
+            readOnly: false
+      volumes:
+      - name: volume-1
+        emptyDir: {}
+
+dev:
+  sync:
+  - containerName: db-container
+    labelSelector:
+      app.kubernetes.io/component: db
+    localSubPath: ./cache
+    containerPath: /tmp/cache
+  - containerName: backend-container
+    labelSelector:
+      app.kubernetes.io/component: backend
+    localSubPath: ./cache
+    containerPath: /tmp/cache
+
+hooks:
+- events: ["after:deploy:db"]
+  upload:
+    localPath: ./cache
+    containerPath: /tmp/cache
+  container:
+    containerName: upload-volumes
+    labelSelector:
+      app.kubernetes.io/component: db
+- events: ["after:deploy:db"]
+  command: touch /tmp/done
+  container:
+    containerName: upload-volumes
+    labelSelector:
+      app.kubernetes.io/component: db
+- events: ["after:deploy:db"]
+  container:
+    labelSelector:
+      app.kubernetes.io/component: db
+    containerName: db-container
+  wait:
+    running: true
+    terminatedWithCode: 0
+- events: ["after:deploy:backend"]
+  upload:
+    localPath: ./cache
+    containerPath: /tmp/cache
+  container:
+    containerName: upload-volumes
+    labelSelector:
+      app.kubernetes.io/component: backend
+- events: ["after:deploy:backend"]
+  command: touch /tmp/done
+  container:
+    containerName: upload-volumes
+    labelSelector:
+      app.kubernetes.io/component: backend

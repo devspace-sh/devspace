@@ -1,0 +1,5 @@
+services:
+  foo:
+    build:
+      dockerfile: Dockerfile.prod
+    entrypoint: ["nginx", "-g", "daemon off;"]

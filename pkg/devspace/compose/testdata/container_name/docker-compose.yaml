@@ -1,0 +1,7 @@
+services:
+  db:
+    image: mysql/mysql-server:8.0.19
+    container_name: my-db.1
+  backend:
+    image: mysql/mysql-server:8.0.19
+    container_name: my_backend.1

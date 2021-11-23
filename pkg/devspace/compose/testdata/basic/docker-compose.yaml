@@ -1,0 +1,5 @@
+services:
+  db:
+    image: mysql/mysql-server:8.0.19
+  backend_1.2:
+    image: mysql/mysql-server:8.0.19

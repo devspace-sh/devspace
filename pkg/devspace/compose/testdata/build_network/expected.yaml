@@ -1,0 +1,19 @@
+version: v1beta11
+images:
+  foo:
+    image: foo
+    context: .
+    dockerfile: Dockerfile
+    build:
+      docker:
+        options:
+          network: host
+
+deployments:
+- name: foo
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - name: foo-container
+        image: foo

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -10,6 +9,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/compose"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 
@@ -40,13 +42,15 @@ const devspaceFolderGitignore = "\n\n# Ignore DevSpace cache and log folder\n.de
 
 const (
 	// Dockerfile not found options
-	UseExistingDockerfileOption = "Use the Dockerfile in ./Dockerfile"
-	CreateDockerfileOption      = "Create a Dockerfile for this project"
-	EnterDockerfileOption       = "Enter path to a different Dockerfile"
-	ComponentChartOption        = "helm: Use Component Helm Chart [QUICKSTART] (https://devspace.sh/component-chart/docs)"
-	HelmChartOption             = "helm: Use my own Helm chart (e.g. local via ./chart/ or any remote chart)"
-	ManifestsOption             = "kubectl: Use existing Kubernetes manifests (e.g. ./kube/deployment.yaml)"
-	KustomizeOption             = "kustomize: Use an existing Kustomization (e.g. ./kube/kustomization/)"
+	UseExistingDockerfileOption       = "Use the Dockerfile in ./Dockerfile"
+	CreateDockerfileOption            = "Create a Dockerfile for this project"
+	EnterDockerfileOption             = "Enter path to a different Dockerfile"
+	ComponentChartOption              = "helm: Use Component Helm Chart [QUICKSTART] (https://devspace.sh/component-chart/docs)"
+	HelmChartOption                   = "helm: Use my own Helm chart (e.g. local via ./chart/ or any remote chart)"
+	ManifestsOption                   = "kubectl: Use existing Kubernetes manifests (e.g. ./kube/deployment.yaml)"
+	KustomizeOption                   = "kustomize: Use an existing Kustomization (e.g. ./kube/kustomization/)"
+	NewDevSpaceConfigOption           = "Create a new DevSpace configuration"
+	DockerComposeDevSpaceConfigOption = "Create a new DevSpace configuration from the existing Docker Compose"
 
 	// The default name for the production profile
 	productionProfileName = "production"
@@ -124,183 +128,227 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		return err
 	}
 
-	// Create config
-	config := latest.New().(*latest.Config)
-	generated, err := configLoader.LoadGenerated(nil)
-	if err != nil {
-		return err
-	}
-
-	// Create ConfigureManager
-	configureManager := f.NewConfigureManager(config, generated, cmd.log)
-
 	// Print DevSpace logo
 	log.PrintLogo()
 
-	// Add deployment and image config
-	deploymentName, err := getDeploymentName()
-	if err != nil {
-		return err
-	}
+	// Create config
+	generated, err := configLoader.LoadGenerated(nil)
 
-	imageName := "app"
-	imageQuestion := ""
-	selectedDeploymentOption := ""
-
-	for {
-		selectedDeploymentOption, err = cmd.log.Question(&survey.QuestionOptions{
-			Question:     "How do you want to deploy this project?",
-			DefaultValue: ComponentChartOption,
+	generateFromDockerCompose := false
+	dockerComposePath := compose.GetDockerComposePath()
+	if dockerComposePath != "" {
+		selectedDockerComposeOption, err := cmd.log.Question(&survey.QuestionOptions{
+			Question:     "Docker Compose configuration detected. Do you want to create a DevSpace configuration based on Docker Compose?",
+			DefaultValue: DockerComposeDevSpaceConfigOption,
 			Options: []string{
-				ComponentChartOption,
-				HelmChartOption,
-				ManifestsOption,
-				KustomizeOption,
+				DockerComposeDevSpaceConfigOption,
+				NewDevSpaceConfigOption,
 			},
 		})
 		if err != nil {
 			return err
 		}
 
-		if selectedDeploymentOption == HelmChartOption {
-			imageQuestion = "What is the main container image of this project which is deployed by this Helm chart? (e.g. ecr.io/project/image)"
-			err = configureManager.AddHelmDeployment(deploymentName)
-		} else if selectedDeploymentOption == ManifestsOption || selectedDeploymentOption == KustomizeOption {
-			if selectedDeploymentOption == ManifestsOption {
-				imageQuestion = "What is the main container image of this project which is deployed by these manifests? (e.g. ecr.io/project/image)"
-			} else {
-				imageQuestion = "What is the main container image of this project which is deployed by this Kustomization? (e.g. ecr.io/project/image)"
-			}
-			err = configureManager.AddKubectlDeployment(deploymentName, selectedDeploymentOption == KustomizeOption)
-		}
+		generateFromDockerCompose = selectedDockerComposeOption == DockerComposeDevSpaceConfigOption
+	}
 
+	if generateFromDockerCompose {
+		composeLoader := compose.NewDockerComposeLoader(dockerComposePath)
 		if err != nil {
-			if err.Error() != "" {
-				cmd.log.WriteString("\n")
-				cmd.log.Errorf("Error: %s", err.Error())
-			}
-		} else {
-			break
+			return err
 		}
-	}
 
-	// Create new dockerfile generator
-	dockerfileGenerator, err := generator.NewDockerfileGenerator("", "", cmd.log)
-	if err != nil {
-		return err
-	}
+		// Load config
+		config, err := composeLoader.Load(cmd.log)
+		if err != nil {
+			return err
+		}
 
-	imageVarName := "IMAGE"
-	imageVar := "${" + imageVarName + "}"
+		// Save config
+		err = composeLoader.Save(config)
+		if err != nil {
+			return err
+		}
+	} else {
+		config := latest.New().(*latest.Config)
+		if err != nil {
+			return err
+		}
 
-	for {
-		image := ""
-		if imageQuestion != "" {
-			image, err = cmd.log.Question(&survey.QuestionOptions{
-				Question:          imageQuestion,
-				ValidationMessage: "Please enter a valid container image from a Kubernetes pod (e.g. myregistry.tld/project/image)",
-				ValidationFunc: func(name string) error {
-					_, _, err := imageselector.GetStrippedDockerImageName(strings.ToLower(name))
-					return err
+		// Create ConfigureManager
+		configureManager := f.NewConfigureManager(config, generated, cmd.log)
+
+		// Add deployment and image config
+		deploymentName, err := getDeploymentName()
+		if err != nil {
+			return err
+		}
+
+		imageName := "app"
+		imageQuestion := ""
+		selectedDeploymentOption := ""
+
+		for {
+			selectedDeploymentOption, err = cmd.log.Question(&survey.QuestionOptions{
+				Question:     "How do you want to deploy this project?",
+				DefaultValue: ComponentChartOption,
+				Options: []string{
+					ComponentChartOption,
+					HelmChartOption,
+					ManifestsOption,
+					KustomizeOption,
 				},
 			})
 			if err != nil {
 				return err
 			}
-		}
 
-		err = configureManager.AddImage(imageName, image, cmd.Dockerfile, dockerfileGenerator)
-		if err != nil {
-			if err.Error() != "" {
-				cmd.log.Errorf("Error: %s", err.Error())
+			if selectedDeploymentOption == HelmChartOption {
+				imageQuestion = "What is the main container image of this project which is deployed by this Helm chart? (e.g. ecr.io/project/image)"
+				err = configureManager.AddHelmDeployment(deploymentName)
+			} else if selectedDeploymentOption == ManifestsOption || selectedDeploymentOption == KustomizeOption {
+				if selectedDeploymentOption == ManifestsOption {
+					imageQuestion = "What is the main container image of this project which is deployed by these manifests? (e.g. ecr.io/project/image)"
+				} else {
+					imageQuestion = "What is the main container image of this project which is deployed by this Kustomization? (e.g. ecr.io/project/image)"
+				}
+				err = configureManager.AddKubectlDeployment(deploymentName, selectedDeploymentOption == KustomizeOption)
 			}
-		} else {
-			break
+
+			if err != nil {
+				if err.Error() != "" {
+					cmd.log.WriteString("\n")
+					cmd.log.Errorf("Error: %s", err.Error())
+				}
+			} else {
+				break
+			}
 		}
-	}
 
-	if config.Images != nil && config.Images[imageName] != nil {
-		// Move full image name to variables
-		config.Vars = append(config.Vars, &latest.Variable{
-			Name:  imageVarName,
-			Value: config.Images[imageName].Image,
-		})
+		// Create new dockerfile generator
+		dockerfileGenerator, err := generator.NewDockerfileGenerator("", "", cmd.log)
+		if err != nil {
+			return err
+		}
 
-		// Use variable in images section
-		config.Images[imageName].Image = imageVar
-	}
+		imageVarName := "IMAGE"
+		imageVar := "${" + imageVarName + "}"
 
-	// Determine app port
-	portString := ""
+		for {
+			image := ""
+			if imageQuestion != "" {
+				image, err = cmd.log.Question(&survey.QuestionOptions{
+					Question:          imageQuestion,
+					ValidationMessage: "Please enter a valid container image from a Kubernetes pod (e.g. myregistry.tld/project/image)",
+					ValidationFunc: func(name string) error {
+						_, _, err := imageselector.GetStrippedDockerImageName(strings.ToLower(name))
+						return err
+					},
+				})
+				if err != nil {
+					return err
+				}
+			}
 
-	// Try to get ports from dockerfile
-	ports, err := dockerfile.GetPorts(config.Images[imageName].Dockerfile)
-	if err == nil {
-		if len(ports) == 1 {
-			portString = strconv.Itoa(ports[0])
-		} else if len(ports) > 1 {
+			err = configureManager.AddImage(imageName, image, cmd.Dockerfile, dockerfileGenerator)
+			if err != nil {
+				if err.Error() != "" {
+					cmd.log.Errorf("Error: %s", err.Error())
+				}
+			} else {
+				break
+			}
+		}
+
+		if config.Images != nil && config.Images[imageName] != nil {
+			// Move full image name to variables
+			config.Vars = append(config.Vars, &latest.Variable{
+				Name:  imageVarName,
+				Value: config.Images[imageName].Image,
+			})
+
+			// Use variable in images section
+			config.Images[imageName].Image = imageVar
+		}
+
+		// Determine app port
+		portString := ""
+
+		// Try to get ports from dockerfile
+		ports, err := dockerfile.GetPorts(config.Images[imageName].Dockerfile)
+		if err == nil {
+			if len(ports) == 1 {
+				portString = strconv.Itoa(ports[0])
+			} else if len(ports) > 1 {
+				portString, err = cmd.log.Question(&survey.QuestionOptions{
+					Question:     "Which port is your application listening on?",
+					DefaultValue: strconv.Itoa(ports[0]),
+				})
+				if err != nil {
+					return err
+				}
+
+				if portString == "" {
+					portString = strconv.Itoa(ports[0])
+				}
+			}
+		}
+
+		if portString == "" {
 			portString, err = cmd.log.Question(&survey.QuestionOptions{
-				Question:     "Which port is your application listening on?",
-				DefaultValue: strconv.Itoa(ports[0]),
+				Question:               "Which port is your application listening on? (Enter to skip)",
+				ValidationRegexPattern: "[0-9]*",
 			})
 			if err != nil {
 				return err
 			}
+		}
 
-			if portString == "" {
-				portString = strconv.Itoa(ports[0])
+		port := 0
+		if portString != "" {
+			port, err = strconv.Atoi(portString)
+			if err != nil {
+				return errors.Wrap(err, "error parsing port")
 			}
 		}
-	}
 
-	if portString == "" {
-		portString, err = cmd.log.Question(&survey.QuestionOptions{
-			Question:               "Which port is your application listening on? (Enter to skip)",
-			ValidationRegexPattern: "[0-9]*",
-		})
+		// Add component deployment if selected
+		if selectedDeploymentOption == ComponentChartOption {
+			err = configureManager.AddComponentDeployment(deploymentName, imageVar, port)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Add the development configuration
+		err = cmd.addDevConfig(config, imageName, imageVar, port, dockerfileGenerator)
+		if err != nil {
+			return err
+		}
+
+		// Add the profile configuration
+		err = cmd.addProfileConfig(config, imageName)
+		if err != nil {
+			return err
+		}
+
+		// Save config
+		err = configLoader.Save(config)
 		if err != nil {
 			return err
 		}
 	}
 
-	port := 0
-	if portString != "" {
-		port, err = strconv.Atoi(portString)
-		if err != nil {
-			return errors.Wrap(err, "error parsing port")
-		}
-	}
-
-	// Add component deployment if selected
-	if selectedDeploymentOption == ComponentChartOption {
-		err = configureManager.AddComponentDeployment(deploymentName, imageVar, port)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Add the development configuration
-	err = cmd.addDevConfig(config, imageName, imageVar, port, dockerfileGenerator)
+	// Save generated
+	err = configLoader.SaveGenerated(generated)
 	if err != nil {
-		return err
-	}
-
-	// Add the profile configuration
-	err = cmd.addProfileConfig(config, imageName)
-	if err != nil {
-		return err
+		return errors.Errorf("Error saving generated file: %v", err)
 	}
 
 	// Add .devspace/ to .gitignore
 	err = appendToIgnoreFile(gitIgnoreFile, devspaceFolderGitignore)
 	if err != nil {
 		cmd.log.Warn(err)
-	}
-
-	// Save config
-	err = configLoader.Save(config)
-	if err != nil {
-		return err
 	}
 
 	configPath := loader.ConfigPath("")
@@ -310,32 +358,32 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	}
 
 	configAnnotations := map[string]string{
-		"(?m)^(vars:)":                    "\n# `vars` specifies variables which may be used as $${VAR_NAME} in devspace.yaml\n$1",
-		"(?m)^(images:)":                  "\n# `images` specifies all images that may need to be built for this project\n$1",
-		"(?m)^(  app:)":                   "$1 # This image is called `app` (you can have more than one image)",
-		"(?m)^(deployments:)":             "\n# `deployments` tells DevSpace how to deploy this project\n$1",
-		"(?m)^(  helm:)":                  "  # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations\n$1",
-		"(?m)^(    )(componentChart:)":    "$1# We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs\n$1$2",
-		"(?m)^(    )(chart:)":             "$1# We are deploying this project with the Helm chart you provided\n$1$2",
-		"(?m)^(    )(values:)":            "$1# Under `values` we can define the values for this Helm chart used during `helm install/upgrade`\n$1# You may also use `valuesFiles` to load values from files, e.g. valuesFiles: [\"values.yaml\"]\n$1$2",
-		"(?m)^(    )  someChartValue:.*":  "$1# image: $${IMAGE}\n$1# ingress:\n$1#   enabled: true",
-		"(image: \\$\\{IMAGE\\})":         "$1 # Use the value of our `$${IMAGE}` variable here (see vars above)",
-		"(?m)^(  kubectl:)":               "  # This deployment uses `kubectl` but you can also define `helm` deployments\n$1",
-		"(?m)^(dev:)":                     "\n# `dev` only applies when you run `devspace dev`\n$1",
-		"(?m)^(  ports:)":                 "  # `dev.ports` specifies all ports that should be forwarded while `devspace dev` is running\n  # Port-forwarding lets you access your application via localhost on your local machine\n$1",
-		"(?m)^(  open:)":                  "\n  # `dev.open` tells DevSpace to open certain URLs as soon as they return HTTP status 200\n  # Since we configured port-forwarding, we can use a localhost address here to access our application\n$1",
-		"(?m)^(  - url:.+)":               "$1\n",
-		"(?m)^(  sync:)":                  "  # `dev.sync` configures a file sync between our Pods in k8s and your local project files\n$1",
-		"(?m)^(  terminal:)":              "\n  # `dev.terminal` tells DevSpace to open a terminal as a last step during `devspace dev`\n$1",
-		"(?m)^(    command:)":             "    # With this optional `command` we can tell DevSpace to run a script when opening the terminal\n    # This is often useful to display help info for new users or perform initial tasks (e.g. installing dependencies)\n    # DevSpace has generated an example ./devspace_start.sh file in your local project - Feel free to customize it!\n$1",
-		"(?m)^(  replacePods:)":           "\n  # Since our Helm charts and manifests deployments are often optimized for production,\n  # DevSpace let's you swap out Pods dynamically to get a better dev environment\n$1",
-		"(?m)^(    replaceImage:)":        "    # Since the `$${IMAGE}` used to start our main application pod may be distroless or not have any dev tooling, let's replace it with a dev-optimized image\n    # DevSpace provides a sample image here but you can use any image for your specific needs\n$1",
-		"(?m)^(    patches:)":             "    # Besides replacing the container image, let's also apply some patches to the `spec` of our Pod\n    # We are overwriting `command` + `args` for the first container in our selected Pod, so it starts with `sleep 9999999`\n    # Using `sleep 9999999` as PID 1 (instead of the regular ENTRYPOINT), allows you to start the application manually\n$1",
-		"(?m)^(  (-| ) imageSelector:.+)": "$1 # Select the Pod that runs our `$${IMAGE}`",
-		"(?m)^(profiles:)":                "\n# `profiles` lets you modify the config above for different environments (e.g. dev vs production)\n$1",
-		"(?m)^(- name: production)":       "  # This profile is called `production` and you can use it for example using: devspace deploy -p production\n  # We generally recommend using the base config without any profiles as optimized for development (e.g. image build+push is disabled)\n$1",
-		"(?m)^(  patches:)":               "# This profile applies patches to the config above.\n  # In this case, it enables image building for example by removing the `disabled: true` statement for the image `app`\n$1",
-		"(?m)^(  merge:)":                 "# This profile adds our image to the config so that DevSpace will build, tag and push our image before the deployment\n$1",
+		"(?m)^(vars:)":                               "\n# `vars` specifies variables which may be used as $${VAR_NAME} in devspace.yaml\n$1",
+		"(?m)^(images:)":                             "\n# `images` specifies all images that may need to be built for this project\n$1",
+		"(?m)^(  app:)":                              "$1 # This image is called `app` (you can have more than one image)",
+		"(?m)^(deployments:)":                        "\n# `deployments` tells DevSpace how to deploy this project\n$1",
+		"(?m)^(  helm:)":                             "  # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations\n$1",
+		"(?m)^(    )(componentChart:)":               "$1# We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs\n$1$2",
+		"(?m)^(    )(chart:)":                        "$1# We are deploying this project with the Helm chart you provided\n$1$2",
+		"(?m)^(    )(values:)":                       "$1# Under `values` we can define the values for this Helm chart used during `helm install/upgrade`\n$1# You may also use `valuesFiles` to load values from files, e.g. valuesFiles: [\"values.yaml\"]\n$1$2",
+		"(?m)^(    )  someChartValue:.*":             "$1# image: $${IMAGE}\n$1# ingress:\n$1#   enabled: true",
+		"(image: \\$\\{IMAGE\\})":                    "$1 # Use the value of our `$${IMAGE}` variable here (see vars above)",
+		"(?m)^(  kubectl:)":                          "  # This deployment uses `kubectl` but you can also define `helm` deployments\n$1",
+		"(?m)^(dev:)":                                "\n# `dev` only applies when you run `devspace dev`\n$1",
+		"(?m)^(  ports:)":                            "  # `dev.ports` specifies all ports that should be forwarded while `devspace dev` is running\n  # Port-forwarding lets you access your application via localhost on your local machine\n$1",
+		"(?m)^(  open:)":                             "\n  # `dev.open` tells DevSpace to open certain URLs as soon as they return HTTP status 200\n  # Since we configured port-forwarding, we can use a localhost address here to access our application\n$1",
+		"(?m)^(  - url:.+)":                          "$1\n",
+		"(?m)^(  sync:)":                             "  # `dev.sync` configures a file sync between our Pods in k8s and your local project files\n$1",
+		"(?m)^(  terminal:)":                         "\n  # `dev.terminal` tells DevSpace to open a terminal as a last step during `devspace dev`\n$1",
+		"(?m)^(    command:)":                        "    # With this optional `command` we can tell DevSpace to run a script when opening the terminal\n    # This is often useful to display help info for new users or perform initial tasks (e.g. installing dependencies)\n    # DevSpace has generated an example ./devspace_start.sh file in your local project - Feel free to customize it!\n$1",
+		"(?m)^(  replacePods:)":                      "\n  # Since our Helm charts and manifests deployments are often optimized for production,\n  # DevSpace let's you swap out Pods dynamically to get a better dev environment\n$1",
+		"(?m)^(    replaceImage:)":                   "    # Since the `$${IMAGE}` used to start our main application pod may be distroless or not have any dev tooling, let's replace it with a dev-optimized image\n    # DevSpace provides a sample image here but you can use any image for your specific needs\n$1",
+		"(?m)^(    patches:)":                        "    # Besides replacing the container image, let's also apply some patches to the `spec` of our Pod\n    # We are overwriting `command` + `args` for the first container in our selected Pod, so it starts with `sleep 9999999`\n    # Using `sleep 9999999` as PID 1 (instead of the regular ENTRYPOINT), allows you to start the application manually\n$1",
+		"(?m)^(  (-| ) imageSelector:\\s?([^\\s]+))": "$1 # Select the Pod that runs our `$3`",
+		"(?m)^(profiles:)":                           "\n# `profiles` lets you modify the config above for different environments (e.g. dev vs production)\n$1",
+		"(?m)^(- name: production)":                  "  # This profile is called `production` and you can use it for example using: devspace deploy -p production\n  # We generally recommend using the base config without any profiles as optimized for development (e.g. image build+push is disabled)\n$1",
+		"(?m)^(  patches:)":                          "# This profile applies patches to the config above.\n  # In this case, it enables image building for example by removing the `disabled: true` statement for the image `app`\n$1",
+		"(?m)^(  merge:)":                            "# This profile adds our image to the config so that DevSpace will build, tag and push our image before the deployment\n$1",
 	}
 
 	for expr, replacement := range configAnnotations {
@@ -345,12 +393,6 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	err = ioutil.WriteFile(configPath, annotatedConfig, os.ModePerm)
 	if err != nil {
 		return err
-	}
-
-	// Save generated
-	err = configLoader.SaveGenerated(generated)
-	if err != nil {
-		return errors.Errorf("Error saving generated file: %v", err)
 	}
 
 	cmd.log.WriteString("\n")

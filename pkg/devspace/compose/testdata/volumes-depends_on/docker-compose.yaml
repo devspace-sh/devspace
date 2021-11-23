@@ -1,0 +1,11 @@
+services:
+  db:
+    image: loft.sh/mysql-server:8.0.19
+    volumes:
+      - ./cache:/tmp/cache
+  backend:
+    image: rails:latest
+    depends_on:
+    - db
+    volumes:
+      - ./cache:/tmp/cache
