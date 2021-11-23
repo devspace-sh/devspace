@@ -117,8 +117,10 @@ func (cmd *BuildCmd) Run(f factory.Factory) error {
 }
 
 func (cmd *BuildCmd) runCommand(f factory.Factory, client kubectl.Client, configInterface config.Config, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, log logpkg.Logger) error {
-	cmd.ensureDeployNamespaces(client, configInterface, log)
-
+	err := cmd.ensureDeployNamespaces(client, configInterface, log)
+	if err != nil {
+		return errors.Errorf("unable to create namespace: %v", err)
+	}
 	// Force tag
 	if len(cmd.Tags) > 0 {
 		for _, imageConfig := range configInterface.Config().Images {
@@ -199,9 +201,7 @@ func (cmd *BuildCmd) ensureDeployNamespaces(client kubectl.Client, configInterfa
 
 	if usesKanikoOrBuildKit {
 		err := client.EnsureDeployNamespaces(configInterface.Config(), log)
-		if err != nil {
-			return errors.Errorf("unable to create namespace: %v", err)
-		}
+		return err
 	}
 	return nil
 }
