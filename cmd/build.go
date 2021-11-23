@@ -117,14 +117,10 @@ func (cmd *BuildCmd) Run(f factory.Factory) error {
 }
 
 func (cmd *BuildCmd) runCommand(f factory.Factory, client kubectl.Client, configInterface config.Config, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, log logpkg.Logger) error {
-	// create namespaces if we have a client
-	if client != nil {
-		err := client.EnsureDeployNamespaces(configInterface.Config(), log)
-		if err != nil {
-			return errors.Errorf("unable to create namespace: %v", err)
-		}
+	err := cmd.ensureDeployNamespaces(client, configInterface, log)
+	if err != nil {
+		return errors.Errorf("unable to create namespace: %v", err)
 	}
-
 	// Force tag
 	if len(cmd.Tags) > 0 {
 		for _, imageConfig := range configInterface.Config().Images {
@@ -189,5 +185,23 @@ func (cmd *BuildCmd) runCommand(f factory.Factory, client kubectl.Client, config
 		log.Donef("Successfully built images for dependencies: %s", strings.Join(cmd.Dependency, " "))
 	}
 
+	return nil
+}
+
+func (cmd *BuildCmd) ensureDeployNamespaces(client kubectl.Client, configInterface config.Config, log logpkg.Logger) error {
+	c := configInterface.Config()
+	if c.Images == nil || client == nil {
+		return nil
+	}
+	usesKanikoOrBuildKit := false
+
+	for _, image := range c.Images {
+		usesKanikoOrBuildKit = image != nil && image.Build != nil && (image.Build.Kaniko != nil || image.Build.BuildKit != nil)
+	}
+
+	if usesKanikoOrBuildKit {
+		err := client.EnsureDeployNamespaces(configInterface.Config(), log)
+		return err
+	}
 	return nil
 }
