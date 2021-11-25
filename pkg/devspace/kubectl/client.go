@@ -100,8 +100,6 @@ type Client interface {
 	IsInCluster() bool
 }
 
-var _, tty = terminal.SetupTTY(os.Stdin, os.Stdout)
-
 type client struct {
 	Client       kubernetes.Interface
 	clientConfig clientcmd.ClientConfig
@@ -112,6 +110,9 @@ type client struct {
 	namespace      string
 	isInCluster    bool
 }
+
+var _, tty = terminal.SetupTTY(os.Stdin, os.Stdout)
+var isTerminalIn = tty.IsTerminalIn()
 
 // NewDefaultClient creates the new default kube client from the active context @Factory
 func NewDefaultClient() (Client, error) {
@@ -228,10 +229,10 @@ func (client *client) CheckKubeContext(generatedConfig *generated.Config, noWarn
 				log.WriteString("\n")
 				log.Warnf(ansi.Color("Are you using the correct kube context?", "white+b"))
 				log.Warnf("Current kube context: '%s'", ansi.Color(currentConfigContext.Context, "white+b"))
-				log.Warnf("Last    kube context: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Context, "white+b"))
+				log.Warnf("Last    kube context: '%s'", ansi.Color(lastConfigContext.Context, "white+b"))
 
 				// if terminal is not interactive then return the same client
-				if !tty.IsTerminalIn() {
+				if !isTerminalIn {
 					return client, nil
 				}
 
@@ -248,20 +249,18 @@ func (client *client) CheckKubeContext(generatedConfig *generated.Config, noWarn
 				}
 				if kc != currentConfigContext.Context {
 					currentConfigContext.Context = kc
+					currentConfigContext.Namespace = lastConfigContext.Namespace
 					resetClient = true
 				}
-			}
-
-			if lastConfigContext.Namespace != "" &&
-				lastConfigContext.Namespace != currentConfigContext.Namespace &&
-				lastConfigContext.Context == currentConfigContext.Context {
+			} else if lastConfigContext.Namespace != "" &&
+				lastConfigContext.Namespace != currentConfigContext.Namespace {
 				log.WriteString("\n")
 				log.Warnf(ansi.Color("Are you using the correct namespace?", "white+b"))
 				log.Warnf("Current namespace: '%s'", ansi.Color(currentConfigContext.Namespace, "white+b"))
-				log.Warnf("Last    namespace: '%s'", ansi.Color(generatedConfig.GetActive().LastContext.Namespace, "white+b"))
+				log.Warnf("Last    namespace: '%s'", ansi.Color(lastConfigContext.Namespace, "white+b"))
 
 				// if terminal is not interactive then return the same client
-				if !tty.IsTerminalIn() {
+				if !isTerminalIn {
 					return client, nil
 				}
 
@@ -270,7 +269,7 @@ func (client *client) CheckKubeContext(generatedConfig *generated.Config, noWarn
 					DefaultValue: currentConfigContext.Namespace,
 					Options: []string{
 						currentConfigContext.Namespace,
-						generatedConfig.GetActive().LastContext.Namespace,
+						lastConfigContext.Namespace,
 					},
 				})
 				if err != nil {
@@ -284,7 +283,9 @@ func (client *client) CheckKubeContext(generatedConfig *generated.Config, noWarn
 		}
 
 		// Warn if using default namespace unless previous deployment was also to default namespace
-		if currentConfigContext.Namespace == metav1.NamespaceDefault && (generatedConfig.GetActive().LastContext == nil || generatedConfig.GetActive().LastContext.Namespace != metav1.NamespaceDefault) {
+		if currentConfigContext.Namespace == metav1.NamespaceDefault &&
+			(lastConfigContext == nil ||
+				lastConfigContext.Namespace != metav1.NamespaceDefault) {
 			log.Warn("Deploying into the 'default' namespace is usually not a good idea as this namespace cannot be deleted\n")
 			log.StartWait("Will continue in 5 seconds...")
 			time.Sleep(5 * time.Second)
@@ -297,7 +298,7 @@ func (client *client) CheckKubeContext(generatedConfig *generated.Config, noWarn
 	log.Infof("Using kube context '%s'", ansi.Color(currentConfigContext.Context, "white+b"))
 
 	if resetClient {
-		return NewClientFromContext(currentConfigContext.Context, currentConfigContext.Namespace, false, client.kubeLoader)
+		return NewClientFromContext(currentConfigContext.Context, currentConfigContext.Namespace, true, client.kubeLoader)
 	}
 	return client, nil
 }

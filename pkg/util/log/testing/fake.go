@@ -11,6 +11,7 @@ import (
 // FakeLogger just discards every log statement
 type FakeLogger struct {
 	Survey *fakesurvey.FakeSurvey
+	level  logrus.Level
 }
 
 // NewFakeLogger returns a new fake logger
@@ -89,10 +90,14 @@ func (d *FakeLogger) StartWait(message string) {}
 func (d *FakeLogger) StopWait() {}
 
 // SetLevel implements logger interface
-func (d *FakeLogger) SetLevel(level logrus.Level) {}
+func (d *FakeLogger) SetLevel(level logrus.Level) {
+	d.level = level
+}
 
 // GetLevel implements logger interface
-func (d *FakeLogger) GetLevel() logrus.Level { return logrus.FatalLevel }
+func (d *FakeLogger) GetLevel() logrus.Level {
+	return d.level
+}
 
 // Write implements logger interface
 func (d *FakeLogger) Write(message []byte) (int, error) {
@@ -105,4 +110,8 @@ func (d *FakeLogger) WriteString(message string) {}
 // Question asks a new question
 func (d *FakeLogger) Question(params *survey.QuestionOptions) (string, error) {
 	return d.Survey.Question(params)
+}
+
+func (d *FakeLogger) SetAnswer(answer string) {
+	d.Survey.SetNextAnswer(answer)
 }
