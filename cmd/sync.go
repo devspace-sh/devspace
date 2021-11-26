@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"os"
+
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -146,12 +147,15 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 	if err != nil {
 		return errors.Wrap(err, "new kube client")
 	}
-	configOptions.KubeClient = client
 
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, logger)
+	// If the current kube context or namespace is different than old,
+	// show warnings and reset kube client if necessary
+	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, logger)
 	if err != nil {
 		return err
 	}
+
+	configOptions.KubeClient = client
 
 	var configInterface config.Config
 	var config *latest.Config

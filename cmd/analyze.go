@@ -86,8 +86,9 @@ func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, cobraCmd *cobra.Command, ar
 		return err
 	}
 
-	// Print warning
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, log)
+	// If the current kube context or namespace is different than old,
+	// show warnings and reset kube client if necessary
+	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, log)
 	if err != nil {
 		return err
 	}

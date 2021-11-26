@@ -79,13 +79,15 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 	if err != nil {
 		return err
 	}
-	configOptions.KubeClient = client
 
-	// Show warning if the old kube context was different
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, logger)
+	// If the current kube context or namespace is different than old,
+	// show warnings and reset kube client if necessary
+	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, logger)
 	if err != nil {
 		return err
 	}
+
+	configOptions.KubeClient = client
 
 	// Get config with adjusted cluster config
 	configInterface, err := configLoader.Load(configOptions, logger)

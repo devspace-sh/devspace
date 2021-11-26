@@ -107,12 +107,15 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 	if err != nil {
 		return errors.Wrap(err, "create kube client")
 	}
-	configOptions.KubeClient = client
 
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, cmd.log)
+	// If the current kube context or namespace is different than old,
+	// show warnings and reset kube client if necessary
+	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, cmd.log)
 	if err != nil {
 		return err
 	}
+
+	configOptions.KubeClient = client
 
 	// Get config with adjusted cluster config
 	configInterface, err := configLoader.Load(configOptions, cmd.log)

@@ -3,10 +3,11 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -153,13 +154,15 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 	if err != nil {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
-	configOptions.KubeClient = client
 
-	// Warn the user if we deployed into a different context before
-	err = client.PrintWarning(generatedConfig, cmd.NoWarn, false, cmd.log)
+	// If the current kube context or namespace is different than old,
+	// show warnings and reset kube client if necessary
+	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, cmd.log)
 	if err != nil {
 		return err
 	}
+
+	configOptions.KubeClient = client
 
 	// Load config
 	if configExists {
