@@ -1085,4 +1085,22 @@ var _ = DevSpaceDescribe("config", func() {
 		gomega.Expect(deployment1.Kubectl).To(gomega.BeNil())
 		gomega.Expect(*deployment1.Helm.ComponentChart).To(gomega.BeTrue())
 	})
+
+	ginkgo.It("should apply patch even value is empty", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-patches")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		config, _, err := framework.LoadConfigWithOptions(f, filepath.Join(tempDir, "empty-patch-value.yaml"), &loader.ConfigOptions{
+			Profiles: []string{"empty-value"},
+		})
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(config.Config().Deployments), 1)
+
+		deployment1 := config.Config().Deployments[0]
+		framework.ExpectEqual(deployment1.Name, "test-sigsegv")
+		gomega.Expect(deployment1.Kubectl).To(gomega.BeNil())
+		gomega.Expect(*deployment1.Helm.ComponentChart).To(gomega.BeTrue())
+	})
 })
