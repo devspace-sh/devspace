@@ -2,6 +2,8 @@ package dependency
 
 import (
 	"testing"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 )
 
 func TestGraph(t *testing.T) {
@@ -23,23 +25,35 @@ func TestGraph(t *testing.T) {
 
 	_, _ = testGraph.insertNodeAt(root.ID, rootChild1.ID, nil)
 	_, _ = testGraph.insertNodeAt(root.ID, rootChild2.ID, nil)
-	_, _ = testGraph.insertNodeAt(root.ID, rootChild3.ID, nil)
+	_, _ = testGraph.insertNodeAt(root.ID, rootChild3.ID, &Dependency{
+		dependencyConfig: &latest.DependencyConfig{
+			Name: "cyclic parent",
+		},
+	})
 
 	_, _ = testGraph.insertNodeAt(rootChild2.ID, rootChild2Child1.ID, nil)
-	_, _ = testGraph.insertNodeAt(rootChild2Child1.ID, rootChild2Child1Child1.ID, nil)
+	_, _ = testGraph.insertNodeAt(rootChild2Child1.ID, rootChild2Child1Child1.ID, &Dependency{
+		dependencyConfig: &latest.DependencyConfig{
+			Name: "cyclic child",
+		},
+	})
 	_, _ = testGraph.insertNodeAt(rootChild3.ID, rootChild2.ID, nil)
 
 	// Cyclic graph error
-	_, err = testGraph.insertNodeAt(rootChild2Child1Child1.ID, rootChild3.ID, nil)
+	_, err = testGraph.insertNodeAt(rootChild2Child1Child1.ID, rootChild3.ID, &Dependency{
+		dependencyConfig: &latest.DependencyConfig{
+			Name: "cyclic child",
+		},
+	})
 	if err == nil {
 		t.Fatal("Cyclic error expected")
 	} else {
 		errMsg := `Cyclic dependency found: 
-rootChild2Child1Child1
-rootChild3
+cyclic child
+cyclic parent
 rootChild2
 rootChild2Child1
-rootChild2Child1Child1`
+cyclic child`
 
 		if err.Error() != errMsg {
 			t.Fatalf("Expected %s, got %s", errMsg, err.Error())
