@@ -535,7 +535,7 @@ func (d *Dependency) Purge(log log.Logger) error {
 	// Purge the deployments
 	err = d.deployController.Purge(nil, log)
 	if err != nil {
-		log.Errorf("Error purging dependency %s: %v", d.id, err)
+		log.Errorf("Error purging dependency %s: %v", d.Name(), err)
 	}
 
 	if d.generatedSaver != nil && d.localConfig != nil && d.localConfig.Generated() != nil {

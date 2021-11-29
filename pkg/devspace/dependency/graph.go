@@ -71,7 +71,7 @@ func (g *graph) insertNodeAt(parentID string, id string, data interface{}) (*nod
 func (g *graph) removeNode(id string) error {
 	if node, ok := g.Nodes[id]; ok {
 		if len(node.childs) > 0 {
-			return errors.Errorf("Cannot remove %s from graph because it has still children", id)
+			return errors.Errorf("Cannot remove %s from graph because it has still children", getNameOrID(node))
 		}
 
 		// Remove child from parents
@@ -111,9 +111,10 @@ type cyclicError struct {
 
 // Error implements error interface
 func (c *cyclicError) Error() string {
-	cycle := []string{c.path[len(c.path)-1].ID}
+	cycle := []string{getNameOrID(c.path[len(c.path)-1])}
+
 	for _, node := range c.path {
-		cycle = append(cycle, node.ID)
+		cycle = append(cycle, getNameOrID(node))
 	}
 
 	return fmt.Sprintf("Cyclic dependency found: \n%s", strings.Join(cycle, "\n"))
@@ -206,4 +207,17 @@ func findFirstPathRecursive(u *node, d *node, isVisited map[string]bool, localPa
 	// Mark the current node
 	delete(isVisited, u.ID)
 	return false
+}
+
+func getNameOrID(n *node) string {
+	dep, ok := n.Data.(*Dependency)
+
+	if ok {
+		depName := dep.Name()
+		if depName != "" {
+			return depName
+		}
+	}
+
+	return n.ID
 }
