@@ -44,8 +44,10 @@ func (op *Operation) Perform(doc *yaml.Node) error {
 
 			parentPath := op.Path.getParentPath()
 			propertName := op.Path.getChildName()
-			propertyValue := op.Value.Content[0]
-			op.Value = createMappingNode(propertName, propertyValue)
+			if op.Value != nil {
+				propertyValue := op.Value.Content[0]
+				op.Value = createMappingNode(propertName, propertyValue)
+			}
 			op.Path = OpPath(parentPath)
 		} else {
 			return fmt.Errorf("%s operation does not apply: doc is missing path: %s", op.Op, op.Path)
@@ -75,7 +77,9 @@ func (op *Operation) add(parent *yaml.Node, match *yaml.Node) {
 	case yaml.ScalarNode:
 		parent.Content = addChildAtIndex(parent, match, op.Value)
 	case yaml.MappingNode:
-		match.Content = append(match.Content, op.Value.Content[0].Content...)
+		if op.Value != nil {
+			match.Content = append(match.Content, op.Value.Content[0].Content...)
+		}
 	case yaml.SequenceNode:
 		match.Content = append(match.Content, op.Value.Content...)
 	case yaml.DocumentNode:
