@@ -343,6 +343,9 @@ replacePods:                              # struct[] | Which pods should be repl
     volumePath: /my-volume/app            # string   | Optional path on the persistent volume to mount
     containerName: ""                     # string   | Optional container name in the replaced pod to persist the path
     readOnly: false                       # bool     | If the path should get mounted read only
+    skipPopulate: false                   # bool     | If true, devspace will not try to pre-populate the path
+    initContainer:                        # struct   | Additional options for the pre-populating init container 
+      resources: {}                       # struct   | Resources of the pre-populating init container
   persistenceOptions:                     # struct   | Additional options for persistPaths
     name: ""                              # string   | Optional name of the pvc to reuse / create
     size: "10Gi"                          # string   | Size of the pvc to create 

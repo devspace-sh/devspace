@@ -78,7 +78,7 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool,
 		if b.skipPushOnLocalKubernetes && b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
 			found, err := b.helper.IsImageAvailableLocally(cache, b.client)
 			if !found && err == nil {
-				log.Debugf("Rebuild image %s because it was not found in local docker daemon", cache.Images[b.helper.ImageConfigName].ImageName)
+				log.Infof("Rebuild image %s because it was not found in local docker daemon", cache.Images[b.helper.ImageConfigName].ImageName)
 				return true, nil
 			}
 		}

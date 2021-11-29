@@ -312,14 +312,14 @@ type KanikoConfig struct {
 	AdditionalMounts []KanikoAdditionalMount `yaml:"additionalMounts,omitempty" json:"additionalMounts,omitempty"`
 
 	// the resources that should be set on the kaniko pod
-	Resources *KanikoPodResources `yaml:"resources,omitempty" json:"resources,omitempty"`
+	Resources *PodResources `yaml:"resources,omitempty" json:"resources,omitempty"`
 
 	// other build options that will be passed to the kaniko pod
 	Options *BuildOptions `yaml:"options,omitempty" json:"options,omitempty"`
 }
 
-// KanikoPodResources describes the resources section of the started kaniko pod
-type KanikoPodResources struct {
+// PodResources describes the resources section of the started kaniko pod
+type PodResources struct {
 	// The requests part of the resources
 	Requests map[string]string `yaml:"requests,omitempty" json:"requests,omitempty"`
 
@@ -724,6 +724,12 @@ type PersistentPath struct {
 	VolumePath    string `yaml:"volumePath,omitempty" json:"volumePath,omitempty"`
 	ReadOnly      bool   `yaml:"readOnly,omitempty" json:"readOnly,omitempty"`
 	SkipPopulate  bool   `yaml:"skipPopulate,omitempty" json:"skipPopulate,omitempty"`
+
+	InitContainer *PersistentPathInitContainer `yaml:"initContainer,omitempty" json:"initContainer,omitempty"`
+}
+
+type PersistentPathInitContainer struct {
+	Resources *PodResources `yaml:"resources,omitempty" json:"resources,omitempty"`
 }
 
 // PortForwardingConfig defines the ports for a port forwarding to a DevSpace
