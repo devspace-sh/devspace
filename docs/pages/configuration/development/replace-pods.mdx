@@ -261,6 +261,17 @@ dev:
 - DevSpace would create a new persistent volume claim for the pod if the pod was not yet replaced
 - DevSpace would replace the pod with a pod which has a volume mount for the path `/app` that references the created persistent volume claim
 
+#### Options
+
+You can configure the following options in a persistent path:
+
+- `path`: the container path that should get persisted
+- `volumePath`: optional path on the persistent volume to mount
+- `containerName`: optional container name in the replaced pod to persist the path
+- `readOnly`: if the path should get mounted read only
+- `skipPopulate`: if true, devspace will not try to pre-populate the path
+- `initContainer.resources`: resources of the pre-populating init container
+
 ### `persistenceOptions`
 
 `persistenceOptions` is an object that defines additional options for `persistPaths`. You can configure the following options:

@@ -2,7 +2,9 @@ package podreplace
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"path"
 	"strings"
@@ -62,8 +64,7 @@ func persistPaths(podName string, replacePod *latest.ReplacePod, copiedPod *core
 			continue
 		}
 
-		// add an init container that pre-populates the persistent volume for that path
-		copiedPod.Spec.InitContainers = append(copiedPod.Spec.InitContainers, corev1.Container{
+		initContainer := corev1.Container{
 			Name:    fmt.Sprintf("path-%d-init", i),
 			Image:   container.Image,
 			Command: []string{"sh"},
@@ -75,7 +76,25 @@ func persistPaths(podName string, replacePod *latest.ReplacePod, copiedPod *core
 					SubPath:   subPath,
 				},
 			},
-		})
+		}
+		if p.InitContainer != nil && p.InitContainer.Resources != nil {
+			// convert resources
+			limits, err := util.ConvertMap(p.InitContainer.Resources.Limits)
+			if err != nil {
+				return errors.Wrap(err, "parse limits")
+			}
+			requests, err := util.ConvertMap(p.InitContainer.Resources.Requests)
+			if err != nil {
+				return errors.Wrap(err, "parse requests")
+			}
+			initContainer.Resources = corev1.ResourceRequirements{
+				Limits:   limits,
+				Requests: requests,
+			}
+		}
+
+		// add an init container that pre-populates the persistent volume for that path
+		copiedPod.Spec.InitContainers = append(copiedPod.Spec.InitContainers, initContainer)
 	}
 
 	return nil

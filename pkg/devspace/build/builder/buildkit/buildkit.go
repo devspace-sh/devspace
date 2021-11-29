@@ -66,7 +66,7 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool,
 
 			found, err := b.helper.IsImageAvailableLocally(cache, dockerClient)
 			if !found && err == nil {
-				log.Debugf("Rebuild image %s because it was not found in local docker daemon", cache.Images[b.helper.ImageConfigName].ImageName)
+				log.Infof("Rebuild image %s because it was not found in local docker daemon", cache.Images[b.helper.ImageConfigName].ImageName)
 				return true, nil
 			}
 		}

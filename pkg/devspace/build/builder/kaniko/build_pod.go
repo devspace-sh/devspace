@@ -2,6 +2,7 @@ package kaniko
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
 	"path/filepath"
 
 	"github.com/docker/distribution/reference"
@@ -337,11 +338,11 @@ func (b *Builder) getBuildPod(buildID string, devspacePID string, options *types
 		}
 	} else {
 		// convert resources
-		limits, err := ConvertMap(kanikoOptions.Resources.Limits)
+		limits, err := util.ConvertMap(kanikoOptions.Resources.Limits)
 		if err != nil {
 			return nil, errors.Wrap(err, "limits")
 		}
-		requests, err := ConvertMap(kanikoOptions.Resources.Requests)
+		requests, err := util.ConvertMap(kanikoOptions.Resources.Requests)
 		if err != nil {
 			return nil, errors.Wrap(err, "requests")
 		}
@@ -358,24 +359,6 @@ func (b *Builder) getBuildPod(buildID string, devspacePID string, options *types
 
 	// return the build pod
 	return pod, nil
-}
-
-func ConvertMap(m map[string]string) (map[k8sv1.ResourceName]resource.Quantity, error) {
-	if m == nil {
-		return nil, nil
-	}
-
-	retMap := map[k8sv1.ResourceName]resource.Quantity{}
-	for k, v := range m {
-		pv, err := resource.ParseQuantity(v)
-		if err != nil {
-			return nil, errors.Wrapf(err, "parse kaniko pod resource quantity %s", k)
-		}
-
-		retMap[k8sv1.ResourceName(k)] = pv
-	}
-
-	return retMap, nil
 }
 
 // Determine available resources (This is only necessary in the devspace cloud)
