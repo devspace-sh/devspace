@@ -67,7 +67,7 @@ func DownloadDependency(ID, basePath string, source *latest.SourceConfig, update
 				return "", errors.Wrap(err, "clone repository")
 			}
 
-			log.Donef("Pulled %s", ID)
+			log.Donef("Pulled %s", gitPath)
 		}
 	} else if source.Path != "" {
 		if isURL(source.Path) {
