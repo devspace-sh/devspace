@@ -51,7 +51,7 @@ jobs:
   release:
     if: startsWith(github.ref, 'refs/tags/v') == true
     needs: [ release-ui ]
-    runs-on: macos-latest
+    runs-on: macos-11
     steps:
       - name: Set up Go
         uses: actions/setup-go@v1
