@@ -84,10 +84,19 @@ for OS in ${DEVSPACE_BUILD_PLATFORMS[@]}; do
         echo "Building for ${OS}/${ARCH} not supported."
         continue
     fi
-
+    
     echo "Building for ${OS}/${ARCH}"
-    GOARCH=${ARCH} GOOS=${OS} ${GO_BUILD_CMD} -ldflags "${GO_BUILD_LDFLAGS}"\
-      -o "${DEVSPACE_ROOT}/release/${NAME}" .
+    
+    # build darwin with CGO_ENABLED=1
+    if [[ "${OS}" == "darwin" ]]; then
+      CGO_ENABLED=1
+    else
+      CGO_ENABLED=0 
+    fi
+    
+    # build the DevSpace binary
+    CGO_ENABLED=${CGO_ENABLED} GOARCH=${ARCH} GOOS=${OS} ${GO_BUILD_CMD} -ldflags "${GO_BUILD_LDFLAGS}"\
+                  -o "${DEVSPACE_ROOT}/release/${NAME}" .
     shasum -a 256 "${DEVSPACE_ROOT}/release/${NAME}" > "${DEVSPACE_ROOT}/release/${NAME}".sha256
   done
 done
