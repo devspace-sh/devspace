@@ -233,9 +233,19 @@ func validateDeployments(config *latest.Config) error {
 		if deployConfig.Helm == nil && deployConfig.Kubectl == nil {
 			return errors.Errorf("Please specify either helm or kubectl as deployment type in deployment %s", deployConfig.Name)
 		}
-		if deployConfig.Helm != nil && (deployConfig.Helm.Chart == nil || deployConfig.Helm.Chart.Name == "") && (deployConfig.Helm.ComponentChart == nil || !*deployConfig.Helm.ComponentChart) {
-			return errors.Errorf("deployments[%d].helm.chart and deployments[%d].helm.chart.name or deployments[%d].helm.componentChart is required", index, index, index)
+		if deployConfig.Helm != nil {
+			if deployConfig.Helm.Chart == nil &&
+				(deployConfig.Helm.ComponentChart == nil || !*deployConfig.Helm.ComponentChart) {
+				return errors.Errorf("deployments[%d].helm.chart or deployments[%d].helm.componentChart is required", index, index)
+			}
+
+			if deployConfig.Helm.Chart != nil &&
+				((deployConfig.Helm.Chart.Name != "" && deployConfig.Helm.Chart.Git != nil) ||
+					(deployConfig.Helm.Chart.Name == "" && deployConfig.Helm.Chart.Git == nil)) {
+				return errors.Errorf("deployments[%d].helm.chart.name or deployments[%d].helm.chart.git is required", index, index)
+			}
 		}
+
 		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
 			return errors.Errorf("deployments[%d].kubectl.manifests is required", index)
 		}

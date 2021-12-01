@@ -17,6 +17,7 @@ To deploy Helm charts, you need to configure them within the `deployments` secti
     { label: 'Component Chart', value: 'component', },
     { label: 'Custom Chart', value: 'remote', },
     { label: 'Local Chart', value: 'local', },
+    { label: 'Git Chart Repo', value: 'git', },
   ]
 }>
 <TabItem value="component">
@@ -84,8 +85,25 @@ deployments:
 ```
 
 </TabItem>
-</Tabs>
 
+<TabItem value="git">
+
+```yaml {5}
+deployments:
+- name: backend
+  helm:
+    chart:
+      git:
+        url: https://github.com/<username>/<chartrepo>.git
+        # optional git configs
+        branch: branchName
+        tag: tag
+        revision: revision
+        subPath: subpath/chartdir
+```
+
+</TabItem>
+</Tabs>
 
 ## Chart
 

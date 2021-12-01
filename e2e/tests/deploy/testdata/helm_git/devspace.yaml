@@ -1,0 +1,10 @@
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: nginx
+deployments:
+  - name: test
+    helm:
+      chart:
+        git:
+          url: https://github.com/pratikjagrut/buildachart.git
