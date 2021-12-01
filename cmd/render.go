@@ -1,10 +1,12 @@
 package cmd
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -14,10 +16,10 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
+	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
-
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -118,7 +120,13 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 	// Create kubectl client and switch context if specified
 	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
 	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
+		log.Warnf("Unable to create new kubectl client: %v", err)
+		log.Warn("Using fake client to render resources")
+		log.WriteString("\n")
+		kube := fake.NewSimpleClientset()
+		client = &fakekube.Client{
+			Client: kube,
+		}
 	}
 	configOptions.KubeClient = client
 
