@@ -2,18 +2,21 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"io"
 	"os"
 	"strings"
 
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	flagspkg "github.com/loft-sh/devspace/pkg/util/flags"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/sirupsen/logrus"
 
@@ -93,6 +96,24 @@ devspace --dependency my-dependency run any-command --any-command-flag
 		},
 	}
 
+	logger := f.GetLog()
+	commands, _ := getCommands(f, logger)
+	for _, command := range commands {
+		description := command.Description
+		if description == "" {
+			description = "Runs " + command.Command
+		}
+		runCmd.AddCommand(&cobra.Command{
+			Use:   command.Name,
+			Short: description,
+			Long:  description,
+			Args:  cobra.ArbitraryArgs,
+			RunE: func(cobraCmd *cobra.Command, args []string) error {
+				return cobraCmd.Parent().RunE(cobraCmd, args)
+			},
+		})
+	}
+
 	runCmd.Flags().StringVar(&cmd.Dependency, "dependency", "", "Run a command from a specific dependency")
 	return runCmd
 }
@@ -163,4 +184,23 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 
 	// Execute command
 	return dependency.ExecuteCommand(commands, args[0], args[1:], cmd.Stdout, cmd.Stderr)
+}
+
+func getCommands(f factory.Factory, logger log.Logger) ([]*latest.CommandConfig, error) {
+	// Set config root
+	configLoader := f.NewConfigLoader("")
+	configExists, err := configLoader.SetDevSpaceRoot(logger)
+	if err != nil {
+		return nil, err
+	}
+	if !configExists {
+		return nil, errors.New(message.ConfigNotFound)
+	}
+
+	// Parse commands
+	commandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), nil, logger)
+	if err != nil {
+		return nil, err
+	}
+	return commandsInterface.Config().Commands, nil
 }
