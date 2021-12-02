@@ -104,10 +104,11 @@ devspace --dependency my-dependency run any-command --any-command-flag
 			description = "Runs " + command.Command
 		}
 		runCmd.AddCommand(&cobra.Command{
-			Use:   command.Name,
-			Short: description,
-			Long:  description,
-			Args:  cobra.ArbitraryArgs,
+			Use:                command.Name,
+			Short:              description,
+			Long:               description,
+			Args:               cobra.ArbitraryArgs,
+			DisableFlagParsing: true,
 			RunE: func(cobraCmd *cobra.Command, args []string) error {
 				return cobraCmd.Parent().RunE(cobraCmd, args)
 			},
