@@ -192,7 +192,7 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 
 Additional run commands:
 {{- range .Commands}}
-  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}
+  {{rpad (printf "'%s'" .CommandPath) .CommandPathPadding}} {{.Short}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
