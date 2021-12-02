@@ -101,7 +101,12 @@ devspace --dependency my-dependency run any-command --any-command-flag
 	for _, command := range commands {
 		description := command.Description
 		if description == "" {
-			description = "Runs " + command.Command
+			description = "Runs command: " + command.Command
+		}
+		if len(description) > 64 {
+			if len(description) > 64 {
+				description = description[:61] + "..."
+			}
 		}
 		runCmd.AddCommand(&cobra.Command{
 			Use:                command.Name,
