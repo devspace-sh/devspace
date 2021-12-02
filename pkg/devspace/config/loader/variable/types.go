@@ -16,10 +16,10 @@ type Resolver interface {
 	ConvertFlags(flags []string) (map[string]interface{}, error)
 
 	// FindVariables returns all variable names that were found in the given map
-	FindVariables(haystack map[interface{}]interface{}, vars []*latest.Variable) (map[string]bool, error)
+	FindVariables(haystack interface{}, vars []*latest.Variable) (map[string]bool, error)
 
-	// FillVariables walks over the haystack and replaces all encountered variables
-	FillVariables(haystack map[interface{}]interface{}) error
+	// FindAndFillVariables finds the used variables first and then fills in those in the haystack
+	FindAndFillVariables(haystack interface{}, vars []*latest.Variable) (interface{}, error)
 
 	// Replaces all variables in a string and returns either a string, integer or boolean
 	ReplaceString(str string) (interface{}, error)
