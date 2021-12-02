@@ -49,4 +49,3 @@ Shows the status of all deployments
       --var strings                  Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
       --vars-secret string           The secret to restore/save the variables from/to, if --restore-vars or --save-vars is enabled (default "devspace-vars")
 ```
-

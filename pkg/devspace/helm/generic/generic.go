@@ -85,7 +85,10 @@ func (c *client) Exec(args []string, helmConfig *latest.HelmConfig) ([]byte, err
 		args = append(args, "--kube-context", c.versionedClient.KubeContext())
 	}
 
-	c.log.Infof("Execute '%s %s'", c.helmPath, strings.Join(args, " "))
+	// disable log for list, because it prints same command multiple times if we've multiple deployments.
+	if args[0] != "list" {
+		c.log.Infof("Execute '%s %s'", c.helmPath, strings.Join(args, " "))
+	}
 	result, err := c.exec(c.helmPath, args).Output()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
