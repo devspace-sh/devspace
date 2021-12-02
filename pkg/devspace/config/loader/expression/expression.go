@@ -20,15 +20,22 @@ func expressionMatchFn(key, value string) bool {
 	return ExpressionMatchRegex.MatchString(value)
 }
 
-func ResolveAllExpressions(preparedConfig map[interface{}]interface{}, dir string) error {
-	err := walk.Walk(preparedConfig, expressionMatchFn, func(value string) (interface{}, error) {
-		return ResolveExpressions(value, dir)
-	})
-	if err != nil {
-		return err
+func ResolveAllExpressions(preparedConfig interface{}, dir string) (interface{}, error) {
+	switch t := preparedConfig.(type) {
+	case string:
+		return ResolveExpressions(t, dir)
+	case map[interface{}]interface{}:
+		err := walk.Walk(t, expressionMatchFn, func(value string) (interface{}, error) {
+			return ResolveExpressions(value, dir)
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return t, nil
 	}
 
-	return nil
+	return nil, fmt.Errorf("unrecognized haystack type: %#v", preparedConfig)
 }
 
 func ResolveExpressions(value, dir string) (interface{}, error) {

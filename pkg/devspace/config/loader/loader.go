@@ -280,6 +280,12 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 		return nil, nil, nil, err
 	}
 
+	// parse cli --var's, the resolver will cache them for us
+	_, err = resolver.ConvertFlags(options.Vars)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	// apply the profiles
 	copiedRawConfig, err = l.applyProfiles(copiedRawConfig, options, log)
 	if err != nil {
