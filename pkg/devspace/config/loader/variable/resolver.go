@@ -32,15 +32,18 @@ func varMatchFn(key, value string) bool {
 	return varspkg.VarMatchRegex.MatchString(value)
 }
 
-func (r *resolver) FillVariables(haystack map[interface{}]interface{}) error {
-	err := walk.Walk(haystack, varMatchFn, func(value string) (interface{}, error) {
-		return r.ReplaceString(value)
-	})
-	if err != nil {
-		return err
+func (r *resolver) FillVariables(haystack interface{}) (interface{}, error) {
+	switch t := haystack.(type) {
+	case string:
+		return r.ReplaceString(t), nil
+	case map[interface{}]interface{}:
+		err := walk.Walk(t, varMatchFn, func(value string) (interface{}, error) {
+			return r.ReplaceString(value)
+		})
+		return t, err
 	}
 
-	return nil
+	return nil, fmt.Errorf("unrecognized haystack type: %#v", haystack)
 }
 
 func (r *resolver) ResolvedVariables() map[string]interface{} {
@@ -58,19 +61,28 @@ func (r *resolver) ReplaceString(str string) (interface{}, error) {
 	})
 }
 
-func (r *resolver) FindVariables(haystack map[interface{}]interface{}, vars []*latest.Variable) (map[string]bool, error) {
+func (r *resolver) FindVariables(haystack interface{}, vars []*latest.Variable) (map[string]bool, error) {
 	// find out what vars are really used
 	varsUsed := map[string]bool{}
-	err := walk.Walk(haystack, varMatchFn, func(value string) (interface{}, error) {
-		_, _ = varspkg.ParseString(value, func(v string) (interface{}, error) {
+
+	switch t := haystack.(type) {
+	case string:
+		_, _ = varspkg.ParseString(t, func(v string) (interface{}, error) {
 			varsUsed[v] = true
 			return "", nil
 		})
+	case map[interface{}]interface{}:
+		err := walk.Walk(t, varMatchFn, func(value string) (interface{}, error) {
+			_, _ = varspkg.ParseString(value, func(v string) (interface{}, error) {
+				varsUsed[v] = true
+				return "", nil
+			})
 
-		return value, nil
-	})
-	if err != nil {
-		return nil, err
+			return value, nil
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// find out what vars are used within other vars definition
@@ -82,6 +94,37 @@ func (r *resolver) FindVariables(haystack map[interface{}]interface{}, vars []*l
 	}
 
 	return varsUsed, nil
+}
+
+func (r *resolver) FindAndFillVariables(haystack interface{}, vars []*latest.Variable) (interface{}, error) {
+	varsUsed, err := r.FindVariables(haystack, vars)
+	if err != nil {
+		return nil, err
+	}
+
+	// resolve used defined variables
+	if len(vars) > 0 {
+		newVars := []*latest.Variable{}
+		for _, v := range vars {
+			if varsUsed[strings.TrimSpace(v.Name)] {
+				newVars = append(newVars, v)
+			}
+		}
+
+		if len(newVars) > 0 {
+			for _, definition := range newVars {
+				name := strings.TrimSpace(definition.Name)
+
+				// resolve the variable with definition
+				_, err := r.Resolve(name, definition)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	return r.FillVariables(haystack)
 }
 
 func (r *resolver) ConvertFlags(flags []string) (map[string]interface{}, error) {
