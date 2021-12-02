@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -219,6 +220,8 @@ func (c *client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, 
 		"list",
 		"--namespace",
 		c.kubeClient.Namespace(),
+		"--max",
+		strconv.Itoa(0),
 		"--output",
 		"json",
 	}

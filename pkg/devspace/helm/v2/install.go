@@ -215,6 +215,8 @@ func (c *client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, 
 		"list",
 		"--tiller-namespace",
 		c.tillerNamespace,
+		"--max",
+		strconv.Itoa(0),
 		"--output",
 		"json",
 	}
