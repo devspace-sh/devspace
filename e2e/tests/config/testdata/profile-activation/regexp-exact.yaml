@@ -1,9 +1,9 @@
-version: v1beta10
+version: v1beta11
 profiles:
   - name: one
     activation:
       - env:
-          FOO: "\\^t.*\\$"
+          FOO: "^t.*$"
     patches:
       - op: replace
         path: deployments

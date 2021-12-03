@@ -2,11 +2,13 @@ package versions
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta10"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta10"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
@@ -435,7 +437,11 @@ func getActivatedProfiles(data map[interface{}]interface{}) ([]string, error) {
 
 func matchEnvironment(env map[string]string) (bool, error) {
 	for k, v := range env {
-		match, err := regexp.MatchString(v, os.Getenv(k))
+		expression := strings.TrimPrefix(v, "^")
+		expression = strings.TrimSuffix(expression, "$")
+		expression = fmt.Sprintf("^%s$", expression)
+
+		match, err := regexp.MatchString(expression, os.Getenv(k))
 		if err != nil {
 			return false, err
 		}
