@@ -40,4 +40,7 @@ type Dependency interface {
 
 	// StartPortForwarding starts the dependency port-forwarding
 	StartPortForwarding(client kubectl.Client, interrupt chan error, logger log.Logger) error
+
+	// Command executes a command from the dependency config
+	Command(command string, args []string) error
 }

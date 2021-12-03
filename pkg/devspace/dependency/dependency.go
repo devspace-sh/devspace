@@ -51,9 +51,6 @@ type Manager interface {
 
 	// RenderAll renders all dependencies
 	RenderAll(options RenderOptions) ([]types.Dependency, error)
-
-	// Command executes a dependency command
-	Command(options CommandOptions) error
 }
 
 type manager struct {
@@ -112,40 +109,6 @@ func (m *manager) ResolveAll(options ResolveOptions) ([]types.Dependency, error)
 	}
 
 	return dependencies, nil
-}
-
-// CommandOptions has all options for executing a command from a dependency
-type CommandOptions struct {
-	Dependency         string
-	Command            string
-	Args               []string
-	UpdateDependencies bool
-	Verbose            bool
-}
-
-// Command will execute a dependency command
-func (m *manager) Command(options CommandOptions) error {
-	found := false
-	_, err := m.handleDependencies(nil, []string{options.Dependency}, false, options.UpdateDependencies, true, options.Verbose, "Command", func(dependency *Dependency, log log.Logger) error {
-		// Switch current working directory
-		currentWorkingDirectory, err := dependency.prepare(true)
-		if err != nil {
-			return err
-		} else if currentWorkingDirectory == "" {
-			return nil
-		}
-
-		// Change back to original working directory
-		defer func() { _ = os.Chdir(currentWorkingDirectory) }()
-
-		found = true
-		return ExecuteCommand(dependency.localConfig.Config().Commands, options.Command, options.Args, os.Stdout, os.Stderr)
-	})
-	if !found {
-		return fmt.Errorf("couldn't find dependency %s", options.Dependency)
-	}
-
-	return err
 }
 
 // ExecuteCommand executes a given command from the available commands
@@ -389,6 +352,32 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 	return retDependencies, nil
 }
 
+func GetDependencyByPath(dependencies []types.Dependency, path string) types.Dependency {
+	splitted := strings.Split(path, ".")
+
+	var retDependency types.Dependency
+	searchDependencies := dependencies
+	for _, segment := range splitted {
+		var nextDependency types.Dependency
+		for _, dependency := range searchDependencies {
+			if dependency.Name() == segment {
+				nextDependency = dependency
+				break
+			}
+		}
+
+		// not found, exit here
+		if nextDependency == nil {
+			return nil
+		}
+
+		searchDependencies = nextDependency.Children()
+		retDependency = nextDependency
+	}
+
+	return retDependency
+}
+
 // Dependency holds the dependency config and has an id
 type Dependency struct {
 	id          string
@@ -428,6 +417,20 @@ func (d *Dependency) Children() []types.Dependency { return d.children }
 func (d *Dependency) Root() bool { return d.root }
 
 func (d *Dependency) BuiltImages() map[string]string { return d.builtImages }
+
+func (d *Dependency) Command(command string, args []string) error {
+	// Switch current working directory
+	currentWorkingDirectory, err := d.prepare(true)
+	if err != nil {
+		return err
+	} else if currentWorkingDirectory == "" {
+		return nil
+	}
+
+	// Change back to original working directory
+	defer func() { _ = os.Chdir(currentWorkingDirectory) }()
+	return ExecuteCommand(d.localConfig.Config().Commands, command, args, os.Stdout, os.Stderr)
+}
 
 // Build builds and pushes all defined images
 func (d *Dependency) Build(forceDependencies bool, buildOptions *build.Options, log log.Logger) error {

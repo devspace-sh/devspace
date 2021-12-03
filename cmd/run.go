@@ -143,9 +143,9 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 
 	// check if dependency command
 	commandSplitted := strings.Split(args[0], ".")
-	if len(commandSplitted) == 2 {
-		cmd.Dependency = commandSplitted[0]
-		args[0] = commandSplitted[1]
+	if len(commandSplitted) > 1 {
+		cmd.Dependency = strings.Join(commandSplitted[:len(commandSplitted)-1], ".")
+		args[0] = commandSplitted[len(commandSplitted)-1]
 	}
 
 	// Execute plugin hook
@@ -161,11 +161,19 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 			return err
 		}
 
-		return f.NewDependencyManager(config, nil, configOptions, f.GetLog()).Command(dependency.CommandOptions{
-			Dependency: cmd.Dependency,
-			Command:    args[0],
-			Args:       args[1:],
+		dependencies, err := f.NewDependencyManager(config, nil, configOptions, f.GetLog()).ResolveAll(dependency.ResolveOptions{
+			Silent: true,
 		})
+		if err != nil {
+			return err
+		}
+
+		dep := dependency.GetDependencyByPath(dependencies, cmd.Dependency)
+		if dep == nil {
+			return fmt.Errorf("couldn't find dependency %s", cmd.Dependency)
+		}
+
+		return dep.Command(args[0], args[1:])
 	}
 
 	// load generated

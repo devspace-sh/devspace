@@ -2,17 +2,14 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	"io"
-	"os"
-	"path/filepath"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"io"
+	"os"
 
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	logger "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
@@ -28,6 +25,8 @@ type PrintCmd struct {
 
 	Out      io.Writer
 	SkipInfo bool
+
+	Dependency string
 }
 
 // NewPrintCmd creates a new devspace print command
@@ -54,6 +53,7 @@ profile after all patching and variable substitution
 	}
 
 	printCmd.Flags().BoolVar(&cmd.SkipInfo, "skip-info", false, "When enabled, only prints the configuration without additional information")
+	printCmd.Flags().StringVar(&cmd.Dependency, "dependency", "", "The dependency to print the config from. Use dot to access nested dependencies (e.g. dep1.dep2)")
 
 	return printCmd
 }
@@ -98,13 +98,22 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 		return err
 	}
 
+	if cmd.Dependency != "" {
+		dep := dependency.GetDependencyByPath(dependencies, cmd.Dependency)
+		if dep == nil {
+			return fmt.Errorf("couldn't find dependency %s: make sure it gets loaded correctly", cmd.Dependency)
+		}
+
+		loadedConfig = dep.Config()
+	}
+
 	bsConfig, err := yaml.Marshal(loadedConfig.Config())
 	if err != nil {
 		return err
 	}
 
 	if !cmd.SkipInfo {
-		err = printExtraInfo(cmd.ConfigPath, loadedConfig, log)
+		err = printExtraInfo(loadedConfig, log)
 		if err != nil {
 			return err
 		}
@@ -122,12 +131,7 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 	return nil
 }
 
-func printExtraInfo(configPath string, config config.Config, log logger.Logger) error {
-	absPath, err := filepath.Abs(loader.ConfigPath(configPath))
-	if err != nil {
-		return err
-	}
-
+func printExtraInfo(config config.Config, log logger.Logger) error {
 	log.WriteString("\n-------------------\n\nVars:\n")
 
 	headerColumnNames := []string{"Name", "Value"}
@@ -146,7 +150,6 @@ func printExtraInfo(configPath string, config config.Config, log logger.Logger) 
 		log.Info("No vars found")
 	}
 
-	log.WriteString("\n-------------------\n\nLoaded path: " + absPath + "\n\n-------------------\n\n")
-
+	log.WriteString("\n-------------------\n\nLoaded path: " + config.Path() + "\n\n-------------------\n\n")
 	return nil
 }
