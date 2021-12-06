@@ -184,7 +184,29 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 			return 2
 		}
 	case "pwd":
-		r.outf("%s\n", r.envGet("PWD"))
+		evalSymlinks := false
+		for len(args) > 0 {
+			switch args[0] {
+			case "-L":
+				evalSymlinks = false
+			case "-P":
+				evalSymlinks = true
+			default:
+				r.errf("invalid option: %q\n", args[0])
+				return 2
+			}
+			args = args[1:]
+		}
+		pwd := r.envGet("PWD")
+		if evalSymlinks {
+			var err error
+			pwd, err = filepath.EvalSymlinks(pwd)
+			if err != nil {
+				r.setErr(err)
+				return 1
+			}
+		}
+		r.outf("%s\n", pwd)
 	case "cd":
 		var path string
 		switch len(args) {
@@ -312,14 +334,22 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 			r.errf("%v: source: need filename\n", pos)
 			return 2
 		}
-		f, err := r.open(ctx, args[0], os.O_RDONLY, 0, false)
+		path, err := scriptFromPathDir(r.Dir, r.writeEnv, args[0])
+		if err != nil {
+			// If the script was not found in PATH or there was any error, pass
+			// the source path to the open handler so it has a chance to look
+			// at files it manages (eg: virtual filesystem), and also allow
+			// it to look for the sourced script in the current directory.
+			path = args[0]
+		}
+		f, err := r.open(ctx, path, os.O_RDONLY, 0, false)
 		if err != nil {
 			r.errf("source: %v\n", err)
 			return 1
 		}
 		defer f.Close()
 		p := syntax.NewParser()
-		file, err := p.Parse(f, args[0])
+		file, err := p.Parse(f, path)
 		if err != nil {
 			r.errf("source: %v\n", err)
 			return 1
@@ -518,12 +548,19 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 		}
 		r.setErr(returnStatus(code))
 	case "read":
+		var prompt string
 		raw := false
 		fp := flagParser{remaining: args}
 		for fp.more() {
 			switch flag := fp.flag(); flag {
 			case "-r":
 				raw = true
+			case "-p":
+				prompt = fp.value()
+				if prompt == "" {
+					r.errf("read: -p: option requires an argument\n")
+					return 2
+				}
 			default:
 				r.errf("read: invalid option %q\n", flag)
 				return 2
@@ -536,6 +573,10 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 				r.errf("read: invalid identifier %q\n", name)
 				return 2
 			}
+		}
+
+		if prompt != "" {
+			r.out(prompt)
 		}
 
 		line, err := r.readLine(raw)
