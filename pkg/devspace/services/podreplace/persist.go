@@ -37,12 +37,16 @@ func persistPaths(podName string, replacePod *latest.ReplacePod, copiedPod *core
 		}
 
 		if len(copiedPod.Spec.Containers) > 1 && p.ContainerName == "" {
-			names := []string{}
-			for _, c := range copiedPod.Spec.Containers {
-				names = append(names, c.Name)
+			if replacePod.ContainerName == "" {
+				names := []string{}
+				for _, c := range copiedPod.Spec.Containers {
+					names = append(names, c.Name)
+				}
+
+				return fmt.Errorf("couldn't persist path %s as multiple containers were found %s, but no containerName was specified", p.Path, strings.Join(names, " "))
 			}
 
-			return fmt.Errorf("couldn't persist path %s as multiple containers were found %s, but no containerName was specified", p.Path, strings.Join(names, " "))
+			p.ContainerName = replacePod.ContainerName
 		}
 
 		var container *corev1.Container
