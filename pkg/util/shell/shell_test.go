@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -30,7 +31,7 @@ func TestShellCat(t *testing.T) {
 
 	testCases := []testCaseShell{
 		{
-			command:        "cat " + file.Name(),
+			command:        "cat " + filepath.ToSlash(file.Name()),
 			expectedOutput: "Hello DevSpace!",
 		},
 		{
@@ -87,7 +88,7 @@ func TestShellCatEnforce(t *testing.T) {
 
 	testCases := []testCaseShell{
 		{
-			command:        "cat " + file.Name(),
+			command:        "cat " + filepath.ToSlash(file.Name()),
 			expectedOutput: "Hello DevSpace!",
 		},
 		{

@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -311,11 +310,11 @@ func StdIO(in io.Reader, out, err io.Writer) RunnerOption {
 	return func(r *Runner) error {
 		r.stdin = in
 		if out == nil {
-			out = ioutil.Discard
+			out = io.Discard
 		}
 		r.stdout = out
 		if err == nil {
-			err = ioutil.Discard
+			err = io.Discard
 		}
 		r.stderr = err
 		return nil
@@ -442,6 +441,13 @@ func (r *Runner) Reset() {
 			Kind:     expand.String,
 			ReadOnly: true,
 			Str:      strconv.Itoa(os.Getuid()),
+		})
+	}
+	if !r.writeEnv.Get("GID").IsSet() {
+		r.setVar("GID", nil, expand.Variable{
+			Kind:     expand.String,
+			ReadOnly: true,
+			Str:      strconv.Itoa(os.Getgid()),
 		})
 	}
 	r.setVarString("PWD", r.Dir)
