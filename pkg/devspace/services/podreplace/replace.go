@@ -458,7 +458,7 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 
 	// create a pvc if needed
 	if len(replacePod.PersistPaths) > 0 {
-		err = createPVC(ctx, client, copiedPod, replicaSet, replacePod)
+		err = createPVC(ctx, client, copiedPod, replicaSet, replacePod, log)
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
 				// delete the old one and wait
@@ -473,7 +473,7 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 				}
 
 				// create the new one
-				err = createPVC(ctx, client, copiedPod, replicaSet, replacePod)
+				err = createPVC(ctx, client, copiedPod, replicaSet, replacePod, log)
 				if err != nil {
 					return errors.Wrap(err, "create persistent volume claim")
 				}
@@ -486,7 +486,7 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 	return nil
 }
 
-func createPVC(ctx context.Context, client kubectl.Client, copiedPod *corev1.Pod, replicaSet *appsv1.ReplicaSet, replacePod *latest.ReplacePod) error {
+func createPVC(ctx context.Context, client kubectl.Client, copiedPod *corev1.Pod, replicaSet *appsv1.ReplicaSet, replacePod *latest.ReplacePod, log log.Logger) error {
 	var err error
 	size := resource.MustParse("10Gi")
 	if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Size != "" {
@@ -540,12 +540,14 @@ func createPVC(ctx context.Context, client kubectl.Client, copiedPod *corev1.Pod
 	}, metav1.CreateOptions{})
 	if err != nil {
 		if kerrors.IsAlreadyExists(err) && replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Name != "" {
+			log.Infof("PVC %s already exists for replaced pod %s", name, copiedPod.Name)
 			return nil
 		}
 
 		return err
 	}
 
+	log.Donef("Created PVC %s for replaced pod %s", name, copiedPod.Name)
 	return nil
 }
 
