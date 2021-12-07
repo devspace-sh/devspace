@@ -19,10 +19,10 @@ dev:
           path: spec.containers[0].command
           value: ["sleep"]
 profiles:
-    -   name: empty-value
-        patches:
-          - op: add
-            path: dev.replacePods[0].patches
-            value:
-                op: replace
-                path: spec.initContainers
+  - name: empty-value
+    patches:
+      - op: add
+        path: dev.replacePods[0].patches
+        value:
+          op: replace
+          path: spec.initContainers
