@@ -141,7 +141,7 @@ func shouldRemoveLocal(absFilepath string, fileInformation *FileInformation, s *
 	// We don't delete the file if we haven't tracked it
 	if stat != nil && s.fileIndex.fileMap[fileInformation.Name] != nil {
 		if stat.IsDir() != s.fileIndex.fileMap[fileInformation.Name].IsDirectory || stat.IsDir() != fileInformation.IsDirectory {
-			s.log.Infof("Skip %s because stat returned unequal isdir with fileMap", absFilepath)
+			s.log.Debugf("Skip %s because stat returned unequal isdir with fileMap", absFilepath)
 			return false
 		}
 
@@ -153,7 +153,7 @@ func shouldRemoveLocal(absFilepath string, fileInformation *FileInformation, s *
 					return true
 				}
 
-				s.log.Infof("Skip %s because stat.ModTime() %d is greater than fileInformation.Mtime %d", absFilepath, stat.ModTime().Unix(), fileInformation.Mtime)
+				s.log.Debugf("Skip %s because stat.ModTime() %d is greater than fileInformation.Mtime %d", absFilepath, stat.ModTime().Unix(), fileInformation.Mtime)
 			} else {
 				// s.log.Infof("Skip %s because Mtime (%d and %d) or Size (%d and %d) is unequal between fileInformation and fileMap", absFilepath, fileInformation.Mtime, s.fileIndex.fileMap[fileInformation.Name].Mtime, fileInformation.Size, s.fileIndex.fileMap[fileInformation.Name].Size)
 				return true

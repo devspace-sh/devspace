@@ -475,6 +475,7 @@ func (u *upstream) evaluateChange(relativePath, fullpath string) (*FileInformati
 				}
 			}
 		} else if err != nil {
+			u.sync.log.Debugf("Error in lstat %s: %v", fullpath, err)
 			return nil, nil
 		} else if stat == nil {
 			return nil, nil
