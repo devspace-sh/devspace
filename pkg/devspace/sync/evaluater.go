@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"os"
 
 	"github.com/loft-sh/devspace/helper/remote"
@@ -36,7 +37,7 @@ func shouldRemoveRemote(relativePath string, s *Sync) bool {
 }
 
 // s.fileIndex needs to be locked before this function is called
-func shouldUpload(s *Sync, fileInformation *FileInformation) bool {
+func shouldUpload(s *Sync, fileInformation *FileInformation, log log.Logger) bool {
 	// Exclude if stat is nil
 	if fileInformation == nil {
 		return false
@@ -50,12 +51,14 @@ func shouldUpload(s *Sync, fileInformation *FileInformation) bool {
 
 	// Exclude local symlinks
 	if fileInformation.IsSymbolicLink {
+		log.Debugf("Don't upload %s because it is a symbolic link", fileInformation.Name)
 		return false
 	}
 
 	// Exclude changes on the exclude list
 	if s.ignoreMatcher != nil {
 		if s.ignoreMatcher.Matches(fileInformation.Name, fileInformation.IsDirectory) {
+			log.Debugf("Don't upload %s because it is excluded", fileInformation.Name)
 			return false
 		}
 	}
@@ -64,16 +67,19 @@ func shouldUpload(s *Sync, fileInformation *FileInformation) bool {
 	if s.fileIndex.fileMap[fileInformation.Name] != nil {
 		// Folder already exists, don't send change
 		if fileInformation.IsDirectory {
+			log.Debugf("Don't upload %s because directory already exists", fileInformation.Name)
 			return false
 		}
 
 		// Exclude symlinks
 		if s.fileIndex.fileMap[fileInformation.Name].IsSymbolicLink {
+			log.Debugf("Don't upload %s because it is a symbolic link", fileInformation.Name)
 			return false
 		}
 
 		// File did not change or was changed by downstream
 		if fileInformation.Mtime == s.fileIndex.fileMap[fileInformation.Name].Mtime && fileInformation.Size == s.fileIndex.fileMap[fileInformation.Name].Size {
+			log.Debugf("Don't upload %s because mtime and size have not changed", fileInformation.Name)
 			return false
 		}
 	}
@@ -141,7 +147,7 @@ func shouldRemoveLocal(absFilepath string, fileInformation *FileInformation, s *
 	// We don't delete the file if we haven't tracked it
 	if stat != nil && s.fileIndex.fileMap[fileInformation.Name] != nil {
 		if stat.IsDir() != s.fileIndex.fileMap[fileInformation.Name].IsDirectory || stat.IsDir() != fileInformation.IsDirectory {
-			s.log.Infof("Skip %s because stat returned unequal isdir with fileMap", absFilepath)
+			s.log.Debugf("Skip %s because stat returned unequal isdir with fileMap", absFilepath)
 			return false
 		}
 
@@ -153,7 +159,7 @@ func shouldRemoveLocal(absFilepath string, fileInformation *FileInformation, s *
 					return true
 				}
 
-				s.log.Infof("Skip %s because stat.ModTime() %d is greater than fileInformation.Mtime %d", absFilepath, stat.ModTime().Unix(), fileInformation.Mtime)
+				s.log.Debugf("Skip %s because stat.ModTime() %d is greater than fileInformation.Mtime %d", absFilepath, stat.ModTime().Unix(), fileInformation.Mtime)
 			} else {
 				// s.log.Infof("Skip %s because Mtime (%d and %d) or Size (%d and %d) is unequal between fileInformation and fileMap", absFilepath, fileInformation.Mtime, s.fileIndex.fileMap[fileInformation.Name].Mtime, fileInformation.Size, s.fileIndex.fileMap[fileInformation.Name].Size)
 				return true
