@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"os"
 
 	"github.com/loft-sh/devspace/helper/remote"
@@ -36,7 +37,7 @@ func shouldRemoveRemote(relativePath string, s *Sync) bool {
 }
 
 // s.fileIndex needs to be locked before this function is called
-func shouldUpload(s *Sync, fileInformation *FileInformation) bool {
+func shouldUpload(s *Sync, fileInformation *FileInformation, log log.Logger) bool {
 	// Exclude if stat is nil
 	if fileInformation == nil {
 		return false
@@ -50,12 +51,14 @@ func shouldUpload(s *Sync, fileInformation *FileInformation) bool {
 
 	// Exclude local symlinks
 	if fileInformation.IsSymbolicLink {
+		log.Debugf("Don't upload %s because it is a symbolic link", fileInformation.Name)
 		return false
 	}
 
 	// Exclude changes on the exclude list
 	if s.ignoreMatcher != nil {
 		if s.ignoreMatcher.Matches(fileInformation.Name, fileInformation.IsDirectory) {
+			log.Debugf("Don't upload %s because it is excluded", fileInformation.Name)
 			return false
 		}
 	}
@@ -64,16 +67,19 @@ func shouldUpload(s *Sync, fileInformation *FileInformation) bool {
 	if s.fileIndex.fileMap[fileInformation.Name] != nil {
 		// Folder already exists, don't send change
 		if fileInformation.IsDirectory {
+			log.Debugf("Don't upload %s because directory already exists", fileInformation.Name)
 			return false
 		}
 
 		// Exclude symlinks
 		if s.fileIndex.fileMap[fileInformation.Name].IsSymbolicLink {
+			log.Debugf("Don't upload %s because it is a symbolic link", fileInformation.Name)
 			return false
 		}
 
 		// File did not change or was changed by downstream
 		if fileInformation.Mtime == s.fileIndex.fileMap[fileInformation.Name].Mtime && fileInformation.Size == s.fileIndex.fileMap[fileInformation.Name].Size {
+			log.Debugf("Don't upload %s because mtime and size have not changed", fileInformation.Name)
 			return false
 		}
 	}

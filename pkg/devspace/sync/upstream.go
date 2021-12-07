@@ -403,6 +403,8 @@ func (u *upstream) getFileInformationFromEvent(events []notify.EventInfo) ([]*Fi
 		if ok {
 			changes = append(changes, fileInfo)
 		} else {
+			u.sync.log.Debugf("Upstream - Event from filesystem for %s", event.Path())
+
 			// check if path is correct
 			fullPath := event.Path()
 			if !strings.HasPrefix(filepath.ToSlash(fullPath), filepath.ToSlash(u.sync.LocalPath)+"/") {
@@ -490,7 +492,7 @@ func (u *upstream) evaluateChange(relativePath, fullpath string) (*FileInformati
 			IsDirectory:    stat.IsDir(),
 			IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
 		}
-		if shouldUpload(u.sync, fileInfo) {
+		if shouldUpload(u.sync, fileInfo, u.sync.log) {
 			// New Create Task
 			return fileInfo, nil
 		}
@@ -670,7 +672,7 @@ func (u *upstream) ExecuteBatchCommand() error {
 func (u *upstream) updateUploadChanges(files []*FileInformation) []*FileInformation {
 	newChanges := make([]*FileInformation, 0, len(files))
 	for _, change := range files {
-		if shouldUpload(u.sync, change) {
+		if shouldUpload(u.sync, change, u.sync.log) {
 			newChanges = append(newChanges, change)
 		}
 	}
