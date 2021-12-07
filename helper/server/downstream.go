@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"github.com/loft-sh/devspace/helper/util/pingtimeout"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"io"
 	"io/ioutil"
@@ -526,6 +527,9 @@ func walkDir(basePath string, path string, ignoreMatcher ignoreparser.IgnorePars
 
 	for _, f := range files {
 		absolutePath := filepath.Join(path, f.Name())
+		if fsutil.IsRecursiveSymlink(f, absolutePath) {
+			continue
+		}
 
 		// Stat is necessary here, because readdir does not follow symlinks and
 		// IsDir() returns false for symlinked folders
