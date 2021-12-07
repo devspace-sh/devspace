@@ -6,7 +6,9 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -412,101 +414,138 @@ func (u *upstream) getFileInformationFromEvent(events []notify.EventInfo) ([]*Fi
 				continue
 			}
 
-			relativePath := getRelativeFromFullPath(fullPath, u.sync.LocalPath)
-
 			// Determine what kind of change we got (Create or Remove)
-			newChange, err := u.evaluateChange(relativePath, fullPath)
+			relativePath := getRelativeFromFullPath(fullPath, u.sync.LocalPath)
+			newChanges, err := u.evaluateChange(relativePath, fullPath)
 			if err != nil {
 				return nil, errors.Wrap(err, "evaluate change")
 			}
 
-			if newChange != nil {
-				changes = append(changes, newChange)
-			}
+			changes = append(changes, newChanges...)
 		}
 	}
 
 	return changes, nil
 }
 
-func (u *upstream) evaluateChange(relativePath, fullpath string) (*FileInformation, error) {
-	stat, err := os.Stat(fullpath)
-
-	// File / Folder exist -> Create File or Folder
-	// if File / Folder does not exist, we create a new remove change
-	if err == nil {
-		// Exclude changes on the upload exclude list
-		if u.sync.uploadIgnoreMatcher != nil {
-			if u.sync.uploadIgnoreMatcher.Matches(relativePath, stat.IsDir()) {
-				// Add to file map and prevent download if local file is newer than the remote one
-				if u.sync.fileIndex.fileMap[relativePath] != nil && u.sync.fileIndex.fileMap[relativePath].Mtime < stat.ModTime().Unix() {
-					// Add it to the fileMap
-					u.sync.fileIndex.fileMap[relativePath] = &FileInformation{
-						Name:        relativePath,
-						Mtime:       stat.ModTime().Unix(),
-						Mode:        stat.Mode(),
-						Size:        stat.Size(),
-						IsDirectory: stat.IsDir(),
-					}
-				}
-
-				return nil, nil
-			}
-		}
-
-		// Check if symbolic link
-		lstat, err := os.Lstat(fullpath)
-		if err == nil && lstat.Mode()&os.ModeSymlink != 0 {
-			_, symlinkExists := u.sync.upstream.symlinks[fullpath]
-
-			// Add symlink to map
-			stat, err = u.sync.upstream.AddSymlink(relativePath, fullpath)
-			if err != nil {
-				return nil, errors.Wrap(err, "add symlink")
-			}
-			if stat == nil {
-				return nil, nil
-			}
-
-			// Only crawl if symlink wasn't there before and it is a directory
-			if !symlinkExists && stat.IsDir() {
-				// Crawl all linked files & folders
-				err = u.symlinks[fullpath].Crawl()
-				if err != nil {
-					return nil, errors.Wrap(err, "crawl symlink")
-				}
-			}
-		} else if err != nil {
-			u.sync.log.Debugf("Error in lstat %s: %v", fullpath, err)
-			return nil, nil
-		} else if stat == nil {
-			return nil, nil
-		}
-
-		fileInfo := &FileInformation{
-			Name:           relativePath,
-			Mtime:          stat.ModTime().Unix(),
-			MtimeNano:      stat.ModTime().UnixNano(),
-			Size:           stat.Size(),
-			Mode:           stat.Mode(),
-			IsDirectory:    stat.IsDir(),
-			IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
-		}
-		if shouldUpload(u.sync, fileInfo, u.sync.log) {
-			// New Create Task
-			return fileInfo, nil
-		}
-	} else {
+func (u *upstream) evaluateChange(relativePath, fullPath string) ([]*FileInformation, error) {
+	stat, err := os.Stat(fullPath)
+	if err != nil {
 		// Remove symlinks
-		u.RemoveSymlinks(fullpath)
+		u.RemoveSymlinks(fullPath)
 
 		// Check if we should remove path remote
 		if shouldRemoveRemote(relativePath, u.sync) {
 			// New Remove Task
-			return &FileInformation{
-				Name: relativePath,
+			return []*FileInformation{
+				{
+					Name: relativePath,
+				},
 			}, nil
 		}
+
+		return nil, nil
+	}
+
+	// Exclude changes on the upload exclude list
+	if u.sync.uploadIgnoreMatcher != nil && u.sync.uploadIgnoreMatcher.Matches(relativePath, stat.IsDir()) {
+		// Add to file map and prevent download if local file is newer than the remote one
+		if u.sync.fileIndex.fileMap[relativePath] != nil && u.sync.fileIndex.fileMap[relativePath].Mtime < stat.ModTime().Unix() {
+			// Add it to the fileMap
+			u.sync.fileIndex.fileMap[relativePath] = &FileInformation{
+				Name:        relativePath,
+				Mtime:       stat.ModTime().Unix(),
+				Mode:        stat.Mode(),
+				Size:        stat.Size(),
+				IsDirectory: stat.IsDir(),
+			}
+		}
+
+		return nil, nil
+	}
+
+	// File / Folder exist -> Create File or Folder
+	// if File / Folder does not exist, we create a new remove change
+	// Check if symbolic link
+	lstat, err := os.Lstat(fullPath)
+	if err == nil && lstat.Mode()&os.ModeSymlink != 0 {
+		_, symlinkExists := u.sync.upstream.symlinks[fullPath]
+
+		// Add symlink to map
+		stat, err = u.sync.upstream.AddSymlink(relativePath, fullPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "add symlink")
+		}
+		if stat == nil {
+			return nil, nil
+		}
+
+		// Only crawl if symlink wasn't there before and it is a directory
+		if !symlinkExists && stat.IsDir() {
+			// Crawl all linked files & folders
+			err = u.symlinks[fullPath].Crawl()
+			if err != nil {
+				return nil, errors.Wrap(err, "crawl symlink")
+			}
+		}
+	} else if err != nil {
+		u.sync.log.Debugf("Error in lstat %s: %v", fullPath, err)
+		return nil, nil
+	} else if stat == nil {
+		return nil, nil
+	}
+
+	fileInfo := &FileInformation{
+		Name:           relativePath,
+		Mtime:          stat.ModTime().Unix(),
+		MtimeNano:      stat.ModTime().UnixNano(),
+		Size:           stat.Size(),
+		Mode:           stat.Mode(),
+		IsDirectory:    stat.IsDir(),
+		IsSymbolicLink: stat.Mode()&os.ModeSymlink != 0,
+	}
+
+	// should we upload the file?
+	if shouldUpload(u.sync, fileInfo, u.sync.log) {
+		// New Create Task
+		return []*FileInformation{fileInfo}, nil
+	} else if stat.IsDir() {
+		// if the change is a directory we walk the directory for other potential changes
+		files, err := ioutil.ReadDir(fullPath)
+		if err != nil {
+			// Remove symlinks
+			u.RemoveSymlinks(fullPath)
+
+			// Check if we should remove path remote
+			if shouldRemoveRemote(relativePath, u.sync) {
+				// New Remove Task
+				return []*FileInformation{
+					{
+						Name: relativePath,
+					},
+				}, nil
+			}
+
+			return nil, nil
+		}
+
+		changes := []*FileInformation{}
+		for _, f := range files {
+			newFullPath := filepath.Join(fullPath, f.Name())
+			newRelativePath := path.Join(relativePath, f.Name())
+			if fsutil.IsRecursiveSymlink(f, newFullPath) {
+				continue
+			}
+
+			otherChanges, err := u.evaluateChange(newRelativePath, newFullPath)
+			if err != nil {
+				return nil, errors.Wrap(err, "evaluate change")
+			}
+
+			changes = append(changes, otherChanges...)
+		}
+
+		return changes, nil
 	}
 
 	return nil, nil
