@@ -56,11 +56,9 @@ func shouldUpload(s *Sync, fileInformation *FileInformation, log log.Logger) boo
 	}
 
 	// Exclude changes on the exclude list
-	if s.ignoreMatcher != nil {
-		if s.ignoreMatcher.Matches(fileInformation.Name, fileInformation.IsDirectory) {
-			log.Debugf("Don't upload %s because it is excluded", fileInformation.Name)
-			return false
-		}
+	if s.ignoreMatcher != nil && s.ignoreMatcher.Matches(fileInformation.Name, fileInformation.IsDirectory) {
+		log.Debugf("Don't upload %s because it is excluded", fileInformation.Name)
+		return false
 	}
 
 	// Check if we already tracked the path

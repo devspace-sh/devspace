@@ -3,6 +3,7 @@ package sync
 import (
 	"archive/tar"
 	"compress/gzip"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"io/ioutil"
 	"os"
@@ -283,8 +284,8 @@ func (a *Archiver) AddToArchive(relativePath string) error {
 }
 
 func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) error {
-	filepath := path.Join(a.basePath, target.Name)
-	files, err := ioutil.ReadDir(filepath)
+	filePath := path.Join(a.basePath, target.Name)
+	files, err := ioutil.ReadDir(filePath)
 	if err != nil {
 		// config.Logf("[Upstream] Couldn't read dir %s: %s\n", filepath, err.Error())
 		return nil
@@ -294,7 +295,7 @@ func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) er
 		// check if not excluded
 		if a.ignoreMatcher == nil || !a.ignoreMatcher.RequireFullScan() || !a.ignoreMatcher.Matches(target.Name, true) {
 			// Case empty directory
-			hdr, _ := tar.FileInfoHeader(targetStat, filepath)
+			hdr, _ := tar.FileInfoHeader(targetStat, filePath)
 			hdr.Uid = 0
 			hdr.Gid = 0
 			hdr.Mode = fillGo18FileTypeBits(int64(chmodTarEntry(os.FileMode(hdr.Mode))), targetStat)
@@ -308,6 +309,10 @@ func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) er
 	}
 
 	for _, f := range files {
+		if fsutil.IsRecursiveSymlink(f, path.Join(filePath, f.Name())) {
+			continue
+		}
+
 		if err := a.AddToArchive(path.Join(target.Name, f.Name())); err != nil {
 			return errors.Wrap(err, "recursive tar "+f.Name())
 		}
@@ -325,7 +330,7 @@ func (a *Archiver) tarFile(target *FileInformation, targetStat os.FileInfo) erro
 		}
 
 		targetStat, err = os.Stat(filepath)
-		if err != nil {
+		if err != nil || targetStat.IsDir() {
 			// We ignore open file and just treat it as okay
 			return nil
 		}

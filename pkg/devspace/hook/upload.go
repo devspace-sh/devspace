@@ -3,6 +3,7 @@ package hook
 import (
 	"archive/tar"
 	"compress/gzip"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"io/ioutil"
 	"os"
@@ -129,6 +130,10 @@ func recursiveTar(srcBase, srcFile, destBase, destFile string, tw *tar.Writer) e
 				}
 			}
 			for _, f := range files {
+				if fsutil.IsRecursiveSymlink(f, path.Join(fpath, f.Name())) {
+					continue
+				}
+
 				if err := recursiveTar(srcBase, path.Join(srcFile, f.Name()), destBase, path.Join(destFile, f.Name()), tw); err != nil {
 					return err
 				}

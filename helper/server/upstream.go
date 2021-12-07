@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/helper/util/crc32"
 	"github.com/loft-sh/devspace/helper/util/pingtimeout"
 	"github.com/loft-sh/devspace/helper/util/stderrlog"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -191,6 +192,9 @@ func (u *Upstream) removeRecursive(absolutePath string) error {
 	// Loop over directory contents and check if we should delete the contents
 	for _, f := range files {
 		absoluteChildPath := filepath.Join(absolutePath, f.Name())
+		if fsutil.IsRecursiveSymlink(f, absoluteChildPath) {
+			continue
+		}
 
 		// Check if ignored
 		if u.ignoreMatcher != nil && !u.ignoreMatcher.RequireFullScan() && u.ignoreMatcher.Matches(absolutePath[len(u.options.UploadPath):], f.IsDir()) {

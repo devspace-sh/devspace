@@ -3,9 +3,11 @@ package sync
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -437,6 +439,10 @@ func (d *downstream) deleteSafeRecursive(relativePath string, deleteChanges []*r
 
 	// Loop over directory contents and check if we should delete the contents
 	for _, f := range files {
+		if fsutil.IsRecursiveSymlink(f, path.Join(relativePath, f.Name())) {
+			continue
+		}
+
 		childRelativePath := filepath.ToSlash(filepath.Join(relativePath, f.Name()))
 		childAbsFilepath := filepath.Join(d.sync.LocalPath, childRelativePath)
 		if shouldRemoveLocal(childAbsFilepath, d.sync.fileIndex.fileMap[childRelativePath], d.sync, force) {

@@ -2,6 +2,7 @@ package sync
 
 import (
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io/ioutil"
 	"os"
 	"path"
@@ -356,6 +357,11 @@ func (i *initialSyncer) calculateLocalDirState(absPath string, stat os.FileInfo,
 	}
 
 	for _, f := range files {
+		if fsutil.IsRecursiveSymlink(f, filepath.Join(absPath, f.Name())) {
+			i.o.Log.Debugf("Found recursive symlink at %v", filepath.Join(absPath, f.Name()))
+			continue
+		}
+
 		err := i.CalculateLocalState(filepath.Join(absPath, f.Name()), localState, ignore)
 		if err != nil {
 			return errors.Wrap(err, f.Name())

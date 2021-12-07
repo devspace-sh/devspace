@@ -11,6 +11,20 @@ import (
 	recursiveCopy "github.com/otiai10/copy"
 )
 
+// IsRecursiveSymlink checks if the provided non-resolved file info
+// is a recursive symlink
+func IsRecursiveSymlink(f os.FileInfo, symlinkPath string) bool {
+	// check if recursive symlink
+	if f.Mode()&os.ModeSymlink == os.ModeSymlink {
+		resolvedPath, err := filepath.EvalSymlinks(symlinkPath)
+		if err != nil || strings.HasPrefix(symlinkPath, filepath.ToSlash(resolvedPath)) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // WriteToFile writes data to a file
 func WriteToFile(data []byte, filePath string) error {
 	err := os.MkdirAll(filepath.Dir(filePath), 0755)

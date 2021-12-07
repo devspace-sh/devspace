@@ -3,6 +3,7 @@ package server
 import (
 	"archive/tar"
 	"compress/gzip"
+	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"io/ioutil"
 	"os"
@@ -213,6 +214,10 @@ func tarFolder(basePath string, fileInformation *fileInformation, writtenFiles m
 
 	if !skipContents {
 		for _, f := range files {
+			if fsutil.IsRecursiveSymlink(f, path.Join(fileInformation.Name, f.Name())) {
+				continue
+			}
+
 			if err := recursiveTar(basePath, path.Join(fileInformation.Name, f.Name()), writtenFiles, tw, skipContents); err != nil {
 				return errors.Wrap(err, "recursive tar")
 			}
