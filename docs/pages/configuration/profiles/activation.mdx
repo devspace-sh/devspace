@@ -31,7 +31,7 @@ profiles:
     path: images.backend.image
     value: john/prodbackend
 ```
-The profile `production` would be activated when the environment variable `ENV` matches the regular expression `prod-\d+`. This can be useful for matching environment variables that have dynamic values.
+The profile `production` would be activated when the environment variable `ENV` matches the regular expression `prod-\d+`. This can be useful for matching environment variables that have dynamic values. Regular expressions will have start of string (`^`) and end of string (`$`) anchors added automatically to avoid unexpected substring matching. 
 
 #### Example: Matching All Environment Variables
 When multiple `env` name/expression pairs are specified in the same activation, all environment variables values must match the expression to activate the profile. For example, the `production` profile is activated when both environment variables match their expressions:

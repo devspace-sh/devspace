@@ -288,6 +288,110 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test2")
 	})
 
+	ginkgo.It("should auto activate profile using exact string matching environment variable", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run with non-matching vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "string-exact.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "test123")
+		err = printCmd.Run(f)
+		framework.ExpectNoError(err)
+		os.Unsetenv("FOO")
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate no profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+
+		// run with environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "string-exact.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "test")
+		err = printCmd.Run(f)
+		framework.ExpectNoError(err)
+		os.Unsetenv("FOO")
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 2)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test2")
+	})
+
+	ginkgo.It("should auto activate profile using exact regular expression matching environment variable", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run with non-matching vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "regexp-exact.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "some test here")
+		err = printCmd.Run(f)
+		framework.ExpectNoError(err)
+		os.Unsetenv("FOO")
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate no profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+
+		// run with environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "regexp-exact.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "test")
+		err = printCmd.Run(f)
+		framework.ExpectNoError(err)
+		os.Unsetenv("FOO")
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 2)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test2")
+	})
+
 	ginkgo.It("should auto activate profile using regular expression matching environment variable", func() {
 		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
 		framework.ExpectNoError(err)
@@ -325,7 +429,59 @@ var _ = DevSpaceDescribe("config", func() {
 			SkipInfo: true,
 		}
 
-		os.Setenv("FOO", "truthy")
+		os.Setenv("FOO", "^the string begins with ^t and ends with $")
+		err = printCmd.Run(f)
+		framework.ExpectNoError(err)
+		os.Unsetenv("FOO")
+
+		latestConfig = &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 2)
+		framework.ExpectEqual(latestConfig.Deployments[0].Name, "test")
+		framework.ExpectEqual(latestConfig.Deployments[1].Name, "test2")
+	})
+
+	ginkgo.It("should auto activate profile using regular expression matching environment variable substring", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-activation")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// run with non-matching vars
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "regexp-substring.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "the best string")
+		err = printCmd.Run(f)
+		framework.ExpectNoError(err)
+		os.Unsetenv("FOO")
+
+		latestConfig := &latest.Config{}
+		err = yaml.Unmarshal(configBuffer.Bytes(), latestConfig)
+		framework.ExpectNoError(err)
+
+		// validate no profile was activated
+		framework.ExpectEqual(len(latestConfig.Deployments), 0)
+
+		// run with environment variable set.
+		configBuffer = &bytes.Buffer{}
+		printCmd = &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				ConfigPath: "regexp-substring.yaml",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
+		}
+
+		os.Setenv("FOO", "a test string")
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 		os.Unsetenv("FOO")
