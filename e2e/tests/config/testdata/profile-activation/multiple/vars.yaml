@@ -1,38 +1,30 @@
 version: v1beta11
-deployments:
-- name: test
-  kubectl:
-    manifests:
-      - test.yaml
+deployments: []
 profiles:
   - name: one
     activation:
-      - env:
+      - vars:
           FOO: "true"
     patches:
-      - op: add
+      - op: replace
         path: deployments
         value:
-          name: test1
+        - name: test
           kubectl:
             manifests:
-              - test1.yaml
-  - name: two
-    activation:
-      - env:
-          FOO: "true"
-    patches:
-      - op: add
-        path: deployments
-        value:
-          name: test2
+              - test.yaml
+        - name: test2
           kubectl:
             manifests:
               - test2.yaml
-  - name: three
+  - name: two
     activation:
-      - env:
+      - vars:
           FOO: "true"
+    patches:
+      - op: remove
+        path: deployments[1]
+  - name: three
     patches:
       - op: add
         path: deployments
@@ -50,15 +42,3 @@ profiles:
           kubectl:
             manifests:
               - test4.yaml
-  - name: five
-    activation:
-      - env:
-          FOO: "true"
-    patches:
-      - op: add
-        path: deployments
-        value:
-          name: test5
-          kubectl:
-            manifests:
-              - test5.yaml

@@ -1,0 +1,19 @@
+version: v1beta11
+profiles:
+  - name: one
+    activation:
+      - vars:
+          FOO: "true"
+          BAR: "true"
+    patches:
+      - op: replace
+        path: deployments
+        value:
+        - name: test
+          kubectl:
+            manifests:
+              - test.yaml
+        - name: test2
+          kubectl:
+            manifests:
+              - test2.yaml

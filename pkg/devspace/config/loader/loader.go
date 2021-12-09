@@ -301,7 +301,7 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 	}
 
 	// apply the profiles
-	copiedRawConfig, err = l.applyProfiles(copiedRawConfig, options, log)
+	copiedRawConfig, err = l.applyProfiles(copiedRawConfig, options, resolver, vars, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -527,9 +527,9 @@ func resolve(data interface{}, resolver variable.Resolver, dir string, vars []*l
 	return expression.ResolveAllExpressions(data, dir)
 }
 
-func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *ConfigOptions, log log.Logger) (map[interface{}]interface{}, error) {
+func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *ConfigOptions, resolver variable.Resolver, vars []*latest.Variable, log log.Logger) (map[interface{}]interface{}, error) {
 	// Get profile
-	profiles, err := versions.ParseProfile(filepath.Dir(l.configPath), data, options.Profiles, options.ProfileRefresh, options.DisableProfileActivation, log)
+	profiles, err := versions.ParseProfile(filepath.Dir(l.configPath), data, options.Profiles, options.ProfileRefresh, options.DisableProfileActivation, resolver, vars, log)
 	if err != nil {
 		return nil, err
 	}

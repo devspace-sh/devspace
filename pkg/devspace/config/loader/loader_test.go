@@ -2034,6 +2034,110 @@ profiles:
 			expectedErr: `convert config: Error loading config: yaml: unmarshal errors:
   line 10: field images/image1 not found in type v1beta10.Config`,
 		},
+		"Profile activated by matching vars": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+vars:
+- name: USE_A
+- name: USE_B
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: A
+  activation:
+  - vars:
+      USE_A: true
+  patches:
+  - path: deployments..image
+    op: replace
+    value: nginx:a
+- name: B
+  patches:
+  - path: deployments..image
+    op: replace
+    value: nginx:b
+		`,
+				options:         &ConfigOptions{},
+				generatedConfig: &generated.Config{Vars: map[string]string{"USE_A": "true"}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "deployment",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "nginx:a",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"Profile not activated by non-matching vars": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+vars:
+- name: USE_A
+- name: USE_B
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: A
+  activation:
+  - vars:
+      USE_A: true
+  patches:
+  - path: deployments..image
+    op: replace
+    value: nginx:a
+- name: B
+  patches:
+  - path: deployments..image
+    op: replace
+    value: nginx:b
+		`,
+				options:         &ConfigOptions{},
+				generatedConfig: &generated.Config{Vars: map[string]string{"USE_A": "false"}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "deployment",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "nginx",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	// Execute test cases
