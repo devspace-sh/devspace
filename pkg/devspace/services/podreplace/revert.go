@@ -3,12 +3,12 @@ package podreplace
 import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	dependencytypes "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -144,7 +144,7 @@ func matchesSelector(annotations map[string]string, pod *corev1.PodTemplateSpec,
 
 		return labelSelector.Matches(labels.Set(pod.Labels)), nil
 	} else if replacePod.ImageSelector != "" {
-		imageSelector, err := util.ResolveImageAsImageSelector(replacePod.ImageSelector, config, dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, config, dependencies)
 		if err != nil {
 			return false, err
 		}

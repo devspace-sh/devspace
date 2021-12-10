@@ -55,8 +55,6 @@ func (r *resolver) fillVariables(haystack interface{}, exclude []*regexp.Regexp)
 				return value, nil
 			}
 
-			fmt.Println(path)
-
 			return r.replaceString(value)
 		})
 		return t, err
@@ -383,6 +381,11 @@ func (r *resolver) fillVariable(name string, definition *latest.Variable) (inter
 	variable, err := NewPredefinedVariable(name, r.persistentCache, r.options)
 	if err == nil {
 		return variable.Load(definition)
+	}
+
+	// is runtime variable
+	if strings.HasPrefix(name, "runtime.") {
+		return nil, fmt.Errorf("cannot resolve %s in this config area as this config region is loaded on startup. Please check the DevSpace docs in which config regions you can use runtime variables", name)
 	}
 
 	// fill variable without definition

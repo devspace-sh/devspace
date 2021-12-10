@@ -1,6 +1,7 @@
 package kubectl
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	"io"
 	"strings"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -259,7 +259,7 @@ func (d *DeployConfig) getReplacedManifest(manifest string, builtImages map[stri
 		}
 
 		if d.DeploymentConfig.Kubectl.ReplaceImageTags == nil || *d.DeploymentConfig.Kubectl.ReplaceImageTags {
-			redeploy, err := util.ReplaceImageNamesStringMap(resource.Object, d.config, d.dependencies, builtImages, map[string]bool{"image": true})
+			redeploy, err := legacy.ReplaceImageNamesStringMap(resource.Object, d.config, d.dependencies, builtImages, map[string]bool{"image": true})
 			if err != nil {
 				return false, "", err
 			} else if redeploy {

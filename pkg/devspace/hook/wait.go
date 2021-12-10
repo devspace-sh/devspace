@@ -2,17 +2,17 @@ package hook
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"sync"
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
@@ -43,7 +43,7 @@ func (r *waitHook) Execute(hook *latest.HookConfig, client kubectl.Client, confi
 		}
 
 		if hook.Container.ImageSelector != "" {
-			imageSelector, err := util.ResolveImageAsImageSelector(hook.Container.ImageSelector, config, dependencies)
+			imageSelector, err := runtime.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(hook.Container.ImageSelector, config, dependencies)
 			if err != nil {
 				return err
 			}

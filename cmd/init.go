@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -23,7 +24,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/dockerfile"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"

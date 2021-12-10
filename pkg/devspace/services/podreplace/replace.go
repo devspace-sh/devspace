@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"strconv"
 	"strings"
@@ -12,14 +13,13 @@ import (
 	yaml2 "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	dependencytypes "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/hash"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
@@ -614,7 +614,7 @@ func hashParentPodSpec(obj runtime.Object, config config.Config, dependencies []
 }
 
 func replaceImageInPodSpec(podSpec *corev1.PodSpec, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod) error {
-	imageStr, err := util.ResolveImage(replacePod.ReplaceImage, config, dependencies)
+	imageStr, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsString(replacePod.ReplaceImage, config, dependencies)
 	if err != nil {
 		return err
 	}
@@ -641,7 +641,7 @@ func replaceImageInPodSpec(podSpec *corev1.PodSpec, config config.Config, depend
 	} else if replacePod.ImageSelector != "" {
 		var imageSelector *imageselector.ImageSelector
 		if replacePod.ImageSelector != "" {
-			imageSelector, err = util.ResolveImageAsImageSelector(replacePod.ImageSelector, config, dependencies)
+			imageSelector, err = runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, config, dependencies)
 			if err != nil {
 				return err
 			}
@@ -787,7 +787,7 @@ func convertToInterface(str runtime.Object) map[interface{}]interface{} {
 
 func getImageSelector(replacePod *latest.ReplacePod, config config.Config, dependencies []dependencytypes.Dependency) (string, error) {
 	if replacePod.ImageSelector != "" {
-		imageSelector, err := util.ResolveImageAsImageSelector(replacePod.ImageSelector, config, dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, config, dependencies)
 		if err != nil {
 			return "", err
 		} else if imageSelector == nil {
@@ -905,7 +905,7 @@ func findSingleReplaceablePodParent(ctx context.Context, client kubectl.Client, 
 	targetOptions.SkipInitContainers = true
 	targetOptions.ImageSelector = []imageselector.ImageSelector{}
 	if replacePod.ImageSelector != "" {
-		imageSelector, err := util.ResolveImageAsImageSelector(replacePod.ImageSelector, config, dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, config, dependencies)
 		if err != nil {
 			return nil, nil, err
 		}

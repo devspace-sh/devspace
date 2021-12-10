@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,13 +16,11 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/devspace/sync"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
@@ -258,7 +258,7 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 
 	options.TargetOptions.ImageSelector = []imageselector.ImageSelector{}
 	if syncConfig.ImageSelector != "" {
-		imageSelector, err := util.ResolveImageAsImageSelector(syncConfig.ImageSelector, c.config, c.dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(syncConfig.ImageSelector, c.config, c.dependencies)
 		if err != nil {
 			return nil, err
 		}

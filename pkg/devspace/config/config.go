@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"sync"
 )
 
 type Config interface {
@@ -20,6 +21,12 @@ type Config interface {
 	// loading the config
 	Variables() map[string]interface{}
 
+	// RuntimeVariables returns the runtime variables
+	RuntimeVariables() map[string]interface{}
+
+	// SetRuntimeVariable allows to set a runtime variable
+	SetRuntimeVariable(key string, value interface{})
+
 	// Path returns the absolute path from which the config was loaded
 	Path() string
 }
@@ -31,6 +38,8 @@ func NewConfig(raw map[interface{}]interface{}, parsed *latest.Config, generated
 		generatedConfig:   generatedConfig,
 		resolvedVariables: resolvedVariables,
 		path:              path,
+
+		runtimeVariables: map[string]interface{}{},
 	}
 }
 
@@ -40,6 +49,28 @@ type config struct {
 	generatedConfig   *generated.Config
 	resolvedVariables map[string]interface{}
 	path              string
+
+	runtimeVariablesMutex sync.Mutex
+	runtimeVariables      map[string]interface{}
+}
+
+func (c *config) SetRuntimeVariable(key string, value interface{}) {
+	c.runtimeVariablesMutex.Lock()
+	defer c.runtimeVariablesMutex.Unlock()
+
+	c.runtimeVariables[key] = value
+}
+
+func (c *config) RuntimeVariables() map[string]interface{} {
+	c.runtimeVariablesMutex.Lock()
+	defer c.runtimeVariablesMutex.Unlock()
+
+	retVars := map[string]interface{}{}
+	for k, v := range c.runtimeVariables {
+		retVars[k] = v
+	}
+
+	return retVars
 }
 
 func (c *config) Config() *latest.Config {

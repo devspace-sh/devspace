@@ -1,12 +1,23 @@
 package variable
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 )
 
 // Variable defines an interface to load a variable
 type Variable interface {
 	Load(definition *latest.Variable) (interface{}, error)
+}
+
+// RuntimeResolver fills in runtime variables and cached ones
+type RuntimeResolver interface {
+	// FillRuntimeVariables finds the used variables first and then fills in those in the haystack
+	FillRuntimeVariables(haystack interface{}, config config.Config, dependencies []types.Dependency) (interface{}, error)
+
+	// FillRuntimeVariablesWithRebuild finds the used variables first and then fills in those in the haystack
+	FillRuntimeVariablesWithRebuild(haystack interface{}, config config.Config, dependencies []types.Dependency, builtImages map[string]string) (bool, interface{}, error)
 }
 
 // Resolver defines an interface to resolve defined variables

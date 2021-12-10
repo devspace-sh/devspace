@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"io"
 	"os"
 	"strings"
@@ -11,11 +13,9 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/legacy"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/dev"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 
@@ -607,7 +607,7 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 
 			var imageSelectors []imageselector.ImageSelector
 			if config.Dev.Terminal != nil && config.Dev.Terminal.ImageSelector != "" {
-				imageSelector, err := util.ResolveImageAsImageSelector(config.Dev.Terminal.ImageSelector, configInterface, dependencies)
+				imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(config.Dev.Terminal.ImageSelector, configInterface, dependencies)
 				if err != nil {
 					return 0, err
 				}

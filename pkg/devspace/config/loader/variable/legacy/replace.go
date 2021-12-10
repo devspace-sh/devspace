@@ -1,7 +1,8 @@
-package util
+package legacy
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"regexp"
 	"strings"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 )
 
 var (

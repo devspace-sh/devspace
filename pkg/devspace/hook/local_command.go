@@ -2,6 +2,7 @@ package hook
 
 import (
 	"encoding/json"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"io"
 	"os"
 	"path/filepath"
@@ -9,7 +10,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -65,7 +65,7 @@ func (l *localCommandHook) Execute(hook *latest.HookConfig, client kubectl.Clien
 
 func ResolveCommand(command string, args []string, config config.Config, dependencies []types.Dependency) (string, []string, error) {
 	// resolve hook command
-	hookCommand, err := util.ResolveImageHelpers(command, config, dependencies)
+	hookCommand, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsString(command, config, dependencies)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "resolve image helpers")
 	}
@@ -74,7 +74,7 @@ func ResolveCommand(command string, args []string, config config.Config, depende
 	if args != nil {
 		newArgs := []string{}
 		for _, a := range args {
-			newArg, err := util.ResolveImageHelpers(a, config, dependencies)
+			newArg, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsString(a, config, dependencies)
 			if err != nil {
 				return "", nil, errors.Wrap(err, "resolve image helpers")
 			}

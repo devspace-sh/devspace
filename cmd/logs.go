@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
@@ -9,13 +11,11 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -161,7 +161,7 @@ func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, c
 			}
 		}
 
-		resolved, err := util.ResolveImageAsImageSelector(imageSelector, config, dependencies)
+		resolved, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(imageSelector, config, dependencies)
 		if err != nil {
 			return nil, err
 		}

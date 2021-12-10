@@ -2,13 +2,12 @@ package imageselector
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
-
 	"github.com/docker/distribution/reference"
 	dockerregistry "github.com/docker/docker/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"regexp"
+	"strings"
 )
 
 type ImageSelector struct {

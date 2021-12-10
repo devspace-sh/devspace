@@ -2,6 +2,8 @@ package helm
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,7 +13,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm/merge"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
 	hashpkg "github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
@@ -146,18 +147,25 @@ func (d *DeployConfig) internalDeploy(forceDeploy bool, builtImages map[string]s
 	}
 
 	// Load override values from data and merge them
+	shouldRedeploy := false
 	if d.DeploymentConfig.Helm.Values != nil {
+		shouldRedeploy, _, err = runtimevar.NewRuntimeResolver(false).FillRuntimeVariablesWithRebuild(d.DeploymentConfig.Helm.Values, d.config, d.dependencies, builtImages)
+		if err != nil {
+			return false, nil, err
+		}
+
 		merge.Values(overwriteValues).MergeInto(d.DeploymentConfig.Helm.Values)
 	}
 
 	// Add devspace specific values
 	if d.DeploymentConfig.Helm.ReplaceImageTags == nil || *d.DeploymentConfig.Helm.ReplaceImageTags {
 		// Replace image names
-		shouldRedeploy, err := util.ReplaceImageNames(overwriteValues, d.config, d.dependencies, builtImages, nil)
+		redeploy, err := legacy.ReplaceImageNames(overwriteValues, d.config, d.dependencies, builtImages, nil)
 		if err != nil {
 			return false, nil, err
 		}
 
+		shouldRedeploy = shouldRedeploy || redeploy
 		if !forceDeploy && shouldRedeploy {
 			forceDeploy = true
 		}
