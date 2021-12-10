@@ -58,14 +58,14 @@ var versionLoader = map[string]*loader{
 }
 
 // ParseProfile loads the base config & a certain profile
-func ParseProfile(basePath string, data map[interface{}]interface{}, profiles []string, update bool, disableProfileActivation bool, resolver variable.Resolver, vars []*latest.Variable, log log.Logger) ([]map[interface{}]interface{}, error) {
+func ParseProfile(basePath string, data map[interface{}]interface{}, profiles []string, update bool, disableProfileActivation bool, resolver variable.Resolver, log log.Logger) ([]map[interface{}]interface{}, error) {
 	parsedProfiles := []map[interface{}]interface{}{}
 
 	// auto activated root level profiles
 	activatedProfiles := []string{}
 	if !disableProfileActivation {
 		var err error
-		activatedProfiles, err = getActivatedProfiles(data, resolver, vars)
+		activatedProfiles, err = getActivatedProfiles(data, resolver)
 		if err != nil {
 			return nil, err
 		}
@@ -393,7 +393,7 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 	return errors.Errorf("Couldn't find profile '%s'", profile)
 }
 
-func getActivatedProfiles(data map[interface{}]interface{}, resolver variable.Resolver, vars []*latest.Variable) ([]string, error) {
+func getActivatedProfiles(data map[interface{}]interface{}, resolver variable.Resolver) ([]string, error) {
 	activatedProfiles := []string{}
 
 	// Check if there are profiles
@@ -427,7 +427,7 @@ func getActivatedProfiles(data map[interface{}]interface{}, resolver variable.Re
 				return activatedProfiles, errors.Wrap(err, "error activating profile with env")
 			}
 
-			activatedByVars, err := matchVars(activation.Vars, resolver, vars)
+			activatedByVars, err := matchVars(activation.Vars, resolver)
 			if err != nil {
 				return activatedProfiles, errors.Wrap(err, "error activating profile with vars")
 			}
@@ -456,9 +456,9 @@ func matchEnvironment(env map[string]string) (bool, error) {
 	return true, nil
 }
 
-func matchVars(activationVars map[string]string, resolver variable.Resolver, vars []*latest.Variable) (bool, error) {
+func matchVars(activationVars map[string]string, resolver variable.Resolver) (bool, error) {
 	for k, v := range activationVars {
-		value, err := resolveVariableValue(k, resolver, vars)
+		value, err := resolveVariableValue(k, resolver)
 		if err != nil {
 			return false, err
 		}
@@ -489,8 +489,8 @@ func sanitizeMatchExpression(expression string) string {
 	return exp
 }
 
-func resolveVariableValue(name string, resolver variable.Resolver, vars []*latest.Variable) (string, error) {
-	val, err := resolver.FillVariables("${"+name+"}", vars)
+func resolveVariableValue(name string, resolver variable.Resolver) (string, error) {
+	val, err := resolver.FillVariables("${" + name + "}")
 	if err != nil {
 		return "", err
 	}

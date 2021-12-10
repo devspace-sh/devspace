@@ -10,7 +10,7 @@ import (
 )
 
 type Parser interface {
-	Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, log log.Logger) (*latest.Config, error)
+	Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error)
 }
 
 func NewDefaultParser() Parser {
@@ -19,11 +19,11 @@ func NewDefaultParser() Parser {
 
 type defaultParser struct{}
 
-func (d *defaultParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
+func (d *defaultParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
 	// delete the commands, since we don't need it in a normal scenario
 	delete(rawConfig, "commands")
 
-	return fillVariablesAndParse(resolver, rawConfig, vars, log)
+	return fillVariablesAndParse(resolver, rawConfig, log)
 }
 
 func NewWithCommandsParser() Parser {
@@ -32,8 +32,8 @@ func NewWithCommandsParser() Parser {
 
 type withCommandsParser struct{}
 
-func (d *withCommandsParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
-	return fillVariablesAndParse(resolver, rawConfig, vars, log)
+func (d *withCommandsParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
+	return fillVariablesAndParse(resolver, rawConfig, log)
 }
 
 func NewCommandsParser() Parser {
@@ -42,14 +42,14 @@ func NewCommandsParser() Parser {
 
 type commandsParser struct{}
 
-func (c *commandsParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
+func (c *commandsParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
 	// modify the config
 	preparedConfig, err := versions.ParseCommands(rawConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	return fillVariablesAndParse(resolver, preparedConfig, vars, log)
+	return fillVariablesAndParse(resolver, preparedConfig, log)
 }
 
 func NewProfilesParser() Parser {
@@ -58,7 +58,7 @@ func NewProfilesParser() Parser {
 
 type profilesParser struct{}
 
-func (p *profilesParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, vars []*latest.Variable, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
+func (p *profilesParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
 	rawMap, err := copyRaw(originalRawConfig)
 	if err != nil {
 		return nil, err
@@ -94,9 +94,11 @@ func (p *profilesParser) Parse(originalRawConfig map[interface{}]interface{}, ra
 	return retConfig, nil
 }
 
-func fillVariablesAndParse(resolver variable.Resolver, preparedConfig map[interface{}]interface{}, vars []*latest.Variable, log log.Logger) (*latest.Config, error) {
-	// fill in variables again
-	preparedConfigInterface, err := resolver.FillVariables(preparedConfig, vars)
+func fillVariablesAndParse(resolver variable.Resolver, preparedConfig map[interface{}]interface{}, log log.Logger) (*latest.Config, error) {
+	// fill in variables and expressions (leave out
+	preparedConfigInterface, err := resolver.FillVariablesExclude(preparedConfig, []string{
+		//"/deployments/*/helm/values",
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -27,10 +27,10 @@ func doWalk(path string, d interface{}, match MatchFn, replace ReplaceFn) error 
 	switch t := d.(type) {
 	case []interface{}:
 		for idx, val := range t {
-			path += "." + strconv.Itoa(idx)
+			newPath := path + "/" + strconv.Itoa(idx)
 			value, ok := val.(string)
 			if !ok {
-				err = doWalk(path, val, match, replace)
+				err = doWalk(newPath, val, match, replace)
 				if err != nil {
 					return err
 				}
@@ -39,7 +39,7 @@ func doWalk(path string, d interface{}, match MatchFn, replace ReplaceFn) error 
 			}
 
 			if match(fmt.Sprintf("[%d]", idx), value) {
-				t[idx], err = replace(path, value)
+				t[idx], err = replace(newPath, value)
 				if err != nil {
 					return err
 				}
@@ -47,10 +47,10 @@ func doWalk(path string, d interface{}, match MatchFn, replace ReplaceFn) error 
 		}
 	case map[string]interface{}:
 		for key, v := range t {
-			path += "." + key
+			newPath := path + "/" + key
 			value, ok := v.(string)
 			if !ok {
-				err = doWalk(path, v, match, replace)
+				err = doWalk(newPath, v, match, replace)
 				if err != nil {
 					return err
 				}
@@ -59,7 +59,7 @@ func doWalk(path string, d interface{}, match MatchFn, replace ReplaceFn) error 
 			}
 
 			if match(key, value) {
-				t[key], err = replace(path, value)
+				t[key], err = replace(newPath, value)
 				if err != nil {
 					return err
 				}
@@ -68,10 +68,10 @@ func doWalk(path string, d interface{}, match MatchFn, replace ReplaceFn) error 
 	case map[interface{}]interface{}:
 		for k, v := range t {
 			key := k.(string)
-			path += "." + key
+			newPath := path + "/" + key
 			value, ok := v.(string)
 			if !ok {
-				err = doWalk(path, v, match, replace)
+				err = doWalk(newPath, v, match, replace)
 				if err != nil {
 					return err
 				}
@@ -80,7 +80,7 @@ func doWalk(path string, d interface{}, match MatchFn, replace ReplaceFn) error 
 			}
 
 			if match(key, value) {
-				t[k], err = replace(path, value)
+				t[k], err = replace(newPath, value)
 				if err != nil {
 					return err
 				}
