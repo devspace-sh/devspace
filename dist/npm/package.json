@@ -19,7 +19,7 @@
     },
     "dependencies": {
         "cli-spinner": "^0.2.10",
-        "find-process": "^1.4.5",
+        "find-process": "^1.4.7",
         "inquirer": "^7.0.5",
         "request": "^2.88.2"
     },
