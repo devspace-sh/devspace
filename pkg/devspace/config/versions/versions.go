@@ -457,13 +457,8 @@ func matchEnvironment(env map[string]string) (bool, error) {
 }
 
 func matchVars(activationVars map[string]string, resolver variable.Resolver, vars []*latest.Variable) (bool, error) {
-	varMap := map[string]*latest.Variable{}
-	for _, v := range vars {
-		varMap[v.Name] = v
-	}
-
 	for k, v := range activationVars {
-		value, err := resolveVariableValue(k, resolver, varMap)
+		value, err := resolveVariableValue(k, resolver, vars)
 		if err != nil {
 			return false, err
 		}
@@ -471,9 +466,7 @@ func matchVars(activationVars map[string]string, resolver variable.Resolver, var
 		match, err := regexp.MatchString(sanitizeMatchExpression(v), value)
 		if err != nil {
 			return false, err
-		}
-
-		if !match {
+		} else if !match {
 			return false, nil
 		}
 	}
@@ -496,8 +489,8 @@ func sanitizeMatchExpression(expression string) string {
 	return exp
 }
 
-func resolveVariableValue(name string, resolver variable.Resolver, varMap map[string]*latest.Variable) (string, error) {
-	val, err := resolver.Resolve(name, varMap[name])
+func resolveVariableValue(name string, resolver variable.Resolver, vars []*latest.Variable) (string, error) {
+	val, err := resolver.FillVariables("${"+name+"}", vars)
 	if err != nil {
 		return "", err
 	}

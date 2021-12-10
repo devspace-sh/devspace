@@ -2,33 +2,35 @@ package walk
 
 import (
 	"fmt"
+	"strconv"
 )
 
 // ReplaceFn defines the replace function
-type ReplaceFn func(value string) (interface{}, error)
+type ReplaceFn func(path, value string) (interface{}, error)
 
 // MatchFn defines the match function
 type MatchFn func(key, value string) bool
 
 // Walk walks over an interface and replaces keys that match the match function with the replace function
 func Walk(d map[interface{}]interface{}, match MatchFn, replace ReplaceFn) error {
-	return doWalk(d, match, replace)
+	return doWalk("", d, match, replace)
 }
 
 // WalkStringMap walks over an interface and replaces keys that match the match function with the replace function
 func WalkStringMap(d map[string]interface{}, match MatchFn, replace ReplaceFn) error {
-	return doWalk(d, match, replace)
+	return doWalk("", d, match, replace)
 }
 
-func doWalk(d interface{}, match MatchFn, replace ReplaceFn) error {
+func doWalk(path string, d interface{}, match MatchFn, replace ReplaceFn) error {
 	var err error
 
 	switch t := d.(type) {
 	case []interface{}:
 		for idx, val := range t {
+			path += "." + strconv.Itoa(idx)
 			value, ok := val.(string)
 			if !ok {
-				err = doWalk(val, match, replace)
+				err = doWalk(path, val, match, replace)
 				if err != nil {
 					return err
 				}
@@ -37,7 +39,7 @@ func doWalk(d interface{}, match MatchFn, replace ReplaceFn) error {
 			}
 
 			if match(fmt.Sprintf("[%d]", idx), value) {
-				t[idx], err = replace(value)
+				t[idx], err = replace(path, value)
 				if err != nil {
 					return err
 				}
@@ -45,9 +47,10 @@ func doWalk(d interface{}, match MatchFn, replace ReplaceFn) error {
 		}
 	case map[string]interface{}:
 		for key, v := range t {
+			path += "." + key
 			value, ok := v.(string)
 			if !ok {
-				err = doWalk(v, match, replace)
+				err = doWalk(path, v, match, replace)
 				if err != nil {
 					return err
 				}
@@ -56,7 +59,7 @@ func doWalk(d interface{}, match MatchFn, replace ReplaceFn) error {
 			}
 
 			if match(key, value) {
-				t[key], err = replace(value)
+				t[key], err = replace(path, value)
 				if err != nil {
 					return err
 				}
@@ -65,9 +68,10 @@ func doWalk(d interface{}, match MatchFn, replace ReplaceFn) error {
 	case map[interface{}]interface{}:
 		for k, v := range t {
 			key := k.(string)
+			path += "." + key
 			value, ok := v.(string)
 			if !ok {
-				err = doWalk(v, match, replace)
+				err = doWalk(path, v, match, replace)
 				if err != nil {
 					return err
 				}
@@ -76,7 +80,7 @@ func doWalk(d interface{}, match MatchFn, replace ReplaceFn) error {
 			}
 
 			if match(key, value) {
-				t[k], err = replace(value)
+				t[k], err = replace(path, value)
 				if err != nil {
 					return err
 				}

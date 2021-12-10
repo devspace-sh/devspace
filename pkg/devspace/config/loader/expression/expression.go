@@ -25,7 +25,7 @@ func ResolveAllExpressions(preparedConfig interface{}, dir string) (interface{},
 	case string:
 		return ResolveExpressions(t, dir)
 	case map[interface{}]interface{}:
-		err := walk.Walk(t, expressionMatchFn, func(value string) (interface{}, error) {
+		err := walk.Walk(t, expressionMatchFn, func(_, value string) (interface{}, error) {
 			return ResolveExpressions(value, dir)
 		})
 		if err != nil {

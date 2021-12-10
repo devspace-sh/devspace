@@ -214,7 +214,7 @@ func replaceImageNames(config config2.Config, dependencies []types.Dependency, b
 	shouldRedeploy := false
 	err := action(func(key, value string) bool {
 		return Match(key, value, keys)
-	}, func(value string) (interface{}, error) {
+	}, func(_, value string) (interface{}, error) {
 		redeploy, retValue, err := Replace(value, config, dependencies, builtImages)
 		if err != nil {
 			return nil, err
