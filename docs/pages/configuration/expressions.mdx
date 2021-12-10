@@ -129,6 +129,17 @@ Expressions are run in a golang shell that is syntax compatible to a regular POS
 Variables are resolved before and after applying expressions, which means that you can load a section from file within an expression that contains a variable which will still be resolved afterwards.
 :::
 
+:::warning Unsupported Config Expressions
+Expressions are not supported in these configuration properties:
+- `vars`
+- `profiles[*].name`
+- `profiles[*].parent`
+- `profiles[*].parents`
+- `profiles[*].activations`
+- `profiles[*].patches[*].op`
+- `profiles[*].patches[*].path`
+:::
+
 ### Testing Config Expressions
 
 The command `devspace print` can be used to test your config expressions and shows the config after all profiles, variables and expressions were applied.

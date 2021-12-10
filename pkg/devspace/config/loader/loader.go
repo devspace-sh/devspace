@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/expression"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -24,6 +25,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/vars"
 
 	version "github.com/hashicorp/go-version"
 )
@@ -286,14 +288,26 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 		return nil, nil, nil, err
 	}
 
+	// Load defined variables
+	vars, err := versions.ParseVariables(copiedRawConfig, log)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// prepare profiles
+	copiedRawConfig, err = prepareProfiles(copiedRawConfig, resolver, filepath.Dir(absPath), vars)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	// apply the profiles
-	copiedRawConfig, err = l.applyProfiles(copiedRawConfig, options, log)
+	copiedRawConfig, err = l.applyProfiles(copiedRawConfig, options, resolver, vars, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	// Load defined variables
-	vars, err := versions.ParseVariables(copiedRawConfig, log)
+	vars, err = versions.ParseVariables(copiedRawConfig, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -340,9 +354,182 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 	return latestConfig, generatedConfig, resolver, nil
 }
 
-func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *ConfigOptions, log log.Logger) (map[interface{}]interface{}, error) {
+func validateProfile(profile interface{}) error {
+	profileMap, ok := profile.(map[interface{}]interface{})
+	if !ok {
+		return fmt.Errorf("profile is not an object")
+	}
+
+	parents := profileMap["parents"]
+	if parents != nil {
+		parentsString, ok := parents.(string)
+		if ok {
+			if vars.VarMatchRegex.MatchString(parentsString) {
+				return fmt.Errorf("parents cannot be a variable")
+			}
+
+			if expression.ExpressionMatchRegex.MatchString(parentsString) {
+				return fmt.Errorf("parents cannot be an expression")
+			}
+
+			return fmt.Errorf("parents is not an array")
+		}
+	}
+
+	activation := profileMap["activation"]
+	if activation != nil {
+		activationString, ok := activation.(string)
+		if ok {
+			if vars.VarMatchRegex.MatchString(activationString) {
+				return fmt.Errorf("activation cannot be a variable")
+			}
+
+			if expression.ExpressionMatchRegex.MatchString(activationString) {
+				return fmt.Errorf("activation cannot be an expression")
+			}
+
+			return fmt.Errorf("activation is not an array")
+		}
+	}
+
+	profileConfig, err := copyForValidation(profile)
+	if err != nil {
+		return err
+	}
+
+	if vars.VarMatchRegex.MatchString(profileConfig.Name) {
+		return fmt.Errorf("name cannot be a variable")
+	}
+
+	if expression.ExpressionMatchRegex.MatchString(profileConfig.Name) {
+		return fmt.Errorf("name cannot be an expression")
+	}
+
+	if vars.VarMatchRegex.MatchString(profileConfig.Parent) {
+		return fmt.Errorf("parent cannot be a variable")
+	}
+
+	if expression.ExpressionMatchRegex.MatchString(profileConfig.Parent) {
+		return fmt.Errorf("parent cannot be an expression")
+	}
+
+	for idx, patch := range profileConfig.Patches {
+		if vars.VarMatchRegex.MatchString(patch.Path) {
+			return fmt.Errorf("patches[%d] path cannot be a variable", idx)
+		}
+
+		if expression.ExpressionMatchRegex.MatchString(patch.Path) {
+			return fmt.Errorf("patches[%d] path cannot be an expression", idx)
+		}
+
+		if vars.VarMatchRegex.MatchString(patch.Operation) {
+			return fmt.Errorf("patches[%d] op cannot be a variable", idx)
+		}
+
+		if expression.ExpressionMatchRegex.MatchString(patch.Operation) {
+			return fmt.Errorf("patches[%d] op cannot be an expression", idx)
+		}
+	}
+
+	return nil
+}
+
+func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resolver, dir string, vars []*latest.Variable) (map[interface{}]interface{}, error) {
+	rawProfiles := config["profiles"]
+	if rawProfiles == nil {
+		return config, nil
+	}
+
+	resolved, err := resolve(rawProfiles, resolver, dir, vars)
+	if err != nil {
+		return nil, err
+	}
+
+	profiles, ok := resolved.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("error validating profiles: not an array")
+	}
+
+	for idx, profile := range profiles {
+		resolvedProfile, err := resolve(profile, resolver, dir, vars)
+		if err != nil {
+			return nil, err
+		}
+
+		profileMap, ok := resolvedProfile.(map[interface{}]interface{})
+		if !ok {
+			return nil, errors.Wrapf(err, "error resolving profiles[%d], object expected", idx)
+		}
+
+		// Resolve merge field
+		if profileMap["merge"] != nil {
+			merge, err := resolve(profileMap["merge"], resolver, dir, vars)
+			if err != nil {
+				return nil, err
+			}
+			profileMap["merge"] = merge
+		}
+
+		// Resolve patches field
+		if profileMap["patches"] != nil {
+			patches, err := resolve(profileMap["patches"], resolver, dir, vars)
+			if err != nil {
+				return nil, err
+			}
+			profileMap["patches"] = patches
+		}
+
+		// Resolve replace field
+		if profileMap["replace"] != nil {
+			replace, err := resolve(profileMap["replace"], resolver, dir, vars)
+			if err != nil {
+				return nil, err
+			}
+			profileMap["replace"] = replace
+		}
+
+		// Resolve strategicMerge field
+		if profileMap["strategicMerge"] != nil {
+			strategicMerge, err := resolve(profileMap["strategicMerge"], resolver, dir, vars)
+			if err != nil {
+				return nil, err
+			}
+			profileMap["strategicMerge"] = strategicMerge
+		}
+
+		// Validate that the profile doesn't use forbidden expressions
+		err = validateProfile(profileMap)
+		if err != nil {
+			return nil, errors.Wrapf(err, "error validating profiles[%d]", idx)
+		}
+
+		profiles[idx] = profileMap
+	}
+
+	config["profiles"] = profiles
+
+	return config, nil
+}
+
+func resolve(data interface{}, resolver variable.Resolver, dir string, vars []*latest.Variable) (interface{}, error) {
+	_, ok := data.(string)
+	if !ok {
+		return data, nil
+	}
+
+	// first resolve variables
+	data, err := resolver.FindAndFillVariables(data, vars)
+	if err != nil {
+		return nil, err
+	}
+
+	// evaluate expressions
+	return expression.ResolveAllExpressions(data, dir)
+}
+
+func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *ConfigOptions, resolver variable.Resolver, vars []*latest.Variable, log log.Logger) (map[interface{}]interface{}, error) {
 	// Get profile
-	profiles, err := versions.ParseProfile(filepath.Dir(l.configPath), data, options.Profiles, options.ProfileRefresh, options.DisableProfileActivation, log)
+	profiles, err := versions.ParseProfile(filepath.Dir(l.configPath), data, options.Profiles, options.ProfileRefresh, options.DisableProfileActivation, resolver, vars, log)
 	if err != nil {
 		return nil, err
 	}
@@ -509,4 +696,32 @@ func copyRaw(in map[interface{}]interface{}) (map[interface{}]interface{}, error
 	}
 
 	return n, nil
+}
+
+func copyForValidation(profile interface{}) (*latest.ProfileConfig, error) {
+	profileMap, ok := profile.(map[interface{}]interface{})
+	if !ok {
+		return nil, fmt.Errorf("error loading profiles: invalid format")
+	}
+
+	clone := map[interface{}]interface{}{
+		"name":       profileMap["name"],
+		"parent":     profileMap["parent"],
+		"parents":    profileMap["parents"],
+		"patches":    profileMap["patches"],
+		"activation": profileMap["activation"],
+	}
+
+	o, err := yaml.Marshal(clone)
+	if err != nil {
+		return nil, err
+	}
+
+	profileConfig := &latest.ProfileConfig{}
+	err = yaml.UnmarshalStrict(o, profileConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return profileConfig, nil
 }

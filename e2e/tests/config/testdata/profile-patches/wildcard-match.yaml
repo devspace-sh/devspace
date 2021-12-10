@@ -1,7 +1,7 @@
-version: v1beta10
+version: v1beta11
 deployments:
-- name: test
-- name: test2
+  - name: test
+  - name: test2
 profiles:
   - name: test
     patches:

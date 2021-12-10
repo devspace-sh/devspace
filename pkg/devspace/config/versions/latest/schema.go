@@ -1196,6 +1196,10 @@ type ProfileActivation struct {
 	// Environment defines key/value pairs where the key is the name of the environment variable and the value is a regular expression used to match the variable's value.
 	// When multiple keys are specified, they must all evaluate to true to activate the profile.
 	Environment map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
+
+	// Vars defines key/value pairs where the key is the name of the variable and the value is a regular expression used to match the variable's value.
+	// When multiple keys are specified, they must all evaluate to true to activate the profile.
+	Vars map[string]string `yaml:"vars,omitempty" json:"vars,omitempty"`
 }
 
 // PatchConfig describes a config patch and how it should be applied

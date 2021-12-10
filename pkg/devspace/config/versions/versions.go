@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta10"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
@@ -57,14 +58,14 @@ var versionLoader = map[string]*loader{
 }
 
 // ParseProfile loads the base config & a certain profile
-func ParseProfile(basePath string, data map[interface{}]interface{}, profiles []string, update bool, disableProfileActivation bool, log log.Logger) ([]map[interface{}]interface{}, error) {
+func ParseProfile(basePath string, data map[interface{}]interface{}, profiles []string, update bool, disableProfileActivation bool, resolver variable.Resolver, vars []*latest.Variable, log log.Logger) ([]map[interface{}]interface{}, error) {
 	parsedProfiles := []map[interface{}]interface{}{}
 
 	// auto activated root level profiles
 	activatedProfiles := []string{}
 	if !disableProfileActivation {
 		var err error
-		activatedProfiles, err = getActivatedProfiles(data)
+		activatedProfiles, err = getActivatedProfiles(data, resolver, vars)
 		if err != nil {
 			return nil, err
 		}
@@ -392,7 +393,7 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 	return errors.Errorf("Couldn't find profile '%s'", profile)
 }
 
-func getActivatedProfiles(data map[interface{}]interface{}) ([]string, error) {
+func getActivatedProfiles(data map[interface{}]interface{}, resolver variable.Resolver, vars []*latest.Variable) ([]string, error) {
 	activatedProfiles := []string{}
 
 	// Check if there are profiles
@@ -421,12 +422,17 @@ func getActivatedProfiles(data map[interface{}]interface{}) ([]string, error) {
 		}
 
 		for _, activation := range profileConfig.Activation {
-			activated, err := matchEnvironment(activation.Environment)
+			activatedByEnv, err := matchEnvironment(activation.Environment)
 			if err != nil {
-				return activatedProfiles, err
+				return activatedProfiles, errors.Wrap(err, "error activating profile with env")
 			}
 
-			if activated {
+			activatedByVars, err := matchVars(activation.Vars, resolver, vars)
+			if err != nil {
+				return activatedProfiles, errors.Wrap(err, "error activating profile with vars")
+			}
+
+			if activatedByEnv && activatedByVars {
 				activatedProfiles = append(activatedProfiles, profileConfig.Name)
 			}
 		}
@@ -437,11 +443,32 @@ func getActivatedProfiles(data map[interface{}]interface{}) ([]string, error) {
 
 func matchEnvironment(env map[string]string) (bool, error) {
 	for k, v := range env {
-		expression := strings.TrimPrefix(v, "^")
-		expression = strings.TrimSuffix(expression, "$")
-		expression = fmt.Sprintf("^%s$", expression)
+		match, err := regexp.MatchString(sanitizeMatchExpression(v), os.Getenv(k))
+		if err != nil {
+			return false, err
+		}
 
-		match, err := regexp.MatchString(expression, os.Getenv(k))
+		if !match {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+func matchVars(activationVars map[string]string, resolver variable.Resolver, vars []*latest.Variable) (bool, error) {
+	varMap := map[string]*latest.Variable{}
+	for _, v := range vars {
+		varMap[v.Name] = v
+	}
+
+	for k, v := range activationVars {
+		value, err := resolveVariableValue(k, resolver, varMap)
+		if err != nil {
+			return false, err
+		}
+
+		match, err := regexp.MatchString(sanitizeMatchExpression(v), value)
 		if err != nil {
 			return false, err
 		}
@@ -460,4 +487,20 @@ func filterProfileParents(profileParents []string) []string {
 			return os == is
 		}, oidx+1)
 	})
+}
+
+func sanitizeMatchExpression(expression string) string {
+	exp := strings.TrimPrefix(expression, "^")
+	exp = strings.TrimSuffix(exp, "$")
+	exp = fmt.Sprintf("^%s$", exp)
+	return exp
+}
+
+func resolveVariableValue(name string, resolver variable.Resolver, varMap map[string]*latest.Variable) (string, error) {
+	val, err := resolver.Resolve(name, varMap[name])
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%v", val), nil
 }

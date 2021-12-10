@@ -569,7 +569,7 @@ func TestParseCommands(t *testing.T) {
 type parseTestCase struct {
 	in          *parseTestCaseInput
 	expected    *latest.Config
-	expectedErr bool
+	expectedErr string
 }
 
 type parseTestCaseInput struct {
@@ -704,6 +704,827 @@ profiles:
 					},
 				},
 			},
+		},
+		"Profiles defined with expression": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles: |-
+  $(echo """
+  - name: testprofile
+    replace:
+      deployments:
+      - name: test
+        helm:
+          componentChart: true
+          values:
+            containers:
+            - image: ubuntu
+  """)
+		`,
+				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "test",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "ubuntu",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"Profile defined with expression": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- |-
+  $(echo """
+  name: testprofile
+  replace:
+    deployments:
+    - name: test
+      helm:
+        componentChart: true
+        values:
+          containers:
+          - image: ubuntu
+  """)
+`,
+				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "test",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "ubuntu",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"Profile with merge expression": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testprofile
+  merge: |-
+    $(echo """
+    deployments:
+      - name: test
+        helm:
+          componentChart: true
+          values:
+            containers:
+            - image: ubuntu
+    """)
+`,
+				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "test",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "ubuntu",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"Profile with replace expression": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testprofile
+  replace: |-
+    $(echo """
+    deployments:
+      - name: test
+        helm:
+          componentChart: true
+          values:
+            containers:
+            - image: ubuntu
+    """)
+`,
+				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "test",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "ubuntu",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"Profile with strategicMerge expression": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testprofile
+  strategicMerge: |-
+    $(echo """
+    deployments:
+      - name: test
+        helm:
+          componentChart: true
+          values:
+            containers:
+            - image: ubuntu
+    """)
+`,
+				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "test",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "ubuntu",
+									},
+								},
+							},
+						},
+					},
+					{
+						Name: "deployment",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "nginx",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"Profile with parent expression": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testparent
+- name: testprofile
+  parent: $(echo testparent)
+`,
+				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expectedErr: `error validating profiles[1]: parent cannot be an expression`,
+		},
+		"Profile with parent variable": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testparent
+- name: testprofile
+  parent: ${testparent}
+`,
+				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{"testparent": "testparent"}},
+			},
+			expectedErr: `error validating profiles[1]: parent cannot be a variable`,
+		},
+		"Profile with parents expression": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testparent
+- name: testprofile
+  parents: $(echo [testparent])
+`,
+				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expectedErr: `error validating profiles[1]: parents cannot be an expression`,
+		},
+		"Profile with parents variable": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testparent
+- name: testprofile
+  parents: ${testparents}
+`,
+				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{"testparent": "testparent"}},
+			},
+			expectedErr: `error validating profiles[1]: parents cannot be a variable`,
+		},
+		"Profile with activations expression": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testprofile
+  activation: $(echo [testparent])
+`,
+				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expectedErr: `error validating profiles[0]: activation cannot be an expression`,
+		},
+		"Profile with activations variable": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testprofile
+  activation: ${testparents}
+`,
+				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{"testparent": "testparent"}},
+			},
+			expectedErr: `error validating profiles[0]: activation cannot be a variable`,
+		},
+		"Profile with patches expression": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testprofile
+  patches: |-
+    $(echo """
+    - path: deployments
+      op: replace
+      value:
+      - name: deployments
+        helm:
+          componentChart: true
+          values:
+            containers:
+            - image: ubuntu
+    """)
+`,
+				options:         &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "deployments",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "ubuntu",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"Profile with patch path variable": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testprofile
+  patches:
+  - path: ${path}
+    op: replace
+    value:
+      - name: deployment
+        helm:
+          componentChart: true
+          values:
+            containers:
+            - image: ubuntu
+`,
+				options: &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{
+					"path": "deployments",
+				}},
+			},
+			expectedErr: "error validating profiles[0]: patches[0] path cannot be a variable",
+		},
+		"Profile with patch path expression": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testprofile
+  patches:
+  - path: $(echo deployments)
+    op: replace
+    value:
+      - name: deployment
+        helm:
+          componentChart: true
+          values:
+            containers:
+            - image: ubuntu
+`,
+				options: &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{
+					"path": "deployments",
+				}},
+			},
+			expectedErr: "error validating profiles[0]: patches[0] path cannot be an expression",
+		},
+		"Profile with patch op variable": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testprofile
+  patches:
+  - path: deployments
+    op: ${op}
+    value:
+      - name: deployment
+        helm:
+          componentChart: true
+          values:
+            containers:
+            - image: ubuntu
+`,
+				options: &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{
+					"op": "replace",
+				}},
+			},
+			expectedErr: "error validating profiles[0]: patches[0] op cannot be a variable",
+		},
+		"Profile with patch op expression": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testprofile
+  patches:
+  - path: deployments
+    op: $(echo replace)
+    value:
+      - name: deployment
+        helm:
+          componentChart: true
+          values:
+            containers:
+            - image: ubuntu
+`,
+				options: &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{
+					"path": "deployments",
+				}},
+			},
+			expectedErr: "error validating profiles[0]: patches[0] op cannot be an expression",
+		},
+		"Profile with patch op invalid": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testprofile
+  patches:
+  - path: deployments
+    op: []
+    value:
+      - name: deployment
+        helm:
+          componentChart: true
+          values:
+            containers:
+            - image: ubuntu
+`,
+				options: &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{
+					"path": "deployments",
+				}},
+			},
+			expectedErr: `error validating profiles[0]: yaml: unmarshal errors:
+  line 6: cannot unmarshal !!seq into string`,
+		},
+		"Profile with patch value variable": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testprofile
+  patches:
+  - path: deployments..image
+    op: replace
+    value: $(echo ubuntu)
+`,
+				options: &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{
+					"test_var": "test",
+				}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "deployment",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "ubuntu",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"Profile with patch value expression": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+vars:
+- name: IMAGE
+  default: ubuntu
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: testprofile
+  patches:
+  - path: deployments
+    op: replace
+    value: |-
+      $(echo """
+      - name: deployment
+        helm:
+          componentChart: true
+          values:
+            containers:
+            - image: ${IMAGE}
+      """)
+`,
+				options: &ConfigOptions{Profiles: []string{"testprofile"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{
+					"IMAGE": "foo",
+				}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "deployment",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "foo",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"Profiles with variables ignored when not activated": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+vars:
+- name: IMAGE_A
+- name: IMAGE_B
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: A
+  patches:
+  - path: deployments..image
+    op: replace
+    value: ${IMAGE_A}
+- name: B
+  patches:
+  - path: deployments..image
+    op: replace
+    value: ${IMAGE_B}
+`,
+				options:         &ConfigOptions{Profiles: []string{"B"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{"IMAGE_B": "ubuntu"}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "deployment",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "ubuntu",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"Profiles with expressions and variables ignored when not activated": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+vars:
+- name: IMAGE_A
+- name: IMAGE_B
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: A
+  patches:
+  - path: deployments..image
+    op: replace
+    value: $(echo ${IMAGE_A})
+- name: B
+  patches:
+  - path: deployments..image
+    op: replace
+    value: $(echo ${IMAGE_B})
+`,
+				options:         &ConfigOptions{Profiles: []string{"B"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{"IMAGE_B": "ubuntu"}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "deployment",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "ubuntu",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"Profile with name variable": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+vars:
+- name: IMAGE_A
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: ${IMAGE_A}
+  patches:
+  - path: deployments..image
+    op: replace
+	value: ubuntu
+`,
+				options:         &ConfigOptions{Profiles: []string{"A"}},
+				generatedConfig: &generated.Config{Vars: map[string]string{"IMAGE_A": "production"}},
+			},
+			expectedErr: "error validating profiles[0]: name cannot be a variable",
+		},
+		"Profile with name expression": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: $(echo production)
+  patches:
+  - path: deployments..image
+    op: replace
+	value: ubuntu
+`,
+				options:         &ConfigOptions{Profiles: []string{"production"}},
+				generatedConfig: &generated.Config{},
+			},
+			expectedErr: "error validating profiles[0]: name cannot be an expression",
 		},
 		"Profile with patches": {
 			in: &parseTestCaseInput{
@@ -971,7 +1792,7 @@ profiles:
 				options:         &ConfigOptions{Profiles: []string{"test"}},
 				generatedConfig: &generated.Config{Vars: map[string]string{}},
 			},
-			expectedErr: true,
+			expectedErr: "cannot load config with profile parent: max config loading depth reached. Seems like you have a profile cycle somewhere",
 		},
 		"Profile strategic merge": {
 			in: &parseTestCaseInput{
@@ -1210,7 +2031,112 @@ profiles:
 				options:         &ConfigOptions{Profiles: []string{"production"}},
 				generatedConfig: &generated.Config{Vars: map[string]string{}},
 			},
-			expectedErr: true,
+			expectedErr: `convert config: Error loading config: yaml: unmarshal errors:
+  line 10: field images/image1 not found in type v1beta10.Config`,
+		},
+		"Profile activated by matching vars": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+vars:
+- name: USE_A
+- name: USE_B
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: A
+  activation:
+  - vars:
+      USE_A: true
+  patches:
+  - path: deployments..image
+    op: replace
+    value: nginx:a
+- name: B
+  patches:
+  - path: deployments..image
+    op: replace
+    value: nginx:b
+		`,
+				options:         &ConfigOptions{},
+				generatedConfig: &generated.Config{Vars: map[string]string{"USE_A": "true"}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "deployment",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "nginx:a",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"Profile not activated by non-matching vars": {
+			in: &parseTestCaseInput{
+				config: `
+version: v1beta11
+vars:
+- name: USE_A
+- name: USE_B
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: nginx
+profiles:
+- name: A
+  activation:
+  - vars:
+      USE_A: true
+  patches:
+  - path: deployments..image
+    op: replace
+    value: nginx:a
+- name: B
+  patches:
+  - path: deployments..image
+    op: replace
+    value: nginx:b
+		`,
+				options:         &ConfigOptions{},
+				generatedConfig: &generated.Config{Vars: map[string]string{"USE_A": "false"}},
+			},
+			expected: &latest.Config{
+				Version: latest.Version,
+				Dev:     latest.DevConfig{},
+				Deployments: []*latest.DeploymentConfig{
+					{
+						Name: "deployment",
+						Helm: &latest.HelmConfig{
+							ComponentChart: ptr.Bool(true),
+							Values: map[interface{}]interface{}{
+								"containers": []interface{}{
+									map[interface{}]interface{}{
+										"image": "nginx",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -1227,9 +2153,11 @@ profiles:
 
 		configLoader := NewConfigLoader("").(*configLoader)
 		newConfig, _, _, err := configLoader.parseConfig("", testMap, NewDefaultParser(), testCase.in.options, log.Discard)
-		if testCase.expectedErr {
+		if testCase.expectedErr != "" {
 			if err == nil {
 				t.Fatalf("TestCase %s: expected error, but got none", index)
+			} else if err.Error() != testCase.expectedErr {
+				t.Fatalf("TestCase %s: expected error:\n\t%s\nbut got:\n\t%s", index, testCase.expectedErr, err.Error())
 			} else {
 				continue
 			}
