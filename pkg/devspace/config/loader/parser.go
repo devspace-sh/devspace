@@ -97,7 +97,14 @@ func (p *profilesParser) Parse(originalRawConfig map[interface{}]interface{}, ra
 func fillVariablesAndParse(resolver variable.Resolver, preparedConfig map[interface{}]interface{}, log log.Logger) (*latest.Config, error) {
 	// fill in variables and expressions (leave out
 	preparedConfigInterface, err := resolver.FillVariablesExclude(preparedConfig, []string{
-		//"/deployments/*/helm/values",
+		"/deployments/*/helm/values/**",
+		"/hooks/*/command",
+		"/hooks/*/args/*",
+		"/hooks/*/container/imageSelector",
+		"/dev/ports/*/imageSelector",
+		"/dev/sync/*/imageSelector",
+		"/dev/logs/*/selectors/*/imageSelector",
+		"/dev/terminal/imageSelector",
 	})
 	if err != nil {
 		return nil, err

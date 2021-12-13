@@ -1,6 +1,7 @@
 package hook
 
 import (
+	"bytes"
 	"encoding/json"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"io"
@@ -55,12 +56,21 @@ func (l *localCommandHook) Execute(hook *latest.HookConfig, client kubectl.Clien
 	}
 
 	// if args are nil we execute the command in a shell
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	defer func() {
+		if hook.Name != "" {
+			config.SetRuntimeVariable("hooks."+hook.Name+".stdout", stdout.String())
+			config.SetRuntimeVariable("hooks."+hook.Name+".stderr", stderr.String())
+		}
+	}()
+
 	if hook.Args == nil {
-		return shell.ExecuteShellCommand(hookCommand, nil, dir, l.Stdout, l.Stderr, extraEnv)
+		return shell.ExecuteShellCommand(hookCommand, nil, dir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), extraEnv)
 	}
 
 	// else we execute it directly
-	return command.ExecuteCommandWithEnv(hookCommand, hookArgs, dir, l.Stdout, l.Stderr, extraEnv)
+	return command.ExecuteCommandWithEnv(hookCommand, hookArgs, dir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), extraEnv)
 }
 
 func ResolveCommand(command string, args []string, config config.Config, dependencies []types.Dependency) (string, []string, error) {

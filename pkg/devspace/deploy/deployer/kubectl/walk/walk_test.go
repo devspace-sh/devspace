@@ -30,7 +30,7 @@ test2:
 	match := MatchFn(func(key, value string) bool {
 		return key == "image" && value != "dontreplaceme"
 	})
-	replace := ReplaceFn(func(value string) (interface{}, error) {
+	replace := ReplaceFn(func(_, value string) (interface{}, error) {
 		if value == "appendtag" {
 			return "appendtag:test", nil
 		}

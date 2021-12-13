@@ -47,9 +47,19 @@ func ResolveAllExpressions(preparedConfig interface{}, dir string, exclude []*re
 		}
 
 		return t, nil
+	case []interface{}:
+		for i := range t {
+			var err error
+			t[i], err = ResolveAllExpressions(t[i], dir, exclude)
+			if err != nil {
+				return nil, err
+			}
+		}
+		
+		return t, nil
 	}
 
-	return nil, fmt.Errorf("unrecognized haystack type: %#v", preparedConfig)
+	return preparedConfig, nil
 }
 
 func ResolveExpressions(value, dir string) (interface{}, error) {

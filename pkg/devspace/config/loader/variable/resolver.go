@@ -58,9 +58,19 @@ func (r *resolver) fillVariables(haystack interface{}, exclude []*regexp.Regexp)
 			return r.replaceString(value)
 		})
 		return t, err
+	case []interface{}:
+		for i := range t {
+			var err error
+			t[i], err = r.fillVariables(t[i], exclude)
+			if err != nil {
+				return nil, err
+			}
+		}
+		
+		return t, nil
 	}
 
-	return nil, fmt.Errorf("unrecognized haystack type: %#v", haystack)
+	return haystack, nil
 }
 
 func (r *resolver) ResolvedVariables() map[string]interface{} {
@@ -117,6 +127,7 @@ func (r *resolver) FillVariablesExclude(haystack interface{}, excludedPaths []st
 	paths := []*regexp.Regexp{}
 	for _, path := range excludedPaths {
 		path = strings.Replace(path, "*", "[^/]+", -1)
+		path = strings.Replace(path, "**", ".+", -1)
 		path = "^" + path
 		expr, err := regexp.Compile(path)
 		if err != nil {

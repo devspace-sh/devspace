@@ -1291,13 +1291,12 @@ deployments:
 - name: deployment
   helm:
     componentChart: true
-    values:
-      containers:
-      - image: nginx
+    valuesFiles:
+      - test.yaml
 profiles:
 - name: testprofile
   patches:
-  - path: deployments..image
+  - path: deployments..valuesFiles[0]
     op: replace
     value: $(echo ubuntu)
 `,
@@ -1314,12 +1313,8 @@ profiles:
 						Name: "deployment",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
-								"containers": []interface{}{
-									map[interface{}]interface{}{
-										"image": "ubuntu",
-									},
-								},
+							ValuesFiles: []string{
+								"ubuntu",
 							},
 						},
 					},
@@ -1420,7 +1415,7 @@ profiles:
 							Values: map[interface{}]interface{}{
 								"containers": []interface{}{
 									map[interface{}]interface{}{
-										"image": "ubuntu",
+										"image": "${IMAGE_B}",
 									},
 								},
 							},
@@ -1440,18 +1435,17 @@ deployments:
 - name: deployment
   helm:
     componentChart: true
-    values:
-      containers:
-      - image: nginx
+    valuesFiles:
+      - test.yaml
 profiles:
 - name: A
   patches:
-  - path: deployments..image
+  - path: deployments..valuesFiles[0]
     op: replace
     value: $(echo ${IMAGE_A})
 - name: B
   patches:
-  - path: deployments..image
+  - path: deployments..valuesFiles[0]
     op: replace
     value: $(echo ${IMAGE_B})
 `,
@@ -1466,12 +1460,8 @@ profiles:
 						Name: "deployment",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
-								"containers": []interface{}{
-									map[interface{}]interface{}{
-										"image": "ubuntu",
-									},
-								},
+							ValuesFiles: []string{
+								"ubuntu",
 							},
 						},
 					},
@@ -2052,7 +2042,7 @@ profiles:
 - name: A
   activation:
   - vars:
-      USE_A: true
+      USE_A: "true"
   patches:
   - path: deployments..image
     op: replace
@@ -2104,7 +2094,7 @@ profiles:
 - name: A
   activation:
   - vars:
-      USE_A: true
+      USE_A: "true"
   patches:
   - path: deployments..image
     op: replace

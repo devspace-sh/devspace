@@ -133,5 +133,5 @@ func (r *runtimeResolver) fillRuntimeVariable(name string, config config.Config,
 		return NewRuntimeVariable(name, config, dependencies, builtImages).Load()
 	}
 
-	return false, nil, fmt.Errorf("cannot resolve variable %s as it is not a runtime variable and apparently wasn't resolved earlier")
+	return false, nil, fmt.Errorf("cannot resolve variable %s as it is not a runtime variable and apparently wasn't resolved earlier", name)
 }
