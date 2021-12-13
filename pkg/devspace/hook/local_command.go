@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -60,8 +61,8 @@ func (l *localCommandHook) Execute(hook *latest.HookConfig, client kubectl.Clien
 	stderr := &bytes.Buffer{}
 	defer func() {
 		if hook.Name != "" {
-			config.SetRuntimeVariable("hooks."+hook.Name+".stdout", stdout.String())
-			config.SetRuntimeVariable("hooks."+hook.Name+".stderr", stderr.String())
+			config.SetRuntimeVariable("hooks."+hook.Name+".stdout", strings.TrimSpace(stdout.String()))
+			config.SetRuntimeVariable("hooks."+hook.Name+".stderr", strings.TrimSpace(stderr.String()))
 		}
 	}()
 

@@ -117,7 +117,7 @@ dev:
   # Will open a terminal to the pod with the 
   # image from dep1
   terminal:
-    imageName: dep1.image1
+    imageSelector: ${runtime.dependencies.dep1.images.image1}
 ```
 
 With `dep1/devspace.yaml`:
@@ -134,24 +134,9 @@ deployments:
           - image: myusername/devspace
 ```
 
-### Referencing Nested Dependencies
-
-You can also reference nested dependencies (dependencies of dependencies) via:
-```yaml
-dependencies:
-- name: dep1
-  source:
-    path: dep1
-dev:
-  # Will open a terminal to the pod with the 
-  # image from dep2 that is a dependency of dep1
-  terminal:
-    imageName: dep1.dep2.image1
-```
-
 ### Referencing Dependencies in Deployment Values / Manifests
 
-It is also possible to reference a dependency's image with the helpers `image()` or `tag()` in a deployment:
+It is also possible to reference a dependency's image with [runtime variables](../variables/runtime-variables.mdx) in a deployment:
 ```yaml
 dependencies:
 - name: dep1
@@ -163,7 +148,7 @@ deployments:
       componentChart: true
       values:
         containers:
-          - image: image(dep1.image1):tag(dep1.image1) # -> replaced with 'myusername/devspace:xxxx' 
+          - image: ${runtime.dependencies.dep1.image1.image}:${runtime.dependencies.dep1.image1.tag} # -> replaced with 'myusername/devspace:xxxx' 
 ```
 
 With a dependency `dep1/devspace.yaml` that looks like:

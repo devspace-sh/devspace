@@ -56,7 +56,7 @@ devspace enter -c my-container
 devspace enter bash -n my-namespace
 devspace enter bash -l release=test
 devspace enter bash --image-selector nginx:latest
-devspace enter bash --image-selector "image(app):tag(app)"
+devspace enter bash --image-selector "${runtime.images.app.image}:${runtime.images.app.tag}"
 #######################################################`,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			plugin.SetPluginCommand(cobraCmd, args)
@@ -68,7 +68,7 @@ devspace enter bash --image-selector "image(app):tag(app)"
 	enterCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
 	enterCmd.Flags().StringVar(&cmd.Image, "image", "", "Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage")
 	enterCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
-	enterCmd.Flags().StringVar(&cmd.ImageSelector, "image-selector", "", "The image to search a pod for (e.g. nginx, nginx:latest, image(app), nginx:tag(app))")
+	enterCmd.Flags().StringVar(&cmd.ImageSelector, "image-selector", "", "The image to search a pod for (e.g. nginx, nginx:latest, ${runtime.images.app}, nginx:${runtime.images.app.tag})")
 	enterCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
 
 	enterCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod / container if multiple are found")

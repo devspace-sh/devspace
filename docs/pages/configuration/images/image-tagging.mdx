@@ -11,7 +11,7 @@ images:                             # map[string]struct | Images to be built and
     tags:                           # string[] | Image tags (may be a tagging schema with variables)
     - latest
     - 0.0.1
-    - dev-${DEVSPACE_GIT_COMMIT}
+    - dev-${devspace.git.commit}
     - dev-${USER}-###               # Each # will be replaced with a random character 
 ```
 
@@ -35,9 +35,9 @@ images:
 
 ## `tags` *Tagging Schema*
 The `tags` option expects an array of strings, each containing a static tag or a tagging schema used to automatically tag images before pushing them to the registry. The tagging schema can contain [dynamic config variables](../../configuration/variables/basics.mdx). While you can define your own config variables, DevSpace provides a set of pre-defined variables. The most commonly used variables for tagging are:
-- **DEVSPACE_TIMESTAMP** A unix timestamp when the config was loaded
-- **DEVSPACE_GIT_COMMIT**: A short hash of the local repo's current git commit
-- **DEVSPACE_NAMESPACE**: The default namespace of your current kube-context
+- **devspace.timestamp** A unix timestamp when the config was loaded
+- **devspace.git.commit**: A short hash of the local repo's current git commit
+- **devspace.namespace**: The default namespace of your current kube-context
 
 Besides dynamic config variables, DevSpace offers you a possibility to mark certain parts of the image tag as random generated. During image build DevSpace will fill these parts with random characters. The placeholder for a random character is **#**. For example, let's assume you want to generate tags with the format dev-BRANCH-RANDOM, you would write the tag as:
 ```yaml
@@ -45,13 +45,13 @@ images:
   default:
     image: my-registry.com/user/image
     tags:
-    # The five # are replaced with 5 random characters. The variable ${GIT_BRANCH} is replaced
+    # The five # are replaced with 5 random characters. The variable ${devspace.git.branch} is replaced
     # with the current branch the user is on
-    - 'dev-${GIT_BRANCH}-#####' 
+    - 'dev-${devspace.git.branch}-#####' 
 ```
  
 :::info Unique Tags For Development
-**Make sure tags are unique** when defining a custom tagging schema for development. Unique tags ensure that your application gets started with the newly built image instead of using an older, cached version. Therefore, it is highly recommended for non-production tags to either use `#` placeholders or `DEVSPACE_TIMESTAMP` as a suffix in your tagging schema (see [example below](#example-custom-tagging-schema)).
+**Make sure tags are unique** when defining a custom tagging schema for development. Unique tags ensure that your application gets started with the newly built image instead of using an older, cached version. Therefore, it is highly recommended for non-production tags to either use `#` placeholders or `devspace.timestamp` as a suffix in your tagging schema (see [example below](#example-custom-tagging-schema)).
 :::
 
 #### Default Value For `tag`
@@ -67,7 +67,7 @@ images:
     image: john/appbackend
     tags: 
     - latest
-    - dev-backend-${DEVSPACE_GIT_COMMIT}-#####
+    - dev-backend-${devspace.git.commit}-#####
 ```
 **Explanation:**  
 The above example would always use the tag `latest` and additionaly generate random tags which could look like this one: `dev-backend-b6caf8a-Jak9i`. This example tag consists of the following substrings defined by the tagging schema:

@@ -114,6 +114,7 @@ func (d *DeployConfig) internalDeploy(forceDeploy bool, builtImages map[string]s
 		chartPath       = d.DeploymentConfig.Helm.Chart.Name
 		chartValuesPath = filepath.Join(chartPath, "values.yaml")
 		overwriteValues = map[interface{}]interface{}{}
+		shouldRedeploy  = false
 	)
 
 	// Get release namespace
@@ -125,6 +126,14 @@ func (d *DeployConfig) internalDeploy(forceDeploy bool, builtImages map[string]s
 		err := yamlutil.ReadYamlFromFile(chartValuesPath, overwriteValues)
 		if err != nil {
 			return false, nil, errors.Errorf("Couldn't deploy chart, error reading from chart values %s: %v", chartValuesPath, err)
+		}
+
+		if d.DeploymentConfig.Helm.ReplaceImageTags == nil || *d.DeploymentConfig.Helm.ReplaceImageTags {
+			redeploy, err := legacy.ReplaceImageNames(overwriteValues, d.config, d.dependencies, builtImages, nil)
+			if err != nil {
+				return false, nil, err
+			}
+			shouldRedeploy = shouldRedeploy || redeploy
 		}
 	}
 
@@ -142,14 +151,26 @@ func (d *DeployConfig) internalDeploy(forceDeploy bool, builtImages map[string]s
 				d.Log.Warnf("Error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)
 			}
 
+			// Replace image names
+			if d.DeploymentConfig.Helm.ReplaceImageTags == nil || *d.DeploymentConfig.Helm.ReplaceImageTags {
+				redeploy, err := legacy.ReplaceImageNames(overwriteValuesFromPath, d.config, d.dependencies, builtImages, nil)
+				if err != nil {
+					return false, nil, err
+				}
+				shouldRedeploy = shouldRedeploy || redeploy
+			}
+			
 			merge.Values(overwriteValues).MergeInto(overwriteValuesFromPath)
 		}
 	}
 
 	// Load override values from data and merge them
-	shouldRedeploy := false
 	if d.DeploymentConfig.Helm.Values != nil {
-		shouldRedeploy, _, err = runtimevar.NewRuntimeResolver(false).FillRuntimeVariablesWithRebuild(d.DeploymentConfig.Helm.Values, d.config, d.dependencies, builtImages)
+		enableLegacy := false
+		if d.DeploymentConfig.Helm.ReplaceImageTags == nil || *d.DeploymentConfig.Helm.ReplaceImageTags {
+			enableLegacy = true
+		}
+		shouldRedeploy, _, err = runtimevar.NewRuntimeResolver(enableLegacy).FillRuntimeVariablesWithRebuild(d.DeploymentConfig.Helm.Values, d.config, d.dependencies, builtImages)
 		if err != nil {
 			return false, nil, err
 		}
@@ -158,17 +179,8 @@ func (d *DeployConfig) internalDeploy(forceDeploy bool, builtImages map[string]s
 	}
 
 	// Add devspace specific values
-	if d.DeploymentConfig.Helm.ReplaceImageTags == nil || *d.DeploymentConfig.Helm.ReplaceImageTags {
-		// Replace image names
-		redeploy, err := legacy.ReplaceImageNames(overwriteValues, d.config, d.dependencies, builtImages, nil)
-		if err != nil {
-			return false, nil, err
-		}
-
-		shouldRedeploy = shouldRedeploy || redeploy
-		if !forceDeploy && shouldRedeploy {
-			forceDeploy = true
-		}
+	if !forceDeploy && shouldRedeploy {
+		forceDeploy = true
 	}
 
 	// Deployment is not necessary

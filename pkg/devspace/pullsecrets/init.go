@@ -21,13 +21,7 @@ func (r *client) CreatePullSecrets() (err error) {
 
 	// gather pull secrets from pullSecrets
 	if r.config != nil {
-		for _, pullSecret := range r.config.Config().PullSecrets {
-			if pullSecret.Disabled {
-				continue
-			}
-
-			createPullSecrets = append(createPullSecrets, pullSecret)
-		}
+		createPullSecrets = append(createPullSecrets, r.config.Config().PullSecrets...)
 
 		// gather pull secrets from images
 		for _, imageConf := range r.config.Config().Images {
@@ -69,6 +63,10 @@ func (r *client) CreatePullSecrets() (err error) {
 
 	// create pull secrets
 	for _, pullSecretConf := range createPullSecrets {
+		if pullSecretConf.Disabled {
+			continue
+		}
+		
 		displayRegistryURL := pullSecretConf.Registry
 		if displayRegistryURL == "" {
 			displayRegistryURL = "hub.docker.com"

@@ -20,15 +20,13 @@ images:
     image: john/appbackend
     build:
       custom:
-        command: ./build
-        args:
-        - "--arg1"
-        - "--flag"
-        - "flag-value"
-        - "--arg2"
+        skipImageArg: true
+        command: |-
+          # Also works on windows as this is executed in a golang shell
+          docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile
 ```
 **Explanation:**  
-The image `backend` would be built using the command `./build arg1 --flag flag-value arg2 "[IMAGE]:[TAG]"` while `[IMAGE]` would be replaced with the `image` option (in this case: `john/appbackend`) and `[TAG]` would be replaced with the tag generated according to the [tagging schema](../../configuration/images/basics.mdx#6-tag-image).
+The image `backend` would be built using the command `docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile"` while `${runtime.images.backend.image}` would be replaced with the `image` option (in this case: `john/appbackend`) and `${runtime.images.backend.tag}` would be replaced with the tag generated according to the [tagging schema](../../configuration/images/basics.mdx#6-tag-image).
 
 
 ### `imageFlag`
@@ -67,16 +65,13 @@ images:
     image: john/appbackend
     build:
       custom:
-        command: ./build
         skipImageArg: true
-        args:
-        - "--arg1"
-        - "--flag"
-        - "flag-value"
-        - "--arg2"
+        command: |-
+          # Also works on windows as this is executed in a golang shell
+          docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile
 ```
 **Explanation:**  
-The image `backend` would be built using the command `./build --arg1 --flag flag-value --arg2`
+The image `backend` would be built using the command `docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile`
 
 ### `imageTagOnly`
 The `imageTagOnly` option expects a boolean which specifies if DevSpace should only add the image `tag` instead of `image:tag` as argument. 

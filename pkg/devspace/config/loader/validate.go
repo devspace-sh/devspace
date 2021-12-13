@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	jsonyaml "github.com/ghodss/yaml"
@@ -79,14 +78,10 @@ func validate(config *latest.Config, log log.Logger) error {
 	return nil
 }
 
-var nameRegEx = regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`)
-
 func validateVars(vars []*latest.Variable) error {
 	for i, v := range vars {
 		if v.Name == "" {
 			return fmt.Errorf("vars[*].name has to be specified")
-		} else if !nameRegEx.MatchString(v.Name) {
-			return fmt.Errorf("vars[*].name %s must match regex: %v", v.Name, nameRegEx.String())
 		}
 
 		// make sure is unique

@@ -36,12 +36,12 @@ You can use either inline or multi-line if else:
 deployments:
     
 # Inline If-Else
-- $( [ ${DEVSPACE_NAMESPACE} == "test" ] && cat deployment.yaml || echo "" )
+- $( [ ${devspace.namespace} == "test" ] && cat deployment.yaml || echo "" )
 
 # Multi-Line If-Else
 - |-
   $(
-    if [ ${DEVSPACE_CONTEXT} == "minikube" ]; then
+    if [ ${devspace.context} == "minikube" ]; then
       cat minikube.yaml
     else
       echo ""
@@ -90,7 +90,7 @@ dev:
 
 Generate a whole section through a script:
 ```yaml
-dev: $(./my-script.sh ${DEVSPACE_NAMESPACE} ${DEVSPACE_CONTEXT} ${DEVSPACE_PROFILE})
+dev: $(./my-script.sh ${devspace.namespace} ${devspace.context} ${DEVSPACE_PROFILE})
 ```
 
 </TabItem>

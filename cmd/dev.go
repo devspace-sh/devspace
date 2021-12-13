@@ -776,7 +776,7 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 			}
 
 			c.Dev.Terminal = &latest.Terminal{
-				ImageSelector: fmt.Sprintf("image(%s):tag(%s)", imageName, imageName),
+				ImageSelector: fmt.Sprintf("${runtime.images.%s.image}:${runtime.images.%s.tag}", imageName, imageName),
 			}
 		} else {
 			c.Dev.Terminal.Disabled = false

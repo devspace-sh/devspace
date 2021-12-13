@@ -51,14 +51,12 @@ deployments:
       # If registry.url/repo/image was found under images as well, will be 
       # rewritten to registry.url/repo/image:generated_tag
       imageWithTag: registry.url/repo/image
-      # If registry.url/repo/image was found under images as well, will be
+      # If registry.url/repo/image was found under images.app as well, will be
       # rewritten to registry.url/repo/image
-      imageWithoutTag: image(registry.url/repo/image)
-      # If registry.url/repo/image was found under images as well, will be
+      imageWithoutTag: ${runtime.images.app.image}
+      # If registry.url/repo/image was found under images.app as well, will be
       # rewritten to generated_tag
-      onlyTag: tag(registry.url/repo/image)
-      ingress:
-        enabled: true
+      onlyTag: ${runtime.images.app.tag}
 ```
 
 </TabItem>
@@ -74,14 +72,12 @@ deployments:
       # If registry.url/repo/image was found under images as well, will be
       # rewritten to registry.url/repo/image:generated_tag
       imageWithTag: registry.url/repo/image
-      # If registry.url/repo/image was found under images as well, will be
+      # If registry.url/repo/image was found under images.app as well, will be
       # rewritten to registry.url/repo/image
-      imageWithoutTag: image(registry.url/repo/image)
-      # If registry.url/repo/image was found under images as well, will be
+      imageWithoutTag: ${runtime.images.app.image}
+      # If registry.url/repo/image was found under images.app as well, will be
       # rewritten to generated_tag
-      onlyTag: tag(registry.url/repo/image)
-      ingress:
-        enabled: true
+      onlyTag: ${runtime.images.app.tag}
 ```
 
 </TabItem>
@@ -285,8 +281,6 @@ By default, DevSpace searches all your values (specified via `values` or `values
 
 DevSpace will replace the following things:
 - **registry.url/repo/name** that corresponds to a `images.*.image`, will be rewritten to `registry.url/repo/name:generated_tag`
-- **image(image-key)** that corresponds to a `images.*` key, will be rewritten to `registry.url/repo/name`. You can also use dependency images here with `image(dep1.dep-image)`
-- **tag(image-key)** that corresponds to a `images.*` key, will be rewritten to `generated_tag`. You can also use dependency images here with `tag(dep1.dep-image)`
 
 :::info In-Memory Tag Replacement
 Tag replacement takes place **in-memory** and is **not** writing anything to the filesystem, i.e. it will **never** change any of your configuration files.
@@ -570,3 +564,8 @@ deployments:
     chart:
       name: bitnami/mysql
 ```
+
+## `disabled`
+
+If true, the deployment will not be deployed, rendered or purged. Can be useful in combination with config expressions or command variables.
+

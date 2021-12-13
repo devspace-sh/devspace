@@ -60,7 +60,7 @@ vars:
   source: env
 - name: SECRET_VALUE
   command: ./retrieve-secret-value.sh
-  args: ["--secret-name=${SECRET_NAME}", "--namespace=${DEVSPACE_NAMESPACE}"]
+  args: ["--secret-name=${SECRET_NAME}", "--namespace=${devspace.namespace}"]
 ```
 :::
 

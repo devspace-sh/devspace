@@ -57,7 +57,7 @@ images:
     # This will be replaced during build time with
     # something like dev-ads13as1-sA4ve. Each hashtag
     # represents a random character.
-    - dev-${DEVSPACE_GIT_COMMIT}-#####  
+    - dev-${devspace.git.commit}-#####  
   database:
     image: image.company.tld/appbackend
 ```
@@ -103,12 +103,10 @@ images:
     image: john/appbackend
     build:
       custom:
-        command: ./build
-        args:
-        - "--arg1"
-        - "arg-value-1"
-        - "--arg2"
-        - "arg-value-2"
+        skipImageArg: true
+        command: |-
+          # Also works on windows as this is executed in a golang shell
+          docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile
 ```
 
 </TabItem>

@@ -158,31 +158,6 @@ devspace reset vars
 
 To disable this functionality set the field `noCache` to `true`. This will make devspace prompt for the variable on every run.
 
-## Predefined Variables
-DevSpace provides some variables that are filled automatically and can be used within the config. These can be helpful for image tagging and other use cases:
-
-- **DEVSPACE_RANDOM**: A random 6 character long string
-- **DEVSPACE_TIMESTAMP** A unix timestamp when the config was loaded
-- **DEVSPACE_GIT_COMMIT**: A short hash of the local repo's current git commit
-- **DEVSPACE_GIT_BRANCH**: The current branch name of the local repo
-- **DEVSPACE_NAMESPACE**: The default namespace of the current kube-context (= the namespace that you are deploying to)
-- **DEVSPACE_CONTEXT**: Name of the current kube-context
-- **DEVSPACE_VERSION**: The version of the devspace cli without a leading v (e.g. 5.4.3)
-- **DEVSPACE_PROFILE**: The main profile used for DevSpace (value of the --profile flag)
-- **DEVSPACE_USER_HOME**: The absolute path to the user's home directory
-
-#### Example: Using `${DEVSPACE_GIT_COMMIT}`
-```yaml
-images:
-  default:
-    image: myrepo/devspace
-    tag: ${DEVSPACE_GIT_COMMIT}-${DEVSPACE_TIMESTAMP}
-```
-**Explanation:**  
-This config will tag the image in the form of `myrepo/devspace:d9b4bcd-1559766514`. Many other combinations are possible with this method.
-
-
-
 ## Useful Commands
 
 ### `devspace list vars`

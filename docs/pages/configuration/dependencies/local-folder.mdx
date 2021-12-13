@@ -28,7 +28,7 @@ deployments:
     componentChart: true
     values:
       containers:
-        - image: image(component-1.image1):tag(component-1.image1)
+        - image: ${runtime.dependencies.component-1.image1}
 ```
 
 ## `source`

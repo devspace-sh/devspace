@@ -34,6 +34,24 @@ var _ = DevSpaceDescribe("config", func() {
 		f = framework.NewDefaultFactory()
 	})
 
+	ginkgo.It("should resolve runtime environment variables correctly", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/runtime-variables")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		configBuffer := &bytes.Buffer{}
+		printCmd := &cmd.PrintCmd{
+			GlobalFlags: &flags.GlobalFlags{},
+			Out:         configBuffer,
+			SkipInfo:    true,
+		}
+
+		err = printCmd.Run(f)
+		framework.ExpectNoError(err)
+		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out.txt"), "test-testimage-latest-dep1")
+		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out2.txt"), "Done")
+	})
+
 	ginkgo.It("should load multiple profiles in order via --profile", func() {
 		tempDir, err := framework.CopyToTempDir("tests/config/testdata/multiple-profiles")
 		framework.ExpectNoError(err)

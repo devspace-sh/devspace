@@ -21,7 +21,7 @@ hooks:
 # Execute the hook in a golang shell (cross operating system compatible)
 - name: "post-image-build-hook"
   command: |
-    echo Built Image image(image-1):tag(image-1)
+    echo Built Image ${runtime.images.image-1.image}:${runtime.images.image-1.tag}
   events: ["after:build:image-1"]
 # Execute the hook directly on the system (echo binary must exist)
 - command: "echo"
@@ -50,6 +50,7 @@ You are able to define hooks for the following lifecycle events:
 - `deployCommand:before:execute`, `deployCommand:after:execute`, `deployCommand:error`, `deployCommand:interrupt` executed at different checkpoints when `devspace deploy` is executed
 - `purgeCommand:before:execute`, `purgeCommand:after:execute`, `purgeCommand:error`, `purgeCommand:interrupt` executed at different checkpoints when `devspace purge` is executed
 - `buildCommand:before:execute`, `buildCommand:after:execute`, `buildCommand:error`, `buildCommand:interrupt` executed at different checkpoints when `devspace build` is executed
+- `before:resolveDependencies`, `after:resolveDependencies`, `error:resolveDependencies`, `before:buildDependencies`, `after:buildDependencies`, `error:buildDependencies`, `before:deployDependencies`, `after:deployDependencies`, `error:deployDependencies`, `before:purgeDependencies`, `after:purgeDependencies`, `error:purgeDependencies` executed at different checkpoints when dependencies are resolved, deployed, built or purged
 
 :::info Errors in Hooks
 If any hook returns a non zero exit code, DevSpace will abort and print an error message.
@@ -94,7 +95,7 @@ hooks:
 - command: "echo"
   args: ["Hello from within the container!"]
   container:
-    imageSelector: image(app):tag(app)
+    imageSelector: ${runtime.images.app.image}:${runtime.images.app.tag}
     # Or select via labelSelector etc.
     # labelSelector: ...
     # namespace: ...
@@ -116,7 +117,7 @@ hooks:
     localPath: bin
     containerPath: bin
   container:
-    imageSelector: image(test):tag(test)
+    imageSelector: ${runtime.images.test.image}:${runtime.images.test.tag}
   events: ["after:deploy:my-deployment"]
   name: "upload-hook"
 # Download a single file from the container to the local path
@@ -124,7 +125,7 @@ hooks:
     localPath: build/artifact.jar
     containerPath: /abs/path/build/artifact-test.jar
   container:
-    imageSelector: image(java):tag(java)
+    imageSelector: ${runtime.images.java.image}:${runtime.images.java.tag}
   events: ["after:deploy:my-deployment-2"]
   name: "download-hook"
 ```

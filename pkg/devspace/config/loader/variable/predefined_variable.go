@@ -65,7 +65,7 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 
 		branch, err := git.GetBranch(filepath.Dir(configPath))
 		if err != nil {
-			return "", fmt.Errorf("error retrieving git branch: %v, but predefined var DEVSPACE_GIT_BRANCH is used", err)
+			return "", fmt.Errorf("error retrieving git branch: %v, but predefined var devspace.git.branch is used", err)
 		}
 
 		return branch, nil
@@ -78,7 +78,7 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 
 		hash, err := git.GetHash(filepath.Dir(configPath))
 		if err != nil {
-			return "", fmt.Errorf("no git repository found (%v), but predefined var DEVSPACE_GIT_COMMIT is used", err)
+			return "", fmt.Errorf("no git repository found (%v), but predefined var devspace.git.commit is used", err)
 		}
 
 		return hash[:8], nil

@@ -62,8 +62,8 @@ func (r *remoteCommandHook) ExecuteRemotely(hook *latest.HookConfig, podContaine
 	stderr := &bytes.Buffer{}
 	defer func() {
 		if hook.Name != "" {
-			config.SetRuntimeVariable("hooks."+hook.Name+".stdout", stdout.String())
-			config.SetRuntimeVariable("hooks."+hook.Name+".stderr", stderr.String())
+			config.SetRuntimeVariable("hooks."+hook.Name+".stdout", strings.TrimSpace(stdout.String()))
+			config.SetRuntimeVariable("hooks."+hook.Name+".stderr", strings.TrimSpace(stderr.String()))
 		}
 	}()
 

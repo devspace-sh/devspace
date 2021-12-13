@@ -410,3 +410,16 @@ You **cannot** use `source.git` and `source.path` in combination. You **must** e
 <FragmentConfigProfiles/>
 
 [Learn more about configuring profiles and patches.](../configuration/profiles/basics.mdx)
+
+## `pullSecrets`
+
+```yaml
+pullSecrets:                              # struct[] | Which pull secrets should get created
+- registry: my-registry.com:5000          # string   | The name of the registry this secret should get created for
+  disabled: false                         # bool     | If enabled will not create the pull secret for this registry
+  username: my-user                       # string   | Optional and expects a string with the username to login into the registry
+  password: my-password                   # string   | Optional and expects a string with the password to login into the registry
+  email: my-email@domain.com              # string   | Optional and expects a string with the email to login into the registry. 
+  secret: ""                              # string   | Optional and expects a string how the secret should be named.
+  serviceAccounts: []                     # string[] | Optional and expects an array of strings to which the pull secret should be added
+```

@@ -17,6 +17,9 @@ type Dependency interface {
 	// Config holds the dependency config
 	Config() config.Config
 
+	// KubeClient returns the kube client of the dependency
+	KubeClient() kubectl.Client
+
 	// Children returns dependency children if any
 	Children() []Dependency
 
@@ -33,13 +36,13 @@ type Dependency interface {
 	DependencyConfig() *latest.DependencyConfig
 
 	// ReplacePods replaces the dependencies pods from dev.replacePods
-	ReplacePods(client kubectl.Client, logger log.Logger) error
+	ReplacePods(logger log.Logger) error
 
 	// StartSync starts the dependency sync
-	StartSync(client kubectl.Client, interrupt chan error, printSyncLog, verboseSync bool, logger log.Logger) error
+	StartSync(interrupt chan error, printSyncLog, verboseSync bool, logger log.Logger) error
 
 	// StartPortForwarding starts the dependency port-forwarding
-	StartPortForwarding(client kubectl.Client, interrupt chan error, logger log.Logger) error
+	StartPortForwarding(interrupt chan error, logger log.Logger) error
 
 	// Command executes a command from the dependency config
 	Command(command string, args []string) error

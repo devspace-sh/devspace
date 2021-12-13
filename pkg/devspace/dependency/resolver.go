@@ -28,7 +28,7 @@ import (
 
 // ResolverInterface defines the resolver interface that takes dependency configs and resolves them
 type ResolverInterface interface {
-	Resolve(update bool) ([]*Dependency, error)
+	Resolve(update bool) ([]types.Dependency, error)
 }
 
 // Resolver implements the resolver interface
@@ -90,7 +90,7 @@ func NewResolver(baseConfig config.Config, client kubectl.Client, configOptions 
 }
 
 // Resolve implements interface
-func (r *resolver) Resolve(update bool) ([]*Dependency, error) {
+func (r *resolver) Resolve(update bool) ([]types.Dependency, error) {
 	currentWorkingDirectory, err := os.Getwd()
 	if err != nil {
 		return nil, errors.Wrap(err, "get current working directory")
@@ -111,28 +111,13 @@ func (r *resolver) Resolve(update bool) ([]*Dependency, error) {
 		return nil, err
 	}
 
-	return r.buildDependencyQueue()
-}
-
-func (r *resolver) buildDependencyQueue() ([]*Dependency, error) {
-	retDependencies := make([]*Dependency, 0, len(r.DependencyGraph.Nodes)-1)
-
-	// build dependency queue
-	for len(r.DependencyGraph.Nodes) > 1 {
-		next := r.DependencyGraph.getNextLeaf(r.DependencyGraph.Root)
-		if next == r.DependencyGraph.Root {
-			break
-		}
-
-		retDependencies = append(retDependencies, next.Data.(*Dependency))
-
-		err := r.DependencyGraph.removeNode(next.ID)
-		if err != nil {
-			return nil, err
-		}
+	// get direct childs
+	childs := []types.Dependency{}
+	for _, v := range r.DependencyGraph.Root.childs {
+		childs = append(childs, v.Data.(*Dependency))
 	}
 
-	return retDependencies, nil
+	return childs, nil
 }
 
 func (r *resolver) resolveRecursive(basePath, parentID string, currentDependency *Dependency, dependencies []*latest.DependencyConfig, update bool) error {

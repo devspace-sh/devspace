@@ -322,14 +322,14 @@ func createSecretHook(name string, cwd string, secret composetypes.SecretConfig)
 
 	return &latest.HookConfig{
 		Events:  []string{"before:deploy"},
-		Command: fmt.Sprintf("kubectl create secret generic %s --namespace=${DEVSPACE_NAMESPACE} --dry-run=client --from-file=%s=%s -o yaml | kubectl apply -f -", name, name, filepath.ToSlash(file)),
+		Command: fmt.Sprintf("kubectl create secret generic %s --namespace=${devspace.namespace} --dry-run=client --from-file=%s=%s -o yaml | kubectl apply -f -", name, name, filepath.ToSlash(file)),
 	}, nil
 }
 
 func deleteSecretHook(name string) *latest.HookConfig {
 	return &latest.HookConfig{
 		Events:  []string{"after:purge"},
-		Command: fmt.Sprintf("kubectl delete secret %s --namespace=${DEVSPACE_NAMESPACE} --ignore-not-found", name),
+		Command: fmt.Sprintf("kubectl delete secret %s --namespace=${devspace.namespace} --ignore-not-found", name),
 	}
 }
 

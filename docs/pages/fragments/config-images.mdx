@@ -5,7 +5,7 @@ images:                             # map[string]struct | Images to be built and
     tags:                           # string[] | Image tags (may be a tagging schema with variables)
     - latest
     - 0.0.1
-    - dev-${DEVSPACE_GIT_COMMIT}
+    - dev-${devspace.git.commit}
     - random-####                   #          | Each hashtag is replaced with a random character during building
     dockerfile: ./Dockerfile        # string   | Relative path to the Dockerfile used for building (Default: ./Dockerfile)
     context: ./                     # string   | Relative path to the context used for building (Default: ./)

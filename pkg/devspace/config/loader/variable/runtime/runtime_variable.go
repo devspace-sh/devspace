@@ -19,6 +19,8 @@ var Locations = []string{
 	"/dev/ports/*/imageSelector",
 	"/dev/sync/*/imageSelector",
 	"/dev/logs/*/selectors/*/imageSelector",
+	"/dev/replacePods/*/imageSelector",
+	"/dev/replacePods/*/replaceImage",
 	"/dev/terminal/imageSelector",
 }
 
@@ -46,11 +48,11 @@ func (e *runtimeVariable) Load() (bool, interface{}, error) {
 
 	runtimeVar := strings.TrimPrefix(e.name, "runtime.")
 	c := e.config
-	if strings.HasPrefix(runtimeVar, "dependency.") {
-		runtimeVar = strings.TrimPrefix(runtimeVar, "dependency.")
+	if strings.HasPrefix(runtimeVar, "dependencies.") {
+		runtimeVar = strings.TrimPrefix(runtimeVar, "dependencies.")
 		dependencyName := strings.Split(runtimeVar, ".")[0]
 		if !strings.HasPrefix(runtimeVar, dependencyName+".") {
-			return false, nil, fmt.Errorf("unexpected runtime variable %s, need format runtime.dependency.NAME", e.name)
+			return false, nil, fmt.Errorf("unexpected runtime variable %s, need format runtime.dependencies.NAME", e.name)
 		}
 		runtimeVar = strings.TrimPrefix(runtimeVar, dependencyName+".")
 

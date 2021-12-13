@@ -62,6 +62,9 @@ pullSecrets:
 ### `registry`
 The `registry` option is mandatory and expects a string with the registry name for which a pull secret should be created for.
 
+### `disabled`
+The `disabled` option is optional and expects a bool if the pull secret should get created for the specified registry.
+
 ### `username`
 The `username` option is optional and expects a string with the username to login into the registry. If this field is empty, DevSpace will try to find out username and password from the local docker store.
 
