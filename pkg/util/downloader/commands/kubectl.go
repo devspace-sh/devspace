@@ -1,18 +1,33 @@
 package commands
 
 import (
+	"io/ioutil"
+	"log"
+	"net/http"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/mitchellh/go-homedir"
 	"github.com/otiai10/copy"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 var (
-	kubectlVersion  = "v1.21.2"
-	kubectlDownload = "https://storage.googleapis.com/kubernetes-release/release/" + kubectlVersion + "/bin/" + runtime.GOOS + "/" + runtime.GOARCH + "/kubectl"
+	kubectlVersion = func() string {
+		res, err := http.Get("https://storage.googleapis.com/kubernetes-release/release/stable.txt")
+		if err != nil {
+			log.Fatal(err)
+		}
+		content, err := ioutil.ReadAll(res.Body)
+		res.Body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+		return string(content)
+	}
+	kubectlDownload = "https://storage.googleapis.com/kubernetes-release/release/" + kubectlVersion() + "/bin/" + runtime.GOOS + "/" + runtime.GOARCH + "/kubectl"
 )
 
 func NewKubectlCommand() Command {

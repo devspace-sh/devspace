@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
+	version "github.com/hashicorp/go-version"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -81,7 +83,30 @@ func (k *kubectlBuilder) Build(manifest string, cmd RunCommand) ([]*unstructured
 		args = append(args, "--namespace", k.namespace)
 	}
 
-	args = append(args, "--dry-run", "--output", "yaml", "--validate=false")
+	// compare kubectl version for --dry-run flag value
+	out, err := command.NewStreamCommand(k.path, []string{"version", "--client", "--short"}).Output()
+	if err != nil {
+		return nil, err
+	}
+
+	versionSlice := strings.Split(string(out), "v")
+	v1, err := version.NewVersion(strings.TrimSpace(versionSlice[1]))
+	if err != nil {
+
+		return nil, err
+	}
+
+	v2, err := version.NewVersion("1.18.0")
+	if err != nil {
+		return nil, err
+	}
+
+	if v1.LessThan(v2) {
+		args = append(args, "--dry-run", "--output", "yaml", "--validate=false")
+	} else {
+		args = append(args, "--dry-run=client", "--output", "yaml", "--validate=false")
+	}
+
 	if k.config.Kubectl.Kustomize != nil && *k.config.Kubectl.Kustomize {
 		args = append(args, "--kustomize", manifest)
 	} else {
