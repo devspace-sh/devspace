@@ -9,10 +9,8 @@
 resolves #
 
 
-**Does this pull request has user-facing changes?** (e.g. config changes, new/modified commands, new/modified flags) 
-
-
-**Does this pull request add new dependencies?** 
+**Please provide a short message that should be published in the DevSpace release notes**
+Fixed an issue where DevSpace ...
 
 
 **What else do we need to know?** 
