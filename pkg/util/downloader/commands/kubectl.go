@@ -2,7 +2,6 @@ package commands
 
 import (
 	"io/ioutil"
-	"log"
 	"net/http"
 	"path/filepath"
 	"runtime"
@@ -12,22 +11,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/mitchellh/go-homedir"
 	"github.com/otiai10/copy"
-)
-
-var (
-	kubectlVersion = func() string {
-		res, err := http.Get("https://storage.googleapis.com/kubernetes-release/release/stable.txt")
-		if err != nil {
-			log.Fatal(err)
-		}
-		content, err := ioutil.ReadAll(res.Body)
-		res.Body.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-		return string(content)
-	}
-	kubectlDownload = "https://storage.googleapis.com/kubernetes-release/release/" + kubectlVersion() + "/bin/" + runtime.GOOS + "/" + runtime.GOARCH + "/kubectl"
 )
 
 func NewKubectlCommand() Command {
@@ -55,7 +38,21 @@ func (k *kubectlCommand) InstallPath() (string, error) {
 }
 
 func (k *kubectlCommand) DownloadURL() string {
-	url := kubectlDownload
+	// let the default kubectl version be 1.22.0
+	kubectlVersion := "v1.22.0"
+
+	// try to fetch latest kubectl version if it fails use default version
+	res, err := http.Get("https://storage.googleapis.com/kubernetes-release/release/stable.txt")
+	if err == nil {
+		content, err := ioutil.ReadAll(res.Body)
+		res.Body.Close()
+		if err == nil {
+			kubectlVersion = string(content)
+		}
+	}
+
+	url := "https://storage.googleapis.com/kubernetes-release/release/" + kubectlVersion + "/bin/" + runtime.GOOS + "/" + runtime.GOARCH + "/kubectl"
+
 	if runtime.GOOS == "windows" {
 		url += ".exe"
 	}

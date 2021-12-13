@@ -1,12 +1,13 @@
 package downloader
 
 import (
-	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
