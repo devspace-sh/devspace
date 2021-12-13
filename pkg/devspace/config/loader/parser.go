@@ -2,6 +2,7 @@ package loader
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -96,16 +97,7 @@ func (p *profilesParser) Parse(originalRawConfig map[interface{}]interface{}, ra
 
 func fillVariablesAndParse(resolver variable.Resolver, preparedConfig map[interface{}]interface{}, log log.Logger) (*latest.Config, error) {
 	// fill in variables and expressions (leave out
-	preparedConfigInterface, err := resolver.FillVariablesExclude(preparedConfig, []string{
-		"/deployments/*/helm/values/**",
-		"/hooks/*/command",
-		"/hooks/*/args/*",
-		"/hooks/*/container/imageSelector",
-		"/dev/ports/*/imageSelector",
-		"/dev/sync/*/imageSelector",
-		"/dev/logs/*/selectors/*/imageSelector",
-		"/dev/terminal/imageSelector",
-	})
+	preparedConfigInterface, err := resolver.FillVariablesExclude(preparedConfig, runtime.Locations)
 	if err != nil {
 		return nil, err
 	}

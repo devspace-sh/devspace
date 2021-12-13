@@ -9,15 +9,10 @@ images:
     image: ${IMAGE}
     build:
       custom:
-        command: ./custom/build
-        # command: docker
-        # args:
-        # - build
-        # - .
-        # - --tag
-        # appendArgs:
-        # - --file
-        # - ./custom/Dockerfile
+        skipImageArg: true
+        command: |-
+          # Also works on windows as this is executed in a golang shell
+          docker build -t ${runtime.images.default.image}:${runtime.images.default.tag} . -f custom/Dockerfile
         onChange:
         - main.go
 deployments:

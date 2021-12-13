@@ -7,6 +7,21 @@ import (
 	"strings"
 )
 
+var Locations = []string{
+	"/images/*/build/custom/command",
+	"/images/*/build/custom/commands/*/command",
+	"/images/*/build/custom/args/*",
+	"/images/*/build/custom/appendArgs/*",
+	"/deployments/*/helm/values/**",
+	"/hooks/*/command",
+	"/hooks/*/args/*",
+	"/hooks/*/container/imageSelector",
+	"/dev/ports/*/imageSelector",
+	"/dev/sync/*/imageSelector",
+	"/dev/logs/*/selectors/*/imageSelector",
+	"/dev/terminal/imageSelector",
+}
+
 // NewRuntimeVariable creates a new variable that is loaded during runtime
 func NewRuntimeVariable(name string, config config.Config, dependencies []types.Dependency, builtImages map[string]string) *runtimeVariable {
 	return &runtimeVariable{
@@ -55,6 +70,12 @@ func (e *runtimeVariable) Load() (bool, interface{}, error) {
 	runtimeVariables := c.RuntimeVariables()
 	if runtimeVariables == nil {
 		return false, nil, fmt.Errorf("couldn't find runtime variable %s", e.name)
+	}
+
+	// generic retrieve runtime variable
+	out, ok := runtimeVariables[runtimeVar]
+	if ok {
+		return false, out, nil
 	}
 
 	// get image info from generated config
@@ -126,11 +147,5 @@ func (e *runtimeVariable) Load() (bool, interface{}, error) {
 		return false, nil, fmt.Errorf("couldn't find imageName %s resolving variable %s", imageName, e.name)
 	}
 
-	// generic retrieve runtime variable
-	out, ok := runtimeVariables[runtimeVar]
-	if !ok {
-		return false, nil, fmt.Errorf("couldn't find runtime variable %s", e.name)
-	}
-
-	return false, out, nil
+	return false, nil, fmt.Errorf("couldn't find runtime variable %s", e.name)
 }

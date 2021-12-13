@@ -3,6 +3,7 @@ package variable
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -66,7 +67,7 @@ func (r *resolver) fillVariables(haystack interface{}, exclude []*regexp.Regexp)
 				return nil, err
 			}
 		}
-		
+
 		return t, nil
 	}
 
@@ -117,6 +118,13 @@ func (r *resolver) FindVariables(haystack interface{}) (map[string]bool, error) 
 		varsUsedInDefinition := r.findVariablesInDefinition(v)
 		for usedVar := range varsUsedInDefinition {
 			varsUsed[usedVar] = true
+		}
+	}
+
+	// filter out runtime environment variables
+	for k := range varsUsed {
+		if strings.HasPrefix(k, "runtime.") {
+			delete(varsUsed, k)
 		}
 	}
 
@@ -396,7 +404,7 @@ func (r *resolver) fillVariable(name string, definition *latest.Variable) (inter
 
 	// is runtime variable
 	if strings.HasPrefix(name, "runtime.") {
-		return nil, fmt.Errorf("cannot resolve %s in this config area as this config region is loaded on startup. Please check the DevSpace docs in which config regions you can use runtime variables", name)
+		return nil, fmt.Errorf("cannot resolve %s in this config area as this config region is loaded on startup. You can only use runtime variables in the following locations: \n  %s", name, strings.Join(runtime.Locations, "\n  "))
 	}
 
 	// fill variable without definition

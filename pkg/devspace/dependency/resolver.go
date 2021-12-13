@@ -140,6 +140,11 @@ func (r *resolver) resolveRecursive(basePath, parentID string, currentDependency
 		currentDependency.children = []types.Dependency{}
 	}
 	for _, dependencyConfig := range dependencies {
+		if dependencyConfig.Disabled {
+			r.log.Debugf("Skip dependency %s, because it is disabled", dependencyConfig.Name)
+			continue
+		}
+
 		ID, err := util.GetDependencyID(basePath, dependencyConfig)
 		if err != nil {
 			return err

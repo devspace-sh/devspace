@@ -448,6 +448,7 @@ type BuildOptions struct {
 type DeploymentConfig struct {
 	Name      string         `yaml:"name" json:"name"`
 	Namespace string         `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	Disabled  bool           `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 	Helm      *HelmConfig    `yaml:"helm,omitempty" json:"helm,omitempty"`
 	Kubectl   *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
 }
@@ -956,6 +957,7 @@ type PodPatch struct {
 type DependencyConfig struct {
 	Name                     string          `yaml:"name" json:"name"`
 	Source                   *SourceConfig   `yaml:"source" json:"source"`
+	Disabled                 bool            `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 	Profile                  string          `yaml:"profile,omitempty" json:"profile,omitempty"`
 	Profiles                 []string        `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 	ProfileParents           []string        `yaml:"profileParents,omitempty" json:"profileParents,omitempty"`
@@ -1011,6 +1013,9 @@ type SourceConfig struct {
 type HookConfig struct {
 	// Name is the name of the hook
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	// If true, the hook is disabled and not executed
+	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 
 	// Events are the events when the hook should be executed
 	Events []string `yaml:"events" json:"events"`
@@ -1212,6 +1217,9 @@ type PatchConfig struct {
 
 // PullSecretConfig defines a pull secret that should be created by DevSpace
 type PullSecretConfig struct {
+	// If true, the pull secret will be not created
+	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+
 	// The registry to create the image pull secret for.
 	// e.g. gcr.io
 	Registry string `yaml:"registry" json:"registry"`

@@ -21,7 +21,13 @@ func (r *client) CreatePullSecrets() (err error) {
 
 	// gather pull secrets from pullSecrets
 	if r.config != nil {
-		createPullSecrets = append(createPullSecrets, r.config.Config().PullSecrets...)
+		for _, pullSecret := range r.config.Config().PullSecrets {
+			if pullSecret.Disabled {
+				continue
+			}
+
+			createPullSecrets = append(createPullSecrets, pullSecret)
+		}
 
 		// gather pull secrets from images
 		for _, imageConf := range r.config.Config().Images {

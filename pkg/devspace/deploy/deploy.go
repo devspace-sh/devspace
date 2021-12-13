@@ -63,6 +63,11 @@ func (c *controller) Render(options *Options, out io.Writer, log log.Logger) err
 		}
 
 		for _, deployConfig := range config.Deployments {
+			if deployConfig.Disabled {
+				log.Debugf("Skip deployment %s, because it is disabled", deployConfig.Name)
+				continue
+			}
+
 			if len(options.Deployments) > 0 {
 				shouldSkip := true
 
@@ -164,6 +169,11 @@ func (c *controller) Deploy(options *Options, log log.Logger) error {
 		}
 
 		for _, deployConfig := range config.Deployments {
+			if deployConfig.Disabled {
+				log.Debugf("Skip deployment %s, because it is disabled", deployConfig.Name)
+				continue
+			}
+
 			if len(options.Deployments) > 0 {
 				shouldSkip := true
 
@@ -290,6 +300,10 @@ func (c *controller) Purge(deployments []string, log log.Logger) error {
 				deployClient deployer.Interface
 				deployConfig = config.Deployments[i]
 			)
+			if deployConfig.Disabled {
+				log.Debugf("Skip deployment %s, because it is disabled", deployConfig.Name)
+				continue
+			}
 
 			// Check if we should skip deleting deployment
 			if deployments != nil {
