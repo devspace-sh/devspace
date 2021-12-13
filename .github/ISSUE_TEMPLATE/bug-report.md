@@ -14,14 +14,18 @@ about: Create a report to help us reproduce and fix a bug
 
 **How can we reproduce the bug?** (as minimally and precisely as possible)  
 
+My devspace.yaml:
+```
+version: ...
+...
+```
 
 **Local Environment:**  
 - DevSpace Version: [use `devspace --version`]
 - Operating System: windows | linux | mac
-- Deployment method: helm | kubectl apply
 
 **Kubernetes Cluster:**  
-- Cloud Provider: google | aws | azure | DevSpace Cloud | DevSpace Cloud Enterprise | other
+- Cloud Provider: google | aws | azure | other
 - Kubernetes Version: [use `kubectl version`]
 
 **Anything else we need to know?**  
