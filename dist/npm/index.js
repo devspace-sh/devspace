@@ -14,6 +14,7 @@ const ARCH_MAPPING = {
   x64: "amd64",
   x86_64: "amd64",
   arm: "arm",
+  arm64: "arm64",
   aarch64: "arm"
 };
 const PLATFORM_MAPPING = {
@@ -223,6 +224,13 @@ let continueProcess = function(askRemoveGlobalFolder) {
   } catch(e) {}
   
   let binaryPath = path.join(globalDir, binaryName);
+  if (process.argv.length > 3 && fs.existsSync(normalizePath(process.argv[3]))) {
+    let binaryDir = normalizePath(process.argv[3]);
+    let possibleBinaryPath = path.join(binaryDir, binaryName)
+    if (fs.existsSync(possibleBinaryPath)) {
+      binaryPath = possibleBinaryPath;
+    }
+  }
 
   try {
     fs.unlinkSync(binaryPath + downloadExtension);
