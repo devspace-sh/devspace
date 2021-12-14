@@ -16,15 +16,17 @@ import (
 func NewUntilNewestRunningWaitingStrategy(initialDelay time.Duration) WaitingStrategy {
 	return &untilNewestRunning{
 		initialDelay: time.Now().Add(initialDelay),
+		lastWarning:  time.Now().Add(initialDelay),
 	}
 }
 
 // this waiting strategy will wait until the newest pod / container is up and running or fails
 // it also waits initially for some time
 type untilNewestRunning struct {
-	initialDelay    time.Time
-	printWarning    sync.Once
-	notFoundWarning sync.Once
+	initialDelay time.Time
+
+	lastMutex   sync.Mutex
+	lastWarning time.Time
 }
 
 func (u *untilNewestRunning) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *v1.Pod, error) {
@@ -32,10 +34,7 @@ func (u *untilNewestRunning) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *v
 	if now.Before(u.initialDelay) {
 		return false, nil, nil
 	} else if len(pods) == 0 {
-		if now.After(u.initialDelay.Add(time.Second * 10)) {
-			u.printNotFoundWarning(log)
-		}
-
+		u.printNotFoundWarning(log)
 		return false, nil, nil
 	}
 
@@ -45,8 +44,8 @@ func (u *untilNewestRunning) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *v
 	if HasPodProblem(pods[0]) {
 		u.printPodWarning(pods[0], log)
 		return false, nil, nil
-	}
-	if kubectl.GetPodStatus(pods[0]) != "Running" {
+	} else if kubectl.GetPodStatus(pods[0]) != "Running" {
+		u.printPodInfo(pods[0], log)
 		return false, nil, nil
 	}
 
@@ -58,10 +57,7 @@ func (u *untilNewestRunning) SelectContainer(containers []*selector.SelectedPodC
 	if now.Before(u.initialDelay) {
 		return false, nil, nil
 	} else if len(containers) == 0 {
-		if now.After(u.initialDelay.Add(time.Second * 10)) {
-			u.printNotFoundWarning(log)
-		}
-
+		u.printNotFoundWarning(log)
 		return false, nil, nil
 	}
 
@@ -71,25 +67,44 @@ func (u *untilNewestRunning) SelectContainer(containers []*selector.SelectedPodC
 	if HasPodProblem(containers[0].Pod) {
 		u.printPodWarning(containers[0].Pod, log)
 		return false, nil, nil
-	}
-	if !IsContainerRunning(containers[0]) {
+	} else if !IsContainerRunning(containers[0]) {
+		u.printPodInfo(containers[0].Pod, log)
 		return false, nil, nil
 	}
 
 	return true, containers[0], nil
 }
 
+func (u *untilNewestRunning) printPodInfo(pod *v1.Pod, log log.Logger) {
+	u.lastMutex.Lock()
+	defer u.lastMutex.Unlock()
+
+	if time.Since(u.lastWarning) > time.Second*10 {
+		status := kubectl.GetPodStatus(pod)
+		log.Warnf("DevSpace is waiting, because Pod %s/%s has status: %s", pod.Namespace, pod.Name, status)
+		u.lastWarning = time.Now()
+	}
+}
+
 func (u *untilNewestRunning) printNotFoundWarning(log log.Logger) {
-	u.notFoundWarning.Do(func() {
+	u.lastMutex.Lock()
+	defer u.lastMutex.Unlock()
+
+	if time.Since(u.lastWarning) > time.Second*10 {
 		log.Warnf("DevSpace still couldn't find any Pods that match the selector. DevSpace will continue waiting, but this operation might timeout")
-	})
+		u.lastWarning = time.Now()
+	}
 }
 
 func (u *untilNewestRunning) printPodWarning(pod *v1.Pod, log log.Logger) {
-	u.printWarning.Do(func() {
+	u.lastMutex.Lock()
+	defer u.lastMutex.Unlock()
+
+	if time.Since(u.lastWarning) > time.Second*10 {
 		status := kubectl.GetPodStatus(pod)
 		log.Warnf("Pod %s/%s has critical status: %s. DevSpace will continue waiting, but this operation might timeout", pod.Namespace, pod.Name, status)
-	})
+		u.lastWarning = time.Now()
+	}
 }
 
 func IsContainerRunning(container *selector.SelectedPodContainer) bool {

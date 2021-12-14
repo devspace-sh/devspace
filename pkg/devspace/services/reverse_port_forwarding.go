@@ -74,6 +74,7 @@ func (serviceClient *client) startReversePortForwarding(portForwarding *latest.P
 		case err := <-errorChan:
 			if err != nil {
 				fileLog.Errorf("Reverse portforwarding restarting, because: %v", err)
+				synccontroller.PrintPodError(context.TODO(), serviceClient.KubeClient(), container.Pod, fileLog)
 				close(closeChan)
 				_ = stdinWriter.Close()
 				_ = stdoutWriter.Close()
