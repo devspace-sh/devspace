@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
+	version "github.com/hashicorp/go-version"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -72,6 +74,33 @@ func NewKubectlBuilder(path string, config *latest.DeploymentConfig, context, na
 	}
 }
 
+// this function is called in Build function
+// to decide the --dry-run value
+var useOldDryRun = func(path string) (bool, error) {
+	// compare kubectl version for --dry-run flag value
+	out, err := command.NewStreamCommand(path, []string{"version", "--client", "--short"}).Output()
+	if err != nil {
+		return false, err
+	}
+
+	v1, err := version.NewVersion(strings.TrimPrefix(strings.TrimSpace(string(out)), "Client Version: v"))
+	if err != nil {
+
+		return false, err
+	}
+
+	v2, err := version.NewVersion("1.18.0")
+	if err != nil {
+		return false, err
+	}
+
+	if v1.LessThan(v2) {
+		return true, nil
+	}
+
+	return false, nil
+}
+
 func (k *kubectlBuilder) Build(manifest string, cmd RunCommand) ([]*unstructured.Unstructured, error) {
 	args := []string{"create"}
 	if k.context != "" && !k.isInCluster {
@@ -81,7 +110,18 @@ func (k *kubectlBuilder) Build(manifest string, cmd RunCommand) ([]*unstructured
 		args = append(args, "--namespace", k.namespace)
 	}
 
-	args = append(args, "--dry-run", "--output", "yaml", "--validate=false")
+	// decides which --dry-run value is to be used
+	uodr, err := useOldDryRun(k.path)
+	if err != nil {
+		return nil, err
+	}
+
+	if uodr {
+		args = append(args, "--dry-run", "--output", "yaml", "--validate=false")
+	} else {
+		args = append(args, "--dry-run=client", "--output", "yaml", "--validate=false")
+	}
+
 	if k.config.Kubectl.Kustomize != nil && *k.config.Kubectl.Kustomize {
 		args = append(args, "--kustomize", manifest)
 	} else {

@@ -220,7 +220,7 @@ github.com/gorilla/mux
 # github.com/gorilla/websocket v1.4.2
 ## explicit
 github.com/gorilla/websocket
-# github.com/hashicorp/go-version v1.2.0
+# github.com/hashicorp/go-version v1.3.0
 ## explicit
 github.com/hashicorp/go-version
 # github.com/imdario/mergo v0.3.12

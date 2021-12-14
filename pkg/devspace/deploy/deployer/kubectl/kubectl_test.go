@@ -192,6 +192,10 @@ func TestRender(t *testing.T) {
 			},
 		}
 
+		useOldDryRun = func(path string) (bool, error) {
+			return true, nil
+		}
+
 		reader, writer := io.Pipe()
 		defer reader.Close()
 
@@ -318,6 +322,9 @@ func TestDelete(t *testing.T) {
 			}
 		}
 
+		useOldDryRun = func(path string) (bool, error) {
+			return true, nil
+		}
 		err := deployer.Delete()
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
@@ -402,6 +409,9 @@ func TestDeploy(t *testing.T) {
 			}
 		}
 
+		useOldDryRun = func(path string) (bool, error) {
+			return true, nil
+		}
 		deployed, err := deployer.Deploy(testCase.forceDeploy, testCase.builtImages)
 
 		if testCase.expectedErr == "" {
@@ -479,7 +489,9 @@ func TestGetReplacedManifest(t *testing.T) {
 				Images: testCase.imageConfigs,
 			}, cache, nil, constants.DefaultConfigPath),
 		}
-
+		useOldDryRun = func(path string) (bool, error) {
+			return true, nil
+		}
 		shouldRedeploy, replacedManifest, err := deployer.getReplacedManifest(testCase.manifest, testCase.builtImages)
 
 		if testCase.expectedErr == "" {

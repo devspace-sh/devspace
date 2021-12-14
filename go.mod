@@ -20,7 +20,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/websocket v1.4.2
-	github.com/hashicorp/go-version v1.2.0
+	github.com/hashicorp/go-version v1.3.0
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/json-iterator/go v1.1.11
