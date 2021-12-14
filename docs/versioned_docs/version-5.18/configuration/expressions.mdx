@@ -1,0 +1,145 @@
+---
+title: Config Expressions
+sidebar_label: $(expression)
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Config expressions are a powerful feature to load the `devspace.yaml` in a more dynamic way. A config expression works by specifying `$( my bash expression )` instead of a field and the stdout of the bash expression is taken as value for the option or complete section. Config expressions are evaluated after variables and profiles are applied to the config and can change parts of the config.
+
+<Tabs
+    defaultValue="file"
+    values={[
+        { label: 'Load From File', value: 'file', },
+        { label: 'If Else', value: 'if', },
+        { label: 'Only in dev', value: 'command', },
+        { label: 'If Variable', value: 'variable', },
+        { label: 'Generate Section', value: 'generate', },
+        { label: 'Return JSON', value: 'json', },
+        { label: 'Force String', value: 'forcestring', },
+    ]
+    }>
+<TabItem value="file">
+
+Load a deployment specification from file:
+```yaml
+deployments:
+  - $(cat deployment.yaml)
+```
+
+</TabItem>
+<TabItem value="if">
+
+You can use either inline or multi-line if else:
+```yaml
+deployments:
+    
+# Inline If-Else
+- $( [ ${devspace.namespace} == "test" ] && cat deployment.yaml || echo "" )
+
+# Multi-Line If-Else
+- |-
+  $(
+    if [ ${devspace.context} == "minikube" ]; then
+      cat minikube.yaml
+    else
+      echo ""
+    fi
+  )
+```
+
+</TabItem>
+<TabItem value="command">
+
+Disable image building during `devspace dev`:
+```yaml
+images:
+  deploy:
+    build:
+      disabled: $( [ $1 == "dev" ] && echo "true" || echo "false" )
+```
+
+</TabItem>
+<TabItem value="variable">
+
+Add sync path if profile is "debug"
+
+```yaml
+dev:
+  sync:
+    - |-
+      $(
+        if [ "${DEVSPACE_PROFILE}" == "debug" ]; then
+          syncConfig="
+      imageSelector: test
+      excludePaths:
+      - test
+      - test2
+          "
+      
+          echo "$syncConfig"
+        else
+          echo ""
+        fi
+      )
+```
+
+</TabItem>
+<TabItem value="generate">
+
+Generate a whole section through a script:
+```yaml
+dev: $(./my-script.sh ${devspace.namespace} ${devspace.context} ${DEVSPACE_PROFILE})
+```
+
+</TabItem>
+<TabItem value="json">
+
+Since json is a subset of yaml, you can also return regular json in a expression:
+```yaml
+images:
+  test:
+    image: my-image/image
+    build: '$( echo {"disabled": true} )'
+```
+
+</TabItem>
+<TabItem value="forcestring">
+
+By default, DevSpace will try to convert the stdout to a number, bool or yaml value, however you can also force the return value to be a string by using `$!()`:
+```yaml
+deployments:
+  - name: quickstart
+    helm:
+      componentChart: true
+      values:
+        labels:
+          test: '$!(echo true)'
+```
+
+</TabItem>
+</Tabs>
+
+:::info
+Expressions are run in a golang shell that is syntax compatible to a regular POSIX shell and works on all operating systems. Check the [github repository](https://github.com/mvdan/sh/blob/master/interp/builtin.go#L23) for a complete list of available commands
+:::
+
+:::info
+Variables are resolved before and after applying expressions, which means that you can load a section from file within an expression that contains a variable which will still be resolved afterwards.
+:::
+
+:::warning Unsupported Config Expressions
+Expressions are not supported in these configuration properties:
+- `vars`
+- `profiles[*].name`
+- `profiles[*].parent`
+- `profiles[*].parents`
+- `profiles[*].activations`
+- `profiles[*].patches[*].op`
+- `profiles[*].patches[*].path`
+:::
+
+### Testing Config Expressions
+
+The command `devspace print` can be used to test your config expressions and shows the config after all profiles, variables and expressions were applied.

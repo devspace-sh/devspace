@@ -1,0 +1,26 @@
+```yaml
+profiles:                             # struct[]  | Array of config profiles
+- name: profile-name                  # string    | Name of the profile
+  parents: 
+  - profile: parent-profile           # string    | Name of the parent of this profile (profile inheritance)
+    source:                           #           | Optional source where to find the profile
+      git: https://github.com/my-repo # string    | HTTP(S) URL of the git repository to retrieve the profile from
+      subPath: repo/sub/path          # string    | Path within the git repo where devspace.yaml can be found
+      branch: master                  # string    | Git branch to checkout
+      tag: v1.2.3                     # string    | Git tag to checkout
+      revision: ac66e49               # string    | Git revision (commit has) to checkout
+      disableShallow: false           # bool      | Allows to disable shallow git clones using "--depth 1"
+      cloneArgs: []                   # string[]  | Array of args for the "git clone" command for retrieving git based dependencies
+      path: ../../my-projects/repo    # string    | Path to a project on your local computer or an URL to a devspace.yaml
+  merge: {}                           # struct    | Merge the provided object into the config
+  patches:                            # struct[]  | Array of config patches
+  - op: "replace"                     # enum      | Patch operation (replace, add, remove)
+    path: "images.backend.cmd"        # string    | Jsonpath or xpath to config option that should be patched
+    value: ""                         # arbitrary | Value to use for patch operation
+  replace:                            # struct    | Array of replacements for entire config sections
+    images: {}                        # struct    | Replacement for entire `images` section
+    deployments: {}                   # struct    | Replacement for entire `deployments` section
+    dev: {}                           # struct    | Replacement for entire `dev` section
+    dependencies: {}                  # struct    | Replacement for entire `dependencies` section
+    hooks: {}                         # struct    | Replacement for entire `hooks` section
+```

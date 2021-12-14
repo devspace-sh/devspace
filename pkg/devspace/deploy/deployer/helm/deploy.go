@@ -214,10 +214,11 @@ func (d *DeployConfig) getDeploymentValues(builtImages map[string]string) (bool,
 		if d.DeploymentConfig.Helm.ReplaceImageTags == nil || *d.DeploymentConfig.Helm.ReplaceImageTags {
 			enableLegacy = true
 		}
-		shouldRedeploy, _, err = runtimevar.NewRuntimeResolver(enableLegacy).FillRuntimeVariablesWithRebuild(d.DeploymentConfig.Helm.Values, d.config, d.dependencies, builtImages)
+		redeploy, _, err := runtimevar.NewRuntimeResolver(enableLegacy).FillRuntimeVariablesWithRebuild(d.DeploymentConfig.Helm.Values, d.config, d.dependencies, builtImages)
 		if err != nil {
 			return false, nil, err
 		}
+		shouldRedeploy = shouldRedeploy || redeploy
 
 		merge.Values(overwriteValues).MergeInto(d.DeploymentConfig.Helm.Values)
 	}

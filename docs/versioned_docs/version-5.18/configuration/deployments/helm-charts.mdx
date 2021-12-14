@@ -1,0 +1,571 @@
+---
+title: Deploy Helm Charts
+sidebar_label: helm
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import FragmentInfoComponentChart from '../../fragments/info-component-chart.mdx';
+
+To deploy Helm charts, you need to configure them within the `deployments` section of the `devspace.yaml`.
+
+## Examples
+
+<Tabs
+  defaultValue="component"
+  values={[
+    { label: 'Component Chart', value: 'component', },
+    { label: 'Custom Chart', value: 'remote', },
+    { label: 'Local Chart', value: 'local', },
+    { label: 'Git Chart Repo', value: 'git', },
+  ]
+}>
+<TabItem value="component">
+
+```yaml {4}
+deployments:
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: reg.tld/username/devspace
+      service:
+        ports:
+        - port: 3000
+```
+
+<FragmentInfoComponentChart/>
+
+</TabItem>
+<TabItem value="remote">
+
+```yaml {5,6}
+deployments:
+- name: backend
+  helm:
+    chart:
+      name: chart-name
+      repo: https://my-charts.company.tld/
+    values:
+      # If registry.url/repo/image was found under images as well, will be 
+      # rewritten to registry.url/repo/image:generated_tag
+      imageWithTag: registry.url/repo/image
+      # If registry.url/repo/image was found under images.app as well, will be
+      # rewritten to registry.url/repo/image
+      imageWithoutTag: ${runtime.images.app.image}
+      # If registry.url/repo/image was found under images.app as well, will be
+      # rewritten to generated_tag
+      onlyTag: ${runtime.images.app.tag}
+```
+
+</TabItem>
+<TabItem value="local">
+
+```yaml {5}
+deployments:
+- name: backend
+  helm:
+    chart:
+      name: ./path/to/chart
+    values:
+      # If registry.url/repo/image was found under images as well, will be
+      # rewritten to registry.url/repo/image:generated_tag
+      imageWithTag: registry.url/repo/image
+      # If registry.url/repo/image was found under images.app as well, will be
+      # rewritten to registry.url/repo/image
+      imageWithoutTag: ${runtime.images.app.image}
+      # If registry.url/repo/image was found under images.app as well, will be
+      # rewritten to generated_tag
+      onlyTag: ${runtime.images.app.tag}
+```
+
+</TabItem>
+
+<TabItem value="git">
+
+```yaml {5}
+deployments:
+- name: backend
+  helm:
+    chart:
+      git:
+        url: https://github.com/<username>/<chartrepo>.git
+        # optional git configs
+        branch: branchName
+        tag: tag
+        revision: revision
+        subPath: subpath/chartdir
+```
+
+</TabItem>
+</Tabs>
+
+## Chart
+
+### `componentChart`
+The `componentChart` option expects a boolean which states if the Component Helm Chart should be used for deployment. 
+
+<FragmentInfoComponentChart/>
+
+:::warning
+If `componentChart: true` is configured, all options under `chart` will be ignored.
+:::
+
+#### Default Value for `componentChart`
+```yaml
+componentChart: false
+```
+
+#### Example: Component Chart Deployment
+```yaml {4}
+deployments:
+- name: backend
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: reg.tld/username/devspace
+      service:
+        ports:
+        - port: 3000
+```
+
+### `chart.name`
+The `name` option is mandatory and expects a string stating either:
+- **a path to a local chart** that is stored on the filesystem
+- **or the name of a remote chart** that is stored in a repository (one specified via [`repo` option](#chartrepo)) or in the form of `repo/name`, where `repo` was added via `helm repo add repo https://repo.url` beforehand
+
+DevSpace follows the same behavior as `helm install` and first checks if the path specified in `name` exists on the file system and is a valid chart. If not, DevSpace will assume that the `name` is not a path but the name of a remote chart located in a chart repository.
+
+#### Example: Simple Helm Deployment
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+helm install database bitnami/mysql
+```
+
+### `chart.version`
+The `version` option expects a string stating the version of the chart that should be used.
+
+#### Default Value for `version`
+```yaml
+version: ""
+```
+
+:::note Latest Version
+If no version is specified, Helm will by default use the latest version of the chart.
+:::
+
+#### Example: Custom Chart Version
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+      version: "1.3.1"
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+helm install database bitnami/mysql --version="1.3.1"
+```
+
+### `chart.repo`
+The `repo` option expects a string with a URL to a [Helm Chart Repository](https://helm.sh/docs/chart_repository/). This is equivalent of using the `--repo` flag in `helm install`
+
+#### Example: Custom Chart Repository
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: custom-chart
+      repo: https://my-repo.tld/
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+helm install database custom-chart --repo "https://my-repo.tld/"
+```
+
+### `chart.username`
+The `username` option expects a string that specifies the user that should be used to access `chart.repo`. Will be used as value for the helm flag `--username`
+
+### `chart.password`
+The `password` option expects a string that specifies the password that should be used to access `chart.repo`. Will be used as value for the helm flag `--password`
+
+## Values
+Helm charts can be configured by overriding the default values of the chart.
+
+### `values`
+The `values` option expects an object with values that should be overriding the default values of this Helm chart.
+
+Compared to the `valuesFiles` option, using `values` has the following advantages:
+- It is easier to comprehend and faster to find (no references)
+- It allows you to use [dynamic config variables](../../configuration/variables/basics.mdx)
+
+:::info
+Because both, `values` and `valuesFiles`, have advantages and disadvantages, it is often useful to combine them. When setting both, values defined in `values` have precedence over values defined in `valuesFiles`.
+:::
+
+#### Default Value for `values`
+```yaml
+values: {}
+```
+
+#### Example: Using Values in devspace.yaml
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+    values:
+      mysqlRootPassword: ${MYSQL_ROOT_PASSWORD}
+      mysqlUser: db_user
+      mysqlDatabase: app_database
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+helm install database bitnami/mysql --set mysqlRootPassword="$MYSQL_ROOT_PASSWORD" --set mysqlUser="db_user" --set mysqlDatabase="app_database"
+```
+
+### `valuesFiles`
+The `valuesFiles` option expects an array of paths to yaml files which specify values for overriding the values.yaml of the Helm chart.
+
+Compared to the `values` option, using `valuesFiles` has the following advantages:
+- It reduces the size of your `devspace.yaml` especially when setting many values for a chart
+- It allows you to run Helm commands directly without DevSpace, e.g. `helm upgrade [NAME] -f mysql/values.yaml`
+
+:::info
+Because both, `values` and `valuesFiles`, have advantages and disadvantages, it is often useful to combine them. When setting both, values defined in `values` have precedence over values defined in `valuesFiles`.
+:::
+
+#### Default Value for `valuesFiles`
+```yaml
+valuesFiles: []
+```
+
+#### Example: Using Values Files
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+    valuesFiles:
+    - mysql/values.yaml
+    - mysql/values.production.yaml
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+helm install database bitnami/mysql -f mysql/values.yaml -f mysql/values.production.yaml
+```
+
+
+### `replaceImageTags`
+The `replaceImageTags` option expects a boolean stating if DevSpace should do [Image Tag Replacement](../../configuration/deployments/basics.mdx#3-tag-replacement).
+
+By default, DevSpace searches all your values (specified via `values` or `valuesFiles`) for images that are defined in the `images` section of the `devspace.yaml`. If DevSpace finds an image, it replaces or appends the image tag with the tag it created during the image building process. Image tag replacement makes sure that your application will always be started with the most up-to-date image that DevSpace has built for you.
+
+DevSpace will replace the following things:
+- **registry.url/repo/name** that corresponds to a `images.*.image`, will be rewritten to `registry.url/repo/name:generated_tag`
+
+:::info In-Memory Tag Replacement
+Tag replacement takes place **in-memory** and is **not** writing anything to the filesystem, i.e. it will **never** change any of your configuration files.
+:::
+
+#### Default Value for `replaceImageTags`
+```yaml
+replaceImageTags: true
+```
+
+#### Example: Disable Tag Replacement
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+    replaceImageTags: false
+```
+
+
+## Helm Options
+
+### `upgradeArgs`
+The `upgradeArgs` specifies an array of arguments that will be passed by devspace additionally to the standard arguments to `helm upgrade` during deployment.
+
+### `templateArgs`
+The `templateArgs` specifies an array of arguments that will be passed by devspace additionally to the standard arguments to `helm template` during `devspace render`.
+
+### `deleteArgs`
+The `deleteArgs` specifies an array of arguments that will be passed by devspace additionally to the standard arguments to `helm delete` during `devspace purge`.
+
+### `wait`
+The `wait` option expects a boolean that will be used for the [helm flag `--wait`](https://helm.sh/docs/intro/using_helm/#helpful-options-for-installupgraderollback).
+
+#### Default Value for `wait`
+```yaml
+wait: false
+```
+
+#### Example: Helm Flag Wait
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+    wait: true
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+helm install database bitnami/mysql --wait
+```
+
+### `displayOutput`
+
+The `displayOutput` option expects a boolean and allows helm output to be printed to the console after `helm install` and `helm upgrade`. This can be used to display `notes.txt` from your helm charts.
+
+#### Default Value for `displayOutput`
+```yaml
+displayOutput: false
+```
+
+#### Example: displayOutput
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+    displayOutput: true
+```
+
+**Explanation:**  
+Deploying the above example would print the helm output and the `notes.txt` from the bitnami/mysql chart.
+
+
+### `timeout`
+The `timeout` option expects an integer representing a number of seconds that will be used for the [helm flag `--timeout`](https://helm.sh/docs/intro/using_helm/#helpful-options-for-installupgraderollback).
+
+#### Default Value for `timeout`
+```yaml
+timeout: 5m0s # defined by helm
+```
+
+#### Example: Helm Flag Timeout
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+    timeout: 300s
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+helm install database bitnami/mysql --timeout=300s
+```
+
+### `force`
+The `force` option expects a boolean that will be used for the [helm flag `--force`](https://helm.sh/docs/helm/helm_upgrade).
+
+#### Default Value for `force`
+```yaml
+force: false
+```
+
+#### Example: Helm Flag Force
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+    force: true
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+helm install database bitnami/mysql --force
+```
+
+### `recreate`
+The `recreate` option expects a boolean that states if DevSpace should set the Helm flag `--recreate-pods`. It tells Helm to restart all pods for applicable resources (e.g. Deployments).
+
+#### Default Value for `recreate`
+```yaml
+recreate: false
+```
+
+#### Example: Enable Recreate Pods
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+    recreate: true
+```
+
+### `atomic`
+The `atomic` option expects a boolean that states if DevSpace should pass the `--atomic` flag to Helm. If set, the upgrade process rolls back all changes in case the upgrade fails. This flag also sets the [`--wait` option](#wait).
+
+#### Default Value for `atomic`
+```yaml
+atomic: false
+```
+
+#### Example: Enable Atomic Deployment
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+    atomic: true
+```
+
+### `cleanupOnFail`
+The `cleanupOnFail` option expects a boolean that states if DevSpace should set the Helm flag `--cleanup-on-fail`. It allows that Helm deletes newly created resources during a rollback in case the rollback fails.
+
+#### Default Value for `cleanupOnFail`
+```yaml
+cleanupOnFail: false
+```
+
+#### Example: Enable Cleanup On Fail
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+    cleanupOnFail: true
+```
+
+### `disableHooks`
+The `disableHooks` option expects a boolean that tells DevSpace to disable hooks when executing Helm commands.
+
+#### Default Value for `disableHooks`
+```yaml
+disableHooks: false
+```
+
+#### Example: Disable Hooks
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+    disableHooks: true
+```
+
+### `v2`
+The `v2` option expects a boolean that tells DevSpace to use the legacy version 2 of Helm instead of Helm v3.
+
+#### Default Value for `v2`
+```yaml
+v2: false
+```
+
+### `tillerNamespace`
+The `tillerNamespace` option expects a string that will be used for the [helm flag `--tiller-namespace`](https://helm.sh/docs/intro/using_helm/#helpful-options-for-installupgraderollback).
+
+:::warning Helm 2 Only
+This config option is only used when [`v2: true`](#v2) is configured as well.
+:::
+
+:::warning Deprecated
+This config option is deprecated because Tiller is not necessary anymore since DevSpace supports Helm v3.
+:::
+
+#### Default Value for `tillerNamespace`
+```yaml
+tillerNamespace: "" # defaults to default namespace of current context
+```
+
+#### Example: Change Tiller Namespace
+```yaml
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+    tillerNamespace: my-tiller-ns
+    v2: true
+```
+**Explanation:**  
+Deploying the above example would roughly be equivalent to this command:
+```bash
+# Helm v2 CLI
+helm install --name database bitnami/mysql --tiller-namespace=my-tiller-ns
+```
+
+
+### `path`
+The `path` option is optional and expects a string with the path of an Helm v2 binary / executable file which should be used for Helm v2 deployments.
+
+:::warning Helm 2 Only
+This config option is only used when [`v2: true`](#v2) is configured as well.
+:::
+
+:::warning
+Setting `path` makes it much harder to share your `devspace.yaml` with other team mates. It is recommended to add `helm` to your `$PATH` environment variable instead.
+:::
+
+
+## General Options
+
+### `name`
+The `name` option is required and expects a string with the name of the release used to deploy this Helm chart.
+
+#### Example: Deployment Name
+```yaml {2}
+deployments:
+- name: database
+  helm:
+    chart:
+      name: bitnami/mysql
+```
+
+### `namespace`
+The `namespace` option is required and expects a string with the namespace used to deploy the Helm chart to.
+
+:::warning
+Only use this option if you really need to. Hard-coding the namespace in `devspace.yaml` makes it harder to share the configuration with your colleagues. It is recommended to set the default namespace of the current context instead using:
+```bash
+devspace use namespace [some-namespace]
+```
+:::
+
+#### Example: Deployment Namespace
+```yaml {3}
+deployments:
+- name: database
+  namespace: some-namespace
+  helm:
+    chart:
+      name: bitnami/mysql
+```
+
+## `disabled`
+
+If true, the deployment will not be deployed, rendered or purged. Can be useful in combination with config expressions or command variables.
+

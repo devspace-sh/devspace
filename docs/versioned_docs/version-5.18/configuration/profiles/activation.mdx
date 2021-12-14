@@ -1,0 +1,117 @@
+---
+title: "Profiles: Activation"
+sidebar_label: activation
+---
+
+The `activation` option is optional and allows you to activate a profile using regular expression matching of either Devspace or environment variables. An activation is configured with the profile it activates in `devspace.yaml`.
+
+
+#### Example: Defining a Profile Activation using `vars`
+```yaml {1-3,7-8}
+vars:
+- name: ENV
+  default: development
+profiles:
+- name: production
+  activation:
+  - vars:
+      ENV: production
+  patches:
+  - op: replace
+    path: images.backend.image
+    value: john/prodbackend
+```
+The `production` profile would be activated when the Devspace variable `ENV` has value `production`.  In this example, it has a default value of `development`, so it is not activated unless you override the value using `--var ENV=production`
+
+#### Example: Defining a Profile Activation using Environment Variables
+```yaml {3-5}
+profiles:
+- name: production
+  activation:
+  - env:
+      ENV: "production"
+  patches:
+  - op: replace
+    path: images.backend.image
+    value: john/prodbackend
+```
+The `production` profile would be activated when the environment variable `ENV` has value `production`:
+
+#### Example: Regular Expression Activation
+```yaml {3-5}
+profiles:
+- name: production
+  activation:
+  - env:
+      ENV: "prod-\d+"
+  patches:
+  - op: replace
+    path: images.backend.image
+    value: john/prodbackend
+```
+The profile `production` would be activated when the environment variable `ENV` matches the regular expression `prod-\d+`. This can be useful for matching environment variables that have dynamic values. Regular expressions will have start of string (`^`) and end of string (`$`) anchors added automatically to avoid unexpected substring matching. 
+
+#### Example: Matching All
+When multiple `env` or `vars` name/expression pairs are specified in the same activation, all expressions must match to activate the profile. For example, the `production` profile is activated when the environment variable `CI` is `true` and the Devspace variable `ENV` is `development`:
+```yaml {3-7}
+profiles:
+- name: production
+  activation:
+  - env:
+      CI: "true"
+    vars:
+      ENV: "development"
+  patches:
+  - op: replace
+    path: images.backend.image
+    value: john/devbackend
+```
+
+:::note Combining `env` and `vars`
+While possible to activate profiles using environment variables and Devspace variables, `vars` can also be populated through environment variables. In the above example, we could have also defined `CI` as a Devspace variable with `source: env` and only used `vars` in the activation.
+:::
+
+#### Example: Matching Any
+When `env` or `vars` are used in multiple activations, the profile is activated when any expression matches. In this example, the `production` profile is activated when either match their expressions:
+```yaml {3-7}
+profiles:
+- name: production
+  activation:
+  - env:
+      CI: "true"
+  - vars:
+      ENV: "development"
+  patches:
+  - op: replace
+    path: images.backend.image
+    value: john/devbackend
+```
+
+### Dependency Activations
+When `dependencies` are referenced from a `devspace.yaml`, the dependency's profile activations will also be evaluated. In this example, any profile activations in `./component-1/devspace.yaml` or `./component-2/devspace.yaml` would be evaluated.
+
+```yaml
+dependencies:
+- name: component-1
+  source:
+    path: ./component-1
+- name: component-2
+  source:
+    path: ./component-2
+```
+
+#### Example: Disable Activations by Dependency
+The `disableProfileActivation` option can be used to disable profile activations for specific dependencies. In the following example, the activations for `./component-1/devspace.yaml` would be ignored, while the activations in `./component-2/devspace.yaml` would be evaluated:
+```yaml {5}
+dependencies:
+- name: component-1
+  source:
+    path: ./component-1
+  disableProfileActivation: true
+- name: component-2
+  source:
+    path: ./component-2
+```
+
+### Disable Activations Globally
+The `--disable-profile-activation` flag can be used to disable all profile activations, including those specifed within each dependency's `devspace.yaml`.

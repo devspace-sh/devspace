@@ -1,0 +1,35 @@
+The `imageSelector` option expects a string that specifies an image (e.g. `my-registry.com/lib/my-image:tag`) to select a target pod and container with. The newest running pod that has a container which matches this image will be selected by DevSpace.
+
+In addition, you can also reference images from the `images` section in the `imageSelector` with:
+- If the image in `imageSelector` matches a `images.*.image`, DevSpace will automatically append the latest built tag during runtime to the `imageSelector`.
+- You can also let DevSpace resolve the target image and tag by using runtime variables `${runtime.images.IMAGE_NAME}`, `${runtime.images.IMAGE_NAME.image}` or `${runtime.images.IMAGE_NAME.tag}`
+
+For example:
+```yaml
+images: 
+  app: 
+    image: my-registry.com/lib/my-image
+dev:
+  ...
+  # DevSpace will search for the newest pod with a container that
+  # uses my-registry.com/lib/other-image:latest
+  - imageSelector: my-registry.com/lib/other-image:latest
+  # DevSpace will search for the newest pod with a container that
+  # uses my-registry.com/lib/my-image:xxxxx (latest built tag by DevSpace)
+  - imageSelector: my-registry.com/lib/my-image
+  # DevSpace will search for the newest pod with a container that
+  # uses my-registry.com/lib/my-image:xxxxx (latest built tag by DevSpace)
+  - imageSelector: ${runtime.images.app}
+  # DevSpace will search for the newest pod with a container that
+  # uses my-registry.com/lib/my-image:custom-tag
+  - imageSelector: ${runtime.images.app.image}:custom-tag
+  # DevSpace will search for the newest pod with a container that
+  # uses my-registry.com/lib/my-image:xxxxx (latest built tag by DevSpace)
+  - imageSelector: ${runtime.images.app.image}:${runtime.images.app.tag}
+  # DevSpace will search for the newest pod with a container that
+  # uses the image of app of dependency dep1 with the latest built tag by DevSpace
+  - imageSelector: ${runtime.dependencies.dep1.images.app.image}:${runtime.dependencies.dep1.images.app.tag}
+```
+
+
+

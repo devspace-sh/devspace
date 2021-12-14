@@ -1,0 +1,81 @@
+---
+title: Pull Secrets
+sidebar_label: pullSecrets
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+DevSpace allows you to configure additional [pull secrets](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) that should be created in the target namespace. For each configured pull secret in the `devspace.yaml`, DevSpace will create a secret in the target namespace and add the secret to the `imagePullSecrets` field of the service account.
+
+For [images](../images/basics.mdx), DevSpace will also automatically create a pull secret, if authentication data can be found in the local docker store and creation is [enabled](../images/pull-secrets.mdx) via `createPullSecret`. 
+
+Image Pull Secrets are defined in the `pullSecrets` section of the `devspace.yaml`.
+
+<Tabs
+    defaultValue="password"
+    values={[        
+        { label: 'With Password', value: 'password', },
+        { label: 'From Docker', value: 'docker', },
+        { label: 'Custom Secret & Service Account', value: 'custom', },
+    ]
+    }>
+<TabItem value="password">
+
+```yaml
+# If you don't want to specify the password and username directly in the config
+# you can use variables, .env file or save the credentials in the local docker store
+pullSecrets: 
+- registry: my-registry.com:5000 
+  username: ${REGISTRY_USER}
+  password: ${REGISTRY_PASSWORD}
+```
+
+</TabItem>
+<TabItem value="docker">
+
+```yaml
+# If you leave out the username & password DevSpace will try
+# to get these from the local docker store. Make sure you
+# are logged into the registry with `docker login my-registry.com:5000`
+pullSecrets:
+- registry: my-registry.com:5000
+```
+
+</TabItem>
+<TabItem value="custom">
+
+```yaml
+pullSecrets:
+- registry: my-registry.com:5000
+  secret: my-pull-secret-name
+  serviceAccounts: 
+    - default
+    - my-other-service-account
+```
+
+</TabItem>
+</Tabs>
+
+## Configuration
+
+### `registry`
+The `registry` option is mandatory and expects a string with the registry name for which a pull secret should be created for.
+
+### `disabled`
+The `disabled` option is optional and expects a bool if the pull secret should get created for the specified registry.
+
+### `username`
+The `username` option is optional and expects a string with the username to login into the registry. If this field is empty, DevSpace will try to find out username and password from the local docker store.
+
+### `password`
+The `password` option is optional and expects a string with the password to login into the registry. If this field is empty, DevSpace will try to find out username and password from the local docker store.
+
+### `email`
+The `email` option is optional and expects a string with the email to login into the registry. This can be left empty usually since username and password are enough to log into a docker registry. If empty, the default value will be `noreply@devspace.cloud`.
+
+### `secret`
+The `secret` option is optional and expects a string how the secret should be named. If empty, DevSpace will automatically create a meaningful name for the secret.
+
+### `serviceAccounts`
+The `serviceAccounts` option is optional and expects an array of strings to which the pull secret should be added. If an image pull secret is added to a service account, the service account is able to pull images from that registry even without specifying the image pull secret in a pod definition. If this is empty, DevSpace will add the pull secret to the `default` serviceaccount.

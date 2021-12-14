@@ -87,6 +87,30 @@ func (r *runtimeResolver) fillVariables(haystack interface{}, config config.Conf
 
 func (r *runtimeResolver) replaceString(str string, config config.Config, dependencies []types.Dependency, builtImages map[string]string) (bool, interface{}, error) {
 	shouldRebuild := false
+	value, err := varspkg.ParseString(str, func(name string) (interface{}, error) {
+		if strings.HasPrefix(name, "runtime.") {
+			return "${"+name+"}", nil
+		}
+		
+		rebuild, val, err := r.resolve(name, config, dependencies, builtImages)
+		if err != nil {
+			return "", err
+		}
+
+		shouldRebuild = shouldRebuild || rebuild
+		return val, nil
+	})
+	if err != nil {
+		return false, nil, err
+	}
+	
+	valueStr, ok := value.(string)
+	if !ok {
+		return shouldRebuild, value, nil
+	} else {
+		str = valueStr
+	}
+	
 	if r.enableLegacyHelpers {
 		rebuild, val, err := legacy.Replace(str, config, dependencies, map[string]string{})
 		if err != nil {
@@ -97,8 +121,12 @@ func (r *runtimeResolver) replaceString(str string, config config.Config, depend
 		str = fmt.Sprintf("%v", val)
 	}
 
-	value, err := varspkg.ParseString(str, func(v string) (interface{}, error) {
-		rebuild, val, err := r.resolve(v, config, dependencies, builtImages)
+	value, err = varspkg.ParseString(str, func(name string) (interface{}, error) {
+		if !strings.HasPrefix(name, "runtime.") {
+			return "${"+name+"}", nil
+		}
+		
+		rebuild, val, err := r.resolve(name, config, dependencies, builtImages)
 		if err != nil {
 			return "", err
 		}

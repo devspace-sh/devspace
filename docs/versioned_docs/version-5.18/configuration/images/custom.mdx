@@ -1,0 +1,192 @@
+---
+title: Custom Build Scripts
+sidebar_label: custom
+---
+
+## `custom`
+Using `custom` as build tool allows you to define a custom command for building images. This is particularly useful if you want to use a remote build system such as Google Cloud Build.
+
+:::warning
+Make sure your `custom` build command terminates with exit code 0 when the build process was successful.
+:::
+
+### `command`
+The `command` option expects a string with the path to a build script or the name of a binary that should be executed in order to build an image.
+
+#### Example: Building Images With `custom` Build Command
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      custom:
+        skipImageArg: true
+        command: |-
+          # Also works on windows as this is executed in a golang shell
+          docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile
+```
+**Explanation:**  
+The image `backend` would be built using the command `docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile"` while `${runtime.images.backend.image}` would be replaced with the `image` option (in this case: `john/appbackend`) and `${runtime.images.backend.tag}` would be replaced with the tag generated according to the [tagging schema](../../configuration/images/basics.mdx#6-tag-image).
+
+
+### `imageFlag`
+The `imageFlag` option expects a string which states the name of the flag that is used to pass the image name (including auto-generated tag) to the custom build script defined in `command`.
+
+#### Default Value For `imageFlag`
+```yaml
+imageFlag: "" # Defaults to passing image and tag as an argument instead of using a flag
+```
+
+#### Example: Defining `imageFlag` For `custom` Build Command
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      custom:
+        command: ./build
+        imageFlag: "--image"
+        args:
+        - "--arg1"
+        - "--flag"
+        - "flag-value"
+        - "--arg2"
+```
+**Explanation:**  
+The image `backend` would be built using the command `./build --arg1 --flag flag-value --arg2 --image "[IMAGE]:[TAG]"` while `[IMAGE]` would be replaced with the `image` option (in this case: `john/appbackend`) and `[TAG]` would be replaced with the tag generated according to the [tagging schema](../../configuration/images/basics.mdx#6-tag-image).
+
+### `skipImageArg`
+The `skipImageArg` option expects a boolean which specifies if DevSpace should add an argument to the command with the `image:tag`. If enabled DevSpace will omit the image argument completely
+
+#### Example: Defining `skipImageArg` For `custom` Build Command
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      custom:
+        skipImageArg: true
+        command: |-
+          # Also works on windows as this is executed in a golang shell
+          docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile
+```
+**Explanation:**  
+The image `backend` would be built using the command `docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile`
+
+### `imageTagOnly`
+The `imageTagOnly` option expects a boolean which specifies if DevSpace should only add the image `tag` instead of `image:tag` as argument. 
+
+#### Example: Defining `imageTagOnly` For `custom` Build Command
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      custom:
+        command: ./build
+        imageFlag: "--image"
+        imageTagOnly: true
+        args:
+        - "--arg1"
+        - "--flag"
+        - "flag-value"
+        - "--arg2"
+```
+**Explanation:**  
+The image `backend` would be built using the command `./build --arg1 --flag flag-value --arg2 --image "[TAG]"` while `[TAG]` would be replaced with the tag generated according to the [tagging schema](../../configuration/images/basics.mdx#6-tag-image).
+
+### `args`
+The `args` option expects an array of strings which represent additional flags and arguments that should be passed to the custom build command **before** the argument containing `[IMAGE]:[TAG]`.
+
+#### Default Value For `args`
+```yaml
+args: []
+```
+
+#### Example: Using `args` and `appendArgs` for Custom Builds
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      custom:
+        command: ./build
+        args:
+        - "--flag1"
+        - "flag-value-1"
+        - "arg1"
+        - "arg2"
+        appendArgs:
+        - "arg3"
+        - "--flag2"
+        - "flag-value-2"
+```
+**Explanation:**  
+The image `backend` would be built using the command `./build --flag1 flag-value-1 arg1 arg2 [IMAGE]:[TAG] arg3 --flag2 flag-value-2` while `[IMAGE]` would be replaced with the `image` option (in this case: `john/appbackend`) and `[TAG]` would be replaced with the tag generated according to the [tagging schema](../../configuration/images/basics.mdx#6-tag-image).
+
+
+### `appendArgs`
+The `appendArgs` option expects an array of strings which represent additional flags and arguments that should be passed to the custom build command **after** the argument containing `[IMAGE]:[TAG]`.
+
+#### Default Value For `appendArgs`
+```yaml
+appendArgs: []
+```
+
+#### Example
+**See "[Example: Using `args` and `appendArgs` For Custom Builds](#example-using-args-and-appendargs-for-custom-builds)"**
+
+### `commands`
+The `commands` option expects an array of commands that should be executed on a specific operating system. This will only exchange the base command, but all other arguments will be appended the same way.
+
+#### Example: Using `commands` for Custom Builds
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      custom:
+        command: ./build-default.sh
+        commands:
+        - command: ./build-windows.ps
+          os: windows
+        - command: ./build-darwin.sh
+          os: darwin
+        args:
+        - "--flag1"
+        - "flag-value-1"
+        - "arg1"
+        - "arg2"
+```
+**Explanation:**  
+- **linux**: The image `backend` would be built using the command `./build-default.sh --flag1 flag-value-1 arg1 arg2 [IMAGE]:[TAG]`
+- **windows**: The image `backend` would be built using the command `./build-windows.ps --flag1 flag-value-1 arg1 arg2 [IMAGE]:[TAG]`
+- **darwin (macOS)**: The image `backend` would be built using the command `./build-darwin.sh --flag1 flag-value-1 arg1 arg2 [IMAGE]:[TAG]`
+
+### `onChange`
+The `onChange` option expects an array of strings which represent paths to files or folders that should be watched for changes. DevSpace uses these paths and the hash values it stores about these paths for evaluating if an image should be rebuilt or if the image building can be skipped because the context of the image has not changed.
+
+:::info
+It is highly recommended to specify this option when using `custom` as build tool in order to speed up the build process.
+:::
+
+#### Default Value For `onChange`
+```yaml
+onChange: []
+```
+
+#### Example: OnChange Option For custom Build Command
+```yaml
+images:
+  backend:
+    image: john/appbackend
+    build:
+      custom:
+        command: ./build
+        imageFlag: "--image"
+        onChange:
+        - some/path/
+        - another/path/file.txt
+```
+**Explanation:**  
+The image `backend` would be built using the command `./build --image "[IMAGE]:[TAG]"` and DevSpace would skip the build if none of the files within `some/path/` nor the file `another/path/file.txt` has changed since the last build.

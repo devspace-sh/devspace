@@ -1,0 +1,217 @@
+---
+title: Config Variables
+sidebar_label: Basics
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+DevSpace allows you to make your configuration dynamic by using variables in `devspace.yaml`.
+
+While there is no need to explicitly define a config variable, it allows you to customize the behavior of DevSpace when working with the variable. Variables are defined within the `vars` section of `devspace.yaml`.
+
+<Tabs
+  defaultValue="question"
+  values={[
+    { label: 'Question', value: 'question', }, 
+    { label: 'Value', value: 'value', },
+    { label: 'Options', value: 'options', },
+    { label: 'Password', value: 'password', }, 
+    { label: 'NoCache', value: 'noCache', }, 
+    { label: 'Command', value: 'command', },
+    { label: 'Environment', value: 'env', },
+    { label: 'Implicit', value: 'implicit', },
+  ]
+}>
+<TabItem value="question">
+
+```yaml {3,5-7}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  question: Which mysql version do you want to use?
+  default: "5.7"
+```
+
+</TabItem>
+<TabItem value="value">
+
+```yaml {3,5-8}
+images: 
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+# Variables defined by value will not 
+# be asked or overwritten through environment
+- name: MYSQL_VERSION
+  value: "5.7"
+```
+
+</TabItem>
+<TabItem value="options">
+
+```yaml {3,5-10}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  question: Which mysql version do you want to use?
+  options:
+  - "5.5"
+  - "5.6"
+  - "5.7"
+```
+
+</TabItem>
+<TabItem value="password">
+
+```yaml {3,5-7}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  question: Which mysql version do you want to use?
+  password: true
+```
+
+</TabItem>
+
+<TabItem value="noCache">
+
+```yaml {3,5-7}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  question: Which mysql version do you want to use?
+  noCache: true
+```
+
+</TabItem>
+<TabItem value="command">
+
+```yaml {3,5-6}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  command: "echo 5.7"
+```
+
+</TabItem>
+<TabItem value="env">
+
+```yaml {3,5-7}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars:
+- name: MYSQL_VERSION
+  source: env
+  default: "5.5"
+```
+
+</TabItem>
+<TabItem value="implicit">
+
+```yaml {3}
+images:
+  database:
+    image: "mysql:${MYSQL_VERSION}"
+vars: {}
+```
+
+:::tip
+DevSpace allows you to use config variables without explicitly defining them as variables. You can simply reference them via `${MY_ENV_VAR}` anywhere in your `devspace.yaml`. Implicit variables use `source: all`.
+:::
+
+</TabItem>
+</Tabs>
+
+:::info Source
+The `source` option of a config variable expects either:
+- `all` means to check environment variables **first** and then ask a question if no env variable is defined (**default**)
+- [`env`](../../configuration/variables/source-env.mdx) means to check environment variables **only**
+- [`input`](../../configuration/variables/source-input.mdx) means to ask the user a question **once** (values will be cached in `.devspace/generated.yaml`)
+- [`command`](../../configuration/variables/source-command.mdx) means DevSpace will not ask the user a question and instead execute a command to determine the value of the variable.
+:::
+
+:::warning Pass Variables via CLI
+A useful feature in DevSpace is that you can also specify variables as flags, which will override previous values (if there are any):
+```
+devspace deploy --var VAR1=VALUE1 --var VAR2=VALUE2
+```
+:::
+
+:::note Input Caching
+If `source` is either `all` or `input` and the variable is not defined, the user will be asked to provide a value either using a generic question or the one provided via the [`question`](../../configuration/variables/source-input.mdx#question) option. The user-provided value will be cached encrypted in `.devspace/generated.yaml` and the user will only be asked again after the cache has been cleared first using:
+```bash
+devspace reset vars
+```
+:::
+
+To disable this functionality set the field `noCache` to `true`. This will make devspace prompt for the variable on every run.
+
+## Useful Commands
+
+### `devspace list vars`
+To get a list of all variables defined in the `devspace.yaml`, you can run this command:
+```bash
+devspace list vars
+```
+
+### `devspace reset vars`
+Once DevSpace asks you to provide a value for a variable, this value will be stored in the variables cache, so you will not asked about this variable again. To reset the variables cache, run:
+```bash
+devspace reset vars
+```
+
+DevSpace will fill the variables cache again, once you run the next build or deployment command.
+
+### `devspace print`
+The following command prints the config after all variables have been replaced:
+```bash
+devspace print
+```
+You can optionally add the `-p / --profiles` flag to this command.
+
+### `export VAR_NAME=value`
+The value for a config variable can also be set by defining an environment variable named `[VAR_NAME]`. Setting the value of a config variable with name `${IMAGE_NAME}` would be possible by setting an environment value `IMAGE_NAME`.
+
+
+<Tabs
+  defaultValue="windows"
+  values={[
+    { label: 'Windows Powershell', value: 'windows', },
+    { label: 'Mac Terminal', value: 'mac', },
+    { label: 'Linux Bash', value: 'linux', },
+  ]
+}>
+<TabItem value="windows">
+
+```powershell
+$env:IMAGE_NAME = "some-value"
+```
+
+</TabItem>
+<TabItem value="mac">
+
+```bash
+export IMAGE_NAME="some-value"
+```
+
+</TabItem>
+<TabItem value="linux">
+
+```bash
+export IMAGE_NAME="some-value"
+```
+
+</TabItem>
+</Tabs>

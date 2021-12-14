@@ -81,7 +81,7 @@ func (u *untilNewestRunning) printPodInfo(pod *v1.Pod, log log.Logger) {
 
 	if time.Since(u.lastWarning) > time.Second*10 {
 		status := kubectl.GetPodStatus(pod)
-		log.Warnf("DevSpace is waiting, because Pod %s/%s has status: %s", pod.Namespace, pod.Name, status)
+		log.Infof("DevSpace is waiting, because Pod %s/%s has status: %s", pod.Namespace, pod.Name, status)
 		u.lastWarning = time.Now()
 	}
 }

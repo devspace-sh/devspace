@@ -1,0 +1,27 @@
+The `default` option expects a string, integer or boolean defining the default value for the variable. You can also use other variables in a default value, with one of the following conditions being true:
+- The used variable is defined before the variable that wants to use it
+- The used variable is a predefined variable
+
+:::note Type Casting
+If a default value is specified, DevSpace will assume the type of the default value as the type for the variable, i.e. when `default: "123"` is defined and a value of `123` (int) is provided it would be casted to `"123"` (string). To explicitly use the value of a variable as a string within `devspace.yaml`, use `$!{VAR_NAME}` instead of `${VAR_NAME}`.
+:::
+
+Example:
+```yaml
+images:
+  default:
+    image: ${IMAGE}
+vars:
+  - name: IMAGE_REPOSITORY
+    default: myrepository
+    source: none
+  - name: IMAGE_NAME
+    default: devspace
+    source: none
+  - name: IMAGE
+    default: ${IMAGE_REPOSITORY}/${IMAGE_NAME}
+    source: none
+  - name: NAMESPACE
+    default: ${devspace.namespace}
+    source: none
+```

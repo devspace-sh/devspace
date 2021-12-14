@@ -1,0 +1,235 @@
+---
+title: Image Building
+sidebar_label: Basics
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import FragmentFaqImageContext from '../../fragments/faq-image-context.mdx';
+import WarningBuildToolPriority from '../../fragments/warning-build-tool-priority.mdx';
+
+Images are configured within the `images` section of the `devspace.yaml`.
+
+## Examples
+
+<Tabs
+  defaultValue="dockerhub"
+  values={[
+    { label: 'Docker Hub', value: 'dockerhub', },
+    { label: 'Custom Registry', value: 'custom-registry', },
+    { label: 'Custom Tagging', value: 'tagging', }, 
+    { label: 'BuildKit', value: 'buildkit', },
+    { label: 'kaniko', value: 'kaniko', },
+    { label: 'Build Command', value: 'custom', },
+    { label: 'Disable', value: 'disabled', },
+  ]
+}>
+<TabItem value="dockerhub">
+
+```yaml {3}
+images:
+  backend:
+    image: my-docker-username/appbackend
+  database:
+    image: my-docker-company/appbackend
+```
+
+</TabItem>
+<TabItem value="custom-registry">
+
+```yaml {3}
+images:
+  backend:
+    image: image.company.tld/appbackend
+  database:
+    image: image.company.tld/appbackend
+```
+
+</TabItem>
+<TabItem value="tagging">
+
+```yaml {4-9}
+images:
+  backend:
+    image: image.company.tld/appbackend
+    tags:
+    - latest
+    # This will be replaced during build time with
+    # something like dev-ads13as1-sA4ve. Each hashtag
+    # represents a random character.
+    - dev-${devspace.git.commit}-#####  
+  database:
+    image: image.company.tld/appbackend
+```
+
+</TabItem>
+<TabItem value="buildkit">
+
+```yaml {4-6}
+images:
+  backend:
+    image: john/appbackend
+    build:
+      buildKit:
+        inCluster: {}
+```
+
+:::info What is BuildKit?
+[BuildKit](https://github.com/moby/buildkit) is an open-source concurrent, cache-efficient, and Dockerfile-agnostic builder toolkit that lets you build images inside containers that run on top of Kubernetes or in your local docker daemon. To force image building using BuildKit, set `build.buildKit: {}`. To tell DevSpace to use in cluster building set `build.buildKit.inCluster: {}` as shown above. Learn more about [configuring BuildKit builds](../../configuration/images/buildkit.mdx).
+:::
+
+</TabItem>
+<TabItem value="kaniko">
+
+```yaml {4-6}
+images:
+  backend:
+    image: john/appbackend
+    build:
+      kaniko:
+        cache: true
+```
+
+:::info What is kaniko?
+Kaniko is an open-source tool that lets you build images inside containers that run on top of Kubernetes. DevSpace uses kaniko as automatic fallback if Docker is not installed. To force image building using kaniko, set `build.kaniko.cache: true` as shown above. Learn more about [configuring kaniko builds](../../configuration/images/kaniko.mdx).
+:::
+
+</TabItem>
+<TabItem value="custom">
+
+```yaml {4-11}
+images:
+  backend:
+    image: john/appbackend
+    build:
+      custom:
+        skipImageArg: true
+        command: |-
+          # Also works on windows as this is executed in a golang shell
+          docker build -t ${runtime.images.backend.image}:${runtime.images.backend.tag} . -f custom/Dockerfile
+```
+
+</TabItem>
+<TabItem value="disabled">
+
+```yaml {5}
+images:
+  frontend:
+    image: john/appfrontend
+    build:
+      disabled: true
+  backend:
+    image: john/appbackend
+```
+
+</TabItem>
+</Tabs>
+
+:::note Parallel Image Building
+To speed up the build process, the images you specify under `images` will all be built in parallel (unless you use the `--build-sequential` flag).
+:::
+
+<WarningBuildToolPriority/>
+
+
+## Run Image Building
+When you run one of the following commands, DevSpace will run the image building process:
+- `devspace build` (only image building without deployment)
+- `devspace deploy` (before deploying the application)
+- `devspace dev` (before deploying the application and starting the development mode)
+
+### Important Flags
+The following flags are available for all commands that trigger image building:
+- `--build-sequential` build images sequentially instead of in parallel (provides more detailed logs for each image)
+- `-b / --force-build` rebuild all images (even if they could be skipped because context and Dockerfile have not changed since the latest build)
+
+## Image Building Process
+DevSpace loads the `images` configuration from `devspace.yaml` and builds all images in parallel. The multi-threaded, parallel build process of DevSpace speeds up image building drastically, especially when building many images and using remote build methods. 
+
+### 1. Load Dockerfile
+DevSpace loads the contents of the Dockerfile specified in `image[*].dockerfile` (defaults to `./Dockerfile`). 
+
+:::info Use Relative Paths
+Dockerfile paths used in `dockerfile` should be relative to the `devspace.yaml`.
+:::
+
+### 2. Override Entrypoint (if needed)
+DevSpace allows you to apply an in-memory override of a Dockerfile's `ENTRYPOINT` by configuring the `entrypoint` option for the image. Similar to the Dockerfile `ENTRYPOINT`, the `images[*].entrypoint` option should be defined as an array. 
+
+:::note Useful for Profiles
+Configuring `ENTRYPOINT` overrides can be particularly useful when defining different [config profiles](../../configuration/profiles/basics.mdx) in your `devspace.yaml`.
+:::
+
+### 3. Load Build Context
+DevSpace loads the context to build this image as specified in `context` (defaults to `./`). The context path serves as root directory for Dockerfile statements like `ADD` or `COPY`. 
+
+:::info Use Relative Paths
+Context paths used in `context` should be relative to the `devspace.yaml`.
+:::
+
+<FragmentFaqImageContext/>
+
+### 4. Skip Build & Push (if possible)
+DevSpace tries to speed up image building by skipping images when they have not changed since the last build process. To do this, DevSpace caches the following information after building an image:
+- a hash of the `Dockerfile` used to build the image (including ENTRYPOINT override)
+- a hash over all files in the `context` used to build this image (excluding files in `.dockerignore`)
+
+The next time you trigger the image building process, DevSpace will generate these hashes again and compare them to the hashes of the last image building process. If all newly generated hashes are equal to the old ones stored during the last image building process, then nothing has changed and DevSpace will skip this image.
+
+:::note Force Build
+You can use the `-b / --force-build` flag to tell DevSpace to build all images even if nothing has changed.
+:::
+
+### 5. Build Image
+DevSpace uses one of the following [build tools](../../configuration/images/basics.mdx) to create an image based on your Dockerfile and the provided context:
+- [`docker`](../../configuration/images/docker.mdx) for building images using a Docker daemon (default, prefers Docker daemon of local Kubernetes clusters)
+- [`kaniko`](../../configuration/images/kaniko.mdx) for building images directly inside Kubernetes (automatic fallback for `docker`)
+- [`custom`](../../configuration/images/custom.mdx) for building images with a custom build command (e.g. for using Google Cloud Build)
+- [`disabled`](../../configuration/images/disabled.mdx) if this image should not be built (especially useful for [config `profiles`](../../configuration/profiles/basics.mdx))
+
+### 6. Tag Image
+DevSpace automatically tags all images after building them using a tagging schema that you can customize using the `tag` option. By default, this option is configured to generate a random string consisting of 5 characters. 
+
+[Learn more about defining a custom tagging schema.](../../configuration/images/image-tagging.mdx#tags-tagging-schema)
+
+:::info Tag Replacement
+Before deploying your application, DevSpace will use the newly generated image tags and replace them in-memory in the values for your [Helm charts](../../configuration/deployments/helm-charts.mdx) and [Kubernetes manifests](../../configuration/deployments/kubernetes-manifests.mdx), so they will be deployed using the newest image tag.
+:::
+
+### 7. Push Image
+DevSpace automatically pushes your images to the respective registry that should be specified as part of the `image` option. Just as with regular Docker images, DevSpace uses Docker Hub if no registry hostname is provided within `image`.
+
+
+:::note
+You can skip this step when proving the `--skip-push` flag. Beware that deploying your application after using `--skip-push` will only work when your images have already been pushed to the registry or when you are using a local Kubernetes cluster (e.g. minikube).
+:::
+
+### 8. Create Pull Secrets
+When deploying your application via DevSpace, Kubernetes needs to be able to pull your images from the registry that is used to store your images when pushing them. For this purpose, Kubernetes relies on so-called image pull secrets. DevSpace can automatically create these secrets for you, if you configure `createPullSecret: true` for the respective image in your `devspace.yaml`.
+
+:::note
+You do **<u>not</u>** need to change anything in your Kubernetes manifests or Helm charts to use the image pull secrets that DevSpace creates because DevSpace [adds these secrets to the default service account in the namespace](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-imagepullsecrets-to-a-service-account) used to deploy your project.
+
+After running `devspace build`, `devspace deploy` or `devspace dev`, you should be able to see the auto-generated pull secrets created by DevSpace when you run the following command:
+```bash
+kubectl get serviceaccount default -o yaml
+```
+Take a look at the `imagePullSecrets` section of the output showing the yaml definition of the service account `default`.
+:::
+
+## Advanced Topics
+
+### Authentication (Registry)
+DevSpace uses the same credential store as Docker. So, if you already have Docker installed and you have logged in to a private registry before, DevSpace will be able to push to this registry. So, if you want to push to a registry using DevSpace, simply authenticate using this command:
+```bash
+docker login            # for Docker Hub
+docker login [REGISTRY] # for any other registry (e.g. my-registry.tld)
+```
+
+:::note
+If you do **<u>not</u>** have Docker installed, DevSpace initializes a Docker credential store for you and stores your login information just like Docker would do it.
+:::
+
+
+### Skip Push (Local Clusters)
+If you are using a local Kubernetes cluster, DevSpace will try to build the image using the Docker deamon of this local cluster. If this process is successful, DevSpace will skip the step of pushing the image to a registry as it is not required for deploying your application.

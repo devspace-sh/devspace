@@ -115,7 +115,6 @@ func init() {
 }
 
 func IsPredefinedVariable(name string) bool {
-	name = strings.ToUpper(name)
 	_, ok := predefinedVars[name]
 	return ok
 }
@@ -151,7 +150,6 @@ func AddPredefinedVars(plugins []plugin.Metadata) {
 // NewPredefinedVariable creates a new predefined variable for the given name or fails if there
 // is none with the given name
 func NewPredefinedVariable(name string, cache map[string]string, options *PredefinedVariableOptions) (Variable, error) {
-	name = strings.ToUpper(name)
 	if _, ok := predefinedVars[name]; !ok {
 		// Load space domain environment variable
 		if strings.HasPrefix(name, "DEVSPACE_SPACE_DOMAIN") {
@@ -180,10 +178,9 @@ type predefinedVariable struct {
 }
 
 func (p *predefinedVariable) Load(definition *latest.Variable) (interface{}, error) {
-	name := strings.ToUpper(p.name)
-	getVar, ok := predefinedVars[name]
+	getVar, ok := predefinedVars[p.name]
 	if !ok {
-		return nil, errors.New("predefined variable " + name + " not found")
+		return nil, errors.New("predefined variable " + p.name + " not found")
 	}
 
 	return getVar(p.options)

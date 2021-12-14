@@ -43,6 +43,7 @@ func TestDeploy(t *testing.T) {
 				Deployments: map[string]*generated.DeploymentCache{
 					"deploy1": {
 						DeploymentConfigHash: "42d471330d96e55ab8d144d52f11e3c319ae2661e50266fa40592bb721689a3a",
+						HelmValuesHash: "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
 					},
 				},
 			},
@@ -65,6 +66,7 @@ func TestDeploy(t *testing.T) {
 				Deployments: map[string]*generated.DeploymentCache{
 					"deploy2": {
 						DeploymentConfigHash: "2f0fdaa77956604c97de5cb343051fab738ac36052956ae3cb16e8ec529ab154",
+						HelmValuesHash: "efd6e101b768968a49f8dba46ef07785ac530ea9f75c4f9ca5733e223b6a4da1",
 						HelmReleaseRevision:  "1",
 					},
 				},
@@ -104,13 +106,12 @@ func TestDeploy(t *testing.T) {
 			config: config.NewConfig(nil, latest.NewRaw(), cache, nil, constants.DefaultConfigPath),
 			Log:    &log.FakeLogger{},
 		}
-
+		
 		if testCase.expectedCache == nil {
 			testCase.expectedCache = testCase.cache
 		}
 
 		deployed, err := deployer.Deploy(testCase.forceDeploy, testCase.builtImages)
-		assert.Equal(t, deployed, testCase.expectedDeployed, "Unexpected deployed-bool in testCase %s", testCase.name)
 		if testCase.expectedErr == "" {
 			assert.NilError(t, err, "Error in testCase %s", testCase.name)
 		} else {
@@ -126,5 +127,6 @@ func TestDeploy(t *testing.T) {
 		expectationAsYaml, err := yaml.Marshal(testCase.expectedCache)
 		assert.NilError(t, err, "Error marshaling expected cache in testCase %s", testCase.name)
 		assert.Equal(t, string(cacheAsYaml), string(expectationAsYaml), "Unexpected cache in testCase %s", testCase.name)
+		assert.Equal(t, deployed, testCase.expectedDeployed, "Unexpected deployed-bool in testCase %s", testCase.name)
 	}
 }

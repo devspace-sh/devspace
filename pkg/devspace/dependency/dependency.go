@@ -315,7 +315,7 @@ func (m *manager) executeDependenciesRecursive(base string, dependencies []types
 
 		// execute dependency
 		if !silent && !verbose {
-			m.log.Infof(fmt.Sprintf("%s dependency %s...", actionName, dependency))
+			m.log.Infof(fmt.Sprintf("%s dependency %s...", actionName, dependencyName))
 		}
 
 		// If not verbose log to a stream

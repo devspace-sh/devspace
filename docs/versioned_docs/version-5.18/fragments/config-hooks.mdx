@@ -1,0 +1,37 @@
+```yaml
+hooks:                              # struct[]  | Array of hooks to be executed. A hook can only have either one of the following fields defined:
+                                    #           | - hooks[*].command which will either execute a command locally or remotely in a container
+                                    #           | - hooks[*].upload which will upload files or folders into a container
+                                    #           | - hooks[*].download which will download files or folder from a container
+                                    #           | - hooks[*].wait which will wait for a container to become running or terminate
+                                    #           | - hooks[*].logs which will print the logs for a certain container
+- name: "my-hook-name"              # string    | Optional string stating the name of this hook configuration
+  events: ["before:deploy"]         # struct    | Events at which this hook should get executed
+  disabled: false                   # bool      | If true the hook will be not executed and skipped
+  command: "echo Hello World!"      # string    | Command to be executed when this hook is triggered (if no args a specified, will be executed in a golang shell)
+  args: []                          # string[]  | (Optional) Array of arguments for the command of this hook. If this is specified, command has to be present in PATH
+  upload:                           # struct    | If defined will upload files or folders into the container.
+    localPath: ./test               # string    | The local path of the file or folder
+    containerPath: /app             # string    | The remote path where to upload the file or folder into
+  download:                         # struct    | If defined will download files or folders from the container.
+    containerPath: /app             # string    | The remote path where to download the file or folder from
+    localPath: ./test               # string    | The local path where to download the file or folder
+  logs:                             # struct    | If logs is defined will print the logs of the target container. This is useful for containers 
+                                    #           | that should finish like init containers or job pods. Otherwise this hook will never terminate.
+    tailLines: /app                 # int       | If set, the number of lines from the end of the logs to show
+  wait:                             # struct    | If wait is defined the hook will wait until the matched pod or container is running or is terminated
+                                    #           | with a certain exit code.
+    running: true                   # bool      | If running is true, will wait until the matched containers are running. Can be used together with terminatedWithCode.
+    terminatedWithCode: 0           # int       | If terminatedWithCode is not nil, will wait until the matched containers are terminated with the given exit code. 
+                                    #           | If the container has exited with a different exit code, the hook will fail. Can be used together with running.
+    timeout: 150                    # int       | Timeout of seconds to wait for matched containers to reach the given state until the hook will fail.
+  os: darwin                        # string    | If specified then this hook is only executed on the given operating system
+  background: false                 # bool      | If true DevSpace will not wait for the command to finish and directly move on
+  silent: false                     # bool      | If true DevSpace will not print any command output to the console
+  container:                        # struct    | If specified, DevSpace will run the command in the container instead of locally
+    imageSelector: nginx            # string    | Image of a container by which DevSpace should select the pod
+    labelSelector: ...              # struct    | Key Value map of labels and values to select pods with
+    containerName: ""               # string    | Container name to use after selecting a pod
+    namespace: ""                   # string    | Kubernetes namespace to select pods in
+    once: false                     # bool      | If true the command will execute once - unless the targeted container is restarted and the hook is re-executing according to its lifecycle events (default false)
+```
