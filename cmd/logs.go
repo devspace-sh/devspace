@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
@@ -9,13 +11,11 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/pkg/errors"
@@ -67,7 +67,7 @@ devspace logs --namespace=mynamespace
 	logsCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
 	logsCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to print the logs of")
 	logsCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
-	logsCmd.Flags().StringVar(&cmd.ImageSelector, "image-selector", "", "The image to search a pod for (e.g. nginx, nginx:latest, image(app), nginx:tag(app))")
+	logsCmd.Flags().StringVar(&cmd.ImageSelector, "image-selector", "", "The image to search a pod for (e.g. nginx, nginx:latest, ${runtime.images.app}, nginx:${runtime.images.app.tag})")
 	logsCmd.Flags().StringVar(&cmd.Image, "image", "", "Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage")
 	logsCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
 	logsCmd.Flags().BoolVarP(&cmd.Follow, "follow", "f", false, "Attach to logs afterwards")
@@ -161,7 +161,7 @@ func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, c
 			}
 		}
 
-		resolved, err := util.ResolveImageAsImageSelector(imageSelector, config, dependencies)
+		resolved, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(imageSelector, config, dependencies)
 		if err != nil {
 			return nil, err
 		}

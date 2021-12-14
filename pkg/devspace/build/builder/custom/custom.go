@@ -2,6 +2,10 @@ package custom
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/util/shell"
 	"io"
 	"path/filepath"
 	"strings"
@@ -28,14 +32,20 @@ type Builder struct {
 
 	imageConfigName string
 	imageTags       []string
+
+	config       config.Config
+	dependencies []types.Dependency
 }
 
 // NewBuilder creates a new custom builder
-func NewBuilder(imageConfigName string, imageConf *latest.ImageConfig, imageTags []string) *Builder {
+func NewBuilder(imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, config config.Config, dependencies []types.Dependency) *Builder {
 	return &Builder{
 		imageConfigName: imageConfigName,
 		imageConf:       imageConf,
 		imageTags:       imageTags,
+
+		config:       config,
+		dependencies: dependencies,
 	}
 }
 
@@ -74,7 +84,7 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool,
 	imageCache := cache.GetImageCache(b.imageConfigName)
 
 	// only rebuild Docker image when Dockerfile or context has changed since latest build
-	mustRebuild := imageCache.Tag == "" || imageCache.ImageConfigHash != imageConfigHash || imageCache.CustomFilesHash != customFilesHash
+	mustRebuild := forceRebuild || b.imageConf.RebuildStrategy == latest.RebuildStrategyAlways || imageCache.Tag == "" || imageCache.ImageConfigHash != imageConfigHash || imageCache.CustomFilesHash != customFilesHash
 
 	imageCache.ImageConfigHash = imageConfigHash
 	imageCache.CustomFilesHash = customFilesHash
@@ -87,8 +97,23 @@ func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
 	// Build arguments
 	args := []string{}
 
-	// add args
-	args = append(args, b.imageConf.Build.Custom.Args...)
+	// resolve command
+	if len(b.imageTags) > 0 {
+		key := fmt.Sprintf("images.%s", b.imageConfigName)
+		b.config.SetRuntimeVariable(key, b.imageConf.Image+":"+b.imageTags[0])
+		b.config.SetRuntimeVariable(key+".image", b.imageConf.Image)
+		b.config.SetRuntimeVariable(key+".tag", b.imageTags[0])
+	}
+	
+	// loop over args
+	for i := range b.imageConf.Build.Custom.Args {
+		resolvedArg, err := runtime.NewRuntimeResolver(false).FillRuntimeVariablesAsString(b.imageConf.Build.Custom.Args[i], b.config, b.dependencies)
+		if err != nil {
+			return err
+		}
+		
+		args = append(args, resolvedArg)
+	}
 
 	// add image arg
 	if !b.imageConf.Build.Custom.SkipImageArg {
@@ -106,7 +131,14 @@ func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
 	}
 
 	// append the rest
-	args = append(args, b.imageConf.Build.Custom.AppendArgs...)
+	for i := range b.imageConf.Build.Custom.AppendArgs {
+		resolvedArg, err := runtime.NewRuntimeResolver(false).FillRuntimeVariablesAsString(b.imageConf.Build.Custom.AppendArgs[i], b.config, b.dependencies)
+		if err != nil {
+			return err
+		}
+
+		args = append(args, resolvedArg)
+	}
 
 	// get the command
 	commandPath := b.imageConf.Build.Custom.Command
@@ -122,11 +154,11 @@ func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
 		return fmt.Errorf("no command specified for custom builder")
 	}
 
-	// make sure the path has the correct slashes
-	commandPath = filepath.FromSlash(commandPath)
-
-	// Create the command
-	cmd := command.NewStreamCommand(commandPath, args)
+	// resolve command and args
+	commandPath, err := runtime.NewRuntimeResolver(false).FillRuntimeVariablesAsString(commandPath, b.config, b.dependencies)
+	if err != nil {
+		return err
+	}
 
 	// Determine output writer
 	var writer io.Writer
@@ -138,9 +170,16 @@ func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
 
 	log.Infof("Build %s:%s with custom command '%s %s'", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "))
 
-	err := cmd.Run(writer, writer, nil)
-	if err != nil {
-		return errors.Errorf("Error building image: %v", err)
+	if len(args) == 0 {
+		err = shell.ExecuteShellCommand(commandPath, args, filepath.Dir(b.config.Path()), writer, writer, nil)
+		if err != nil {
+			return errors.Errorf("error building image: %v", err)
+		}
+	} else {
+		err = command.NewStreamCommand(commandPath, args).Run(writer, writer, nil)
+		if err != nil {
+			return errors.Errorf("error building image: %v", err)
+		}
 	}
 
 	log.Done("Done processing image '" + b.imageConf.Image + "'")

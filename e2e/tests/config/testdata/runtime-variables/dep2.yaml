@@ -1,0 +1,13 @@
+version: v1beta11
+images:
+  app:
+    image: testimage
+    tags:
+      - dep1
+    build:
+     disabled: true
+dependencies:
+  - name: dep1
+    disabled: true
+    source:
+      path: ./dep1.yaml

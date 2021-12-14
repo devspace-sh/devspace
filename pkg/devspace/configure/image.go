@@ -2,6 +2,7 @@ package configure
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"os"
 	"os/exec"
 	"path"
@@ -12,7 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/generator"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/pkg/errors"
 )

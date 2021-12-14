@@ -2,15 +2,15 @@ package services
 
 import (
 	"context"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"io"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
 	"github.com/loft-sh/devspace/pkg/devspace/services/synccontroller"
 	"github.com/loft-sh/devspace/pkg/devspace/tunnel"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
@@ -27,7 +27,7 @@ func (serviceClient *client) startReversePortForwarding(portForwarding *latest.P
 	options.AllowPick = false
 	options.ImageSelector = []imageselector.ImageSelector{}
 	if portForwarding.ImageSelector != "" {
-		imageSelector, err := util.ResolveImageAsImageSelector(portForwarding.ImageSelector, serviceClient.config, serviceClient.dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(portForwarding.ImageSelector, serviceClient.config, serviceClient.dependencies)
 		if err != nil {
 			return err
 		}
@@ -74,6 +74,7 @@ func (serviceClient *client) startReversePortForwarding(portForwarding *latest.P
 		case err := <-errorChan:
 			if err != nil {
 				fileLog.Errorf("Reverse portforwarding restarting, because: %v", err)
+				synccontroller.PrintPodError(context.TODO(), serviceClient.KubeClient(), container.Pod, fileLog)
 				close(closeChan)
 				_ = stdinWriter.Close()
 				_ = stdoutWriter.Close()

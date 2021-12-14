@@ -1,0 +1,83 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+<Tabs
+  defaultValue="javascript"
+  groupId="language"
+  values={[
+    { label: 'Node.js', value: 'javascript', },
+    { label: 'Python', value: 'python', },
+    { label: 'Java', value: 'java', },
+    { label: 'Ruby', value: 'ruby', },
+    { label: 'Golang', value: 'golang', },
+    { label: 'PHP', value: 'php', },
+    { label: 'ASP.NET', value: 'dotnet', },
+    { label: 'Your Own Project', value: 'custom', },
+  ]
+}>
+<TabItem value="javascript">
+
+```bash
+npm start  
+# or: npm run dev
+# or: yarn start
+```
+
+</TabItem>
+<TabItem value="python">
+
+```bash
+python main.py
+```
+
+</TabItem>
+<TabItem value="ruby">
+
+```bash
+bundle exec rails server -p 3000 -b 0.0.0.0
+```
+
+</TabItem>
+<TabItem value="golang">
+
+```bash
+go run main.go
+```
+
+</TabItem>
+<TabItem value="java">
+
+```bash
+./build.sh run
+```
+
+</TabItem>
+<TabItem value="php">
+
+```bash
+# Your application may already be running
+# Try to open the browser on localhost to access it
+
+# You can also run other commands now:
+php ...
+composer ...
+ps aux
+```
+
+</TabItem>
+<TabItem value="dotnet">
+
+```bash
+dotnet run
+```
+
+</TabItem>
+<TabItem value="custom">
+
+```bash
+# Whatever command is needed to start your application
+```
+
+</TabItem>
+</Tabs>

@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"strings"
 	"sync"
 	"time"
@@ -10,10 +12,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
@@ -71,7 +71,7 @@ func NewLogManager(client kubectl.Client, config config.Config, dependencies []t
 		// resolve selectors
 		for _, selector := range c.Dev.Logs.Selectors {
 			if selector.ImageSelector != "" {
-				imageSelector, err := util.ResolveImageAsImageSelector(selector.ImageSelector, config, dependencies)
+				imageSelector, err := runtime.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(selector.ImageSelector, config, dependencies)
 				if err != nil {
 					return nil, err
 				}

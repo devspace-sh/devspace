@@ -2,12 +2,12 @@ package selector
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"sort"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/hash"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/pkg/errors"
 	k8sv1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"

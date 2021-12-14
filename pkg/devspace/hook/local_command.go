@@ -1,15 +1,17 @@
 package hook
 
 import (
+	"bytes"
 	"encoding/json"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -55,17 +57,26 @@ func (l *localCommandHook) Execute(hook *latest.HookConfig, client kubectl.Clien
 	}
 
 	// if args are nil we execute the command in a shell
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	defer func() {
+		if hook.Name != "" {
+			config.SetRuntimeVariable("hooks."+hook.Name+".stdout", strings.TrimSpace(stdout.String()))
+			config.SetRuntimeVariable("hooks."+hook.Name+".stderr", strings.TrimSpace(stderr.String()))
+		}
+	}()
+
 	if hook.Args == nil {
-		return shell.ExecuteShellCommand(hookCommand, nil, dir, l.Stdout, l.Stderr, extraEnv)
+		return shell.ExecuteShellCommand(hookCommand, nil, dir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), extraEnv)
 	}
 
 	// else we execute it directly
-	return command.ExecuteCommandWithEnv(hookCommand, hookArgs, dir, l.Stdout, l.Stderr, extraEnv)
+	return command.ExecuteCommandWithEnv(hookCommand, hookArgs, dir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), extraEnv)
 }
 
 func ResolveCommand(command string, args []string, config config.Config, dependencies []types.Dependency) (string, []string, error) {
 	// resolve hook command
-	hookCommand, err := util.ResolveImageHelpers(command, config, dependencies)
+	hookCommand, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsString(command, config, dependencies)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "resolve image helpers")
 	}
@@ -74,7 +85,7 @@ func ResolveCommand(command string, args []string, config config.Config, depende
 	if args != nil {
 		newArgs := []string{}
 		for _, a := range args {
-			newArg, err := util.ResolveImageHelpers(a, config, dependencies)
+			newArg, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsString(a, config, dependencies)
 			if err != nil {
 				return "", nil, errors.Wrap(err, "resolve image helpers")
 			}

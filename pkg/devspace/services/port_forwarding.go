@@ -3,13 +3,14 @@ package services
 import (
 	"context"
 	"fmt"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
+	"github.com/loft-sh/devspace/pkg/devspace/services/synccontroller"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
@@ -114,7 +115,7 @@ func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardi
 	options.AllowPick = false
 	options.ImageSelector = []imageselector.ImageSelector{}
 	if portForwarding.ImageSelector != "" {
-		imageSelector, err := util.ResolveImageAsImageSelector(portForwarding.ImageSelector, serviceClient.config, serviceClient.dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(portForwarding.ImageSelector, serviceClient.config, serviceClient.dependencies)
 		if err != nil {
 			return err
 		}
@@ -189,6 +190,7 @@ func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardi
 		case err := <-errorChan:
 			if err != nil {
 				fileLog.Errorf("Portforwarding restarting, because: %v", err)
+				synccontroller.PrintPodError(context.TODO(), serviceClient.KubeClient(), pod, fileLog)
 				pf.Close()
 				hook.LogExecuteHooks(serviceClient.KubeClient(), serviceClient.Config(), serviceClient.Dependencies(), map[string]interface{}{
 					"port_forwarding_config": portForwarding,

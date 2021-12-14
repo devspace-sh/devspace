@@ -4,6 +4,10 @@ metadata:
   name: devspace
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: devspace-default
+      app.kubernetes.io/name: devspace-app
   template:
     metadata:
       labels:
@@ -12,4 +16,5 @@ spec:
     spec:
       containers:
         - name: default
-          image: devspace
+          image: myusername/devspace
+          imagePullPolicy: Never

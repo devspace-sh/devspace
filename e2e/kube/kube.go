@@ -3,12 +3,12 @@ package kube
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"strings"
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
 	corev1 "k8s.io/api/core/v1"

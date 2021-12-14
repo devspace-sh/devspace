@@ -1,0 +1,17 @@
+version: v1beta11
+images:
+  app:
+    image: my-docker-username/helloworld
+    tags:
+      - dep1
+    build:
+      disabled: true
+dependencies:
+  - name: dep2
+    source:
+      path: ./dep2.yaml
+hooks:
+  - name: test-123
+    command: |-
+      echo ${runtime.dependencies.dep2.images.app.image}
+    events: ["after:resolveDependencies"]

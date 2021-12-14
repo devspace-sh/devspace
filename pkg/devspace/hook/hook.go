@@ -121,7 +121,7 @@ func executeSingle(client kubectl.Client, config config.Config, dependencies []t
 
 		// Execute hooks
 		for _, hookConfig := range hooksToExecute {
-			if !command.ShouldExecuteOnOS(hookConfig.OperatingSystem) {
+			if hookConfig.Disabled || !command.ShouldExecuteOnOS(hookConfig.OperatingSystem) {
 				continue
 			}
 

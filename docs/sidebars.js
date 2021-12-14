@@ -113,6 +113,8 @@ module.exports = {
             'configuration/variables/source-input',
             'configuration/variables/source-command',
             'configuration/variables/source-none',
+            'configuration/variables/predefined-variables',
+            'configuration/variables/runtime-variables',
           ],
         },
         {

@@ -53,6 +53,7 @@ type DeploymentCache struct {
 
 	HelmOverridesHash   string `yaml:"helmOverridesHash,omitempty"`
 	HelmChartHash       string `yaml:"helmChartHash,omitempty"`
+	HelmValuesHash      string `yaml:"helmValuesHash,omitempty"`
 	HelmReleaseRevision string `yaml:"helmReleaseRevision,omitempty"`
 
 	KubectlManifestsHash string `yaml:"kubectlManifestsHash,omitempty"`

@@ -173,9 +173,6 @@ func TestResolver(t *testing.T) {
 			allowCyclic: true,
 			expectedDependencies: []Dependency{
 				{
-					localPath: filepath.Join(dir, "dependency2"),
-				},
-				{
 					localPath: filepath.Join(dir, "dependency1"),
 				},
 			},
@@ -212,9 +209,9 @@ func TestResolver(t *testing.T) {
 		for index, expected := range testCase.expectedDependencies {
 			if testCase.skipIds == false {
 				id, _ := util.GetDependencyID(dir, testCase.dependencyTasks[index])
-				assert.Equal(t, id, dependencies[index].id, "Dependency has wrong id in testCase %s", testCase.name)
+				assert.Equal(t, id, dependencies[index].ID(), "Dependency has wrong id in testCase %s", testCase.name)
 			}
-			assert.Equal(t, expected.localPath, dependencies[index].localPath, "Dependency has wrong local path in testCase %s", testCase.name)
+			assert.Equal(t, expected.localPath, dependencies[index].LocalPath(), "Dependency has wrong local path in testCase %s", testCase.name)
 		}
 
 		for path := range testCase.files {

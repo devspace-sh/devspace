@@ -24,7 +24,7 @@ func (c *controller) createBuilder(imageConfigName string, imageConf *latest.Ima
 	var builder builder.Interface
 
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
-		builder = custom.NewBuilder(imageConfigName, imageConf, imageTags)
+		builder = custom.NewBuilder(imageConfigName, imageConf, imageTags, c.config, c.dependencies)
 	} else if imageConf.Build != nil && imageConf.Build.BuildKit != nil {
 		log.StartWait("Creating BuildKit builder")
 		defer log.StopWait()

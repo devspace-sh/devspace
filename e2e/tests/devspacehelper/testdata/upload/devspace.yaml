@@ -7,7 +7,7 @@ images:
     image: ${IMAGE}
 hooks:
 - events: ["after:build:app"]
-  command: kind load docker-image image(app):tag(app) || true
+  command: kind load docker-image image(app):${runtime.images.app.tag} || true
 deployments:
   - name: upload
     helm:

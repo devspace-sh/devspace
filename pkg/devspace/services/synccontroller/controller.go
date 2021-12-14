@@ -4,7 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"io"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -14,13 +19,11 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/devspace/sync"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
@@ -104,7 +107,7 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 	}
 
 	// start the sync
-	client, err := c.startSync(options, onInitUploadDone, onInitDownloadDone, onDone, onError, log)
+	client, pod, err := c.startSync(options, onInitUploadDone, onInitDownloadDone, onDone, onError, log)
 	if err != nil {
 		pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
 			"sync_config": options.SyncConfig,
@@ -185,6 +188,7 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				}, options.SyncLog, hook.EventsForSingle("restart:sync", options.SyncConfig.Name).With("sync.restart")...)
 
 				options.SyncLog.Info("Restarting sync...")
+				PrintPodError(context.TODO(), c.client, pod.Pod, options.SyncLog)
 				for {
 					err := c.startWithWait(options, options.SyncLog)
 					if err != nil {
@@ -218,6 +222,25 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 
 	return nil
 }
+
+func PrintPodError(ctx context.Context, kubeClient kubectl.Client, pod *v1.Pod, log logpkg.Logger) {
+	// check if pod still exists
+	newPod, err := kubeClient.KubeClient().CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			log.Errorf("Restarted because old pod %s/%s seems to be erased", pod.Namespace, pod.Name)
+			return
+		}
+
+		return
+	}
+
+	podStatus := kubectl.GetPodStatus(newPod)
+	if podStatus != "Running" {
+		log.Errorf("Restarted because old pod %s/%s has status %s", pod.Namespace, pod.Name, podStatus)
+	}
+}
+
 func realWorkDir() (string, error) {
 	if runtime.GOOS == "darwin" {
 		if pwd, present := os.LookupEnv("PWD"); present {
@@ -229,7 +252,7 @@ func realWorkDir() (string, error) {
 	return ".", nil
 }
 
-func (c *controller) startSync(options *Options, onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}, onDone chan struct{}, onError chan error, log logpkg.Logger) (*sync.Sync, error) {
+func (c *controller) startSync(options *Options, onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}, onDone chan struct{}, onError chan error, log logpkg.Logger) (*sync.Sync, *selector.SelectedPodContainer, error) {
 	options.TargetOptions.SkipInitContainers = true
 	var (
 		syncConfig = options.SyncConfig
@@ -237,7 +260,7 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 
 	localPath, err := realWorkDir()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if syncConfig.LocalSubPath != "" {
@@ -247,20 +270,20 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 	_, err = os.Stat(localPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return nil, err
+			return nil, nil, err
 		}
 
 		err = os.MkdirAll(localPath, os.ModePerm)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	options.TargetOptions.ImageSelector = []imageselector.ImageSelector{}
 	if syncConfig.ImageSelector != "" {
-		imageSelector, err := util.ResolveImageAsImageSelector(syncConfig.ImageSelector, c.config, c.dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(syncConfig.ImageSelector, c.config, c.dependencies)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		options.TargetOptions.ImageSelector = append(options.TargetOptions.ImageSelector, *imageSelector)
@@ -269,18 +292,18 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 	log.Info("Waiting for containers to start...")
 	container, err := targetselector.NewTargetSelector(c.client).SelectSingleContainer(context.TODO(), options.TargetOptions, log)
 	if err != nil {
-		return nil, errors.Errorf("Error selecting pod: %v", err)
+		return nil, nil, errors.Errorf("Error selecting pod: %v", err)
 	}
 
 	log.Info("Starting sync...")
 	syncClient, err := c.initClient(container.Pod, container.Container.Name, syncConfig, options.Verbose, options.SyncLog)
 	if err != nil {
-		return nil, errors.Wrap(err, "start sync")
+		return nil, nil, errors.Wrap(err, "start sync")
 	}
 
 	err = syncClient.Start(onInitUploadDone, onInitDownloadDone, onDone, onError)
 	if err != nil {
-		return nil, errors.Errorf("Sync error: %v", err)
+		return nil, nil, errors.Errorf("Sync error: %v", err)
 	}
 
 	containerPath := "."
@@ -289,7 +312,7 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 	}
 
 	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, container.Pod.Namespace, container.Pod.Name)
-	return syncClient, nil
+	return syncClient, container, nil
 }
 
 func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, customLog logpkg.Logger) (*sync.Sync, error) {

@@ -3,16 +3,16 @@ package cmd
 import (
 	"context"
 	"fmt"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/util"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/loft-sh/devspace/pkg/util/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -152,7 +152,7 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 		options := targetselector.NewOptionsFromFlags("", "", cmd.Namespace, "", cmd.Pick).ApplyConfigParameter(syncPath.LabelSelector, syncPath.Namespace, syncPath.ContainerName, "")
 		options.ImageSelector = []imageselector.ImageSelector{}
 		if syncPath.ImageSelector != "" {
-			imageSelector, err := util.ResolveImageAsImageSelector(syncPath.ImageSelector, configInterface, dep)
+			imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(syncPath.ImageSelector, configInterface, dep)
 			if err != nil {
 				return err
 			}

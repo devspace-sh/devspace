@@ -62,7 +62,7 @@ func SyncAndPortForwarding(servicesClient services.Client, interrupt chan error,
 				continue
 			}
 
-			err = d.StartSync(servicesClient.KubeClient(), interrupt, printSyncLog, verbose, servicesClient.Log())
+			err = d.StartSync(interrupt, printSyncLog, verbose, servicesClient.Log())
 			if err != nil {
 				errChan <- err
 				return
@@ -90,7 +90,7 @@ func SyncAndPortForwarding(servicesClient services.Client, interrupt chan error,
 			if d.DependencyConfig().Dev == nil || !d.DependencyConfig().Dev.Ports {
 				continue
 			}
-			err = d.StartPortForwarding(servicesClient.KubeClient(), interrupt, servicesClient.Log())
+			err = d.StartPortForwarding(interrupt, servicesClient.Log())
 			if err != nil {
 				errChan <- err
 				return
@@ -131,7 +131,7 @@ func ReplacePods(servicesClient services.Client) error {
 		if d.DependencyConfig().Dev == nil || !d.DependencyConfig().Dev.ReplacePods {
 			continue
 		}
-		err = d.ReplacePods(servicesClient.KubeClient(), servicesClient.Log())
+		err = d.ReplacePods(servicesClient.Log())
 		if err != nil {
 			return err
 		}

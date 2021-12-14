@@ -1,0 +1,27 @@
+version: v1beta11
+vars:
+  - name: OTHER
+    value: test
+dependencies:
+  - name: dep1
+    source:
+      path: ./dep1.yaml
+images:
+  app:
+    image: my-docker-username/helloworld
+    tags:
+      - latest
+    build:
+      disabled: true
+hooks:
+  - name: test-123
+    command: |-
+      # This should print test-testimage-latest-dep1
+      echo -n $(echo -n "${OTHER}-${runtime.dependencies.dep1.hooks.test-123.stdout}-${runtime.images.app.tag}-${runtime.dependencies.dep1.images.app.tag}") > out.txt
+      echo -n "Done"
+    events: ["after:resolveDependencies"]
+  - name: test-124
+    command: |-
+      # This should print Done
+      echo -n ${runtime.hooks.test-123.stdout} > out2.txt
+    events: ["after:resolveDependencies"]

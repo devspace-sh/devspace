@@ -12,8 +12,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader/expression"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -273,17 +273,8 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 		options.Profiles = []string{generatedConfig.ActiveProfile}
 	}
 
-	// create a new variable resolver
-	resolver := l.newVariableResolver(generatedConfig, options, log)
-
 	// copy raw config
 	copiedRawConfig, err := copyRaw(rawConfig)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// parse cli --var's, the resolver will cache them for us
-	_, err = resolver.ConvertFlags(options.Vars)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -294,23 +285,41 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 		return nil, nil, nil, err
 	}
 
+	// validate variables
+	err = validateVars(vars)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// create a new variable resolver
+	resolver := l.newVariableResolver(generatedConfig, absPath, options, vars, log)
+
+	// parse cli --var's, the resolver will cache them for us
+	_, err = resolver.ConvertFlags(options.Vars)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	// prepare profiles
-	copiedRawConfig, err = prepareProfiles(copiedRawConfig, resolver, filepath.Dir(absPath), vars)
+	copiedRawConfig, err = prepareProfiles(copiedRawConfig, resolver)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	// apply the profiles
-	copiedRawConfig, err = l.applyProfiles(copiedRawConfig, options, resolver, vars, log)
+	copiedRawConfig, err = l.applyProfiles(copiedRawConfig, options, resolver, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	// Load defined variables
+	// Load defined variables again (might be changed through profiles)
 	vars, err = versions.ParseVariables(copiedRawConfig, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	// update the used vars in the resolver
+	resolver.UpdateVars(vars)
 
 	// validate variables
 	err = validateVars(vars)
@@ -322,7 +331,7 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 	delete(copiedRawConfig, "vars")
 
 	// parse the config
-	latestConfig, err := parser.Parse(absPath, rawConfig, copiedRawConfig, vars, resolver, options, log)
+	latestConfig, err := parser.Parse(rawConfig, copiedRawConfig, resolver, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -434,13 +443,13 @@ func validateProfile(profile interface{}) error {
 	return nil
 }
 
-func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resolver, dir string, vars []*latest.Variable) (map[interface{}]interface{}, error) {
+func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resolver) (map[interface{}]interface{}, error) {
 	rawProfiles := config["profiles"]
 	if rawProfiles == nil {
 		return config, nil
 	}
 
-	resolved, err := resolve(rawProfiles, resolver, dir, vars)
+	resolved, err := resolve(rawProfiles, resolver)
 	if err != nil {
 		return nil, err
 	}
@@ -451,7 +460,7 @@ func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resol
 	}
 
 	for idx, profile := range profiles {
-		resolvedProfile, err := resolve(profile, resolver, dir, vars)
+		resolvedProfile, err := resolve(profile, resolver)
 		if err != nil {
 			return nil, err
 		}
@@ -463,7 +472,7 @@ func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resol
 
 		// Resolve merge field
 		if profileMap["merge"] != nil {
-			merge, err := resolve(profileMap["merge"], resolver, dir, vars)
+			merge, err := resolve(profileMap["merge"], resolver)
 			if err != nil {
 				return nil, err
 			}
@@ -472,7 +481,7 @@ func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resol
 
 		// Resolve patches field
 		if profileMap["patches"] != nil {
-			patches, err := resolve(profileMap["patches"], resolver, dir, vars)
+			patches, err := resolve(profileMap["patches"], resolver)
 			if err != nil {
 				return nil, err
 			}
@@ -481,7 +490,7 @@ func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resol
 
 		// Resolve replace field
 		if profileMap["replace"] != nil {
-			replace, err := resolve(profileMap["replace"], resolver, dir, vars)
+			replace, err := resolve(profileMap["replace"], resolver)
 			if err != nil {
 				return nil, err
 			}
@@ -490,7 +499,7 @@ func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resol
 
 		// Resolve strategicMerge field
 		if profileMap["strategicMerge"] != nil {
-			strategicMerge, err := resolve(profileMap["strategicMerge"], resolver, dir, vars)
+			strategicMerge, err := resolve(profileMap["strategicMerge"], resolver)
 			if err != nil {
 				return nil, err
 			}
@@ -511,25 +520,19 @@ func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resol
 	return config, nil
 }
 
-func resolve(data interface{}, resolver variable.Resolver, dir string, vars []*latest.Variable) (interface{}, error) {
+func resolve(data interface{}, resolver variable.Resolver) (interface{}, error) {
 	_, ok := data.(string)
 	if !ok {
 		return data, nil
 	}
 
-	// first resolve variables
-	data, err := resolver.FindAndFillVariables(data, vars)
-	if err != nil {
-		return nil, err
-	}
-
-	// evaluate expressions
-	return expression.ResolveAllExpressions(data, dir)
+	// find and fill variables
+	return resolver.FillVariables(data)
 }
 
-func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *ConfigOptions, resolver variable.Resolver, vars []*latest.Variable, log log.Logger) (map[interface{}]interface{}, error) {
+func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *ConfigOptions, resolver variable.Resolver, log log.Logger) (map[interface{}]interface{}, error) {
 	// Get profile
-	profiles, err := versions.ParseProfile(filepath.Dir(l.configPath), data, options.Profiles, options.ProfileRefresh, options.DisableProfileActivation, resolver, vars, log)
+	profiles, err := versions.ParseProfile(filepath.Dir(l.configPath), data, options.Profiles, options.ProfileRefresh, options.DisableProfileActivation, resolver, log)
 	if err != nil {
 		return nil, err
 	}
@@ -567,15 +570,15 @@ func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *
 	return data, nil
 }
 
-func (l *configLoader) newVariableResolver(generatedConfig *generated.Config, options *ConfigOptions, log log.Logger) variable.Resolver {
+func (l *configLoader) newVariableResolver(generatedConfig *generated.Config, absPath string, options *ConfigOptions, vars []*latest.Variable, log log.Logger) variable.Resolver {
 	return variable.NewResolver(generatedConfig.Vars, &variable.PredefinedVariableOptions{
 		BasePath:         options.BasePath,
-		ConfigPath:       ConfigPath(l.configPath),
+		ConfigPath:       absPath,
 		KubeContextFlag:  options.KubeContext,
 		NamespaceFlag:    options.Namespace,
 		KubeConfigLoader: l.kubeConfigLoader,
 		Profile:          GetLastProfile(options.Profiles),
-	}, log)
+	}, vars, log)
 }
 
 func GetLastProfile(profiles []string) string {

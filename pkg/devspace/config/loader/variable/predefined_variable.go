@@ -38,26 +38,26 @@ type PredefinedVariableFunction func(options *PredefinedVariableOptions) (interf
 
 // predefinedVars holds all predefined variables that can be used in the config
 var predefinedVars = map[string]PredefinedVariableFunction{
-	"DEVSPACE_VERSION": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.version": func(options *PredefinedVariableOptions) (interface{}, error) {
 		return upgrade.GetVersion(), nil
 	},
-	"DEVSPACE_RANDOM": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.random": func(options *PredefinedVariableOptions) (interface{}, error) {
 		return randutil.GenerateRandomString(6), nil
 	},
-	"DEVSPACE_PROFILE": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.profile": func(options *PredefinedVariableOptions) (interface{}, error) {
 		return options.Profile, nil
 	},
-	"DEVSPACE_USER_HOME": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.userHome": func(options *PredefinedVariableOptions) (interface{}, error) {
 		homeDir, err := homedir.Dir()
 		if err != nil {
 			return nil, err
 		}
 		return homeDir, nil
 	},
-	"DEVSPACE_TIMESTAMP": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.timestamp": func(options *PredefinedVariableOptions) (interface{}, error) {
 		return strconv.FormatInt(time.Now().Unix(), 10), nil
 	},
-	"DEVSPACE_GIT_BRANCH": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.git.branch": func(options *PredefinedVariableOptions) (interface{}, error) {
 		configPath := options.BasePath
 		if configPath == "" {
 			configPath = options.ConfigPath
@@ -65,12 +65,12 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 
 		branch, err := git.GetBranch(filepath.Dir(configPath))
 		if err != nil {
-			return "", fmt.Errorf("error retrieving git branch: %v, but predefined var DEVSPACE_GIT_BRANCH is used", err)
+			return "", fmt.Errorf("error retrieving git branch: %v, but predefined var devspace.git.branch is used", err)
 		}
 
 		return branch, nil
 	},
-	"DEVSPACE_GIT_COMMIT": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.git.commit": func(options *PredefinedVariableOptions) (interface{}, error) {
 		configPath := options.BasePath
 		if configPath == "" {
 			configPath = options.ConfigPath
@@ -78,12 +78,12 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 
 		hash, err := git.GetHash(filepath.Dir(configPath))
 		if err != nil {
-			return "", fmt.Errorf("no git repository found (%v), but predefined var DEVSPACE_GIT_COMMIT is used", err)
+			return "", fmt.Errorf("no git repository found (%v), but predefined var devspace.git.commit is used", err)
 		}
 
 		return hash[:8], nil
 	},
-	"DEVSPACE_CONTEXT": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.context": func(options *PredefinedVariableOptions) (interface{}, error) {
 		_, activeContext, _, _, err := util.NewClientByContext(options.KubeContextFlag, options.NamespaceFlag, false, options.KubeConfigLoader)
 		if err != nil {
 			return "", err
@@ -91,7 +91,7 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 
 		return activeContext, nil
 	},
-	"DEVSPACE_NAMESPACE": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.namespace": func(options *PredefinedVariableOptions) (interface{}, error) {
 		_, _, activeNamespace, _, err := util.NewClientByContext(options.KubeContextFlag, options.NamespaceFlag, false, options.KubeConfigLoader)
 		if err != nil {
 			return "", err
@@ -101,8 +101,20 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 	},
 }
 
+func init() {
+	// migrate old names
+	predefinedVars["DEVSPACE_VERSION"] = predefinedVars["devspace.version"]
+	predefinedVars["DEVSPACE_RANDOM"] = predefinedVars["devspace.random"]
+	predefinedVars["DEVSPACE_PROFILE"] = predefinedVars["devspace.profile"]
+	predefinedVars["DEVSPACE_USER_HOME"] = predefinedVars["devspace.userHome"]
+	predefinedVars["DEVSPACE_TIMESTAMP"] = predefinedVars["devspace.timestamp"]
+	predefinedVars["DEVSPACE_GIT_BRANCH"] = predefinedVars["devspace.git.branch"]
+	predefinedVars["DEVSPACE_GIT_COMMIT"] = predefinedVars["devspace.git.commit"]
+	predefinedVars["DEVSPACE_CONTEXT"] = predefinedVars["devspace.context"]
+	predefinedVars["DEVSPACE_NAMESPACE"] = predefinedVars["devspace.namespace"]
+}
+
 func IsPredefinedVariable(name string) bool {
-	name = strings.ToUpper(name)
 	_, ok := predefinedVars[name]
 	return ok
 }
@@ -138,7 +150,6 @@ func AddPredefinedVars(plugins []plugin.Metadata) {
 // NewPredefinedVariable creates a new predefined variable for the given name or fails if there
 // is none with the given name
 func NewPredefinedVariable(name string, cache map[string]string, options *PredefinedVariableOptions) (Variable, error) {
-	name = strings.ToUpper(name)
 	if _, ok := predefinedVars[name]; !ok {
 		// Load space domain environment variable
 		if strings.HasPrefix(name, "DEVSPACE_SPACE_DOMAIN") {
@@ -167,10 +178,9 @@ type predefinedVariable struct {
 }
 
 func (p *predefinedVariable) Load(definition *latest.Variable) (interface{}, error) {
-	name := strings.ToUpper(p.name)
-	getVar, ok := predefinedVars[name]
+	getVar, ok := predefinedVars[p.name]
 	if !ok {
-		return nil, errors.New("predefined variable " + name + " not found")
+		return nil, errors.New("predefined variable " + p.name + " not found")
 	}
 
 	return getVar(p.options)

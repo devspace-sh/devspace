@@ -63,6 +63,10 @@ func (r *client) CreatePullSecrets() (err error) {
 
 	// create pull secrets
 	for _, pullSecretConf := range createPullSecrets {
+		if pullSecretConf.Disabled {
+			continue
+		}
+		
 		displayRegistryURL := pullSecretConf.Registry
 		if displayRegistryURL == "" {
 			displayRegistryURL = "hub.docker.com"

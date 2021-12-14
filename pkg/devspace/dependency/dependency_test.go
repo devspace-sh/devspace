@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -25,14 +26,14 @@ import (
 )
 
 type fakeResolver struct {
-	resolvedDependencies []*Dependency
+	resolvedDependencies []types.Dependency
 }
 
 var replaceWithHash = "replaceThisWithHash"
 
-func (r *fakeResolver) Resolve(update bool) ([]*Dependency, error) {
-	for _, dep := range r.resolvedDependencies {
-
+func (r *fakeResolver) Resolve(update bool) ([]types.Dependency, error) {
+	for _, d := range r.resolvedDependencies {
+		dep := d.(*Dependency)
 		directoryHash, _ := hash.DirectoryExcludes(dep.localPath, []string{".git", ".devspace"}, true)
 		for _, profile := range dep.dependencyCache.Profiles {
 			for key, val := range profile.Dependencies {
@@ -155,7 +156,7 @@ type buildAllTestCase struct {
 
 	files                map[string]string
 	dependencyTasks      []*latest.DependencyConfig
-	resolvedDependencies []*Dependency
+	resolvedDependencies []types.Dependency
 	options              BuildOptions
 
 	expectedErr string
@@ -202,8 +203,8 @@ func TestBuildAll(t *testing.T) {
 			dependencyTasks: []*latest.DependencyConfig{
 				{},
 			},
-			resolvedDependencies: []*Dependency{
-				{
+			resolvedDependencies: []types.Dependency{
+				&Dependency{
 					localPath:        "./",
 					dependencyConfig: &latest.DependencyConfig{},
 					dependencyCache: &generated.Config{
@@ -256,7 +257,7 @@ type deployAllTestCase struct {
 
 	files                map[string]string
 	dependencyTasks      []*latest.DependencyConfig
-	resolvedDependencies []*Dependency
+	resolvedDependencies []types.Dependency
 	options              DeployOptions
 
 	expectedErr string
@@ -303,8 +304,8 @@ func TestDeployAll(t *testing.T) {
 			dependencyTasks: []*latest.DependencyConfig{
 				{},
 			},
-			resolvedDependencies: []*Dependency{
-				{
+			resolvedDependencies: []types.Dependency{
+				&Dependency{
 					localPath:        "./",
 					dependencyConfig: &latest.DependencyConfig{},
 					dependencyCache: &generated.Config{
@@ -357,7 +358,7 @@ type purgeAllTestCase struct {
 
 	files                map[string]string
 	dependencyTasks      []*latest.DependencyConfig
-	resolvedDependencies []*Dependency
+	resolvedDependencies []types.Dependency
 	verboseParam         bool
 
 	expectedErr string
@@ -407,8 +408,8 @@ func TestPurgeAll(t *testing.T) {
 			dependencyTasks: []*latest.DependencyConfig{
 				{},
 			},
-			resolvedDependencies: []*Dependency{
-				{
+			resolvedDependencies: []types.Dependency{
+				&Dependency{
 					localPath:        "./",
 					dependencyConfig: &latest.DependencyConfig{},
 					dependencyCache: &generated.Config{
@@ -548,13 +549,13 @@ func TestBuild(t *testing.T) {
 		}
 
 		dependencies, _ := (&fakeResolver{
-			resolvedDependencies: []*Dependency{
+			resolvedDependencies: []types.Dependency{
 				testCase.dependency,
 			},
 		}).Resolve(false)
 		dependency := dependencies[0]
 
-		err = dependency.Build(testCase.forceDependencies, &build.Options{
+		err = dependency.(*Dependency).Build(testCase.forceDependencies, &build.Options{
 			SkipPush:     testCase.skipPush,
 			ForceRebuild: testCase.forceBuild,
 		}, log.Discard)
@@ -671,11 +672,11 @@ func TestDeploy(t *testing.T) {
 		}
 
 		dependencies, _ := (&fakeResolver{
-			resolvedDependencies: []*Dependency{
+			resolvedDependencies: []types.Dependency{
 				testCase.dependency,
 			},
 		}).Resolve(false)
-		dependency := dependencies[0]
+		dependency := dependencies[0].(*Dependency)
 		if dependency.localConfig == nil {
 			dependency.localConfig = config.NewConfig(nil, &latest.Config{}, nil, nil, constants.DefaultConfigPath)
 		}

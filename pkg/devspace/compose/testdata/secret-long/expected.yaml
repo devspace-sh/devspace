@@ -20,7 +20,7 @@ deployments:
 hooks:
 - events:
   - before:deploy
-  command: kubectl create secret generic db-password --namespace=${DEVSPACE_NAMESPACE} --dry-run=client --from-file=db-password=db/password.txt -o yaml | kubectl apply -f -
+  command: kubectl create secret generic db-password --namespace=${devspace.namespace} --dry-run=client --from-file=db-password=db/password.txt -o yaml | kubectl apply -f -
 - events:
   - after:purge
-  command: kubectl delete secret db-password --namespace=${DEVSPACE_NAMESPACE} --ignore-not-found
+  command: kubectl delete secret db-password --namespace=${devspace.namespace} --ignore-not-found

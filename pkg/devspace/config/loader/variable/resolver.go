@@ -2,6 +2,10 @@ package variable
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -12,16 +16,18 @@ import (
 )
 
 // NewResolver creates a new resolver that caches resolved variables in memory and in the provided cache
-func NewResolver(cache map[string]string, predefinedVariableOptions *PredefinedVariableOptions, log log.Logger) Resolver {
+func NewResolver(cache map[string]string, predefinedVariableOptions *PredefinedVariableOptions, vars []*latest.Variable, log log.Logger) Resolver {
 	return &resolver{
 		memoryCache:     map[string]interface{}{},
 		persistentCache: cache,
+		vars:            vars,
 		options:         predefinedVariableOptions,
 		log:             log,
 	}
 }
 
 type resolver struct {
+	vars            []*latest.Variable
 	memoryCache     map[string]interface{}
 	persistentCache map[string]string
 	options         *PredefinedVariableOptions
@@ -32,27 +38,49 @@ func varMatchFn(key, value string) bool {
 	return varspkg.VarMatchRegex.MatchString(value)
 }
 
-func (r *resolver) FillVariables(haystack interface{}) (interface{}, error) {
+func (r *resolver) DefinedVars() []*latest.Variable {
+	return r.vars
+}
+
+func (r *resolver) UpdateVars(vars []*latest.Variable) {
+	r.vars = vars
+}
+
+func (r *resolver) fillVariables(haystack interface{}, exclude []*regexp.Regexp) (interface{}, error) {
 	switch t := haystack.(type) {
 	case string:
-		return r.ReplaceString(t)
+		return r.replaceString(t)
 	case map[interface{}]interface{}:
-		err := walk.Walk(t, varMatchFn, func(value string) (interface{}, error) {
-			return r.ReplaceString(value)
+		err := walk.Walk(t, varMatchFn, func(path, value string) (interface{}, error) {
+			if expression.ExcludedPath(path, exclude) {
+				return value, nil
+			}
+
+			return r.replaceString(value)
 		})
 		return t, err
+	case []interface{}:
+		for i := range t {
+			var err error
+			t[i], err = r.fillVariables(t[i], exclude)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return t, nil
 	}
 
-	return nil, fmt.Errorf("unrecognized haystack type: %#v", haystack)
+	return haystack, nil
 }
 
 func (r *resolver) ResolvedVariables() map[string]interface{} {
 	return r.memoryCache
 }
 
-func (r *resolver) ReplaceString(str string) (interface{}, error) {
+func (r *resolver) replaceString(str string) (interface{}, error) {
 	return varspkg.ParseString(str, func(v string) (interface{}, error) {
-		val, err := r.Resolve(v, nil)
+		val, err := r.resolve(v, nil)
 		if err != nil {
 			return "", err
 		}
@@ -61,7 +89,7 @@ func (r *resolver) ReplaceString(str string) (interface{}, error) {
 	})
 }
 
-func (r *resolver) FindVariables(haystack interface{}, vars []*latest.Variable) (map[string]bool, error) {
+func (r *resolver) FindVariables(haystack interface{}) (map[string]bool, error) {
 	// find out what vars are really used
 	varsUsed := map[string]bool{}
 
@@ -72,7 +100,7 @@ func (r *resolver) FindVariables(haystack interface{}, vars []*latest.Variable) 
 			return "", nil
 		})
 	case map[interface{}]interface{}:
-		err := walk.Walk(t, varMatchFn, func(value string) (interface{}, error) {
+		err := walk.Walk(t, varMatchFn, func(_, value string) (interface{}, error) {
 			_, _ = varspkg.ParseString(value, func(v string) (interface{}, error) {
 				varsUsed[v] = true
 				return "", nil
@@ -86,45 +114,92 @@ func (r *resolver) FindVariables(haystack interface{}, vars []*latest.Variable) 
 	}
 
 	// find out what vars are used within other vars definition
-	for _, v := range vars {
+	for _, v := range r.vars {
 		varsUsedInDefinition := r.findVariablesInDefinition(v)
 		for usedVar := range varsUsedInDefinition {
 			varsUsed[usedVar] = true
 		}
 	}
 
+	// filter out runtime environment variables
+	for k := range varsUsed {
+		if strings.HasPrefix(k, "runtime.") {
+			delete(varsUsed, k)
+		}
+	}
+
 	return varsUsed, nil
 }
 
-func (r *resolver) FindAndFillVariables(haystack interface{}, vars []*latest.Variable) (interface{}, error) {
-	varsUsed, err := r.FindVariables(haystack, vars)
+func (r *resolver) FillVariablesExclude(haystack interface{}, excludedPaths []string) (interface{}, error) {
+	paths := []*regexp.Regexp{}
+	for _, path := range excludedPaths {
+		path = strings.Replace(path, "*", "[^/]+", -1)
+		path = strings.Replace(path, "**", ".+", -1)
+		path = "^" + path
+		expr, err := regexp.Compile(path)
+		if err != nil {
+			return nil, err
+		}
+
+		paths = append(paths, expr)
+	}
+
+	// fill variables
+	preparedConfigInterface, err := r.findAndFillVariables(haystack, paths)
+	if err != nil {
+		return nil, err
+	}
+
+	// resolve expressions
+	preparedConfigInterface, err = expression.ResolveAllExpressions(preparedConfigInterface, filepath.Dir(r.options.ConfigPath), paths)
+	if err != nil {
+		return nil, err
+	}
+
+	// fill in variables again
+	return r.findAndFillVariables(preparedConfigInterface, paths)
+}
+
+func (r *resolver) FillVariables(haystack interface{}) (interface{}, error) {
+	return r.FillVariablesExclude(haystack, nil)
+}
+
+func (r *resolver) findAndFillVariables(haystack interface{}, exclude []*regexp.Regexp) (interface{}, error) {
+	varsUsed, err := r.FindVariables(haystack)
 	if err != nil {
 		return nil, err
 	}
 
 	// resolve used defined variables
-	if len(vars) > 0 {
+	if len(r.vars) > 0 {
 		newVars := []*latest.Variable{}
-		for _, v := range vars {
+		for _, v := range r.vars {
 			if varsUsed[strings.TrimSpace(v.Name)] {
 				newVars = append(newVars, v)
 			}
 		}
 
-		if len(newVars) > 0 {
-			for _, definition := range newVars {
-				name := strings.TrimSpace(definition.Name)
+		for _, definition := range newVars {
+			name := strings.TrimSpace(definition.Name)
 
-				// resolve the variable with definition
-				_, err := r.Resolve(name, definition)
-				if err != nil {
-					return nil, err
-				}
+			// resolve the variable with definition
+			_, err := r.resolve(name, definition)
+			if err != nil {
+				return nil, err
 			}
 		}
 	}
 
-	return r.FillVariables(haystack)
+	// resolve all other variables
+	for k := range varsUsed {
+		_, err = r.resolve(k, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return r.fillVariables(haystack, exclude)
 }
 
 func (r *resolver) ConvertFlags(flags []string) (map[string]interface{}, error) {
@@ -144,7 +219,7 @@ func (r *resolver) ConvertFlags(flags []string) (map[string]interface{}, error) 
 	return retVariables, nil
 }
 
-func (r *resolver) Resolve(name string, definition *latest.Variable) (interface{}, error) {
+func (r *resolver) resolve(name string, definition *latest.Variable) (interface{}, error) {
 	name = strings.TrimSpace(name)
 
 	// check if in vars already
@@ -325,6 +400,11 @@ func (r *resolver) fillVariable(name string, definition *latest.Variable) (inter
 	variable, err := NewPredefinedVariable(name, r.persistentCache, r.options)
 	if err == nil {
 		return variable.Load(definition)
+	}
+
+	// is runtime variable
+	if strings.HasPrefix(name, "runtime.") {
+		return nil, fmt.Errorf("cannot resolve %s in this config area as this config region is loaded on startup. You can only use runtime variables in the following locations: \n  %s", name, strings.Join(runtime.Locations, "\n  "))
 	}
 
 	// fill variable without definition

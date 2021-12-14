@@ -161,31 +161,11 @@ type DeployOptions struct {
 
 // DeployAll will deploy all dependencies if there are any
 func (m *manager) DeployAll(options DeployOptions) ([]types.Dependency, error) {
-	pluginErr := hook.ExecuteHooks(m.client, m.config, nil, nil, m.log, "before:deployDependencies")
-	if pluginErr != nil {
-		return nil, pluginErr
-	}
-
 	dependencies, err := m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
-		err := dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
 	})
 	if err != nil {
-		pluginErr := hook.ExecuteHooks(m.client, m.config, nil, map[string]interface{}{"error": err}, m.log, "error:deployDependencies")
-		if pluginErr != nil {
-			return nil, pluginErr
-		}
-
 		return nil, err
-	}
-
-	pluginErr = hook.ExecuteHooks(m.client, m.config, dependencies, nil, m.log, "after:deployDependencies")
-	if pluginErr != nil {
-		return nil, pluginErr
 	}
 
 	return dependencies, nil
@@ -232,6 +212,11 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 		m.log.Infof("Start resolving dependencies")
 	}
 
+	hooksErr := hook.ExecuteHooks(m.client, m.config, nil, nil, m.log, "before:"+strings.ToLower(actionName)+"Dependencies")
+	if hooksErr != nil {
+		return nil, hooksErr
+	}
+
 	// Resolve all dependencies
 	dependencies, err := m.resolver.Resolve(updateDependencies)
 	if err != nil {
@@ -241,33 +226,77 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 	defer m.log.StopWait()
 
 	if !silent {
-		m.log.Donef("Resolved %d dependencies", len(dependencies))
+		m.log.Donef("Resolved dependencies successfully")
 	}
 	if !silent && !verbose {
 		m.log.Infof("To display the complete dependency execution log run with the '--verbose-dependencies' flag")
 	}
 
+	executedDependencies, err := m.executeDependenciesRecursive("", dependencies, skipDependencies, filterDependencies, reverse, silent, verbose, actionName, action)
+	if err != nil {
+		hooksErr := hook.ExecuteHooks(m.client, m.config, dependencies, map[string]interface{}{
+			"error": err,
+		}, m.log, "error:"+strings.ToLower(actionName)+"Dependencies")
+		if hooksErr != nil {
+			return nil, hooksErr
+		}
+
+		return nil, err
+	}
+
+	hooksErr = hook.ExecuteHooks(m.client, m.config, dependencies, nil, m.log, "after:"+strings.ToLower(actionName)+"Dependencies")
+	if hooksErr != nil {
+		return nil, hooksErr
+	}
+
+	return executedDependencies, nil
+}
+
+func (m *manager) executeDependenciesRecursive(base string, dependencies []types.Dependency, skipDependencies, filterDependencies []string, reverse, silent, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) ([]types.Dependency, error) {
 	// Execute all dependencies
 	i := 0
 	if reverse {
 		i = len(dependencies) - 1
 	}
 
-	numDependencies := len(dependencies)
-	if len(filterDependencies) > 0 {
-		numDependencies = len(filterDependencies)
-	}
-
 	executedDependencies := []types.Dependency{}
-	if !silent && !verbose {
-		m.log.StartWait(fmt.Sprintf("%s %d dependencies", actionName, numDependencies))
-	}
 	for i >= 0 && i < len(dependencies) {
 		var (
 			dependency       = dependencies[i]
 			buff             = &bytes.Buffer{}
 			dependencyLogger = m.log
 		)
+
+		// get dependency name
+		dependencyName := dependency.Name()
+		if base != "" {
+			dependencyName = base + "." + dependencyName
+		}
+
+		// deploy the dependencies of the dependency first
+		if len(dependency.Children()) > 0 {
+			hooksErr := hook.ExecuteHooks(dependency.KubeClient(), dependency.Config(), dependency.Children(), nil, m.log, "before:"+strings.ToLower(actionName)+"Dependencies")
+			if hooksErr != nil {
+				return nil, hooksErr
+			}
+
+			_, err := m.executeDependenciesRecursive(dependencyName, dependency.Children(), skipDependencies, filterDependencies, reverse, silent, verbose, actionName, action)
+			if err != nil {
+				hooksErr := hook.ExecuteHooks(dependency.KubeClient(), dependency.Config(), dependency.Children(), map[string]interface{}{
+					"error": err,
+				}, m.log, "error:"+strings.ToLower(actionName)+"Dependencies")
+				if hooksErr != nil {
+					return nil, hooksErr
+				}
+
+				return nil, err
+			}
+
+			hooksErr = hook.ExecuteHooks(dependency.KubeClient(), dependency.Config(), dependency.Children(), nil, m.log, "after:"+strings.ToLower(actionName)+"Dependencies")
+			if hooksErr != nil {
+				return nil, hooksErr
+			}
+		}
 
 		// Increase / Decrease counter
 		if reverse {
@@ -277,11 +306,16 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 		}
 
 		// Check if we should act on this dependency
-		if !foundDependency(dependency.Name(), filterDependencies) {
+		if !foundDependency(dependencyName, filterDependencies) {
 			continue
-		} else if skipDependency(dependency.Name(), skipDependencies) {
-			m.log.Infof("Skip dependency %s", dependency.Name())
+		} else if skipDependency(dependencyName, skipDependencies) {
+			m.log.Infof("Skip dependency %s", dependencyName)
 			continue
+		}
+
+		// execute dependency
+		if !silent && !verbose {
+			m.log.Infof(fmt.Sprintf("%s dependency %s...", actionName, dependencyName))
 		}
 
 		// If not verbose log to a stream
@@ -300,7 +334,7 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 			}
 		}
 
-		err := action(dependency, dependencyLogger)
+		err := action(dependency.(*Dependency), dependencyLogger)
 		if err != nil {
 			if dependency.Config() != nil {
 				pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{
@@ -329,27 +363,11 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 
 		executedDependencies = append(executedDependencies, dependency)
 		if !silent {
-			m.log.Donef("%s dependency %s completed", actionName, dependency.Name())
-		}
-	}
-	m.log.StopWait()
-	if !silent {
-		if len(executedDependencies) > 0 {
-			m.log.Donef("Successfully processed %d dependencies", len(executedDependencies))
-		} else {
-			m.log.Done("No dependency processed")
+			m.log.Donef("%s dependency %s completed", actionName, dependencyName)
 		}
 	}
 
-	// we only return the root executed dependencies (you could get the others via traversing the graph and children)
-	retDependencies := []types.Dependency{}
-	for _, d := range executedDependencies {
-		if d.Root() {
-			retDependencies = append(retDependencies, d)
-		}
-	}
-
-	return retDependencies, nil
+	return executedDependencies, nil
 }
 
 func GetDependencyByPath(dependencies []types.Dependency, path string) types.Dependency {
@@ -405,6 +423,8 @@ type Dependency struct {
 func (d *Dependency) ID() string { return d.id }
 
 func (d *Dependency) Name() string { return d.dependencyConfig.Name }
+
+func (d *Dependency) KubeClient() kubectl.Client { return d.kubeClient }
 
 func (d *Dependency) Config() config.Config { return d.localConfig }
 
@@ -552,30 +572,30 @@ func (d *Dependency) Purge(log log.Logger) error {
 	return nil
 }
 
-func (d *Dependency) StartSync(client kubectl.Client, interrupt chan error, printSyncLog, verboseSync bool, logger log.Logger) error {
+func (d *Dependency) StartSync(interrupt chan error, printSyncLog, verboseSync bool, logger log.Logger) error {
 	currentWorkingDirectory, err := d.changeWorkingDirectory()
 	if err != nil {
 		return errors.Wrap(err, "getwd")
 	}
 	defer func() { _ = os.Chdir(currentWorkingDirectory) }()
 
-	err = services.NewClient(d.localConfig, d.children, client, logger).StartSync(interrupt, printSyncLog, verboseSync, services.DependencyPrefixFn(d.Name()))
+	err = services.NewClient(d.localConfig, d.children, d.kubeClient, logger).StartSync(interrupt, printSyncLog, verboseSync, services.DependencyPrefixFn(d.Name()))
 	if err != nil {
 		return errors.Wrapf(err, "start sync in dependency %s", d.Name())
 	}
 	return nil
 }
 
-func (d *Dependency) StartPortForwarding(client kubectl.Client, interrupt chan error, logger log.Logger) error {
-	err := services.NewClient(d.localConfig, d.children, client, logger).StartPortForwarding(interrupt, services.DependencyPrefixFn(d.Name()))
+func (d *Dependency) StartPortForwarding(interrupt chan error, logger log.Logger) error {
+	err := services.NewClient(d.localConfig, d.children, d.kubeClient, logger).StartPortForwarding(interrupt, services.DependencyPrefixFn(d.Name()))
 	if err != nil {
 		return errors.Wrapf(err, "start port-forwarding in dependency %s", d.Name())
 	}
 	return nil
 }
 
-func (d *Dependency) ReplacePods(client kubectl.Client, logger log.Logger) error {
-	err := services.NewClient(d.localConfig, d.children, client, logger).ReplacePods(services.DependencyPrefixFn(d.Name()))
+func (d *Dependency) ReplacePods(logger log.Logger) error {
+	err := services.NewClient(d.localConfig, d.children, d.kubeClient, logger).ReplacePods(services.DependencyPrefixFn(d.Name()))
 	if err != nil {
 		return errors.Wrapf(err, "replace pods in dependency %s", d.Name())
 	}

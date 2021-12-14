@@ -1,0 +1,54 @@
+The `overwriteVars` option is optional and expects a boolean. If this option is enabled it will overwrite all defined variables within the dependency config with the values of the variables defined in the base config. Variables that are not used or not defined within the base config aren't overwritten in the dependency config.
+
+For example:
+```yaml
+# devspace.yaml
+vars:
+- name: DEFINED_AND_USED
+  value: my-base-value
+- name: DEFINED_AND_NOT_USED
+  value: my-other-base-value
+dependencies:
+- name: dep1
+  source:
+    path: dep1
+  overwriteVars: true
+  # If overwriteVars is true, all variables that are used within this
+  # config are passed to the dependency and will overwrite the values of variables with 
+  # the same name there. In this case only the variable DEFINED_AND_USED
+  # will be passed to the dependency, as DEFINED_AND_NOT_USED is not used within the config.
+  # overwriteVars: true
+  #
+  # If you want to pass the variable DEFINED_AND_NOT_USED to the dependency as well,
+  # you can either use it somewhere within the config or explicitly pass it to the dependency with vars.
+  # vars:
+  # - name: DEFINED_AND_NOT_USED
+  #   value: ${DEFINED_AND_NOT_USED}
+deployments:
+- name: deployment
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: ${DEFINED_AND_USED}
+```
+
+and
+
+```yaml
+# dep1/devspace.yaml
+vars:
+- name: DEFINED_AND_USED
+  value: my-dep-value
+- name: DEFINED_AND_NOT_USED
+  value: my-other-dep-value
+deployments:
+  # This will be my-other-dep-value
+- name: ${DEFINED_AND_NOT_USED}
+  helm:
+    componentChart: true
+    values:
+      containers:
+        # This will be my-base-value
+      - image: ${DEFINED_AND_USED}
+```

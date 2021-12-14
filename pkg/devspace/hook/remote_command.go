@@ -57,13 +57,23 @@ func (r *remoteCommandHook) ExecuteRemotely(hook *latest.HookConfig, podContaine
 		}
 	}
 
+	// if args are nil we execute the command in a shell
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	defer func() {
+		if hook.Name != "" {
+			config.SetRuntimeVariable("hooks."+hook.Name+".stdout", strings.TrimSpace(stdout.String()))
+			config.SetRuntimeVariable("hooks."+hook.Name+".stderr", strings.TrimSpace(stderr.String()))
+		}
+	}()
+
 	log.Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
 	err = client.ExecStream(&kubectl.ExecStreamOptions{
 		Pod:       podContainer.Pod,
 		Container: podContainer.Container.Name,
 		Command:   cmd,
-		Stdout:    r.Stdout,
-		Stderr:    r.Stderr,
+		Stdout:    io.MultiWriter(r.Stdout, stdout),
+		Stderr:    io.MultiWriter(r.Stderr, stderr),
 	})
 	if err != nil {
 		return errors.Errorf("error in container '%s/%s/%s': %v", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
