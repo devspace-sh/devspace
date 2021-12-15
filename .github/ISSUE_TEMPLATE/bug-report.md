@@ -23,7 +23,7 @@ version: ...
 **Local Environment:**  
 - DevSpace Version: [use `devspace --version`]
 - Operating System: windows | linux | mac
-
+- ARCH of the OS: AMD64 | ARM64 | i386
 **Kubernetes Cluster:**  
 - Cloud Provider: google | aws | azure | other
 - Kubernetes Version: [use `kubectl version`]
