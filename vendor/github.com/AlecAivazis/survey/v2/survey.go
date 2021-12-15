@@ -1,10 +1,12 @@
 package survey
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/AlecAivazis/survey/v2/core"
 	"github.com/AlecAivazis/survey/v2/terminal"
@@ -55,6 +57,7 @@ func defaultAskOptions() *AskOptions {
 				return strings.Contains(strings.ToLower(value), filter)
 			},
 			KeepFilter: false,
+			ShowCursor: false,
 		},
 	}
 }
@@ -114,6 +117,7 @@ type PromptConfig struct {
 	SuggestInput string
 	Filter       func(filter string, option string, index int) bool
 	KeepFilter   bool
+	ShowCursor   bool
 }
 
 // Prompt is the primary interface for the objects that can take user input
@@ -213,6 +217,17 @@ func WithIcons(setIcons func(*IconSet)) AskOpt {
 	return func(options *AskOptions) error {
 		// update the default icons with whatever the user says
 		setIcons(&options.PromptConfig.Icons)
+
+		// nothing went wrong
+		return nil
+	}
+}
+
+// WithShowCursor sets the show cursor behavior when prompting the user
+func WithShowCursor(ShowCursor bool) AskOpt {
+	return func(options *AskOptions) error {
+		// set the page size
+		options.PromptConfig.ShowCursor = ShowCursor
 
 		// nothing went wrong
 		return nil
@@ -397,4 +412,43 @@ func paginate(pageSize int, choices []core.OptionAnswer, sel int) ([]core.Option
 
 	// return the subset we care about and the index
 	return choices[start:end], cursor
+}
+
+type IterableOpts interface {
+	IterateOption(int, core.OptionAnswer) interface{}
+}
+
+func computeCursorOffset(tmpl string, data IterableOpts, opts []core.OptionAnswer, idx, tWidth int) int {
+	tmpls, err := core.GetTemplatePair(tmpl)
+
+	if err != nil {
+		return 0
+	}
+
+	t := tmpls[0]
+
+	renderOpt := func(ix int, opt core.OptionAnswer) string {
+		buf := bytes.NewBufferString("")
+		t.ExecuteTemplate(buf, "option", data.IterateOption(ix, opt))
+		return buf.String()
+	}
+
+	offset := len(opts) - idx
+
+	for i, o := range opts {
+		if i < idx {
+			continue
+		}
+		renderedOpt := renderOpt(i, o)
+		valWidth := utf8.RuneCount([]byte(renderedOpt))
+		if valWidth > tWidth {
+			splitCount := valWidth / tWidth
+			if valWidth%tWidth == 0 {
+				splitCount -= 1
+			}
+			offset += splitCount
+		}
+	}
+
+	return offset
 }

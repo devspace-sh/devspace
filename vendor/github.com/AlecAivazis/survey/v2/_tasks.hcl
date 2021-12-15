@@ -1,19 +1,19 @@
 task "install-deps" {
     description = "Install all of package dependencies"
     pipeline = [
-        "go get {{.files}}",
+        "go get -v {{.files}}",
     ]
 }
 
 task "tests" {
     description = "Run the test suite"
-    command = "go test {{.files}}"
-    environment {
+    command = "go test -v {{.files}}"
+    environment = {
         GOFLAGS = "-mod=vendor"
     }
 }
 
-variables {
+variables = {
     files = "$(go list -v ./... | grep -iEv \"tests|examples\")"
 }
 
