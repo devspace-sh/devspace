@@ -2,6 +2,7 @@ package helm
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"io"
@@ -221,6 +222,12 @@ func (d *DeployConfig) getDeploymentValues(builtImages map[string]string) (bool,
 		shouldRedeploy = shouldRedeploy || redeploy
 
 		merge.Values(overwriteValues).MergeInto(d.DeploymentConfig.Helm.Values)
+	}
+
+	// Validate deployment values
+	err = loader.ValidateComponentConfig(d.DeploymentConfig, overwriteValues)
+	if err != nil {
+		return false, nil, err
 	}
 
 	return shouldRedeploy, overwriteValues, nil
