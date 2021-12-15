@@ -9,3 +9,4 @@ deployments:
       values:
         containers:
           - image: ${IMAGE}
+            env: $(cat env.yaml)

@@ -3,14 +3,11 @@ package loader
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
-	"path/filepath"
 	"strings"
 
 	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm/merge"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	k8sv1 "k8s.io/api/core/v1"
@@ -249,39 +246,22 @@ func validateDeployments(config *latest.Config) error {
 		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
 			return errors.Errorf("deployments[%d].kubectl.manifests is required", index)
 		}
-		if deployConfig.Helm != nil && deployConfig.Helm.ComponentChart != nil && *deployConfig.Helm.ComponentChart {
-			// Load override values from path
-			overwriteValues := map[interface{}]interface{}{}
-			if deployConfig.Helm.ValuesFiles != nil {
-				for _, overridePath := range deployConfig.Helm.ValuesFiles {
-					overwriteValuesPath, err := filepath.Abs(overridePath)
-					if err != nil {
-						return errors.Errorf("deployments[%d].helm.valuesFiles: Error retrieving absolute path from %s: %v", index, overridePath, err)
-					}
+	}
 
-					overwriteValuesFromPath := map[interface{}]interface{}{}
-					err = yamlutil.ReadYamlFromFile(overwriteValuesPath, overwriteValuesFromPath)
-					if err == nil {
-						merge.Values(overwriteValues).MergeInto(overwriteValuesFromPath)
-					}
-				}
-			}
+	return nil
+}
 
-			// Load override values from data and merge them
-			if deployConfig.Helm.Values != nil {
-				merge.Values(overwriteValues).MergeInto(deployConfig.Helm.Values)
-			}
+func ValidateComponentConfig(deployConfig *latest.DeploymentConfig, overwriteValues map[interface{}]interface{}) error {
+	if deployConfig.Helm != nil && deployConfig.Helm.ComponentChart != nil && *deployConfig.Helm.ComponentChart {
+		bytes, err := yaml.Marshal(overwriteValues)
+		if err != nil {
+			return errors.Errorf("deployments[%s].helm: Error marshaling overwrite values: %v", deployConfig.Name, err)
+		}
 
-			bytes, err := yaml.Marshal(overwriteValues)
-			if err != nil {
-				return errors.Errorf("deployments[%d].helm: Error marshaling overwrite values: %v", index, err)
-			}
-
-			componentValues := &latest.ComponentConfig{}
-			err = yaml.UnmarshalStrict(bytes, componentValues)
-			if err != nil {
-				return errors.Errorf("deployments[%d].helm.componentChart: component values are incorrect: %v", index, err)
-			}
+		componentValues := &latest.ComponentConfig{}
+		err = yaml.UnmarshalStrict(bytes, componentValues)
+		if err != nil {
+			return errors.Errorf("deployments[%s].helm.componentChart: component values are incorrect: %v", deployConfig.Name, err)
 		}
 	}
 
