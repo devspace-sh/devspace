@@ -242,4 +242,19 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 0)
 	})
+
+	ginkgo.It("should resolve cyclic dependencies", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/cyclic")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// load it from the regular path first
+		_, dependencies, err := framework.LoadConfig(f, filepath.Join(tempDir, "devspace.yaml"))
+		framework.ExpectNoError(err)
+
+		// check if dependencies were loaded correctly
+		framework.ExpectEqual(len(dependencies), 1)
+		framework.ExpectEqual(dependencies[0].Name(), "dependency")
+
+	})
 })
