@@ -1,6 +1,8 @@
 package survey
 
 import (
+	"errors"
+
 	"github.com/AlecAivazis/survey/v2/core"
 	"github.com/AlecAivazis/survey/v2/terminal"
 )
@@ -19,8 +21,8 @@ type Input struct {
 	Default       string
 	Help          string
 	Suggest       func(toComplete string) []string
-	typedAnswer   string
 	answer        string
+	typedAnswer   string
 	options       []core.OptionAnswer
 	selectedIndex int
 	showingHelp   bool
@@ -58,86 +60,90 @@ var InputQuestionTemplate = `
     {{- if and .Suggest }}{{color "cyan"}}{{ print .Config.SuggestInput }} for suggestions{{end -}}
   ]{{color "reset"}} {{end}}
   {{- if .Default}}{{color "white"}}({{.Default}}) {{color "reset"}}{{end}}
-  {{- .Answer -}}
 {{- end}}`
 
-func (i *Input) OnChange(key rune, config *PromptConfig) (bool, error) {
-	if key == terminal.KeyEnter || key == '\n' {
-		if i.answer != config.HelpInput || i.Help == "" {
-			// we're done
-			return true, nil
-		} else {
-			i.answer = ""
-			i.showingHelp = true
-		}
-	} else if key == terminal.KeyDeleteWord || key == terminal.KeyDeleteLine {
-		i.answer = ""
-	} else if key == terminal.KeyEscape && i.Suggest != nil {
-		if len(i.options) > 0 {
+func (i *Input) onRune(config *PromptConfig) terminal.OnRuneFn {
+	return terminal.OnRuneFn(func(key rune, line []rune) ([]rune, bool, error) {
+		if i.options != nil && (key == terminal.KeyEnter || key == '\n') {
+			return []rune(i.answer), true, nil
+		} else if i.options != nil && key == terminal.KeyEscape {
 			i.answer = i.typedAnswer
-		}
-		i.options = nil
-	} else if key == terminal.KeyArrowUp && len(i.options) > 0 {
-		if i.selectedIndex == 0 {
-			i.selectedIndex = len(i.options) - 1
-		} else {
-			i.selectedIndex--
-		}
-		i.answer = i.options[i.selectedIndex].Value
-	} else if (key == terminal.KeyArrowDown || key == terminal.KeyTab) && len(i.options) > 0 {
-		if i.selectedIndex == len(i.options)-1 {
+			i.options = nil
+		} else if key == terminal.KeyArrowUp && len(i.options) > 0 {
+			if i.selectedIndex == 0 {
+				i.selectedIndex = len(i.options) - 1
+			} else {
+				i.selectedIndex--
+			}
+			i.answer = i.options[i.selectedIndex].Value
+		} else if (key == terminal.KeyArrowDown || key == terminal.KeyTab) && len(i.options) > 0 {
+			if i.selectedIndex == len(i.options)-1 {
+				i.selectedIndex = 0
+			} else {
+				i.selectedIndex++
+			}
+			i.answer = i.options[i.selectedIndex].Value
+		} else if key == terminal.KeyTab && i.Suggest != nil {
+			i.answer = string(line)
+			i.typedAnswer = i.answer
+			options := i.Suggest(i.answer)
 			i.selectedIndex = 0
-		} else {
-			i.selectedIndex++
-		}
-		i.answer = i.options[i.selectedIndex].Value
-	} else if key == terminal.KeyTab && i.Suggest != nil {
-		options := i.Suggest(i.answer)
-		i.selectedIndex = 0
-		i.typedAnswer = i.answer
-		if len(options) > 0 {
+			if len(options) == 0 {
+				return line, false, nil
+			}
+
 			i.answer = options[0]
 			if len(options) == 1 {
+				i.typedAnswer = i.answer
 				i.options = nil
 			} else {
 				i.options = core.OptionAnswerList(options)
 			}
-		}
-	} else if key == terminal.KeyDelete || key == terminal.KeyBackspace {
-		if i.answer != "" {
-			runeAnswer := []rune(i.answer)
-			i.answer = string(runeAnswer[0 : len(runeAnswer)-1])
-		}
-	} else if key >= terminal.KeySpace {
-		i.answer += string(key)
-		i.typedAnswer = i.answer
-		i.options = nil
-	}
+		} else {
+			if i.options == nil {
+				return line, false, nil
+			}
 
-	pageSize := config.PageSize
-	opts, idx := paginate(pageSize, i.options, i.selectedIndex)
-	err := i.Render(
-		InputQuestionTemplate,
-		InputTemplateData{
-			Input:         *i,
-			Answer:        i.answer,
-			ShowHelp:      i.showingHelp,
-			SelectedIndex: idx,
-			PageEntries:   opts,
-			Config:        config,
-		},
-	)
+			if key >= terminal.KeySpace {
+				i.answer += string(key)
+			}
+			i.typedAnswer = i.answer
 
-	return err != nil, err
+			i.options = nil
+		}
+
+		pageSize := config.PageSize
+		opts, idx := paginate(pageSize, i.options, i.selectedIndex)
+		err := i.Render(
+			InputQuestionTemplate,
+			InputTemplateData{
+				Input:         *i,
+				Answer:        i.answer,
+				ShowHelp:      i.showingHelp,
+				SelectedIndex: idx,
+				PageEntries:   opts,
+				Config:        config,
+			},
+		)
+
+		if err == nil {
+			err = readLineAgain
+		}
+
+		return []rune(i.typedAnswer), true, err
+	})
 }
+
+var readLineAgain = errors.New("read line again")
 
 func (i *Input) Prompt(config *PromptConfig) (interface{}, error) {
 	// render the template
 	err := i.Render(
 		InputQuestionTemplate,
 		InputTemplateData{
-			Input:  *i,
-			Config: config,
+			Input:    *i,
+			Config:   config,
+			ShowHelp: i.showingHelp,
 		},
 	)
 	if err != nil {
@@ -150,30 +156,39 @@ func (i *Input) Prompt(config *PromptConfig) (interface{}, error) {
 	defer rr.RestoreTermMode()
 
 	cursor := i.NewCursor()
-	cursor.Hide()       // hide the cursor
-	defer cursor.Show() // show the cursor when we're done
+	if !config.ShowCursor {
+		cursor.Hide()       // hide the cursor
+		defer cursor.Show() // show the cursor when we're done
+	}
 
-	// start waiting for input
+	var line []rune
+
 	for {
-		r, _, err := rr.ReadRune()
-		if err != nil {
-			return "", err
-		}
-		if r == terminal.KeyInterrupt {
-			return "", terminal.InterruptErr
-		}
-		if r == terminal.KeyEndTransmission {
-			break
+		if i.options != nil {
+			line = []rune{}
 		}
 
-		b, err := i.OnChange(r, config)
+		line, err = rr.ReadLineWithDefault(0, line, i.onRune(config))
+		if err == readLineAgain {
+			continue
+		}
+
 		if err != nil {
 			return "", err
 		}
 
-		if b {
-			break
-		}
+		break
+	}
+
+	i.answer = string(line)
+	// readline print an empty line, go up before we render the follow up
+	cursor.Up(1)
+
+	// if we ran into the help string
+	if i.answer == config.HelpInput && i.Help != "" {
+		// show the help and prompt again
+		i.showingHelp = true
+		return i.Prompt(config)
 	}
 
 	// if the line is empty

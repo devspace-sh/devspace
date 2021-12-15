@@ -43,9 +43,26 @@ type SelectTemplateData struct {
 	ShowAnswer    bool
 	ShowHelp      bool
 	Config        *PromptConfig
+
+	// These fields are used when rendering an individual option
+	CurrentOpt   core.OptionAnswer
+	CurrentIndex int
+}
+
+// IterateOption sets CurrentOpt and CurrentIndex appropriately so a select option can be rendered individually
+func (s SelectTemplateData) IterateOption(ix int, opt core.OptionAnswer) interface{} {
+	copy := s
+	copy.CurrentIndex = ix
+	copy.CurrentOpt = opt
+	return copy
 }
 
 var SelectQuestionTemplate = `
+{{- define "option"}}
+    {{- if eq .SelectedIndex .CurrentIndex }}{{color .Config.Icons.SelectFocus.Format }}{{ .Config.Icons.SelectFocus.Text }} {{else}}{{color "default"}}  {{end}}
+    {{- .CurrentOpt.Value}}
+    {{- color "reset"}}
+{{end}}
 {{- if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
 {{- color .Config.Icons.Question.Format }}{{ .Config.Icons.Question.Text }} {{color "reset"}}
 {{- color "default+hb"}}{{ .Message }}{{ .FilterMessage }}{{color "reset"}}
@@ -53,10 +70,8 @@ var SelectQuestionTemplate = `
 {{- else}}
   {{- "  "}}{{- color "cyan"}}[Use arrows to move, type to filter{{- if and .Help (not .ShowHelp)}}, {{ .Config.HelpInput }} for more help{{end}}]{{color "reset"}}
   {{- "\n"}}
-  {{- range $ix, $choice := .PageEntries}}
-    {{- if eq $ix $.SelectedIndex }}{{color $.Config.Icons.SelectFocus.Format }}{{ $.Config.Icons.SelectFocus.Text }} {{else}}{{color "default"}}  {{end}}
-    {{- $choice.Value}}
-    {{- color "reset"}}{{"\n"}}
+  {{- range $ix, $option := .PageEntries}}
+    {{- template "option" $.IterateOption $ix $option}}
   {{- end}}
 {{- end}}`
 
@@ -152,17 +167,16 @@ func (s *Select) OnChange(key rune, config *PromptConfig) bool {
 	// and we have modified the filter then we should move the page back!
 	opts, idx := paginate(pageSize, options, s.selectedIndex)
 
+	tmplData := SelectTemplateData{
+		Select:        *s,
+		SelectedIndex: idx,
+		ShowHelp:      s.showingHelp,
+		PageEntries:   opts,
+		Config:        config,
+	}
+
 	// render the options
-	s.Render(
-		SelectQuestionTemplate,
-		SelectTemplateData{
-			Select:        *s,
-			SelectedIndex: idx,
-			ShowHelp:      s.showingHelp,
-			PageEntries:   opts,
-			Config:        config,
-		},
-	)
+	s.RenderWithCursorOffset(SelectQuestionTemplate, tmplData, opts, idx)
 
 	// keep prompting
 	return false
@@ -234,16 +248,22 @@ func (s *Select) Prompt(config *PromptConfig) (interface{}, error) {
 	// figure out the options and index to render
 	opts, idx := paginate(pageSize, core.OptionAnswerList(s.Options), sel)
 
+	cursor := s.NewCursor()
+	cursor.Save()          // for proper cursor placement during selection
+	cursor.Hide()          // hide the cursor
+	defer cursor.Show()    // show the cursor when we're done
+	defer cursor.Restore() // clear any accessibility offsetting on exit
+
+	tmplData := SelectTemplateData{
+		Select:        *s,
+		SelectedIndex: idx,
+		ShowHelp:      s.showingHelp,
+		PageEntries:   opts,
+		Config:        config,
+	}
+
 	// ask the question
-	err := s.Render(
-		SelectQuestionTemplate,
-		SelectTemplateData{
-			Select:        *s,
-			PageEntries:   opts,
-			SelectedIndex: idx,
-			Config:        config,
-		},
-	)
+	err := s.RenderWithCursorOffset(SelectQuestionTemplate, tmplData, opts, idx)
 	if err != nil {
 		return "", err
 	}
@@ -254,10 +274,6 @@ func (s *Select) Prompt(config *PromptConfig) (interface{}, error) {
 	rr := s.NewRuneReader()
 	rr.SetTermMode()
 	defer rr.RestoreTermMode()
-
-	cursor := s.NewCursor()
-	cursor.Hide()       // hide the cursor
-	defer cursor.Show() // show the cursor when we're done
 
 	// start waiting for input
 	for {
@@ -317,6 +333,8 @@ func (s *Select) Prompt(config *PromptConfig) (interface{}, error) {
 }
 
 func (s *Select) Cleanup(config *PromptConfig, val interface{}) error {
+	cursor := s.NewCursor()
+	cursor.Restore()
 	return s.Render(
 		SelectQuestionTemplate,
 		SelectTemplateData{

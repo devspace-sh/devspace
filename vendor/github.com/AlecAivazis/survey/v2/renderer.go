@@ -7,7 +7,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2/core"
 	"github.com/AlecAivazis/survey/v2/terminal"
-	goterm "golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 type Renderer struct {
@@ -69,6 +69,14 @@ func (r *Renderer) Error(config *PromptConfig, invalid error) error {
 	return nil
 }
 
+func (r *Renderer) OffsetCursor(offset int) {
+	cursor := r.NewCursor()
+	for offset > 0 {
+		cursor.PreviousLine(1)
+		offset--
+	}
+}
+
 func (r *Renderer) Render(tmpl string, data interface{}) error {
 	// cleanup the currently rendered text
 	lineCount := r.countLines(r.renderedText)
@@ -88,6 +96,21 @@ func (r *Renderer) Render(tmpl string, data interface{}) error {
 	r.AppendRenderedText(layoutOut)
 
 	// nothing went wrong
+	return nil
+}
+
+func (r *Renderer) RenderWithCursorOffset(tmpl string, data IterableOpts, opts []core.OptionAnswer, idx int) error {
+	cursor := r.NewCursor()
+	cursor.Restore() // clear any accessibility offsetting
+
+	if err := r.Render(tmpl, data); err != nil {
+		return err
+	}
+	cursor.Save()
+
+	offset := computeCursorOffset(MultiSelectQuestionTemplate, data, opts, idx, r.termWidthSafe())
+	r.OffsetCursor(offset)
+
 	return nil
 }
 
@@ -119,19 +142,24 @@ func (r *Renderer) resetPrompt(lines int) {
 
 func (r *Renderer) termWidth() (int, error) {
 	fd := int(r.stdio.Out.Fd())
-	termWidth, _, err := goterm.GetSize(fd)
+	termWidth, _, err := term.GetSize(fd)
 	return termWidth, err
 }
 
-// countLines will return the count of `\n` with the addition of any
-// lines that have wrapped due to narrow terminal width
-func (r *Renderer) countLines(buf bytes.Buffer) int {
+func (r *Renderer) termWidthSafe() int {
 	w, err := r.termWidth()
 	if err != nil || w == 0 {
 		// if we got an error due to terminal.GetSize not being supported
 		// on current platform then just assume a very wide terminal
 		w = 10000
 	}
+	return w
+}
+
+// countLines will return the count of `\n` with the addition of any
+// lines that have wrapped due to narrow terminal width
+func (r *Renderer) countLines(buf bytes.Buffer) int {
+	w := r.termWidthSafe()
 
 	bufBytes := buf.Bytes()
 
