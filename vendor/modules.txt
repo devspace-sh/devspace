@@ -216,9 +216,6 @@ github.com/gorilla/mux
 # github.com/gorilla/websocket v1.4.2
 ## explicit
 github.com/gorilla/websocket
-# github.com/hashicorp/go-version v1.3.0
-## explicit
-github.com/hashicorp/go-version
 # github.com/imdario/mergo v0.3.12
 github.com/imdario/mergo
 # github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf

@@ -1,4 +1,4 @@
-package version
+package constraint
 
 import (
 	"bytes"
@@ -60,20 +60,18 @@ func NewSemver(v string) (*Version, error) {
 func newVersion(v string, pattern *regexp.Regexp) (*Version, error) {
 	matches := pattern.FindStringSubmatch(v)
 	if matches == nil {
-		return nil, fmt.Errorf("Malformed version: %s", v)
+		return nil, fmt.Errorf("malformed version: %s", v)
 	}
 	segmentsStr := strings.Split(matches[1], ".")
 	segments := make([]int64, len(segmentsStr))
-	si := 0
 	for i, str := range segmentsStr {
 		val, err := strconv.ParseInt(str, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"Error parsing version: %s", err)
+				"error parsing version: %s", err)
 		}
 
-		segments[i] = int64(val)
-		si++
+		segments[i] = val
 	}
 
 	// Even though we could support more than three segments, if we
@@ -92,7 +90,7 @@ func newVersion(v string, pattern *regexp.Regexp) (*Version, error) {
 		metadata: matches[10],
 		pre:      pre,
 		segments: segments,
-		si:       si,
+		si:       len(segmentsStr),
 		original: v,
 	}, nil
 }
@@ -374,12 +372,12 @@ func (v *Version) String() string {
 		str := strconv.FormatInt(s, 10)
 		fmtParts[i] = str
 	}
-	fmt.Fprintf(&buf, strings.Join(fmtParts, "."))
+	_, _ = fmt.Fprintf(&buf, "%s", strings.Join(fmtParts, "."))
 	if v.pre != "" {
-		fmt.Fprintf(&buf, "-%s", v.pre)
+		_, _ = fmt.Fprintf(&buf, "-%s", v.pre)
 	}
 	if v.metadata != "" {
-		fmt.Fprintf(&buf, "+%s", v.metadata)
+		_, _ = fmt.Fprintf(&buf, "+%s", v.metadata)
 	}
 
 	return buf.String()

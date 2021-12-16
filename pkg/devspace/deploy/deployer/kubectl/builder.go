@@ -2,12 +2,12 @@ package kubectl
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/constraint"
 	"os/exec"
 	"regexp"
 	"strings"
 
 	"github.com/ghodss/yaml"
-	version "github.com/hashicorp/go-version"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -83,13 +83,13 @@ var useOldDryRun = func(path string) (bool, error) {
 		return false, err
 	}
 
-	v1, err := version.NewVersion(strings.TrimPrefix(strings.TrimSpace(string(out)), "Client Version: v"))
+	v1, err := constraint.NewVersion(strings.TrimPrefix(strings.TrimSpace(string(out)), "Client Version: v"))
 	if err != nil {
 
 		return false, err
 	}
 
-	v2, err := version.NewVersion("1.18.0")
+	v2, err := constraint.NewVersion("1.18.0")
 	if err != nil {
 		return false, err
 	}
