@@ -1,0 +1,12 @@
+version: v1beta11
+dependencies:
+- name: dependency
+  source:
+    path: dependency
+  # Use dev.ports config from dependency2
+  dev:
+    ports: true
+dev:
+  # Open terminal to the pod with the imageName created in dependency1
+  terminal:
+    imageSelector: image(dependency.default)
