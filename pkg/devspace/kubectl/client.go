@@ -210,14 +210,15 @@ func (client *client) IsInCluster() bool {
 
 // PrintWarning prints a warning if the last kube context is different than this one
 func (client *client) CheckKubeContext(generatedConfig *generated.Config, noWarning bool, log log.Logger) (Client, error) {
-	lastConfigContext := generatedConfig.GetActive().LastContext
 	currentConfigContext := &generated.LastContextConfig{
 		Namespace: client.Namespace(),
 		Context:   client.CurrentContext(),
 	}
+	
 	resetClient := false
-
 	if generatedConfig != nil && log.GetLevel() >= logrus.InfoLevel && !noWarning {
+		lastConfigContext := generatedConfig.GetActive().LastContext
+		
 		// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
 		if lastConfigContext != nil {
 			// if the current kubeContext!=last kubeContext
