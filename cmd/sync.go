@@ -10,7 +10,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/message"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -33,6 +32,7 @@ type SyncCmd struct {
 	Container     string
 	Pod           string
 	Pick          bool
+	Wait          bool
 
 	Exclude       []string
 	ContainerPath string
@@ -98,6 +98,8 @@ devspace sync --container-path=/my-path
 
 	syncCmd.Flags().BoolVar(&cmd.UploadOnly, "upload-only", false, "If set DevSpace will only upload files")
 	syncCmd.Flags().BoolVar(&cmd.DownloadOnly, "download-only", false, "If set DevSpace will only download files")
+
+	syncCmd.Flags().BoolVar(&cmd.Wait, "wait", true, "Wait for the pod(s) to start if they are not running")
 
 	return syncCmd
 }
@@ -186,7 +188,8 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 
 	// set image selector
 	options.ImageSelector = imageSelector
-	options.Wait = ptr.Bool(false)
+	options.Wait = &cmd.Wait
+
 	if cmd.DownloadOnly && cmd.UploadOnly {
 		return errors.New("--upload-only cannot be used together with --download-only")
 	}
