@@ -1125,6 +1125,8 @@ type Variable struct {
 	ValidationPattern string   `yaml:"validationPattern,omitempty" json:"validationPattern,omitempty"`
 	ValidationMessage string   `yaml:"validationMessage,omitempty" json:"validationMessage,omitempty"`
 	NoCache           bool     `yaml:"noCache,omitempty" json:"noCache,omitempty"`
+	AlwaysResolve     bool     `yaml:"alwaysResolve,omitempty" json:"alwaysResolve,omitempty"`
+
 	// Value is a shortcut for using source: none and default: my-value
 	Value interface{} `yaml:"value,omitempty" json:"value,omitempty"`
 

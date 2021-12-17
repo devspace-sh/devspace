@@ -3,6 +3,7 @@ package init
 import (
 	"bytes"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,7 +58,8 @@ var _ = DevSpaceDescribe("init", func() {
 		config, _, err := framework.LoadConfig(f, filepath.Join(tempDir, "devspace.yaml"))
 		framework.ExpectNoError(err)
 
-		framework.ExpectEqual(config.Variables(), map[string]interface{}{"IMAGE": "username/app"})
+		framework.ExpectEqual(len(config.Variables()), 1+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(config.Variables()["IMAGE"], "username/app")
 	})
 
 	ginkgo.It("should create devspace.yml from docker-compose.yaml", func() {

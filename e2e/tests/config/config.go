@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"os"
 	"path/filepath"
 
@@ -41,15 +42,18 @@ var _ = DevSpaceDescribe("config", func() {
 
 		configBuffer := &bytes.Buffer{}
 		printCmd := &cmd.PrintCmd{
-			GlobalFlags: &flags.GlobalFlags{},
-			Out:         configBuffer,
-			SkipInfo:    true,
+			GlobalFlags: &flags.GlobalFlags{
+				Namespace: "test-ns",
+			},
+			Out:      configBuffer,
+			SkipInfo: true,
 		}
 
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out.txt"), "test-testimage-latest-dep1")
 		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out2.txt"), "Done")
+		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out3.txt"), "test-ns-resolved-${NOT_RESOLVED}")
 	})
 
 	ginkgo.It("should load multiple profiles in order via --profile", func() {
@@ -1648,7 +1652,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 
 		// check if variables were loaded correctly
-		framework.ExpectEqual(len(config.Variables()), 4)
+		framework.ExpectEqual(len(config.Variables()), 4+len(variable.AlwaysResolvePredefinedVars))
 		framework.ExpectEqual(len(config.Generated().Vars), 1)
 		framework.ExpectEqual(config.Generated().Vars["TEST_1"], "test")
 		framework.ExpectEqual(len(dependencies), 1)
@@ -1675,7 +1679,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 
 		// config
-		framework.ExpectEqual(len(config.Variables()), 3)
+		framework.ExpectEqual(len(config.Variables()), 3+len(variable.AlwaysResolvePredefinedVars))
 		framework.ExpectEqual(len(config.Generated().Vars), 2)
 		framework.ExpectEqual(config.Generated().Vars["NOT_USED"], "test")
 		framework.ExpectEqual(config.Generated().Vars["TEST_2"], "dep1")
@@ -1698,7 +1702,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 
 		// check if default config variables were loaded correctly
-		framework.ExpectEqual(len(config.Variables()), 2)
+		framework.ExpectEqual(len(config.Variables()), 2+len(variable.AlwaysResolvePredefinedVars))
 		framework.ExpectEqual(len(config.Generated().Vars), 1)
 		framework.ExpectEqual(config.Generated().Vars["NAME"], "default")
 		framework.ExpectEqual(len(dependencies), 0)
@@ -1713,7 +1717,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 
 		// check if custom config variables were loaded correctly
-		framework.ExpectEqual(len(customConfig.Variables()), 2)
+		framework.ExpectEqual(len(customConfig.Variables()), 2+len(variable.AlwaysResolvePredefinedVars))
 		framework.ExpectEqual(len(customConfig.Generated().Vars), 1)
 		framework.ExpectEqual(customConfig.Generated().Vars["NAME"], "custom")
 		framework.ExpectEqual(len(customDependencies), 0)
