@@ -96,7 +96,11 @@ func (s Selector) String() string {
 		strs = append(strs, "image selector: "+strings.Join(sa, ","))
 	}
 	if len(s.LabelSelector) > 0 {
-		strs = append(strs, "label selector: "+s.LabelSelector)
+		if s.ContainerName != "" {
+			strs = append(strs, "label selector: "+s.LabelSelector+" - container: "+s.ContainerName)
+		} else {
+			strs = append(strs, "label selector: "+s.LabelSelector)
+		}
 	}
 	if s.Pod != "" {
 		strs = append(strs, "pod name: "+s.Pod)
