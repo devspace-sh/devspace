@@ -72,8 +72,9 @@ var _ = DevSpaceDescribe("sync", func() {
 			ImageSelector: "node:13.14-alpine",
 			ContainerPath: "/app",
 			UploadOnly:    true,
-			// Polling:       true,
-			Interrupt: interrupt,
+			Polling:       true,
+			Wait:          true,
+			Interrupt:     interrupt,
 		}
 
 		// start the command

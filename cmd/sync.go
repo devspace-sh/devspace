@@ -33,6 +33,7 @@ type SyncCmd struct {
 	Pod           string
 	Pick          bool
 	Wait          bool
+	Polling       bool
 
 	Exclude       []string
 	ContainerPath string
@@ -100,6 +101,7 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().BoolVar(&cmd.DownloadOnly, "download-only", false, "If set DevSpace will only download files")
 
 	syncCmd.Flags().BoolVar(&cmd.Wait, "wait", true, "Wait for the pod(s) to start if they are not running")
+	syncCmd.Flags().BoolVar(&cmd.Polling, "polling", false, "If polling should be used to detect file changes in the container")
 
 	return syncCmd
 }
@@ -299,6 +301,10 @@ func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig) error 
 		}
 
 		syncConfig.InitialSync = latest.InitialSyncStrategy(cmd.InitialSync)
+	}
+
+	if cmd.Polling {
+		syncConfig.Polling = cmd.Polling
 	}
 
 	return nil

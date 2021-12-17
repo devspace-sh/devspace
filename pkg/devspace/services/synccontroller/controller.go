@@ -283,6 +283,7 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 	if len(options.TargetOptions.ImageSelector) == 0 {
 		options.TargetOptions.ImageSelector = []imageselector.ImageSelector{}
 	}
+
 	if syncConfig.ImageSelector != "" {
 		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(syncConfig.ImageSelector, c.config, c.dependencies)
 		if err != nil {
