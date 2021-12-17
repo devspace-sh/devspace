@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -10,6 +9,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 
 	"github.com/loft-sh/devspace/pkg/devspace/compose"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
@@ -374,6 +375,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		"(?m)^(  open:)":                             "\n  # `dev.open` tells DevSpace to open certain URLs as soon as they return HTTP status 200\n  # Since we configured port-forwarding, we can use a localhost address here to access our application\n$1",
 		"(?m)^(  - url:.+)":                          "$1\n",
 		"(?m)^(  sync:)":                             "  # `dev.sync` configures a file sync between our Pods in k8s and your local project files\n$1",
+		"(?m)^(  (-| ) excludePaths:)":               "    # `excludePaths` option expects an array of strings with paths that should not be synchronized between the\n    # local filesystem and the remote container filesystem. It uses the same syntax as `.gitignore`.\n$1",
 		"(?m)^(  terminal:)":                         "\n  # `dev.terminal` tells DevSpace to open a terminal as a last step during `devspace dev`\n$1",
 		"(?m)^(    command:)":                        "    # With this optional `command` we can tell DevSpace to run a script when opening the terminal\n    # This is often useful to display help info for new users or perform initial tasks (e.g. installing dependencies)\n    # DevSpace has generated an example ./devspace_start.sh file in your local project - Feel free to customize it!\n$1",
 		"(?m)^(  replacePods:)":                      "\n  # Since our Helm charts and manifests deployments are often optimized for production,\n  # DevSpace let's you swap out Pods dynamically to get a better dev environment\n$1",
