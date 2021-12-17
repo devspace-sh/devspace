@@ -10,7 +10,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/message"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -29,9 +28,12 @@ type SyncCmd struct {
 	*flags.GlobalFlags
 
 	LabelSelector string
+	ImageSelector string
 	Container     string
 	Pod           string
 	Pick          bool
+	Wait          bool
+	Polling       bool
 
 	Exclude       []string
 	ContainerPath string
@@ -82,6 +84,7 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to sync to")
 	syncCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to sync to")
 	syncCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
+	syncCmd.Flags().StringVar(&cmd.ImageSelector, "image-selector", "", "The image to search a pod for (e.g. nginx, nginx:latest, ${runtime.images.app}, nginx:${runtime.images.app.tag})")
 	syncCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
 
 	syncCmd.Flags().StringSliceVarP(&cmd.Exclude, "exclude", "e", []string{}, "Exclude directory from sync")
@@ -96,6 +99,9 @@ devspace sync --container-path=/my-path
 
 	syncCmd.Flags().BoolVar(&cmd.UploadOnly, "upload-only", false, "If set DevSpace will only upload files")
 	syncCmd.Flags().BoolVar(&cmd.DownloadOnly, "download-only", false, "If set DevSpace will only download files")
+
+	syncCmd.Flags().BoolVar(&cmd.Wait, "wait", true, "Wait for the pod(s) to start if they are not running")
+	syncCmd.Flags().BoolVar(&cmd.Polling, "polling", false, "If polling should be used to detect file changes in the container")
 
 	return syncCmd
 }
@@ -176,7 +182,16 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 
 	// Build params
 	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
-	options.Wait = ptr.Bool(false)
+	// get image selector if specified
+	imageSelector, err := getImageSelector(client, configLoader, configOptions, "", cmd.ImageSelector, logger)
+	if err != nil {
+		return err
+	}
+
+	// set image selector
+	options.ImageSelector = imageSelector
+	options.Wait = &cmd.Wait
+
 	if cmd.DownloadOnly && cmd.UploadOnly {
 		return errors.New("--upload-only cannot be used together with --download-only")
 	}
@@ -266,7 +281,7 @@ func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig) error 
 	if cmd.Container != "" {
 		syncConfig.ContainerName = ""
 	}
-	if cmd.LabelSelector != "" || cmd.Pod != "" {
+	if cmd.LabelSelector != "" || cmd.Pod != "" || cmd.ImageSelector != "" {
 		syncConfig.LabelSelector = nil
 		syncConfig.ImageSelector = ""
 	}
@@ -286,6 +301,10 @@ func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig) error 
 		}
 
 		syncConfig.InitialSync = latest.InitialSyncStrategy(cmd.InitialSync)
+	}
+
+	if cmd.Polling {
+		syncConfig.Polling = cmd.Polling
 	}
 
 	return nil
