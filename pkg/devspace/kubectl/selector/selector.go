@@ -2,9 +2,10 @@ package selector
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"sort"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/hash"

@@ -37,8 +37,65 @@ var _ = DevSpaceDescribe("sync", func() {
 	})
 
 	ginkgo.It("devspace sync should work with and without config", func() {
-		// TODO:
-		// test devspace sync command with devspace.yaml and without devspace.yaml
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/no-config")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// deploy app to sync
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:     true,
+				Namespace:  ns,
+				ConfigPath: "sync.yaml",
+			},
+		}
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// interrupt chan for the sync command
+		interrupt, stop := framework.InterruptChan()
+		defer stop()
+
+		// sync with watch
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			ImageSelector: "node:13.14-alpine",
+			ContainerPath: "/",
+			UploadOnly:    true,
+			Exclude:       []string{"file2.txt"},
+			Interrupt:     interrupt,
+		}
+
+		// start the command
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(1)
+		go func() {
+			defer ginkgo.GinkgoRecover()
+			defer waitGroup.Done()
+
+			err := syncCmd.Run(f)
+			framework.ExpectNoError(err)
+		}()
+
+		// wait until files were synced
+		framework.ExpectRemoteFileContents("node", ns, "/file1.txt", "Hello World")
+
+		// time.Sleep(10 * time.Minute)
+		// stop command
+		stop()
+
+		// wait for the command to finish
+		waitGroup.Wait()
 	})
 
 	ginkgo.It("should execute a command after sync", func() {

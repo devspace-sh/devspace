@@ -29,6 +29,7 @@ type SyncCmd struct {
 	*flags.GlobalFlags
 
 	LabelSelector string
+	ImageSelector string
 	Container     string
 	Pod           string
 	Pick          bool
@@ -82,6 +83,7 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to sync to")
 	syncCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to sync to")
 	syncCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
+	syncCmd.Flags().StringVar(&cmd.ImageSelector, "image-selector", "", "The image to search a pod for (e.g. nginx, nginx:latest, ${runtime.images.app}, nginx:${runtime.images.app.tag})")
 	syncCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
 
 	syncCmd.Flags().StringSliceVarP(&cmd.Exclude, "exclude", "e", []string{}, "Exclude directory from sync")
@@ -176,6 +178,14 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 
 	// Build params
 	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
+	// get image selector if specified
+	imageSelector, err := getImageSelector(client, configLoader, configOptions, "", cmd.ImageSelector, logger)
+	if err != nil {
+		return err
+	}
+
+	// set image selector
+	options.ImageSelector = imageSelector
 	options.Wait = ptr.Bool(false)
 	if cmd.DownloadOnly && cmd.UploadOnly {
 		return errors.New("--upload-only cannot be used together with --download-only")
@@ -266,7 +276,7 @@ func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig) error 
 	if cmd.Container != "" {
 		syncConfig.ContainerName = ""
 	}
-	if cmd.LabelSelector != "" || cmd.Pod != "" {
+	if cmd.LabelSelector != "" || cmd.Pod != "" || cmd.ImageSelector != "" {
 		syncConfig.LabelSelector = nil
 		syncConfig.ImageSelector = ""
 	}
