@@ -72,9 +72,8 @@ var _ = DevSpaceDescribe("sync", func() {
 			ImageSelector: "node:13.14-alpine",
 			ContainerPath: "/app",
 			UploadOnly:    true,
-			Polling:       true,
-			Exclude:       []string{"file2.txt"},
-			Interrupt:     interrupt,
+			// Polling:       true,
+			Interrupt: interrupt,
 		}
 
 		// start the command
@@ -89,8 +88,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		}()
 
 		// wait until files were synced
-		framework.ExpectRemoteFileContents("node:13.14-alpine", ns, "/app/file1.txt", "Hello World")
-		framework.ExpectRemoteFileNotFound("node:13.14-alpine", ns, "/app/file2.txt")
+		framework.ExpectRemoteFileContents("node:13.14-alpine", ns, "/app/file1.txt", "Hello World\n")
 
 		// stop sync
 		stop()
