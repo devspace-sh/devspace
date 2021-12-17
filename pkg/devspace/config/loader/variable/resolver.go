@@ -15,6 +15,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var AlwaysResolvePredefinedVars = []string{"devspace.version", "devspace.random", "devspace.profile", "devspace.userHome", "devspace.timestamp", "devspace.context", "devspace.namespace"}
+
 // NewResolver creates a new resolver that caches resolved variables in memory and in the provided cache
 func NewResolver(cache map[string]string, predefinedVariableOptions *PredefinedVariableOptions, vars []*latest.Variable, log log.Logger) Resolver {
 	return &resolver{
@@ -172,19 +174,12 @@ func (r *resolver) findAndFillVariables(haystack interface{}, exclude []*regexp.
 	}
 
 	// resolve used defined variables
-	if len(r.vars) > 0 {
-		newVars := []*latest.Variable{}
-		for _, v := range r.vars {
-			if varsUsed[strings.TrimSpace(v.Name)] {
-				newVars = append(newVars, v)
-			}
-		}
-
-		for _, definition := range newVars {
-			name := strings.TrimSpace(definition.Name)
+	for _, v := range r.vars {
+		if v.AlwaysResolve || varsUsed[strings.TrimSpace(v.Name)] {
+			name := strings.TrimSpace(v.Name)
 
 			// resolve the variable with definition
-			_, err := r.resolve(name, definition)
+			_, err := r.resolve(name, v)
 			if err != nil {
 				return nil, err
 			}
@@ -197,6 +192,12 @@ func (r *resolver) findAndFillVariables(haystack interface{}, exclude []*regexp.
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// try resolving predefined variables
+	for _, name := range AlwaysResolvePredefinedVars {
+		// ignore errors here as those variables are probably not used anyways
+		_, _ = r.resolve(name, nil)
 	}
 
 	return r.fillVariables(haystack, exclude)

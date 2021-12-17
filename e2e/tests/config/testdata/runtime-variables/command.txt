@@ -1,0 +1,1 @@
+echo -n '${devspace.namespace}-${ALREADY_RESOLVED}-${NOT_RESOLVED}' > out3.txt

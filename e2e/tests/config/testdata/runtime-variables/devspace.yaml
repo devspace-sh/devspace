@@ -2,6 +2,11 @@ version: v1beta11
 vars:
   - name: OTHER
     value: test
+  - name: NOT_RESOLVED
+    value: not-resolved
+  - name: ALREADY_RESOLVED
+    value: resolved
+    alwaysResolve: true
 dependencies:
   - name: dep1
     source:
@@ -24,4 +29,7 @@ hooks:
     command: |-
       # This should print Done
       echo -n ${runtime.hooks.test-123.stdout} > out2.txt
+    events: ["after:resolveDependencies"]
+  - name: test-125
+    command: $(cat command.txt)
     events: ["after:resolveDependencies"]

@@ -177,3 +177,24 @@ If the provided value does **<u>not</u>** match the regex in `validationPattern`
 
 ### `validationMessage`
 The `validationMessage` option expects a string stating an error message that is shown to the user when providing a value for the variable that does not match the regex provided in [`validationPattern`](#validationpattern).
+
+### `alwaysResolve`
+
+If enabled, the variable will be loaded even though it is not used within the config. This might be useful for variables that should be resolved after a config expression is applied. E.g.:
+
+`devspace.yaml`:
+```
+vars:
+- name: my-var
+  value: my-value
+  alwaysResolve: true
+hooks:
+- name: my-hook
+  command: $(cat command.txt)
+  events: ["after:deploy"]
+```
+
+`command.txt`:
+```
+echo Hello ${my-var}!
+```
