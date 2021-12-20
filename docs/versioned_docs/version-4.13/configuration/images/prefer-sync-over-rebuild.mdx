@@ -36,7 +36,7 @@ images:
     image: dscr.io/${DEVSPACE_USERNAME}/cache
 dev:
   sync:
-  - imageName: backend
+  - imageSelector: backend
     onUpload:
       restartContainer: true
 ```
