@@ -44,8 +44,11 @@ devspace sync --container-path=/my-path
       --no-watch                   Synchronizes local and remote and then stops
       --pick                       Select a pod (default true)
       --pod string                 Pod to sync to
+      --polling bool               If polling should be used to detect file changes in the container
       --upload-only                If set DevSpace will only upload files
       --verbose                    Shows every file that is synced
+      --wait                       Wait for the pod(s) to start if they are not running
+
 ```
 
 
@@ -69,4 +72,3 @@ devspace sync --container-path=/my-path
       --var strings                  Variables to override during execution (e.g. --var=MYVAR=MYVALUE)
       --vars-secret string           The secret to restore/save the variables from/to, if --restore-vars or --save-vars is enabled (default "devspace-vars")
 ```
-
