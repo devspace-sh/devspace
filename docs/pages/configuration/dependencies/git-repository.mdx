@@ -36,7 +36,7 @@ dependencies:
     ports: true
 dev:
   terminal:
-    imageName: api-server.server-image
+    imageSelector: ${runtime.dependencies.api-server.images.server-image}
 ```
 
 :::info Authentication

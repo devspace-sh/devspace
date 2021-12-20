@@ -73,7 +73,7 @@ dev:
   # Will open a terminal to the pod with the 
   # image from dep1
   terminal:
-    imageName: ${runtime.dependencies.dep1.images.image1}
+    imageSelector: ${runtime.dependencies.dep1.images.image1}
 ```
 
 </TabItem>
@@ -124,5 +124,5 @@ dev:
   # Will open a terminal to the pod with the 
   # image from dep1
   terminal:
-    imageName: ${runtime.dependencies.dep1.images.image1}
+    imageSelector: ${runtime.dependencies.dep1.images.image1}
 ```

@@ -558,7 +558,7 @@ deployments:
 
 dev:
   ports:
-    imageName: backend
+    imageSelector: ${runtime.images.backend}
     forward:
     - port: 3000
     - port: 8080
@@ -566,12 +566,12 @@ dev:
   open:
   - url: http://localhost:3000/login
   sync:
-  - imageName: backend
+  - imageSelector: ${runtime.images.backend}
     localSubPath: ./src
   terminal:
-    imageName: backend
+    imageSelector: ${runtime.images.backend}
   replacePods:
-  - imageName: backend
+  - imageSelector: ${runtime.images.backend}
     replaceImage: loftsh/javascript:latest
 
 dependencies:
