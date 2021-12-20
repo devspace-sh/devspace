@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webserver-simple-deployment
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: webserver-simple-app
+  template:
+    metadata:
+      labels:
+        app: webserver-simple-app
+    spec:
+      containers:
+      - image: nginx
+        name: webserver-simple-container
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webserver-simple-service
+  namespace: default
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    app: webserver-simple-app
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pods-simple-pod
+  namespace: default
+spec:
+  containers:
+  - command:
+    - sleep
+    - "3600"
+    image: busybox
+    name: pods-simple-container
+
+---
