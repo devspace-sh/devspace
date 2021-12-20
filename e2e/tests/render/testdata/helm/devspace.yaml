@@ -1,0 +1,13 @@
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: node:13.14-alpine
+deployments:
+  - name: test
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: ${IMAGE}
+            command: ["sleep"]
+            args: ["999999999999"]
