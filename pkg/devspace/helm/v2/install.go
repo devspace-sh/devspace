@@ -77,7 +77,6 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 		args = append(args, chartName)
 		if chartRepo != "" {
 			args = append(args, "--repo", chartRepo)
-			args = append(args, "--repository-config=''")
 		}
 		if helmConfig.Chart.Version != "" {
 			args = append(args, "--version", helmConfig.Chart.Version)

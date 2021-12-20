@@ -181,7 +181,7 @@ func (r *resolver) resolveRecursive(basePath, parentID string, currentDependency
 		}
 
 		// add child
-		if currentDependency != nil {
+		if currentDependency != nil && currentDependency.children != nil && child != nil {
 			currentDependency.children = append(currentDependency.children, child)
 		}
 	}
