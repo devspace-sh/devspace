@@ -3,9 +3,10 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"os"
 	"path/filepath"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -1906,5 +1907,34 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectEqual(deployment1.Name, "test-sigsegv")
 		gomega.Expect(deployment1.Kubectl).To(gomega.BeNil())
 		gomega.Expect(*deployment1.Helm.ComponentChart).To(gomega.BeTrue())
+	})
+
+	// regression test for issue: https://github.com/loft-sh/devspace/issues/1835
+	ginkgo.It("should load config with var in patch", func() {
+		tempDir, err := framework.CopyToTempDir("tests/config/testdata/profile-patches")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		config, _, err := framework.LoadConfigWithOptions(f, filepath.Join(tempDir, "path-variable.yaml"),
+			&loader.ConfigOptions{Profiles: []string{"demo"}})
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(config.Config().Deployments), 1)
+
+		deployment := config.Config().Deployments[0]
+		framework.ExpectEqual(deployment.Name, "test-me-server")
+
+		values, ok := deployment.Helm.Values["containers"].([]interface{})
+		gomega.Expect(ok).To(gomega.BeTrue())
+		gomega.Expect(values).NotTo(gomega.BeEmpty())
+
+		v, ok := values[0].(map[interface{}]interface{})
+		gomega.Expect(ok).To(gomega.BeTrue())
+		gomega.Expect(v).NotTo(gomega.BeNil())
+
+		framework.ExpectEqual(v["name"], "replace-0")
+
+		gomega.Expect(deployment.Kubectl).To(gomega.BeNil())
+		gomega.Expect(*deployment.Helm.ComponentChart).To(gomega.BeTrue())
 	})
 })
