@@ -30,7 +30,7 @@
     "js-sha256": "^0.9.0",
     "js-yaml": "^3.13.1",
     "moment": "^2.24.0",
-    "node-sass": "^4.0.0",
+    "node-sass": "^7.0.1",
     "npm-run-all": "^4.1.5",
     "object-assign": "4.1.1",
     "postcss-flexbugs-fixes": "4.1.0",
