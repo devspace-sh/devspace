@@ -36,7 +36,7 @@ Open terminal instead of logs:
 ```
       --allow-cyclic           When enabled allows cyclic dependencies
       --build-sequential       Builds the images one after another instead of in parallel
-      --deployments string     Only deploy a specifc deployment (You can specify multiple deployments comma-separated
+      --deployments string     Only deploy a specific deployment (You can specify multiple deployments comma-separated
       --exit-after-deploy      Exits the command after building the images and deploying the project
   -b, --force-build            Forces to build every image
       --force-dependencies     Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies) (default true)

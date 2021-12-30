@@ -29,7 +29,7 @@ deployment.
 ```
       --build-sequential            Builds the images one after another instead of in parallel
       --dependency strings          Renders only the specific named dependencies
-      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
+      --deployments string          Only deploy a specific deployment (You can specify multiple deployments comma-separated
   -b, --force-build                 Forces to build every image
   -h, --help                        help for render
       --max-concurrent-builds int   The maximum number of image builds built in parallel (0 for infinite)
