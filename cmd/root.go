@@ -161,6 +161,10 @@ func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 
 	// build the root cmd
 	rootCmd := NewRootCmd(f)
+	rootCmd.SetHelpCommand(&cobra.Command{
+		Use:    "no-help",
+		Hidden: true,
+	})
 	persistentFlags := rootCmd.PersistentFlags()
 	globalFlags = flags.SetGlobalFlags(persistentFlags)
 
