@@ -320,6 +320,46 @@ func TestRemoveOperation(t *testing.T) {
 					- name: devbackend
 			`,
 		},
+		"remove nested item matched by numeric property from array by string or numeric filter": {
+			input: `
+                dev:
+                    ports:
+                    - name: rails
+                      reverseForward:
+                      - port: 9200
+                        remotePort: 9200
+			`,
+			operation: &Operation{
+				Op:   opRemove,
+				Path: "dev.ports[?(@.name=='rails')].reverseForward[?(@.port==9200 || @.port=='9200')]",
+			},
+			expected: `
+                dev:
+                    ports:
+                    - name: rails
+                      reverseForward: []
+			`,
+		},
+		"remove nested item matched by string property from array by string or numeric filter": {
+			input: `
+                dev:
+                    ports:
+                    - name: rails
+                      reverseForward:
+                      - port: '9200'
+                        remotePort: '9200'
+			`,
+			operation: &Operation{
+				Op:   opRemove,
+				Path: "dev.ports[?(@.name=='rails')].reverseForward[?(@.port==9200 || @.port=='9200')]",
+			},
+			expected: `
+				dev:
+                    ports:
+                    - name: rails
+                      reverseForward: []
+			`,
+		},
 		"remove no match": {
 			input: `
 				deployments:
