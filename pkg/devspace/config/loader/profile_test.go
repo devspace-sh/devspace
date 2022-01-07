@@ -26,6 +26,7 @@ func TestTransformPath(t *testing.T) {
 		`deployments[?(@.name=='staging1')]`:                 `deployments[?(@.name=='staging1')]`,
 		`deployments[?(@.helm.timeout > 1000)]`:              `deployments[?(@.helm.timeout > 1000)]`,
 		`deployments.name=backend.helm.values.containers.image=john/devbackend.image`: `deployments[?(@.name=='backend')].helm.values.containers[?(@.image=='john/devbackend')].image`,
+		`dev.ports.name=rails.reverseForward.port=9200`:                               `dev.ports[?(@.name=='rails')].reverseForward[?(@.port=='9200' || @.port==9200)]`,
 	}
 
 	// Run test cases
