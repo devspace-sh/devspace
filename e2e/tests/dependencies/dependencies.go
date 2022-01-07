@@ -39,6 +39,41 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		kubeClient, err = kube.NewKubeHelper()
 	})
 
+	ginkgo.It("should skip equal dependencies", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/overlapping")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dependencies")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+		}
+
+		// run the command
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// make sure the dependencies are correctly deployed
+		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "dep1", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "dep2", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "dep3", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		_, err = kubeClient.RawClient().AppsV1().Deployments(ns).Get(context.TODO(), "dep4", metav1.GetOptions{})
+		framework.ExpectNoError(err)
+	})
+
 	ginkgo.It("should skip dependencies", func() {
 		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/skip")
 		framework.ExpectNoError(err)

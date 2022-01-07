@@ -1,0 +1,28 @@
+version: v1beta11
+
+dependencies:
+  - name: dep3
+    source:
+      path: ../dep3
+    vars:
+    - name: NAME
+      value: dep4
+
+hooks:
+  - events: ["before:deploy"]
+    command: |-
+      if [ -f "test.yaml" ]; then
+        echo File test.yaml already exists
+        exit 1
+      else
+        echo 123 > test.yaml
+      fi
+
+deployments:
+  - name: dep2
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: alpine
+            command: ["sleep", "infinity"]

@@ -1,0 +1,14 @@
+version: v1beta11
+
+vars:
+  - name: NAME
+    value: dep3
+
+deployments:
+  - name: ${NAME}
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: alpine
+            command: ["sleep", "infinity"]

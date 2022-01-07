@@ -1,0 +1,18 @@
+version: v1beta11
+
+dependencies:
+  - name: dep2
+    source:
+      path: ../dep2
+  - name: dep3
+    source:
+      path: ../dep3
+
+deployments:
+  - name: dep1
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: alpine
+            command: ["sleep", "infinity"]
