@@ -232,7 +232,7 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 		m.log.Infof("To display the complete dependency execution log run with the '--verbose-dependencies' flag")
 	}
 
-	executedDependencies, err := m.executeDependenciesRecursive("", dependencies, skipDependencies, filterDependencies, reverse, silent, verbose, actionName, action)
+	executedDependencies, err := m.executeDependenciesRecursive("", dependencies, skipDependencies, filterDependencies, reverse, silent, verbose, actionName, action, map[string]bool{})
 	if err != nil {
 		hooksErr := hook.ExecuteHooks(m.client, m.config, dependencies, map[string]interface{}{
 			"error": err,
@@ -252,7 +252,7 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 	return executedDependencies, nil
 }
 
-func (m *manager) executeDependenciesRecursive(base string, dependencies []types.Dependency, skipDependencies, filterDependencies []string, reverse, silent, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) ([]types.Dependency, error) {
+func (m *manager) executeDependenciesRecursive(base string, dependencies []types.Dependency, skipDependencies, filterDependencies []string, reverse, silent, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error, executedDependenciesIDs map[string]bool) ([]types.Dependency, error) {
 	// Execute all dependencies
 	i := 0
 	if reverse {
@@ -267,6 +267,21 @@ func (m *manager) executeDependenciesRecursive(base string, dependencies []types
 			dependencyLogger = m.log
 		)
 
+		// Increase / Decrease counter
+		if reverse {
+			i--
+		} else {
+			i++
+		}
+
+		// skip if dependency was executed already
+		if executedDependenciesIDs[dependency.ID()] {
+			continue
+		}
+
+		// make sure we don't execute the dependency again
+		executedDependenciesIDs[dependency.ID()] = true
+
 		// get dependency name
 		dependencyName := dependency.Name()
 		if base != "" {
@@ -280,7 +295,7 @@ func (m *manager) executeDependenciesRecursive(base string, dependencies []types
 				return nil, hooksErr
 			}
 
-			_, err := m.executeDependenciesRecursive(dependencyName, dependency.Children(), skipDependencies, filterDependencies, reverse, silent, verbose, actionName, action)
+			_, err := m.executeDependenciesRecursive(dependencyName, dependency.Children(), skipDependencies, filterDependencies, reverse, silent, verbose, actionName, action, executedDependenciesIDs)
 			if err != nil {
 				hooksErr := hook.ExecuteHooks(dependency.KubeClient(), dependency.Config(), dependency.Children(), map[string]interface{}{
 					"error": err,
@@ -296,13 +311,6 @@ func (m *manager) executeDependenciesRecursive(base string, dependencies []types
 			if hooksErr != nil {
 				return nil, hooksErr
 			}
-		}
-
-		// Increase / Decrease counter
-		if reverse {
-			i--
-		} else {
-			i++
 		}
 
 		// Check if we should act on this dependency

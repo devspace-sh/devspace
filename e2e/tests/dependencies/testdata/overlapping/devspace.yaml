@@ -1,0 +1,9 @@
+version: v1beta11
+
+dependencies:
+  - name: dep1
+    source:
+      path: dep1
+  - name: dep2
+    source:
+      path: dep2
