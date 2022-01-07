@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"io"
@@ -113,7 +114,7 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 	}
 
 	if !cmd.SkipInfo {
-		err = printExtraInfo(loadedConfig, log)
+		err = printExtraInfo(loadedConfig, dependencies, log)
 		if err != nil {
 			return err
 		}
@@ -131,7 +132,7 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 	return nil
 }
 
-func printExtraInfo(config config.Config, log logger.Logger) error {
+func printExtraInfo(config config.Config, dependencies []types.Dependency, log logger.Logger) error {
 	log.WriteString("\n-------------------\n\nVars:\n")
 
 	headerColumnNames := []string{"Name", "Value"}
@@ -151,5 +152,21 @@ func printExtraInfo(config config.Config, log logger.Logger) error {
 	}
 
 	log.WriteString("\n-------------------\n\nLoaded path: " + config.Path() + "\n\n-------------------\n\n")
+
+	if len(dependencies) > 0 {
+		log.WriteString("Dependency Tree:\n\n> Root\n")
+		for _, dep := range dependencies {
+			printDependencyRecursive("--", dep, log)
+		}
+		log.WriteString("\n-------------------\n\n")
+	}
+
 	return nil
+}
+
+func printDependencyRecursive(prefix string, dep types.Dependency, log logger.Logger) {
+	log.WriteString(prefix + "> " + dep.Name() + " (ID: " + dep.ID()[:5] + ")\n")
+	for _, child := range dep.Children() {
+		printDependencyRecursive(prefix+"--", child, log)
+	}
 }

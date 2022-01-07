@@ -276,6 +276,7 @@ func (m *manager) executeDependenciesRecursive(base string, dependencies []types
 
 		// skip if dependency was executed already
 		if executedDependenciesIDs[dependency.ID()] {
+			executedDependencies = append(executedDependencies, dependency)
 			continue
 		}
 
