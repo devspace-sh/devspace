@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 
@@ -20,6 +21,8 @@ type imageNameAndTag struct {
 	imageConfigName string
 	imageName       string
 	imageTag        string
+	imageTags       []string
+	imageConfig     latest.ImageConfig
 }
 
 // Options describe how images should be build
@@ -246,22 +249,13 @@ func (c *controller) Build(options *Options, log logpkg.Logger) (map[string]stri
 					return
 				}
 
-				// Execute plugin hook
-				pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
-					"IMAGE_CONFIG_NAME": imageConfigName,
-					"IMAGE_NAME":        imageName,
-					"IMAGE_CONFIG":      cImageConf,
-					"IMAGE_TAGS":        imageTags,
-				}, log, hook.EventsForSingle("after:build", imageConfigName).With("build.afterBuild")...)
-				if pluginErr != nil {
-					errChan <- pluginErr
-				}
-
 				// Send the response
 				cacheChan <- imageNameAndTag{
 					imageConfigName: imageConfigName,
 					imageName:       imageName,
 					imageTag:        imageTags[0],
+					imageTags:       imageTags,
+					imageConfig:     cImageConf,
 				}
 			}()
 		}
@@ -306,6 +300,17 @@ func (c *controller) waitForBuild(errChan <-chan error, cacheChan <-chan imageNa
 
 		// Track built images
 		builtImages[done.imageName] = done.imageTag
+
+		// Execute plugin hook
+		pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+			"IMAGE_CONFIG_NAME": done.imageConfigName,
+			"IMAGE_NAME":        done.imageName,
+			"IMAGE_CONFIG":      done.imageConfig,
+			"IMAGE_TAGS":        done.imageTags,
+		}, log, hook.EventsForSingle("after:build", done.imageConfigName).With("build.afterBuild")...)
+		if pluginErr != nil {
+			return pluginErr
+		}
 	}
 
 	return nil

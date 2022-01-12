@@ -14,4 +14,4 @@ hooks:
   - name: test-123
     command: |-
       echo ${runtime.dependencies.dep2.images.app.image}
-    events: ["after:resolveDependencies"]
+    events: ["after:deployDependencies"]

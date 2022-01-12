@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 
 	"github.com/loft-sh/devspace/cmd"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/loft-sh/devspace/cmd/use"
 	"github.com/loft-sh/devspace/e2e/framework"
+	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/onsi/ginkgo"
@@ -29,11 +31,15 @@ var _ = DevSpaceDescribe("config", func() {
 
 	// create a new factory
 	var (
-		f *framework.DefaultFactory
+		f          *framework.DefaultFactory
+		kubeClient *kube.KubeHelper
 	)
 
 	ginkgo.BeforeEach(func() {
 		f = framework.NewDefaultFactory()
+
+		kubeClient, err = kube.NewKubeHelper()
+		framework.ExpectNoError(err)
 	})
 
 	ginkgo.It("should resolve runtime environment variables correctly", func() {
@@ -41,20 +47,29 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
-		configBuffer := &bytes.Buffer{}
-		printCmd := &cmd.PrintCmd{
+		ns, err := kubeClient.CreateNamespace("config")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		printCmd := &cmd.DeployCmd{
 			GlobalFlags: &flags.GlobalFlags{
-				Namespace: "test-ns",
+				Namespace: ns,
 			},
-			Out:      configBuffer,
-			SkipInfo: true,
 		}
 
 		err = printCmd.Run(f)
 		framework.ExpectNoError(err)
 		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out.txt"), "test-testimage-latest-dep1")
 		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out2.txt"), "Done")
-		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out3.txt"), "test-ns-resolved-${NOT_RESOLVED}")
+		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out3.txt"), ns+"-resolved-${NOT_RESOLVED}")
+
+		// read the generated.yaml
+		config, err := generated.NewConfigLoader("").Load()
+		framework.ExpectNoError(err)
+		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out0.txt"), "my-docker-username/helloworld2:"+config.GetActive().GetImageCache("app-test").Tag)
 	})
 
 	ginkgo.It("should load multiple profiles in order via --profile", func() {
