@@ -58,7 +58,7 @@ type logger interface {
 
 // Config is used to specify how a file must be tailed.
 type Config struct {
-	// File-specifc
+	// File-specific
 	Location    *SeekInfo // Seek to this location before tailing
 	ReOpen      bool      // Reopen recreated files (tail -F)
 	MustExist   bool      // Fail early if the file does not exist

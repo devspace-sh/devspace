@@ -96,7 +96,7 @@ devspace deploy --kube-context=deploy-context
 
 	deployCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
 	deployCmd.Flags().BoolVar(&cmd.SkipDeploy, "skip-deploy", false, "Skips deploying and only builds images")
-	deployCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specifc deployment (You can specify multiple deployments comma-separated")
+	deployCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specific deployment (You can specify multiple deployments comma-separated")
 
 	deployCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips deploying the following dependencies")
 	deployCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Deploys only the specific named dependencies")

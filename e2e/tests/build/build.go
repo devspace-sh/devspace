@@ -66,15 +66,17 @@ var _ = DevSpaceDescribe("build", func() {
 		imageList, err := dockerClient.ImageList(ctx, types.ImageListOptions{})
 		framework.ExpectNoError(err)
 
+		found := false
+	Outer:
 		for _, image := range imageList {
-			if image.RepoTags[0] == "my-docker-username/helloworld:latest" {
-				err = nil
-				break
-			} else {
-				err = errors.New("image not found")
+			for _, tag := range image.RepoTags {
+				if tag == "my-docker-username/helloworld:latest" {
+					found = true
+					break Outer
+				}
 			}
 		}
-		framework.ExpectNoError(err)
+		framework.ExpectEqual(found, true, "image not found in cache")
 	})
 
 	ginkgo.It("should build dockerfile with buildkit", func() {

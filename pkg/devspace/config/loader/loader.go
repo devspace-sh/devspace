@@ -2,13 +2,14 @@ package loader
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/util/constraint"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/util/constraint"
 
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
@@ -422,10 +423,6 @@ func validateProfile(profile interface{}) error {
 	}
 
 	for idx, patch := range profileConfig.Patches {
-		if vars.VarMatchRegex.MatchString(patch.Path) {
-			return fmt.Errorf("patches[%d] path cannot be a variable", idx)
-		}
-
 		if expression.ExpressionMatchRegex.MatchString(patch.Path) {
 			return fmt.Errorf("patches[%d] path cannot be an expression", idx)
 		}

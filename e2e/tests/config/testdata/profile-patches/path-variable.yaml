@@ -1,0 +1,28 @@
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: john/devbackend
+  - name: PREFIX
+    value: test-me
+deployments:
+  - name: ${PREFIX}-server
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - name: container-0
+            image: ${IMAGE}
+dev:
+  replacePods:
+    - imageSelector: ${IMAGE}
+      replaceImage: ubuntu:18.04
+      patches:
+        - op: add
+          path: spec.containers[0].command
+          value: ["sleep"]
+profiles:
+  - name: demo
+    patches:
+    - op: replace
+      path: deployments.name=${PREFIX}-server.helm.values.containers[0].name
+      value: replace-0

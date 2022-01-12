@@ -1,0 +1,8 @@
+version: v1beta11
+deployments:
+  - name: test
+    kubectl:
+      manifests:
+        - deployment.yaml
+        - service.yaml
+        - https://raw.githubusercontent.com/ContainerSolutions/kubernetes-examples/cdf024abb19fa005ad8bccb762e238f10ba0511e/Pod/simple.yaml

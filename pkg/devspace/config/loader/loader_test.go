@@ -1127,37 +1127,6 @@ profiles:
 				},
 			},
 		},
-		"Profile with patch path variable": {
-			in: &parseTestCaseInput{
-				config: `
-version: v1beta11
-deployments:
-- name: deployment
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - image: nginx
-profiles:
-- name: testprofile
-  patches:
-  - path: ${path}
-    op: replace
-    value:
-      - name: deployment
-        helm:
-          componentChart: true
-          values:
-            containers:
-            - image: ubuntu
-`,
-				options: &ConfigOptions{Profiles: []string{"testprofile"}},
-				generatedConfig: &generated.Config{Vars: map[string]string{
-					"path": "deployments",
-				}},
-			},
-			expectedErr: "error validating profiles[0]: patches[0] path cannot be a variable",
-		},
 		"Profile with patch path expression": {
 			in: &parseTestCaseInput{
 				config: `

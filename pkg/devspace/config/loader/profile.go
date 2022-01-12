@@ -221,6 +221,7 @@ var hasFilterRegEx = regexp.MustCompile(`(?i)\[\?.*\)\]`)
 var indexXPathRegEx = regexp.MustCompile(`\/(\d+|\*)\/`)
 var trailingIndexXPathRegEx = regexp.MustCompile(`\/(\d+|\*)$`)
 var rootXPathRegEx = regexp.MustCompile(`^\/`)
+var numeric = regexp.MustCompile(`^\d+$`)
 
 func transformPath(path string) string {
 	if path == "" {
@@ -237,7 +238,11 @@ func transformPath(path string) string {
 			rewriteToken := token
 			if legacyExtendedSyntaxRegEx.MatchString(token) {
 				filterTokens := legacyExtendedSyntaxRegEx.FindStringSubmatch(token)
-				rewriteToken = fmt.Sprintf("[?(@.%s=='%s')]", filterTokens[1], filterTokens[2])
+				if numeric.MatchString((filterTokens[2])) {
+					rewriteToken = fmt.Sprintf("[?(@.%s=='%s' || @.%s==%s)]", filterTokens[1], filterTokens[2], filterTokens[1], filterTokens[2])
+				} else {
+					rewriteToken = fmt.Sprintf("[?(@.%s=='%s')]", filterTokens[1], filterTokens[2])
+				}
 			}
 			rewriteTokens = append(rewriteTokens, rewriteToken)
 		}

@@ -17,6 +17,7 @@ import (
 	_ "github.com/loft-sh/devspace/e2e/tests/devspacehelper"
 	_ "github.com/loft-sh/devspace/e2e/tests/hooks"
 	_ "github.com/loft-sh/devspace/e2e/tests/init"
+	_ "github.com/loft-sh/devspace/e2e/tests/render"
 	_ "github.com/loft-sh/devspace/e2e/tests/replacepods"
 	_ "github.com/loft-sh/devspace/e2e/tests/sync"
 	_ "github.com/loft-sh/devspace/e2e/tests/terminal"

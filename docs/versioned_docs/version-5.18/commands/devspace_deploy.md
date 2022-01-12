@@ -31,7 +31,7 @@ devspace deploy --kube-context=deploy-context
 ```
       --build-sequential            Builds the images one after another instead of in parallel
       --dependency strings          Deploys only the specific named dependencies
-      --deployments string          Only deploy a specifc deployment (You can specify multiple deployments comma-separated
+      --deployments string          Only deploy a specific deployment (You can specify multiple deployments comma-separated
   -b, --force-build                 Forces to (re-)build every image
       --force-dependencies          Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies) (default true)
   -d, --force-deploy                Forces to (re-)deploy every deployment
