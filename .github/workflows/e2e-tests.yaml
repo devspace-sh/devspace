@@ -22,6 +22,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # Hardens the GitHub-hosted runner (Ubuntu VM) 
+    - name: Harden Runner
+      uses: step-security/harden-runner@v1
+      with:
+        egress-policy: audit
+        
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - name: Checkout repo
       uses: actions/checkout@v2
