@@ -12,6 +12,16 @@ dependencies:
     source:
       path: ./dep1.yaml
 images:
+  aap-test:
+    image: my-docker-username/helloworld3
+    build:
+      docker:
+        skipPush: true
+  app-test:
+    image: my-docker-username/helloworld2
+    build:
+      docker:
+        skipPush: true
   app:
     image: my-docker-username/helloworld
     tags:
@@ -19,17 +29,21 @@ images:
     build:
       disabled: true
 hooks:
+  - name: test-012
+    command: |-
+      echo -n ${runtime.images.app-test.image}:${runtime.images.app-test.tag} > out0.txt
+    events: ["after:build:app-test"]
   - name: test-123
     command: |-
       # This should print test-testimage-latest-dep1
       echo -n $(echo -n "${OTHER}-${runtime.dependencies.dep1.hooks.test-123.stdout}-${runtime.images.app.tag}-${runtime.dependencies.dep1.images.app.tag}") > out.txt
       echo -n "Done"
-    events: ["after:resolveDependencies"]
+    events: ["after:deployDependencies"]
   - name: test-124
     command: |-
       # This should print Done
       echo -n ${runtime.hooks.test-123.stdout} > out2.txt
-    events: ["after:resolveDependencies"]
+    events: ["after:deployDependencies"]
   - name: test-125
     command: $(cat command.txt)
-    events: ["after:resolveDependencies"]
+    events: ["after:deployDependencies"]
