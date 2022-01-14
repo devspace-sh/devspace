@@ -28,4 +28,4 @@ dev:
           path: spec.containers[0].workingDir
           value: "/workdir"
   terminal:
-    imageSelector: ${IMAGE}
+    command: ["echo", "hello"]

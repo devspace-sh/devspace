@@ -603,12 +603,12 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 				return 0, pluginErr
 			}
 
-			// if config.Dev.Terminal is defined && config.Images is empty
+			// if config.Dev.Terminal is defined
 			// config.Dev.Terminal.ImageSelector is empty &&
 			// config.Dev.Terminal.LabelSelector is also empty &&
 			// config.Dev.Terminal.Command is defined then
 			// run the command locally instead on in container
-			if config.Images == nil && config.Dev.Terminal.ImageSelector == "" &&
+			if config.Dev.Terminal.ImageSelector == "" &&
 				config.Dev.Terminal.LabelSelector == nil &&
 				config.Dev.Terminal.Command != nil &&
 				len(config.Dev.Terminal.Command) > 0 {
@@ -624,6 +624,7 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 				}
 				// if command succeeds
 				cmd.log.Infof("Command '%s' returned: %s", command, stdout.String())
+				_, _ = cmd.Stdout.Write(stdout.Bytes()) // pass output to the devspace's stdout
 				return 0, nil
 			} else {
 				selectorOptions := targetselector.NewDefaultOptions().ApplyCmdParameter("", "", cmd.Namespace, "")
@@ -781,30 +782,32 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 	// check if terminal is enabled
 	c := configInterface.Config()
 
-	if cmd.Terminal || (c.Dev.Terminal != nil && !c.Dev.Terminal.Disabled) {
+	if cmd.Terminal && c.Dev.Terminal == nil {
 		if c.Dev.Terminal == nil || (c.Dev.Terminal.ImageSelector == "" && len(c.Dev.Terminal.LabelSelector) == 0) {
+			if len(c.Images) == 0 {
+				return nil, errors.New("No image available in devspace config")
+			}
+
 			imageNames := make([]string, 0, len(c.Images))
 			for k := range c.Images {
 				imageNames = append(imageNames, k)
 			}
 
-			if len(imageNames) > 0 {
-				// if only one image exists, use it, otherwise show image picker
-				imageName := ""
-				if len(imageNames) == 1 {
-					imageName = imageNames[0]
-				} else {
-					imageName, err = cmd.log.Question(&survey.QuestionOptions{
-						Question: "Which image do you want to open a terminal to?",
-						Options:  imageNames,
-					})
-					if err != nil {
-						return nil, err
-					}
+			// if only one image exists, use it, otherwise show image picker
+			imageName := ""
+			if len(imageNames) == 1 {
+				imageName = imageNames[0]
+			} else {
+				imageName, err = cmd.log.Question(&survey.QuestionOptions{
+					Question: "Which image do you want to open a terminal to?",
+					Options:  imageNames,
+				})
+				if err != nil {
+					return nil, err
 				}
-				c.Dev.Terminal = &latest.Terminal{
-					ImageSelector: fmt.Sprintf("${runtime.images.%s.image}:${runtime.images.%s.tag}", imageName, imageName),
-				}
+			}
+			c.Dev.Terminal = &latest.Terminal{
+				ImageSelector: fmt.Sprintf("${runtime.images.%s.image}:${runtime.images.%s.tag}", imageName, imageName),
 			}
 
 		} else {
