@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +11,7 @@ import (
 
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
+	"github.com/loft-sh/devspace/pkg/util/command"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/legacy"
@@ -603,6 +603,8 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 				return 0, pluginErr
 			}
 
+			stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
+
 			// if config.Dev.Terminal is defined
 			// config.Dev.Terminal.ImageSelector is empty &&
 			// config.Dev.Terminal.LabelSelector is also empty &&
@@ -612,19 +614,14 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 				config.Dev.Terminal.LabelSelector == nil &&
 				config.Dev.Terminal.Command != nil &&
 				len(config.Dev.Terminal.Command) > 0 {
-				command := config.Dev.Terminal.Command[0]
-				c := exec.Command(command, config.Dev.Terminal.Command[1:]...)
-				var stdout bytes.Buffer
-				c.Stdout = &stdout
-				if err := c.Run(); err != nil {
+				c := command.NewStreamCommand(config.Dev.Terminal.Command[0], config.Dev.Terminal.Command[1:])
+				err := c.Run(stdout, stderr, stdin)
+				if err != nil {
 					if exitError, ok := err.(*exec.ExitError); ok {
-						cmd.log.Failf("Command '%s' returned an error: %s", command, err)
+						cmd.log.Failf("Command '%s' returned an error: %s", config.Dev.Terminal.Command[0], err)
 						return exitError.ExitCode(), err
 					}
 				}
-				// if command succeeds
-				cmd.log.Infof("Command '%s' returned: %s", command, stdout.String())
-				_, _ = cmd.Stdout.Write(stdout.Bytes()) // pass output to the devspace's stdout
 				return 0, nil
 			} else {
 				selectorOptions := targetselector.NewDefaultOptions().ApplyCmdParameter("", "", cmd.Namespace, "")
@@ -644,7 +641,7 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 
 				cmd.log.Info("Terminal: Waiting for containers to start...")
 				selectorOptions.ImageSelector = imageSelectors
-				stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
+
 				code, err := servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalReconnect, stdout, stderr, stdin)
 				if services.IsUnexpectedExitCode(code) {
 					cmd.log.Warnf("Command terminated with exit code %d", code)
@@ -783,35 +780,30 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 	c := configInterface.Config()
 
 	if cmd.Terminal && c.Dev.Terminal == nil {
-		if c.Dev.Terminal == nil || (c.Dev.Terminal.ImageSelector == "" && len(c.Dev.Terminal.LabelSelector) == 0) {
-			if len(c.Images) == 0 {
-				return nil, errors.New("No image available in devspace config")
-			}
+		if len(c.Images) == 0 {
+			return nil, errors.New("No image available in devspace config")
+		}
 
-			imageNames := make([]string, 0, len(c.Images))
-			for k := range c.Images {
-				imageNames = append(imageNames, k)
-			}
+		imageNames := make([]string, 0, len(c.Images))
+		for k := range c.Images {
+			imageNames = append(imageNames, k)
+		}
 
-			// if only one image exists, use it, otherwise show image picker
-			imageName := ""
-			if len(imageNames) == 1 {
-				imageName = imageNames[0]
-			} else {
-				imageName, err = cmd.log.Question(&survey.QuestionOptions{
-					Question: "Which image do you want to open a terminal to?",
-					Options:  imageNames,
-				})
-				if err != nil {
-					return nil, err
-				}
-			}
-			c.Dev.Terminal = &latest.Terminal{
-				ImageSelector: fmt.Sprintf("${runtime.images.%s.image}:${runtime.images.%s.tag}", imageName, imageName),
-			}
-
+		// if only one image exists, use it, otherwise show image picker
+		imageName := ""
+		if len(imageNames) == 1 {
+			imageName = imageNames[0]
 		} else {
-			c.Dev.Terminal.Disabled = false
+			imageName, err = cmd.log.Question(&survey.QuestionOptions{
+				Question: "Which image do you want to open a terminal to?",
+				Options:  imageNames,
+			})
+			if err != nil {
+				return nil, err
+			}
+		}
+		c.Dev.Terminal = &latest.Terminal{
+			ImageSelector: fmt.Sprintf("${runtime.images.%s.image}:${runtime.images.%s.tag}", imageName, imageName),
 		}
 	}
 
