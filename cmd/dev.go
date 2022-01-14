@@ -1,14 +1,17 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
-	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
+
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/legacy"
@@ -600,30 +603,54 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 				return 0, pluginErr
 			}
 
-			selectorOptions := targetselector.NewDefaultOptions().ApplyCmdParameter("", "", cmd.Namespace, "")
-			if config.Dev.Terminal != nil {
-				selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Terminal.LabelSelector, config.Dev.Terminal.Namespace, config.Dev.Terminal.ContainerName, "")
-			}
-
-			var imageSelectors []imageselector.ImageSelector
-			if config.Dev.Terminal != nil && config.Dev.Terminal.ImageSelector != "" {
-				imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(config.Dev.Terminal.ImageSelector, configInterface, dependencies)
-				if err != nil {
-					return 0, err
+			// if config.Dev.Terminal is defined && config.Images is empty
+			// config.Dev.Terminal.ImageSelector is empty &&
+			// config.Dev.Terminal.LabelSelector is also empty &&
+			// config.Dev.Terminal.Command is defined then
+			// run the command locally instead on in container
+			if config.Images == nil && config.Dev.Terminal.ImageSelector == "" &&
+				config.Dev.Terminal.LabelSelector == nil &&
+				config.Dev.Terminal.Command != nil &&
+				len(config.Dev.Terminal.Command) > 0 {
+				command := config.Dev.Terminal.Command[0]
+				c := exec.Command(command, config.Dev.Terminal.Command[1:]...)
+				var stdout bytes.Buffer
+				c.Stdout = &stdout
+				if err := c.Run(); err != nil {
+					if exitError, ok := err.(*exec.ExitError); ok {
+						cmd.log.Failf("Command '%s' returned an error: %s", command, err)
+						return exitError.ExitCode(), err
+					}
+				}
+				// if command succeeds
+				cmd.log.Infof("Command '%s' returned: %s", command, stdout.String())
+				return 0, nil
+			} else {
+				selectorOptions := targetselector.NewDefaultOptions().ApplyCmdParameter("", "", cmd.Namespace, "")
+				if config.Dev.Terminal != nil {
+					selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Terminal.LabelSelector, config.Dev.Terminal.Namespace, config.Dev.Terminal.ContainerName, "")
 				}
 
-				imageSelectors = append(imageSelectors, *imageSelector)
-			}
+				var imageSelectors []imageselector.ImageSelector
+				if config.Dev.Terminal != nil && config.Dev.Terminal.ImageSelector != "" {
+					imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(config.Dev.Terminal.ImageSelector, configInterface, dependencies)
+					if err != nil {
+						return 0, err
+					}
 
-			cmd.log.Info("Terminal: Waiting for containers to start...")
-			selectorOptions.ImageSelector = imageSelectors
-			stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
-			code, err := servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalReconnect, stdout, stderr, stdin)
-			if services.IsUnexpectedExitCode(code) {
-				cmd.log.Warnf("Command terminated with exit code %d", code)
-			}
+					imageSelectors = append(imageSelectors, *imageSelector)
+				}
 
-			return code, err
+				cmd.log.Info("Terminal: Waiting for containers to start...")
+				selectorOptions.ImageSelector = imageSelectors
+				stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
+				code, err := servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalReconnect, stdout, stderr, stdin)
+				if services.IsUnexpectedExitCode(code) {
+					cmd.log.Warnf("Command terminated with exit code %d", code)
+				}
+
+				return code, err
+			}
 		} else if config.Dev.Logs == nil || config.Dev.Logs.Disabled == nil || !*config.Dev.Logs.Disabled {
 			pluginErr := hook.ExecuteHooks(client, configInterface, dependencies, nil, cmd.log, "devCommand:before:streamLogs")
 			if pluginErr != nil {
@@ -761,23 +788,25 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 				imageNames = append(imageNames, k)
 			}
 
-			// if only one image exists, use it, otherwise show image picker
-			imageName := ""
-			if len(imageNames) == 1 {
-				imageName = imageNames[0]
-			} else {
-				imageName, err = cmd.log.Question(&survey.QuestionOptions{
-					Question: "Which image do you want to open a terminal to?",
-					Options:  imageNames,
-				})
-				if err != nil {
-					return nil, err
+			if len(imageNames) > 0 {
+				// if only one image exists, use it, otherwise show image picker
+				imageName := ""
+				if len(imageNames) == 1 {
+					imageName = imageNames[0]
+				} else {
+					imageName, err = cmd.log.Question(&survey.QuestionOptions{
+						Question: "Which image do you want to open a terminal to?",
+						Options:  imageNames,
+					})
+					if err != nil {
+						return nil, err
+					}
+				}
+				c.Dev.Terminal = &latest.Terminal{
+					ImageSelector: fmt.Sprintf("${runtime.images.%s.image}:${runtime.images.%s.tag}", imageName, imageName),
 				}
 			}
 
-			c.Dev.Terminal = &latest.Terminal{
-				ImageSelector: fmt.Sprintf("${runtime.images.%s.image}:${runtime.images.%s.tag}", imageName, imageName),
-			}
 		} else {
 			c.Dev.Terminal.Disabled = false
 		}
