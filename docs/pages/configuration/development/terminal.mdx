@@ -84,6 +84,10 @@ dev:
     containerName: container1
 ```
 
+:::note Execute command locally
+If `imageSelector` and `labelSelector` are not defined then the `command` will be executed on your local machine.
+:::
+
 ### `containerName` 
 If you select a pod via `labelSelector` and the pod has multiple containers, you'll need to specify a container name with this option.
 

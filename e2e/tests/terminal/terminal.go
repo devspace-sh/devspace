@@ -133,6 +133,30 @@ var _ = DevSpaceDescribe("terminal", func() {
 		err = <-done
 		framework.ExpectNoError(err)
 	})
+
+	ginkgo.It("should run command locally", func() {
+		tempDir, err := framework.CopyToTempDir("tests/terminal/testdata/run_cmd_locally")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("terminal")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		interrupt := make(chan error)
+		stdout := &Buffer{}
+		devCmd := &cmd.DevCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+			Interrupt: interrupt,
+			Stdout:    stdout,
+		}
+		err = devCmd.Run(f, nil)
+		framework.ExpectNoError(err)
+		framework.ExpectEqual("hello", strings.TrimSuffix(stdout.String(), "\n"))
+	})
 })
 
 // Buffer is a goroutine safe bytes.Buffer
