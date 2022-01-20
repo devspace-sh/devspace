@@ -212,7 +212,7 @@ func getCommands(f factory.Factory, logger log.Logger) ([]*latest.CommandConfig,
 	}
 
 	// Parse commands
-	commandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), nil, logger)
+	commandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), nil, log.Discard)
 	if err != nil {
 		return nil, err
 	}
