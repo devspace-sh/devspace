@@ -155,31 +155,35 @@ func (cmd *BuildCmd) runCommand(f factory.Factory, client kubectl.Client, config
 
 	// Build images if necessary
 	if len(cmd.Dependency) == 0 {
-		builtImages, err := f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
-			SkipPush:                  cmd.SkipPush,
-			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
-			ForceRebuild:              cmd.ForceBuild,
-			Sequential:                cmd.BuildSequential,
-			MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
-		}, log)
-		if err != nil {
-			if strings.Contains(err.Error(), "no space left on device") {
-				return errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
-			}
-
-			return errors.Wrap(err, "build images")
-		}
-
-		// Save config if an image was built
-		if len(builtImages) > 0 {
-			err := configLoader.SaveGenerated(configInterface.Generated())
+		if len(configInterface.Config().Images) > 0 {
+			builtImages, err := f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
+				SkipPush:                  cmd.SkipPush,
+				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
+				ForceRebuild:              cmd.ForceBuild,
+				Sequential:                cmd.BuildSequential,
+				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
+			}, log)
 			if err != nil {
-				return err
+				if strings.Contains(err.Error(), "no space left on device") {
+					return errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
+				}
+
+				return errors.Wrap(err, "build images")
 			}
 
-			log.Donef("Successfully built %d images", len(builtImages))
+			// Save config if an image was built
+			if len(builtImages) > 0 {
+				err := configLoader.SaveGenerated(configInterface.Generated())
+				if err != nil {
+					return err
+				}
+
+				log.Donef("Successfully built %d images", len(builtImages))
+			} else {
+				log.Info("No images to rebuild. Run with -b to force rebuilding")
+			}
 		} else {
-			log.Info("No images to rebuild. Run with -b to force rebuilding")
+			log.Info("No images defined for this profile")
 		}
 	} else {
 		log.Donef("Successfully built images for dependencies: %s", strings.Join(cmd.Dependency, " "))
