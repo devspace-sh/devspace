@@ -538,6 +538,7 @@ type VolumeMountVolumeConfig struct {
 	Name     string `yaml:"name,omitempty" json:"name,omitempty"`
 	SubPath  string `yaml:"subPath,omitempty" json:"subPath,omitempty"`
 	ReadOnly *bool  `yaml:"readOnly,omitempty" json:"readOnly,omitempty"`
+	Shared   *bool  `yaml:"shared,omitempty" json:"shared,omitempty"`
 }
 
 // VolumeConfig holds the configuration for a specific volume
