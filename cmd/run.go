@@ -201,12 +201,22 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 }
 
 func getCommands(f factory.Factory, logger log.Logger) ([]*latest.CommandConfig, error) {
-	// Set config root
-	configLoader := f.NewConfigLoader("")
-	configExists, err := configLoader.SetDevSpaceRoot(logger)
+	// get current working dir
+	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
+
+	// set working dir back to original
+	defer func() { _ = os.Chdir(cwd) }()
+
+	// Set config root
+	configLoader := f.NewConfigLoader("")
+	configExists, err := configLoader.SetDevSpaceRoot(log.Discard)
+	if err != nil {
+		return nil, err
+	}
+
 	if !configExists {
 		return nil, errors.New(message.ConfigNotFound)
 	}
