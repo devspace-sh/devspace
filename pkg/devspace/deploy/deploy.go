@@ -177,7 +177,7 @@ func (c *controller) Deploy(options *Options, logLogger log.Logger) error {
 		)
 
 		for _, deployConfig := range config.Deployments {
-			if deployConfig.Concurrency {
+			if deployConfig.Concurrent {
 				concurrentDeployments = append(concurrentDeployments, deployConfig)
 			} else {
 				sequentialDeployments = append(sequentialDeployments, deployConfig)
