@@ -342,6 +342,12 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 		return nil, nil, nil, err
 	}
 
+	// check if we do not want to change the generated config or
+	// secret vars.
+	if options.Dry {
+		return latestConfig, generatedConfig, resolver, nil
+	}
+
 	// Save generated config
 	if options.GeneratedLoader == nil {
 		err = generated.NewConfigLoaderFromDevSpacePath(GetLastProfile(options.Profiles), l.configPath).Save(generatedConfig)
