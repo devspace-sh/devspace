@@ -2,14 +2,15 @@ package selector
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"sort"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/pkg/errors"
-	k8sv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -21,7 +22,7 @@ const (
 	ReplacedLabel = "devspace.sh/replaced"
 )
 
-var SortPodsByNewest = func(pods []*k8sv1.Pod, i, j int) bool {
+var SortPodsByNewest = func(pods []*corev1.Pod, i, j int) bool {
 	return pods[i].CreationTimestamp.Unix() > pods[j].CreationTimestamp.Unix()
 }
 
@@ -34,7 +35,7 @@ var SortContainersByNewest = func(pods []*SelectedPodContainer, i, j int) bool {
 	return pods[i].Pod.CreationTimestamp.Unix() > pods[j].Pod.CreationTimestamp.Unix()
 }
 
-func initContainerPos(container string, pod *k8sv1.Pod) int {
+func initContainerPos(container string, pod *corev1.Pod) int {
 	for i, c := range pod.Spec.InitContainers {
 		if c.Name == container {
 			return i
@@ -43,11 +44,11 @@ func initContainerPos(container string, pod *k8sv1.Pod) int {
 	return -1
 }
 
-var FilterNonRunningPods = func(p *k8sv1.Pod) bool {
+var FilterNonRunningPods = func(p *corev1.Pod) bool {
 	return kubectl.GetPodStatus(p) != "Running"
 }
 
-var FilterNonRunningContainers = func(p *k8sv1.Pod, c *k8sv1.Container) bool {
+var FilterNonRunningContainers = func(p *corev1.Pod, c *corev1.Container) bool {
 	if p.DeletionTimestamp != nil {
 		return true
 	}
@@ -65,8 +66,8 @@ var FilterNonRunningContainers = func(p *k8sv1.Pod, c *k8sv1.Container) bool {
 }
 
 type SelectedPodContainer struct {
-	Pod       *k8sv1.Pod
-	Container *k8sv1.Container
+	Pod       *corev1.Pod
+	Container *corev1.Container
 }
 
 type Selector struct {
@@ -109,15 +110,15 @@ func (s Selector) String() string {
 	return strings.Join(strs, ", ")
 }
 
-type FilterPod func(p *k8sv1.Pod) bool
-type FilterContainer func(p *k8sv1.Pod, c *k8sv1.Container) bool
+type FilterPod func(p *corev1.Pod) bool
+type FilterContainer func(p *corev1.Pod, c *corev1.Container) bool
 
-type SortPods func(pods []*k8sv1.Pod, i, j int) bool
+type SortPods func(pods []*corev1.Pod, i, j int) bool
 type SortContainers func(containers []*SelectedPodContainer, i, j int) bool
 
 type Filter interface {
 	SelectContainers(ctx context.Context, selectors ...Selector) ([]*SelectedPodContainer, error)
-	SelectPods(ctx context.Context, selectors ...Selector) ([]*k8sv1.Pod, error)
+	SelectPods(ctx context.Context, selectors ...Selector) ([]*corev1.Pod, error)
 }
 
 type filter struct {
@@ -141,7 +142,7 @@ func NewFilterWithSort(client kubectl.Client, sortPods SortPods, sortContainers 
 	}
 }
 
-func (f *filter) SelectPods(ctx context.Context, selectors ...Selector) ([]*k8sv1.Pod, error) {
+func (f *filter) SelectPods(ctx context.Context, selectors ...Selector) ([]*corev1.Pod, error) {
 	retList, err := f.SelectContainers(ctx, selectors...)
 	if err != nil {
 		return nil, err
@@ -208,8 +209,8 @@ func deduplicate(stack []*SelectedPodContainer) []*SelectedPodContainer {
 	return retStack
 }
 
-func podsFromPodContainer(stack []*SelectedPodContainer) []*k8sv1.Pod {
-	retPods := []*k8sv1.Pod{}
+func podsFromPodContainer(stack []*SelectedPodContainer) []*corev1.Pod {
+	retPods := []*corev1.Pod{}
 	for _, s := range stack {
 		if !containsPod(retPods, key(s.Pod.Namespace, s.Pod.Name, "")) {
 			retPods = append(retPods, s.Pod)
@@ -218,7 +219,7 @@ func podsFromPodContainer(stack []*SelectedPodContainer) []*k8sv1.Pod {
 	return retPods
 }
 
-func containsPod(stack []*k8sv1.Pod, k string) bool {
+func containsPod(stack []*corev1.Pod, k string) bool {
 	for _, s := range stack {
 		if key(s.Namespace, s.Name, "") == k {
 			return true
@@ -257,6 +258,8 @@ func byPodName(ctx context.Context, client kubectl.Client, namespace string, nam
 	if skipPod != nil && skipPod(pod) {
 		return nil, nil
 	} else if pod.DeletionTimestamp != nil {
+		return nil, nil
+	} else if isPodEvicted(pod) {
 		return nil, nil
 	}
 
@@ -305,6 +308,8 @@ func byLabelSelector(ctx context.Context, client kubectl.Client, namespace strin
 		if skipPod != nil && skipPod(&pod) {
 			continue
 		} else if pod.DeletionTimestamp != nil {
+			continue
+		} else if isPodEvicted(&pod) {
 			continue
 		}
 
@@ -356,6 +361,8 @@ func byImageName(ctx context.Context, client kubectl.Client, namespace string, i
 			if skipPod != nil && skipPod(&pod) {
 				continue
 			} else if pod.DeletionTimestamp != nil {
+				continue
+			} else if isPodEvicted(&pod) {
 				continue
 			}
 
@@ -409,4 +416,8 @@ func byImageName(ctx context.Context, client kubectl.Client, namespace string, i
 		}
 	}
 	return retPods, nil
+}
+
+func isPodEvicted(pod *corev1.Pod) bool {
+	return strings.Contains(pod.Status.Reason, "Evicted")
 }
