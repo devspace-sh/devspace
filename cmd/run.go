@@ -96,8 +96,7 @@ devspace --dependency my-dependency run any-command --any-command-flag
 		},
 	}
 
-	logger := f.GetLog()
-	commands, _ := getCommands(f, logger)
+	commands, _ := getCommands(f)
 	for _, command := range commands {
 		description := command.Description
 		if description == "" {
@@ -200,7 +199,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	return dependency.ExecuteCommand(commands, args[0], args[1:], cmd.Stdout, cmd.Stderr)
 }
 
-func getCommands(f factory.Factory, logger log.Logger) ([]*latest.CommandConfig, error) {
+func getCommands(f factory.Factory) ([]*latest.CommandConfig, error) {
 	// get current working dir
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -222,7 +221,7 @@ func getCommands(f factory.Factory, logger log.Logger) ([]*latest.CommandConfig,
 	}
 
 	// Parse commands
-	commandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), nil, log.Discard)
+	commandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), &loader.ConfigOptions{Dry: true}, log.Discard)
 	if err != nil {
 		return nil, err
 	}

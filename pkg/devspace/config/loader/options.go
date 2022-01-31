@@ -14,6 +14,8 @@ func OptionsWithGeneratedConfig(generatedConfig *generated.Config) *ConfigOption
 
 // ConfigOptions defines options to load the config
 type ConfigOptions struct {
+	Dry bool
+
 	// KubeClient is needed if variables were saved in the namespace
 	KubeClient kubectl.Client `yaml:"-" json:"-"`
 
