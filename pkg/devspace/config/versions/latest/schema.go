@@ -446,11 +446,12 @@ type BuildOptions struct {
 
 // DeploymentConfig defines the configuration how the devspace should be deployed
 type DeploymentConfig struct {
-	Name      string         `yaml:"name" json:"name"`
-	Namespace string         `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	Disabled  bool           `yaml:"disabled,omitempty" json:"disabled,omitempty"`
-	Helm      *HelmConfig    `yaml:"helm,omitempty" json:"helm,omitempty"`
-	Kubectl   *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
+	Name        string         `yaml:"name" json:"name"`
+	Namespace   string         `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	Disabled    bool           `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+	Helm        *HelmConfig    `yaml:"helm,omitempty" json:"helm,omitempty"`
+	Kubectl     *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
+	Concurrency bool           `yaml:"concurrency,omitempty" json:"concurrency,omitempty"`
 }
 
 // ComponentConfig holds the component information
