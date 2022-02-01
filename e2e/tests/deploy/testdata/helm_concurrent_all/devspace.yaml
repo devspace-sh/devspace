@@ -1,0 +1,29 @@
+version: v1beta11
+vars:
+  - name: IMAGE
+    value: nginx
+deployments:
+  - name: test
+    concurrent: true
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: ${IMAGE}
+            env: $(cat env.yaml)
+  - name: test-2
+    concurrent: true
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: ${IMAGE}
+            env: $(cat env.yaml)
+  - name: test-3
+    concurrent: true
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: ${IMAGE}
+            env: $(cat env.yaml)

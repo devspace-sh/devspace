@@ -194,4 +194,77 @@ var _ = DevSpaceDescribe("deploy", func() {
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(out, "test")
 	})
+
+	ginkgo.It("should deploy helm applications concurrently", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm_concurrent_all")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+		}
+
+		// run the command
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// wait until nginx pod is reachable
+		out, err := kubeClient.ExecByContainer("app.kubernetes.io/component=test", "container-0", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		out2, err := kubeClient.ExecByContainer("app.kubernetes.io/component=test-2", "container-0", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		out3, err := kubeClient.ExecByContainer("app.kubernetes.io/component=test-3", "container-0", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(out, "test")
+		framework.ExpectEqual(out2, "test")
+		framework.ExpectEqual(out3, "test")
+	})
+	ginkgo.It("should deploy helm applications mixed concurrently and sequentially", func() {
+		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm_concurrent_sequential")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("deploy")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+		}
+
+		// run the command
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// wait until nginx pod is reachable
+		out, err := kubeClient.ExecByContainer("app.kubernetes.io/component=test", "container-0", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		out2, err := kubeClient.ExecByContainer("app.kubernetes.io/component=test-2", "container-0", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+		out3, err := kubeClient.ExecByContainer("app.kubernetes.io/component=test-3", "container-0", ns, []string{"echo", "-n", "test"})
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(out, "test")
+		framework.ExpectEqual(out2, "test")
+		framework.ExpectEqual(out3, "test")
+	})
 })
