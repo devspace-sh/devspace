@@ -195,7 +195,7 @@ var _ = DevSpaceDescribe("deploy", func() {
 		framework.ExpectEqual(out, "test")
 	})
 
-	ginkgo.It("should deploy helm applications concurrently", func() {
+	ginkgo.It("should deploy applications concurrently", func() {
 		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm_concurrent_all")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -231,7 +231,8 @@ var _ = DevSpaceDescribe("deploy", func() {
 		framework.ExpectEqual(out2, "test")
 		framework.ExpectEqual(out3, "test")
 	})
-	ginkgo.It("should deploy helm applications mixed concurrently and sequentially", func() {
+
+	ginkgo.It("should deploy applications mixed concurrently and sequentially", func() {
 		tempDir, err := framework.CopyToTempDir("tests/deploy/testdata/helm_concurrent_sequential")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
