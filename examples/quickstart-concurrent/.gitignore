@@ -3,4 +3,3 @@ Dockerfile
 chart/
 node_modules/
 test/
-devspace.yaml

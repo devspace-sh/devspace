@@ -1,0 +1,69 @@
+version: v1beta11
+vars:                                # `vars` specifies variables which may be used as ${VAR_NAME} in devspace.yaml
+- name: IMAGE
+  value: loftsh/javascript:latest
+deployments:                         # `deployments` tells DevSpace how to deploy this project
+- name: quickstart-con-1
+  concurrent: true
+  helm:                              # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+    componentChart: true
+    displayOutput: true             # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
+    values:                          # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+      containers:
+      - image: ${IMAGE}              # Use the value of our `${IMAGE}` variable here (see vars above)
+        command: ["sleep", "infinity"]
+- name: quickstart-con-2
+  concurrent: true
+  helm:                              # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+    componentChart: true
+    displayOutput: true             # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
+    values:                          # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+      containers:
+      - image: ${IMAGE}              # Use the value of our `${IMAGE}` variable here (see vars above)
+        command: ["sleep", "infinity"]
+- name: quickstart-con-3
+  concurrent: true
+  helm:                              # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+    componentChart: true
+    displayOutput: true             # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
+    values:                          # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+      containers:
+      - image: ${IMAGE}              # Use the value of our `${IMAGE}` variable here (see vars above)
+        command: ["sleep", "infinity"]
+- name: quickstart-con-4
+  concurrent: true
+  helm:                              # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+    componentChart: true
+    displayOutput: true             # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
+    values:                          # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+      containers:
+      - image: ${IMAGE}              # Use the value of our `${IMAGE}` variable here (see vars above)
+        command: ["sleep", "infinity"]
+- name: quickstart-con-5
+  concurrent: true
+  helm:                              # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+    componentChart: true
+    displayOutput: true             # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
+    values:                          # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+      containers:
+      - image: ${IMAGE}              # Use the value of our `${IMAGE}` variable here (see vars above)
+        command: ["sleep", "infinity"]
+- name: quickstart-seq-1
+  helm:                              # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+    componentChart: true
+    displayOutput: true             # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
+    values:                          # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+      containers:
+      - image: ${IMAGE}              # Use the value of our `${IMAGE}` variable here (see vars above)
+        command: ["sleep", "infinity"]
+dev:                                 # `dev` only applies when you run `devspace dev`
+  ports:                             # `dev.ports` specifies all ports that should be forwarded while `devspace dev` is running
+  - imageSelector: ${IMAGE}          # Select the Pod that runs our `${IMAGE}`
+    forward:
+    - port: 3000                     # lets you access your application via localhost:3000 on your local machine
+  sync:                              # `dev.sync` configures a file sync between our Pods in k8s and your local project files
+  - imageSelector: ${IMAGE}          # Select the Pod that runs our `${IMAGE}`
+    excludeFile: .gitignore          # Exclude everything defined in .gitignore
+  terminal:                          # `dev.terminal` tells DevSpace to open a terminal as a last step during `devspace dev`
+    imageSelector: ${IMAGE}          # Select the Pod that runs our `${IMAGE}`
+    command: ["./devspace_start.sh"] # With this optional `command` we can tell DevSpace to run a script when opening the terminal
