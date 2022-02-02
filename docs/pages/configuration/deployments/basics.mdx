@@ -125,6 +125,9 @@ The following flags are available for all commands that trigger the deployment p
 ## Deployment Process
 DevSpace loads the `deployments` configuration from `devspace.yaml` and by default deploys each deployment sequentially in the order that they are specified in the `deployments` array. Alternatively, some or all deployments can be configured to deploy in parallel by setting `concurrent: true`. Deployments with concurrency enabled will deploy before sequential deployments. Additionally, DevSpace also deploys related projects specified in `dependencies`.
 
+:::warning Helm hooks and concurrency
+When using concurrency for Helm deployments that have Helm hooks, be cautious if those hooks depend on resources created by other deployments. You may want such a deployments to be run sequentially after concurrent deployments are completed. Otherwise, appropriate retry logic will be necessary for the affected Helm hook in order to avoid deployment failure.
+:::
 
 ### 1. Deploy Dependencies
 
