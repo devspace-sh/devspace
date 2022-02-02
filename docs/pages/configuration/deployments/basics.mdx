@@ -107,8 +107,8 @@ deployments:
 </TabItem>
 </Tabs>
 
-:::info Sequential Deployment
-Unlike images which are build in parallel, deployments will be deployed sequentially following the order in which they are specified in the `devspace.yaml`.
+:::info Sequential and Concurrent Deployment
+Unlike images, which are built in parallel by default, deployments will be deployed sequentially following the order in which they are specified in the `devspace.yaml`. If a deployment has `concurrent: true` set, then it will run before any sequential deployments and in parallel with other deployments that also have concurrency enabled.
 :::
 
 ## Run Deployments
