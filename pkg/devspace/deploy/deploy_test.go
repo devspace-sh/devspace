@@ -137,6 +137,21 @@ func TestDeploy(t *testing.T) {
 				Deployments: map[string]*generated.DeploymentCache{},
 			},
 		},
+		{
+			name: "Deploy concurrently",
+			deployments: []*latest.DeploymentConfig{
+				{
+					Name: "concurrentDeploy",
+					Kubectl: &latest.KubectlConfig{
+						Manifests: []string{},
+					},
+					Concurrent: true,
+				},
+			},
+			cache: &generated.CacheConfig{
+				Deployments: map[string]*generated.DeploymentCache{},
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
