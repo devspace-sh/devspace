@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,7 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/vmware-labs/yaml-jsonpath/pkg/yamlpath"
+	yaml "gopkg.in/yaml.v3"
 
 	"github.com/loft-sh/devspace/pkg/devspace/compose"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
@@ -238,13 +241,24 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		for {
 			image := ""
 			if imageQuestion != "" {
+				manifests, err := cmd.render(f, config)
+				if err != nil {
+					return errors.Wrap(err, "error rendering deployment")
+				}
+
+				images, err := parseImages(manifests)
+				if err != nil {
+					return errors.Wrap(err, "error parsing images")
+				}
+
+				if len(images) == 0 {
+					return fmt.Errorf("no images found for the selected deployments")
+				}
+
 				image, err = cmd.log.Question(&survey.QuestionOptions{
-					Question:          imageQuestion,
-					ValidationMessage: "Please enter a valid container image from a Kubernetes pod (e.g. myregistry.tld/project/image)",
-					ValidationFunc: func(name string) error {
-						_, _, err := imageselector.GetStrippedDockerImageName(strings.ToLower(name))
-						return err
-					},
+					Question:     imageQuestion,
+					DefaultValue: images[0],
+					Options:      images,
 				})
 				if err != nil {
 					return err
@@ -726,4 +740,58 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config, imageName string) er
 		}
 	}
 	return nil
+}
+
+func (cmd *InitCmd) render(f factory.Factory, config *latest.Config) (string, error) {
+	// Save temporary file to render it
+	renderPath := loader.ConfigPath("render.yaml")
+	configLoader := loader.NewConfigLoader(renderPath)
+
+	err := configLoader.Save(config)
+	defer os.Remove(renderPath)
+	if err != nil {
+		return "", err
+	}
+
+	// Use the render command to render it.
+	writer := &bytes.Buffer{}
+	renderCmd := &RenderCmd{
+		GlobalFlags: &flags.GlobalFlags{
+			Silent:     true,
+			ConfigPath: renderPath,
+		},
+		SkipPush:  true,
+		SkipBuild: true,
+		Writer:    writer,
+	}
+	err = renderCmd.Run(f)
+	if err != nil {
+		return "", err
+	}
+
+	return writer.String(), nil
+}
+
+func parseImages(manifests string) ([]string, error) {
+	images := []string{}
+
+	var doc yaml.Node
+	dec := yaml.NewDecoder(bytes.NewReader([]byte(manifests)))
+	for dec.Decode(&doc) == nil {
+		path, err := yamlpath.NewPath("..image")
+		if err != nil {
+			return nil, err
+		}
+
+		matches, err := path.Find(&doc)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, match := range matches {
+			images = append(images, match.Value)
+		}
+	}
+
+	return images, nil
 }

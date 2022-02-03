@@ -1,0 +1,5 @@
+containers:
+  app:
+    image: username/app
+
+pullSecrets: []
