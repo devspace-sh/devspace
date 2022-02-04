@@ -208,14 +208,10 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 			}
 
 			if selectedDeploymentOption == HelmChartOption {
-				imageQuestion = "What is the main container image of this project which is deployed by this Helm chart? (e.g. ecr.io/project/image)"
+				imageQuestion = "Which image do you want to develop with DevSpace?"
 				err = configureManager.AddHelmDeployment(deploymentName)
 			} else if selectedDeploymentOption == ManifestsOption || selectedDeploymentOption == KustomizeOption {
-				if selectedDeploymentOption == ManifestsOption {
-					imageQuestion = "What is the main container image of this project which is deployed by these manifests? (e.g. ecr.io/project/image)"
-				} else {
-					imageQuestion = "What is the main container image of this project which is deployed by this Kustomization? (e.g. ecr.io/project/image)"
-				}
+				imageQuestion = "Which image do you want to develop with DevSpace?"
 				err = configureManager.AddKubectlDeployment(deploymentName, selectedDeploymentOption == KustomizeOption)
 			}
 
