@@ -2,11 +2,11 @@ package init
 
 import (
 	"bytes"
-	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -60,6 +60,181 @@ var _ = DevSpaceDescribe("init", func() {
 
 		framework.ExpectEqual(len(config.Variables()), 1+len(variable.AlwaysResolvePredefinedVars))
 		framework.ExpectEqual(config.Variables()["IMAGE"], "username/app")
+
+		ns, err := kubeClient.CreateNamespace("init")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		done := make(chan error)
+		go func() {
+			devCmd := &cmd.DevCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+			}
+			done <- devCmd.Run(f, []string{"sh", "-c", "exit 0"})
+		}()
+
+		err = <-done
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should create devspace.yml without registry details and manifests deploy", func() {
+		tempDir, err := framework.CopyToTempDir("tests/init/testdata/new")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// set the question answer func here
+		f.SetAnswerFunc(func(params *survey.QuestionOptions) (string, error) {
+			if strings.Contains(params.Question, "Which registry would you want to use to push images to?") {
+				return "Skip Registry", nil
+			}
+
+			if strings.Contains(params.Question, "How do you want to deploy this project?") {
+				return cmd.ManifestsOption, nil
+			}
+
+			if strings.Contains(params.Question, "Please enter the paths to your Kubernetes manifests") {
+				return "manifests/**", nil
+			}
+
+			return params.DefaultValue, nil
+		})
+
+		initCmd := &cmd.InitCmd{}
+		err = initCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		config, _, err := framework.LoadConfig(f, filepath.Join(tempDir, "devspace.yaml"))
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(config.Variables()), 1+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(config.Variables()["IMAGE"], "username/app")
+
+		ns, err := kubeClient.CreateNamespace("init")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		done := make(chan error)
+		go func() {
+			devCmd := &cmd.DevCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+			}
+			done <- devCmd.Run(f, []string{"sh", "-c", "exit 0"})
+		}()
+
+		err = <-done
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should create devspace.yml without registry details and kustomize deploy", func() {
+		tempDir, err := framework.CopyToTempDir("tests/init/testdata/new")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// set the question answer func here
+		f.SetAnswerFunc(func(params *survey.QuestionOptions) (string, error) {
+			if strings.Contains(params.Question, "Which registry would you want to use to push images to?") {
+				return "Skip Registry", nil
+			}
+
+			if strings.Contains(params.Question, "How do you want to deploy this project?") {
+				return cmd.KustomizeOption, nil
+			}
+
+			if strings.Contains(params.Question, "Please enter path to your Kustomization folder") {
+				return "./kustomization", nil
+			}
+
+			return params.DefaultValue, nil
+		})
+
+		initCmd := &cmd.InitCmd{}
+		err = initCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		config, _, err := framework.LoadConfig(f, filepath.Join(tempDir, "devspace.yaml"))
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(config.Variables()), 1+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(config.Variables()["IMAGE"], "username/app")
+
+		ns, err := kubeClient.CreateNamespace("init")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		done := make(chan error)
+		go func() {
+			devCmd := &cmd.DevCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+			}
+			done <- devCmd.Run(f, []string{"sh", "-c", "exit 0"})
+		}()
+
+		err = <-done
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should create devspace.yml without registry details and local helm chart deploy", func() {
+		tempDir, err := framework.CopyToTempDir("tests/init/testdata/new")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		// set the question answer func here
+		f.SetAnswerFunc(func(params *survey.QuestionOptions) (string, error) {
+			if strings.Contains(params.Question, "Which registry would you want to use to push images to?") {
+				return "Skip Registry", nil
+			}
+
+			if strings.Contains(params.Question, "How do you want to deploy this project?") {
+				return cmd.HelmChartOption, nil
+			}
+
+			if strings.Contains(params.Question, "Which Helm chart do you want to use?") {
+				return `Use a local Helm chart (e.g. ./helm/chart/)`, nil
+			}
+
+			if strings.Contains(params.Question, "Please enter the relative path to your local Helm chart") {
+				return "./chart", nil
+			}
+
+			return params.DefaultValue, nil
+		})
+
+		initCmd := &cmd.InitCmd{}
+		err = initCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		config, _, err := framework.LoadConfig(f, filepath.Join(tempDir, "devspace.yaml"))
+		framework.ExpectNoError(err)
+
+		framework.ExpectEqual(len(config.Variables()), 1+len(variable.AlwaysResolvePredefinedVars))
+		framework.ExpectEqual(config.Variables()["IMAGE"], "username/app")
+
+		ns, err := kubeClient.CreateNamespace("init")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		done := make(chan error)
+		go func() {
+			devCmd := &cmd.DevCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+			}
+			done <- devCmd.Run(f, []string{"sh", "-c", "exit 0"})
+		}()
+
+		err = <-done
+		framework.ExpectNoError(err)
 	})
 
 	ginkgo.It("should create devspace.yml from docker-compose.yaml", func() {
@@ -76,7 +251,6 @@ var _ = DevSpaceDescribe("init", func() {
 
 		// Answer all questions with the default
 		f.SetAnswerFunc(func(params *survey.QuestionOptions) (string, error) {
-			fmt.Println(params.Question)
 			return params.DefaultValue, nil
 		})
 

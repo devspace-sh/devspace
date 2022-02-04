@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "new"
+  labels:
+    "app.kubernetes.io/name": "devspace-app"
+    "app.kubernetes.io/component": "test"
+    "app.kubernetes.io/managed-by": "Helm"
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      "app.kubernetes.io/name": "devspace-app"
+      "app.kubernetes.io/component": "test"
+      "app.kubernetes.io/managed-by": "Helm"
+  template:
+    metadata:
+      labels:
+        "app.kubernetes.io/name": "devspace-app"
+        "app.kubernetes.io/component": "test"
+        "app.kubernetes.io/managed-by": "Helm"
+    spec:
+      containers:
+        - image: "username/app"
+          name: "container-0"
