@@ -829,10 +829,16 @@ func (u *upstream) filterChanges(files []*FileInformation) ([]*FileInformation, 
 
 					change := needCheck[i+j]
 					u.sync.fileIndex.fileMap[change.Name].Mtime = change.Mtime
-					batch = append(batch, &remote.TouchPath{
+					touchPath := &remote.TouchPath{
 						Path:      change.Name,
 						MtimeUnix: change.Mtime,
-					})
+					}
+					if !equalFilePermissions(u.sync.fileIndex.fileMap[change.Name].Mode, change.Mode) {
+						u.sync.fileIndex.fileMap[change.Name].Mode = change.Mode
+						touchPath.Mode = uint32(change.Mode)
+					}
+
+					batch = append(batch, touchPath)
 				}
 
 				// ask remote for checksums

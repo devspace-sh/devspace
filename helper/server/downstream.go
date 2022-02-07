@@ -113,6 +113,8 @@ func StartDownstreamServer(reader io.Reader, writer io.Writer, options *Downstre
 
 // Downstream is the implementation for the downstream server
 type Downstream struct {
+	remote.UnimplementedDownstreamServer
+
 	options *DownstreamOptions
 
 	// ignore matcher is the ignore matcher which matches against excluded files and paths
@@ -390,6 +392,7 @@ func (d *Downstream) applyChange(newState map[string]*remote.Change, fullPath st
 				Size:          stat.Size(),
 				MtimeUnix:     stat.ModTime().Unix(),
 				MtimeUnixNano: stat.ModTime().UnixNano(),
+				Mode:          uint32(stat.Mode()),
 				IsDir:         false,
 			}
 		}
@@ -413,6 +416,7 @@ func copyState(state map[string]*remote.Change) map[string]*remote.Change {
 			MtimeUnix:     v.MtimeUnix,
 			MtimeUnixNano: v.MtimeUnixNano,
 			Size:          v.Size,
+			Mode:          v.Mode,
 			IsDir:         v.IsDir,
 		}
 	}
@@ -444,6 +448,7 @@ func streamChanges(basePath string, oldState map[string]*remote.Change, newState
 						MtimeUnix:     newFile.MtimeUnix,
 						MtimeUnixNano: newFile.MtimeUnixNano,
 						Size:          newFile.Size,
+						Mode:          newFile.Mode,
 						IsDir:         newFile.IsDir,
 					})
 				}
@@ -458,6 +463,7 @@ func streamChanges(basePath string, oldState map[string]*remote.Change, newState
 					MtimeUnix:     newFile.MtimeUnix,
 					MtimeUnixNano: newFile.MtimeUnixNano,
 					Size:          newFile.Size,
+					Mode:          newFile.Mode,
 					IsDir:         newFile.IsDir,
 				})
 			}
@@ -490,6 +496,7 @@ func streamChanges(basePath string, oldState map[string]*remote.Change, newState
 					MtimeUnix:     oldFile.MtimeUnix,
 					MtimeUnixNano: oldFile.MtimeUnixNano,
 					Size:          oldFile.Size,
+					Mode:          oldFile.Mode,
 					IsDir:         oldFile.IsDir,
 				})
 			}
@@ -568,6 +575,7 @@ func walkDir(basePath string, path string, ignoreMatcher ignoreparser.IgnorePars
 					Size:          stat.Size(),
 					MtimeUnix:     stat.ModTime().Unix(),
 					MtimeUnixNano: stat.ModTime().UnixNano(),
+					Mode:          uint32(stat.Mode()),
 					IsDir:         false,
 				}
 			}

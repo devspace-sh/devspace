@@ -76,6 +76,8 @@ func StartUpstreamServer(reader io.Reader, writer io.Writer, options *UpstreamOp
 
 // Upstream is the implementation for the upstream server
 type Upstream struct {
+	remote.UnimplementedUpstreamServer
+
 	options *UpstreamOptions
 
 	// ignore matcher is the ignore matcher which matches against excluded files and paths
@@ -138,7 +140,7 @@ func (u *Upstream) Remove(stream remote.Upstream_RemoveServer) error {
 
 func (u *Upstream) Checksums(ctx context.Context, paths *remote.TouchPaths) (*remote.PathsChecksum, error) {
 	if paths != nil {
-		// update timestamps
+		// update timestamps & permissions
 		stopChan := make(chan struct{})
 		go func() {
 			for _, path := range paths.Paths {
@@ -147,12 +149,20 @@ func (u *Upstream) Checksums(ctx context.Context, paths *remote.TouchPaths) (*re
 				}
 
 				// Update timestamp if needed
+				absolutePath := filepath.Join(u.options.UploadPath, path.Path)
 				if path.MtimeUnix > 0 {
-					absolutePath := filepath.Join(u.options.UploadPath, path.Path)
 					t := time.Unix(path.MtimeUnix, 0)
 					err := os.Chtimes(absolutePath, t, t)
 					if err != nil && !os.IsNotExist(err) {
 						stderrlog.Logf("Error touching %s: %v", path, err)
+					}
+				}
+
+				// Update permissions if needed
+				if path.Mode > 0 {
+					err := os.Chmod(absolutePath, os.FileMode(path.Mode))
+					if err != nil && !os.IsNotExist(err) {
+						stderrlog.Logf("Error chmod %s: %v", path, err)
 					}
 				}
 			}

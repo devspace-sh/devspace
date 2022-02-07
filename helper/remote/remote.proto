@@ -1,5 +1,7 @@
-// protoc -I . remote.proto  --go_out=plugins=grpc:.
+// protoc -I . remote.proto  --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative
 syntax = "proto3";
+
+option go_package = "github.com/loft-sh/devspace/helper/remote";
 
 package remote;
 
@@ -66,6 +68,7 @@ message TouchPaths {
 message TouchPath {
     string Path = 1;
     int64 MtimeUnix = 2;
+    uint32 Mode = 3;
 }
 
 message Command {
@@ -101,7 +104,8 @@ message Change {
     int64 MtimeUnix = 3;
     int64 MtimeUnixNano = 4;
     int64 Size = 5;
-    bool IsDir = 6;
+    uint32 Mode = 6;
+    bool IsDir = 7;
 }
 
 message Paths {

@@ -4,15 +4,18 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
+	"github.com/sirupsen/logrus"
 )
 
 var _ factory.Factory = &DefaultFactory{}
 
 func NewDefaultFactory() *DefaultFactory {
+	logger := log.GetInstance()
+	logger.SetLevel(logrus.DebugLevel)
 	return &DefaultFactory{
 		Factory: factory.DefaultFactory(),
 		log: &DefaultLog{
-			Logger: log.GetInstance(),
+			Logger: logger,
 		},
 	}
 }

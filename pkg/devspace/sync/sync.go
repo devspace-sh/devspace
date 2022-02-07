@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
@@ -358,7 +359,7 @@ func (s *Sync) sendChangesToUpstream(changes []*FileInformation, remove bool) {
 		for i := j; i < (j+initialUpstreamBatchSize) && i < len(changes); i++ {
 			if remove {
 				sendBatch = append(sendBatch, changes[i])
-			} else if s.fileIndex.fileMap[changes[i].Name] == nil || changes[i].Mtime != s.fileIndex.fileMap[changes[i].Name].Mtime || changes[i].Size != s.fileIndex.fileMap[changes[i].Name].Size {
+			} else if s.fileIndex.fileMap[changes[i].Name] == nil || !equalFilePermissions(changes[i].Mode, s.fileIndex.fileMap[changes[i].Name].Mode) || changes[i].Mtime != s.fileIndex.fileMap[changes[i].Name].Mtime || changes[i].Size != s.fileIndex.fileMap[changes[i].Name].Size {
 				sendBatch = append(sendBatch, changes[i])
 			}
 		}
@@ -374,6 +375,14 @@ func (s *Sync) sendChangesToUpstream(changes []*FileInformation, remove bool) {
 			s.upstream.isBusyMutex.Unlock()
 		}
 	}
+}
+
+func equalFilePermissions(mode os.FileMode, mode2 os.FileMode) bool {
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		return true
+	}
+
+	return mode == mode2
 }
 
 // Stop stops the sync process

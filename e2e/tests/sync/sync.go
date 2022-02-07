@@ -36,6 +36,68 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectNoError(err)
 	})
 
+	ginkgo.It("devspace sync should override permissions on initial sync", func() {
+		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/permissions")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("sync")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command
+		deployCmd := &cmd.DeployCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+			},
+		}
+
+		// run the command
+		err = deployCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// wait until busybox pod is reachable
+		_, err = kubeClient.ExecByImageSelector("busybox", ns, []string{"sh", "-c", "mkdir /test_sync && echo -n 'echo \"Hello World!\"' > /test_sync/test.sh"})
+		framework.ExpectNoError(err)
+
+		// run single sync
+		syncCmd := &cmd.SyncCmd{
+			GlobalFlags: &flags.GlobalFlags{
+				NoWarn:    true,
+				Namespace: ns,
+				Debug:     true,
+			},
+			ContainerPath: "/test_sync",
+			NoWatch:       true,
+			ImageSelector: "busybox",
+		}
+
+		// run the command
+		err = syncCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// check if script is executable
+		_, err = kubeClient.ExecByImageSelector("busybox", ns, []string{"sh", "-c", "/test_sync/test.sh"})
+		framework.ExpectError(err)
+
+		// make script executable
+		err = os.Chmod("test.sh", 0755)
+		framework.ExpectNoError(err)
+
+		// rerun sync command
+		err = syncCmd.Run(f)
+		framework.ExpectNoError(err)
+
+		// make sure we got the right result this time
+		out, err := kubeClient.ExecByImageSelector("busybox", ns, []string{"sh", "-c", "/test_sync/test.sh"})
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(string(out), "Hello World!\n")
+	})
+
 	ginkgo.It("devspace sync should work with and without config", func() {
 		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/no-config")
 		framework.ExpectNoError(err)

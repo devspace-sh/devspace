@@ -45,6 +45,7 @@ func parseFileInformation(change *remote.Change) *FileInformation {
 		Size:        change.Size,
 		Mtime:       change.MtimeUnix,
 		MtimeNano:   change.MtimeUnixNano,
+		Mode:        os.FileMode(change.Mode),
 		IsDirectory: change.IsDir,
 	}
 }

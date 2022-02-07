@@ -17,6 +17,8 @@ import (
 )
 
 type tunnelServer struct {
+	remote.UnimplementedTunnelServer
+
 	// ping is used to determine if we still have an alive connection
 	ping *pingtimeout.PingTimeout
 }

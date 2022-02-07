@@ -1,16 +1,15 @@
 package sync
 
 import (
+	"github.com/loft-sh/devspace/helper/remote"
 	"github.com/loft-sh/devspace/helper/server/ignoreparser"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
-
-	"github.com/loft-sh/devspace/helper/remote"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
 )
@@ -119,6 +118,7 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation, localState 
 					Path:          element.Name,
 					MtimeUnix:     element.Mtime,
 					MtimeUnixNano: element.MtimeNano,
+					Mode:          uint32(element.Mode),
 					Size:          element.Size,
 					IsDir:         element.IsDirectory,
 				})
@@ -142,6 +142,7 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation, localState 
 							Path:          element.Name,
 							MtimeUnix:     element.Mtime,
 							MtimeUnixNano: element.MtimeNano,
+							Mode:          uint32(element.Mode),
 							Size:          element.Size,
 							IsDir:         element.IsDirectory,
 						})
@@ -161,6 +162,7 @@ func (i *initialSyncer) Run(remoteState map[string]*FileInformation, localState 
 						Path:          element.Name,
 						MtimeUnix:     element.Mtime,
 						MtimeUnixNano: element.MtimeNano,
+						Mode:          uint32(element.Mode),
 						Size:          element.Size,
 						IsDir:         element.IsDirectory,
 					})
@@ -257,6 +259,7 @@ func (i *initialSyncer) deltaState(remoteState map[string]*FileInformation, loca
 				delete(remoteState, relativePath)
 
 				// Add file to upload
+				// Make sure we use remote mode here
 				changes = append(changes, stat)
 			} else if action == noAction {
 				delete(remoteState, relativePath)
@@ -411,6 +414,10 @@ func (i *initialSyncer) decide(fileInformation *FileInformation, strategy latest
 
 		// File did not change or was changed by downstream
 		if fileInformation.Size == i.o.FileIndex.fileMap[fileInformation.Name].Size {
+			if strategy == latest.InitialSyncStrategyPreferLocal && !equalFilePermissions(fileInformation.Mode, i.o.FileIndex.fileMap[fileInformation.Name].Mode) {
+				return uploadAction
+			}
+
 			if fileInformation.Mtime == i.o.FileIndex.fileMap[fileInformation.Name].Mtime {
 				return noAction
 			} else if i.o.CompareBy == latest.InitialSyncCompareBySize {
