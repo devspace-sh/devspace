@@ -1,0 +1,9 @@
+version: v1beta11
+deployments:
+  - name: test
+    helm:
+      componentChart: true
+      values:
+        containers:
+          - image: busybox
+            command: ["sleep", "999999999999"]
