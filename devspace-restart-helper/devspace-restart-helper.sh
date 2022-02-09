@@ -333,7 +333,7 @@ sendSignalToProcessOrProcessGroup () {
   fi
 }
 
-killProcessGroupGracefulyByProcessIDFile () {
+killProcessGroupGracefullyByProcessIDFile () {
   pidFile=${1?"pidFile variable is not defined."}
   stopSignal=${2:-$stopSignalDefault}
   signal="$stopSignal"
@@ -341,7 +341,7 @@ killProcessGroupGracefulyByProcessIDFile () {
   if [ "$pidToKill" ]; then
     sendSignalToProcessOrProcessGroup "$pidToKill" "$signal" false
     sleep 0.05
-    log "Debug" "Waiting for a maximum of ($gracePeriod) seconds for PID ($pidToKill) to exit gracefuly."
+    log "Debug" "Waiting for a maximum of ($gracePeriod) seconds for PID ($pidToKill) to exit gracefully."
     waitForPID "$pidToKill" "$gracePeriod"
     # NOTE: At this point either process with id pidToKill died OR it has elapsed more than $gracePeriod.
     # waitForPID doesn't kill any process. Check if alive:
@@ -353,10 +353,10 @@ killProcessGroupGracefulyByProcessIDFile () {
       sendSignalToProcessOrProcessGroup "$pidToKill" "$signal" true
       sleep 0.05
     else
-      log "Debug" "PID ($pidToKill) exited gracefuly"
+      log "Debug" "PID ($pidToKill) exited gracefully"
     fi  
   else
-    log "Error" "killProcessGroupGracefulyByProcessIDFile called with pidFile=($1), but file content is empty."
+    log "Error" "killProcessGroupGracefullyByProcessIDFile called with pidFile=($1), but file content is empty."
   fi
 }
 
@@ -365,17 +365,17 @@ quit() {
   restart=false
   screenProcessID="$( getProcessIDFromFile "$screenProcessIDFile" )"
   cmdProcessID="$( getProcessIDFromFile "$cmdProcessIDFile" )"
-  log "Info" "Trying to kill command process ($cmdProcessID) gracefuly."
+  log "Info" "Trying to kill command process ($cmdProcessID) gracefully."
   # $stopSignalForProcess can be overridden in the input values.
-  killProcessGroupGracefulyByProcessIDFile "$cmdProcessIDFile" "$stopSignalForProcess"
+  killProcessGroupGracefullyByProcessIDFile "$cmdProcessIDFile" "$stopSignalForProcess"
   
   # Check if Screen was ever used and screen process is alive.
   isAlive "$screenProcessID"
   lastCommandsExitStatus=$?
   if [ "$lastCommandsExitStatus" -eq 0 ]; then
     log "Debug" "Screen seems to be alive."
-    log "Info" "Trying to kill Screen process ($screenProcessID) gracefuly."
-    killProcessGroupGracefulyByProcessIDFile "$screenProcessIDFile" "$stopSignalDefault"
+    log "Info" "Trying to kill Screen process ($screenProcessID) gracefully."
+    killProcessGroupGracefullyByProcessIDFile "$screenProcessIDFile" "$stopSignalDefault"
   fi
   # Reap zombies and left children.
   childProcessReaper
