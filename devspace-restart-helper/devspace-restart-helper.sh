@@ -21,7 +21,7 @@ Usage:
   --development : Enable verbose, debug and development.
   --log-to-file : Enabling logging to file.
   --grace-period 7 : Grace period -in seconds- to wait for a process to exit after sending it's STOPSIGNAL, here we have several processes command, screen (if enabled), and some childeren of ours. The gracePeriod will be applied as one for each process. It is recommended to use 1/4, 1/5 of the terminationGracePeriodSeconds (default 30 seconds) value.
-  --stop-signal-for-process 15 : Which signal should be send to the process(and any forked process) for gracefull termination. (by default SIGTERM)
+  --stop-signal-for-process 15 : Which signal should be send to the process(and any forked process) for graceful termination. (by default SIGTERM)
 USAGE
 }
 
@@ -333,7 +333,7 @@ sendSignalToProcessOrProcessGroup () {
   fi
 }
 
-killProcessGroupGracefullyByProcessIDFile () {
+killProcessGroupGracefulyByProcessIDFile () {
   pidFile=${1?"pidFile variable is not defined."}
   stopSignal=${2:-$stopSignalDefault}
   signal="$stopSignal"
@@ -341,7 +341,7 @@ killProcessGroupGracefullyByProcessIDFile () {
   if [ "$pidToKill" ]; then
     sendSignalToProcessOrProcessGroup "$pidToKill" "$signal" false
     sleep 0.05
-    log "Debug" "Waiting for a maximum of ($gracePeriod) seconds for PID ($pidToKill) to exit gracefully."
+    log "Debug" "Waiting for a maximum of ($gracePeriod) seconds for PID ($pidToKill) to exit gracefuly."
     waitForPID "$pidToKill" "$gracePeriod"
     # NOTE: At this point either process with id pidToKill died OR it has elapsed more than $gracePeriod.
     # waitForPID doesn't kill any process. Check if alive:
@@ -353,10 +353,10 @@ killProcessGroupGracefullyByProcessIDFile () {
       sendSignalToProcessOrProcessGroup "$pidToKill" "$signal" true
       sleep 0.05
     else
-      log "Debug" "PID ($pidToKill) exited gracefully"
+      log "Debug" "PID ($pidToKill) exited gracefuly"
     fi  
   else
-    log "Error" "killProcessGroupGracefullyByProcessIDFile called with pidFile=($1), but file content is empty."
+    log "Error" "killProcessGroupGracefulyByProcessIDFile called with pidFile=($1), but file content is empty."
   fi
 }
 
@@ -365,17 +365,17 @@ quit() {
   restart=false
   screenProcessID="$( getProcessIDFromFile "$screenProcessIDFile" )"
   cmdProcessID="$( getProcessIDFromFile "$cmdProcessIDFile" )"
-  log "Info" "Trying to kill command process ($cmdProcessID) gracefully."
+  log "Info" "Trying to kill command process ($cmdProcessID) gracefuly."
   # $stopSignalForProcess can be overridden in the input values.
-  killProcessGroupGracefullyByProcessIDFile "$cmdProcessIDFile" "$stopSignalForProcess"
+  killProcessGroupGracefulyByProcessIDFile "$cmdProcessIDFile" "$stopSignalForProcess"
   
   # Check if Screen was ever used and screen process is alive.
   isAlive "$screenProcessID"
   lastCommandsExitStatus=$?
   if [ "$lastCommandsExitStatus" -eq 0 ]; then
     log "Debug" "Screen seems to be alive."
-    log "Info" "Trying to kill Screen process ($screenProcessID) gracefully."
-    killProcessGroupGracefullyByProcessIDFile "$screenProcessIDFile" "$stopSignalDefault"
+    log "Info" "Trying to kill Screen process ($screenProcessID) gracefuly."
+    killProcessGroupGracefulyByProcessIDFile "$screenProcessIDFile" "$stopSignalDefault"
   fi
   # Reap zombies and left children.
   childProcessReaper
@@ -537,4 +537,3 @@ main () {
 }
 ######################################################################
 main "$@"
-
