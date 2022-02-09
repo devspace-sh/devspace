@@ -380,6 +380,7 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 	copiedPod.Annotations[selector.MatchedContainerAnnotation] = pod.Container.Name
 	copiedPod.Annotations[ParentHashAnnotation] = parentHash
 	copiedPod.Annotations[ReplaceConfigHashAnnotation] = configHash
+	copiedPod.Spec.NodeName = ""
 
 	// get pod spec from object
 	switch t := parent.(type) {

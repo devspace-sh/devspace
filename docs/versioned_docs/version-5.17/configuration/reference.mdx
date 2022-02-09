@@ -340,7 +340,7 @@ replacePods:                              # struct[] | Which pods should be repl
   replaceImage: ""                        # string   | The image that should be used for the pod
   persistPaths:                           # struct[] | Paths that should get persisted in the replaced pod
   - path: /app                            # string   | The container path that should get persisted
-    volumePath: /my-volume/app            # string   | Optional path on the persistent volume to mount
+    volumePath: my-volume/app             # string   | Optional path on the persistent volume to mount
     containerName: ""                     # string   | Optional container name in the replaced pod to persist the path
     readOnly: false                       # bool     | If the path should get mounted read only
   persistenceOptions:                     # struct   | Additional options for persistPaths
