@@ -1,0 +1,91 @@
+version: v1beta11
+
+# `vars` specifies variables which may be used as ${VAR_NAME} in devspace.yaml
+vars:
+- name: IMAGE_PREFIX
+  value: leventogut
+- name: REPO
+  value: devspace-restart-helper
+- name: WORKING_DIR
+  value: /.devspace
+- name: IMAGE
+  value: ${IMAGE_PREFIX}/${REPO}
+images:
+  alpine:
+    image: ${IMAGE_PREFIX}/${REPO}
+    build:
+      buildKit:
+        inCluster:
+          name: buildKit-builder
+        skipPush: false
+        args:
+          - --platform
+          - linux/amd64
+          - --cache-to
+          - type=registry,ref=${IMAGE_PREFIX}/${REPO}
+          - --cache-from
+          - type=registry,ref=${IMAGE_PREFIX}/${REPO}
+
+
+
+# `deployments` tells DevSpace how to deploy this project
+deployments:
+- name: devspace-restart-helper-test
+  # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+  helm:
+    # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
+    componentChart: true
+    # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+    # You may also use `valuesFiles` to load values from files, e.g. valuesFiles: ["values.yaml"]
+    values:
+      containers:
+      - name: devspace-restart-helper
+        image: ${IMAGE} # Use the value of our `${IMAGE}` variable here (see vars above)
+
+# `dev` only applies when you run `devspace dev`
+dev:
+  # `dev.sync` configures a file sync between our Pods in k8s and your local project files
+  # sync:
+  # - imageSelector: ${IMAGE} # Select the Pod that runs our `${IMAGE}`
+  #   # `excludePaths` option expects an array of strings with paths that should not be synchronized between the
+  #   # local filesystem and the remote container filesystem. It uses the same syntax as `.gitignore`.
+  #   excludePaths:
+  #   - .git/
+
+  # # `dev.terminal` tells DevSpace to open a terminal as a last step during `devspace dev`
+  # terminal:
+  #   imageSelector: ${IMAGE} # Select the Pod that runs our `${IMAGE}`
+  #   # With this optional `command` we can tell DevSpace to run a script when opening the terminal
+  #   # This is often useful to display help info for new users or perform initial tasks (e.g. installing dependencies)
+  #   # DevSpace has generated an example ./devspace_start.sh file in your local project - Feel free to customize it!
+  #   command:
+  #   - ./devspace_start.sh
+commands:
+- name: 2
+  command: devspace enter -c devspace-restart-helper -- kill -2 1
+- name: 9
+  command: devspace enter -c devspace-restart-helper -- kill -9 1
+- name: 15
+  command: devspace enter -c devspace-restart-helper -- kill -15 1
+- name: attach
+  command: devspace attach -c devspace-restart-helper
+- name: up
+  command: devspace --debug purge && devspace --debug build -b && devspace --debug dev
+- name: exec
+  command: devspace enter -c devspace-restart-helper
+- name: logs
+  command: devspace run exec -- cat ${WORKING_DIR}/devspace-restart-helper.log
+- name: ps
+  command: devspace run exec -- ps aux
+- name: devc-alpine
+  command: docker stop drh-alpine; docker rm drh-alpine; docker run --name drh-alpine -it -v "$(pwd)":/tmp/dev -w /tmp/dev alpine sh
+- name: devc-ubuntu
+  command: docker stop drh-ubuntu; docker rm drh-ubuntu; docker run --name drh-ubuntu -it -v "$(pwd)":/tmp/dev -w /tmp/dev ubuntu sh
+- name: devc-debian
+  command: docker stop drh-debian; docker rm drh-debian; docker run --name drh-debian -it -v "$(pwd)":/tmp/dev -w /tmp/dev debian sh
+- name: test-alpine
+  command: docker stop drh-alpine; docker rm drh-alpine; docker run --name drh-alpine -it -v "$(pwd)":/tmp/dev alpine /tmp/dev/devspace-restart-helper.sh --development /tmp/dev/test/process.sh
+- name: test-ubuntu
+  command: docker stop drh-ubuntu; docker rm drh-ubuntu; docker run --name drh-ubuntu -it -v "$(pwd)":/tmp/dev ubuntu /tmp/dev/devspace-restart-helper.sh --development /tmp/dev/test/process.sh
+- name: test-debian
+  command: docker stop drh-debian; docker rm drh-debian; docker run --name drh-debian -it -v "$(pwd)":/tmp/dev debian /tmp/dev/devspace-restart-helper.sh --development /tmp/dev/test/process.sh
