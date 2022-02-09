@@ -24,7 +24,7 @@ func (serviceClient *client) StartLogsWithWriter(options targetselector.Options,
 	} else {
 		options.FilterPod = nil
 		options.FilterContainer = nil
-		options.WaitingStrategy = targetselector.NewUntilNotWaitingStrategy(time.Second * 2)
+		options.WaitingStrategy = targetselector.NewUntilNotWaitingStrategy(time.Second*2, serviceClient.client, options.Namespace)
 	}
 
 	container, err := targetSelector.SelectSingleContainer(context.TODO(), options, serviceClient.log)

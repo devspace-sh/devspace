@@ -23,10 +23,10 @@ type RemoteHook interface {
 	ExecuteRemotely(hook *latest.HookConfig, podContainer *selector.SelectedPodContainer, client kubectl.Client, config config.Config, dependencies []types.Dependency, log logpkg.Logger) error
 }
 
-func NewRemoteHook(hook RemoteHook) Hook {
+func NewRemoteHook(hook RemoteHook, client kubectl.Client, namespace string) Hook {
 	return &remoteHook{
 		Hook:            hook,
-		WaitingStrategy: targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2),
+		WaitingStrategy: targetselector.NewUntilNewestRunningWaitingStrategy(time.Second*2, client, namespace),
 	}
 }
 

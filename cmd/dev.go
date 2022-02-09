@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"io"
 	"os"
 	"os/exec"
@@ -758,7 +759,7 @@ func GetPaths(config *latest.Config) []string {
 		}
 	}
 
-	return removeDuplicates(paths)
+	return stringutil.RemoveDuplicates(paths)
 }
 
 func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Config, error) {
@@ -821,25 +822,6 @@ func defaultStdStreams(stdout io.Writer, stderr io.Writer, stdin io.Reader) (io.
 		stdin = os.Stdin
 	}
 	return stdout, stderr, stdin
-}
-
-func removeDuplicates(arr []string) []string {
-	newArr := []string{}
-	for _, v := range arr {
-		if !contains(newArr, v) {
-			newArr = append(newArr, v)
-		}
-	}
-	return newArr
-}
-
-func contains(haystack []string, needle string) bool {
-	for _, v := range haystack {
-		if v == needle {
-			return true
-		}
-	}
-	return false
 }
 
 func updateLastKubeContext(configLoader loader.ConfigLoader, client kubectl.Client, generatedConfig *generated.Config) error {

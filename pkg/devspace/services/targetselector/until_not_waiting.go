@@ -1,8 +1,8 @@
 package targetselector
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"sort"
-	"sync"
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
@@ -11,17 +11,23 @@ import (
 )
 
 // NewUntilNotWaitingStrategy creates a new waiting strategy
-func NewUntilNotWaitingStrategy(initialDelay time.Duration) WaitingStrategy {
+func NewUntilNotWaitingStrategy(initialDelay time.Duration, client kubectl.Client, namespace string) WaitingStrategy {
 	return &untilNotWaiting{
 		initialDelay: time.Now().Add(initialDelay),
+		podInfoPrinter: &PodInfoPrinter{
+			lastWarning: time.Now().Add(initialDelay),
+			namespace:   namespace,
+			client:      client,
+		},
 	}
 }
 
 // this waiting strategy will wait until the newest pod / container is not in waiting
 // stage anymore and either terminated or running.
 type untilNotWaiting struct {
-	initialDelay    time.Time
-	notFoundWarning sync.Once
+	initialDelay time.Time
+
+	podInfoPrinter *PodInfoPrinter
 }
 
 func (u *untilNotWaiting) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *v1.Pod, error) {
@@ -30,7 +36,7 @@ func (u *untilNotWaiting) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *v1.P
 		return false, nil, nil
 	} else if len(pods) == 0 {
 		if now.After(u.initialDelay.Add(time.Second * 6)) {
-			u.printNotFoundWarning(log)
+			u.podInfoPrinter.PrintNotFoundWarning(log)
 		}
 
 		return false, nil, nil
@@ -52,7 +58,7 @@ func (u *untilNotWaiting) SelectContainer(containers []*selector.SelectedPodCont
 		return false, nil, nil
 	} else if len(containers) == 0 {
 		if now.After(u.initialDelay.Add(time.Second * 6)) {
-			u.printNotFoundWarning(log)
+			u.podInfoPrinter.PrintNotFoundWarning(log)
 		}
 
 		return false, nil, nil
@@ -66,12 +72,6 @@ func (u *untilNotWaiting) SelectContainer(containers []*selector.SelectedPodCont
 	}
 
 	return true, containers[0], nil
-}
-
-func (u *untilNotWaiting) printNotFoundWarning(log log.Logger) {
-	u.notFoundWarning.Do(func() {
-		log.Warnf("DevSpace still couldn't find any Pods that match the selector. DevSpace will continue waiting, but this operation might timeout")
-	})
 }
 
 func isPodWaiting(pod *v1.Pod) bool {

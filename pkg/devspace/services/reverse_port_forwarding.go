@@ -34,7 +34,7 @@ func (serviceClient *client) startReversePortForwarding(portForwarding *latest.P
 
 		options.ImageSelector = append(options.ImageSelector, *imageSelector)
 	}
-	options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
+	options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second*2, serviceClient.client, options.Namespace)
 	options.SkipInitContainers = true
 
 	log.Info("Reverse-Port-Forwarding: Waiting for containers to start...")

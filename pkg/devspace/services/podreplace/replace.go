@@ -829,7 +829,7 @@ func findSingleReplacedPod(ctx context.Context, client kubectl.Client, replacePo
 	targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(labelSelector, replacePod.Namespace, replacePod.ContainerName, "")
 	targetOptions.Timeout = 30
 	targetOptions.AllowPick = false
-	targetOptions.WaitingStrategy = targetselector.NewUntilNotTerminatingStrategy(0)
+	targetOptions.WaitingStrategy = targetselector.NewUntilNotTerminatingStrategy(0, client, targetOptions.Namespace)
 	targetOptions.SkipInitContainers = true
 	selected, err := targetselector.NewTargetSelector(client).SelectSingleContainer(ctx, targetOptions, log)
 	if err != nil {
@@ -902,7 +902,7 @@ func findSingleReplaceablePodParent(ctx context.Context, client kubectl.Client, 
 	targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(replacePod.LabelSelector, replacePod.Namespace, replacePod.ContainerName, "")
 	targetOptions.Timeout = int64(300)
 	targetOptions.AllowPick = false
-	targetOptions.WaitingStrategy = targetselector.NewUntilNotTerminatingStrategy(time.Second * 2)
+	targetOptions.WaitingStrategy = targetselector.NewUntilNotTerminatingStrategy(time.Second*2, client, targetOptions.Namespace)
 	targetOptions.SkipInitContainers = true
 	targetOptions.ImageSelector = []imageselector.ImageSelector{}
 	if replacePod.ImageSelector != "" {

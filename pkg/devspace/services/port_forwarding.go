@@ -122,7 +122,7 @@ func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardi
 
 		options.ImageSelector = append(options.ImageSelector, *imageSelector)
 	}
-	options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
+	options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second*2, serviceClient.client, options.Namespace)
 	options.SkipInitContainers = true
 
 	// start port forwarding

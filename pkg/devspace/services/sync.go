@@ -98,7 +98,7 @@ func (serviceClient *client) newSyncFn(idx int, syncConfig *latest.SyncConfig, i
 	return func() error {
 		targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(syncConfig.LabelSelector, syncConfig.Namespace, syncConfig.ContainerName, "")
 		targetOptions.AllowPick = false
-		targetOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
+		targetOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second*2, serviceClient.client, targetOptions.Namespace)
 
 		// set options
 		options := &synccontroller.Options{

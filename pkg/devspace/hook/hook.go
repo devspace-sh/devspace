@@ -143,16 +143,16 @@ func executeSingle(client kubectl.Client, config config.Config, dependencies []t
 			var hook Hook
 			if hookConfig.Container != nil {
 				if hookConfig.Upload != nil {
-					hook = NewRemoteHook(NewUploadHook())
+					hook = NewRemoteHook(NewUploadHook(), client, hookConfig.Container.Namespace)
 				} else if hookConfig.Download != nil {
-					hook = NewRemoteHook(NewDownloadHook())
+					hook = NewRemoteHook(NewDownloadHook(), client, hookConfig.Container.Namespace)
 				} else if hookConfig.Logs != nil {
 					// we use another waiting strategy here, because the pod might has finished already
-					hook = NewRemoteHookWithWaitingStrategy(NewLogsHook(hookWriter), targetselector.NewUntilNotWaitingStrategy(time.Second*2))
+					hook = NewRemoteHookWithWaitingStrategy(NewLogsHook(hookWriter), targetselector.NewUntilNotWaitingStrategy(time.Second*2, client, hookConfig.Container.Namespace))
 				} else if hookConfig.Wait != nil {
 					hook = NewWaitHook()
 				} else {
-					hook = NewRemoteHook(NewRemoteCommandHook(hookWriter, hookWriter))
+					hook = NewRemoteHook(NewRemoteCommandHook(hookWriter, hookWriter), client, hookConfig.Container.Namespace)
 				}
 			} else {
 				hook = NewLocalCommandHook(hookWriter, hookWriter)
