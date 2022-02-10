@@ -11,10 +11,8 @@ import (
 
 // StartAttach opens a new terminal
 func (serviceClient *client) StartAttach(options targetselector.Options, interrupt chan error) error {
-	targetSelector := targetselector.NewTargetSelector(serviceClient.client)
 	options = options.WithQuestion("Which pod do you want to attach to?")
-
-	container, err := targetSelector.SelectSingleContainer(context.TODO(), options, serviceClient.log)
+	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(context.TODO(), serviceClient.client, options, serviceClient.log)
 	if err != nil {
 		return err
 	}

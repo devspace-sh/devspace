@@ -833,7 +833,7 @@ func findSingleReplacedPod(ctx context.Context, client kubectl.Client, replacePo
 		WithSkipInitContainers(true)
 
 	// get container
-	selected, err := targetselector.NewTargetSelector(client).SelectSingleContainer(ctx, targetOptions, log)
+	selected, err := targetselector.GlobalTargetSelector.SelectSingleContainer(ctx, client, targetOptions, log)
 	if err != nil {
 		return nil, err
 	}
@@ -918,7 +918,7 @@ func findSingleReplaceablePodParent(ctx context.Context, client kubectl.Client, 
 		WithWaitingStrategy(targetselector.NewUntilNotTerminatingStrategy(time.Second * 2)).
 		WithSkipInitContainers(true)
 
-	container, err := targetselector.NewTargetSelector(client).SelectSingleContainer(ctx, targetOptions, log)
+	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(ctx, client, targetOptions, log)
 	if err != nil {
 		return nil, nil, err
 	}

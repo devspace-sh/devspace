@@ -2,8 +2,11 @@ package targetselector
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
+	"github.com/loft-sh/devspace/pkg/util/lockfactory"
+	"sync"
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
@@ -150,24 +153,34 @@ func ToStringImageSelector(imageSelector []imageselector.ImageSelector) []string
 }
 
 type TargetSelector interface {
-	SelectSinglePod(ctx context.Context, options Options, log log.Logger) (*v1.Pod, error)
-	SelectSingleContainer(ctx context.Context, options Options, log log.Logger) (*selector.SelectedPodContainer, error)
+	SelectSinglePod(ctx context.Context, client kubectl.Client, options Options, log log.Logger) (*v1.Pod, error)
+	SelectSingleContainer(ctx context.Context, client kubectl.Client, options Options, log log.Logger) (*selector.SelectedPodContainer, error)
 }
+
+// GlobalTargetSelector is used to make sure we don't wait for the same pod
+// multiple times concurrently.
+var GlobalTargetSelector = NewTargetSelector()
 
 // targetSelector is the struct that will select a target
 type targetSelector struct {
-	client kubectl.Client
+	// lock factory is used to make sure we don't wait for the same pod
+	// multiple times.
+	lockFactory lockfactory.LockFactory
 }
 
 // NewTargetSelector creates a new target selector for selecting a target pod or container
-func NewTargetSelector(client kubectl.Client) TargetSelector {
+func NewTargetSelector() TargetSelector {
 	return &targetSelector{
-		client: client,
+		lockFactory: lockfactory.NewDefaultLockFactory(),
 	}
 }
 
-func (t *targetSelector) SelectSingleContainer(ctx context.Context, options Options, log log.Logger) (*selector.SelectedPodContainer, error) {
-	container, err := t.selectSingle(ctx, options, log, t.selectSingleContainer)
+func (t *targetSelector) SelectSingleContainer(ctx context.Context, client kubectl.Client, options Options, log log.Logger) (*selector.SelectedPodContainer, error) {
+	lock := t.getSelectorLock(options.selector)
+	lock.Lock()
+	defer lock.Unlock()
+
+	container, err := t.selectSingle(ctx, client, options, log, t.selectSingleContainer)
 	if err != nil {
 		return nil, err
 	} else if container == nil {
@@ -177,8 +190,12 @@ func (t *targetSelector) SelectSingleContainer(ctx context.Context, options Opti
 	return container.(*selector.SelectedPodContainer), nil
 }
 
-func (t *targetSelector) SelectSinglePod(ctx context.Context, options Options, log log.Logger) (*v1.Pod, error) {
-	pod, err := t.selectSingle(ctx, options, log, t.selectSinglePod)
+func (t *targetSelector) SelectSinglePod(ctx context.Context, client kubectl.Client, options Options, log log.Logger) (*v1.Pod, error) {
+	lock := t.getSelectorLock(options.selector)
+	lock.Lock()
+	defer lock.Unlock()
+
+	pod, err := t.selectSingle(ctx, client, options, log, t.selectSinglePod)
 	if err != nil {
 		return nil, err
 	} else if pod == nil {
@@ -188,7 +205,12 @@ func (t *targetSelector) SelectSinglePod(ctx context.Context, options Options, l
 	return pod.(*v1.Pod), nil
 }
 
-func (t *targetSelector) selectSingle(ctx context.Context, options Options, log log.Logger, selectFn func(ctx context.Context, options Options, log log.Logger) (bool, interface{}, error)) (interface{}, error) {
+func (t *targetSelector) getSelectorLock(s selector.Selector) sync.Locker {
+	out, _ := json.Marshal(s)
+	return t.lockFactory.GetLock(string(out))
+}
+
+func (t *targetSelector) selectSingle(ctx context.Context, client kubectl.Client, options Options, log log.Logger, selectFn func(ctx context.Context, client kubectl.Client, options Options, log log.Logger) (bool, interface{}, error)) (interface{}, error) {
 	if options.wait == nil || *options.wait {
 		timeout := time.Minute * 10
 		if options.timeout > 0 {
@@ -197,7 +219,7 @@ func (t *targetSelector) selectSingle(ctx context.Context, options Options, log 
 
 		var out interface{}
 		err := wait.PollImmediate(time.Second, timeout, func() (done bool, err error) {
-			done, o, err := selectFn(ctx, options, log)
+			done, o, err := selectFn(ctx, client, options, log)
 			if err != nil {
 				return false, err
 			} else if !done {
@@ -222,7 +244,7 @@ func (t *targetSelector) selectSingle(ctx context.Context, options Options, log 
 	}
 
 	// we try to select a pod
-	done, out, err := selectFn(ctx, options, log)
+	done, out, err := selectFn(ctx, client, options, log)
 	if err != nil {
 		return nil, err
 	} else if !done {
@@ -235,12 +257,12 @@ func (t *targetSelector) selectSingle(ctx context.Context, options Options, log 
 	return out, nil
 }
 
-func (t *targetSelector) selectSingleContainer(ctx context.Context, options Options, log log.Logger) (bool, interface{}, error) {
-	containers, err := selector.NewFilterWithSort(t.client, options.sortContainers).SelectContainers(ctx, options.selector)
+func (t *targetSelector) selectSingleContainer(ctx context.Context, client kubectl.Client, options Options, log log.Logger) (bool, interface{}, error) {
+	containers, err := selector.NewFilterWithSort(client, options.sortContainers).SelectContainers(ctx, options.selector)
 	if err != nil {
 		return false, nil, err
 	} else if options.waitingStrategy != nil {
-		return options.waitingStrategy.SelectContainer(ctx, t.client, options.selector.Namespace, containers, log)
+		return options.waitingStrategy.SelectContainer(ctx, client, options.selector.Namespace, containers, log)
 	}
 
 	if len(containers) == 0 {
@@ -285,8 +307,8 @@ func (t *targetSelector) selectSingleContainer(ctx context.Context, options Opti
 	return true, containers[0], nil
 }
 
-func (t *targetSelector) selectSinglePod(ctx context.Context, options Options, log log.Logger) (bool, interface{}, error) {
-	stack, err := selector.NewFilterWithSort(t.client, options.sortContainers).SelectContainers(ctx, options.selector)
+func (t *targetSelector) selectSinglePod(ctx context.Context, client kubectl.Client, options Options, log log.Logger) (bool, interface{}, error) {
+	stack, err := selector.NewFilterWithSort(client, options.sortContainers).SelectContainers(ctx, options.selector)
 	if err != nil {
 		return false, nil, err
 	}
@@ -294,7 +316,7 @@ func (t *targetSelector) selectSinglePod(ctx context.Context, options Options, l
 	// transform stack
 	pods := selector.PodsFromPodContainer(stack)
 	if options.waitingStrategy != nil {
-		return options.waitingStrategy.SelectPod(ctx, t.client, options.selector.Namespace, pods, log)
+		return options.waitingStrategy.SelectPod(ctx, client, options.selector.Namespace, pods, log)
 	}
 
 	if len(pods) == 0 {

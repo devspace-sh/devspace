@@ -36,8 +36,6 @@ func (serviceClient *client) StartTerminal(
 	stdin io.Reader,
 ) (int, error) {
 	command := serviceClient.getCommand(args, workDir)
-	targetSelector := targetselector.NewTargetSelector(serviceClient.client)
-
 	options = options.WithWait(wait).
 		WithQuestion("Which pod do you want to open the terminal for?")
 	if wait {
@@ -45,7 +43,7 @@ func (serviceClient *client) StartTerminal(
 		options = options.WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second))
 	}
 
-	container, err := targetSelector.SelectSingleContainer(context.TODO(), options, serviceClient.log)
+	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(context.TODO(), serviceClient.client, options, serviceClient.log)
 	if err != nil {
 		return 0, err
 	}

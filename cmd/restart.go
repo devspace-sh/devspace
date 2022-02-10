@@ -178,7 +178,7 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 
 func restartContainer(client kubectl.Client, options targetselector.Options, log log.Logger) error {
 	options = options.WithWait(false)
-	container, err := targetselector.NewTargetSelector(client).SelectSingleContainer(context.TODO(), options, log)
+	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(context.TODO(), client, options, log)
 	if err != nil {
 		return errors.Errorf("Error selecting pod: %v", err)
 	}

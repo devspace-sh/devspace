@@ -71,14 +71,14 @@ type SelectedPodContainer struct {
 }
 
 type Selector struct {
-	ImageSelector      []string
-	LabelSelector      string
-	Pod                string
-	ContainerName      string
-	Namespace          string
-	SkipInitContainers bool
+	ImageSelector      []string `json:"imageSelector"`
+	LabelSelector      string   `json:"labelSelector"`
+	Pod                string   `json:"pod"`
+	ContainerName      string   `json:"containerName"`
+	Namespace          string   `json:"namespace"`
+	SkipInitContainers bool     `json:"skipInitContainers"`
 
-	FilterContainer FilterContainer
+	FilterContainer FilterContainer `json:"-"`
 }
 
 func (s Selector) String() string {

@@ -44,7 +44,7 @@ func (k *KubeHelper) ExecByImageSelector(imageSelector, namespace string, comman
 		WithTimeout(120).
 		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2))
 
-	container, err := targetselector.NewTargetSelector(k.client).SelectSingleContainer(context.TODO(), targetOptions, log.Discard)
+	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(context.TODO(), k.client, targetOptions, log.Discard)
 	if err != nil {
 		return "", err
 	}
@@ -62,7 +62,7 @@ func (k *KubeHelper) ExecByContainer(labelSelector, containerName, namespace str
 		WithTimeout(120).
 		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2))
 
-	container, err := targetselector.NewTargetSelector(k.client).SelectSingleContainer(context.TODO(), targetOptions, log.Discard)
+	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(context.TODO(), k.client, targetOptions, log.Discard)
 	if err != nil {
 		return "", err
 	}

@@ -39,7 +39,7 @@ func (serviceClient *client) startReversePortForwarding(portForwarding *latest.P
 		WithSkipInitContainers(true)
 
 	log.Info("Reverse-Port-Forwarding: Waiting for containers to start...")
-	container, err := targetselector.NewTargetSelector(serviceClient.client).SelectSingleContainer(context.TODO(), options, log)
+	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(context.TODO(), serviceClient.client, options, log)
 	if err != nil {
 		return errors.Errorf("%s: %s", message.SelectorErrorPod, err.Error())
 	}

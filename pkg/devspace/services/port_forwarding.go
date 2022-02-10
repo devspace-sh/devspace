@@ -128,7 +128,7 @@ func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardi
 
 	// start port forwarding
 	log.Info("Port-Forwarding: Waiting for containers to start...")
-	pod, err := targetselector.NewTargetSelector(serviceClient.client).SelectSinglePod(context.TODO(), options, log)
+	pod, err := targetselector.GlobalTargetSelector.SelectSinglePod(context.TODO(), serviceClient.client, options, log)
 	if err != nil {
 		return errors.Errorf("%s: %s", message.SelectorErrorPod, err.Error())
 	} else if pod == nil {
