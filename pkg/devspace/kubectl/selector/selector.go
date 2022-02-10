@@ -45,10 +45,7 @@ func initContainerPos(container string, pod *corev1.Pod) int {
 }
 
 var FilterTerminatingContainers = func(p *corev1.Pod, c *corev1.Container) bool {
-	if IsPodTerminating(p) {
-		return true
-	}
-	return false
+	return IsPodTerminating(p)
 }
 
 var FilterNonRunningContainers = func(p *corev1.Pod, c *corev1.Container) bool {
@@ -108,19 +105,15 @@ func (s Selector) String() string {
 }
 
 type FilterContainer func(p *corev1.Pod, c *corev1.Container) bool
-
-type SortPods func(pods []*corev1.Pod, i, j int) bool
 type SortContainers func(containers []*SelectedPodContainer, i, j int) bool
 
 type Filter interface {
 	SelectContainers(ctx context.Context, selectors ...Selector) ([]*SelectedPodContainer, error)
-	SelectPods(ctx context.Context, selectors ...Selector) ([]*corev1.Pod, error)
 }
 
 type filter struct {
 	client kubectl.Client
 
-	sortPods       SortPods
 	sortContainers SortContainers
 }
 
@@ -130,28 +123,11 @@ func NewFilter(client kubectl.Client) Filter {
 	}
 }
 
-func NewFilterWithSort(client kubectl.Client, sortPods SortPods, sortContainers SortContainers) Filter {
+func NewFilterWithSort(client kubectl.Client, sortContainers SortContainers) Filter {
 	return &filter{
 		client:         client,
-		sortPods:       sortPods,
 		sortContainers: sortContainers,
 	}
-}
-
-func (f *filter) SelectPods(ctx context.Context, selectors ...Selector) ([]*corev1.Pod, error) {
-	retList, err := f.SelectContainers(ctx, selectors...)
-	if err != nil {
-		return nil, err
-	}
-
-	pods := podsFromPodContainer(retList)
-	if f.sortPods != nil {
-		sort.Slice(pods, func(i, j int) bool {
-			return f.sortPods(pods, i, j)
-		})
-	}
-
-	return pods, nil
 }
 
 func (f *filter) SelectContainers(ctx context.Context, selectors ...Selector) ([]*SelectedPodContainer, error) {
@@ -205,13 +181,17 @@ func deduplicate(stack []*SelectedPodContainer) []*SelectedPodContainer {
 	return retStack
 }
 
-func podsFromPodContainer(stack []*SelectedPodContainer) []*corev1.Pod {
+func PodsFromPodContainer(stack []*SelectedPodContainer) []*corev1.Pod {
 	retPods := []*corev1.Pod{}
 	for _, s := range stack {
 		if !containsPod(retPods, key(s.Pod.Namespace, s.Pod.Name, "")) {
 			retPods = append(retPods, s.Pod)
 		}
 	}
+
+	sort.Slice(retPods, func(i, j int) bool {
+		return SortPodsByNewest(retPods, i, j)
+	})
 	return retPods
 }
 

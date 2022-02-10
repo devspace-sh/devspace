@@ -34,7 +34,6 @@ type Options struct {
 	timeout int64
 
 	failIfMultiple bool
-	sortPods       selector.SortPods
 	sortContainers selector.SortContainers
 
 	waitingStrategy WaitingStrategy
@@ -45,7 +44,6 @@ func NewEmptyOptions() Options {
 		selector: selector.Selector{
 			FilterContainer: selector.FilterTerminatingContainers,
 		},
-		sortPods:       selector.SortPodsByNewest,
 		sortContainers: selector.SortContainersByNewest,
 	}
 }
@@ -60,7 +58,6 @@ func NewOptionsFromFlags(containerName string, labelSelector string, imageSelect
 			Namespace:       namespace,
 			FilterContainer: selector.FilterNonRunningContainers,
 		},
-		sortPods:       selector.SortPodsByNewest,
 		sortContainers: selector.SortContainersByNewest,
 	}
 }
@@ -239,7 +236,7 @@ func (t *targetSelector) selectSingle(ctx context.Context, options Options, log 
 }
 
 func (t *targetSelector) selectSingleContainer(ctx context.Context, options Options, log log.Logger) (bool, interface{}, error) {
-	containers, err := selector.NewFilterWithSort(t.client, options.sortPods, options.sortContainers).SelectContainers(ctx, options.selector)
+	containers, err := selector.NewFilterWithSort(t.client, options.sortContainers).SelectContainers(ctx, options.selector)
 	if err != nil {
 		return false, nil, err
 	} else if options.waitingStrategy != nil {
@@ -289,10 +286,14 @@ func (t *targetSelector) selectSingleContainer(ctx context.Context, options Opti
 }
 
 func (t *targetSelector) selectSinglePod(ctx context.Context, options Options, log log.Logger) (bool, interface{}, error) {
-	pods, err := selector.NewFilterWithSort(t.client, options.sortPods, options.sortContainers).SelectPods(ctx, options.selector)
+	stack, err := selector.NewFilterWithSort(t.client, options.sortContainers).SelectContainers(ctx, options.selector)
 	if err != nil {
 		return false, nil, err
-	} else if options.waitingStrategy != nil {
+	}
+
+	// transform stack
+	pods := selector.PodsFromPodContainer(stack)
+	if options.waitingStrategy != nil {
 		return options.waitingStrategy.SelectPod(ctx, t.client, options.selector.Namespace, pods, log)
 	}
 
