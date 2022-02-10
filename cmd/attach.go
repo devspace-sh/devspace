@@ -7,7 +7,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
@@ -99,18 +98,16 @@ func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 		return err
 	}
 
-	// Build params
-	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
-
 	// get image selector if specified
 	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, cmd.ImageSelector, log)
 	if err != nil {
 		return err
 	}
 
-	// set image selector
-	options.ImageSelector = imageSelector
-	options.Wait = ptr.Bool(false)
+	// Build params
+	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, imageSelector, cmd.Namespace, cmd.Pod).
+		WithPick(cmd.Pick).
+		WithWait(false)
 
 	// Start attach
 	return f.NewServicesClient(nil, nil, client, log).StartAttach(options, make(chan error))

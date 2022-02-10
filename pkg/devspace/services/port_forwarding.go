@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/synccontroller"
 	"strconv"
 	"strings"
@@ -108,22 +107,24 @@ func (serviceClient *client) newPortForwardingFn(prefix string, portForwarding *
 }
 
 func (serviceClient *client) startForwarding(portForwarding *latest.PortForwardingConfig, interrupt chan error, fileLog, log logpkg.Logger) error {
-	var err error
-
-	// apply config & set image selector
-	options := targetselector.NewEmptyOptions().ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, "", "")
-	options.AllowPick = false
-	options.ImageSelector = []imageselector.ImageSelector{}
+	var (
+		err           error
+		imageSelector []string
+	)
 	if portForwarding.ImageSelector != "" {
-		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(portForwarding.ImageSelector, serviceClient.config, serviceClient.dependencies)
+		imageSelectorObject, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(portForwarding.ImageSelector, serviceClient.config, serviceClient.dependencies)
 		if err != nil {
 			return err
 		}
 
-		options.ImageSelector = append(options.ImageSelector, *imageSelector)
+		imageSelector = []string{imageSelectorObject.Image}
 	}
-	options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second*2, serviceClient.client, options.Namespace)
-	options.SkipInitContainers = true
+
+	// apply config & set image selector
+	options := targetselector.NewEmptyOptions().
+		ApplyConfigParameter("", portForwarding.LabelSelector, imageSelector, portForwarding.Namespace, "").
+		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)).
+		WithSkipInitContainers(true)
 
 	// start port forwarding
 	log.Info("Port-Forwarding: Waiting for containers to start...")

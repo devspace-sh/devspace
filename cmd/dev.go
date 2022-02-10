@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"io"
 	"os"
@@ -11,7 +12,6 @@ import (
 	"time"
 
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/command"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -625,24 +625,24 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 				}
 				return 0, nil
 			} else {
-				selectorOptions := targetselector.NewDefaultOptions().ApplyCmdParameter("", "", cmd.Namespace, "")
+				selectorOptions := targetselector.NewEmptyOptions().
+					WithContainerFilter(selector.FilterNonRunningContainers).
+					WithPick(true).
+					WithNamespace(cmd.Namespace)
 				if config.Dev.Terminal != nil {
-					selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Terminal.LabelSelector, config.Dev.Terminal.Namespace, config.Dev.Terminal.ContainerName, "")
-				}
+					var imageSelectors []string
+					if config.Dev.Terminal.ImageSelector != "" {
+						imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(config.Dev.Terminal.ImageSelector, configInterface, dependencies)
+						if err != nil {
+							return 0, err
+						}
 
-				var imageSelectors []imageselector.ImageSelector
-				if config.Dev.Terminal != nil && config.Dev.Terminal.ImageSelector != "" {
-					imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(config.Dev.Terminal.ImageSelector, configInterface, dependencies)
-					if err != nil {
-						return 0, err
+						imageSelectors = []string{imageSelector.Image}
 					}
-
-					imageSelectors = append(imageSelectors, *imageSelector)
+					selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Terminal.ContainerName, config.Dev.Terminal.LabelSelector, imageSelectors, config.Dev.Terminal.Namespace, "")
 				}
 
 				cmd.log.Info("Terminal: Waiting for containers to start...")
-				selectorOptions.ImageSelector = imageSelectors
-
 				code, err := servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalReconnect, stdout, stderr, stdin)
 				if services.IsUnexpectedExitCode(code) {
 					cmd.log.Warnf("Command terminated with exit code %d", code)

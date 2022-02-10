@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"strings"
 	"sync"
 	"time"
@@ -194,16 +195,16 @@ type podInfo struct {
 func (l *logManager) gatherPods() ([]podInfo, error) {
 	returnList := []podInfo{}
 	selectors := []selector.Selector{}
-	filterPod := func(p *k8sv1.Pod) bool {
+	filterPod := func(p *k8sv1.Pod, c *k8sv1.Container) bool {
 		return kubectl.GetPodStatus(p) != "Running"
 	}
 
 	// first gather all pods by image
 	for _, s := range l.imageSelectors {
 		selectors = append(selectors, selector.Selector{
-			ImageSelector:      []imageselector.ImageSelector{s.ImageSelector},
+			ImageSelector:      targetselector.ToStringImageSelector([]imageselector.ImageSelector{s.ImageSelector}),
 			Namespace:          s.Namespace,
-			FilterPod:          filterPod,
+			FilterContainer:    filterPod,
 			SkipInitContainers: true,
 		})
 	}
@@ -219,7 +220,7 @@ func (l *logManager) gatherPods() ([]podInfo, error) {
 			LabelSelector:      labelSelector,
 			ContainerName:      s.ContainerName,
 			Namespace:          s.Namespace,
-			FilterPod:          filterPod,
+			FilterContainer:    filterPod,
 			SkipInitContainers: true,
 		})
 	}

@@ -1,6 +1,7 @@
 package targetselector
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"sort"
 	"time"
@@ -11,13 +12,11 @@ import (
 )
 
 // NewUntilNotWaitingStrategy creates a new waiting strategy
-func NewUntilNotWaitingStrategy(initialDelay time.Duration, client kubectl.Client, namespace string) WaitingStrategy {
+func NewUntilNotWaitingStrategy(initialDelay time.Duration) WaitingStrategy {
 	return &untilNotWaiting{
 		initialDelay: time.Now().Add(initialDelay),
 		podInfoPrinter: &PodInfoPrinter{
 			lastWarning: time.Now().Add(initialDelay),
-			namespace:   namespace,
-			client:      client,
 		},
 	}
 }
@@ -30,13 +29,13 @@ type untilNotWaiting struct {
 	podInfoPrinter *PodInfoPrinter
 }
 
-func (u *untilNotWaiting) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *v1.Pod, error) {
+func (u *untilNotWaiting) SelectPod(ctx context.Context, client kubectl.Client, namespace string, pods []*v1.Pod, log log.Logger) (bool, *v1.Pod, error) {
 	now := time.Now()
 	if now.Before(u.initialDelay) {
 		return false, nil, nil
 	} else if len(pods) == 0 {
 		if now.After(u.initialDelay.Add(time.Second * 6)) {
-			u.podInfoPrinter.PrintNotFoundWarning(log)
+			u.podInfoPrinter.PrintNotFoundWarning(client, namespace, log)
 		}
 
 		return false, nil, nil
@@ -52,13 +51,13 @@ func (u *untilNotWaiting) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *v1.P
 	return true, pods[0], nil
 }
 
-func (u *untilNotWaiting) SelectContainer(containers []*selector.SelectedPodContainer, log log.Logger) (bool, *selector.SelectedPodContainer, error) {
+func (u *untilNotWaiting) SelectContainer(ctx context.Context, client kubectl.Client, namespace string, containers []*selector.SelectedPodContainer, log log.Logger) (bool, *selector.SelectedPodContainer, error) {
 	now := time.Now()
 	if now.Before(u.initialDelay) {
 		return false, nil, nil
 	} else if len(containers) == 0 {
 		if now.After(u.initialDelay.Add(time.Second * 6)) {
-			u.podInfoPrinter.PrintNotFoundWarning(log)
+			u.podInfoPrinter.PrintNotFoundWarning(client, namespace, log)
 		}
 
 		return false, nil, nil
@@ -75,7 +74,7 @@ func (u *untilNotWaiting) SelectContainer(containers []*selector.SelectedPodCont
 }
 
 func isPodWaiting(pod *v1.Pod) bool {
-	if pod.DeletionTimestamp != nil {
+	if selector.IsPodTerminating(pod) {
 		return true
 	}
 
@@ -94,7 +93,7 @@ func isPodWaiting(pod *v1.Pod) bool {
 }
 
 func isContainerWaiting(container *selector.SelectedPodContainer) bool {
-	if container.Pod.DeletionTimestamp != nil {
+	if selector.IsPodTerminating(container.Pod) {
 		return true
 	}
 

@@ -3,7 +3,6 @@ package kube
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"strings"
 	"time"
 
@@ -41,15 +40,10 @@ func (k *KubeHelper) RawClient() kubernetes.Interface {
 }
 
 func (k *KubeHelper) ExecByImageSelector(imageSelector, namespace string, command []string) (string, error) {
-	targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(nil, namespace, "", "")
-	targetOptions.AllowPick = false
-	targetOptions.Timeout = 120
-	targetOptions.ImageSelector = []imageselector.ImageSelector{
-		{
-			Image: imageSelector,
-		},
-	}
-	targetOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
+	targetOptions := targetselector.NewOptionsFromFlags("", "", []string{imageSelector}, namespace, "").
+		WithTimeout(120).
+		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2))
+
 	container, err := targetselector.NewTargetSelector(k.client).SelectSingleContainer(context.TODO(), targetOptions, log.Discard)
 	if err != nil {
 		return "", err
@@ -64,12 +58,10 @@ func (k *KubeHelper) ExecByImageSelector(imageSelector, namespace string, comman
 }
 
 func (k *KubeHelper) ExecByContainer(labelSelector, containerName, namespace string, command []string) (string, error) {
-	targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(nil, namespace, "", "")
-	targetOptions.AllowPick = false
-	targetOptions.Timeout = 120
-	targetOptions.LabelSelector = labelSelector
-	targetOptions.ContainerName = containerName
-	targetOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
+	targetOptions := targetselector.NewOptionsFromFlags(containerName, labelSelector, nil, namespace, "").
+		WithTimeout(120).
+		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2))
+
 	container, err := targetselector.NewTargetSelector(k.client).SelectSingleContainer(context.TODO(), targetOptions, log.Discard)
 	if err != nil {
 		return "", err

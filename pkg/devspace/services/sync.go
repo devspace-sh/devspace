@@ -96,9 +96,9 @@ func (serviceClient *client) StartSync(interrupt chan error, printSyncLog, verbo
 
 func (serviceClient *client) newSyncFn(idx int, syncConfig *latest.SyncConfig, interrupt chan error, printSyncLog, verboseSync bool, prefixFn PrefixFn) func() error {
 	return func() error {
-		targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(syncConfig.LabelSelector, syncConfig.Namespace, syncConfig.ContainerName, "")
-		targetOptions.AllowPick = false
-		targetOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second*2, serviceClient.client, targetOptions.Namespace)
+		targetOptions := targetselector.NewEmptyOptions().
+			ApplyConfigParameter(syncConfig.ContainerName, syncConfig.LabelSelector, nil, syncConfig.Namespace, "").
+			WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2))
 
 		// set options
 		options := &synccontroller.Options{

@@ -72,7 +72,7 @@ func persistPaths(podName string, replacePod *latest.ReplacePod, copiedPod *core
 			Name:    fmt.Sprintf("path-%d-init", i),
 			Image:   container.Image,
 			Command: []string{"sh"},
-			Args:    []string{"-c", fmt.Sprintf("set -x\nif [ ! -d \"/devspace-persistence/.devspace/\" ] && [ -d \"%s\" ]; then\n cp -a %s/. /devspace-persistence/ && mkdir /devspace-persistence/.devspace\nfi", path.Clean(p.Path), path.Clean(p.Path))},
+			Args:    []string{"-c", fmt.Sprintf("if [ ! -d \"/devspace-persistence/.devspace/\" ] && [ -d \"%s\" ]; then\n cp --verbose -a %s/. /devspace-persistence/ && mkdir /devspace-persistence/.devspace\n sleep 20\nfi", path.Clean(p.Path), path.Clean(p.Path))},
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      "devspace-persistence",

@@ -116,17 +116,15 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 		return err
 	}
 
-	// Build options
-	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
-
 	// get image selector if specified
 	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, cmd.ImageSelector, log)
 	if err != nil {
 		return err
 	}
 
-	// set image selector
-	options.ImageSelector = imageSelector
+	// Build options
+	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, imageSelector, cmd.Namespace, cmd.Pod).
+		WithPick(cmd.Pick)
 
 	// Start terminal
 	err = f.NewServicesClient(nil, nil, client, log).StartLogs(options, cmd.Follow, int64(cmd.LastAmountOfLines), cmd.Wait)
@@ -137,8 +135,8 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 	return nil
 }
 
-func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, image, imageSelector string, log log.Logger) ([]imageselector.ImageSelector, error) {
-	var imageSelectors []imageselector.ImageSelector
+func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, image, imageSelector string, log log.Logger) ([]string, error) {
+	var imageSelectors []string
 	if imageSelector != "" {
 		var (
 			err          error
@@ -166,7 +164,7 @@ func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, c
 			return nil, err
 		}
 
-		imageSelectors = append(imageSelectors, *resolved)
+		imageSelectors = append(imageSelectors, resolved.Image)
 	} else if image != "" {
 		log.Warnf("Flag --image is deprecated, please use --image-selector instead")
 
@@ -193,7 +191,7 @@ func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, c
 			return nil, fmt.Errorf("couldn't find an image with name %s in devspace config", image)
 		}
 
-		imageSelectors = append(imageSelectors, *imageSelector)
+		imageSelectors = append(imageSelectors, imageSelector.Image)
 	}
 
 	return imageSelectors, nil

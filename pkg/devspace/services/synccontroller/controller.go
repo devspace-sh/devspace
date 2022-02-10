@@ -12,7 +12,6 @@ import (
 	"time"
 
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -254,7 +253,7 @@ func realWorkDir() (string, error) {
 }
 
 func (c *controller) startSync(options *Options, onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}, onDone chan struct{}, onError chan error, log logpkg.Logger) (*sync.Sync, *selector.SelectedPodContainer, error) {
-	options.TargetOptions.SkipInitContainers = true
+	options.TargetOptions = options.TargetOptions.WithSkipInitContainers(true)
 	var (
 		syncConfig = options.SyncConfig
 	)
@@ -280,17 +279,13 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 		}
 	}
 
-	if len(options.TargetOptions.ImageSelector) == 0 {
-		options.TargetOptions.ImageSelector = []imageselector.ImageSelector{}
-	}
-
 	if syncConfig.ImageSelector != "" {
 		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(syncConfig.ImageSelector, c.config, c.dependencies)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		options.TargetOptions.ImageSelector = append(options.TargetOptions.ImageSelector, *imageSelector)
+		options.TargetOptions = options.TargetOptions.WithImageSelector([]string{imageSelector.Image})
 	}
 
 	log.Info("Waiting for containers to start...")

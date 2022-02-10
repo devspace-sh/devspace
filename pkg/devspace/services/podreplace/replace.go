@@ -417,7 +417,7 @@ func replace(ctx context.Context, client kubectl.Client, pod *selector.SelectedP
 		}
 
 		// for non stateful set its enough if the pod is still terminating
-		if pod.DeletionTimestamp != nil && copiedPod.Annotations[ParentKindAnnotation] != "StatefulSet" {
+		if selector.IsPodTerminating(pod) && copiedPod.Annotations[ParentKindAnnotation] != "StatefulSet" {
 			return true, nil
 		}
 
@@ -653,7 +653,7 @@ func replaceImageInPodSpec(podSpec *corev1.PodSpec, config config.Config, depend
 			if len(podSpec.Containers) == 1 {
 				podSpec.Containers[i].Image = imageStr
 				break
-			} else if imageselector.CompareImageNames(*imageSelector, podSpec.Containers[i].Image) {
+			} else if imageSelector != nil && imageselector.CompareImageNames(imageSelector.Image, podSpec.Containers[i].Image) {
 				podSpec.Containers[i].Image = imageStr
 				break
 			}
@@ -826,11 +826,13 @@ func findSingleReplacedPod(ctx context.Context, client kubectl.Client, replacePo
 	}
 
 	// create selector
-	targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(labelSelector, replacePod.Namespace, replacePod.ContainerName, "")
-	targetOptions.Timeout = 30
-	targetOptions.AllowPick = false
-	targetOptions.WaitingStrategy = targetselector.NewUntilNotTerminatingStrategy(0, client, targetOptions.Namespace)
-	targetOptions.SkipInitContainers = true
+	targetOptions := targetselector.NewEmptyOptions().
+		ApplyConfigParameter(replacePod.ContainerName, labelSelector, nil, replacePod.Namespace, "").
+		WithTimeout(30).
+		WithWaitingStrategy(targetselector.NewUntilNotTerminatingStrategy(0)).
+		WithSkipInitContainers(true)
+
+	// get container
 	selected, err := targetselector.NewTargetSelector(client).SelectSingleContainer(ctx, targetOptions, log)
 	if err != nil {
 		return nil, err
@@ -896,23 +898,25 @@ func findReplacedPodReplicaSet(ctx context.Context, client kubectl.Client, repla
 }
 
 func findSingleReplaceablePodParent(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (*selector.SelectedPodContainer, runtime.Object, error) {
-	var err error
-
-	// create selector
-	targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(replacePod.LabelSelector, replacePod.Namespace, replacePod.ContainerName, "")
-	targetOptions.Timeout = int64(300)
-	targetOptions.AllowPick = false
-	targetOptions.WaitingStrategy = targetselector.NewUntilNotTerminatingStrategy(time.Second*2, client, targetOptions.Namespace)
-	targetOptions.SkipInitContainers = true
-	targetOptions.ImageSelector = []imageselector.ImageSelector{}
+	var (
+		err           error
+		imageSelector []string
+	)
 	if replacePod.ImageSelector != "" {
-		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, config, dependencies)
+		imageSelectorObject, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, config, dependencies)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		targetOptions.ImageSelector = append(targetOptions.ImageSelector, *imageSelector)
+		imageSelector = []string{imageSelectorObject.Image}
 	}
+
+	// create selector
+	targetOptions := targetselector.NewEmptyOptions().
+		ApplyConfigParameter(replacePod.ContainerName, replacePod.LabelSelector, imageSelector, replacePod.Namespace, "").
+		WithTimeout(300).
+		WithWaitingStrategy(targetselector.NewUntilNotTerminatingStrategy(time.Second * 2)).
+		WithSkipInitContainers(true)
 
 	container, err := targetselector.NewTargetSelector(client).SelectSingleContainer(ctx, targetOptions, log)
 	if err != nil {

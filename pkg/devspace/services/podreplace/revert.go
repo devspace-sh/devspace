@@ -151,7 +151,7 @@ func matchesSelector(annotations map[string]string, pod *corev1.PodTemplateSpec,
 
 		// compare image
 		for i := range pod.Spec.Containers {
-			if imageselector.CompareImageNames(*imageSelector, pod.Spec.Containers[i].Image) {
+			if imageselector.CompareImageNames(imageSelector.Image, pod.Spec.Containers[i].Image) {
 				return true, nil
 			}
 		}

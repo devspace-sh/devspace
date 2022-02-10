@@ -180,17 +180,16 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 		return err
 	}
 
-	// Build params
-	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
 	// get image selector if specified
 	imageSelector, err := getImageSelector(client, configLoader, configOptions, "", cmd.ImageSelector, logger)
 	if err != nil {
 		return err
 	}
 
-	// set image selector
-	options.ImageSelector = imageSelector
-	options.Wait = &cmd.Wait
+	// Build params
+	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, imageSelector, cmd.Namespace, cmd.Pod).
+		WithPick(cmd.Pick).
+		WithWait(cmd.Wait)
 
 	if cmd.DownloadOnly && cmd.UploadOnly {
 		return errors.New("--upload-only cannot be used together with --download-only")
@@ -253,9 +252,8 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 		return errors.Wrap(err, "apply flags to sync config")
 	}
 
-	options = options.ApplyConfigParameter(syncConfig.LabelSelector, syncConfig.Namespace, syncConfig.ContainerName, "")
-
 	// Start sync
+	options = options.ApplyConfigParameter(syncConfig.ContainerName, syncConfig.LabelSelector, nil, syncConfig.Namespace, "")
 	return f.NewServicesClient(configInterface, nil, client, logger).StartSyncFromCmd(options, syncConfig, cmd.Interrupt, cmd.NoWatch, cmd.Verbose)
 }
 

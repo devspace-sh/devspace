@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"io"
 	"strings"
 	"time"
@@ -36,14 +37,13 @@ func (serviceClient *client) StartTerminal(
 ) (int, error) {
 	command := serviceClient.getCommand(args, workDir)
 	targetSelector := targetselector.NewTargetSelector(serviceClient.client)
-	if !wait {
-		options.Wait = &wait
-	} else {
-		options.FilterPod = nil
-		options.FilterContainer = nil
-		options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second, serviceClient.client, options.Namespace)
+
+	options = options.WithWait(wait).
+		WithQuestion("Which pod do you want to open the terminal for?")
+	if wait {
+		options = options.WithContainerFilter(selector.FilterTerminatingContainers)
+		options = options.WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second))
 	}
-	options.Question = "Which pod do you want to open the terminal for?"
 
 	container, err := targetSelector.SelectSingleContainer(context.TODO(), options, serviceClient.log)
 	if err != nil {

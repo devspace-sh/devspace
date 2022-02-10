@@ -75,11 +75,12 @@ func (r *waitHook) execute(hook *latest.HookConfig, client kubectl.Client, image
 	// wait until the defined condition will be true, this will wait initially 2 seconds
 	err := wait.Poll(time.Second*2, time.Duration(timeout)*time.Second, func() (done bool, err error) {
 		podContainers, err := selector.NewFilter(client).SelectContainers(context.TODO(), selector.Selector{
-			ImageSelector: imageSelector,
-			LabelSelector: labelSelector,
-			Pod:           hook.Container.Pod,
-			ContainerName: hook.Container.ContainerName,
-			Namespace:     hook.Container.Namespace,
+			ImageSelector:   targetselector.ToStringImageSelector(imageSelector),
+			LabelSelector:   labelSelector,
+			Pod:             hook.Container.Pod,
+			ContainerName:   hook.Container.ContainerName,
+			Namespace:       hook.Container.Namespace,
+			FilterContainer: selector.FilterTerminatingContainers,
 		})
 		if err != nil {
 			return false, err
@@ -109,7 +110,7 @@ func (r *waitHook) execute(hook *latest.HookConfig, client kubectl.Client, image
 }
 
 func isWaitConditionTrue(condition *latest.HookWaitConfig, podContainer *selector.SelectedPodContainer) bool {
-	if podContainer.Pod.DeletionTimestamp != nil {
+	if selector.IsPodTerminating(podContainer.Pod) {
 		return false
 	}
 
