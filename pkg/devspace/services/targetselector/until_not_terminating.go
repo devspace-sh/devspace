@@ -1,8 +1,9 @@
 package targetselector
 
 import (
+	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"sort"
-	"sync"
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
@@ -14,22 +15,26 @@ import (
 func NewUntilNotTerminatingStrategy(initialDelay time.Duration) WaitingStrategy {
 	return &untilNotTerminating{
 		initialDelay: time.Now().Add(initialDelay),
+		podInfoPrinter: &PodInfoPrinter{
+			lastWarning: time.Now().Add(initialDelay),
+		},
 	}
 }
 
 // this waiting strategy will wait until there is a pod that is not terminating
 type untilNotTerminating struct {
-	initialDelay    time.Time
-	notFoundWarning sync.Once
+	initialDelay time.Time
+
+	podInfoPrinter *PodInfoPrinter
 }
 
-func (u *untilNotTerminating) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *v1.Pod, error) {
+func (u *untilNotTerminating) SelectPod(ctx context.Context, client kubectl.Client, namespace string, pods []*v1.Pod, log log.Logger) (bool, *v1.Pod, error) {
 	now := time.Now()
 	if now.Before(u.initialDelay) {
 		return false, nil, nil
 	} else if len(pods) == 0 {
 		if now.After(u.initialDelay.Add(time.Second * 6)) {
-			u.printNotFoundWarning(log)
+			u.podInfoPrinter.PrintNotFoundWarning(client, namespace, log)
 		}
 
 		return false, nil, nil
@@ -38,20 +43,20 @@ func (u *untilNotTerminating) SelectPod(pods []*v1.Pod, log log.Logger) (bool, *
 	sort.Slice(pods, func(i, j int) bool {
 		return selector.SortPodsByNewest(pods, i, j)
 	})
-	if isPodTerminating(pods[0]) {
+	if selector.IsPodTerminating(pods[0]) {
 		return false, nil, nil
 	}
 
 	return true, pods[0], nil
 }
 
-func (u *untilNotTerminating) SelectContainer(containers []*selector.SelectedPodContainer, log log.Logger) (bool, *selector.SelectedPodContainer, error) {
+func (u *untilNotTerminating) SelectContainer(ctx context.Context, client kubectl.Client, namespace string, containers []*selector.SelectedPodContainer, log log.Logger) (bool, *selector.SelectedPodContainer, error) {
 	now := time.Now()
 	if now.Before(u.initialDelay) {
 		return false, nil, nil
 	} else if len(containers) == 0 {
 		if now.After(u.initialDelay.Add(time.Second * 6)) {
-			u.printNotFoundWarning(log)
+			u.podInfoPrinter.PrintNotFoundWarning(client, namespace, log)
 		}
 
 		return false, nil, nil
@@ -60,19 +65,9 @@ func (u *untilNotTerminating) SelectContainer(containers []*selector.SelectedPod
 	sort.Slice(containers, func(i, j int) bool {
 		return selector.SortContainersByNewest(containers, i, j)
 	})
-	if isPodTerminating(containers[0].Pod) {
+	if selector.IsPodTerminating(containers[0].Pod) {
 		return false, nil, nil
 	}
 
 	return true, containers[0], nil
-}
-
-func (u *untilNotTerminating) printNotFoundWarning(log log.Logger) {
-	u.notFoundWarning.Do(func() {
-		log.Warnf("DevSpace still couldn't find any Pods that match the selector. DevSpace will continue waiting, but this operation might timeout")
-	})
-}
-
-func isPodTerminating(pod *v1.Pod) bool {
-	return pod.DeletionTimestamp != nil
 }

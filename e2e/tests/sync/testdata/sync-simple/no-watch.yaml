@@ -26,7 +26,14 @@ hooks:
     when:
       before:
         initialSync: test
-  - command: echo -n Hello World > /no-watch/initial-sync-done.txt
+  - command: echo -n Hello World > /no-watch/initial-sync-done-before.txt
+    where:
+      container:
+        imageSelector: ${IMAGE}
+    when:
+      before:
+        initialSync: test
+  - command: echo -n Hello World > /no-watch/initial-sync-done-after.txt
     where:
       container:
         imageSelector: ${IMAGE}

@@ -103,7 +103,7 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		for _, image := range imageList {
-			if image.RepoTags[0] == "my-docker-username/helloworld-buildkit:latest" {
+			if len(image.RepoTags) > 0 && image.RepoTags[0] == "my-docker-username/helloworld-buildkit:latest" {
 				err = nil
 				break
 			} else {

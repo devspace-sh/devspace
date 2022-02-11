@@ -17,7 +17,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
 	hashpkg "github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
-	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 )
 
@@ -144,7 +143,7 @@ func (d *DeployConfig) internalDeploy(overwriteValues map[interface{}]interface{
 	// Deploy chart
 	appRelease, err := d.Helm.InstallChart(releaseName, releaseNamespace, overwriteValues, d.DeploymentConfig.Helm)
 	if err != nil {
-		return nil, errors.Errorf("Unable to deploy helm chart: %v\nRun `%s` and `%s` to recreate the chart", err, ansi.Color("devspace purge -d "+d.DeploymentConfig.Name, "white+b"), ansi.Color("devspace deploy", "white+b"))
+		return nil, errors.Errorf("Unable to deploy helm chart: %v", err)
 	}
 
 	// Print revision

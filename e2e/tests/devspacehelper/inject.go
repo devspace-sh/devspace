@@ -68,6 +68,8 @@ var _ = DevSpaceDescribe("devspacehelper", func() {
 			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=curl-container"})
 			if err != nil {
 				return false, err
+			} else if len(pods.Items) == 0 || len(pods.Items[0].Status.ContainerStatuses) == 0 {
+				return false, nil
 			}
 			return pods.Items[0].Status.ContainerStatuses[0].Ready, nil
 		})

@@ -12,6 +12,11 @@ import (
 
 // StartSyncFromCmd starts a new sync from command
 func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Options, syncConfig *latest.SyncConfig, interrupt chan error, noWatch, verbose bool) error {
+	if noWatch && interrupt == nil {
+		interrupt = make(chan error)
+		defer close(interrupt)
+	}
+
 	syncDone := make(chan struct{})
 	options := &synccontroller.Options{
 		Interrupt: interrupt,
@@ -96,9 +101,9 @@ func (serviceClient *client) StartSync(interrupt chan error, printSyncLog, verbo
 
 func (serviceClient *client) newSyncFn(idx int, syncConfig *latest.SyncConfig, interrupt chan error, printSyncLog, verboseSync bool, prefixFn PrefixFn) func() error {
 	return func() error {
-		targetOptions := targetselector.NewEmptyOptions().ApplyConfigParameter(syncConfig.LabelSelector, syncConfig.Namespace, syncConfig.ContainerName, "")
-		targetOptions.AllowPick = false
-		targetOptions.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
+		targetOptions := targetselector.NewEmptyOptions().
+			ApplyConfigParameter(syncConfig.ContainerName, syncConfig.LabelSelector, nil, syncConfig.Namespace, "").
+			WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2))
 
 		// set options
 		options := &synccontroller.Options{

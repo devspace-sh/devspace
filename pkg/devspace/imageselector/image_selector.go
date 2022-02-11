@@ -75,8 +75,8 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 	return nil, nil
 }
 
-func CompareImageNames(selector ImageSelector, image2 string) bool {
-	image1 := selector.Image
+func CompareImageNames(selector string, image2 string) bool {
+	image1 := selector
 
 	// we replace possible # with a's here to avoid an parsing error
 	// since the tag is stripped anyways it doesn't really matter if we lose
