@@ -91,7 +91,7 @@ func CleanupTempDir(initialDir, tempDir string) {
 }
 
 func CopyToTempDir(relativePath string) (string, error) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := ioutil.TempDir("", "temp-*")
 	if err != nil {
 		return "", err
 	}

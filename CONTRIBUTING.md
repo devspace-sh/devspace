@@ -19,12 +19,12 @@ This project is mainly written in Golang. To contribute code,
 4. Clone the project: `git clone https://github.com/[YOUR_USERNAME]/devspace && cd devspace`
 5. Run `go clean -modcache`
 6. Run `go mod vendor` to install the dependencies
-7. Make changes to the code (add new dependencies to the Gopkg.toml)
-8. Build the project, e.g. via `go build -o devspace.exe`
-9. Make changes
-10. Run tests: `go test ./...`
+7. Build the project, e.g. via `go build -o devspace.exe`
+8. Make changes
+9.  Run unit tests: `./hack/coverage.bash`
+10. Run E2E tests: `cd e2e/ && go test -v -ginkgo.v`
 11. Format your code: `go fmt ./...`
-12. Commit changes
+12. Commit changes *([Please refer the commit message conventions](https://www.conventionalcommits.org/en/v1.0.0/))*
 13. Push commits
 14. Open pull request
 
