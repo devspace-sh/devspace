@@ -12,6 +12,11 @@ import (
 
 // StartSyncFromCmd starts a new sync from command
 func (serviceClient *client) StartSyncFromCmd(targetOptions targetselector.Options, syncConfig *latest.SyncConfig, interrupt chan error, noWatch, verbose bool) error {
+	if noWatch && interrupt == nil {
+		interrupt = make(chan error)
+		defer close(interrupt)
+	}
+
 	syncDone := make(chan struct{})
 	options := &synccontroller.Options{
 		Interrupt: interrupt,

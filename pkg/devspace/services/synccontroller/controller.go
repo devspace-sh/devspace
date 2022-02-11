@@ -289,7 +289,20 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 	}
 
 	log.Info("Waiting for containers to start...")
-	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(context.TODO(), c.client, options.TargetOptions, log)
+
+	ctx := context.Background()
+	if options.Interrupt != nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithCancel(ctx)
+		defer cancel()
+		
+		go func() {
+			<-options.Interrupt
+			cancel()
+		}()
+	}
+
+	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(ctx, c.client, options.TargetOptions, log)
 	if err != nil {
 		return nil, nil, errors.Errorf("Error selecting pod: %v", err)
 	}
