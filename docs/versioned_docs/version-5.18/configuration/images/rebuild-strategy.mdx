@@ -19,9 +19,9 @@ DevSpace will always rebuild when the `-b / --force-rebuild` flag is explicitly 
 :::
 
 #### Options For `rebuildStrategy`
-Currently DevSpace supports the rebuild strategies `always` and `ignoreContextChanges`:
-- **always**: if this strategy is provided, DevSpace will always rebuild the image
-- **ignoreContextChanges**: same as default except that DevSpace will ignore changes to files within the docker context
+Currently DevSpace supports two rebuild strategies:
+- `always` if this strategy is provided, DevSpace will always rebuild the image
+- `ignoreContextChanges` same as default except that DevSpace will ignore changes to files within the docker context
 
 #### Example
 ```yaml {4,7}
