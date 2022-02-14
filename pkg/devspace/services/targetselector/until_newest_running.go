@@ -114,8 +114,8 @@ func (u *PodInfoPrinter) PrintPodInfo(client kubectl.Client, pod *v1.Pod, log lo
 		}
 
 		status := kubectl.GetPodStatus(pod)
-		log.Infof("DevSpace is waiting, because Pod %s has status: %s", pod.Name, status)
 		u.shownEvents = displayWarnings(relevantObjectsFromPod(pod), pod.Namespace, client, u.shownEvents, log)
+		log.Infof("DevSpace is waiting, because Pod %s has status: %s", pod.Name, status)
 		u.lastWarning = time.Now()
 	}
 }
@@ -125,8 +125,6 @@ func (u *PodInfoPrinter) PrintNotFoundWarning(client kubectl.Client, namespace s
 	defer u.lastMutex.Unlock()
 
 	if time.Since(u.lastWarning) > time.Second*10 {
-		log.Warnf("DevSpace still couldn't find any Pods that match the selector. DevSpace will continue waiting, but this operation might timeout")
-
 		u.shownEvents = displayWarnings([]relevantObject{
 			{
 				Kind: "StatefulSet",
@@ -137,7 +135,11 @@ func (u *PodInfoPrinter) PrintNotFoundWarning(client kubectl.Client, namespace s
 			{
 				Kind: "ReplicaSet",
 			},
+			{
+				Kind: "Pod",
+			},
 		}, namespace, client, u.shownEvents, log)
+		log.Warnf("DevSpace still couldn't find any Pods that match the selector. DevSpace will continue waiting, but this operation might timeout")
 		u.lastWarning = time.Now()
 	}
 }
