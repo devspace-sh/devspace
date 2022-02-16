@@ -70,7 +70,6 @@ devspace purge -d my-deployment
 
 	purgeCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips the following dependencies from purging")
 	purgeCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Purges only the specific named dependencies")
-
 	return purgeCmd
 }
 

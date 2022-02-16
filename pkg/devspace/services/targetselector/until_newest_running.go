@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sort"
 	"strings"
@@ -94,22 +95,24 @@ func (u *PodInfoPrinter) PrintPodInfo(client kubectl.Client, pod *v1.Pod, log lo
 
 	if time.Since(u.lastWarning) > time.Second*10 {
 		// show init container logs if init container is running
-		for _, initContainer := range pod.Status.InitContainerStatuses {
-			if !stringutil.Contains(u.printedInitContainers, initContainer.Name) && initContainer.State.Running != nil {
-				// show logs of this currently running init container
-				log.Infof("Printing init container logs of pod %s", pod.Name)
-				reader, err := client.Logs(context.TODO(), pod.Namespace, pod.Name, initContainer.Name, false, nil, true)
-				if err != nil {
-					log.Warnf("Error reading init container logs: %v", err)
-				} else {
-					scanner := scanner.NewScanner(reader)
-					for scanner.Scan() {
-						log.Info(scanner.Text())
+		if log.GetLevel() == logrus.DebugLevel {
+			for _, initContainer := range pod.Status.InitContainerStatuses {
+				if !stringutil.Contains(u.printedInitContainers, initContainer.Name) && initContainer.State.Running != nil {
+					// show logs of this currently running init container
+					log.Infof("Printing init container logs of pod %s", pod.Name)
+					reader, err := client.Logs(context.TODO(), pod.Namespace, pod.Name, initContainer.Name, false, nil, true)
+					if err != nil {
+						log.Warnf("Error reading init container logs: %v", err)
+					} else {
+						scanner := scanner.NewScanner(reader)
+						for scanner.Scan() {
+							log.Info(scanner.Text())
+						}
 					}
-				}
 
-				u.printedInitContainers = append(u.printedInitContainers, initContainer.Name)
-				return
+					u.printedInitContainers = append(u.printedInitContainers, initContainer.Name)
+					return
+				}
 			}
 		}
 
