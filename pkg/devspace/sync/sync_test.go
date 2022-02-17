@@ -22,32 +22,17 @@ import (
 )
 
 func initTestDirs(t *testing.T) (string, string, string) {
-	testRemotePath, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("Couldn't create test dir: %v", err)
-	}
-
-	testLocalPath, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("Couldn't create test dir: %v", err)
-	}
-
-	outside, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("Couldn't create test dir: %v", err)
-	}
-
-	testRemotePath, err = filepath.EvalSymlinks(testRemotePath)
+	testRemotePath, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	testLocalPath, err = filepath.EvalSymlinks(testLocalPath)
+	testLocalPath, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	outside, err = filepath.EvalSymlinks(outside)
+	outside, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

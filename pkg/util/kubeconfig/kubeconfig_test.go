@@ -2,7 +2,6 @@ package kubeconfig
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -18,10 +17,7 @@ import (
 func TestSaveLoadKubeConfig(t *testing.T) {
 	t.Skip("Test not ready yet")
 
-	dir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
+	dir := t.TempDir()
 
 	wdBackup, err := os.Getwd()
 	if err != nil {
@@ -50,10 +46,6 @@ func TestSaveLoadKubeConfig(t *testing.T) {
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
 

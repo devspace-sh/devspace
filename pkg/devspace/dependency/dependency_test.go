@@ -1,11 +1,11 @@
 package dependency
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	fakebuild "github.com/loft-sh/devspace/pkg/devspace/build/testing"
@@ -89,10 +89,7 @@ func TestUpdateAll(t *testing.T) {
 		},
 	}
 
-	dir, err := ioutil.TempDir("", "testFolder")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
+	dir := t.TempDir()
 
 	wdBackup, err := os.Getwd()
 	if err != nil {
@@ -108,10 +105,6 @@ func TestUpdateAll(t *testing.T) {
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
 
@@ -163,10 +156,7 @@ type buildAllTestCase struct {
 }
 
 func TestBuildAll(t *testing.T) {
-	dir, err := ioutil.TempDir("", "testFolder")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
+	dir := t.TempDir()
 
 	wdBackup, err := os.Getwd()
 	if err != nil {
@@ -186,10 +176,6 @@ func TestBuildAll(t *testing.T) {
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
 
@@ -264,10 +250,7 @@ type deployAllTestCase struct {
 }
 
 func TestDeployAll(t *testing.T) {
-	dir, err := ioutil.TempDir("", "testFolder")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
+	dir := t.TempDir()
 
 	wdBackup, err := os.Getwd()
 	if err != nil {
@@ -287,10 +270,6 @@ func TestDeployAll(t *testing.T) {
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
 
@@ -365,11 +344,7 @@ type purgeAllTestCase struct {
 }
 
 func TestPurgeAll(t *testing.T) {
-	dir, err := ioutil.TempDir("", "testFolder")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
-	dir, err = filepath.EvalSymlinks(dir)
+	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -388,10 +363,6 @@ func TestPurgeAll(t *testing.T) {
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
 
@@ -470,11 +441,7 @@ type buildTestCase struct {
 }
 
 func TestBuild(t *testing.T) {
-	dir, err := ioutil.TempDir("", "testFolder")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
-	dir, err = filepath.EvalSymlinks(dir)
+	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -493,10 +460,6 @@ func TestBuild(t *testing.T) {
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
 
@@ -591,11 +554,7 @@ type deployTestCase struct {
 }
 
 func TestDeploy(t *testing.T) {
-	dir, err := ioutil.TempDir("", "testFolder")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
-	dir, err = filepath.EvalSymlinks(dir)
+	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -614,10 +573,6 @@ func TestDeploy(t *testing.T) {
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
 

@@ -30,10 +30,7 @@ func TestEraseVersionPrefix(t *testing.T) {
 func TestUpgrade(t *testing.T) {
 	t.Skip("Skip because of some API-limit")
 	//Create TmpFolder
-	dir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
+	dir := t.TempDir()
 
 	wdBackup, err := os.Getwd()
 	if err != nil {
@@ -49,10 +46,6 @@ func TestUpgrade(t *testing.T) {
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
 
