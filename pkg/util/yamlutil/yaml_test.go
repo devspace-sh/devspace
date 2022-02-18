@@ -1,7 +1,6 @@
 package yamlutil
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -9,10 +8,7 @@ import (
 )
 
 func TestWriteRead(t *testing.T) {
-	dir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
+	dir := t.TempDir()
 
 	wdBackup, err := os.Getwd()
 	if err != nil {
@@ -28,10 +24,6 @@ func TestWriteRead(t *testing.T) {
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
 
