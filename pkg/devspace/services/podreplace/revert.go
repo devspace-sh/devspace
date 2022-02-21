@@ -1,15 +1,11 @@
 package podreplace
 
 import (
-	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	dependencytypes "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -18,52 +14,52 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod, log log.Logger) (*selector.SelectedPodContainer, error) {
+func (p *replacer) RevertReplacePod(ctx *devspacecontext.Context, replacePod *latest.DevPod) (*selector.SelectedPodContainer, error) {
 	// check if there is a replaced pod in the target namespace
-	log.Info("Try to find replaced pod...")
+	ctx.Log.Info("Try to find replaced pod...")
 
 	// try to find a single patched pod
-	selectedPod, err := findSingleReplacedPod(ctx, client, replacePod, config, dependencies, log)
+	selectedPod, err := findSingleReplacedPod(ctx, replacePod)
 	if err != nil {
 		return nil, errors.Wrap(err, "find patched pod")
 	} else if selectedPod == nil {
-		parent, err := p.findScaledDownParentBySelector(ctx, client, config, dependencies, replacePod)
+		parent, err := p.findScaledDownParentBySelector(ctx, replacePod)
 		if err != nil {
 			return nil, err
 		} else if parent == nil {
 			return nil, nil
 		}
 
-		err = deleteLeftOverReplicaSets(ctx, client, replacePod, parent, log)
+		err = deleteLeftOverReplicaSets(ctx, replacePod, parent)
 		if err != nil {
 			return nil, err
 		}
 
 		accessor, _ := meta.Accessor(parent)
 		typeAccessor, _ := meta.TypeAccessor(parent)
-		log.Infof("Scale up %s %s/%s", typeAccessor.GetKind(), accessor.GetNamespace(), accessor.GetName())
-		return nil, scaleUpParent(ctx, client, parent)
+		ctx.Log.Infof("Scale up %s %s/%s", typeAccessor.GetKind(), accessor.GetNamespace(), accessor.GetName())
+		return nil, scaleUpParent(ctx, parent)
 	}
 
 	if selectedPod.Pod.Annotations == nil || selectedPod.Pod.Annotations[ParentKindAnnotation] == "" || selectedPod.Pod.Annotations[ParentNameAnnotation] == "" {
-		return selectedPod, deleteAndWait(ctx, client, selectedPod.Pod, log)
+		return selectedPod, deleteAndWait(ctx, selectedPod.Pod)
 	}
 
-	parent, err := getParentFromReplaced(ctx, client, selectedPod.Pod.ObjectMeta)
+	parent, err := getParentFromReplaced(ctx, selectedPod.Pod.ObjectMeta)
 	if err != nil {
 		// log.Infof("Error getting Parent of replaced Pod %s/%s: %v", selectedPod.Pod.Namespace, selectedPod.Pod.Name, err)
-		return selectedPod, deleteAndWait(ctx, client, selectedPod.Pod, log)
+		return selectedPod, deleteAndWait(ctx, selectedPod.Pod)
 	}
 
 	// delete replaced pods
-	err = deleteLeftOverReplicaSets(ctx, client, replacePod, parent, log)
+	err = deleteLeftOverReplicaSets(ctx, replacePod, parent)
 	if err != nil {
 		return nil, err
 	}
 
 	// scale up parent
-	log.Info("Scaling up parent of replaced pod...")
-	err = scaleUpParent(ctx, client, parent)
+	ctx.Log.Info("Scaling up parent of replaced pod...")
+	err = scaleUpParent(ctx, parent)
 	if err != nil {
 		return nil, err
 	}
@@ -71,19 +67,19 @@ func (p *replacer) RevertReplacePod(ctx context.Context, client kubectl.Client, 
 	return selectedPod, nil
 }
 
-func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client kubectl.Client, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod) (runtime.Object, error) {
-	namespace := client.Namespace()
+func (p *replacer) findScaledDownParentBySelector(ctx *devspacecontext.Context, replacePod *latest.DevPod) (runtime.Object, error) {
+	namespace := ctx.KubeClient.Namespace()
 	if replacePod.Namespace != "" {
 		namespace = replacePod.Namespace
 	}
 
 	// deployments
-	deployments, err := client.KubeClient().AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
+	deployments, err := ctx.KubeClient.KubeClient().AppsV1().Deployments(namespace).List(ctx.Context, metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "list Deployments")
 	}
 	for _, d := range deployments.Items {
-		matched, err := matchesSelector(d.Annotations, &d.Spec.Template, config, dependencies, replacePod)
+		matched, err := matchesSelector(ctx, d.Annotations, &d.Spec.Template, replacePod)
 		if err != nil {
 			return nil, err
 		} else if matched {
@@ -93,7 +89,7 @@ func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client ku
 	}
 
 	// replicaSets
-	replicaSets, err := client.KubeClient().AppsV1().ReplicaSets(namespace).List(ctx, metav1.ListOptions{})
+	replicaSets, err := ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(namespace).List(ctx.Context, metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "list ReplicaSets")
 	}
@@ -102,7 +98,7 @@ func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client ku
 			continue
 		}
 
-		matched, err := matchesSelector(d.Annotations, &d.Spec.Template, config, dependencies, replacePod)
+		matched, err := matchesSelector(ctx, d.Annotations, &d.Spec.Template, replacePod)
 		if err != nil {
 			return nil, err
 		} else if matched {
@@ -112,12 +108,12 @@ func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client ku
 	}
 
 	// statefulSets
-	statefulSets, err := client.KubeClient().AppsV1().StatefulSets(namespace).List(ctx, metav1.ListOptions{})
+	statefulSets, err := ctx.KubeClient.KubeClient().AppsV1().StatefulSets(namespace).List(ctx.Context, metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "list StatefulSets")
 	}
 	for _, d := range statefulSets.Items {
-		matched, err := matchesSelector(d.Annotations, &d.Spec.Template, config, dependencies, replacePod)
+		matched, err := matchesSelector(ctx, d.Annotations, &d.Spec.Template, replacePod)
 		if err != nil {
 			return nil, err
 		} else if matched {
@@ -129,7 +125,7 @@ func (p *replacer) findScaledDownParentBySelector(ctx context.Context, client ku
 	return nil, nil
 }
 
-func matchesSelector(annotations map[string]string, pod *corev1.PodTemplateSpec, config config.Config, dependencies []dependencytypes.Dependency, replacePod *latest.ReplacePod) (bool, error) {
+func matchesSelector(ctx *devspacecontext.Context, annotations map[string]string, pod *corev1.PodTemplateSpec, replacePod *latest.DevPod) (bool, error) {
 	if annotations == nil || annotations[ReplicasAnnotation] == "" {
 		return false, nil
 	}
@@ -144,7 +140,7 @@ func matchesSelector(annotations map[string]string, pod *corev1.PodTemplateSpec,
 
 		return labelSelector.Matches(labels.Set(pod.Labels)), nil
 	} else if replacePod.ImageSelector != "" {
-		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, config, dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return false, err
 		}

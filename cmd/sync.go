@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"os"
 
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
@@ -254,6 +255,15 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 
 	// Start sync
 	options = options.ApplyConfigParameter(syncConfig.ContainerName, syncConfig.LabelSelector, nil, syncConfig.Namespace, "")
+	options = options.WithSkipInitContainers(true)
+	if options.SyncConfig.ImageSelector != "" {
+		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(options.SyncConfig.ImageSelector, ctx.Config, ctx.Dependencies)
+		if err != nil {
+			return err
+		}
+
+		options.TargetOptions = options.TargetOptions.WithImageSelector([]string{imageSelector.Image})
+	}
 	return f.NewServicesClient(configInterface, nil, client, logger).StartSyncFromCmd(options, syncConfig, cmd.Interrupt, cmd.NoWatch, cmd.Verbose)
 }
 

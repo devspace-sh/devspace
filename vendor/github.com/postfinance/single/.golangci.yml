@@ -1,0 +1,92 @@
+# options for analysis running
+run:
+  tests: true
+  timeout: 3m
+
+
+# all available settings of specific linters
+linters-settings:
+  dupl:
+    threshold: 150
+  funlen:
+    lines: 100
+    statements: 50
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - whyNoLint
+  gocyclo:
+    min-complexity: 15
+  goimports:
+    local-prefixes: github.com/ewohltman/ephemeral-roles
+  golint:
+    min-confidence: 0.8
+  govet:
+    check-shadowing: true
+  maligned:
+    suggest-new: true
+  misspell:
+    locale: US
+
+linters:
+  disable:
+    - gomnd
+    - lll
+  enable:
+    - bodyclose
+    - deadcode
+    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godox
+    - gofmt
+    - goimports
+    - golint
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - interfacer
+    - maligned
+    - misspell
+    - nakedret
+    - prealloc
+    - rowserrcheck
+    - scopelint # todo
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+    - whitespace
+    - wsl
+
+
+issues:
+  exclude:
+    # Very commonly not checked.
+    - 'Error return value of .(l.Sync|.*Close|.*Flush|os\.Remove(All)?|os\.(Un)?Setenv). is not checked'
+    - 'exported method (.*\.MarshalJSON|.*\.UnmarshalJSON) should have comment or be unexported'
+    - 'shadow: declaration of "err" shadows declaration.*'
+  max-same-issues: 0
+  exclude-use-default: false

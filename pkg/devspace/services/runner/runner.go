@@ -1,4 +1,4 @@
-package services
+package runner
 
 import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"

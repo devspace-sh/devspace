@@ -12,4 +12,5 @@ import (
 type WaitingStrategy interface {
 	SelectContainer(ctx context.Context, client kubectl.Client, namespace string, containers []*selector.SelectedPodContainer, log log.Logger) (bool, *selector.SelectedPodContainer, error)
 	SelectPod(ctx context.Context, client kubectl.Client, namespace string, pods []*v1.Pod, log log.Logger) (bool, *v1.Pod, error)
+	Reset() WaitingStrategy
 }

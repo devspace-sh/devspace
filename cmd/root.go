@@ -230,6 +230,7 @@ Additional run commands:
 	rootCmd.AddCommand(NewRenderCmd(f, globalFlags))
 	rootCmd.AddCommand(NewPurgeCmd(f, globalFlags))
 	rootCmd.AddCommand(NewUpgradeCmd())
+	rootCmd.AddCommand(NewPipelineCmd(f, globalFlags))
 	rootCmd.AddCommand(NewDeployCmd(f, globalFlags))
 	rootCmd.AddCommand(NewEnterCmd(f, globalFlags))
 	rootCmd.AddCommand(NewAnalyzeCmd(f, globalFlags))

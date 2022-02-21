@@ -1,4 +1,4 @@
-package synccontroller
+package sync
 
 import (
 	"bytes"
@@ -11,14 +11,12 @@ import (
 	"strconv"
 	"time"
 
-	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
@@ -32,29 +30,22 @@ import (
 )
 
 type Controller interface {
-	Start(options *Options, log logpkg.Logger) error
+	Start(ctx *devspacecontext.Context, options *Options) error
 }
 
-func NewController(config config.Config, dependencies []types.Dependency, client kubectl.Client) Controller {
-	return &controller{
-		config:       config,
-		dependencies: dependencies,
-		client:       client,
-	}
+func NewController() Controller {
+	return &controller{}
 }
 
-type controller struct {
-	config       config.Config
-	dependencies []types.Dependency
-	client       kubectl.Client
-}
+type controller struct{}
 
 type Options struct {
-	SyncConfig    *latest.SyncConfig
-	TargetOptions targetselector.Options
+	Name       string
+	SyncConfig *latest.SyncConfig
+	Arch       string
+	Selector   targetselector.TargetSelector
 
-	Interrupt chan error
-	Done      chan struct{}
+	Done chan struct{}
 
 	RestartOnError bool
 	SyncLog        logpkg.Logger
@@ -62,20 +53,20 @@ type Options struct {
 	Verbose bool
 }
 
-func (c *controller) Start(options *Options, log logpkg.Logger) error {
-	pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+func (c *controller) Start(ctx *devspacecontext.Context, options *Options) error {
+	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 		"sync_config": options.SyncConfig,
-	}, log, hook.EventsForSingle("start:sync", options.SyncConfig.Name).With("sync.start")...)
+	}, hook.EventsForSingle("start:sync", options.Name).With("sync.start")...)
 	if pluginErr != nil {
 		return pluginErr
 	}
 
-	err := c.startWithWait(options, log)
+	err := c.startWithWait(ctx, options)
 	if err != nil {
-		pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+		pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"sync_config": options.SyncConfig,
 			"ERROR":       err,
-		}, log, hook.EventsForSingle("error:sync", options.SyncConfig.Name).With("sync.error")...)
+		}, hook.EventsForSingle("error:sync", options.Name).With("sync.error")...)
 		if pluginErr != nil {
 			return pluginErr
 		}
@@ -86,7 +77,7 @@ func (c *controller) Start(options *Options, log logpkg.Logger) error {
 	return nil
 }
 
-func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
+func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Options) error {
 	var (
 		onInitUploadDone   chan struct{}
 		onInitDownloadDone chan struct{}
@@ -98,21 +89,21 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 	if options.SyncConfig.WaitInitialSync == nil || *options.SyncConfig.WaitInitialSync {
 		onInitUploadDone = make(chan struct{})
 		onInitDownloadDone = make(chan struct{})
-		pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+		pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"sync_config": options.SyncConfig,
-		}, log, hook.EventsForSingle("before:initialSync", options.SyncConfig.Name).With("sync.beforeInitialSync")...)
+		}, hook.EventsForSingle("before:initialSync", options.Name).With("sync.beforeInitialSync")...)
 		if pluginErr != nil {
 			return pluginErr
 		}
 	}
 
 	// start the sync
-	client, pod, err := c.startSync(options, onInitUploadDone, onInitDownloadDone, onDone, onError, log)
+	client, pod, err := c.startSync(ctx, options, onInitUploadDone, onInitDownloadDone, onDone, onError)
 	if err != nil {
-		pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+		pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"sync_config": options.SyncConfig,
 			"ERROR":       err,
-		}, log, hook.EventsForSingle("error:initialSync", options.SyncConfig.Name).With("sync.errorInitialSync")...)
+		}, hook.EventsForSingle("error:initialSync", options.Name).With("sync.errorInitialSync")...)
 		if pluginErr != nil {
 			return pluginErr
 		}
@@ -122,7 +113,7 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 
 	// should wait for initial sync?
 	if options.SyncConfig.WaitInitialSync == nil || *options.SyncConfig.WaitInitialSync {
-		log.Info("Waiting for initial sync to complete")
+		ctx.Log.Info("Waiting for initial sync to complete")
 		var (
 			uploadDone   = false
 			downloadDone = false
@@ -131,10 +122,10 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 		for {
 			select {
 			case err := <-onError:
-				pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+				pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 					"sync_config": options.SyncConfig,
 					"ERROR":       err,
-				}, log, hook.EventsForSingle("error:initialSync", options.SyncConfig.Name).With("sync.errorInitialSync")...)
+				}, hook.EventsForSingle("error:initialSync", options.Name).With("sync.errorInitialSync")...)
 				if pluginErr != nil {
 					return pluginErr
 				}
@@ -143,11 +134,11 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				uploadDone = true
 			case <-onInitDownloadDone:
 				downloadDone = true
-			case <-options.Interrupt:
+			case <-ctx.Context.Done():
 				client.Stop(nil)
-				pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+				pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 					"sync_config": options.SyncConfig,
-				}, log, hook.EventsForSingle("stop:sync", options.SyncConfig.Name).With("sync.stop")...)
+				}, hook.EventsForSingle("stop:sync", options.Name).With("sync.stop")...)
 				if pluginErr != nil {
 					return pluginErr
 				}
@@ -156,22 +147,22 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 				if options.Done != nil {
 					close(options.Done)
 				}
-				pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+				pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 					"sync_config": options.SyncConfig,
-				}, log, hook.EventsForSingle("stop:sync", options.SyncConfig.Name).With("sync.stop")...)
+				}, hook.EventsForSingle("stop:sync", options.Name).With("sync.stop")...)
 				if pluginErr != nil {
 					return pluginErr
 				}
 				return nil
 			}
 			if uploadDone && downloadDone {
-				log.Debugf("Initial sync took: %s", time.Since(started))
+				ctx.Log.Debugf("Initial sync took: %s", time.Since(started))
 				break
 			}
 		}
-		pluginErr := hook.ExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+		pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"sync_config": options.SyncConfig,
-		}, log, hook.EventsForSingle("after:initialSync", options.SyncConfig.Name).With("sync.afterInitialSync")...)
+		}, hook.EventsForSingle("after:initialSync", options.Name).With("sync.afterInitialSync")...)
 		if pluginErr != nil {
 			return pluginErr
 		}
@@ -182,20 +173,20 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 		go func(syncClient *sync.Sync, options *Options) {
 			select {
 			case err = <-onError:
-				hook.LogExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+				hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
 					"sync_config": options.SyncConfig,
 					"ERROR":       err,
-				}, options.SyncLog, hook.EventsForSingle("restart:sync", options.SyncConfig.Name).With("sync.restart")...)
+				}, hook.EventsForSingle("restart:sync", options.Name).With("sync.restart")...)
 
 				options.SyncLog.Info("Restarting sync...")
-				PrintPodError(context.TODO(), c.client, pod.Pod, options.SyncLog)
+				PrintPodError(ctx.Context, ctx.KubeClient, pod.Pod, options.SyncLog)
 				for {
-					err := c.startWithWait(options, options.SyncLog)
+					err := c.startWithWait(ctx.WithLogger(options.SyncLog), options)
 					if err != nil {
-						hook.LogExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+						hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
 							"sync_config": options.SyncConfig,
 							"ERROR":       err,
-						}, options.SyncLog, hook.EventsForSingle("restart:sync", options.SyncConfig.Name).With("sync.restart")...)
+						}, hook.EventsForSingle("restart:sync", options.Name).With("sync.restart")...)
 						options.SyncLog.Errorf("Error restarting sync: %v", err)
 						options.SyncLog.Errorf("Will try again in 15 seconds")
 						time.Sleep(time.Second * 15)
@@ -204,18 +195,21 @@ func (c *controller) startWithWait(options *Options, log logpkg.Logger) error {
 
 					break
 				}
-			case <-options.Interrupt:
+			case <-ctx.Context.Done():
 				syncClient.Stop(nil)
-				hook.LogExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+				if options.Done != nil {
+					close(options.Done)
+				}
+				hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
 					"sync_config": options.SyncConfig,
-				}, options.SyncLog, hook.EventsForSingle("stop:sync", options.SyncConfig.Name).With("sync.stop")...)
+				}, hook.EventsForSingle("stop:sync", options.Name).With("sync.stop")...)
 			case <-onDone:
 				if options.Done != nil {
 					close(options.Done)
 				}
-				hook.LogExecuteHooks(c.client, c.config, c.dependencies, map[string]interface{}{
+				hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
 					"sync_config": options.SyncConfig,
-				}, options.SyncLog, hook.EventsForSingle("stop:sync", options.SyncConfig.Name).With("sync.stop")...)
+				}, hook.EventsForSingle("stop:sync", options.Name).With("sync.stop")...)
 			}
 		}(client, options)
 	}
@@ -252,8 +246,7 @@ func realWorkDir() (string, error) {
 	return ".", nil
 }
 
-func (c *controller) startSync(options *Options, onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}, onDone chan struct{}, onError chan error, log logpkg.Logger) (*sync.Sync, *selector.SelectedPodContainer, error) {
-	options.TargetOptions = options.TargetOptions.WithSkipInitContainers(true)
+func (c *controller) startSync(ctx *devspacecontext.Context, options *Options, onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}, onDone chan struct{}, onError chan error) (*sync.Sync, *selector.SelectedPodContainer, error) {
 	var (
 		syncConfig = options.SyncConfig
 	)
@@ -279,36 +272,13 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 		}
 	}
 
-	if syncConfig.ImageSelector != "" {
-		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(syncConfig.ImageSelector, c.config, c.dependencies)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		options.TargetOptions = options.TargetOptions.WithImageSelector([]string{imageSelector.Image})
-	}
-
-	log.Info("Waiting for containers to start...")
-
-	ctx := context.Background()
-	if options.Interrupt != nil {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithCancel(ctx)
-		defer cancel()
-		
-		go func() {
-			<-options.Interrupt
-			cancel()
-		}()
-	}
-
-	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(ctx, c.client, options.TargetOptions, log)
+	container, err := options.Selector.SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
 	if err != nil {
 		return nil, nil, errors.Errorf("Error selecting pod: %v", err)
 	}
 
-	log.Info("Starting sync...")
-	syncClient, err := c.initClient(container.Pod, container.Container.Name, syncConfig, options.Verbose, options.SyncLog)
+	ctx.Log.Info("Starting sync...")
+	syncClient, err := c.initClient(ctx, container.Pod, options.Arch, container.Container.Name, syncConfig, options.Verbose, options.SyncLog)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "start sync")
 	}
@@ -323,12 +293,12 @@ func (c *controller) startSync(options *Options, onInitUploadDone chan struct{},
 		containerPath = syncConfig.ContainerPath
 	}
 
-	log.Donef("Sync started on %s <-> %s (Pod: %s/%s)", syncClient.LocalPath, containerPath, container.Pod.Namespace, container.Pod.Name)
+	ctx.Log.Donef("Sync started on %s:%s", syncClient.LocalPath, containerPath)
 	return syncClient, container, nil
 }
 
-func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *latest.SyncConfig, verbose bool, customLog logpkg.Logger) (*sync.Sync, error) {
-	err := inject.InjectDevSpaceHelper(c.client, pod, container, string(syncConfig.Arch), customLog)
+func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch, container string, syncConfig *latest.SyncConfig, verbose bool, customLog logpkg.Logger) (*sync.Sync, error) {
+	err := inject.InjectDevSpaceHelper(ctx.KubeClient, pod, container, string(arch), customLog)
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +341,7 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 		Log:                  customLog,
 		Polling:              syncConfig.Polling,
 		ResolveCommand: func(command string, args []string) (string, []string, error) {
-			return hook.ResolveCommand(command, args, c.config, c.dependencies)
+			return hook.ResolveCommand(command, args, ctx.Config, ctx.Dependencies)
 		},
 	}
 
@@ -488,7 +458,7 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 	upStdoutReader, upStdoutWriter := io.Pipe()
 
 	go func() {
-		err := StartStream(c.client, pod, container, upstreamArgs, upStdinReader, upStdoutWriter, true, options.Log)
+		err := StartStream(ctx.KubeClient, pod, container, upstreamArgs, upStdinReader, upStdoutWriter, true, options.Log)
 		if err != nil {
 			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
@@ -519,7 +489,7 @@ func (c *controller) initClient(pod *v1.Pod, container string, syncConfig *lates
 	downStdoutReader, downStdoutWriter := io.Pipe()
 
 	go func() {
-		err := StartStream(c.client, pod, container, downstreamArgs, downStdinReader, downStdoutWriter, true, options.Log)
+		err := StartStream(ctx.KubeClient, pod, container, downstreamArgs, downStdinReader, downStdoutWriter, true, options.Log)
 		if err != nil {
 			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
@@ -575,13 +545,12 @@ func StartStream(client kubectl.Client, pod *v1.Pod, container string, command [
 
 	go func() {
 		defer stderrReader.Close()
-
-		scanner := scanner.NewScanner(stderrReader)
-		for scanner.Scan() {
-			log.Info("Helper - " + scanner.Text())
+		s := scanner.NewScanner(stderrReader)
+		for s.Scan() {
+			log.Info("Helper - " + s.Text())
 		}
-		if scanner.Err() != nil && scanner.Err() != context.Canceled {
-			log.Warnf("Helper - Error streaming logs: %v", scanner.Err())
+		if s.Err() != nil && s.Err() != context.Canceled {
+			log.Warnf("Helper - Error streaming logs: %v", s.Err())
 		}
 	}()
 

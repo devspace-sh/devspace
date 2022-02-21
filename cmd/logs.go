@@ -1,9 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
+	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
+	"os"
+	"time"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
@@ -110,8 +116,15 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 		return errors.Wrap(err, "create kube client")
 	}
 
+	// create the context
+	ctx := &devspacecontext.Context{
+		Context:    context.Background(),
+		KubeClient: client,
+		Log:        log,
+	}
+
 	// Execute plugin hook
-	err = hook.ExecuteHooks(client, nil, nil, nil, nil, "logs")
+	err = hook.ExecuteHooks(ctx, nil, "logs")
 	if err != nil {
 		return err
 	}
@@ -124,10 +137,15 @@ func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 
 	// Build options
 	options := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, imageSelector, cmd.Namespace, cmd.Pod).
-		WithPick(cmd.Pick)
+		WithPick(cmd.Pick).
+		WithWait(cmd.Wait).
+		WithContainerFilter(selector.FilterTerminatingContainers)
+	if cmd.Wait {
+		options = options.WithWaitingStrategy(targetselector.NewUntilNotWaitingStrategy(time.Second * 2))
+	}
 
 	// Start terminal
-	err = f.NewServicesClient(nil, nil, client, log).StartLogs(options, cmd.Follow, int64(cmd.LastAmountOfLines), cmd.Wait)
+	err = logs.StartLogsWithWriter(ctx, targetselector.NewTargetSelector(options), cmd.Follow, int64(cmd.LastAmountOfLines), os.Stdout)
 	if err != nil {
 		return err
 	}

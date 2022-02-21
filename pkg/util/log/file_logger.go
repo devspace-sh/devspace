@@ -23,6 +23,10 @@ type fileLogger struct {
 	logger *logrus.Logger
 }
 
+func GetDevPodFileLogger(devPodName string) Logger {
+	return GetFileLogger("devpod-" + devPodName)
+}
+
 // GetFileLogger returns a logger instance for the specified filename
 func GetFileLogger(filename string) Logger {
 	logsMutext.Lock()

@@ -4,6 +4,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/devspace/services"
+	"github.com/loft-sh/devspace/pkg/devspace/services/sync"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
@@ -50,7 +51,7 @@ func SyncAndPortForwarding(servicesClient services.Client, interrupt chan error,
 			return
 		}
 
-		err := servicesClient.StartSync(interrupt, printSyncLog, verbose, services.DefaultPrefixFn)
+		err := servicesClient.StartSync(interrupt, printSyncLog, verbose, sync.DefaultPrefixFn)
 		if err != nil {
 			errChan <- errors.Wrap(err, "start sync")
 			return
@@ -80,7 +81,7 @@ func SyncAndPortForwarding(servicesClient services.Client, interrupt chan error,
 		}
 
 		// start port forwarding
-		err := servicesClient.StartPortForwarding(interrupt, services.DefaultPrefixFn)
+		err := servicesClient.StartPortForwarding(interrupt, sync.DefaultPrefixFn)
 		if err != nil {
 			errChan <- errors.Errorf("Unable to start portforwarding: %v", err)
 			return
@@ -123,7 +124,7 @@ func ReplacePods(servicesClient services.Client) error {
 	}
 
 	// replace pods
-	err := servicesClient.ReplacePods(services.DefaultPrefixFn)
+	err := servicesClient.ReplacePods(sync.DefaultPrefixFn)
 	if err != nil {
 		return err
 	}

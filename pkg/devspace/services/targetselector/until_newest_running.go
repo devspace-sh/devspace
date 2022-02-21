@@ -18,11 +18,12 @@ import (
 )
 
 // NewUntilNewestRunningWaitingStrategy creates a new waiting strategy
-func NewUntilNewestRunningWaitingStrategy(initialDelay time.Duration) WaitingStrategy {
+func NewUntilNewestRunningWaitingStrategy(delay time.Duration) WaitingStrategy {
 	return &untilNewestRunning{
-		initialDelay: time.Now().Add(initialDelay),
+		originalDelay: delay,
+		initialDelay:  time.Now().Add(delay),
 		podInfoPrinter: &PodInfoPrinter{
-			lastWarning: time.Now().Add(initialDelay),
+			lastWarning: time.Now().Add(delay),
 		},
 	}
 }
@@ -30,9 +31,20 @@ func NewUntilNewestRunningWaitingStrategy(initialDelay time.Duration) WaitingStr
 // this waiting strategy will wait until the newest pod / container is up and running or fails
 // it also waits initially for some time
 type untilNewestRunning struct {
-	initialDelay time.Time
+	originalDelay time.Duration
+	initialDelay  time.Time
 
 	podInfoPrinter *PodInfoPrinter
+}
+
+func (u *untilNewestRunning) Reset() WaitingStrategy {
+	return &untilNewestRunning{
+		originalDelay: u.originalDelay,
+		initialDelay:  time.Now().Add(u.originalDelay),
+		podInfoPrinter: &PodInfoPrinter{
+			lastWarning: time.Now().Add(u.originalDelay),
+		},
+	}
 }
 
 func (u *untilNewestRunning) SelectPod(ctx context.Context, client kubectl.Client, namespace string, pods []*v1.Pod, log log.Logger) (bool, *v1.Pod, error) {

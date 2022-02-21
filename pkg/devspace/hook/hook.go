@@ -3,6 +3,7 @@ package hook
 import (
 	"bytes"
 	"fmt"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 	"strings"
 	"time"
@@ -51,29 +52,29 @@ type Hook interface {
 }
 
 // LogExecuteHooks executes plugin hooks and config hooks and prints errors to the log
-func LogExecuteHooks(client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]interface{}, log logpkg.Logger, events ...string) {
+func LogExecuteHooks(ctx *devspacecontext.Context, extraEnv map[string]interface{}, events ...string) {
 	// call plugin first
 	plugin.LogExecutePluginHookWithContext(extraEnv, events...)
 
 	// now execute hooks
-	if config != nil {
-		if log == nil {
-			log = logpkg.GetInstance()
+	if ctx != nil && ctx.Config != nil {
+		if ctx.Log == nil {
+			ctx = ctx.WithLogger(logpkg.GetInstance())
 		}
 
 		convertedExtraEnv := plugin.ConvertExtraEnv("DEVSPACE_HOOK", extraEnv)
 		for _, e := range events {
 			convertedExtraEnv["DEVSPACE_HOOK_EVENT"] = e
-			err := executeSingle(client, config, dependencies, convertedExtraEnv, log, e)
+			err := executeSingle(ctx.KubeClient, ctx.Config, ctx.Dependencies, convertedExtraEnv, ctx.Log, e)
 			if err != nil {
-				log.Warn(err)
+				ctx.Log.Warn(err)
 			}
 		}
 	}
 }
 
 // ExecuteHooks executes plugin hooks and config hooks
-func ExecuteHooks(client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]interface{}, log logpkg.Logger, events ...string) error {
+func ExecuteHooks(ctx *devspacecontext.Context, extraEnv map[string]interface{}, events ...string) error {
 	// call plugin first
 	err := plugin.ExecutePluginHookWithContext(extraEnv, events...)
 	if err != nil {
@@ -81,15 +82,15 @@ func ExecuteHooks(client kubectl.Client, config config.Config, dependencies []ty
 	}
 
 	// now execute hooks
-	if config != nil {
-		if log == nil {
-			log = logpkg.GetInstance()
+	if ctx != nil && ctx.Config != nil {
+		if ctx.Log == nil {
+			ctx = ctx.WithLogger(logpkg.GetInstance())
 		}
 
 		convertedExtraEnv := plugin.ConvertExtraEnv("DEVSPACE_HOOK", extraEnv)
 		for _, e := range events {
 			convertedExtraEnv["DEVSPACE_HOOK_EVENT"] = e
-			err := executeSingle(client, config, dependencies, convertedExtraEnv, log, e)
+			err := executeSingle(ctx.KubeClient, ctx.Config, ctx.Dependencies, convertedExtraEnv, ctx.Log, e)
 			if err != nil {
 				return err
 			}

@@ -1,7 +1,14 @@
 package cmd
 
 import (
+	"context"
+	"fmt"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
+	"github.com/loft-sh/devspace/pkg/devspace/services/terminal"
 	"io"
+	"strings"
+	"time"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
@@ -111,8 +118,15 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 		return errors.Wrap(err, "new kube client")
 	}
 
+	// create the context
+	ctx := &devspacecontext.Context{
+		Context:    context.Background(),
+		KubeClient: client,
+		Log:        logger,
+	}
+
 	// Execute plugin hook
-	err = hook.ExecuteHooks(client, nil, nil, nil, nil, "enter")
+	err = hook.ExecuteHooks(ctx, nil, "enter")
 	if err != nil {
 		return err
 	}
@@ -125,11 +139,26 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 
 	// Build params
 	selectorOptions := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, imageSelector, cmd.Namespace, cmd.Pod).
-		WithPick(cmd.Pick)
+		WithPick(cmd.Pick).
+		WithWait(cmd.Wait).
+		WithQuestion("Which pod do you want to open the terminal for?")
+	if cmd.Wait {
+		selectorOptions = selectorOptions.WithContainerFilter(selector.FilterTerminatingContainers)
+		selectorOptions = selectorOptions.WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second))
+	}
+
+	// build command
+	command := []string{"sh", "-c", "command -v bash >/dev/null 2>&1 && exec bash || exec sh"}
+	if len(args) > 0 {
+		command = args
+	}
+	if cmd.WorkingDirectory != "" {
+		command = []string{"sh", "-c", fmt.Sprintf("cd %s; %s", cmd.WorkingDirectory, strings.Join(command, " "))}
+	}
 
 	// Start terminal
 	stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)
-	exitCode, err := f.NewServicesClient(nil, nil, client, logger).StartTerminal(selectorOptions, args, cmd.WorkingDirectory, make(chan error), cmd.Wait, cmd.Reconnect, stdout, stderr, stdin)
+	exitCode, err := terminal.StartTerminalFromCMD(ctx, targetselector.NewTargetSelector(selectorOptions), command, cmd.Wait, cmd.Reconnect, stdout, stderr, stdin)
 	if err != nil {
 		return err
 	} else if exitCode != 0 {

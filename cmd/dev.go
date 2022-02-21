@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
+	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"io"
 	"os"
@@ -657,7 +658,7 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 			}
 
 			// Log multiple images at once
-			manager, err := services.NewLogManager(client, configInterface, dependencies, exitChan, logger)
+			manager, err := logs.NewLogManager(client, configInterface, dependencies, exitChan, logger)
 			if err != nil {
 				return 0, errors.Wrap(err, "starting log manager")
 			}

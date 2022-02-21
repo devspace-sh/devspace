@@ -3,6 +3,7 @@ package dependency
 import (
 	"bytes"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/services/sync"
 	"io"
 	"os"
 	"strings"
@@ -588,7 +589,7 @@ func (d *Dependency) StartSync(interrupt chan error, printSyncLog, verboseSync b
 	}
 	defer func() { _ = os.Chdir(currentWorkingDirectory) }()
 
-	err = services.NewClient(d.localConfig, d.children, d.kubeClient, logger).StartSync(interrupt, printSyncLog, verboseSync, services.DependencyPrefixFn(d.Name()))
+	err = services.NewClient(d.localConfig, d.children, d.kubeClient, logger).StartSync(interrupt, printSyncLog, verboseSync, sync.DependencyPrefixFn(d.Name()))
 	if err != nil {
 		return errors.Wrapf(err, "start sync in dependency %s", d.Name())
 	}
@@ -596,7 +597,7 @@ func (d *Dependency) StartSync(interrupt chan error, printSyncLog, verboseSync b
 }
 
 func (d *Dependency) StartPortForwarding(interrupt chan error, logger log.Logger) error {
-	err := services.NewClient(d.localConfig, d.children, d.kubeClient, logger).StartPortForwarding(interrupt, services.DependencyPrefixFn(d.Name()))
+	err := services.NewClient(d.localConfig, d.children, d.kubeClient, logger).StartPortForwarding(interrupt, sync.DependencyPrefixFn(d.Name()))
 	if err != nil {
 		return errors.Wrapf(err, "start port-forwarding in dependency %s", d.Name())
 	}
@@ -604,7 +605,7 @@ func (d *Dependency) StartPortForwarding(interrupt chan error, logger log.Logger
 }
 
 func (d *Dependency) ReplacePods(logger log.Logger) error {
-	err := services.NewClient(d.localConfig, d.children, d.kubeClient, logger).ReplacePods(services.DependencyPrefixFn(d.Name()))
+	err := services.NewClient(d.localConfig, d.children, d.kubeClient, logger).ReplacePods(sync.DependencyPrefixFn(d.Name()))
 	if err != nil {
 		return errors.Wrapf(err, "replace pods in dependency %s", d.Name())
 	}

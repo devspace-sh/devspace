@@ -2,12 +2,12 @@ package server
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
 	"io"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"github.com/sirupsen/logrus"
 
 	"github.com/gorilla/websocket"
@@ -87,7 +87,7 @@ func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
 	defer ws.Close()
 
 	writer := &wsStream{WebSocket: ws}
-	manager, err := services.NewLogManager(client, h.config, h.dependencies, make(chan error), log.NewStreamLogger(writer, logrus.InfoLevel))
+	manager, err := logs.NewLogManager(client, h.config, h.dependencies, make(chan error), log.NewStreamLogger(writer, logrus.InfoLevel))
 	if err != nil {
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
 		websocketError(ws, err)

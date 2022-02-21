@@ -1,30 +1,9 @@
 version: v1beta11
-vars:
-  - name: IMAGE
-    value: mydockeruser/devspace
 images:
-  my-image:
-    image: ${IMAGE}
-    tags:
-      - my-tag-#####
-    build:
-      docker:
-        # force skip push if context is minikube or else disable
-        skipPush: $( [ ${DEVSPACE_CONTEXT} == "minikube" ] && echo "true" || echo "false" ) 
-deployments:
-- name: default
-  helm:
-    chart:
-      name: ./chart
-    values:
-      image: image(my-image)
-      tag: tag(my-image)
-dev:
-  ports:
-  - imageSelector: ${IMAGE}
-    forward:
-    - port: 3000
-  sync:
-  - imageSelector: ${IMAGE}
-    excludePaths:
-    - node_modules
+  test:
+    image: mydockeruser/devspace
+pipeline:
+  steps:
+    - name: Test
+      command: |-
+        devspace build > test.txt

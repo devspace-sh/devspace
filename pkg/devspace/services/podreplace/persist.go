@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func persistPaths(podName string, replacePod *latest.ReplacePod, copiedPod *corev1.Pod) error {
+func persistPaths(podName string, replacePod *latest.DevPod, copiedPod *corev1.Pod) error {
 	name := podName
 	if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Name != "" {
 		name = replacePod.PersistenceOptions.Name
@@ -37,7 +37,7 @@ func persistPaths(podName string, replacePod *latest.ReplacePod, copiedPod *core
 		}
 
 		if len(copiedPod.Spec.Containers) > 1 && p.ContainerName == "" {
-			if replacePod.ContainerName == "" {
+			if replacePod.Container == "" {
 				names := []string{}
 				for _, c := range copiedPod.Spec.Containers {
 					names = append(names, c.Name)
@@ -46,7 +46,7 @@ func persistPaths(podName string, replacePod *latest.ReplacePod, copiedPod *core
 				return fmt.Errorf("couldn't persist path %s as multiple containers were found %s, but no containerName was specified", p.Path, strings.Join(names, " "))
 			}
 
-			p.ContainerName = replacePod.ContainerName
+			p.ContainerName = replacePod.Container
 		}
 
 		var container *corev1.Container

@@ -26,10 +26,28 @@ func NewRaw() *Config {
 	}
 }
 
+type Pipeline struct {
+	Steps []PipelineStep `yaml:"steps,omitempty" json:"steps,omitempty"`
+}
+
+type PipelineStep struct {
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	If string `yaml:"if,omitempty" json:"if,omitempty"`
+
+	Command string `yaml:"command" json:"command"`
+
+	Directory string `yaml:"directory" json:"directory"`
+
+	Env map[string]string `yaml:"env" json:"env"`
+}
+
 // Config defines the configuration
 type Config struct {
 	// Version holds the config version
 	Version string `yaml:"version"`
+
+	Pipeline *Pipeline `yaml:"pipeline,omitempty" json:"pipeline,omitempty"`
 
 	// Require defines what DevSpace, plugins and command versions are needed to use this config
 	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
@@ -692,16 +710,8 @@ type KubectlConfig struct {
 
 // DevConfig defines the devspace deployment
 type DevConfig struct {
-	Ports      []*PortForwardingConfig `yaml:"ports,omitempty" json:"ports,omitempty"`
-	Open       []*OpenConfig           `yaml:"open,omitempty" json:"open,omitempty"`
-	Sync       []*SyncConfig           `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
-	Logs       *LogsConfig             `yaml:"logs,omitempty" json:"logs,omitempty"`
-	AutoReload *AutoReloadConfig       `yaml:"autoReload,omitempty" json:"autoReload,omitempty"`
-	Terminal   *Terminal               `yaml:"terminal,omitempty" json:"terminal,omitempty"`
-
-	// Replace pods will replace the selected target pod/container with a new image and optionally apply
-	// pod patches.
-	ReplacePods []*ReplacePod `yaml:"replacePods,omitempty" json:"replacePods,omitempty"`
+	Open       []*OpenConfig     `yaml:"open,omitempty" json:"open,omitempty"`
+	AutoReload *AutoReloadConfig `yaml:"autoReload,omitempty" json:"autoReload,omitempty"`
 
 	// DEPRECATED: Only used for backwards compatibility with older config versions
 	InteractiveEnabled bool `yaml:"deprecatedInteractiveEnabled,omitempty" json:"deprecatedInteractiveEnabled,omitempty"`
@@ -709,19 +719,41 @@ type DevConfig struct {
 	InteractiveImages []*InteractiveImageConfig `yaml:"deprecatedInteractiveImages,omitempty" json:"deprecatedInteractiveImages,omitempty"`
 }
 
-// ReplacePod will replace the selected target pod/container with a new image and optionally apply
-// pod patches.
-type ReplacePod struct {
+type DevPod struct {
 	Name          string            `yaml:"name,omitempty" json:"name,omitempty"`
 	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 
-	ReplaceImage       string              `yaml:"replaceImage,omitempty" json:"replaceImage,omitempty"`
-	PersistPaths       []PersistentPath    `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
-	PersistenceOptions *PersistenceOptions `yaml:"persistenceOptions,omitempty" json:"persistenceOptions,omitempty"`
+	Forward            []*PortMapping      `yaml:"forward,omitempty" json:"forward,omitempty"`
 	Patches            []*PatchConfig      `yaml:"patches,omitempty" json:"patches,omitempty"`
+	PersistenceOptions *PersistenceOptions `yaml:"persistenceOptions,omitempty" json:"persistenceOptions,omitempty"`
+
+	// Container Options
+	DevContainer `yaml:",inline" json:",inline"`
+	Containers   []DevContainer `yaml:"containers,omitempty" json:"containers,omitempty"`
+}
+
+type DevContainer struct {
+	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
+	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
+
+	PortMappingsReverse []*PortMapping   `yaml:"reverseForward,omitempty" json:"reverseForward,omitempty"`
+	Container           string           `yaml:"container,omitempty" json:"container,omitempty"`
+	Terminal            *Terminal        `yaml:"terminal,omitempty" json:"terminal,omitempty"`
+	Logs                *Logs            `yaml:"logs,omitempty" json:"logs,omitempty"`
+	Attach              *Attach          `yaml:"attach,omitempty" json:"attach,omitempty"`
+	ReplaceImage        string           `yaml:"replaceImage,omitempty" json:"replaceImage,omitempty"`
+	PersistPaths        []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
+	Sync                []*SyncConfig    `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
+}
+
+type Attach struct {
+}
+
+type Logs struct {
+	// If disabled is true, DevSpace will not print any logs
+	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 }
 
 type PersistenceOptions struct {
@@ -746,21 +778,6 @@ type PersistentPathInitContainer struct {
 	Resources *PodResources `yaml:"resources,omitempty" json:"resources,omitempty"`
 }
 
-// PortForwardingConfig defines the ports for a port forwarding to a DevSpace
-type PortForwardingConfig struct {
-	Name          string            `yaml:"name,omitempty" json:"name,omitempty"`
-	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
-	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-
-	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
-	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
-
-	PortMappings        []*PortMapping `yaml:"forward,omitempty" json:"forward,omitempty"`
-	PortMappingsReverse []*PortMapping `yaml:"reverseForward,omitempty" json:"reverseForward,omitempty"`
-}
-
 // PortMapping defines the ports for a PortMapping
 type PortMapping struct {
 	LocalPort   *int   `yaml:"port" json:"port"`
@@ -775,11 +792,8 @@ type OpenConfig struct {
 
 // SyncConfig defines the paths for a SyncFolder
 type SyncConfig struct {
-	Name                 string               `yaml:"name,omitempty" json:"name,omitempty"`
-	ImageSelector        string               `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	LabelSelector        map[string]string    `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	ContainerName        string               `yaml:"containerName,omitempty" json:"containerName,omitempty"`
-	Namespace            string               `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	PrintLogs bool `yaml:"printLogs,omitempty" json:"printLogs,omitempty"`
+
 	LocalSubPath         string               `yaml:"localSubPath,omitempty" json:"localSubPath,omitempty"`
 	ContainerPath        string               `yaml:"containerPath,omitempty" json:"containerPath,omitempty"`
 	ExcludePaths         []string             `yaml:"excludePaths,omitempty" json:"excludePaths,omitempty"`
@@ -798,9 +812,6 @@ type SyncConfig struct {
 
 	WaitInitialSync *bool            `yaml:"waitInitialSync,omitempty" json:"waitInitialSync,omitempty"`
 	BandwidthLimits *BandwidthLimits `yaml:"bandwidthLimits,omitempty" json:"bandwidthLimits,omitempty"`
-
-	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
-	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
 
 	// If greater zero, describes the amount of milliseconds to wait after each checked 100 files
 	ThrottleChangeDetection *int64 `yaml:"throttleChangeDetection,omitempty" json:"throttleChangeDetection,omitempty"`
@@ -898,22 +909,6 @@ type BandwidthLimits struct {
 	Upload   *int64 `yaml:"upload,omitempty" json:"upload,omitempty"`
 }
 
-// LogsConfig specifies the logs options for devspace dev
-type LogsConfig struct {
-	Disabled  *bool          `yaml:"disabled,omitempty" json:"disabled,omitempty"`
-	ShowLast  *int           `yaml:"showLast,omitempty" json:"showLast,omitempty"`
-	Sync      *bool          `yaml:"sync,omitempty" json:"sync,omitempty"`
-	Selectors []LogsSelector `yaml:"selectors,omitempty" json:"selectors,omitempty"`
-}
-
-// LogsSelector holds configuration how to select a log target
-type LogsSelector struct {
-	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
-}
-
 // AutoReloadConfig defines the struct for auto reloading devspace with additional paths
 type AutoReloadConfig struct {
 	Paths       []string `yaml:"paths,omitempty" json:"paths,omitempty"`
@@ -930,12 +925,8 @@ type InteractiveImageConfig struct {
 
 // Terminal describes the terminal options
 type Terminal struct {
-	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
-	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
-	ContainerName string            `yaml:"containerName,omitempty" json:"containerName,omitempty"`
-	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	Command       []string          `yaml:"command,omitempty" json:"command,omitempty"`
-	WorkDir       string            `yaml:"workDir,omitempty" json:"workDir,omitempty"`
+	Command string `yaml:"command,omitempty" json:"command,omitempty"`
+	WorkDir string `yaml:"workDir,omitempty" json:"workDir,omitempty"`
 
 	// If disabled is true, DevSpace will not use the terminal
 	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
