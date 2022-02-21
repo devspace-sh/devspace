@@ -196,8 +196,9 @@ hooks:
     - secret
     - generic
     - custom-pull-secret
+    - --type=kubernetes.io/dockerconfigjson
     - --from-literal
-    - config.json='{ "credsStore":"ecr-login" }'
+    - .dockerconfigjson='{ "credsStore":"ecr-login" }'
   when:
     before:
       images: all
@@ -207,16 +208,17 @@ hooks:
 :::note Building AWS ECR images on EKS
 If your EKS instance is [configured with access to ECR (see instance role permissions for AWS EKS and ECR)](https://docs.aws.amazon.com/AmazonECR/latest/userguide/ECR_on_EKS.html), your pull secret referenced by the `pullSecret` option, could be created with this kubectl command:
 ```yaml
-kubectl create secret generic custom-pull-secret --from-literal config.json='{ "credsStore":"ecr-login" }'
+kubectl create secret generic custom-pull-secret --type=kubernetes.io/dockerconfigjson --from-literal .dockerconfigjson='{ "credsStore":"ecr-login" }'
 ```
 The resulting Kubernetes secret would look like this:
 ```yaml
 apiVersion: v1
 kind: Secret
+type: kubernetes.io/dockerconfigjson
 metadata:
   name: custom-pull-secret
 data:
-  config.json: eyAiY3JlZHNTdG9yZSI6ImVjci1sb2dpbiIgfQ==
+  .dockerconfigjson: eyAiY3JlZHNTdG9yZSI6ImVjci1sb2dpbiIgfQ==
 ```
 If you define `pullSecret: custom-pull-secret` as shown in the example above, DevSpace will automatically mount this secret into the kaniko container and kaniko will be able to pull from and push to ECR.
 :::
