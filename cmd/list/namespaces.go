@@ -51,7 +51,7 @@ func (cmd *namespacesCmd) RunListNamespaces(f factory.Factory, cobraCmd *cobra.C
 	}
 
 	// Load generated config if possible
-	var generatedConfig *generated.Config
+	var generatedConfig *localcache.Config
 	if configExists {
 		generatedConfig, err = configLoader.LoadGenerated(cmd.ToConfigOptions(logger))
 		if err != nil {

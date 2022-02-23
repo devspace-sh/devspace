@@ -190,7 +190,7 @@ func TestResolver(t *testing.T) {
 		testConfig := &latest.Config{
 			Dependencies: testCase.dependencyTasks,
 		}
-		generatedConfig := &generated.Config{}
+		generatedConfig := &localcache.Config{}
 		kube := fake.NewSimpleClientset()
 		kubeClient := &fakekube.Client{
 			Client: kube,

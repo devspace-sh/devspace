@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -12,25 +13,18 @@ import (
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/util"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/git"
-	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/mitchellh/go-homedir"
 )
 
 // PredefinedVariableOptions holds the options for a predefined variable to load
 type PredefinedVariableOptions struct {
-	BasePath   string
 	ConfigPath string
-
-	KubeContextFlag  string
-	NamespaceFlag    string
-	KubeConfigLoader kubeconfig.Loader
-
-	Profile string
+	KubeClient kubectl.Client
+	Profile    string
 }
 
 // PredefinedVariableFunction is the definition of a predefined variable
@@ -58,11 +52,7 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 		return strconv.FormatInt(time.Now().Unix(), 10), nil
 	},
 	"devspace.git.branch": func(options *PredefinedVariableOptions) (interface{}, error) {
-		configPath := options.BasePath
-		if configPath == "" {
-			configPath = options.ConfigPath
-		}
-
+		configPath := options.ConfigPath
 		branch, err := git.GetBranch(filepath.Dir(configPath))
 		if err != nil {
 			return "", fmt.Errorf("error retrieving git branch: %v, but predefined var devspace.git.branch is used", err)
@@ -71,11 +61,7 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 		return branch, nil
 	},
 	"devspace.git.commit": func(options *PredefinedVariableOptions) (interface{}, error) {
-		configPath := options.BasePath
-		if configPath == "" {
-			configPath = options.ConfigPath
-		}
-
+		configPath := options.ConfigPath
 		hash, err := git.GetHash(filepath.Dir(configPath))
 		if err != nil {
 			return "", fmt.Errorf("no git repository found (%v), but predefined var devspace.git.commit is used", err)
@@ -84,20 +70,18 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 		return hash[:8], nil
 	},
 	"devspace.context": func(options *PredefinedVariableOptions) (interface{}, error) {
-		_, activeContext, _, _, err := util.NewClientByContext(options.KubeContextFlag, options.NamespaceFlag, false, options.KubeConfigLoader)
-		if err != nil {
-			return "", err
+		if options.KubeClient == nil {
+			return "", nil
 		}
 
-		return activeContext, nil
+		return options.KubeClient.CurrentContext(), nil
 	},
 	"devspace.namespace": func(options *PredefinedVariableOptions) (interface{}, error) {
-		_, _, activeNamespace, _, err := util.NewClientByContext(options.KubeContextFlag, options.NamespaceFlag, false, options.KubeConfigLoader)
-		if err != nil {
-			return "", err
+		if options.KubeClient == nil {
+			return "", nil
 		}
 
-		return activeNamespace, nil
+		return options.KubeClient.Namespace(), nil
 	},
 }
 
@@ -133,9 +117,7 @@ func AddPredefinedVars(plugins []plugin.Metadata) {
 
 				buffer := &bytes.Buffer{}
 				err = plugin.CallPluginExecutable(filepath.Join(pluginFolder, plugin.PluginBinary), v.BaseArgs, map[string]string{
-					plugin.KubeContextFlagEnv:   options.KubeContextFlag,
-					plugin.KubeNamespaceFlagEnv: options.NamespaceFlag,
-					plugin.OsArgsEnv:            string(args),
+					plugin.OsArgsEnv: string(args),
 				}, buffer)
 				if err != nil {
 					return "", fmt.Errorf("executing plugin %s: %s - %v", pluginName, buffer.String(), err)
@@ -149,31 +131,19 @@ func AddPredefinedVars(plugins []plugin.Metadata) {
 
 // NewPredefinedVariable creates a new predefined variable for the given name or fails if there
 // is none with the given name
-func NewPredefinedVariable(name string, cache map[string]string, options *PredefinedVariableOptions) (Variable, error) {
+func NewPredefinedVariable(name string, options *PredefinedVariableOptions) (Variable, error) {
 	if _, ok := predefinedVars[name]; !ok {
-		// Load space domain environment variable
-		if strings.HasPrefix(name, "DEVSPACE_SPACE_DOMAIN") {
-			// Check if its in generated config
-			if val, ok := cache[name]; ok {
-				return NewCachedValueVariable(val), nil
-			}
-
-			return NewCachedValueVariable(name), nil
-		}
-
 		return nil, errors.New("predefined variable " + name + " not found")
 	}
 
 	return &predefinedVariable{
 		name:    name,
-		cache:   cache,
 		options: options,
 	}, nil
 }
 
 type predefinedVariable struct {
 	name    string
-	cache   map[string]string
 	options *PredefinedVariableOptions
 }
 

@@ -1,8 +1,8 @@
 package kaniko
 
 import (
-	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"path/filepath"
 
 	"github.com/docker/distribution/reference"
@@ -51,7 +51,7 @@ var defaultResources = &availableResources{
 	EphemeralStorage: resource.MustParse("10Gi"),
 }
 
-func (b *Builder) getBuildPod(buildID string, devspacePID string, options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
+func (b *Builder) getBuildPod(ctx *devspacecontext.Context, buildID string, options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
 	kanikoOptions := b.helper.ImageConf.Build.Kaniko
 
 	registryURL, err := pullsecrets.GetRegistryFromImageName(b.FullImageName)
@@ -218,7 +218,7 @@ func (b *Builder) getBuildPod(buildID string, devspacePID string, options *types
 			Labels: map[string]string{
 				"devspace-build":    "true",
 				"devspace-build-id": buildID,
-				"devspace-pid":      devspacePID,
+				"devspace-pid":      ctx.RunID,
 			},
 		},
 		Spec: k8sv1.PodSpec{
@@ -313,7 +313,7 @@ func (b *Builder) getBuildPod(buildID string, devspacePID string, options *types
 	// check if we have specific options for the resources part
 	if kanikoOptions.Resources == nil {
 		// get available resources
-		availableResources, err := b.getAvailableResources()
+		availableResources, err := b.getAvailableResources(ctx)
 		if err != nil {
 			return nil, err
 		} else if availableResources != nil {
@@ -362,8 +362,8 @@ func (b *Builder) getBuildPod(buildID string, devspacePID string, options *types
 }
 
 // Determine available resources (This is only necessary in the devspace cloud)
-func (b *Builder) getAvailableResources() (*availableResources, error) {
-	quota, err := b.helper.KubeClient.KubeClient().CoreV1().ResourceQuotas(b.BuildNamespace).Get(context.TODO(), devspaceQuota, metav1.GetOptions{})
+func (b *Builder) getAvailableResources(ctx *devspacecontext.Context) (*availableResources, error) {
+	quota, err := ctx.KubeClient.KubeClient().CoreV1().ResourceQuotas(b.BuildNamespace).Get(ctx.Context, devspaceQuota, metav1.GetOptions{})
 	if err != nil {
 		return nil, nil
 	}
@@ -389,7 +389,7 @@ func (b *Builder) getAvailableResources() (*availableResources, error) {
 	}
 
 	// Get limitrange
-	limitrange, err := b.helper.KubeClient.KubeClient().CoreV1().LimitRanges(b.BuildNamespace).Get(context.TODO(), devspaceLimitRange, metav1.GetOptions{})
+	limitrange, err := ctx.KubeClient.KubeClient().CoreV1().LimitRanges(b.BuildNamespace).Get(ctx.Context, devspaceLimitRange, metav1.GetOptions{})
 	if err != nil {
 		return availableResources, nil
 	}

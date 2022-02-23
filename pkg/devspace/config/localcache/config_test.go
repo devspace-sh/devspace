@@ -1,4 +1,4 @@
-package generated
+package localcache
 
 import (
 	"io/ioutil"
@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
 	yaml "gopkg.in/yaml.v2"
 	"gotest.tools/assert"
 )
@@ -14,10 +13,9 @@ import (
 type loadTestCase struct {
 	name string
 
-	profile string
-	files   map[string]interface{}
+	files map[string]interface{}
 
-	expectedConfig *Config
+	expectedConfig *LocalCache
 	expectedErr    string
 }
 
@@ -25,17 +23,14 @@ func TestLoad(t *testing.T) {
 	testCases := []loadTestCase{
 		{
 			name:           "no config file",
-			expectedConfig: &Config{},
+			expectedConfig: &LocalCache{},
 		},
 		{
 			name: "load empty config file",
 			files: map[string]interface{}{
 				".devspace/generated.yaml": struct{}{},
 			},
-			profile: "someprofile",
-			expectedConfig: &Config{
-				OverrideProfile: ptr.String("someprofile"),
-			},
+			expectedConfig: &LocalCache{},
 		},
 	}
 
@@ -72,7 +67,7 @@ func TestLoad(t *testing.T) {
 
 func testLoad(testCase loadTestCase, t *testing.T) {
 	defer func() {
-		for _, path := range []string{".devspace/generated.yaml"} {
+		for _, path := range []string{".devspace/cache.yaml"} {
 			os.Remove(path)
 		}
 	}()
@@ -83,7 +78,7 @@ func testLoad(testCase loadTestCase, t *testing.T) {
 		assert.NilError(t, err, "Error writing file %s in testCase %s", path, testCase.name)
 	}
 
-	loader := NewConfigLoader(testCase.profile)
+	loader := NewCacheLoader()
 
 	config, err := loader.Load()
 
@@ -104,7 +99,7 @@ type saveTestCase struct {
 	name               string
 	devspaceConfigPath string
 
-	config *Config
+	config *LocalCache
 
 	expectedConfigFileName string
 	expectedConfigFile     interface{}
@@ -115,17 +110,13 @@ func TestSave(t *testing.T) {
 	testCases := []saveTestCase{
 		{
 			name: "Save config default",
-			config: &Config{
-				OverrideProfile: ptr.String("overrideProf"),
-				ActiveProfile:   "active",
+			config: &LocalCache{
 				Vars: map[string]string{
 					"key": "value",
 				},
 			},
-			expectedConfigFileName: ".devspace/generated.yaml",
-			expectedConfigFile: Config{
-				OverrideProfile: ptr.String("overrideProf"),
-				ActiveProfile:   "active",
+			expectedConfigFileName: ".devspace/cache.yaml",
+			expectedConfigFile: LocalCache{
 				Vars: map[string]string{
 					"key": "value",
 				},
@@ -134,17 +125,13 @@ func TestSave(t *testing.T) {
 		{
 			name:               "Save config test.yaml",
 			devspaceConfigPath: "test.yaml",
-			config: &Config{
-				OverrideProfile: ptr.String("overrideProf"),
-				ActiveProfile:   "active",
+			config: &LocalCache{
 				Vars: map[string]string{
 					"key": "value",
 				},
 			},
-			expectedConfigFileName: ".devspace/generated-test.yaml",
-			expectedConfigFile: Config{
-				OverrideProfile: ptr.String("overrideProf"),
-				ActiveProfile:   "active",
+			expectedConfigFileName: ".devspace/cache-test.yaml",
+			expectedConfigFile: LocalCache{
 				Vars: map[string]string{
 					"key": "value",
 				},
@@ -179,11 +166,11 @@ func TestSave(t *testing.T) {
 	}()
 
 	for _, testCase := range testCases {
-		var loader ConfigLoader
+		var loader Loader
 		if testCase.devspaceConfigPath != "" {
-			loader = NewConfigLoaderFromDevSpacePath("", testCase.devspaceConfigPath)
+			loader = NewCacheLoaderFromDevSpacePath(testCase.devspaceConfigPath)
 		} else {
-			loader = NewConfigLoader("")
+			loader = NewCacheLoader()
 		}
 
 		err := loader.Save(testCase.config)
@@ -200,73 +187,4 @@ func TestSave(t *testing.T) {
 		assert.NilError(t, err, "Error parsing exception to yaml in testCase %s", testCase.name)
 		assert.Equal(t, string(fileContent), string(expectedAsYaml), "Unexpected config file in testCase %s", testCase.name)
 	}
-}
-
-type getActiveTestCase struct {
-	name string
-
-	active   string
-	override *string
-	profiles map[string]*CacheConfig
-
-	expectedCache CacheConfig
-}
-
-func TestGetActive(t *testing.T) {
-	testCases := []getActiveTestCase{
-		{
-			name:     "Get overridden profile that is not there",
-			active:   "active",
-			override: ptr.String("override"),
-			profiles: map[string]*CacheConfig{},
-
-			expectedCache: CacheConfig{},
-		},
-	}
-
-	for _, testCase := range testCases {
-		config := &Config{
-			ActiveProfile:   testCase.active,
-			OverrideProfile: testCase.override,
-			Profiles:        testCase.profiles,
-		}
-
-		active := config.GetActive()
-
-		activeAsYaml, err := yaml.Marshal(active)
-		assert.NilError(t, err, "Error parsing active provider in testCase %s", testCase.name)
-		expectedAsYaml, err := yaml.Marshal(testCase.expectedCache)
-		assert.NilError(t, err, "Error parsing exception to yaml in testCase %s", testCase.name)
-		assert.Equal(t, string(activeAsYaml), string(expectedAsYaml), "Unexpected config file in testCase %s", testCase.name)
-	}
-}
-
-func TestGetCaches(t *testing.T) {
-	dsConfig := &Config{
-		Profiles: map[string]*CacheConfig{
-			"SomeConfig": {},
-		},
-	}
-	InitDevSpaceConfig(dsConfig, "SomeConfig")
-	cacheConfig := dsConfig.Profiles["SomeConfig"]
-	assert.Equal(t, 0, len(cacheConfig.Deployments), "Deployments wrong initialized")
-	assert.Equal(t, 0, len(cacheConfig.Images), "Images wrong initialized")
-	assert.Equal(t, 0, len(cacheConfig.Dependencies), "Dependencies wrong initialized")
-
-	imageCache := cacheConfig.GetImageCache("NewImageCache")
-	assert.Equal(t, 1, len(cacheConfig.Images), "New imageCache not added to cache")
-	assert.Equal(t, "", imageCache.ImageConfigHash, "ImageCache wrong initialized")
-	assert.Equal(t, "", imageCache.DockerfileHash, "ImageCache wrong initialized")
-	assert.Equal(t, "", imageCache.ContextHash, "ImageCache wrong initialized")
-	assert.Equal(t, "", imageCache.EntrypointHash, "ImageCache wrong initialized")
-	assert.Equal(t, "", imageCache.CustomFilesHash, "ImageCache wrong initialized")
-	assert.Equal(t, "", imageCache.ImageName, "ImageCache wrong initialized")
-	assert.Equal(t, "", imageCache.Tag, "ImageCache wrong initialized")
-
-	deploymentCache := cacheConfig.GetDeploymentCache("NewDeploymentCache")
-	assert.Equal(t, 1, len(cacheConfig.Deployments), "New deploymentCache not added to cache")
-	assert.Equal(t, "", deploymentCache.DeploymentConfigHash, "DeploymentCache wrong initialized")
-	assert.Equal(t, "", deploymentCache.HelmOverridesHash, "DeploymentCache wrong initialized")
-	assert.Equal(t, "", deploymentCache.HelmChartHash, "DeploymentCache wrong initialized")
-	assert.Equal(t, "", deploymentCache.KubectlManifestsHash, "DeploymentCache wrong initialized")
 }

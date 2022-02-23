@@ -185,7 +185,7 @@ func SendData(stream remote.Tunnel_InitTunnelClient, sessions <-chan *tunnel.Ses
 	}
 }
 
-func StartReverseForward(reader io.ReadCloser, writer io.WriteCloser, tunnels []*latest.PortMapping, stopChan chan error, namespace string, name string, log logpkg.Logger) error {
+func StartReverseForward(ctx context.Context, reader io.ReadCloser, writer io.WriteCloser, tunnels []*latest.PortMapping, stopChan chan error, namespace string, name string, log logpkg.Logger) error {
 	scheme := "TCP"
 	closeStreams := make([]chan bool, len(tunnels))
 	defer func() {
@@ -213,12 +213,14 @@ func StartReverseForward(reader io.ReadCloser, writer io.WriteCloser, tunnels []
 	go func() {
 		for {
 			select {
+			case <-ctx.Done():
+				return
 			case <-closeStream:
 				return
 			case <-stopChan:
 				return
 			case <-time.After(time.Second * 20):
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+				ctx, cancel := context.WithTimeout(ctx, time.Second*20)
 				_, err := client.Ping(ctx, &remote.Empty{})
 				cancel()
 				if err != nil {
@@ -242,7 +244,6 @@ func StartReverseForward(reader io.ReadCloser, writer io.WriteCloser, tunnels []
 
 		c := make(chan bool, 1)
 		go func(closeStream chan bool, localPort, remotePort int32) {
-			ctx := context.Background()
 			tunnelScheme, ok := remote.TunnelScheme_value[scheme]
 			if !ok {
 				errorsChan <- fmt.Errorf("unsupported connection scheme %s", scheme)
@@ -287,6 +288,8 @@ func StartReverseForward(reader io.ReadCloser, writer io.WriteCloser, tunnels []
 	}
 
 	select {
+	case <-ctx.Done():
+		return nil
 	case err := <-errorsChan:
 		return err
 	case <-stopChan:

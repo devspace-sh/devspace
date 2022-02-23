@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/assets"
 	"io"
@@ -44,7 +45,7 @@ const DevSpaceHelperContainerPath = "/tmp/devspacehelper"
 var injectMutex = sync.Mutex{}
 
 // InjectDevSpaceHelper injects the devspace helper into the provided container
-func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, arch string, log logpkg.Logger) error {
+func InjectDevSpaceHelper(ctx context.Context, client kubectl.Client, pod *v1.Pod, container string, arch string, log logpkg.Logger) error {
 	if log == nil {
 		log = logpkg.Discard
 	}
@@ -67,7 +68,7 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 
 	// Check if sync is already in pod
 	localHelperName := "devspacehelper" + arch
-	stdout, _, err := client.ExecBuffered(pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
+	stdout, _, err := client.ExecBuffered(ctx, pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
 	if err != nil || version != string(stdout) {
 		homedir, err := homedir.Dir()
 		if err != nil {
@@ -78,7 +79,7 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 		if os.Getenv("DEVSPACE_INJECT_LOCAL") != "true" {
 			// Install devspacehelper inside container
 			log.Infof("Trying to download devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
-			err = installDevSpaceHelperInContainer(client, pod, container, version, localHelperName)
+			err = installDevSpaceHelperInContainer(ctx, client, pod, container, version, localHelperName)
 			if err == nil {
 				log.Donef("Successfully injected devspacehelper into pod %s/%s", pod.Namespace, pod.Name)
 				return nil
@@ -92,17 +93,17 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 		// check if we can find it in the assets
 		helperBytes, err := assets.Asset("release/" + localHelperName)
 		if err == nil {
-			return injectSyncHelperFromBytes(client, pod, container, helperFileInfo(helperBytes), bytes.NewReader(helperBytes))
+			return injectSyncHelperFromBytes(ctx, client, pod, container, helperFileInfo(helperBytes), bytes.NewReader(helperBytes))
 		}
 
 		// Download sync helper if necessary
-		err = downloadSyncHelper(localHelperName, syncBinaryFolder, version, log)
+		err = downloadSyncHelper(ctx, localHelperName, syncBinaryFolder, version, log)
 		if err != nil {
 			return errors.Wrap(err, "download devspace helper")
 		}
 
 		// Inject sync helper
-		err = injectSyncHelper(client, pod, container, filepath.Join(syncBinaryFolder, localHelperName))
+		err = injectSyncHelper(ctx, client, pod, container, filepath.Join(syncBinaryFolder, localHelperName))
 		if err != nil {
 			return errors.Wrap(err, "inject devspace helper")
 		}
@@ -114,7 +115,7 @@ func InjectDevSpaceHelper(client kubectl.Client, pod *v1.Pod, container string, 
 	return nil
 }
 
-func installDevSpaceHelperInContainer(client kubectl.Client, pod *v1.Pod, container, version, filename string) error {
+func installDevSpaceHelperInContainer(ctx context.Context, client kubectl.Client, pod *v1.Pod, container, version, filename string) error {
 	url, err := devSpaceHelperDownloadURL(version, filename)
 	if err != nil {
 		return err
@@ -124,12 +125,12 @@ func installDevSpaceHelperInContainer(client kubectl.Client, pod *v1.Pod, contai
 	chmod := fmt.Sprintf("chmod +x %s", DevSpaceHelperContainerPath)
 	cmd := curl + " && " + chmod
 
-	stdout, stderr, err := client.ExecBuffered(pod, container, []string{"sh", "-c", cmd}, nil)
+	stdout, stderr, err := client.ExecBuffered(ctx, pod, container, []string{"sh", "-c", cmd}, nil)
 	if err != nil {
 		return errors.Wrapf(err, "stdout, stderr: \n%s %s", string(stdout), string(stderr))
 	}
 
-	stdout, stderr, err = client.ExecBuffered(pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
+	stdout, stderr, err = client.ExecBuffered(ctx, pod, container, []string{DevSpaceHelperContainerPath, "version"}, nil)
 	if err != nil {
 		return errors.Wrapf(err, "stdout, stderr: \n%s %s", string(stdout), string(stderr))
 	}
@@ -173,7 +174,7 @@ func devSpaceHelperDownloadURL(version, filename string) (string, error) {
 	return "https://github.com" + matches[1], nil
 }
 
-func downloadSyncHelper(helperName, syncBinaryFolder, version string, log logpkg.Logger) error {
+func downloadSyncHelper(ctx context.Context, helperName, syncBinaryFolder, version string, log logpkg.Logger) error {
 	filepath := filepath.Join(syncBinaryFolder, helperName)
 
 	// Check if file exists
@@ -186,7 +187,11 @@ func downloadSyncHelper(helperName, syncBinaryFolder, version string, log logpkg
 
 		// download sha256 html
 		url := fmt.Sprintf("https://github.com/loft-sh/devspace/releases/download/%s/%s.sha256", version, helperName)
-		resp, err := http.Get(url)
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		if err != nil {
+			return nil
+		}
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			log.Warnf("Couldn't retrieve helper sha256: %v", err)
 			return nil
@@ -274,7 +279,7 @@ func (h helperFileInfo) Sys() interface{} {
 	return nil
 }
 
-func injectSyncHelper(client kubectl.Client, pod *v1.Pod, container string, filepath string) error {
+func injectSyncHelper(ctx context.Context, client kubectl.Client, pod *v1.Pod, container string, filepath string) error {
 	// Stat sync helper
 	stat, err := os.Stat(filepath)
 	if err != nil {
@@ -288,10 +293,10 @@ func injectSyncHelper(client kubectl.Client, pod *v1.Pod, container string, file
 	}
 
 	defer f.Close()
-	return injectSyncHelperFromBytes(client, pod, container, stat, f)
+	return injectSyncHelperFromBytes(ctx, client, pod, container, stat, f)
 }
 
-func injectSyncHelperFromBytes(client kubectl.Client, pod *v1.Pod, container string, fi fs.FileInfo, bytesReader io.Reader) error {
+func injectSyncHelperFromBytes(ctx context.Context, client kubectl.Client, pod *v1.Pod, container string, fi fs.FileInfo, bytesReader io.Reader) error {
 	writerComplete := make(chan struct{})
 	readerComplete := make(chan struct{})
 
@@ -313,7 +318,7 @@ func injectSyncHelperFromBytes(client kubectl.Client, pod *v1.Pod, container str
 		}()
 		defer reader.Close()
 
-		err := client.CopyFromReader(pod, container, "/tmp", reader)
+		err := client.CopyFromReader(ctx, pod, container, "/tmp", reader)
 		setRetErr.Do(func() {
 			retErr = err
 		})

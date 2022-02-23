@@ -1,8 +1,10 @@
 package kaniko
 
 import (
-	"context"
 	"fmt"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
+	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -11,7 +13,6 @@ import (
 
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -20,12 +21,10 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
-	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
@@ -64,8 +63,15 @@ type Builder struct {
 const waitTimeout = 20 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(config config.Config, dockerClient docker.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, log logpkg.Logger) (builder.Interface, error) {
-	buildNamespace := kubeClient.Namespace()
+func NewBuilder(ctx *devspacecontext.Context, dockerClient docker.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string) (builder.Interface, error) {
+	if imageConf.Build != nil && imageConf.Build.Kaniko != nil && imageConf.Build.Kaniko.Namespace != "" {
+		err := ctx.KubeClient.EnsureNamespace(ctx.Context, imageConf.Build.Kaniko.Namespace, ctx.Log)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	buildNamespace := ctx.KubeClient.Namespace()
 	if imageConf.Build.Kaniko.Namespace != "" {
 		buildNamespace = imageConf.Build.Kaniko.Namespace
 	}
@@ -80,7 +86,7 @@ func NewBuilder(config config.Config, dockerClient docker.Client, kubeClient kub
 		pullSecretName = imageConf.Build.Kaniko.PullSecret
 	}
 
-	builder := &Builder{
+	b := &Builder{
 		PullSecretName: pullSecretName,
 		FullImageName:  imageConf.Image + ":" + imageTags[0],
 		BuildNamespace: buildNamespace,
@@ -88,34 +94,33 @@ func NewBuilder(config config.Config, dockerClient docker.Client, kubeClient kub
 		allowInsecureRegistry: allowInsecurePush,
 
 		dockerClient: dockerClient,
-		helper:       helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags),
+		helper:       helper.NewBuildHelper(ctx, EngineName, imageConfigName, imageConf, imageTags),
 	}
 
 	// create pull secret
 	if !imageConf.Build.Kaniko.SkipPullSecretMount {
-		err := builder.createPullSecret(log)
+		err := b.createPullSecret(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "create pull secret")
 		}
 	}
 
-	return builder, nil
+	return b, nil
 }
 
 // Build implements the interface
-func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
-	return b.helper.Build(b, devspacePID, log)
+func (b *Builder) Build(ctx *devspacecontext.Context) error {
+	return b.helper.Build(ctx, b)
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool, log logpkg.Logger) (bool, error) {
-	return b.helper.ShouldRebuild(cache, forceRebuild, log)
+func (b *Builder) ShouldRebuild(ctx *devspacecontext.Context, forceRebuild bool) (bool, error) {
+	return b.helper.ShouldRebuild(ctx, forceRebuild)
 }
 
 // Authenticate authenticates kaniko for pushing to the RegistryURL (if username == "", it will try to get login data from local docker daemon)
-func (b *Builder) createPullSecret(log logpkg.Logger) error {
+func (b *Builder) createPullSecret(ctx *devspacecontext.Context) error {
 	username, password := "", ""
-
 	if b.PullSecretName != "" {
 		return nil
 	}
@@ -139,7 +144,7 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 		password = authConfig.IdentityToken
 	}
 
-	return pullsecrets.NewClient(nil, nil, b.helper.KubeClient, b.dockerClient, log).CreatePullSecret(&pullsecrets.PullSecretOptions{
+	return pullsecrets.NewClient(b.dockerClient).CreatePullSecret(ctx, &pullsecrets.PullSecretOptions{
 		Namespace:       b.BuildNamespace,
 		RegistryURL:     registryURL,
 		Username:        username,
@@ -149,7 +154,7 @@ func (b *Builder) createPullSecret(log logpkg.Logger) error {
 }
 
 // BuildImage builds a dockerimage within a kaniko pod
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, devspacePID string, log logpkg.Logger) error {
+func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfilePath string, entrypoint []string, cmd []string) error {
 	var err error
 
 	// Buildoptions
@@ -168,7 +173,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 
 	// Check if we should overwrite entrypoint
 	if len(entrypoint) > 0 || len(cmd) > 0 || b.helper.ImageConf.InjectRestartHelper || len(b.helper.ImageConf.AppendDockerfileInstructions) > 0 {
-		dockerfilePath, err = helper.RewriteDockerfile(dockerfilePath, entrypoint, cmd, b.helper.ImageConf.AppendDockerfileInstructions, options.Target, b.helper.ImageConf.InjectRestartHelper, log)
+		dockerfilePath, err = helper.RewriteDockerfile(dockerfilePath, entrypoint, cmd, b.helper.ImageConf.AppendDockerfileInstructions, options.Target, b.helper.ImageConf.InjectRestartHelper, ctx.Log)
 		if err != nil {
 			return err
 		}
@@ -179,7 +184,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	// Generate the build pod spec
 	randString := randutil.GenerateRandomString(12)
 	buildID := strings.ToLower(randString)
-	buildPod, err := b.getBuildPod(buildID, devspacePID, options, dockerfilePath)
+	buildPod, err := b.getBuildPod(ctx, buildID, options, dockerfilePath)
 	if err != nil {
 		return errors.Wrap(err, "get build pod")
 	}
@@ -191,26 +196,26 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			return
 		}
 
-		deleteErr := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Delete(context.TODO(), buildPod.Name, metav1.DeleteOptions{
+		deleteErr := ctx.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Delete(ctx.Context, buildPod.Name, metav1.DeleteOptions{
 			GracePeriodSeconds: &gracePeriod,
 		})
 
 		if deleteErr != nil {
-			log.Errorf("Failed to delete build pod: %s", deleteErr.Error())
+			ctx.Log.Errorf("Failed to delete build pod: %s", deleteErr.Error())
 		}
 	}
 
 	err = interrupt.Global.RunAlways(func() error {
-		defer log.StopWait()
+		defer ctx.Log.StopWait()
 
-		buildPodCreated, err := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Create(context.TODO(), buildPod, metav1.CreateOptions{})
+		buildPodCreated, err := ctx.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Create(ctx.Context, buildPod, metav1.CreateOptions{})
 		if err != nil {
 			return errors.Errorf("unable to create build pod: %s", err.Error())
 		}
 
-		log.StartWait("Waiting for build init container to start")
+		ctx.Log.StartWait("Waiting for build init container to start")
 		err = wait.PollImmediate(time.Second, waitTimeout, func() (done bool, err error) {
-			buildPod, err = b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(context.TODO(), buildPodCreated.Name, metav1.GetOptions{})
+			buildPod, err = ctx.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(ctx.Context, buildPodCreated.Name, metav1.GetOptions{})
 			if err != nil {
 				if kerrors.IsNotFound(err) {
 					return false, nil
@@ -221,7 +226,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 				status := buildPod.Status.InitContainerStatuses[0]
 				if status.State.Terminated != nil {
 					errorLog := ""
-					reader, _ := b.helper.KubeClient.Logs(context.TODO(), b.BuildNamespace, buildPodCreated.Name, buildPod.Spec.InitContainers[0].Name, false, nil, false)
+					reader, _ := ctx.KubeClient.Logs(ctx.Context, b.BuildNamespace, buildPodCreated.Name, buildPod.Spec.InitContainers[0].Name, false, nil, false)
 					if reader != nil {
 						out, err := ioutil.ReadAll(reader)
 						if err == nil {
@@ -256,7 +261,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			return errors.Errorf("error checking context: '%s'", err)
 		}
 
-		log.StartWait("Uploading files to build container")
+		ctx.Log.StartWait("Uploading files to build container")
 		buildCtx, err := archive.TarWithOptions(contextPath, &archive.TarOptions{
 			ExcludePatterns: ignoreRules,
 			ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
@@ -266,7 +271,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 
 		// Copy complete context
-		_, stderr, err := b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"tar", "xp", "-C", kanikoContextPath + "/."}, buildCtx)
+		_, stderr, err := ctx.KubeClient.ExecBuffered(ctx.Context, buildPod, buildPod.Spec.InitContainers[0].Name, []string{"tar", "xp", "-C", kanikoContextPath + "/."}, buildCtx)
 		if err != nil {
 			if stderr != nil {
 				return errors.Errorf("copy context: error executing tar: %s: %v", string(stderr), err)
@@ -276,7 +281,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 
 		// Copy dockerfile
-		err = b.helper.KubeClient.Copy(buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, dockerfilePath, []string{})
+		err = ctx.KubeClient.Copy(ctx.Context, buildPod, buildPod.Spec.InitContainers[0].Name, kanikoContextPath, dockerfilePath, []string{})
 		if err != nil {
 			return errors.Errorf("error uploading dockerfile to container: %v", err)
 		}
@@ -303,26 +308,26 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			}
 
 			// create the .devspace directory in the container
-			_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"mkdir", "-p", remoteFolder}, nil)
+			_, _, err = ctx.KubeClient.ExecBuffered(ctx.Context, buildPod, buildPod.Spec.InitContainers[0].Name, []string{"mkdir", "-p", remoteFolder}, nil)
 			if err != nil {
 				return errors.Errorf("error executing command 'mkdir -p %s' in init container: %v", remoteFolder, err)
 			}
 
 			// copy the helper script into the container
-			err = b.helper.KubeClient.Copy(buildPod, buildPod.Spec.InitContainers[0].Name, remoteFolder, scriptPath, []string{})
+			err = ctx.KubeClient.Copy(ctx.Context, buildPod, buildPod.Spec.InitContainers[0].Name, remoteFolder, scriptPath, []string{})
 			if err != nil {
 				return errors.Errorf("error uploading helper script to container: %v", err)
 			}
 
 			// change permissions for the execution script
-			_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"chmod", "-R", "0777", remoteFolder}, nil)
+			_, _, err = ctx.KubeClient.ExecBuffered(ctx.Context, buildPod, buildPod.Spec.InitContainers[0].Name, []string{"chmod", "-R", "0777", remoteFolder}, nil)
 			if err != nil {
 				return errors.Errorf("error executing command 'chmod +x %s' in init container: %v", filepath.Join(kanikoContextPath, restart.ScriptName), err)
 			}
 
 			// remove the .dockerignore since .devspace is usually ignored and we want to sneak our helper script in
 			// this shouldn't be any issue since the context was already pruned in the copy step beforehand
-			_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"rm", filepath.ToSlash(filepath.Join(kanikoContextPath, ".dockerignore"))}, nil)
+			_, _, err = ctx.KubeClient.ExecBuffered(ctx.Context, buildPod, buildPod.Spec.InitContainers[0].Name, []string{"rm", filepath.ToSlash(filepath.Join(kanikoContextPath, ".dockerignore"))}, nil)
 			if err != nil {
 				if _, ok := err.(exec.CodeExitError); !ok {
 					return errors.Errorf("error executing command 'rm .dockerignore' in init container: %v", err)
@@ -331,15 +336,15 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 
 		// Tell init container we are done
-		_, _, err = b.helper.KubeClient.ExecBuffered(buildPod, buildPod.Spec.InitContainers[0].Name, []string{"touch", doneFile}, nil)
+		_, _, err = ctx.KubeClient.ExecBuffered(ctx.Context, buildPod, buildPod.Spec.InitContainers[0].Name, []string{"touch", doneFile}, nil)
 		if err != nil {
 			return errors.Errorf("Error executing command in init container: %v", err)
 		}
 
-		log.Done("Uploaded files to container")
-		log.StartWait("Waiting for kaniko container to start")
+		ctx.Log.Done("Uploaded files to container")
+		ctx.Log.StartWait("Waiting for kaniko container to start")
 		err = wait.PollImmediate(time.Second, waitTimeout, func() (done bool, err error) {
-			buildPod, err = b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(context.TODO(), buildPodCreated.Name, metav1.GetOptions{})
+			buildPod, err = ctx.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(ctx.Context, buildPodCreated.Name, metav1.GetOptions{})
 			if err != nil {
 				if kerrors.IsNotFound(err) {
 					return false, nil
@@ -354,7 +359,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 					}
 
 					errorLog := ""
-					reader, _ := b.helper.KubeClient.Logs(context.TODO(), b.BuildNamespace, buildPodCreated.Name, status.Name, false, nil, false)
+					reader, _ := ctx.KubeClient.Logs(ctx.Context, b.BuildNamespace, buildPodCreated.Name, status.Name, false, nil, false)
 					if reader != nil {
 						out, err := ioutil.ReadAll(reader)
 						if err == nil {
@@ -379,32 +384,34 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 			return errors.Wrap(err, "waiting for kaniko")
 		}
 
-		log.StopWait()
-		log.Done("Build pod has started")
+		ctx.Log.StopWait()
+		ctx.Log.Done("Build pod has started")
 
 		// Determine output writer
 		var writer io.Writer
-		if log == logpkg.GetInstance() {
+		if ctx.Log == logpkg.GetInstance() {
 			writer = stdout
 		} else {
-			writer = log
+			writer = ctx.Log
 		}
 
 		stdoutLogger := kanikoLogger{out: writer}
 
 		// Stream the logs
-		options := targetselector.NewOptionsFromFlags(buildPod.Spec.Containers[0].Name, "", nil, buildPod.Namespace, buildPod.Name)
-		err = services.NewClient(b.helper.Config, nil, b.helper.KubeClient, log).StartLogsWithWriter(options, true, 100, false, stdoutLogger)
+		options := targetselector.NewOptionsFromFlags(buildPod.Spec.Containers[0].Name, "", nil, buildPod.Namespace, buildPod.Name).
+			WithWait(false).
+			WithContainerFilter(selector.FilterTerminatingContainers)
+		err = logs.StartLogsWithWriter(ctx, targetselector.NewTargetSelector(options), true, 100, stdoutLogger)
 		if err != nil {
 			return errors.Errorf("error printing build logs: %v", err)
 		}
 
-		log.StartWait("Checking build status")
+		ctx.Log.StartWait("Checking build status")
 		for {
 			time.Sleep(time.Second)
 
 			// Check if build was successful
-			pod, err := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(context.TODO(), buildPodCreated.Name, metav1.GetOptions{})
+			pod, err := ctx.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(ctx.Context, buildPodCreated.Name, metav1.GetOptions{})
 			if err != nil {
 				return errors.Errorf("Error checking if build was successful: %v", err)
 			}
@@ -418,23 +425,23 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 				break
 			}
 		}
-		log.StopWait()
+		ctx.Log.StopWait()
 
-		log.Done("Done building image")
+		ctx.Log.Done("Done building image")
 		return nil
 	}, deleteBuildPod)
 	if err != nil {
 		// Delete all build pods on error
 
-		labelSelector := fmt.Sprintf("devspace-pid=%s", devspacePID)
-		pods, getErr := b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).List(context.TODO(), metav1.ListOptions{
+		labelSelector := fmt.Sprintf("devspace-pid=%s", ctx.RunID)
+		pods, getErr := ctx.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).List(ctx.Context, metav1.ListOptions{
 			LabelSelector: labelSelector,
 		})
 		if getErr != nil {
 			return err
 		}
 		for _, pod := range pods.Items {
-			_ = b.helper.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
+			_ = ctx.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Delete(ctx.Context, pod.Name, metav1.DeleteOptions{})
 		}
 
 		return err

@@ -22,7 +22,7 @@ type GenericRequestOptions struct {
 }
 
 // GenericRequest makes a new request to the given server with the specified options
-func (client *client) GenericRequest(options *GenericRequestOptions) (string, error) {
+func (client *client) GenericRequest(ctx context.Context, options *GenericRequestOptions) (string, error) {
 	// Create new client
 	var restClient restclient.Interface
 	if options.APIVersion != "" {
@@ -69,7 +69,7 @@ func (client *client) GenericRequest(options *GenericRequestOptions) (string, er
 	}
 
 	// Make request
-	out, err := req.DoRaw(context.TODO())
+	out, err := req.DoRaw(ctx)
 	if err != nil {
 		return "", errors.Wrap(err, "request")
 	}

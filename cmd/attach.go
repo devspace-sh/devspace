@@ -71,7 +71,7 @@ func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// Load config if possible
-	var generatedConfig *generated.Config
+	var generatedConfig *localcache.Config
 	if configExists {
 		generatedConfig, err = configLoader.LoadGenerated(configOptions)
 		if err != nil {

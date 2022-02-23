@@ -5,6 +5,7 @@ import (
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
+	patch2 "github.com/loft-sh/devspace/pkg/util/patch"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"strconv"
 	"strings"
@@ -244,7 +245,7 @@ func scaleUpParent(ctx *devspacecontext.Context, parent runtime.Object) error {
 	metaParent.SetAnnotations(annotations)
 
 	// create patch
-	patch := MergeFrom(clonedParent)
+	patch := patch2.MergeFrom(clonedParent)
 	bytes, err := patch.Data(parent)
 	if err != nil {
 		return errors.Wrap(err, "create parent patch")
@@ -611,7 +612,7 @@ func hashParentPodSpec(ctx *devspacecontext.Context, obj runtime.Object, replace
 }
 
 func replaceImageInPodSpec(ctx *devspacecontext.Context, podSpec *corev1.PodSpec, replacePod *latest.DevPod) error {
-	imageStr, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsString(replacePod.ReplaceImage, ctx.Config, ctx.Dependencies)
+	imageStr, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsString(replacePod.ReplaceImage, ctx.Config, ctx.Dependencies)
 	if err != nil {
 		return err
 	}
@@ -638,7 +639,7 @@ func replaceImageInPodSpec(ctx *devspacecontext.Context, podSpec *corev1.PodSpec
 	} else if replacePod.ImageSelector != "" {
 		var imageSelector *imageselector.ImageSelector
 		if replacePod.ImageSelector != "" {
-			imageSelector, err = runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, ctx.Config, ctx.Dependencies)
+			imageSelector, err = runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, ctx.Config, ctx.Dependencies)
 			if err != nil {
 				return err
 			}
@@ -680,7 +681,7 @@ func scaleDownParent(ctx *devspacecontext.Context, obj runtime.Object) error {
 
 		t.Annotations[ReplicasAnnotation] = strconv.Itoa(replicas)
 		t.Spec.Replicas = ptr.Int32(0)
-		patch := MergeFrom(cloned)
+		patch := patch2.MergeFrom(cloned)
 		bytes, err := patch.Data(t)
 		if err != nil {
 			return err
@@ -708,7 +709,7 @@ func scaleDownParent(ctx *devspacecontext.Context, obj runtime.Object) error {
 
 		t.Annotations[ReplicasAnnotation] = strconv.Itoa(replicas)
 		t.Spec.Replicas = ptr.Int32(0)
-		patch := MergeFrom(cloned)
+		patch := patch2.MergeFrom(cloned)
 		bytes, err := patch.Data(t)
 		if err != nil {
 			return err
@@ -736,7 +737,7 @@ func scaleDownParent(ctx *devspacecontext.Context, obj runtime.Object) error {
 
 		t.Annotations[ReplicasAnnotation] = strconv.Itoa(replicas)
 		t.Spec.Replicas = ptr.Int32(0)
-		patch := MergeFrom(cloned)
+		patch := patch2.MergeFrom(cloned)
 		bytes, err := patch.Data(t)
 		if err != nil {
 			return err
@@ -784,7 +785,7 @@ func convertToInterface(str runtime.Object) map[interface{}]interface{} {
 
 func getImageSelector(ctx *devspacecontext.Context, replacePod *latest.DevPod) (string, error) {
 	if replacePod.ImageSelector != "" {
-		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, ctx.Config, ctx.Dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return "", err
 		} else if imageSelector == nil {
@@ -899,7 +900,7 @@ func findSingleReplaceablePodParent(ctx *devspacecontext.Context, replacePod *la
 		imageSelector []string
 	)
 	if replacePod.ImageSelector != "" {
-		imageSelectorObject, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, ctx.Config, ctx.Dependencies)
+		imageSelectorObject, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return nil, nil, err
 		}

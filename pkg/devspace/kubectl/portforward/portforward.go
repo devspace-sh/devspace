@@ -17,6 +17,7 @@ limitations under the License.
 package portforward
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -199,7 +200,7 @@ func (pf *PortForwarder) raiseError(err error) {
 
 // ForwardPorts formats and executes a port forwarding request. The connection will remain
 // open until stopChan is closed.
-func (pf *PortForwarder) ForwardPorts() error {
+func (pf *PortForwarder) ForwardPorts(ctx context.Context) error {
 	defer pf.Close()
 
 	var err error
@@ -209,7 +210,19 @@ func (pf *PortForwarder) ForwardPorts() error {
 	}
 	defer pf.streamConn.Close()
 
-	return pf.forward()
+	errChan := make(chan error)
+	go func() {
+		errChan <- pf.forward()
+	}()
+
+	select {
+	case <-ctx.Done():
+		pf.Close()
+		<-errChan
+		return nil
+	case err = <-errChan:
+		return err
+	}
 }
 
 // forward dials the remote host specific in req, upgrades the request, starts

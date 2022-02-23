@@ -1,7 +1,11 @@
 package loader
 
 import (
+	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -22,10 +26,8 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/vars"
 )
@@ -37,25 +39,23 @@ var DefaultCommandVersionRegEx = "(v\\d+\\.\\d+\\.\\d+)"
 type ConfigLoader interface {
 	// Load loads the devspace.yaml, parses it, applies profiles, fills in variables and
 	// finally returns it.
-	Load(options *ConfigOptions, log log.Logger) (config.Config, error)
+	Load(client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error)
+
+	// LoadWithCache loads the devspace.yaml, parses it, applies profiles, fills in variables and
+	// finally returns it.
+	LoadWithCache(localCache localcache.Cache, client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error)
+
+	// LoadWithParser loads the config with the given parser
+	LoadWithParser(localCache localcache.Cache, client kubectl.Client, parser Parser, options *ConfigOptions, log log.Logger) (config.Config, error)
 
 	// LoadRaw loads the config without parsing it.
 	LoadRaw() (map[interface{}]interface{}, error)
 
-	// LoadWithParser loads the config with the given parser
-	LoadWithParser(parser Parser, options *ConfigOptions, log log.Logger) (config.Config, error)
-
-	// LoadGenerated loads the generated config
-	LoadGenerated(options *ConfigOptions) (*generated.Config, error)
-
-	// Save saves a devspace.yaml to file
-	Save(config *latest.Config) error
-
-	// SaveGenerated saves a generated config yaml to file
-	SaveGenerated(generated *generated.Config) error
-
 	// Exists returns if a devspace.yaml could be found
 	Exists() bool
+
+	// ConfigPath returns the absolute devspace.yaml path for this config loader
+	ConfigPath() string
 
 	// SetDevSpaceRoot searches for a devspace.yaml in the current directory and parent directories
 	// and will return if a devspace.yaml was found as well as switch to the current
@@ -64,60 +64,50 @@ type ConfigLoader interface {
 }
 
 type configLoader struct {
-	kubeConfigLoader kubeconfig.Loader
-
-	configPath string
+	absConfigPath string
 }
 
 // NewConfigLoader creates a new config loader with the given options
-func NewConfigLoader(configPath string) ConfigLoader {
-	return &configLoader{
-		configPath:       configPath,
-		kubeConfigLoader: kubeconfig.NewLoader(),
-	}
-}
-
-// LoadGenerated loads the generated config from file
-func (l *configLoader) LoadGenerated(options *ConfigOptions) (*generated.Config, error) {
-	var err error
-	if options == nil {
-		options = &ConfigOptions{}
-	}
-
-	generatedConfig := options.GeneratedConfig
-	if generatedConfig == nil {
-		if options.GeneratedLoader == nil {
-			generatedConfig, err = generated.NewConfigLoaderFromDevSpacePath(GetLastProfile(options.Profiles), l.configPath).Load()
-		} else {
-			generatedConfig, err = options.GeneratedLoader.Load()
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return generatedConfig, nil
-}
-
-// Load restores variables from the cluster (if wanted), loads the config and then saves them to the cluster again
-func (l *configLoader) Load(options *ConfigOptions, log log.Logger) (config.Config, error) {
-	return l.LoadWithParser(NewDefaultParser(), options, log)
-}
-
-// LoadWithParser loads the config with the given parser
-func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log log.Logger) (_ config.Config, err error) {
-	if options == nil {
-		options = &ConfigOptions{}
-	}
-
-	absPath, err := filepath.Abs(ConfigPath(l.configPath))
+func NewConfigLoader(configPath string) (ConfigLoader, error) {
+	absPath, err := filepath.Abs(ConfigPath(configPath))
 	if err != nil {
 		return nil, err
 	}
 
+	return &configLoader{
+		absConfigPath: absPath,
+	}, nil
+}
+
+func (l *configLoader) ConfigPath() string {
+	return l.absConfigPath
+}
+
+// Load restores variables from the cluster (if wanted), loads the config and then saves them to the cluster again
+func (l *configLoader) Load(client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error) {
+	return l.LoadWithCache(nil, client, options, log)
+}
+
+// LoadWithCache loads the config with the given local cache
+func (l *configLoader) LoadWithCache(localCache localcache.Cache, client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error) {
+	return l.LoadWithParser(localCache, client, NewDefaultParser(), options, log)
+}
+
+// LoadWithParser loads the config with the given parser
+func (l *configLoader) LoadWithParser(localCache localcache.Cache, client kubectl.Client, parser Parser, options *ConfigOptions, log log.Logger) (_ config.Config, err error) {
+	if localCache == nil {
+		localCache, err = localcache.NewCacheLoaderFromDevSpacePath(l.absConfigPath).Load()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if options == nil {
+		options = &ConfigOptions{}
+	}
+
 	defer func() {
 		if err != nil {
-			pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{"ERROR": err, "LOAD_PATH": absPath}, "config.errorLoad", "error:loadConfig")
+			pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{"ERROR": err, "LOAD_PATH": l.absConfigPath}, "config.errorLoad", "error:loadConfig")
 			if pluginErr != nil {
 				log.Warnf("Error executing plugin hook: %v", pluginErr)
 				return
@@ -126,7 +116,7 @@ func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log
 	}()
 
 	// call plugin hook
-	pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{"LOAD_PATH": absPath}, "config.beforeLoad", "before:loadConfig")
+	pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{"LOAD_PATH": l.absConfigPath}, "config.beforeLoad", "before:loadConfig")
 	if pluginErr != nil {
 		return nil, pluginErr
 	}
@@ -136,7 +126,29 @@ func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log
 		return nil, err
 	}
 
-	parsedConfig, generatedConfig, resolver, err := l.parseConfig(absPath, data, parser, options, log)
+	name := options.OverrideName
+	if name == "" {
+		nameInterface, ok := data["name"]
+		if !ok {
+			return nil, fmt.Errorf("devspace.yaml is missing the name property")
+		}
+
+		name, ok = nameInterface.(string)
+		if !ok || name == "" {
+			return nil, fmt.Errorf("name property is not a string")
+		}
+	}
+
+	// create remote cache
+	var remoteCache remotecache.Cache
+	if client != nil {
+		remoteCache, err = remotecache.NewCacheLoader(name).Load(context.TODO(), client)
+		if err != nil {
+			return nil, fmt.Errorf("error trying to load remote cache from current context and namespace: %v", err)
+		}
+	}
+
+	parsedConfig, resolver, err := l.parseConfig(data, localCache, remoteCache, client, parser, options, log)
 	if err != nil {
 		return nil, err
 	}
@@ -146,9 +158,9 @@ func (l *configLoader) LoadWithParser(parser Parser, options *ConfigOptions, log
 		return nil, errors.Wrap(err, "require versions")
 	}
 
-	c := config.NewConfig(data, parsedConfig, generatedConfig, resolver.ResolvedVariables(), absPath)
+	c := config.NewConfig(data, parsedConfig, localCache, remoteCache, resolver.ResolvedVariables(), l.absConfigPath)
 	pluginErr = plugin.ExecutePluginHookWithContext(map[string]interface{}{
-		"LOAD_PATH":     absPath,
+		"LOAD_PATH":     l.absConfigPath,
 		"LOADED_CONFIG": c.Config(),
 		"LOADED_VARS":   c.Variables(),
 		"LOADED_RAW":    c.Raw(),
@@ -251,71 +263,58 @@ func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) err
 	return nil
 }
 
-func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]interface{}, parser Parser, options *ConfigOptions, log log.Logger) (*latest.Config, *generated.Config, variable.Resolver, error) {
-	// load the generated config
-	generatedConfig, err := l.LoadGenerated(options)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// restore vars if wanted
-	if options.KubeClient != nil && options.RestoreVars {
-		vars, _, err := RestoreVarsFromSecret(options.KubeClient, options.VarsSecretName)
-		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "restore vars")
-		} else if vars != nil {
-			generatedConfig.Vars = vars
-		}
-	}
-
-	// check if we should load the profile from the generated config
-	if generatedConfig.ActiveProfile != "" && len(options.Profiles) == 0 {
-		options.Profiles = []string{generatedConfig.ActiveProfile}
-	}
-
+func (l *configLoader) parseConfig(
+	rawConfig map[interface{}]interface{},
+	localCache localcache.Cache,
+	remoteCache remotecache.Cache,
+	client kubectl.Client,
+	parser Parser,
+	options *ConfigOptions,
+	log log.Logger,
+) (*latest.Config, variable.Resolver, error) {
 	// copy raw config
 	copiedRawConfig, err := copyRaw(rawConfig)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	// Load defined variables
 	vars, err := versions.ParseVariables(copiedRawConfig, log)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	// validate variables
 	err = validateVars(vars)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	// create a new variable resolver
-	resolver := l.newVariableResolver(generatedConfig, absPath, options, vars, log)
+	resolver := l.newVariableResolver(localCache, remoteCache, client, options, vars, log)
 
 	// parse cli --var's, the resolver will cache them for us
 	_, err = resolver.ConvertFlags(options.Vars)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	// prepare profiles
 	copiedRawConfig, err = prepareProfiles(copiedRawConfig, resolver)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	// apply the profiles
 	copiedRawConfig, err = l.applyProfiles(copiedRawConfig, options, resolver, log)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	// Load defined variables again (might be changed through profiles)
 	vars, err = versions.ParseVariables(copiedRawConfig, log)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	// update the used vars in the resolver
@@ -324,7 +323,7 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 	// validate variables
 	err = validateVars(vars)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	// Delete vars from config
@@ -333,40 +332,36 @@ func (l *configLoader) parseConfig(absPath string, rawConfig map[interface{}]int
 	// parse the config
 	latestConfig, err := parser.Parse(rawConfig, copiedRawConfig, resolver, log)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	// now we validate the config
 	err = validate(latestConfig, log)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	// check if we do not want to change the generated config or
 	// secret vars.
 	if options.Dry {
-		return latestConfig, generatedConfig, resolver, nil
+		return latestConfig, resolver, nil
 	}
 
-	// Save generated config
-	if options.GeneratedLoader == nil {
-		err = generated.NewConfigLoaderFromDevSpacePath(GetLastProfile(options.Profiles), l.configPath).Save(generatedConfig)
-	} else {
-		err = options.GeneratedLoader.Save(generatedConfig)
-	}
+	// save local cache
+	err = localCache.Save()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	// save vars if wanted
-	if options.KubeClient != nil && options.SaveVars {
-		err = SaveVarsInSecret(options.KubeClient, generatedConfig.Vars, options.VarsSecretName, log)
+	// save remote cache
+	if client != nil {
+		err = remoteCache.Save(context.TODO(), client)
 		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "save vars")
+			return nil, nil, err
 		}
 	}
 
-	return latestConfig, generatedConfig, resolver, nil
+	return latestConfig, resolver, nil
 }
 
 func validateProfile(profile interface{}) error {
@@ -534,7 +529,7 @@ func resolve(data interface{}, resolver variable.Resolver) (interface{}, error) 
 
 func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *ConfigOptions, resolver variable.Resolver, log log.Logger) (map[interface{}]interface{}, error) {
 	// Get profile
-	profiles, err := versions.ParseProfile(filepath.Dir(l.configPath), data, options.Profiles, options.ProfileRefresh, options.DisableProfileActivation, resolver, log)
+	profiles, err := versions.ParseProfile(filepath.Dir(l.absConfigPath), data, options.Profiles, options.ProfileRefresh, options.DisableProfileActivation, resolver, log)
 	if err != nil {
 		return nil, err
 	}
@@ -572,14 +567,11 @@ func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *
 	return data, nil
 }
 
-func (l *configLoader) newVariableResolver(generatedConfig *generated.Config, absPath string, options *ConfigOptions, vars []*latest.Variable, log log.Logger) variable.Resolver {
-	return variable.NewResolver(generatedConfig.Vars, &variable.PredefinedVariableOptions{
-		BasePath:         options.BasePath,
-		ConfigPath:       absPath,
-		KubeContextFlag:  options.KubeContext,
-		NamespaceFlag:    options.Namespace,
-		KubeConfigLoader: l.kubeConfigLoader,
-		Profile:          GetLastProfile(options.Profiles),
+func (l *configLoader) newVariableResolver(localCache localcache.Cache, remoteCache remotecache.Cache, client kubectl.Client, options *ConfigOptions, vars []*latest.Variable, log log.Logger) variable.Resolver {
+	return variable.NewResolver(localCache, remoteCache, &variable.PredefinedVariableOptions{
+		ConfigPath: l.absConfigPath,
+		KubeClient: client,
+		Profile:    GetLastProfile(options.Profiles),
 	}, vars, log)
 }
 
@@ -600,7 +592,7 @@ func configExistsInPath(path string) bool {
 // LoadRaw loads the raw config
 func (l *configLoader) LoadRaw() (map[interface{}]interface{}, error) {
 	// What path should we use
-	configPath := ConfigPath(l.configPath)
+	configPath := ConfigPath(l.absConfigPath)
 	_, err := os.Stat(configPath)
 	if err != nil {
 		return nil, errors.Errorf("Couldn't load '%s': %v", configPath, err)
@@ -622,22 +614,22 @@ func (l *configLoader) LoadRaw() (map[interface{}]interface{}, error) {
 
 // Exists checks whether the yaml file for the config exists or the configs.yaml exists
 func (l *configLoader) Exists() bool {
-	return configExistsInPath(ConfigPath(l.configPath))
+	return configExistsInPath(ConfigPath(l.absConfigPath))
 }
 
 // SetDevSpaceRoot checks the current directory and all parent directories for a .devspace folder with a config and sets the current working directory accordingly
 func (l *configLoader) SetDevSpaceRoot(log log.Logger) (bool, error) {
-	if l.configPath != "" {
-		configExists := configExistsInPath(l.configPath)
+	if l.absConfigPath != "" {
+		configExists := configExistsInPath(l.absConfigPath)
 		if !configExists {
 			return configExists, nil
 		}
 
-		err := os.Chdir(filepath.Dir(ConfigPath(l.configPath)))
+		err := os.Chdir(filepath.Dir(ConfigPath(l.absConfigPath)))
 		if err != nil {
 			return false, err
 		}
-		l.configPath = filepath.Base(ConfigPath(l.configPath))
+		l.absConfigPath = filepath.Base(ConfigPath(l.absConfigPath))
 		return true, nil
 	}
 

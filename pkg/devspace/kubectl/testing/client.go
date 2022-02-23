@@ -11,7 +11,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
@@ -73,7 +72,7 @@ func (c *Client) KubeConfigLoader() kubeconfig.Loader {
 }
 
 // PrintWarning is a fake implementation of function
-func (c *Client) CheckKubeContext(generatedConfig *generated.Config, noWarning bool, log log.Logger) (kubectl.Client, error) {
+func (c *Client) CheckKubeContext(generatedConfig *localcache.Config, noWarning bool, log log.Logger) (kubectl.Client, error) {
 	return c, nil
 }
 
@@ -84,11 +83,6 @@ func (c *Client) CopyFromReader(pod *k8sv1.Pod, container, containerPath string,
 
 // Copy is a fake implementation of function
 func (c *Client) Copy(pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error {
-	return nil
-}
-
-// ExecStreamWithTransport is a fake implementation of function
-func (c *Client) ExecStreamWithTransport(options *kubectl.ExecStreamWithTransportOptions) error {
 	return nil
 }
 
@@ -108,7 +102,7 @@ func (c *Client) GenericRequest(options *kubectl.GenericRequestOptions) (string,
 }
 
 // ReadLogs is a fake implementation of function
-func (c *Client) ReadLogs(namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error) {
+func (c *Client) ReadLogs(ctx context.Context, namespace, podName, containerName string, lastContainerLog bool, tail *int64) (string, error) {
 	return "ContainerLogs", nil
 }
 
@@ -136,17 +130,12 @@ func (c *Client) GetUpgraderWrapper() (http.RoundTripper, kubectl.UpgraderWrappe
 }
 
 // EnsureDefaultNamespace is a fake implementation of function
-func (c *Client) EnsureDeployNamespaces(config *latest.Config, log log.Logger) error {
-	return nil
-}
-
-// EnsureGoogleCloudClusterRoleBinding is a fake implementation of function
-func (c *Client) EnsureGoogleCloudClusterRoleBinding(log log.Logger) error {
+func (c *Client) EnsureDeployNamespaces(ctx context.Context, config *latest.Config, log log.Logger) error {
 	return nil
 }
 
 // NewPortForwarder is a fake implementation of function
-func (c *Client) NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}, errorChan chan error) (*portforward.PortForwarder, error) {
+func (c *Client) NewPortForwarder(ctx context.Context, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}, errorChan chan error) (*portforward.PortForwarder, error) {
 	return nil, nil
 }
 

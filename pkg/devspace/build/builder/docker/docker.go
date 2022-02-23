@@ -4,21 +4,18 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
-
 	"github.com/docker/cli/cli/streams"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/helper"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 
@@ -55,9 +52,9 @@ type Builder struct {
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(config config.Config, client dockerclient.Client, kubeClient kubectl.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
+func NewBuilder(ctx *devspacecontext.Context, client dockerclient.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
 	return &Builder{
-		helper:                    helper.NewBuildHelper(config, kubeClient, EngineName, imageConfigName, imageConf, imageTags),
+		helper:                    helper.NewBuildHelper(ctx, EngineName, imageConfigName, imageConf, imageTags),
 		client:                    client,
 		skipPush:                  skipPush,
 		skipPushOnLocalKubernetes: skipPushOnLocalKubernetes,
@@ -65,20 +62,21 @@ func NewBuilder(config config.Config, client dockerclient.Client, kubeClient kub
 }
 
 // Build implements the interface
-func (b *Builder) Build(devspacePID string, log logpkg.Logger) error {
-	return b.helper.Build(b, devspacePID, log)
+func (b *Builder) Build(ctx *devspacecontext.Context) error {
+	return b.helper.Build(ctx, b)
 }
 
 // ShouldRebuild determines if an image has to be rebuilt
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool, log logpkg.Logger) (bool, error) {
-	rebuild, err := b.helper.ShouldRebuild(cache, forceRebuild, log)
+func (b *Builder) ShouldRebuild(ctx *devspacecontext.Context, forceRebuild bool) (bool, error) {
+	rebuild, err := b.helper.ShouldRebuild(ctx, forceRebuild)
 
 	// Check if image is present in local repository
 	if !rebuild && err == nil {
-		if b.skipPushOnLocalKubernetes && b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
-			found, err := b.helper.IsImageAvailableLocally(cache, b.client)
+		if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && ctx.KubeClient.IsLocalKubernetes() {
+			found, err := b.helper.IsImageAvailableLocally(ctx, b.client)
 			if !found && err == nil {
-				log.Infof("Rebuild image %s because it was not found in local docker daemon", cache.Images[b.helper.ImageConfigName].ImageName)
+				imageCache, _ := ctx.Config.LocalCache().GetImageCache(b.helper.ImageConfigName)
+				ctx.Log.Infof("Rebuild image %s because it was not found in local docker daemon", imageCache.ImageName)
 				return true, nil
 			}
 		}
@@ -90,7 +88,7 @@ func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild bool,
 // BuildImage builds a dockerimage with the docker cli
 // contextPath is the absolute path to the context path
 // dockerfilePath is the absolute path to the dockerfile WITHIN the contextPath
-func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []string, cmd []string, devspacePID string, log logpkg.Logger) error {
+func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfilePath string, entrypoint []string, cmd []string) error {
 	var (
 		displayRegistryURL = "hub.docker.com"
 	)
@@ -105,20 +103,20 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// We skip pushing when it is the minikube client
-	if b.skipPushOnLocalKubernetes && b.helper.KubeClient != nil && b.helper.KubeClient.IsLocalKubernetes() {
+	if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && ctx.KubeClient.IsLocalKubernetes() {
 		b.skipPush = true
 	}
 
 	// Authenticate
 	if !b.skipPush && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || !b.helper.ImageConf.Build.Docker.SkipPush) {
-		log.StartWait("Authenticating (" + displayRegistryURL + ")")
+		ctx.Log.StartWait("Authenticating (" + displayRegistryURL + ")")
 		_, err = b.Authenticate()
-		log.StopWait()
+		ctx.Log.StopWait()
 		if err != nil {
 			return errors.Errorf("Error during image registry authentication: %v", err)
 		}
 
-		log.Done("Authentication successful (" + displayRegistryURL + ")")
+		ctx.Log.Done("Authentication successful (" + displayRegistryURL + ")")
 	}
 
 	// Buildoptions
@@ -136,7 +134,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 	}
 
 	// create context stream
-	body, writer, outStream, buildOptions, err := CreateContextStream(b.helper, contextPath, dockerfilePath, entrypoint, cmd, options, log)
+	body, writer, outStream, buildOptions, err := CreateContextStream(b.helper, contextPath, dockerfilePath, entrypoint, cmd, options, ctx.Log)
 	if err != nil {
 		return err
 	}
@@ -152,7 +150,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		}
 	}
 	if useDockerCli || useBuildKit || len(cliArgs) > 0 {
-		err = b.client.ImageBuildCLI(useBuildKit, body, writer, cliArgs, *buildOptions, log)
+		err = b.client.ImageBuildCLI(useBuildKit, body, writer, cliArgs, *buildOptions, ctx.Log)
 		if err != nil {
 			return err
 		}
@@ -160,7 +158,7 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 		// make sure to use the correct proxy configuration
 		buildOptions.BuildArgs = b.client.ParseProxyConfig(buildOptions.BuildArgs)
 
-		response, err := b.client.ImageBuild(context.Background(), body, *buildOptions)
+		response, err := b.client.ImageBuild(ctx.Context, body, *buildOptions)
 		if err != nil {
 			return err
 		}
@@ -180,10 +178,10 @@ func (b *Builder) BuildImage(contextPath, dockerfilePath string, entrypoint []st
 				return errors.Errorf("error during image push: %v", err)
 			}
 
-			log.Info("Image pushed to registry (" + displayRegistryURL + ")")
+			ctx.Log.Info("Image pushed to registry (" + displayRegistryURL + ")")
 		}
 	} else {
-		log.Infof("Skip image push for %s", b.helper.ImageName)
+		ctx.Log.Infof("Skip image push for %s", b.helper.ImageName)
 	}
 
 	return nil

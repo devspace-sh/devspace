@@ -13,7 +13,6 @@ import (
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -87,31 +86,15 @@ devspace logs --namespace=mynamespace
 func (cmd *LogsCmd) RunLogs(f factory.Factory) error {
 	// Set config root
 	log := f.GetLog()
-	configOptions := cmd.ToConfigOptions(log)
+	configOptions := cmd.ToConfigOptions()
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
-	configExists, err := configLoader.SetDevSpaceRoot(log)
-	if err != nil {
-		return err
-	}
-
-	// Load config if possible
-	var generatedConfig *generated.Config
-	if configExists {
-		generatedConfig, err = configLoader.LoadGenerated(configOptions)
-		if err != nil {
-			return err
-		}
-		configOptions.GeneratedConfig = generatedConfig
-	}
-
-	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log)
+	_, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
 
 	// Get kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return errors.Wrap(err, "create kube client")
 	}
@@ -164,7 +147,7 @@ func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, c
 		if !configLoader.Exists() {
 			config = config2.Ensure(nil)
 		} else {
-			config, err = configLoader.Load(configOptions, log)
+			config, err = configLoader.Load(client, configOptions, log)
 			if err != nil {
 				return nil, err
 			}
@@ -177,7 +160,7 @@ func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, c
 			}
 		}
 
-		resolved, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(imageSelector, config, dependencies)
+		resolved, err := runtimevar.NewRuntimeResolver(".", true).FillRuntimeVariablesAsImageSelector(imageSelector, config, dependencies)
 		if err != nil {
 			return nil, err
 		}
@@ -185,12 +168,11 @@ func getImageSelector(client kubectl.Client, configLoader loader.ConfigLoader, c
 		imageSelectors = append(imageSelectors, resolved.Image)
 	} else if image != "" {
 		log.Warnf("Flag --image is deprecated, please use --image-selector instead")
-
 		if !configLoader.Exists() {
 			return nil, errors.New(message.ConfigNotFound)
 		}
 
-		config, err := configLoader.Load(configOptions, log)
+		config, err := configLoader.Load(client, configOptions, log)
 		if err != nil {
 			return nil, err
 		}

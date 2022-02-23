@@ -1,17 +1,20 @@
 package devpod
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/util/lockfactory"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"sync"
 )
 
-var GlobalManager = NewManager()
-
 type Manager interface {
+	// StartMultiple will start multiple or all dev pods
+	StartMultiple(ctx *devspacecontext.Context, devPods []string) error
+
 	// Start will start a DevPod if it is not yet started
 	Start(ctx *devspacecontext.Context, devPod *latest.DevPod) error
 
@@ -30,6 +33,44 @@ func NewManager() Manager {
 	return &devPodManager{
 		lockFactory: lockfactory.NewDefaultLockFactory(),
 		devPods:     map[string]*devPod{},
+	}
+}
+
+func (d *devPodManager) StartMultiple(ctx *devspacecontext.Context, devPods []string) error {
+	cancelCtx, cancel := context.WithCancel(ctx.Context)
+	defer cancel()
+	ctx = ctx.WithContext(cancelCtx)
+
+	waitGroup := sync.WaitGroup{}
+	errChan := make(chan error, len(ctx.Config.Config().Dev))
+	for devPodName, devPod := range ctx.Config.Config().Dev {
+		if len(devPods) > 0 && !stringutil.Contains(devPods, devPodName) {
+			continue
+		}
+
+		waitGroup.Add(1)
+		go func(devPod *latest.DevPod) {
+			defer waitGroup.Done()
+			err := d.Start(ctx, devPod)
+			if err != nil {
+				errChan <- err
+			}
+		}(devPod)
+	}
+
+	done := make(chan struct{})
+	go func() {
+		waitGroup.Wait()
+		close(done)
+	}()
+
+	select {
+	case err := <-errChan:
+		cancel()
+		<-done
+		return err
+	case <-done:
+		return nil
 	}
 }
 

@@ -224,7 +224,7 @@ func (h *handler) version(w http.ResponseWriter, r *http.Request) {
 type returnConfig struct {
 	Config          *latest.Config              `yaml:"config"`
 	RawConfig       map[interface{}]interface{} `yaml:"rawConfig"`
-	GeneratedConfig *generated.Config           `yaml:"generatedConfig"`
+	GeneratedConfig *localcache.Config          `yaml:"generatedConfig"`
 
 	AnalyticsEnabled bool              `yaml:"analyticsEnabled"`
 	Profile          string            `yaml:"profile"`

@@ -131,7 +131,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 
 	var (
 		config          config2.Config
-		generatedConfig *generated.Config
+		generatedConfig *localcache.Config
 	)
 
 	if configExists {

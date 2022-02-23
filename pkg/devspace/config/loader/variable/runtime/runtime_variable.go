@@ -2,7 +2,9 @@ package runtime
 
 import (
 	"fmt"
+	buildtypes "github.com/loft-sh/devspace/pkg/devspace/build/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"strings"
 )
@@ -25,12 +27,11 @@ var Locations = []string{
 }
 
 // NewRuntimeVariable creates a new variable that is loaded during runtime
-func NewRuntimeVariable(name string, config config.Config, dependencies []types.Dependency, builtImages map[string]string) *runtimeVariable {
+func NewRuntimeVariable(name string, config config.Config, dependencies []types.Dependency) *runtimeVariable {
 	return &runtimeVariable{
 		name:         name,
 		config:       config,
 		dependencies: dependencies,
-		builtImages:  builtImages,
 	}
 }
 
@@ -38,7 +39,6 @@ type runtimeVariable struct {
 	name         string
 	config       config.Config
 	dependencies []types.Dependency
-	builtImages  map[string]string
 }
 
 func (e *runtimeVariable) Load() (bool, interface{}, error) {
@@ -83,7 +83,7 @@ func (e *runtimeVariable) Load() (bool, interface{}, error) {
 	// get image info from generated config
 	if strings.HasPrefix(runtimeVar, "images.") {
 		runtimeVar = strings.TrimPrefix(runtimeVar, "images.")
-		if c.Config() == nil || c.Generated() == nil {
+		if c.Config() == nil || c.LocalCache() == nil {
 			return false, nil, fmt.Errorf("couldn't find runtime variable %s, because config or cache is empty", e.name)
 		}
 
@@ -99,7 +99,7 @@ func (e *runtimeVariable) Load() (bool, interface{}, error) {
 		}
 
 		// search for image name
-		generated := c.Generated().GetActive()
+		cache := c.LocalCache()
 		for configImageKey, configImage := range c.Config().Images {
 			if configImageKey != imageName {
 				continue
@@ -107,9 +107,14 @@ func (e *runtimeVariable) Load() (bool, interface{}, error) {
 
 			// check if in built images
 			shouldRedeploy := false
-			if e.builtImages != nil {
-				if _, ok := e.builtImages[configImage.Image]; ok {
-					shouldRedeploy = true
+			builtImagesInterface, ok := c.GetRuntimeVariable(constants.BuiltImagesKey)
+			if ok {
+				builtImages := builtImagesInterface.(map[string]buildtypes.ImageNameTag)
+				for _, v := range builtImages {
+					if v.ImageName == configImage.Image {
+						shouldRedeploy = true
+						break
+					}
 				}
 			}
 
@@ -120,8 +125,9 @@ func (e *runtimeVariable) Load() (bool, interface{}, error) {
 
 			// try to find the tag for the image
 			tag := ""
-			if generated.Images[configImageKey] != nil && generated.Images[configImageKey].Tag != "" {
-				tag = generated.Images[configImageKey].Tag
+			imageCache, _ := cache.GetImageCache(configImageKey)
+			if imageCache.Tag != "" {
+				tag = imageCache.Tag
 			}
 
 			// does the config have a tag defined?

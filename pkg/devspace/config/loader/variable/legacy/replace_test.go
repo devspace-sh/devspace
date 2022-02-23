@@ -16,7 +16,7 @@ type replaceContainerNamesTestCase struct {
 	name string
 
 	overwriteValues map[interface{}]interface{}
-	cache           *generated.CacheConfig
+	cache           *localcache.CacheConfig
 	imagesConf      map[string]*latest.ImageConfig
 	builtImages     map[string]string
 
@@ -31,8 +31,8 @@ func TestReplaceContainerNames(t *testing.T) {
 			overwriteValues: map[interface{}]interface{}{
 				"": "",
 			},
-			cache: &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{
+			cache: &localcache.CacheConfig{
+				Images: map[string]*localcache.ImageCache{
 					"": {},
 				},
 			},
@@ -45,8 +45,8 @@ func TestReplaceContainerNames(t *testing.T) {
 			overwriteValues: map[interface{}]interface{}{
 				"": "myimage",
 			},
-			cache: &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{},
+			cache: &localcache.CacheConfig{
+				Images: map[string]*localcache.ImageCache{},
 			},
 			expectedOverwriteValues: map[interface{}]interface{}{
 				"": "myimage",
@@ -62,8 +62,8 @@ func TestReplaceContainerNames(t *testing.T) {
 					Image: "myimage",
 				},
 			},
-			cache: &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{
+			cache: &localcache.CacheConfig{
+				Images: map[string]*localcache.ImageCache{
 					"test": {
 						ImageName: "myimage",
 						Tag:       "someTag",
@@ -88,8 +88,8 @@ func TestReplaceContainerNames(t *testing.T) {
 					Image: "myimage",
 				},
 			},
-			cache: &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{
+			cache: &localcache.CacheConfig{
+				Images: map[string]*localcache.ImageCache{
 					"test": {
 						ImageName: "myimage",
 						Tag:       "someTag",
@@ -114,8 +114,8 @@ func TestReplaceContainerNames(t *testing.T) {
 					Image: "myimage",
 				},
 			},
-			cache: &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{
+			cache: &localcache.CacheConfig{
+				Images: map[string]*localcache.ImageCache{
 					"test": {
 						ImageName: "myimage",
 						Tag:       "someTag",
@@ -140,8 +140,8 @@ func TestReplaceContainerNames(t *testing.T) {
 					Image: "myimage",
 				},
 			},
-			cache: &generated.CacheConfig{
-				Images: map[string]*generated.ImageCache{
+			cache: &localcache.CacheConfig{
+				Images: map[string]*localcache.ImageCache{
 					"test": {
 						ImageName: "myimage",
 						Tag:       "someTag",
@@ -159,7 +159,7 @@ func TestReplaceContainerNames(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		cache := generated.New()
+		cache := localcache.New()
 		cache.Profiles[""] = testCase.cache
 		shouldRedeploy, err := ReplaceImageNames(testCase.overwriteValues, config.NewConfig(nil, &latest.Config{Images: testCase.imagesConf}, cache, nil, constants.DefaultConfigPath), nil, testCase.builtImages, nil)
 		assert.NilError(t, err, "Error replacing image names in testCase %s", testCase.name)

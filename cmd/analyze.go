@@ -66,7 +66,7 @@ func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, cobraCmd *cobra.Command, ar
 	}
 
 	// Load generated config if possible
-	var generatedConfig *generated.Config
+	var generatedConfig *localcache.Config
 	if configExists {
 		generatedConfig, err = configLoader.LoadGenerated(cmd.ToConfigOptions(log))
 		if err != nil {

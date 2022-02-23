@@ -2,14 +2,15 @@ package types
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 )
 
 // Client is the client interface for helm
 type Client interface {
-	InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*Release, error)
-	Template(releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error)
-	DeleteRelease(releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error
-	ListReleases(helmConfig *latest.HelmConfig) ([]*Release, error)
+	InstallChart(ctx *devspacecontext.Context, releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*Release, error)
+	Template(ctx *devspacecontext.Context, releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error)
+	DeleteRelease(ctx *devspacecontext.Context, releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error
+	ListReleases(ctx *devspacecontext.Context, helmConfig *latest.HelmConfig) ([]*Release, error)
 }
 
 // Release is the helm release struct

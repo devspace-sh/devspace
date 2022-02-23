@@ -306,7 +306,7 @@ func (cmd *DeployCmd) validateFlags() error {
 	return nil
 }
 
-func fillDevSpaceDomainVars(client kubectl.Client, generatedConfig *generated.Config) error {
+func fillDevSpaceDomainVars(client kubectl.Client, generatedConfig *localcache.Config) error {
 	namespace, err := client.KubeClient().CoreV1().Namespaces().Get(context.TODO(), client.Namespace(), metav1.GetOptions{})
 	if err != nil {
 		return nil
@@ -337,10 +337,10 @@ func fillDevSpaceDomainVars(client kubectl.Client, generatedConfig *generated.Co
 	return nil
 }
 
-func clearCache(generatedConfig *generated.Config, client kubectl.Client) {
+func clearCache(generatedConfig *localcache.Config, client kubectl.Client) {
 	if generatedConfig.GetActive().LastContext != nil {
 		if (generatedConfig.GetActive().LastContext.Context != "" && generatedConfig.GetActive().LastContext.Context != client.CurrentContext()) || (generatedConfig.GetActive().LastContext.Namespace != "" && generatedConfig.GetActive().LastContext.Namespace != client.Namespace()) {
-			generatedConfig.GetActive().Deployments = map[string]*generated.DeploymentCache{}
+			generatedConfig.GetActive().Deployments = map[string]*localcache.DeploymentCache{}
 			generatedConfig.GetActive().Dependencies = map[string]string{}
 		}
 	}

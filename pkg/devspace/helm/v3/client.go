@@ -1,6 +1,7 @@
 package v3
 
 import (
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,7 +11,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/git"
@@ -19,30 +19,17 @@ import (
 
 type client struct {
 	exec        command.Exec
-	kubeClient  kubectl.Client
 	genericHelm generic.Client
-
-	log log.Logger
 }
 
 // NewClient creates a new helm v3 Client
-func NewClient(kubeClient kubectl.Client, log log.Logger) (types.Client, error) {
+func NewClient(log log.Logger) (types.Client, error) {
 	c := &client{
-		exec:       command.NewStreamCommand,
-		kubeClient: kubeClient,
-		log:        log,
+		exec: command.NewStreamCommand,
 	}
 
 	c.genericHelm = generic.NewGenericClient(c, log)
 	return c, nil
-}
-
-func (c *client) IsInCluster() bool {
-	return c.kubeClient.IsInCluster()
-}
-
-func (c *client) KubeContext() string {
-	return c.kubeClient.CurrentContext()
 }
 
 func (c *client) Command() commands.Command {
@@ -50,7 +37,7 @@ func (c *client) Command() commands.Command {
 }
 
 // InstallChart installs the given chart via helm v3
-func (c *client) InstallChart(releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
+func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
 	valuesFile, err := c.genericHelm.WriteValues(values)
 	if err != nil {
 		return nil, err
@@ -58,7 +45,7 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	defer os.Remove(valuesFile)
 
 	if releaseNamespace == "" {
-		releaseNamespace = c.kubeClient.Namespace()
+		releaseNamespace = ctx.KubeClient.Namespace()
 	}
 
 	args := []string{
@@ -135,17 +122,17 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 		args = append(args, "--no-hooks")
 	}
 	args = append(args, helmConfig.UpgradeArgs...)
-	output, err := c.genericHelm.Exec(args, helmConfig)
+	output, err := c.genericHelm.Exec(ctx, args, helmConfig)
 
 	if helmConfig.DisplayOutput {
-		_, _ = c.log.Write(output)
+		_, _ = ctx.Log.Write(output)
 	}
 
 	if err != nil {
 		return nil, err
 	}
 
-	releases, err := c.ListReleases(helmConfig)
+	releases, err := c.ListReleases(ctx, helmConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -159,8 +146,8 @@ func (c *client) InstallChart(releaseName string, releaseNamespace string, value
 	return nil, nil
 }
 
-func (c *client) Template(releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error) {
-	cleanup, chartDir, err := c.genericHelm.FetchChart(helmConfig)
+func (c *client) Template(ctx *devspacecontext.Context, releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error) {
+	cleanup, chartDir, err := c.genericHelm.FetchChart(ctx, helmConfig)
 	if err != nil {
 		return "", err
 	} else if cleanup {
@@ -168,7 +155,7 @@ func (c *client) Template(releaseName, releaseNamespace string, values map[inter
 	}
 
 	if releaseNamespace == "" {
-		releaseNamespace = c.kubeClient.Namespace()
+		releaseNamespace = ctx.KubeClient.Namespace()
 	}
 
 	valuesFile, err := c.genericHelm.WriteValues(values)
@@ -187,7 +174,7 @@ func (c *client) Template(releaseName, releaseNamespace string, values map[inter
 		valuesFile,
 	}
 	args = append(args, helmConfig.TemplateArgs...)
-	result, err := c.genericHelm.Exec(args, helmConfig)
+	result, err := c.genericHelm.Exec(ctx, args, helmConfig)
 	if err != nil {
 		return "", err
 	}
@@ -195,9 +182,9 @@ func (c *client) Template(releaseName, releaseNamespace string, values map[inter
 	return string(result), nil
 }
 
-func (c *client) DeleteRelease(releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error {
+func (c *client) DeleteRelease(ctx *devspacecontext.Context, releaseName string, releaseNamespace string, helmConfig *latest.HelmConfig) error {
 	if releaseNamespace == "" {
-		releaseNamespace = c.kubeClient.Namespace()
+		releaseNamespace = ctx.KubeClient.Namespace()
 	}
 
 	args := []string{
@@ -207,7 +194,7 @@ func (c *client) DeleteRelease(releaseName string, releaseNamespace string, helm
 		releaseNamespace,
 	}
 	args = append(args, helmConfig.DeleteArgs...)
-	_, err := c.genericHelm.Exec(args, helmConfig)
+	_, err := c.genericHelm.Exec(ctx, args, helmConfig)
 	if err != nil {
 		return err
 	}
@@ -215,17 +202,17 @@ func (c *client) DeleteRelease(releaseName string, releaseNamespace string, helm
 	return nil
 }
 
-func (c *client) ListReleases(helmConfig *latest.HelmConfig) ([]*types.Release, error) {
+func (c *client) ListReleases(ctx *devspacecontext.Context, helmConfig *latest.HelmConfig) ([]*types.Release, error) {
 	args := []string{
 		"list",
 		"--namespace",
-		c.kubeClient.Namespace(),
+		ctx.KubeClient.Namespace(),
 		"--max",
 		strconv.Itoa(0),
 		"--output",
 		"json",
 	}
-	out, err := c.genericHelm.Exec(args, helmConfig)
+	out, err := c.genericHelm.Exec(ctx, args, helmConfig)
 	if err != nil {
 		return nil, err
 	}

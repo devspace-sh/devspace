@@ -1,4 +1,4 @@
-package podreplace
+package patch
 
 import (
 	"encoding/json"

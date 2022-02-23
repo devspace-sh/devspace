@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"encoding/json"
 	"fmt"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 	"io/ioutil"
 	"os"
@@ -90,7 +91,7 @@ func ensureDockerIgnoreAndDockerFile(excludes []string, dockerfile, dockerignore
 }
 
 // GetDockerfileAndContext retrieves the dockerfile and context
-func GetDockerfileAndContext(imageConf *latest.ImageConfig) (string, string) {
+func GetDockerfileAndContext(ctx *devspacecontext.Context, imageConf *latest.ImageConfig) (string, string) {
 	var (
 		dockerfilePath = DefaultDockerfilePath
 		contextPath    = DefaultContextPath
@@ -104,7 +105,7 @@ func GetDockerfileAndContext(imageConf *latest.ImageConfig) (string, string) {
 		contextPath = imageConf.Context
 	}
 
-	return dockerfilePath, contextPath
+	return ctx.ResolvePath(dockerfilePath), ctx.ResolvePath(contextPath)
 }
 
 // InjectBuildScriptInContext will add the restart helper script to the build context

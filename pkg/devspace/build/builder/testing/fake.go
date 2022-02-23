@@ -10,7 +10,7 @@ type Builder struct {
 }
 
 // ShouldRebuild is a fake implementation of the function
-func (b *Builder) ShouldRebuild(cache *generated.CacheConfig, forceRebuild, ignoreContextPathChanges bool) (bool, error) {
+func (b *Builder) ShouldRebuild(cache *localcache.CacheConfig, forceRebuild, ignoreContextPathChanges bool) (bool, error) {
 	return forceRebuild, nil
 }
 

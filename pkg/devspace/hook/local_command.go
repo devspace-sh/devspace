@@ -4,17 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/command"
-	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/shell"
 	"github.com/pkg/errors"
 )
@@ -31,7 +29,7 @@ type localCommandHook struct {
 	Stderr io.Writer
 }
 
-func (l *localCommandHook) Execute(hook *latest.HookConfig, client kubectl.Client, config config.Config, dependencies []types.Dependency, cmdExtraEnv map[string]string, log logpkg.Logger) error {
+func (l *localCommandHook) Execute(ctx *devspacecontext.Context, hook *latest.HookConfig, cmdExtraEnv map[string]string) error {
 	// Create extra env variables
 	osArgsBytes, err := json.Marshal(os.Args)
 	if err != nil {
@@ -40,18 +38,18 @@ func (l *localCommandHook) Execute(hook *latest.HookConfig, client kubectl.Clien
 	extraEnv := map[string]string{
 		OsArgsEnv: string(osArgsBytes),
 	}
-	if client != nil {
-		extraEnv[KubeContextEnv] = client.CurrentContext()
-		extraEnv[KubeNamespaceEnv] = client.Namespace()
+	if ctx.KubeClient != nil {
+		extraEnv[KubeContextEnv] = ctx.KubeClient.CurrentContext()
+		extraEnv[KubeNamespaceEnv] = ctx.KubeClient.Namespace()
 	}
 	for k, v := range cmdExtraEnv {
 		extraEnv[k] = v
 	}
 
-	dir := filepath.Dir(config.Path())
+	dir := ctx.WorkingDir
 
 	// resolve hook command and args
-	hookCommand, hookArgs, err := ResolveCommand(hook.Command, hook.Args, config, dependencies)
+	hookCommand, hookArgs, err := ResolveCommand(hook.Command, hook.Args, ctx.Config, ctx.Dependencies)
 	if err != nil {
 		return err
 	}
@@ -61,8 +59,8 @@ func (l *localCommandHook) Execute(hook *latest.HookConfig, client kubectl.Clien
 	stderr := &bytes.Buffer{}
 	defer func() {
 		if hook.Name != "" {
-			config.SetRuntimeVariable("hooks."+hook.Name+".stdout", strings.TrimSpace(stdout.String()))
-			config.SetRuntimeVariable("hooks."+hook.Name+".stderr", strings.TrimSpace(stderr.String()))
+			ctx.Config.SetRuntimeVariable("hooks."+hook.Name+".stdout", strings.TrimSpace(stdout.String()))
+			ctx.Config.SetRuntimeVariable("hooks."+hook.Name+".stderr", strings.TrimSpace(stderr.String()))
 		}
 	}()
 

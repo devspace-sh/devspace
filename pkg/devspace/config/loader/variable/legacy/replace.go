@@ -2,12 +2,13 @@ package legacy
 
 import (
 	"fmt"
+	buildtypes "github.com/loft-sh/devspace/pkg/devspace/build/types"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"regexp"
 	"strings"
 
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
@@ -58,7 +59,13 @@ func Match(key, value string, keys map[string]bool) bool {
 	return true
 }
 
-func resolveImage(value string, config config2.Config, dependencies []types.Dependency, builtImages map[string]string, tryImageKey, onlyImage, onlyTag bool) (bool, bool, string, error) {
+func resolveImage(value string, config config2.Config, dependencies []types.Dependency, tryImageKey, onlyImage, onlyTag bool) (bool, bool, string, error) {
+	builtImages := map[string]buildtypes.ImageNameTag{}
+	builtImagesInterface, ok := config.GetRuntimeVariable(constants.BuiltImagesKey)
+	if ok {
+		builtImages, _ = builtImagesInterface.(map[string]buildtypes.ImageNameTag)
+	}
+
 	resolvedImage := value
 	if tryImageKey {
 		selector, err := imageselector.Resolve(value, config, dependencies)
@@ -66,7 +73,13 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 			resolvedImage = selector.Image
 			if selector.Dependency != nil {
 				config = selector.Dependency.Config()
-				builtImages = selector.Dependency.BuiltImages()
+
+				builtImagesInterface, ok := selector.Dependency.Config().GetRuntimeVariable(constants.BuiltImagesKey)
+				if ok {
+					builtImages, _ = builtImagesInterface.(map[string]buildtypes.ImageNameTag)
+				} else {
+					builtImages = map[string]buildtypes.ImageNameTag{}
+				}
 			}
 		}
 	}
@@ -75,10 +88,7 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 	config = config2.Ensure(config)
 
 	// strip out images from cache that are not in the images conf anymore
-	imageCache := config.Generated().GetActive().Images
-	if imageCache == nil {
-		imageCache = map[string]*generated.ImageCache{}
-	}
+	imageCache := config.LocalCache().ListImageCache()
 
 	// config images
 	configImages := config.Config().Images
@@ -95,8 +105,11 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 	// check if in built images
 	shouldRedeploy := false
 	if builtImages != nil {
-		if _, ok := builtImages[image]; ok {
-			shouldRedeploy = true
+		for _, v := range builtImages {
+			if v.ImageName == image {
+				shouldRedeploy = true
+				break
+			}
 		}
 	}
 
@@ -113,7 +126,7 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 
 		// try to find the tag for the image
 		tag := originalTag
-		if imageCache[configImageKey] != nil && imageCache[configImageKey].Tag != "" {
+		if imageCache[configImageKey].Tag != "" {
 			tag = imageCache[configImageKey].Tag
 		}
 
@@ -144,7 +157,7 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 }
 
 func ResolveImageHelpers(value string, config config2.Config, dependencies []types.Dependency) (string, error) {
-	_, image, err := ReplaceHelpers(value, config, dependencies, map[string]string{})
+	_, image, err := ReplaceHelpers(value, config, dependencies)
 	if err != nil {
 		return "", err
 	}
@@ -153,7 +166,7 @@ func ResolveImageHelpers(value string, config config2.Config, dependencies []typ
 }
 
 func ResolveImage(imageSelector string, config config2.Config, dependencies []types.Dependency) (string, error) {
-	_, image, err := Replace(imageSelector, config, dependencies, map[string]string{})
+	_, image, err := Replace(imageSelector, config, dependencies)
 	if err != nil {
 		return "", err
 	}
@@ -172,22 +185,22 @@ func ResolveImageAsImageSelector(imageSelector string, config config2.Config, de
 	}, nil
 }
 
-func Replace(value string, config config2.Config, dependencies []types.Dependency, builtImages map[string]string) (bool, interface{}, error) {
+func Replace(value string, config config2.Config, dependencies []types.Dependency) (bool, interface{}, error) {
 	// check if it's just a single image name
-	found, shouldRedeploy, resolvedImage, err := resolveImage(value, config, dependencies, builtImages, false, false, false)
+	found, shouldRedeploy, resolvedImage, err := resolveImage(value, config, dependencies, false, false, false)
 	if err != nil {
 		return false, nil, err
 	} else if found {
 		return shouldRedeploy, resolvedImage, nil
 	}
 
-	return ReplaceHelpers(value, config, dependencies, builtImages)
+	return ReplaceHelpers(value, config, dependencies)
 }
 
-func ReplaceHelpers(value string, config config2.Config, dependencies []types.Dependency, builtImages map[string]string) (bool, interface{}, error) {
+func ReplaceHelpers(value string, config config2.Config, dependencies []types.Dependency) (bool, interface{}, error) {
 	// replace the image() helpers
 	shouldRedeploy, value, err := replaceWithRegEx(value, func(match string) (bool, bool, string, error) {
-		return resolveImage(match, config, dependencies, builtImages, true, true, false)
+		return resolveImage(match, config, dependencies, true, true, false)
 	}, imageRegEx)
 	if err != nil {
 		return false, nil, err
@@ -196,7 +209,7 @@ func ReplaceHelpers(value string, config config2.Config, dependencies []types.De
 	// replace the tag() helpers
 	imageShouldRedeploy := shouldRedeploy
 	shouldRedeploy, value, err = replaceWithRegEx(value, func(match string) (bool, bool, string, error) {
-		return resolveImage(match, config, dependencies, builtImages, true, false, true)
+		return resolveImage(match, config, dependencies, true, false, true)
 	}, tagRegEx)
 	if err != nil {
 		return false, nil, err
@@ -205,7 +218,7 @@ func ReplaceHelpers(value string, config config2.Config, dependencies []types.De
 	return imageShouldRedeploy || shouldRedeploy, value, nil
 }
 
-func replaceImageNames(config config2.Config, dependencies []types.Dependency, builtImages map[string]string, keys map[string]bool, action func(walk.MatchFn, walk.ReplaceFn) error) (bool, error) {
+func replaceImageNames(config config2.Config, dependencies []types.Dependency, keys map[string]bool, action func(walk.MatchFn, walk.ReplaceFn) error) (bool, error) {
 	config = config2.Ensure(config)
 	if keys == nil {
 		keys = map[string]bool{}
@@ -215,7 +228,7 @@ func replaceImageNames(config config2.Config, dependencies []types.Dependency, b
 	err := action(func(key, value string) bool {
 		return Match(key, value, keys)
 	}, func(_, value string) (interface{}, error) {
-		redeploy, retValue, err := Replace(value, config, dependencies, builtImages)
+		redeploy, retValue, err := Replace(value, config, dependencies)
 		if err != nil {
 			return nil, err
 		} else if redeploy {
@@ -231,15 +244,15 @@ func replaceImageNames(config config2.Config, dependencies []types.Dependency, b
 	return shouldRedeploy, nil
 }
 
-func ReplaceImageNamesStringMap(manifest map[string]interface{}, config config2.Config, dependencies []types.Dependency, builtImages map[string]string, keys map[string]bool) (bool, error) {
-	return replaceImageNames(config, dependencies, builtImages, keys, func(match walk.MatchFn, replace walk.ReplaceFn) error {
+func ReplaceImageNamesStringMap(manifest map[string]interface{}, config config2.Config, dependencies []types.Dependency, keys map[string]bool) (bool, error) {
+	return replaceImageNames(config, dependencies, keys, func(match walk.MatchFn, replace walk.ReplaceFn) error {
 		return walk.WalkStringMap(manifest, match, replace)
 	})
 }
 
 // ReplaceImageNames replaces images within a certain manifest with the correct tags from the cache
-func ReplaceImageNames(manifest map[interface{}]interface{}, config config2.Config, dependencies []types.Dependency, builtImages map[string]string, keys map[string]bool) (bool, error) {
-	return replaceImageNames(config, dependencies, builtImages, keys, func(match walk.MatchFn, replace walk.ReplaceFn) error {
+func ReplaceImageNames(manifest map[interface{}]interface{}, config config2.Config, dependencies []types.Dependency, keys map[string]bool) (bool, error) {
+	return replaceImageNames(config, dependencies, keys, func(match walk.MatchFn, replace walk.ReplaceFn) error {
 		return walk.Walk(manifest, match, replace)
 	})
 }

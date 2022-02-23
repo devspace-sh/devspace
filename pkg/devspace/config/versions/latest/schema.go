@@ -2,6 +2,7 @@ package latest
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
+	"gopkg.in/yaml.v2"
 	k8sv1 "k8s.io/api/core/v1"
 )
 
@@ -26,8 +27,27 @@ func NewRaw() *Config {
 	}
 }
 
+func (c *Config) Clone() *Config {
+	out, _ := yaml.Marshal(c)
+	n := &Config{}
+	_ = yaml.Unmarshal(out, n)
+	return n
+}
+
 type Pipeline struct {
+	PipelineJob `yaml:",inline" json:",inline"`
+
+	Jobs map[string]*PipelineJob `yaml:"jobs,omitempty" json:"jobs,omitempty"`
+}
+
+type PipelineJob struct {
+	After []string  `yaml:"after,omitempty" json:"after,omitempty"`
+	Rerun *JobRerun `yaml:"rerun,omitempty" json:"rerun,omitempty"`
+
 	Steps []PipelineStep `yaml:"steps,omitempty" json:"steps,omitempty"`
+}
+
+type JobRerun struct {
 }
 
 type PipelineStep struct {
@@ -47,7 +67,11 @@ type Config struct {
 	// Version holds the config version
 	Version string `yaml:"version"`
 
-	Pipeline *Pipeline `yaml:"pipeline,omitempty" json:"pipeline,omitempty"`
+	// Name specifies the name of the DevSpace project
+	Name string `yaml:"name"`
+
+	// Pipelines are the pipelines to execute
+	Pipelines map[string]Pipeline `yaml:"pipeline,omitempty" json:"pipeline,omitempty"`
 
 	// Require defines what DevSpace, plugins and command versions are needed to use this config
 	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
@@ -66,7 +90,7 @@ type Config struct {
 	Deployments []*DeploymentConfig `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
 	// Dev holds development configuration for the 'devspace dev' command.
-	Dev DevConfig `yaml:"dev,omitempty" json:"dev,omitempty"`
+	Dev map[string]*DevPod `yaml:"dev,omitempty" json:"dev,omitempty"`
 
 	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
 	// in the order they are specified.
@@ -656,7 +680,7 @@ type HelmConfig struct {
 	ComponentChart   *bool                       `yaml:"componentChart,omitempty" json:"componentChart,omitempty"`
 	Values           map[interface{}]interface{} `yaml:"values,omitempty" json:"values,omitempty"`
 	ValuesFiles      []string                    `yaml:"valuesFiles,omitempty" json:"valuesFiles,omitempty"`
-	ReplaceImageTags *bool                       `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
+	ReplaceImageTags bool                        `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
 	Wait             bool                        `yaml:"wait,omitempty" json:"wait,omitempty"`
 	DisplayOutput    bool                        `yaml:"displayOutput,omitempty" json:"output,omitempty"`
 	Timeout          string                      `yaml:"timeout,omitempty" json:"timeout,omitempty"`
@@ -667,8 +691,6 @@ type HelmConfig struct {
 	DisableHooks     bool                        `yaml:"disableHooks,omitempty" json:"disableHooks,omitempty"`
 	Driver           string                      `yaml:"driver,omitempty" json:"driver,omitempty"`
 	Path             string                      `yaml:"path,omitempty" json:"path,omitempty"`
-	V2               bool                        `yaml:"v2,omitempty" json:"v2,omitempty"`
-	TillerNamespace  string                      `yaml:"tillerNamespace,omitempty" json:"tillerNamespace,omitempty"`
 
 	DeleteArgs   []string `yaml:"deleteArgs,omitempty" json:"deleteArgs,omitempty"`
 	TemplateArgs []string `yaml:"templateArgs,omitempty" json:"templateArgs,omitempty"`
@@ -701,7 +723,7 @@ type KubectlConfig struct {
 	Manifests        []string `yaml:"manifests,omitempty" json:"manifests,omitempty"`
 	Kustomize        *bool    `yaml:"kustomize,omitempty" json:"kustomize,omitempty"`
 	KustomizeArgs    []string `yaml:"kustomizeArgs,omitempty" json:"kustomizeArgs,omitempty"`
-	ReplaceImageTags *bool    `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
+	ReplaceImageTags bool     `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
 	DeleteArgs       []string `yaml:"deleteArgs,omitempty" json:"deleteArgs,omitempty"`
 	CreateArgs       []string `yaml:"createArgs,omitempty" json:"createArgs,omitempty"`
 	ApplyArgs        []string `yaml:"applyArgs,omitempty" json:"applyArgs,omitempty"`
@@ -712,11 +734,6 @@ type KubectlConfig struct {
 type DevConfig struct {
 	Open       []*OpenConfig     `yaml:"open,omitempty" json:"open,omitempty"`
 	AutoReload *AutoReloadConfig `yaml:"autoReload,omitempty" json:"autoReload,omitempty"`
-
-	// DEPRECATED: Only used for backwards compatibility with older config versions
-	InteractiveEnabled bool `yaml:"deprecatedInteractiveEnabled,omitempty" json:"deprecatedInteractiveEnabled,omitempty"`
-	// DEPRECATED: Only used for backwards compatibility with older config versions
-	InteractiveImages []*InteractiveImageConfig `yaml:"deprecatedInteractiveImages,omitempty" json:"deprecatedInteractiveImages,omitempty"`
 }
 
 type DevPod struct {
@@ -948,7 +965,7 @@ type PodPatch struct {
 
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
-	Name                     string          `yaml:"name" json:"name"`
+	OverrideName             string          `yaml:"overrideName" json:"overrideName"`
 	Source                   *SourceConfig   `yaml:"source" json:"source"`
 	Disabled                 bool            `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 	Profile                  string          `yaml:"profile,omitempty" json:"profile,omitempty"`
@@ -993,6 +1010,7 @@ type SourceConfig struct {
 	Git            string   `yaml:"git,omitempty" json:"git,omitempty"`
 	CloneArgs      []string `yaml:"cloneArgs,omitempty" json:"cloneArgs,omitempty"`
 	DisableShallow bool     `yaml:"disableShallow,omitempty" json:"disableShallow,omitempty"`
+	DisablePull    bool     `yaml:"disablePull,omitempty" json:"disablePull,omitempty"`
 	SubPath        string   `yaml:"subPath,omitempty" json:"subPath,omitempty"`
 	Branch         string   `yaml:"branch,omitempty" json:"branch,omitempty"`
 	Tag            string   `yaml:"tag,omitempty" json:"tag,omitempty"`
@@ -1118,6 +1136,7 @@ type Variable struct {
 	ValidationPattern string   `yaml:"validationPattern,omitempty" json:"validationPattern,omitempty"`
 	ValidationMessage string   `yaml:"validationMessage,omitempty" json:"validationMessage,omitempty"`
 	NoCache           bool     `yaml:"noCache,omitempty" json:"noCache,omitempty"`
+	RemoteCache       bool     `yaml:"remoteCache,omitempty" json:"remoteCache,omitempty"`
 	AlwaysResolve     bool     `yaml:"alwaysResolve,omitempty" json:"alwaysResolve,omitempty"`
 
 	// Value is a shortcut for using source: none and default: my-value

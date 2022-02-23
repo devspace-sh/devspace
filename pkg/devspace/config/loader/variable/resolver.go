@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -18,22 +20,24 @@ import (
 var AlwaysResolvePredefinedVars = []string{"devspace.version", "devspace.random", "devspace.profile", "devspace.userHome", "devspace.timestamp", "devspace.context", "devspace.namespace"}
 
 // NewResolver creates a new resolver that caches resolved variables in memory and in the provided cache
-func NewResolver(cache map[string]string, predefinedVariableOptions *PredefinedVariableOptions, vars []*latest.Variable, log log.Logger) Resolver {
+func NewResolver(localCache localcache.Cache, remoteCache remotecache.Cache, predefinedVariableOptions *PredefinedVariableOptions, vars []*latest.Variable, log log.Logger) Resolver {
 	return &resolver{
-		memoryCache:     map[string]interface{}{},
-		persistentCache: cache,
-		vars:            vars,
-		options:         predefinedVariableOptions,
-		log:             log,
+		memoryCache: map[string]interface{}{},
+		localCache:  localCache,
+		remoteCache: remoteCache,
+		vars:        vars,
+		options:     predefinedVariableOptions,
+		log:         log,
 	}
 }
 
 type resolver struct {
-	vars            []*latest.Variable
-	memoryCache     map[string]interface{}
-	persistentCache map[string]string
-	options         *PredefinedVariableOptions
-	log             log.Logger
+	vars        []*latest.Variable
+	memoryCache map[string]interface{}
+	localCache  localcache.Cache
+	remoteCache remotecache.Cache
+	options     *PredefinedVariableOptions
+	log         log.Logger
 }
 
 func varMatchFn(key, value string) bool {
@@ -374,7 +378,7 @@ func (r *resolver) resolveDefinitionString(str string, definition *latest.Variab
 		v, ok := r.memoryCache[varName]
 		if !ok {
 			// check if its a predefined variable
-			variable, err := NewPredefinedVariable(varName, r.persistentCache, r.options)
+			variable, err := NewPredefinedVariable(varName, r.options)
 			if err != nil {
 				return nil, errors.Errorf("variable '%s' was not resolved yet, however is used in the definition of variable '%s' as '%s'. Please make sure you define '%s' before '%s' in the vars array", varName, definition.Name, str, varName, definition.Name)
 			}
@@ -398,7 +402,7 @@ func (r *resolver) resolveDefaultValue(definition *latest.Variable) (interface{}
 
 func (r *resolver) fillVariable(name string, definition *latest.Variable) (interface{}, error) {
 	// is predefined variable?
-	variable, err := NewPredefinedVariable(name, r.persistentCache, r.options)
+	variable, err := NewPredefinedVariable(name, r.options)
 	if err == nil {
 		return variable.Load(definition)
 	}
@@ -410,7 +414,7 @@ func (r *resolver) fillVariable(name string, definition *latest.Variable) (inter
 
 	// fill variable without definition
 	if definition == nil {
-		return NewUndefinedVariable(name, r.persistentCache, r.log).Load(definition)
+		return NewUndefinedVariable(name, r.localCache, r.log).Load(definition)
 	}
 
 	// trim space from variable definition
@@ -421,7 +425,7 @@ func (r *resolver) fillVariable(name string, definition *latest.Variable) (inter
 	case latest.VariableSourceEnv:
 		return NewEnvVariable(name).Load(definition)
 	case latest.VariableSourceDefault, latest.VariableSourceInput, latest.VariableSourceAll:
-		return NewDefaultVariable(name, r.persistentCache, r.log).Load(definition)
+		return NewDefaultVariable(name, r.localCache, r.remoteCache, r.log).Load(definition)
 	case latest.VariableSourceNone:
 		return NewNoneVariable(name).Load(definition)
 	case latest.VariableSourceCommand:

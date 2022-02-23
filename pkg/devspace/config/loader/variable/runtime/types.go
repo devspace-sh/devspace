@@ -18,5 +18,5 @@ type RuntimeResolver interface {
 	FillRuntimeVariables(haystack interface{}, config config.Config, dependencies []types.Dependency) (interface{}, error)
 
 	// FillRuntimeVariablesWithRebuild finds the used variables first and then fills in those in the haystack
-	FillRuntimeVariablesWithRebuild(haystack interface{}, config config.Config, dependencies []types.Dependency, builtImages map[string]string) (bool, interface{}, error)
+	FillRuntimeVariablesWithRebuild(haystack interface{}, config config.Config, dependencies []types.Dependency) (bool, interface{}, error)
 }

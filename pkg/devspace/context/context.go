@@ -6,15 +6,52 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/randutil"
+	"os"
+	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
 )
 
 func NewContext() *Context {
-	return &Context{}
+	workingDir, _ := RealWorkDir()
+	if workingDir == "" {
+		workingDir = "."
+	}
+
+	return &Context{
+		Context:    context.Background(),
+		WorkingDir: workingDir,
+		RunID:      strings.ToLower(randutil.GenerateRandomString(12)),
+		Log:        log.Discard,
+	}
+}
+
+func RealWorkDir() (string, error) {
+	if runtime.GOOS == "darwin" {
+		if pwd, present := os.LookupEnv("PWD"); present {
+			os.Unsetenv("PWD")
+			defer os.Setenv("PWD", pwd)
+		}
+		return os.Getwd()
+	}
+	return ".", nil
 }
 
 type Context struct {
 	// Context is the context to use
 	Context context.Context
+
+	// WorkingDir is the current working dir. Functions
+	// that receive this context should prefer this working directory
+	// instead of using the global one.
+	WorkingDir string
+
+	// RunID is the current DevSpace run id, which differs in each
+	// run of DevSpace. This can be used to save certain informations
+	// during the run.
+	RunID string
 
 	// Config is the loaded DevSpace config
 	Config config.Config
@@ -29,18 +66,62 @@ type Context struct {
 	Log log.Logger
 }
 
+func (c *Context) ToOriginalRelativePath(absPath string) string {
+	relPath, err := filepath.Rel(c.WorkingDir, absPath)
+	if err != nil {
+		c.Log.Debugf("Error computing original relative path: %v", err)
+		return absPath
+	}
+	return relPath
+}
+
+func (c *Context) ResolvePath(relPath string) string {
+	relPath = filepath.ToSlash(relPath)
+	if filepath.IsAbs(relPath) {
+		return path.Clean(relPath)
+	}
+
+	return path.Join(filepath.ToSlash(c.WorkingDir), relPath)
+}
+
+func (c *Context) WithKubeClient(client kubectl.Client) *Context {
+	if c == nil {
+		return nil
+	}
+
+	n := *c
+	n.KubeClient = client
+	return &n
+}
+
+func (c *Context) WithWorkingDir(workingDir string) *Context {
+	if c == nil {
+		return nil
+	}
+
+	n := *c
+	n.WorkingDir = workingDir
+	return &n
+}
+
+func (c *Context) WithConfig(conf config.Config) *Context {
+	if c == nil {
+		return nil
+	}
+
+	n := *c
+	n.Config = conf
+	return &n
+}
+
 func (c *Context) WithContext(ctx context.Context) *Context {
 	if c == nil {
 		return nil
 	}
 
-	return &Context{
-		Context:      ctx,
-		Config:       c.Config,
-		Dependencies: c.Dependencies,
-		KubeClient:   c.KubeClient,
-		Log:          c.Log,
-	}
+	n := *c
+	n.Context = ctx
+	return &n
 }
 
 func (c *Context) WithLogger(logger log.Logger) *Context {
@@ -48,11 +129,7 @@ func (c *Context) WithLogger(logger log.Logger) *Context {
 		return nil
 	}
 
-	return &Context{
-		Context:      c.Context,
-		Config:       c.Config,
-		Dependencies: c.Dependencies,
-		KubeClient:   c.KubeClient,
-		Log:          logger,
-	}
+	n := *c
+	n.Log = logger
+	return &n
 }

@@ -4,7 +4,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/configure"
@@ -28,11 +27,11 @@ type Factory interface {
 	NewConfigLoader(configPath string) loader.ConfigLoader
 
 	// NewConfigureManager creates a new configure manager
-	NewConfigureManager(config *latest.Config, generated *generated.Config, log log.Logger) configure.Manager
+	NewConfigureManager(config *latest.Config, generated *localcache.Config, log log.Logger) configure.Manager
 
 	// NewKubeDefaultClient creates a new kube client
 	NewKubeDefaultClient() (kubectl.Client, error)
-	NewKubeClientFromContext(context, namespace string, switchContext bool) (kubectl.Client, error)
+	NewKubeClientFromContext(context, namespace string) (kubectl.Client, error)
 	NewKubeClientBySelect(allowPrivate bool, switchContext bool, log log.Logger) (kubectl.Client, error)
 
 	// NewHelmClient creates a new helm client
@@ -122,7 +121,7 @@ func (f *DefaultFactoryImpl) NewConfigLoader(configPath string) loader.ConfigLoa
 }
 
 // NewConfigureManager implements interface
-func (f *DefaultFactoryImpl) NewConfigureManager(config *latest.Config, generated *generated.Config, log log.Logger) configure.Manager {
+func (f *DefaultFactoryImpl) NewConfigureManager(config *latest.Config, generated *localcache.Config, log log.Logger) configure.Manager {
 	return configure.NewManager(f, config, generated, log)
 }
 

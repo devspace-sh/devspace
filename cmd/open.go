@@ -105,7 +105,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 	)
 
 	// Load generated config if possible
-	var generatedConfig *generated.Config
+	var generatedConfig *localcache.Config
 	if configExists {
 		log.StartFileLogging()
 

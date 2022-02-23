@@ -38,7 +38,7 @@ type CloneOptions struct {
 	DisableShallow bool
 }
 
-// Update pulls the repository or clones it into the local path
+// Clone pulls the repository or clones it into the local path
 func (gr *GitCLIRepository) Clone(options CloneOptions) error {
 	// Check if repo already exists
 	_, err := os.Stat(gr.LocalPath + "/.git")
@@ -78,7 +78,7 @@ func (gr *GitCLIRepository) Clone(options CloneOptions) error {
 		return nil
 	}
 
-	// make sure the repo is up to date
+	// make sure the repo is up-to-date
 	if options.Commit == "" {
 		out, err := exec.Command("git", "-C", gr.LocalPath, "pull").CombinedOutput()
 		if err != nil {

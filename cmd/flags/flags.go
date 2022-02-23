@@ -1,11 +1,7 @@
 package flags
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
-
 	flag "github.com/spf13/pflag"
 )
 
@@ -19,58 +15,24 @@ type GlobalFlags struct {
 	KubeContext              string
 	Profiles                 []string
 	ProfileRefresh           bool
-	ProfileParents           []string
 	DisableProfileActivation bool
 	ConfigPath               string
 	Vars                     []string
-
-	RestoreVars    bool
-	SaveVars       bool
-	VarsSecretName string
-	SwitchContext  bool
 
 	InactivityTimeout int
 
 	Flags *flag.FlagSet
 }
 
-// UseLastContext uses the last context
-func (gf *GlobalFlags) UseLastContext(generatedConfig *generated.Config, log log.Logger) error {
-	if gf.KubeContext == "" && gf.Namespace == "" && gf.SwitchContext {
-		if generatedConfig == nil || generatedConfig.GetActive().LastContext == nil {
-			log.Warn("There is no last context to use. Only use the '--switch-context / -s' flag if you already have deployed the project before")
-		} else {
-			gf.KubeContext = generatedConfig.GetActive().LastContext.Context
-			gf.Namespace = generatedConfig.GetActive().LastContext.Namespace
-
-			log.Infof("Switching to context '%s' and namespace '%s'", ansi.Color(gf.KubeContext, "white+b"), ansi.Color(gf.Namespace, "white+b"))
-			return nil
-		}
-	}
-
-	gf.SwitchContext = false
-	return nil
-}
-
 // ToConfigOptions converts the globalFlags into config options
-func (gf *GlobalFlags) ToConfigOptions(log log.Logger) *loader.ConfigOptions {
-	if len(gf.ProfileParents) > 0 {
-		log.Infof("--profile-parent is deprecated, please use --profile instead")
-	}
-
+func (gf *GlobalFlags) ToConfigOptions() *loader.ConfigOptions {
 	profiles := []string{}
-	profiles = append(profiles, gf.ProfileParents...)
 	profiles = append(profiles, gf.Profiles...)
 	return &loader.ConfigOptions{
 		Profiles:                 profiles,
 		ProfileRefresh:           gf.ProfileRefresh,
 		DisableProfileActivation: gf.DisableProfileActivation,
-		KubeContext:              gf.KubeContext,
-		Namespace:                gf.Namespace,
 		Vars:                     gf.Vars,
-		RestoreVars:              gf.RestoreVars,
-		SaveVars:                 gf.SaveVars,
-		VarsSecretName:           gf.VarsSecretName,
 	}
 }
 
@@ -87,18 +49,12 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 
 	flags.StringVar(&globalFlags.ConfigPath, "config", "", "The devspace config file to use")
 	flags.StringSliceVarP(&globalFlags.Profiles, "profile", "p", []string{}, "The DevSpace profiles to apply. Multiple profiles are applied in the order they are specified")
-	flags.StringSliceVar(&globalFlags.ProfileParents, "profile-parent", []string{}, "One or more profiles that should be applied before the specified profile (e.g. devspace dev --profile-parent=base1 --profile-parent=base2 --profile=my-profile)")
 	flags.BoolVar(&globalFlags.ProfileRefresh, "profile-refresh", false, "If true will pull and re-download profile parent sources")
 	flags.BoolVar(&globalFlags.DisableProfileActivation, "disable-profile-activation", false, "If true will ignore all profile activations")
 	flags.StringVarP(&globalFlags.Namespace, "namespace", "n", "", "The kubernetes namespace to use")
 	flags.StringVar(&globalFlags.KubeContext, "kube-context", "", "The kubernetes context to use")
-	flags.BoolVarP(&globalFlags.SwitchContext, "switch-context", "s", false, "DEPRECATED: Switches and uses the last kube context and namespace that was used to deploy the DevSpace project")
 	flags.StringSliceVar(&globalFlags.Vars, "var", []string{}, "Variables to override during execution (e.g. --var=MYVAR=MYVALUE)")
 
-	flags.BoolVar(&globalFlags.RestoreVars, "restore-vars", false, "If true will restore the variables from kubernetes before loading the config")
-	flags.BoolVar(&globalFlags.SaveVars, "save-vars", false, "If true will save the variables to kubernetes after loading the config")
-	flags.StringVar(&globalFlags.VarsSecretName, "vars-secret", "devspace-vars", "The secret to restore/save the variables from/to, if --restore-vars or --save-vars is enabled")
 	flags.IntVar(&globalFlags.InactivityTimeout, "inactivity-timeout", 180, "Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems")
-
 	return globalFlags
 }

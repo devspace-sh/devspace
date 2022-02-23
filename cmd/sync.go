@@ -119,7 +119,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 
 	// Load generated config if possible
 	var err error
-	var generatedConfig *generated.Config
+	var generatedConfig *localcache.Config
 	logger := f.GetLog()
 	configOptions := cmd.ToConfigOptions(logger)
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)

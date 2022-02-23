@@ -1,23 +1,23 @@
 package testing
 
-import "github.com/loft-sh/devspace/pkg/devspace/config/generated"
+import "github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 
 // Loader is a fake implementation of the ConigLoader interface
 type Loader struct {
-	Config generated.Config
+	Config localcache.LocalCache
 }
 
-func (l *Loader) ForDevspace(path string) generated.ConfigLoader {
+func (l *Loader) ForDevspace(path string) localcache.Loader {
 	return l
 }
 
 // Load is a fake implementation o this function
-func (l *Loader) Load() (*generated.Config, error) {
+func (l *Loader) Load() (*localcache.LocalCache, error) {
 	return &l.Config, nil
 }
 
 // Save is a fake implementation o this function
-func (l *Loader) Save(config *generated.Config) error {
+func (l *Loader) Save(config *localcache.LocalCache) error {
 	if config != nil {
 		l.Config = *config
 	}

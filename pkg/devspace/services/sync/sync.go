@@ -35,13 +35,11 @@ func StartSyncFromCmd(ctx *devspacecontext.Context, selector targetselector.Targ
 	}
 
 	// Handle interrupt
-	for {
-		select {
-		case <-syncDone:
-			return nil
-		case <-ctx.Context.Done():
-			return nil
-		}
+	select {
+	case <-ctx.Context.Done():
+		return nil
+	case <-syncDone:
+		return nil
 	}
 }
 

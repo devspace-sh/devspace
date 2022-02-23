@@ -105,7 +105,7 @@ func (d *devPod) stop(withErr error) {
 	}
 }
 
-func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod) error {
+func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod) (err error) {
 	// check first if we need to replace the pod
 	if needPodReplace(devPodConfig) {
 		err := podreplace.NewPodReplacer().ReplacePod(ctx, devPodConfig)
@@ -120,7 +120,7 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 	}
 
 	if d.devPodConfig.ImageSelector != "" {
-		imageSelectorObject, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(d.devPodConfig.ImageSelector, d.devCtx.Config, d.devCtx.Dependencies)
+		imageSelectorObject, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(d.devPodConfig.ImageSelector, d.devCtx.Config, d.devCtx.Dependencies)
 		if err != nil {
 			return err
 		}
@@ -130,7 +130,6 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 
 	// wait for pod to be ready
 	ctx.Log.Infof("Waiting for pod to become ready...")
-	var err error
 	d.selectedPod, err = targetselector.NewTargetSelector(d.newOptions("")).SelectSinglePod(ctx.Context, ctx.KubeClient, ctx.Log)
 	if err != nil {
 		return errors.Wrap(err, "waiting for pod to become ready")

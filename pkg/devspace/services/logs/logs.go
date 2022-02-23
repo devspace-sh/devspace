@@ -55,6 +55,7 @@ func StartLogs(ctx *devspacecontext.Context, devContainer *latest.DevContainer, 
 	select {
 	case <-ctx.Context.Done():
 		reader.Close()
+		<-errChan
 		return nil
 	case err := <-errChan:
 		if err != nil {

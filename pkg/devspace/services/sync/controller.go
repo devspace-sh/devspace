@@ -235,42 +235,10 @@ func PrintPodError(ctx context.Context, kubeClient kubectl.Client, pod *v1.Pod, 
 	}
 }
 
-func realWorkDir() (string, error) {
-	if runtime.GOOS == "darwin" {
-		if pwd, present := os.LookupEnv("PWD"); present {
-			os.Unsetenv("PWD")
-			defer os.Setenv("PWD", pwd)
-		}
-		return os.Getwd()
-	}
-	return ".", nil
-}
-
 func (c *controller) startSync(ctx *devspacecontext.Context, options *Options, onInitUploadDone chan struct{}, onInitDownloadDone chan struct{}, onDone chan struct{}, onError chan error) (*sync.Sync, *selector.SelectedPodContainer, error) {
 	var (
 		syncConfig = options.SyncConfig
 	)
-
-	localPath, err := realWorkDir()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if syncConfig.LocalSubPath != "" {
-		localPath = syncConfig.LocalSubPath
-	}
-	// check if local path exists
-	_, err = os.Stat(localPath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return nil, nil, err
-		}
-
-		err = os.MkdirAll(localPath, os.ModePerm)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
 
 	container, err := options.Selector.SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
 	if err != nil {
@@ -298,18 +266,30 @@ func (c *controller) startSync(ctx *devspacecontext.Context, options *Options, o
 }
 
 func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch, container string, syncConfig *latest.SyncConfig, verbose bool, customLog logpkg.Logger) (*sync.Sync, error) {
-	err := inject.InjectDevSpaceHelper(ctx.KubeClient, pod, container, string(arch), customLog)
-	if err != nil {
-		return nil, err
-	}
-
-	localPath, err := realWorkDir()
-	if err != nil {
-		return nil, err
-	}
-
+	localPath := "."
 	if syncConfig.LocalSubPath != "" {
 		localPath = syncConfig.LocalSubPath
+	}
+
+	// make sure we resolve it correctly
+	localPath = ctx.ResolvePath(localPath)
+
+	// check if local path exists
+	_, err := os.Stat(localPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+
+		err = os.MkdirAll(localPath, os.ModePerm)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err = inject.InjectDevSpaceHelper(ctx.KubeClient, pod, container, string(arch), customLog)
+	if err != nil {
+		return nil, err
 	}
 
 	containerPath := "."
@@ -458,7 +438,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 	upStdoutReader, upStdoutWriter := io.Pipe()
 
 	go func() {
-		err := StartStream(ctx.KubeClient, pod, container, upstreamArgs, upStdinReader, upStdoutWriter, true, options.Log)
+		err := StartStream(ctx.Context, ctx.KubeClient, pod, container, upstreamArgs, upStdinReader, upStdoutWriter, true, options.Log)
 		if err != nil {
 			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
@@ -489,7 +469,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 	downStdoutReader, downStdoutWriter := io.Pipe()
 
 	go func() {
-		err := StartStream(ctx.KubeClient, pod, container, downstreamArgs, downStdinReader, downStdoutWriter, true, options.Log)
+		err := StartStream(ctx.Context, ctx.KubeClient, pod, container, downstreamArgs, downStdinReader, downStdoutWriter, true, options.Log)
 		if err != nil {
 			syncClient.Stop(errors.Errorf("Sync - connection lost to pod %s/%s: %v", pod.Namespace, pod.Name, err))
 		}
@@ -538,7 +518,7 @@ func parseExcludeFile(path string) ([]string, error) {
 	return paths, nil
 }
 
-func StartStream(client kubectl.Client, pod *v1.Pod, container string, command []string, reader io.Reader, stdoutWriter io.Writer, buffer bool, log logpkg.Logger) error {
+func StartStream(ctx context.Context, client kubectl.Client, pod *v1.Pod, container string, command []string, reader io.Reader, stdoutWriter io.Writer, buffer bool, log logpkg.Logger) error {
 	stderrBuffer := &bytes.Buffer{}
 	stderrReader, stderrWriter := io.Pipe()
 	defer stderrWriter.Close()
@@ -559,7 +539,7 @@ func StartStream(client kubectl.Client, pod *v1.Pod, container string, command [
 		stdErr = io.MultiWriter(stderrBuffer, stderrWriter)
 	}
 
-	err := client.ExecStream(&kubectl.ExecStreamOptions{
+	err := client.ExecStream(ctx, &kubectl.ExecStreamOptions{
 		Pod:       pod,
 		Container: container,
 		Command:   command,

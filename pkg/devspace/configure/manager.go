@@ -26,12 +26,12 @@ type Factory interface {
 type manager struct {
 	log       log.Logger
 	config    *latest.Config
-	generated *generated.Config
+	generated *localcache.Config
 	factory   Factory
 }
 
 // NewManager creates a new instance of the interface Manager
-func NewManager(factory Factory, config *latest.Config, generated *generated.Config, log log.Logger) Manager {
+func NewManager(factory Factory, config *latest.Config, generated *localcache.Config, log log.Logger) Manager {
 	return &manager{
 		log:       log,
 		factory:   factory,

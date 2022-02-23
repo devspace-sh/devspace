@@ -13,7 +13,7 @@ type useLastContextTestCase struct {
 	name string
 
 	globalFlags     GlobalFlags
-	generatedConfig *generated.Config
+	generatedConfig *localcache.Config
 
 	expectedErr string
 }
@@ -25,11 +25,11 @@ func TestUseLastContext(t *testing.T) {
 			globalFlags: GlobalFlags{
 				SwitchContext: true,
 			},
-			generatedConfig: &generated.Config{
+			generatedConfig: &localcache.Config{
 				ActiveProfile: "someProfile",
-				Profiles: map[string]*generated.CacheConfig{
+				Profiles: map[string]*localcache.CacheConfig{
 					"someProfile": {
-						LastContext: &generated.LastContextConfig{
+						LastContext: &localcache.LastContextConfig{
 							Context:   "myKubeContext",
 							Namespace: "myNamespace",
 						},

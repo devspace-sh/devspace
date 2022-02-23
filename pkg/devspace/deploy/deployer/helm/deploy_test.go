@@ -20,7 +20,7 @@ import (
 type deployTestCase struct {
 	name string
 
-	cache          *generated.CacheConfig
+	cache          *localcache.CacheConfig
 	forceDeploy    bool
 	builtImages    map[string]string
 	releasesBefore []*helmtypes.Release
@@ -31,7 +31,7 @@ type deployTestCase struct {
 
 	expectedDeployed bool
 	expectedErr      string
-	expectedCache    *generated.CacheConfig
+	expectedCache    *localcache.CacheConfig
 }
 
 func TestDeploy(t *testing.T) {
@@ -39,11 +39,11 @@ func TestDeploy(t *testing.T) {
 		{
 			name:       "Don't deploy anything",
 			deployment: "deploy1",
-			cache: &generated.CacheConfig{
-				Deployments: map[string]*generated.DeploymentCache{
+			cache: &localcache.CacheConfig{
+				Deployments: map[string]*localcache.DeploymentCache{
 					"deploy1": {
 						DeploymentConfigHash: "42d471330d96e55ab8d144d52f11e3c319ae2661e50266fa40592bb721689a3a",
-						HelmValuesHash: "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+						HelmValuesHash:       "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
 					},
 				},
 			},
@@ -62,11 +62,11 @@ func TestDeploy(t *testing.T) {
 				"val": "fromVal",
 			},
 			expectedDeployed: true,
-			expectedCache: &generated.CacheConfig{
-				Deployments: map[string]*generated.DeploymentCache{
+			expectedCache: &localcache.CacheConfig{
+				Deployments: map[string]*localcache.DeploymentCache{
 					"deploy2": {
 						DeploymentConfigHash: "2f0fdaa77956604c97de5cb343051fab738ac36052956ae3cb16e8ec529ab154",
-						HelmValuesHash: "efd6e101b768968a49f8dba46ef07785ac530ea9f75c4f9ca5733e223b6a4da1",
+						HelmValuesHash:       "efd6e101b768968a49f8dba46ef07785ac530ea9f75c4f9ca5733e223b6a4da1",
 						HelmReleaseRevision:  "1",
 					},
 				},
@@ -81,12 +81,12 @@ func TestDeploy(t *testing.T) {
 		}
 
 		if testCase.cache == nil {
-			testCase.cache = &generated.CacheConfig{
-				Deployments: map[string]*generated.DeploymentCache{},
+			testCase.cache = &localcache.CacheConfig{
+				Deployments: map[string]*localcache.DeploymentCache{},
 			}
 		}
 
-		cache := generated.New()
+		cache := localcache.New()
 		cache.Profiles[""] = testCase.cache
 		deployer := &DeployConfig{
 			Kube: kubeClient,
@@ -106,7 +106,7 @@ func TestDeploy(t *testing.T) {
 			config: config.NewConfig(nil, latest.NewRaw(), cache, nil, constants.DefaultConfigPath),
 			Log:    &log.FakeLogger{},
 		}
-		
+
 		if testCase.expectedCache == nil {
 			testCase.expectedCache = testCase.cache
 		}

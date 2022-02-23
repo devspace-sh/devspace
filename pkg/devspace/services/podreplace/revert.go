@@ -140,7 +140,7 @@ func matchesSelector(ctx *devspacecontext.Context, annotations map[string]string
 
 		return labelSelector.Matches(labels.Set(pod.Labels)), nil
 	} else if replacePod.ImageSelector != "" {
-		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, ctx.Config, ctx.Dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return false, err
 		}

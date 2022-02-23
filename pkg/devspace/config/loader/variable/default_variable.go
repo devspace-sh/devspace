@@ -1,6 +1,8 @@
 package variable
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	"os"
 	"strconv"
 
@@ -9,18 +11,20 @@ import (
 )
 
 // NewDefaultVariable creates a new variable for the sources default, all or input
-func NewDefaultVariable(name string, cache map[string]string, log log.Logger) Variable {
+func NewDefaultVariable(name string, localCache localcache.Cache, remoteCache remotecache.Cache, log log.Logger) Variable {
 	return &defaultVariable{
-		name:  name,
-		cache: cache,
-		log:   log,
+		name:        name,
+		localCache:  localCache,
+		remoteCache: remoteCache,
+		log:         log,
 	}
 }
 
 type defaultVariable struct {
-	name  string
-	cache map[string]string
-	log   log.Logger
+	name        string
+	localCache  localcache.Cache
+	remoteCache remotecache.Cache
+	log         log.Logger
 }
 
 func (d *defaultVariable) Load(definition *latest.Variable) (interface{}, error) {
@@ -36,9 +40,17 @@ func (d *defaultVariable) Load(definition *latest.Variable) (interface{}, error)
 		return valueByType(value, definition.Default)
 	}
 
-	// Is cached
-	if value, ok := d.cache[d.name]; !definition.NoCache && ok {
-		return valueByType(value, definition.Default)
+	// Remote cache takes precedence over local cache
+	if !definition.NoCache {
+		if definition.RemoteCache {
+			if value, ok := d.remoteCache.GetVar(d.name); !definition.NoCache && ok {
+				return valueByType(value, definition.Default)
+			}
+		} else {
+			if value, ok := d.localCache.GetVar(d.name); !definition.NoCache && ok {
+				return valueByType(value, definition.Default)
+			}
+		}
 	}
 
 	// Now ask the question
@@ -48,7 +60,11 @@ func (d *defaultVariable) Load(definition *latest.Variable) (interface{}, error)
 	}
 
 	if !definition.NoCache {
-		d.cache[d.name] = value
+		if definition.RemoteCache {
+			d.remoteCache.SetVar(d.name, value)
+		} else {
+			d.localCache.SetVar(d.name, value)
+		}
 	}
 	return valueByType(value, definition.Default)
 }

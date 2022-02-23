@@ -1,97 +1,167 @@
 package pipeline
 
 import (
-	"bytes"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/scanner"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/graph"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
+	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/pkg/errors"
-	"io"
-	"mvdan.cc/sh/v3/interp"
-	"os"
-	"strings"
 )
 
 type Executor interface {
-	ExecutePipeline(pipeline *latest.Pipeline, log log.Logger) error
+	ExecutePipeline(ctx *devspacecontext.Context, pipeline *latest.Pipeline) error
 }
 
-func NewExecutor(conf config.Config, dependencies []types.Dependency, client kubectl.Client) Executor {
+func NewExecutor(registry registry.DependencyRegistry) Executor {
 	return &executor{
-		devSpaceConfig: conf,
-		dependencies:   dependencies,
-		client:         client,
+		registry: registry,
 	}
 }
 
 type executor struct {
-	devSpaceConfig config.Config
-	dependencies   []types.Dependency
-	client         kubectl.Client
+	registry registry.DependencyRegistry
 }
 
-func (e *executor) ExecutePipeline(pipeline *latest.Pipeline, logger log.Logger) error {
-	for i, step := range pipeline.Steps {
-		name := fmt.Sprintf("[step:%d] ", i)
-		if step.Name != "" {
-			name = "[" + step.Name + "] "
-		}
+func (e *executor) ExecutePipeline(ctx *devspacecontext.Context, configPipeline *latest.Pipeline) error {
+	pipeline, err := e.buildPipeline(configPipeline)
+	if err != nil {
+		return errors.Wrap(err, "build pipeline")
+	}
 
-		prefixLogger := log.NewDefaultPrefixLogger(name, logger)
-		if step.If != "" {
-			shouldExecute, err := e.shouldExecuteStep(&step, prefixLogger)
-			if err != nil {
-				return errors.Wrapf(err, "execute if for step %s", name)
-			} else if !shouldExecute {
-				continue
+	return pipeline.Run(ctx)
+}
+
+func (e *executor) buildPipeline(configPipeline *latest.Pipeline) (*Pipeline, error) {
+	devPodManager := devpod.NewManager()
+	pipeline := &Pipeline{
+		DevPodManager:      devPodManager,
+		DependencyRegistry: e.registry,
+		JobsPipeline:       []*PipelineJob{},
+	}
+
+	pipeline.Jobs = map[string]*PipelineJob{
+		"default": {
+			Name:          "default",
+			DevPodManager: devPodManager,
+			JobConfig:     &configPipeline.PipelineJob,
+			Job:           NewJob(configPipeline.PipelineJob.Rerun != nil),
+			Children:      []*PipelineJob{},
+		},
+	}
+
+	// add other jobs
+	for k, j := range configPipeline.Jobs {
+		pipeline.Jobs[k] = &PipelineJob{
+			Name:          k,
+			DevPodManager: devPodManager,
+			JobConfig:     j,
+			Job:           NewJob(j.Rerun != nil),
+			Children:      []*PipelineJob{},
+		}
+	}
+
+	rootNode := graph.NewNode("___root___", nil)
+	jobGraph := graph.NewGraph(rootNode)
+
+	// add the jobs that have no dependencies
+	leftJobs := map[string]*PipelineJob{}
+	for k, j := range pipeline.Jobs {
+		leftJobs[k] = j
+	}
+	for {
+		changed := false
+		for k, j := range leftJobs {
+			foundAllAfter := true
+			for _, after := range j.JobConfig.After {
+				if pipeline.Jobs[after] == nil {
+					return nil, fmt.Errorf("job %s in pipeline has wrong after job %s: this job does not exist", k, after)
+				}
+				if k == after {
+					return nil, fmt.Errorf("error in job %s: cannot use itself as after", k)
+				}
+				if _, ok := jobGraph.Nodes[after]; !ok {
+					foundAllAfter = false
+					break
+				}
+			}
+			if foundAllAfter {
+				if len(j.JobConfig.After) > 0 {
+					_, err := jobGraph.InsertNodeAt(j.JobConfig.After[0], k, j)
+					if err != nil {
+						return nil, resolveCyclicError(err)
+					}
+
+					// add other afters as edges
+					for _, after := range j.JobConfig.After[1:] {
+						err = jobGraph.AddEdge(after, k)
+						if err != nil {
+							return nil, resolveCyclicError(err)
+						}
+					}
+				} else {
+					_, err := jobGraph.InsertNodeAt(rootNode.ID, k, j)
+					if err != nil {
+						return nil, resolveCyclicError(err)
+					}
+				}
+
+				delete(leftJobs, k)
+				changed = true
 			}
 		}
 
-		err := e.executeStep(&step, prefixLogger)
+		// are we done?
+		if len(leftJobs) == 0 {
+			break
+		}
+
+		// we are stuck, seems like there is no solution
+		// to solve this graph
+		if !changed {
+			problematicJobs := []string{}
+			for k := range leftJobs {
+				problematicJobs = append(problematicJobs, k)
+			}
+
+			return nil, fmt.Errorf("unable to solve direct graph for pipeline. Seems like you have specified the following jobs that depend on each other: %s", problematicJobs)
+		}
+	}
+
+	// resolve the pipeline
+	return pipeline, addRecursive(rootNode, &pipeline.JobsPipeline)
+}
+
+func addRecursive(node *graph.Node, childs *[]*PipelineJob) error {
+	for _, c := range node.Childs {
+		job := c.Data.(*PipelineJob)
+		*childs = append(*childs, job)
+
+		if job.JobConfig.Rerun != nil && len(c.Childs) > 0 {
+			return fmt.Errorf("rerun is not supported for jobs where other jobs depend on. Please only use rerun if there is no other job referencing it with 'after'. Rerun job where others depend on: %s", c.ID)
+		}
+
+		job.Parents = []*PipelineJob{}
+		for _, parent := range c.Parents {
+			p := parent.Data.(*PipelineJob)
+			job.Parents = append(job.Parents, p)
+		}
+
+		err := addRecursive(c, &job.Children)
 		if err != nil {
-			return errors.Wrapf(err, "execute step %s", name)
+			return err
 		}
 	}
 
 	return nil
 }
 
-func (e *executor) shouldExecuteStep(step *latest.PipelineStep, logger log.Logger) (bool, error) {
-	// check if step should be rerun
-	handler := engine.NewExecHandler(e.devSpaceConfig, e.dependencies, e.client, logger)
-
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-	_, err := engine.ExecuteShellCommand(step.Command, os.Args[1:], step.Directory, stdout, stderr, step.Env, handler)
-	if err != nil {
-		if status, ok := interp.IsExitStatus(err); ok && status == 1 {
-			return false, nil
-		}
-
-		return false, fmt.Errorf("error: %v (stdout: %s, stderr: %s)", err, stdout.String(), stderr.String())
-	} else if strings.TrimSpace(stdout.String()) == "false" {
-		return false, nil
+func resolveCyclicError(err error) error {
+	if cyclicErr, ok := err.(*graph.CyclicError); ok {
+		cyclicErr.What = "Job"
+		return cyclicErr
 	}
 
-	return true, nil
-}
-
-func (e *executor) executeStep(step *latest.PipelineStep, logger log.Logger) error {
-	stdoutReader, stdoutWriter := io.Pipe()
-	defer stdoutWriter.Close()
-	go func() {
-		s := scanner.NewScanner(stdoutReader)
-		for s.Scan() {
-			logger.Info(s.Text())
-		}
-	}()
-
-	handler := engine.NewExecHandler(e.devSpaceConfig, e.dependencies, e.client, logger)
-	_, err := engine.ExecuteShellCommand(step.Command, os.Args[1:], step.Directory, stdoutWriter, stdoutWriter, step.Env, handler)
-	return err
+	return fmt.Errorf("error constructing pipeline: %v", err)
 }

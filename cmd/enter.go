@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
@@ -89,31 +88,15 @@ devspace enter bash --image-selector "${runtime.images.app.image}:${runtime.imag
 func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	logger := f.GetLog()
-	configOptions := cmd.ToConfigOptions(logger)
+	configOptions := cmd.ToConfigOptions()
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
-	configExists, err := configLoader.SetDevSpaceRoot(logger)
-	if err != nil {
-		return err
-	}
-
-	// Load config if possible
-	var generatedConfig *generated.Config
-	if configExists {
-		generatedConfig, err = configLoader.LoadGenerated(configOptions)
-		if err != nil {
-			return err
-		}
-		configOptions.GeneratedConfig = generatedConfig
-	}
-
-	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, logger)
+	_, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
 
 	// Get kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return errors.Wrap(err, "new kube client")
 	}

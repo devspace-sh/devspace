@@ -2,6 +2,7 @@ package generic
 
 import (
 	"fmt"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -23,14 +24,12 @@ import (
 const stableChartRepo = "https://charts.helm.sh/stable"
 
 type VersionedClient interface {
-	IsInCluster() bool
-	KubeContext() string
 	Command() commands.Command
 }
 
 type Client interface {
-	Exec(args []string, helmConfig *latest.HelmConfig) ([]byte, error)
-	FetchChart(helmConfig *latest.HelmConfig) (bool, string, error)
+	Exec(ctx *devspacecontext.Context, args []string, helmConfig *latest.HelmConfig) ([]byte, error)
+	FetchChart(ctx *devspacecontext.Context, helmConfig *latest.HelmConfig) (bool, string, error)
 	WriteValues(values map[interface{}]interface{}) (string, error)
 }
 
@@ -75,21 +74,21 @@ func (c *client) WriteValues(values map[interface{}]interface{}) (string, error)
 	return f.Name(), nil
 }
 
-func (c *client) Exec(args []string, helmConfig *latest.HelmConfig) ([]byte, error) {
+func (c *client) Exec(ctx *devspacecontext.Context, args []string, helmConfig *latest.HelmConfig) ([]byte, error) {
 	err := c.ensureHelmBinary(helmConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	if !c.versionedClient.IsInCluster() {
-		args = append(args, "--kube-context", c.versionedClient.KubeContext())
+	if !ctx.KubeClient.IsInCluster() {
+		args = append(args, "--kube-context", ctx.KubeClient.CurrentContext())
 	}
 
 	// disable log for list, because it prints same command multiple times if we've multiple deployments.
 	if args[0] != "list" {
 		c.log.Infof("Execute '%s %s'", c.helmPath, strings.Join(args, " "))
 	}
-	result, err := c.exec(c.helmPath, args).Output()
+	result, err := c.exec(c.helmPath, args).Output(ctx.WorkingDir)
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			return nil, fmt.Errorf("error during '%s %s': %s%s => %v", c.helmPath, strings.Join(args, " "), string(result), string(exitError.Stderr), err)
@@ -123,7 +122,7 @@ func (c *client) ensureHelmBinary(helmConfig *latest.HelmConfig) error {
 	return err
 }
 
-func (c *client) FetchChart(helmConfig *latest.HelmConfig) (bool, string, error) {
+func (c *client) FetchChart(ctx *devspacecontext.Context, helmConfig *latest.HelmConfig) (bool, string, error) {
 	chartName, chartRepo := ChartNameAndRepo(helmConfig)
 	if chartRepo == "" {
 		return false, chartName, nil
@@ -144,12 +143,10 @@ func (c *client) FetchChart(helmConfig *latest.HelmConfig) (bool, string, error)
 	if helmConfig.Chart.Password != "" {
 		args = append(args, "--password", helmConfig.Chart.Password)
 	}
-	if !helmConfig.V2 {
-		args = append(args, "--repository-config=''")
-	}
+	args = append(args, "--repository-config=''")
 
 	args = append(args, helmConfig.FetchArgs...)
-	out, err := c.Exec(args, helmConfig)
+	out, err := c.Exec(ctx, args, helmConfig)
 	if err != nil {
 		_ = os.RemoveAll(tempFolder)
 		return false, "", fmt.Errorf("error running helm fetch: %s => %v", string(out), err)

@@ -177,7 +177,7 @@ func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 	}
 
 	go func() {
-		err := pf.ForwardPorts()
+		err := pf.ForwardPorts(ctx.Context)
 		if err != nil {
 			errorChan <- err
 		}
@@ -185,6 +185,8 @@ func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 
 	// Wait till forwarding is ready
 	select {
+	case <-ctx.Context.Done():
+		return nil
 	case <-readyChan:
 		ctx.Log.Donef("Port forwarding started on %s (%s/%s)", strings.Join(ports, ", "), pod.Namespace, pod.Name)
 	case err := <-errorChan:
@@ -196,6 +198,13 @@ func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 	go func(portMappings []*latest.PortMapping) {
 		fileLog := logpkg.GetDevPodFileLogger(name)
 		select {
+		case <-ctx.Context.Done():
+			pf.Close()
+			hook.LogExecuteHooks(ctx.WithLogger(fileLog), map[string]interface{}{
+				"port_forwarding_config": portMappings,
+			}, hook.EventsForSingle("stop:portForwarding", name).With("portForwarding.stop")...)
+			close(done)
+			fileLog.Done("Stopped port forwarding")
 		case err := <-errorChan:
 			if err != nil {
 				fileLog.Errorf("Portforwarding restarting, because: %v", err)
@@ -223,13 +232,6 @@ func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 					break
 				}
 			}
-		case <-ctx.Context.Done():
-			pf.Close()
-			hook.LogExecuteHooks(ctx.WithLogger(fileLog), map[string]interface{}{
-				"port_forwarding_config": portMappings,
-			}, hook.EventsForSingle("stop:portForwarding", name).With("portForwarding.stop")...)
-			close(done)
-			fileLog.Done("Stopped port forwarding")
 		}
 	}(portMappings)
 

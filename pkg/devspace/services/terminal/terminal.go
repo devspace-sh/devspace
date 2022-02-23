@@ -36,29 +36,20 @@ func StartTerminalFromCMD(
 		return 0, err
 	}
 
-	wrapper, upgradeRoundTripper, err := ctx.KubeClient.GetUpgraderWrapper()
-	if err != nil {
-		return 0, err
-	}
-
 	ctx.Log.Infof("Opening shell to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
 	done := make(chan error)
 	go func() {
 		interruptpkg.Global.Stop()
 		defer interruptpkg.Global.Start()
 
-		done <- ctx.KubeClient.ExecStreamWithTransport(&kubectl.ExecStreamWithTransportOptions{
-			ExecStreamOptions: kubectl.ExecStreamOptions{
-				Pod:       container.Pod,
-				Container: container.Container.Name,
-				Command:   command,
-				TTY:       true,
-				Stdin:     stdin,
-				Stdout:    stdout,
-				Stderr:    stderr,
-			},
-			Transport:   wrapper,
-			Upgrader:    upgradeRoundTripper,
+		done <- ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
+			Pod:         container.Pod,
+			Container:   container.Container.Name,
+			Command:     command,
+			TTY:         true,
+			Stdin:       stdin,
+			Stdout:      stdout,
+			Stderr:      stderr,
 			SubResource: kubectl.SubResourceExec,
 		})
 	}()
@@ -112,29 +103,20 @@ func StartTerminal(
 		return 0, err
 	}
 
-	wrapper, upgradeRoundTripper, err := ctx.KubeClient.GetUpgraderWrapper()
-	if err != nil {
-		return 0, err
-	}
-
 	ctx.Log.Infof("Opening shell to pod:container %s:%s", ansi.Color(container.Pod.Name, "white+b"), ansi.Color(container.Container.Name, "white+b"))
 	errChan := make(chan error)
 	go func() {
 		interruptpkg.Global.Stop()
 		defer interruptpkg.Global.Start()
 
-		errChan <- ctx.KubeClient.ExecStreamWithTransport(&kubectl.ExecStreamWithTransportOptions{
-			ExecStreamOptions: kubectl.ExecStreamOptions{
-				Pod:       container.Pod,
-				Container: container.Container.Name,
-				Command:   command,
-				TTY:       true,
-				Stdin:     stdin,
-				Stdout:    stdout,
-				Stderr:    stderr,
-			},
-			Transport:   wrapper,
-			Upgrader:    upgradeRoundTripper,
+		errChan <- ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
+			Pod:         container.Pod,
+			Container:   container.Container.Name,
+			Command:     command,
+			TTY:         true,
+			Stdin:       stdin,
+			Stdout:      stdout,
+			Stderr:      stderr,
 			SubResource: kubectl.SubResourceExec,
 		})
 	}()
@@ -142,7 +124,6 @@ func StartTerminal(
 	// wait until either client has finished or we got interrupted
 	select {
 	case err = <-ctx.Context.Done():
-		_ = upgradeRoundTripper.Close()
 		<-errChan
 		return 0, err
 	case err = <-errChan:

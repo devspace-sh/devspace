@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
@@ -16,7 +17,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/command"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/config/legacy"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/dev"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
@@ -37,7 +37,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/watch"
 	"github.com/mgutz/ansi"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -158,7 +157,6 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVar(&cmd.Portforwarding, "portforwarding", true, "Enable port forwarding")
 
 	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
-	devCmd.Flags().BoolVarP(&cmd.Interactive, "interactive", "i", false, "DEPRECATED: DO NOT USE ANYMORE")
 	devCmd.Flags().BoolVarP(&cmd.Terminal, "terminal", "t", false, "Open a terminal instead of showing logs")
 	devCmd.Flags().BoolVar(&cmd.TerminalReconnect, "terminal-reconnect", true, "Will try to reconnect the terminal if an unexpected exit code was encountered")
 	devCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
@@ -215,12 +213,6 @@ func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 		return errors.Errorf("Unable to create new kubectl client: %v", err)
 	}
 	configOptions.KubeClient = client
-
-	// Create kubectl client and switch context if specified
-	client, err = f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
-	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
-	}
 
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
@@ -770,14 +762,6 @@ func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Confi
 		return nil, err
 	}
 
-	// apply legacy interactive mode
-	wasInteractive, err := legacy.LegacyInteractiveMode(configInterface.Config(), cmd.Interactive, cmd.Terminal, cmd.log)
-	if err != nil {
-		return nil, err
-	} else if wasInteractive {
-		return configInterface, nil
-	}
-
 	// check if terminal is enabled
 	c := configInterface.Config()
 
@@ -825,10 +809,10 @@ func defaultStdStreams(stdout io.Writer, stderr io.Writer, stdin io.Reader) (io.
 	return stdout, stderr, stdin
 }
 
-func updateLastKubeContext(configLoader loader.ConfigLoader, client kubectl.Client, generatedConfig *generated.Config) error {
+func updateLastKubeContext(configLoader loader.ConfigLoader, client kubectl.Client, generatedConfig *localcache.Config) error {
 	// Update generated if we deploy the application
 	if generatedConfig != nil {
-		generatedConfig.GetActive().LastContext = &generated.LastContextConfig{
+		generatedConfig.GetActive().LastContext = &localcache.LastContextConfig{
 			Context:   client.CurrentContext(),
 			Namespace: client.Namespace(),
 		}

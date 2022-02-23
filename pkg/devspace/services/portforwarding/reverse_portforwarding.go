@@ -26,7 +26,7 @@ func startReversePortForwarding(ctx *devspacecontext.Context, name, arch string,
 
 	// make sure the DevSpace helper binary is injected
 	ctx.Log.Info("Reverse-Port-Forwarding: Inject devspacehelper...")
-	err = inject.InjectDevSpaceHelper(ctx.KubeClient, container.Pod, container.Container.Name, arch, ctx.Log)
+	err = inject.InjectDevSpaceHelper(ctx.Context, ctx.KubeClient, container.Pod, container.Container.Name, arch, ctx.Log)
 	if err != nil {
 		return err
 	}
@@ -37,7 +37,7 @@ func startReversePortForwarding(ctx *devspacecontext.Context, name, arch string,
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
 	go func() {
-		err := sync.StartStream(ctx.KubeClient, container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "tunnel"}, stdinReader, stdoutWriter, false, fileLog)
+		err := sync.StartStream(ctx.Context, ctx.KubeClient, container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "tunnel"}, stdinReader, stdoutWriter, false, fileLog)
 		if err != nil {
 			errorChan <- errors.Errorf("connection lost to pod %s/%s: %v", container.Pod.Namespace, container.Pod.Name, err)
 		}
@@ -52,6 +52,15 @@ func startReversePortForwarding(ctx *devspacecontext.Context, name, arch string,
 
 	go func(portForwarding []*latest.PortMapping) {
 		select {
+		case <-ctx.Context.Done():
+			close(closeChan)
+			_ = stdinWriter.Close()
+			_ = stdoutWriter.Close()
+			hook.LogExecuteHooks(ctx.WithLogger(fileLog), map[string]interface{}{
+				"reverse_port_forwarding_config": portForwarding,
+			}, hook.EventsForSingle("stop:reversePortForwarding", name).With("reversePortForwarding.stop")...)
+			fileLog.Done("Stopped reverse port forwarding %s", name)
+			close(done)
 		case err := <-errorChan:
 			if err != nil {
 				fileLog.Errorf("Reverse portforwarding restarting, because: %v", err)
@@ -81,15 +90,6 @@ func startReversePortForwarding(ctx *devspacecontext.Context, name, arch string,
 					break
 				}
 			}
-		case <-ctx.Context.Done():
-			close(closeChan)
-			_ = stdinWriter.Close()
-			_ = stdoutWriter.Close()
-			hook.LogExecuteHooks(ctx.WithLogger(fileLog), map[string]interface{}{
-				"reverse_port_forwarding_config": portForwarding,
-			}, hook.EventsForSingle("stop:reversePortForwarding", name).With("reversePortForwarding.stop")...)
-			fileLog.Done("Stopped reverse port forwarding %s", name)
-			close(done)
 		}
 	}(portForwarding)
 

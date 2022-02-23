@@ -67,7 +67,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out3.txt"), ns+"-resolved-${NOT_RESOLVED}")
 
 		// read the generated.yaml
-		config, err := generated.NewConfigLoader("").Load()
+		config, err := localcache.NewConfigLoader("").Load()
 		framework.ExpectNoError(err)
 		framework.ExpectLocalFileContentsImmediately(filepath.Join(tempDir, "out0.txt"), "my-docker-username/helloworld2:"+config.GetActive().GetImageCache("app-test").Tag)
 	})

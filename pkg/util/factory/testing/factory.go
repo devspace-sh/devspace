@@ -89,7 +89,7 @@ func (f *Factory) NewConfigLoader(configPath string) loader.ConfigLoader {
 }
 
 // NewConfigureManager implements interface
-func (f *Factory) NewConfigureManager(config *latest.Config, generated *generated.Config, log log.Logger) configure.Manager {
+func (f *Factory) NewConfigureManager(config *latest.Config, generated *localcache.Config, log log.Logger) configure.Manager {
 	return f.ConfigureManager
 }
 

@@ -91,7 +91,7 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 	errorChan := make(chan error)
 	ports := []string{strconv.Itoa(checkPort) + ":" + targetPort[0]}
 
-	pf, err := client.NewPortForwarder(pod, ports, []string{"127.0.0.1"}, stopChan, readyChan, nil)
+	pf, err := client.NewPortForwarder(context.TODO(), pod, ports, []string{"127.0.0.1"}, stopChan, readyChan, nil)
 
 	if err != nil {
 		h.log.Errorf("Error in %s: %v", r.URL.String(), err)

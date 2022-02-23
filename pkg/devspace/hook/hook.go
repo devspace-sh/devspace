@@ -8,10 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/command"
@@ -48,7 +45,7 @@ func EventsForSingle(base, name string) Events {
 
 // Hook is an interface to execute a specific hook type
 type Hook interface {
-	Execute(hook *latest.HookConfig, client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]string, log logpkg.Logger) error
+	Execute(ctx *devspacecontext.Context, hook *latest.HookConfig, extraEnv map[string]string) error
 }
 
 // LogExecuteHooks executes plugin hooks and config hooks and prints errors to the log
@@ -65,7 +62,7 @@ func LogExecuteHooks(ctx *devspacecontext.Context, extraEnv map[string]interface
 		convertedExtraEnv := plugin.ConvertExtraEnv("DEVSPACE_HOOK", extraEnv)
 		for _, e := range events {
 			convertedExtraEnv["DEVSPACE_HOOK_EVENT"] = e
-			err := executeSingle(ctx.KubeClient, ctx.Config, ctx.Dependencies, convertedExtraEnv, ctx.Log, e)
+			err := executeSingle(ctx, convertedExtraEnv, e)
 			if err != nil {
 				ctx.Log.Warn(err)
 			}
@@ -90,7 +87,7 @@ func ExecuteHooks(ctx *devspacecontext.Context, extraEnv map[string]interface{},
 		convertedExtraEnv := plugin.ConvertExtraEnv("DEVSPACE_HOOK", extraEnv)
 		for _, e := range events {
 			convertedExtraEnv["DEVSPACE_HOOK_EVENT"] = e
-			err := executeSingle(ctx.KubeClient, ctx.Config, ctx.Dependencies, convertedExtraEnv, ctx.Log, e)
+			err := executeSingle(ctx, convertedExtraEnv, e)
 			if err != nil {
 				return err
 			}
@@ -101,7 +98,8 @@ func ExecuteHooks(ctx *devspacecontext.Context, extraEnv map[string]interface{},
 }
 
 // executeSingle executes hooks at a specific time
-func executeSingle(client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]string, log logpkg.Logger, event string) error {
+func executeSingle(ctx *devspacecontext.Context, extraEnv map[string]string, event string) error {
+	config := ctx.Config
 	if config == nil {
 		return nil
 	}
@@ -128,10 +126,10 @@ func executeSingle(client kubectl.Client, config config.Config, dependencies []t
 
 			// Determine output writer
 			var writer io.Writer
-			if log == logpkg.GetInstance() {
+			if ctx.Log == logpkg.GetInstance() {
 				writer = stdout
 			} else {
-				writer = log
+				writer = ctx.Log
 			}
 
 			// If the hook is silent, we cache it in a buffer
@@ -160,7 +158,7 @@ func executeSingle(client kubectl.Client, config config.Config, dependencies []t
 			}
 
 			// Execute the hook
-			err := executeHook(hookConfig, hookWriter, client, config, dependencies, extraEnv, log, hook, event)
+			err := executeHook(ctx, hookConfig, hookWriter, extraEnv, hook, event)
 			if err != nil {
 				return err
 			}
@@ -170,21 +168,21 @@ func executeSingle(client kubectl.Client, config config.Config, dependencies []t
 	return nil
 }
 
-func executeHook(hookConfig *latest.HookConfig, hookWriter io.Writer, client kubectl.Client, config config.Config, dependencies []types.Dependency, extraEnv map[string]string, log logpkg.Logger, hook Hook, event string) error {
-	hookLog := log
+func executeHook(ctx *devspacecontext.Context, hookConfig *latest.HookConfig, hookWriter io.Writer, extraEnv map[string]string, hook Hook, event string) error {
+	hookLog := ctx.Log
 	if hookConfig.Silent {
 		hookLog = logpkg.Discard
 	}
 
 	if hookConfig.Background {
-		log.Infof("Execute hook '%s' in background at %s", ansi.Color(hookName(hookConfig), "white+b"), ansi.Color(event, "white+b"))
+		ctx.Log.Infof("Execute hook '%s' in background at %s", ansi.Color(hookName(hookConfig), "white+b"), ansi.Color(event, "white+b"))
 		go func() {
-			err := hook.Execute(hookConfig, client, config, dependencies, extraEnv, hookLog)
+			err := hook.Execute(ctx.WithLogger(hookLog), hookConfig, extraEnv)
 			if err != nil {
 				if hookConfig.Silent {
-					log.Warnf("Error executing hook '%s' in background: %s %v", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(*bytes.Buffer).String(), err)
+					ctx.Log.Warnf("Error executing hook '%s' in background: %s %v", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(*bytes.Buffer).String(), err)
 				} else {
-					log.Warnf("Error executing hook '%s' in background: %v", ansi.Color(hookName(hookConfig), "white+b"), err)
+					ctx.Log.Warnf("Error executing hook '%s' in background: %v", ansi.Color(hookName(hookConfig), "white+b"), err)
 				}
 			}
 		}()
@@ -192,8 +190,8 @@ func executeHook(hookConfig *latest.HookConfig, hookWriter io.Writer, client kub
 		return nil
 	}
 
-	log.Infof("Execute hook '%s' at %s", ansi.Color(hookName(hookConfig), "white+b"), ansi.Color(event, "white+b"))
-	err := hook.Execute(hookConfig, client, config, dependencies, extraEnv, hookLog)
+	ctx.Log.Infof("Execute hook '%s' at %s", ansi.Color(hookName(hookConfig), "white+b"), ansi.Color(event, "white+b"))
+	err := hook.Execute(ctx.WithLogger(hookLog), hookConfig, extraEnv)
 	if err != nil {
 		if hookConfig.Silent {
 			return errors.Wrapf(err, "in hook '%s': %s", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(*bytes.Buffer).String())
