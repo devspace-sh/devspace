@@ -147,7 +147,7 @@ func (f *filter) SelectContainers(ctx context.Context, selectors ...Selector) ([
 			retList = append(retList, containersByLabelSelector...)
 		}
 
-		containersByImage, err := byImageName(ctx, f.client, namespace, s.ImageSelector, s.FilterContainer, s.SkipInitContainers)
+		containersByImage, err := byImageName(ctx, f.client, namespace, s.ImageSelector, s.ContainerName, s.FilterContainer, s.SkipInitContainers)
 		if err != nil {
 			return nil, errors.Wrap(err, "pods by image name")
 		}
@@ -310,7 +310,7 @@ func byLabelSelector(ctx context.Context, client kubectl.Client, namespace strin
 	return retPods, nil
 }
 
-func byImageName(ctx context.Context, client kubectl.Client, namespace string, imageSelector []string, skipContainer FilterContainer, skipInit bool) ([]*SelectedPodContainer, error) {
+func byImageName(ctx context.Context, client kubectl.Client, namespace string, imageSelector []string, containerName string, skipContainer FilterContainer, skipInit bool) ([]*SelectedPodContainer, error) {
 	retPods := []*SelectedPodContainer{}
 	if len(imageSelector) > 0 {
 		podList, err := client.KubeClient().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
@@ -323,6 +323,9 @@ func byImageName(ctx context.Context, client kubectl.Client, namespace string, i
 				for _, container := range pod.Spec.InitContainers {
 					for _, imageName := range imageSelector {
 						if skipContainer != nil && skipContainer(&pod, &container) {
+							continue
+						}
+						if containerName != "" && container.Name != containerName {
 							continue
 						}
 
@@ -340,6 +343,9 @@ func byImageName(ctx context.Context, client kubectl.Client, namespace string, i
 			for _, container := range pod.Spec.Containers {
 				for _, imageName := range imageSelector {
 					if skipContainer != nil && skipContainer(&pod, &container) {
+						continue
+					}
+					if containerName != "" && container.Name != containerName {
 						continue
 					}
 

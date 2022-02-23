@@ -96,26 +96,6 @@ func TestValidateDev(t *testing.T) {
 	err := validateDev(config)
 	assert.NilError(t, err)
 
-	config = &latest.Config{
-		Dev: latest.DevConfig{
-			Ports: []*latest.PortForwardingConfig{
-				{
-					ContainerName: "fakeContainer",
-					Name:          "someName",
-					PortMappings: []*latest.PortMapping{
-						{
-							LocalPort:  &localPort,
-							RemotePort: &remotePort,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	err = validateDev(config)
-	assert.Error(t, err, "Error in config: containerName is defined but label selector is nil in ports config at index 0")
-
 	// test sync
 	config = &latest.Config{
 		Dev: latest.DevConfig{
@@ -134,20 +114,6 @@ func TestValidateDev(t *testing.T) {
 
 	err = validateDev(config)
 	assert.NilError(t, err)
-
-	config = &latest.Config{
-		Dev: latest.DevConfig{
-			Sync: []*latest.SyncConfig{
-				{
-					ContainerName: "fakeContainer",
-					Name:          "someName",
-				},
-			},
-		},
-	}
-
-	err = validateDev(config)
-	assert.Error(t, err, "Error in config: containerName is defined but label selector is nil in sync config at index 0")
 
 	// test replace pods
 	config = &latest.Config{
