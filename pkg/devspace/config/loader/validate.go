@@ -385,10 +385,6 @@ func validateDev(config *latest.Config) error {
 	if config.Dev.Ports != nil {
 		for index, port := range config.Dev.Ports {
 			// Validate imageName and label selector
-			if port.ContainerName != "" && len(port.LabelSelector) == 0 {
-				return errors.Errorf("Error in config: containerName is defined but label selector is nil in ports config at index %d", index)
-			}
-
 			if len(port.LabelSelector) == 0 && port.ImageSelector == "" {
 				return errors.Errorf("Error in config: image selector and label selector are nil in ports config at index %d", index)
 			}
@@ -405,10 +401,6 @@ func validateDev(config *latest.Config) error {
 	if config.Dev.Sync != nil {
 		for index, sync := range config.Dev.Sync {
 			// Validate imageName and label selector
-			if sync.ContainerName != "" && len(sync.LabelSelector) == 0 {
-				return errors.Errorf("Error in config: containerName is defined but label selector is nil in sync config at index %d", index)
-			}
-
 			if len(sync.LabelSelector) == 0 && sync.ImageSelector == "" {
 				return errors.Errorf("Error in config: image selector and label selector are nil in sync config at index %d", index)
 			}
@@ -442,9 +434,6 @@ func validateDev(config *latest.Config) error {
 		for index, selector := range config.Dev.Logs.Selectors {
 			if selector.ImageSelector != "" && len(selector.LabelSelector) > 0 {
 				return errors.Errorf("Error in config: dev.logs.selectors[%d].imageSelector and dev.logs.selectors[%d].labelSelector cannot be used together", index, index)
-			}
-			if selector.ImageSelector != "" && selector.ContainerName != "" {
-				return errors.Errorf("Error in config: dev.logs.selectors[%d].imageSelector and dev.logs.selectors[%d].containerName cannot be used together", index, index)
 			}
 		}
 	}
