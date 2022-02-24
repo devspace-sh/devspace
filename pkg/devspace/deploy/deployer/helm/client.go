@@ -76,24 +76,27 @@ func New(ctx *devspacecontext.Context, helmClient helmtypes.Client, deployConfig
 	}, nil
 }
 
-// Delete deletes the release
-func (d *DeployConfig) Delete(ctx *devspacecontext.Context) error {
-	if d.Helm == nil {
-		var err error
-
-		// Get HelmClient
-		d.Helm, err = helm.NewClient(ctx.Log)
-		if err != nil {
-			return errors.Wrap(err, "new helm client")
-		}
+// Delete deletes the deployment
+func Delete(ctx *devspacecontext.Context, deploymentName string) error {
+	deploymentCache, ok := ctx.Config.RemoteCache().GetDeploymentCache(deploymentName)
+	if !ok || deploymentCache.HelmRelease == "" || deploymentCache.HelmReleaseNamespace == "" {
+		ctx.Config.RemoteCache().DeleteDeploymentCache(deploymentName)
+		return nil
 	}
 
-	err := d.Helm.DeleteRelease(ctx, d.DeploymentConfig.Name, d.DeploymentConfig.Namespace, d.DeploymentConfig.Helm)
+	helmClient, err := helm.NewClient(ctx.Log)
+	if err != nil {
+		return errors.Wrap(err, "new helm client")
+	}
+
+	err = helmClient.DeleteRelease(ctx, deploymentCache.HelmRelease, deploymentCache.HelmReleaseNamespace, &latest.HelmConfig{
+		DeleteArgs: deploymentCache.HelmDeleteArgs,
+	})
 	if err != nil {
 		return err
 	}
 
 	// Delete from cache
-	ctx.Config.RemoteCache().DeleteDeploymentCache(d.DeploymentConfig.Helm.Chart.Name)
+	ctx.Config.RemoteCache().DeleteDeploymentCache(deploymentName)
 	return nil
 }

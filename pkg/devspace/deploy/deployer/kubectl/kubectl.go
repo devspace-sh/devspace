@@ -2,6 +2,7 @@ package kubectl
 
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 	"strings"
@@ -96,7 +97,7 @@ func New(ctx *devspacecontext.Context, deployConfig *latest.DeploymentConfig) (d
 // Render writes the generated manifests to the out stream
 func (d *DeployConfig) Render(ctx *devspacecontext.Context, out io.Writer) error {
 	for _, manifest := range d.Manifests {
-		_, replacedManifest, err := d.getReplacedManifest(ctx, manifest)
+		_, replacedManifest, _, err := d.getReplacedManifest(ctx, manifest)
 		if err != nil {
 			return errors.Errorf("%v\nPlease make sure `kubectl apply` does work locally with manifest `%s`", err, manifest)
 		}
@@ -122,33 +123,6 @@ func (d *DeployConfig) Status(ctx *devspacecontext.Context) (*deployer.StatusRes
 		Target: manifests,
 		Status: "N/A",
 	}, nil
-}
-
-// Delete deletes all matched manifests from kubernetes
-func (d *DeployConfig) Delete(ctx *devspacecontext.Context) error {
-	ctx.Log.StartWait("Deleting manifests with kubectl")
-	defer ctx.Log.StopWait()
-
-	for i := len(d.Manifests) - 1; i >= 0; i-- {
-		manifest := d.Manifests[i]
-		_, replacedManifest, err := d.getReplacedManifest(ctx, manifest)
-		if err != nil {
-			return err
-		}
-
-		args := d.getCmdArgs("delete", "--ignore-not-found=true")
-		args = append(args, d.DeploymentConfig.Kubectl.DeleteArgs...)
-
-		stringReader := strings.NewReader(replacedManifest)
-		cmd := d.commandExecuter.GetCommand(d.CmdPath, args)
-		err = cmd.Run(ctx.WorkingDir, ctx.Log, ctx.Log, stringReader)
-		if err != nil {
-			return err
-		}
-	}
-
-	ctx.Config.RemoteCache().DeleteDeploymentCache(d.DeploymentConfig.Name)
-	return nil
 }
 
 // Deploy deploys all specified manifests via kubectl apply and adds to the specified image names the corresponding tags
@@ -191,12 +165,14 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, _ bool) (bool, error
 
 	wasDeployed := false
 
+	kubeObjects := []remotecache.KubectlObject{}
 	for _, manifest := range d.Manifests {
-		shouldRedeploy, replacedManifest, err := d.getReplacedManifest(ctx, manifest)
+		shouldRedeploy, replacedManifest, parsedObjects, err := d.getReplacedManifest(ctx, manifest)
 		if err != nil {
 			return false, errors.Errorf("%v\nPlease make sure `kubectl apply` does work locally with manifest `%s`", err, manifest)
 		}
 
+		kubeObjects = append(kubeObjects, parsedObjects...)
 		if shouldRedeploy || forceDeploy {
 			stringReader := strings.NewReader(replacedManifest)
 			args := d.getCmdArgs("apply", "--force")
@@ -215,15 +191,17 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, _ bool) (bool, error
 	}
 
 	deployCache.KubectlManifestsHash = manifestsHash
+	deployCache.IsKubectl = true
+	deployCache.KubectlObjects = kubeObjects
 	deployCache.DeploymentConfigHash = deploymentConfigHash
 	ctx.Config.RemoteCache().SetDeploymentCache(d.DeploymentConfig.Name, deployCache)
 	return wasDeployed, nil
 }
 
-func (d *DeployConfig) getReplacedManifest(ctx *devspacecontext.Context, manifest string) (bool, string, error) {
+func (d *DeployConfig) getReplacedManifest(ctx *devspacecontext.Context, manifest string) (bool, string, []remotecache.KubectlObject, error) {
 	objects, err := d.buildManifests(ctx, manifest)
 	if err != nil {
-		return false, "", err
+		return false, "", nil, err
 	}
 
 	// Split output into the yamls
@@ -232,15 +210,23 @@ func (d *DeployConfig) getReplacedManifest(ctx *devspacecontext.Context, manifes
 		shouldRedeploy   = false
 	)
 
+	kubeObjects := []remotecache.KubectlObject{}
 	for _, resource := range objects {
 		if resource.Object == nil {
 			continue
 		}
 
+		kubeObjects = append(kubeObjects, remotecache.KubectlObject{
+			APIVersion: resource.GetAPIVersion(),
+			Kind:       resource.GetKind(),
+			Name:       resource.GetName(),
+			Namespace:  resource.GetNamespace(),
+		})
+
 		if d.DeploymentConfig.Kubectl.ReplaceImageTags {
 			redeploy, err := legacy.ReplaceImageNamesStringMap(resource.Object, ctx.Config, ctx.Dependencies, map[string]bool{"image": true})
 			if err != nil {
-				return false, "", err
+				return false, "", nil, err
 			} else if redeploy {
 				shouldRedeploy = true
 			}
@@ -248,13 +234,13 @@ func (d *DeployConfig) getReplacedManifest(ctx *devspacecontext.Context, manifes
 
 		replacedManifest, err := yaml.Marshal(resource)
 		if err != nil {
-			return false, "", errors.Wrap(err, "marshal yaml")
+			return false, "", nil, errors.Wrap(err, "marshal yaml")
 		}
 
 		replaceManifests = append(replaceManifests, string(replacedManifest))
 	}
 
-	return shouldRedeploy, strings.Join(replaceManifests, "\n---\n"), nil
+	return shouldRedeploy, strings.Join(replaceManifests, "\n---\n"), kubeObjects, nil
 }
 
 func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []string {

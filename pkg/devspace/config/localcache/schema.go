@@ -76,22 +76,10 @@ type ImageCache struct {
 	Tag       string `yaml:"tag,omitempty"`
 }
 
-// DeploymentCache holds the information about a specific deployment
-type DeploymentCache struct {
-	DeploymentConfigHash string `yaml:"deploymentConfigHash,omitempty"`
-
-	HelmOverridesHash   string `yaml:"helmOverridesHash,omitempty"`
-	HelmChartHash       string `yaml:"helmChartHash,omitempty"`
-	HelmValuesHash      string `yaml:"helmValuesHash,omitempty"`
-	HelmReleaseRevision string `yaml:"helmReleaseRevision,omitempty"`
-
-	KubectlManifestsHash string `yaml:"kubectlManifestsHash,omitempty"`
-}
-
 func (l *LocalCache) ListImageCache() map[string]ImageCache {
 	l.accessMutex.Lock()
 	defer l.accessMutex.Unlock()
-	
+
 	retMap := map[string]ImageCache{}
 	for k, v := range l.Images {
 		retMap[k] = v

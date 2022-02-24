@@ -20,6 +20,7 @@ import (
 type Cache interface {
 	GetDeploymentCache(deploymentName string) (DeploymentCache, bool)
 	DeleteDeploymentCache(deploymentName string)
+	ListDeployments() map[string]DeploymentCache
 	SetDeploymentCache(deploymentName string, deploymentCache DeploymentCache)
 
 	GetData(key string) (string, bool)
@@ -53,13 +54,37 @@ type RemoteCache struct {
 type DeploymentCache struct {
 	DeploymentConfigHash string `yaml:"deploymentConfigHash,omitempty"`
 
-	HelmRelease         string `yaml:"helmRelease,omitempty"`
+	HelmRelease          string   `yaml:"helmRelease,omitempty"`
+	HelmReleaseNamespace string   `yaml:"helmReleaseNamespace,omitempty"`
+	HelmDeleteArgs       []string `yaml:"HelmDeleteArgs,omitempty"`
+
 	HelmOverridesHash   string `yaml:"helmOverridesHash,omitempty"`
 	HelmChartHash       string `yaml:"helmChartHash,omitempty"`
 	HelmValuesHash      string `yaml:"helmValuesHash,omitempty"`
 	HelmReleaseRevision string `yaml:"helmReleaseRevision,omitempty"`
 
-	KubectlManifestsHash string `yaml:"kubectlManifestsHash,omitempty"`
+	IsKubectl            bool            `yaml:"isKubectl,omitempty"`
+	KubectlObjects       []KubectlObject `yaml:"kubectlObjects,omitempty"`
+	KubectlManifestsHash string          `yaml:"kubectlManifestsHash,omitempty"`
+}
+
+type KubectlObject struct {
+	APIVersion string `yaml:"apiVersion"`
+	Kind       string `yaml:"kind"`
+	Name       string `yaml:"name"`
+	Namespace  string `yaml:"namespace"`
+}
+
+func (l *RemoteCache) ListDeployments() map[string]DeploymentCache {
+	l.accessMutex.Lock()
+	defer l.accessMutex.Unlock()
+
+	retMap := map[string]DeploymentCache{}
+	for k, v := range l.Deployments {
+		retMap[k] = v
+	}
+	return retMap
+
 }
 
 func (l *RemoteCache) GetDeploymentCache(deploymentName string) (DeploymentCache, bool) {
