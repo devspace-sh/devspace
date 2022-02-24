@@ -56,6 +56,9 @@ func StartTerminalFromCMD(
 
 	// wait until either client has finished or we got interrupted
 	select {
+	case <-ctx.Context.Done():
+		<-done
+		return 0, nil
 	case err = <-done:
 		if err != nil {
 			if _, ok := err.(*InterruptError); ok {

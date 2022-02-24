@@ -13,7 +13,7 @@ import (
 )
 
 // ExecuteCommand executes a command from the config
-func ExecuteCommand(commands []*latest.CommandConfig, name string, args []string, stdout io.Writer, stderr io.Writer) error {
+func ExecuteCommand(commands []*latest.CommandConfig, name string, args []string, dir string, stdout io.Writer, stderr io.Writer) error {
 	shellCommand := ""
 	var shellArgs []string
 	var appendArgs bool
@@ -41,9 +41,9 @@ func ExecuteCommand(commands []*latest.CommandConfig, name string, args []string
 		}
 
 		// execute the command in a shell
-		return shell.ExecuteShellCommand(shellCommand, args, "", stdout, stderr, nil)
+		return shell.ExecuteShellCommand(shellCommand, args, dir, stdout, stderr, nil)
 	}
 
 	shellArgs = append(shellArgs, args...)
-	return command.ExecuteCommand(shellCommand, shellArgs, stdout, stderr)
+	return command.ExecuteCommand(shellCommand, shellArgs, dir, stdout, stderr)
 }

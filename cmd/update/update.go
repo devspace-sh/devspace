@@ -19,8 +19,6 @@ func NewUpdateCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []p
 	`,
 		Args: cobra.NoArgs,
 	}
-
-	updateCmd.AddCommand(newDependenciesCmd(f, globalFlags))
 	updateCmd.AddCommand(newPluginCmd(f))
 
 	// Add plugin commands

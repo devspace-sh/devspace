@@ -1,6 +1,7 @@
 package server
 
 import (
+	context2 "context"
 	"net/http"
 	"strconv"
 	"time"
@@ -76,7 +77,7 @@ func (h *handler) enter(w http.ResponseWriter, r *http.Request) {
 
 	// Open logs connection
 	stream := &wsStream{WebSocket: ws}
-	err = client.ExecStream(&kubectl.ExecStreamOptions{
+	err = client.ExecStream(context2.Background(), &kubectl.ExecStreamOptions{
 		Pod: &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name[0],

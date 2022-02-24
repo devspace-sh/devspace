@@ -2,18 +2,14 @@ package server
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
 	"io"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/gorilla/websocket"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 )
 
@@ -55,7 +51,7 @@ func (ws *wsStream) Read(p []byte) (int, error) {
 }
 
 func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
-	// Kube Context
+	/*// Kube Context
 	kubeContext := h.defaultContext
 	context, ok := r.URL.Query()["context"]
 	if ok && len(context) == 1 && context[0] != "" {
@@ -102,7 +98,7 @@ func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = ws.SetWriteDeadline(time.Now().Add(time.Second * 5))
-	_ = ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	_ = ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))*/
 }
 
 func (h *handler) logs(w http.ResponseWriter, r *http.Request) {

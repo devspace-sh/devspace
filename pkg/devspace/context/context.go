@@ -133,3 +133,16 @@ func (c *Context) WithLogger(logger log.Logger) *Context {
 	n.Log = logger
 	return &n
 }
+
+func (c *Context) AsDependency(dependency types.Dependency) *Context {
+	if c == nil {
+		return nil
+	}
+
+	n := *c
+	n.WorkingDir = dependency.Path()
+	n.KubeClient = dependency.KubeClient()
+	n.Config = dependency.Config()
+	n.Dependencies = dependency.Children()
+	return &n
+}

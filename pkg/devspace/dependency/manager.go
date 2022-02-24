@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
+	"github.com/loft-sh/devspace/pkg/devspace/command"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/util/exit"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io"
@@ -22,74 +22,42 @@ import (
 
 // Manager can update, build, deploy and purge dependencies.
 type Manager interface {
-	// UpdateAll updates all dependencies
-	UpdateAll() error
-
 	// BuildAll builds all dependencies
-	BuildAll(options BuildOptions) ([]types.Dependency, error)
+	BuildAll(ctx *devspacecontext.Context, options BuildOptions) ([]types.Dependency, error)
 
 	// DeployAll deploys all dependencies and returns them
-	DeployAll(options DeployOptions) ([]types.Dependency, error)
+	DeployAll(ctx *devspacecontext.Context, options DeployOptions) ([]types.Dependency, error)
 
 	// ResolveAll resolves all dependencies and returns them
-	ResolveAll(options ResolveOptions) ([]types.Dependency, error)
+	ResolveAll(ctx *devspacecontext.Context, options ResolveOptions) ([]types.Dependency, error)
 
 	// PurgeAll purges all dependencies
-	PurgeAll(options PurgeOptions) ([]types.Dependency, error)
+	PurgeAll(ctx *devspacecontext.Context, options PurgeOptions) ([]types.Dependency, error)
 
 	// RenderAll renders all dependencies
-	RenderAll(options RenderOptions) ([]types.Dependency, error)
+	RenderAll(ctx *devspacecontext.Context, options RenderOptions) ([]types.Dependency, error)
 }
 
 type manager struct {
-	config   config.Config
-	log      log.Logger
 	resolver ResolverInterface
-	client   kubectl.Client
 }
 
 // NewManager creates a new instance of the interface Manager
-func NewManager(config config.Config, client kubectl.Client, configOptions *loader.ConfigOptions, logger log.Logger) Manager {
+func NewManager(ctx *devspacecontext.Context, configOptions *loader.ConfigOptions) Manager {
 	return &manager{
-		config:   config,
-		log:      logger,
-		resolver: NewResolver(config, client, configOptions, logger),
-		client:   client,
+		resolver: NewResolver(ctx, configOptions),
 	}
-}
-
-// UpdateAll will update all dependencies if there are any
-func (m *manager) UpdateAll() error {
-	if m.config == nil || m.config.Config() == nil || len(m.config.Config().Dependencies) == 0 {
-		return nil
-	}
-
-	m.log.StartWait("Update dependencies")
-	defer m.log.StopWait()
-
-	// Resolve all dependencies
-	_, err := m.resolver.Resolve(true)
-	if err != nil {
-		if _, ok := err.(*cyclicError); ok {
-			return errors.Errorf("%v.\n To allow cyclic dependencies run with the '%s' flag", err, ansi.Color("--allow-cyclic", "white+b"))
-		}
-
-		return err
-	}
-
-	return nil
 }
 
 type ResolveOptions struct {
-	SkipDependencies   []string
-	Dependencies       []string
-	UpdateDependencies bool
-	Silent             bool
-	Verbose            bool
+	SkipDependencies []string
+	Dependencies     []string
+	Silent           bool
+	Verbose          bool
 }
 
-func (m *manager) ResolveAll(options ResolveOptions) ([]types.Dependency, error) {
-	dependencies, err := m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, options.Silent, options.Verbose, "Resolve", func(dependency *Dependency, log log.Logger) error {
+func (m *manager) ResolveAll(ctx *devspacecontext.Context, options ResolveOptions) ([]types.Dependency, error) {
+	dependencies, err := m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, false, options.Silent, options.Verbose, "Resolve", func(ctx *devspacecontext.Context, dependency *Dependency) error {
 		return nil
 	})
 	if err != nil {
@@ -100,8 +68,8 @@ func (m *manager) ResolveAll(options ResolveOptions) ([]types.Dependency, error)
 }
 
 // ExecuteCommand executes a given command from the available commands
-func ExecuteCommand(commands []*latest.CommandConfig, cmd string, args []string, stdout io.Writer, stderr io.Writer) error {
-	err := command.ExecuteCommand(commands, cmd, args, stdout, stderr)
+func ExecuteCommand(commands []*latest.CommandConfig, cmd string, args []string, dir string, stdout io.Writer, stderr io.Writer) error {
+	err := command.ExecuteCommand(commands, cmd, args, dir, stdout, stderr)
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok {
 			return &exit.ReturnCodeError{
@@ -119,17 +87,15 @@ func ExecuteCommand(commands []*latest.CommandConfig, cmd string, args []string,
 type BuildOptions struct {
 	BuildOptions build.Options
 
-	SkipDependencies        []string
-	Dependencies            []string
-	UpdateDependencies      bool
-	ForceDeployDependencies bool
-	Verbose                 bool
+	SkipDependencies []string
+	Dependencies     []string
+	Verbose          bool
 }
 
 // BuildAll will build all dependencies if there are any
-func (m *manager) BuildAll(options BuildOptions) ([]types.Dependency, error) {
-	return m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Build", func(dependency *Dependency, log log.Logger) error {
-		return dependency.Build(options.ForceDeployDependencies, &options.BuildOptions, log)
+func (m *manager) BuildAll(ctx *devspacecontext.Context, options BuildOptions) ([]types.Dependency, error) {
+	return m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, false, false, options.Verbose, "Build", func(ctx *devspacecontext.Context, dependency *Dependency) error {
+		return dependency.Build(ctx, &options.BuildOptions)
 	})
 }
 
@@ -137,20 +103,18 @@ func (m *manager) BuildAll(options BuildOptions) ([]types.Dependency, error) {
 type DeployOptions struct {
 	BuildOptions build.Options
 
-	SkipDependencies        []string
-	Dependencies            []string
-	UpdateDependencies      bool
-	ForceDeployDependencies bool
-	SkipBuild               bool
-	SkipDeploy              bool
-	ForceDeploy             bool
-	Verbose                 bool
+	SkipDependencies []string
+	Dependencies     []string
+	SkipBuild        bool
+	SkipDeploy       bool
+	ForceDeploy      bool
+	Verbose          bool
 }
 
 // DeployAll will deploy all dependencies if there are any
-func (m *manager) DeployAll(options DeployOptions) ([]types.Dependency, error) {
-	dependencies, err := m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Deploy", func(dependency *Dependency, log log.Logger) error {
-		return dependency.Deploy(options.ForceDeployDependencies, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions, log)
+func (m *manager) DeployAll(ctx *devspacecontext.Context, options DeployOptions) ([]types.Dependency, error) {
+	dependencies, err := m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, false, false, options.Verbose, "Deploy", func(ctx *devspacecontext.Context, dependency *Dependency) error {
+		return dependency.Deploy(ctx, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions)
 	})
 	if err != nil {
 		return nil, err
@@ -167,64 +131,63 @@ type PurgeOptions struct {
 }
 
 // PurgeAll purges all dependencies in reverse order
-func (m *manager) PurgeAll(options PurgeOptions) ([]types.Dependency, error) {
-	return m.handleDependencies(options.SkipDependencies, options.Dependencies, true, false, false, options.Verbose, "Purge", func(dependency *Dependency, log log.Logger) error {
-		return dependency.Purge(log)
+func (m *manager) PurgeAll(ctx *devspacecontext.Context, options PurgeOptions) ([]types.Dependency, error) {
+	return m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, true, false, options.Verbose, "Purge", func(ctx *devspacecontext.Context, dependency *Dependency) error {
+		return dependency.Purge(ctx)
 	})
 }
 
 // RenderOptions has all options for rendering all dependencies
 type RenderOptions struct {
-	SkipDependencies   []string
-	Dependencies       []string
-	Verbose            bool
-	UpdateDependencies bool
-	SkipBuild          bool
-	Writer             io.Writer
+	SkipDependencies []string
+	Dependencies     []string
+	Verbose          bool
+	SkipBuild        bool
+	Writer           io.Writer
 
 	BuildOptions build.Options
 }
 
-func (m *manager) RenderAll(options RenderOptions) ([]types.Dependency, error) {
-	return m.handleDependencies(options.SkipDependencies, options.Dependencies, false, options.UpdateDependencies, false, options.Verbose, "Render", func(dependency *Dependency, log log.Logger) error {
-		return dependency.Render(options.SkipBuild, &options.BuildOptions, options.Writer, log)
+func (m *manager) RenderAll(ctx *devspacecontext.Context, options RenderOptions) ([]types.Dependency, error) {
+	return m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, false, false, options.Verbose, "Render", func(ctx *devspacecontext.Context, dependency *Dependency) error {
+		return dependency.Render(ctx, options.SkipBuild, &options.BuildOptions, options.Writer)
 	})
 }
 
-func (m *manager) handleDependencies(skipDependencies, filterDependencies []string, reverse, updateDependencies, silent, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error) ([]types.Dependency, error) {
-	if m.config == nil || m.config.Config() == nil || len(m.config.Config().Dependencies) == 0 {
+func (m *manager) handleDependencies(ctx *devspacecontext.Context, skipDependencies, filterDependencies []string, reverse, silent, verbose bool, actionName string, action func(ctx *devspacecontext.Context, dependency *Dependency) error) ([]types.Dependency, error) {
+	if ctx.Config == nil || ctx.Config.Config() == nil || len(ctx.Config.Config().Dependencies) == 0 {
 		return nil, nil
 	}
 
 	if !silent {
-		m.log.Infof("Start resolving dependencies")
+		ctx.Log.Infof("Start resolving dependencies")
 	}
 
-	hooksErr := hook.ExecuteHooks(m.client, m.config, nil, nil, m.log, "before:"+strings.ToLower(actionName)+"Dependencies")
+	hooksErr := hook.ExecuteHooks(ctx, nil, "before:"+strings.ToLower(actionName)+"Dependencies")
 	if hooksErr != nil {
 		return nil, hooksErr
 	}
 
 	// Resolve all dependencies
-	dependencies, err := m.resolver.Resolve(updateDependencies)
+	dependencies, err := m.resolver.Resolve(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve dependencies")
 	}
 
-	defer m.log.StopWait()
+	defer ctx.Log.StopWait()
 
 	if !silent {
-		m.log.Donef("Resolved dependencies successfully")
+		ctx.Log.Donef("Resolved dependencies successfully")
 	}
 	if !silent && !verbose {
-		m.log.Infof("To display the complete dependency execution log run with the '--verbose-dependencies' flag")
+		ctx.Log.Infof("To display the complete dependency execution log run with the '--verbose-dependencies' flag")
 	}
 
-	executedDependencies, err := m.executeDependenciesRecursive("", dependencies, skipDependencies, filterDependencies, reverse, silent, verbose, actionName, action, map[string]bool{})
+	executedDependencies, err := m.executeDependenciesRecursive(ctx, "", dependencies, skipDependencies, filterDependencies, reverse, silent, verbose, actionName, action, map[string]bool{})
 	if err != nil {
-		hooksErr := hook.ExecuteHooks(m.client, m.config, dependencies, map[string]interface{}{
+		hooksErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"error": err,
-		}, m.log, "error:"+strings.ToLower(actionName)+"Dependencies")
+		}, "error:"+strings.ToLower(actionName)+"Dependencies")
 		if hooksErr != nil {
 			return nil, hooksErr
 		}
@@ -232,7 +195,7 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 		return nil, err
 	}
 
-	hooksErr = hook.ExecuteHooks(m.client, m.config, dependencies, nil, m.log, "after:"+strings.ToLower(actionName)+"Dependencies")
+	hooksErr = hook.ExecuteHooks(ctx, nil, "after:"+strings.ToLower(actionName)+"Dependencies")
 	if hooksErr != nil {
 		return nil, hooksErr
 	}
@@ -240,7 +203,16 @@ func (m *manager) handleDependencies(skipDependencies, filterDependencies []stri
 	return executedDependencies, nil
 }
 
-func (m *manager) executeDependenciesRecursive(base string, dependencies []types.Dependency, skipDependencies, filterDependencies []string, reverse, silent, verbose bool, actionName string, action func(dependency *Dependency, log log.Logger) error, executedDependenciesIDs map[string]bool) ([]types.Dependency, error) {
+func (m *manager) executeDependenciesRecursive(
+	ctx *devspacecontext.Context,
+	base string,
+	dependencies []types.Dependency,
+	skipDependencies, filterDependencies []string,
+	reverse, silent, verbose bool,
+	actionName string,
+	action func(ctx *devspacecontext.Context, dependency *Dependency) error,
+	executedDependenciesIDs map[string]bool,
+) ([]types.Dependency, error) {
 	// Execute all dependencies
 	i := 0
 	if reverse {
@@ -250,9 +222,8 @@ func (m *manager) executeDependenciesRecursive(base string, dependencies []types
 	executedDependencies := []types.Dependency{}
 	for i >= 0 && i < len(dependencies) {
 		var (
-			dependency       = dependencies[i]
-			buff             = &bytes.Buffer{}
-			dependencyLogger = m.log
+			dependency = dependencies[i]
+			buff       = &bytes.Buffer{}
 		)
 
 		// Increase / Decrease counter
@@ -263,13 +234,13 @@ func (m *manager) executeDependenciesRecursive(base string, dependencies []types
 		}
 
 		// skip if dependency was executed already
-		if executedDependenciesIDs[dependency.ID()] {
+		if executedDependenciesIDs[dependency.Name()] {
 			executedDependencies = append(executedDependencies, dependency)
 			continue
 		}
 
 		// make sure we don't execute the dependency again
-		executedDependenciesIDs[dependency.ID()] = true
+		executedDependenciesIDs[dependency.Name()] = true
 
 		// get dependency name
 		dependencyName := dependency.Name()
@@ -278,17 +249,18 @@ func (m *manager) executeDependenciesRecursive(base string, dependencies []types
 		}
 
 		// deploy the dependencies of the dependency first
+		dependencyCtx := ctx.AsDependency(dependency)
 		if len(dependency.Children()) > 0 {
-			hooksErr := hook.ExecuteHooks(dependency.KubeClient(), dependency.Config(), dependency.Children(), nil, m.log, "before:"+strings.ToLower(actionName)+"Dependencies")
+			hooksErr := hook.ExecuteHooks(dependencyCtx, nil, "before:"+strings.ToLower(actionName)+"Dependencies")
 			if hooksErr != nil {
 				return nil, hooksErr
 			}
 
-			_, err := m.executeDependenciesRecursive(dependencyName, dependency.Children(), skipDependencies, filterDependencies, reverse, silent, verbose, actionName, action, executedDependenciesIDs)
+			_, err := m.executeDependenciesRecursive(dependencyCtx, dependencyName, dependency.Children(), skipDependencies, filterDependencies, reverse, silent, verbose, actionName, action, executedDependenciesIDs)
 			if err != nil {
-				hooksErr := hook.ExecuteHooks(dependency.KubeClient(), dependency.Config(), dependency.Children(), map[string]interface{}{
+				hooksErr := hook.ExecuteHooks(dependencyCtx, map[string]interface{}{
 					"error": err,
-				}, m.log, "error:"+strings.ToLower(actionName)+"Dependencies")
+				}, "error:"+strings.ToLower(actionName)+"Dependencies")
 				if hooksErr != nil {
 					return nil, hooksErr
 				}
@@ -296,7 +268,7 @@ func (m *manager) executeDependenciesRecursive(base string, dependencies []types
 				return nil, err
 			}
 
-			hooksErr = hook.ExecuteHooks(dependency.KubeClient(), dependency.Config(), dependency.Children(), nil, m.log, "after:"+strings.ToLower(actionName)+"Dependencies")
+			hooksErr = hook.ExecuteHooks(dependencyCtx, nil, "after:"+strings.ToLower(actionName)+"Dependencies")
 			if hooksErr != nil {
 				return nil, hooksErr
 			}
@@ -306,18 +278,18 @@ func (m *manager) executeDependenciesRecursive(base string, dependencies []types
 		if !foundDependency(dependencyName, filterDependencies) {
 			continue
 		} else if skipDependency(dependencyName, skipDependencies) {
-			m.log.Infof("Skip dependency %s", dependencyName)
+			ctx.Log.Infof("Skip dependency %s", dependencyName)
 			continue
 		}
 
 		// execute dependency
 		if !silent && !verbose {
-			m.log.Infof(fmt.Sprintf("%s dependency %s...", actionName, dependencyName))
+			ctx.Log.Infof(fmt.Sprintf("%s dependency %s...", actionName, dependencyName))
 		}
 
 		// If not verbose log to a stream
 		if !verbose {
-			dependencyLogger = log.NewStreamLogger(buff, logrus.InfoLevel)
+			dependencyCtx = dependencyCtx.WithLogger(log.NewStreamLogger(buff, logrus.InfoLevel))
 		}
 
 		if dependency.Config() != nil {
@@ -331,7 +303,7 @@ func (m *manager) executeDependenciesRecursive(base string, dependencies []types
 			}
 		}
 
-		err := action(dependency.(*Dependency), dependencyLogger)
+		err := action(dependencyCtx, dependency.(*Dependency))
 		if err != nil {
 			if dependency.Config() != nil {
 				pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{
@@ -360,7 +332,7 @@ func (m *manager) executeDependenciesRecursive(base string, dependencies []types
 
 		executedDependencies = append(executedDependencies, dependency)
 		if !silent {
-			m.log.Donef("%s dependency %s completed", actionName, dependencyName)
+			ctx.Log.Donef("%s dependency %s completed", actionName, dependencyName)
 		}
 	}
 

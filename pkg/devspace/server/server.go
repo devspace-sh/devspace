@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,7 +11,6 @@ import (
 	"sync"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -222,9 +222,9 @@ func (h *handler) version(w http.ResponseWriter, r *http.Request) {
 }
 
 type returnConfig struct {
-	Config          *latest.Config              `yaml:"config"`
-	RawConfig       map[interface{}]interface{} `yaml:"rawConfig"`
-	GeneratedConfig *localcache.Config          `yaml:"generatedConfig"`
+	Config     *latest.Config              `yaml:"config"`
+	RawConfig  map[interface{}]interface{} `yaml:"rawConfig"`
+	LocalCache localcache.Cache            `yaml:"generatedConfig"`
 
 	AnalyticsEnabled bool              `yaml:"analyticsEnabled"`
 	Profile          string            `yaml:"profile"`
@@ -236,10 +236,6 @@ type returnConfig struct {
 
 func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
 	profile := ""
-	if h.config != nil {
-		profile = h.config.Generated().GetActiveProfile()
-	}
-
 	retConfig := &returnConfig{
 		AnalyticsEnabled: h.analyticsEnabled,
 		Profile:          profile,
@@ -251,7 +247,7 @@ func (h *handler) returnConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	if h.config != nil {
 		retConfig.Config = h.config.Config()
-		retConfig.GeneratedConfig = h.config.Generated()
+		retConfig.LocalCache = h.config.LocalCache()
 	}
 
 	s, err := yaml.Marshal(retConfig)
@@ -330,7 +326,7 @@ func (h *handler) request(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Do the request
-	out, err := client.GenericRequest(options)
+	out, err := client.GenericRequest(r.Context(), options)
 	if err != nil {
 		if strings.Index(err.Error(), "request: unknown") != 0 {
 			h.log.Errorf("Error in %s: %v", r.URL.String(), err)

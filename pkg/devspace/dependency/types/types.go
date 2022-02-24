@@ -22,7 +22,7 @@ type Dependency interface {
 	// Root determines if we are the top of the graph
 	Root() bool
 
-	// Path returns the path where this dependency is stored
+	// Path returns the folder where this dependency is stored
 	Path() string
 
 	// DependencyConfig is the config this dependency was created from

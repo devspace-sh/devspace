@@ -144,8 +144,8 @@ func ExecuteCommandWithEnv(cmd string, args []string, dir string, stdout io.Writ
 	return nil
 }
 
-func ExecuteCommand(cmd string, args []string, stdout io.Writer, stderr io.Writer) error {
-	return ExecuteCommandWithEnv(cmd, args, "", stdout, stderr, nil)
+func ExecuteCommand(cmd string, args []string, dir string, stdout io.Writer, stderr io.Writer) error {
+	return ExecuteCommandWithEnv(cmd, args, dir, stdout, stderr, nil)
 }
 
 func FormatCommandName(cmd string, args []string) string {

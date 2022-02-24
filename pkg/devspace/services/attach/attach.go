@@ -10,14 +10,8 @@ import (
 )
 
 // StartAttach opens a new terminal
-func StartAttach(ctx *devspacecontext.Context, options targetselector.Options, interrupt chan error) error {
-	options = options.WithQuestion("Which pod do you want to attach to?")
-	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(ctx.Context, ctx.KubeClient, options, ctx.Log)
-	if err != nil {
-		return err
-	}
-
-	wrapper, upgradeRoundTripper, err := ctx.KubeClient.GetUpgraderWrapper()
+func StartAttach(ctx *devspacecontext.Context, selector targetselector.TargetSelector) error {
+	container, err := selector.SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
 	if err != nil {
 		return err
 	}
@@ -31,32 +25,23 @@ func StartAttach(ctx *devspacecontext.Context, options targetselector.Options, i
 
 	done := make(chan error)
 	go func() {
-		interrupt <- ctx.KubeClient.ExecStreamWithTransport(&kubectl.ExecStreamWithTransportOptions{
-			ExecStreamOptions: kubectl.ExecStreamOptions{
-				Pod:       container.Pod,
-				Container: container.Container.Name,
-				TTY:       container.Container.TTY,
-				Stdin:     os.Stdin,
-				Stdout:    os.Stdout,
-				Stderr:    os.Stderr,
-			},
-			Transport:   wrapper,
-			Upgrader:    upgradeRoundTripper,
+		done <- ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
+			Pod:         container.Pod,
+			Container:   container.Container.Name,
+			TTY:         container.Container.TTY,
+			Stdin:       os.Stdin,
+			Stdout:      os.Stdout,
+			Stderr:      os.Stderr,
 			SubResource: kubectl.SubResourceAttach,
 		})
 	}()
 
 	// wait until either client has finished or we got interrupted
 	select {
-	case err = <-interrupt:
-		_ = upgradeRoundTripper.Close()
+	case <-ctx.Context.Done():
 		<-done
+		return nil
+	case err := <-done:
 		return err
-	case err = <-done:
-		if err != nil {
-			return err
-		}
 	}
-
-	return err
 }

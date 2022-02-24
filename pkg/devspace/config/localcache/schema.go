@@ -16,9 +16,6 @@ type Cache interface {
 	GetImageCache(imageConfigName string) (ImageCache, bool)
 	SetImageCache(imageConfigName string, imageCache ImageCache)
 
-	GetDependencyCache(dependencyName string) (DependencyCache, bool)
-	SetDependencyCache(dependencyName string, dependencyCache DependencyCache)
-
 	GetLastContext() *LastContextConfig
 	SetLastContext(config *LastContextConfig)
 
@@ -39,10 +36,8 @@ type LocalCache struct {
 	Vars          map[string]string `yaml:"vars,omitempty"`
 	VarsEncrypted bool              `yaml:"varsEncrypted,omitempty"`
 
-	Images       map[string]ImageCache      `yaml:"images,omitempty"`
-	Dependencies map[string]DependencyCache `yaml:"dependencies,omitempty"`
-
-	LastContext *LastContextConfig `yaml:"lastContext,omitempty"`
+	Images      map[string]ImageCache `yaml:"images,omitempty"`
+	LastContext *LastContextConfig    `yaml:"lastContext,omitempty"`
 
 	// Data is arbitrary key value cache
 	Data map[string]string `yaml:"data,omitempty"`
@@ -56,10 +51,6 @@ type LocalCache struct {
 type LastContextConfig struct {
 	Namespace string `yaml:"namespace,omitempty"`
 	Context   string `yaml:"context,omitempty"`
-}
-
-// DependencyCache holds dependency related caching information
-type DependencyCache struct {
 }
 
 // ImageCache holds the cache related information about a certain image
@@ -101,21 +92,6 @@ func (l *LocalCache) SetImageCache(imageConfigName string, imageCache ImageCache
 	defer l.accessMutex.Unlock()
 
 	l.Images[imageConfigName] = imageCache
-}
-
-func (l *LocalCache) GetDependencyCache(dependencyName string) (DependencyCache, bool) {
-	l.accessMutex.Lock()
-	defer l.accessMutex.Unlock()
-
-	cache, ok := l.Dependencies[dependencyName]
-	return cache, ok
-}
-
-func (l *LocalCache) SetDependencyCache(dependencyName string, dependencyCache DependencyCache) {
-	l.accessMutex.Lock()
-	defer l.accessMutex.Unlock()
-
-	l.Dependencies[dependencyName] = dependencyCache
 }
 
 func (l *LocalCache) GetLastContext() *LastContextConfig {
