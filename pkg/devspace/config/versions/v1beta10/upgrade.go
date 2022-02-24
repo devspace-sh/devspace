@@ -3,8 +3,8 @@ package v1beta10
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
-	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
+	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta11"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"strings"
 )

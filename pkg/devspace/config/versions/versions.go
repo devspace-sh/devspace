@@ -2,6 +2,7 @@ package versions
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta11"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -54,6 +55,7 @@ var versionLoader = map[string]*loader{
 	v1beta8.Version:  {New: v1beta8.New},
 	v1beta9.Version:  {New: v1beta9.New},
 	v1beta10.Version: {New: v1beta10.New},
+	v1beta11.Version: {New: v1beta11.New},
 	latest.Version:   {New: latest.New},
 }
 
@@ -211,41 +213,14 @@ func filterOutEmpty(config *latest.Config) {
 		}
 		config.Commands = newObjs
 	}
-	if config.Dev.Ports != nil {
-		newObjs := []*latest.PortForwardingConfig{}
-		for _, v := range config.Dev.Ports {
-			if v != nil {
-				newObjs = append(newObjs, v)
-			}
-		}
-		config.Dev.Ports = newObjs
-	}
-	if config.Dev.ReplacePods != nil {
-		newObjs := []*latest.ReplacePod{}
-		for _, v := range config.Dev.ReplacePods {
-			if v != nil {
-				newObjs = append(newObjs, v)
-			}
-		}
-		config.Dev.ReplacePods = newObjs
-	}
-	if config.Dev.Sync != nil {
-		newObjs := []*latest.SyncConfig{}
-		for _, v := range config.Dev.Sync {
-			if v != nil {
-				newObjs = append(newObjs, v)
-			}
-		}
-		config.Dev.Sync = newObjs
-	}
-	if config.Dev.Open != nil {
+	if config.Open != nil {
 		newObjs := []*latest.OpenConfig{}
-		for _, v := range config.Dev.Open {
+		for _, v := range config.Open {
 			if v != nil {
 				newObjs = append(newObjs, v)
 			}
 		}
-		config.Dev.Open = newObjs
+		config.Open = newObjs
 	}
 }
 
@@ -351,7 +326,7 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 
 					if profileConfig.Parents[i].Source != nil {
 						ID := dependencyutil.GetParentProfileID(basePath, profileConfig.Parents[i].Source, profileConfig.Parents[i].Profile, nil)
-						localPath, err := dependencyutil.DownloadDependency(ID, basePath, profileConfig.Parents[i].Source, update, log)
+						localPath, err := dependencyutil.DownloadDependency(ID, basePath, profileConfig.Parents[i].Source, log)
 						if err != nil {
 							return err
 						}
