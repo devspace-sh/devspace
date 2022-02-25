@@ -127,7 +127,7 @@ func (d *DeployConfig) Status(ctx *devspacecontext.Context) (*deployer.StatusRes
 
 // Deploy deploys all specified manifests via kubectl apply and adds to the specified image names the corresponding tags
 func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, _ bool) (bool, error) {
-	deployCache, _ := ctx.Config.RemoteCache().GetDeploymentCache(d.DeploymentConfig.Name)
+	deployCache, _ := ctx.Config.RemoteCache().GetDeployment(d.DeploymentConfig.Name)
 
 	// Hash the manifests
 	manifestsHash := ""
@@ -190,11 +190,12 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, _ bool) (bool, error
 		}
 	}
 
-	deployCache.KubectlManifestsHash = manifestsHash
-	deployCache.IsKubectl = true
-	deployCache.KubectlObjects = kubeObjects
+	deployCache.Kubectl = &remotecache.KubectlCache{
+		Objects:       kubeObjects,
+		ManifestsHash: manifestsHash,
+	}
 	deployCache.DeploymentConfigHash = deploymentConfigHash
-	ctx.Config.RemoteCache().SetDeploymentCache(d.DeploymentConfig.Name, deployCache)
+	ctx.Config.RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
 	return wasDeployed, nil
 }
 

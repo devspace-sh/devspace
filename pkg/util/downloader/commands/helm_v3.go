@@ -5,6 +5,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/extract"
 	"github.com/mitchellh/go-homedir"
+	"github.com/otiai10/copy"
+	"github.com/pkg/errors"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -49,7 +51,7 @@ func (h *helmv3) DownloadURL() string {
 }
 
 func (h *helmv3) IsValid(path string) (bool, error) {
-	out, err := command.NewStreamCommand(path, []string{"version"}).Output()
+	out, err := command.NewStreamCommand(path, []string{"version"}).Output(".")
 	if err != nil {
 		return false, nil
 	}
@@ -64,4 +66,28 @@ func (h *helmv3) Install(archiveFile string) error {
 	}
 
 	return installHelmBinary(extract.NewExtractor(), archiveFile, installPath, h.DownloadURL())
+}
+
+func installHelmBinary(extract extract.Extract, archiveFile, installPath, installFromURL string) error {
+	t := filepath.Dir(archiveFile)
+
+	// Extract the binary
+	if strings.HasSuffix(installFromURL, ".tar.gz") {
+		err := extract.UntarGz(archiveFile, t)
+		if err != nil {
+			return errors.Wrap(err, "extract tar.gz")
+		}
+	} else if strings.HasSuffix(installFromURL, ".zip") {
+		err := extract.Unzip(archiveFile, t)
+		if err != nil {
+			return errors.Wrap(err, "extract zip")
+		}
+	}
+
+	// Copy file to target location
+	if runtime.GOOS == "windows" {
+		return copy.Copy(filepath.Join(t, runtime.GOOS+"-"+runtime.GOARCH, "helm.exe"), installPath)
+	}
+
+	return copy.Copy(filepath.Join(t, runtime.GOOS+"-"+runtime.GOARCH, "helm"), installPath)
 }

@@ -50,7 +50,10 @@ devspace set var key=value key2=value2
 func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
@@ -61,11 +64,10 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 
 	// Load config and find all variables in it
 	variableParser := &variableParser{}
-	c, err := configLoader.LoadWithParser(variableParser, cmd.ToConfigOptions(log), log)
+	c, err := configLoader.LoadWithParser(nil, nil, variableParser, cmd.ToConfigOptions(), log)
 	if err != nil {
 		return err
 	}
-	generatedConfig := c.Generated()
 
 	// Set vars
 	for _, v := range args {
@@ -102,15 +104,16 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 		}
 
 		// only overwrite it if the flag is true and value is not set yet
-		if cmd.Overwrite || generatedConfig.Vars[splitted[0]] == "" {
-			generatedConfig.Vars[splitted[0]] = splitted[1]
+		_, found := c.LocalCache().GetVar(splitted[0])
+		if cmd.Overwrite || !found {
+			c.LocalCache().SetVar(splitted[0], splitted[1])
 		} else {
 			log.Infof("Skip variable %s, because it already has a value", splitted[0])
 		}
 	}
 
 	// Save the config
-	err = configLoader.SaveGenerated(generatedConfig)
+	err = c.LocalCache().Save()
 	if err != nil {
 		return errors.Errorf("Error saving config: %v", err)
 	}

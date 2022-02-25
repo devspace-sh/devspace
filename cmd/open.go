@@ -4,7 +4,11 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/services/sync"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/services/portforwarding"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	"k8s.io/apimachinery/pkg/labels"
 	"net/http"
 	"os"
 	"strconv"
@@ -18,7 +22,6 @@ import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 
@@ -92,7 +95,10 @@ devspace open
 func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 	// Set config root
 	cmd.log = f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
 		return err
@@ -104,38 +110,36 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 		ingressControllerWarning string
 	)
 
+	// Get kubernetes client
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
+	if err != nil {
+		return err
+	}
+
 	// Load generated config if possible
-	var generatedConfig *localcache.Config
+	var localCache localcache.Cache
 	if configExists {
 		log.StartFileLogging()
 
-		generatedConfig, err = configLoader.LoadGenerated(cmd.ToConfigOptions(cmd.log))
+		localCache, err = localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
 		if err != nil {
 			return err
 		}
 	}
 
-	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, cmd.log)
-	if err != nil {
-		return err
-	}
-
-	// Get kubernetes client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
-	if err != nil {
-		return err
-	}
-
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, cmd.log)
+	client, err = client.CheckKubeContext(localCache, cmd.NoWarn, cmd.log)
 	if err != nil {
 		return err
 	}
 
+	// create devspace context
+	ctx := devspacecontext.NewContext(context.Background(), cmd.log).
+		WithKubeClient(client)
+
 	// Execute plugin hook
-	err = hook.ExecuteHooks(client, nil, nil, nil, nil, "open")
+	err = hook.ExecuteHooks(ctx, nil, "open")
 	if err != nil {
 		return err
 	}
@@ -158,7 +162,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 
 	// Check if we should open locally
 	if openingMode == openLocalHostOption {
-		err := cmd.openLocal(f, client, domain)
+		err := cmd.openLocal(ctx, domain)
 		if err != nil {
 			cmd.log.Error(err)
 		}
@@ -277,8 +281,8 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 	return nil
 }
 
-func (cmd *OpenCmd) openLocal(f factory.Factory, client kubectl.Client, domain string) error {
-	_, servicePort, serviceLabels, err := cmd.getService(client, client.Namespace(), domain, true)
+func (cmd *OpenCmd) openLocal(ctx *devspacecontext.Context, domain string) error {
+	_, servicePort, serviceLabels, err := cmd.getService(ctx.KubeClient, ctx.KubeClient.Namespace(), domain, true)
 	if err != nil {
 		return errors.Errorf("Unable to get service: %v", err)
 	}
@@ -312,20 +316,25 @@ func (cmd *OpenCmd) openLocal(f factory.Factory, client kubectl.Client, domain s
 		labelSelector[key] = value
 	}
 
-	portforwardingConfig := []*latest.PortForwardingConfig{
-		{
-			PortMappings:  portMappings,
-			LabelSelector: labelSelector,
+	devPod := &latest.DevPod{
+		Name:          "open",
+		LabelSelector: labelSelector,
+		Forward:       portMappings,
+	}
+	fakeConfig := &latest.Config{
+		Dev: map[string]*latest.DevPod{
+			"open": devPod,
 		},
 	}
 
+	devSpaceConfig := config.Ensure(config.NewConfig(nil, fakeConfig, nil, nil, nil, constants.DefaultConfigPath))
+	ctx = ctx.WithConfig(devSpaceConfig)
+	options := targetselector.NewEmptyOptions().
+		WithLabelSelector(labels.Set(labelSelector).String()).
+		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second))
+
 	// start port-forwarding for localhost access
-	servicesClient := f.NewServicesClient(config.Ensure(config.NewConfig(nil, &latest.Config{
-		Dev: latest.DevConfig{
-			Ports: portforwardingConfig,
-		},
-	}, nil, nil, constants.DefaultConfigPath)), nil, client, cmd.log)
-	err = servicesClient.StartPortForwarding(nil, sync.DefaultPrefixFn)
+	err = portforwarding.StartPortForwarding(ctx, devPod, targetselector.NewTargetSelector(options), make(chan struct{}))
 	if err != nil {
 		return errors.Wrap(err, "start port forwarding")
 	}

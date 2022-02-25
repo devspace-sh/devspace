@@ -212,7 +212,7 @@ func getContainerProblem(client kubectl.Client, pod *v1.Pod, containerStatus *v1
 			containerProblem.LastExitReason = containerStatus.LastTerminationState.Terminated.Reason
 
 			if containerProblem.LastExitCode != 0 {
-				containerProblem.LastFaultyExecutionLog, _ = client.ReadLogs(pod.Namespace, pod.Name, containerStatus.Name, containerProblem.Ready, &tailLines)
+				containerProblem.LastFaultyExecutionLog, _ = client.ReadLogs(context.TODO(), pod.Namespace, pod.Name, containerStatus.Name, containerProblem.Ready, &tailLines)
 			}
 		}
 	}
@@ -230,7 +230,7 @@ func getContainerProblem(client kubectl.Client, pod *v1.Pod, containerStatus *v1
 			containerProblem.LastExitCode = int(containerStatus.State.Terminated.ExitCode)
 			if containerProblem.LastExitCode != 0 {
 				hasProblem = true
-				containerProblem.LastFaultyExecutionLog, _ = client.ReadLogs(pod.Namespace, pod.Name, containerStatus.Name, false, &tailLines)
+				containerProblem.LastFaultyExecutionLog, _ = client.ReadLogs(context.TODO(), pod.Namespace, pod.Name, containerStatus.Name, false, &tailLines)
 			}
 		} else if containerStatus.State.Waiting != nil {
 			hasProblem = true
@@ -242,7 +242,7 @@ func getContainerProblem(client kubectl.Client, pod *v1.Pod, containerStatus *v1
 			if containerStatus.RestartCount > 0 {
 				containerProblem.LastExitCode = int(containerStatus.LastTerminationState.Terminated.ExitCode)
 				if containerProblem.LastExitCode != 0 {
-					containerProblem.LastFaultyExecutionLog, _ = client.ReadLogs(pod.Namespace, pod.Name, containerStatus.Name, false, &tailLines)
+					containerProblem.LastFaultyExecutionLog, _ = client.ReadLogs(context.TODO(), pod.Namespace, pod.Name, containerStatus.Name, false, &tailLines)
 				}
 			}
 		}

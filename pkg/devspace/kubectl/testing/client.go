@@ -2,6 +2,7 @@ package testing
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -39,6 +40,10 @@ func (c *Client) ClientConfig() clientcmd.ClientConfig {
 	return nil
 }
 
+func (c *Client) EnsureNamespace(ctx context.Context, namespace string, log log.Logger) error {
+	return nil
+}
+
 // CurrentContext is a fake implementation of function
 func (c *Client) CurrentContext() string {
 	return c.Context
@@ -72,32 +77,32 @@ func (c *Client) KubeConfigLoader() kubeconfig.Loader {
 }
 
 // PrintWarning is a fake implementation of function
-func (c *Client) CheckKubeContext(generatedConfig *localcache.Config, noWarning bool, log log.Logger) (kubectl.Client, error) {
+func (c *Client) CheckKubeContext(generatedConfig localcache.Cache, noWarning bool, log log.Logger) (kubectl.Client, error) {
 	return c, nil
 }
 
 // CopyFromReader is a fake implementation of function
-func (c *Client) CopyFromReader(pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error {
+func (c *Client) CopyFromReader(ctx context.Context, pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error {
 	return nil
 }
 
 // Copy is a fake implementation of function
-func (c *Client) Copy(pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error {
+func (c *Client) Copy(ctx context.Context, pod *k8sv1.Pod, container, containerPath, localPath string, exclude []string) error {
 	return nil
 }
 
 // ExecStream is a fake implementation of function
-func (c *Client) ExecStream(options *kubectl.ExecStreamOptions) error {
+func (c *Client) ExecStream(ctx context.Context, options *kubectl.ExecStreamOptions) error {
 	return nil
 }
 
 // ExecBuffered is a fake implementation of function
-func (c *Client) ExecBuffered(pod *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error) {
+func (c *Client) ExecBuffered(ctx context.Context, od *k8sv1.Pod, container string, command []string, input io.Reader) ([]byte, []byte, error) {
 	return []byte{}, []byte{}, nil
 }
 
 // GenericRequest is a fake implementation of function
-func (c *Client) GenericRequest(options *kubectl.GenericRequestOptions) (string, error) {
+func (c *Client) GenericRequest(ctx context.Context, options *kubectl.GenericRequestOptions) (string, error) {
 	return "", nil
 }
 
@@ -135,7 +140,7 @@ func (c *Client) EnsureDeployNamespaces(ctx context.Context, config *latest.Conf
 }
 
 // NewPortForwarder is a fake implementation of function
-func (c *Client) NewPortForwarder(ctx context.Context, pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}, errorChan chan error) (*portforward.PortForwarder, error) {
+func (c *Client) NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}, errorChan chan error) (*portforward.PortForwarder, error) {
 	return nil, nil
 }
 

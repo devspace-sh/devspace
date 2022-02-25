@@ -6,13 +6,13 @@ import (
 )
 
 func Delete(ctx *devspacecontext.Context, deploymentName string) error {
-	deploymentCache, ok := ctx.Config.RemoteCache().GetDeploymentCache(deploymentName)
-	if !ok || deploymentCache.IsKubectl == false || len(deploymentCache.KubectlObjects) == 0 {
-		ctx.Config.RemoteCache().DeleteDeploymentCache(deploymentName)
+	deploymentCache, ok := ctx.Config.RemoteCache().GetDeployment(deploymentName)
+	if !ok || deploymentCache.Kubectl == nil || len(deploymentCache.Kubectl.Objects) == 0 {
+		ctx.Config.RemoteCache().DeleteDeployment(deploymentName)
 		return nil
 	}
 
-	for _, resource := range deploymentCache.KubectlObjects {
+	for _, resource := range deploymentCache.Kubectl.Objects {
 		_, err := ctx.KubeClient.GenericRequest(ctx.Context, &kubectl.GenericRequestOptions{
 			Kind:       resource.Kind,
 			APIVersion: resource.APIVersion,
@@ -26,6 +26,6 @@ func Delete(ctx *devspacecontext.Context, deploymentName string) error {
 	}
 
 	// Delete from cache
-	ctx.Config.RemoteCache().DeleteDeploymentCache(deploymentName)
+	ctx.Config.RemoteCache().DeleteDeployment(deploymentName)
 	return nil
 }

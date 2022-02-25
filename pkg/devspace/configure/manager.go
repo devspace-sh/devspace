@@ -1,7 +1,7 @@
 package configure
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/generator"
@@ -24,18 +24,18 @@ type Factory interface {
 }
 
 type manager struct {
-	log       log.Logger
-	config    *latest.Config
-	generated *localcache.Config
-	factory   Factory
+	log        log.Logger
+	config     *latest.Config
+	localCache localcache.Cache
+	factory    Factory
 }
 
 // NewManager creates a new instance of the interface Manager
-func NewManager(factory Factory, config *latest.Config, generated *localcache.Config, log log.Logger) Manager {
+func NewManager(factory Factory, config *latest.Config, localCache localcache.Cache, log log.Logger) Manager {
 	return &manager{
-		log:       log,
-		factory:   factory,
-		config:    config,
-		generated: generated,
+		log:        log,
+		factory:    factory,
+		config:     config,
+		localCache: localCache,
 	}
 }

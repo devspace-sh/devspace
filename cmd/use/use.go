@@ -19,8 +19,6 @@ func NewUseCmd(f factory.Factory, globalFlags *flags.GlobalFlags, plugins []plug
 	`,
 		Args: cobra.NoArgs,
 	}
-
-	useCmd.AddCommand(newProfileCmd(f))
 	useCmd.AddCommand(newContextCmd(f, globalFlags))
 	useCmd.AddCommand(newNamespaceCmd(f, globalFlags))
 

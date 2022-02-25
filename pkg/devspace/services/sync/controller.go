@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
@@ -287,7 +286,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 		}
 	}
 
-	err = inject.InjectDevSpaceHelper(ctx.KubeClient, pod, container, string(arch), customLog)
+	err = inject.InjectDevSpaceHelper(ctx.Context, ctx.KubeClient, pod, container, arch, customLog)
 	if err != nil {
 		return nil, err
 	}
@@ -451,9 +450,6 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 
 	// Start downstream
 	downstreamArgs := []string{inject.DevSpaceHelperContainerPath, "sync", "downstream"}
-	if syncConfig.ThrottleChangeDetection != nil {
-		downstreamArgs = append(downstreamArgs, "--throttle", strconv.FormatInt(*syncConfig.ThrottleChangeDetection, 10))
-	}
 	if syncConfig.Polling {
 		downstreamArgs = append(downstreamArgs, "--polling")
 	}

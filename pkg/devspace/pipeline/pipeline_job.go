@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
@@ -17,8 +18,9 @@ import (
 )
 
 type PipelineJob struct {
-	Name          string
-	DevPodManager devpod.Manager
+	Name               string
+	DependencyRegistry registry.DependencyRegistry
+	DevPodManager      devpod.Manager
 
 	JobConfig *latest.PipelineJob
 	Job       Job
@@ -86,7 +88,7 @@ func (j *PipelineJob) doWork(ctx *devspacecontext.Context) error {
 
 func (j *PipelineJob) shouldExecuteStep(ctx *devspacecontext.Context, step *latest.PipelineStep) (bool, error) {
 	// check if step should be rerun
-	handler := engine.NewExecHandler(ctx, j.DevPodManager)
+	handler := engine.NewExecHandler(ctx, j.DependencyRegistry, j.DevPodManager, false)
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	_, err := engine.ExecuteShellCommand(step.Command, os.Args[1:], step.Directory, stdout, stderr, step.Env, handler)
@@ -113,7 +115,7 @@ func (j *PipelineJob) executeStep(ctx *devspacecontext.Context, step *latest.Pip
 		}
 	}()
 
-	handler := engine.NewExecHandler(ctx, j.DevPodManager)
+	handler := engine.NewExecHandler(ctx, j.DependencyRegistry, j.DevPodManager, true)
 	_, err := engine.ExecuteShellCommand(step.Command, os.Args[1:], step.Directory, stdoutWriter, stdoutWriter, step.Env, handler)
 	return err
 }

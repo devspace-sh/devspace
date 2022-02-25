@@ -15,7 +15,6 @@ import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -130,7 +129,7 @@ func (cmd *DeployCmd) Run(f factory.Factory) error {
 	}
 
 	// load generated config
-	generatedConfig, err := configLoader.LoadGenerated(configOptions)
+	localCache, err := localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
 	if err != nil {
 		return errors.Errorf("error loading generated.yaml: %v", err)
 	}

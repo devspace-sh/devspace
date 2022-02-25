@@ -61,7 +61,7 @@ func (k *kubectlCommand) DownloadURL() string {
 }
 
 func (k *kubectlCommand) IsValid(path string) (bool, error) {
-	out, err := command.NewStreamCommand(path, []string{"version", "--client"}).Output()
+	out, err := command.NewStreamCommand(path, []string{"version", "--client"}).Output(".")
 	if err != nil {
 		return false, nil
 	}

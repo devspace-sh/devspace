@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/cmd/flags"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
@@ -70,84 +71,108 @@ devspace restart -n my-namespace
 func (cmd *RestartCmd) Run(f factory.Factory) error {
 	// Set config root
 	cmd.log = f.GetLog()
-	configOptions := cmd.ToConfigOptions(cmd.log)
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configOptions := cmd.ToConfigOptions()
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
 		return err
 	} else if !configExists || cmd.Pod != "" || cmd.LabelSelector != "" || cmd.Pick {
-		client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+		client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 		if err != nil {
 			return errors.Wrap(err, "create kube client")
 		}
 
-		return restartContainer(client, targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, nil, cmd.Namespace, cmd.Pod).WithPick(cmd.Pick), cmd.log)
+		// Create context
+		ctx := devspacecontext.NewContext(context.Background(), cmd.log).
+			WithKubeClient(client)
+
+		return restartContainer(ctx, targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, nil, cmd.Namespace, cmd.Pod).WithPick(cmd.Pick))
 	}
 
 	log.StartFileLogging()
 
-	// Get config with adjusted cluster config
-	generatedConfig, err := configLoader.LoadGenerated(configOptions)
-	if err != nil {
-		return err
-	}
-	configOptions.GeneratedConfig = generatedConfig
-
-	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, cmd.log)
-	if err != nil {
-		return err
-	}
-
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return errors.Wrap(err, "create kube client")
 	}
 
+	localCache, err := localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
+	if err != nil {
+		return err
+	}
+
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, cmd.log)
+	client, err = client.CheckKubeContext(localCache, cmd.NoWarn, cmd.log)
 	if err != nil {
 		return err
 	}
-
-	configOptions.KubeClient = client
 
 	// Get config with adjusted cluster config
-	configInterface, err := configLoader.Load(configOptions, cmd.log)
+	config, err := configLoader.LoadWithCache(localCache, client, configOptions, cmd.log)
 	if err != nil {
 		return err
 	}
-	config := configInterface.Config()
+
+	// Create context
+	ctx := devspacecontext.NewContext(context.Background(), cmd.log).
+		WithConfig(config).
+		WithKubeClient(client)
 
 	// Execute plugin hook
-	err = hook.ExecuteHooks(client, configInterface, nil, nil, cmd.log, "restart")
+	err = hook.ExecuteHooks(ctx, nil, "restart")
 	if err != nil {
 		return err
 	}
 
 	// Resolve dependencies
-	dep, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).ResolveAll(dependency.ResolveOptions{
-		UpdateDependencies: false,
-		Verbose:            false,
+	dep, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{
+		Verbose: false,
 	})
 	if err != nil {
 		cmd.log.Warnf("Error resolving dependencies: %v", err)
 	}
+	ctx = ctx.WithDependencies(dep)
 
 	// restart containers
 	restarts := 0
-	for _, syncPath := range config.Dev.Sync {
-		if syncPath.OnUpload == nil || !syncPath.OnUpload.RestartContainer {
+	for _, devPod := range ctx.Config.Config().Dev {
+		if cmd.Name != "" && devPod.Name != cmd.Name {
 			continue
-		} else if cmd.Name != "" && syncPath.Name != cmd.Name {
+		}
+
+		// has sync config
+		found := false
+		for _, s := range devPod.Sync {
+			if s.OnUpload != nil && s.OnUpload.RestartContainer {
+				found = true
+				break
+			}
+		}
+		for _, c := range devPod.Containers {
+			for _, s := range c.Sync {
+				if s.OnUpload != nil && s.OnUpload.RestartContainer {
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
 			continue
+		}
+
+		// find containers to restart
+		if cmd.Container == "" {
+			cmd.Container = devPod.Container
 		}
 
 		// create target selector options
 		var imageSelector []string
-		if syncPath.ImageSelector != "" {
-			imageSelectorObject, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(syncPath.ImageSelector, configInterface, dep)
+		if devPod.ImageSelector != "" {
+			imageSelectorObject, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(devPod.ImageSelector, ctx.Config, ctx.Dependencies)
 			if err != nil {
 				return err
 			}
@@ -157,17 +182,12 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 
 		options := targetselector.NewOptionsFromFlags("", "", nil, cmd.Namespace, "").
 			WithPick(cmd.Pick).
-			ApplyConfigParameter(syncPath.ContainerName, syncPath.LabelSelector, imageSelector, syncPath.Namespace, "")
-		err = restartContainer(client, options, cmd.log)
+			ApplyConfigParameter(cmd.Container, devPod.LabelSelector, imageSelector, devPod.Namespace, "")
+		err = restartContainer(ctx, options)
 		if err != nil {
 			return err
 		}
 		restarts++
-	}
-
-	err = configLoader.SaveGenerated(generatedConfig)
-	if err != nil {
-		cmd.log.Errorf("Error saving generated.yaml: %v", err)
 	}
 
 	if restarts == 0 {
@@ -176,23 +196,23 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 	return nil
 }
 
-func restartContainer(client kubectl.Client, options targetselector.Options, log log.Logger) error {
+func restartContainer(ctx *devspacecontext.Context, options targetselector.Options) error {
 	options = options.WithWait(false)
-	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(context.TODO(), client, options, log)
+	container, err := targetselector.NewTargetSelector(options).SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
 	if err != nil {
 		return errors.Errorf("Error selecting pod: %v", err)
 	}
 
-	err = inject.InjectDevSpaceHelper(client, container.Pod, container.Container.Name, "", log)
+	err = inject.InjectDevSpaceHelper(ctx.Context, ctx.KubeClient, container.Pod, container.Container.Name, "", ctx.Log)
 	if err != nil {
 		return errors.Wrap(err, "inject devspace helper")
 	}
 
-	stdOut, stdErr, err := client.ExecBuffered(container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "restart"}, nil)
+	stdOut, stdErr, err := ctx.KubeClient.ExecBuffered(ctx.Context, container.Pod, container.Container.Name, []string{inject.DevSpaceHelperContainerPath, "restart"}, nil)
 	if err != nil {
 		return fmt.Errorf("error restarting container %s in pod %s/%s: %s %s => %v", container.Container.Name, container.Pod.Namespace, container.Pod.Name, string(stdOut), string(stdErr), err)
 	}
 
-	log.Donef("Successfully restarted container %s in pod %s/%s", container.Container.Name, container.Pod.Namespace, container.Pod.Name)
+	ctx.Log.Donef("Successfully restarted container %s in pod %s/%s", container.Container.Name, container.Pod.Namespace, container.Pod.Name)
 	return nil
 }

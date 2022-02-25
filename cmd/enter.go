@@ -26,7 +26,6 @@ type EnterCmd struct {
 
 	LabelSelector string
 	ImageSelector string
-	Image         string
 	Container     string
 	Pod           string
 	Pick          bool
@@ -72,7 +71,6 @@ devspace enter bash --image-selector "${runtime.images.app.image}:${runtime.imag
 
 	enterCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
 	enterCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
-	enterCmd.Flags().StringVar(&cmd.Image, "image", "", "Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage")
 	enterCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 	enterCmd.Flags().StringVar(&cmd.ImageSelector, "image-selector", "", "The image to search a pod for (e.g. nginx, nginx:latest, ${runtime.images.app}, nginx:${runtime.images.app.tag})")
 	enterCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
@@ -89,8 +87,11 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	// Set config root
 	logger := f.GetLog()
 	configOptions := cmd.ToConfigOptions()
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
-	_, err := configLoader.SetDevSpaceRoot(logger)
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
+	_, err = configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
@@ -115,7 +116,7 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 	}
 
 	// get image selector if specified
-	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, cmd.ImageSelector, logger)
+	imageSelector, err := getImageSelector(ctx, configLoader, configOptions, cmd.ImageSelector)
 	if err != nil {
 		return err
 	}

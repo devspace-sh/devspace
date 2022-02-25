@@ -17,8 +17,6 @@ import (
 	"github.com/loft-sh/devspace/cmd/list"
 	"github.com/loft-sh/devspace/cmd/remove"
 	"github.com/loft-sh/devspace/cmd/reset"
-	"github.com/loft-sh/devspace/cmd/restore"
-	"github.com/loft-sh/devspace/cmd/save"
 	"github.com/loft-sh/devspace/cmd/set"
 	"github.com/loft-sh/devspace/cmd/update"
 	"github.com/loft-sh/devspace/cmd/use"
@@ -110,7 +108,7 @@ func Execute() {
 	rootCmd.Version = upgrade.GetVersion()
 
 	// before hooks
-	pluginErr := hook.ExecuteHooks(nil, nil, nil, nil, nil, "root", "root.beforeExecute", "command:before:execute")
+	pluginErr := hook.ExecuteHooks(nil, nil, "root", "root.beforeExecute", "command:before:execute")
 	if pluginErr != nil {
 		f.GetLog().Fatalf("%+v", pluginErr)
 	}
@@ -119,7 +117,7 @@ func Execute() {
 	err := rootCmd.Execute()
 
 	// after hooks
-	pluginErr = hook.ExecuteHooks(nil, nil, nil, map[string]interface{}{"error": err}, nil, "root.afterExecute", "command:after:execute")
+	pluginErr = hook.ExecuteHooks(nil, map[string]interface{}{"error": err}, "root.afterExecute", "command:after:execute")
 	if err != nil {
 		// Check if return code error
 		retCode, ok := errors.Cause(err).(*exit.ReturnCodeError)
@@ -128,7 +126,7 @@ func Execute() {
 		}
 
 		// error hooks
-		pluginErr := hook.ExecuteHooks(nil, nil, nil, map[string]interface{}{"error": err}, nil, "root.errorExecution", "command:error")
+		pluginErr := hook.ExecuteHooks(nil, map[string]interface{}{"error": err}, "root.errorExecution", "command:error")
 		if pluginErr != nil {
 			f.GetLog().Fatalf("%+v", pluginErr)
 		}
@@ -218,8 +216,6 @@ Additional run commands:
 	rootCmd.AddCommand(set.NewSetCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(use.NewUseCmd(f, globalFlags, plugins))
 	rootCmd.AddCommand(update.NewUpdateCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(save.NewSaveCmd(f, globalFlags, plugins))
-	rootCmd.AddCommand(restore.NewRestoreCmd(f, globalFlags, plugins))
 
 	// Add main commands
 	rootCmd.AddCommand(NewInitCmd(f))
@@ -230,7 +226,6 @@ Additional run commands:
 	rootCmd.AddCommand(NewRenderCmd(f, globalFlags))
 	rootCmd.AddCommand(NewPurgeCmd(f, globalFlags))
 	rootCmd.AddCommand(NewUpgradeCmd())
-	rootCmd.AddCommand(NewPipelineCmd(f, globalFlags))
 	rootCmd.AddCommand(NewDeployCmd(f, globalFlags))
 	rootCmd.AddCommand(NewEnterCmd(f, globalFlags))
 	rootCmd.AddCommand(NewAnalyzeCmd(f, globalFlags))

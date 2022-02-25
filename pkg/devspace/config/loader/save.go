@@ -9,7 +9,7 @@ import (
 )
 
 // Save writes the data of a config to its yaml file
-func (l *configLoader) Save(config *latest.Config) error {
+func Save(path string, config *latest.Config) error {
 	// Convert to string
 	configYaml, err := yaml.Marshal(config)
 	if err != nil {
@@ -17,7 +17,7 @@ func (l *configLoader) Save(config *latest.Config) error {
 	}
 
 	// Path to save the configuration to
-	err = ioutil.WriteFile(ConfigPath(l.absConfigPath), configYaml, os.ModePerm)
+	err = ioutil.WriteFile(path, configYaml, os.ModePerm)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"strings"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -92,7 +93,7 @@ func (cmd *BuildCmd) Run(f factory.Factory) error {
 	logpkg.StartFileLogging()
 
 	// Load config
-	generatedConfig, err := configLoader.LoadGenerated(configOptions)
+	localCache, err := localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
 	if err != nil {
 		return err
 	}

@@ -1,13 +1,13 @@
 package cmd
 
 import (
+	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"strings"
 
 	"github.com/loft-sh/devspace/cmd/reset"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -27,7 +27,6 @@ type PurgeCmd struct {
 
 	Deployments         string
 	VerboseDependencies bool
-	PurgeDependencies   bool
 	All                 bool
 
 	SkipDependency []string
@@ -65,7 +64,6 @@ devspace purge -d my-deployment
 
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
 	purgeCmd.Flags().BoolVarP(&cmd.All, "all", "a", true, "When enabled purges the dependencies as well")
-	purgeCmd.Flags().BoolVar(&cmd.PurgeDependencies, "dependencies", false, "DEPRECATED: Please use --all instead")
 	purgeCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Builds the dependencies verbosely")
 
 	purgeCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips the following dependencies from purging")
@@ -77,8 +75,11 @@ devspace purge -d my-deployment
 func (cmd *PurgeCmd) Run(f factory.Factory) error {
 	// Set config root
 	cmd.log = f.GetLog()
-	configOptions := cmd.ToConfigOptions(cmd.log)
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configOptions := cmd.ToConfigOptions()
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(cmd.log)
 	if err != nil {
 		return err
@@ -87,98 +88,58 @@ func (cmd *PurgeCmd) Run(f factory.Factory) error {
 		return errors.New(message.ConfigNotFound)
 	}
 
-	// check for deprecated flag
-	if cmd.PurgeDependencies {
-		cmd.log.Warnf("Flag --dependencies is deprecated, please use --all or -a instead")
-		cmd.All = true
-	}
-
 	log.StartFileLogging()
-
-	// Get config with adjusted cluster config
-	generatedConfig, err := configLoader.LoadGenerated(configOptions)
-	if err != nil {
-		return err
-	}
-	configOptions.GeneratedConfig = generatedConfig
-
-	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, cmd.log)
-	if err != nil {
-		return err
-	}
-
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		return errors.Wrap(err, "create kube client")
 	}
 
+	// Get config with adjusted cluster config
+	localCache, err := localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
+	if err != nil {
+		return err
+	}
+
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, cmd.log)
+	client, err = client.CheckKubeContext(localCache, cmd.NoWarn, cmd.log)
 	if err != nil {
 		return err
 	}
-
-	configOptions.KubeClient = client
 
 	// Get config with adjusted cluster config
-	configInterface, err := configLoader.Load(configOptions, cmd.log)
+	configInterface, err := configLoader.LoadWithCache(localCache, client, configOptions, cmd.log)
 	if err != nil {
 		return err
 	}
 
+	// create devspace context
+	ctx := devspacecontext.NewContext(context.Background(), cmd.log).
+		WithConfig(configInterface).
+		WithKubeClient(client)
+
 	return runWithHooks("purgeCommand", client, configInterface, cmd.log, func() error {
-		return cmd.runCommand(f, client, configInterface, configLoader, configOptions)
+		return cmd.runCommand(ctx, f, configOptions)
 	})
 }
 
-func (cmd *PurgeCmd) runCommand(f factory.Factory, client kubectl.Client, configInterface config.Config, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions) error {
-	// Purge dependencies
-	var dependencies []types.Dependency
-	if cmd.All || len(cmd.Dependency) > 0 {
-		// Resolve dependencies
-		dependencies, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).ResolveAll(dependency.ResolveOptions{
-			SkipDependencies:   cmd.SkipDependency,
-			UpdateDependencies: false,
-			Silent:             true,
-			Verbose:            false,
-		})
-		if err != nil {
-			cmd.log.Warnf("Error resolving dependencies: %v", err)
-		}
-		for _, dep := range dependencies {
-			if dep.DependencyConfig().Dev != nil && dep.DependencyConfig().Dev.ReplacePods && len(dep.Config().Config().Dev.ReplacePods) > 0 {
-				reset.ResetPods(client, dep.Config(), dep.Children(), cmd.log)
-			}
-		}
-
-		_, err = f.NewDependencyManager(configInterface, client, configOptions, cmd.log).PurgeAll(dependency.PurgeOptions{
-			SkipDependencies: cmd.SkipDependency,
-			Dependencies:     cmd.Dependency,
-			Verbose:          cmd.VerboseDependencies,
-		})
-		if err != nil {
-			cmd.log.Errorf("Error purging dependencies: %v", err)
-		}
-	}
-
+func (cmd *PurgeCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
 	// Only purge if we don't specify dependency
 	if len(cmd.Dependency) == 0 {
 		// Resolve dependencies
-		dep, err := f.NewDependencyManager(configInterface, client, configOptions, cmd.log).ResolveAll(dependency.ResolveOptions{
-			SkipDependencies:   cmd.SkipDependency,
-			UpdateDependencies: false,
-			Silent:             true,
-			Verbose:            false,
+		dependencies, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{
+			SkipDependencies: cmd.SkipDependency,
+			Silent:           true,
+			Verbose:          false,
 		})
 		if err != nil {
 			cmd.log.Warnf("Error resolving dependencies: %v", err)
 		}
+		ctx = ctx.WithDependencies(dependencies)
 
 		// Reset replaced pods
-		if len(configInterface.Config().Dev.ReplacePods) > 0 {
-			reset.ResetPods(client, configInterface, dep, cmd.log)
+		if len(ctx.Config.RemoteCache().ListDevPods()) > 0 {
+			reset.ResetPods(ctx, false)
 		}
 
 		deployments := []string{}
@@ -190,13 +151,43 @@ func (cmd *PurgeCmd) runCommand(f factory.Factory, client kubectl.Client, config
 		}
 
 		// Purge deployments
-		err = f.NewDeployController(configInterface, dependencies, client).Purge(deployments, cmd.log)
+		err = f.NewDeployController().Purge(ctx, deployments)
 		if err != nil {
 			cmd.log.Errorf("Error purging deployments: %v", err)
 		}
 	}
 
-	err := configLoader.SaveGenerated(configInterface.Generated())
+	// Purge dependencies
+	if cmd.All || len(cmd.Dependency) > 0 {
+		// Resolve dependencies
+		dependencies, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{
+			SkipDependencies: cmd.SkipDependency,
+			Dependencies:     cmd.Dependency,
+			Silent:           true,
+			Verbose:          false,
+		})
+		if err != nil {
+			cmd.log.Warnf("Error resolving dependencies: %v", err)
+		}
+		ctx = ctx.WithDependencies(dependencies)
+
+		// Reset all dev pods
+		for _, d := range dependencies {
+			reset.ResetPodsRecursive(ctx.AsDependency(d), true)
+		}
+
+		// Test
+		_, err = f.NewDependencyManager(ctx, configOptions).PurgeAll(ctx, dependency.PurgeOptions{
+			SkipDependencies: cmd.SkipDependency,
+			Dependencies:     cmd.Dependency,
+			Verbose:          cmd.VerboseDependencies,
+		})
+		if err != nil {
+			cmd.log.Errorf("Error purging dependencies: %v", err)
+		}
+	}
+
+	err := ctx.Config.RemoteCache().Save(ctx.Context, ctx.KubeClient)
 	if err != nil {
 		cmd.log.Errorf("Error saving generated.yaml: %v", err)
 	}

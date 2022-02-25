@@ -167,7 +167,6 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyID,
 	// set dependency profile
 	cloned.OverrideName = dependency.OverrideName
 	cloned.Profiles = []string{}
-	cloned.Profiles = append(cloned.Profiles, dependency.ProfileParents...)
 	if dependency.Profile != "" {
 		cloned.Profiles = append(cloned.Profiles, dependency.Profile)
 	}
@@ -188,6 +187,19 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyID,
 		cloned.Vars = append(cloned.Vars, strings.TrimSpace(v.Name)+"="+strings.TrimSpace(v.Value))
 	}
 
+	// Recreate client if necessary
+	client := ctx.KubeClient
+	if dependency.Namespace != "" {
+		if ctx.KubeClient == nil {
+			client, err = kubectl.NewClientFromContext("", dependency.Namespace, false, kubeconfig.NewLoader())
+		} else {
+			client, err = kubectl.NewClientFromContext(client.CurrentContext(), dependency.Namespace, false, ctx.KubeClient.KubeConfigLoader())
+		}
+		if err != nil {
+			return nil, errors.Wrap(err, "create new client")
+		}
+	}
+
 	// load the dependency config
 	var dConfigWrapper config.Config
 	err = executeInDirectory(filepath.Dir(dependencyConfigPath), func() error {
@@ -196,7 +208,7 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyID,
 			return err
 		}
 
-		dConfigWrapper, err = configLoader.LoadWithParser(nil, ctx.KubeClient, loader.NewWithCommandsParser(), cloned, ctx.Log)
+		dConfigWrapper, err = configLoader.LoadWithParser(nil, client, loader.NewWithCommandsParser(), cloned, ctx.Log)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", dependencyName))
 		}
@@ -228,19 +240,6 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyID,
 			}
 
 			b.Build.Disabled = true
-		}
-	}
-
-	// Recreate client if necessary
-	client := ctx.KubeClient
-	if dependency.Namespace != "" {
-		if ctx.KubeClient == nil {
-			client, err = kubectl.NewClientFromContext("", dependency.Namespace, false, kubeconfig.NewLoader())
-		} else {
-			client, err = kubectl.NewClientFromContext(client.CurrentContext(), dependency.Namespace, false, ctx.KubeClient.KubeConfigLoader())
-		}
-		if err != nil {
-			return nil, errors.Wrap(err, "create new client")
 		}
 	}
 

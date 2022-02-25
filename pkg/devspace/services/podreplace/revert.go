@@ -2,69 +2,57 @@ package podreplace
 
 import (
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func (p *replacer) RevertReplacePod(ctx *devspacecontext.Context, replacePod *latest.DevPod) (*selector.SelectedPodContainer, error) {
+func (p *replacer) RevertReplacePod(ctx *devspacecontext.Context, devPodCache *remotecache.DevPodCache) (bool, error) {
 	// check if there is a replaced pod in the target namespace
 	ctx.Log.Info("Try to find replaced pod...")
 
-	// try to find a single patched pod
-	selectedPod, err := findSingleReplacedPod(ctx, replacePod)
-	if err != nil {
-		return nil, errors.Wrap(err, "find patched pod")
-	} else if selectedPod == nil {
-		parent, err := p.findScaledDownParentBySelector(ctx, replacePod)
+	namespace := devPodCache.Namespace
+	if namespace == "" {
+		namespace = ctx.KubeClient.Namespace()
+	}
+
+	// delete replica set & scale up parent
+	deleted := false
+	if devPodCache.ReplicaSet != "" {
+		err := ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(namespace).Delete(ctx.Context, devPodCache.ReplicaSet, metav1.DeleteOptions{})
 		if err != nil {
-			return nil, err
-		} else if parent == nil {
-			return nil, nil
+			if !kerrors.IsNotFound(err) {
+				return false, errors.Wrap(err, "delete devspace replica set")
+			}
+		} else {
+			deleted = true
 		}
-
-		err = deleteLeftOverReplicaSets(ctx, replacePod, parent)
-		if err != nil {
-			return nil, err
-		}
-
-		accessor, _ := meta.Accessor(parent)
-		typeAccessor, _ := meta.TypeAccessor(parent)
-		ctx.Log.Infof("Scale up %s %s/%s", typeAccessor.GetKind(), accessor.GetNamespace(), accessor.GetName())
-		return nil, scaleUpParent(ctx, parent)
 	}
 
-	if selectedPod.Pod.Annotations == nil || selectedPod.Pod.Annotations[ParentKindAnnotation] == "" || selectedPod.Pod.Annotations[ParentNameAnnotation] == "" {
-		return selectedPod, deleteAndWait(ctx, selectedPod.Pod)
-	}
-
-	parent, err := getParentFromReplaced(ctx, selectedPod.Pod.ObjectMeta)
+	// scale up parent
+	parent, err := getParentByKindName(ctx, devPodCache.ParentKind, namespace, devPodCache.ParentName)
 	if err != nil {
-		// log.Infof("Error getting Parent of replaced Pod %s/%s: %v", selectedPod.Pod.Namespace, selectedPod.Pod.Name, err)
-		return selectedPod, deleteAndWait(ctx, selectedPod.Pod)
-	}
-
-	// delete replaced pods
-	err = deleteLeftOverReplicaSets(ctx, replacePod, parent)
-	if err != nil {
-		return nil, err
+		ctx.Log.Debugf("Error getting parent by name: %v", err)
+		ctx.Config.RemoteCache().DeleteDevPod(devPodCache.Name)
+		return deleted, nil
 	}
 
 	// scale up parent
 	ctx.Log.Info("Scaling up parent of replaced pod...")
 	err = scaleUpParent(ctx, parent)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
-	return selectedPod, nil
+	ctx.Config.RemoteCache().DeleteDevPod(devPodCache.Name)
+	return deleted, ctx.Config.RemoteCache().Save(ctx.Context, ctx.KubeClient)
 }
 
 func (p *replacer) findScaledDownParentBySelector(ctx *devspacecontext.Context, replacePod *latest.DevPod) (runtime.Object, error) {

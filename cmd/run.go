@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 	"os"
 	"strings"
@@ -130,8 +133,11 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	}
 
 	// Set config root
-	configOptions := cmd.ToConfigOptions(f.GetLog())
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configOptions := cmd.ToConfigOptions()
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(f.GetLog())
 	if err != nil {
 		return err
@@ -148,19 +154,36 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	}
 
 	// Execute plugin hook
-	err = hook.ExecuteHooks(nil, nil, nil, nil, nil, "run")
+	err = hook.ExecuteHooks(nil, nil, "run")
 	if err != nil {
 		return err
 	}
 
+	// load generated
+	localCache, err := localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
+	if err != nil {
+		return err
+	}
+
+	// Parse commands
+	commandsInterface, err := configLoader.LoadWithParser(localCache, nil, loader.NewCommandsParser(), configOptions, f.GetLog())
+	if err != nil {
+		return err
+	}
+	commands := commandsInterface.Config().Commands
+
+	// create context
+	ctx := devspacecontext.NewContext(context.Background(), f.GetLog())
+
 	// check if we should execute a dependency command
 	if cmd.Dependency != "" {
-		config, err := configLoader.Load(configOptions, f.GetLog())
+		config, err := configLoader.LoadWithCache(localCache, nil, configOptions, f.GetLog())
 		if err != nil {
 			return err
 		}
 
-		dependencies, err := f.NewDependencyManager(config, nil, configOptions, f.GetLog()).ResolveAll(dependency.ResolveOptions{
+		ctx = ctx.WithConfig(config)
+		dependencies, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{
 			Silent: true,
 		})
 		if err != nil {
@@ -175,28 +198,14 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 		return dep.Command(args[0], args[1:])
 	}
 
-	// load generated
-	generatedConfig, err := configLoader.LoadGenerated(configOptions)
-	if err != nil {
-		return err
-	}
-	configOptions.GeneratedConfig = generatedConfig
-
-	// Parse commands
-	commandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), configOptions, f.GetLog())
-	if err != nil {
-		return err
-	}
-	commands := commandsInterface.Config().Commands
-
 	// Save variables
-	err = configLoader.SaveGenerated(generatedConfig)
+	err = localCache.Save()
 	if err != nil {
 		return err
 	}
 
 	// Execute command
-	return dependency.ExecuteCommand(commands, args[0], args[1:], cmd.Stdout, cmd.Stderr)
+	return dependency.ExecuteCommand(commands, args[0], args[1:], ctx.WorkingDir, cmd.Stdout, cmd.Stderr)
 }
 
 func getCommands(f factory.Factory) ([]*latest.CommandConfig, error) {
@@ -210,18 +219,20 @@ func getCommands(f factory.Factory) ([]*latest.CommandConfig, error) {
 	defer func() { _ = os.Chdir(cwd) }()
 
 	// Set config root
-	configLoader := f.NewConfigLoader("")
+	configLoader, err := f.NewConfigLoader("")
+	if err != nil {
+		return nil, err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(log.Discard)
 	if err != nil {
 		return nil, err
 	}
-
 	if !configExists {
 		return nil, errors.New(message.ConfigNotFound)
 	}
 
 	// Parse commands
-	commandsInterface, err := configLoader.LoadWithParser(loader.NewCommandsParser(), &loader.ConfigOptions{Dry: true}, log.Discard)
+	commandsInterface, err := configLoader.LoadWithParser(nil, nil, loader.NewCommandsParser(), &loader.ConfigOptions{Dry: true}, log.Discard)
 	if err != nil {
 		return nil, err
 	}

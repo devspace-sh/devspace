@@ -3,6 +3,7 @@ package use
 import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
@@ -87,7 +88,11 @@ func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command,
 	}
 
 	// clear project kube context
-	err = ClearProjectKubeContext(f.NewConfigLoader(cmd.ConfigPath), cmd.ToConfigOptions(log), log)
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
+	err = ClearProjectKubeContext(configLoader, cmd.ToConfigOptions(), log)
 	if err != nil {
 		return errors.Wrap(err, "clear generated kube context")
 	}
@@ -105,14 +110,14 @@ func ClearProjectKubeContext(configLoader loader.ConfigLoader, options *loader.C
 	}
 
 	// load config if it exists
-	generatedConfig, err := configLoader.LoadGenerated(options)
+	localCache, err := localcache.NewCacheLoaderFromDevSpacePath(configLoader.ConfigPath()).Load()
 	if err != nil {
 		return err
 	}
 
 	// update last context
-	generatedConfig.GetActive().LastContext = nil
+	localCache.SetLastContext(nil)
 
 	// save it
-	return configLoader.SaveGenerated(generatedConfig)
+	return localCache.Save()
 }

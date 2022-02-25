@@ -221,8 +221,8 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 								Password: true,
 							})
 
-							m.generated.Vars[usernameVar] = username
-							m.generated.Vars[passwordVar] = password
+							m.localCache.SetVar(usernameVar, username)
+							m.localCache.SetVar(passwordVar, password)
 						}
 
 						break ChartRepoLoop

@@ -155,6 +155,11 @@ func Parse(data map[interface{}]interface{}, log log.Logger) (*latest.Config, er
 	// Filter out empty images, deployments etc.
 	filterOutEmpty(latestConfigConverted)
 
+	// Set name on dev pods to key
+	for name, devPod := range latestConfigConverted.Dev {
+		devPod.Name = name
+	}
+
 	return latestConfigConverted, nil
 }
 

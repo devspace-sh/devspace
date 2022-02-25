@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -24,6 +25,9 @@ func StartSyncFromCmd(ctx *devspacecontext.Context, selector targetselector.Targ
 		Verbose: verbose,
 	}
 
+	cancelCtx, cancel := context.WithCancel(ctx.Context)
+	defer cancel()
+	ctx = ctx.WithContext(cancelCtx)
 	err := NewController().Start(ctx, options)
 	if err != nil {
 		return err
@@ -31,6 +35,8 @@ func StartSyncFromCmd(ctx *devspacecontext.Context, selector targetselector.Targ
 
 	// Handle no watch
 	if noWatch {
+		cancel()
+		<-syncDone
 		return nil
 	}
 

@@ -62,7 +62,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 	}
 
 	// Load generated
-	generatedConfig, err := configLoader.LoadGenerated(configOptions)
+	localCache, err := localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
 	if err != nil {
 		return err
 	}

@@ -17,11 +17,12 @@ type Loader interface {
 	Load(ctx context.Context, client kubectl.Client) (Cache, error)
 }
 
-// New generates a new generated config
-func New(secretName string) Cache {
+// NewCache generates a new generated config
+func NewCache(secretName string) *RemoteCache {
 	return &RemoteCache{
 		Vars:        make(map[string]string),
-		Deployments: make(map[string]DeploymentCache),
+		Deployments: []DeploymentCache{},
+		DevPods:     []DevPodCache{},
 		Data:        make(map[string]string),
 		secretName:  secretName,
 	}
@@ -45,12 +46,17 @@ func (c *cacheLoader) Load(ctx context.Context, client kubectl.Client) (Cache, e
 			return nil, err
 		}
 
-		return New(c.secretName), nil
+		s := NewCache(c.secretName)
+		s.secretNamespace = client.Namespace()
+		return s, nil
 	} else if secret.Data == nil || len(secret.Data["cache"]) == 0 {
-		return New(c.secretName), nil
+		s := NewCache(c.secretName)
+		s.secretNamespace = client.Namespace()
+		return s, nil
 	}
 
 	remoteCache := &RemoteCache{}
+	remoteCache.raw = secret.Data["cache"]
 	err = yaml.Unmarshal(secret.Data["cache"], remoteCache)
 	if err != nil {
 		return nil, err
@@ -58,9 +64,6 @@ func (c *cacheLoader) Load(ctx context.Context, client kubectl.Client) (Cache, e
 
 	if remoteCache.Data == nil {
 		remoteCache.Data = make(map[string]string)
-	}
-	if remoteCache.Deployments == nil {
-		remoteCache.Deployments = make(map[string]DeploymentCache)
 	}
 	if remoteCache.Vars == nil {
 		remoteCache.Vars = make(map[string]string)
@@ -93,6 +96,7 @@ func (c *cacheLoader) Load(ctx context.Context, client kubectl.Client) (Cache, e
 	}
 
 	remoteCache.secretName = c.secretName
+	remoteCache.secretNamespace = client.Namespace()
 	return remoteCache, nil
 }
 

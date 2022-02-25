@@ -5,6 +5,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 	"os"
@@ -42,7 +43,7 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 	}
 
 	// Ensure deployment config is there
-	deployCache, _ := ctx.Config.RemoteCache().GetDeploymentCache(d.DeploymentConfig.Name)
+	deployCache, _ := ctx.Config.RemoteCache().GetDeployment(d.DeploymentConfig.Name)
 
 	// Check values files for changes
 	helmOverridesHash := ""
@@ -89,7 +90,12 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 	deployValuesHash := hashpkg.String(string(deployValuesBytes))
 
 	// Check if redeploying is necessary
-	forceDeploy = forceDeploy || redeploy || deployCache.HelmValuesHash != deployValuesHash || deployCache.HelmOverridesHash != helmOverridesHash || deployCache.HelmChartHash != hash || deployCache.DeploymentConfigHash != deploymentConfigHash
+	helmCache := deployCache.Helm
+	if helmCache == nil {
+		helmCache = &remotecache.HelmCache{}
+	}
+
+	forceDeploy = forceDeploy || redeploy || deployCache.DeploymentConfigHash != deploymentConfigHash || helmCache.ValuesHash != deployValuesHash || helmCache.OverridesHash != helmOverridesHash || helmCache.ChartHash != hash
 	if !forceDeploy {
 		releases, err := d.Helm.ListReleases(ctx, d.DeploymentConfig.Helm)
 		if err != nil {
@@ -98,7 +104,7 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 
 		forceDeploy = true
 		for _, release := range releases {
-			if release.Name == releaseName && release.Revision == deployCache.HelmReleaseRevision {
+			if release.Name == releaseName && release.Revision == helmCache.ReleaseRevision {
 				forceDeploy = false
 				break
 			}
@@ -113,17 +119,18 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 		}
 
 		deployCache.DeploymentConfigHash = deploymentConfigHash
-		deployCache.HelmRelease = releaseName
-		deployCache.HelmReleaseNamespace = d.DeploymentConfig.Namespace
-		deployCache.HelmDeleteArgs = d.DeploymentConfig.Helm.DeleteArgs
-		deployCache.HelmChartHash = hash
-		deployCache.HelmValuesHash = deployValuesHash
-		deployCache.HelmOverridesHash = helmOverridesHash
+		helmCache.Release = releaseName
+		helmCache.ReleaseNamespace = d.DeploymentConfig.Namespace
+		helmCache.DeleteArgs = d.DeploymentConfig.Helm.DeleteArgs
+		helmCache.ChartHash = hash
+		helmCache.ValuesHash = deployValuesHash
+		helmCache.OverridesHash = helmOverridesHash
 		if release != nil {
-			deployCache.HelmReleaseRevision = release.Revision
+			helmCache.ReleaseRevision = release.Revision
 		}
 
-		ctx.Config.RemoteCache().SetDeploymentCache(d.DeploymentConfig.Name, deployCache)
+		deployCache.Helm = helmCache
+		ctx.Config.RemoteCache().SetDeployment(d.DeploymentConfig.Name, deployCache)
 		return true, nil
 	}
 

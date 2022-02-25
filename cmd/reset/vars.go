@@ -1,6 +1,7 @@
 package reset
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/message"
 
@@ -38,7 +39,10 @@ devspace reset vars
 func (cmd *varsCmd) RunResetVars(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader("")
+	configLoader, err := f.NewConfigLoader("")
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
@@ -48,16 +52,16 @@ func (cmd *varsCmd) RunResetVars(f factory.Factory, cobraCmd *cobra.Command, arg
 	}
 
 	// Load generated config
-	generatedConfig, err := configLoader.LoadGenerated(nil)
+	localCache, err := localcache.NewCacheLoader().Load()
 	if err != nil {
 		return err
 	}
 
 	// Clear the vars map
-	generatedConfig.Vars = map[string]string{}
+	localCache.ClearVars()
 
 	// Save the config
-	err = configLoader.SaveGenerated(generatedConfig)
+	err = localCache.Save()
 	if err != nil {
 		return errors.Errorf("Error saving config: %v", err)
 	}

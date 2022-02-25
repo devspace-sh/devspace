@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -59,42 +59,39 @@ devspace analyze --namespace=mynamespace
 func (cmd *AnalyzeCmd) RunAnalyze(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
 
+	// Create kubectl client
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
+	if err != nil {
+		return err
+	}
+
 	// Load generated config if possible
-	var generatedConfig *localcache.Config
+	var localCache localcache.Cache
 	if configExists {
-		generatedConfig, err = configLoader.LoadGenerated(cmd.ToConfigOptions(log))
+		localCache, err = localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
 		if err != nil {
 			return err
 		}
 	}
 
-	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, log)
-	if err != nil {
-		return err
-	}
-
-	// Create kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
-	if err != nil {
-		return err
-	}
-
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(generatedConfig, cmd.NoWarn, log)
+	client, err = client.CheckKubeContext(localCache, cmd.NoWarn, log)
 	if err != nil {
 		return err
 	}
 
 	// Execute plugin hook
-	err = hook.ExecuteHooks(client, nil, nil, nil, nil, "analyze")
+	err = hook.ExecuteHooks(nil, nil, "analyze")
 	if err != nil {
 		return err
 	}

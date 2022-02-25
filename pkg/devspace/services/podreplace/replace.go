@@ -3,6 +3,7 @@ package podreplace
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	patch2 "github.com/loft-sh/devspace/pkg/util/patch"
@@ -46,7 +47,7 @@ type PodReplacer interface {
 	ReplacePod(ctx *devspacecontext.Context, devPod *latest.DevPod) error
 
 	// RevertReplacePod will try to revert a pod replacement with the given config
-	RevertReplacePod(ctx *devspacecontext.Context, devPod *latest.DevPod) (*selector.SelectedPodContainer, error)
+	RevertReplacePod(ctx *devspacecontext.Context, devPodCache *remotecache.DevPodCache) (bool, error)
 }
 
 func NewPodReplacer() PodReplacer {
@@ -55,52 +56,57 @@ func NewPodReplacer() PodReplacer {
 
 type replacer struct{}
 
-func (p *replacer) ReplacePod(ctx *devspacecontext.Context, replacePod *latest.DevPod) error {
-	// check if there is a replaced pod in the target namespace
-	ctx.Log.Info("Try to find replaced pod...")
+func (p *replacer) ReplacePod(ctx *devspacecontext.Context, devPod *latest.DevPod) error {
+	namespace := devPod.Namespace
+	if namespace == "" {
+		namespace = ctx.KubeClient.Namespace()
+	}
 
-	// try to find a single patched pod
-	selectedPod, err := findSingleReplacedPod(ctx, replacePod)
-	if err != nil {
-		return errors.Wrap(err, "find patched pod")
-	} else if selectedPod != nil {
-		shouldUpdate, err := updateNeeded(ctx, selectedPod, replacePod)
+	devPodCache, ok := ctx.Config.RemoteCache().GetDevPod(devPod.Name)
+	if !ok {
+		devPodCache.Name = devPod.Name
+		devPodCache.Namespace = namespace
+	}
+
+	// did we already replace a pod?
+	if devPodCache.ReplicaSet != "" {
+		// check if there is a replaced pod in the target namespace
+		ctx.Log.Debug("Try to find replaced pod...")
+
+		// try to find a single patched pod
+		selectedPod, err := findSingleReplacedPod(ctx, devPod)
 		if err != nil {
-			return err
-		} else if !shouldUpdate {
-			ctx.Log.Infof("Found replaced pod %s/%s", selectedPod.Pod.Namespace, selectedPod.Pod.Name)
-			return nil
-		}
-	} else {
-		// try to find a single patchable object
-		parent, err := p.findScaledDownParentBySelector(ctx, replacePod)
-		if err != nil {
-			return err
-		} else if parent != nil {
-			err = deleteLeftOverReplicaSets(ctx, replacePod, parent)
+			return errors.Wrap(err, "find patched pod")
+		} else if selectedPod != nil {
+			shouldUpdate, err := updateNeeded(ctx, selectedPod, devPod)
 			if err != nil {
 				return err
-			}
-
-			accessor, _ := meta.Accessor(parent)
-			typeAccessor, _ := meta.TypeAccessor(parent)
-			ctx.Log.Infof("Reset %s %s/%s", typeAccessor.GetKind(), accessor.GetNamespace(), accessor.GetName())
-			err = scaleUpParent(ctx, parent)
-			if err != nil {
-				return err
+			} else if !shouldUpdate {
+				ctx.Log.Debugf("Found replaced pod %s/%s", selectedPod.Pod.Namespace, selectedPod.Pod.Name)
+				return nil
 			}
 		}
 	}
 
+	// try to find a replaceable deployment statefulset etc.
 	ctx.Log.Info("Try to find replaceable pod...")
-	container, parent, err := findSingleReplaceablePodParent(ctx, replacePod)
+	container, parent, err := findSingleReplaceablePodParent(ctx, devPod)
+	if err != nil {
+		return err
+	}
+
+	// make sure we already save the cache here
+	devPodCache.ParentKind = parent.GetObjectKind().GroupVersionKind().Kind
+	devPodCache.ParentName = parent.(metav1.Object).GetName()
+	devPodCache.ReplicaSet = container.Pod.Name
+	err = ctx.Config.RemoteCache().Save(ctx.Context, ctx.KubeClient)
 	if err != nil {
 		return err
 	}
 
 	// replace the pod
-	ctx.Log.Info(fmt.Sprintf("Replacing Pod %s/%s...", container.Pod.Namespace, container.Pod.Name))
-	err = replace(ctx, container, parent, replacePod)
+	ctx.Log.Debugf("Replacing Pod %s/%s...", container.Pod.Namespace, container.Pod.Name)
+	devPodCache.ReplicaSet, err = replace(ctx, container.Pod.Name, container.Pod, container.Container.Name, parent, devPod)
 	if err != nil {
 		return err
 	}
@@ -109,44 +115,14 @@ func (p *replacer) ReplacePod(ctx *devspacecontext.Context, replacePod *latest.D
 	return nil
 }
 
-func deleteLeftOverReplicaSets(ctx *devspacecontext.Context, replacePod *latest.DevPod, parent runtime.Object) error {
-	accessor, _ := meta.Accessor(parent)
-	typeAccessor, _ := meta.TypeAccessor(parent)
-
-	parentName := accessor.GetName()
-	parentKind := typeAccessor.GetKind()
-
-	namespace := ctx.KubeClient.Namespace()
-	if replacePod.Namespace != "" {
-		namespace = replacePod.Namespace
-	}
-
-	replicaSets, err := ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(namespace).List(ctx.Context, metav1.ListOptions{LabelSelector: ReplicaSetLabel + "=true"})
-	if err != nil {
-		return err
-	}
-
-	for _, rs := range replicaSets.Items {
-		if rs.DeletionTimestamp == nil && rs.Annotations != nil && rs.Annotations[ParentNameAnnotation] == parentName && rs.Annotations[ParentKindAnnotation] == parentKind {
-			ctx.Log.Infof("Delete replaced replica set %s/%s", rs.Namespace, rs.Name)
-			err = ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(rs.Namespace).Delete(ctx.Context, rs.Name, metav1.DeleteOptions{})
-			if err != nil {
-				return errors.Wrap(err, "delete pod")
-			}
-		}
-	}
-
-	return nil
-}
-
 func updateNeeded(ctx *devspacecontext.Context, pod *selector.SelectedPodContainer, replacePod *latest.DevPod) (bool, error) {
 	if pod.Pod.Annotations == nil || pod.Pod.Annotations[ParentKindAnnotation] == "" || pod.Pod.Annotations[ParentNameAnnotation] == "" {
 		return true, deleteAndWait(ctx, pod.Pod)
 	}
 
-	parent, err := getParentFromReplaced(ctx, pod.Pod.ObjectMeta)
+	parent, err := getParentByKindName(ctx, pod.Pod.Annotations[ParentKindAnnotation], pod.Pod.Namespace, pod.Pod.Annotations[ParentNameAnnotation])
 	if err != nil {
-		ctx.Log.Infof("Error getting Parent of replaced Pod %s/%s: %v", pod.Pod.Namespace, pod.Pod.Name, err)
+		ctx.Log.Debugf("error getting Parent of replaced Pod %s/%s: %v", pod.Pod.Namespace, pod.Pod.Name, err)
 		return true, deleteAndWait(ctx, pod.Pod)
 	}
 
@@ -172,14 +148,14 @@ func updateNeeded(ctx *devspacecontext.Context, pod *selector.SelectedPodContain
 	}
 
 	// delete replaced pod
-	ctx.Log.Info("Change detected for replaced Pod " + pod.Pod.Namespace + "/" + pod.Pod.Name)
+	ctx.Log.Debug("Change detected for replaced Pod " + pod.Pod.Namespace + "/" + pod.Pod.Name)
 	err = deleteAndWait(ctx, pod.Pod)
 	if err != nil {
 		return false, errors.Wrap(err, "delete replaced pod")
 	}
 
 	// scale up parent
-	ctx.Log.Info("Scaling up parent of replaced pod...")
+	ctx.Log.Debug("Scaling up parent of replaced pod...")
 	err = scaleUpParent(ctx, parent)
 	if err != nil {
 		return false, err
@@ -188,24 +164,25 @@ func updateNeeded(ctx *devspacecontext.Context, pod *selector.SelectedPodContain
 	return true, nil
 }
 
-func getParentFromReplaced(ctx *devspacecontext.Context, obj metav1.ObjectMeta) (runtime.Object, error) {
+func getParentByKindName(ctx *devspacecontext.Context, kind, namespace, name string) (runtime.Object, error) {
 	var (
 		err    error
 		parent runtime.Object
 	)
-	switch obj.GetAnnotations()[ParentKindAnnotation] {
+	switch kind {
 	case "ReplicaSet":
-		parent, err = ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(obj.Namespace).Get(ctx.Context, obj.Annotations[ParentNameAnnotation], metav1.GetOptions{})
+		parent, err = ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(namespace).Get(ctx.Context, name, metav1.GetOptions{})
 	case "Deployment":
-		parent, err = ctx.KubeClient.KubeClient().AppsV1().Deployments(obj.Namespace).Get(ctx.Context, obj.Annotations[ParentNameAnnotation], metav1.GetOptions{})
+		parent, err = ctx.KubeClient.KubeClient().AppsV1().Deployments(namespace).Get(ctx.Context, name, metav1.GetOptions{})
 	case "StatefulSet":
-		parent, err = ctx.KubeClient.KubeClient().AppsV1().StatefulSets(obj.Namespace).Get(ctx.Context, obj.Annotations[ParentNameAnnotation], metav1.GetOptions{})
+		parent, err = ctx.KubeClient.KubeClient().AppsV1().StatefulSets(namespace).Get(ctx.Context, name, metav1.GetOptions{})
 	default:
 		return nil, fmt.Errorf("unrecognized parent kind")
 	}
 
 	typeAccessor, _ := meta.TypeAccessor(parent)
-	typeAccessor.SetKind(obj.Annotations[ParentKindAnnotation])
+	typeAccessor.SetAPIVersion("apps/v1")
+	typeAccessor.SetKind(kind)
 	return parent, err
 }
 
@@ -310,101 +287,87 @@ func deleteAndWait(ctx *devspacecontext.Context, pod *corev1.Pod) error {
 	return nil
 }
 
-func replace(ctx *devspacecontext.Context, pod *selector.SelectedPodContainer, parent runtime.Object, replacePod *latest.DevPod) error {
+func replace(ctx *devspacecontext.Context, replicaSetName string, pod *corev1.Pod, container string, parent runtime.Object, replacePod *latest.DevPod) (string, error) {
 	parentHash, err := hashParentPodSpec(ctx, parent, replacePod)
 	if err != nil {
-		return errors.Wrap(err, "hash parent pod spec")
+		return "", errors.Wrap(err, "hash parent pod spec")
 	}
 
 	configHash, err := hashConfig(replacePod)
 	if err != nil {
-		return errors.Wrap(err, "hash config")
+		return "", errors.Wrap(err, "hash config")
 	}
 
-	copiedPod := pod.Pod.DeepCopyObject().(*corev1.Pod)
-	if _, ok := parent.(*appsv1.StatefulSet); ok {
-		copiedPod.Spec.Hostname = strings.Replace(pod.Pod.Name, ".", "-", -1)
+	copiedPod := &corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{},
+	}
+	switch t := parent.(type) {
+	case *appsv1.ReplicaSet:
+		copiedPod.Annotations[ParentNameAnnotation] = t.Name
+		copiedPod.Annotations[ParentKindAnnotation] = "ReplicaSet"
+		copiedPod.Spec = t.Spec.Template.Spec
+	case *appsv1.Deployment:
+		copiedPod.Annotations[ParentNameAnnotation] = t.Name
+		copiedPod.Annotations[ParentKindAnnotation] = "Deployment"
+		copiedPod.Spec = t.Spec.Template.Spec
+	case *appsv1.StatefulSet:
+		copiedPod.Annotations[ParentNameAnnotation] = t.Name
+		copiedPod.Annotations[ParentKindAnnotation] = "StatefulSet"
+		copiedPod.Spec = t.Spec.Template.Spec
+		copiedPod.Spec.Hostname = strings.Replace(pod.Name, ".", "-", -1)
+	default:
+		return "", fmt.Errorf("unrecognized object")
 	}
 
-	// replace the image name
-	if replacePod.ReplaceImage != "" {
-		err := replaceImageInPodSpec(ctx, &copiedPod.Spec, replacePod)
-		if err != nil {
-			return err
-		}
+	// replace the image names
+	err = replaceImagesInPodSpec(ctx, &copiedPod.Spec, replacePod)
+	if err != nil {
+		return "", err
 	}
 
 	// apply the patches
 	copiedPod, err = applyPodPatches(copiedPod, replacePod)
 	if err != nil {
-		return errors.Wrap(err, "apply pod patches")
+		return "", errors.Wrap(err, "apply pod patches")
 	}
 
 	// replace paths
 	if len(replacePod.PersistPaths) > 0 {
-		err := persistPaths(pod.Pod.Name, replacePod, copiedPod)
+		err := persistPaths(pod.Name, replacePod, copiedPod)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
 	// reset the metadata
-	copiedPod.ObjectMeta = metav1.ObjectMeta{
-		Name:        copiedPod.Name,
-		Namespace:   copiedPod.Namespace,
-		Labels:      copiedPod.Labels,
-		Annotations: copiedPod.Annotations,
-	}
 	if copiedPod.Annotations == nil {
 		copiedPod.Annotations = map[string]string{}
 	}
 	if copiedPod.Labels == nil {
 		copiedPod.Labels = map[string]string{}
 	}
-
-	// make sure the pod-template-hash label is deleted
-	delete(copiedPod.Labels, "pod-template-hash")
-	delete(copiedPod.Labels, "controller-revision-hash")
-	delete(copiedPod.Labels, "statefulset.kubernetes.io/pod-name")
-
 	copiedPod.Labels[selector.ReplacedLabel] = "true"
 	imageSelector, err := getImageSelector(ctx, replacePod)
 	if err != nil {
-		return err
+		return "", err
 	} else if imageSelector != "" {
 		copiedPod.Labels[selector.ImageSelectorLabel] = imageSelector
 	}
-	copiedPod.Annotations[selector.MatchedContainerAnnotation] = pod.Container.Name
+	copiedPod.Annotations[selector.MatchedContainerAnnotation] = container
 	copiedPod.Annotations[ParentHashAnnotation] = parentHash
 	copiedPod.Annotations[ReplaceConfigHashAnnotation] = configHash
-	copiedPod.Spec.NodeName = ""
-
-	// get pod spec from object
-	switch t := parent.(type) {
-	case *appsv1.ReplicaSet:
-		copiedPod.Annotations[ParentNameAnnotation] = t.Name
-		copiedPod.Annotations[ParentKindAnnotation] = "ReplicaSet"
-	case *appsv1.Deployment:
-		copiedPod.Annotations[ParentNameAnnotation] = t.Name
-		copiedPod.Annotations[ParentKindAnnotation] = "Deployment"
-	case *appsv1.StatefulSet:
-		copiedPod.Annotations[ParentNameAnnotation] = t.Name
-		copiedPod.Annotations[ParentKindAnnotation] = "StatefulSet"
-	default:
-		return fmt.Errorf("unrecognized object")
-	}
 
 	// scale down parent
 	err = scaleDownParent(ctx, parent)
 	if err != nil {
-		return errors.Wrap(err, "scale down parent")
+		return "", errors.Wrap(err, "scale down parent")
 	}
-	ctx.Log.Donef("Scaled down %s %s/%s", copiedPod.Annotations[ParentKindAnnotation], copiedPod.Namespace, copiedPod.Annotations[ParentNameAnnotation])
+	ctx.Log.Debugf("Scaled down %s %s/%s", copiedPod.Annotations[ParentKindAnnotation], copiedPod.Namespace, copiedPod.Annotations[ParentNameAnnotation])
 
 	// wait until pod is in terminating mode
-	ctx.Log.Info("Waiting for Pod " + pod.Pod.Name + " to get terminated...")
+	ctx.Log.Info("Waiting for Pod " + pod.Name + " to get terminated...")
 	err = wait.Poll(time.Second*2, time.Minute*2, func() (bool, error) {
-		pod, err := ctx.KubeClient.KubeClient().CoreV1().Pods(pod.Pod.Namespace).Get(ctx.Context, pod.Pod.Name, metav1.GetOptions{})
+		pod, err := ctx.KubeClient.KubeClient().CoreV1().Pods(pod.Namespace).Get(ctx.Context, pod.Name, metav1.GetOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				return true, nil
@@ -421,14 +384,14 @@ func replace(ctx *devspacecontext.Context, pod *selector.SelectedPodContainer, p
 		return false, nil
 	})
 	if err != nil {
-		return errors.Wrap(err, "wait for original pod to terminate")
+		return "", errors.Wrap(err, "wait for original pod to terminate")
 	}
 
 	// create a replica set
 	replicaSet, err := ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(copiedPod.Namespace).Create(ctx.Context, &appsv1.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      copiedPod.Name,
-			Namespace: copiedPod.Namespace,
+			Name:      replicaSetName,
+			Namespace: pod.Namespace,
 			Annotations: map[string]string{
 				ParentKindAnnotation: copiedPod.Annotations[ParentKindAnnotation],
 				ParentNameAnnotation: copiedPod.Annotations[ParentNameAnnotation],
@@ -441,17 +404,11 @@ func replace(ctx *devspacecontext.Context, pod *selector.SelectedPodContainer, p
 			Selector: &metav1.LabelSelector{
 				MatchLabels: copiedPod.Labels,
 			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:      copiedPod.Labels,
-					Annotations: copiedPod.Annotations,
-				},
-				Spec: copiedPod.Spec,
-			},
+			Template: *copiedPod,
 		},
 	}, metav1.CreateOptions{})
 	if err != nil {
-		return errors.Wrap(err, "create copied pod")
+		return "", errors.Wrap(err, "create copied pod")
 	}
 
 	// create a pvc if needed
@@ -467,24 +424,24 @@ func replace(ctx *devspacecontext.Context, pod *selector.SelectedPodContainer, p
 					return kerrors.IsNotFound(err), nil
 				})
 				if err != nil {
-					return errors.Wrap(err, "waiting for pvc to terminate")
+					return copiedPod.Name, errors.Wrap(err, "waiting for pvc to terminate")
 				}
 
 				// create the new one
 				err = createPVC(ctx, copiedPod, replicaSet, replacePod)
 				if err != nil {
-					return errors.Wrap(err, "create persistent volume claim")
+					return copiedPod.Name, errors.Wrap(err, "create persistent volume claim")
 				}
 			} else {
-				return errors.Wrap(err, "create persistent volume claim")
+				return copiedPod.Name, errors.Wrap(err, "create persistent volume claim")
 			}
 		}
 	}
 
-	return nil
+	return copiedPod.Name, nil
 }
 
-func createPVC(ctx *devspacecontext.Context, copiedPod *corev1.Pod, replicaSet *appsv1.ReplicaSet, replacePod *latest.DevPod) error {
+func createPVC(ctx *devspacecontext.Context, copiedPod *corev1.PodTemplateSpec, replicaSet *appsv1.ReplicaSet, replacePod *latest.DevPod) error {
 	var err error
 	size := resource.MustParse("10Gi")
 	if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Size != "" {
@@ -549,7 +506,7 @@ func createPVC(ctx *devspacecontext.Context, copiedPod *corev1.Pod, replicaSet *
 	return nil
 }
 
-func applyPodPatches(pod *corev1.Pod, replacePod *latest.DevPod) (*corev1.Pod, error) {
+func applyPodPatches(pod *corev1.PodTemplateSpec, replacePod *latest.DevPod) (*corev1.PodTemplateSpec, error) {
 	if len(replacePod.Patches) == 0 {
 		return pod.DeepCopy(), nil
 	}
@@ -561,7 +518,7 @@ func applyPodPatches(pod *corev1.Pod, replacePod *latest.DevPod) (*corev1.Pod, e
 
 	// convert back
 	rawJSON := convertFromInterface(raw)
-	retPod := &corev1.Pod{}
+	retPod := &corev1.PodTemplateSpec{}
 	err = json.Unmarshal(rawJSON, retPod)
 	if err != nil {
 		return nil, err
@@ -579,7 +536,7 @@ func hashConfig(replacePod *latest.DevPod) (string, error) {
 	return hash.String(string(out)), nil
 }
 
-func hashParentPodSpec(ctx *devspacecontext.Context, obj runtime.Object, replacePod *latest.DevPod) (string, error) {
+func hashParentPodSpec(ctx *devspacecontext.Context, obj runtime.Object, devPod *latest.DevPod) (string, error) {
 	cloned := obj.DeepCopyObject()
 	var podSpec *corev1.PodTemplateSpec
 
@@ -596,8 +553,8 @@ func hashParentPodSpec(ctx *devspacecontext.Context, obj runtime.Object, replace
 	}
 
 	// replace the image name
-	if replacePod.ReplaceImage != "" {
-		err := replaceImageInPodSpec(ctx, &podSpec.Spec, replacePod)
+	if devPod.ReplaceImage != "" {
+		err := replaceImagesInPodSpec(ctx, &podSpec.Spec, devPod)
 		if err != nil {
 			return "", err
 		}
@@ -611,48 +568,66 @@ func hashParentPodSpec(ctx *devspacecontext.Context, obj runtime.Object, replace
 	return hash.String(string(out)), nil
 }
 
-func replaceImageInPodSpec(ctx *devspacecontext.Context, podSpec *corev1.PodSpec, replacePod *latest.DevPod) error {
-	imageStr, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsString(replacePod.ReplaceImage, ctx.Config, ctx.Dependencies)
+func replaceImagesInPodSpec(ctx *devspacecontext.Context, podSpec *corev1.PodSpec, devPod *latest.DevPod) error {
+	if devPod.ReplaceImage != "" {
+		err := replaceImageInPodSpec(ctx, podSpec, devPod.LabelSelector, devPod.ImageSelector, devPod.Container, devPod.ReplaceImage)
+		if err != nil {
+			return err
+		}
+	}
+	for _, c := range devPod.Containers {
+		err := replaceImageInPodSpec(ctx, podSpec, devPod.LabelSelector, devPod.ImageSelector, c.Container, c.ReplaceImage)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func replaceImageInPodSpec(ctx *devspacecontext.Context, podSpec *corev1.PodSpec, labelSelector map[string]string, imageSelector string, container, replaceImage string) error {
+	if len(podSpec.Containers) == 0 {
+		return fmt.Errorf("no containers in pod spec")
+	}
+
+	imageStr, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsString(replaceImage, ctx.Config, ctx.Dependencies)
 	if err != nil {
 		return err
 	}
 
-	// either replace by labelSelector & containerName
-	// or by resolved image name
-	if replacePod.LabelSelector != nil {
-		if len(podSpec.Containers) > 1 && replacePod.Container == "" {
+	if container != "" {
+		for i := range podSpec.Containers {
+			if podSpec.Containers[i].Name == container {
+				podSpec.Containers[i].Image = imageStr
+				break
+			}
+		}
+	} else if labelSelector != nil {
+		if len(podSpec.Containers) > 1 {
 			return fmt.Errorf("pod spec has more than 1 containers and containerName is an empty string")
-		} else if len(podSpec.Containers) == 0 {
-			return fmt.Errorf("no containers in pod spec")
 		}
 
 		// exchange image name
-		for i := range podSpec.Containers {
-			if len(podSpec.Containers) == 1 {
-				podSpec.Containers[i].Image = imageStr
-				break
-			} else if podSpec.Containers[i].Name == replacePod.Container {
-				podSpec.Containers[i].Image = imageStr
-				break
-			}
+		if len(podSpec.Containers) == 1 {
+			podSpec.Containers[0].Image = imageStr
 		}
-	} else if replacePod.ImageSelector != "" {
-		var imageSelector *imageselector.ImageSelector
-		if replacePod.ImageSelector != "" {
-			imageSelector, err = runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, ctx.Config, ctx.Dependencies)
-			if err != nil {
-				return err
+	} else if imageSelector != "" {
+		if len(podSpec.Containers) == 1 {
+			podSpec.Containers[0].Image = imageStr
+		} else {
+			var imageSelectorPtr *imageselector.ImageSelector
+			if imageSelector != "" {
+				imageSelectorPtr, err = runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(replaceImage, ctx.Config, ctx.Dependencies)
+				if err != nil {
+					return err
+				}
 			}
-		}
 
-		// exchange image name
-		for i := range podSpec.Containers {
-			if len(podSpec.Containers) == 1 {
-				podSpec.Containers[i].Image = imageStr
-				break
-			} else if imageSelector != nil && imageselector.CompareImageNames(imageSelector.Image, podSpec.Containers[i].Image) {
-				podSpec.Containers[i].Image = imageStr
-				break
+			// exchange image name
+			for i := range podSpec.Containers {
+				if imageSelectorPtr != nil && imageselector.CompareImageNames(imageSelectorPtr.Image, podSpec.Containers[i].Image) {
+					podSpec.Containers[i].Image = imageStr
+					break
+				}
 			}
 		}
 	}
@@ -768,7 +743,7 @@ func convertFromInterface(inter map[interface{}]interface{}) []byte {
 	return retOut
 }
 
-func convertToInterface(str runtime.Object) map[interface{}]interface{} {
+func convertToInterface(str *corev1.PodTemplateSpec) map[interface{}]interface{} {
 	out, err := json.Marshal(str)
 	if err != nil {
 		panic(err)
@@ -850,7 +825,7 @@ func findReplacedPodReplicaSet(ctx *devspacecontext.Context, replacePod *latest.
 		return nil, errors.Wrap(err, "list ReplicaSets")
 	}
 	for _, replicaSet := range replicaSets.Items {
-		parent, err := getParentFromReplaced(ctx, replicaSet.ObjectMeta)
+		parent, err := getParentByKindName(ctx, replicaSet.Annotations[ParentKindAnnotation], replicaSet.Namespace, replicaSet.Annotations[ParentNameAnnotation])
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				// delete replica set
@@ -908,9 +883,15 @@ func findSingleReplaceablePodParent(ctx *devspacecontext.Context, replacePod *la
 		imageSelector = []string{imageSelectorObject.Image}
 	}
 
+	containerName := replacePod.Container
+	for _, c := range replacePod.Containers {
+		containerName = c.Container
+		break
+	}
+
 	// create selector
 	targetOptions := targetselector.NewEmptyOptions().
-		ApplyConfigParameter(replacePod.Container, replacePod.LabelSelector, imageSelector, replacePod.Namespace, "").
+		ApplyConfigParameter(containerName, replacePod.LabelSelector, imageSelector, replacePod.Namespace, "").
 		WithTimeout(300).
 		WithWaitingStrategy(targetselector.NewUntilNotTerminatingStrategy(time.Second * 2)).
 		WithSkipInitContainers(true)

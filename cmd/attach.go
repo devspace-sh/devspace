@@ -20,7 +20,6 @@ type AttachCmd struct {
 
 	LabelSelector string
 	ImageSelector string
-	Image         string
 	Container     string
 	Pod           string
 	Pick          bool
@@ -53,7 +52,6 @@ devspace attach -n my-namespace
 	attachCmd.Flags().StringVarP(&cmd.Container, "container", "c", "", "Container name within pod where to execute command")
 	attachCmd.Flags().StringVar(&cmd.Pod, "pod", "", "Pod to open a shell to")
 	attachCmd.Flags().StringVar(&cmd.ImageSelector, "image-selector", "", "The image to search a pod for (e.g. nginx, nginx:latest, ${runtime.images.app}, nginx:${runtime.images.app.tag})")
-	attachCmd.Flags().StringVar(&cmd.Image, "image", "", "Image is the config name of an image to select in the devspace config (e.g. 'default'), it is NOT a docker image like myuser/myimage")
 	attachCmd.Flags().StringVarP(&cmd.LabelSelector, "label-selector", "l", "", "Comma separated key=value selector list (e.g. release=test)")
 
 	attachCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
@@ -66,8 +64,11 @@ func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	// Set config root
 	log := f.GetLog()
 	configOptions := cmd.ToConfigOptions()
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
-	_, err := configLoader.SetDevSpaceRoot(log)
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
+	_, err = configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
 	}
@@ -92,7 +93,7 @@ func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 	}
 
 	// get image selector if specified
-	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, cmd.ImageSelector, log)
+	imageSelector, err := getImageSelector(ctx, configLoader, configOptions, cmd.ImageSelector)
 	if err != nil {
 		return err
 	}

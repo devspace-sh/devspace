@@ -1,5 +1,6 @@
 package compose
 
+/*
 import (
 	"fmt"
 	"io/ioutil"
@@ -801,3 +802,4 @@ func hasLocalSync(service composetypes.ServiceConfig) bool {
 	}
 	return false
 }
+*/

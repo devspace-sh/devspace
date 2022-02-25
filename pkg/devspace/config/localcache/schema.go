@@ -24,6 +24,7 @@ type Cache interface {
 
 	GetVar(varName string) (string, bool)
 	SetVar(varName, value string)
+	ClearVars()
 
 	DeepCopy() Cache
 
@@ -136,6 +137,13 @@ func (l *LocalCache) SetVar(varName, value string) {
 	defer l.accessMutex.Unlock()
 
 	l.Vars[varName] = value
+}
+
+func (l *LocalCache) ClearVars() {
+	l.accessMutex.Lock()
+	defer l.accessMutex.Unlock()
+
+	l.Vars = map[string]string{}
 }
 
 // DeepCopy creates a deep copy of the config

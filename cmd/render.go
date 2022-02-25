@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"context"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 	"os"
 	"strings"
@@ -98,8 +100,11 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 		log = logpkg.Discard
 	}
 
-	configOptions := cmd.ToConfigOptions(log)
-	configLoader := loader.NewConfigLoader(cmd.ConfigPath)
+	configOptions := cmd.ToConfigOptions()
+	configLoader, err := loader.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
@@ -110,15 +115,8 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 	// Start file logging
 	logpkg.StartFileLogging()
 
-	// Load config
-	generatedConfig, err := configLoader.LoadGenerated(configOptions)
-	if err != nil {
-		return err
-	}
-	configOptions.GeneratedConfig = generatedConfig
-
 	// Create kubectl client and switch context if specified
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		log.Warnf("Unable to create new kubectl client: %v", err)
 		log.Warn("Using fake client to render resources")
@@ -128,10 +126,9 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 			Client: kube,
 		}
 	}
-	configOptions.KubeClient = client
 
 	// Get the config
-	configInterface, err := configLoader.Load(configOptions, log)
+	config, err := configLoader.Load(client, configOptions, log)
 	if err != nil {
 		cause := errors.Cause(err)
 		if _, ok := cause.(logpkg.SurveyError); ok {
@@ -140,19 +137,23 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 
 		return err
 	}
-	config := configInterface.Config()
 
 	// Force tag
 	if len(cmd.Tags) > 0 {
-		for _, imageConfig := range config.Images {
+		for _, imageConfig := range config.Config().Images {
 			imageConfig.Tags = cmd.Tags
 		}
 	}
 
+	// Create context
+	ctx := devspacecontext.NewContext(context.Background(), log).
+		WithConfig(config).
+		WithKubeClient(client)
+
 	// Render dependencies
 	var dependencies []types.Dependency
 	if !cmd.SkipDependencies {
-		dependencies, err = f.NewDependencyManager(configInterface, client, configOptions, log).RenderAll(dependency.RenderOptions{
+		dependencies, err = f.NewDependencyManager(ctx, configOptions).RenderAll(ctx, dependency.RenderOptions{
 			Dependencies:     cmd.Dependency,
 			SkipDependencies: cmd.SkipDependency,
 			SkipBuild:        cmd.SkipBuild,
@@ -170,27 +171,34 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 		if err != nil {
 			return errors.Wrap(err, "render dependencies")
 		}
+
+	} else {
+		dependencies, err = f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{
+			Silent: true,
+		})
 	}
 	if len(cmd.Dependency) > 0 {
 		return nil
 	}
 
+	// add dependencies to context
+	ctx = ctx.WithDependencies(dependencies)
+
 	// Execute plugin hook
-	err = hook.ExecuteHooks(client, configInterface, dependencies, nil, log, "render")
+	err = hook.ExecuteHooks(ctx, nil, "render")
 	if err != nil {
 		return err
 	}
 
 	// Build images if necessary
-	builtImages := map[string]string{}
 	if !cmd.SkipBuild {
-		builtImages, err = f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
+		err = f.NewBuildController().Build(ctx, nil, &build.Options{
 			SkipPush:                  cmd.SkipPush,
 			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 			ForceRebuild:              cmd.ForceBuild,
 			MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
 			Sequential:                cmd.BuildSequential,
-		}, log)
+		})
 		if err != nil {
 			if strings.Contains(err.Error(), "no space left on device") {
 				return errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
@@ -198,18 +206,6 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 
 			return errors.Wrap(err, "build images")
 		}
-	}
-
-	// Save config if an image was built
-	if len(builtImages) > 0 {
-		err := configLoader.SaveGenerated(generatedConfig)
-		if err != nil {
-			return err
-		}
-
-		log.Donef("Successfully built %d images", len(builtImages))
-	} else {
-		log.Info("No images to rebuild. Run with -b to force rebuilding")
 	}
 
 	// What deployments should be deployed
@@ -222,10 +218,7 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 	}
 
 	// Deploy all defined deployments
-	err = f.NewDeployController(configInterface, dependencies, client).Render(&deploy.Options{
-		BuiltImages: builtImages,
-		Deployments: deployments,
-	}, cmd.Writer, log)
+	err = f.NewDeployController().Render(ctx, deployments, &deploy.Options{}, cmd.Writer)
 	if err != nil {
 		return err
 	}

@@ -42,7 +42,10 @@ Deletes all locally created docker images from docker
 func (cmd *imagesCmd) RunCleanupImages(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	// Set config root
 	log := f.GetLog()
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	kubeConfigLoader := f.NewKubeConfigLoader()
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
@@ -68,7 +71,7 @@ func (cmd *imagesCmd) RunCleanupImages(f factory.Factory, cobraCmd *cobra.Comman
 	}
 
 	// Load config
-	configInterface, err := configLoader.Load(cmd.ToConfigOptions(log), log)
+	configInterface, err := configLoader.Load(nil, cmd.ToConfigOptions(), log)
 	if err != nil {
 		return err
 	}

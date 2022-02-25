@@ -216,6 +216,11 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 			}
 		}
 
+		err = ctx.Config.RemoteCache().Save(ctx.Context, ctx.KubeClient)
+		if err != nil {
+			return err
+		}
+
 		// Execute after deployments deploy hook
 		err = hook.ExecuteHooks(ctx, nil, "after:deploy")
 		if err != nil {
@@ -342,13 +347,13 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) e
 
 	// Reverse them
 	deploymentCaches := ctx.Config.RemoteCache().ListDeployments()
-	for deploymentName, deploymentCache := range deploymentCaches {
+	for _, deploymentCache := range deploymentCaches {
 		// Check if we should skip deleting deployment
 		if deployments != nil {
 			found := false
 
 			for _, value := range deployments {
-				if value == deploymentName {
+				if value == deploymentCache.Name {
 					found = true
 					break
 				}
@@ -361,48 +366,48 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) e
 
 		// Execute before deployment purge hook
 		err = hook.ExecuteHooks(ctx, map[string]interface{}{
-			"DEPLOY_NAME":   deploymentName,
+			"DEPLOY_NAME":   deploymentCache.Name,
 			"DEPLOY_CONFIG": deploymentCache,
-		}, hook.EventsForSingle("before:purge", deploymentName).With("deploy.beforePurge")...)
+		}, hook.EventsForSingle("before:purge", deploymentCache.Name).With("deploy.beforePurge")...)
 		if err != nil {
 			return err
 		}
 
 		// Delete kubectl engine
-		ctx.Log.StartWait("Deleting deployment " + deploymentName)
-		if deploymentCache.IsKubectl {
-			err = kubectl.Delete(ctx, deploymentName)
-		} else if deploymentCache.HelmRelease != "" {
-			err = helm.Delete(ctx, deploymentName)
+		ctx.Log.StartWait("Deleting deployment " + deploymentCache.Name)
+		if deploymentCache.Kubectl != nil {
+			err = kubectl.Delete(ctx, deploymentCache.Name)
+		} else if deploymentCache.Helm != nil {
+			err = helm.Delete(ctx, deploymentCache.Name)
 		} else {
-			ctx.Log.Errorf("error purging: deployment %s has no deployment method", deploymentName)
-			ctx.Config.RemoteCache().DeleteDeploymentCache(deploymentName)
+			ctx.Log.Errorf("error purging: deployment %s has no deployment method", deploymentCache.Name)
+			ctx.Config.RemoteCache().DeleteDeployment(deploymentCache.Name)
 			continue
 		}
 		ctx.Log.StopWait()
 		if err != nil {
 			// Execute on error deployment purge hook
 			hookErr := hook.ExecuteHooks(ctx, map[string]interface{}{
-				"DEPLOY_NAME":   deploymentName,
+				"DEPLOY_NAME":   deploymentCache.Name,
 				"DEPLOY_CONFIG": deploymentCache,
 				"ERROR":         err,
-			}, hook.EventsForSingle("error:purge", deploymentName).With("deploy.errorPurge")...)
+			}, hook.EventsForSingle("error:purge", deploymentCache.Name).With("deploy.errorPurge")...)
 			if hookErr != nil {
 				return hookErr
 			}
 
-			ctx.Log.Warnf("Error deleting deployment %s: %v", deploymentName, err)
+			ctx.Log.Warnf("Error deleting deployment %s: %v", deploymentCache.Name, err)
 		} else {
 			err = hook.ExecuteHooks(ctx, map[string]interface{}{
-				"DEPLOY_NAME":   deploymentName,
+				"DEPLOY_NAME":   deploymentCache.Name,
 				"DEPLOY_CONFIG": deploymentCache,
-			}, hook.EventsForSingle("after:purge", deploymentName).With("deploy.afterPurge")...)
+			}, hook.EventsForSingle("after:purge", deploymentCache.Name).With("deploy.afterPurge")...)
 			if err != nil {
 				return err
 			}
 		}
 
-		ctx.Log.Donef("Successfully deleted deployment %s", deploymentName)
+		ctx.Log.Donef("Successfully deleted deployment %s", deploymentCache.Name)
 	}
 
 	// Execute after deployments purge hook

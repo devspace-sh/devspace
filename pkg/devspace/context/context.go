@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
+	"github.com/pkg/errors"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,17 +15,21 @@ import (
 	"strings"
 )
 
-func NewContext() *Context {
+func NewContext(ctx context.Context, log log.Logger) *Context {
+	var err error
 	workingDir, _ := RealWorkDir()
 	if workingDir == "" {
-		workingDir = "."
+		workingDir, err = os.Getwd()
+		if err != nil {
+			panic(errors.Wrap(err, "get current working directory"))
+		}
 	}
 
 	return &Context{
-		Context:    context.Background(),
+		Context:    ctx,
 		WorkingDir: workingDir,
 		RunID:      strings.ToLower(randutil.GenerateRandomString(12)),
-		Log:        log.Discard,
+		Log:        log,
 	}
 }
 
@@ -111,6 +116,16 @@ func (c *Context) WithConfig(conf config.Config) *Context {
 
 	n := *c
 	n.Config = conf
+	return &n
+}
+
+func (c *Context) WithDependencies(dependencies []types.Dependency) *Context {
+	if c == nil {
+		return nil
+	}
+
+	n := *c
+	n.Dependencies = dependencies
 	return &n
 }
 

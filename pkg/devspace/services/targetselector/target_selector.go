@@ -62,6 +62,18 @@ func NewOptionsFromFlags(containerName string, labelSelector string, imageSelect
 	}
 }
 
+func (o Options) WithPod(pod string) Options {
+	newOptions := o
+	newOptions.selector.Pod = pod
+	return newOptions
+}
+
+func (o Options) WithLabelSelector(labelSelector string) Options {
+	newOptions := o
+	newOptions.selector.LabelSelector = labelSelector
+	return newOptions
+}
+
 func (o Options) WithContainer(container string) Options {
 	newOptions := o
 	newOptions.selector.ContainerName = container

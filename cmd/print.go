@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
@@ -63,8 +65,11 @@ profile after all patching and variable substitution
 func (cmd *PrintCmd) Run(f factory.Factory) error {
 	// Set config root
 	log := f.GetLog()
-	configOptions := cmd.ToConfigOptions(log)
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configOptions := cmd.ToConfigOptions()
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
@@ -73,28 +78,33 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 	}
 
 	// create kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		log.Warnf("Unable to create new kubectl client: %v", err)
 	}
-	configOptions.KubeClient = client
 
 	// load config
-	loadedConfig, err := configLoader.Load(configOptions, log)
+	config, err := configLoader.Load(client, configOptions, log)
 	if err != nil {
 		return err
 	}
 
+	// create devspace context
+	ctx := devspacecontext.NewContext(context.Background(), log).
+		WithConfig(config).
+		WithKubeClient(client)
+
 	// resolve dependencies
-	dependencies, err := dependency.NewManager(loadedConfig, client, configOptions, log).ResolveAll(dependency.ResolveOptions{
+	dependencies, err := dependency.NewManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{
 		Silent: true,
 	})
 	if err != nil {
 		log.Warnf("Error resolving dependencies: %v", err)
 	}
+	ctx = ctx.WithDependencies(dependencies)
 
 	// Execute plugin hook
-	err = hook.ExecuteHooks(client, loadedConfig, dependencies, nil, log, "print")
+	err = hook.ExecuteHooks(ctx, nil, "print")
 	if err != nil {
 		return err
 	}
@@ -105,16 +115,16 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 			return fmt.Errorf("couldn't find dependency %s: make sure it gets loaded correctly", cmd.Dependency)
 		}
 
-		loadedConfig = dep.Config()
+		ctx = ctx.AsDependency(dep)
 	}
 
-	bsConfig, err := yaml.Marshal(loadedConfig.Config())
+	bsConfig, err := yaml.Marshal(ctx.Config)
 	if err != nil {
 		return err
 	}
 
 	if !cmd.SkipInfo {
-		err = printExtraInfo(loadedConfig, dependencies, log)
+		err = printExtraInfo(ctx.Config, dependencies, log)
 		if err != nil {
 			return err
 		}
@@ -156,7 +166,7 @@ func printExtraInfo(config config.Config, dependencies []types.Dependency, log l
 	if len(dependencies) > 0 {
 		log.WriteString("Dependency Tree:\n\n> Root\n")
 		for _, dep := range dependencies {
-			printDependencyRecursive("--", dep, log)
+			printDependencyRecursive("--", dep, 5, log)
 		}
 		log.WriteString("\n-------------------\n\n")
 	}
@@ -164,9 +174,12 @@ func printExtraInfo(config config.Config, dependencies []types.Dependency, log l
 	return nil
 }
 
-func printDependencyRecursive(prefix string, dep types.Dependency, log logger.Logger) {
-	log.WriteString(prefix + "> " + dep.Name() + " (ID: " + dep.ID()[:5] + ")\n")
+func printDependencyRecursive(prefix string, dep types.Dependency, maxDepth int, log logger.Logger) {
+	if maxDepth == 0 {
+		return
+	}
+	log.WriteString(prefix + "> " + dep.Name() + "\n")
 	for _, child := range dep.Children() {
-		printDependencyRecursive(prefix+"--", child, log)
+		printDependencyRecursive(prefix+"--", child, maxDepth-1, log)
 	}
 }

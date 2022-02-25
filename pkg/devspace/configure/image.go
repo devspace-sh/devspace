@@ -322,8 +322,8 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 				Password: true,
 			})
 
-			m.generated.Vars[usernameVar] = registryUsername
-			m.generated.Vars[passwordVar] = registryPassword
+			m.localCache.SetVar(usernameVar, registryUsername)
+			m.localCache.SetVar(passwordVar, registryPassword)
 
 			break
 		}

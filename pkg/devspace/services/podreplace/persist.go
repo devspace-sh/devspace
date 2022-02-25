@@ -10,23 +10,37 @@ import (
 	"strings"
 )
 
-func persistPaths(podName string, replacePod *latest.DevPod, copiedPod *corev1.Pod) error {
+type containerPath struct {
+	latest.PersistentPath
+	Container string
+}
+
+func persistPaths(podName string, devPod *latest.DevPod, copiedPod *corev1.PodTemplateSpec) error {
 	name := podName
-	if replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.Name != "" {
-		name = replacePod.PersistenceOptions.Name
+	if devPod.PersistenceOptions != nil && devPod.PersistenceOptions.Name != "" {
+		name = devPod.PersistenceOptions.Name
 	}
 
-	copiedPod.Spec.Volumes = append(copiedPod.Spec.Volumes, corev1.Volume{
-		Name: "devspace-persistence",
-		VolumeSource: corev1.VolumeSource{
-			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-				ClaimName: name,
-				ReadOnly:  replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.ReadOnly,
-			},
-		},
-	})
+	paths := []containerPath{}
+	for _, p := range devPod.PersistPaths {
+		paths = append(paths, containerPath{
+			PersistentPath: p,
+			Container:      devPod.Container,
+		})
+	}
+	for _, c := range devPod.Containers {
+		for _, p := range c.PersistPaths {
+			paths = append(paths, containerPath{
+				PersistentPath: p,
+				Container:      c.Container,
+			})
+		}
+	}
+	if len(paths) == 0 {
+		return nil
+	}
 
-	for i, p := range replacePod.PersistPaths {
+	for i, p := range paths {
 		if p.Path == "" {
 			continue
 		}
@@ -36,22 +50,18 @@ func persistPaths(podName string, replacePod *latest.DevPod, copiedPod *corev1.P
 			subPath = fmt.Sprintf("path-%d", i)
 		}
 
-		if len(copiedPod.Spec.Containers) > 1 && p.ContainerName == "" {
-			if replacePod.Container == "" {
-				names := []string{}
-				for _, c := range copiedPod.Spec.Containers {
-					names = append(names, c.Name)
-				}
-
-				return fmt.Errorf("couldn't persist path %s as multiple containers were found %s, but no containerName was specified", p.Path, strings.Join(names, " "))
+		if len(copiedPod.Spec.Containers) > 1 && p.Container == "" {
+			names := []string{}
+			for _, c := range copiedPod.Spec.Containers {
+				names = append(names, c.Name)
 			}
 
-			p.ContainerName = replacePod.Container
+			return fmt.Errorf("couldn't persist path %s as multiple containers were found %s, but no containerName was specified", p.Path, strings.Join(names, " "))
 		}
 
 		var container *corev1.Container
 		for i, con := range copiedPod.Spec.Containers {
-			if p.ContainerName == "" || p.ContainerName == con.Name {
+			if p.Container == "" || p.Container == con.Name {
 				copiedPod.Spec.Containers[i].VolumeMounts = append(copiedPod.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
 					Name:      "devspace-persistence",
 					MountPath: p.Path,
@@ -64,7 +74,7 @@ func persistPaths(podName string, replacePod *latest.DevPod, copiedPod *corev1.P
 			}
 		}
 
-		if container == nil || p.SkipPopulate || p.ReadOnly || (replacePod.PersistenceOptions != nil && replacePod.PersistenceOptions.ReadOnly) {
+		if container == nil || p.SkipPopulate || p.ReadOnly || (devPod.PersistenceOptions != nil && devPod.PersistenceOptions.ReadOnly) {
 			continue
 		}
 
@@ -100,6 +110,16 @@ func persistPaths(podName string, replacePod *latest.DevPod, copiedPod *corev1.P
 		// add an init container that pre-populates the persistent volume for that path
 		copiedPod.Spec.InitContainers = append(copiedPod.Spec.InitContainers, initContainer)
 	}
+
+	copiedPod.Spec.Volumes = append(copiedPod.Spec.Volumes, corev1.Volume{
+		Name: "devspace-persistence",
+		VolumeSource: corev1.VolumeSource{
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+				ClaimName: name,
+				ReadOnly:  devPod.PersistenceOptions != nil && devPod.PersistenceOptions.ReadOnly,
+			},
+		},
+	})
 
 	return nil
 }

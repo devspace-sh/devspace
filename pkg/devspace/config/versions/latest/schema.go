@@ -734,6 +734,7 @@ type KubectlConfig struct {
 }
 
 type DevPod struct {
+	Name          string            `yaml:"name,omitempty" json:"name,omitempty"`
 	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`

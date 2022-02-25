@@ -298,6 +298,13 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 	}
 
 	ctx.Config.SetRuntimeVariable(constants.BuiltImagesKey, builtImages)
+
+	if len(builtImages) > 0 {
+		err := ctx.Config.LocalCache().Save()
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
