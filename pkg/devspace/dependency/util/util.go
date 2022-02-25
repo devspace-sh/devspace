@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"io"
 	"net/http"
 	"os"
@@ -33,16 +32,6 @@ func init() {
 	homedir, _ := homedir.Dir()
 
 	DependencyFolderPath = filepath.Join(homedir, filepath.FromSlash(DependencyFolder))
-}
-
-var convertRegEx1 = regexp.MustCompile(`[\@/\.\:\s]+`)
-var convertRegEx2 = regexp.MustCompile(`[^a-z0-9\-]+`)
-
-func ConvertID(ID string) string {
-	ID = strings.ToLower(ID)
-	ID = convertRegEx1.ReplaceAllString(ID, "-")
-	ID = convertRegEx2.ReplaceAllString(ID, "")
-	return encoding.SafeConcatName(ID)
 }
 
 func DownloadDependency(ID, basePath string, source *latest.SourceConfig, log log.Logger) (localPath string, err error) {

@@ -1,16 +1,17 @@
 package cmd
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/build/types"
+	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"strings"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -79,8 +80,11 @@ Builds all defined images and pushes them
 func (cmd *BuildCmd) Run(f factory.Factory) error {
 	// Set config root
 	log := f.GetLog()
-	configOptions := cmd.ToConfigOptions(log)
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configOptions := cmd.ToConfigOptions()
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(log)
 	if err != nil {
 		return err
@@ -92,49 +96,41 @@ func (cmd *BuildCmd) Run(f factory.Factory) error {
 	// Start file logging
 	logpkg.StartFileLogging()
 
-	// Load config
-	localCache, err := localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
-	if err != nil {
-		return err
-	}
-	configOptions.GeneratedConfig = generatedConfig
-
 	// create kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
 	if err != nil {
 		log.Warnf("Unable to create new kubectl client: %v", err)
 	}
-	configOptions.KubeClient = client
 
 	// Get the config
-	configInterface, err := configLoader.Load(configOptions, log)
+	configInterface, err := configLoader.Load(client, configOptions, log)
 	if err != nil {
 		return err
 	}
 
+	// create context
+	ctx := devspacecontext.NewContext(context.Background(), log).
+		WithConfig(configInterface).
+		WithKubeClient(client)
+
 	return runWithHooks("buildCommand", client, configInterface, log, func() error {
-		return cmd.runCommand(f, client, configInterface, configLoader, configOptions, log)
+		return cmd.runCommand(ctx, f, configLoader, configOptions)
 	})
 }
 
-func (cmd *BuildCmd) runCommand(f factory.Factory, client kubectl.Client, configInterface config.Config, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions, log logpkg.Logger) error {
-	err := cmd.ensureDeployNamespaces(client, configInterface, log)
-	if err != nil {
-		return errors.Errorf("unable to create namespace: %v", err)
-	}
+func (cmd *BuildCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configLoader loader.ConfigLoader, configOptions *loader.ConfigOptions) error {
 	// Force tag
 	if len(cmd.Tags) > 0 {
-		for _, imageConfig := range configInterface.Config().Images {
+		for _, imageConfig := range ctx.Config.Config().Images {
 			imageConfig.Tags = cmd.Tags
 		}
 	}
 
 	// Dependencies
-	dependencies, err := f.NewDependencyManager(configInterface, client, configOptions, log).BuildAll(dependency.BuildOptions{
-		Dependencies:            cmd.Dependency,
-		SkipDependencies:        cmd.SkipDependency,
-		ForceDeployDependencies: cmd.ForceDependencies,
-		Verbose:                 cmd.VerboseDependencies,
+	dependencies, err := f.NewDependencyManager(ctx, configOptions).BuildAll(ctx, dependency.BuildOptions{
+		Dependencies:     cmd.Dependency,
+		SkipDependencies: cmd.SkipDependency,
+		Verbose:          cmd.VerboseDependencies,
 
 		BuildOptions: build.Options{
 			SkipPush:                  cmd.SkipPush,
@@ -147,23 +143,24 @@ func (cmd *BuildCmd) runCommand(f factory.Factory, client kubectl.Client, config
 	if err != nil {
 		return errors.Wrap(err, "build dependencies")
 	}
+	ctx = ctx.WithDependencies(dependencies)
 
 	// Execute plugin hook
-	err = hook.ExecuteHooks(client, configInterface, dependencies, nil, log, "build")
+	err = hook.ExecuteHooks(ctx, nil, "build")
 	if err != nil {
 		return err
 	}
 
 	// Build images if necessary
 	if len(cmd.Dependency) == 0 {
-		if len(configInterface.Config().Images) > 0 {
-			builtImages, err := f.NewBuildController(configInterface, dependencies, client).Build(&build.Options{
+		if len(ctx.Config.Config().Images) > 0 {
+			err := f.NewBuildController().Build(ctx, nil, &build.Options{
 				SkipPush:                  cmd.SkipPush,
 				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
 				ForceRebuild:              cmd.ForceBuild,
 				Sequential:                cmd.BuildSequential,
 				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
-			}, log)
+			})
 			if err != nil {
 				if strings.Contains(err.Error(), "no space left on device") {
 					return errors.Errorf("Error building image: %v\n\n Try running `%s` to free docker daemon space and retry", err, ansi.Color("devspace cleanup images", "white+b"))
@@ -172,41 +169,24 @@ func (cmd *BuildCmd) runCommand(f factory.Factory, client kubectl.Client, config
 				return errors.Wrap(err, "build images")
 			}
 
-			// Save config if an image was built
-			if len(builtImages) > 0 {
-				err := configLoader.SaveGenerated(configInterface.Generated())
-				if err != nil {
-					return err
+			// merge built images
+			alreadyBuiltImages, ok := ctx.Config.GetRuntimeVariable(constants.BuiltImagesKey)
+			if ok {
+				alreadyBuiltImagesMap, ok := alreadyBuiltImages.(map[string]types.ImageNameTag)
+				if ok && len(alreadyBuiltImagesMap) > 0 {
+					ctx.Log.Donef("Successfully built %d images", len(alreadyBuiltImagesMap))
+				} else {
+					ctx.Log.Info("No images to rebuild. Run with -b to force rebuilding")
 				}
-
-				log.Donef("Successfully built %d images", len(builtImages))
 			} else {
-				log.Info("No images to rebuild. Run with -b to force rebuilding")
+				ctx.Log.Info("No images to rebuild. Run with -b to force rebuilding")
 			}
 		} else {
-			log.Info("No images defined for this profile")
+			ctx.Log.Info("No images defined for this profile")
 		}
 	} else {
-		log.Donef("Successfully built images for dependencies: %s", strings.Join(cmd.Dependency, " "))
+		ctx.Log.Donef("Successfully built images for dependencies: %s", strings.Join(cmd.Dependency, " "))
 	}
 
-	return nil
-}
-
-func (cmd *BuildCmd) ensureDeployNamespaces(client kubectl.Client, configInterface config.Config, log logpkg.Logger) error {
-	c := configInterface.Config()
-	if c.Images == nil || client == nil {
-		return nil
-	}
-	usesKanikoOrBuildKit := false
-
-	for _, image := range c.Images {
-		usesKanikoOrBuildKit = image != nil && image.Build != nil && (image.Build.Kaniko != nil || image.Build.BuildKit != nil)
-	}
-
-	if usesKanikoOrBuildKit {
-		err := client.EnsureDeployNamespaces(configInterface.Config(), log)
-		return err
-	}
 	return nil
 }

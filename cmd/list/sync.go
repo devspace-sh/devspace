@@ -3,10 +3,6 @@ package list
 import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/message"
-
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +33,7 @@ Lists the sync configuration
 
 // RunListSync runs the list sync command logic
 func (cmd *syncCmd) RunListSync(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
-	logger := f.GetLog()
+	/*logger := f.GetLog()
 	// Set config root
 	configLoader := f.NewConfigLoader(cmd.ConfigPath)
 	configExists, err := configLoader.SetDevSpaceRoot(logger)
@@ -100,5 +96,6 @@ func (cmd *syncCmd) RunListSync(f factory.Factory, cobraCmd *cobra.Command, args
 	}
 
 	log.PrintTable(logger, headerColumnNames, syncPaths)
+	return nil*/
 	return nil
 }

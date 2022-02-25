@@ -2,10 +2,10 @@ package list
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"strconv"
 
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
 
@@ -44,31 +44,35 @@ Lists all namespaces in the selected kube context
 func (cmd *namespacesCmd) RunListNamespaces(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	logger := f.GetLog()
 	// Set config root
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
 	}
 
+	// Get kubectl client
+	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
+	if err != nil {
+		return errors.Wrap(err, "new kube client")
+	}
+
 	// Load generated config if possible
-	var generatedConfig *localcache.Config
+	var localCache localcache.Cache
 	if configExists {
-		generatedConfig, err = configLoader.LoadGenerated(cmd.ToConfigOptions(logger))
+		localCache, err = localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
 		if err != nil {
 			return err
 		}
 	}
 
-	// Use last context if specified
-	err = cmd.UseLastContext(generatedConfig, logger)
+	// If the current kube context or namespace is different than old,
+	// show warnings and reset kube client if necessary
+	client, err = client.CheckKubeContext(localCache, cmd.NoWarn, logger)
 	if err != nil {
 		return err
-	}
-
-	// Get kubectl client
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace, cmd.SwitchContext)
-	if err != nil {
-		return errors.Wrap(err, "new kube client")
 	}
 
 	namespaces, err := client.KubeClient().CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})

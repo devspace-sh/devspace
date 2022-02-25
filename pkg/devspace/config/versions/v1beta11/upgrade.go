@@ -4,6 +4,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
+	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"k8s.io/apimachinery/pkg/labels"
 	"strings"
@@ -50,6 +51,15 @@ dev --all`
 		},
 	}
 
+	for k, v := range nextConfig.Images {
+		delete(nextConfig.Images, k)
+		nextConfig.Images[encoding.Convert(k)] = v
+	}
+
+	for i := range nextConfig.Deployments {
+		nextConfig.Deployments[i].Name = encoding.Convert(nextConfig.Deployments[i].Name)
+	}
+
 	for i, d := range c.Dependencies {
 		// dev config for dependencies is not working anymore
 		if d.Dev != nil {
@@ -60,7 +70,7 @@ dev --all`
 		}
 
 		// we use dependency name as override name to identify it
-		nextConfig.Dependencies[i].OverrideName = d.Name
+		nextConfig.Dependencies[i].OverrideName = encoding.Convert(d.Name)
 
 		// profile parents are removed
 		if len(d.ProfileParents) > 0 {
@@ -350,6 +360,7 @@ func getMatchingDevPod(devPods map[string]*next.DevPod, name string, labelSelect
 		}
 	}
 
+	name = encoding.Convert(name)
 	devPods[name] = &next.DevPod{
 		ImageSelector: imageSelector,
 		LabelSelector: labelSelector,

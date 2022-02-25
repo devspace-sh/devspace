@@ -47,7 +47,10 @@ values
 func (cmd *varsCmd) RunListVars(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
 	logger := f.GetLog()
 	// Set config root
-	configLoader := f.NewConfigLoader(cmd.ConfigPath)
+	configLoader, err := f.NewConfigLoader(cmd.ConfigPath)
+	if err != nil {
+		return err
+	}
 	configExists, err := configLoader.SetDevSpaceRoot(logger)
 	if err != nil {
 		return err
@@ -57,7 +60,7 @@ func (cmd *varsCmd) RunListVars(f factory.Factory, cobraCmd *cobra.Command, args
 	}
 
 	// Fill variables config
-	config, err := configLoader.LoadWithParser(loader.NewWithCommandsParser(), cmd.ToConfigOptions(logger), logger)
+	config, err := configLoader.LoadWithParser(nil, nil, loader.NewWithCommandsParser(), cmd.ToConfigOptions(), logger)
 	if err != nil {
 		return err
 	}

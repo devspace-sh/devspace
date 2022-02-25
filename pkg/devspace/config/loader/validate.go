@@ -2,11 +2,10 @@ package loader
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
-	"strings"
-
 	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
+	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -32,6 +31,10 @@ func ValidContainerArch(arch latest.ContainerArchitecture) bool {
 }
 
 func validate(config *latest.Config, log log.Logger) error {
+	if encoding.IsUnsafeName(config.Name) {
+		return fmt.Errorf("name has to match the following regex: %v", encoding.UnsafeNameRegEx.String())
+	}
+
 	err := validateRequire(config)
 	if err != nil {
 		return err
@@ -80,6 +83,9 @@ func validateVars(vars []*latest.Variable) error {
 		if v.Name == "" {
 			return fmt.Errorf("vars[*].name has to be specified")
 		}
+		if encoding.IsUnsafeUpperName(v.Name) {
+			return fmt.Errorf("vars[%d].name %s has to match the following regex: %v", i, v.Name, encoding.UnsafeUpperNameRegEx.String())
+		}
 
 		// make sure is unique
 		for j, v2 := range vars {
@@ -116,14 +122,8 @@ func validateRequire(config *latest.Config) error {
 
 func validateDependencies(config *latest.Config) error {
 	for index, dep := range config.Dependencies {
-		if dep.Name == "" {
-			return errors.Errorf("dependencies[%d].name is required", index)
-		}
-		if strings.Contains(dep.Name, ".") {
-			return errors.Errorf("dependencies[%d].name cannot contain a '.'", index)
-		}
-		if !isDependencyNameUnique(dep.Name, config.Dependencies) {
-			return errors.Errorf("dependencies[%d].name has to be unique", index)
+		if dep.OverrideName != "" && encoding.IsUnsafeName(dep.OverrideName) {
+			return fmt.Errorf("dependencies[%d].overrideName %s has to match the following regex: %v", index, dep.OverrideName, encoding.UnsafeNameRegEx.String())
 		}
 		if dep.Source == nil {
 			return errors.Errorf("dependencies[%d].source is required", index)
@@ -131,7 +131,7 @@ func validateDependencies(config *latest.Config) error {
 		if dep.Source.Git == "" && dep.Source.Path == "" {
 			return errors.Errorf("dependencies[%d].source.git or dependencies[%d].source.path is required", index, index)
 		}
-		if len(dep.Profiles) > 0 && (dep.Profile != "" || len(dep.ProfileParents) > 0) {
+		if len(dep.Profiles) > 0 && dep.Profile != "" {
 			return errors.Errorf("dependencies[%d].profiles and dependencies[%d].profile & dependencies[%d].profileParents cannot be used together", index, index, index)
 		}
 	}
@@ -139,25 +139,13 @@ func validateDependencies(config *latest.Config) error {
 	return nil
 }
 
-func isDependencyNameUnique(name string, dependencies []*latest.DependencyConfig) bool {
-	found := false
-	for _, d := range dependencies {
-		if d.Name == name {
-			if found {
-				return false
-			}
-
-			found = true
-		}
-	}
-
-	return true
-}
-
 func validateCommands(config *latest.Config) error {
 	for index, command := range config.Commands {
 		if command.Name == "" {
 			return errors.Errorf("commands[%d].name is required", index)
+		}
+		if encoding.IsUnsafeUpperName(command.Name) {
+			return fmt.Errorf("commands[%d].name %s has to match the following regex: %v", index, command.Name, encoding.UnsafeUpperNameRegEx.String())
 		}
 		if command.Command == "" {
 			return errors.Errorf("commands[%d].command is required", index)
@@ -227,6 +215,9 @@ func validateDeployments(config *latest.Config) error {
 		if deployConfig.Name == "" {
 			return errors.Errorf("deployments[%d].name is required", index)
 		}
+		if encoding.IsUnsafeName(deployConfig.Name) {
+			return fmt.Errorf("deployments[%d].name %s has to match the following regex: %v", index, deployConfig.Name, encoding.UnsafeNameRegEx.String())
+		}
 		if deployConfig.Helm == nil && deployConfig.Kubectl == nil {
 			return errors.Errorf("Please specify either helm or kubectl as deployment type in deployment %s", deployConfig.Name)
 		}
@@ -285,6 +276,9 @@ func validateImages(config *latest.Config) error {
 		if imageConfigName == "" {
 			return errors.Errorf("images keys cannot be an empty string")
 		}
+		if encoding.IsUnsafeName(imageConfigName) {
+			return fmt.Errorf("images[%s] has to match the following regex: %v", imageConfigName, encoding.UnsafeNameRegEx.String())
+		}
 		if imageConf == nil {
 			return errors.Errorf("images.%s is empty and should at least contain an image name", imageConfigName)
 		}
@@ -322,7 +316,7 @@ func validateImages(config *latest.Config) error {
 	return nil
 }
 
-func isReplacePodsUnique(index int, rp *latest.ReplacePod, rps []*latest.ReplacePod) bool {
+func isDevPodUnique(index string, rp *latest.DevPod, rps map[string]*latest.DevPod) bool {
 	for i, r := range rps {
 		if i == index {
 			continue
@@ -353,99 +347,77 @@ func strMapEquals(a, b map[string]string) bool {
 }
 
 func validateDev(config *latest.Config) error {
-	for index, rp := range config.Dev.ReplacePods {
-		if rp.ContainerName != "" && len(rp.LabelSelector) == 0 {
-			return errors.Errorf("Error in config: containerName is defined but label selector is nil in replace pods at index %d", index)
+	for devPodName, devPod := range config.Dev {
+		if devPodName == "" {
+			return errors.Errorf("dev[%s] is required", devPodName)
 		}
-
-		if len(rp.LabelSelector) == 0 && rp.ImageSelector == "" {
-			return errors.Errorf("Error in config: image selector and label selector are nil in replace pods at index %d", index)
+		if encoding.IsUnsafeName(devPodName) {
+			return fmt.Errorf("dev[%s] has to match the following regex: %v", devPodName, encoding.UnsafeNameRegEx.String())
+		}
+		if len(devPod.LabelSelector) == 0 && devPod.ImageSelector == "" {
+			return errors.Errorf("dev[%s]: image selector and label selector are nil", devPodName)
 		}
 
 		definedSelectors := 0
-		if rp.ImageSelector != "" {
+		if devPod.ImageSelector != "" {
 			definedSelectors++
 		}
-		if len(rp.LabelSelector) > 0 {
+		if len(devPod.LabelSelector) > 0 {
 			definedSelectors++
 		}
 		if definedSelectors > 1 {
-			return errors.Errorf("Error in config: image selector and label selector cannot both be defined in replace pods at index %d", index)
+			return errors.Errorf("dev[%s]: image selector and label selector cannot both be defined", devPodName)
 		}
-		if !isReplacePodsUnique(index, rp, config.Dev.ReplacePods) {
-			return errors.Errorf("Error in config: image selector or label selector is not unique in replace pods at index %d", index)
+		if !isDevPodUnique(devPodName, devPod, config.Dev) {
+			return errors.Errorf("dev[%s]: image selector or label selector is not unique", devPodName)
 		}
-		for j, p := range rp.PersistPaths {
-			if p.Path == "" {
-				return errors.Errorf("Error in config: dev.replacePods[%d].persistPaths[%d].path is required", index, j)
-			}
+
+		err := validateDevContainer(fmt.Sprintf("dev[%s]", devPodName), &devPod.DevContainer, false)
+		if err != nil {
+			return err
 		}
-	}
-
-	if config.Dev.Ports != nil {
-		for index, port := range config.Dev.Ports {
-			// Validate imageName and label selector
-			if port.ContainerName != "" && len(port.LabelSelector) == 0 {
-				return errors.Errorf("Error in config: containerName is defined but label selector is nil in ports config at index %d", index)
-			}
-
-			if len(port.LabelSelector) == 0 && port.ImageSelector == "" {
-				return errors.Errorf("Error in config: image selector and label selector are nil in ports config at index %d", index)
-			}
-
-			if len(port.PortMappings) == 0 && len(port.PortMappingsReverse) == 0 {
-				return errors.Errorf("Error in config: portMappings is empty in port config at index %d", index)
-			}
-			if !ValidContainerArch(port.Arch) {
-				return errors.Errorf("Error in config: ports.arch is not valid '%s' at index %d", port.Arch, index)
-			}
-		}
-	}
-
-	if config.Dev.Sync != nil {
-		for index, sync := range config.Dev.Sync {
-			// Validate imageName and label selector
-			if sync.ContainerName != "" && len(sync.LabelSelector) == 0 {
-				return errors.Errorf("Error in config: containerName is defined but label selector is nil in sync config at index %d", index)
-			}
-
-			if len(sync.LabelSelector) == 0 && sync.ImageSelector == "" {
-				return errors.Errorf("Error in config: image selector and label selector are nil in sync config at index %d", index)
-			}
-
-			// Validate initial sync strategy
-			if !ValidInitialSyncStrategy(sync.InitialSync) {
-				return errors.Errorf("Error in config: sync.initialSync is not valid '%s' at index %d", sync.InitialSync, index)
-			}
-			if !ValidContainerArch(sync.Arch) {
-				return errors.Errorf("Error in config: sync.arch is not valid '%s' at index %d", sync.Arch, index)
-			}
-			if sync.OnUpload != nil {
-				for j, e := range sync.OnUpload.Exec {
-					if e.Command == "" {
-						return errors.Errorf("Error in config: dev.sync[%d].exec[%d].command is required", index, j)
-					}
+		if len(devPod.Containers) > 0 {
+			for i, c := range devPod.Containers {
+				err := validateDevContainer(fmt.Sprintf("dev[%s].containers[%d]", devPodName, i), &c, true)
+				if err != nil {
+					return err
 				}
 			}
 		}
 	}
 
-	if config.Dev.InteractiveImages != nil {
-		for index, imageConf := range config.Dev.InteractiveImages {
-			if imageConf.Name == "" {
-				return errors.Errorf("Error in config: Unnamed interactive image config at index %d", index)
+	return nil
+}
+
+func validateDevContainer(path string, devContainer *latest.DevContainer, nameRequired bool) error {
+	if nameRequired && devContainer.Container == "" {
+		return errors.Errorf("%s.container is required", path)
+	}
+
+	if !ValidContainerArch(devContainer.Arch) {
+		return errors.Errorf("%s.arch is not valid '%s'", path, devContainer.Arch)
+	}
+	for index, sync := range devContainer.Sync {
+		// Validate initial sync strategy
+		if !ValidInitialSyncStrategy(sync.InitialSync) {
+			return errors.Errorf("%s.sync[%d].initialSync is not valid '%s'", path, index, sync.InitialSync)
+		}
+		if sync.OnUpload != nil {
+			for j, e := range sync.OnUpload.Exec {
+				if e.Command == "" {
+					return errors.Errorf("%s.sync[%d].exec[%d].command is required", path, index, j)
+				}
 			}
 		}
 	}
-
-	if config.Dev.Logs != nil {
-		for index, selector := range config.Dev.Logs.Selectors {
-			if selector.ImageSelector != "" && len(selector.LabelSelector) > 0 {
-				return errors.Errorf("Error in config: dev.logs.selectors[%d].imageSelector and dev.logs.selectors[%d].labelSelector cannot be used together", index, index)
-			}
-			if selector.ImageSelector != "" && selector.ContainerName != "" {
-				return errors.Errorf("Error in config: dev.logs.selectors[%d].imageSelector and dev.logs.selectors[%d].containerName cannot be used together", index, index)
-			}
+	for index, port := range devContainer.PortMappingsReverse {
+		if port.LocalPort == nil || *port.LocalPort == 0 {
+			return errors.Errorf("%s.forward[%d].port is required", path, index)
+		}
+	}
+	for j, p := range devContainer.PersistPaths {
+		if p.Path == "" {
+			return errors.Errorf("%s.persistPaths[%d].path is required", path, j)
 		}
 	}
 
