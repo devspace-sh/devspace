@@ -39,14 +39,14 @@ var UnsafeNameRegEx = regexp.MustCompile(`[a-z0-9][a-z0-9\-]+[a-z0-9]`)
 var UnsafeUpperNameRegEx = regexp.MustCompile(`[A-Za-z0-9][A-Za-z0-9\-_]+[A-Za-z0-9]`)
 
 func IsUnsafeUpperName(unsafeName string) bool {
-	if !UnsafeUpperNameRegEx.MatchString(unsafeName) {
+	if UnsafeUpperNameRegEx.MatchString(unsafeName) {
 		return false
 	}
 	return true
 }
 
 func IsUnsafeName(unsafeName string) bool {
-	if !UnsafeNameRegEx.MatchString(unsafeName) {
+	if UnsafeNameRegEx.MatchString(unsafeName) {
 		return false
 	}
 	return true

@@ -130,12 +130,12 @@ func (l *configLoader) LoadWithParser(localCache localcache.Cache, client kubect
 	if name == "" {
 		nameInterface, ok := data["name"]
 		if !ok {
-			return nil, fmt.Errorf("devspace.yaml is missing the name property")
-		}
-
-		name, ok = nameInterface.(string)
-		if !ok || name == "" {
-			return nil, fmt.Errorf("name property is not a string")
+			name = "devspace"
+		} else {
+			name, ok = nameInterface.(string)
+			if !ok || name == "" {
+				return nil, fmt.Errorf("name property is not a string")
+			}
 		}
 	}
 

@@ -21,6 +21,12 @@ var Locations = []string{
 	"/dev/*/imageSelector",
 	"/dev/*/replaceImage",
 	"/dev/*/containers/*/replaceImage",
+	"/dev/ports/*/imageSelector",
+	"/dev/sync/*/imageSelector",
+	"/dev/logs/*/selectors/*/imageSelector",
+	"/dev/replacePods/*/imageSelector",
+	"/dev/replacePods/*/replaceImage",
+	"/dev/terminal/imageSelector",
 	"/pipelines/**",
 }
 

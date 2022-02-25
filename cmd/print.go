@@ -118,7 +118,7 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 		ctx = ctx.AsDependency(dep)
 	}
 
-	bsConfig, err := yaml.Marshal(ctx.Config)
+	bsConfig, err := yaml.Marshal(ctx.Config.Config())
 	if err != nil {
 		return err
 	}

@@ -55,23 +55,23 @@ type PipelineStep struct {
 
 	If string `yaml:"if,omitempty" json:"if,omitempty"`
 
-	Command string `yaml:"command" json:"command"`
+	Command string `yaml:"command,omitempty" json:"command,omitempty"`
 
-	Directory string `yaml:"directory" json:"directory"`
+	Directory string `yaml:"directory,omitempty" json:"directory,omitempty"`
 
-	Env map[string]string `yaml:"env" json:"env"`
+	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 }
 
 // Config defines the configuration
 type Config struct {
 	// Version holds the config version
-	Version string `yaml:"version"`
+	Version string `yaml:"version" json:"version"`
 
 	// Name specifies the name of the DevSpace project
-	Name string `yaml:"name"`
+	Name string `yaml:"name" json:"name"`
 
 	// Pipelines are the pipelines to execute
-	Pipelines map[string]*Pipeline `yaml:"pipeline,omitempty" json:"pipeline,omitempty"`
+	Pipelines map[string]*Pipeline `yaml:"pipelines,omitempty" json:"pipelines,omitempty"`
 
 	// Require defines what DevSpace, plugins and command versions are needed to use this config
 	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`

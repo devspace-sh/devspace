@@ -1,6 +1,7 @@
 package v1beta11
 
 import (
+	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
@@ -12,8 +13,14 @@ import (
 
 // Upgrade upgrades the config
 func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
+	clonedConfig := &Config{}
+	err := util.Convert(c, clonedConfig)
+	if err != nil {
+		return nil, err
+	}
+	clonedConfig.Dev = DevConfig{}
 	nextConfig := &next.Config{}
-	err := util.Convert(c, nextConfig)
+	err = util.Convert(clonedConfig, nextConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -93,11 +100,12 @@ deploy --all`
 	}
 
 	// merge dev config together
-	nextConfig.Dev, err = c.mergeDevConfig(log)
+	devPods, err := c.mergeDevConfig(log)
 	if err != nil {
 		return nil, err
 	}
 
+	nextConfig.Dev = devPods
 	return nextConfig, nil
 }
 
@@ -105,12 +113,17 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 	devPods := map[string]*next.DevPod{}
 
 	// go over replace pods
-	for _, replacePod := range c.Dev.ReplacePods {
+	for i, replacePod := range c.Dev.ReplacePods {
 		if len(replacePod.LabelSelector) == 0 && replacePod.ImageSelector == "" {
 			continue
 		}
 
-		devPod := getMatchingDevPod(devPods, replacePod.Name, replacePod.LabelSelector, replacePod.ImageSelector)
+		name := replacePod.Name
+		if name == "" {
+			name = fmt.Sprintf("replace:%d", i)
+		}
+
+		devPod := getMatchingDevPod(devPods, name, replacePod.LabelSelector, replacePod.ImageSelector)
 		devPod.Namespace = replacePod.Namespace
 		for _, p := range replacePod.Patches {
 			devPod.Patches = append(devPod.Patches, &next.PatchConfig{
@@ -153,12 +166,17 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 	}
 
 	// go over port forwarding
-	for _, portForwarding := range c.Dev.Ports {
+	for i, portForwarding := range c.Dev.Ports {
 		if len(portForwarding.LabelSelector) == 0 && portForwarding.ImageSelector == "" {
 			continue
 		}
 
-		devPod := getMatchingDevPod(devPods, portForwarding.Name, portForwarding.LabelSelector, portForwarding.ImageSelector)
+		name := portForwarding.Name
+		if name == "" {
+			name = fmt.Sprintf("ports:%d", i)
+		}
+
+		devPod := getMatchingDevPod(devPods, name, portForwarding.LabelSelector, portForwarding.ImageSelector)
 		devPod.Namespace = portForwarding.Namespace
 		for _, pr := range portForwarding.PortMappings {
 			devPod.Forward = append(devPod.Forward, &next.PortMapping{
@@ -183,12 +201,17 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 
 	// go over sync configuration
 	printSyncLogs := c.Dev.Logs != nil && (c.Dev.Logs.Sync == nil || *c.Dev.Logs.Sync)
-	for _, syncConfig := range c.Dev.Sync {
+	for i, syncConfig := range c.Dev.Sync {
 		if len(syncConfig.LabelSelector) == 0 && syncConfig.ImageSelector == "" {
 			continue
 		}
 
-		devPod := getMatchingDevPod(devPods, syncConfig.Name, syncConfig.LabelSelector, syncConfig.ImageSelector)
+		name := syncConfig.Name
+		if name == "" {
+			name = fmt.Sprintf("sync:%d", i)
+		}
+
+		devPod := getMatchingDevPod(devPods, name, syncConfig.LabelSelector, syncConfig.ImageSelector)
 		devPod.Namespace = syncConfig.Namespace
 
 		devContainer := getMatchingDevContainer(devPod, syncConfig.ContainerName)
@@ -322,18 +345,14 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 	}
 
 	// flatten dev containers
-	for _, devPod := range devPods {
-		flattenDevContainers(devPod)
+	for k := range devPods {
+		if len(devPods[k].Containers) == 1 {
+			devPods[k].DevContainer = devPods[k].Containers[0]
+			devPods[k].Containers = nil
+		}
 	}
 
 	return devPods, nil
-}
-
-func flattenDevContainers(devPod *next.DevPod) {
-	if len(devPod.Containers) == 1 {
-		devPod.DevContainer = devPod.Containers[0]
-		devPod.Containers = nil
-	}
 }
 
 func getMatchingDevContainer(devPod *next.DevPod, containerName string) *next.DevContainer {
