@@ -2,6 +2,7 @@ package hook
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
@@ -29,7 +30,7 @@ type remoteCommandHook struct {
 }
 
 func (r *remoteCommandHook) ExecuteRemotely(ctx *devspacecontext.Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer) error {
-	hookCommand, hookArgs, err := ResolveCommand(hook.Command, hook.Args, ctx.Config, ctx.Dependencies)
+	hookCommand, hookArgs, err := ResolveCommand(hook.Command, hook.Args, ctx.WorkingDir, ctx.Config, ctx.Dependencies)
 	if err != nil {
 		return err
 	}
@@ -44,7 +45,7 @@ func (r *remoteCommandHook) ExecuteRemotely(ctx *devspacecontext.Context, hook *
 	once := hook.Container.Once != nil && *hook.Container.Once
 	if once {
 		// check whether hook has previously executed
-		hookExecuted, err := hasHookExecuted(hookCommand, hookArgs, podContainer, ctx.KubeClient)
+		hookExecuted, err := hasHookExecuted(ctx.Context, hookCommand, hookArgs, podContainer, ctx.KubeClient)
 		if err != nil {
 			return errors.Errorf("error checking whether hook has executed '%s/%s/%s': %v", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
 		}
@@ -66,7 +67,7 @@ func (r *remoteCommandHook) ExecuteRemotely(ctx *devspacecontext.Context, hook *
 	}()
 
 	ctx.Log.Infof("Execute hook '%s' in container '%s/%s/%s'", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name)
-	err = ctx.KubeClient.ExecStream(&kubectl.ExecStreamOptions{
+	err = ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
 		Pod:       podContainer.Pod,
 		Container: podContainer.Container.Name,
 		Command:   cmd,
@@ -79,7 +80,7 @@ func (r *remoteCommandHook) ExecuteRemotely(ctx *devspacecontext.Context, hook *
 
 	if once {
 		// record hook execution
-		err := recordHookExecuted(hookCommand, hookArgs, podContainer, ctx.KubeClient)
+		err := recordHookExecuted(ctx.Context, hookCommand, hookArgs, podContainer, ctx.KubeClient)
 		if err != nil {
 			return errors.Errorf("error recording hook execution %s in container '%s/%s/%s': %v", ansi.Color(hookName(hook), "white+b"), podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
 		}
@@ -92,13 +93,13 @@ func commandHash(command string, args []string) string {
 	return hash.String(fmt.Sprintf("%s %s", command, strings.Join(args, " ")))
 }
 
-func hasHookExecuted(command string, args []string, podContainer *selector.SelectedPodContainer, client kubectl.Client) (bool, error) {
+func hasHookExecuted(ctx context.Context, command string, args []string, podContainer *selector.SelectedPodContainer, client kubectl.Client) (bool, error) {
 	cmdHash := commandHash(command, args)
 	cmd := []string{"test", "-e", fmt.Sprintf(`/tmp/hook-%s`, cmdHash)}
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
 
-	err := client.ExecStream(&kubectl.ExecStreamOptions{
+	err := client.ExecStream(ctx, &kubectl.ExecStreamOptions{
 		Pod:       podContainer.Pod,
 		Container: podContainer.Container.Name,
 		Command:   cmd,
@@ -115,13 +116,13 @@ func hasHookExecuted(command string, args []string, podContainer *selector.Selec
 	return true, nil
 }
 
-func recordHookExecuted(command string, args []string, podContainer *selector.SelectedPodContainer, client kubectl.Client) error {
+func recordHookExecuted(ctx context.Context, command string, args []string, podContainer *selector.SelectedPodContainer, client kubectl.Client) error {
 	cmdHash := commandHash(command, args)
 	cmd := []string{"touch", fmt.Sprintf(`/tmp/hook-%s`, cmdHash)}
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
 
-	err := client.ExecStream(&kubectl.ExecStreamOptions{
+	err := client.ExecStream(ctx, &kubectl.ExecStreamOptions{
 		Pod:       podContainer.Pod,
 		Container: podContainer.Container.Name,
 		Command:   cmd,

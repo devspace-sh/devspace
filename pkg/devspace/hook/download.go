@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
@@ -47,7 +48,7 @@ func (r *remoteDownloadHook) ExecuteRemotely(ctx *devspacecontext.Context, hook 
 	}
 
 	// Download the files
-	err := download(ctx.KubeClient, podContainer.Pod, podContainer.Container.Name, localPath, containerPath, ctx.Log)
+	err := download(ctx.Context, ctx.KubeClient, podContainer.Pod, podContainer.Container.Name, localPath, containerPath, ctx.Log)
 	if err != nil {
 		return errors.Errorf("error in container '%s/%s/%s': %v", podContainer.Pod.Namespace, podContainer.Pod.Name, podContainer.Container.Name, err)
 	}
@@ -55,7 +56,7 @@ func (r *remoteDownloadHook) ExecuteRemotely(ctx *devspacecontext.Context, hook 
 	return nil
 }
 
-func download(client kubectl.Client, pod *k8sv1.Pod, container string, localPath string, containerPath string, log logpkg.Logger) error {
+func download(ctx context.Context, client kubectl.Client, pod *k8sv1.Pod, container string, localPath string, containerPath string, log logpkg.Logger) error {
 	prefix := getPrefix(containerPath)
 	prefix = path.Clean(prefix)
 	// remove extraneous path shortcuts - these could occur if a path contained extra "../"
@@ -67,7 +68,7 @@ func download(client kubectl.Client, pod *k8sv1.Pod, container string, localPath
 	errorChan := make(chan error)
 	go func() {
 		defer writer.Close()
-		errorChan <- downloadFromPod(client, pod, container, containerPath, writer)
+		errorChan <- downloadFromPod(ctx, client, pod, container, containerPath, writer)
 	}()
 	go func() {
 		defer reader.Close()
@@ -79,9 +80,9 @@ func download(client kubectl.Client, pod *k8sv1.Pod, container string, localPath
 	return err
 }
 
-func downloadFromPod(client kubectl.Client, pod *k8sv1.Pod, container, containerPath string, writer io.Writer) error {
+func downloadFromPod(ctx context.Context, client kubectl.Client, pod *k8sv1.Pod, container, containerPath string, writer io.Writer) error {
 	stderr := &bytes.Buffer{}
-	err := client.ExecStream(&kubectl.ExecStreamOptions{
+	err := client.ExecStream(ctx, &kubectl.ExecStreamOptions{
 		Pod:       pod,
 		Container: container,
 		Command:   []string{"tar", "czf", "-", containerPath},

@@ -320,7 +320,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 		Log:                  customLog,
 		Polling:              syncConfig.Polling,
 		ResolveCommand: func(command string, args []string) (string, []string, error) {
-			return hook.ResolveCommand(command, args, ctx.Config, ctx.Dependencies)
+			return hook.ResolveCommand(command, args, ctx.WorkingDir, ctx.Config, ctx.Dependencies)
 		},
 	}
 

@@ -22,6 +22,7 @@ func NewExecutor(registry registry.DependencyRegistry) Executor {
 
 type executor struct {
 	registry registry.DependencyRegistry
+	pipeline *Pipeline
 }
 
 func (e *executor) ExecutePipeline(ctx *devspacecontext.Context, configPipeline *latest.Pipeline) error {
@@ -30,6 +31,7 @@ func (e *executor) ExecutePipeline(ctx *devspacecontext.Context, configPipeline 
 		return errors.Wrap(err, "build pipeline")
 	}
 
+	e.pipeline = pipeline
 	return pipeline.Run(ctx)
 }
 

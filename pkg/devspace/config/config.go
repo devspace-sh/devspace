@@ -94,11 +94,8 @@ func Ensure(config Config) Config {
 	if retConfig.Config() == nil {
 		retConfig = NewConfig(retConfig.Raw(), latest.NewRaw(), retConfig.LocalCache(), retConfig.RemoteCache(), retConfig.Variables(), retConfig.Path())
 	}
-	if retConfig.RemoteCache() == nil {
-		retConfig = NewConfig(retConfig.Raw(), retConfig.Config(), localcache.New(""), retConfig.RemoteCache(), retConfig.Variables(), retConfig.Path())
-	}
 	if retConfig.LocalCache() == nil {
-		retConfig = NewConfig(retConfig.Raw(), retConfig.Config(), retConfig.LocalCache(), remotecache.New(""), retConfig.Variables(), retConfig.Path())
+		retConfig = NewConfig(retConfig.Raw(), retConfig.Config(), localcache.New(""), retConfig.RemoteCache(), retConfig.Variables(), retConfig.Path())
 	}
 	if retConfig.Variables() == nil {
 		retConfig = NewConfig(retConfig.Raw(), retConfig.Config(), retConfig.LocalCache(), retConfig.RemoteCache(), map[string]interface{}{}, retConfig.Path())

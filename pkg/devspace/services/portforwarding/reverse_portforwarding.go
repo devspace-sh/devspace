@@ -44,7 +44,7 @@ func startReversePortForwarding(ctx *devspacecontext.Context, name, arch string,
 	}()
 
 	go func() {
-		err := tunnel.StartReverseForward(stdoutReader, stdinWriter, portForwarding, closeChan, container.Pod.Namespace, container.Pod.Name, ctx.Log)
+		err := tunnel.StartReverseForward(ctx.Context, stdoutReader, stdinWriter, portForwarding, closeChan, container.Pod.Namespace, container.Pod.Name, ctx.Log)
 		if err != nil {
 			errorChan <- err
 		}

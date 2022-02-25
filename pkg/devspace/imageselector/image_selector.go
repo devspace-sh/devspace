@@ -18,16 +18,17 @@ type ImageSelector struct {
 }
 
 func Resolve(configImageName string, config config.Config, dependencies []types.Dependency) (*ImageSelector, error) {
-	if configImageName != "" && config != nil && config.Generated() != nil && config.Config() != nil {
+	if configImageName != "" && config != nil && config.LocalCache() != nil && config.Config() != nil {
 		var (
 			c         = config.Config()
-			generated = config.Generated().GetActive()
+			generated = config.LocalCache()
 		)
 
 		// check if cached
-		if generated.Images != nil && generated.Images[configImageName] != nil && generated.Images[configImageName].ImageName != "" && generated.Images[configImageName].Tag != "" && c.Images != nil && c.Images[configImageName] != nil {
+		imageCache, _ := generated.GetImageCache(configImageName)
+		if imageCache.ImageName != "" && imageCache.Tag != "" && c.Images != nil && c.Images[configImageName] != nil {
 			return &ImageSelector{
-				Image: generated.Images[configImageName].ImageName + ":" + generated.Images[configImageName].Tag,
+				Image: imageCache.ImageName + ":" + imageCache.Tag,
 			}, nil
 		}
 
@@ -50,7 +51,7 @@ func Resolve(configImageName string, config config.Config, dependencies []types.
 			dependencyImageName := configImageName[len(dependency)+1:]
 
 			for _, dep := range dependencies {
-				if dep.DependencyConfig().Name == dependency {
+				if dep.Name() == dependency {
 					imageSelector, err := Resolve(dependencyImageName, dep.Config(), dep.Children())
 					if err != nil {
 						return nil, err

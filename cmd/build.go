@@ -113,7 +113,7 @@ func (cmd *BuildCmd) Run(f factory.Factory) error {
 		WithConfig(configInterface).
 		WithKubeClient(client)
 
-	return runWithHooks("buildCommand", client, configInterface, log, func() error {
+	return runWithHooks(ctx, "buildCommand", func() error {
 		return cmd.runCommand(ctx, f, configLoader, configOptions)
 	})
 }

@@ -113,9 +113,12 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 			return errors.Wrap(err, "replace pod")
 		}
 	} else {
-		_, err := podreplace.NewPodReplacer().RevertReplacePod(ctx, devPodConfig)
-		if err != nil {
-			return errors.Wrap(err, "replace pod")
+		devPodCache, ok := ctx.Config.RemoteCache().GetDevPod(devPodConfig.Name)
+		if ok {
+			_, err := podreplace.NewPodReplacer().RevertReplacePod(ctx, &devPodCache)
+			if err != nil {
+				return errors.Wrap(err, "replace pod")
+			}
 		}
 	}
 

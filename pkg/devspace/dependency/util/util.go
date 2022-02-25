@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"io"
 	"net/http"
 	"os"
@@ -40,7 +41,7 @@ func DownloadDependency(ID, basePath string, source *latest.SourceConfig, log lo
 		gitPath := strings.TrimSpace(source.Git)
 
 		_ = os.MkdirAll(DependencyFolderPath, 0755)
-		localPath = filepath.Join(DependencyFolderPath, ConvertID(ID))
+		localPath = filepath.Join(DependencyFolderPath, encoding.Convert(ID))
 
 		// Check if dependency exists
 		_, statErr := os.Stat(localPath)
@@ -78,7 +79,7 @@ func DownloadDependency(ID, basePath string, source *latest.SourceConfig, log lo
 		}
 	} else if source.Path != "" {
 		if isURL(source.Path) {
-			localPath = filepath.Join(DependencyFolderPath, ConvertID(ID))
+			localPath = filepath.Join(DependencyFolderPath, encoding.Convert(ID))
 			_ = os.MkdirAll(localPath, 0755)
 
 			// Check if dependency exists

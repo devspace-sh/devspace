@@ -18,12 +18,10 @@ var Locations = []string{
 	"/hooks/*/command",
 	"/hooks/*/args/*",
 	"/hooks/*/container/imageSelector",
-	"/dev/ports/*/imageSelector",
-	"/dev/sync/*/imageSelector",
-	"/dev/logs/*/selectors/*/imageSelector",
-	"/dev/replacePods/*/imageSelector",
-	"/dev/replacePods/*/replaceImage",
-	"/dev/terminal/imageSelector",
+	"/dev/*/imageSelector",
+	"/dev/*/replaceImage",
+	"/dev/*/containers/*/replaceImage",
+	"/pipelines/**",
 }
 
 // NewRuntimeVariable creates a new variable that is loaded during runtime
@@ -69,7 +67,7 @@ func (e *runtimeVariable) Load() (bool, interface{}, error) {
 		}
 	}
 
-	runtimeVariables := c.RuntimeVariables()
+	runtimeVariables := c.ListRuntimeVariables()
 	if runtimeVariables == nil {
 		return false, nil, fmt.Errorf("couldn't find runtime variable %s", e.name)
 	}

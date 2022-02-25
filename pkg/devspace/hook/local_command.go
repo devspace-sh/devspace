@@ -49,7 +49,7 @@ func (l *localCommandHook) Execute(ctx *devspacecontext.Context, hook *latest.Ho
 	dir := ctx.WorkingDir
 
 	// resolve hook command and args
-	hookCommand, hookArgs, err := ResolveCommand(hook.Command, hook.Args, ctx.Config, ctx.Dependencies)
+	hookCommand, hookArgs, err := ResolveCommand(hook.Command, hook.Args, ctx.WorkingDir, ctx.Config, ctx.Dependencies)
 	if err != nil {
 		return err
 	}
@@ -72,9 +72,9 @@ func (l *localCommandHook) Execute(ctx *devspacecontext.Context, hook *latest.Ho
 	return command.ExecuteCommandWithEnv(hookCommand, hookArgs, dir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), extraEnv)
 }
 
-func ResolveCommand(command string, args []string, config config.Config, dependencies []types.Dependency) (string, []string, error) {
+func ResolveCommand(command string, args []string, dir string, config config.Config, dependencies []types.Dependency) (string, []string, error) {
 	// resolve hook command
-	hookCommand, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsString(command, config, dependencies)
+	hookCommand, err := runtimevar.NewRuntimeResolver(dir, true).FillRuntimeVariablesAsString(command, config, dependencies)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "resolve image helpers")
 	}
@@ -83,7 +83,7 @@ func ResolveCommand(command string, args []string, config config.Config, depende
 	if args != nil {
 		newArgs := []string{}
 		for _, a := range args {
-			newArg, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsString(a, config, dependencies)
+			newArg, err := runtimevar.NewRuntimeResolver(dir, true).FillRuntimeVariablesAsString(a, config, dependencies)
 			if err != nil {
 				return "", nil, errors.Wrap(err, "resolve image helpers")
 			}

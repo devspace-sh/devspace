@@ -126,9 +126,9 @@ func StartTerminal(
 
 	// wait until either client has finished or we got interrupted
 	select {
-	case err = <-ctx.Context.Done():
+	case <-ctx.Context.Done():
 		<-errChan
-		return 0, err
+		return 0, nil
 	case err = <-errChan:
 		if err != nil {
 			if _, ok := err.(*InterruptError); ok {

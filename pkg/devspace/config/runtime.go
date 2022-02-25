@@ -3,8 +3,8 @@ package config
 import "sync"
 
 type RuntimeVariables interface {
-	// RuntimeVariables returns the runtime variables
-	RuntimeVariables() map[string]interface{}
+	// ListRuntimeVariables returns the runtime variables
+	ListRuntimeVariables() map[string]interface{}
 
 	// GetRuntimeVariable retrieves a single runtime variable
 	GetRuntimeVariable(key string) (interface{}, bool)
@@ -39,7 +39,7 @@ func (c *runtimeVariables) SetRuntimeVariable(key string, value interface{}) {
 	c.runtimeVariables[key] = value
 }
 
-func (c *runtimeVariables) RuntimeVariables() map[string]interface{} {
+func (c *runtimeVariables) ListRuntimeVariables() map[string]interface{} {
 	c.runtimeVariablesMutex.Lock()
 	defer c.runtimeVariablesMutex.Unlock()
 

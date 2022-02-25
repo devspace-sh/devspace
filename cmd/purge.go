@@ -118,7 +118,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory) error {
 		WithConfig(configInterface).
 		WithKubeClient(client)
 
-	return runWithHooks("purgeCommand", client, configInterface, cmd.log, func() error {
+	return runWithHooks(ctx, "purgeCommand", func() error {
 		return cmd.runCommand(ctx, f, configOptions)
 	})
 }

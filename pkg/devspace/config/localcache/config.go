@@ -33,10 +33,9 @@ type cacheLoader struct {
 // New generates a new generated config
 func New(cachePath string) Cache {
 	return &LocalCache{
-		Vars:         make(map[string]string),
-		Images:       make(map[string]ImageCache),
-		Dependencies: make(map[string]DependencyCache),
-		Data:         make(map[string]string),
+		Vars:   make(map[string]string),
+		Images: make(map[string]ImageCache),
+		Data:   make(map[string]string),
 
 		cachePath: cachePath,
 	}
@@ -83,9 +82,6 @@ func (l *cacheLoader) loadFromPath(path string) (Cache, error) {
 		}
 		if loadedConfig.Data == nil {
 			loadedConfig.Data = make(map[string]string)
-		}
-		if loadedConfig.Dependencies == nil {
-			loadedConfig.Dependencies = make(map[string]DependencyCache)
 		}
 		if loadedConfig.Vars == nil {
 			loadedConfig.Vars = make(map[string]string)

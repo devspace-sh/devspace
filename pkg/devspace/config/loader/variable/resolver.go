@@ -425,11 +425,11 @@ func (r *resolver) fillVariable(name string, definition *latest.Variable) (inter
 	case latest.VariableSourceEnv:
 		return NewEnvVariable(name).Load(definition)
 	case latest.VariableSourceDefault, latest.VariableSourceInput, latest.VariableSourceAll:
-		return NewDefaultVariable(name, r.localCache, r.remoteCache, r.log).Load(definition)
+		return NewDefaultVariable(name, filepath.Dir(r.options.ConfigPath), r.localCache, r.remoteCache, r.log).Load(definition)
 	case latest.VariableSourceNone:
 		return NewNoneVariable(name).Load(definition)
 	case latest.VariableSourceCommand:
-		return NewCommandVariable(name).Load(definition)
+		return NewCommandVariable(name, filepath.Dir(r.options.ConfigPath)).Load(definition)
 	default:
 		return nil, errors.Errorf("unrecognized variable source '%s', please choose one of 'all', 'input', 'env' or 'none'", name)
 	}
