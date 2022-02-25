@@ -15,12 +15,12 @@ type DevOptions struct {
 
 func Dev(ctx *devspacecontext.Context, devManager devpod.Manager, args []string) error {
 	options := &DevOptions{}
-	args, err := flags.ParseArgs(&options, args)
+	args, err := flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
 	}
 
-	if len(args) == 0 || (options.All && len(args) > 0) {
+	if !options.All && len(args) == 0 {
 		return fmt.Errorf("dev: either specify 'dev --all' or 'dev devConfig1 devConfig2'")
 	}
 	return devManager.StartMultiple(ctx, args)

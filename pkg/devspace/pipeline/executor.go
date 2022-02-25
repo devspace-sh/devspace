@@ -10,6 +10,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	rootID = "___root___"
+)
+
 type Executor interface {
 	ExecutePipeline(ctx *devspacecontext.Context, pipeline *latest.Pipeline) error
 }
@@ -37,12 +41,7 @@ func (e *executor) ExecutePipeline(ctx *devspacecontext.Context, configPipeline 
 
 func (e *executor) buildPipeline(configPipeline *latest.Pipeline) (*Pipeline, error) {
 	devPodManager := devpod.NewManager()
-	pipeline := &Pipeline{
-		DevPodManager:      devPodManager,
-		DependencyRegistry: e.registry,
-		JobsPipeline:       []*PipelineJob{},
-	}
-
+	pipeline := NewPipeline(e.registry, devPodManager)
 	pipeline.Jobs = map[string]*PipelineJob{
 		"default": {
 			Name:          "default",
@@ -64,7 +63,7 @@ func (e *executor) buildPipeline(configPipeline *latest.Pipeline) (*Pipeline, er
 		}
 	}
 
-	rootNode := graph.NewNode("___root___", nil)
+	rootNode := graph.NewNode(rootID, nil)
 	jobGraph := graph.NewGraph(rootNode)
 
 	// add the jobs that have no dependencies
@@ -146,6 +145,10 @@ func addRecursive(node *graph.Node, childs *[]*PipelineJob) error {
 
 		job.Parents = []*PipelineJob{}
 		for _, parent := range c.Parents {
+			if parent.ID == rootID {
+				continue
+			}
+
 			p := parent.Data.(*PipelineJob)
 			job.Parents = append(job.Parents, p)
 		}

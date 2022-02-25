@@ -8,6 +8,17 @@ import (
 	"sync"
 )
 
+func NewPipeline(dependencyRegistry registry.DependencyRegistry, devPodManager devpod.Manager) *Pipeline {
+	return &Pipeline{
+		DevPodManager:      devPodManager,
+		DependencyRegistry: dependencyRegistry,
+		JobsPipeline:       []*PipelineJob{},
+		openJobs:           make(map[string]*PipelineJob),
+		runningJobs:        make(map[string]*PipelineJob),
+		completedJobs:      make(map[string]*PipelineJob),
+	}
+}
+
 type Pipeline struct {
 	DevPodManager      devpod.Manager
 	DependencyRegistry registry.DependencyRegistry

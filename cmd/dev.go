@@ -8,7 +8,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/survey"
-	"github.com/mgutz/ansi"
 	"io"
 	"os"
 
@@ -228,7 +227,7 @@ func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 }
 
 func (cmd *DevCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
-	err := runPipeline(ctx, f, configOptions, cmd.SkipDependency, cmd.Dependency, "deploy", `run_dependencies --all
+	err := runPipeline(ctx, f, configOptions, cmd.SkipDependency, cmd.Dependency, "dev", `run_dependencies --all
 build --all
 deploy --all
 dev --all`, cmd.Wait, cmd.Timeout, 0)
@@ -236,8 +235,6 @@ dev --all`, cmd.Wait, cmd.Timeout, 0)
 		return err
 	}
 
-	cmd.log.Donef("Successfully deployed!")
-	cmd.log.Infof("\r         \nRun: \n- `%s` to create an ingress for the app and open it in the browser \n- `%s` to open a shell into the container \n- `%s` to show the container logs\n- `%s` to analyze the space for potential issues\n", ansi.Color("devspace enter", "white+b"), ansi.Color("devspace logs", "white+b"), ansi.Color("devspace analyze", "white+b"))
 	return nil
 }
 

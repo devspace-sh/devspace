@@ -70,11 +70,16 @@ func (j *PipelineJob) Run(ctx *devspacecontext.Context) error {
 func (j *PipelineJob) doWork(ctx *devspacecontext.Context) error {
 	// loop over steps and execute them
 	for i, step := range j.JobConfig.Steps {
-		execute, err := j.shouldExecuteStep(ctx, &step)
-		if err != nil {
-			return errors.Wrapf(err, "error checking if at step %d", i)
+		var (
+			execute = true
+			err     error
+		)
+		if step.If != "" {
+			execute, err = j.shouldExecuteStep(ctx, &step)
+			if err != nil {
+				return errors.Wrapf(err, "error checking if at step %d", i)
+			}
 		}
-
 		if execute {
 			err = j.executeStep(ctx, &step)
 			if err != nil {

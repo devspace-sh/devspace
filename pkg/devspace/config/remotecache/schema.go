@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/encryption"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/patch"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -307,6 +308,11 @@ func (l *RemoteCache) Save(ctx context.Context, client kubectl.Client) error {
 	if err != nil {
 		if !kerrors.IsNotFound(err) {
 			return errors.Wrapf(err, "get cache secret")
+		}
+
+		err = client.EnsureNamespace(ctx, namespace, log.Discard)
+		if err != nil {
+			return err
 		}
 
 		_, err = client.KubeClient().CoreV1().Secrets(namespace).Create(ctx, &corev1.Secret{

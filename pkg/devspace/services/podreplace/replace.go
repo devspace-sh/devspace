@@ -301,6 +301,9 @@ func replace(ctx *devspacecontext.Context, replicaSetName string, pod *corev1.Po
 	copiedPod := &corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{},
 	}
+	if copiedPod.Annotations == nil {
+		copiedPod.Annotations = map[string]string{}
+	}
 	switch t := parent.(type) {
 	case *appsv1.ReplicaSet:
 		copiedPod.Annotations[ParentNameAnnotation] = t.Name

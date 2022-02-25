@@ -19,12 +19,12 @@ type BuildOptions struct {
 
 func Build(ctx *devspacecontext.Context, args []string) error {
 	options := &BuildOptions{}
-	args, err := flags.ParseArgs(&options, args)
+	args, err := flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
 	}
 
-	if len(args) == 0 || (options.All && len(args) > 0) {
+	if !options.All && len(args) == 0 {
 		return fmt.Errorf("build: either specify 'build --all' or 'build image1 image2'")
 	}
 	return build.NewController().Build(ctx, args, &options.Options)

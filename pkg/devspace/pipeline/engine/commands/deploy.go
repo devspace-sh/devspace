@@ -19,12 +19,12 @@ type DeployOptions struct {
 
 func Deploy(ctx *devspacecontext.Context, args []string) error {
 	options := &DeployOptions{}
-	args, err := flags.ParseArgs(&options, args)
+	args, err := flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
 	}
 
-	if len(args) == 0 || (options.All && len(args) > 0) {
+	if !options.All && len(args) == 0 {
 		return fmt.Errorf("deploy: either specify 'deploy --all' or 'deploy deployment1 deployment2'")
 	}
 	return deploy.NewController().Deploy(ctx, args, &options.Options)
