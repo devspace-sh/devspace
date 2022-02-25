@@ -36,7 +36,7 @@ func (f *Client) ListReleases(ctx *devspacecontext.Context, helmConfig *latest.H
 }
 
 // InstallChart implements interface
-func (f *Client) InstallChart(ctx *devspacecontext.Context, releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
+func (f *Client) InstallChart(ctx *devspacecontext.Context, releaseName string, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
 	for _, release := range f.Releases {
 		if release.Name == releaseName {
 			return release, nil
@@ -57,6 +57,6 @@ func (f *Client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 }
 
 // Template implements interface
-func (f *Client) Template(ctx *devspacecontext.Context, releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error) {
+func (f *Client) Template(ctx *devspacecontext.Context, releaseName, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (string, error) {
 	return "", nil
 }

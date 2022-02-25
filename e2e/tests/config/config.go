@@ -12,7 +12,7 @@ import (
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/loft-sh/devspace/cmd/use"
 	"github.com/loft-sh/devspace/e2e/framework"
@@ -1943,7 +1943,7 @@ var _ = DevSpaceDescribe("config", func() {
 		gomega.Expect(ok).To(gomega.BeTrue())
 		gomega.Expect(values).NotTo(gomega.BeEmpty())
 
-		v, ok := values[0].(map[interface{}]interface{})
+		v, ok := values[0].(map[string]interface{})
 		gomega.Expect(ok).To(gomega.BeTrue())
 		gomega.Expect(v).NotTo(gomega.BeNil())
 

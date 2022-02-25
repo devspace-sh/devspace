@@ -10,7 +10,7 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
 	"github.com/loft-sh/devspace/pkg/util/shell"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // ExpressionMatchRegex is the regex to check if a value matches the devspace var format
@@ -34,7 +34,7 @@ func ResolveAllExpressions(preparedConfig interface{}, dir string, exclude []*re
 	switch t := preparedConfig.(type) {
 	case string:
 		return ResolveExpressions(t, dir)
-	case map[interface{}]interface{}:
+	case map[string]interface{}:
 		err := walk.Walk(t, expressionMatchFn, func(path, value string) (interface{}, error) {
 			if ExcludedPath(path, exclude) {
 				return value, nil
@@ -55,7 +55,7 @@ func ResolveAllExpressions(preparedConfig interface{}, dir string, exclude []*re
 				return nil, err
 			}
 		}
-		
+
 		return t, nil
 	}
 
@@ -109,7 +109,7 @@ func ResolveExpressions(value, dir string) (interface{}, error) {
 		}
 
 		// is yaml object?
-		m := map[interface{}]interface{}{}
+		m := map[string]interface{}{}
 		err = yaml.Unmarshal([]byte(out), &m)
 		if err == nil {
 			return m, nil

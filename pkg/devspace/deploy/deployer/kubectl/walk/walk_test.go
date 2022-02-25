@@ -3,7 +3,7 @@ package walk
 import (
 	"testing"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 )
 
@@ -21,7 +21,7 @@ test2:
       test5:
       image: replaceme
 `
-	inputObj := make(map[interface{}]interface{})
+	inputObj := make(map[string]interface{})
 	err := yaml.Unmarshal([]byte(input), inputObj)
 	if err != nil {
 		t.Fatalf("Error parsing input: %v", err)

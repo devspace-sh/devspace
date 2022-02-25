@@ -7,11 +7,11 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type Parser interface {
-	Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error)
+	Parse(originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error)
 }
 
 func NewDefaultParser() Parser {
@@ -20,7 +20,7 @@ func NewDefaultParser() Parser {
 
 type defaultParser struct{}
 
-func (d *defaultParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
+func (d *defaultParser) Parse(originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
 	// delete the commands, since we don't need it in a normal scenario
 	delete(rawConfig, "commands")
 
@@ -33,7 +33,7 @@ func NewWithCommandsParser() Parser {
 
 type withCommandsParser struct{}
 
-func (d *withCommandsParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
+func (d *withCommandsParser) Parse(originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
 	return fillVariablesAndParse(resolver, rawConfig, log)
 }
 
@@ -43,7 +43,7 @@ func NewCommandsParser() Parser {
 
 type commandsParser struct{}
 
-func (c *commandsParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
+func (c *commandsParser) Parse(originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
 	// modify the config
 	preparedConfig, err := versions.ParseCommands(rawConfig)
 	if err != nil {
@@ -59,7 +59,7 @@ func NewProfilesParser() Parser {
 
 type profilesParser struct{}
 
-func (p *profilesParser) Parse(originalRawConfig map[interface{}]interface{}, rawConfig map[interface{}]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
+func (p *profilesParser) Parse(originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
 	rawMap, err := copyRaw(originalRawConfig)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (p *profilesParser) Parse(originalRawConfig map[interface{}]interface{}, ra
 
 	retProfiles := []*latest.ProfileConfig{}
 	for _, profile := range profiles {
-		profileMap, ok := profile.(map[interface{}]interface{})
+		profileMap, ok := profile.(map[string]interface{})
 		if !ok {
 			continue
 		}
@@ -95,7 +95,7 @@ func (p *profilesParser) Parse(originalRawConfig map[interface{}]interface{}, ra
 	return retConfig, nil
 }
 
-func fillVariablesAndParse(resolver variable.Resolver, preparedConfig map[interface{}]interface{}, log log.Logger) (*latest.Config, error) {
+func fillVariablesAndParse(resolver variable.Resolver, preparedConfig map[string]interface{}, log log.Logger) (*latest.Config, error) {
 	// fill in variables and expressions (leave out
 	preparedConfigInterface, err := resolver.FillVariablesExclude(preparedConfig, runtime.Locations)
 	if err != nil {
@@ -103,7 +103,7 @@ func fillVariablesAndParse(resolver variable.Resolver, preparedConfig map[interf
 	}
 
 	// Now convert the whole config to latest
-	latestConfig, err := versions.Parse(preparedConfigInterface.(map[interface{}]interface{}), log)
+	latestConfig, err := versions.Parse(preparedConfigInterface.(map[string]interface{}), log)
 	if err != nil {
 		return nil, errors.Wrap(err, "convert config")
 	}

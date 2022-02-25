@@ -17,7 +17,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"gotest.tools/assert"
 )
@@ -49,9 +49,9 @@ func TestListProfiles(t *testing.T) {
 			name:       "print 1 profile",
 			fakeConfig: &latest.Config{},
 			files: map[string]interface{}{
-				"devspace.yaml": map[interface{}]interface{}{
+				"devspace.yaml": map[string]interface{}{
 					"profiles": []interface{}{
-						map[interface{}]interface{}{
+						map[string]interface{}{
 							"name": "someProfile",
 						},
 					},

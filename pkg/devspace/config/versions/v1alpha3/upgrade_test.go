@@ -21,7 +21,7 @@ func TestSimple(t *testing.T) {
 					Overrides: &[]*string{
 						ptr.String("chart/values.yaml"),
 					},
-					OverrideValues: &map[interface{}]interface{}{
+					OverrideValues: &map[string]interface{}{
 						"test": "test",
 					},
 				},

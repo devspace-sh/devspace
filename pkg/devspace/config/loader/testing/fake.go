@@ -67,7 +67,7 @@ func (f *FakeConfigLoader) LoadGenerated(options *loader.ConfigOptions) (*localc
 }
 
 // LoadRaw implements interface
-func (f *FakeConfigLoader) LoadRaw() (map[interface{}]interface{}, error) {
+func (f *FakeConfigLoader) LoadRaw() (map[string]interface{}, error) {
 	if f.Config == nil {
 		return nil, errors.New("Couldn't load config")
 	}
@@ -77,7 +77,7 @@ func (f *FakeConfigLoader) LoadRaw() (map[interface{}]interface{}, error) {
 		return nil, err
 	}
 
-	retConfig := map[interface{}]interface{}{}
+	retConfig := map[string]interface{}{}
 	err = yaml.Unmarshal(out, &retConfig)
 	if err != nil {
 		return nil, err

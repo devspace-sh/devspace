@@ -13,13 +13,12 @@ import (
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	fakegenerated "github.com/loft-sh/devspace/pkg/devspace/config/generated/testing"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	fakekubeconfig "github.com/loft-sh/devspace/pkg/util/kubeconfig/testing"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -413,7 +412,7 @@ func TestGetProfiles(t *testing.T) {
 		{
 			name: "Empty file",
 			files: map[string]interface{}{
-				"devspace.yaml": map[interface{}]interface{}{
+				"devspace.yaml": map[string]interface{}{
 					"version": "v1beta9",
 				},
 			},
@@ -422,10 +421,10 @@ func TestGetProfiles(t *testing.T) {
 			name:       "Parse several profiles",
 			configPath: "custom.yaml",
 			files: map[string]interface{}{
-				"custom.yaml": map[interface{}]interface{}{
+				"custom.yaml": map[string]interface{}{
 					"version": "v1beta9",
 					"profiles": []interface{}{
-						map[interface{}]interface{}{
+						map[string]interface{}{
 							"name": "myprofile",
 						},
 					},
@@ -503,7 +502,7 @@ type parseCommandsTestCase struct {
 	name string
 
 	generatedConfig *localcache.Config
-	data            map[interface{}]interface{}
+	data            map[string]interface{}
 
 	expectedCommands []*latest.CommandConfig
 	expectedErr      string
@@ -513,7 +512,7 @@ type parseCommandsTestCase struct {
 func TestParseCommands(t *testing.T) {
 	testCases := []parseCommandsTestCase{
 		{
-			data: map[interface{}]interface{}{
+			data: map[string]interface{}{
 				"version": latest.Version,
 			},
 		},
@@ -615,9 +614,9 @@ deployments:
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
 							V2:             true,
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "nginx",
 									},
 								},
@@ -650,9 +649,9 @@ deployments:
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
 							V2:             true,
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "nginx",
 									},
 								},
@@ -693,9 +692,9 @@ profiles:
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
 							V2:             true,
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -740,9 +739,9 @@ profiles: |-
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -788,9 +787,9 @@ profiles:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -835,9 +834,9 @@ profiles:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -882,9 +881,9 @@ profiles:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -929,9 +928,9 @@ profiles:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -942,9 +941,9 @@ profiles:
 						Name: "deployment",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "nginx",
 									},
 								},
@@ -1115,9 +1114,9 @@ profiles:
 						Name: "deployments",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -1332,9 +1331,9 @@ profiles:
 						Name: "deployment",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "foo",
 									},
 								},
@@ -1381,9 +1380,9 @@ profiles:
 						Name: "deployment",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "${IMAGE_B}",
 									},
 								},
@@ -1523,9 +1522,9 @@ profiles:
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
 							V2:             true,
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "ubuntu",
 									},
 								},
@@ -1571,9 +1570,9 @@ profiles:
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
 							V2:             true,
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "nginx",
 									},
 								},
@@ -1617,9 +1616,9 @@ profiles:
 						Name: "newdefault",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "nginx",
 									},
 								},
@@ -1808,16 +1807,16 @@ profiles:
 						Name: "test",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
-								"service": map[interface{}]interface{}{
+							Values: map[string]interface{}{
+								"service": map[string]interface{}{
 									"ports": []interface{}{
-										map[interface{}]interface{}{
+										map[string]interface{}{
 											"port": 3000,
 										},
 									},
 								},
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "test123/test123",
 									},
 								},
@@ -1828,9 +1827,9 @@ profiles:
 						Name: "test2",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "test/test",
 									},
 								},
@@ -2033,9 +2032,9 @@ profiles:
 						Name: "deployment",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "nginx:a",
 									},
 								},
@@ -2085,9 +2084,9 @@ profiles:
 						Name: "deployment",
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
-									map[interface{}]interface{}{
+									map[string]interface{}{
 										"image": "nginx",
 									},
 								},
@@ -2101,7 +2100,7 @@ profiles:
 
 	// Execute test cases
 	for index, testCase := range testCases {
-		testMap := map[interface{}]interface{}{}
+		testMap := map[string]interface{}{}
 		err := yaml.Unmarshal([]byte(strings.Replace(testCase.in.config, "	", "  ", -1)), &testMap)
 		if err != nil {
 			t.Fatal(err)

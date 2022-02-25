@@ -18,7 +18,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func logErrorf(message string, args ...interface{}) {

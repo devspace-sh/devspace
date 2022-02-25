@@ -1,7 +1,7 @@
 package loader
 
 import (
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // ConfigOptions defines options to load the config

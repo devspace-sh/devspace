@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 )
 

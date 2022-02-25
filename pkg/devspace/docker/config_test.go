@@ -11,7 +11,7 @@ import (
 	configtypes "github.com/docker/cli/cli/config/types"
 	"github.com/docker/docker/api/types"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 )
 

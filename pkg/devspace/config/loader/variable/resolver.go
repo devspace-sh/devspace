@@ -56,7 +56,7 @@ func (r *resolver) fillVariables(haystack interface{}, exclude []*regexp.Regexp)
 	switch t := haystack.(type) {
 	case string:
 		return r.replaceString(t)
-	case map[interface{}]interface{}:
+	case map[string]interface{}:
 		err := walk.Walk(t, varMatchFn, func(path, value string) (interface{}, error) {
 			if expression.ExcludedPath(path, exclude) {
 				return value, nil
@@ -105,7 +105,7 @@ func (r *resolver) FindVariables(haystack interface{}) (map[string]bool, error) 
 			varsUsed[v] = true
 			return "", nil
 		})
-	case map[interface{}]interface{}:
+	case map[string]interface{}:
 		err := walk.Walk(t, varMatchFn, func(_, value string) (interface{}, error) {
 			_, _ = varspkg.ParseString(value, func(v string) (interface{}, error) {
 				varsUsed[v] = true

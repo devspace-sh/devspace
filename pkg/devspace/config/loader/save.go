@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 // Save writes the data of a config to its yaml file

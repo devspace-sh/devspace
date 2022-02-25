@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"bytes"
 	"fmt"
 	jsonyaml "github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -8,7 +9,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
 )
 
@@ -242,15 +243,17 @@ func validateDeployments(config *latest.Config) error {
 	return nil
 }
 
-func ValidateComponentConfig(deployConfig *latest.DeploymentConfig, overwriteValues map[interface{}]interface{}) error {
+func ValidateComponentConfig(deployConfig *latest.DeploymentConfig, overwriteValues map[string]interface{}) error {
 	if deployConfig.Helm != nil && deployConfig.Helm.ComponentChart != nil && *deployConfig.Helm.ComponentChart {
-		bytes, err := yaml.Marshal(overwriteValues)
+		b, err := yaml.Marshal(overwriteValues)
 		if err != nil {
 			return errors.Errorf("deployments[%s].helm: Error marshaling overwrite values: %v", deployConfig.Name, err)
 		}
 
 		componentValues := &latest.ComponentConfig{}
-		err = yaml.UnmarshalStrict(bytes, componentValues)
+		decoder := yaml.NewDecoder(bytes.NewReader(b))
+		decoder.KnownFields(true)
+		err = decoder.Decode(componentValues)
 		if err != nil {
 			return errors.Errorf("deployments[%s].helm.componentChart: component values are incorrect: %v", deployConfig.Name, err)
 		}

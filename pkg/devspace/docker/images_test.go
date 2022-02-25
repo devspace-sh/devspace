@@ -5,7 +5,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	log "github.com/loft-sh/devspace/pkg/util/log/testing"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 )
 

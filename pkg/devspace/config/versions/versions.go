@@ -1,6 +1,7 @@
 package versions
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta11"
 	"io/ioutil"
@@ -33,7 +34,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 
 	"github.com/pkg/errors"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 type loader struct {
@@ -60,8 +61,8 @@ var versionLoader = map[string]*loader{
 }
 
 // ParseProfile loads the base config & a certain profile
-func ParseProfile(basePath string, data map[interface{}]interface{}, profiles []string, update bool, disableProfileActivation bool, resolver variable.Resolver, log log.Logger) ([]map[interface{}]interface{}, error) {
-	parsedProfiles := []map[interface{}]interface{}{}
+func ParseProfile(basePath string, data map[string]interface{}, profiles []string, update bool, disableProfileActivation bool, resolver variable.Resolver, log log.Logger) ([]map[string]interface{}, error) {
+	parsedProfiles := []map[string]interface{}{}
 
 	// auto activated root level profiles
 	activatedProfiles := []string{}
@@ -89,12 +90,12 @@ func ParseProfile(basePath string, data map[interface{}]interface{}, profiles []
 }
 
 // ParseCommands parses only the commands from the config
-func ParseCommands(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+func ParseCommands(data map[string]interface{}) (map[string]interface{}, error) {
 	return getCommands(data)
 }
 
 // ParseVariables parses only the variables from the config
-func ParseVariables(data map[interface{}]interface{}, log log.Logger) ([]*latest.Variable, error) {
+func ParseVariables(data map[string]interface{}, log log.Logger) ([]*latest.Variable, error) {
 	strippedData, err := getVariables(data)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading variables")
@@ -109,7 +110,7 @@ func ParseVariables(data map[interface{}]interface{}, log log.Logger) ([]*latest
 }
 
 // Parse parses the data into the latest config
-func Parse(data map[interface{}]interface{}, log log.Logger) (*latest.Config, error) {
+func Parse(data map[string]interface{}, log log.Logger) (*latest.Config, error) {
 	version, ok := data["version"].(string)
 	if !ok {
 		return nil, errors.Errorf("Version is missing in devspace.yaml")
@@ -128,7 +129,9 @@ func Parse(data map[interface{}]interface{}, log log.Logger) (*latest.Config, er
 	if err != nil {
 		return nil, err
 	}
-	err = yaml.UnmarshalStrict(out, latestConfig)
+	decoder := yaml.NewDecoder(bytes.NewReader(out))
+	decoder.KnownFields(true)
+	err = decoder.Decode(latestConfig)
 	if err != nil {
 		return nil, errors.Errorf("Error loading config: %v", err)
 	}
@@ -230,8 +233,8 @@ func filterOutEmpty(config *latest.Config) {
 }
 
 // getVariables returns only the variables from the config
-func getVariables(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
-	retMap := map[interface{}]interface{}{}
+func getVariables(data map[string]interface{}) (map[string]interface{}, error) {
+	retMap := map[string]interface{}{}
 	err := util.Convert(data, &retMap)
 	if err != nil {
 		return nil, err
@@ -239,20 +242,20 @@ func getVariables(data map[interface{}]interface{}) (map[interface{}]interface{}
 
 	vars, ok := retMap["vars"]
 	if !ok {
-		return map[interface{}]interface{}{
+		return map[string]interface{}{
 			"version": retMap["version"],
 		}, nil
 	}
 
-	return map[interface{}]interface{}{
+	return map[string]interface{}{
 		"version": retMap["version"],
 		"vars":    vars,
 	}, nil
 }
 
 // getCommands returns only the commands from the config
-func getCommands(data map[interface{}]interface{}) (map[interface{}]interface{}, error) {
-	retMap := map[interface{}]interface{}{}
+func getCommands(data map[string]interface{}) (map[string]interface{}, error) {
+	retMap := map[string]interface{}{}
 	err := util.Convert(data, &retMap)
 	if err != nil {
 		return nil, err
@@ -260,25 +263,25 @@ func getCommands(data map[interface{}]interface{}) (map[interface{}]interface{},
 
 	commands, ok := retMap["commands"]
 	if !ok {
-		return map[interface{}]interface{}{
+		return map[string]interface{}{
 			"version": retMap["version"],
 		}, nil
 	}
 
-	return map[interface{}]interface{}{
+	return map[string]interface{}{
 		"version":  retMap["version"],
 		"commands": commands,
 	}, nil
 }
 
 // getProfiles loads a certain profile
-func getProfiles(basePath string, data map[interface{}]interface{}, profile string, profileChain *[]map[interface{}]interface{}, depth int, update bool, log log.Logger) error {
+func getProfiles(basePath string, data map[string]interface{}, profile string, profileChain *[]map[string]interface{}, depth int, update bool, log log.Logger) error {
 	if depth > 50 {
 		return fmt.Errorf("cannot load config with profile %s: max config loading depth reached. Seems like you have a profile cycle somewhere", profile)
 	}
 
 	// Convert config
-	retMap := map[interface{}]interface{}{}
+	retMap := map[string]interface{}{}
 	err := util.Convert(data, &retMap)
 	if err != nil {
 		return err
@@ -302,12 +305,14 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 		if err != nil {
 			return err
 		}
-		err = yaml.UnmarshalStrict(o, profileConfig)
+		decoder := yaml.NewDecoder(bytes.NewReader(o))
+		decoder.KnownFields(true)
+		err = decoder.Decode(profileConfig)
 		if err != nil {
 			return fmt.Errorf("error parsing profile at profiles[%d]: %v", i, err)
 		}
 
-		configMap, ok := profileMap.(map[interface{}]interface{})
+		configMap, ok := profileMap.(map[string]interface{})
 		if ok && profileConfig.Name == profile {
 			// Add to profile chain
 			*profileChain = append(*profileChain, configMap)
@@ -346,7 +351,7 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 							return errors.Wrap(err, "read parent config")
 						}
 
-						rawMap := map[interface{}]interface{}{}
+						rawMap := map[string]interface{}{}
 						err = yaml.Unmarshal(fileContent, &rawMap)
 						if err != nil {
 							return err
@@ -373,7 +378,7 @@ func getProfiles(basePath string, data map[interface{}]interface{}, profile stri
 	return errors.Errorf("Couldn't find profile '%s'", profile)
 }
 
-func getActivatedProfiles(data map[interface{}]interface{}, resolver variable.Resolver) ([]string, error) {
+func getActivatedProfiles(data map[string]interface{}, resolver variable.Resolver) ([]string, error) {
 	activatedProfiles := []string{}
 
 	// Check if there are profiles
@@ -396,7 +401,9 @@ func getActivatedProfiles(data map[interface{}]interface{}, resolver variable.Re
 			return activatedProfiles, err
 		}
 
-		err = yaml.UnmarshalStrict(o, profileConfig)
+		decoder := yaml.NewDecoder(bytes.NewReader(o))
+		decoder.KnownFields(true)
+		err = decoder.Decode(profileConfig)
 		if err != nil {
 			return activatedProfiles, fmt.Errorf("error parsing profile at profiles[%d]: %v", i, err)
 		}

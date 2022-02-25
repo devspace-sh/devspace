@@ -191,15 +191,10 @@ func (d *devPod) startTerminal(ctx *devspacecontext.Context, devPodConfig *lates
 	}
 
 	if devContainer != nil {
-		go func() {
-			_, err := terminal.StartTerminal(ctx, devContainer, &targetSelectorWithContainer{devPod: d}, os.Stdout, os.Stderr, os.Stdin)
-			if err != nil {
-				ctx.Log.Errorf("error in terminal forwarding: %v", err)
-			}
-
-			// terminal is done, we are done
-			d.Stop()
-		}()
+		_, err := terminal.StartTerminal(ctx, devContainer, &targetSelectorWithContainer{devPod: d}, os.Stdout, os.Stderr, os.Stdin)
+		if err != nil {
+			ctx.Log.Errorf("error in terminal forwarding: %v", err)
+		}
 
 		return true
 	}
@@ -250,7 +245,7 @@ type targetSelectorWithContainer struct {
 }
 
 func (d *targetSelectorWithContainer) SelectSinglePod(ctx context.Context, client kubectl.Client, log log.Logger) (*corev1.Pod, error) {
-	return d.SelectSinglePod(ctx, client, log)
+	return d.devPod.selectSinglePod(ctx, client, log)
 }
 
 func (d *targetSelectorWithContainer) SelectSingleContainer(ctx context.Context, client kubectl.Client, log log.Logger) (*selector.SelectedPodContainer, error) {

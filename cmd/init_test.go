@@ -30,7 +30,7 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 )
 
@@ -158,7 +158,7 @@ func TestInit(t *testing.T) {
 						Name: filepath.Base(dir),
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []*latest.ContainerConfig{
 									{
 										Image: "someImage",
@@ -220,7 +220,7 @@ func TestInit(t *testing.T) {
 						Name: filepath.Base(dir),
 						Helm: &latest.HelmConfig{
 							ComponentChart: ptr.Bool(true),
-							Values: map[interface{}]interface{}{
+							Values: map[string]interface{}{
 								"containers": []interface{}{
 									struct{}{},
 								},

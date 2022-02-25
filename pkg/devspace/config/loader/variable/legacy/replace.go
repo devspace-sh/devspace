@@ -251,7 +251,7 @@ func ReplaceImageNamesStringMap(manifest map[string]interface{}, config config2.
 }
 
 // ReplaceImageNames replaces images within a certain manifest with the correct tags from the cache
-func ReplaceImageNames(manifest map[interface{}]interface{}, config config2.Config, dependencies []types.Dependency, keys map[string]bool) (bool, error) {
+func ReplaceImageNames(manifest map[string]interface{}, config config2.Config, dependencies []types.Dependency, keys map[string]bool) (bool, error) {
 	return replaceImageNames(config, dependencies, keys, func(match walk.MatchFn, replace walk.ReplaceFn) error {
 		return walk.Walk(manifest, match, replace)
 	})

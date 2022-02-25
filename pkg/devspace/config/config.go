@@ -14,7 +14,7 @@ type Config interface {
 
 	// Raw returns the config as it was loaded from the devspace.yaml
 	// including all sections
-	Raw() map[interface{}]interface{}
+	Raw() map[string]interface{}
 
 	// Variables returns the variables that were resolved while
 	// loading the config
@@ -30,7 +30,7 @@ type Config interface {
 	Path() string
 }
 
-func NewConfig(raw map[interface{}]interface{}, parsed *latest.Config, localCache localcache.Cache, remoteCache remotecache.Cache, resolvedVariables map[string]interface{}, path string) Config {
+func NewConfig(raw map[string]interface{}, parsed *latest.Config, localCache localcache.Cache, remoteCache remotecache.Cache, resolvedVariables map[string]interface{}, path string) Config {
 	return &config{
 		RuntimeVariables:  newRuntimeVariables(),
 		rawConfig:         raw,
@@ -45,7 +45,7 @@ func NewConfig(raw map[interface{}]interface{}, parsed *latest.Config, localCach
 type config struct {
 	RuntimeVariables
 
-	rawConfig         map[interface{}]interface{}
+	rawConfig         map[string]interface{}
 	parsedConfig      *latest.Config
 	localCache        localcache.Cache
 	remoteCache       remotecache.Cache
@@ -67,7 +67,7 @@ func (c *config) Config() *latest.Config {
 	return c.parsedConfig
 }
 
-func (c *config) Raw() map[interface{}]interface{} {
+func (c *config) Raw() map[string]interface{} {
 	return c.rawConfig
 }
 
@@ -89,7 +89,7 @@ func Ensure(config Config) Config {
 		retConfig = NewConfig(nil, nil, nil, nil, nil, "")
 	}
 	if retConfig.Raw() == nil {
-		retConfig = NewConfig(map[interface{}]interface{}{}, retConfig.Config(), retConfig.LocalCache(), retConfig.RemoteCache(), retConfig.Variables(), retConfig.Path())
+		retConfig = NewConfig(map[string]interface{}{}, retConfig.Config(), retConfig.LocalCache(), retConfig.RemoteCache(), retConfig.Variables(), retConfig.Path())
 	}
 	if retConfig.Config() == nil {
 		retConfig = NewConfig(retConfig.Raw(), latest.NewRaw(), retConfig.LocalCache(), retConfig.RemoteCache(), retConfig.Variables(), retConfig.Path())

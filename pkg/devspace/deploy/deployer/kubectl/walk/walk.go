@@ -12,7 +12,7 @@ type ReplaceFn func(path, value string) (interface{}, error)
 type MatchFn func(key, value string) bool
 
 // Walk walks over an interface and replaces keys that match the match function with the replace function
-func Walk(d map[interface{}]interface{}, match MatchFn, replace ReplaceFn) error {
+func Walk(d map[string]interface{}, match MatchFn, replace ReplaceFn) error {
 	return doWalk("", d, match, replace)
 }
 
@@ -46,28 +46,8 @@ func doWalk(path string, d interface{}, match MatchFn, replace ReplaceFn) error 
 			}
 		}
 	case map[string]interface{}:
-		for key, v := range t {
-			newPath := path + "/" + key
-			value, ok := v.(string)
-			if !ok {
-				err = doWalk(newPath, v, match, replace)
-				if err != nil {
-					return err
-				}
-
-				continue
-			}
-
-			if match(key, value) {
-				t[key], err = replace(newPath, value)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	case map[interface{}]interface{}:
 		for k, v := range t {
-			key := k.(string)
+			key := k
 			newPath := path + "/" + key
 			value, ok := v.(string)
 			if !ok {

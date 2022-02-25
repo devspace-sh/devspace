@@ -12,7 +12,7 @@ import (
 	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
 	log "github.com/loft-sh/devspace/pkg/util/log/testing"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -27,7 +27,7 @@ type deployTestCase struct {
 	deployment     string
 	chart          string
 	valuesFiles    []string
-	values         map[interface{}]interface{}
+	values         map[string]interface{}
 
 	expectedDeployed bool
 	expectedErr      string
@@ -58,7 +58,7 @@ func TestDeploy(t *testing.T) {
 			deployment:  "deploy2",
 			chart:       ".",
 			valuesFiles: []string{"."},
-			values: map[interface{}]interface{}{
+			values: map[string]interface{}{
 				"val": "fromVal",
 			},
 			expectedDeployed: true,

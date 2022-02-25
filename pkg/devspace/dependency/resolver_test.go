@@ -22,7 +22,7 @@ import (
 	"gotest.tools/assert"
 	"k8s.io/client-go/kubernetes/fake"
 
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 type resolverTestCase struct {

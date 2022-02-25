@@ -12,7 +12,7 @@ import (
 	"github.com/docker/docker/api/types/registry"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"gotest.tools/assert"
 )

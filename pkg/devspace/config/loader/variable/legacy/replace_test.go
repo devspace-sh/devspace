@@ -8,27 +8,27 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 )
 
 type replaceContainerNamesTestCase struct {
 	name string
 
-	overwriteValues map[interface{}]interface{}
+	overwriteValues map[string]interface{}
 	cache           *localcache.CacheConfig
 	imagesConf      map[string]*latest.ImageConfig
 	builtImages     map[string]string
 
 	expectedShouldRedeploy  bool
-	expectedOverwriteValues map[interface{}]interface{}
+	expectedOverwriteValues map[string]interface{}
 }
 
 func TestReplaceContainerNames(t *testing.T) {
 	testCases := []replaceContainerNamesTestCase{
 		{
 			name: "invalid image name",
-			overwriteValues: map[interface{}]interface{}{
+			overwriteValues: map[string]interface{}{
 				"": "",
 			},
 			cache: &localcache.CacheConfig{
@@ -36,25 +36,25 @@ func TestReplaceContainerNames(t *testing.T) {
 					"": {},
 				},
 			},
-			expectedOverwriteValues: map[interface{}]interface{}{
+			expectedOverwriteValues: map[string]interface{}{
 				"": "",
 			},
 		},
 		{
 			name: "Image not in cache",
-			overwriteValues: map[interface{}]interface{}{
+			overwriteValues: map[string]interface{}{
 				"": "myimage",
 			},
 			cache: &localcache.CacheConfig{
 				Images: map[string]*localcache.ImageCache{},
 			},
-			expectedOverwriteValues: map[interface{}]interface{}{
+			expectedOverwriteValues: map[string]interface{}{
 				"": "myimage",
 			},
 		},
 		{
 			name: "Image in cache",
-			overwriteValues: map[interface{}]interface{}{
+			overwriteValues: map[string]interface{}{
 				"": "myimage",
 			},
 			imagesConf: map[string]*latest.ImageConfig{
@@ -74,13 +74,13 @@ func TestReplaceContainerNames(t *testing.T) {
 				"myimage": "",
 			},
 			expectedShouldRedeploy: true,
-			expectedOverwriteValues: map[interface{}]interface{}{
+			expectedOverwriteValues: map[string]interface{}{
 				"": "myimage:someTag",
 			},
 		},
 		{
 			name: "Replace image & tag helpers",
-			overwriteValues: map[interface{}]interface{}{
+			overwriteValues: map[string]interface{}{
 				"": "image(test):tag(test)",
 			},
 			imagesConf: map[string]*latest.ImageConfig{
@@ -100,13 +100,13 @@ func TestReplaceContainerNames(t *testing.T) {
 				"myimage": "",
 			},
 			expectedShouldRedeploy: true,
-			expectedOverwriteValues: map[interface{}]interface{}{
+			expectedOverwriteValues: map[string]interface{}{
 				"": "myimage:someTag",
 			},
 		},
 		{
 			name: "Do not replace unknown tag helpers",
-			overwriteValues: map[interface{}]interface{}{
+			overwriteValues: map[string]interface{}{
 				"": "tag(test2):image(test):tag(test)image(test)",
 			},
 			imagesConf: map[string]*latest.ImageConfig{
@@ -126,13 +126,13 @@ func TestReplaceContainerNames(t *testing.T) {
 				"myimage": "",
 			},
 			expectedShouldRedeploy: true,
-			expectedOverwriteValues: map[interface{}]interface{}{
+			expectedOverwriteValues: map[string]interface{}{
 				"": "tag(test2):myimage:someTagmyimage",
 			},
 		},
 		{
 			name: "Do not replace unknown image helpers",
-			overwriteValues: map[interface{}]interface{}{
+			overwriteValues: map[string]interface{}{
 				"": "image(test2):image(test):tag(test)image(test)",
 			},
 			imagesConf: map[string]*latest.ImageConfig{
@@ -152,7 +152,7 @@ func TestReplaceContainerNames(t *testing.T) {
 				"myimage": "",
 			},
 			expectedShouldRedeploy: true,
-			expectedOverwriteValues: map[interface{}]interface{}{
+			expectedOverwriteValues: map[string]interface{}{
 				"": "image(test2):myimage:someTagmyimage",
 			},
 		},

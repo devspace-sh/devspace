@@ -12,7 +12,7 @@ import (
 	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 	"k8s.io/client-go/kubernetes/fake"
 )

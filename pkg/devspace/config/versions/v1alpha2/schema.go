@@ -59,12 +59,12 @@ type DeploymentConfig struct {
 
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
-	ChartPath       *string                      `yaml:"chartPath,omitempty"`
-	Wait            *bool                        `yaml:"wait,omitempty"`
-	Timeout         *int64                       `yaml:"timeout,omitempty"`
-	TillerNamespace *string                      `yaml:"tillerNamespace,omitempty"`
-	Overrides       *[]*string                   `yaml:"overrides,omitempty"`
-	OverrideValues  *map[interface{}]interface{} `yaml:"overrideValues,omitempty"`
+	ChartPath       *string                 `yaml:"chartPath,omitempty"`
+	Wait            *bool                   `yaml:"wait,omitempty"`
+	Timeout         *int64                  `yaml:"timeout,omitempty"`
+	TillerNamespace *string                 `yaml:"tillerNamespace,omitempty"`
+	Overrides       *[]*string              `yaml:"overrides,omitempty"`
+	OverrideValues  *map[string]interface{} `yaml:"overrideValues,omitempty"`
 }
 
 // KubectlConfig defines the specific kubectl options used during deployment

@@ -12,13 +12,13 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	config, err := Parse(map[interface{}]interface{}{
+	config, err := Parse(map[string]interface{}{
 		"version": "DoesNotExist",
 	}, log.Discard)
 	assert.Error(t, err, "Unrecognized config version DoesNotExist. Please upgrade devspace with `devspace upgrade`")
 	assert.Equal(t, true, config == nil, "Config from invalid version not nil")
 
-	config, err = Parse(map[interface{}]interface{}{
+	config, err = Parse(map[string]interface{}{
 		"version": latest.Version,
 		"images": &map[string]*latest.ImageConfig{
 			"TestImg": {
@@ -30,7 +30,7 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, latest.Version, config.Version, "Conversion to latest version not correct")
 	assert.Equal(t, "TestImg", config.Images["TestImg"].Image, "Conversion to latest version not correct")
 
-	config, err = Parse(map[interface{}]interface{}{
+	config, err = Parse(map[string]interface{}{
 		"version": "v1alpha1",
 		"images": &map[string]*v1alpha1.ImageConfig{
 			"TestImg": {

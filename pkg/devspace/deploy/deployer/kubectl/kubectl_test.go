@@ -18,7 +18,7 @@ import (
 	log "github.com/loft-sh/devspace/pkg/util/log/testing"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 )
 

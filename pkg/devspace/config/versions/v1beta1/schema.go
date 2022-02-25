@@ -103,15 +103,15 @@ type ComponentConfig struct {
 
 // ContainerConfig holds the configurations of a container
 type ContainerConfig struct {
-	Name           *string                         `yaml:"name,omitempty"`
-	Image          *string                         `yaml:"image,omitempty"`
-	Command        *[]*string                      `yaml:"command,omitempty"`
-	Args           *[]*string                      `yaml:"args,omitempty"`
-	Env            *[]*map[interface{}]interface{} `yaml:"env,omitempty"`
-	VolumeMounts   *[]*VolumeMountConfig           `yaml:"volumeMounts,omitempty"`
-	Resources      *map[interface{}]interface{}    `yaml:"resources,omitempty"`
-	LivenessProbe  *map[interface{}]interface{}    `yaml:"livenessProbe,omitempty"`
-	ReadinessProbe *map[interface{}]interface{}    `yaml:"readinessProbe,omitempty"`
+	Name           *string                    `yaml:"name,omitempty"`
+	Image          *string                    `yaml:"image,omitempty"`
+	Command        *[]*string                 `yaml:"command,omitempty"`
+	Args           *[]*string                 `yaml:"args,omitempty"`
+	Env            *[]*map[string]interface{} `yaml:"env,omitempty"`
+	VolumeMounts   *[]*VolumeMountConfig      `yaml:"volumeMounts,omitempty"`
+	Resources      *map[string]interface{}    `yaml:"resources,omitempty"`
+	LivenessProbe  *map[string]interface{}    `yaml:"livenessProbe,omitempty"`
+	ReadinessProbe *map[string]interface{}    `yaml:"readinessProbe,omitempty"`
 }
 
 // VolumeMountConfig holds the configuration for a specific mount path
@@ -171,15 +171,15 @@ type ServicePortConfig struct {
 
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
-	Chart           *ChartConfig                 `yaml:"chart,omitempty"`
-	Wait            *bool                        `yaml:"wait,omitempty"`
-	Rollback        *bool                        `yaml:"rollback,omitempty"`
-	Force           *bool                        `yaml:"force,omitempty"`
-	Timeout         *int64                       `yaml:"timeout,omitempty"`
-	TillerNamespace *string                      `yaml:"tillerNamespace,omitempty"`
-	DevSpaceValues  *bool                        `yaml:"devSpaceValues,omitempty"`
-	ValuesFiles     *[]*string                   `yaml:"valuesFiles,omitempty"`
-	Values          *map[interface{}]interface{} `yaml:"values,omitempty"`
+	Chart           *ChartConfig            `yaml:"chart,omitempty"`
+	Wait            *bool                   `yaml:"wait,omitempty"`
+	Rollback        *bool                   `yaml:"rollback,omitempty"`
+	Force           *bool                   `yaml:"force,omitempty"`
+	Timeout         *int64                  `yaml:"timeout,omitempty"`
+	TillerNamespace *string                 `yaml:"tillerNamespace,omitempty"`
+	DevSpaceValues  *bool                   `yaml:"devSpaceValues,omitempty"`
+	ValuesFiles     *[]*string              `yaml:"valuesFiles,omitempty"`
+	Values          *map[string]interface{} `yaml:"values,omitempty"`
 }
 
 // ChartConfig defines the helm chart options

@@ -21,7 +21,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -99,6 +99,7 @@ func (p *replacer) ReplacePod(ctx *devspacecontext.Context, devPod *latest.DevPo
 	devPodCache.ParentKind = parent.GetObjectKind().GroupVersionKind().Kind
 	devPodCache.ParentName = parent.(metav1.Object).GetName()
 	devPodCache.ReplicaSet = container.Pod.Name
+	ctx.Config.RemoteCache().SetDevPod(devPodCache.Name, devPodCache)
 	err = ctx.Config.RemoteCache().Save(ctx.Context, ctx.KubeClient)
 	if err != nil {
 		return err
@@ -106,7 +107,7 @@ func (p *replacer) ReplacePod(ctx *devspacecontext.Context, devPod *latest.DevPo
 
 	// replace the pod
 	ctx.Log.Debugf("Replacing Pod %s/%s...", container.Pod.Namespace, container.Pod.Name)
-	devPodCache.ReplicaSet, err = replace(ctx, container.Pod.Name, container.Pod, container.Container.Name, parent, devPod)
+	err = replace(ctx, container.Pod.Name, container.Pod, container.Container.Name, parent, devPod)
 	if err != nil {
 		return err
 	}
@@ -287,15 +288,15 @@ func deleteAndWait(ctx *devspacecontext.Context, pod *corev1.Pod) error {
 	return nil
 }
 
-func replace(ctx *devspacecontext.Context, replicaSetName string, pod *corev1.Pod, container string, parent runtime.Object, replacePod *latest.DevPod) (string, error) {
+func replace(ctx *devspacecontext.Context, replicaSetName string, pod *corev1.Pod, container string, parent runtime.Object, replacePod *latest.DevPod) error {
 	parentHash, err := hashParentPodSpec(ctx, parent, replacePod)
 	if err != nil {
-		return "", errors.Wrap(err, "hash parent pod spec")
+		return errors.Wrap(err, "hash parent pod spec")
 	}
 
 	configHash, err := hashConfig(replacePod)
 	if err != nil {
-		return "", errors.Wrap(err, "hash config")
+		return errors.Wrap(err, "hash config")
 	}
 
 	copiedPod := &corev1.PodTemplateSpec{
@@ -319,26 +320,26 @@ func replace(ctx *devspacecontext.Context, replicaSetName string, pod *corev1.Po
 		copiedPod.Spec = t.Spec.Template.Spec
 		copiedPod.Spec.Hostname = strings.Replace(pod.Name, ".", "-", -1)
 	default:
-		return "", fmt.Errorf("unrecognized object")
+		return fmt.Errorf("unrecognized object")
 	}
 
 	// replace the image names
 	err = replaceImagesInPodSpec(ctx, &copiedPod.Spec, replacePod)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// apply the patches
 	copiedPod, err = applyPodPatches(copiedPod, replacePod)
 	if err != nil {
-		return "", errors.Wrap(err, "apply pod patches")
+		return errors.Wrap(err, "apply pod patches")
 	}
 
 	// replace paths
 	if len(replacePod.PersistPaths) > 0 {
 		err := persistPaths(pod.Name, replacePod, copiedPod)
 		if err != nil {
-			return "", err
+			return err
 		}
 	}
 
@@ -352,7 +353,7 @@ func replace(ctx *devspacecontext.Context, replicaSetName string, pod *corev1.Po
 	copiedPod.Labels[selector.ReplacedLabel] = "true"
 	imageSelector, err := getImageSelector(ctx, replacePod)
 	if err != nil {
-		return "", err
+		return err
 	} else if imageSelector != "" {
 		copiedPod.Labels[selector.ImageSelectorLabel] = imageSelector
 	}
@@ -363,7 +364,7 @@ func replace(ctx *devspacecontext.Context, replicaSetName string, pod *corev1.Po
 	// scale down parent
 	err = scaleDownParent(ctx, parent)
 	if err != nil {
-		return "", errors.Wrap(err, "scale down parent")
+		return errors.Wrap(err, "scale down parent")
 	}
 	ctx.Log.Debugf("Scaled down %s %s/%s", copiedPod.Annotations[ParentKindAnnotation], copiedPod.Namespace, copiedPod.Annotations[ParentNameAnnotation])
 
@@ -387,11 +388,11 @@ func replace(ctx *devspacecontext.Context, replicaSetName string, pod *corev1.Po
 		return false, nil
 	})
 	if err != nil {
-		return "", errors.Wrap(err, "wait for original pod to terminate")
+		return errors.Wrap(err, "wait for original pod to terminate")
 	}
 
 	// create a replica set
-	replicaSet, err := ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(copiedPod.Namespace).Create(ctx.Context, &appsv1.ReplicaSet{
+	replicaSet, err := ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(pod.Namespace).Create(ctx.Context, &appsv1.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      replicaSetName,
 			Namespace: pod.Namespace,
@@ -411,7 +412,7 @@ func replace(ctx *devspacecontext.Context, replicaSetName string, pod *corev1.Po
 		},
 	}, metav1.CreateOptions{})
 	if err != nil {
-		return "", errors.Wrap(err, "create copied pod")
+		return errors.Wrap(err, "create copied pod")
 	}
 
 	// create a pvc if needed
@@ -427,21 +428,21 @@ func replace(ctx *devspacecontext.Context, replicaSetName string, pod *corev1.Po
 					return kerrors.IsNotFound(err), nil
 				})
 				if err != nil {
-					return copiedPod.Name, errors.Wrap(err, "waiting for pvc to terminate")
+					return errors.Wrap(err, "waiting for pvc to terminate")
 				}
 
 				// create the new one
 				err = createPVC(ctx, copiedPod, replicaSet, replacePod)
 				if err != nil {
-					return copiedPod.Name, errors.Wrap(err, "create persistent volume claim")
+					return errors.Wrap(err, "create persistent volume claim")
 				}
 			} else {
-				return copiedPod.Name, errors.Wrap(err, "create persistent volume claim")
+				return errors.Wrap(err, "create persistent volume claim")
 			}
 		}
 	}
 
-	return copiedPod.Name, nil
+	return nil
 }
 
 func createPVC(ctx *devspacecontext.Context, copiedPod *corev1.PodTemplateSpec, replicaSet *appsv1.ReplicaSet, replacePod *latest.DevPod) error {
@@ -732,7 +733,7 @@ func scaleDownParent(ctx *devspacecontext.Context, obj runtime.Object) error {
 	return fmt.Errorf("unrecognized object")
 }
 
-func convertFromInterface(inter map[interface{}]interface{}) []byte {
+func convertFromInterface(inter map[string]interface{}) []byte {
 	out, err := yaml.Marshal(inter)
 	if err != nil {
 		panic(err)
@@ -746,13 +747,13 @@ func convertFromInterface(inter map[interface{}]interface{}) []byte {
 	return retOut
 }
 
-func convertToInterface(str *corev1.PodTemplateSpec) map[interface{}]interface{} {
+func convertToInterface(str *corev1.PodTemplateSpec) map[string]interface{} {
 	out, err := json.Marshal(str)
 	if err != nil {
 		panic(err)
 	}
 
-	ret := map[interface{}]interface{}{}
+	ret := map[string]interface{}{}
 	err = yaml.Unmarshal(out, ret)
 	if err != nil {
 		panic(err)
@@ -896,6 +897,14 @@ func findSingleReplaceablePodParent(ctx *devspacecontext.Context, replacePod *la
 	targetOptions := targetselector.NewEmptyOptions().
 		ApplyConfigParameter(containerName, replacePod.LabelSelector, imageSelector, replacePod.Namespace, "").
 		WithTimeout(300).
+		WithContainerFilter(func(p *corev1.Pod, c *corev1.Container) bool {
+			isTerminating := selector.FilterTerminatingContainers(p, c)
+			if isTerminating {
+				return true
+			}
+
+			return p.Labels != nil && p.Labels[ReplicaSetLabel] == "true"
+		}).
 		WithWaitingStrategy(targetselector.NewUntilNotTerminatingStrategy(time.Second * 2)).
 		WithSkipInitContainers(true)
 

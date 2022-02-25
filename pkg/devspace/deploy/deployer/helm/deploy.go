@@ -13,7 +13,7 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm/merge"
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
@@ -137,7 +137,7 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 	return false, nil
 }
 
-func (d *DeployConfig) internalDeploy(ctx *devspacecontext.Context, overwriteValues map[interface{}]interface{}, out io.Writer) (*types.Release, error) {
+func (d *DeployConfig) internalDeploy(ctx *devspacecontext.Context, overwriteValues map[string]interface{}, out io.Writer) (*types.Release, error) {
 	var (
 		releaseName      = d.DeploymentConfig.Name
 		releaseNamespace = d.DeploymentConfig.Namespace
@@ -172,11 +172,11 @@ func (d *DeployConfig) internalDeploy(ctx *devspacecontext.Context, overwriteVal
 	return appRelease, nil
 }
 
-func (d *DeployConfig) getDeploymentValues(ctx *devspacecontext.Context) (bool, map[interface{}]interface{}, error) {
+func (d *DeployConfig) getDeploymentValues(ctx *devspacecontext.Context) (bool, map[string]interface{}, error) {
 	var (
 		chartPath       = d.DeploymentConfig.Helm.Chart.Name
 		chartValuesPath = ctx.ResolvePath(filepath.Join(chartPath, "values.yaml"))
-		overwriteValues = map[interface{}]interface{}{}
+		overwriteValues = map[string]interface{}{}
 		shouldRedeploy  = false
 	)
 
@@ -202,7 +202,7 @@ func (d *DeployConfig) getDeploymentValues(ctx *devspacecontext.Context) (bool, 
 		for _, overridePath := range d.DeploymentConfig.Helm.ValuesFiles {
 			overwriteValuesPath := ctx.ResolvePath(overridePath)
 
-			overwriteValuesFromPath := map[interface{}]interface{}{}
+			overwriteValuesFromPath := map[string]interface{}{}
 			err = yamlutil.ReadYamlFromFile(overwriteValuesPath, overwriteValuesFromPath)
 			if err != nil {
 				ctx.Log.Warnf("Error reading from chart dev overwrite values %s: %v", overwriteValuesPath, err)

@@ -8,14 +8,15 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/encryption"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/patch"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
 	"sync"
+	"time"
 )
 
 type Cache interface {
@@ -132,7 +133,9 @@ func (l *RemoteCache) GetDevPod(devPodName string) (DevPodCache, bool) {
 			return dP, true
 		}
 	}
-	return DevPodCache{}, false
+	return DevPodCache{
+		Name: devPodName,
+	}, false
 }
 
 func (l *RemoteCache) DeleteDevPod(devPodName string) {
@@ -180,7 +183,9 @@ func (l *RemoteCache) GetDeployment(deploymentName string) (DeploymentCache, boo
 			return dP, true
 		}
 	}
-	return DeploymentCache{}, false
+	return DeploymentCache{
+		Name: deploymentName,
+	}, false
 }
 
 func (l *RemoteCache) DeleteDeployment(deploymentName string) {
@@ -304,57 +309,62 @@ func (l *RemoteCache) Save(ctx context.Context, client kubectl.Client) error {
 		namespace = client.Namespace()
 	}
 
-	secret, err := client.KubeClient().CoreV1().Secrets(namespace).Get(ctx, l.secretName, metav1.GetOptions{})
-	if err != nil {
-		if !kerrors.IsNotFound(err) {
-			return errors.Wrapf(err, "get cache secret")
+	waitErr := wait.PollImmediate(time.Second, time.Second*10, func() (done bool, err error) {
+		secret, err := client.KubeClient().CoreV1().Secrets(namespace).Get(ctx, l.secretName, metav1.GetOptions{})
+		if err != nil {
+			if !kerrors.IsNotFound(err) {
+				return false, errors.Wrapf(err, "get cache secret")
+			}
+
+			err = client.EnsureNamespace(ctx, namespace, log.Discard)
+			if err != nil {
+				return false, err
+			}
+
+			_, err = client.KubeClient().CoreV1().Secrets(namespace).Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      l.secretName,
+					Namespace: client.Namespace(),
+				},
+				Data: map[string][]byte{
+					"cache": data,
+				},
+			}, metav1.CreateOptions{})
+			if err != nil {
+				if kerrors.IsAlreadyExists(err) {
+					return false, nil
+				}
+
+				return false, errors.Wrap(err, "create cache secret")
+			}
+
+			l.raw = data
+			return true, nil
 		}
 
-		err = client.EnsureNamespace(ctx, namespace, log.Discard)
-		if err != nil {
-			return err
+		if secret.Data == nil {
+			secret.Data = map[string][]byte{}
 		}
 
-		_, err = client.KubeClient().CoreV1().Secrets(namespace).Create(ctx, &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      l.secretName,
-				Namespace: client.Namespace(),
-			},
-			Data: map[string][]byte{
-				"cache": data,
-			},
-		}, metav1.CreateOptions{})
+		cacheData := secret.Data["cache"]
+		if string(cacheData) == string(data) {
+			return true, nil
+		}
+
+		secret.Data["cache"] = data
+
+		// create patch
+		_, err = client.KubeClient().CoreV1().Secrets(namespace).Update(ctx, secret, metav1.UpdateOptions{})
 		if err != nil {
-			return errors.Wrap(err, "create cache secret")
+			if kerrors.IsConflict(err) {
+				return false, nil
+			}
+
+			return false, err
 		}
 
 		l.raw = data
-		return nil
-	}
-
-	if secret.Data == nil {
-		secret.Data = map[string][]byte{}
-	}
-
-	cacheData := secret.Data["cache"]
-	if string(cacheData) == string(data) {
-		return nil
-	}
-
-	originalSecret := secret.DeepCopy()
-	secret.Data["cache"] = data
-
-	// create patch
-	p := patch.MergeFrom(originalSecret)
-	bytes, err := p.Data(secret)
-	if err != nil {
-		return errors.Wrap(err, "create parent patch")
-	}
-	_, err = client.KubeClient().CoreV1().Secrets(namespace).Patch(ctx, l.secretName, p.Type(), bytes, metav1.PatchOptions{})
-	if err != nil {
-		return err
-	}
-
-	l.raw = data
-	return nil
+		return true, nil
+	})
+	return waitErr
 }

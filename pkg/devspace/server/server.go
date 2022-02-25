@@ -21,7 +21,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/port"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 	"github.com/pkg/errors"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -101,7 +101,7 @@ type handler struct {
 
 	defaultContext   string
 	defaultNamespace string
-	rawConfig        map[interface{}]interface{}
+	rawConfig        map[string]interface{}
 	kubeContexts     map[string]string
 	workingDirectory string
 	analyticsEnabled bool
@@ -222,9 +222,9 @@ func (h *handler) version(w http.ResponseWriter, r *http.Request) {
 }
 
 type returnConfig struct {
-	Config     *latest.Config              `yaml:"config"`
-	RawConfig  map[interface{}]interface{} `yaml:"rawConfig"`
-	LocalCache localcache.Cache            `yaml:"generatedConfig"`
+	Config     *latest.Config         `yaml:"config"`
+	RawConfig  map[string]interface{} `yaml:"rawConfig"`
+	LocalCache localcache.Cache       `yaml:"generatedConfig"`
 
 	AnalyticsEnabled bool              `yaml:"analyticsEnabled"`
 	Profile          string            `yaml:"profile"`

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/command"
@@ -30,7 +30,7 @@ type VersionedClient interface {
 type Client interface {
 	Exec(ctx *devspacecontext.Context, args []string, helmConfig *latest.HelmConfig) ([]byte, error)
 	FetchChart(ctx *devspacecontext.Context, helmConfig *latest.HelmConfig) (bool, string, error)
-	WriteValues(values map[interface{}]interface{}) (string, error)
+	WriteValues(values map[string]interface{}) (string, error)
 }
 
 func NewGenericClient(versionedClient VersionedClient, log log.Logger) Client {
@@ -55,7 +55,7 @@ type client struct {
 	helmPath string
 }
 
-func (c *client) WriteValues(values map[interface{}]interface{}) (string, error) {
+func (c *client) WriteValues(values map[string]interface{}) (string, error) {
 	f, err := ioutil.TempFile("", "")
 	if err != nil {
 		return "", err

@@ -687,7 +687,7 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config, imageName string) er
 				}
 
 				profile.Merge = &latest.ProfileConfigStructure{
-					Images: map[interface{}]interface{}{
+					Images: map[string]interface{}{
 						imageName: imageConfig,
 					},
 				}

@@ -79,7 +79,7 @@ func (r *runtimeResolver) fillVariables(haystack interface{}, config config.Conf
 	switch t := haystack.(type) {
 	case string:
 		return r.replaceString(t, config, dependencies, legacyHelpers)
-	case map[interface{}]interface{}:
+	case map[string]interface{}:
 		shouldRebuild := false
 		err := walk.Walk(t, varMatchFn, func(path, value string) (interface{}, error) {
 			rebuild, val, err := r.replaceString(value, config, dependencies, legacyHelpers)

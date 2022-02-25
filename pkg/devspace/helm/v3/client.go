@@ -37,7 +37,7 @@ func (c *client) Command() commands.Command {
 }
 
 // InstallChart installs the given chart via helm v3
-func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
+func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (*types.Release, error) {
 	valuesFile, err := c.genericHelm.WriteValues(values)
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 	return nil, nil
 }
 
-func (c *client) Template(ctx *devspacecontext.Context, releaseName, releaseNamespace string, values map[interface{}]interface{}, helmConfig *latest.HelmConfig) (string, error) {
+func (c *client) Template(ctx *devspacecontext.Context, releaseName, releaseNamespace string, values map[string]interface{}, helmConfig *latest.HelmConfig) (string, error) {
 	cleanup, chartDir, err := c.genericHelm.FetchChart(ctx, helmConfig)
 	if err != nil {
 		return "", err

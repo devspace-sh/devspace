@@ -77,7 +77,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 	for {
 		helmConfig := &latest.HelmConfig{
 			Chart: &latest.ChartConfig{},
-			Values: map[interface{}]interface{}{
+			Values: map[string]interface{}{
 				"someChartValue": "",
 			},
 		}

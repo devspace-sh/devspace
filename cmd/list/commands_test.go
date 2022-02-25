@@ -22,7 +22,7 @@ package list
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 )
 

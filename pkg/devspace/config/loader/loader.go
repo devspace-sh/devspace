@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
@@ -22,7 +23,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
@@ -49,7 +50,7 @@ type ConfigLoader interface {
 	LoadWithParser(localCache localcache.Cache, client kubectl.Client, parser Parser, options *ConfigOptions, log log.Logger) (config.Config, error)
 
 	// LoadRaw loads the config without parsing it.
-	LoadRaw() (map[interface{}]interface{}, error)
+	LoadRaw() (map[string]interface{}, error)
 
 	// Exists returns if a devspace.yaml could be found
 	Exists() bool
@@ -264,7 +265,7 @@ func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) err
 }
 
 func (l *configLoader) parseConfig(
-	rawConfig map[interface{}]interface{},
+	rawConfig map[string]interface{},
 	localCache localcache.Cache,
 	remoteCache remotecache.Cache,
 	client kubectl.Client,
@@ -365,7 +366,7 @@ func (l *configLoader) parseConfig(
 }
 
 func validateProfile(profile interface{}) error {
-	profileMap, ok := profile.(map[interface{}]interface{})
+	profileMap, ok := profile.(map[string]interface{})
 	if !ok {
 		return fmt.Errorf("profile is not an object")
 	}
@@ -440,7 +441,7 @@ func validateProfile(profile interface{}) error {
 	return nil
 }
 
-func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resolver) (map[interface{}]interface{}, error) {
+func prepareProfiles(config map[string]interface{}, resolver variable.Resolver) (map[string]interface{}, error) {
 	rawProfiles := config["profiles"]
 	if rawProfiles == nil {
 		return config, nil
@@ -462,7 +463,7 @@ func prepareProfiles(config map[interface{}]interface{}, resolver variable.Resol
 			return nil, err
 		}
 
-		profileMap, ok := resolvedProfile.(map[interface{}]interface{})
+		profileMap, ok := resolvedProfile.(map[string]interface{})
 		if !ok {
 			return nil, errors.Wrapf(err, "error resolving profiles[%d], object expected", idx)
 		}
@@ -527,7 +528,7 @@ func resolve(data interface{}, resolver variable.Resolver) (interface{}, error) 
 	return resolver.FillVariables(data)
 }
 
-func (l *configLoader) applyProfiles(data map[interface{}]interface{}, options *ConfigOptions, resolver variable.Resolver, log log.Logger) (map[interface{}]interface{}, error) {
+func (l *configLoader) applyProfiles(data map[string]interface{}, options *ConfigOptions, resolver variable.Resolver, log log.Logger) (map[string]interface{}, error) {
 	// Get profile
 	profiles, err := versions.ParseProfile(filepath.Dir(l.absConfigPath), data, options.Profiles, options.ProfileRefresh, options.DisableProfileActivation, resolver, log)
 	if err != nil {
@@ -590,7 +591,7 @@ func configExistsInPath(path string) bool {
 }
 
 // LoadRaw loads the raw config
-func (l *configLoader) LoadRaw() (map[interface{}]interface{}, error) {
+func (l *configLoader) LoadRaw() (map[string]interface{}, error) {
 	// What path should we use
 	configPath := ConfigPath(l.absConfigPath)
 	_, err := os.Stat(configPath)
@@ -603,7 +604,7 @@ func (l *configLoader) LoadRaw() (map[interface{}]interface{}, error) {
 		return nil, err
 	}
 
-	rawMap := map[interface{}]interface{}{}
+	rawMap := map[string]interface{}{}
 	err = yaml.Unmarshal(fileContent, &rawMap)
 	if err != nil {
 		return nil, err
@@ -680,13 +681,13 @@ func ConfigPath(configPath string) string {
 	return path
 }
 
-func copyRaw(in map[interface{}]interface{}) (map[interface{}]interface{}, error) {
+func copyRaw(in map[string]interface{}) (map[string]interface{}, error) {
 	o, err := yaml.Marshal(in)
 	if err != nil {
 		return nil, err
 	}
 
-	n := map[interface{}]interface{}{}
+	n := map[string]interface{}{}
 	err = yaml.Unmarshal(o, &n)
 	if err != nil {
 		return nil, err
@@ -696,12 +697,12 @@ func copyRaw(in map[interface{}]interface{}) (map[interface{}]interface{}, error
 }
 
 func copyForValidation(profile interface{}) (*latest.ProfileConfig, error) {
-	profileMap, ok := profile.(map[interface{}]interface{})
+	profileMap, ok := profile.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("error loading profiles: invalid format")
 	}
 
-	clone := map[interface{}]interface{}{
+	clone := map[string]interface{}{
 		"name":       profileMap["name"],
 		"parent":     profileMap["parent"],
 		"parents":    profileMap["parents"],
@@ -715,7 +716,9 @@ func copyForValidation(profile interface{}) (*latest.ProfileConfig, error) {
 	}
 
 	profileConfig := &latest.ProfileConfig{}
-	err = yaml.UnmarshalStrict(o, profileConfig)
+	decoder := yaml.NewDecoder(bytes.NewReader(o))
+	decoder.KnownFields(true)
+	err = decoder.Decode(profileConfig)
 	if err != nil {
 		return nil, err
 	}
