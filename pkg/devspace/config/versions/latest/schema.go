@@ -71,6 +71,10 @@ type PipelineStep struct {
 	// should get executed.
 	If string `yaml:"if,omitempty" json:"if,omitempty"`
 
+	// ContinueOnError will not fail the whole job and pipeline if
+	// a call within the step fails.
+	ContinueOnError bool `yaml:"continueOnError" json:"continueOnError"`
+
 	// Run is the actual shell command that should be executed during this
 	// pipeline step
 	Run string `yaml:"run,omitempty" json:"run,omitempty"`

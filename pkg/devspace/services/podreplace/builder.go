@@ -143,12 +143,12 @@ func buildReplicaSet(ctx *devspacecontext.Context, name string, target runtime.O
 	if err != nil {
 		return nil, err
 	} else if imageSelector != "" {
-		podTemplate.Labels[selector.ImageSelectorLabel] = imageSelector
+		podTemplate.Annotations[selector.ImageSelectorAnnotation] = imageSelector
 	}
 
 	replicaSet.Spec = appsv1.ReplicaSetSpec{
 		Selector: &metav1.LabelSelector{
-			MatchLabels: podTemplate.Labels,
+			MatchLabels: podTemplate.ObjectMeta.Labels,
 		},
 		Template: *podTemplate,
 	}

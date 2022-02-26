@@ -230,7 +230,7 @@ func (t *targetSelector) selectSingle(ctx context.Context, client kubectl.Client
 		}
 
 		var out interface{}
-		err := wait.PollImmediateWithContext(ctx, time.Second, timeout, func(ctx context.Context) (done bool, err error) {
+		err := wait.PollImmediateWithContext(ctx, time.Millisecond*500, timeout, func(ctx context.Context) (done bool, err error) {
 			done, o, err := selectFn(ctx, client, options, log)
 			if err != nil {
 				return false, err

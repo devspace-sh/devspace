@@ -190,14 +190,6 @@ func (r *resolver) findAndFillVariables(haystack interface{}, exclude []*regexp.
 		}
 	}
 
-	// resolve all other variables
-	for k := range varsUsed {
-		_, err = r.resolve(k, nil)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	// try resolving predefined variables
 	for _, name := range AlwaysResolvePredefinedVars {
 		// ignore errors here as those variables are probably not used anyways
@@ -237,6 +229,11 @@ func (r *resolver) resolve(name string, definition *latest.Variable) (interface{
 	err := r.fillVariableDefinition(definition)
 	if err != nil {
 		return nil, err
+	}
+
+	// skip variable if no definition was found
+	if definition == nil {
+		return "${" + name + "}", nil
 	}
 
 	// fill the variable if not found

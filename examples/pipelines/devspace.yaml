@@ -9,11 +9,10 @@ pipelines:
   dev:
     steps:
       - run: |-
-          echo "${IMAGE}"
           build test --set image=${IMAGE} --set build.docker.skipPush=true
           
           deploy test --set helm.componentChart=true \
-            --set helm.values.containers[0].image="${runtime.images.test}"
+            --set helm.values.containers[0].image=${IMAGE}
           
-          dev test --set imageSelector="${runtime.images.test}" \
-            --set terminal.command=bash
+          dev test --set imageSelector=${IMAGE} \
+            --set terminal.command=sh

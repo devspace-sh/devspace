@@ -102,62 +102,89 @@ func (e *runtimeVariable) Load() (bool, interface{}, error) {
 			onlyImage = true
 		}
 
-		// search for image name
-		cache := c.LocalCache()
+		// search for image name in cache
+		imageCache, ok := c.LocalCache().GetImageCache(imageName)
+		if ok && imageCache.ImageName != "" && imageCache.Tag != "" {
+			shouldRedeploy, image := BuildImageString(c, imageName, imageCache.ImageName, imageCache.Tag, onlyImage, onlyTag)
+			if image != "" {
+				return shouldRedeploy, image, nil
+			}
+		}
+
+		// search for image name in config
 		for configImageKey, configImage := range c.Config().Images {
 			if configImageKey != imageName {
 				continue
 			}
 
-			// check if in built images
-			shouldRedeploy := false
-			builtImagesInterface, ok := c.GetRuntimeVariable(constants.BuiltImagesKey)
-			if ok {
-				builtImages := builtImagesInterface.(map[string]buildtypes.ImageNameTag)
-				for _, v := range builtImages {
-					if v.ImageName == configImage.Image {
-						shouldRedeploy = true
-						break
-					}
-				}
-			}
-
-			// if we only need the image we are done here
-			if onlyImage {
-				return shouldRedeploy, configImage.Image, nil
-			}
-
-			// try to find the tag for the image
 			tag := ""
-			imageCache, _ := cache.GetImageCache(configImageKey)
-			if imageCache.Tag != "" {
-				tag = imageCache.Tag
+			if len(configImage.Tags) > 0 {
+				tag = configImage.Tags[0]
 			}
 
-			// does the config have a tag defined?
-			if tag == "" && len(configImage.Tags) > 0 {
-				tag = strings.Replace(configImage.Tags[0], "#", "x", -1)
+			shouldRedeploy, image := BuildImageString(c, imageName, configImage.Image, tag, onlyImage, onlyTag)
+			if image != "" {
+				return shouldRedeploy, image, nil
 			}
-
-			// only return the tag
-			if onlyTag {
-				if tag == "" {
-					return shouldRedeploy, "latest", nil
-				}
-
-				return shouldRedeploy, tag, nil
-			}
-
-			// return either with or without tag
-			if tag == "" {
-				return shouldRedeploy, configImage.Image, nil
-			}
-
-			return shouldRedeploy, configImage.Image + ":" + tag, nil
 		}
 
 		return false, nil, fmt.Errorf("couldn't find imageName %s resolving variable %s", imageName, e.name)
 	}
 
 	return false, nil, fmt.Errorf("couldn't find runtime variable %s", e.name)
+}
+
+func BuildImageString(c config.Config, name string, fallbackImage string, fallbackTag string, onlyImage, onlyTag bool) (bool, string) {
+	cache := c.LocalCache()
+	imageCache, _ := cache.GetImageCache(name)
+
+	// try to find the image
+	image := ""
+	if imageCache.ImageName != "" {
+		image = imageCache.ImageName
+	} else if fallbackImage != "" {
+		image = fallbackImage
+	} else {
+		return false, ""
+	}
+
+	// check if in built images
+	shouldRedeploy := false
+	builtImagesInterface, ok := c.GetRuntimeVariable(constants.BuiltImagesKey)
+	if ok {
+		builtImages := builtImagesInterface.(map[string]buildtypes.ImageNameTag)
+		_, found := builtImages[name]
+		if found {
+			shouldRedeploy = true
+		}
+	}
+
+	// if we only need the image we are done here
+	if onlyImage {
+		return shouldRedeploy, image
+	}
+
+	// try to find the tag for the image
+	tag := ""
+	if imageCache.Tag != "" {
+		tag = imageCache.Tag
+	} else if fallbackTag != "" {
+		tag = strings.Replace(fallbackTag, "#", "x", -1)
+	}
+
+	// only return the tag
+	if onlyTag {
+		if tag == "" {
+			return shouldRedeploy, "latest"
+		}
+
+		return shouldRedeploy, tag
+	}
+
+	// return either with or without tag
+	if tag == "" {
+		return shouldRedeploy, image
+	}
+
+	return shouldRedeploy, image + ":" + tag
 }

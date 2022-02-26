@@ -64,6 +64,12 @@ deploy --all`
 
 	for i := range nextConfig.Deployments {
 		nextConfig.Deployments[i].Name = encoding.Convert(nextConfig.Deployments[i].Name)
+		if c.Deployments[i].Helm != nil && (c.Deployments[i].Helm.ReplaceImageTags == nil || *c.Deployments[i].Helm.ReplaceImageTags) {
+			nextConfig.Deployments[i].Helm.ReplaceImageTags = true
+		}
+		if c.Deployments[i].Kubectl != nil && (c.Deployments[i].Kubectl.ReplaceImageTags == nil || *c.Deployments[i].Kubectl.ReplaceImageTags) {
+			nextConfig.Deployments[i].Kubectl.ReplaceImageTags = true
+		}
 	}
 
 	for i, d := range c.Dependencies {

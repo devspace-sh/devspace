@@ -61,7 +61,9 @@ func applyDevSetValues(config *latest.Config, devConfig string, set, setString, 
 				return nil, fmt.Errorf("couldn't find --from %s", name)
 			}
 
-			return &latest.DevPod{}, nil
+			return &latest.DevPod{
+				Name: devConfig,
+			}, nil
 		}
 
 		return imageObj, nil

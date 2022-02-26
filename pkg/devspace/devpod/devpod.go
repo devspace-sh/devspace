@@ -206,7 +206,7 @@ func (d *devPod) startTerminal(ctx *devspacecontext.Context, devPodConfig *lates
 func (d *devPod) newOptions(container string) targetselector.Options {
 	return targetselector.NewEmptyOptions().
 		ApplyConfigParameter(container, d.devPodConfig.LabelSelector, d.imageSelector, d.devPodConfig.Namespace, "").
-		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)).
+		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Millisecond * 500)).
 		WithSkipInitContainers(true)
 }
 

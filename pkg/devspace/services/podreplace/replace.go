@@ -64,7 +64,7 @@ func (p *replacer) ReplacePod(ctx *devspacecontext.Context, devPod *latest.DevPo
 		ctx.Log.Debug("Try to find replaced replica set...")
 
 		// find the replaced replica set
-		replicaSet, err := ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(devPodCache.Namespace).Get(ctx.Context, devPodCache.Name, metav1.GetOptions{})
+		replicaSet, err := ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(devPodCache.Namespace).Get(ctx.Context, devPodCache.ReplicaSet, metav1.GetOptions{})
 		if err != nil {
 			if !kerrors.IsNotFound(err) {
 				return errors.Wrap(err, "find devspace replica set")
@@ -160,7 +160,16 @@ func updateNeeded(ctx *devspacecontext.Context, replicaSet *appsv1.ReplicaSet, d
 	}
 
 	_, err = ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(replicaSet.Namespace).Patch(ctx.Context, replicaSet.Name, patch.Type(), patchBytes, metav1.PatchOptions{})
-	return false, err
+	if err != nil {
+		if kerrors.IsInvalid(err) {
+			ctx.Log.Debugf("Recreate replica set because it is invalid: %v", err)
+			return true, deleteReplicaSet(ctx, replicaSet)
+		}
+
+		return false, err
+	}
+
+	return false, nil
 }
 
 func deleteReplicaSet(ctx *devspacecontext.Context, replicaSet *appsv1.ReplicaSet) error {
