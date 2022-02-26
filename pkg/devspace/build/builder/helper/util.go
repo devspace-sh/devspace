@@ -91,7 +91,7 @@ func ensureDockerIgnoreAndDockerFile(excludes []string, dockerfile, dockerignore
 }
 
 // GetDockerfileAndContext retrieves the dockerfile and context
-func GetDockerfileAndContext(ctx *devspacecontext.Context, imageConf *latest.ImageConfig) (string, string) {
+func GetDockerfileAndContext(ctx *devspacecontext.Context, imageConf *latest.Image) (string, string) {
 	var (
 		dockerfilePath = DefaultDockerfilePath
 		contextPath    = DefaultContextPath

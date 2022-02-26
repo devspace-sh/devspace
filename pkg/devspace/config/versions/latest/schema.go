@@ -23,7 +23,7 @@ func New() config.Config {
 func NewRaw() *Config {
 	return &Config{
 		Version: Version,
-		Images:  map[string]*ImageConfig{},
+		Images:  map[string]*Image{},
 	}
 }
 
@@ -84,7 +84,7 @@ type Config struct {
 	PullSecrets []*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
 
 	// Images holds configuration of how devspace should build images
-	Images map[string]*ImageConfig `yaml:"images,omitempty" json:"images,omitempty"`
+	Images map[string]*Image `yaml:"images,omitempty" json:"images,omitempty"`
 
 	// Deployments is an ordered list of deployments to deploy via helm, kustomize or kubectl.
 	Deployments []*DeploymentConfig `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
@@ -142,8 +142,8 @@ type RequireCommand struct {
 	Version string `yaml:"version,omitempty" json:"version,omitempty"`
 }
 
-// ImageConfig defines the image specification
-type ImageConfig struct {
+// Image defines the image specification
+type Image struct {
 	// Image is the complete image name including registry and repository
 	// for example myregistry.com/mynamespace/myimage
 	Image string `yaml:"image" json:"image"`

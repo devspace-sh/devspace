@@ -28,6 +28,9 @@ type Config interface {
 
 	// Path returns the absolute path from which the config was loaded
 	Path() string
+
+	// WithParsedConfig returns a new config with the parse one
+	WithParsedConfig(conf *latest.Config) Config
 }
 
 func NewConfig(raw map[string]interface{}, parsed *latest.Config, localCache localcache.Cache, remoteCache remotecache.Cache, resolvedVariables map[string]interface{}, path string) Config {

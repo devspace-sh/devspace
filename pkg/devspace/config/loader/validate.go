@@ -7,7 +7,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/encoding"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
@@ -31,7 +30,7 @@ func ValidContainerArch(arch latest.ContainerArchitecture) bool {
 		arch == latest.ContainerArchitectureArm64
 }
 
-func validate(config *latest.Config, log log.Logger) error {
+func Validate(config *latest.Config) error {
 	if encoding.IsUnsafeName(config.Name) {
 		return fmt.Errorf("name has to match the following regex: %v", encoding.UnsafeNameRegEx.String())
 	}

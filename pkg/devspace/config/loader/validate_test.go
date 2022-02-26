@@ -9,7 +9,7 @@ import (
 
 func TestValidateImageName(t *testing.T) {
 	config := &latest.Config{
-		Images: map[string]*latest.ImageConfig{
+		Images: map[string]*latest.Image{
 			"default": {
 				Image: "localhost:5000/node",
 			},
@@ -19,7 +19,7 @@ func TestValidateImageName(t *testing.T) {
 	assert.NilError(t, err)
 
 	config = &latest.Config{
-		Images: map[string]*latest.ImageConfig{
+		Images: map[string]*latest.Image{
 			"default": {
 				Image: "localhost:5000/node:latest",
 			},

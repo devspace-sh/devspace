@@ -6,7 +6,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"gopkg.in/yaml.v3"
 	"gotest.tools/assert"
@@ -17,7 +16,7 @@ type replaceContainerNamesTestCase struct {
 
 	overwriteValues map[string]interface{}
 	cache           *localcache.CacheConfig
-	imagesConf      map[string]*latest.ImageConfig
+	imagesConf      map[string]*latest.Image
 	builtImages     map[string]string
 
 	expectedShouldRedeploy  bool
@@ -57,7 +56,7 @@ func TestReplaceContainerNames(t *testing.T) {
 			overwriteValues: map[string]interface{}{
 				"": "myimage",
 			},
-			imagesConf: map[string]*latest.ImageConfig{
+			imagesConf: map[string]*latest.Image{
 				"test": {
 					Image: "myimage",
 				},
@@ -83,7 +82,7 @@ func TestReplaceContainerNames(t *testing.T) {
 			overwriteValues: map[string]interface{}{
 				"": "image(test):tag(test)",
 			},
-			imagesConf: map[string]*latest.ImageConfig{
+			imagesConf: map[string]*latest.Image{
 				"test": {
 					Image: "myimage",
 				},
@@ -109,7 +108,7 @@ func TestReplaceContainerNames(t *testing.T) {
 			overwriteValues: map[string]interface{}{
 				"": "tag(test2):image(test):tag(test)image(test)",
 			},
-			imagesConf: map[string]*latest.ImageConfig{
+			imagesConf: map[string]*latest.Image{
 				"test": {
 					Image: "myimage",
 				},
@@ -135,7 +134,7 @@ func TestReplaceContainerNames(t *testing.T) {
 			overwriteValues: map[string]interface{}{
 				"": "image(test2):image(test):tag(test)image(test)",
 			},
-			imagesConf: map[string]*latest.ImageConfig{
+			imagesConf: map[string]*latest.Image{
 				"test": {
 					Image: "myimage",
 				},

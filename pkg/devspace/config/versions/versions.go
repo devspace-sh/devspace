@@ -168,7 +168,7 @@ func Parse(data map[string]interface{}, log log.Logger) (*latest.Config, error) 
 
 func filterOutEmpty(config *latest.Config) {
 	if config.Images != nil {
-		newObjs := map[string]*latest.ImageConfig{}
+		newObjs := map[string]*latest.Image{}
 		for k, v := range config.Images {
 			if v != nil {
 				newObjs[k] = v

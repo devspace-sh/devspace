@@ -42,7 +42,7 @@ func (c *fakeDockerAPIClient) ImageList(ctx context.Context, options types.Image
 func TestIsImageAvailableLocally(t *testing.T) {
 	helper := &BuildHelper{
 		DockerfilePath:  "Doesn'tExist",
-		ImageConf:       &latest.ImageConfig{},
+		ImageConf:       &latest.Image{},
 		Entrypoint:      []string{"echo"},
 		ImageConfigName: "ImageConf",
 	}
@@ -126,7 +126,7 @@ func (builder fakeBuilder) BuildImage(absoluteContextPath string, absoluteDocker
 
 func TestBuild(t *testing.T) {
 	testConfig := &latest.Config{}
-	imageConfig := &latest.ImageConfig{
+	imageConfig := &latest.Image{
 		Image:      "SomeImage",
 		Dockerfile: "Dockerfile",
 		Context:    "ImageConfigContext",
@@ -186,7 +186,7 @@ func TestShouldRebuild(t *testing.T) {
 
 	helper := &BuildHelper{
 		DockerfilePath:  "Doesn'tExist",
-		ImageConf:       &latest.ImageConfig{},
+		ImageConf:       &latest.Image{},
 		Entrypoint:      []string{"echo"},
 		ImageConfigName: "ImageConf",
 	}

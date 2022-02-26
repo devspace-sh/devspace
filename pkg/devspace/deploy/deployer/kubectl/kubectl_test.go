@@ -9,7 +9,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -431,7 +430,7 @@ type getReplacedManifestTestCase struct {
 	manifest     string
 	kustomize    bool
 	cache        *localcache.CacheConfig
-	imageConfigs map[string]*latest.ImageConfig
+	imageConfigs map[string]*latest.Image
 	builtImages  map[string]string
 
 	expectedRedeploy bool
@@ -460,7 +459,7 @@ func TestGetReplacedManifest(t *testing.T) {
 					},
 				},
 			},
-			imageConfigs: map[string]*latest.ImageConfig{
+			imageConfigs: map[string]*latest.Image{
 				"myimage": {
 					Image: "myimage",
 				},

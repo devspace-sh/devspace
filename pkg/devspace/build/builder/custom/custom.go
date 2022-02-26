@@ -25,13 +25,13 @@ var (
 
 // Builder holds all the relevant information for a custom build
 type Builder struct {
-	imageConf       *latest.ImageConfig
+	imageConf       *latest.Image
 	imageConfigName string
 	imageTags       []string
 }
 
 // NewBuilder creates a new custom builder
-func NewBuilder(imageConfigName string, imageConf *latest.ImageConfig, imageTags []string) *Builder {
+func NewBuilder(imageConfigName string, imageConf *latest.Image, imageTags []string) *Builder {
 	return &Builder{
 		imageConfigName: imageConfigName,
 		imageConf:       imageConf,

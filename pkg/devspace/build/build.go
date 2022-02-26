@@ -23,7 +23,7 @@ type imageNameAndTag struct {
 	imageName       string
 	imageTag        string
 	imageTags       []string
-	imageConfig     latest.ImageConfig
+	imageConfig     latest.Image
 }
 
 // Options describe how images should be build

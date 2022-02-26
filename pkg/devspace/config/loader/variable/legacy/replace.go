@@ -93,7 +93,7 @@ func resolveImage(value string, config config2.Config, dependencies []types.Depe
 	// config images
 	configImages := config.Config().Images
 	if configImages == nil {
-		configImages = map[string]*latest.ImageConfig{}
+		configImages = map[string]*latest.Image{}
 	}
 
 	// strip docker image name

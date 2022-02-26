@@ -19,7 +19,7 @@ import (
 // BuildHelper is the helper class to store common functionality used by both the docker and kaniko builder
 type BuildHelper struct {
 	ImageConfigName string
-	ImageConf       *latest.ImageConfig
+	ImageConf       *latest.Image
 
 	DockerfilePath string
 	ContextPath    string
@@ -37,7 +37,7 @@ type BuildHelperInterface interface {
 }
 
 // NewBuildHelper creates a new build helper for a certain engine
-func NewBuildHelper(ctx *devspacecontext.Context, engineName string, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string) *BuildHelper {
+func NewBuildHelper(ctx *devspacecontext.Context, engineName string, imageConfigName string, imageConf *latest.Image, imageTags []string) *BuildHelper {
 	var (
 		dockerfilePath, contextPath = GetDockerfileAndContext(ctx, imageConf)
 		imageName                   = imageConf.Image

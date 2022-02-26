@@ -52,7 +52,7 @@ type Builder struct {
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(ctx *devspacecontext.Context, client dockerclient.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
+func NewBuilder(ctx *devspacecontext.Context, client dockerclient.Client, imageConfigName string, imageConf *latest.Image, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
 	return &Builder{
 		helper:                    helper.NewBuildHelper(ctx, EngineName, imageConfigName, imageConf, imageTags),
 		client:                    client,

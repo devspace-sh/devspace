@@ -63,7 +63,7 @@ type Builder struct {
 const waitTimeout = 20 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
-func NewBuilder(ctx *devspacecontext.Context, dockerClient docker.Client, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string) (builder.Interface, error) {
+func NewBuilder(ctx *devspacecontext.Context, dockerClient docker.Client, imageConfigName string, imageConf *latest.Image, imageTags []string) (builder.Interface, error) {
 	if imageConf.Build != nil && imageConf.Build.Kaniko != nil && imageConf.Build.Kaniko.Namespace != "" {
 		err := ctx.KubeClient.EnsureNamespace(ctx.Context, imageConf.Build.Kaniko.Namespace, ctx.Log)
 		if err != nil {

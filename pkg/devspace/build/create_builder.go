@@ -18,7 +18,7 @@ import (
 )
 
 // createBuilder creates a new builder
-func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, options *Options) (builder.Interface, error) {
+func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName string, imageConf *latest.Image, imageTags []string, options *Options) (builder.Interface, error) {
 	var err error
 	var bldr builder.Interface
 
@@ -111,7 +111,7 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 	return bldr, nil
 }
 
-func convertDockerConfigToKanikoConfig(dockerConfig *latest.ImageConfig) *latest.ImageConfig {
+func convertDockerConfigToKanikoConfig(dockerConfig *latest.Image) *latest.Image {
 	kanikoBuildOptions := &latest.KanikoConfig{
 		Cache: ptr.Bool(true),
 	}
@@ -122,7 +122,7 @@ func convertDockerConfigToKanikoConfig(dockerConfig *latest.ImageConfig) *latest
 		kanikoBuildOptions.Options = dockerConfig.Build.Docker.Options
 	}
 
-	kanikoConfig := &latest.ImageConfig{
+	kanikoConfig := &latest.Image{
 		Image:               dockerConfig.Image,
 		Tags:                dockerConfig.Tags,
 		Dockerfile:          dockerConfig.Dockerfile,

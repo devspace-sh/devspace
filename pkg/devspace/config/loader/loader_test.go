@@ -1714,7 +1714,7 @@ profiles:
 						},
 					},
 				},
-				Images: map[string]*latest.ImageConfig{
+				Images: map[string]*latest.Image{
 					"test": {
 						Image: "test",
 					},
@@ -1797,7 +1797,7 @@ profiles:
 			expected: &latest.Config{
 				Version: latest.Version,
 				Dev:     latest.DevConfig{},
-				Images: map[string]*latest.ImageConfig{
+				Images: map[string]*latest.Image{
 					"test": {
 						Image: "test2/test2",
 					},
@@ -1944,7 +1944,7 @@ profiles:
 			},
 			expected: &latest.Config{
 				Version: latest.Version,
-				Images: map[string]*latest.ImageConfig{
+				Images: map[string]*latest.Image{
 					"image1": {
 						Image: "node",
 					},

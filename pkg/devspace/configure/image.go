@@ -37,7 +37,7 @@ func (m *manager) AddImage(imageName, image, dockerfile string, dockerfileGenera
 		err                   error
 	)
 
-	imageConfig := &latest.ImageConfig{
+	imageConfig := &latest.Image{
 		Image:      strings.ToLower(image),
 		Dockerfile: dockerfile,
 		Build: &latest.BuildConfig{

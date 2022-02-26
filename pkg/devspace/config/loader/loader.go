@@ -337,7 +337,7 @@ func (l *configLoader) parseConfig(
 	}
 
 	// now we validate the config
-	err = validate(latestConfig, log)
+	err = Validate(latestConfig)
 	if err != nil {
 		return nil, nil, err
 	}

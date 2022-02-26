@@ -20,7 +20,7 @@ func TestParse(t *testing.T) {
 
 	config, err = Parse(map[string]interface{}{
 		"version": latest.Version,
-		"images": &map[string]*latest.ImageConfig{
+		"images": &map[string]*latest.Image{
 			"TestImg": {
 				Image: "TestImg",
 			},

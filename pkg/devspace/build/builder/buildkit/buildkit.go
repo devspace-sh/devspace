@@ -38,7 +38,7 @@ type Builder struct {
 }
 
 // NewBuilder creates a new docker Builder instance
-func NewBuilder(ctx *devspacecontext.Context, imageConfigName string, imageConf *latest.ImageConfig, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
+func NewBuilder(ctx *devspacecontext.Context, imageConfigName string, imageConf *latest.Image, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
 	// ensure namespace
 	if imageConf.Build != nil && imageConf.Build.BuildKit != nil && imageConf.Build.BuildKit.InCluster != nil && imageConf.Build.BuildKit.InCluster.Namespace != "" {
 		err := ctx.KubeClient.EnsureNamespace(ctx.Context, imageConf.Build.BuildKit.InCluster.Namespace, ctx.Log)
