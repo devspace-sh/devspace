@@ -97,9 +97,6 @@ func DevSpaceExecHandler(ctx context.Context, args []string) error {
 					return interp.NewExitStatus(1)
 				}
 				args[0] = bin
-			default:
-				_, _ = fmt.Fprintln(hc.Stderr, "command is not found.")
-				return interp.NewExitStatus(127)
 			}
 		}
 	}

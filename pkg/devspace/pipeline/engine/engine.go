@@ -11,12 +11,7 @@ import (
 	"strings"
 )
 
-func ExecuteShellCommand(command string, args []string, dir string, stdout io.Writer, stderr io.Writer, extraEnvVars map[string]string, execHandler ExecHandler) (*interp.Runner, error) {
-	env := os.Environ()
-	for k, v := range extraEnvVars {
-		env = append(env, k+"="+v)
-	}
-
+func ExecuteShellCommand(ctx context.Context, command string, args []string, dir string, stdout io.Writer, stderr io.Writer, environ expand.Environ, execHandler ExecHandler) (*interp.Runner, error) {
 	// Let's parse the complete command
 	file, err := syntax.NewParser().Parse(strings.NewReader(command), "")
 	if err != nil {
@@ -32,16 +27,20 @@ func ExecuteShellCommand(command string, args []string, dir string, stdout io.Wr
 	}
 
 	// Create shell runner
-	r, err := interp.New(interp.Dir(dir), interp.StdIO(os.Stdin, stdout, stderr),
-		interp.Env(expand.ListEnviron(env...)),
-		interp.ExecHandler(execHandler.ExecHandler))
+	r, err := interp.New(
+		interp.Params("-e"),
+		interp.Dir(dir),
+		interp.StdIO(os.Stdin, stdout, stderr),
+		interp.Env(environ),
+		interp.ExecHandler(execHandler.ExecHandler),
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "create shell runner")
 	}
 	r.Params = args
 
 	// Run command
-	err = r.Run(context.Background(), file)
+	err = r.Run(ctx, file)
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok && status == 0 {
 			return r, nil

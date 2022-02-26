@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/pkg/errors"
 	"io"
@@ -96,7 +97,7 @@ func (j *PipelineJob) shouldExecuteStep(ctx *devspacecontext.Context, step *late
 	handler := engine.NewExecHandler(ctx, j.DependencyRegistry, j.DevPodManager, false)
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	_, err := engine.ExecuteShellCommand(step.Run, os.Args[1:], step.Directory, stdout, stderr, step.Env, handler)
+	_, err := engine.ExecuteShellCommand(ctx.Context, step.Run, os.Args[1:], step.Directory, stdout, stderr, env.NewVariableEnvProvider(ctx.Config, step.Env), handler)
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok && status == 1 {
 			return false, nil
@@ -121,6 +122,6 @@ func (j *PipelineJob) executeStep(ctx *devspacecontext.Context, step *latest.Pip
 	}()
 
 	handler := engine.NewExecHandler(ctx, j.DependencyRegistry, j.DevPodManager, true)
-	_, err := engine.ExecuteShellCommand(step.Run, os.Args[1:], step.Directory, stdoutWriter, stdoutWriter, step.Env, handler)
+	_, err := engine.ExecuteShellCommand(ctx.Context, step.Run, os.Args[1:], step.Directory, stdoutWriter, stdoutWriter, env.NewVariableEnvProvider(ctx.Config, step.Env), handler)
 	return err
 }

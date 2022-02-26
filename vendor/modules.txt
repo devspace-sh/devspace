@@ -967,7 +967,7 @@ k8s.io/utils/clock/testing
 k8s.io/utils/integer
 k8s.io/utils/internal/third_party/forked/golang/net
 k8s.io/utils/net
-# mvdan.cc/sh/v3 v3.4.1
+# mvdan.cc/sh/v3 v3.4.3
 ## explicit
 mvdan.cc/sh/v3/expand
 mvdan.cc/sh/v3/interp

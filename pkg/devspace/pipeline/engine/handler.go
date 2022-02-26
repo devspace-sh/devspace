@@ -138,9 +138,6 @@ func (e *execHandler) fallbackCommands(ctx context.Context, command string, args
 			return interp.NewExitStatus(1)
 		}
 		command = bin
-	default:
-		_, _ = fmt.Fprintln(hc.Stderr, "command is not found.")
-		return interp.NewExitStatus(127)
 	}
 	return nil
 }

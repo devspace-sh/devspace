@@ -34,31 +34,51 @@ func (c *Config) Clone() *Config {
 	return n
 }
 
+// Pipeline defines what DevSpace should do. A pipeline consists of one or more
+// jobs that are run in parallel and can depend on each other. Each job consists
+// of one or more conditional steps that are executed in order.
 type Pipeline struct {
+	// Embedded default pipeline job. Can be referenced in other pipeline jobs via
+	// default.
 	PipelineJob `yaml:",inline" json:",inline"`
 
+	// Additional jobs that are executed in parallel to the default job.
 	Jobs map[string]*PipelineJob `yaml:"jobs,omitempty" json:"jobs,omitempty"`
 }
 
+// PipelineJob defines a pipeline job consisting of several steps that
+// will be executed in order.
 type PipelineJob struct {
-	After []string  `yaml:"after,omitempty" json:"after,omitempty"`
+	// After defines after which other jobs this job can be run
+	After []string `yaml:"after,omitempty" json:"after,omitempty"`
+
+	// Rerun defines when this job should get reexecuted
 	Rerun *JobRerun `yaml:"rerun,omitempty" json:"rerun,omitempty"`
 
+	// Steps are the steps that are run in order for this job
 	Steps []PipelineStep `yaml:"steps,omitempty" json:"steps,omitempty"`
 }
 
 type JobRerun struct {
 }
 
+// PipelineStep is a step within a single pipeline
 type PipelineStep struct {
+	// Name of the pipeline step to execute
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
+	// If defines a condition as shell command to check if the command
+	// should get executed.
 	If string `yaml:"if,omitempty" json:"if,omitempty"`
 
+	// Run is the actual shell command that should be executed during this
+	// pipeline step
 	Run string `yaml:"run,omitempty" json:"run,omitempty"`
 
+	// Directory is the working directory of the pipeline step
 	Directory string `yaml:"directory,omitempty" json:"directory,omitempty"`
 
+	// Env are additional environment variables to use for this pipeline step.
 	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 }
 

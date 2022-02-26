@@ -1,12 +1,19 @@
 version: v2beta1
 name: pipelines
 
+vars:
+  - name: IMAGE
+    value: testme
+
 pipelines:
   dev:
     steps:
       - run: |-
-          deploy test --set helm.componentChart=true \
-            --set helm.values.containers[0].image=ubuntu
+          echo "${IMAGE}"
+          build test --set image=${IMAGE} --set build.docker.skipPush=true
           
-          dev test --set imageSelector=ubuntu \
+          deploy test --set helm.componentChart=true \
+            --set helm.values.containers[0].image="${runtime.images.test}"
+          
+          dev test --set imageSelector="${runtime.images.test}" \
             --set terminal.command=bash

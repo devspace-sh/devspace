@@ -60,6 +60,6 @@ require (
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.30.0
 	k8s.io/kubectl v0.23.0
-	mvdan.cc/sh/v3 v3.4.1
+	mvdan.cc/sh/v3 v3.4.3
 	sigs.k8s.io/yaml v1.2.0
 )
