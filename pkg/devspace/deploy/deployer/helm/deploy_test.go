@@ -6,7 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	fakehelm "github.com/loft-sh/devspace/pkg/devspace/helm/testing"
 	helmtypes "github.com/loft-sh/devspace/pkg/devspace/helm/types"

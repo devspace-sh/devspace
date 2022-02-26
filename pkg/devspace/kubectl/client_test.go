@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	configTesting "github.com/loft-sh/devspace/pkg/util/kubeconfig/testing"
 	"github.com/loft-sh/devspace/pkg/util/ptr"

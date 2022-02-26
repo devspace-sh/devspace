@@ -11,7 +11,7 @@ import (
 	cloudconfig "github.com/loft-sh/devspace/pkg/devspace/cloud/config"
 	cloudlatest "github.com/loft-sh/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"

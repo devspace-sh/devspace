@@ -19,7 +19,7 @@ import (
 	cloudlatest "github.com/loft-sh/devspace/pkg/devspace/cloud/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"

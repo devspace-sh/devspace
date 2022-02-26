@@ -1,7 +1,7 @@
 package testing
 
 import (
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/util/log"
 )
 

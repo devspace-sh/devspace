@@ -240,7 +240,7 @@ func runPipeline(
 				PipelineJob: latest.PipelineJob{
 					Steps: []latest.PipelineStep{
 						{
-							Command: fallbackPipeline,
+							Run: fallbackPipeline,
 						},
 					},
 				},

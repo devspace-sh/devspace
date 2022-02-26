@@ -3,6 +3,7 @@ package podreplace
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -15,27 +16,21 @@ type containerPath struct {
 	Container string
 }
 
-func persistPaths(podName string, devPod *latest.DevPod, copiedPod *corev1.PodTemplateSpec) error {
-	name := podName
+func persistPaths(name string, devPod *latest.DevPod, podTemplate *corev1.PodTemplateSpec) error {
 	if devPod.PersistenceOptions != nil && devPod.PersistenceOptions.Name != "" {
 		name = devPod.PersistenceOptions.Name
 	}
 
 	paths := []containerPath{}
-	for _, p := range devPod.PersistPaths {
-		paths = append(paths, containerPath{
-			PersistentPath: p,
-			Container:      devPod.Container,
-		})
-	}
-	for _, c := range devPod.Containers {
-		for _, p := range c.PersistPaths {
+	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
+		for _, p := range devContainer.PersistPaths {
 			paths = append(paths, containerPath{
 				PersistentPath: p,
-				Container:      c.Container,
+				Container:      devContainer.Container,
 			})
 		}
-	}
+		return true
+	})
 	if len(paths) == 0 {
 		return nil
 	}
@@ -50,9 +45,9 @@ func persistPaths(podName string, devPod *latest.DevPod, copiedPod *corev1.PodTe
 			subPath = fmt.Sprintf("path-%d", i)
 		}
 
-		if len(copiedPod.Spec.Containers) > 1 && p.Container == "" {
+		if len(podTemplate.Spec.Containers) > 1 && p.Container == "" {
 			names := []string{}
-			for _, c := range copiedPod.Spec.Containers {
+			for _, c := range podTemplate.Spec.Containers {
 				names = append(names, c.Name)
 			}
 
@@ -60,9 +55,9 @@ func persistPaths(podName string, devPod *latest.DevPod, copiedPod *corev1.PodTe
 		}
 
 		var container *corev1.Container
-		for i, con := range copiedPod.Spec.Containers {
+		for i, con := range podTemplate.Spec.Containers {
 			if p.Container == "" || p.Container == con.Name {
-				copiedPod.Spec.Containers[i].VolumeMounts = append(copiedPod.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
+				podTemplate.Spec.Containers[i].VolumeMounts = append(podTemplate.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
 					Name:      "devspace-persistence",
 					MountPath: p.Path,
 					SubPath:   subPath,
@@ -108,10 +103,10 @@ func persistPaths(podName string, devPod *latest.DevPod, copiedPod *corev1.PodTe
 		}
 
 		// add an init container that pre-populates the persistent volume for that path
-		copiedPod.Spec.InitContainers = append(copiedPod.Spec.InitContainers, initContainer)
+		podTemplate.Spec.InitContainers = append(podTemplate.Spec.InitContainers, initContainer)
 	}
 
-	copiedPod.Spec.Volumes = append(copiedPod.Spec.Volumes, corev1.Volume{
+	podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, corev1.Volume{
 		Name: "devspace-persistence",
 		VolumeSource: corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{

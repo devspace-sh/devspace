@@ -41,7 +41,7 @@ deploy --all`
 			PipelineJob: next.PipelineJob{
 				Steps: []next.PipelineStep{
 					{
-						Command: devPipeline,
+						Run: devPipeline,
 					},
 				},
 			},
@@ -50,7 +50,7 @@ deploy --all`
 			PipelineJob: next.PipelineJob{
 				Steps: []next.PipelineStep{
 					{
-						Command: deployPipeline,
+						Run: deployPipeline,
 					},
 				},
 			},
@@ -321,9 +321,10 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 
 			devContainer := getMatchingDevContainer(devPod, c.Dev.Terminal.ContainerName)
 			devContainer.Terminal = &next.Terminal{
-				Command:  strings.Join(c.Dev.Terminal.Command, " "),
-				WorkDir:  c.Dev.Terminal.WorkDir,
-				Disabled: c.Dev.Terminal.Disabled,
+				Command:        strings.Join(c.Dev.Terminal.Command, " "),
+				WorkDir:        c.Dev.Terminal.WorkDir,
+				Disabled:       c.Dev.Terminal.Disabled,
+				DisableReplace: true,
 			}
 		}
 	}

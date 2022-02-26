@@ -55,7 +55,7 @@ type PipelineStep struct {
 
 	If string `yaml:"if,omitempty" json:"if,omitempty"`
 
-	Command string `yaml:"command,omitempty" json:"command,omitempty"`
+	Run string `yaml:"run,omitempty" json:"run,omitempty"`
 
 	Directory string `yaml:"directory,omitempty" json:"directory,omitempty"`
 
@@ -940,6 +940,9 @@ type Terminal struct {
 
 	// If disabled is true, DevSpace will not use the terminal
 	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+
+	// Needed to turn pod replace off
+	DisableReplace bool `yaml:"disableReplace,omitempty" json:"disableReplace,omitempty"`
 }
 
 // PodPatch will patch a pod's owning ReplicaSet, Deployment or StatefulSet with the givens patches or image

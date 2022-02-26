@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"github.com/loft-sh/devspace/pkg/util/log"
 

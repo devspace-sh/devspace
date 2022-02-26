@@ -13,7 +13,7 @@ import (
 	config2 "github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
 
-	fakegenerated "github.com/loft-sh/devspace/pkg/devspace/config/generated/testing"
+	fakegenerated "github.com/loft-sh/devspace/pkg/devspace/config/localcache/testing"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	fakekubeconfig "github.com/loft-sh/devspace/pkg/util/kubeconfig/testing"

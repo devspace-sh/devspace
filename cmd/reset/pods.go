@@ -120,15 +120,14 @@ func ResetPods(ctx *devspacecontext.Context, dependencies bool) {
 }
 
 func ResetPodsRecursive(ctx *devspacecontext.Context, dependencies bool) int {
-	reset := 0
+	resetted := 0
 	if dependencies {
 		for _, d := range ctx.Dependencies {
-			reset += ResetPodsRecursive(ctx.AsDependency(d), dependencies)
+			resetted += ResetPodsRecursive(ctx.AsDependency(d), dependencies)
 		}
 	}
 
 	// create pod replacer
-	resetted := 0
 	podReplacer := podreplace.NewPodReplacer()
 	for _, replacePodCache := range ctx.Config.RemoteCache().ListDevPods() {
 		deleted, err := podReplacer.RevertReplacePod(ctx, &replacePodCache)
@@ -139,5 +138,5 @@ func ResetPodsRecursive(ctx *devspacecontext.Context, dependencies bool) int {
 		}
 	}
 
-	return reset
+	return resetted
 }

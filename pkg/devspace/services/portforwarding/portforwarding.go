@@ -3,6 +3,7 @@ package portforwarding
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"strconv"
 	"strings"
 	"time"
@@ -42,27 +43,23 @@ func StartPortForwarding(ctx *devspacecontext.Context, devPod *latest.DevPod, se
 	}
 
 	// reverse
-	if len(devPod.PortMappingsReverse) > 0 {
-		doneChan := make(chan struct{})
-		doneChans = append(doneChans, doneChan)
-		err := runner.Run(newReversePortForwardingFn(ctx, devPod.Name, string(devPod.Arch), devPod.PortMappingsReverse, selector.WithContainer(devPod.Container), doneChan))
-		if err != nil {
-			if done != nil {
-				close(done)
+	var err error
+	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
+		if len(devPod.PortMappingsReverse) > 0 {
+			doneChan := make(chan struct{})
+			doneChans = append(doneChans, doneChan)
+			err = runner.Run(newReversePortForwardingFn(ctx, devPod.Name, string(devContainer.Arch), devContainer.PortMappingsReverse, selector.WithContainer(devContainer.Container), doneChan))
+			if err != nil {
+				if done != nil {
+					close(done)
+				}
+				return false
 			}
-			return err
 		}
-	}
-	for _, c := range devPod.Containers {
-		doneChan := make(chan struct{})
-		doneChans = append(doneChans, doneChan)
-		err := runner.Run(newReversePortForwardingFn(ctx, devPod.Name, string(c.Arch), c.PortMappingsReverse, selector.WithContainer(c.Container), doneChan))
-		if err != nil {
-			if done != nil {
-				close(done)
-			}
-			return err
-		}
+		return true
+	})
+	if err != nil {
+		return err
 	}
 
 	if done != nil {
@@ -71,7 +68,11 @@ func StartPortForwarding(ctx *devspacecontext.Context, devPod *latest.DevPod, se
 				<-doneChans[i]
 			}
 
-			close(done)
+			select {
+			case <-done:
+			default:
+				close(done)
+			}
 		}()
 	}
 

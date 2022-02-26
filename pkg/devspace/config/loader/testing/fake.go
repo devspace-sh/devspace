@@ -8,8 +8,8 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"

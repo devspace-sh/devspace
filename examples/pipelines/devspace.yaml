@@ -1,0 +1,12 @@
+version: v2beta1
+name: pipelines
+
+pipelines:
+  dev:
+    steps:
+      - run: |-
+          deploy test --set helm.componentChart=true \
+            --set helm.values.containers[0].image=ubuntu
+          
+          dev test --set imageSelector=ubuntu \
+            --set terminal.command=bash

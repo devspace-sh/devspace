@@ -344,7 +344,14 @@ func byImageName(ctx context.Context, client kubectl.Client, namespace string, i
 					}
 
 					// check if it is a replaced pod and if yes, check if the imageName and container name matches
-					if pod.Labels != nil && pod.Labels[ReplacedLabel] == "true" && pod.Annotations != nil && pod.Annotations[MatchedContainerAnnotation] == container.Name {
+					containers := map[string]bool{}
+					if pod.Annotations != nil && pod.Annotations[MatchedContainerAnnotation] != "" {
+						splitted := strings.Split(pod.Annotations[MatchedContainerAnnotation], ";")
+						for _, s := range splitted {
+							containers[s] = true
+						}
+					}
+					if pod.Labels != nil && pod.Labels[ReplacedLabel] == "true" && containers[container.Name] {
 						if pod.Labels[ImageSelectorLabel] != "" && pod.Labels[ImageSelectorLabel] == hash.String(imageName)[:32] {
 							retPod := pod
 							retContainer := container

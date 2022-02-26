@@ -71,11 +71,11 @@ type DevPodCache struct {
 	// ReplicaSet is the replica set that was created by DevSpace
 	ReplicaSet string `yaml:"replicaSet,omitempty"`
 
-	// ParentKind is the kind of the original parent
-	ParentKind string `yaml:"parentKind,omitempty"`
+	// TargetKind is the kind of the original parent
+	TargetKind string `yaml:"parentKind,omitempty"`
 
-	// ParentName is the parent name of the original parent
-	ParentName string `yaml:"parentName,omitempty"`
+	// TargetName is the parent name of the original parent
+	TargetName string `yaml:"parentName,omitempty"`
 }
 
 // DeploymentCache holds the information about a specific deployment

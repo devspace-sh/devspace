@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
@@ -146,20 +148,15 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 
 		// has sync config
 		found := false
-		for _, s := range devPod.Sync {
-			if s.OnUpload != nil && s.OnUpload.RestartContainer {
-				found = true
-				break
-			}
-		}
-		for _, c := range devPod.Containers {
-			for _, s := range c.Sync {
+		loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
+			for _, s := range devContainer.Sync {
 				if s.OnUpload != nil && s.OnUpload.RestartContainer {
 					found = true
-					break
+					return false
 				}
 			}
-		}
+			return true
+		})
 		if !found {
 			continue
 		}

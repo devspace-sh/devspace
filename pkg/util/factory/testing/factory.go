@@ -3,20 +3,18 @@ package testing
 import (
 	"github.com/loft-sh/devspace/pkg/devspace/analyze"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
-	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/configure"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
-	dependencytypes "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
-	"github.com/loft-sh/devspace/pkg/devspace/services"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -39,7 +37,6 @@ type Factory struct {
 	DockerClient      docker.Client
 	KubeClient        kubectl.Client
 	HelmClient        types.Client
-	ServicesClient    services.Client
 	PluginClient      plugin.Interface
 }
 
@@ -54,12 +51,12 @@ func (f *Factory) NewAnalyzer(client kubectl.Client, log log.Logger) analyze.Ana
 }
 
 // NewBuildController implements interface
-func (f *Factory) NewBuildController(config config.Config, dependencies []dependencytypes.Dependency, client kubectl.Client) build.Controller {
+func (f *Factory) NewBuildController() build.Controller {
 	return f.BuildController
 }
 
 // NewDeployController implements interface
-func (f *Factory) NewDeployController(config config.Config, dependencies []dependencytypes.Dependency, client kubectl.Client) deploy.Controller {
+func (f *Factory) NewDeployController() deploy.Controller {
 	return f.DeployController
 }
 
@@ -74,22 +71,22 @@ func (f *Factory) GetLog() log.Logger {
 }
 
 // NewDependencyManager implements interface
-func (f *Factory) NewDependencyManager(config config.Config, client kubectl.Client, configOptions *loader.ConfigOptions, logger log.Logger) dependency.Manager {
+func (f *Factory) NewDependencyManager(ctx *devspacecontext.Context, configOptions *loader.ConfigOptions) dependency.Manager {
 	return f.DependencyManager
 }
 
 // NewPullSecretClient implements interface
-func (f *Factory) NewPullSecretClient(config config.Config, dependencies []dependencytypes.Dependency, kubeClient kubectl.Client, dockerClient docker.Client, log log.Logger) pullsecrets.Client {
+func (f *Factory) NewPullSecretClient(dockerClient docker.Client) pullsecrets.Client {
 	return f.PullSecretClient
 }
 
 // NewConfigLoader implements interface
-func (f *Factory) NewConfigLoader(configPath string) loader.ConfigLoader {
-	return f.ConfigLoader
+func (f *Factory) NewConfigLoader(configPath string) (loader.ConfigLoader, error) {
+	return f.ConfigLoader, nil
 }
 
 // NewConfigureManager implements interface
-func (f *Factory) NewConfigureManager(config *latest.Config, generated *localcache.Config, log log.Logger) configure.Manager {
+func (f *Factory) NewConfigureManager(config *latest.Config, generated localcache.Cache, log log.Logger) configure.Manager {
 	return f.ConfigureManager
 }
 
@@ -109,7 +106,7 @@ func (f *Factory) NewKubeDefaultClient() (kubectl.Client, error) {
 }
 
 // NewKubeClientFromContext implements interface
-func (f *Factory) NewKubeClientFromContext(context, namespace string, switchContext bool) (kubectl.Client, error) {
+func (f *Factory) NewKubeClientFromContext(context, namespace string) (kubectl.Client, error) {
 	return f.KubeClient, nil
 }
 
@@ -119,11 +116,6 @@ func (f *Factory) NewKubeClientBySelect(allowPrivate bool, switchContext bool, l
 }
 
 // NewHelmClient implements interface
-func (f *Factory) NewHelmClient(config *latest.Config, deployConfig *latest.DeploymentConfig, kubeClient kubectl.Client, tillerNamespace string, upgradeTiller bool, dryInit bool, log log.Logger) (types.Client, error) {
+func (f *Factory) NewHelmClient(log log.Logger) (types.Client, error) {
 	return f.HelmClient, nil
-}
-
-// NewServicesClient implements interface
-func (f *Factory) NewServicesClient(config config.Config, dependencies []dependencytypes.Dependency, kubeClient kubectl.Client, log log.Logger) services.Client {
-	return f.ServicesClient
 }

@@ -12,8 +12,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
-	"github.com/loft-sh/devspace/pkg/devspace/config/generated"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"

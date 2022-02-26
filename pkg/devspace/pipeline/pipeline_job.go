@@ -96,7 +96,7 @@ func (j *PipelineJob) shouldExecuteStep(ctx *devspacecontext.Context, step *late
 	handler := engine.NewExecHandler(ctx, j.DependencyRegistry, j.DevPodManager, false)
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	_, err := engine.ExecuteShellCommand(step.Command, os.Args[1:], step.Directory, stdout, stderr, step.Env, handler)
+	_, err := engine.ExecuteShellCommand(step.Run, os.Args[1:], step.Directory, stdout, stderr, step.Env, handler)
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok && status == 1 {
 			return false, nil
@@ -121,6 +121,6 @@ func (j *PipelineJob) executeStep(ctx *devspacecontext.Context, step *latest.Pip
 	}()
 
 	handler := engine.NewExecHandler(ctx, j.DependencyRegistry, j.DevPodManager, true)
-	_, err := engine.ExecuteShellCommand(step.Command, os.Args[1:], step.Directory, stdoutWriter, stdoutWriter, step.Env, handler)
+	_, err := engine.ExecuteShellCommand(step.Run, os.Args[1:], step.Directory, stdoutWriter, stdoutWriter, step.Env, handler)
 	return err
 }

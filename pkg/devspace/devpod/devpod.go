@@ -3,6 +3,7 @@ package devpod
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
@@ -319,16 +320,17 @@ func needPodReplace(devPodConfig *latest.DevPod) bool {
 	if len(devPodConfig.Patches) > 0 {
 		return true
 	}
-	if needPodReplaceContainer(&devPodConfig.DevContainer) {
-		return true
-	}
-	for _, c := range devPodConfig.Containers {
-		if needPodReplaceContainer(&c) {
-			return true
-		}
-	}
 
-	return false
+	needReplace := false
+	loader.EachDevContainer(devPodConfig, func(devContainer *latest.DevContainer) bool {
+		if needPodReplaceContainer(&devPodConfig.DevContainer) {
+			needReplace = true
+			return false
+		}
+		return true
+	})
+
+	return needReplace
 }
 
 func needPodReplaceContainer(devContainer *latest.DevContainer) bool {
@@ -338,7 +340,7 @@ func needPodReplaceContainer(devContainer *latest.DevContainer) bool {
 	if len(devContainer.PersistPaths) > 0 {
 		return true
 	}
-	if devContainer.Terminal != nil {
+	if devContainer.Terminal != nil && !devContainer.Terminal.Disabled && !devContainer.Terminal.DisableReplace {
 		return true
 	}
 

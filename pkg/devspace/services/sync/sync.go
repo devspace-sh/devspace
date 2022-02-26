@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/services/runner"
@@ -58,29 +59,23 @@ func StartSync(ctx *devspacecontext.Context, devPod *latest.DevPod, selector tar
 	// Start sync client
 	doneChans := []chan struct{}{}
 	r := runner.NewRunner(5)
-	for _, syncConfig := range devPod.Sync {
-		doneChan := make(chan struct{})
-		doneChans = append(doneChans, doneChan)
-		err := r.Run(newSyncFn(ctx, devPod.Name, string(devPod.Arch), syncConfig, selector.WithContainer(devPod.Container), doneChan))
-		if err != nil {
-			if done != nil {
-				close(done)
-			}
-			return err
-		}
-	}
-	for _, c := range devPod.Containers {
-		for _, syncConfig := range c.Sync {
+	var err error
+	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
+		for _, syncConfig := range devContainer.Sync {
 			doneChan := make(chan struct{})
 			doneChans = append(doneChans, doneChan)
-			err := r.Run(newSyncFn(ctx, devPod.Name, string(c.Arch), syncConfig, selector.WithContainer(c.Container), doneChan))
+			err = r.Run(newSyncFn(ctx, devPod.Name, string(devContainer.Arch), syncConfig, selector.WithContainer(devContainer.Container), doneChan))
 			if err != nil {
 				if done != nil {
 					close(done)
 				}
-				return err
+				return false
 			}
 		}
+		return true
+	})
+	if err != nil {
+		return err
 	}
 
 	if done != nil {
@@ -89,7 +84,11 @@ func StartSync(ctx *devspacecontext.Context, devPod *latest.DevPod, selector tar
 				<-doneChans[i]
 			}
 
-			close(done)
+			select {
+			case <-done:
+			default:
+				close(done)
+			}
 		}()
 	}
 

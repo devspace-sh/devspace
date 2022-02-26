@@ -31,6 +31,9 @@ func ValidContainerArch(arch latest.ContainerArchitecture) bool {
 }
 
 func Validate(config *latest.Config) error {
+	if config.Name == "" {
+		return fmt.Errorf("you need to specify a name for your devspace.yaml")
+	}
 	if encoding.IsUnsafeName(config.Name) {
 		return fmt.Errorf("name has to match the following regex: %v", encoding.UnsafeNameRegEx.String())
 	}
@@ -424,4 +427,18 @@ func validateDevContainer(path string, devContainer *latest.DevContainer, nameRe
 	}
 
 	return nil
+}
+
+func EachDevContainer(devPod *latest.DevPod, each func(devContainer *latest.DevContainer) bool) {
+	if len(devPod.Containers) > 0 {
+		for _, devContainer := range devPod.Containers {
+			d := devContainer
+			cont := each(&d)
+			if !cont {
+				break
+			}
+		}
+	} else {
+		_ = each(&devPod.DevContainer)
+	}
 }
