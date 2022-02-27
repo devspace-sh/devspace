@@ -2,6 +2,7 @@ package v3
 
 import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -125,7 +126,7 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 	output, err := c.genericHelm.Exec(ctx, args, helmConfig)
 
 	if helmConfig.DisplayOutput {
-		_, _ = ctx.Log.Write(output)
+		_, _ = ctx.Log.Writer(logrus.InfoLevel).Write(output)
 	}
 
 	if err != nil {

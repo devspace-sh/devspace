@@ -216,7 +216,7 @@ func (client *client) CheckKubeContext(localCache localcache.Cache, noWarning bo
 			// then ask which namespace to use
 			if lastConfigContext.Context != "" &&
 				lastConfigContext.Context != currentConfigContext.Context {
-				log.WriteString("\n")
+				log.WriteString(logrus.InfoLevel, "\n")
 				log.Warnf(ansi.Color("Are you using the correct kube context?", "white+b"))
 				log.Warnf("Current kube context: '%s'", ansi.Color(currentConfigContext.Context, "white+b"))
 				log.Warnf("Last    kube context: '%s'", ansi.Color(lastConfigContext.Context, "white+b"))
@@ -244,7 +244,7 @@ func (client *client) CheckKubeContext(localCache localcache.Cache, noWarning bo
 				}
 			} else if lastConfigContext.Namespace != "" &&
 				lastConfigContext.Namespace != currentConfigContext.Namespace {
-				log.WriteString("\n")
+				log.WriteString(logrus.InfoLevel, "\n")
 				log.Warnf(ansi.Color("Are you using the correct namespace?", "white+b"))
 				log.Warnf("Current namespace: '%s'", ansi.Color(currentConfigContext.Namespace, "white+b"))
 				log.Warnf("Last    namespace: '%s'", ansi.Color(lastConfigContext.Namespace, "white+b"))

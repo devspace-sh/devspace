@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"path/filepath"
@@ -238,7 +239,7 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 	if log == logpkg.GetInstance() {
 		writer = stdout
 	} else {
-		writer = log
+		writer = log.Writer(logrus.InfoLevel)
 	}
 
 	contextDir, relDockerfile, err := build.GetContextFromLocalDir(contextPath, dockerfilePath)

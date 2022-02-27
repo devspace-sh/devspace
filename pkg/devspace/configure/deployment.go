@@ -3,6 +3,7 @@ package configure
 import (
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
 	"path"
@@ -128,7 +129,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 
 			stat, err := os.Stat(path.Join(localChartPathRel, "Chart.yaml"))
 			if err != nil || stat.IsDir() {
-				m.log.WriteString("\n")
+				m.log.WriteString(logrus.InfoLevel, "\n")
 				m.log.Errorf("Local path `%s` is not a Helm chart (Chart.yaml missing)", localChartPathRel)
 				continue
 			}
@@ -257,12 +258,12 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 
 				gitCommand := fmt.Sprintf("if [ -d '%s/.git' ]; then cd \"%s\" && git pull origin %s; else mkdir -p %s; git clone --single-branch --branch %s %s %s; fi", chartTempPath, chartTempPath, gitBranch, chartTempPath, gitBranch, gitRepo, chartTempPath)
 
-				m.log.WriteString("\n")
+				m.log.WriteString(logrus.InfoLevel, "\n")
 				m.log.Infof("Cloning external repo `%s` containing to retrieve Helm chart", gitRepo)
 
 				err = shell.ExecuteShellCommand(gitCommand, nil, "", os.Stdout, os.Stderr, nil)
 				if err != nil {
-					m.log.WriteString("\n")
+					m.log.WriteString(logrus.InfoLevel, "\n")
 					m.log.Errorf("Unable to clone repository `%s` (branch: %s)", gitRepo, gitBranch)
 					continue
 				}
@@ -270,7 +271,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				chartFolder := path.Join(chartTempPath, gitSubFolder)
 				stat, err := os.Stat(chartFolder)
 				if err != nil || !stat.IsDir() {
-					m.log.WriteString("\n")
+					m.log.WriteString(logrus.InfoLevel, "\n")
 					m.log.Errorf("Local path `%s` does not exist or is not a directory", chartFolder)
 					continue
 				}

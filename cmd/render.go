@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"strings"
@@ -120,7 +121,7 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 	if err != nil {
 		log.Warnf("Unable to create new kubectl client: %v", err)
 		log.Warn("Using fake client to render resources")
-		log.WriteString("\n")
+		log.WriteString(logrus.InfoLevel, "\n")
 		kube := fake.NewSimpleClientset()
 		client = &fakekube.Client{
 			Client: kube,

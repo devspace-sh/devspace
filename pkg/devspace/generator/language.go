@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -95,7 +96,7 @@ func (cg *DockerfileGenerator) ContainerizeApplication(dockerfilePath string) er
 		return err
 	}
 
-	cg.log.WriteString("\n")
+	cg.log.WriteString(logrus.InfoLevel, "\n")
 
 	return cg.CreateDockerfile(selectedLanguage)
 }

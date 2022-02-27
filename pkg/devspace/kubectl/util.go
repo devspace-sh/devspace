@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -189,7 +190,7 @@ func (client *client) NewPortForwarder(pod *corev1.Pod, ports []string, addresse
 	logFile := log.GetFileLogger("portforwarding")
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", execRequest.URL())
 
-	fw, err := portforward.NewOnAddresses(dialer, addresses, ports, stopChan, readyChan, errorChan, logFile, logFile)
+	fw, err := portforward.NewOnAddresses(dialer, addresses, ports, stopChan, readyChan, errorChan, logFile.Writer(logrus.InfoLevel), logFile.Writer(logrus.InfoLevel))
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/sirupsen/logrus"
 	"io"
 	"strings"
 
@@ -179,7 +180,7 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, _ bool) (bool, error
 			args = append(args, d.DeploymentConfig.Kubectl.ApplyArgs...)
 
 			cmd := d.commandExecuter.GetCommand(d.CmdPath, args)
-			err = cmd.Run(ctx.WorkingDir, ctx.Log, ctx.Log, stringReader)
+			err = cmd.Run(ctx.WorkingDir, ctx.Log.Writer(logrus.InfoLevel), ctx.Log.Writer(logrus.InfoLevel), stringReader)
 			if err != nil {
 				return false, errors.Errorf("%v\nPlease make sure the command `kubectl apply` does work locally with manifest `%s`", err, manifest)
 			}

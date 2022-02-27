@@ -5,6 +5,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/util/shell"
+	"github.com/sirupsen/logrus"
 	"io"
 	"strings"
 
@@ -156,7 +157,7 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 	if ctx.Log == logpkg.GetInstance() {
 		writer = stdout
 	} else {
-		writer = ctx.Log
+		writer = ctx.Log.Writer(logrus.InfoLevel)
 	}
 
 	ctx.Log.Infof("Build %s:%s with custom command '%s %s'", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "))

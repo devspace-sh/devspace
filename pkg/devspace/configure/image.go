@@ -3,6 +3,7 @@ package configure
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
+	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"path"
@@ -132,7 +133,7 @@ func (m *manager) AddImage(imageName, image, dockerfile string, dockerfileGenera
 	}
 
 	if image == "" {
-		m.log.WriteString("\n")
+		m.log.WriteString(logrus.InfoLevel, "\n")
 		m.log.Info("DevSpace does *not* require pushing your images to a registry but let's assume you wanted to do that (optional)")
 
 		registryOptions := []string{skipRegistry, useDockerHub, useGithubRegistry, useOtherRegistry}
@@ -214,7 +215,7 @@ func (m *manager) AddImage(imageName, image, dockerfile string, dockerfileGenera
 			imageConfig.Image = "username" + "/" + imageName
 		}
 	} else {
-		m.log.WriteString("\n")
+		m.log.WriteString(logrus.InfoLevel, "\n")
 		m.log.Info("DevSpace does *not* require pushing your images to a registry but let's check your registry credentials for this image (optional)")
 
 		_, err := m.addPullSecretConfig(dockerClient, image)
@@ -270,7 +271,7 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 			break
 		}
 
-		m.log.WriteString("\n")
+		m.log.WriteString(logrus.WarnLevel, "\n")
 		m.log.Warnf("Unable to find registry credentials for %s", registryHostnamePrintable)
 		m.log.Warnf("Running `docker login%s` for you to authenticate with the registry (optional)", registryHostnameSpaced)
 
@@ -293,7 +294,7 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 			}
 		}
 
-		m.log.WriteString("\n")
+		m.log.WriteString(logrus.WarnLevel, "\n")
 
 		// Check if docker is running
 		runErr := exec.Command("docker", "version").Run()

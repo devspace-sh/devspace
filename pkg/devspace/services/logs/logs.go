@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/mgutz/ansi"
+	"github.com/sirupsen/logrus"
 	"io"
 )
 
@@ -59,7 +60,7 @@ func StartLogs(ctx *devspacecontext.Context, devContainer *latest.DevContainer, 
 		return nil
 	case err := <-errChan:
 		if err != nil {
-			ctx.Log.WriteString("\n")
+			ctx.Log.WriteString(logrus.InfoLevel, "\n")
 			ctx.Log.Infof("Restarting logs because: %s", err)
 			return StartLogs(ctx, devContainer, selector)
 		}

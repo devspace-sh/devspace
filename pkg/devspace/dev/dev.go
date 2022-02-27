@@ -5,6 +5,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
+	"github.com/sirupsen/logrus"
 )
 
 func UI(ctx *devspacecontext.Context, port int) error {
@@ -26,9 +27,9 @@ func UI(ctx *devspacecontext.Context, port int) error {
 		// Start server
 		go func() { _ = serv.ListenAndServe() }()
 
-		ctx.Log.WriteString("\n#########################################################\n")
+		ctx.Log.WriteString(logrus.InfoLevel, "\n#########################################################\n")
 		ctx.Log.Infof("DevSpace UI available at: %s", ansi.Color("http://"+serv.Server.Addr, "white+b"))
-		ctx.Log.WriteString("#########################################################\n\n")
+		ctx.Log.WriteString(logrus.InfoLevel, "#########################################################\n\n")
 	}
 	return nil
 }

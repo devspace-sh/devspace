@@ -1,16 +1,22 @@
 package log
 
 import (
-	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/sirupsen/logrus"
 )
 
+var _ Logger = &DiscardLogger{}
+
 // DiscardLogger just discards every log statement
-type DiscardLogger struct {
-	PanicOnExit bool
+type DiscardLogger struct{}
+
+// WithLevel implements logger interface
+func (d *DiscardLogger) WithLevel(level logrus.Level) Logger {
+	return &DiscardLogger{}
 }
 
 // Debug implements logger interface
@@ -39,30 +45,12 @@ func (d *DiscardLogger) Errorf(format string, args ...interface{}) {}
 
 // Fatal implements logger interface
 func (d *DiscardLogger) Fatal(args ...interface{}) {
-	if d.PanicOnExit {
-		d.Panic(args...)
-	}
-
 	os.Exit(1)
 }
 
 // Fatalf implements logger interface
 func (d *DiscardLogger) Fatalf(format string, args ...interface{}) {
-	if d.PanicOnExit {
-		d.Panicf(format, args...)
-	}
-
 	os.Exit(1)
-}
-
-// Panic implements logger interface
-func (d *DiscardLogger) Panic(args ...interface{}) {
-	panic(fmt.Sprint(args...))
-}
-
-// Panicf implements logger interface
-func (d *DiscardLogger) Panicf(format string, args ...interface{}) {
-	panic(fmt.Sprintf(format, args...))
 }
 
 // Done implements logger interface
@@ -100,8 +88,12 @@ func (d *DiscardLogger) Write(message []byte) (int, error) {
 	return len(message), nil
 }
 
+func (d *DiscardLogger) Writer(level logrus.Level) io.Writer {
+	return ioutil.Discard
+}
+
 // WriteString implements logger interface
-func (d *DiscardLogger) WriteString(message string) {}
+func (d *DiscardLogger) WriteString(level logrus.Level, message string) {}
 
 // Question asks a new question
 func (d *DiscardLogger) Question(params *survey.QuestionOptions) (string, error) {

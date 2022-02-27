@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -65,7 +66,7 @@ func (a *analyzer) Analyze(namespace string, options Options) error {
 	}
 
 	reportString := ReportToString(report)
-	a.log.WriteString(reportString)
+	a.log.WriteString(logrus.InfoLevel, reportString)
 
 	return nil
 }

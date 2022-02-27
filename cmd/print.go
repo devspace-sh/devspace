@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 
@@ -136,14 +137,14 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 			return err
 		}
 	} else {
-		log.WriteString(string(bsConfig))
+		log.WriteString(logrus.InfoLevel, string(bsConfig))
 	}
 
 	return nil
 }
 
 func printExtraInfo(config config.Config, dependencies []types.Dependency, log logger.Logger) error {
-	log.WriteString("\n-------------------\n\nVars:\n")
+	log.WriteString(logrus.InfoLevel, "\n-------------------\n\nVars:\n")
 
 	headerColumnNames := []string{"Name", "Value"}
 	values := [][]string{}
@@ -161,14 +162,14 @@ func printExtraInfo(config config.Config, dependencies []types.Dependency, log l
 		log.Info("No vars found")
 	}
 
-	log.WriteString("\n-------------------\n\nLoaded path: " + config.Path() + "\n\n-------------------\n\n")
+	log.WriteString(logrus.InfoLevel, "\n-------------------\n\nLoaded path: "+config.Path()+"\n\n-------------------\n\n")
 
 	if len(dependencies) > 0 {
-		log.WriteString("Dependency Tree:\n\n> Root\n")
+		log.WriteString(logrus.InfoLevel, "Dependency Tree:\n\n> Root\n")
 		for _, dep := range dependencies {
 			printDependencyRecursive("--", dep, 5, log)
 		}
-		log.WriteString("\n-------------------\n\n")
+		log.WriteString(logrus.InfoLevel, "\n-------------------\n\n")
 	}
 
 	return nil
@@ -178,7 +179,7 @@ func printDependencyRecursive(prefix string, dep types.Dependency, maxDepth int,
 	if maxDepth == 0 {
 		return
 	}
-	log.WriteString(prefix + "> " + dep.Name() + "\n")
+	log.WriteString(logrus.InfoLevel, prefix+"> "+dep.Name()+"\n")
 	for _, child := range dep.Children() {
 		printDependencyRecursive(prefix+"--", child, maxDepth-1, log)
 	}

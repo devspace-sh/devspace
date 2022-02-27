@@ -1,245 +1,323 @@
 package log
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
+	"time"
 
+	"github.com/acarl005/stripansi"
+	goansi "github.com/k0kubun/go-ansi"
 	"github.com/loft-sh/devspace/pkg/util/survey"
+	"github.com/loft-sh/devspace/pkg/util/terminal"
+	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
-// StreamLogger logs all messages to a stream
-type StreamLogger struct {
-	logMutex sync.Mutex
-	level    logrus.Level
+const DevSpaceLogTimestamps = "DEVSPACE_LOG_TIMESTAMPS"
 
-	stream io.Writer
-}
+var stdout = goansi.NewAnsiStdout()
 
-// NewStreamLogger creates a new stream logger
-func NewStreamLogger(stream io.Writer, level logrus.Level) *StreamLogger {
+type Format int
+
+const (
+	TextFormat Format = iota
+	JsonFormat Format = iota
+)
+
+func NewStdoutLogger(reader io.Reader, writer io.Writer, level logrus.Level) Logger {
+	isTerminal, _ := terminal.SetupTTY(reader, writer)
 	return &StreamLogger{
-		level: level,
-
-		stream: stream,
+		m:          sync.Mutex{},
+		level:      level,
+		format:     TextFormat,
+		isTerminal: isTerminal,
+		stream:     writer,
+		survey:     survey.NewSurvey(),
 	}
 }
 
-type fnStringTypeInformation struct {
+func NewStreamLogger(writer io.Writer, level logrus.Level) Logger {
+	return &StreamLogger{
+		m:          sync.Mutex{},
+		level:      level,
+		format:     TextFormat,
+		isTerminal: false,
+		stream:     writer,
+		survey:     survey.NewSurvey(),
+	}
+}
+
+func NewStreamLoggerWithFormat(writer io.Writer, level logrus.Level, format Format) Logger {
+	return &StreamLogger{
+		m:          sync.Mutex{},
+		level:      level,
+		isTerminal: false,
+		format:     format,
+		stream:     writer,
+		survey:     survey.NewSurvey(),
+	}
+}
+
+type StreamLogger struct {
+	m     sync.Mutex
+	level logrus.Level
+
+	format     Format
+	isTerminal bool
+	stream     io.Writer
+
+	loadingText *loadingText
+	survey      survey.Survey
+}
+
+type Line struct {
+	// Time is when this log message occurred
+	Time time.Time `json:"time,omitempty"`
+
+	// Message is when the message of the log message
+	Message string `json:"message,omitempty"`
+
+	// Level is the log level this message has used
+	Level logrus.Level `json:"level,omitempty"`
+}
+
+type fnTypeInformation struct {
 	tag      string
+	color    string
 	logLevel logrus.Level
 }
 
-var fnStringTypeInformationMap = map[logFunctionType]*fnStringTypeInformation{
+var fnTypeInformationMap = map[logFunctionType]*fnTypeInformation{
 	debugFn: {
-		tag:      "Debug: ",
+		tag:      "[debug]  ",
+		color:    "green+b",
 		logLevel: logrus.DebugLevel,
 	},
 	infoFn: {
-		tag:      "Info: ",
+		tag:      "[info]   ",
+		color:    "cyan+b",
 		logLevel: logrus.InfoLevel,
 	},
 	warnFn: {
-		tag:      "Warn: ",
+		tag:      "[warn]   ",
+		color:    "red+b",
 		logLevel: logrus.WarnLevel,
 	},
 	errorFn: {
-		tag:      "Error: ",
+		tag:      "[error]  ",
+		color:    "red+b",
 		logLevel: logrus.ErrorLevel,
 	},
 	fatalFn: {
-		tag:      "Fatal: ",
+		tag:      "[fatal]  ",
+		color:    "red+b",
 		logLevel: logrus.FatalLevel,
 	},
-	panicFn: {
-		tag:      "Panic: ",
-		logLevel: logrus.PanicLevel,
-	},
 	doneFn: {
-		tag:      "Done: ",
+		tag:      "[done] √ ",
+		color:    "green+b",
 		logLevel: logrus.InfoLevel,
-	},
-	failFn: {
-		tag:      "Fail: ",
-		logLevel: logrus.ErrorLevel,
 	},
 }
 
+func formatInt(i int) string {
+	formatted := strconv.Itoa(i)
+	if len(formatted) == 1 {
+		formatted = "0" + formatted
+	}
+	return formatted
+}
+
+func (s *StreamLogger) WithLevel(level logrus.Level) Logger {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	return &StreamLogger{
+		stream:     s.stream,
+		format:     s.format,
+		isTerminal: s.isTerminal,
+		level:      level,
+		survey:     survey.NewSurvey(),
+	}
+}
+
 func (s *StreamLogger) writeMessage(fnType logFunctionType, message string) {
-	fnInformation := fnStringTypeInformationMap[fnType]
-
+	fnInformation := fnTypeInformationMap[fnType]
 	if s.level >= fnInformation.logLevel {
-		_, err := s.stream.Write([]byte(fnInformation.tag))
-		if err != nil {
-			panic(err)
+		if s.loadingText != nil {
+			s.loadingText.Stop()
 		}
 
-		_, err = s.stream.Write([]byte(message))
-		if err != nil {
-			panic(err)
+		if s.format == TextFormat {
+			if os.Getenv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
+				now := time.Now()
+				_, _ = s.stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
+			}
+			_, _ = s.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
+			_, _ = s.stream.Write([]byte(message))
+		} else if s.format == JsonFormat {
+			s.writeJSON(message, fnInformation.logLevel)
 		}
+
+		if s.loadingText != nil && fnType != fatalFn {
+			s.loadingText.Start()
+		}
+	}
+}
+
+func (s *StreamLogger) writeJSON(message string, level logrus.Level) {
+	line, err := json.Marshal(&Line{
+		Time:    time.Now(),
+		Message: stripansi.Strip(strings.TrimSpace(message)),
+		Level:   level,
+	})
+	if err == nil {
+		_, _ = s.stream.Write([]byte(string(line) + "\n"))
 	}
 }
 
 // StartWait prints a wait message until StopWait is called
 func (s *StreamLogger) StartWait(message string) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	if !s.isTerminal {
+		s.Info(message)
+		return
+	}
+
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	if s.loadingText != nil {
+		if s.loadingText.Message == message {
+			return
+		}
+
+		s.loadingText.Stop()
+		s.loadingText = nil
+	}
 
 	if s.level >= logrus.InfoLevel {
-		_, err := s.stream.Write([]byte("Wait: "))
-		if err != nil {
-			panic(err)
+		s.loadingText = &loadingText{
+			Message: message,
+			Stream:  goansi.NewAnsiStdout(),
 		}
 
-		_, err = s.stream.Write([]byte(message + "\n"))
-		if err != nil {
-			panic(err)
-		}
+		s.loadingText.Start()
 	}
 }
 
-// StopWait prints a wait message until StopWait is called
+// StopWait stops printing a message
 func (s *StreamLogger) StopWait() {
+	s.m.Lock()
+	defer s.m.Unlock()
 
+	if !s.isTerminal {
+		return
+	}
+
+	if s.loadingText != nil {
+		s.loadingText.Stop()
+		s.loadingText = nil
+	}
 }
 
-// Debug implements interface
 func (s *StreamLogger) Debug(args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	s.writeMessage(debugFn, fmt.Sprintln(args...))
 }
 
-// Debugf implements interface
 func (s *StreamLogger) Debugf(format string, args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	s.writeMessage(debugFn, fmt.Sprintf(format, args...)+"\n")
 }
 
-// Info implements interface
 func (s *StreamLogger) Info(args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	s.writeMessage(infoFn, fmt.Sprintln(args...))
 }
 
-// Infof implements interface
 func (s *StreamLogger) Infof(format string, args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	s.writeMessage(infoFn, fmt.Sprintf(format, args...)+"\n")
 }
 
-// Warn implements interface
 func (s *StreamLogger) Warn(args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	s.writeMessage(warnFn, fmt.Sprintln(args...))
 }
 
-// Warnf implements interface
 func (s *StreamLogger) Warnf(format string, args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	s.writeMessage(warnFn, fmt.Sprintf(format, args...)+"\n")
 }
 
-// Error implements interface
 func (s *StreamLogger) Error(args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	s.writeMessage(errorFn, fmt.Sprintln(args...))
 }
 
-// Errorf implements interface
 func (s *StreamLogger) Errorf(format string, args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	s.writeMessage(errorFn, fmt.Sprintf(format, args...)+"\n")
 }
 
-// Fatal implements interface
 func (s *StreamLogger) Fatal(args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
 
-	s.writeMessage(fatalFn, fmt.Sprintln(args...))
+	msg := fmt.Sprintln(args...)
+
+	s.writeMessage(fatalFn, msg)
 	os.Exit(1)
 }
 
-// Fatalf implements interface
 func (s *StreamLogger) Fatalf(format string, args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
 
-	s.writeMessage(fatalFn, fmt.Sprintf(format, args...)+"\n")
+	msg := fmt.Sprintf(format, args...)
+
+	s.writeMessage(fatalFn, msg+"\n")
 	os.Exit(1)
 }
 
-// Panic implements interface
-func (s *StreamLogger) Panic(args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
-
-	s.writeMessage(panicFn, fmt.Sprintln(args...))
-	panic(fmt.Sprintln(args...))
-}
-
-// Panicf implements interface
-func (s *StreamLogger) Panicf(format string, args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
-
-	s.writeMessage(panicFn, fmt.Sprintf(format, args...)+"\n")
-	panic(fmt.Sprintf(format, args...))
-}
-
-// Done implements interface
 func (s *StreamLogger) Done(args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	s.writeMessage(doneFn, fmt.Sprintln(args...))
+
 }
 
-// Donef implements interface
 func (s *StreamLogger) Donef(format string, args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	s.writeMessage(doneFn, fmt.Sprintf(format, args...)+"\n")
 }
 
-// Fail implements interface
-func (s *StreamLogger) Fail(args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
-
-	s.writeMessage(failFn, fmt.Sprintln(args...))
-}
-
-// Failf implements interface
-func (s *StreamLogger) Failf(format string, args ...interface{}) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
-
-	s.writeMessage(failFn, fmt.Sprintf(format, args...)+"\n")
-}
-
-// Print implements interface
 func (s *StreamLogger) Print(level logrus.Level, args ...interface{}) {
 	switch level {
 	case logrus.InfoLevel:
@@ -250,14 +328,11 @@ func (s *StreamLogger) Print(level logrus.Level, args ...interface{}) {
 		s.Warn(args...)
 	case logrus.ErrorLevel:
 		s.Error(args...)
-	case logrus.PanicLevel:
-		s.Panic(args...)
 	case logrus.FatalLevel:
 		s.Fatal(args...)
 	}
 }
 
-// Printf implements interface
 func (s *StreamLogger) Printf(level logrus.Level, format string, args ...interface{}) {
 	switch level {
 	case logrus.InfoLevel:
@@ -268,48 +343,93 @@ func (s *StreamLogger) Printf(level logrus.Level, format string, args ...interfa
 		s.Warnf(format, args...)
 	case logrus.ErrorLevel:
 		s.Errorf(format, args...)
-	case logrus.PanicLevel:
-		s.Panicf(format, args...)
 	case logrus.FatalLevel:
 		s.Fatalf(format, args...)
 	}
 }
 
-// SetLevel implements interface
 func (s *StreamLogger) SetLevel(level logrus.Level) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	s.level = level
 }
 
-// GetLevel implements interface
 func (s *StreamLogger) GetLevel() logrus.Level {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	return s.level
 }
 
-func (s *StreamLogger) Write(message []byte) (int, error) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
+func (s *StreamLogger) Writer(level logrus.Level) io.Writer {
+	s.m.Lock()
+	defer s.m.Unlock()
 
-	return s.stream.Write(message)
-}
-
-// WriteString implements interface
-func (s *StreamLogger) WriteString(message string) {
-	s.logMutex.Lock()
-	defer s.logMutex.Unlock()
-
-	_, err := s.stream.Write([]byte(message))
-	if err != nil {
-		panic(err)
+	if s.level < level {
+		return ioutil.Discard
 	}
+
+	return s
 }
 
-// Question asks a new question
+func (s *StreamLogger) Write(message []byte) (int, error) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	return s.write(message)
+}
+
+func (s *StreamLogger) WriteString(level logrus.Level, message string) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	if s.level < level {
+		return
+	}
+
+	_, _ = s.write([]byte(message))
+}
+
+func (s *StreamLogger) write(message []byte) (int, error) {
+	if s.loadingText != nil {
+		s.loadingText.Stop()
+	}
+
+	var (
+		n   int
+		err error
+	)
+	if s.format == JsonFormat {
+		s.writeJSON(string(message), logrus.InfoLevel)
+		n = len(message)
+	} else {
+		n, err = s.stream.Write(message)
+	}
+
+	if s.loadingText != nil {
+		s.loadingText.Start()
+	}
+
+	return n, err
+}
+
 func (s *StreamLogger) Question(params *survey.QuestionOptions) (string, error) {
-	return "", errors.New("questions in discard logger not supported")
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	if !s.isTerminal {
+		return "", fmt.Errorf("cannot ask question '%s' because you are not currently using a terminal", params.Question)
+	}
+
+	// Stop wait if there was any
+	s.StopWait()
+
+	// Check if we can ask the question
+	if s.GetLevel() < logrus.InfoLevel {
+		return "", errors.Errorf("cannot ask question '%s' because log level is too low", params.Question)
+	}
+
+	s.WriteString(logrus.InfoLevel, "\n")
+	return s.survey.Question(params)
 }

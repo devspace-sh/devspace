@@ -2,6 +2,10 @@ package log
 
 import (
 	"errors"
+	"fmt"
+	"github.com/acarl005/stripansi"
+	"io"
+	"io/ioutil"
 	"strings"
 	"sync"
 
@@ -15,12 +19,15 @@ import (
 var Logdir = "./.devspace/logs/"
 
 var logs = map[string]Logger{}
-var logsMutext sync.Mutex
+var logsMutex sync.Mutex
 
 var overrideOnce sync.Once
 
 type fileLogger struct {
 	logger *logrus.Logger
+
+	m     sync.Mutex
+	level logrus.Level
 }
 
 func GetDevPodFileLogger(devPodName string) Logger {
@@ -29,8 +36,8 @@ func GetDevPodFileLogger(devPodName string) Logger {
 
 // GetFileLogger returns a logger instance for the specified filename
 func GetFileLogger(filename string) Logger {
-	logsMutext.Lock()
-	defer logsMutext.Unlock()
+	logsMutex.Lock()
+	defer logsMutex.Unlock()
 
 	log := logs[filename]
 	if log == nil {
@@ -82,67 +89,135 @@ func OverrideRuntimeErrorHandler(discard bool) {
 }
 
 func (f *fileLogger) Debug(args ...interface{}) {
-	f.logger.Debug(args...)
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	if f.level < logrus.DebugLevel {
+		return
+	}
+
+	f.logger.Debug(stripEscapeSequences(fmt.Sprint(args...)))
 }
 
 func (f *fileLogger) Debugf(format string, args ...interface{}) {
-	f.logger.Debugf(format, args...)
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	if f.level < logrus.DebugLevel {
+		return
+	}
+
+	f.logger.Debugf(stripEscapeSequences(fmt.Sprintf(format, args...)))
 }
 
 func (f *fileLogger) Info(args ...interface{}) {
-	f.logger.Info(args...)
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	if f.level < logrus.InfoLevel {
+		return
+	}
+
+	f.logger.Info(stripEscapeSequences(fmt.Sprint(args...)))
 }
 
 func (f *fileLogger) Infof(format string, args ...interface{}) {
-	f.logger.Infof(format, args...)
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	if f.level < logrus.InfoLevel {
+		return
+	}
+
+	f.logger.Info(stripEscapeSequences(fmt.Sprintf(format, args...)))
 }
 
 func (f *fileLogger) Warn(args ...interface{}) {
-	f.logger.Warn(args...)
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	if f.level < logrus.WarnLevel {
+		return
+	}
+
+	f.logger.Warn(stripEscapeSequences(fmt.Sprint(args...)))
 }
 
 func (f *fileLogger) Warnf(format string, args ...interface{}) {
-	f.logger.Warnf(format, args...)
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	if f.level < logrus.WarnLevel {
+		return
+	}
+
+	f.logger.Warn(stripEscapeSequences(fmt.Sprintf(format, args...)))
 }
 
 func (f *fileLogger) Error(args ...interface{}) {
-	f.logger.Error(args...)
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	if f.level < logrus.ErrorLevel {
+		return
+	}
+
+	f.logger.Error(stripEscapeSequences(fmt.Sprint(args...)))
 }
 
 func (f *fileLogger) Errorf(format string, args ...interface{}) {
-	f.logger.Errorf(format, args...)
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	if f.level < logrus.ErrorLevel {
+		return
+	}
+
+	f.logger.Error(stripEscapeSequences(fmt.Sprintf(format, args...)))
 }
 
 func (f *fileLogger) Fatal(args ...interface{}) {
-	f.logger.Fatal(args...)
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	if f.level < logrus.FatalLevel {
+		return
+	}
+
+	f.logger.Fatal(stripEscapeSequences(fmt.Sprint(args...)))
 }
 
 func (f *fileLogger) Fatalf(format string, args ...interface{}) {
-	f.logger.Fatalf(format, args...)
-}
+	f.m.Lock()
+	defer f.m.Unlock()
 
-func (f *fileLogger) Panic(args ...interface{}) {
-	f.logger.Panic(args...)
-}
+	if f.level < logrus.FatalLevel {
+		return
+	}
 
-func (f *fileLogger) Panicf(format string, args ...interface{}) {
-	f.logger.Panicf(format, args...)
+	f.logger.Fatal(stripEscapeSequences(fmt.Sprintf(format, args...)))
 }
 
 func (f *fileLogger) Done(args ...interface{}) {
-	f.logger.Info(args...)
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	if f.level < logrus.InfoLevel {
+		return
+	}
+
+	f.logger.Info(stripEscapeSequences(fmt.Sprint(args...)))
 }
 
 func (f *fileLogger) Donef(format string, args ...interface{}) {
-	f.logger.Infof(format, args...)
-}
+	f.m.Lock()
+	defer f.m.Unlock()
 
-func (f *fileLogger) Fail(args ...interface{}) {
-	f.logger.Error(args...)
-}
+	if f.level < logrus.InfoLevel {
+		return
+	}
 
-func (f *fileLogger) Failf(format string, args ...interface{}) {
-	f.logger.Errorf(format, args...)
+	f.logger.Info(stripEscapeSequences(fmt.Sprintf(format, args...)))
 }
 
 func (f *fileLogger) Print(level logrus.Level, args ...interface{}) {
@@ -155,8 +230,6 @@ func (f *fileLogger) Print(level logrus.Level, args ...interface{}) {
 		f.Warn(args...)
 	case logrus.ErrorLevel:
 		f.Error(args...)
-	case logrus.PanicLevel:
-		f.Panic(args...)
 	case logrus.FatalLevel:
 		f.Fatal(args...)
 	}
@@ -172,8 +245,6 @@ func (f *fileLogger) Printf(level logrus.Level, format string, args ...interface
 		f.Warnf(format, args...)
 	case logrus.ErrorLevel:
 		f.Errorf(format, args...)
-	case logrus.PanicLevel:
-		f.Panicf(format, args...)
 	case logrus.FatalLevel:
 		f.Fatalf(format, args...)
 	}
@@ -188,21 +259,60 @@ func (f *fileLogger) StopWait() {
 }
 
 func (f *fileLogger) SetLevel(level logrus.Level) {
-	f.logger.SetLevel(level)
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	f.level = level
 }
 
 func (f *fileLogger) GetLevel() logrus.Level {
-	return f.logger.GetLevel()
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	return f.level
+}
+
+func (f *fileLogger) Writer(level logrus.Level) io.Writer {
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	if f.level < level {
+		return ioutil.Discard
+	}
+
+	return f
 }
 
 func (f *fileLogger) Write(message []byte) (int, error) {
 	return f.logger.Out.Write(message)
 }
 
-func (f *fileLogger) WriteString(message string) {
-	f.logger.Info(strings.TrimSuffix(message, "\n"))
+func (f *fileLogger) WriteString(level logrus.Level, message string) {
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	if f.level < logrus.InfoLevel {
+		return
+	}
+
+	_, _ = f.logger.Out.Write([]byte(stripEscapeSequences(message)))
+}
+
+func stripEscapeSequences(str string) string {
+	return stripansi.Strip(strings.TrimSpace(str))
 }
 
 func (f *fileLogger) Question(params *survey.QuestionOptions) (string, error) {
 	return "", errors.New("questions in file logger not supported")
+}
+
+// WithLevel implements logger interface
+func (f *fileLogger) WithLevel(level logrus.Level) Logger {
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	return &fileLogger{
+		logger: f.logger,
+		level:  f.level,
+	}
 }

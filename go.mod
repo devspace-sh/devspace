@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
+	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bmatcuk/doublestar v1.1.1
 	github.com/compose-spec/compose-go v1.0.1

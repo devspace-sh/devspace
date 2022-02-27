@@ -5,6 +5,7 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
+	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -392,7 +393,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 		if ctx.Log == logpkg.GetInstance() {
 			writer = stdout
 		} else {
-			writer = ctx.Log
+			writer = ctx.Log.Writer(logrus.InfoLevel)
 		}
 
 		stdoutLogger := kanikoLogger{out: writer}

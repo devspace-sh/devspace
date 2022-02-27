@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/sirupsen/logrus"
 	"io"
 	"strings"
 	"time"
@@ -129,7 +130,7 @@ func executeSingle(ctx *devspacecontext.Context, extraEnv map[string]string, eve
 			if ctx.Log == logpkg.GetInstance() {
 				writer = stdout
 			} else {
-				writer = ctx.Log
+				writer = ctx.Log.Writer(logrus.InfoLevel)
 			}
 
 			// If the hook is silent, we cache it in a buffer

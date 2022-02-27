@@ -8,6 +8,7 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/services/portforwarding"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/labels"
 	"net/http"
 	"os"
@@ -158,7 +159,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 	if err != nil {
 		return err
 	}
-	cmd.log.WriteString("\n")
+	cmd.log.WriteString(logrus.InfoLevel, "\n")
 
 	// Check if we should open locally
 	if openingMode == openLocalHostOption {
@@ -216,7 +217,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 			},
 		}, metav1.CreateOptions{})
 		if err != nil {
-			cmd.log.WriteString("\n")
+			cmd.log.WriteString(logrus.InfoLevel, "\n")
 			return errors.Errorf("Unable to create ingress for domain %s: %v", domain, err)
 		}
 
@@ -272,7 +273,7 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 			}
 			if len(report) > 0 {
 				reportString := analyze.ReportToString(report)
-				log.WriteString(reportString)
+				log.WriteString(logrus.InfoLevel, reportString)
 			}
 		}
 
@@ -349,7 +350,7 @@ func (cmd *OpenCmd) openLocal(ctx *devspacecontext.Context, domain string) error
 	cmd.log.StopWait()
 	_ = open.Start(domain)
 	cmd.log.Donef("Successfully opened %s", domain)
-	cmd.log.WriteString("\n")
+	cmd.log.WriteString(logrus.InfoLevel, "\n")
 	cmd.log.Info("Press ENTER to terminate port-forwarding process")
 
 	// Wait until user aborts the program or presses ENTER

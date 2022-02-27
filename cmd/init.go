@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -221,7 +222,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 
 			if err != nil {
 				if err.Error() != "" {
-					cmd.log.WriteString("\n")
+					cmd.log.WriteString(logrus.InfoLevel, "\n")
 					cmd.log.Errorf("Error: %s", err.Error())
 				}
 			} else {
@@ -411,7 +412,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 		return err
 	}
 
-	cmd.log.WriteString("\n")
+	cmd.log.WriteString(logrus.InfoLevel, "\n")
 	cmd.log.Info("Configuration saved in devspace.yaml - you can make adjustments as needed")
 	cmd.log.Done("Project successfully initialized")
 	cmd.log.Infof("\r         \nYou can now run:\n- `%s` to pick which Kubernetes namespace to work in\n- `%s` to start developing your project in Kubernetes\n- `%s` to deploy your project to Kubernetes\n- `%s` to get a list of available commands", ansi.Color("devspace use namespace", "blue+b"), ansi.Color("devspace dev", "blue+b"), ansi.Color("devspace deploy -p production", "blue+b"), ansi.Color("devspace -h", "blue+b"))
@@ -470,7 +471,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 		if port > 0 {
 			localPort := port
 			if localPort < 1024 {
-				cmd.log.WriteString("\n")
+				cmd.log.WriteString(logrus.InfoLevel, "\n")
 				cmd.log.Warn("Your application listens on a system port [0-1024]. Choose a forwarding-port to access your application via localhost.")
 
 				portString, err := cmd.log.Question(&survey.QuestionOptions{

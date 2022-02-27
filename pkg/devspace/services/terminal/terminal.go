@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/sirupsen/logrus"
 	"io"
 	kubectlExec "k8s.io/client-go/util/exec"
 
@@ -72,14 +73,14 @@ func StartTerminalFromCMD(
 				// 128 - Invalid argument to exit
 				// 130 - Script terminated by Control-C
 				if restart && IsUnexpectedExitCode(exitError.Code) {
-					ctx.Log.WriteString("\n")
+					ctx.Log.WriteString(logrus.InfoLevel, "\n")
 					ctx.Log.Infof("Restarting terminal because: %s", err)
 					return StartTerminalFromCMD(ctx, selector, command, wait, restart, stdout, stderr, stdin)
 				}
 
 				return exitError.Code, nil
 			} else if restart {
-				ctx.Log.WriteString("\n")
+				ctx.Log.WriteString(logrus.InfoLevel, "\n")
 				ctx.Log.Infof("Restarting terminal because: %s", err)
 				return StartTerminalFromCMD(ctx, selector, command, wait, restart, stdout, stderr, stdin)
 			}
@@ -142,7 +143,7 @@ func StartTerminal(
 				// 128 - Invalid argument to exit
 				// 130 - Script terminated by Control-C
 				if IsUnexpectedExitCode(exitError.Code) {
-					ctx.Log.WriteString("\n")
+					ctx.Log.WriteString(logrus.InfoLevel, "\n")
 					ctx.Log.Infof("Restarting terminal because: %s", err)
 					return StartTerminal(ctx, devContainer, selector, stdout, stderr, stdin)
 				}
@@ -150,7 +151,7 @@ func StartTerminal(
 				return exitError.Code, nil
 			}
 
-			ctx.Log.WriteString("\n")
+			ctx.Log.WriteString(logrus.InfoLevel, "\n")
 			ctx.Log.Infof("Restarting terminal because: %s", err)
 			return StartTerminal(ctx, devContainer, selector, stdout, stderr, stdin)
 		}
