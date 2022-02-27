@@ -10,8 +10,6 @@ import (
 	"regexp"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/git"
@@ -35,8 +33,14 @@ func init() {
 	DependencyFolderPath = filepath.Join(homedir, filepath.FromSlash(DependencyFolder))
 }
 
-func DownloadDependency(ID, basePath string, source *latest.SourceConfig, log log.Logger) (localPath string, err error) {
+func DownloadDependency(basePath string, source *latest.SourceConfig, log log.Logger) (configPath string, err error) {
+	ID, err := getDependencyID(source)
+	if err != nil {
+		return "", err
+	}
+
 	// Resolve source
+	var localPath string
 	if source.Git != "" {
 		gitPath := strings.TrimSpace(source.Git)
 
@@ -52,7 +56,7 @@ func DownloadDependency(ID, basePath string, source *latest.SourceConfig, log lo
 			if err != nil {
 				if statErr == nil {
 					log.Warnf("Error creating git cli: %v", err)
-					return localPath, nil
+					return getDependencyConfigPath(localPath, source)
 				}
 
 				return "", err
@@ -69,7 +73,7 @@ func DownloadDependency(ID, basePath string, source *latest.SourceConfig, log lo
 			if err != nil {
 				if statErr == nil {
 					log.Warnf("Error cloning or pulling git repository %s: %v", gitPath, err)
-					return localPath, nil
+					return getDependencyConfigPath(localPath, source)
 				}
 
 				return "", errors.Wrap(err, "clone repository")
@@ -92,7 +96,7 @@ func DownloadDependency(ID, basePath string, source *latest.SourceConfig, log lo
 				if err != nil {
 					if statErr == nil {
 						log.Warnf("Error creating file: %v", err)
-						return localPath, nil
+						return getDependencyConfigPath(localPath, source)
 					}
 
 					return "", err
@@ -104,7 +108,7 @@ func DownloadDependency(ID, basePath string, source *latest.SourceConfig, log lo
 				if err != nil {
 					if statErr == nil {
 						log.Warnf("Error retrieving url %s: %v", source.Path, err)
-						return localPath, nil
+						return getDependencyConfigPath(localPath, source)
 					}
 
 					return "", errors.Wrapf(err, "request %s", source.Path)
@@ -116,7 +120,7 @@ func DownloadDependency(ID, basePath string, source *latest.SourceConfig, log lo
 				if err != nil {
 					if statErr == nil {
 						log.Warnf("Error retrieving url %s: %v", source.Path, err)
-						return localPath, nil
+						return getDependencyConfigPath(localPath, source)
 					}
 
 					return "", errors.Wrapf(err, "download %s", source.Path)
@@ -138,13 +142,13 @@ func DownloadDependency(ID, basePath string, source *latest.SourceConfig, log lo
 		localPath = filepath.Join(localPath, filepath.FromSlash(source.SubPath))
 	}
 
-	return localPath, nil
+	return getDependencyConfigPath(localPath, source)
 }
 
-func GetDependencyConfigPath(dependencyPath string, config *latest.DependencyConfig) (string, string) {
+func getDependencyConfigPath(dependencyPath string, source *latest.SourceConfig) (string, error) {
 	var configPath string
-	if config.Source.ConfigName != "" {
-		configPath = filepath.Join(dependencyPath, config.Source.ConfigName)
+	if source.ConfigName != "" {
+		configPath = filepath.Join(dependencyPath, source.ConfigName)
 	} else if strings.HasSuffix(dependencyPath, ".yaml") || strings.HasSuffix(dependencyPath, ".yml") {
 		configPath = dependencyPath
 		dependencyPath = filepath.Dir(dependencyPath)
@@ -152,52 +156,29 @@ func GetDependencyConfigPath(dependencyPath string, config *latest.DependencyCon
 		configPath = filepath.Join(dependencyPath, constants.DefaultConfigPath)
 	}
 
-	return configPath, dependencyPath
+	return configPath, nil
 }
 
-func GetDependencyID(basePath string, config *latest.DependencyConfig) (string, error) {
-	// copy config
-	out, err := yaml.Marshal(config)
-	if err != nil {
-		return "", err
-	}
-	outConfig := &latest.DependencyConfig{}
-	err = yaml.Unmarshal(out, outConfig)
-	if err != nil {
-		return "", err
-	}
-
+func getDependencyID(source *latest.SourceConfig) (string, error) {
 	// check if source is there
-	if config.Source == nil {
-		return "", fmt.Errorf("source is missing in dependency")
-	}
-
-	// replace relative path with absolute path
-	if outConfig.Source != nil && outConfig.Source.Path != "" {
-		if !isURL(outConfig.Source.Path) {
-			filePath := outConfig.Source.Path
-			if !filepath.IsAbs(outConfig.Source.Path) {
-				filePath = filepath.Join(basePath, outConfig.Source.Path)
-			}
-
-			outConfig.Source.Path = filePath
-		}
+	if source == nil {
+		return "", fmt.Errorf("source is missing")
 	}
 
 	// get id for git
-	if config.Source.Git != "" {
-		id := config.Source.Git
-		if config.Source.Branch != "" {
-			id += "@" + config.Source.Branch
-		} else if config.Source.Tag != "" {
-			id += "@tag:" + config.Source.Tag
-		} else if config.Source.Revision != "" {
-			id += "@revision:" + config.Source.Revision
+	if source.Git != "" {
+		id := source.Git
+		if source.Branch != "" {
+			id += "@" + source.Branch
+		} else if source.Tag != "" {
+			id += "@tag:" + source.Tag
+		} else if source.Revision != "" {
+			id += "@revision:" + source.Revision
 		}
 
 		return id, nil
-	} else if config.Source.Path != "" {
-		return config.Source.Path, nil
+	} else if source.Path != "" {
+		return source.Path, nil
 	}
 
 	return "", fmt.Errorf("unexpected dependency config, both source.git and source.path are missing")

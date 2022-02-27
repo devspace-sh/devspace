@@ -21,7 +21,6 @@ import (
 
 // Dependency holds the dependency config and has an id
 type Dependency struct {
-	id           string
 	name         string
 	absolutePath string
 	root         bool
@@ -38,8 +37,6 @@ type Dependency struct {
 }
 
 // Implement Interface Methods
-
-func (d *Dependency) ID() string { return d.id }
 
 func (d *Dependency) Name() string { return d.name }
 

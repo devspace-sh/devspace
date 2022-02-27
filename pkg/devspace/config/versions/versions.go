@@ -13,7 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta10"
 
-	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
@@ -89,9 +88,48 @@ func ParseProfile(basePath string, data map[string]interface{}, profiles []strin
 	return parsedProfiles, nil
 }
 
+// ParseImports parses only the commands from the config
+func ParseImports(data map[string]interface{}) (map[string]interface{}, error) {
+	retMap := map[string]interface{}{}
+	err := util.Convert(data, &retMap)
+	if err != nil {
+		return nil, err
+	}
+
+	imports, ok := retMap["imports"]
+	if !ok {
+		return map[string]interface{}{
+			"version": retMap["version"],
+			"name":    retMap["name"],
+		}, nil
+	}
+
+	return map[string]interface{}{
+		"version": retMap["version"],
+		"name":    retMap["name"],
+		"imports": imports,
+	}, nil
+}
+
 // ParseCommands parses only the commands from the config
 func ParseCommands(data map[string]interface{}) (map[string]interface{}, error) {
-	return getCommands(data)
+	retMap := map[string]interface{}{}
+	err := util.Convert(data, &retMap)
+	if err != nil {
+		return nil, err
+	}
+
+	commands, ok := retMap["commands"]
+	if !ok {
+		return map[string]interface{}{
+			"version": retMap["version"],
+		}, nil
+	}
+
+	return map[string]interface{}{
+		"version":  retMap["version"],
+		"commands": commands,
+	}, nil
 }
 
 // ParseVariables parses only the variables from the config
@@ -253,27 +291,6 @@ func getVariables(data map[string]interface{}) (map[string]interface{}, error) {
 	}, nil
 }
 
-// getCommands returns only the commands from the config
-func getCommands(data map[string]interface{}) (map[string]interface{}, error) {
-	retMap := map[string]interface{}{}
-	err := util.Convert(data, &retMap)
-	if err != nil {
-		return nil, err
-	}
-
-	commands, ok := retMap["commands"]
-	if !ok {
-		return map[string]interface{}{
-			"version": retMap["version"],
-		}, nil
-	}
-
-	return map[string]interface{}{
-		"version":  retMap["version"],
-		"commands": commands,
-	}, nil
-}
-
 // getProfiles loads a certain profile
 func getProfiles(basePath string, data map[string]interface{}, profile string, profileChain *[]map[string]interface{}, depth int, update bool, log log.Logger) error {
 	if depth > 50 {
@@ -335,15 +352,9 @@ func getProfiles(basePath string, data map[string]interface{}, profile string, p
 					}
 
 					if profileConfig.Parents[i].Source != nil {
-						ID := dependencyutil.GetParentProfileID(basePath, profileConfig.Parents[i].Source, profileConfig.Parents[i].Profile, nil)
-						localPath, err := dependencyutil.DownloadDependency(ID, basePath, profileConfig.Parents[i].Source, log)
+						configPath, err := dependencyutil.DownloadDependency(basePath, profileConfig.Parents[i].Source, log)
 						if err != nil {
 							return err
-						}
-
-						configPath := filepath.Join(localPath, constants.DefaultConfigPath)
-						if profileConfig.Parents[i].Source.ConfigName != "" {
-							configPath = filepath.Join(localPath, profileConfig.Parents[i].Source.ConfigName)
 						}
 
 						fileContent, err := ioutil.ReadFile(configPath)
@@ -357,7 +368,7 @@ func getProfiles(basePath string, data map[string]interface{}, profile string, p
 							return err
 						}
 
-						err = getProfiles(localPath, rawMap, profileConfig.Parents[i].Profile, profileChain, depth+1, update, log)
+						err = getProfiles(filepath.Dir(configPath), rawMap, profileConfig.Parents[i].Profile, profileChain, depth+1, update, log)
 						if err != nil {
 							return errors.Wrapf(err, "load parent profile %s", profileConfig.Parents[i].Profile)
 						}

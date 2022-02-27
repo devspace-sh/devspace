@@ -34,6 +34,61 @@ func (c *Config) Clone() *Config {
 	return n
 }
 
+// Config defines the configuration
+type Config struct {
+	// Version holds the config version
+	Version string `yaml:"version" json:"version"`
+
+	// Name specifies the name of the DevSpace project
+	Name string `yaml:"name" json:"name"`
+
+	// Pipelines are the pipelines to execute
+	Pipelines map[string]*Pipeline `yaml:"pipelines,omitempty" json:"pipelines,omitempty"`
+
+	// Imports merges specified config files into this one
+	Imports []Import `yaml:"imports,omitempty" json:"imports,omitempty"`
+
+	// Require defines what DevSpace, plugins and command versions are needed to use this config
+	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
+
+	// Vars are config variables that can be used inside other config sections to replace certain values dynamically
+	Vars []*Variable `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// PullSecrets are image pull secrets that will be created by devspace in the target namespace
+	// during devspace dev or devspace deploy
+	PullSecrets []*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+
+	// Images holds configuration of how devspace should build images
+	Images map[string]*Image `yaml:"images,omitempty" json:"images,omitempty"`
+
+	// Deployments is an ordered list of deployments to deploy via helm, kustomize or kubectl.
+	Deployments []*DeploymentConfig `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// Dev holds development configuration for the 'devspace dev' command.
+	Dev map[string]*DevPod `yaml:"dev,omitempty" json:"dev,omitempty"`
+
+	// Open holds the open config for urls
+	Open []*OpenConfig `yaml:"open,omitempty" json:"open,omitempty"`
+
+	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
+	// in the order they are specified.
+	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty"`
+
+	// Commands are custom commands that can be executed via 'devspace run COMMAND'
+	Commands []*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// Profiles can be used to change the current configuration and change the behavior of devspace
+	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`
+
+	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
+	Dependencies []*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+}
+
+// Import specifies the source of the devspace config to merge
+type Import struct {
+	SourceConfig `yaml:",inline" json:",inline"`
+}
+
 // Pipeline defines what DevSpace should do. A pipeline consists of one or more
 // jobs that are run in parallel and can depend on each other. Each job consists
 // of one or more conditional steps that are executed in order.
@@ -73,7 +128,7 @@ type PipelineStep struct {
 
 	// ContinueOnError will not fail the whole job and pipeline if
 	// a call within the step fails.
-	ContinueOnError bool `yaml:"continueOnError" json:"continueOnError"`
+	ContinueOnError bool `yaml:"continueOnError,omitempty" json:"continueOnError,omitempty"`
 
 	// Run is the actual shell command that should be executed during this
 	// pipeline step
@@ -84,53 +139,6 @@ type PipelineStep struct {
 
 	// Env are additional environment variables to use for this pipeline step.
 	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
-}
-
-// Config defines the configuration
-type Config struct {
-	// Version holds the config version
-	Version string `yaml:"version" json:"version"`
-
-	// Name specifies the name of the DevSpace project
-	Name string `yaml:"name" json:"name"`
-
-	// Pipelines are the pipelines to execute
-	Pipelines map[string]*Pipeline `yaml:"pipelines,omitempty" json:"pipelines,omitempty"`
-
-	// Require defines what DevSpace, plugins and command versions are needed to use this config
-	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
-
-	// Vars are config variables that can be used inside other config sections to replace certain values dynamically
-	Vars []*Variable `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-
-	// PullSecrets are image pull secrets that will be created by devspace in the target namespace
-	// during devspace dev or devspace deploy
-	PullSecrets []*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
-
-	// Images holds configuration of how devspace should build images
-	Images map[string]*Image `yaml:"images,omitempty" json:"images,omitempty"`
-
-	// Deployments is an ordered list of deployments to deploy via helm, kustomize or kubectl.
-	Deployments []*DeploymentConfig `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-
-	// Dev holds development configuration for the 'devspace dev' command.
-	Dev map[string]*DevPod `yaml:"dev,omitempty" json:"dev,omitempty"`
-
-	// Open holds the open config for urls
-	Open []*OpenConfig `yaml:"open,omitempty" json:"open,omitempty"`
-
-	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
-	// in the order they are specified.
-	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty"`
-
-	// Commands are custom commands that can be executed via 'devspace run COMMAND'
-	Commands []*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-
-	// Profiles can be used to change the current configuration and change the behavior of devspace
-	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`
-
-	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
-	Dependencies []*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 type RequireConfig struct {

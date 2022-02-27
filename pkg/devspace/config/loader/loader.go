@@ -274,10 +274,13 @@ func (l *configLoader) parseConfig(
 	log log.Logger,
 ) (*latest.Config, variable.Resolver, error) {
 	// copy raw config
-	copiedRawConfig, err := copyRaw(rawConfig)
+	copiedRawConfig, err := Imports(filepath.Dir(l.absConfigPath), rawConfig, log)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Delete imports from config
+	delete(copiedRawConfig, "imports")
 
 	// Load defined variables
 	vars, err := versions.ParseVariables(copiedRawConfig, log)

@@ -40,7 +40,7 @@ type resolver struct {
 // NewResolver creates a new resolver for resolving dependencies
 func NewResolver(ctx *devspacecontext.Context, configOptions *loader.ConfigOptions) ResolverInterface {
 	return &resolver{
-		DependencyGraph: graph.NewGraph(graph.NewNode(ctx.Config.Config().Name, &Dependency{id: ".", name: ctx.Config.Config().Name, root: true})),
+		DependencyGraph: graph.NewGraph(graph.NewNode(ctx.Config.Config().Name, &Dependency{name: ctx.Config.Config().Name, root: true})),
 
 		BaseConfig: ctx.Config.Config(),
 		BaseCache:  ctx.Config.LocalCache(),
@@ -72,7 +72,7 @@ func (r *resolver) Resolve(ctx *devspacecontext.Context) ([]types.Dependency, er
 		return nil, err
 	}
 
-	// get direct childrem
+	// get direct children
 	children := []types.Dependency{}
 	for _, v := range r.DependencyGraph.Root.Childs {
 		children = append(children, v.Data.(*Dependency))
@@ -91,17 +91,11 @@ func (r *resolver) resolveRecursive(ctx *devspacecontext.Context, basePath, pare
 			continue
 		}
 
-		dependencyID, err := util.GetDependencyID(basePath, dependencyConfig)
+		dependencyConfigPath, err := util.DownloadDependency(basePath, dependencyConfig.Source, ctx.Log)
 		if err != nil {
 			return err
 		}
 
-		dependencyPath, err := util.DownloadDependency(dependencyID, basePath, dependencyConfig.Source, ctx.Log)
-		if err != nil {
-			return err
-		}
-
-		dependencyConfigPath, dependencyPath := util.GetDependencyConfigPath(dependencyPath, dependencyConfig)
 		dependencyName, err := GetDependencyConfigName(dependencyConfigPath, dependencyConfig)
 		if err != nil {
 			return err
@@ -113,8 +107,8 @@ func (r *resolver) resolveRecursive(ctx *devspacecontext.Context, basePath, pare
 		)
 		if n, ok := r.DependencyGraph.Nodes[dependencyName]; ok {
 			child = n.Data.(*Dependency)
-			if child.id != dependencyID {
-				ctx.Log.Warnf("Seems like you have multiple dependencies with name %s, but they use different source settings (%s != %s). This can lead to unexpected results and you should make sure that the devspace.yaml name is unique across your dependencies or that you use the dependencies.overrideName option", child.name, dependencyID, child.id)
+			if child.Config().Path() != dependencyConfigPath {
+				ctx.Log.Warnf("Seems like you have multiple dependencies with name %s, but they use different source settings (%s != %s). This can lead to unexpected results and you should make sure that the devspace.yaml name is unique across your dependencies or that you use the dependencies.overrideName option", child.name, child.Config().Path(), dependencyConfigPath)
 			}
 
 			err := r.DependencyGraph.AddEdge(parentConfigName, dependencyName)
@@ -126,7 +120,7 @@ func (r *resolver) resolveRecursive(ctx *devspacecontext.Context, basePath, pare
 				ctx.Log.Debugf(err.Error())
 			}
 		} else {
-			child, err = r.resolveDependency(ctx, dependencyID, dependencyConfigPath, dependencyName, dependencyConfig)
+			child, err = r.resolveDependency(ctx, dependencyConfigPath, dependencyName, dependencyConfig)
 			if err != nil {
 				return err
 			}
@@ -157,7 +151,7 @@ func (r *resolver) resolveRecursive(ctx *devspacecontext.Context, basePath, pare
 	return nil
 }
 
-func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyID, dependencyConfigPath, dependencyName string, dependency *latest.DependencyConfig) (*Dependency, error) {
+func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyConfigPath, dependencyName string, dependency *latest.DependencyConfig) (*Dependency, error) {
 	// clone config options
 	cloned, err := r.ConfigOptions.Clone()
 	if err != nil {
@@ -251,7 +245,6 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyID,
 
 	// Create registry client for pull secrets
 	return &Dependency{
-		id:           dependencyID,
 		name:         dependencyName,
 		absolutePath: filepath.Dir(dependencyConfigPath),
 		localConfig:  dConfigWrapper,

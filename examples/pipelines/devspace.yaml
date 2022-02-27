@@ -2,17 +2,16 @@ version: v2beta1
 name: pipelines
 
 vars:
-  - name: IMAGE
-    value: testme
+  - name: IMAGE2
+    value: testme2
+
+imports:
+  - path: test.yaml
 
 pipelines:
   dev:
     steps:
       - run: |-
-          build test --set image=${IMAGE} --set build.docker.skipPush=true
+          echo ${IMAGE}
           
-          deploy test --set helm.componentChart=true \
-            --set helm.values.containers[0].image=${IMAGE}
-          
-          dev test --set imageSelector=${IMAGE} \
-            --set terminal.command=sh
+          echo ${IMAGE2}
