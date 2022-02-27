@@ -1,8 +1,6 @@
 package git
 
 import (
-	"io/ioutil"
-	"os"
 	"testing"
 )
 
@@ -12,11 +10,7 @@ const testTag = "tag1"
 const testRepo = "https://github.com/thockin/test"
 
 func TestGitCliCommit(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	gitRepo, err := NewGitCLIRepository(tempDir)
 	if err != nil {
@@ -49,11 +43,7 @@ func TestGitCliCommit(t *testing.T) {
 }
 
 func TestGitCliBranch(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	gitRepo, err := NewGitCLIRepository(tempDir)
 	if err != nil {
@@ -87,14 +77,10 @@ func TestGitCliBranch(t *testing.T) {
 }
 
 func TestGoGit(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	gitRepo := NewGoGitRepository(tempDir, testRepo)
-	err = gitRepo.Update(true)
+	err := gitRepo.Update(true)
 	if err != nil {
 		t.Fatal(err)
 	}

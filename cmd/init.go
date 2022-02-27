@@ -54,8 +54,8 @@ const (
 	HelmChartOption                   = "helm: Use my own Helm chart (e.g. local via ./chart/ or any remote chart)"
 	ManifestsOption                   = "kubectl: Use existing Kubernetes manifests (e.g. ./kube/deployment.yaml)"
 	KustomizeOption                   = "kustomize: Use an existing Kustomization (e.g. ./kube/kustomization/)"
-	NewDevSpaceConfigOption           = "Create a new DevSpace configuration"
-	DockerComposeDevSpaceConfigOption = "Create a new DevSpace configuration from the existing Docker Compose"
+	NewDevSpaceConfigOption           = "Create a new devspace.yaml from scratch"
+	DockerComposeDevSpaceConfigOption = "Convert existing docker-compose.yml to devspace.yaml"
 
 	// The default name for the production profile
 	productionProfileName = "production"
