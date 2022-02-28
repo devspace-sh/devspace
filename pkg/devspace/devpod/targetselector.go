@@ -40,7 +40,7 @@ func (t *targetSelector) SelectSinglePod(ctx context.Context, client kubectl.Cli
 	options := targetselector.NewEmptyOptions().
 		WithPod(t.pod).
 		WithNamespace(t.namespace).
-		WithWaitingStrategy(newUntilNewestRunningWaitingStrategy(t.pod, time.Millisecond*250, t.parent))
+		WithWaitingStrategy(newUntilNewestRunningWaitingStrategy(time.Millisecond*250, t.parent))
 
 	return targetselector.NewTargetSelector(options).SelectSinglePod(ctx, client, log)
 }
@@ -50,7 +50,7 @@ func (t *targetSelector) SelectSingleContainer(ctx context.Context, client kubec
 		WithPod(t.pod).
 		WithNamespace(t.namespace).
 		WithContainer(t.container).
-		WithWaitingStrategy(newUntilNewestRunningWaitingStrategy(t.pod, time.Millisecond*250, t.parent))
+		WithWaitingStrategy(newUntilNewestRunningWaitingStrategy(time.Millisecond*250, t.parent))
 
 	return targetselector.NewTargetSelector(options).SelectSingleContainer(ctx, client, log)
 }
@@ -60,13 +60,13 @@ func (t *targetSelector) WithContainer(container string) targetselector.TargetSe
 		pod:       t.pod,
 		namespace: t.namespace,
 		container: container,
+		parent:    t.parent,
 	}
 }
 
 // newUntilNewestRunningWaitingStrategy creates a new waiting strategy
-func newUntilNewestRunningWaitingStrategy(pod string, delay time.Duration, parent *tomb.Tomb) targetselector.WaitingStrategy {
+func newUntilNewestRunningWaitingStrategy(delay time.Duration, parent *tomb.Tomb) targetselector.WaitingStrategy {
 	return &untilNewestRunning{
-		Pod:           pod,
 		originalDelay: delay,
 		initialDelay:  time.Now().Add(delay),
 		parent:        parent,
@@ -79,8 +79,6 @@ func newUntilNewestRunningWaitingStrategy(pod string, delay time.Duration, paren
 // this waiting strategy will wait until the newest pod / container is up and running or fails
 // it also waits initially for some time
 type untilNewestRunning struct {
-	Pod string
-
 	originalDelay time.Duration
 	initialDelay  time.Time
 
@@ -93,6 +91,7 @@ type untilNewestRunning struct {
 
 func (u *untilNewestRunning) Reset() targetselector.WaitingStrategy {
 	return &untilNewestRunning{
+		parent:        u.parent,
 		originalDelay: u.originalDelay,
 		initialDelay:  time.Now().Add(u.originalDelay),
 		podInfoPrinter: &targetselector.PodInfoPrinter{

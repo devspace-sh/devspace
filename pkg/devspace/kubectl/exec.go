@@ -112,7 +112,7 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 
 	select {
 	case err = <-errChan:
-		return nil
+		return err
 	case <-ctx.Done():
 		upgradeRoundTripper.Close()
 		<-errChan

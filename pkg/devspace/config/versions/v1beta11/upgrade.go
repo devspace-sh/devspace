@@ -41,20 +41,16 @@ deploy --all`
 	}
 	nextConfig.Pipelines = map[string]*next.Pipeline{
 		"dev": {
-			PipelineJob: next.PipelineJob{
-				Steps: []next.PipelineStep{
-					{
-						Run: devPipeline,
-					},
+			Steps: []next.PipelineStep{
+				{
+					Run: devPipeline,
 				},
 			},
 		},
 		"deploy": {
-			PipelineJob: next.PipelineJob{
-				Steps: []next.PipelineStep{
-					{
-						Run: deployPipeline,
-					},
+			Steps: []next.PipelineStep{
+				{
+					Run: deployPipeline,
 				},
 			},
 		},

@@ -4,15 +4,14 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
+	interruptpkg "github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/sirupsen/logrus"
 	"io"
 	kubectlExec "k8s.io/client-go/util/exec"
 	"time"
-
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
-	interruptpkg "github.com/loft-sh/devspace/pkg/util/interrupt"
 
 	"github.com/mgutz/ansi"
 )
@@ -99,28 +98,7 @@ func StartTerminal(
 	// restart on error
 	defer func() {
 		if err != nil {
-			// check if context is done
 			if ctx.IsDone() {
-				err = nil
-				return
-			}
-
-			if exitError, ok := err.(kubectlExec.CodeExitError); ok {
-				// Expected exit codes are (https://shapeshed.com/unix-exit-codes/):
-				// 1 - Catchall for general errors
-				// 2 - Misuse of shell builtins (according to Bash documentation)
-				// 126 - Command invoked cannot execute
-				// 127 - “command not found”
-				// 128 - Invalid argument to exit
-				// 130 - Script terminated by Control-C
-				if IsUnexpectedExitCode(exitError.Code) {
-					ctx.Log.WriteString(logrus.InfoLevel, "\n")
-					ctx.Log.Infof("Restarting terminal because: %s", err)
-					time.Sleep(time.Second * 3)
-					err = StartTerminal(ctx, devContainer, selector, stdout, stderr, stdin, parent)
-					return
-				}
-
 				err = nil
 				return
 			}
@@ -162,8 +140,30 @@ func StartTerminal(
 	case <-ctx.Context.Done():
 		return nil
 	case err = <-errChan:
-		return err
+		if err != nil {
+			// check if context is done
+			if ctx.IsDone() {
+				return nil
+			} else if exitError, ok := err.(kubectlExec.CodeExitError); ok {
+				// Expected exit codes are (https://shapeshed.com/unix-exit-codes/):
+				// 1 - Catchall for general errors
+				// 2 - Misuse of shell builtins (according to Bash documentation)
+				// 126 - Command invoked cannot execute
+				// 127 - “command not found”
+				// 128 - Invalid argument to exit
+				// 130 - Script terminated by Control-C
+				if IsUnexpectedExitCode(exitError.Code) {
+					return err
+				}
+
+				return nil
+			}
+
+			return fmt.Errorf("lost connection to pod %s", container.Pod.Name)
+		}
 	}
+
+	return nil
 }
 
 func IsUnexpectedExitCode(code int) bool {

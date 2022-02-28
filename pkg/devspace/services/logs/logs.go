@@ -1,11 +1,13 @@
 package logs
 
 import (
+	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/mgutz/ansi"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io"
 	"time"
@@ -81,9 +83,9 @@ func StartLogs(
 		return nil
 	case err := <-errChan:
 		if err != nil {
-			return err
+			return errors.Wrap(err, "logs")
 		}
 
-		return nil
+		return fmt.Errorf("logs: lost connection to pod")
 	}
 }

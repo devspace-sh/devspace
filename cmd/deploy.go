@@ -238,11 +238,9 @@ func runPipeline(
 			}
 		} else {
 			configPipeline = &latest.Pipeline{
-				PipelineJob: latest.PipelineJob{
-					Steps: []latest.PipelineStep{
-						{
-							Run: fallbackPipeline,
-						},
+				Steps: []latest.PipelineStep{
+					{
+						Run: fallbackPipeline,
 					},
 				},
 			}
@@ -257,7 +255,7 @@ func runPipeline(
 	defer devPodManager.Close()
 
 	// get deploy pipeline
-	pipe, err := pipeline.NewPipelineBuilder().BuildPipeline(devPodManager, configPipeline, dependencyRegistry)
+	pipe, err := pipeline.NewPipelineBuilder().BuildPipeline(executePipeline, devPodManager, configPipeline, dependencyRegistry)
 	if err != nil {
 		return err
 	}

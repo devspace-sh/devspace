@@ -126,7 +126,7 @@ func (u *upstream) startPing(doneChan chan struct{}) {
 				return
 			case <-time.After(time.Second * 15):
 				if u.client != nil {
-					ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 					_, err := u.client.Ping(ctx, &remote.Empty{})
 					cancel()
 					if err != nil {
@@ -636,7 +636,7 @@ func (u *upstream) applyChanges(changes []*FileInformation) error {
 					return changes, nil
 				} else if i+1 >= syncRetries {
 					return nil, errors.Wrap(err, "apply creates")
-				} else if strings.HasSuffix(err.Error(), "transport is closing") || strings.HasSuffix(err.Error(), "broken pipe") {
+				} else if strings.Contains(err.Error(), "closed pipe") || strings.Contains(err.Error(), "transport is closing") || strings.Contains(err.Error(), "broken pipe") {
 					return nil, errors.Wrap(err, "apply creates")
 				}
 

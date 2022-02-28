@@ -1,6 +1,7 @@
 package devpod
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
 	"github.com/loft-sh/devspace/pkg/devspace/services/terminal"
@@ -23,37 +24,20 @@ import (
 	"time"
 )
 
-type DevPod interface {
-	// Start starts the DevPod with the given configuration
-	Start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod) error
-
-	// Stop just closes all connections to the DevPod and waits for things
-	// to get cleaned up
-	Stop()
-
-	// Done returns a channel that is closed as soon as everything is done
-	// and cleaned up
-	Done() <-chan struct{}
-
-	// Alive returns if the dev pod is still doing something in the background
-	Alive() bool
-
-	// Error returns an error if the DevPod exited because of an error
-	Error() error
-}
-
 type devPod struct {
-	m           syncpkg.Mutex
-	started     bool
 	selectedPod *corev1.Pod
 
-	job string
-	t   *tomb.Tomb
+	m syncpkg.Mutex
+
+	done chan struct{}
+
+	cancelCtx context.Context
+	cancel    context.CancelFunc
 }
 
 func newDevPod() *devPod {
 	return &devPod{
-		t: &tomb.Tomb{},
+		done: make(chan struct{}),
 	}
 }
 
@@ -61,56 +45,117 @@ func (d *devPod) Start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 	d.m.Lock()
 	defer d.m.Unlock()
 
-	if d.started {
+	if d.cancel != nil {
 		return errors.Errorf("dev pod is already running, please stop it before starting")
 	}
-
-	d.started = true
-
-	tombCtx := d.t.Context(ctx.Context)
-	ctx = ctx.WithContext(tombCtx)
+	d.cancelCtx, d.cancel = context.WithCancel(ctx.Context)
+	ctx = ctx.WithContext(d.cancelCtx)
 
 	// start the dev pod
-	<-d.t.NotifyGo(func() error {
-		return d.start(ctx, devPodConfig, d.t)
-	})
-
-	if !d.t.Alive() {
-		return d.t.Err()
+	err := d.startWithRetry(ctx, devPodConfig)
+	if err != nil {
+		d.cancel()
+		<-d.done
+		return err
 	}
+
 	return nil
 }
 
-func (d *devPod) Alive() bool {
-	return d.t.Alive()
-}
-
-func (d *devPod) Err() error {
-	return d.t.Err()
+func (d *devPod) Done() <-chan struct{} {
+	return d.done
 }
 
 func (d *devPod) Stop() {
-	d.t.Kill(nil)
-	_ = d.t.Wait()
+	d.m.Lock()
+	defer d.m.Lock()
+
+	if d.cancel != nil {
+		d.cancel()
+		<-d.done
+	}
 }
 
-func (d *devPod) Done() <-chan struct{} {
-	return d.t.Dead()
+func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *latest.DevPod) error {
+	t := &tomb.Tomb{}
+
+	go func(ctx *devspacecontext.Context) {
+		select {
+		case <-ctx.Context.Done():
+			<-t.Dead()
+			close(d.done)
+			return
+		case <-t.Dead():
+			// try restarting the dev pod if it has stopped because of
+			// a lost connection
+			if _, ok := t.Err().(DevPodLostConnection); ok {
+				for {
+					err := d.startWithRetry(ctx, devPodConfig)
+					if err != nil {
+						if ctx.IsDone() {
+							return
+						}
+
+						ctx.Log.Infof("Restart dev %s because of: %v", devPodConfig.Name, err)
+						select {
+						case <-ctx.Context.Done():
+							return
+						case <-time.After(time.Second * 10):
+							continue
+						}
+					}
+
+					return
+				}
+			} else {
+				close(d.done)
+			}
+		}
+	}(ctx)
+
+	// Create a new tomb and run it
+	tombCtx := t.Context(ctx.Context)
+	ctx = ctx.WithContext(tombCtx)
+	var (
+		hasTerminal bool
+		err         error
+	)
+	<-t.NotifyGo(func() error {
+		hasTerminal, err = d.start(ctx, devPodConfig, t)
+		return err
+	})
+	if hasTerminal {
+		err = t.Wait()
+		if err != nil {
+			// if we just lost connection we wait here until stopped
+			if _, ok := t.Err().(DevPodLostConnection); ok {
+				<-d.done
+				return nil
+			}
+
+			return err
+		}
+		return nil
+	} else if !t.Alive() {
+		return t.Err()
+	}
+
+	return nil
 }
 
-func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, parent *tomb.Tomb) (err error) {
+func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, parent *tomb.Tomb) (hasTerminal bool, err error) {
 	// check first if we need to replace the pod
 	if needPodReplace(devPodConfig) {
 		err := podreplace.NewPodReplacer().ReplacePod(ctx, devPodConfig)
 		if err != nil {
-			return errors.Wrap(err, "replace pod")
+			return false, errors.Wrap(err, "replace pod")
 		}
 	} else {
 		devPodCache, ok := ctx.Config.RemoteCache().GetDevPod(devPodConfig.Name)
 		if ok && devPodCache.ReplicaSet != "" {
 			_, err := podreplace.NewPodReplacer().RevertReplacePod(ctx, &devPodCache)
 			if err != nil {
-				return errors.Wrap(err, "replace pod")
+				return false, errors.Wrap(err, "replace pod")
 			}
 		}
 	}
@@ -119,7 +164,7 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 	if devPodConfig.ImageSelector != "" {
 		imageSelectorObject, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(devPodConfig.ImageSelector, ctx.Config, ctx.Dependencies)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		imageSelector = []string{imageSelectorObject.Image}
@@ -133,33 +178,33 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 		WithSkipInitContainers(true)
 	d.selectedPod, err = targetselector.NewTargetSelector(options).SelectSinglePod(ctx.Context, ctx.KubeClient, ctx.Log)
 	if err != nil {
-		return errors.Wrap(err, "waiting for pod to become ready")
+		return false, errors.Wrap(err, "waiting for pod to become ready")
 	}
 
 	// start sync and port forwarding
-	err = d.startSyncAndPortForwarding(ctx, devPodConfig, newTargetSelector(d.selectedPod.Name, d.selectedPod.Namespace, d.t), parent)
+	err = d.startSyncAndPortForwarding(ctx, devPodConfig, newTargetSelector(d.selectedPod.Name, d.selectedPod.Namespace, parent), parent)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// start logs or terminal
 	terminalDevContainer := d.getTerminalDevContainer(devPodConfig)
 	if terminalDevContainer != nil {
-		return d.startTerminal(ctx, terminalDevContainer, parent)
+		return true, d.startTerminal(ctx, terminalDevContainer, parent)
 	}
 
 	// TODO attach
-	return d.startLogs(ctx, devPodConfig, parent)
+	return false, d.startLogs(ctx, devPodConfig, parent)
 }
 
 func (d *devPod) startLogs(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, parent *tomb.Tomb) error {
 	loader.EachDevContainer(devPodConfig, func(devContainer *latest.DevContainer) bool {
-		if devContainer.Logs != nil && !devContainer.Logs.Disabled {
-			return false
+		if devContainer.Logs == nil || !devContainer.Logs.Disabled {
+			return true
 		}
 
 		parent.Go(func() error {
-			return logs.StartLogs(ctx, devContainer, newTargetSelector(d.selectedPod.Name, d.selectedPod.Namespace, d.t))
+			return logs.StartLogs(ctx, devContainer, newTargetSelector(d.selectedPod.Name, d.selectedPod.Namespace, parent))
 		})
 
 		return true
@@ -185,14 +230,18 @@ func (d *devPod) getTerminalDevContainer(devPodConfig *latest.DevPod) *latest.De
 }
 
 func (d *devPod) startTerminal(ctx *devspacecontext.Context, devContainer *latest.DevContainer, parent *tomb.Tomb) error {
-	// make sure the global log is silent
-	before := log.GetInstance().GetLevel()
-	log.GetInstance().SetLevel(logrus.FatalLevel)
-	err := terminal.StartTerminal(ctx, devContainer, newTargetSelector(d.selectedPod.Name, d.selectedPod.Namespace, d.t), os.Stdout, os.Stderr, os.Stdin, parent)
-	log.GetInstance().SetLevel(before)
-	if err != nil {
-		return errors.Wrap(err, "error in terminal forwarding")
-	}
+	parent.Go(func() error {
+		// make sure the global log is silent
+		before := log.GetInstance().GetLevel()
+		log.GetInstance().SetLevel(logrus.FatalLevel)
+		err := terminal.StartTerminal(ctx, devContainer, newTargetSelector(d.selectedPod.Name, d.selectedPod.Namespace, parent), os.Stdout, os.Stderr, os.Stdin, parent)
+		log.GetInstance().SetLevel(before)
+		if err != nil {
+			return errors.Wrap(err, "error in terminal forwarding")
+		}
+
+		return nil
+	})
 
 	return nil
 }

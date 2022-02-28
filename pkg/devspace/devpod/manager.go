@@ -10,7 +10,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sync"
-	"time"
 )
 
 type Manager interface {
@@ -157,7 +156,7 @@ func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodCo
 	d.m.Unlock()
 
 	// check if already running
-	if dp != nil && dp.Alive() {
+	if dp != nil {
 		return nil, DevPodAlreadyExists{}
 	}
 
@@ -177,35 +176,6 @@ func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodCo
 		return nil, err
 	}
 
-	// restart dev pod if necessary
-	go func() {
-		<-dp.Done()
-		if originalContext.IsDone() {
-			return
-		}
-
-		// try restarting the dev pod if it has stopped because of
-		// a lost connection
-		if _, ok := dp.Err().(DevPodLostConnection); ok {
-			for {
-				_, err = d.Start(originalContext, devPodConfig)
-				if err != nil {
-					if originalContext.IsDone() {
-						return
-					} else if _, ok := err.(DevPodAlreadyExists); ok {
-						return
-					}
-
-					originalContext.Log.Infof("Restart dev %s because of: %v", devPodConfig.Name, err)
-					time.Sleep(time.Second * 10)
-					continue
-				}
-
-				return
-			}
-		}
-	}()
-
 	return dp, nil
 }
 
@@ -213,9 +183,6 @@ func (d *devPodManager) Reset(ctx *devspacecontext.Context, name string) error {
 	lock := d.lockFactory.GetLock(name)
 	lock.Lock()
 	defer lock.Unlock()
-
-	d.m.Lock()
-	defer d.m.Unlock()
 
 	d.stop(name)
 	devPod, ok := ctx.Config.RemoteCache().GetDevPod(name)
@@ -232,19 +199,20 @@ func (d *devPodManager) Stop(name string) {
 	lock.Lock()
 	defer lock.Unlock()
 
-	d.m.Lock()
-	defer d.m.Unlock()
-
 	d.stop(name)
 }
 
 func (d *devPodManager) stop(name string) {
+	d.m.Lock()
 	dp := d.devPods[name]
+	d.m.Unlock()
 	if dp == nil {
 		return
 	}
 
 	// stop the dev pod
 	dp.Stop()
+	d.m.Lock()
 	delete(d.devPods, name)
+	d.m.Unlock()
 }

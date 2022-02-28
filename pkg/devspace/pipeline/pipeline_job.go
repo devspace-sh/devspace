@@ -19,22 +19,22 @@ import (
 	"sync"
 )
 
-type PipelineJob struct {
-	Name               string
+type Job struct {
 	DependencyRegistry registry.DependencyRegistry
 	DevPodManager      devpod.Manager
 
-	JobConfig *latest.PipelineJob
-
-	Parents  []*PipelineJob
-	Children []*PipelineJob
+	Config *latest.Pipeline
 
 	m       sync.Mutex
 	started bool
 	t       *tomb.Tomb
 }
 
-func (j *PipelineJob) Run(ctx *devspacecontext.Context) error {
+func (j *Job) Run(ctx *devspacecontext.Context) error {
+	if ctx.IsDone() {
+		return ctx.Context.Err()
+	}
+
 	j.m.Lock()
 	defer j.m.Unlock()
 
@@ -47,14 +47,6 @@ func (j *PipelineJob) Run(ctx *devspacecontext.Context) error {
 	tombCtx := j.t.Context(ctx.Context)
 	ctx = ctx.WithContext(tombCtx)
 	j.t.Go(func() error {
-		for _, parent := range j.Parents {
-			select {
-			case <-ctx.Context.Done():
-				return nil
-			case <-parent.t.Dead():
-			}
-		}
-
 		// start the actual job
 		done := j.t.NotifyGo(func() error {
 			return j.doWork(ctx)
@@ -73,7 +65,7 @@ func (j *PipelineJob) Run(ctx *devspacecontext.Context) error {
 		}
 
 		// if rerun we should watch here
-		if j.JobConfig.Rerun != nil {
+		if j.Config.Rerun != nil {
 			// TODO: watch and restart job here
 			return nil
 		}
@@ -84,9 +76,9 @@ func (j *PipelineJob) Run(ctx *devspacecontext.Context) error {
 	return j.t.Wait()
 }
 
-func (j *PipelineJob) doWork(ctx *devspacecontext.Context) error {
+func (j *Job) doWork(ctx *devspacecontext.Context) error {
 	// loop over steps and execute them
-	for i, step := range j.JobConfig.Steps {
+	for i, step := range j.Config.Steps {
 		var (
 			execute = true
 			err     error
@@ -108,7 +100,7 @@ func (j *PipelineJob) doWork(ctx *devspacecontext.Context) error {
 	return nil
 }
 
-func (j *PipelineJob) shouldExecuteStep(ctx *devspacecontext.Context, step *latest.PipelineStep) (bool, error) {
+func (j *Job) shouldExecuteStep(ctx *devspacecontext.Context, step *latest.PipelineStep) (bool, error) {
 	// check if step should be rerun
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
@@ -127,7 +119,7 @@ func (j *PipelineJob) shouldExecuteStep(ctx *devspacecontext.Context, step *late
 	return true, nil
 }
 
-func (j *PipelineJob) executeStep(ctx *devspacecontext.Context, step *latest.PipelineStep) error {
+func (j *Job) executeStep(ctx *devspacecontext.Context, step *latest.PipelineStep) error {
 	ctx = ctx.WithLogger(ctx.Log.WithoutPrefix())
 	stdoutReader, stdoutWriter := io.Pipe()
 	defer stdoutWriter.Close()

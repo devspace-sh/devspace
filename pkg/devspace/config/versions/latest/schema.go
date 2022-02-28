@@ -93,20 +93,6 @@ type Import struct {
 // jobs that are run in parallel and can depend on each other. Each job consists
 // of one or more conditional steps that are executed in order.
 type Pipeline struct {
-	// Embedded default pipeline job. Can be referenced in other pipeline jobs via
-	// default.
-	PipelineJob `yaml:",inline" json:",inline"`
-
-	// Additional jobs that are executed in parallel to the default job.
-	Jobs map[string]*PipelineJob `yaml:"jobs,omitempty" json:"jobs,omitempty"`
-}
-
-// PipelineJob defines a pipeline job consisting of several steps that
-// will be executed in order.
-type PipelineJob struct {
-	// After defines after which other jobs this job can be run
-	After []string `yaml:"after,omitempty" json:"after,omitempty"`
-
 	// Rerun defines when this job should get reexecuted
 	Rerun *JobRerun `yaml:"rerun,omitempty" json:"rerun,omitempty"`
 
