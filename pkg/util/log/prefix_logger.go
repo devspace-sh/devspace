@@ -60,6 +60,10 @@ type prefixLogger struct {
 	m sync.Mutex
 }
 
+func (s *prefixLogger) WithoutPrefix() Logger {
+	return s.base
+}
+
 func (s *prefixLogger) WithLevel(level logrus.Level) Logger {
 	s.m.Lock()
 	defer s.m.Unlock()
@@ -84,17 +88,6 @@ func (s *prefixLogger) GetLevel() logrus.Level {
 	defer s.m.Unlock()
 
 	return s.level
-}
-
-func (s *prefixLogger) StartWait(message string) {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	s.writeMessage(logrus.InfoLevel, "Wait: "+message+"\n")
-}
-
-func (s *prefixLogger) StopWait() {
-
 }
 
 func (s *prefixLogger) writeMessage(level logrus.Level, message string) {

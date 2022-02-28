@@ -161,11 +161,8 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, _ bool) (bool, error
 	// forceDeploy = forceDeploy || deployCache.KubectlManifestsHash != manifestsHash || deployCache.DeploymentConfigHash != deploymentConfigHash
 	forceDeploy := true
 
-	ctx.Log.StartWait("Applying manifests with kubectl")
-	defer ctx.Log.StopWait()
-
+	ctx.Log.Info("Applying manifests with kubectl...")
 	wasDeployed := false
-
 	kubeObjects := []remotecache.KubectlObject{}
 	for _, manifest := range d.Manifests {
 		shouldRedeploy, replacedManifest, parsedObjects, err := d.getReplacedManifest(ctx, manifest)

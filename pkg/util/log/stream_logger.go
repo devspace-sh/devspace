@@ -69,12 +69,12 @@ type StreamLogger struct {
 	m     sync.Mutex
 	level logrus.Level
 
-	format     Format
-	isTerminal bool
-	stream     io.Writer
+	format      Format
+	isTerminal  bool
+	disableTags bool
+	stream      io.Writer
 
-	loadingText *loadingText
-	survey      survey.Survey
+	survey survey.Survey
 }
 
 type Line struct {
@@ -151,23 +151,17 @@ func (s *StreamLogger) WithLevel(level logrus.Level) Logger {
 func (s *StreamLogger) writeMessage(fnType logFunctionType, message string) {
 	fnInformation := fnTypeInformationMap[fnType]
 	if s.level >= fnInformation.logLevel {
-		if s.loadingText != nil {
-			s.loadingText.Stop()
-		}
-
 		if s.format == TextFormat {
-			if os.Getenv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
-				now := time.Now()
-				_, _ = s.stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
+			if !s.disableTags {
+				if os.Getenv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
+					now := time.Now()
+					_, _ = s.stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
+				}
+				_, _ = s.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
 			}
-			_, _ = s.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
 			_, _ = s.stream.Write([]byte(message))
 		} else if s.format == JsonFormat {
 			s.writeJSON(message, fnInformation.logLevel)
-		}
-
-		if s.loadingText != nil && fnType != fatalFn {
-			s.loadingText.Start()
 		}
 	}
 }
@@ -180,50 +174,6 @@ func (s *StreamLogger) writeJSON(message string, level logrus.Level) {
 	})
 	if err == nil {
 		_, _ = s.stream.Write([]byte(string(line) + "\n"))
-	}
-}
-
-// StartWait prints a wait message until StopWait is called
-func (s *StreamLogger) StartWait(message string) {
-	if !s.isTerminal {
-		s.Info(message)
-		return
-	}
-
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	if s.loadingText != nil {
-		if s.loadingText.Message == message {
-			return
-		}
-
-		s.loadingText.Stop()
-		s.loadingText = nil
-	}
-
-	if s.level >= logrus.InfoLevel {
-		s.loadingText = &loadingText{
-			Message: message,
-			Stream:  goansi.NewAnsiStdout(),
-		}
-
-		s.loadingText.Start()
-	}
-}
-
-// StopWait stops printing a message
-func (s *StreamLogger) StopWait() {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	if !s.isTerminal {
-		return
-	}
-
-	if s.loadingText != nil {
-		s.loadingText.Stop()
-		s.loadingText = nil
 	}
 }
 
@@ -362,6 +312,25 @@ func (s *StreamLogger) GetLevel() logrus.Level {
 	return s.level
 }
 
+func (s *StreamLogger) WithoutPrefix() Logger {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	if s.format == JsonFormat {
+		return s
+	}
+
+	return &StreamLogger{
+		m:           sync.Mutex{},
+		level:       s.level,
+		format:      s.format,
+		isTerminal:  s.isTerminal,
+		disableTags: true,
+		stream:      s.stream,
+		survey:      survey.NewSurvey(),
+	}
+}
+
 func (s *StreamLogger) Writer(level logrus.Level) io.Writer {
 	s.m.Lock()
 	defer s.m.Unlock()
@@ -392,10 +361,6 @@ func (s *StreamLogger) WriteString(level logrus.Level, message string) {
 }
 
 func (s *StreamLogger) write(message []byte) (int, error) {
-	if s.loadingText != nil {
-		s.loadingText.Stop()
-	}
-
 	var (
 		n   int
 		err error
@@ -405,10 +370,6 @@ func (s *StreamLogger) write(message []byte) (int, error) {
 		n = len(message)
 	} else {
 		n, err = s.stream.Write(message)
-	}
-
-	if s.loadingText != nil {
-		s.loadingText.Start()
 	}
 
 	return n, err
@@ -422,14 +383,11 @@ func (s *StreamLogger) Question(params *survey.QuestionOptions) (string, error) 
 		return "", fmt.Errorf("cannot ask question '%s' because you are not currently using a terminal", params.Question)
 	}
 
-	// Stop wait if there was any
-	s.StopWait()
-
 	// Check if we can ask the question
-	if s.GetLevel() < logrus.InfoLevel {
+	if s.level < logrus.InfoLevel {
 		return "", errors.Errorf("cannot ask question '%s' because log level is too low", params.Question)
 	}
 
-	s.WriteString(logrus.InfoLevel, "\n")
+	_, _ = s.write([]byte("\n"))
 	return s.survey.Question(params)
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
+	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/pkg/errors"
 	"io"
 	"mvdan.cc/sh/v3/interp"
@@ -24,48 +25,56 @@ type PipelineJob struct {
 	DevPodManager      devpod.Manager
 
 	JobConfig *latest.PipelineJob
-	Job       Job
 
 	Parents  []*PipelineJob
 	Children []*PipelineJob
 
 	startOnce sync.Once
-	err       error
+	t         *tomb.Tomb
 }
 
 func (j *PipelineJob) Run(ctx *devspacecontext.Context) error {
 	j.startOnce.Do(func() {
-		for _, parent := range j.Parents {
+		tombCtx := j.t.Context(ctx.Context)
+		ctx = ctx.WithContext(tombCtx)
+
+		j.t.Go(func() error {
+			for _, parent := range j.Parents {
+				select {
+				case <-ctx.Context.Done():
+					return nil
+				case <-parent.t.Dead():
+				}
+			}
+
+			// start the actual job
+			done := j.t.NotifyGo(func() error {
+				return j.doWork(ctx)
+			})
+
+			// wait until job is dying
 			select {
 			case <-ctx.Context.Done():
-				return
-			case <-parent.Job.Done():
+				return nil
+			case <-done:
 			}
-		}
 
-		// start the actual job
-		err := j.Job.Start(ctx, j.doWork)
-		if err != nil {
-			j.err = err
-			return
-		}
+			// check if errored
+			if !j.t.Alive() {
+				return j.t.Err()
+			}
 
-		// wait until job is finished
-		<-j.Job.Done()
+			// if rerun we should watch here
+			if j.JobConfig.Rerun != nil {
+				// TODO: watch and restart job here
+				return nil
+			}
 
-		// check if error
-		if j.Job.Error() != nil {
-			j.err = j.Job.Error()
-			return
-		}
-
-		// if rerun we should watch here
-		if j.JobConfig.Rerun != nil {
-			// TODO: watch and restart job here
-			return
-		}
+			return nil
+		})
+		<-j.t.Dead()
 	})
-	return j.err
+	return j.t.Err()
 }
 
 func (j *PipelineJob) doWork(ctx *devspacecontext.Context) error {
@@ -112,6 +121,7 @@ func (j *PipelineJob) shouldExecuteStep(ctx *devspacecontext.Context, step *late
 }
 
 func (j *PipelineJob) executeStep(ctx *devspacecontext.Context, step *latest.PipelineStep) error {
+	ctx = ctx.WithLogger(ctx.Log.WithoutPrefix())
 	stdoutReader, stdoutWriter := io.Pipe()
 	defer stdoutWriter.Close()
 	go func() {

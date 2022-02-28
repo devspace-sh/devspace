@@ -153,9 +153,7 @@ func (d *DeployConfig) internalDeploy(ctx *devspacecontext.Context, overwriteVal
 		return nil, nil
 	}
 
-	ctx.Log.StartWait(fmt.Sprintf("Deploying chart %s (%s) with helm", d.DeploymentConfig.Helm.Chart.Name, d.DeploymentConfig.Name))
-	defer ctx.Log.StopWait()
-
+	ctx.Log.Info(fmt.Sprintf("Deploying chart %s (%s) with helm...", d.DeploymentConfig.Helm.Chart.Name, d.DeploymentConfig.Name))
 	valuesOut, _ := yaml.Marshal(overwriteValues)
 	ctx.Log.Debugf("Deploying chart with values:\n %v\n", string(valuesOut))
 

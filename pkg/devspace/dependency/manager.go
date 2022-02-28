@@ -174,8 +174,6 @@ func (m *manager) handleDependencies(ctx *devspacecontext.Context, skipDependenc
 		return nil, errors.Wrap(err, "resolve dependencies")
 	}
 
-	defer ctx.Log.StopWait()
-
 	if !silent {
 		ctx.Log.Donef("Resolved dependencies successfully")
 	}

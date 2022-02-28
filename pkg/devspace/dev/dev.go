@@ -9,9 +9,6 @@ import (
 )
 
 func UI(ctx *devspacecontext.Context, port int) error {
-	ctx.Log.StartWait("Starting the ui server...")
-	defer ctx.Log.StopWait()
-
 	var defaultPort *int
 	if port != 0 {
 		defaultPort = &port
@@ -20,7 +17,6 @@ func UI(ctx *devspacecontext.Context, port int) error {
 	// Create server
 	uiLogger := log.GetFileLogger("ui")
 	serv, err := server.NewServer(ctx.Config, ctx.Dependencies, "localhost", false, ctx.KubeClient.CurrentContext(), ctx.KubeClient.Namespace(), defaultPort, uiLogger)
-	ctx.Log.StopWait()
 	if err != nil {
 		ctx.Log.Warnf("Couldn't start UI server: %v", err)
 	} else {

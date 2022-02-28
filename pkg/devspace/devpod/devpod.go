@@ -72,23 +72,21 @@ func (d *devPod) Start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 	ctx = ctx.WithContext(tombCtx)
 
 	// start the dev pod
-	initDone := make(chan struct{})
-	d.t.Go(func() error {
-		defer close(initDone)
-
+	<-d.t.NotifyGo(func() error {
 		return d.start(ctx, devPodConfig, d.t)
 	})
 
-	// wait until initialization is done
-	<-initDone
-	return d.t.Err()
+	if !d.t.Alive() {
+		return d.t.Err()
+	}
+	return nil
 }
 
 func (d *devPod) Alive() bool {
 	return d.t.Alive()
 }
 
-func (d *devPod) Error() error {
+func (d *devPod) Err() error {
 	return d.t.Err()
 }
 

@@ -110,9 +110,8 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 
 	// Authenticate
 	if !b.skipPush && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || !b.helper.ImageConf.Build.Docker.SkipPush) {
-		ctx.Log.StartWait("Authenticating (" + displayRegistryURL + ")")
+		ctx.Log.Info("Authenticating (" + displayRegistryURL + ")...")
 		_, err = b.Authenticate()
-		ctx.Log.StopWait()
 		if err != nil {
 			return errors.Errorf("Error during image registry authentication: %v", err)
 		}

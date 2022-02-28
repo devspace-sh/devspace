@@ -27,25 +27,17 @@ func StartPortForwarding(ctx *devspacecontext.Context, devPod *latest.DevPod, se
 	// forward
 	initDoneArray := []chan struct{}{}
 	if len(devPod.Forward) > 0 {
-		initDone := make(chan struct{})
-		initDoneArray = append(initDoneArray, initDone)
-		parent.Go(func() error {
-			defer close(initDone)
-
+		initDoneArray = append(initDoneArray, parent.NotifyGo(func() error {
 			return startPortForwardingWithHooks(ctx, devPod.Name, devPod.Forward, selector, parent)
-		})
+		}))
 	}
 
 	// reverse
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
 		if len(devPod.PortMappingsReverse) > 0 {
-			initDone := make(chan struct{})
-			initDoneArray = append(initDoneArray, initDone)
-			parent.Go(func() error {
-				defer close(initDone)
-
+			initDoneArray = append(initDoneArray, parent.NotifyGo(func() error {
 				return startReversePortForwardingWithHooks(ctx, devPod.Name, string(devContainer.Arch), devContainer.PortMappingsReverse, selector.WithContainer(devContainer.Container), parent)
-			})
+			}))
 		}
 		return true
 	})

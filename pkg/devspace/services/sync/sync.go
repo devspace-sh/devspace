@@ -24,16 +24,12 @@ func StartSyncFromCmd(ctx *devspacecontext.Context, selector targetselector.Targ
 	}
 
 	// Start the tomb
-	initDone := make(chan struct{})
-	parent.Go(func() error {
-		defer close(initDone)
-
+	<-parent.NotifyGo(func() error {
 		return NewController().Start(ctx, options, parent)
 	})
 
 	// Handle no watch
 	if noWatch {
-		<-initDone
 		parent.Kill(nil)
 		_ = parent.Wait()
 		return nil
@@ -59,15 +55,10 @@ func StartSync(ctx *devspacecontext.Context, devPod *latest.DevPod, selector tar
 	initDoneArray := []chan struct{}{}
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
 		for i, syncConfig := range devContainer.Sync {
-			initDone := make(chan struct{})
-			initDoneArray = append(initDoneArray, initDone)
-
 			// start a new go routine in the tomb
-			parent.Go(func() error {
-				defer close(initDone)
-
+			initDoneArray = append(initDoneArray, parent.NotifyGo(func() error {
 				return startSync(ctx, devPod.Name, string(devContainer.Arch), syncConfig, selector.WithContainer(devContainer.Container), parent)
-			})
+			}))
 
 			// every five we wait
 			if i%5 == 0 {

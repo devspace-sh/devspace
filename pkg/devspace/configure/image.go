@@ -261,9 +261,8 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 	registryPassword := ""
 
 	for {
-		m.log.StartWait("Checking registry authentication for " + registryHostnamePrintable)
+		m.log.Info("Checking registry authentication for " + registryHostnamePrintable + "...")
 		authConfig, err := dockerClient.Login(registryHostname, registryUsername, registryPassword, true, false, false)
-		m.log.StopWait()
 		if err == nil && (authConfig.Username != "" || authConfig.Password != "") {
 			registryUsername = authConfig.Username
 

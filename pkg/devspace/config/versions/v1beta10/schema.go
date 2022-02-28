@@ -30,6 +30,9 @@ type Config struct {
 	// Version holds the config version
 	Version string `yaml:"version"`
 
+	// Name specifies the name of the DevSpace project
+	Name string `yaml:"name" json:"name"`
+
 	// Require defines what DevSpace, plugins and command versions are needed to use this config
 	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
 

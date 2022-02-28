@@ -3,63 +3,45 @@ package pipeline
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/graph"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
-	"github.com/loft-sh/devspace/pkg/devspace/devpod"
-	"github.com/pkg/errors"
+	"github.com/loft-sh/devspace/pkg/util/tomb"
 )
 
 const (
 	rootID = "___root___"
 )
 
-type Executor interface {
-	ExecutePipeline(ctx *devspacecontext.Context, pipeline *latest.Pipeline) error
+type Builder interface {
+	BuildPipeline(configPipeline *latest.Pipeline, registry registry.DependencyRegistry) (Pipeline, error)
 }
 
-func NewExecutor(registry registry.DependencyRegistry) Executor {
-	return &executor{
-		registry: registry,
-	}
+func NewPipelineBuilder() Builder {
+	return &builder{}
 }
 
-type executor struct {
-	registry registry.DependencyRegistry
-	pipeline *Pipeline
-}
+type builder struct{}
 
-func (e *executor) ExecutePipeline(ctx *devspacecontext.Context, configPipeline *latest.Pipeline) error {
-	pipeline, err := e.buildPipeline(configPipeline)
-	if err != nil {
-		return errors.Wrap(err, "build pipeline")
-	}
-
-	e.pipeline = pipeline
-	return pipeline.Run(ctx)
-}
-
-func (e *executor) buildPipeline(configPipeline *latest.Pipeline) (*Pipeline, error) {
-	devPodManager := devpod.NewManager()
-	pipeline := NewPipeline(e.registry, devPodManager)
-	pipeline.Jobs = map[string]*PipelineJob{
+func (b *builder) BuildPipeline(configPipeline *latest.Pipeline, registry registry.DependencyRegistry) (Pipeline, error) {
+	pip := NewPipeline(registry).(*pipeline)
+	pip.Jobs = map[string]*PipelineJob{
 		"default": {
 			Name:          "default",
-			DevPodManager: devPodManager,
+			DevPodManager: pip.DevPodManager(),
 			JobConfig:     &configPipeline.PipelineJob,
-			Job:           NewJob(configPipeline.PipelineJob.Rerun != nil),
 			Children:      []*PipelineJob{},
+			t:             &tomb.Tomb{},
 		},
 	}
 
 	// add other jobs
 	for k, j := range configPipeline.Jobs {
-		pipeline.Jobs[k] = &PipelineJob{
+		pip.Jobs[k] = &PipelineJob{
 			Name:          k,
-			DevPodManager: devPodManager,
+			DevPodManager: pip.DevPodManager(),
 			JobConfig:     j,
-			Job:           NewJob(j.Rerun != nil),
 			Children:      []*PipelineJob{},
+			t:             &tomb.Tomb{},
 		}
 	}
 
@@ -68,7 +50,7 @@ func (e *executor) buildPipeline(configPipeline *latest.Pipeline) (*Pipeline, er
 
 	// add the jobs that have no dependencies
 	leftJobs := map[string]*PipelineJob{}
-	for k, j := range pipeline.Jobs {
+	for k, j := range pip.Jobs {
 		leftJobs[k] = j
 	}
 	for {
@@ -76,7 +58,7 @@ func (e *executor) buildPipeline(configPipeline *latest.Pipeline) (*Pipeline, er
 		for k, j := range leftJobs {
 			foundAllAfter := true
 			for _, after := range j.JobConfig.After {
-				if pipeline.Jobs[after] == nil {
+				if pip.Jobs[after] == nil {
 					return nil, fmt.Errorf("job %s in pipeline has wrong after job %s: this job does not exist", k, after)
 				}
 				if k == after {
@@ -131,7 +113,7 @@ func (e *executor) buildPipeline(configPipeline *latest.Pipeline) (*Pipeline, er
 	}
 
 	// resolve the pipeline
-	return pipeline, addRecursive(rootNode, &pipeline.JobsPipeline)
+	return pip, addRecursive(rootNode, &pip.JobsPipeline)
 }
 
 func addRecursive(node *graph.Node, childs *[]*PipelineJob) error {

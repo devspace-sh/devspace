@@ -87,11 +87,9 @@ func (cmd *imagesCmd) RunCleanupImages(f factory.Factory, cobraCmd *cobra.Comman
 		return errors.Errorf("Docker seems to be not running: %v", err)
 	}
 
-	defer log.StopWait()
-
 	// Delete all images
 	for _, imageConfig := range config.Images {
-		log.StartWait("Deleting local image " + imageConfig.Image)
+		log.Info("Deleting local image " + imageConfig.Image + "...")
 
 		response, err := client.DeleteImageByName(imageConfig.Image, log)
 		if err != nil {
@@ -107,7 +105,7 @@ func (cmd *imagesCmd) RunCleanupImages(f factory.Factory, cobraCmd *cobra.Comman
 		}
 	}
 
-	log.StartWait("Deleting local dangling images")
+	log.Info("Deleting local dangling images...")
 
 	// Cleanup dangling images aswell
 	for {
@@ -129,7 +127,6 @@ func (cmd *imagesCmd) RunCleanupImages(f factory.Factory, cobraCmd *cobra.Comman
 		}
 	}
 
-	log.StopWait()
 	log.Donef("Successfully cleaned up images")
 	return nil
 }

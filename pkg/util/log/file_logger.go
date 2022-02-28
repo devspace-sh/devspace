@@ -306,6 +306,10 @@ func (f *fileLogger) Question(params *survey.QuestionOptions) (string, error) {
 	return "", errors.New("questions in file logger not supported")
 }
 
+func (f *fileLogger) WithoutPrefix() Logger {
+	return f
+}
+
 // WithLevel implements logger interface
 func (f *fileLogger) WithLevel(level logrus.Level) Logger {
 	f.m.Lock()

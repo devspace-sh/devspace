@@ -213,32 +213,6 @@ func (s *unionLogger) Printf(level logrus.Level, format string, args ...interfac
 	}
 }
 
-func (s *unionLogger) StartWait(message string) {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	if s.level < logrus.InfoLevel {
-		return
-	}
-
-	for _, l := range s.Loggers {
-		l.StartWait(message)
-	}
-}
-
-func (s *unionLogger) StopWait() {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	if s.level < logrus.InfoLevel {
-		return
-	}
-
-	for _, l := range s.Loggers {
-		l.StopWait()
-	}
-}
-
 func (s *unionLogger) Writer(level logrus.Level) io.Writer {
 	s.m.Lock()
 	defer s.m.Unlock()
@@ -251,6 +225,9 @@ func (s *unionLogger) Writer(level logrus.Level) io.Writer {
 }
 
 func (s *unionLogger) Write(message []byte) (int, error) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
 	errs := []error{}
 	for _, l := range s.Loggers {
 		_, err := l.Writer(logrus.PanicLevel).Write(message)
@@ -309,6 +286,20 @@ func (s *unionLogger) GetLevel() logrus.Level {
 	defer s.m.Unlock()
 
 	return s.level
+}
+
+func (s *unionLogger) WithoutPrefix() Logger {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	loggers := []Logger{}
+	for _, l := range s.Loggers {
+		loggers = append(loggers, l.WithoutPrefix())
+	}
+	return &unionLogger{
+		Loggers: loggers,
+		level:   s.level,
+	}
 }
 
 func (s *unionLogger) WithLevel(level logrus.Level) Logger {

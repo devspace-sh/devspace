@@ -25,8 +25,6 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 	if imageConf.Build != nil && imageConf.Build.Custom != nil {
 		bldr = custom.NewBuilder(imageConfigName, imageConf, imageTags)
 	} else if imageConf.Build != nil && imageConf.Build.BuildKit != nil {
-		ctx.Log.StartWait("Creating BuildKit builder")
-		defer ctx.Log.StopWait()
 		bldr, err = buildkit.NewBuilder(ctx, imageConfigName, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes)
 		if err != nil {
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
@@ -47,8 +45,6 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 			ctx = ctx.WithKubeClient(kubeClient)
 		}
 
-		ctx.Log.StartWait("Creating kaniko builder")
-		defer ctx.Log.StopWait()
 		bldr, err = kaniko.NewBuilder(ctx, dockerClient, imageConfigName, imageConf, imageTags)
 		if err != nil {
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)

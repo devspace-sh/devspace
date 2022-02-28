@@ -245,12 +245,6 @@ func runWithHooks(ctx *devspacecontext.Context, command string, fn func() error)
 	}
 
 	defer func() {
-		if ctx.Log == nil {
-			log.GetInstance().StopWait()
-		} else {
-			ctx.Log.StopWait()
-		}
-
 		if err != nil {
 			hook.LogExecuteHooks(ctx, map[string]interface{}{"error": err}, command+":after:execute", command+":error")
 		} else {
@@ -259,12 +253,6 @@ func runWithHooks(ctx *devspacecontext.Context, command string, fn func() error)
 	}()
 
 	return interrupt.Global.Run(fn, func() {
-		if ctx.Log == nil {
-			log.GetInstance().StopWait()
-		} else {
-			ctx.Log.StopWait()
-		}
-
 		hook.LogExecuteHooks(ctx, nil, command+":interrupt")
 	})
 }

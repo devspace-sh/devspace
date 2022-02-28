@@ -193,7 +193,7 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 		}
 
 		if len(concurrentDeployments) > 0 {
-			ctx.Log.StartWait(fmt.Sprintf("Deploying %d deployments concurrently", len(concurrentDeployments)))
+			ctx.Log.Info(fmt.Sprintf("Deploying %d deployments concurrently...", len(concurrentDeployments)))
 
 			// Wait for concurrent deployments to complete before starting sequential deployments.
 			for i := 0; i < len(concurrentDeployments); i++ {
@@ -201,12 +201,9 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 				case err := <-errChan:
 					return err
 				case <-deployedChan:
-					ctx.Log.StartWait(fmt.Sprintf("Deploying %d deployments concurrently", len(concurrentDeployments)-i-1))
-
+					ctx.Log.Info(fmt.Sprintf("Deploying %d deployments concurrently", len(concurrentDeployments)-i-1))
 				}
 			}
-
-			ctx.Log.StopWait()
 		}
 
 		for _, deployConfig := range sequentialDeployments {
@@ -374,7 +371,7 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) e
 		}
 
 		// Delete kubectl engine
-		ctx.Log.StartWait("Deleting deployment " + deploymentCache.Name)
+		ctx.Log.Info("Deleting deployment " + deploymentCache.Name + "...")
 		if deploymentCache.Kubectl != nil {
 			err = kubectl.Delete(ctx, deploymentCache.Name)
 		} else if deploymentCache.Helm != nil {
@@ -384,7 +381,6 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) e
 			ctx.Config.RemoteCache().DeleteDeployment(deploymentCache.Name)
 			continue
 		}
-		ctx.Log.StopWait()
 		if err != nil {
 			// Execute on error deployment purge hook
 			hookErr := hook.ExecuteHooks(ctx, map[string]interface{}{

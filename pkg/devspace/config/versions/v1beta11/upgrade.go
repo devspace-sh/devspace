@@ -26,6 +26,9 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	}
 
 	// just guess a name here
+	if nextConfig.Name == "" {
+
+	}
 	nextConfig.Name = "devspace"
 
 	// use a pretty simple pipeline which was used by devspace before

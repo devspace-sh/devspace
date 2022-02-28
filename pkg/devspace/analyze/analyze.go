@@ -73,8 +73,7 @@ func (a *analyzer) Analyze(namespace string, options Options) error {
 
 // CreateReport creates a new report about a certain namespace
 func (a *analyzer) CreateReport(namespace string, options Options) ([]*ReportItem, error) {
-	a.log.StartWait("Checking status")
-	defer a.log.StopWait()
+	a.log.Info("Checking status...")
 
 	report := []*ReportItem{}
 	timeout := WaitTimeout

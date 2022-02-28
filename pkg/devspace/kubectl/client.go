@@ -277,9 +277,8 @@ func (client *client) CheckKubeContext(localCache localcache.Cache, noWarning bo
 			(lastConfigContext == nil ||
 				lastConfigContext.Namespace != metav1.NamespaceDefault) {
 			log.Warn("Deploying into the 'default' namespace is usually not a good idea as this namespace cannot be deleted\n")
-			log.StartWait("Will continue in 5 seconds...")
+			log.Info("Will continue in 5 seconds...")
 			time.Sleep(5 * time.Second)
-			log.StopWait()
 		}
 	}
 

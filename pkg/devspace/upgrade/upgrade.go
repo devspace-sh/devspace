@@ -137,9 +137,8 @@ func Upgrade(flagVersion string) error {
 			return err
 		}
 
-		log.StartWait(fmt.Sprintf("Downloading version %s...", flagVersion))
+		log.Info(fmt.Sprintf("Downloading version %s...", flagVersion))
 		err = selfupdate.DefaultUpdater().UpdateTo(release, cmdPath)
-		log.StopWait()
 		if err != nil {
 			return err
 		}
@@ -159,9 +158,8 @@ func Upgrade(flagVersion string) error {
 		return nil
 	}
 
-	log.StartWait("Downloading newest version...")
+	log.Info("Downloading newest version...")
 	latest, err := selfupdate.UpdateSelf(v, githubSlug)
-	log.StopWait()
 	if err != nil {
 		return err
 	}

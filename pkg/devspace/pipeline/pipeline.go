@@ -1,16 +1,22 @@
 package pipeline
 
 import (
-	"context"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"sync"
 )
 
-func NewPipeline(dependencyRegistry registry.DependencyRegistry, devPodManager devpod.Manager) *Pipeline {
-	return &Pipeline{
-		DevPodManager:      devPodManager,
+type Pipeline interface {
+	Run(ctx *devspacecontext.Context) error
+	DevPodManager() devpod.Manager
+	Children() []Pipeline
+	WaitDev()
+}
+
+func NewPipeline(dependencyRegistry registry.DependencyRegistry) Pipeline {
+	return &pipeline{
+		devPodManager:      devpod.NewManager(),
 		DependencyRegistry: dependencyRegistry,
 		JobsPipeline:       []*PipelineJob{},
 		openJobs:           make(map[string]*PipelineJob),
@@ -19,20 +25,53 @@ func NewPipeline(dependencyRegistry registry.DependencyRegistry, devPodManager d
 	}
 }
 
-type Pipeline struct {
-	DevPodManager      devpod.Manager
+type pipeline struct {
+	m sync.Mutex
+
+	devPodManager      devpod.Manager
 	DependencyRegistry registry.DependencyRegistry
+
+	children []Pipeline
 
 	Jobs         map[string]*PipelineJob
 	JobsPipeline []*PipelineJob
 
-	jobsMutex     sync.Mutex
 	openJobs      map[string]*PipelineJob
 	runningJobs   map[string]*PipelineJob
 	completedJobs map[string]*PipelineJob
 }
 
-func (p *Pipeline) Run(ctx *devspacecontext.Context) error {
+// WaitDev waits for the dev pod managers to complete.
+// This essentially waits until all dev pods are closed.
+func (p *pipeline) WaitDev() {
+	children := []Pipeline{}
+	p.m.Lock()
+	children = append(children, p.children...)
+	p.m.Unlock()
+
+	// wait for children first
+	for _, child := range children {
+		child.WaitDev()
+	}
+
+	// wait for dev pods to finish
+	p.devPodManager.Wait()
+}
+
+func (p *pipeline) DevPodManager() devpod.Manager {
+	return p.devPodManager
+}
+
+func (p *pipeline) Children() []Pipeline {
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	children := []Pipeline{}
+	children = append(children, p.children...)
+	return children
+}
+
+func (p *pipeline) Run(ctx *devspacecontext.Context) error {
 	for k, v := range p.Jobs {
 		p.openJobs[k] = v
 	}
@@ -40,52 +79,31 @@ func (p *Pipeline) Run(ctx *devspacecontext.Context) error {
 	return p.executeJobs(ctx, p.JobsPipeline)
 }
 
-func (p *Pipeline) executeJobs(ctx *devspacecontext.Context, jobs []*PipelineJob) error {
+func (p *pipeline) executeJobs(ctx *devspacecontext.Context, jobs []*PipelineJob) error {
 	if len(jobs) == 0 {
 		return nil
 	}
 
-	cancelCtx, cancel := context.WithCancel(ctx.Context)
-	defer cancel()
-	ctx = ctx.WithContext(cancelCtx)
+	ctx, t := ctx.WithNewTomb()
+	t.Go(func() error {
+		for _, j := range jobs {
+			func(j *PipelineJob) {
+				t.Go(func() error {
+					return p.executeJob(ctx, j)
+				})
+			}(j)
+		}
 
-	waitGroup := sync.WaitGroup{}
-	errChan := make(chan error, len(jobs))
-	for _, j := range jobs {
-		waitGroup.Add(1)
-
-		go func(j *PipelineJob) {
-			defer waitGroup.Done()
-
-			err := p.executeJob(ctx, j)
-			if err != nil {
-				errChan <- err
-			}
-		}(j)
-	}
-
-	done := make(chan struct{})
-	go func() {
-		waitGroup.Wait()
-		close(done)
-	}()
-
-	select {
-	case err := <-errChan:
-		cancel()
-		<-done
-		return err
-	case <-done:
 		return nil
-	}
+	})
+
+	return t.Wait()
 }
 
-func (p *Pipeline) executeJob(ctx *devspacecontext.Context, j *PipelineJob) error {
+func (p *pipeline) executeJob(ctx *devspacecontext.Context, j *PipelineJob) error {
 	// don't start jobs on a cancelled context
-	select {
-	case <-ctx.Context.Done():
+	if ctx.IsDone() {
 		return nil
-	default:
 	}
 
 	// make sure nobody else if running this job already
@@ -105,9 +123,9 @@ func (p *Pipeline) executeJob(ctx *devspacecontext.Context, j *PipelineJob) erro
 	return p.executeJobs(ctx, j.Children)
 }
 
-func (p *Pipeline) setRunning(j *PipelineJob) bool {
-	p.jobsMutex.Lock()
-	defer p.jobsMutex.Unlock()
+func (p *pipeline) setRunning(j *PipelineJob) bool {
+	p.m.Lock()
+	defer p.m.Unlock()
 
 	if p.runningJobs[j.Name] != nil || p.completedJobs[j.Name] != nil {
 		return true
@@ -118,9 +136,9 @@ func (p *Pipeline) setRunning(j *PipelineJob) bool {
 	return false
 }
 
-func (p *Pipeline) setCompleted(j *PipelineJob) {
-	p.jobsMutex.Lock()
-	defer p.jobsMutex.Unlock()
+func (p *pipeline) setCompleted(j *PipelineJob) {
+	p.m.Lock()
+	defer p.m.Unlock()
 
 	delete(p.runningJobs, j.Name)
 	p.completedJobs[j.Name] = j

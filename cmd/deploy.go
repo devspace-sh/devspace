@@ -252,10 +252,19 @@ func runPipeline(
 	dependencyRegistry := registry.NewDependencyRegistry(ctx, "http://localhost:8090")
 
 	// get deploy pipeline
-	err = pipeline.NewExecutor(dependencyRegistry).ExecutePipeline(ctx, configPipeline)
+	pipe, err := pipeline.NewPipelineBuilder().BuildPipeline(configPipeline, dependencyRegistry)
 	if err != nil {
 		return err
 	}
+
+	// start pipeline
+	err = pipe.Run(ctx)
+	if err != nil {
+		return err
+	}
+
+	// wait for dev
+	pipe.WaitDev()
 
 	// wait if necessary
 	if wait {

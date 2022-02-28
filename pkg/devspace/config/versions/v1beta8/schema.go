@@ -30,6 +30,9 @@ func NewRaw() *Config {
 type Config struct {
 	Version string `yaml:"version"`
 
+	// Name specifies the name of the DevSpace project
+	Name string `yaml:"name" json:"name"`
+
 	Images       map[string]*ImageConfig `yaml:"images,omitempty"`
 	Deployments  []*DeploymentConfig     `yaml:"deployments,omitempty"`
 	Dev          *DevConfig              `yaml:"dev,omitempty"`

@@ -16,10 +16,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1alpha1"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1alpha2"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1alpha3"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1alpha4"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta1"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta2"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta3"
@@ -41,10 +37,6 @@ type loader struct {
 }
 
 var versionLoader = map[string]*loader{
-	v1alpha1.Version: {New: v1alpha1.New},
-	v1alpha2.Version: {New: v1alpha2.New},
-	v1alpha3.Version: {New: v1alpha3.New},
-	v1alpha4.Version: {New: v1alpha4.New},
 	v1beta1.Version:  {New: v1beta1.New},
 	v1beta2.Version:  {New: v1beta2.New},
 	v1beta3.Version:  {New: v1beta3.New},
@@ -123,11 +115,13 @@ func ParseCommands(data map[string]interface{}) (map[string]interface{}, error) 
 	if !ok {
 		return map[string]interface{}{
 			"version": retMap["version"],
+			"name":    retMap["name"],
 		}, nil
 	}
 
 	return map[string]interface{}{
 		"version":  retMap["version"],
+		"name":     retMap["name"],
 		"commands": commands,
 	}, nil
 }
@@ -282,11 +276,13 @@ func getVariables(data map[string]interface{}) (map[string]interface{}, error) {
 	if !ok {
 		return map[string]interface{}{
 			"version": retMap["version"],
+			"name":    retMap["name"],
 		}, nil
 	}
 
 	return map[string]interface{}{
 		"version": retMap["version"],
+		"name":    retMap["name"],
 		"vars":    vars,
 	}, nil
 }

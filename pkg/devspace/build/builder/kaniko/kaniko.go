@@ -207,14 +207,12 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 	}
 
 	err = interrupt.Global.RunAlways(func() error {
-		defer ctx.Log.StopWait()
-
 		buildPodCreated, err := ctx.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Create(ctx.Context, buildPod, metav1.CreateOptions{})
 		if err != nil {
 			return errors.Errorf("unable to create build pod: %s", err.Error())
 		}
 
-		ctx.Log.StartWait("Waiting for build init container to start")
+		ctx.Log.Info("Waiting for build init container to start...")
 		err = wait.PollImmediate(time.Second, waitTimeout, func() (done bool, err error) {
 			buildPod, err = ctx.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(ctx.Context, buildPodCreated.Name, metav1.GetOptions{})
 			if err != nil {
@@ -262,7 +260,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 			return errors.Errorf("error checking context: '%s'", err)
 		}
 
-		ctx.Log.StartWait("Uploading files to build container")
+		ctx.Log.Info("Uploading files to build container...")
 		buildCtx, err := archive.TarWithOptions(contextPath, &archive.TarOptions{
 			ExcludePatterns: ignoreRules,
 			ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
@@ -343,7 +341,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 		}
 
 		ctx.Log.Done("Uploaded files to container")
-		ctx.Log.StartWait("Waiting for kaniko container to start")
+		ctx.Log.Info("Waiting for kaniko container to start...")
 		err = wait.PollImmediate(time.Second, waitTimeout, func() (done bool, err error) {
 			buildPod, err = ctx.KubeClient.KubeClient().CoreV1().Pods(b.BuildNamespace).Get(ctx.Context, buildPodCreated.Name, metav1.GetOptions{})
 			if err != nil {
@@ -385,7 +383,6 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 			return errors.Wrap(err, "waiting for kaniko")
 		}
 
-		ctx.Log.StopWait()
 		ctx.Log.Done("Build pod has started")
 
 		// Determine output writer
@@ -407,7 +404,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 			return errors.Errorf("error printing build logs: %v", err)
 		}
 
-		ctx.Log.StartWait("Checking build status")
+		ctx.Log.Info("Checking build status...")
 		for {
 			time.Sleep(time.Second)
 
@@ -426,8 +423,6 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 				break
 			}
 		}
-		ctx.Log.StopWait()
-
 		ctx.Log.Done("Done building image")
 		return nil
 	}, deleteBuildPod)

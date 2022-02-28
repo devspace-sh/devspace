@@ -27,7 +27,7 @@ func (r *client) EnsurePullSecret(ctx *devspacecontext.Context, namespace, regis
 			}
 		}
 	}
-	
+
 	return r.ensurePullSecret(ctx, namespace, pullSecret)
 }
 
@@ -44,9 +44,8 @@ func (r *client) ensurePullSecret(ctx *devspacecontext.Context, namespace string
 		pullSecretConf.Secret = GetRegistryAuthSecretName(pullSecretConf.Registry)
 	}
 
-	ctx.Log.StartWait("Creating image pull secret for registry: " + displayRegistryURL)
+	ctx.Log.Info("Ensuring image pull secret for registry: " + displayRegistryURL + "...")
 	err := r.createPullSecret(ctx, pullSecretConf)
-	ctx.Log.StopWait()
 	if err != nil {
 		return errors.Errorf("failed to create pull secret for registry: %v", err)
 	}

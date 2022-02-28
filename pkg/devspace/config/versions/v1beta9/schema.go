@@ -31,6 +31,9 @@ type Config struct {
 	// Version holds the config version
 	Version string `yaml:"version"`
 
+	// Name specifies the name of the DevSpace project
+	Name string `yaml:"name" json:"name"`
+
 	// Images holds configuration of how devspace should build images
 	Images map[string]*ImageConfig `yaml:"images,omitempty" json:"images,omitempty"`
 

@@ -23,13 +23,18 @@ type Manager interface {
 
 	// Stop will stop the DevPod
 	Stop(name string)
+
+	// Wait will wait until all DevPods are stopped
+	Wait()
 }
 
 type devPodManager struct {
 	lockFactory lockfactory.LockFactory
 
 	mapLock sync.Mutex
-	devPods map[string]*devPod
+
+	devPods     map[string]*devPod
+	restartPods map[string]bool
 }
 
 func NewManager() Manager {
@@ -65,6 +70,19 @@ func (DevPodAlreadyExists) Error() string {
 	return "dev pod already exists, please make sure to stop the dev pod before rerunning it"
 }
 
+func (d *devPodManager) Wait() {
+	devPods := map[string]*devPod{}
+	d.mapLock.Lock()
+	for k, v := range d.devPods {
+		devPods[k] = v
+	}
+	d.mapLock.Unlock()
+
+	for _, dp := range devPods {
+		<-dp.Done()
+	}
+}
+
 func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodConfig *latest.DevPod) error {
 	lock := d.lockFactory.GetLock(devPodConfig.Name)
 	lock.Lock()
@@ -74,64 +92,54 @@ func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodCo
 	d.mapLock.Lock()
 	dp = d.devPods[devPodConfig.Name]
 	d.mapLock.Unlock()
-	if dp != nil {
-		return DevPodAlreadyExists{}
-	}
 
 	// create a DevPod logger
 	prefix := devPodConfig.Name
-	unionLogger := logpkg.NewUnionLogger(logpkg.NewDefaultPrefixLogger(prefix, originalContext.Log), logpkg.GetDevPodFileLogger(prefix))
+	unionLogger := logpkg.NewUnionLogger(logpkg.NewDefaultPrefixLogger(prefix, originalContext.Log.WithoutPrefix()), logpkg.GetDevPodFileLogger(prefix))
+
+	// check if already running
+	if dp != nil && dp.Alive() {
+		return DevPodAlreadyExists{}
+	}
+
+	// create a new dev pod
+	dp = newDevPod()
+	d.mapLock.Lock()
+	d.devPods[devPodConfig.Name] = dp
+	d.mapLock.Unlock()
 
 	// start the dev pod
-	dp = newDevPod()
 	err := dp.Start(originalContext.WithLogger(unionLogger), devPodConfig)
 	if err != nil {
 		return err
 	}
 
-	// save dev pod in the map
-	d.mapLock.Lock()
-	defer d.mapLock.Unlock()
-
-	d.devPods[devPodConfig.Name] = dp
-
 	// restart dev pod if necessary
 	go func() {
 		<-dp.Done()
+		if originalContext.IsDone() {
+			return
+		}
 
-		if _, ok := dp.Error().(DevPodLostConnection); ok {
-			lock := d.lockFactory.GetLock(devPodConfig.Name)
-			lock.Lock()
-			defer lock.Unlock()
-
-			// stop the dev pod
-			// now remove from map
-			d.mapLock.Lock()
-			defer d.mapLock.Unlock()
-
-			if d.devPods[devPodConfig.Name] == nil {
-				return
-			}
-
-			delete(d.devPods, devPodConfig.Name)
-			go func() {
-				for {
-					err = d.Start(originalContext, devPodConfig)
-					if err != nil {
-						if originalContext.IsDone() {
-							return
-						} else if _, ok := err.(DevPodAlreadyExists); ok {
-							return
-						}
-
-						originalContext.Log.Infof("Restart dev %s because of: %v", devPodConfig.Name, err)
-						time.Sleep(time.Second * 10)
-						continue
+		// try restarting the dev pod if it has stopped because of
+		// a lost connection
+		if _, ok := dp.Err().(DevPodLostConnection); ok {
+			for {
+				err = d.Start(originalContext, devPodConfig)
+				if err != nil {
+					if originalContext.IsDone() {
+						return
+					} else if _, ok := err.(DevPodAlreadyExists); ok {
+						return
 					}
 
-					return
+					originalContext.Log.Infof("Restart dev %s because of: %v", devPodConfig.Name, err)
+					time.Sleep(time.Second * 10)
+					continue
 				}
-			}()
+
+				return
+			}
 		}
 	}()
 

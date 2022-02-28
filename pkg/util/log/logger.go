@@ -38,9 +38,6 @@ type Logger interface {
 	Fatal(args ...interface{})
 	Fatalf(format string, args ...interface{})
 
-	StartWait(message string)
-	StopWait()
-
 	Print(level logrus.Level, args ...interface{})
 	Printf(level logrus.Level, format string, args ...interface{})
 
@@ -54,4 +51,8 @@ type Logger interface {
 
 	// WithLevel creates a new logger with the given level
 	WithLevel(level logrus.Level) Logger
+
+	// WithoutPrefix returns a new logger of the same type
+	// but disables the current loggers prefixes.
+	WithoutPrefix() Logger
 }

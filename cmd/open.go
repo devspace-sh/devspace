@@ -247,8 +247,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 
 func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, log log.Logger, maxWait time.Duration) error {
 	// Loop and check if http code is != 502
-	log.StartWait("Waiting for ingress")
-	defer log.StopWait()
+	log.Info("Waiting for ingress...")
 
 	// Make sure the ingress has some time to take effect
 	time.Sleep(time.Second * 5)
@@ -258,7 +257,6 @@ func openURL(url string, kubectlClient kubectl.Client, analyzeNamespace string, 
 		// Check if domain is ready => ignore error as we will retry request
 		resp, _ := http.Get(url)
 		if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
-			log.StopWait()
 			time.Sleep(time.Second * 1)
 			_ = open.Start(url)
 			log.Donef("Successfully opened %s", url)
@@ -336,25 +334,19 @@ func (cmd *OpenCmd) openLocal(ctx *devspacecontext.Context, domain string) error
 
 	// start port-forwarding for localhost access
 	ctx, t := ctx.WithNewTomb()
-	initChan := make(chan struct{})
-	t.Go(func() error {
-		defer close(initChan)
-
+	<-t.NotifyGo(func() error {
 		return portforwarding.StartPortForwarding(ctx, devPod, targetselector.NewTargetSelector(options), t)
 	})
-	<-initChan
-	if t.Err() != nil {
+	if !t.Alive() {
 		return t.Err()
 	}
 
 	// Loop and check if http code is != 502
-	cmd.log.StartWait("Waiting for application")
-	defer cmd.log.StopWait()
+	cmd.log.Info("Waiting for application...")
 
 	// Make sure the ingress has some time to take effect
 	time.Sleep(time.Second * 2)
 
-	cmd.log.StopWait()
 	_ = open.Start(domain)
 	cmd.log.Donef("Successfully opened %s", domain)
 	cmd.log.WriteString(logrus.InfoLevel, "\n")
@@ -445,8 +437,7 @@ func (cmd *OpenCmd) getService(client kubectl.Client, namespace, host string, ge
 }
 
 func (cmd *OpenCmd) findDomain(client kubectl.Client, namespace, host string) (string, bool, error) {
-	cmd.log.StartWait("Retrieve ingresses")
-	defer cmd.log.StopWait()
+	cmd.log.Info("Retrieve ingresses...")
 
 	// List all ingresses and only create one if there is none already
 	ingressList, err := client.KubeClient().ExtensionsV1beta1().Ingresses(namespace).List(context.TODO(), metav1.ListOptions{})

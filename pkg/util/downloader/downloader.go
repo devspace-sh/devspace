@@ -77,8 +77,7 @@ func (d *downloader) downloadExecutable(command, installPath, installFromURL str
 type getRequest func(url string) (*http.Response, error)
 
 func (d *downloader) downloadFile(command, installPath, installFromURL string) error {
-	d.log.StartWait("Downloading " + command + "...")
-	defer d.log.StopWait()
+	d.log.Info("Downloading " + command + "...")
 
 	t, err := ioutil.TempDir("", "")
 	if err != nil {

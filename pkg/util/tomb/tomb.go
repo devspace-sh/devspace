@@ -156,10 +156,27 @@ func (t *Tomb) Go(f func() error) {
 	default:
 	}
 	t.alive++
-	go t.run(f)
+	go t.run(f, nil)
 }
 
-func (t *Tomb) run(f func() error) {
+// NotifyGo is the same as Go but returns a channel that is
+// closed after the function has been run
+func (t *Tomb) NotifyGo(f func() error) chan struct{} {
+	t.init()
+	t.m.Lock()
+	defer t.m.Unlock()
+	select {
+	case <-t.dead:
+		panic("tomb.Go called after all goroutines terminated")
+	default:
+	}
+	t.alive++
+	done := make(chan struct{})
+	go t.run(f, done)
+	return done
+}
+
+func (t *Tomb) run(f func() error, done chan struct{}) {
 	err := f()
 	t.m.Lock()
 	defer t.m.Unlock()
@@ -169,6 +186,9 @@ func (t *Tomb) run(f func() error) {
 		if t.alive == 0 {
 			close(t.dead)
 		}
+	}
+	if done != nil {
+		close(done)
 	}
 }
 
