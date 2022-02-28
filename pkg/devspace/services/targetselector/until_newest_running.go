@@ -23,7 +23,7 @@ func NewUntilNewestRunningWaitingStrategy(delay time.Duration) WaitingStrategy {
 		originalDelay: delay,
 		initialDelay:  time.Now().Add(delay),
 		podInfoPrinter: &PodInfoPrinter{
-			lastWarning: time.Now().Add(delay),
+			LastWarning: time.Now().Add(delay),
 		},
 	}
 }
@@ -42,7 +42,7 @@ func (u *untilNewestRunning) Reset() WaitingStrategy {
 		originalDelay: u.originalDelay,
 		initialDelay:  time.Now().Add(u.originalDelay),
 		podInfoPrinter: &PodInfoPrinter{
-			lastWarning: time.Now().Add(u.originalDelay),
+			LastWarning: time.Now().Add(u.originalDelay),
 		},
 	}
 }
@@ -95,7 +95,7 @@ func (u *untilNewestRunning) SelectContainer(ctx context.Context, client kubectl
 
 type PodInfoPrinter struct {
 	lastMutex   sync.Mutex
-	lastWarning time.Time
+	LastWarning time.Time
 
 	shownEvents           []string
 	printedInitContainers []string
@@ -105,7 +105,7 @@ func (u *PodInfoPrinter) PrintPodInfo(client kubectl.Client, pod *v1.Pod, log lo
 	u.lastMutex.Lock()
 	defer u.lastMutex.Unlock()
 
-	if time.Since(u.lastWarning) > time.Second*10 {
+	if time.Since(u.LastWarning) > time.Second*10 {
 		// show init container logs if init container is running
 		if log.GetLevel() == logrus.DebugLevel {
 			for _, initContainer := range pod.Status.InitContainerStatuses {
@@ -131,7 +131,7 @@ func (u *PodInfoPrinter) PrintPodInfo(client kubectl.Client, pod *v1.Pod, log lo
 		status := kubectl.GetPodStatus(pod)
 		u.shownEvents = displayWarnings(relevantObjectsFromPod(pod), pod.Namespace, client, u.shownEvents, log)
 		log.Infof("DevSpace is waiting, because Pod %s has status: %s", pod.Name, status)
-		u.lastWarning = time.Now()
+		u.LastWarning = time.Now()
 	}
 }
 
@@ -139,7 +139,7 @@ func (u *PodInfoPrinter) PrintNotFoundWarning(client kubectl.Client, namespace s
 	u.lastMutex.Lock()
 	defer u.lastMutex.Unlock()
 
-	if time.Since(u.lastWarning) > time.Second*10 {
+	if time.Since(u.LastWarning) > time.Second*10 {
 		u.shownEvents = displayWarnings([]relevantObject{
 			{
 				Kind: "StatefulSet",
@@ -155,7 +155,7 @@ func (u *PodInfoPrinter) PrintNotFoundWarning(client kubectl.Client, namespace s
 			},
 		}, namespace, client, u.shownEvents, log)
 		log.Warnf("DevSpace still couldn't find any Pods that match the selector. DevSpace will continue waiting, but this operation might timeout")
-		u.lastWarning = time.Now()
+		u.LastWarning = time.Now()
 	}
 }
 
@@ -163,10 +163,10 @@ func (u *PodInfoPrinter) PrintPodWarning(pod *v1.Pod, log log.Logger) {
 	u.lastMutex.Lock()
 	defer u.lastMutex.Unlock()
 
-	if time.Since(u.lastWarning) > time.Second*10 {
+	if time.Since(u.LastWarning) > time.Second*10 {
 		status := kubectl.GetPodStatus(pod)
 		log.Warnf("Pod %s has critical status: %s. DevSpace will continue waiting, but this operation might timeout", pod.Name, status)
-		u.lastWarning = time.Now()
+		u.LastWarning = time.Now()
 	}
 }
 
@@ -244,12 +244,12 @@ func IsContainerRunning(container *selector.SelectedPodContainer) bool {
 		return false
 	}
 	for _, cs := range container.Pod.Status.InitContainerStatuses {
-		if cs.Name == container.Container.Name && cs.State.Running != nil {
+		if cs.Name == container.Container.Name && cs.Ready && cs.State.Running != nil {
 			return true
 		}
 	}
 	for _, cs := range container.Pod.Status.ContainerStatuses {
-		if cs.Name == container.Container.Name && cs.State.Running != nil {
+		if cs.Name == container.Container.Name && cs.Ready && cs.State.Running != nil {
 			return true
 		}
 	}

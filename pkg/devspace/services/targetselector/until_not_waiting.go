@@ -17,7 +17,7 @@ func NewUntilNotWaitingStrategy(initialDelay time.Duration) WaitingStrategy {
 		originalDelay: initialDelay,
 		initialDelay:  time.Now().Add(initialDelay),
 		podInfoPrinter: &PodInfoPrinter{
-			lastWarning: time.Now().Add(initialDelay),
+			LastWarning: time.Now().Add(initialDelay),
 		},
 	}
 }
@@ -36,7 +36,7 @@ func (u *untilNotWaiting) Reset() WaitingStrategy {
 		originalDelay: u.originalDelay,
 		initialDelay:  time.Now().Add(u.originalDelay),
 		podInfoPrinter: &PodInfoPrinter{
-			lastWarning: time.Now().Add(u.originalDelay),
+			LastWarning: time.Now().Add(u.originalDelay),
 		},
 	}
 }

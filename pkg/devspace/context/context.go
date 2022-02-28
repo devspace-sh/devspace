@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
+	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/pkg/errors"
 	"os"
 	"path"
@@ -69,6 +70,27 @@ type Context struct {
 
 	// Log is the currently used logger
 	Log log.Logger
+}
+
+func (c *Context) IsDone() bool {
+	select {
+	case <-c.Context.Done():
+		return true
+	default:
+	}
+
+	return false
+}
+
+func (c *Context) WithNewTomb() (*Context, *tomb.Tomb) {
+	if c == nil {
+		return nil, nil
+	}
+
+	var t *tomb.Tomb
+	n := *c
+	t, n.Context = tomb.WithContext(c.Context)
+	return &n, t
 }
 
 func (c *Context) ToOriginalRelativePath(absPath string) string {

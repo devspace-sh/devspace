@@ -8,6 +8,7 @@ import (
 	"github.com/mgutz/ansi"
 	"github.com/sirupsen/logrus"
 	"io"
+	"time"
 )
 
 // StartLogsWithWriter prints the logs and then attaches to the container with the given stdout and stderr
@@ -28,13 +29,33 @@ func StartLogsWithWriter(ctx *devspacecontext.Context, selector targetselector.T
 }
 
 // StartLogs print the logs and then attaches to the container
-func StartLogs(ctx *devspacecontext.Context, devContainer *latest.DevContainer, selector targetselector.TargetSelector) error {
-	container, err := selector.WithContainer(devContainer.Container).SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
+func StartLogs(
+	ctx *devspacecontext.Context,
+	devContainer *latest.DevContainer,
+	selector targetselector.TargetSelector,
+) (err error) {
+	// Restart on error
+	defer func() {
+		if err != nil {
+			if ctx.IsDone() {
+				err = nil
+				return
+			}
+
+			ctx.Log.WriteString(logrus.InfoLevel, "\n")
+			ctx.Log.Infof("Restarting logs because: %s", err)
+			time.Sleep(time.Second * 3)
+			err = StartLogs(ctx, devContainer, selector)
+			return
+		}
+	}()
+
+	containerObj, err := selector.WithContainer(devContainer.Container).SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
 	if err != nil {
 		return err
 	}
 
-	reader, err := ctx.KubeClient.Logs(ctx.Context, container.Pod.Namespace, container.Pod.Name, container.Container.Name, false, nil, true)
+	reader, err := ctx.KubeClient.Logs(ctx.Context, containerObj.Pod.Namespace, containerObj.Pod.Name, containerObj.Container.Name, false, nil, true)
 	if err != nil {
 		return err
 	}
@@ -55,14 +76,12 @@ func StartLogs(ctx *devspacecontext.Context, devContainer *latest.DevContainer, 
 
 	select {
 	case <-ctx.Context.Done():
-		reader.Close()
+		_ = reader.Close()
 		<-errChan
 		return nil
 	case err := <-errChan:
 		if err != nil {
-			ctx.Log.WriteString(logrus.InfoLevel, "\n")
-			ctx.Log.Infof("Restarting logs because: %s", err)
-			return StartLogs(ctx, devContainer, selector)
+			return err
 		}
 
 		return nil

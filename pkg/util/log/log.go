@@ -1,11 +1,10 @@
 package log
 
 import (
-	"os"
-	"strings"
-
 	"github.com/mgutz/ansi"
 	"github.com/sirupsen/logrus"
+	"os"
+	"strings"
 )
 
 var defaultLog Logger = NewStdoutLogger(os.Stdin, stdout, logrus.InfoLevel)

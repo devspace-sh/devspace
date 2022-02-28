@@ -1,9 +1,9 @@
 package portforwarding
 
 import (
-	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"strconv"
 	"strings"
 	"time"
@@ -11,135 +11,111 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	runner2 "github.com/loft-sh/devspace/pkg/devspace/services/runner"
 	"github.com/loft-sh/devspace/pkg/devspace/services/sync"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/loft-sh/devspace/pkg/util/port"
 	"github.com/pkg/errors"
 )
 
 // StartPortForwarding starts the port forwarding functionality
-func StartPortForwarding(ctx *devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, done chan struct{}) error {
+func StartPortForwarding(ctx *devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) (retErr error) {
 	if ctx == nil || ctx.Config == nil || ctx.Config.Config() == nil {
 		return fmt.Errorf("DevSpace config is not set")
 	}
 
-	runner := runner2.NewRunner(5)
-
 	// forward
-	doneChans := []chan struct{}{}
+	initDoneArray := []chan struct{}{}
 	if len(devPod.Forward) > 0 {
-		doneChan := make(chan struct{})
-		doneChans = append(doneChans, doneChan)
-		err := runner.Run(newPortForwardingFn(ctx, devPod.Name, devPod.Forward, selector, doneChan))
-		if err != nil {
-			if done != nil {
-				close(done)
-			}
-			return err
-		}
+		initDone := make(chan struct{})
+		initDoneArray = append(initDoneArray, initDone)
+		parent.Go(func() error {
+			defer close(initDone)
+
+			return startPortForwardingWithHooks(ctx, devPod.Name, devPod.Forward, selector, parent)
+		})
 	}
 
 	// reverse
-	var err error
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
 		if len(devPod.PortMappingsReverse) > 0 {
-			doneChan := make(chan struct{})
-			doneChans = append(doneChans, doneChan)
-			err = runner.Run(newReversePortForwardingFn(ctx, devPod.Name, string(devContainer.Arch), devContainer.PortMappingsReverse, selector.WithContainer(devContainer.Container), doneChan))
-			if err != nil {
-				if done != nil {
-					close(done)
-				}
-				return false
-			}
+			initDone := make(chan struct{})
+			initDoneArray = append(initDoneArray, initDone)
+			parent.Go(func() error {
+				defer close(initDone)
+
+				return startReversePortForwardingWithHooks(ctx, devPod.Name, string(devContainer.Arch), devContainer.PortMappingsReverse, selector.WithContainer(devContainer.Container), parent)
+			})
 		}
 		return true
 	})
+
+	// wait until everything is initialized
+	for _, initDone := range initDoneArray {
+		<-initDone
+	}
+	return nil
+}
+
+func startReversePortForwardingWithHooks(ctx *devspacecontext.Context, name, arch string, portMappings []*latest.PortMapping, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
+		"reverse_port_forwarding_config": portMappings,
+	}, hook.EventsForSingle("start:reversePortForwarding", name).With("reversePortForwarding.start")...)
+	if pluginErr != nil {
+		return pluginErr
+	}
+
+	// start reverse port forwarding
+	err := startReversePortForwarding(ctx, name, arch, portMappings, selector, parent)
 	if err != nil {
+		pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
+			"reverse_port_forwarding_config": portMappings,
+			"error":                          err,
+		}, hook.EventsForSingle("error:reversePortForwarding", name).With("reversePortForwarding.error")...)
+		if pluginErr != nil {
+			return pluginErr
+		}
+
 		return err
 	}
 
-	if done != nil {
-		go func() {
-			for i := 0; i < len(doneChans); i++ {
-				<-doneChans[i]
-			}
-
-			select {
-			case <-done:
-			default:
-				close(done)
-			}
-		}()
-	}
-
-	return runner.Wait()
+	return nil
 }
 
-func newReversePortForwardingFn(ctx *devspacecontext.Context, name, arch string, portMappings []*latest.PortMapping, selector targetselector.TargetSelector, done chan struct{}) func() error {
-	return func() error {
-		pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
-			"reverse_port_forwarding_config": portMappings,
-		}, hook.EventsForSingle("start:reversePortForwarding", name).With("reversePortForwarding.start")...)
-		if pluginErr != nil {
-			return pluginErr
-		}
-
-		// start reverse port forwarding
-		err := startReversePortForwarding(ctx, name, arch, portMappings, selector, done)
-		if err != nil {
-			pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
-				"reverse_port_forwarding_config": portMappings,
-				"error":                          err,
-			}, hook.EventsForSingle("error:reversePortForwarding", name).With("reversePortForwarding.error")...)
-			if pluginErr != nil {
-				return pluginErr
-			}
-
-			close(done)
-			return err
-		}
-
-		return nil
+func startPortForwardingWithHooks(ctx *devspacecontext.Context, name string, portMappings []*latest.PortMapping, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
+		"port_forwarding_config": portMappings,
+	}, hook.EventsForSingle("start:portForwarding", name).With("portForwarding.start")...)
+	if pluginErr != nil {
+		return pluginErr
 	}
-}
 
-func newPortForwardingFn(ctx *devspacecontext.Context, name string, portMappings []*latest.PortMapping, selector targetselector.TargetSelector, done chan struct{}) func() error {
-	return func() error {
+	// start port forwarding
+	err := startForwarding(ctx, name, portMappings, selector, parent)
+	if err != nil {
 		pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"port_forwarding_config": portMappings,
-		}, hook.EventsForSingle("start:portForwarding", name).With("portForwarding.start")...)
+			"error":                  err,
+		}, hook.EventsForSingle("error:portForwarding", name).With("portForwarding.error")...)
 		if pluginErr != nil {
 			return pluginErr
 		}
 
-		// start port forwarding
-		err := startForwarding(ctx, name, portMappings, selector, done)
-		if err != nil {
-			pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
-				"port_forwarding_config": portMappings,
-				"error":                  err,
-			}, hook.EventsForSingle("error:portForwarding", name).With("portForwarding.error")...)
-			if pluginErr != nil {
-				return pluginErr
-			}
-
-			close(done)
-			return err
-		}
-
-		return nil
+		return err
 	}
+
+	return nil
 }
 
-func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*latest.PortMapping, selector targetselector.TargetSelector, done chan struct{}) error {
+func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*latest.PortMapping, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+	if ctx.IsDone() {
+		return nil
+	}
+
 	// start port forwarding
 	pod, err := selector.SelectSinglePod(ctx.Context, ctx.KubeClient, ctx.Log)
 	if err != nil {
-		return errors.Errorf("%s: %s", message.SelectorErrorPod, err.Error())
+		return errors.Wrap(err, "error selecting pod")
 	} else if pod == nil {
 		return nil
 	}
@@ -196,20 +172,16 @@ func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 		return errors.Errorf("Timeout waiting for port forwarding to start")
 	}
 
-	go func(portMappings []*latest.PortMapping) {
+	parent.Go(func() error {
 		fileLog := logpkg.GetDevPodFileLogger(name)
 		select {
 		case <-ctx.Context.Done():
 			pf.Close()
-			hook.LogExecuteHooks(ctx.WithLogger(fileLog), map[string]interface{}{
-				"port_forwarding_config": portMappings,
-			}, hook.EventsForSingle("stop:portForwarding", name).With("portForwarding.stop")...)
-			close(done)
-			fileLog.Done("Stopped port forwarding")
+			stopPortForwarding(ctx, name, portMappings, fileLog, parent)
 		case err := <-errorChan:
 			if err != nil {
 				fileLog.Errorf("Portforwarding restarting, because: %v", err)
-				sync.PrintPodError(context.TODO(), ctx.KubeClient, pod, fileLog)
+				sync.PrintPodError(ctx.Context, ctx.KubeClient, pod, fileLog)
 				pf.Close()
 				hook.LogExecuteHooks(ctx.WithLogger(fileLog), map[string]interface{}{
 					"port_forwarding_config": portMappings,
@@ -217,7 +189,7 @@ func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 				}, hook.EventsForSingle("restart:portForwarding", name).With("portForwarding.restart")...)
 
 				for {
-					err = startForwarding(ctx.WithLogger(fileLog), name, portMappings, selector, done)
+					err = startForwarding(ctx.WithLogger(fileLog), name, portMappings, selector, parent)
 					if err != nil {
 						hook.LogExecuteHooks(ctx.WithLogger(fileLog), map[string]interface{}{
 							"port_forwarding_config": portMappings,
@@ -225,16 +197,30 @@ func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 						}, hook.EventsForSingle("restart:portForwarding", name).With("portForwarding.restart")...)
 						fileLog.Errorf("Error restarting port-forwarding: %v", err)
 						fileLog.Errorf("Will try again in 15 seconds")
-						time.Sleep(time.Second * 15)
-						continue
+
+						select {
+						case <-time.After(time.Second * 15):
+							continue
+						case <-ctx.Context.Done():
+							stopPortForwarding(ctx, name, portMappings, fileLog, parent)
+							return nil
+						}
 					}
 
-					time.Sleep(time.Second * 3)
 					break
 				}
 			}
 		}
-	}(portMappings)
+		return nil
+	})
 
 	return nil
+}
+
+func stopPortForwarding(ctx *devspacecontext.Context, name string, portMappings []*latest.PortMapping, fileLog logpkg.Logger, parent *tomb.Tomb) {
+	hook.LogExecuteHooks(ctx.WithLogger(fileLog), map[string]interface{}{
+		"port_forwarding_config": portMappings,
+	}, hook.EventsForSingle("stop:portForwarding", name).With("portForwarding.stop")...)
+	parent.Kill(nil)
+	fileLog.Done("Stopped port forwarding")
 }

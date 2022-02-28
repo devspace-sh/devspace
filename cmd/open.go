@@ -335,9 +335,16 @@ func (cmd *OpenCmd) openLocal(ctx *devspacecontext.Context, domain string) error
 		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second))
 
 	// start port-forwarding for localhost access
-	err = portforwarding.StartPortForwarding(ctx, devPod, targetselector.NewTargetSelector(options), make(chan struct{}))
-	if err != nil {
-		return errors.Wrap(err, "start port forwarding")
+	ctx, t := ctx.WithNewTomb()
+	initChan := make(chan struct{})
+	t.Go(func() error {
+		defer close(initChan)
+
+		return portforwarding.StartPortForwarding(ctx, devPod, targetselector.NewTargetSelector(options), t)
+	})
+	<-initChan
+	if t.Err() != nil {
+		return t.Err()
 	}
 
 	// Loop and check if http code is != 502

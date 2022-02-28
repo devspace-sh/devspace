@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"io"
 	"os"
 	"path/filepath"
@@ -29,7 +30,7 @@ import (
 )
 
 type Controller interface {
-	Start(ctx *devspacecontext.Context, options *Options) error
+	Start(ctx *devspacecontext.Context, options *Options, parent *tomb.Tomb) error
 }
 
 func NewController() Controller {
@@ -44,15 +45,13 @@ type Options struct {
 	Arch       string
 	Selector   targetselector.TargetSelector
 
-	Done chan struct{}
-
 	RestartOnError bool
 	SyncLog        logpkg.Logger
 
 	Verbose bool
 }
 
-func (c *controller) Start(ctx *devspacecontext.Context, options *Options) error {
+func (c *controller) Start(ctx *devspacecontext.Context, options *Options, parent *tomb.Tomb) error {
 	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 		"sync_config": options.SyncConfig,
 	}, hook.EventsForSingle("start:sync", options.Name).With("sync.start")...)
@@ -60,7 +59,7 @@ func (c *controller) Start(ctx *devspacecontext.Context, options *Options) error
 		return pluginErr
 	}
 
-	err := c.startWithWait(ctx, options)
+	err := c.startWithWait(ctx, options, parent)
 	if err != nil {
 		pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"sync_config": options.SyncConfig,
@@ -76,7 +75,11 @@ func (c *controller) Start(ctx *devspacecontext.Context, options *Options) error
 	return nil
 }
 
-func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Options) error {
+func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Options, parent *tomb.Tomb) error {
+	if ctx.IsDone() {
+		return nil
+	}
+
 	var (
 		onInitUploadDone   chan struct{}
 		onInitDownloadDone chan struct{}
@@ -143,9 +146,7 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 				}
 				return nil
 			case <-onDone:
-				if options.Done != nil {
-					close(options.Done)
-				}
+				parent.Kill(nil)
 				pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 					"sync_config": options.SyncConfig,
 				}, hook.EventsForSingle("stop:sync", options.Name).With("sync.stop")...)
@@ -169,8 +170,10 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 
 	// should we restart the client on error?
 	if options.RestartOnError {
-		go func(syncClient *sync.Sync, options *Options) {
+		parent.Go(func() error {
 			select {
+			case <-ctx.Context.Done():
+				syncStop(ctx, client, options, parent)
 			case err = <-onError:
 				hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
 					"sync_config": options.SyncConfig,
@@ -180,7 +183,7 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 				options.SyncLog.Info("Restarting sync...")
 				PrintPodError(ctx.Context, ctx.KubeClient, pod.Pod, options.SyncLog)
 				for {
-					err := c.startWithWait(ctx.WithLogger(options.SyncLog), options)
+					err := c.startWithWait(ctx.WithLogger(options.SyncLog), options, parent)
 					if err != nil {
 						hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
 							"sync_config": options.SyncConfig,
@@ -188,32 +191,38 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 						}, hook.EventsForSingle("restart:sync", options.Name).With("sync.restart")...)
 						options.SyncLog.Errorf("Error restarting sync: %v", err)
 						options.SyncLog.Errorf("Will try again in 15 seconds")
-						time.Sleep(time.Second * 15)
-						continue
+
+						select {
+						case <-time.After(time.Second * 15):
+							continue
+						case <-ctx.Context.Done():
+							syncStop(ctx, client, options, parent)
+							return nil
+						}
 					}
 
 					break
 				}
-			case <-ctx.Context.Done():
-				syncClient.Stop(nil)
-				if options.Done != nil {
-					close(options.Done)
-				}
-				hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
-					"sync_config": options.SyncConfig,
-				}, hook.EventsForSingle("stop:sync", options.Name).With("sync.stop")...)
 			case <-onDone:
-				if options.Done != nil {
-					close(options.Done)
-				}
-				hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
-					"sync_config": options.SyncConfig,
-				}, hook.EventsForSingle("stop:sync", options.Name).With("sync.stop")...)
+				syncDone(ctx, options, parent)
 			}
-		}(client, options)
+			return nil
+		})
 	}
 
 	return nil
+}
+
+func syncStop(ctx *devspacecontext.Context, syncClient *sync.Sync, options *Options, parent *tomb.Tomb) {
+	syncClient.Stop(nil)
+	syncDone(ctx, options, parent)
+}
+
+func syncDone(ctx *devspacecontext.Context, options *Options, parent *tomb.Tomb) {
+	parent.Kill(nil)
+	hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
+		"sync_config": options.SyncConfig,
+	}, hook.EventsForSingle("stop:sync", options.Name).With("sync.stop")...)
 }
 
 func PrintPodError(ctx context.Context, kubeClient kubectl.Client, pod *v1.Pod, log logpkg.Logger) {
@@ -241,7 +250,7 @@ func (c *controller) startSync(ctx *devspacecontext.Context, options *Options, o
 
 	container, err := options.Selector.SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
 	if err != nil {
-		return nil, nil, errors.Errorf("Error selecting pod: %v", err)
+		return nil, nil, errors.Wrap(err, "error selecting container")
 	}
 
 	ctx.Log.Info("Starting sync...")
