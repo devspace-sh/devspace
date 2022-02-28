@@ -29,7 +29,7 @@ func PrintLogo() {
 
 // StartFileLogging logs the output of the global logger to the file default.log
 func StartFileLogging() {
-	defaultLog = NewUnionLogger(defaultLog, GetFileLogger("default"))
+	defaultLog = NewUnionLogger(logrus.InfoLevel, defaultLog, GetFileLogger("default"))
 	OverrideRuntimeErrorHandler(false)
 }
 

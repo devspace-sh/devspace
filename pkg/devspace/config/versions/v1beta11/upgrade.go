@@ -35,7 +35,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	deployPipeline := `run_dependencies --all
 build --all
 deploy --all`
-	devPipeline := deployPipeline + "\n" + "dev --all"
+	devPipeline := deployPipeline + "\n" + "start_dev --all"
 	if c.Dev.Terminal != nil && c.Dev.Terminal.ImageSelector == "" && len(c.Dev.Terminal.LabelSelector) == 0 {
 		devPipeline += "\n" + strings.Join(c.Dev.Terminal.Command, " ")
 	}

@@ -12,9 +12,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func NewUnionLogger(loggers ...Logger) Logger {
+func NewUnionLogger(level logrus.Level, loggers ...Logger) Logger {
 	return &unionLogger{
 		Loggers: loggers,
+		level:   level,
 	}
 }
 
@@ -300,6 +301,15 @@ func (s *unionLogger) WithoutPrefix() Logger {
 		Loggers: loggers,
 		level:   s.level,
 	}
+}
+
+func (s *unionLogger) Children() []Logger {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	loggers := []Logger{}
+	loggers = append(loggers, s.Loggers...)
+	return loggers
 }
 
 func (s *unionLogger) WithLevel(level logrus.Level) Logger {

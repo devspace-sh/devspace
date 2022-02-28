@@ -64,6 +64,10 @@ func (s *prefixLogger) WithoutPrefix() Logger {
 	return s.base
 }
 
+func (s *prefixLogger) Children() []Logger {
+	return []Logger{s.base}
+}
+
 func (s *prefixLogger) WithLevel(level logrus.Level) Logger {
 	s.m.Lock()
 	defer s.m.Unlock()
@@ -92,7 +96,7 @@ func (s *prefixLogger) GetLevel() logrus.Level {
 
 func (s *prefixLogger) writeMessage(level logrus.Level, message string) {
 	if s.level >= level {
-		if os.Getenv(DevSpaceLogTimestamps) == "true" || s.GetLevel() == logrus.DebugLevel {
+		if os.Getenv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
 			now := time.Now()
 			if s.color != "" {
 				s.base.WriteString(level, ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")+ansi.Color(s.prefix, s.color)+message)

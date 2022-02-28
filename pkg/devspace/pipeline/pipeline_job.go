@@ -29,52 +29,59 @@ type PipelineJob struct {
 	Parents  []*PipelineJob
 	Children []*PipelineJob
 
-	startOnce sync.Once
-	t         *tomb.Tomb
+	m       sync.Mutex
+	started bool
+	t       *tomb.Tomb
 }
 
 func (j *PipelineJob) Run(ctx *devspacecontext.Context) error {
-	j.startOnce.Do(func() {
-		tombCtx := j.t.Context(ctx.Context)
-		ctx = ctx.WithContext(tombCtx)
+	j.m.Lock()
+	defer j.m.Unlock()
 
-		j.t.Go(func() error {
-			for _, parent := range j.Parents {
-				select {
-				case <-ctx.Context.Done():
-					return nil
-				case <-parent.t.Dead():
-				}
-			}
+	if j.started {
+		return j.t.Err()
+	}
 
-			// start the actual job
-			done := j.t.NotifyGo(func() error {
-				return j.doWork(ctx)
-			})
+	j.started = true
 
-			// wait until job is dying
+	tombCtx := j.t.Context(ctx.Context)
+	ctx = ctx.WithContext(tombCtx)
+	j.t.Go(func() error {
+		for _, parent := range j.Parents {
 			select {
 			case <-ctx.Context.Done():
 				return nil
-			case <-done:
+			case <-parent.t.Dead():
 			}
+		}
 
-			// check if errored
-			if !j.t.Alive() {
-				return j.t.Err()
-			}
-
-			// if rerun we should watch here
-			if j.JobConfig.Rerun != nil {
-				// TODO: watch and restart job here
-				return nil
-			}
-
-			return nil
+		// start the actual job
+		done := j.t.NotifyGo(func() error {
+			return j.doWork(ctx)
 		})
-		<-j.t.Dead()
+
+		// wait until job is dying
+		select {
+		case <-ctx.Context.Done():
+			return nil
+		case <-done:
+		}
+
+		// check if errored
+		if !j.t.Alive() {
+			return j.t.Err()
+		}
+
+		// if rerun we should watch here
+		if j.JobConfig.Rerun != nil {
+			// TODO: watch and restart job here
+			return nil
+		}
+
+		return nil
 	})
-	return j.t.Err()
+
+	return j.t.Wait()
 }
 
 func (j *PipelineJob) doWork(ctx *devspacecontext.Context) error {
@@ -103,9 +110,9 @@ func (j *PipelineJob) doWork(ctx *devspacecontext.Context) error {
 
 func (j *PipelineJob) shouldExecuteStep(ctx *devspacecontext.Context, step *latest.PipelineStep) (bool, error) {
 	// check if step should be rerun
-	handler := engine.NewExecHandler(ctx, j.DependencyRegistry, j.DevPodManager, false)
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
+	handler := engine.NewExecHandler(ctx, nil, j.DependencyRegistry, j.DevPodManager, false)
 	_, err := engine.ExecuteShellCommand(ctx.Context, step.Run, os.Args[1:], step.Directory, false, stdout, stderr, env.NewVariableEnvProvider(ctx.Config, ctx.Dependencies, step.Env), handler)
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok && status == 1 {
@@ -131,7 +138,7 @@ func (j *PipelineJob) executeStep(ctx *devspacecontext.Context, step *latest.Pip
 		}
 	}()
 
-	handler := engine.NewExecHandler(ctx, j.DependencyRegistry, j.DevPodManager, true)
+	handler := engine.NewExecHandler(ctx, stdoutWriter, j.DependencyRegistry, j.DevPodManager, true)
 	_, err := engine.ExecuteShellCommand(ctx.Context, step.Run, os.Args[1:], step.Directory, step.ContinueOnError, stdoutWriter, stdoutWriter, env.NewVariableEnvProvider(ctx.Config, ctx.Dependencies, step.Env), handler)
 	return err
 }

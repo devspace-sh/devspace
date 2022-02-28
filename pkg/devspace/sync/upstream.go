@@ -742,6 +742,7 @@ func (u *upstream) applyCreates(files []*FileInformation) (map[string]*FileInfor
 			size += c.Size
 		}
 	}
+
 	u.sync.log.Infof("Upstream - Upload %d create change(s) (Uncompressed ~%0.2f KB)", len(files), float64(size)/1024.0)
 	defer u.sync.log.Debugf("Upstream - Done Uploading")
 

@@ -11,8 +11,6 @@ import (
 // DependencyOptions describe how dependencies should get deployed
 type DependencyOptions struct {
 	All bool `long:"all" description:"Deploy all dependencies"`
-
-	// Extra flags here to add an deployment
 }
 
 func Dependency(ctx *devspacecontext.Context, dependencyRegistry registry.DependencyRegistry, args []string) error {

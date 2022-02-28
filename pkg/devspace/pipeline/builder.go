@@ -5,6 +5,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/graph"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
+	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 )
 
@@ -13,7 +14,7 @@ const (
 )
 
 type Builder interface {
-	BuildPipeline(configPipeline *latest.Pipeline, registry registry.DependencyRegistry) (Pipeline, error)
+	BuildPipeline(devPodManager devpod.Manager, configPipeline *latest.Pipeline, registry registry.DependencyRegistry) (Pipeline, error)
 }
 
 func NewPipelineBuilder() Builder {
@@ -22,8 +23,8 @@ func NewPipelineBuilder() Builder {
 
 type builder struct{}
 
-func (b *builder) BuildPipeline(configPipeline *latest.Pipeline, registry registry.DependencyRegistry) (Pipeline, error) {
-	pip := NewPipeline(registry).(*pipeline)
+func (b *builder) BuildPipeline(devPodManager devpod.Manager, configPipeline *latest.Pipeline, registry registry.DependencyRegistry) (Pipeline, error) {
+	pip := NewPipeline(devPodManager, registry).(*pipeline)
 	pip.Jobs = map[string]*PipelineJob{
 		"default": {
 			Name:          "default",

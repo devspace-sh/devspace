@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/downloader"
 	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"io"
 	"mvdan.cc/sh/v3/interp"
 	"os"
 	"time"
@@ -19,9 +20,10 @@ type ExecHandler interface {
 	ExecHandler(ctx context.Context, args []string) error
 }
 
-func NewExecHandler(ctx *devspacecontext.Context, registry registry.DependencyRegistry, manager devpod.Manager, enablePipelineCommands bool) ExecHandler {
+func NewExecHandler(ctx *devspacecontext.Context, stdout io.Writer, registry registry.DependencyRegistry, manager devpod.Manager, enablePipelineCommands bool) ExecHandler {
 	return &execHandler{
 		ctx:                    ctx,
+		stdout:                 stdout,
 		registry:               registry,
 		manager:                manager,
 		enablePipelineCommands: enablePipelineCommands,
@@ -30,6 +32,7 @@ func NewExecHandler(ctx *devspacecontext.Context, registry registry.DependencyRe
 
 type execHandler struct {
 	ctx                    *devspacecontext.Context
+	stdout                 io.Writer
 	registry               registry.DependencyRegistry
 	manager                devpod.Manager
 	enablePipelineCommands bool
@@ -60,8 +63,12 @@ func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
 func (e *execHandler) handlePipelineCommands(ctx context.Context, command string, args []string) (bool, error) {
 	hc := interp.HandlerCtx(ctx)
 	devCtx := e.ctx.WithContext(ctx).
-		WithWorkingDir(hc.Dir).
-		WithLogger(log.NewStreamLogger(hc.Stdout, e.ctx.Log.GetLevel()))
+		WithWorkingDir(hc.Dir)
+	if e.stdout != nil && e.stdout == hc.Stdout {
+		devCtx = devCtx.WithLogger(e.ctx.Log)
+	} else {
+		devCtx = devCtx.WithLogger(log.NewStreamLogger(hc.Stdout, e.ctx.Log.GetLevel()))
+	}
 
 	switch command {
 	case "build":
@@ -72,9 +79,13 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 		return e.executePipelineCommand(ctx, command, func() error {
 			return enginecommands.Deploy(devCtx, args)
 		})
-	case "dev":
+	case "start_dev":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.Dev(devCtx, e.manager, args)
+			return enginecommands.StartDev(devCtx, e.manager, args)
+		})
+	case "stop_dev":
+		return e.executePipelineCommand(ctx, command, func() error {
+			return enginecommands.StopDev(devCtx, e.manager, args)
 		})
 	case "run_dependencies":
 		return e.executePipelineCommand(ctx, command, func() error {

@@ -14,9 +14,9 @@ type Pipeline interface {
 	WaitDev()
 }
 
-func NewPipeline(dependencyRegistry registry.DependencyRegistry) Pipeline {
+func NewPipeline(devPodManager devpod.Manager, dependencyRegistry registry.DependencyRegistry) Pipeline {
 	return &pipeline{
-		devPodManager:      devpod.NewManager(),
+		devPodManager:      devPodManager,
 		DependencyRegistry: dependencyRegistry,
 		JobsPipeline:       []*PipelineJob{},
 		openJobs:           make(map[string]*PipelineJob),

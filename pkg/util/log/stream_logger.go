@@ -191,6 +191,10 @@ func (s *StreamLogger) Debugf(format string, args ...interface{}) {
 	s.writeMessage(debugFn, fmt.Sprintf(format, args...)+"\n")
 }
 
+func (s *StreamLogger) Children() []Logger {
+	return nil
+}
+
 func (s *StreamLogger) Info(args ...interface{}) {
 	s.m.Lock()
 	defer s.m.Unlock()

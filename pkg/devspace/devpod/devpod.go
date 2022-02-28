@@ -43,13 +43,12 @@ type DevPod interface {
 }
 
 type devPod struct {
-	m       syncpkg.Mutex
-	started bool
-
+	m           syncpkg.Mutex
+	started     bool
 	selectedPod *corev1.Pod
 
-	// devCtx is used to interrupt the dev pod
-	t *tomb.Tomb
+	job string
+	t   *tomb.Tomb
 }
 
 func newDevPod() *devPod {
@@ -205,18 +204,12 @@ func (d *devPod) startSyncAndPortForwarding(ctx *devspacecontext.Context, devPod
 	}
 
 	// Start sync
-	syncDone := make(chan struct{})
-	parent.Go(func() error {
-		defer close(syncDone)
-
+	syncDone := parent.NotifyGo(func() error {
 		return sync.StartSync(ctx, devPod, selector, parent)
 	})
 
 	// Start Port Forwarding
-	portForwardingDone := make(chan struct{})
-	parent.Go(func() error {
-		defer close(portForwardingDone)
-
+	portForwardingDone := parent.NotifyGo(func() error {
 		return portforwarding.StartPortForwarding(ctx, devPod, selector, parent)
 	})
 

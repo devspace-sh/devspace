@@ -1,24 +1,30 @@
 version: v2beta1
 name: pipelines
 
-vars:                                # `vars` specifies variables which may be used as ${VAR_NAME} in devspace.yaml
+vars:
   - name: IMAGE
     value: loftsh/javascript:latest
 
-deployments:                         # `deployments` tells DevSpace how to deploy this project
+deployments:
   - name: quickstart
-    helm:                              # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
-      componentChart: true             # We are deploying the so-called Component Chart: https://devspace.sh/component-chart/docs
-      values:                          # Under `values` we can define the values for this Helm chart used during `helm install/upgrade`
+    helm:
+      componentChart: true
+      values:
         containers:
-          - image: ${IMAGE}              # Use the value of our `${IMAGE}` variable here (see vars above)
-            command: ["sleep", "infinity"]
+          - image: ${IMAGE}
+            command: ["sleep", "10000000000"]
 
 dev:
   quickstart:
     imageSelector: ${IMAGE}
     forward:
       - port: 3000
-    terminal: {}
     sync:
-      - {}
+      - printLogs: true
+
+pipelines:
+  dev:
+    steps:
+      - run: |-
+          deploy --all
+          start_dev --all

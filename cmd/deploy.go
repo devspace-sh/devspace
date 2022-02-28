@@ -8,6 +8,7 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/dev"
+	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -251,8 +252,12 @@ func runPipeline(
 	// create dependency registry
 	dependencyRegistry := registry.NewDependencyRegistry(ctx, "http://localhost:8090")
 
+	// create a new base dev pod manager
+	devPodManager := devpod.NewManager(ctx.Context)
+	defer devPodManager.Close()
+
 	// get deploy pipeline
-	pipe, err := pipeline.NewPipelineBuilder().BuildPipeline(configPipeline, dependencyRegistry)
+	pipe, err := pipeline.NewPipelineBuilder().BuildPipeline(devPodManager, configPipeline, dependencyRegistry)
 	if err != nil {
 		return err
 	}

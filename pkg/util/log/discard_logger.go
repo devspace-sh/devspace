@@ -48,6 +48,10 @@ func (d *DiscardLogger) Fatal(args ...interface{}) {
 	os.Exit(1)
 }
 
+func (d *DiscardLogger) Children() []Logger {
+	return nil
+}
+
 // Fatalf implements logger interface
 func (d *DiscardLogger) Fatalf(format string, args ...interface{}) {
 	os.Exit(1)

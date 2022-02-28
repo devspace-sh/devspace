@@ -230,7 +230,7 @@ func (cmd *DevCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, c
 	err := runPipeline(ctx, f, configOptions, cmd.SkipDependency, cmd.Dependency, "dev", `run_dependencies --all
 build --all
 deploy --all
-dev --all`, cmd.Wait, cmd.Timeout, 0)
+start_dev --all`, cmd.Wait, cmd.Timeout, 0)
 	if err != nil {
 		return err
 	}

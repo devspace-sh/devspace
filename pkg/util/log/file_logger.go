@@ -99,6 +99,10 @@ func (f *fileLogger) Debug(args ...interface{}) {
 	f.logger.Debug(stripEscapeSequences(fmt.Sprint(args...)))
 }
 
+func (f *fileLogger) Children() []Logger {
+	return nil
+}
+
 func (f *fileLogger) Debugf(format string, args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
