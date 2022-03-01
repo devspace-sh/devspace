@@ -54,6 +54,10 @@ func Deploy(ctx *devspacecontext.Context, args []string) error {
 }
 
 func applyDeploymentSetValues(config *latest.Config, deployment string, set, setString, from []string) error {
+	if config.Deployments == nil {
+		config.Deployments = map[string]*latest.DeploymentConfig{}
+	}
+
 	mapObj, err := applySetValues(deployment, set, setString, from, func(name string, create bool) (interface{}, error) {
 		imageObj, ok := config.Deployments[deployment]
 		if !ok {

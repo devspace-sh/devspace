@@ -199,7 +199,7 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 
 func (d *devPod) startLogs(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, parent *tomb.Tomb) error {
 	loader.EachDevContainer(devPodConfig, func(devContainer *latest.DevContainer) bool {
-		if devContainer.Logs == nil || !devContainer.Logs.Disabled {
+		if devContainer.Logs == nil || devContainer.Logs.Disabled {
 			return true
 		}
 

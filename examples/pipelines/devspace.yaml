@@ -2,20 +2,18 @@ version: v2beta1
 name: pipelines
 
 pipelines:
-  test3:
-    steps:
-      - run: |-
-          echo "Hello World 3"
-  test2:
-    steps:
-      - run: |-
-          echo "Hello World 2"
   test:
     steps:
       - run: |-
-          echo "Hello World 1"
+          start_dev test --set imageSelector=ubuntu \
+                         --set logs.disabled=false
+
   dev:
     steps:
       - run: |-
-          run_pipelines test test2 test3 --sequential
+          create_deployments test --set helm.componentChart=true \
+                                  --set helm.values.containers[0].image=ubuntu \
+                                  --set helm.values.containers[0].command='{sh,-c,echo "Hello World" && sleep 99999999}'
+          
+          run_pipelines test
           echo "After"

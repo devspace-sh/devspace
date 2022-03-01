@@ -44,7 +44,7 @@ func (p *replacer) RevertReplacePod(ctx *devspacecontext.Context, devPodCache *r
 	}
 
 	// scale up parent
-	ctx.Log.Info("Scaling up %s %s...", devPodCache.TargetKind, devPodCache.TargetName)
+	ctx.Log.Infof("Scaling up %s %s...", devPodCache.TargetKind, devPodCache.TargetName)
 	err = scaleUpTarget(ctx, parent)
 	if err != nil {
 		return false, err
