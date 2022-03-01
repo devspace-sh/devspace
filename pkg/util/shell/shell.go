@@ -18,7 +18,7 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
-func ExecuteShellCommand(command string, args []string, dir string, stdout io.Writer, stderr io.Writer, extraEnvVars map[string]string) error {
+func ExecuteShellCommand(ctx context.Context, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader, extraEnvVars map[string]string, command string, args ...string) error {
 	env := os.Environ()
 	for k, v := range extraEnvVars {
 		env = append(env, k+"="+v)
@@ -39,7 +39,7 @@ func ExecuteShellCommand(command string, args []string, dir string, stdout io.Wr
 	}
 
 	// Create shell runner
-	r, err := interp.New(interp.Dir(dir), interp.StdIO(os.Stdin, stdout, stderr),
+	r, err := interp.New(interp.Dir(dir), interp.StdIO(stdin, stdout, stderr),
 		interp.Env(expand.ListEnviron(env...)),
 		interp.ExecHandler(DevSpaceExecHandler))
 	if err != nil {
@@ -48,7 +48,7 @@ func ExecuteShellCommand(command string, args []string, dir string, stdout io.Wr
 	r.Params = args
 
 	// Run command
-	err = r.Run(context.Background(), file)
+	err = r.Run(ctx, file)
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok && status == 0 {
 			return nil
@@ -77,14 +77,14 @@ func DevSpaceExecHandler(ctx context.Context, args []string) error {
 				}
 				return interp.NewExitStatus(0)
 			case "kubectl":
-				path, err := downloader.NewDownloader(commands.NewKubectlCommand(), logger).EnsureCommand()
+				path, err := downloader.NewDownloader(commands.NewKubectlCommand(), logger).EnsureCommand(ctx)
 				if err != nil {
 					_, _ = fmt.Fprintln(hc.Stderr, err)
 					return interp.NewExitStatus(127)
 				}
 				args[0] = path
 			case "helm":
-				path, err := downloader.NewDownloader(commands.NewHelmV3Command(), logger).EnsureCommand()
+				path, err := downloader.NewDownloader(commands.NewHelmV3Command(), logger).EnsureCommand(ctx)
 				if err != nil {
 					_, _ = fmt.Fprintln(hc.Stderr, err)
 					return interp.NewExitStatus(127)

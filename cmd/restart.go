@@ -114,7 +114,7 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 	}
 
 	// Get config with adjusted cluster config
-	config, err := configLoader.LoadWithCache(localCache, client, configOptions, cmd.log)
+	config, err := configLoader.LoadWithCache(context.Background(), localCache, client, configOptions, cmd.log)
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 		// create target selector options
 		var imageSelector []string
 		if devPod.ImageSelector != "" {
-			imageSelectorObject, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(devPod.ImageSelector, ctx.Config, ctx.Dependencies)
+			imageSelectorObject, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, devPod.ImageSelector, ctx.Config, ctx.Dependencies)
 			if err != nil {
 				return err
 			}

@@ -2,6 +2,7 @@ package variable
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,30 +29,30 @@ type PredefinedVariableOptions struct {
 }
 
 // PredefinedVariableFunction is the definition of a predefined variable
-type PredefinedVariableFunction func(options *PredefinedVariableOptions) (interface{}, error)
+type PredefinedVariableFunction func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error)
 
 // predefinedVars holds all predefined variables that can be used in the config
 var predefinedVars = map[string]PredefinedVariableFunction{
-	"devspace.version": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.version": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		return upgrade.GetVersion(), nil
 	},
-	"devspace.random": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.random": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		return randutil.GenerateRandomString(6), nil
 	},
-	"devspace.profile": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.profile": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		return options.Profile, nil
 	},
-	"devspace.userHome": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.userHome": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		homeDir, err := homedir.Dir()
 		if err != nil {
 			return nil, err
 		}
 		return homeDir, nil
 	},
-	"devspace.timestamp": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.timestamp": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		return strconv.FormatInt(time.Now().Unix(), 10), nil
 	},
-	"devspace.git.branch": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.git.branch": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		configPath := options.ConfigPath
 		branch, err := git.GetBranch(filepath.Dir(configPath))
 		if err != nil {
@@ -60,23 +61,23 @@ var predefinedVars = map[string]PredefinedVariableFunction{
 
 		return branch, nil
 	},
-	"devspace.git.commit": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.git.commit": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		configPath := options.ConfigPath
-		hash, err := git.GetHash(filepath.Dir(configPath))
+		hash, err := git.GetHash(ctx, filepath.Dir(configPath))
 		if err != nil {
 			return "", fmt.Errorf("no git repository found (%v), but predefined var devspace.git.commit is used", err)
 		}
 
 		return hash[:8], nil
 	},
-	"devspace.context": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.context": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		if options.KubeClient == nil {
 			return "", nil
 		}
 
 		return options.KubeClient.CurrentContext(), nil
 	},
-	"devspace.namespace": func(options *PredefinedVariableOptions) (interface{}, error) {
+	"devspace.namespace": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		if options.KubeClient == nil {
 			return "", nil
 		}
@@ -109,7 +110,7 @@ func AddPredefinedVars(plugins []plugin.Metadata) {
 		pluginFolder := p.PluginFolder
 		for _, variable := range p.Vars {
 			v := variable
-			predefinedVars[variable.Name] = func(options *PredefinedVariableOptions) (interface{}, error) {
+			predefinedVars[variable.Name] = func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 				args, err := json.Marshal(os.Args)
 				if err != nil {
 					return "", err
@@ -147,11 +148,11 @@ type predefinedVariable struct {
 	options *PredefinedVariableOptions
 }
 
-func (p *predefinedVariable) Load(definition *latest.Variable) (interface{}, error) {
+func (p *predefinedVariable) Load(ctx context.Context, definition *latest.Variable) (interface{}, error) {
 	getVar, ok := predefinedVars[p.name]
 	if !ok {
 		return nil, errors.New("predefined variable " + p.name + " not found")
 	}
 
-	return getVar(p.options)
+	return getVar(ctx, p.options)
 }

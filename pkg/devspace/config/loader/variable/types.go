@@ -1,6 +1,7 @@
 package variable
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
@@ -8,7 +9,7 @@ import (
 
 // Variable defines an interface to load a variable
 type Variable interface {
-	Load(definition *latest.Variable) (interface{}, error)
+	Load(ctx context.Context, definition *latest.Variable) (interface{}, error)
 }
 
 // RuntimeResolver fills in runtime variables and cached ones
@@ -35,10 +36,10 @@ type Resolver interface {
 	FindVariables(haystack interface{}) (map[string]bool, error)
 
 	// FillVariables finds the used variables first and then fills in those in the haystack
-	FillVariables(haystack interface{}) (interface{}, error)
+	FillVariables(ctx context.Context, haystack interface{}) (interface{}, error)
 
 	// FillVariablesExclude finds the used variables first and then fills in those that do not match the excluded paths in the haystack
-	FillVariablesExclude(haystack interface{}, excluded []string) (interface{}, error)
+	FillVariablesExclude(ctx context.Context, haystack interface{}, excluded []string) (interface{}, error)
 
 	// ResolvedVariables returns the internal memory cache of the resolver with all resolved variables
 	ResolvedVariables() map[string]interface{}

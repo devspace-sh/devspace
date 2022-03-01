@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"io"
@@ -33,7 +34,7 @@ func init() {
 	DependencyFolderPath = filepath.Join(homedir, filepath.FromSlash(DependencyFolder))
 }
 
-func DownloadDependency(basePath string, source *latest.SourceConfig, log log.Logger) (configPath string, err error) {
+func DownloadDependency(ctx context.Context, basePath string, source *latest.SourceConfig, log log.Logger) (configPath string, err error) {
 	ID, err := getDependencyID(source)
 	if err != nil {
 		return "", err
@@ -52,7 +53,7 @@ func DownloadDependency(basePath string, source *latest.SourceConfig, log log.Lo
 
 		// Update dependency
 		if !source.DisablePull || statErr != nil {
-			repo, err := git.NewGitCLIRepository(localPath)
+			repo, err := git.NewGitCLIRepository(ctx, localPath)
 			if err != nil {
 				if statErr == nil {
 					log.Warnf("Error creating git cli: %v", err)
@@ -62,7 +63,7 @@ func DownloadDependency(basePath string, source *latest.SourceConfig, log log.Lo
 				return "", err
 			}
 
-			err = repo.Clone(git.CloneOptions{
+			err = repo.Clone(ctx, git.CloneOptions{
 				URL:            gitPath,
 				Tag:            source.Tag,
 				Branch:         source.Branch,

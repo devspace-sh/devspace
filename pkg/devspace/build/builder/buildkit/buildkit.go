@@ -2,14 +2,15 @@ package buildkit
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	command2 "github.com/loft-sh/devspace/pkg/util/command"
 	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -104,7 +105,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 	buildKitConfig := b.helper.ImageConf.Build.BuildKit
 
 	// create the builder
-	builder, err := ensureBuilder(ctx.KubeClient, buildKitConfig, ctx.Log)
+	builder, err := ensureBuilder(ctx.Context, ctx.WorkingDir, ctx.KubeClient, buildKitConfig, ctx.Log)
 	if err != nil {
 		return err
 	}
@@ -131,10 +132,10 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 		buildKitConfig.SkipPush = b.skipPush
 	}
 
-	return buildWithCLI(body, writer, ctx.KubeClient, builder, buildKitConfig, *buildOptions, useMinikubeDocker, ctx.Log)
+	return buildWithCLI(ctx.Context, ctx.WorkingDir, body, writer, ctx.KubeClient, builder, buildKitConfig, *buildOptions, useMinikubeDocker, ctx.Log)
 }
 
-func buildWithCLI(context io.Reader, writer io.Writer, kubeClient kubectl.Client, builder string, imageConf *latest.BuildKitConfig, options types.ImageBuildOptions, useMinikubeDocker bool, log logpkg.Logger) error {
+func buildWithCLI(ctx context.Context, dir string, context io.Reader, writer io.Writer, kubeClient kubectl.Client, builder string, imageConf *latest.BuildKitConfig, options types.ImageBuildOptions, useMinikubeDocker bool, log logpkg.Logger) error {
 	environ := os.Environ()
 
 	command := []string{"docker", "buildx"}
@@ -199,23 +200,18 @@ func buildWithCLI(context io.Reader, writer io.Writer, kubeClient kubectl.Client
 	completeArgs = append(completeArgs, command[1:]...)
 	completeArgs = append(completeArgs, args...)
 
-	cmd := exec.Command(command[0], completeArgs...)
-	cmd.Env = environ
+	var (
+		minikubeEnv map[string]string
+		err         error
+	)
 	if useMinikubeDocker {
-		minikubeEnv, err := dockerpkg.GetMinikubeEnvironment()
+		minikubeEnv, err = dockerpkg.GetMinikubeEnvironment()
 		if err != nil {
 			return fmt.Errorf("error retrieving minikube environment with 'minikube docker-env --shell none'. Try setting the option preferMinikube to false: %v", err)
 		}
-		for k, v := range minikubeEnv {
-			cmd.Env = append(cmd.Env, k+"="+v)
-		}
 	}
 
-	cmd.Stdin = context
-	cmd.Stdout = writer
-	cmd.Stderr = writer
-
-	return cmd.Run()
+	return command2.CommandWithEnv(ctx, dir, writer, writer, context, minikubeEnv, command[0], completeArgs...)
 }
 
 type NodeGroup struct {
@@ -234,7 +230,7 @@ type Node struct {
 	DriverOpts map[string]string
 }
 
-func ensureBuilder(kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, log logpkg.Logger) (string, error) {
+func ensureBuilder(ctx context.Context, workingDir string, kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, log logpkg.Logger) (string, error) {
 	if imageConf.InCluster == nil {
 		return "", nil
 	} else if kubeClient == nil {
@@ -337,9 +333,9 @@ func ensureBuilder(kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, 
 		rmArgs = append(rmArgs, "rm", name)
 
 		// execute the command
-		cmd := exec.Command(command[0], rmArgs...)
-		cmd.Env = append(os.Environ(), "KUBECONFIG="+tempFile)
-		out, err := cmd.CombinedOutput()
+		out, err := command2.CombinedOutputWithEnv(ctx, workingDir, map[string]string{
+			"KUBECONFIG": tempFile,
+		}, command[0], rmArgs...)
 		if err != nil {
 			log.Warnf("error deleting BuildKit builder: %s => %v", string(out), err)
 		}
@@ -348,13 +344,12 @@ func ensureBuilder(kubeClient kubectl.Client, imageConf *latest.BuildKitConfig, 
 	// create the builder
 	log.Infof("Create BuildKit builder with: %s %s", strings.Join(command, " "), strings.Join(args, " "))
 
-	cmd := exec.Command(command[0], completeArgs...)
 	// This is necessary because docker would otherwise save the used kube config
 	// which we don't want because we will override it with our own temp kube config
 	// during building.
-	cmd.Env = append(os.Environ(), "KUBECONFIG=")
-
-	out, err := cmd.CombinedOutput()
+	out, err := command2.CombinedOutputWithEnv(ctx, workingDir, map[string]string{
+		"KUBECONFIG": "",
+	}, command[0], completeArgs...)
 	if err != nil {
 		if !strings.Contains(string(out), "existing instance") {
 			return "", fmt.Errorf("error creating BuildKit builder: %s => %v", string(out), err)

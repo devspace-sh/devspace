@@ -2,6 +2,7 @@ package dependency
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/command"
@@ -24,9 +25,6 @@ import (
 type Manager interface {
 	// BuildAll builds all dependencies
 	BuildAll(ctx *devspacecontext.Context, options BuildOptions) ([]types.Dependency, error)
-
-	// DeployAll deploys all dependencies and returns them
-	DeployAll(ctx *devspacecontext.Context, options DeployOptions) ([]types.Dependency, error)
 
 	// ResolveAll resolves all dependencies and returns them
 	ResolveAll(ctx *devspacecontext.Context, options ResolveOptions) ([]types.Dependency, error)
@@ -68,8 +66,8 @@ func (m *manager) ResolveAll(ctx *devspacecontext.Context, options ResolveOption
 }
 
 // ExecuteCommand executes a given command from the available commands
-func ExecuteCommand(commands []*latest.CommandConfig, cmd string, args []string, dir string, stdout io.Writer, stderr io.Writer) error {
-	err := command.ExecuteCommand(commands, cmd, args, dir, stdout, stderr)
+func ExecuteCommand(ctx context.Context, commands []*latest.CommandConfig, cmd string, args []string, dir string, stdout io.Writer, stderr io.Writer) error {
+	err := command.ExecuteCommand(ctx, commands, cmd, args, dir, stdout, stderr)
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok {
 			return &exit.ReturnCodeError{
@@ -97,30 +95,6 @@ func (m *manager) BuildAll(ctx *devspacecontext.Context, options BuildOptions) (
 	return m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, false, false, options.Verbose, "Build", func(ctx *devspacecontext.Context, dependency *Dependency) error {
 		return dependency.Build(ctx, &options.BuildOptions)
 	})
-}
-
-// DeployOptions has all options for deploying all dependencies
-type DeployOptions struct {
-	BuildOptions build.Options
-
-	SkipDependencies []string
-	Dependencies     []string
-	SkipBuild        bool
-	SkipDeploy       bool
-	ForceDeploy      bool
-	Verbose          bool
-}
-
-// DeployAll will deploy all dependencies if there are any
-func (m *manager) DeployAll(ctx *devspacecontext.Context, options DeployOptions) ([]types.Dependency, error) {
-	dependencies, err := m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, false, false, options.Verbose, "Deploy", func(ctx *devspacecontext.Context, dependency *Dependency) error {
-		return dependency.Deploy(ctx, options.SkipBuild, options.SkipDeploy, options.ForceDeploy, &options.BuildOptions)
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return dependencies, nil
 }
 
 // PurgeOptions has all options for purging all dependencies

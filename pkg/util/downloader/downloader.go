@@ -1,6 +1,7 @@
 package downloader
 
 import (
+	"context"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 )
 
 type Downloader interface {
-	EnsureCommand() (string, error)
+	EnsureCommand(ctx context.Context) (string, error)
 }
 
 type downloader struct {
@@ -31,9 +32,9 @@ func NewDownloader(command commands.Command, log logpkg.Logger) Downloader {
 	}
 }
 
-func (d *downloader) EnsureCommand() (string, error) {
+func (d *downloader) EnsureCommand(ctx context.Context) (string, error) {
 	command := d.command.Name()
-	valid, err := d.command.IsValid(command)
+	valid, err := d.command.IsValid(ctx, command)
 	if err != nil {
 		return "", err
 	} else if valid {
@@ -45,7 +46,7 @@ func (d *downloader) EnsureCommand() (string, error) {
 		return "", err
 	}
 
-	valid, err = d.command.IsValid(installPath)
+	valid, err = d.command.IsValid(ctx, installPath)
 	if err != nil {
 		return "", err
 	} else if valid {

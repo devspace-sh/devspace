@@ -1,6 +1,7 @@
 package set
 
 import (
+	"context"
 	"strings"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -64,7 +65,7 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 
 	// Load config and find all variables in it
 	variableParser := &variableParser{}
-	c, err := configLoader.LoadWithParser(nil, nil, variableParser, cmd.ToConfigOptions(), log)
+	c, err := configLoader.LoadWithParser(context.Background(), nil, nil, variableParser, cmd.ToConfigOptions(), log)
 	if err != nil {
 		return err
 	}
@@ -127,7 +128,7 @@ type variableParser struct {
 	Used        map[string]bool
 }
 
-func (v *variableParser) Parse(originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
+func (v *variableParser) Parse(ctx context.Context, originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
 	// Find out what vars are really used
 	varsUsed, err := resolver.FindVariables(rawConfig)
 	if err != nil {

@@ -1,6 +1,7 @@
 package configure
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
@@ -261,7 +262,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				m.log.WriteString(logrus.InfoLevel, "\n")
 				m.log.Infof("Cloning external repo `%s` containing to retrieve Helm chart", gitRepo)
 
-				err = shell.ExecuteShellCommand(gitCommand, nil, "", os.Stdout, os.Stderr, nil)
+				err = shell.ExecuteShellCommand(context.TODO(), "", os.Stdout, os.Stderr, nil, nil, gitCommand)
 				if err != nil {
 					m.log.WriteString(logrus.InfoLevel, "\n")
 					m.log.Errorf("Unable to clone repository `%s` (branch: %s)", gitRepo, gitBranch)

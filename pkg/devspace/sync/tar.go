@@ -3,11 +3,11 @@ package sync
 import (
 	"archive/tar"
 	"compress/gzip"
+	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -165,9 +165,7 @@ func (u *Unarchiver) untarNext(destPath string, tarReader *tar.Reader) (bool, er
 			}
 		}
 
-		cmd := exec.Command(u.syncConfig.Options.FileChangeCmd, cmdArgs...)
-		cmd.Dir = u.syncConfig.LocalPath
-		out, err := cmd.CombinedOutput()
+		out, err := command.CombinedOutput(u.syncConfig.ctx, u.syncConfig.LocalPath, u.syncConfig.Options.FileChangeCmd, cmdArgs...)
 		if err != nil {
 			return false, errors.Errorf("Error executing command '%s %s': %s => %v", u.syncConfig.Options.FileChangeCmd, strings.Join(cmdArgs, " "), string(out), err)
 		}
@@ -214,9 +212,7 @@ func (u *Unarchiver) createAllFolders(name string, perm os.FileMode) error {
 				}
 			}
 
-			cmd := exec.Command(u.syncConfig.Options.DirCreateCmd, cmdArgs...)
-			cmd.Dir = u.syncConfig.LocalPath
-			out, err := cmd.CombinedOutput()
+			out, err := command.CombinedOutput(u.syncConfig.ctx, u.syncConfig.LocalPath, u.syncConfig.Options.DirCreateCmd, cmdArgs...)
 			if err != nil {
 				return errors.Errorf("Error executing command '%s %s': %s => %v", u.syncConfig.Options.DirCreateCmd, strings.Join(cmdArgs, " "), string(out), err)
 			}

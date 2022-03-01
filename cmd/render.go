@@ -129,7 +129,7 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 	}
 
 	// Get the config
-	config, err := configLoader.Load(client, configOptions, log)
+	config, err := configLoader.Load(context.Background(), client, configOptions, log)
 	if err != nil {
 		cause := errors.Cause(err)
 		if _, ok := cause.(logpkg.SurveyError); ok {

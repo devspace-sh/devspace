@@ -103,7 +103,7 @@ func (cmd *BuildCmd) Run(f factory.Factory) error {
 	}
 
 	// Get the config
-	configInterface, err := configLoader.Load(client, configOptions, log)
+	configInterface, err := configLoader.Load(context.Background(), client, configOptions, log)
 	if err != nil {
 		return err
 	}

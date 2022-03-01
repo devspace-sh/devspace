@@ -2,6 +2,7 @@ package hook
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -46,10 +47,8 @@ func (l *localCommandHook) Execute(ctx *devspacecontext.Context, hook *latest.Ho
 		extraEnv[k] = v
 	}
 
-	dir := ctx.WorkingDir
-
 	// resolve hook command and args
-	hookCommand, hookArgs, err := ResolveCommand(hook.Command, hook.Args, ctx.WorkingDir, ctx.Config, ctx.Dependencies)
+	hookCommand, hookArgs, err := ResolveCommand(ctx.Context, hook.Command, hook.Args, ctx.WorkingDir, ctx.Config, ctx.Dependencies)
 	if err != nil {
 		return err
 	}
@@ -65,16 +64,16 @@ func (l *localCommandHook) Execute(ctx *devspacecontext.Context, hook *latest.Ho
 	}()
 
 	if hook.Args == nil {
-		return shell.ExecuteShellCommand(hookCommand, nil, dir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), extraEnv)
+		return shell.ExecuteShellCommand(ctx.Context, ctx.WorkingDir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), nil, extraEnv, hookCommand)
 	}
 
 	// else we execute it directly
-	return command.ExecuteCommandWithEnv(hookCommand, hookArgs, dir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), extraEnv)
+	return command.CommandWithEnv(ctx.Context, ctx.WorkingDir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), nil, extraEnv, hookCommand, hookArgs...)
 }
 
-func ResolveCommand(command string, args []string, dir string, config config.Config, dependencies []types.Dependency) (string, []string, error) {
+func ResolveCommand(ctx context.Context, command string, args []string, dir string, config config.Config, dependencies []types.Dependency) (string, []string, error) {
 	// resolve hook command
-	hookCommand, err := runtimevar.NewRuntimeResolver(dir, true).FillRuntimeVariablesAsString(command, config, dependencies)
+	hookCommand, err := runtimevar.NewRuntimeResolver(dir, true).FillRuntimeVariablesAsString(ctx, command, config, dependencies)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "resolve image helpers")
 	}
@@ -83,7 +82,7 @@ func ResolveCommand(command string, args []string, dir string, config config.Con
 	if args != nil {
 		newArgs := []string{}
 		for _, a := range args {
-			newArg, err := runtimevar.NewRuntimeResolver(dir, true).FillRuntimeVariablesAsString(a, config, dependencies)
+			newArg, err := runtimevar.NewRuntimeResolver(dir, true).FillRuntimeVariablesAsString(ctx, a, config, dependencies)
 			if err != nil {
 				return "", nil, errors.Wrap(err, "resolve image helpers")
 			}

@@ -166,7 +166,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	}
 
 	// Parse commands
-	commandsInterface, err := configLoader.LoadWithParser(localCache, nil, loader.NewCommandsParser(), configOptions, f.GetLog())
+	commandsInterface, err := configLoader.LoadWithParser(context.Background(), localCache, nil, loader.NewCommandsParser(), configOptions, f.GetLog())
 	if err != nil {
 		return err
 	}
@@ -177,7 +177,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 
 	// check if we should execute a dependency command
 	if cmd.Dependency != "" {
-		config, err := configLoader.LoadWithCache(localCache, nil, configOptions, f.GetLog())
+		config, err := configLoader.LoadWithCache(context.Background(), localCache, nil, configOptions, f.GetLog())
 		if err != nil {
 			return err
 		}
@@ -195,7 +195,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 			return fmt.Errorf("couldn't find dependency %s", cmd.Dependency)
 		}
 
-		return dep.Command(args[0], args[1:])
+		return dep.Command(ctx.Context, args[0], args[1:])
 	}
 
 	// Save variables
@@ -205,7 +205,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	}
 
 	// Execute command
-	return dependency.ExecuteCommand(commands, args[0], args[1:], ctx.WorkingDir, cmd.Stdout, cmd.Stderr)
+	return dependency.ExecuteCommand(ctx.Context, commands, args[0], args[1:], ctx.WorkingDir, cmd.Stdout, cmd.Stderr)
 }
 
 func getCommands(f factory.Factory) ([]*latest.CommandConfig, error) {
@@ -232,7 +232,7 @@ func getCommands(f factory.Factory) ([]*latest.CommandConfig, error) {
 	}
 
 	// Parse commands
-	commandsInterface, err := configLoader.LoadWithParser(nil, nil, loader.NewCommandsParser(), &loader.ConfigOptions{Dry: true}, log.Discard)
+	commandsInterface, err := configLoader.LoadWithParser(context.Background(), nil, nil, loader.NewCommandsParser(), &loader.ConfigOptions{Dry: true}, log.Discard)
 	if err != nil {
 		return nil, err
 	}

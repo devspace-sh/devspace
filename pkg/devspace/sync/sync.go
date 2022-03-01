@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -60,6 +61,9 @@ type Options struct {
 
 // Sync holds the necessary information for the syncing process
 type Sync struct {
+	ctx       context.Context
+	cancelCtx context.CancelFunc
+
 	LocalPath string
 	Options   Options
 
@@ -85,7 +89,9 @@ type Sync struct {
 }
 
 // NewSync creates a new sync for the given
-func NewSync(localPath string, options Options) (*Sync, error) {
+func NewSync(ctx context.Context, localPath string, options Options) (*Sync, error) {
+	cancelCtx, cancel := context.WithCancel(ctx)
+
 	// we have to resolve the real local path, because the watcher gives us the real path always
 	realLocalPath, err := filepath.EvalSymlinks(localPath)
 	if err != nil {
@@ -111,6 +117,9 @@ func NewSync(localPath string, options Options) (*Sync, error) {
 
 	// Create sync structure
 	s := &Sync{
+		ctx:       cancelCtx,
+		cancelCtx: cancel,
+
 		LocalPath: absoluteRealLocalPath,
 		Options:   options,
 
@@ -388,12 +397,11 @@ func equalFilePermissions(mode os.FileMode, mode2 os.FileMode) bool {
 // Stop stops the sync process
 func (s *Sync) Stop(fatalError error) {
 	s.stopOnce.Do(func() {
-		if s.upstream != nil && s.upstream.interrupt != nil {
+		s.cancelCtx()
+		if s.upstream != nil {
 			for _, symlink := range s.upstream.symlinks {
 				symlink.Stop()
 			}
-
-			close(s.upstream.interrupt)
 			if s.upstream.writer != nil {
 				s.upstream.writer.Close()
 			}
@@ -402,8 +410,7 @@ func (s *Sync) Stop(fatalError error) {
 			}
 		}
 
-		if s.downstream != nil && s.downstream.interrupt != nil {
-			close(s.downstream.interrupt)
+		if s.downstream != nil {
 			if s.downstream.writer != nil {
 				s.downstream.writer.Close()
 			}

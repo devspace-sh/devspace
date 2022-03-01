@@ -1,6 +1,7 @@
 package variable
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"os"
@@ -26,7 +27,7 @@ type undefinedVariable struct {
 	log        log.Logger
 }
 
-func (u *undefinedVariable) Load(_ *latest.Variable) (interface{}, error) {
+func (u *undefinedVariable) Load(ctx context.Context, _ *latest.Variable) (interface{}, error) {
 	// Is in environment?
 	if os.Getenv(u.name) != "" {
 		return convertStringValue(os.Getenv(u.name)), nil

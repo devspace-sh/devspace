@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/extract"
@@ -50,8 +51,8 @@ func (h *helmv3) DownloadURL() string {
 	return url
 }
 
-func (h *helmv3) IsValid(path string) (bool, error) {
-	out, err := command.NewStreamCommand(path, []string{"version"}).Output(".")
+func (h *helmv3) IsValid(ctx context.Context, path string) (bool, error) {
+	out, err := command.Output(ctx, "", path, "version")
 	if err != nil {
 		return false, nil
 	}

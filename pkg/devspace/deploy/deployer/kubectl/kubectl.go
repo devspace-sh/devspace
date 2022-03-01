@@ -1,9 +1,11 @@
 package kubectl
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/sirupsen/logrus"
 	"io"
 	"strings"
@@ -30,7 +32,6 @@ type DeployConfig struct {
 	Manifests   []string
 
 	DeploymentConfig *latest.DeploymentConfig
-	commandExecuter  commandExecuter
 }
 
 // New creates a new deploy config for kubectl
@@ -43,14 +44,13 @@ func New(ctx *devspacecontext.Context, deployConfig *latest.DeploymentConfig) (d
 
 	// make sure kubectl exists
 	var (
-		err      error
-		executer = &executer{}
-		cmdPath  string
+		err     error
+		cmdPath string
 	)
 	if deployConfig.Kubectl.CmdPath != "" {
 		cmdPath = deployConfig.Kubectl.CmdPath
 	} else {
-		cmdPath, err = downloader.NewDownloader(commands.NewKubectlCommand(), ctx.Log).EnsureCommand()
+		cmdPath, err = downloader.NewDownloader(commands.NewKubectlCommand(), ctx.Log).EnsureCommand(ctx.Context)
 		if err != nil {
 			return nil, err
 		}
@@ -73,7 +73,6 @@ func New(ctx *devspacecontext.Context, deployConfig *latest.DeploymentConfig) (d
 			Manifests: manifests,
 
 			DeploymentConfig: deployConfig,
-			commandExecuter:  executer,
 		}, nil
 	}
 
@@ -91,7 +90,6 @@ func New(ctx *devspacecontext.Context, deployConfig *latest.DeploymentConfig) (d
 		IsInCluster: ctx.KubeClient.IsInCluster(),
 
 		DeploymentConfig: deployConfig,
-		commandExecuter:  executer,
 	}, nil
 }
 
@@ -175,9 +173,7 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, _ bool) (bool, error
 			stringReader := strings.NewReader(replacedManifest)
 			args := d.getCmdArgs("apply", "--force")
 			args = append(args, d.DeploymentConfig.Kubectl.ApplyArgs...)
-
-			cmd := d.commandExecuter.GetCommand(d.CmdPath, args)
-			err = cmd.Run(ctx.WorkingDir, ctx.Log.Writer(logrus.InfoLevel), ctx.Log.Writer(logrus.InfoLevel), stringReader)
+			err = command.Command(ctx.Context, ctx.WorkingDir, ctx.Log.Writer(logrus.InfoLevel), ctx.Log.Writer(logrus.InfoLevel), stringReader, d.CmdPath, args...)
 			if err != nil {
 				return false, errors.Errorf("%v\nPlease make sure the command `kubectl apply` does work locally with manifest `%s`", err, manifest)
 			}
@@ -262,15 +258,15 @@ func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []str
 
 func (d *DeployConfig) buildManifests(ctx *devspacecontext.Context, manifest string) ([]*unstructured.Unstructured, error) {
 	// Check if we should use kustomize or kubectl
-	if d.DeploymentConfig.Kubectl.Kustomize != nil && *d.DeploymentConfig.Kubectl.Kustomize && d.isKustomizeInstalled(ctx.WorkingDir, "kustomize") {
-		return NewKustomizeBuilder("kustomize", d.DeploymentConfig, ctx.Log).Build(ctx.WorkingDir, manifest, d.commandExecuter.RunCommand)
+	if d.DeploymentConfig.Kubectl.Kustomize != nil && *d.DeploymentConfig.Kubectl.Kustomize && d.isKustomizeInstalled(ctx.Context, ctx.WorkingDir, "kustomize") {
+		return NewKustomizeBuilder("kustomize", d.DeploymentConfig, ctx.Log).Build(ctx.Context, ctx.WorkingDir, manifest)
 	}
 
 	// Build with kubectl
-	return NewKubectlBuilder(d.CmdPath, d.DeploymentConfig, d.Context, d.Namespace, d.IsInCluster).Build(ctx.WorkingDir, manifest, d.commandExecuter.RunCommand)
+	return NewKubectlBuilder(d.CmdPath, d.DeploymentConfig, d.Context, d.Namespace, d.IsInCluster).Build(ctx.Context, ctx.WorkingDir, manifest)
 }
 
-func (d *DeployConfig) isKustomizeInstalled(dir, path string) bool {
-	_, err := d.commandExecuter.RunCommand(dir, path, []string{"version"})
+func (d *DeployConfig) isKustomizeInstalled(ctx context.Context, dir, path string) bool {
+	err := command.Command(ctx, dir, nil, nil, nil, path, "version")
 	return err == nil
 }

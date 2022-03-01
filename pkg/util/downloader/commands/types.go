@@ -1,5 +1,7 @@
 package commands
 
+import "context"
+
 type Command interface {
 	// Name is the name of the command, e.g. helm or kubectl
 	Name() string
@@ -13,7 +15,7 @@ type Command interface {
 	DownloadURL() string
 
 	// IsValid checks if the command at the given path exists.
-	IsValid(path string) (bool, error)
+	IsValid(ctx context.Context, path string) (bool, error)
 
 	// Install installs the command after it was downloaded from the DownloadURL()
 	Install(archiveFile string) error

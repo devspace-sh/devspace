@@ -85,7 +85,7 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 	}
 
 	// load config
-	config, err := configLoader.Load(client, configOptions, log)
+	config, err := configLoader.Load(context.Background(), client, configOptions, log)
 	if err != nil {
 		return err
 	}

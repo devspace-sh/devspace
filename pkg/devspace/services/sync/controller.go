@@ -329,7 +329,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 		Log:                  customLog,
 		Polling:              syncConfig.Polling,
 		ResolveCommand: func(command string, args []string) (string, []string, error) {
-			return hook.ResolveCommand(command, args, ctx.WorkingDir, ctx.Config, ctx.Dependencies)
+			return hook.ResolveCommand(ctx.Context, command, args, ctx.WorkingDir, ctx.Config, ctx.Dependencies)
 		},
 	}
 
@@ -407,7 +407,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 		options.UploadBatchArgs = syncConfig.OnUpload.ExecRemote.OnBatch.Args
 	}
 
-	syncClient, err := sync.NewSync(localPath, options)
+	syncClient, err := sync.NewSync(ctx.Context, localPath, options)
 	if err != nil {
 		return nil, errors.Wrap(err, "create sync")
 	}

@@ -12,23 +12,18 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
-	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/git"
 	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
 type client struct {
-	exec        command.Exec
 	genericHelm generic.Client
 }
 
 // NewClient creates a new helm v3 Client
 func NewClient(log log.Logger) (types.Client, error) {
-	c := &client{
-		exec: command.NewStreamCommand,
-	}
-
+	c := &client{}
 	c.genericHelm = generic.NewGenericClient(c, log)
 	return c, nil
 }
@@ -67,11 +62,11 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 		}
 
 		defer os.RemoveAll(chartName)
-		repo, err := git.NewGitCLIRepository(chartName)
+		repo, err := git.NewGitCLIRepository(ctx.Context, chartName)
 		if err != nil {
 			return nil, err
 		}
-		err = repo.Clone(git.CloneOptions{
+		err = repo.Clone(ctx.Context, git.CloneOptions{
 			URL:    helmConfig.Chart.Git.URL,
 			Branch: helmConfig.Chart.Git.Branch,
 			Tag:    helmConfig.Chart.Git.Tag,

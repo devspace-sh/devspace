@@ -9,11 +9,11 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	dockerclient "github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"os"
-	"os/exec"
 )
 
 // BuildHelper is the helper class to store common functionality used by both the docker and kaniko builder
@@ -198,8 +198,7 @@ func (b *BuildHelper) IsImageAvailableLocally(ctx *devspacecontext.Context, dock
 	// if docker is not present then skip the image availability check
 	// and return (true, nil) to skip image rebuild
 	// if docker is present then do the image availability check
-	cmd := exec.Command("docker", "buildx")
-	err := cmd.Run()
+	err := command.Command(ctx.Context, ctx.WorkingDir, nil, nil, nil, "docker", "buildx")
 	if err != nil {
 		return true, nil
 	}

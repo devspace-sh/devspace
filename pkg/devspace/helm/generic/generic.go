@@ -1,8 +1,10 @@
 package generic
 
 import (
+	"context"
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/util/command"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -12,7 +14,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/downloader"
 	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/extract"
@@ -36,7 +37,6 @@ type Client interface {
 func NewGenericClient(versionedClient VersionedClient, log log.Logger) Client {
 	c := &client{
 		log:             log,
-		exec:            command.NewStreamCommand,
 		versionedClient: versionedClient,
 		extract:         extract.NewExtractor(),
 	}
@@ -46,7 +46,6 @@ func NewGenericClient(versionedClient VersionedClient, log log.Logger) Client {
 }
 
 type client struct {
-	exec            command.Exec
 	log             log.Logger
 	versionedClient VersionedClient
 	extract         extract.Extract
@@ -75,7 +74,7 @@ func (c *client) WriteValues(values map[string]interface{}) (string, error) {
 }
 
 func (c *client) Exec(ctx *devspacecontext.Context, args []string, helmConfig *latest.HelmConfig) ([]byte, error) {
-	err := c.ensureHelmBinary(helmConfig)
+	err := c.ensureHelmBinary(ctx.Context, helmConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +87,7 @@ func (c *client) Exec(ctx *devspacecontext.Context, args []string, helmConfig *l
 	if args[0] != "list" {
 		c.log.Infof("Execute '%s %s'", c.helmPath, strings.Join(args, " "))
 	}
-	result, err := c.exec(c.helmPath, args).Output(ctx.WorkingDir)
+	result, err := command.Output(ctx.Context, ctx.WorkingDir, c.helmPath, args...)
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			return nil, fmt.Errorf("error during '%s %s': %s%s => %v", c.helmPath, strings.Join(args, " "), string(result), string(exitError.Stderr), err)
@@ -100,13 +99,13 @@ func (c *client) Exec(ctx *devspacecontext.Context, args []string, helmConfig *l
 	return result, nil
 }
 
-func (c *client) ensureHelmBinary(helmConfig *latest.HelmConfig) error {
+func (c *client) ensureHelmBinary(ctx context.Context, helmConfig *latest.HelmConfig) error {
 	if c.helmPath != "" {
 		return nil
 	}
 
 	if helmConfig != nil && helmConfig.Path != "" {
-		valid, err := c.versionedClient.Command().IsValid(helmConfig.Path)
+		valid, err := c.versionedClient.Command().IsValid(ctx, helmConfig.Path)
 		if err != nil {
 			return err
 		} else if !valid {
@@ -118,7 +117,7 @@ func (c *client) ensureHelmBinary(helmConfig *latest.HelmConfig) error {
 	}
 
 	var err error
-	c.helmPath, err = c.downloader.EnsureCommand()
+	c.helmPath, err = c.downloader.EnsureCommand(ctx)
 	return err
 }
 

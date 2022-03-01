@@ -149,7 +149,7 @@ func (cmd *DeployCmd) Run(f factory.Factory) error {
 	}
 
 	// load config
-	configInterface, err := configLoader.LoadWithCache(localCache, client, configOptions, cmd.log)
+	configInterface, err := configLoader.LoadWithCache(context.Background(), localCache, client, configOptions, cmd.log)
 	if err != nil {
 		return err
 	}

@@ -169,7 +169,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 
 	var configInterface config.Config
 	if configLoader.Exists() && cmd.GlobalFlags.ConfigPath != "" {
-		configInterface, err = configLoader.LoadWithCache(localCache, client, configOptions, logger)
+		configInterface, err = configLoader.LoadWithCache(context.Background(), localCache, client, configOptions, logger)
 		if err != nil {
 			return err
 		}
@@ -257,7 +257,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 	// apply the flags to the empty sync config or loaded sync config from the devspace.yaml
 	var configImageSelector []string
 	if syncConfig.devPod.ImageSelector != "" {
-		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(syncConfig.devPod.ImageSelector, ctx.Config, ctx.Dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, syncConfig.devPod.ImageSelector, ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return err
 		}

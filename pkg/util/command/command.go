@@ -1,85 +1,34 @@
 package command
 
 import (
+	"bytes"
+	"context"
 	"io"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
-
-	goansi "github.com/k0kubun/go-ansi"
 )
 
-var defaultStdout = goansi.NewAnsiStdout()
-var defaultStderr = goansi.NewAnsiStderr()
-
-// Command is the default factory function
-var Command Exec = NewStreamCommand
-
-// Exec is the interface to create new commands
-type Exec func(command string, args []string) Interface
-
-// Interface is the command interface
-type Interface interface {
-	Run(dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error
-	RunWithEnv(dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader, env map[string]string) error
-	Output(dir string) ([]byte, error)
-	CombinedOutput(dir string) ([]byte, error)
+// streamCommand is the a command whose output is streamed to a log
+type streamCommand struct {
+	cmd         *exec.Cmd
+	killTimeout time.Duration
 }
 
-// FakeCommand is used for testing
-type FakeCommand struct {
-	OutputBytes []byte
-}
-
-// CombinedOutput runs the command and returns the stdout and stderr
-func (f *FakeCommand) CombinedOutput() ([]byte, error) {
-	return f.OutputBytes, nil
-}
-
-// Output runs the command and returns the stdout
-func (f *FakeCommand) Output() ([]byte, error) {
-	return f.OutputBytes, nil
-}
-
-// Run implements interface
-func (f *FakeCommand) RunWithEnv(stdout io.Writer, stderr io.Writer, stdin io.Reader, dir string, extraEnvVars map[string]string) error {
-	return nil
-}
-
-// Run implements interface
-func (f *FakeCommand) Run(workingDirectory string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
-	return nil
-}
-
-// StreamCommand is the a command whose output is streamed to a log
-type StreamCommand struct {
-	cmd *exec.Cmd
-}
-
-// NewStreamCommand creates a new stram command
-func NewStreamCommand(command string, args []string) Interface {
-	return &StreamCommand{
-		cmd: exec.Command(command, args...),
+// newStreamCommand creates a new stram command
+func newStreamCommand(command string, args []string) *streamCommand {
+	return &streamCommand{
+		cmd:         exec.Command(command, args...),
+		killTimeout: time.Second * 2,
 	}
 }
 
-// CombinedOutput runs the command and returns the stdout and stderr
-func (s *StreamCommand) CombinedOutput(dir string) ([]byte, error) {
-	s.cmd.Dir = dir
-	return s.cmd.CombinedOutput()
-}
-
-// Output runs the command and returns the stdout
-func (s *StreamCommand) Output(dir string) ([]byte, error) {
-	s.cmd.Dir = dir
-	return s.cmd.Output()
-}
-
-// Run runs a stream command
-func (s *StreamCommand) RunWithEnv(dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader, extraEnvVars map[string]string) error {
+// RunWithEnv runs a stream command
+func (s *streamCommand) RunWithEnv(ctx context.Context, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader, extraEnvVars map[string]string) error {
 	s.cmd.Dir = dir
 	env := os.Environ()
 	for k, v := range extraEnvVars {
@@ -87,28 +36,61 @@ func (s *StreamCommand) RunWithEnv(dir string, stdout io.Writer, stderr io.Write
 	}
 
 	s.cmd.Env = env
-	if stdout == nil {
-		s.cmd.Stdout = defaultStdout
-	} else {
+	if stdout != nil {
 		s.cmd.Stdout = stdout
 	}
 
-	if stderr == nil {
-		s.cmd.Stderr = defaultStderr
-	} else {
+	var defaultStderr *prefixSuffixSaver
+	if stderr != nil {
 		s.cmd.Stderr = stderr
+	} else {
+		defaultStderr = &prefixSuffixSaver{N: 32 << 10}
+		s.cmd.Stderr = defaultStderr
 	}
 
 	if stdin != nil {
 		s.cmd.Stdin = stdin
 	}
 
-	return s.cmd.Run()
+	var err error
+	err = s.cmd.Start()
+	if err == nil {
+		if done := ctx.Done(); done != nil {
+			go func() {
+				<-done
+
+				if s.killTimeout <= 0 || runtime.GOOS == "windows" {
+					_ = s.cmd.Process.Signal(os.Kill)
+					return
+				}
+
+				// TODO: don't temporarily leak this goroutine
+				// if the program stops itself with the
+				// interrupt.
+				go func() {
+					time.Sleep(s.killTimeout)
+					_ = s.cmd.Process.Signal(os.Kill)
+				}()
+				_ = s.cmd.Process.Signal(os.Interrupt)
+			}()
+		}
+
+		err = s.cmd.Wait()
+	}
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && defaultStderr != nil {
+			exitErr.Stderr = defaultStderr.Bytes()
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 // Run runs a stream command
-func (s *StreamCommand) Run(dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
-	return s.RunWithEnv(dir, stdout, stderr, stdin, nil)
+func (s *streamCommand) Run(ctx context.Context, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
+	return s.RunWithEnv(ctx, dir, stdout, stderr, stdin, nil)
 }
 
 func ShouldExecuteOnOS(os string) bool {
@@ -131,21 +113,40 @@ func ShouldExecuteOnOS(os string) bool {
 	return true
 }
 
-func ExecuteCommandWithEnv(cmd string, args []string, dir string, stdout io.Writer, stderr io.Writer, extraEnvVars map[string]string) error {
-	err := NewStreamCommand(cmd, args).RunWithEnv(dir, stdout, stderr, nil, extraEnvVars)
+func CommandWithEnv(ctx context.Context, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader, extraEnvVars map[string]string, cmd string, args ...string) error {
+	err := newStreamCommand(cmd, args).RunWithEnv(ctx, dir, stdout, stderr, stdin, extraEnvVars)
 	if err != nil {
 		if errr, ok := err.(*exec.ExitError); ok {
-			return errors.Errorf("error executing command '%s %s': code: %d, error: %s, %s", cmd, strings.Join(args, " "), errr.ExitCode(), string(errr.Stderr), errr)
+			return errors.Errorf("error executing '%s %s': code: %d, error: %s, %s", cmd, strings.Join(args, " "), errr.ExitCode(), string(errr.Stderr), errr)
 		}
 
-		return errors.Errorf("error executing command: %v", err)
+		return err
 	}
 
 	return nil
 }
 
-func ExecuteCommand(cmd string, args []string, dir string, stdout io.Writer, stderr io.Writer) error {
-	return ExecuteCommandWithEnv(cmd, args, dir, stdout, stderr, nil)
+func Command(ctx context.Context, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader, cmd string, args ...string) error {
+	return CommandWithEnv(ctx, dir, stdout, stderr, stdin, nil, cmd, args...)
+}
+
+func CombinedOutput(ctx context.Context, dir string, cmd string, args ...string) ([]byte, error) {
+	stdout := &bytes.Buffer{}
+	err := CommandWithEnv(ctx, dir, stdout, stdout, nil, nil, cmd, args...)
+	return stdout.Bytes(), err
+}
+
+func CombinedOutputWithEnv(ctx context.Context, dir string, extraEnvVars map[string]string, cmd string, args ...string) ([]byte, error) {
+	stdout := &bytes.Buffer{}
+	err := CommandWithEnv(ctx, dir, stdout, stdout, nil, extraEnvVars, cmd, args...)
+	return stdout.Bytes(), err
+}
+
+func Output(ctx context.Context, dir string, cmd string, args ...string) ([]byte, error) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	err := CommandWithEnv(ctx, dir, stdout, stderr, nil, nil, cmd, args...)
+	return stdout.Bytes(), err
 }
 
 func FormatCommandName(cmd string, args []string) string {

@@ -185,7 +185,7 @@ func replaceImageInPodSpec(ctx *devspacecontext.Context, podSpec *corev1.PodSpec
 		return fmt.Errorf("no containers in pod spec")
 	}
 
-	imageStr, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsString(replaceImage, ctx.Config, ctx.Dependencies)
+	imageStr, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsString(ctx.Context, replaceImage, ctx.Config, ctx.Dependencies)
 	if err != nil {
 		return err
 	}
@@ -212,7 +212,7 @@ func replaceImageInPodSpec(ctx *devspacecontext.Context, podSpec *corev1.PodSpec
 		} else {
 			var imageSelectorPtr *imageselector.ImageSelector
 			if imageSelector != "" {
-				imageSelectorPtr, err = runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(replaceImage, ctx.Config, ctx.Dependencies)
+				imageSelectorPtr, err = runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, replaceImage, ctx.Config, ctx.Dependencies)
 				if err != nil {
 					return err
 				}
@@ -233,7 +233,7 @@ func replaceImageInPodSpec(ctx *devspacecontext.Context, podSpec *corev1.PodSpec
 
 func hashImageSelector(ctx *devspacecontext.Context, replacePod *latest.DevPod) (string, error) {
 	if replacePod.ImageSelector != "" {
-		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(replacePod.ImageSelector, ctx.Config, ctx.Dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, replacePod.ImageSelector, ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return "", err
 		} else if imageSelector == nil {

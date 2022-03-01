@@ -131,14 +131,14 @@ func (e *execHandler) fallbackCommands(ctx context.Context, command string, args
 		}
 		return interp.NewExitStatus(0)
 	case "kubectl":
-		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), logger).EnsureCommand()
+		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), logger).EnsureCommand(ctx)
 		if err != nil {
 			_, _ = fmt.Fprintln(hc.Stderr, err)
 			return interp.NewExitStatus(127)
 		}
 		command = path
 	case "helm":
-		path, err := downloader.NewDownloader(commands.NewHelmV3Command(), logger).EnsureCommand()
+		path, err := downloader.NewDownloader(commands.NewHelmV3Command(), logger).EnsureCommand(ctx)
 		if err != nil {
 			_, _ = fmt.Fprintln(hc.Stderr, err)
 			return interp.NewExitStatus(127)

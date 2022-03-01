@@ -108,7 +108,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory) error {
 	}
 
 	// Get config with adjusted cluster config
-	configInterface, err := configLoader.LoadWithCache(localCache, client, configOptions, cmd.log)
+	configInterface, err := configLoader.LoadWithCache(context.Background(), localCache, client, configOptions, cmd.log)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package kubectl
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/util/constraint"
 	"os/exec"
@@ -17,10 +18,8 @@ import (
 
 // Builder is the manifest builder interface
 type Builder interface {
-	Build(dir, manifest string, executor RunCommand) ([]*unstructured.Unstructured, error)
+	Build(ctx context.Context, dir, manifest string) ([]*unstructured.Unstructured, error)
 }
-
-type RunCommand func(dir string, path string, args []string) ([]byte, error)
 
 type kustomizeBuilder struct {
 	path   string
@@ -36,13 +35,13 @@ func NewKustomizeBuilder(path string, config *latest.DeploymentConfig, log log.L
 	}
 }
 
-func (k *kustomizeBuilder) Build(dir, manifest string, cmd RunCommand) ([]*unstructured.Unstructured, error) {
+func (k *kustomizeBuilder) Build(ctx context.Context, dir, manifest string) ([]*unstructured.Unstructured, error) {
 	args := []string{"build", manifest}
 	args = append(args, k.config.Kubectl.KustomizeArgs...)
 
 	// Execute command
 	k.log.Infof("Render manifests with 'kustomize %s'", strings.Join(args, " "))
-	output, err := cmd(dir, k.path, args)
+	output, err := command.Output(ctx, dir, k.path, args...)
 	if err != nil {
 		exitError, ok := err.(*exec.ExitError)
 		if ok {
@@ -76,9 +75,9 @@ func NewKubectlBuilder(path string, config *latest.DeploymentConfig, context, na
 
 // this function is called in Build function
 // to decide the --dry-run value
-var useOldDryRun = func(dir, path string) (bool, error) {
+var useOldDryRun = func(ctx context.Context, dir, path string) (bool, error) {
 	// compare kubectl version for --dry-run flag value
-	out, err := command.NewStreamCommand(path, []string{"version", "--client", "--short"}).Output(dir)
+	out, err := command.Output(ctx, dir, path, "version", "--client", "--short")
 	if err != nil {
 		return false, err
 	}
@@ -101,7 +100,7 @@ var useOldDryRun = func(dir, path string) (bool, error) {
 	return false, nil
 }
 
-func (k *kubectlBuilder) Build(dir, manifest string, cmd RunCommand) ([]*unstructured.Unstructured, error) {
+func (k *kubectlBuilder) Build(ctx context.Context, dir, manifest string) ([]*unstructured.Unstructured, error) {
 	args := []string{"create"}
 	if k.context != "" && !k.isInCluster {
 		args = append(args, "--context", k.context)
@@ -111,7 +110,7 @@ func (k *kubectlBuilder) Build(dir, manifest string, cmd RunCommand) ([]*unstruc
 	}
 
 	// decides which --dry-run value is to be used
-	uodr, err := useOldDryRun(dir, k.path)
+	uodr, err := useOldDryRun(ctx, dir, k.path)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +131,7 @@ func (k *kubectlBuilder) Build(dir, manifest string, cmd RunCommand) ([]*unstruc
 	args = append(args, k.config.Kubectl.CreateArgs...)
 
 	// Execute command
-	output, err := cmd(dir, k.path, args)
+	output, err := command.Output(ctx, dir, k.path, args...)
 	if err != nil {
 		exitError, ok := err.(*exec.ExitError)
 		if ok {

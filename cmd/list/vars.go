@@ -1,6 +1,7 @@
 package list
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -60,7 +61,7 @@ func (cmd *varsCmd) RunListVars(f factory.Factory, cobraCmd *cobra.Command, args
 	}
 
 	// Fill variables config
-	config, err := configLoader.LoadWithParser(nil, nil, loader.NewWithCommandsParser(), cmd.ToConfigOptions(), logger)
+	config, err := configLoader.LoadWithParser(context.Background(), nil, nil, loader.NewWithCommandsParser(), cmd.ToConfigOptions(), logger)
 	if err != nil {
 		return err
 	}

@@ -131,7 +131,7 @@ func matchesSelector(ctx *devspacecontext.Context, pod *corev1.PodTemplateSpec, 
 func matchesImageSelector(ctx *devspacecontext.Context, pod *corev1.PodTemplateSpec, devPod *latest.DevPod) ([]string, error) {
 	var matchingContainers []string
 	if devPod.ImageSelector != "" {
-		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(devPod.ImageSelector, ctx.Config, ctx.Dependencies)
+		imageSelector, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, devPod.ImageSelector, ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return nil, err
 		}

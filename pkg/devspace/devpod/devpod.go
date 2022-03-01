@@ -162,7 +162,7 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 
 	var imageSelector []string
 	if devPodConfig.ImageSelector != "" {
-		imageSelectorObject, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(devPodConfig.ImageSelector, ctx.Config, ctx.Dependencies)
+		imageSelectorObject, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, devPodConfig.ImageSelector, ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return false, err
 		}

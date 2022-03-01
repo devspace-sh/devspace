@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
@@ -12,7 +13,7 @@ import (
 	"io/ioutil"
 )
 
-func Imports(basePath string, rawData map[string]interface{}, log log.Logger) (map[string]interface{}, error) {
+func Imports(ctx context.Context, basePath string, rawData map[string]interface{}, log log.Logger) (map[string]interface{}, error) {
 	rawImports, err := versions.ParseImports(rawData)
 	if err != nil {
 		return nil, err
@@ -41,7 +42,7 @@ func Imports(basePath string, rawData map[string]interface{}, log log.Logger) (m
 
 	// load imports
 	for idx, i := range imports.Imports {
-		configPath, err := dependencyutil.DownloadDependency(basePath, &i.SourceConfig, log)
+		configPath, err := dependencyutil.DownloadDependency(ctx, basePath, &i.SourceConfig, log)
 		if err != nil {
 			return nil, errors.Wrap(err, "resolve import")
 		}

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
@@ -60,8 +61,8 @@ func (k *kubectlCommand) DownloadURL() string {
 	return url
 }
 
-func (k *kubectlCommand) IsValid(path string) (bool, error) {
-	out, err := command.NewStreamCommand(path, []string{"version", "--client"}).Output(".")
+func (k *kubectlCommand) IsValid(ctx context.Context, path string) (bool, error) {
+	out, err := command.Output(ctx, "", path, "version", "--client")
 	if err != nil {
 		return false, nil
 	}

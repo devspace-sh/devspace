@@ -7,9 +7,9 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
+	"github.com/loft-sh/devspace/pkg/util/command"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -40,14 +40,14 @@ var DefaultCommandVersionRegEx = "(v\\d+\\.\\d+\\.\\d+)"
 type ConfigLoader interface {
 	// Load loads the devspace.yaml, parses it, applies profiles, fills in variables and
 	// finally returns it.
-	Load(client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error)
+	Load(ctx context.Context, client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error)
 
 	// LoadWithCache loads the devspace.yaml, parses it, applies profiles, fills in variables and
 	// finally returns it.
-	LoadWithCache(localCache localcache.Cache, client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error)
+	LoadWithCache(ctx context.Context, localCache localcache.Cache, client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error)
 
 	// LoadWithParser loads the config with the given parser
-	LoadWithParser(localCache localcache.Cache, client kubectl.Client, parser Parser, options *ConfigOptions, log log.Logger) (config.Config, error)
+	LoadWithParser(ctx context.Context, localCache localcache.Cache, client kubectl.Client, parser Parser, options *ConfigOptions, log log.Logger) (config.Config, error)
 
 	// LoadRaw loads the config without parsing it.
 	LoadRaw() (map[string]interface{}, error)
@@ -85,17 +85,17 @@ func (l *configLoader) ConfigPath() string {
 }
 
 // Load restores variables from the cluster (if wanted), loads the config and then saves them to the cluster again
-func (l *configLoader) Load(client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error) {
-	return l.LoadWithCache(nil, client, options, log)
+func (l *configLoader) Load(ctx context.Context, client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error) {
+	return l.LoadWithCache(ctx, nil, client, options, log)
 }
 
 // LoadWithCache loads the config with the given local cache
-func (l *configLoader) LoadWithCache(localCache localcache.Cache, client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error) {
-	return l.LoadWithParser(localCache, client, NewDefaultParser(), options, log)
+func (l *configLoader) LoadWithCache(ctx context.Context, localCache localcache.Cache, client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error) {
+	return l.LoadWithParser(ctx, localCache, client, NewDefaultParser(), options, log)
 }
 
 // LoadWithParser loads the config with the given parser
-func (l *configLoader) LoadWithParser(localCache localcache.Cache, client kubectl.Client, parser Parser, options *ConfigOptions, log log.Logger) (_ config.Config, err error) {
+func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache.Cache, client kubectl.Client, parser Parser, options *ConfigOptions, log log.Logger) (_ config.Config, err error) {
 	if localCache == nil {
 		localCache, err = localcache.NewCacheLoaderFromDevSpacePath(l.absConfigPath).Load()
 		if err != nil {
@@ -149,7 +149,7 @@ func (l *configLoader) LoadWithParser(localCache localcache.Cache, client kubect
 		}
 	}
 
-	parsedConfig, resolver, err := l.parseConfig(data, localCache, remoteCache, client, parser, options, log)
+	parsedConfig, resolver, err := l.parseConfig(ctx, data, localCache, remoteCache, client, parser, options, log)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +241,7 @@ func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) err
 			return errors.Wrapf(err, "parsing require.commands[%d].version", index)
 		}
 
-		out, err := exec.Command(c.Name, versionArgs...).Output()
+		out, err := command.Output(context.TODO(), filepath.Dir(l.absConfigPath), c.Name, versionArgs...)
 		if err != nil {
 			return fmt.Errorf("cannot run command '%s' (%v), however it is required by the config. Please make sure you have correctly installed '%s' with version %s", c.Name, err, c.Name, c.Version)
 		}
@@ -265,6 +265,7 @@ func (l *configLoader) ensureRequires(config *latest.Config, log log.Logger) err
 }
 
 func (l *configLoader) parseConfig(
+	ctx context.Context,
 	rawConfig map[string]interface{},
 	localCache localcache.Cache,
 	remoteCache remotecache.Cache,
@@ -274,7 +275,7 @@ func (l *configLoader) parseConfig(
 	log log.Logger,
 ) (*latest.Config, variable.Resolver, error) {
 	// copy raw config
-	copiedRawConfig, err := Imports(filepath.Dir(l.absConfigPath), rawConfig, log)
+	copiedRawConfig, err := Imports(ctx, filepath.Dir(l.absConfigPath), rawConfig, log)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -304,13 +305,13 @@ func (l *configLoader) parseConfig(
 	}
 
 	// prepare profiles
-	copiedRawConfig, err = prepareProfiles(copiedRawConfig, resolver)
+	copiedRawConfig, err = prepareProfiles(ctx, copiedRawConfig, resolver)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// apply the profiles
-	copiedRawConfig, err = l.applyProfiles(copiedRawConfig, options, resolver, log)
+	copiedRawConfig, err = l.applyProfiles(ctx, copiedRawConfig, options, resolver, log)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -334,7 +335,7 @@ func (l *configLoader) parseConfig(
 	delete(copiedRawConfig, "vars")
 
 	// parse the config
-	latestConfig, err := parser.Parse(rawConfig, copiedRawConfig, resolver, log)
+	latestConfig, err := parser.Parse(ctx, rawConfig, copiedRawConfig, resolver, log)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -444,13 +445,13 @@ func validateProfile(profile interface{}) error {
 	return nil
 }
 
-func prepareProfiles(config map[string]interface{}, resolver variable.Resolver) (map[string]interface{}, error) {
+func prepareProfiles(ctx context.Context, config map[string]interface{}, resolver variable.Resolver) (map[string]interface{}, error) {
 	rawProfiles := config["profiles"]
 	if rawProfiles == nil {
 		return config, nil
 	}
 
-	resolved, err := resolve(rawProfiles, resolver)
+	resolved, err := resolve(ctx, rawProfiles, resolver)
 	if err != nil {
 		return nil, err
 	}
@@ -461,7 +462,7 @@ func prepareProfiles(config map[string]interface{}, resolver variable.Resolver) 
 	}
 
 	for idx, profile := range profiles {
-		resolvedProfile, err := resolve(profile, resolver)
+		resolvedProfile, err := resolve(ctx, profile, resolver)
 		if err != nil {
 			return nil, err
 		}
@@ -473,7 +474,7 @@ func prepareProfiles(config map[string]interface{}, resolver variable.Resolver) 
 
 		// Resolve merge field
 		if profileMap["merge"] != nil {
-			merge, err := resolve(profileMap["merge"], resolver)
+			merge, err := resolve(ctx, profileMap["merge"], resolver)
 			if err != nil {
 				return nil, err
 			}
@@ -482,7 +483,7 @@ func prepareProfiles(config map[string]interface{}, resolver variable.Resolver) 
 
 		// Resolve patches field
 		if profileMap["patches"] != nil {
-			patches, err := resolve(profileMap["patches"], resolver)
+			patches, err := resolve(ctx, profileMap["patches"], resolver)
 			if err != nil {
 				return nil, err
 			}
@@ -491,7 +492,7 @@ func prepareProfiles(config map[string]interface{}, resolver variable.Resolver) 
 
 		// Resolve replace field
 		if profileMap["replace"] != nil {
-			replace, err := resolve(profileMap["replace"], resolver)
+			replace, err := resolve(ctx, profileMap["replace"], resolver)
 			if err != nil {
 				return nil, err
 			}
@@ -500,7 +501,7 @@ func prepareProfiles(config map[string]interface{}, resolver variable.Resolver) 
 
 		// Resolve strategicMerge field
 		if profileMap["strategicMerge"] != nil {
-			strategicMerge, err := resolve(profileMap["strategicMerge"], resolver)
+			strategicMerge, err := resolve(ctx, profileMap["strategicMerge"], resolver)
 			if err != nil {
 				return nil, err
 			}
@@ -521,19 +522,19 @@ func prepareProfiles(config map[string]interface{}, resolver variable.Resolver) 
 	return config, nil
 }
 
-func resolve(data interface{}, resolver variable.Resolver) (interface{}, error) {
+func resolve(ctx context.Context, data interface{}, resolver variable.Resolver) (interface{}, error) {
 	_, ok := data.(string)
 	if !ok {
 		return data, nil
 	}
 
 	// find and fill variables
-	return resolver.FillVariables(data)
+	return resolver.FillVariables(ctx, data)
 }
 
-func (l *configLoader) applyProfiles(data map[string]interface{}, options *ConfigOptions, resolver variable.Resolver, log log.Logger) (map[string]interface{}, error) {
+func (l *configLoader) applyProfiles(ctx context.Context, data map[string]interface{}, options *ConfigOptions, resolver variable.Resolver, log log.Logger) (map[string]interface{}, error) {
 	// Get profile
-	profiles, err := versions.ParseProfile(filepath.Dir(l.absConfigPath), data, options.Profiles, options.ProfileRefresh, options.DisableProfileActivation, resolver, log)
+	profiles, err := versions.ParseProfile(ctx, filepath.Dir(l.absConfigPath), data, options.Profiles, options.ProfileRefresh, options.DisableProfileActivation, resolver, log)
 	if err != nil {
 		return nil, err
 	}

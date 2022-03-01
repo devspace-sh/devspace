@@ -99,7 +99,7 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 
 	// loop over args
 	for i := range b.imageConf.Build.Custom.Args {
-		resolvedArg, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(b.imageConf.Build.Custom.Args[i], ctx.Config, ctx.Dependencies)
+		resolvedArg, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(ctx.Context, b.imageConf.Build.Custom.Args[i], ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return err
 		}
@@ -124,7 +124,7 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 
 	// append the rest
 	for i := range b.imageConf.Build.Custom.AppendArgs {
-		resolvedArg, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(b.imageConf.Build.Custom.AppendArgs[i], ctx.Config, ctx.Dependencies)
+		resolvedArg, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(ctx.Context, b.imageConf.Build.Custom.AppendArgs[i], ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return err
 		}
@@ -147,7 +147,7 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 	}
 
 	// resolve command and args
-	commandPath, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(commandPath, ctx.Config, ctx.Dependencies)
+	commandPath, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(ctx.Context, commandPath, ctx.Config, ctx.Dependencies)
 	if err != nil {
 		return err
 	}
@@ -162,12 +162,12 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 
 	ctx.Log.Infof("Build %s:%s with custom command '%s %s'", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "))
 	if len(args) == 0 {
-		err = shell.ExecuteShellCommand(commandPath, args, ctx.WorkingDir, writer, writer, nil)
+		err = shell.ExecuteShellCommand(ctx.Context, ctx.WorkingDir, writer, writer, nil, nil, commandPath, args...)
 		if err != nil {
 			return errors.Errorf("error building image: %v", err)
 		}
 	} else {
-		err = command.NewStreamCommand(commandPath, args).Run(ctx.WorkingDir, writer, writer, nil)
+		err = command.Command(ctx.Context, ctx.WorkingDir, writer, writer, nil, commandPath, args...)
 		if err != nil {
 			return errors.Errorf("error building image: %v", err)
 		}

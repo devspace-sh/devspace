@@ -1,11 +1,12 @@
 package configure
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
+	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/sirupsen/logrus"
 	"os"
-	"os/exec"
 	"path"
 	"regexp"
 	"strings"
@@ -202,8 +203,7 @@ func (m *manager) AddImage(imageName, image, dockerfile string, dockerfileGenera
 			} else {
 				projectPath := registryUsername + "/project"
 				if regexp.MustCompile(`^(.+\.)?gcr.io$`).Match([]byte(registryHostname)) {
-					project, err := exec.Command("gcloud", "config", "get-value", "project").Output()
-
+					project, err := command.Output(context.TODO(), "", "gcloud", "config", "get-value", "project")
 					if err == nil {
 						projectPath = strings.TrimSpace(string(project))
 					}
@@ -296,7 +296,7 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 		m.log.WriteString(logrus.WarnLevel, "\n")
 
 		// Check if docker is running
-		runErr := exec.Command("docker", "version").Run()
+		_, runErr := command.Output(context.TODO(), "", "docker", "version")
 		if runErr != nil || registryUsername == "" {
 			if registryUsername == "" {
 				m.log.Warn("Skipping image registry authentication.")

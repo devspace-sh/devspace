@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	buildtypes "github.com/loft-sh/devspace/pkg/devspace/build/types"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -52,54 +53,13 @@ func (d *Dependency) DependencyConfig() *latest.DependencyConfig { return d.depe
 
 func (d *Dependency) Children() []types.Dependency { return d.children }
 
-func (d *Dependency) Command(command string, args []string) error {
-	return ExecuteCommand(d.localConfig.Config().Commands, command, args, d.absolutePath, os.Stdout, os.Stderr)
+func (d *Dependency) Command(ctx context.Context, command string, args []string) error {
+	return ExecuteCommand(ctx, d.localConfig.Config().Commands, command, args, d.absolutePath, os.Stdout, os.Stderr)
 }
 
 // Build builds and pushes all defined images
 func (d *Dependency) Build(ctx *devspacecontext.Context, buildOptions *build.Options) error {
 	return d.buildImages(ctx, false, buildOptions)
-}
-
-// Deploy deploys the dependency if necessary
-func (d *Dependency) Deploy(ctx *devspacecontext.Context, skipBuild, skipDeploy, forceDeploy bool, buildOptions *build.Options) error {
-	// Create namespace if necessary
-	err := d.kubeClient.EnsureNamespace(ctx.Context, ctx.KubeClient.Namespace(), ctx.Log)
-	if err != nil {
-		return errors.Errorf("unable to create namespace: %v", err)
-	}
-
-	// Create pull secrets and private registry if necessary
-	err = d.registryClient.EnsurePullSecrets(ctx, ctx.KubeClient.Namespace())
-	if err != nil {
-		ctx.Log.Warn(err)
-	}
-
-	// TODO: start pipeline here
-
-	// Check if image build is enabled
-	err = d.buildImages(ctx, skipBuild, buildOptions)
-	if err != nil {
-		return err
-	}
-
-	// Deploy all defined deployments
-	if !skipDeploy {
-		err = deploy.NewController().Deploy(ctx, nil, &deploy.Options{
-			ForceDeploy: forceDeploy,
-		})
-		if err != nil {
-			return err
-		}
-
-		// Save Config
-		err = ctx.Config.RemoteCache().Save(ctx.Context, ctx.KubeClient)
-		if err != nil {
-			return errors.Errorf("Error saving generated config: %v", err)
-		}
-	}
-
-	return nil
 }
 
 // Render renders the dependency

@@ -2,6 +2,7 @@ package versions
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/v1beta11"
 	"io/ioutil"
@@ -52,7 +53,7 @@ var versionLoader = map[string]*loader{
 }
 
 // ParseProfile loads the base config & a certain profile
-func ParseProfile(basePath string, data map[string]interface{}, profiles []string, update bool, disableProfileActivation bool, resolver variable.Resolver, log log.Logger) ([]map[string]interface{}, error) {
+func ParseProfile(ctx context.Context, basePath string, data map[string]interface{}, profiles []string, update bool, disableProfileActivation bool, resolver variable.Resolver, log log.Logger) ([]map[string]interface{}, error) {
 	parsedProfiles := []map[string]interface{}{}
 
 	// auto activated root level profiles
@@ -71,7 +72,7 @@ func ParseProfile(basePath string, data map[string]interface{}, profiles []strin
 
 	// check if there are profile parents
 	for i := len(profiles) - 1; i >= 0; i-- {
-		err := getProfiles(basePath, data, profiles[i], &parsedProfiles, 1, update, log)
+		err := getProfiles(ctx, basePath, data, profiles[i], &parsedProfiles, 1, update, log)
 		if err != nil {
 			return nil, err
 		}
@@ -290,7 +291,7 @@ func getVariables(data map[string]interface{}) (map[string]interface{}, error) {
 }
 
 // getProfiles loads a certain profile
-func getProfiles(basePath string, data map[string]interface{}, profile string, profileChain *[]map[string]interface{}, depth int, update bool, log log.Logger) error {
+func getProfiles(ctx context.Context, basePath string, data map[string]interface{}, profile string, profileChain *[]map[string]interface{}, depth int, update bool, log log.Logger) error {
 	if depth > 50 {
 		return fmt.Errorf("cannot load config with profile %s: max config loading depth reached. Seems like you have a profile cycle somewhere", profile)
 	}
@@ -339,7 +340,7 @@ func getProfiles(basePath string, data map[string]interface{}, profile string, p
 
 			// single parent
 			if profileConfig.Parent != "" {
-				return getProfiles(basePath, data, profileConfig.Parent, profileChain, depth+1, update, log)
+				return getProfiles(ctx, basePath, data, profileConfig.Parent, profileChain, depth+1, update, log)
 			}
 
 			// multiple parents
@@ -350,7 +351,7 @@ func getProfiles(basePath string, data map[string]interface{}, profile string, p
 					}
 
 					if profileConfig.Parents[i].Source != nil {
-						configPath, err := dependencyutil.DownloadDependency(basePath, profileConfig.Parents[i].Source, log)
+						configPath, err := dependencyutil.DownloadDependency(ctx, basePath, profileConfig.Parents[i].Source, log)
 						if err != nil {
 							return err
 						}
@@ -366,12 +367,12 @@ func getProfiles(basePath string, data map[string]interface{}, profile string, p
 							return err
 						}
 
-						err = getProfiles(filepath.Dir(configPath), rawMap, profileConfig.Parents[i].Profile, profileChain, depth+1, update, log)
+						err = getProfiles(ctx, filepath.Dir(configPath), rawMap, profileConfig.Parents[i].Profile, profileChain, depth+1, update, log)
 						if err != nil {
 							return errors.Wrapf(err, "load parent profile %s", profileConfig.Parents[i].Profile)
 						}
 					} else {
-						err := getProfiles(basePath, data, profileConfig.Parents[i].Profile, profileChain, depth+1, update, log)
+						err := getProfiles(ctx, basePath, data, profileConfig.Parents[i].Profile, profileChain, depth+1, update, log)
 						if err != nil {
 							return err
 						}
@@ -486,7 +487,7 @@ func sanitizeMatchExpression(expression string) string {
 }
 
 func resolveVariableValue(name string, resolver variable.Resolver) (string, error) {
-	val, err := resolver.FillVariables("${" + name + "}")
+	val, err := resolver.FillVariables(context.TODO(), "${"+name+"}")
 	if err != nil {
 		return "", err
 	}

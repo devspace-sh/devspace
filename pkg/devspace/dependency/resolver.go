@@ -91,7 +91,7 @@ func (r *resolver) resolveRecursive(ctx *devspacecontext.Context, basePath, pare
 			continue
 		}
 
-		dependencyConfigPath, err := util.DownloadDependency(basePath, dependencyConfig.Source, ctx.Log)
+		dependencyConfigPath, err := util.DownloadDependency(ctx.Context, basePath, dependencyConfig.Source, ctx.Log)
 		if err != nil {
 			return err
 		}
@@ -202,7 +202,7 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyCon
 			return err
 		}
 
-		dConfigWrapper, err = configLoader.LoadWithParser(nil, client, loader.NewWithCommandsParser(), cloned, ctx.Log)
+		dConfigWrapper, err = configLoader.LoadWithParser(ctx.Context, nil, client, loader.NewWithCommandsParser(), cloned, ctx.Log)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", dependencyName))
 		}

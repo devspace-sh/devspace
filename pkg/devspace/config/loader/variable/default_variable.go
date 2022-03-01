@@ -1,6 +1,7 @@
 package variable
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	"os"
@@ -29,9 +30,9 @@ type defaultVariable struct {
 	log              log.Logger
 }
 
-func (d *defaultVariable) Load(definition *latest.Variable) (interface{}, error) {
+func (d *defaultVariable) Load(ctx context.Context, definition *latest.Variable) (interface{}, error) {
 	if definition.Command != "" || len(definition.Commands) > 0 {
-		return NewCommandVariable(d.name, d.workingDirectory).Load(definition)
+		return NewCommandVariable(d.name, d.workingDirectory).Load(ctx, definition)
 	}
 
 	// Check environment

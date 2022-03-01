@@ -162,7 +162,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 
 	// Load config
 	if configExists {
-		config, err = configLoader.LoadWithCache(localCache, client, configOptions, cmd.log)
+		config, err = configLoader.LoadWithCache(context.Background(), localCache, client, configOptions, cmd.log)
 		if err != nil {
 			return err
 		}

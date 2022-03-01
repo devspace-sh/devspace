@@ -30,7 +30,7 @@ type remoteCommandHook struct {
 }
 
 func (r *remoteCommandHook) ExecuteRemotely(ctx *devspacecontext.Context, hook *latest.HookConfig, podContainer *selector.SelectedPodContainer) error {
-	hookCommand, hookArgs, err := ResolveCommand(hook.Command, hook.Args, ctx.WorkingDir, ctx.Config, ctx.Dependencies)
+	hookCommand, hookArgs, err := ResolveCommand(ctx.Context, hook.Command, hook.Args, ctx.WorkingDir, ctx.Config, ctx.Dependencies)
 	if err != nil {
 		return err
 	}

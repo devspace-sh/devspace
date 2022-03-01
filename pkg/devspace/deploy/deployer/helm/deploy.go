@@ -227,7 +227,7 @@ func (d *DeployConfig) getDeploymentValues(ctx *devspacecontext.Context) (bool, 
 		if d.DeploymentConfig.Helm.ReplaceImageTags {
 			enableLegacy = true
 		}
-		redeploy, _, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, enableLegacy).FillRuntimeVariablesWithRebuild(d.DeploymentConfig.Helm.Values, ctx.Config, ctx.Dependencies)
+		redeploy, _, err := runtimevar.NewRuntimeResolver(ctx.WorkingDir, enableLegacy).FillRuntimeVariablesWithRebuild(ctx.Context, d.DeploymentConfig.Helm.Values, ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return false, nil, err
 		}

@@ -144,7 +144,7 @@ func getImageSelector(ctx *devspacecontext.Context, configLoader loader.ConfigLo
 		if !configLoader.Exists() {
 			config = config2.Ensure(nil)
 		} else {
-			config, err = configLoader.Load(ctx.KubeClient, configOptions, ctx.Log)
+			config, err = configLoader.Load(ctx.Context, ctx.KubeClient, configOptions, ctx.Log)
 			if err != nil {
 				return nil, err
 			}
@@ -158,7 +158,7 @@ func getImageSelector(ctx *devspacecontext.Context, configLoader loader.ConfigLo
 			}
 		}
 
-		resolved, err := runtimevar.NewRuntimeResolver(".", true).FillRuntimeVariablesAsImageSelector(imageSelector, config, dependencies)
+		resolved, err := runtimevar.NewRuntimeResolver(".", true).FillRuntimeVariablesAsImageSelector(ctx.Context, imageSelector, config, dependencies)
 		if err != nil {
 			return nil, err
 		}

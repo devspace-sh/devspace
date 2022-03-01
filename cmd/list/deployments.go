@@ -86,7 +86,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 	}
 
 	// Get config with adjusted cluster config
-	configInterface, err := configLoader.LoadWithCache(localCache, client, configOptions, logger)
+	configInterface, err := configLoader.LoadWithCache(context.Background(), localCache, client, configOptions, logger)
 	if err != nil {
 		return err
 	}

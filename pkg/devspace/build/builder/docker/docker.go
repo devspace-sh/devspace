@@ -150,7 +150,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 		}
 	}
 	if useDockerCli || useBuildKit || len(cliArgs) > 0 {
-		err = b.client.ImageBuildCLI(useBuildKit, body, writer, cliArgs, *buildOptions, ctx.Log)
+		err = b.client.ImageBuildCLI(ctx.Context, ctx.WorkingDir, useBuildKit, body, writer, cliArgs, *buildOptions, ctx.Log)
 		if err != nil {
 			return err
 		}

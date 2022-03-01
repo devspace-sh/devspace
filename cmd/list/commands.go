@@ -1,6 +1,7 @@
 package list
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -54,7 +55,7 @@ func (cmd *commandsCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 	}
 
 	// Parse commands
-	commandsInterface, err := configLoader.LoadWithParser(nil, nil, loader.NewCommandsParser(), nil, logger)
+	commandsInterface, err := configLoader.LoadWithParser(context.Background(), nil, nil, loader.NewCommandsParser(), nil, logger)
 	if err != nil {
 		return err
 	}

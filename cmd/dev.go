@@ -190,7 +190,7 @@ func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 	}
 
 	// Load config
-	configInterface, err := cmd.configLoader.LoadWithCache(localCache, client, configOptions, cmd.log)
+	configInterface, err := cmd.configLoader.LoadWithCache(context.Background(), localCache, client, configOptions, cmd.log)
 	if err != nil {
 		return err
 	}

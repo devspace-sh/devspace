@@ -1,6 +1,7 @@
 package variable
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
@@ -52,23 +53,23 @@ func (r *resolver) UpdateVars(vars []*latest.Variable) {
 	r.vars = vars
 }
 
-func (r *resolver) fillVariables(haystack interface{}, exclude []*regexp.Regexp) (interface{}, error) {
+func (r *resolver) fillVariables(ctx context.Context, haystack interface{}, exclude []*regexp.Regexp) (interface{}, error) {
 	switch t := haystack.(type) {
 	case string:
-		return r.replaceString(t)
+		return r.replaceString(ctx, t)
 	case map[string]interface{}:
 		err := walk.Walk(t, varMatchFn, func(path, value string) (interface{}, error) {
 			if expression.ExcludedPath(path, exclude) {
 				return value, nil
 			}
 
-			return r.replaceString(value)
+			return r.replaceString(ctx, value)
 		})
 		return t, err
 	case []interface{}:
 		for i := range t {
 			var err error
-			t[i], err = r.fillVariables(t[i], exclude)
+			t[i], err = r.fillVariables(ctx, t[i], exclude)
 			if err != nil {
 				return nil, err
 			}
@@ -84,9 +85,9 @@ func (r *resolver) ResolvedVariables() map[string]interface{} {
 	return r.memoryCache
 }
 
-func (r *resolver) replaceString(str string) (interface{}, error) {
+func (r *resolver) replaceString(ctx context.Context, str string) (interface{}, error) {
 	return varspkg.ParseString(str, func(v string) (interface{}, error) {
-		val, err := r.resolve(v, nil)
+		val, err := r.resolve(ctx, v, nil)
 		if err != nil {
 			return "", err
 		}
@@ -137,7 +138,7 @@ func (r *resolver) FindVariables(haystack interface{}) (map[string]bool, error) 
 	return varsUsed, nil
 }
 
-func (r *resolver) FillVariablesExclude(haystack interface{}, excludedPaths []string) (interface{}, error) {
+func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{}, excludedPaths []string) (interface{}, error) {
 	paths := []*regexp.Regexp{}
 	for _, path := range excludedPaths {
 		path = strings.Replace(path, "*", "[^/]+", -1)
@@ -152,26 +153,26 @@ func (r *resolver) FillVariablesExclude(haystack interface{}, excludedPaths []st
 	}
 
 	// fill variables
-	preparedConfigInterface, err := r.findAndFillVariables(haystack, paths)
+	preparedConfigInterface, err := r.findAndFillVariables(ctx, haystack, paths)
 	if err != nil {
 		return nil, err
 	}
 
 	// resolve expressions
-	preparedConfigInterface, err = expression.ResolveAllExpressions(preparedConfigInterface, filepath.Dir(r.options.ConfigPath), paths)
+	preparedConfigInterface, err = expression.ResolveAllExpressions(ctx, preparedConfigInterface, filepath.Dir(r.options.ConfigPath), paths)
 	if err != nil {
 		return nil, err
 	}
 
 	// fill in variables again
-	return r.findAndFillVariables(preparedConfigInterface, paths)
+	return r.findAndFillVariables(ctx, preparedConfigInterface, paths)
 }
 
-func (r *resolver) FillVariables(haystack interface{}) (interface{}, error) {
-	return r.FillVariablesExclude(haystack, nil)
+func (r *resolver) FillVariables(ctx context.Context, haystack interface{}) (interface{}, error) {
+	return r.FillVariablesExclude(ctx, haystack, nil)
 }
 
-func (r *resolver) findAndFillVariables(haystack interface{}, exclude []*regexp.Regexp) (interface{}, error) {
+func (r *resolver) findAndFillVariables(ctx context.Context, haystack interface{}, exclude []*regexp.Regexp) (interface{}, error) {
 	varsUsed, err := r.FindVariables(haystack)
 	if err != nil {
 		return nil, err
@@ -183,7 +184,7 @@ func (r *resolver) findAndFillVariables(haystack interface{}, exclude []*regexp.
 			name := strings.TrimSpace(v.Name)
 
 			// resolve the variable with definition
-			_, err := r.resolve(name, v)
+			_, err := r.resolve(ctx, name, v)
 			if err != nil {
 				return nil, err
 			}
@@ -193,10 +194,10 @@ func (r *resolver) findAndFillVariables(haystack interface{}, exclude []*regexp.
 	// try resolving predefined variables
 	for _, name := range AlwaysResolvePredefinedVars {
 		// ignore errors here as those variables are probably not used anyways
-		_, _ = r.resolve(name, nil)
+		_, _ = r.resolve(ctx, name, nil)
 	}
 
-	return r.fillVariables(haystack, exclude)
+	return r.fillVariables(ctx, haystack, exclude)
 }
 
 func (r *resolver) ConvertFlags(flags []string) (map[string]interface{}, error) {
@@ -216,7 +217,7 @@ func (r *resolver) ConvertFlags(flags []string) (map[string]interface{}, error) 
 	return retVariables, nil
 }
 
-func (r *resolver) resolve(name string, definition *latest.Variable) (interface{}, error) {
+func (r *resolver) resolve(ctx context.Context, name string, definition *latest.Variable) (interface{}, error) {
 	name = strings.TrimSpace(name)
 
 	// check if in vars already
@@ -226,7 +227,7 @@ func (r *resolver) resolve(name string, definition *latest.Variable) (interface{
 	}
 
 	// fill other variables in the variable definition
-	err := r.fillVariableDefinition(definition)
+	err := r.fillVariableDefinition(ctx, definition)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +238,7 @@ func (r *resolver) resolve(name string, definition *latest.Variable) (interface{
 	}
 
 	// fill the variable if not found
-	value, err := r.fillVariable(name, definition)
+	value, err := r.fillVariable(ctx, name, definition)
 	if err != nil {
 		return nil, err
 	}
@@ -303,7 +304,7 @@ func (r *resolver) findVariablesInDefinition(definition *latest.Variable) map[st
 	return varsUsed
 }
 
-func (r *resolver) fillVariableDefinition(definition *latest.Variable) error {
+func (r *resolver) fillVariableDefinition(ctx context.Context, definition *latest.Variable) error {
 	var err error
 	if definition == nil {
 		return nil
@@ -322,7 +323,7 @@ func (r *resolver) fillVariableDefinition(definition *latest.Variable) error {
 	// if the definition has a default value, we try to resolve possible variables
 	// in that definition from the cache (or predefined) before continuing
 	if definition.Default != nil {
-		resolvedDefaultValue, err := r.resolveDefaultValue(definition)
+		resolvedDefaultValue, err := r.resolveDefaultValue(ctx, definition)
 		if err != nil {
 			return err
 		}
@@ -331,14 +332,14 @@ func (r *resolver) fillVariableDefinition(definition *latest.Variable) error {
 	}
 
 	// resolve command
-	definition.Command, err = r.resolveDefinitionStringToString(definition.Command, definition)
+	definition.Command, err = r.resolveDefinitionStringToString(ctx, definition.Command, definition)
 	if err != nil {
 		return err
 	}
 
 	// resolve args
 	for i := range definition.Args {
-		definition.Args[i], err = r.resolveDefinitionStringToString(definition.Args[i], definition)
+		definition.Args[i], err = r.resolveDefinitionStringToString(ctx, definition.Args[i], definition)
 		if err != nil {
 			return err
 		}
@@ -346,12 +347,12 @@ func (r *resolver) fillVariableDefinition(definition *latest.Variable) error {
 
 	// resolve commands
 	for ci := range definition.Commands {
-		definition.Commands[ci].Command, err = r.resolveDefinitionStringToString(definition.Commands[ci].Command, definition)
+		definition.Commands[ci].Command, err = r.resolveDefinitionStringToString(ctx, definition.Commands[ci].Command, definition)
 		if err != nil {
 			return err
 		}
 		for i := range definition.Commands[ci].Args {
-			definition.Commands[ci].Args[i], err = r.resolveDefinitionStringToString(definition.Commands[ci].Args[i], definition)
+			definition.Commands[ci].Args[i], err = r.resolveDefinitionStringToString(ctx, definition.Commands[ci].Args[i], definition)
 			if err != nil {
 				return err
 			}
@@ -361,8 +362,8 @@ func (r *resolver) fillVariableDefinition(definition *latest.Variable) error {
 	return nil
 }
 
-func (r *resolver) resolveDefinitionStringToString(str string, definition *latest.Variable) (string, error) {
-	val, err := r.resolveDefinitionString(str, definition)
+func (r *resolver) resolveDefinitionStringToString(ctx context.Context, str string, definition *latest.Variable) (string, error) {
+	val, err := r.resolveDefinitionString(ctx, str, definition)
 	if err != nil {
 		return "", err
 	}
@@ -370,7 +371,7 @@ func (r *resolver) resolveDefinitionStringToString(str string, definition *lates
 	return fmt.Sprintf("%v", val), nil
 }
 
-func (r *resolver) resolveDefinitionString(str string, definition *latest.Variable) (interface{}, error) {
+func (r *resolver) resolveDefinitionString(ctx context.Context, str string, definition *latest.Variable) (interface{}, error) {
 	return varspkg.ParseString(str, func(varName string) (interface{}, error) {
 		v, ok := r.memoryCache[varName]
 		if !ok {
@@ -380,28 +381,28 @@ func (r *resolver) resolveDefinitionString(str string, definition *latest.Variab
 				return nil, errors.Errorf("variable '%s' was not resolved yet, however is used in the definition of variable '%s' as '%s'. Please make sure you define '%s' before '%s' in the vars array", varName, definition.Name, str, varName, definition.Name)
 			}
 
-			return variable.Load(definition)
+			return variable.Load(ctx, definition)
 		}
 
 		return v, nil
 	})
 }
 
-func (r *resolver) resolveDefaultValue(definition *latest.Variable) (interface{}, error) {
+func (r *resolver) resolveDefaultValue(ctx context.Context, definition *latest.Variable) (interface{}, error) {
 	// check if default value is a string
 	defaultString, ok := definition.Default.(string)
 	if !ok {
 		return definition.Default, nil
 	}
 
-	return r.resolveDefinitionString(defaultString, definition)
+	return r.resolveDefinitionString(ctx, defaultString, definition)
 }
 
-func (r *resolver) fillVariable(name string, definition *latest.Variable) (interface{}, error) {
+func (r *resolver) fillVariable(ctx context.Context, name string, definition *latest.Variable) (interface{}, error) {
 	// is predefined variable?
 	variable, err := NewPredefinedVariable(name, r.options)
 	if err == nil {
-		return variable.Load(definition)
+		return variable.Load(ctx, definition)
 	}
 
 	// is runtime variable
@@ -411,7 +412,7 @@ func (r *resolver) fillVariable(name string, definition *latest.Variable) (inter
 
 	// fill variable without definition
 	if definition == nil {
-		return NewUndefinedVariable(name, r.localCache, r.log).Load(definition)
+		return NewUndefinedVariable(name, r.localCache, r.log).Load(ctx, definition)
 	}
 
 	// trim space from variable definition
@@ -420,13 +421,13 @@ func (r *resolver) fillVariable(name string, definition *latest.Variable) (inter
 	// fill variable by source
 	switch definition.Source {
 	case latest.VariableSourceEnv:
-		return NewEnvVariable(name).Load(definition)
+		return NewEnvVariable(name).Load(ctx, definition)
 	case latest.VariableSourceDefault, latest.VariableSourceInput, latest.VariableSourceAll:
-		return NewDefaultVariable(name, filepath.Dir(r.options.ConfigPath), r.localCache, r.remoteCache, r.log).Load(definition)
+		return NewDefaultVariable(name, filepath.Dir(r.options.ConfigPath), r.localCache, r.remoteCache, r.log).Load(ctx, definition)
 	case latest.VariableSourceNone:
-		return NewNoneVariable(name).Load(definition)
+		return NewNoneVariable(name).Load(ctx, definition)
 	case latest.VariableSourceCommand:
-		return NewCommandVariable(name, filepath.Dir(r.options.ConfigPath)).Load(definition)
+		return NewCommandVariable(name, filepath.Dir(r.options.ConfigPath)).Load(ctx, definition)
 	default:
 		return nil, errors.Errorf("unrecognized variable source '%s', please choose one of 'all', 'input', 'env' or 'none'", name)
 	}

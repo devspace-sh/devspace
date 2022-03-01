@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
@@ -29,8 +30,8 @@ type runtimeResolver struct {
 	workingDirectory    string
 }
 
-func (r *runtimeResolver) FillRuntimeVariablesAsString(haystack interface{}, config config.Config, dependencies []types.Dependency) (string, error) {
-	out, err := r.FillRuntimeVariables(haystack, config, dependencies)
+func (r *runtimeResolver) FillRuntimeVariablesAsString(ctx context.Context, haystack interface{}, config config.Config, dependencies []types.Dependency) (string, error) {
+	out, err := r.FillRuntimeVariables(ctx, haystack, config, dependencies)
 	if err != nil {
 		return "", err
 	}
@@ -38,8 +39,8 @@ func (r *runtimeResolver) FillRuntimeVariablesAsString(haystack interface{}, con
 	return fmt.Sprintf("%v", out), nil
 }
 
-func (r *runtimeResolver) FillRuntimeVariablesAsImageSelector(haystack interface{}, config config.Config, dependencies []types.Dependency) (*imageselector.ImageSelector, error) {
-	out, err := r.FillRuntimeVariablesAsString(haystack, config, dependencies)
+func (r *runtimeResolver) FillRuntimeVariablesAsImageSelector(ctx context.Context, haystack interface{}, config config.Config, dependencies []types.Dependency) (*imageselector.ImageSelector, error) {
+	out, err := r.FillRuntimeVariablesAsString(ctx, haystack, config, dependencies)
 	if err != nil {
 		return nil, err
 	}
@@ -49,14 +50,14 @@ func (r *runtimeResolver) FillRuntimeVariablesAsImageSelector(haystack interface
 	}, nil
 }
 
-func (r *runtimeResolver) FillRuntimeVariablesWithRebuild(haystack interface{}, config config.Config, dependencies []types.Dependency) (bool, interface{}, error) {
+func (r *runtimeResolver) FillRuntimeVariablesWithRebuild(ctx context.Context, haystack interface{}, config config.Config, dependencies []types.Dependency) (bool, interface{}, error) {
 	shouldRebuild, haystack, err := r.fillVariables(haystack, config, dependencies, r.enableLegacyHelpers)
 	if err != nil {
 		return false, nil, err
 	}
 
 	// resolve expressions
-	haystack, err = expression.ResolveAllExpressions(haystack, r.workingDirectory, nil)
+	haystack, err = expression.ResolveAllExpressions(ctx, haystack, r.workingDirectory, nil)
 	if err != nil {
 		return false, nil, err
 	}
@@ -70,8 +71,8 @@ func (r *runtimeResolver) FillRuntimeVariablesWithRebuild(haystack interface{}, 
 	return shouldRebuild || rebuild, haystack, nil
 }
 
-func (r *runtimeResolver) FillRuntimeVariables(haystack interface{}, config config.Config, dependencies []types.Dependency) (interface{}, error) {
-	_, out, err := r.FillRuntimeVariablesWithRebuild(haystack, config, dependencies)
+func (r *runtimeResolver) FillRuntimeVariables(ctx context.Context, haystack interface{}, config config.Config, dependencies []types.Dependency) (interface{}, error) {
+	_, out, err := r.FillRuntimeVariablesWithRebuild(ctx, haystack, config, dependencies)
 	return out, err
 }
 

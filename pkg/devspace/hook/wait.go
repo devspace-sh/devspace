@@ -42,7 +42,7 @@ func (r *waitHook) Execute(ctx *devspacecontext.Context, hook *latest.HookConfig
 		}
 
 		if hook.Container.ImageSelector != "" {
-			imageSelector, err := runtime.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(hook.Container.ImageSelector, ctx.Config, ctx.Dependencies)
+			imageSelector, err := runtime.NewRuntimeResolver(ctx.WorkingDir, true).FillRuntimeVariablesAsImageSelector(ctx.Context, hook.Container.ImageSelector, ctx.Config, ctx.Dependencies)
 			if err != nil {
 				return err
 			}

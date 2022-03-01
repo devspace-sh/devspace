@@ -84,7 +84,7 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 	}
 
 	// Get config with adjusted cluster config
-	conf, err := configLoader.LoadWithCache(localCache, client, configOptions, cmd.log)
+	conf, err := configLoader.LoadWithCache(context.Background(), localCache, client, configOptions, cmd.log)
 	if err != nil {
 		return err
 	}
