@@ -240,6 +240,8 @@ func (d *devPod) startTerminal(ctx *devspacecontext.Context, devContainer *lates
 			return errors.Wrap(err, "error in terminal forwarding")
 		}
 
+		// kill ourselves here
+		parent.Kill(nil)
 		return nil
 	})
 

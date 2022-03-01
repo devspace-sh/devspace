@@ -188,17 +188,15 @@ func Parse(data map[string]interface{}, log log.Logger) (*latest.Config, error) 
 	latestConfigConverted.Version = latest.Version
 
 	// Filter out empty images, deployments etc.
-	filterOutEmpty(latestConfigConverted)
-
-	// Set name on dev pods to key
-	for name, devPod := range latestConfigConverted.Dev {
-		devPod.Name = name
-	}
+	adjustConfig(latestConfigConverted)
 
 	return latestConfigConverted, nil
 }
 
-func filterOutEmpty(config *latest.Config) {
+func adjustConfig(config *latest.Config) {
+	for name, devPod := range config.Dev {
+		devPod.Name = name
+	}
 	if config.Images != nil {
 		newObjs := map[string]*latest.Image{}
 		for k, v := range config.Images {
@@ -209,10 +207,11 @@ func filterOutEmpty(config *latest.Config) {
 		config.Images = newObjs
 	}
 	if config.Deployments != nil {
-		newObjs := []*latest.DeploymentConfig{}
-		for _, v := range config.Deployments {
+		newObjs := map[string]*latest.DeploymentConfig{}
+		for k, v := range config.Deployments {
 			if v != nil {
-				newObjs = append(newObjs, v)
+				v.Name = k
+				newObjs[k] = v
 			}
 		}
 		config.Deployments = newObjs

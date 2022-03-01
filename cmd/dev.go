@@ -227,9 +227,9 @@ func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 }
 
 func (cmd *DevCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
-	err := runPipeline(ctx, f, configOptions, cmd.SkipDependency, cmd.Dependency, "dev", `run_dependencies --all
-build --all
-deploy --all
+	err := runPipeline(ctx, f, configOptions, cmd.SkipDependency, cmd.Dependency, "dev", `run_dependencies_pipeline --all
+build_images --all
+create_deployments --all
 start_dev --all`, cmd.Wait, cmd.Timeout, 0)
 	if err != nil {
 		return err

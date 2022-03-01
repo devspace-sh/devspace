@@ -93,9 +93,8 @@ type DeploymentCache struct {
 }
 
 type HelmCache struct {
-	Release          string   `yaml:"release,omitempty"`
-	ReleaseNamespace string   `yaml:"releaseNamespace,omitempty"`
-	DeleteArgs       []string `yaml:"deleteArgs,omitempty"`
+	Release          string `yaml:"release,omitempty"`
+	ReleaseNamespace string `yaml:"releaseNamespace,omitempty"`
 
 	OverridesHash   string `yaml:"overridesHash,omitempty"`
 	ChartHash       string `yaml:"chartHash,omitempty"`

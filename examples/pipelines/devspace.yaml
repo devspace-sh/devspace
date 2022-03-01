@@ -2,24 +2,36 @@ version: v2beta1
 name: pipelines
 
 deployments:
-  - name: quickstart
-    helm:
-      componentChart: true
-      values:
-        containers:
-          - image: ${runtime.images.test}
+  deploy-1: ...
+  deploy-2: ...
 
 dev:
-  quickstart:
-    imageSelector: ${runtime.images.test}
+  my-service:
+    imageSelector: ${IMAGE}
+    replaceImage: my-image:dev
+    sync:
+      - ...
+      - ...
+    ports:
+      - ...
+      - ...
     terminal: {}
 
 pipelines:
   dev:
     steps:
-      - run: |-
-          build test --set image=testme \
-            --set build.docker.skipPush=true
+      - name: Run rest of pipeline
+        run: |-
+          run_pipelines pipeline1
+          run_dependency_pipelines dependency1
           
-          deploy --all
-          start_dev --all
+          build_images test-1 test-2 --set image=testme \
+                                     --skip-push
+          
+          # Deploy Chart
+          create_deployments deploy-1 --set helm.chart.name=./chart # Production image my-image:latest
+          # -> Creating pod deploy-1
+          
+          # Development my-image:dev 
+          # It starts sync and then continues pipeline
+          start_dev my-service

@@ -99,7 +99,6 @@ func StartTerminal(
 	defer func() {
 		if err != nil {
 			if ctx.IsDone() {
-				err = nil
 				return
 			}
 

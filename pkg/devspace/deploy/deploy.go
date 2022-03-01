@@ -1,7 +1,6 @@
 package deploy
 
 import (
-	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 	"strings"
@@ -22,7 +21,8 @@ import (
 
 // Options describe how the deployments should be deployed
 type Options struct {
-	ForceDeploy bool
+	ForceDeploy bool `long:"force-deploy" description:"Forces redeployment"`
+	Sequential  bool `long:"sequential" description:"Sequentially deploys the deployments"`
 }
 
 // Controller is the main deploying interface
@@ -157,7 +157,7 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 		)
 
 		for _, deployConfig := range config.Deployments {
-			if deployConfig.Concurrent {
+			if !options.Sequential {
 				concurrentDeployments = append(concurrentDeployments, deployConfig)
 			} else {
 				sequentialDeployments = append(sequentialDeployments, deployConfig)
@@ -193,7 +193,7 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 		}
 
 		if len(concurrentDeployments) > 0 {
-			ctx.Log.Info(fmt.Sprintf("Deploying %d deployments concurrently...", len(concurrentDeployments)))
+			ctx.Log.Debugf("Deploying %d deployments concurrently...", len(concurrentDeployments))
 
 			// Wait for concurrent deployments to complete before starting sequential deployments.
 			for i := 0; i < len(concurrentDeployments); i++ {
@@ -201,7 +201,7 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 				case err := <-errChan:
 					return err
 				case <-deployedChan:
-					ctx.Log.Info(fmt.Sprintf("Deploying %d deployments concurrently", len(concurrentDeployments)-i-1))
+					ctx.Log.Debugf("Deploying %d deployments concurrently", len(concurrentDeployments)-i-1)
 				}
 			}
 		}

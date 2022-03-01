@@ -48,7 +48,7 @@ func Build(ctx *devspacecontext.Context, args []string) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("build: either specify 'build --all' or 'build image1 image2'")
+		return fmt.Errorf("build_images: either specify 'build_images --all' or 'build_images image1 image2'")
 	}
 
 	return build.NewController().Build(ctx, args, &options.Options)

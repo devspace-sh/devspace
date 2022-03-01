@@ -121,7 +121,6 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 		deployCache.DeploymentConfigHash = deploymentConfigHash
 		helmCache.Release = releaseName
 		helmCache.ReleaseNamespace = d.DeploymentConfig.Namespace
-		helmCache.DeleteArgs = d.DeploymentConfig.Helm.DeleteArgs
 		helmCache.ChartHash = hash
 		helmCache.ValuesHash = deployValuesHash
 		helmCache.OverridesHash = helmOverridesHash

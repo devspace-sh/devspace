@@ -62,7 +62,7 @@ type Config struct {
 	Images map[string]*Image `yaml:"images,omitempty" json:"images,omitempty"`
 
 	// Deployments is an ordered list of deployments to deploy via helm, kustomize or kubectl.
-	Deployments []*DeploymentConfig `yaml:"deployments,omitempty" json:"deployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Deployments map[string]*DeploymentConfig `yaml:"deployments,omitempty" json:"deployments,omitempty"`
 
 	// Dev holds development configuration for the 'devspace dev' command.
 	Dev map[string]*DevPod `yaml:"dev,omitempty" json:"dev,omitempty"`
@@ -509,12 +509,11 @@ type BuildOptions struct {
 
 // DeploymentConfig defines the configuration how the devspace should be deployed
 type DeploymentConfig struct {
-	Name       string         `yaml:"name" json:"name"`
-	Namespace  string         `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	Disabled   bool           `yaml:"disabled,omitempty" json:"disabled,omitempty"`
-	Helm       *HelmConfig    `yaml:"helm,omitempty" json:"helm,omitempty"`
-	Kubectl    *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
-	Concurrent bool           `yaml:"concurrent,omitempty" json:"concurrent,omitempty"`
+	Name      string         `yaml:"name" json:"name"`
+	Namespace string         `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	Disabled  bool           `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+	Helm      *HelmConfig    `yaml:"helm,omitempty" json:"helm,omitempty"`
+	Kubectl   *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
 }
 
 // ComponentConfig holds the component information
@@ -713,7 +712,6 @@ type HelmConfig struct {
 	Driver           string                 `yaml:"driver,omitempty" json:"driver,omitempty"`
 	Path             string                 `yaml:"path,omitempty" json:"path,omitempty"`
 
-	DeleteArgs   []string `yaml:"deleteArgs,omitempty" json:"deleteArgs,omitempty"`
 	TemplateArgs []string `yaml:"templateArgs,omitempty" json:"templateArgs,omitempty"`
 	UpgradeArgs  []string `yaml:"upgradeArgs,omitempty" json:"upgradeArgs,omitempty"`
 	FetchArgs    []string `yaml:"fetchArgs,omitempty" json:"fetchArgs,omitempty"`
@@ -745,7 +743,6 @@ type KubectlConfig struct {
 	Kustomize        *bool    `yaml:"kustomize,omitempty" json:"kustomize,omitempty"`
 	KustomizeArgs    []string `yaml:"kustomizeArgs,omitempty" json:"kustomizeArgs,omitempty"`
 	ReplaceImageTags bool     `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
-	DeleteArgs       []string `yaml:"deleteArgs,omitempty" json:"deleteArgs,omitempty"`
 	CreateArgs       []string `yaml:"createArgs,omitempty" json:"createArgs,omitempty"`
 	ApplyArgs        []string `yaml:"applyArgs,omitempty" json:"applyArgs,omitempty"`
 	CmdPath          string   `yaml:"cmdPath,omitempty" json:"cmdPath,omitempty"`

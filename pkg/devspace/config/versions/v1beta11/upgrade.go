@@ -18,6 +18,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	clonedConfig.Deployments = nil
 	clonedConfig.Dev = DevConfig{}
 	nextConfig := &next.Config{}
 	err = util.Convert(clonedConfig, nextConfig)
@@ -27,14 +28,31 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 
 	// just guess a name here
 	if nextConfig.Name == "" {
-
+		nextConfig.Name = "devspace"
 	}
-	nextConfig.Name = "devspace"
 
 	// use a pretty simple pipeline which was used by devspace before
-	deployPipeline := `run_dependencies --all
-build --all
-deploy --all`
+	deployPipeline := `run_dependencies_pipeline --all
+build_images --all`
+
+	// create the deploy pipeline based on concurrent deployments
+	concurrentDeployments := []string{}
+	sequentialDeployments := []string{}
+	for _, d := range c.Deployments {
+		if d.Concurrent {
+			concurrentDeployments = append(concurrentDeployments, d.Name)
+		} else {
+			sequentialDeployments = append(sequentialDeployments, d.Name)
+		}
+	}
+
+	if len(concurrentDeployments) > 0 {
+		deployPipeline += "\ncreate_deployments " + strings.Join(concurrentDeployments, " ")
+	}
+	if len(sequentialDeployments) > 0 {
+		deployPipeline += "\ncreate_deployments " + strings.Join(sequentialDeployments, " ") + " --sequential"
+	}
+
 	devPipeline := deployPipeline + "\n" + "start_dev --all"
 	if c.Dev.Terminal != nil && c.Dev.Terminal.ImageSelector == "" && len(c.Dev.Terminal.LabelSelector) == 0 {
 		devPipeline += "\n" + strings.Join(c.Dev.Terminal.Command, " ")
@@ -61,13 +79,77 @@ deploy --all`
 		nextConfig.Images[encoding.Convert(k)] = v
 	}
 
-	for i := range nextConfig.Deployments {
-		nextConfig.Deployments[i].Name = encoding.Convert(nextConfig.Deployments[i].Name)
-		if c.Deployments[i].Helm != nil && (c.Deployments[i].Helm.ReplaceImageTags == nil || *c.Deployments[i].Helm.ReplaceImageTags) {
-			nextConfig.Deployments[i].Helm.ReplaceImageTags = true
+	nextConfig.Deployments = map[string]*next.DeploymentConfig{}
+	for _, deployment := range c.Deployments {
+		if deployment.Name == "" {
+			continue
 		}
-		if c.Deployments[i].Kubectl != nil && (c.Deployments[i].Kubectl.ReplaceImageTags == nil || *c.Deployments[i].Kubectl.ReplaceImageTags) {
-			nextConfig.Deployments[i].Kubectl.ReplaceImageTags = true
+
+		name := encoding.Convert(deployment.Name)
+		nextConfig.Deployments[name] = &next.DeploymentConfig{
+			Name:      name,
+			Namespace: deployment.Namespace,
+			Disabled:  deployment.Disabled,
+		}
+		if deployment.Helm != nil {
+			nextConfig.Deployments[name].Helm = &next.HelmConfig{
+				ComponentChart: deployment.Helm.ComponentChart,
+				Values:         deployment.Helm.Values,
+				ValuesFiles:    deployment.Helm.ValuesFiles,
+				Wait:           deployment.Helm.Wait,
+				DisplayOutput:  deployment.Helm.DisplayOutput,
+				Timeout:        deployment.Helm.Timeout,
+				Force:          deployment.Helm.Force,
+				Atomic:         deployment.Helm.Atomic,
+				CleanupOnFail:  deployment.Helm.CleanupOnFail,
+				Recreate:       deployment.Helm.Recreate,
+				DisableHooks:   deployment.Helm.DisableHooks,
+				Driver:         deployment.Helm.Driver,
+				Path:           deployment.Helm.Path,
+				TemplateArgs:   deployment.Helm.TemplateArgs,
+				UpgradeArgs:    deployment.Helm.UpgradeArgs,
+				FetchArgs:      deployment.Helm.FetchArgs,
+			}
+			if deployment.Helm.Chart != nil {
+				nextConfig.Deployments[name].Helm.Chart = &next.ChartConfig{
+					Name:     deployment.Helm.Chart.Name,
+					Version:  deployment.Helm.Chart.Version,
+					RepoURL:  deployment.Helm.Chart.RepoURL,
+					Username: deployment.Helm.Chart.Username,
+					Password: deployment.Helm.Chart.Password,
+				}
+				if deployment.Helm.Chart.Git != nil {
+					nextConfig.Deployments[name].Helm.Chart.Git = &next.GitSource{
+						URL:       deployment.Helm.Chart.Git.URL,
+						CloneArgs: deployment.Helm.Chart.Git.CloneArgs,
+						Branch:    deployment.Helm.Chart.Git.Branch,
+						Tag:       deployment.Helm.Chart.Git.Tag,
+						Revision:  deployment.Helm.Chart.Git.Revision,
+						SubPath:   deployment.Helm.Chart.Git.SubPath,
+					}
+				}
+			}
+			if len(deployment.Helm.DeleteArgs) > 0 {
+				log.Warnf("deployments[*].helm.deleteArgs is not supported anymore in v6")
+			}
+			if deployment.Helm.ReplaceImageTags == nil || *deployment.Helm.ReplaceImageTags {
+				nextConfig.Deployments[name].Helm.ReplaceImageTags = true
+			}
+		} else if deployment.Kubectl != nil {
+			nextConfig.Deployments[name].Kubectl = &next.KubectlConfig{
+				Manifests:     deployment.Kubectl.Manifests,
+				Kustomize:     deployment.Kubectl.Kustomize,
+				KustomizeArgs: deployment.Kubectl.KustomizeArgs,
+				CreateArgs:    deployment.Kubectl.CreateArgs,
+				ApplyArgs:     deployment.Kubectl.ApplyArgs,
+				CmdPath:       deployment.Kubectl.CmdPath,
+			}
+			if len(deployment.Kubectl.DeleteArgs) > 0 {
+				log.Warnf("deployments[*].kubectl.deleteArgs is not supported anymore in v6")
+			}
+			if deployment.Kubectl.ReplaceImageTags == nil || *deployment.Kubectl.ReplaceImageTags {
+				nextConfig.Deployments[name].Kubectl.ReplaceImageTags = true
+			}
 		}
 	}
 

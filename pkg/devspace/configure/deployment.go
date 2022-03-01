@@ -57,17 +57,17 @@ func (m *manager) AddKubectlDeployment(deploymentName string, isKustomization bo
 		splittedPointer = append(splittedPointer, trimmed)
 	}
 
-	m.config.Deployments = append([]*latest.DeploymentConfig{
-		{
-			Name: deploymentName,
-			Kubectl: &latest.KubectlConfig{
-				Manifests: splittedPointer,
-			},
+	if m.config.Deployments == nil {
+		m.config.Deployments = map[string]*latest.DeploymentConfig{}
+	}
+	m.config.Deployments[deploymentName] = &latest.DeploymentConfig{
+		Name: deploymentName,
+		Kubectl: &latest.KubectlConfig{
+			Manifests: splittedPointer,
 		},
-	}, m.config.Deployments...)
-
+	}
 	if isKustomization {
-		m.config.Deployments[0].Kubectl.Kustomize = ptr.Bool(isKustomization)
+		m.config.Deployments[deploymentName].Kubectl.Kustomize = ptr.Bool(isKustomization)
 	}
 
 	return nil
@@ -286,12 +286,13 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 			}
 		}
 
-		m.config.Deployments = append([]*latest.DeploymentConfig{
-			{
-				Name: deploymentName,
-				Helm: helmConfig,
-			},
-		}, m.config.Deployments...)
+		if m.config.Deployments == nil {
+			m.config.Deployments = map[string]*latest.DeploymentConfig{}
+		}
+		m.config.Deployments[deploymentName] = &latest.DeploymentConfig{
+			Name: deploymentName,
+			Helm: helmConfig,
+		}
 
 		break
 	}
@@ -324,15 +325,16 @@ func (m *manager) AddComponentDeployment(deploymentName, image string, servicePo
 		return err
 	}
 
-	m.config.Deployments = append([]*latest.DeploymentConfig{
-		{
-			Name: deploymentName,
-			Helm: &latest.HelmConfig{
-				ComponentChart: ptr.Bool(true),
-				Values:         chartValues,
-			},
+	if m.config.Deployments == nil {
+		m.config.Deployments = map[string]*latest.DeploymentConfig{}
+	}
+	m.config.Deployments[deploymentName] = &latest.DeploymentConfig{
+		Name: deploymentName,
+		Helm: &latest.HelmConfig{
+			ComponentChart: ptr.Bool(true),
+			Values:         chartValues,
 		},
-	}, m.config.Deployments...)
+	}
 
 	return nil
 }

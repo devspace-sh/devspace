@@ -13,6 +13,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
+	"gopkg.in/yaml.v3"
 	"time"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -159,9 +160,9 @@ func (cmd *DeployCmd) Run(f factory.Factory) error {
 }
 
 func (cmd *DeployCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
-	err := runPipeline(ctx, f, configOptions, cmd.SkipDependency, cmd.Dependency, "deploy", `run_dependencies --all
-build --all
-deploy --all`, cmd.Wait, cmd.Timeout, 0)
+	err := runPipeline(ctx, f, configOptions, cmd.SkipDependency, cmd.Dependency, "deploy", `run_dependencies_pipeline --all
+build_images --all
+create_deployments --all`, cmd.Wait, cmd.Timeout, 0)
 	if err != nil {
 		return err
 	}
@@ -253,6 +254,12 @@ func runPipeline(
 	// create a new base dev pod manager
 	devPodManager := devpod.NewManager(ctx.Context)
 	defer devPodManager.Close()
+
+	// marshal pipeline
+	configPipelineBytes, err := yaml.Marshal(configPipeline)
+	if err == nil {
+		ctx.Log.Debugf("Run pipeline:\n%s\n", string(configPipelineBytes))
+	}
 
 	// get deploy pipeline
 	pipe, err := pipeline.NewPipelineBuilder().BuildPipeline(executePipeline, devPodManager, configPipeline, dependencyRegistry)

@@ -194,7 +194,6 @@ func (c *client) DeleteRelease(ctx *devspacecontext.Context, releaseName string,
 		"--namespace",
 		releaseNamespace,
 	}
-	args = append(args, helmConfig.DeleteArgs...)
 	_, err := c.genericHelm.Exec(ctx, args, helmConfig)
 	if err != nil {
 		return err

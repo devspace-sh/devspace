@@ -47,7 +47,7 @@ func Deploy(ctx *devspacecontext.Context, args []string) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("deploy: either specify 'deploy --all' or 'deploy deployment1 deployment2'")
+		return fmt.Errorf("create_deployments: either specify 'create_deployments --all' or 'create_deployments deployment1 deployment2'")
 	}
 
 	return deploy.NewController().Deploy(ctx, args, &options.Options)
@@ -55,27 +55,18 @@ func Deploy(ctx *devspacecontext.Context, args []string) error {
 
 func applyDeploymentSetValues(config *latest.Config, deployment string, set, setString, from []string) error {
 	mapObj, err := applySetValues(deployment, set, setString, from, func(name string, create bool) (interface{}, error) {
-		var (
-			deploymentObj *latest.DeploymentConfig
-		)
-		for _, d := range config.Deployments {
-			if d.Name == deployment {
-				deploymentObj = d
-				break
-			}
-		}
-		if deploymentObj == nil {
+		imageObj, ok := config.Deployments[deployment]
+		if !ok {
 			if !create {
 				return nil, fmt.Errorf("couldn't find --from %s", name)
 			}
 
-			deploymentObj = &latest.DeploymentConfig{
+			return &latest.DeploymentConfig{
 				Name: deployment,
-			}
-			config.Deployments = append(config.Deployments, deploymentObj)
+			}, nil
 		}
 
-		return deploymentObj, nil
+		return imageObj, nil
 	})
 	if err != nil {
 		return err
@@ -87,11 +78,6 @@ func applyDeploymentSetValues(config *latest.Config, deployment string, set, set
 		return err
 	}
 
-	for i := range config.Deployments {
-		if config.Deployments[i].Name == deployment {
-			config.Deployments[i] = deploymentObj
-			break
-		}
-	}
+	config.Deployments[deployment] = deploymentObj
 	return loader.Validate(config)
 }

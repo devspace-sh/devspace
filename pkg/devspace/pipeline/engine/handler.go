@@ -71,11 +71,11 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 	}
 
 	switch command {
-	case "build":
+	case "build_images":
 		return e.executePipelineCommand(ctx, command, func() error {
 			return enginecommands.Build(devCtx, args)
 		})
-	case "deploy":
+	case "create_deployments":
 		return e.executePipelineCommand(ctx, command, func() error {
 			return enginecommands.Deploy(devCtx, args)
 		})
@@ -87,7 +87,7 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 		return e.executePipelineCommand(ctx, command, func() error {
 			return enginecommands.StopDev(devCtx, e.manager, args)
 		})
-	case "run_dependencies":
+	case "run_dependencies_pipeline":
 		return e.executePipelineCommand(ctx, command, func() error {
 			return enginecommands.Dependency(devCtx, e.registry, args)
 		})
