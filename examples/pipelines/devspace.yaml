@@ -1,19 +1,22 @@
 version: v2beta1
 name: pipelines
 
-pipelines:
-  test:
-    steps:
-      - run: |-
-          start_dev test --set imageSelector=ubuntu \
-                         --set logs.disabled=false
+dependencies:
+  - source:
+      path: dep1/dependency.yaml
 
+pipelines:
   dev:
     steps:
       - run: |-
-          create_deployments test --set helm.componentChart=true \
-                                  --set helm.values.containers[0].image=ubuntu \
-                                  --set helm.values.containers[0].command='{sh,-c,echo "Hello World" && sleep 99999999}'
+          run_dependencies_pipelines --all
           
-          run_pipelines test
-          echo "After"
+          export IMAGE=loftsh/alpine:latest
+          
+          # Deploy test here
+          create_deployments test --set helm.componentChart=true \
+                                  --set helm.values.containers[0].image=${IMAGE}
+          
+          # Start development mode for test here
+          start_dev test --set imageSelector=${IMAGE} \
+                         --set terminal.command=bash

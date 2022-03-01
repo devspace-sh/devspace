@@ -1,0 +1,16 @@
+version: v2beta1
+name: dependency
+
+pipelines:
+  deploy:
+    steps:
+      - run: |-
+          # Deploy test here
+          create_deployments test2 --set helm.componentChart=true \
+                                   --set helm.values.containers[0].image=ubuntu \
+                                   --set helm.values.containers[0].command='{sleep,9999999999}'
+          
+          # Start development mode for test here
+          start_dev test --set imageSelector=ubuntu \
+                         --set forward[0].port=8080 \
+                         --set logs.disabled=false

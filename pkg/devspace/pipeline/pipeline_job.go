@@ -137,7 +137,7 @@ func (j *Job) shouldExecuteStep(ctx *devspacecontext.Context, step *latest.Pipel
 }
 
 func (j *Job) executeStep(ctx *devspacecontext.Context, step *latest.PipelineStep, parent *tomb.Tomb) error {
-	ctx = ctx.WithLogger(ctx.Log.WithoutPrefix())
+	ctx = ctx.WithLogger(ctx.Log)
 	stdoutReader, stdoutWriter := io.Pipe()
 	defer stdoutWriter.Close()
 	parent.Go(func() error {

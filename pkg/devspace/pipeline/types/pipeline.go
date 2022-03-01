@@ -4,6 +4,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
+	types2 "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 )
 
@@ -31,4 +32,8 @@ type Pipeline interface {
 	// that each pipeline can only be run once at the same time and otherwise
 	// will fail to start.
 	StartNewPipelines(ctx *devspacecontext.Context, pipelines []*latest.Pipeline, sequentially bool) error
+
+	// StartNewDependencies starts dependency pipelines in this pipeline. It is ensured
+	// that each pipeline will only run once ever and will otherwise be skipped.
+	StartNewDependencies(ctx *devspacecontext.Context, dependencies []types2.Dependency, sequentially bool) error
 }

@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -96,20 +97,23 @@ func (s *prefixLogger) GetLevel() logrus.Level {
 
 func (s *prefixLogger) writeMessage(level logrus.Level, message string) {
 	if s.level >= level {
+		prefix := ""
 		if os.Getenv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
 			now := time.Now()
 			if s.color != "" {
-				s.base.WriteString(level, ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")+ansi.Color(s.prefix, s.color)+message)
+				prefix = ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b") + ansi.Color(s.prefix, s.color)
 			} else {
-				s.base.WriteString(level, formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" "+s.prefix+message)
+				prefix = formatInt(now.Hour()) + ":" + formatInt(now.Minute()) + ":" + formatInt(now.Second()) + " " + s.prefix
 			}
 		} else {
 			if s.color != "" {
-				s.base.WriteString(level, ansi.Color(s.prefix, s.color)+message)
+				prefix = ansi.Color(s.prefix, s.color)
 			} else {
-				s.base.WriteString(level, s.prefix+message)
+				prefix = s.prefix
 			}
 		}
+
+		s.base.Print(level, prefix+strings.TrimSpace(message))
 	}
 }
 

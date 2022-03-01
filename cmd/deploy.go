@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -12,6 +13,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
+	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"gopkg.in/yaml.v3"
 	"time"
@@ -206,7 +208,7 @@ func runPipeline(
 	ctx = ctx.WithDependencies(dependencies)
 
 	// start ui & open
-	err = startServices(ctx, uiPort)
+	serv, err := startServices(ctx, uiPort)
 	if err != nil {
 		return err
 	}
@@ -233,23 +235,25 @@ func runPipeline(
 	if ctx.Config.Config().Pipelines != nil && ctx.Config.Config().Pipelines[executePipeline] != nil {
 		configPipeline = ctx.Config.Config().Pipelines[executePipeline]
 	} else {
-		if ctx.Config.Config().Pipelines != nil && len(ctx.Config.Config().Pipelines) == 1 {
-			for _, p := range ctx.Config.Config().Pipelines {
-				configPipeline = p
-			}
-		} else {
-			configPipeline = &latest.Pipeline{
-				Steps: []latest.PipelineStep{
-					{
-						Run: fallbackPipeline,
-					},
+		configPipeline = &latest.Pipeline{
+			Steps: []latest.PipelineStep{
+				{
+					Run: fallbackPipeline,
 				},
-			}
+			},
 		}
 	}
 
 	// create dependency registry
-	dependencyRegistry := registry.NewDependencyRegistry(ctx, "http://localhost:8090")
+	dependencyRegistry := registry.NewDependencyRegistry("http://" + serv.Server.Addr)
+
+	// exclude ourselves
+	couldExclude, err := dependencyRegistry.MarkDependencyExcluded(ctx, ctx.Config.Config().Name, true)
+	if err != nil {
+		return err
+	} else if !couldExclude {
+		return fmt.Errorf("couldn't start project %s, because there is another DevSpace instance active in the current namespace right now that uses the same project", ctx.Config.Config().Name)
+	}
 
 	// create a new base dev pod manager
 	devPodManager := devpod.NewManager(ctx.Context)
@@ -262,13 +266,10 @@ func runPipeline(
 	}
 
 	// get deploy pipeline
-	pipe, err := pipeline.NewPipelineBuilder().BuildPipeline(executePipeline, devPodManager, configPipeline, dependencyRegistry)
-	if err != nil {
-		return err
-	}
+	pipe := pipeline.NewPipeline(executePipeline, devPodManager, dependencyRegistry, configPipeline)
 
 	// start pipeline
-	err = pipe.Run(ctx)
+	err = pipe.Run(ctx.WithLogger(ctx.Log.WithoutPrefix()))
 	if err != nil {
 		return err
 	}
@@ -291,11 +292,11 @@ func runPipeline(
 	return nil
 }
 
-func startServices(ctx *devspacecontext.Context, uiPort int) error {
+func startServices(ctx *devspacecontext.Context, uiPort int) (*server.Server, error) {
 	// Open UI if configured
-	err := dev.UI(ctx, uiPort)
+	serv, err := dev.UI(ctx, uiPort)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Run dev.open configs
@@ -317,5 +318,5 @@ func startServices(ctx *devspacecontext.Context, uiPort int) error {
 		}
 	}
 
-	return nil
+	return serv, nil
 }

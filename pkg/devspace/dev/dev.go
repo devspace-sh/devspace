@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func UI(ctx *devspacecontext.Context, port int) error {
+func UI(ctx *devspacecontext.Context, port int) (*server.Server, error) {
 	var defaultPort *int
 	if port != 0 {
 		defaultPort = &port
@@ -27,5 +27,5 @@ func UI(ctx *devspacecontext.Context, port int) error {
 		ctx.Log.Infof("DevSpace UI available at: %s", ansi.Color("http://"+serv.Server.Addr, "white+b"))
 		ctx.Log.WriteString(logrus.InfoLevel, "#########################################################\n\n")
 	}
-	return nil
+	return serv, nil
 }

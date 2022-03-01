@@ -5,8 +5,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
@@ -14,8 +12,6 @@ import (
 	helmclient "github.com/loft-sh/devspace/pkg/devspace/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/scanner"
-
 	"github.com/pkg/errors"
 )
 
@@ -171,19 +167,7 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 
 		for i, deployConfig := range concurrentDeployments {
 			go func(deployConfig *latest.DeploymentConfig, deployNumber int) {
-				// Create new logger to allow concurrent logging.
-				reader, writer := io.Pipe()
-				streamLog := log.NewStreamLogger(writer, logrus.InfoLevel)
-				logsLog := log.NewPrefixLogger("["+deployConfig.Name+"] ", log.Colors[(len(log.Colors)-1)-(deployNumber%len(log.Colors))], ctx.Log)
-				go func() {
-					scanner := scanner.NewScanner(reader)
-					for scanner.Scan() {
-						logsLog.Info(scanner.Text())
-					}
-				}()
-
-				wasDeployed, err := c.deployOne(ctx.WithLogger(streamLog), deployConfig, deployments, options)
-				_ = writer.Close()
+				wasDeployed, err := c.deployOne(ctx.WithLogger(log.NewDefaultPrefixLogger("deploy:"+deployConfig.Name+" ", ctx.Log)), deployConfig, deployments, options)
 				if err != nil {
 					errChan <- err
 				} else {
@@ -206,8 +190,9 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 			}
 		}
 
+		logsDeploy := log.NewDefaultPrefixLogger("[deploy] ", ctx.Log)
 		for _, deployConfig := range sequentialDeployments {
-			_, err := c.deployOne(ctx, deployConfig, deployments, options)
+			_, err := c.deployOne(ctx.WithLogger(logsDeploy), deployConfig, deployments, options)
 			if err != nil {
 				return err
 			}

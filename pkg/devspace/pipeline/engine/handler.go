@@ -89,9 +89,9 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 		return e.executePipelineCommand(ctx, command, func() error {
 			return enginecommands.StopDev(devCtx, e.pipeline.DevPodManager(), args)
 		})
-	case "run_dependencies_pipeline":
+	case "run_dependencies_pipelines":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.Dependency(devCtx, e.pipeline.DependencyRegistry(), args)
+			return enginecommands.Dependency(devCtx, e.pipeline, args)
 		})
 	}
 
