@@ -3,15 +3,18 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/dev"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
@@ -164,7 +167,18 @@ func (cmd *DeployCmd) Run(f factory.Factory) error {
 func (cmd *DeployCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
 	err := runPipeline(ctx, f, configOptions, cmd.SkipDependency, cmd.Dependency, "deploy", `run_dependencies_pipeline --all
 build_images --all
-create_deployments --all`, cmd.Wait, cmd.Timeout, 0)
+create_deployments --all`, cmd.Wait, cmd.Timeout, 0, types.Options{
+		BuildOptions: build.Options{
+			SkipPush:                  cmd.SkipPush,
+			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
+			ForceRebuild:              cmd.ForceBuild,
+			Sequential:                cmd.BuildSequential,
+			MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
+		},
+		DeployOptions: deploy.Options{
+			ForceDeploy: cmd.ForceDeploy,
+		},
+	})
 	if err != nil {
 		return err
 	}
@@ -182,6 +196,7 @@ func runPipeline(
 	wait bool,
 	timeout int,
 	uiPort int,
+	options types.Options,
 ) error {
 	// create namespace if necessary
 	err := ctx.KubeClient.EnsureNamespace(ctx.Context, ctx.KubeClient.Namespace(), ctx.Log)
@@ -266,7 +281,7 @@ func runPipeline(
 	}
 
 	// get deploy pipeline
-	pipe := pipeline.NewPipeline(executePipeline, devPodManager, dependencyRegistry, configPipeline)
+	pipe := pipeline.NewPipeline(executePipeline, devPodManager, dependencyRegistry, configPipeline, options)
 
 	// start pipeline
 	err = pipe.Run(ctx.WithLogger(ctx.Log.WithoutPrefix()))

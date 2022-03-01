@@ -75,11 +75,11 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 		})
 	case "build_images":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.Build(devCtx, args)
+			return enginecommands.Build(devCtx, e.pipeline, args)
 		})
 	case "create_deployments":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.Deploy(devCtx, args)
+			return enginecommands.Deploy(devCtx, e.pipeline, args)
 		})
 	case "start_dev":
 		return e.executePipelineCommand(ctx, command, func() error {

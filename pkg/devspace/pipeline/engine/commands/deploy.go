@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/pkg/errors"
 )
 
@@ -24,8 +25,10 @@ type DeployOptions struct {
 	// Extra flags here to add an deployment
 }
 
-func Deploy(ctx *devspacecontext.Context, args []string) error {
-	options := &DeployOptions{}
+func Deploy(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	options := &DeployOptions{
+		Options: pipeline.Options().DeployOptions,
+	}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")

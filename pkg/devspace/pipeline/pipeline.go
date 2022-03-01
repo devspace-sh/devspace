@@ -24,11 +24,12 @@ create_deployments --all`,
 	},
 }
 
-func NewPipeline(name string, devPodManager devpod.Manager, dependencyRegistry registry.DependencyRegistry, config *latest.Pipeline) types.Pipeline {
+func NewPipeline(name string, devPodManager devpod.Manager, dependencyRegistry registry.DependencyRegistry, config *latest.Pipeline, options types.Options) types.Pipeline {
 	pip := &pipeline{
 		name:               name,
 		devPodManager:      devPodManager,
 		dependencyRegistry: dependencyRegistry,
+		options:            options,
 		jobs:               make(map[string]*Job),
 	}
 	pip.main = &Job{
@@ -41,6 +42,8 @@ func NewPipeline(name string, devPodManager devpod.Manager, dependencyRegistry r
 type pipeline struct {
 	m sync.Mutex
 
+	options types.Options
+
 	name               string
 	devPodManager      devpod.Manager
 	dependencyRegistry registry.DependencyRegistry
@@ -49,6 +52,10 @@ type pipeline struct {
 
 	main *Job
 	jobs map[string]*Job
+}
+
+func (p *pipeline) Options() types.Options {
+	return p.options
 }
 
 // WaitDev waits for the dev pod managers to complete.
@@ -185,7 +192,7 @@ func (p *pipeline) startNewDependency(ctx *devspacecontext.Context, dependency t
 	}
 
 	dependencyDevPodManager := devpod.NewManager(p.devPodManager.Context())
-	pip := NewPipeline(dependency.Name(), dependencyDevPodManager, p.dependencyRegistry, pipelineConfig)
+	pip := NewPipeline(dependency.Name(), dependencyDevPodManager, p.dependencyRegistry, pipelineConfig, p.options)
 
 	p.m.Lock()
 	p.dependencies = append(p.dependencies, pip)

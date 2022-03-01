@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"io"
@@ -230,7 +233,18 @@ func (cmd *DevCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, c
 	err := runPipeline(ctx, f, configOptions, cmd.SkipDependency, cmd.Dependency, "dev", `run_dependencies_pipeline --all
 build_images --all
 create_deployments --all
-start_dev --all`, cmd.Wait, cmd.Timeout, 0)
+start_dev --all`, cmd.Wait, cmd.Timeout, 0, types.Options{
+		BuildOptions: build.Options{
+			SkipPush:                  cmd.SkipPush,
+			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
+			ForceRebuild:              cmd.ForceBuild,
+			Sequential:                cmd.BuildSequential,
+			MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
+		},
+		DeployOptions: deploy.Options{
+			ForceDeploy: cmd.ForceDeploy,
+		},
+	})
 	if err != nil {
 		return err
 	}

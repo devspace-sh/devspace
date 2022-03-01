@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/strvals"
 	"github.com/pkg/errors"
 )
@@ -25,8 +26,10 @@ type BuildOptions struct {
 	// Extra flags here to add an image
 }
 
-func Build(ctx *devspacecontext.Context, args []string) error {
-	options := &BuildOptions{}
+func Build(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	options := &BuildOptions{
+		Options: pipeline.Options().BuildOptions,
+	}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")

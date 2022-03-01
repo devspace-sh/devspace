@@ -1,12 +1,19 @@
 package types
 
 import (
+	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
 	types2 "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 )
+
+type Options struct {
+	BuildOptions  build.Options
+	DeployOptions deploy.Options
+}
 
 type Pipeline interface {
 	// Run runs the main pipeline
@@ -20,6 +27,9 @@ type Pipeline interface {
 
 	// Dependencies retrieves the currently created dependencies
 	Dependencies() []Pipeline
+
+	// Options retrieves the default options for the pipeline
+	Options() Options
 
 	// Name retrieves the name of the pipeline
 	Name() string
