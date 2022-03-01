@@ -93,6 +93,9 @@ type Import struct {
 // jobs that are run in parallel and can depend on each other. Each job consists
 // of one or more conditional steps that are executed in order.
 type Pipeline struct {
+	// Name of the pipeline, will be filled automatically
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
 	// Rerun defines when this job should get reexecuted
 	Rerun *JobRerun `yaml:"rerun,omitempty" json:"rerun,omitempty"`
 

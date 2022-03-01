@@ -43,7 +43,7 @@ func StartDev(ctx *devspacecontext.Context, devManager devpod.Manager, args []st
 			}
 		}
 	} else {
-		return fmt.Errorf("start_dev: either specify 'start_dev --all' or 'dev devConfig1 devConfig2'")
+		return fmt.Errorf("either specify 'start_dev --all' or 'dev devConfig1 devConfig2'")
 	}
 	return devManager.StartMultiple(ctx, args)
 }

@@ -4,11 +4,11 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
-	"github.com/loft-sh/devspace/pkg/util/tomb"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 )
 
 type Builder interface {
-	BuildPipeline(name string, devPodManager devpod.Manager, configPipeline *latest.Pipeline, registry registry.DependencyRegistry) (Pipeline, error)
+	BuildPipeline(name string, devPodManager devpod.Manager, configPipeline *latest.Pipeline, registry registry.DependencyRegistry) (types.Pipeline, error)
 }
 
 func NewPipelineBuilder() Builder {
@@ -17,12 +17,11 @@ func NewPipelineBuilder() Builder {
 
 type builder struct{}
 
-func (b *builder) BuildPipeline(name string, devPodManager devpod.Manager, configPipeline *latest.Pipeline, registry registry.DependencyRegistry) (Pipeline, error) {
+func (b *builder) BuildPipeline(name string, devPodManager devpod.Manager, configPipeline *latest.Pipeline, registry registry.DependencyRegistry) (types.Pipeline, error) {
 	pip := NewPipeline(name, devPodManager, registry).(*pipeline)
-	pip.Job = &Job{
-		DevPodManager: pip.DevPodManager(),
-		Config:        configPipeline,
-		t:             &tomb.Tomb{},
+	pip.main = &Job{
+		Pipeline: pip,
+		Config:   configPipeline,
 	}
 
 	return pip, nil

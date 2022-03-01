@@ -105,6 +105,16 @@ func (t *Tomb) init() {
 	t.m.Unlock()
 }
 
+func (t *Tomb) Terminated() bool {
+	t.init()
+	select {
+	case <-t.dead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Dead returns the channel that can be used to wait until
 // all goroutines have finished running.
 func (t *Tomb) Dead() <-chan struct{} {

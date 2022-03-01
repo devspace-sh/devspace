@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
-	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	enginecommands "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/commands"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/downloader"
 	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 	"io"
 	"mvdan.cc/sh/v3/interp"
 	"os"
@@ -20,12 +20,11 @@ type ExecHandler interface {
 	ExecHandler(ctx context.Context, args []string) error
 }
 
-func NewExecHandler(ctx *devspacecontext.Context, stdout io.Writer, registry registry.DependencyRegistry, manager devpod.Manager, enablePipelineCommands bool) ExecHandler {
+func NewExecHandler(ctx *devspacecontext.Context, stdout io.Writer, pipeline types.Pipeline, enablePipelineCommands bool) ExecHandler {
 	return &execHandler{
 		ctx:                    ctx,
 		stdout:                 stdout,
-		registry:               registry,
-		manager:                manager,
+		pipeline:               pipeline,
 		enablePipelineCommands: enablePipelineCommands,
 	}
 }
@@ -33,8 +32,7 @@ func NewExecHandler(ctx *devspacecontext.Context, stdout io.Writer, registry reg
 type execHandler struct {
 	ctx                    *devspacecontext.Context
 	stdout                 io.Writer
-	registry               registry.DependencyRegistry
-	manager                devpod.Manager
+	pipeline               types.Pipeline
 	enablePipelineCommands bool
 }
 
@@ -71,6 +69,10 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 	}
 
 	switch command {
+	case "run_pipelines":
+		return e.executePipelineCommand(ctx, command, func() error {
+			return enginecommands.Pipeline(devCtx, e.pipeline, args)
+		})
 	case "build_images":
 		return e.executePipelineCommand(ctx, command, func() error {
 			return enginecommands.Build(devCtx, args)
@@ -81,15 +83,15 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 		})
 	case "start_dev":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.StartDev(devCtx, e.manager, args)
+			return enginecommands.StartDev(devCtx, e.pipeline.DevPodManager(), args)
 		})
 	case "stop_dev":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.StopDev(devCtx, e.manager, args)
+			return enginecommands.StopDev(devCtx, e.pipeline.DevPodManager(), args)
 		})
 	case "run_dependencies_pipeline":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.Dependency(devCtx, e.registry, args)
+			return enginecommands.Dependency(devCtx, e.pipeline.DependencyRegistry(), args)
 		})
 	}
 
@@ -99,20 +101,20 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 func (e *execHandler) executePipelineCommand(ctx context.Context, command string, commandFn func() error) (bool, error) {
 	if !e.enablePipelineCommands {
 		hc := interp.HandlerCtx(ctx)
-		_, _ = fmt.Fprintln(hc.Stderr, fmt.Errorf("cannot execute the command %s because it can only be executed within a pipeline step", command))
+		_, _ = fmt.Fprintln(hc.Stderr, fmt.Errorf("%s: cannot execute the command because it can only be executed within a pipeline step", command))
 		return true, interp.NewExitStatus(1)
 	}
 
-	return true, handleError(ctx, commandFn())
+	return true, handleError(ctx, command, commandFn())
 }
 
-func handleError(ctx context.Context, err error) error {
+func handleError(ctx context.Context, command string, err error) error {
 	if err == nil {
 		return interp.NewExitStatus(0)
 	}
 
 	hc := interp.HandlerCtx(ctx)
-	_, _ = fmt.Fprintln(hc.Stderr, err)
+	_, _ = fmt.Fprintln(hc.Stderr, errors.Wrap(err, command))
 	return interp.NewExitStatus(1)
 }
 

@@ -47,7 +47,7 @@ func Deploy(ctx *devspacecontext.Context, args []string) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("create_deployments: either specify 'create_deployments --all' or 'create_deployments deployment1 deployment2'")
+		return fmt.Errorf("either specify 'create_deployments --all' or 'create_deployments deployment1 deployment2'")
 	}
 
 	return deploy.NewController().Deploy(ctx, args, &options.Options)

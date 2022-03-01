@@ -1,37 +1,21 @@
 version: v2beta1
 name: pipelines
 
-deployments:
-  deploy-1: ...
-  deploy-2: ...
-
-dev:
-  my-service:
-    imageSelector: ${IMAGE}
-    replaceImage: my-image:dev
-    sync:
-      - ...
-      - ...
-    ports:
-      - ...
-      - ...
-    terminal: {}
-
 pipelines:
+  test3:
+    steps:
+      - run: |-
+          echo "Hello World 3"
+  test2:
+    steps:
+      - run: |-
+          echo "Hello World 2"
+  test:
+    steps:
+      - run: |-
+          echo "Hello World 1"
   dev:
     steps:
-      - name: Run rest of pipeline
-        run: |-
-          run_pipelines pipeline1
-          run_dependency_pipelines dependency1
-          
-          build_images test-1 test-2 --set image=testme \
-                                     --skip-push
-          
-          # Deploy Chart
-          create_deployments deploy-1 --set helm.chart.name=./chart # Production image my-image:latest
-          # -> Creating pod deploy-1
-          
-          # Development my-image:dev 
-          # It starts sync and then continues pipeline
-          start_dev my-service
+      - run: |-
+          run_pipelines test test2 test3 --sequential
+          echo "After"

@@ -197,6 +197,9 @@ func adjustConfig(config *latest.Config) {
 	for name, devPod := range config.Dev {
 		devPod.Name = name
 	}
+	for name, pipeline := range config.Pipelines {
+		pipeline.Name = name
+	}
 	if config.Images != nil {
 		newObjs := map[string]*latest.Image{}
 		for k, v := range config.Images {
