@@ -282,7 +282,6 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 
 // Purge removes all deployments or a set of deployments from the cluster
 func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) error {
-	ctx = ctx.WithLogger(log.NewDefaultPrefixLogger("purge", ctx.Log))
 	if deployments != nil && len(deployments) == 0 {
 		deployments = nil
 	}
@@ -310,6 +309,7 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) e
 				continue
 			}
 		}
+		ctx = ctx.WithLogger(log.NewDefaultPrefixLogger("purge:"+deploymentCache.Name+" ", ctx.Log))
 
 		// Execute before deployment purge hook
 		err = hook.ExecuteHooks(ctx, map[string]interface{}{
@@ -354,6 +354,11 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) e
 		}
 
 		ctx.Log.Donef("Successfully deleted deployment %s", deploymentCache.Name)
+	}
+
+	err = ctx.Config.RemoteCache().Save(ctx.Context, ctx.KubeClient)
+	if err != nil {
+		return err
 	}
 
 	// Execute after deployments purge hook

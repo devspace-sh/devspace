@@ -317,6 +317,7 @@ func (l *RemoteCache) Save(ctx context.Context, client kubectl.Client) error {
 
 			// don't do anything if its empty
 			if len(l.Vars) == 0 && len(l.Data) == 0 && len(l.DevPods) == 0 && len(l.Deployments) == 0 {
+				l.raw = data
 				return true, nil
 			}
 
@@ -352,6 +353,7 @@ func (l *RemoteCache) Save(ctx context.Context, client kubectl.Client) error {
 
 		cacheData := secret.Data["cache"]
 		if string(cacheData) == string(data) {
+			l.raw = data
 			return true, nil
 		}
 

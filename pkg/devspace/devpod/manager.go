@@ -25,11 +25,11 @@ type Manager interface {
 	// Reset will stop the DevPod if it exists and reset the replaced pods
 	Reset(ctx *devspacecontext.Context, name string) error
 
+	// Stop will stop the DevPod
+	Stop(ctx *devspacecontext.Context, name string)
+
 	// List lists the currently active dev pods
 	List() []string
-
-	// Stop will stop the DevPod
-	Stop(name string)
 
 	// Close will close the manager and wait for all dev pods
 	Close()
@@ -200,7 +200,7 @@ func (d *devPodManager) Reset(ctx *devspacecontext.Context, name string) error {
 	return nil
 }
 
-func (d *devPodManager) Stop(name string) {
+func (d *devPodManager) Stop(ctx *devspacecontext.Context, name string) {
 	lock := d.lockFactory.GetLock(name)
 	lock.Lock()
 	defer lock.Unlock()

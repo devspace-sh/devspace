@@ -14,6 +14,8 @@ pipelines:
   dev:
     steps:
       - run: |-
+          run_dependencies_pipelines --all
+          
           export IMAGE=testfabi
           
           build_images test --set image=${IMAGE}

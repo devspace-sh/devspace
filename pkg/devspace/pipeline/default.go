@@ -44,10 +44,11 @@ start_dev --all`,
 }
 
 var DefaultPurgePipeline = &latest.Pipeline{
-	Name: "dev",
+	Name: "purge",
 	Steps: []latest.PipelineStep{
 		{
-			Run: `purge_deployments --all
+			Run: `stop_dev --all
+purge_deployments --all
 run_dependencies_pipelines --all --pipeline purge`,
 		},
 	},

@@ -119,7 +119,11 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 
 		deployCache.DeploymentConfigHash = deploymentConfigHash
 		helmCache.Release = releaseName
-		helmCache.ReleaseNamespace = d.DeploymentConfig.Namespace
+		if d.DeploymentConfig.Namespace != "" {
+			helmCache.ReleaseNamespace = d.DeploymentConfig.Namespace
+		} else {
+			helmCache.ReleaseNamespace = ctx.KubeClient.Namespace()
+		}
 		helmCache.ChartHash = hash
 		helmCache.ValuesHash = deployValuesHash
 		helmCache.OverridesHash = helmOverridesHash
