@@ -122,7 +122,7 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 	if configExists {
 		log.StartFileLogging()
 
-		localCache, err = localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
+		localCache, err = configLoader.LoadLocalCache()
 		if err != nil {
 			return err
 		}

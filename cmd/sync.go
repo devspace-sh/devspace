@@ -145,7 +145,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 				return errors.New(message.ConfigNotFound)
 			}
 
-			localCache, err = localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
+			localCache, err = configLoader.LoadLocalCache()
 			if err != nil {
 				return err
 			}

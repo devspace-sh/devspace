@@ -4,7 +4,8 @@ name: dependency
 commands:
   - name: dev
     command: |-
-      devspace dev -n test
+      echo 123
+      #devspace dev --config dependency.yaml -n test
 
 pipelines:
   dev:
@@ -12,10 +13,10 @@ pipelines:
       - run: |-
           # Deploy test here
           create_deployments test2 --set helm.componentChart=true \
-                                   --set helm.values.containers[0].image=ubuntu \
-                                   --set helm.values.containers[0].command='{sleep,9999999999}'
+                                   --set helm.values.containers[0].image=nginx
           
           # Start development mode for test here
-          start_dev test --set imageSelector=ubuntu \
+          start_dev test --set imageSelector=nginx \
                          --set forward[0].port=8080 \
+                         --set forward[0].containerPort=80 \
                          --set logs.disabled=false

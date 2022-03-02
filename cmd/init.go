@@ -140,8 +140,7 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 	log.PrintLogo()
 
 	// Create config
-	localCache, err := localcache.NewCacheLoader().Load()
-
+	localCache, err := localcache.NewCacheLoader().Load(constants.DefaultConfigPath)
 	generateFromDockerCompose := false
 	// TODO: Enable again
 	dockerComposePath := "" // compose.GetDockerComposePath()

@@ -36,6 +36,8 @@ func GetDevPodFileLogger(devPodName string) Logger {
 
 // GetFileLogger returns a logger instance for the specified filename
 func GetFileLogger(filename string) Logger {
+	filename = strings.TrimSpace(filename)
+
 	logsMutex.Lock()
 	defer logsMutex.Unlock()
 

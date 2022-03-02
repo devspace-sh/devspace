@@ -202,6 +202,16 @@ func (l *LocalCache) Save() error {
 		return err
 	}
 
+	_, err = os.Stat(l.cachePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// check if a save is really necessary
+			if len(l.Data) == 0 && len(l.Vars) == 0 && len(l.Images) == 0 && l.LastContext == nil {
+				return nil
+			}
+		}
+	}
+
 	err = os.MkdirAll(filepath.Dir(l.cachePath), 0755)
 	if err != nil {
 		return err

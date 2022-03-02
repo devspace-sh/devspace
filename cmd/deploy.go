@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
@@ -190,7 +189,7 @@ func prepare(f factory.Factory, configOptions *loader.ConfigOptions, globalFlags
 	}
 
 	// load generated config
-	localCache, err := localcache.NewCacheLoaderFromDevSpacePath(globalFlags.ConfigPath).Load()
+	localCache, err := configLoader.LoadLocalCache()
 	if err != nil {
 		return nil, errors.Errorf("error loading local cache: %v", err)
 	}

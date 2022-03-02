@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"io"
 	"os"
@@ -141,8 +140,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	configExists, err := configLoader.SetDevSpaceRoot(f.GetLog())
 	if err != nil {
 		return err
-	}
-	if !configExists {
+	} else if !configExists {
 		return errors.New(message.ConfigNotFound)
 	}
 
@@ -160,7 +158,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	}
 
 	// load generated
-	localCache, err := localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
+	localCache, err := configLoader.LoadLocalCache()
 	if err != nil {
 		return err
 	}

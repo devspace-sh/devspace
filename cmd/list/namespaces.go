@@ -62,7 +62,7 @@ func (cmd *namespacesCmd) RunListNamespaces(f factory.Factory, cobraCmd *cobra.C
 	// Load generated config if possible
 	var localCache localcache.Cache
 	if configExists {
-		localCache, err = localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
+		localCache, err = configLoader.LoadLocalCache()
 		if err != nil {
 			return err
 		}

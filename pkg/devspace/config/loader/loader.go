@@ -52,6 +52,9 @@ type ConfigLoader interface {
 	// LoadRaw loads the config without parsing it.
 	LoadRaw() (map[string]interface{}, error)
 
+	// LoadLocalCache loads the local cache from this config loader
+	LoadLocalCache() (localcache.Cache, error)
+
 	// Exists returns if a devspace.yaml could be found
 	Exists() bool
 
@@ -84,6 +87,10 @@ func (l *configLoader) ConfigPath() string {
 	return l.absConfigPath
 }
 
+func (l *configLoader) LoadLocalCache() (localcache.Cache, error) {
+	return localcache.NewCacheLoader().Load(l.absConfigPath)
+}
+
 // Load restores variables from the cluster (if wanted), loads the config and then saves them to the cluster again
 func (l *configLoader) Load(ctx context.Context, client kubectl.Client, options *ConfigOptions, log log.Logger) (config.Config, error) {
 	return l.LoadWithCache(ctx, nil, client, options, log)
@@ -97,7 +104,7 @@ func (l *configLoader) LoadWithCache(ctx context.Context, localCache localcache.
 // LoadWithParser loads the config with the given parser
 func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache.Cache, client kubectl.Client, parser Parser, options *ConfigOptions, log log.Logger) (_ config.Config, err error) {
 	if localCache == nil {
-		localCache, err = localcache.NewCacheLoaderFromDevSpacePath(l.absConfigPath).Load()
+		localCache, err = l.LoadLocalCache()
 		if err != nil {
 			return nil, err
 		}

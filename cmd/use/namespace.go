@@ -121,7 +121,7 @@ func (cmd *namespaceCmd) RunUseNamespace(f factory.Factory, cobraCmd *cobra.Comm
 	if err != nil {
 		return err
 	}
-	err = ClearProjectKubeContext(configLoader, cmd.ToConfigOptions(), log)
+	err = ClearProjectKubeContext(configLoader, log)
 	if err != nil {
 		return errors.Wrap(err, "clear generated kube context")
 	}

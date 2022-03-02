@@ -147,7 +147,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 
 	if configExists {
 		// Load generated config
-		localCache, err = localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
+		localCache, err = configLoader.LoadLocalCache()
 		if err != nil {
 			return errors.Errorf("Error loading generated.yaml: %v", err)
 		}

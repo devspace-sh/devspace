@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
@@ -23,12 +22,10 @@ var EncryptionKey string
 
 // Loader is the interface for loading the cache
 type Loader interface {
-	Load() (Cache, error)
+	Load(devSpaceFilePath string) (Cache, error)
 }
 
-type cacheLoader struct {
-	cachePath string
-}
+type cacheLoader struct{}
 
 // New generates a new generated config
 func New(cachePath string) Cache {
@@ -43,33 +40,22 @@ func New(cachePath string) Cache {
 
 // NewCacheLoader creates a new generated config loader
 func NewCacheLoader() Loader {
-	return NewCacheLoaderFromDevSpacePath(constants.DefaultConfigPath)
-}
-
-// NewCacheLoaderFromDevSpacePath creates a new generated config loader for the given DevSpace configuration path
-func NewCacheLoaderFromDevSpacePath(path string) Loader {
-	return &cacheLoader{
-		cachePath: cachePath(path),
-	}
+	return &cacheLoader{}
 }
 
 // Load loads the config from the filesystem
-func (l *cacheLoader) Load() (Cache, error) {
-	return l.loadFromPath(l.cachePath)
-}
-
-// LoadFromPath loads the generated config from a given path
-func (l *cacheLoader) loadFromPath(path string) (Cache, error) {
+func (l *cacheLoader) Load(devSpaceFilePath string) (Cache, error) {
 	var loadedConfig *LocalCache
 
-	absPath, err := filepath.Abs(path)
+	absPath, err := filepath.Abs(devSpaceFilePath)
 	if err != nil {
 		return nil, err
 	}
 
-	data, readErr := ioutil.ReadFile(absPath)
+	cachePath := cachePath(absPath)
+	data, readErr := ioutil.ReadFile(cachePath)
 	if readErr != nil {
-		loadedConfig = New(l.cachePath).(*LocalCache)
+		loadedConfig = New(cachePath).(*LocalCache)
 	} else {
 		loadedConfig = &LocalCache{}
 		err := yaml.Unmarshal(data, loadedConfig)
@@ -114,24 +100,16 @@ func (l *cacheLoader) loadFromPath(path string) (Cache, error) {
 		loadedConfig.VarsEncrypted = false
 	}
 
-	loadedConfig.cachePath = absPath
+	loadedConfig.cachePath = cachePath
 	return loadedConfig, nil
 }
 
-// cachePath returns the generated config absolute path. The if the default devspace.yaml is given the generated config path
-// will be $PWD/.devspace/generated.yaml. For any other file name it will be $PWD/.devspace/generated-[file name]
+// cachePath returns the cache absolute path. The if the default devspace.yaml is given the cache path
+// will be $PWD/.devspace/cache.yaml. For any other file name it will be $PWD/.devspace/cache-[file name]
 func cachePath(devSpaceConfigPath string) string {
-	if devSpaceConfigPath == "" {
-		return filepath.Join(constants.DefaultCacheFolder, "cache.yaml")
-	}
-
 	fileDir := filepath.Dir(devSpaceConfigPath)
-	if fileDir == "" {
-		fileDir, _ = os.Getwd()
-	}
-
 	fileName := filepath.Base(devSpaceConfigPath)
-	if fileName == constants.DefaultConfigPath || fileName == "" {
+	if fileName == constants.DefaultConfigPath {
 		return filepath.Join(fileDir, constants.DefaultCacheFolder, "cache.yaml")
 	}
 

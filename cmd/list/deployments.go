@@ -3,7 +3,6 @@ package list
 import (
 	"context"
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
@@ -73,7 +72,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 	}
 
 	// Load generated
-	localCache, err := localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
+	localCache, err := configLoader.LoadLocalCache()
 	if err != nil {
 		return err
 	}

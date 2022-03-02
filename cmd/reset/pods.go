@@ -2,7 +2,6 @@ package reset
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -71,7 +70,7 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 	}
 
 	// Get config with adjusted cluster config
-	localCache, err := localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
+	localCache, err := configLoader.LoadLocalCache()
 	if err != nil {
 		return err
 	}

@@ -6,7 +6,6 @@ import (
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
@@ -101,7 +100,7 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 		return errors.Wrap(err, "create kube client")
 	}
 
-	localCache, err := localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
+	localCache, err := configLoader.LoadLocalCache()
 	if err != nil {
 		return err
 	}
