@@ -21,6 +21,7 @@ import (
 func (client *client) CopyFromReader(ctx context.Context, pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error {
 	_, stderr, err := client.ExecBuffered(ctx, pod, container, []string{"tar", "xzp", "-C", containerPath + "/."}, reader)
 	if err != nil {
+
 		if stderr != nil {
 			return errors.Errorf("error executing tar: %s: %v", string(stderr), err)
 		}

@@ -3,12 +3,12 @@ package devpod
 import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
 	"github.com/loft-sh/devspace/pkg/devspace/services/terminal"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	"os"
 	syncpkg "sync"
 
@@ -25,7 +25,7 @@ import (
 )
 
 type devPod struct {
-	selectedPod *corev1.Pod
+	selectedPod *selector.SelectedPodContainer
 
 	m syncpkg.Mutex
 
@@ -176,13 +176,14 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 		ApplyConfigParameter("", devPodConfig.LabelSelector, imageSelector, devPodConfig.Namespace, "").
 		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Millisecond * 500)).
 		WithSkipInitContainers(true)
-	d.selectedPod, err = targetselector.NewTargetSelector(options).SelectSinglePod(ctx.Context, ctx.KubeClient, ctx.Log)
+	d.selectedPod, err = targetselector.NewTargetSelector(options).SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
 	if err != nil {
 		return false, errors.Wrap(err, "waiting for pod to become ready")
 	}
+	ctx.Log.Debugf("Selected pod:container %s:%s", d.selectedPod.Pod.Name, d.selectedPod.Container.Name)
 
 	// start sync and port forwarding
-	err = d.startSyncAndPortForwarding(ctx, devPodConfig, newTargetSelector(d.selectedPod.Name, d.selectedPod.Namespace, parent), opts, parent)
+	err = d.startSyncAndPortForwarding(ctx, devPodConfig, newTargetSelector(d.selectedPod.Pod.Name, d.selectedPod.Pod.Namespace, d.selectedPod.Container.Name, parent), opts, parent)
 	if err != nil {
 		return false, err
 	}
@@ -204,7 +205,7 @@ func (d *devPod) startLogs(ctx *devspacecontext.Context, devPodConfig *latest.De
 		}
 
 		parent.Go(func() error {
-			return logs.StartLogs(ctx, devContainer, newTargetSelector(d.selectedPod.Name, d.selectedPod.Namespace, parent))
+			return logs.StartLogs(ctx, devContainer, newTargetSelector(d.selectedPod.Pod.Name, d.selectedPod.Pod.Namespace, d.selectedPod.Container.Name, parent))
 		})
 
 		return true
@@ -234,7 +235,7 @@ func (d *devPod) startTerminal(ctx *devspacecontext.Context, devContainer *lates
 		// make sure the global log is silent
 		before := log.GetBaseInstance().GetLevel()
 		log.GetBaseInstance().SetLevel(logrus.PanicLevel)
-		err := terminal.StartTerminal(ctx, devContainer, newTargetSelector(d.selectedPod.Name, d.selectedPod.Namespace, parent), os.Stdout, os.Stderr, os.Stdin, parent)
+		err := terminal.StartTerminal(ctx, devContainer, newTargetSelector(d.selectedPod.Pod.Name, d.selectedPod.Pod.Namespace, d.selectedPod.Container.Name, parent), os.Stdout, os.Stderr, os.Stdin, parent)
 		log.GetBaseInstance().SetLevel(before)
 		if err != nil {
 			return errors.Wrap(err, "error in terminal forwarding")

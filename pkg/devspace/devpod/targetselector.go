@@ -18,18 +18,20 @@ func (d DevPodLostConnection) Error() string {
 	return "lost connection to pod"
 }
 
-func newTargetSelector(pod, namespace string, parent *tomb.Tomb) targetselector.TargetSelector {
+func newTargetSelector(pod, namespace, defaultContainer string, parent *tomb.Tomb) targetselector.TargetSelector {
 	return &targetSelector{
-		pod:       pod,
-		namespace: namespace,
-		parent:    parent,
+		pod:              pod,
+		namespace:        namespace,
+		defaultContainer: defaultContainer,
+		parent:           parent,
 	}
 }
 
 type targetSelector struct {
-	pod       string
-	namespace string
-	container string
+	pod              string
+	namespace        string
+	defaultContainer string
+	container        string
 
 	// parent is killed if we cannot find the
 	// pod anymore we are assigned to
@@ -46,10 +48,15 @@ func (t *targetSelector) SelectSinglePod(ctx context.Context, client kubectl.Cli
 }
 
 func (t *targetSelector) SelectSingleContainer(ctx context.Context, client kubectl.Client, log log.Logger) (*selector.SelectedPodContainer, error) {
+	container := t.container
+	if t.container == "" {
+		container = t.defaultContainer
+	}
+
 	options := targetselector.NewEmptyOptions().
 		WithPod(t.pod).
 		WithNamespace(t.namespace).
-		WithContainer(t.container).
+		WithContainer(container).
 		WithWaitingStrategy(newUntilNewestRunningWaitingStrategy(time.Millisecond*250, t.parent))
 
 	return targetselector.NewTargetSelector(options).SelectSingleContainer(ctx, client, log)
@@ -57,10 +64,11 @@ func (t *targetSelector) SelectSingleContainer(ctx context.Context, client kubec
 
 func (t *targetSelector) WithContainer(container string) targetselector.TargetSelector {
 	return &targetSelector{
-		pod:       t.pod,
-		namespace: t.namespace,
-		container: container,
-		parent:    t.parent,
+		pod:              t.pod,
+		namespace:        t.namespace,
+		container:        container,
+		defaultContainer: t.defaultContainer,
+		parent:           t.parent,
 	}
 }
 
