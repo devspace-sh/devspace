@@ -130,7 +130,9 @@ func (u *PodInfoPrinter) PrintPodInfo(client kubectl.Client, pod *v1.Pod, log lo
 
 		status := kubectl.GetPodStatus(pod)
 		u.shownEvents = displayWarnings(relevantObjectsFromPod(pod), pod.Namespace, client, u.shownEvents, log)
-		log.Infof("DevSpace is waiting, because Pod %s has status: %s", pod.Name, status)
+		if status != "Running" {
+			log.Infof("DevSpace is waiting, because Pod %s has status: %s", pod.Name, status)
+		}
 		u.LastWarning = time.Now()
 	}
 }

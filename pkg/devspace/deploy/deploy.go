@@ -309,7 +309,7 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) e
 				continue
 			}
 		}
-		ctx = ctx.WithLogger(log.NewDefaultPrefixLogger("purge:"+deploymentCache.Name+" ", ctx.Log))
+		ctx := ctx.WithLogger(log.NewDefaultPrefixLogger("purge:"+deploymentCache.Name+" ", ctx.Log))
 
 		// Execute before deployment purge hook
 		err = hook.ExecuteHooks(ctx, map[string]interface{}{

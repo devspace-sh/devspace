@@ -304,6 +304,7 @@ func (c *controller) waitForBuild(ctx *devspacecontext.Context, errChan <-chan e
 	case err := <-errChan:
 		return err
 	case done := <-cacheChan:
+		ctx := ctx.WithLogger(logpkg.NewDefaultPrefixLogger("build:"+done.imageConfigName+" ", ctx.Log))
 		ctx.Log.Donef("Done building image %s:%s (%s)", done.imageName, done.imageTag, done.imageConfigName)
 
 		// Update cache

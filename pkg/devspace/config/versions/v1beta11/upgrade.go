@@ -8,6 +8,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"k8s.io/apimachinery/pkg/labels"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -28,7 +30,13 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 
 	// just guess a name here
 	if nextConfig.Name == "" {
-		nextConfig.Name = "devspace"
+		// try to get current folder name
+		wd, _ := os.Getwd()
+		if wd != "" && filepath.Base(wd) != "" && len(filepath.Base(wd)) > 2 {
+			nextConfig.Name = filepath.Base(wd)
+		} else {
+			nextConfig.Name = "devspace"
+		}
 	}
 
 	// use a pretty simple pipeline which was used by devspace before
