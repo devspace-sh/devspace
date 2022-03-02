@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
@@ -64,7 +65,7 @@ devspace purge -d my-deployment
 // Run executes the purge command logic
 func (cmd *PurgeCmd) Run(f factory.Factory) error {
 	configOptions := cmd.ToConfigOptions()
-	ctx, err := prepare(f, configOptions, cmd.GlobalFlags, false)
+	ctx, err := prepare(context.Background(), f, configOptions, cmd.GlobalFlags, false)
 	if err != nil {
 		return err
 	}

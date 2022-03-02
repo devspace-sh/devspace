@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
@@ -63,7 +64,7 @@ Builds all defined images and pushes them
 // Run executes the command logic
 func (cmd *BuildCmd) Run(f factory.Factory) error {
 	configOptions := cmd.ToConfigOptions()
-	ctx, err := prepare(f, configOptions, cmd.GlobalFlags, true)
+	ctx, err := prepare(context.Background(), f, configOptions, cmd.GlobalFlags, true)
 	if err != nil {
 		return err
 	}

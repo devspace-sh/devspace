@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	pipelinetypes "github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
@@ -79,7 +80,7 @@ deployment.
 func (cmd *RenderCmd) Run(f factory.Factory) error {
 	f.GetLog().Warnf("This command is deprecated, please use 'devspace deploy --render' instead")
 	configOptions := cmd.ToConfigOptions()
-	ctx, err := prepare(f, configOptions, cmd.GlobalFlags, true)
+	ctx, err := prepare(context.Background(), f, configOptions, cmd.GlobalFlags, true)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
@@ -62,10 +63,10 @@ type DevCmd struct {
 	log          log.Logger
 
 	// used for testing to allow interruption
-	Interrupt chan error
-	Stdout    io.Writer
-	Stderr    io.Writer
-	Stdin     io.Reader
+	Ctx    context.Context
+	Stdout io.Writer
+	Stderr io.Writer
+	Stdin  io.Reader
 }
 
 // NewDevCmd creates a new devspace dev command
@@ -133,8 +134,12 @@ Open terminal instead of logs:
 
 // Run executes the command logic
 func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
+	if cmd.Ctx == nil {
+		cmd.Ctx = context.Background()
+	}
+
 	configOptions := cmd.ToConfigOptions()
-	ctx, err := prepare(f, configOptions, cmd.GlobalFlags, false)
+	ctx, err := prepare(cmd.Ctx, f, configOptions, cmd.GlobalFlags, false)
 	if err != nil {
 		return err
 	}

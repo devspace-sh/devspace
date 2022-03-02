@@ -115,7 +115,7 @@ devspace deploy --kube-context=deploy-context
 // Run executes the down command logic
 func (cmd *DeployCmd) Run(f factory.Factory) error {
 	configOptions := cmd.ToConfigOptions()
-	ctx, err := prepare(f, configOptions, cmd.GlobalFlags, false)
+	ctx, err := prepare(context.Background(), f, configOptions, cmd.GlobalFlags, false)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func (cmd *DeployCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory
 	})
 }
 
-func prepare(f factory.Factory, configOptions *loader.ConfigOptions, globalFlags *flags.GlobalFlags, allowFailingKubeClient bool) (*devspacecontext.Context, error) {
+func prepare(ctx context.Context, f factory.Factory, configOptions *loader.ConfigOptions, globalFlags *flags.GlobalFlags, allowFailingKubeClient bool) (*devspacecontext.Context, error) {
 	// start file logging
 	logpkg.StartFileLogging()
 
@@ -202,17 +202,14 @@ func prepare(f factory.Factory, configOptions *loader.ConfigOptions, globalFlags
 		return nil, err
 	}
 
-	// Create our parent context
-	backgroundCtx := context.Background()
-
 	// load config
-	configInterface, err := configLoader.LoadWithCache(backgroundCtx, localCache, client, configOptions, log)
+	configInterface, err := configLoader.LoadWithCache(ctx, localCache, client, configOptions, log)
 	if err != nil {
 		return nil, err
 	}
 
 	// create devspace context
-	return devspacecontext.NewContext(backgroundCtx, log).
+	return devspacecontext.NewContext(ctx, log).
 		WithConfig(configInterface).
 		WithKubeClient(client), nil
 }
