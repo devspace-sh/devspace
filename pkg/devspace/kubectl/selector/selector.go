@@ -8,7 +8,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -358,7 +357,7 @@ func byImageName(ctx context.Context, client kubectl.Client, namespace string, i
 						}
 					}
 					if pod.Labels != nil && pod.Labels[ReplacedLabel] == "true" && containers[container.Name] {
-						if pod.Annotations != nil && pod.Annotations[ImageSelectorAnnotation] != "" && pod.Annotations[ImageSelectorAnnotation] == hash.String(imageName)[:32] {
+						if pod.Annotations != nil && pod.Annotations[ImageSelectorAnnotation] != "" && pod.Annotations[ImageSelectorAnnotation] == imageName {
 							retPod := pod
 							retContainer := container
 							retPods = append(retPods, &SelectedPodContainer{

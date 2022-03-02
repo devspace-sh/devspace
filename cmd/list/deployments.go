@@ -96,9 +96,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 		WithKubeClient(client)
 
 	// Resolve dependencies
-	dependencies, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{
-		Silent: true,
-	})
+	dependencies, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{})
 	if err != nil {
 		return err
 	}

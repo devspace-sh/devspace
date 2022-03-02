@@ -193,6 +193,8 @@ func (t *targetSelector) WithContainer(container string) TargetSelector {
 }
 
 func (t *targetSelector) SelectSingleContainer(ctx context.Context, client kubectl.Client, log log.Logger) (*selector.SelectedPodContainer, error) {
+	log.Debugf("Start selecting a single container with selector %v", t.options.selector.String())
+
 	if t.options.waitingStrategy != nil {
 		t.options.waitingStrategy = t.options.waitingStrategy.Reset()
 	}
@@ -208,6 +210,8 @@ func (t *targetSelector) SelectSingleContainer(ctx context.Context, client kubec
 }
 
 func (t *targetSelector) SelectSinglePod(ctx context.Context, client kubectl.Client, log log.Logger) (*v1.Pod, error) {
+	log.Debugf("Start selecting a single pod with selector %v", t.options.selector.String())
+
 	if t.options.waitingStrategy != nil {
 		t.options.waitingStrategy = t.options.waitingStrategy.Reset()
 	}
@@ -328,7 +332,12 @@ func (t *targetSelector) selectSinglePod(ctx context.Context, client kubectl.Cli
 	// transform stack
 	pods := selector.PodsFromPodContainer(stack)
 	if options.waitingStrategy != nil {
-		return options.waitingStrategy.SelectPod(ctx, client, options.selector.Namespace, pods, log)
+		namespace := options.selector.Namespace
+		if namespace == "" {
+			namespace = client.Namespace()
+		}
+
+		return options.waitingStrategy.SelectPod(ctx, client, namespace, pods, log)
 	}
 
 	if len(pods) == 0 {

@@ -3,7 +3,6 @@ package dependency
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/command"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
@@ -41,12 +40,10 @@ func NewManager(ctx *devspacecontext.Context, configOptions *loader.ConfigOption
 type ResolveOptions struct {
 	SkipDependencies []string
 	Dependencies     []string
-	Silent           bool
-	Verbose          bool
 }
 
 func (m *manager) ResolveAll(ctx *devspacecontext.Context, options ResolveOptions) ([]types.Dependency, error) {
-	dependencies, err := m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, false, options.Silent, options.Verbose, "Resolve", func(ctx *devspacecontext.Context, dependency *Dependency) error {
+	dependencies, err := m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, "Resolve", func(ctx *devspacecontext.Context, dependency *Dependency) error {
 		return nil
 	})
 	if err != nil {
@@ -81,13 +78,9 @@ type BuildOptions struct {
 	Verbose          bool
 }
 
-func (m *manager) handleDependencies(ctx *devspacecontext.Context, skipDependencies, filterDependencies []string, reverse, silent, verbose bool, actionName string, action func(ctx *devspacecontext.Context, dependency *Dependency) error) ([]types.Dependency, error) {
+func (m *manager) handleDependencies(ctx *devspacecontext.Context, skipDependencies, filterDependencies []string, actionName string, action func(ctx *devspacecontext.Context, dependency *Dependency) error) ([]types.Dependency, error) {
 	if ctx.Config == nil || ctx.Config.Config() == nil || len(ctx.Config.Config().Dependencies) == 0 {
 		return nil, nil
-	}
-
-	if !silent {
-		ctx.Log.Infof("Start resolving dependencies")
 	}
 
 	hooksErr := hook.ExecuteHooks(ctx, nil, "before:"+strings.ToLower(actionName)+"Dependencies")
@@ -101,14 +94,7 @@ func (m *manager) handleDependencies(ctx *devspacecontext.Context, skipDependenc
 		return nil, errors.Wrap(err, "resolve dependencies")
 	}
 
-	if !silent {
-		ctx.Log.Donef("Resolved dependencies successfully")
-	}
-	if !silent && !verbose {
-		ctx.Log.Infof("To display the complete dependency execution log run with the '--verbose-dependencies' flag")
-	}
-
-	executedDependencies, err := m.executeDependenciesRecursive(ctx, "", dependencies, skipDependencies, filterDependencies, silent, verbose, actionName, action, map[string]bool{})
+	executedDependencies, err := m.executeDependenciesRecursive(ctx, "", dependencies, skipDependencies, filterDependencies, actionName, action, map[string]bool{})
 	if err != nil {
 		hooksErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"error": err,
@@ -133,7 +119,6 @@ func (m *manager) executeDependenciesRecursive(
 	base string,
 	dependencies []types.Dependency,
 	skipDependencies, filterDependencies []string,
-	silent, verbose bool,
 	actionName string,
 	action func(ctx *devspacecontext.Context, dependency *Dependency) error,
 	executedDependenciesIDs map[string]bool,
@@ -173,7 +158,7 @@ func (m *manager) executeDependenciesRecursive(
 				return nil, hooksErr
 			}
 
-			_, err := m.executeDependenciesRecursive(dependencyCtx, dependencyName, dependency.Children(), skipDependencies, filterDependencies, silent, verbose, actionName, action, executedDependenciesIDs)
+			_, err := m.executeDependenciesRecursive(dependencyCtx, dependencyName, dependency.Children(), skipDependencies, filterDependencies, actionName, action, executedDependenciesIDs)
 			if err != nil {
 				hooksErr := hook.ExecuteHooks(dependencyCtx, map[string]interface{}{
 					"error": err,
@@ -199,16 +184,8 @@ func (m *manager) executeDependenciesRecursive(
 			continue
 		}
 
-		// execute dependency
-		if !silent && !verbose {
-			ctx.Log.Infof(fmt.Sprintf("%s dependency %s...", actionName, dependencyName))
-		}
-
 		// If not verbose log to a stream
-		if !verbose {
-			dependencyCtx = dependencyCtx.WithLogger(log.NewStreamLogger(buff, logrus.InfoLevel))
-		}
-
+		dependencyCtx = dependencyCtx.WithLogger(log.NewStreamLogger(buff, logrus.InfoLevel))
 		if dependency.Config() != nil {
 			pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{
 				"dependency_name":        dependency.Name(),
@@ -248,9 +225,6 @@ func (m *manager) executeDependenciesRecursive(
 		}
 
 		executedDependencies = append(executedDependencies, dependency)
-		if !silent {
-			ctx.Log.Donef("%s dependency %s completed", actionName, dependencyName)
-		}
 	}
 
 	return executedDependencies, nil

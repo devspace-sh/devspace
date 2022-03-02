@@ -230,7 +230,7 @@ func (s *unionLogger) Write(message []byte) (int, error) {
 	defer s.m.Unlock()
 
 	for _, l := range s.Loggers {
-		l.WriteString(logrus.PanicLevel, string(message))
+		l.WriteString(logrus.FatalLevel, string(message))
 	}
 	return len(message), nil
 }

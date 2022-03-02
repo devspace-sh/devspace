@@ -181,9 +181,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 		}
 
 		ctx = ctx.WithConfig(config)
-		dependencies, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{
-			Silent: true,
-		})
+		dependencies, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{})
 		if err != nil {
 			return err
 		}

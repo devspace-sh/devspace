@@ -232,10 +232,10 @@ func (d *devPod) getTerminalDevContainer(devPodConfig *latest.DevPod) *latest.De
 func (d *devPod) startTerminal(ctx *devspacecontext.Context, devContainer *latest.DevContainer, parent *tomb.Tomb) error {
 	parent.Go(func() error {
 		// make sure the global log is silent
-		before := log.GetInstance().GetLevel()
-		log.GetInstance().SetLevel(logrus.FatalLevel)
+		before := log.GetBaseInstance().GetLevel()
+		log.GetBaseInstance().SetLevel(logrus.PanicLevel)
 		err := terminal.StartTerminal(ctx, devContainer, newTargetSelector(d.selectedPod.Name, d.selectedPod.Namespace, parent), os.Stdout, os.Stderr, os.Stdin, parent)
-		log.GetInstance().SetLevel(before)
+		log.GetBaseInstance().SetLevel(before)
 		if err != nil {
 			return errors.Wrap(err, "error in terminal forwarding")
 		}

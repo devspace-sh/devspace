@@ -96,9 +96,7 @@ func (cmd *PrintCmd) Run(f factory.Factory) error {
 		WithKubeClient(client)
 
 	// resolve dependencies
-	dependencies, err := dependency.NewManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{
-		Silent: true,
-	})
+	dependencies, err := dependency.NewManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{})
 	if err != nil {
 		log.Warnf("Error resolving dependencies: %v", err)
 	}

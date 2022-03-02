@@ -1,13 +1,15 @@
 package log
 
 import (
+	"fmt"
 	"github.com/mgutz/ansi"
 	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
 )
 
-var defaultLog Logger = NewStdoutLogger(os.Stdin, stdout, logrus.InfoLevel)
+var baseLog = NewStdoutLogger(os.Stdin, stdout, logrus.InfoLevel)
+var defaultLog = baseLog
 
 //var defaultLog Logger = NewStreamLoggerWithFormat(os.Stdin, logrus.InfoLevel, JsonFormat)
 
@@ -38,9 +40,20 @@ func GetInstance() Logger {
 	return defaultLog
 }
 
-// SetInstance sets the default logger instance
-func SetInstance(logger Logger) {
-	defaultLog = logger
+// GetBaseInstance returns the base stdout logger
+func GetBaseInstance() Logger {
+	return baseLog
+}
+
+func PrintLogInfo(logger Logger) {
+	printLogInfoRecursive("", logger)
+}
+
+func printLogInfoRecursive(prefix string, logger Logger) {
+	fmt.Printf("%s> %#+v\n", prefix, logger)
+	for _, l := range logger.Children() {
+		printLogInfoRecursive(prefix+"  ", l)
+	}
 }
 
 // WriteColored writes a message in color

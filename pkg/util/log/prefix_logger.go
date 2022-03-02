@@ -258,7 +258,7 @@ func (s *prefixLogger) Write(message []byte) (int, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	s.base.WriteString(logrus.PanicLevel, string(message))
+	s.base.WriteString(logrus.FatalLevel, string(message))
 	return len(message), nil
 }
 

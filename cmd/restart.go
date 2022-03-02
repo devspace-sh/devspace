@@ -130,9 +130,7 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 	}
 
 	// Resolve dependencies
-	dep, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{
-		Verbose: false,
-	})
+	dep, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{})
 	if err != nil {
 		cmd.log.Warnf("Error resolving dependencies: %v", err)
 	}

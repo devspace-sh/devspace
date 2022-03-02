@@ -94,10 +94,7 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 		WithKubeClient(client)
 
 	// Resolve dependencies
-	dependencies, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{
-		Silent:  true,
-		Verbose: false,
-	})
+	dependencies, err := f.NewDependencyManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{})
 	if err != nil {
 		cmd.log.Warnf("Error resolving dependencies: %v", err)
 	}

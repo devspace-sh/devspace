@@ -154,6 +154,10 @@ func (cmd *DeployCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory
 }
 
 func prepare(f factory.Factory, configOptions *loader.ConfigOptions, globalFlags *flags.GlobalFlags, allowFailingKubeClient bool) (*devspacecontext.Context, error) {
+	// start file logging
+	logpkg.StartFileLogging()
+
+	// get the main logger after file logging is started
 	log := f.GetLog()
 
 	// set config root
@@ -167,9 +171,6 @@ func prepare(f factory.Factory, configOptions *loader.ConfigOptions, globalFlags
 	} else if !configExists {
 		return nil, errors.New(message.ConfigNotFound)
 	}
-
-	// start file logging
-	logpkg.StartFileLogging()
 
 	// create kubectl client
 	client, err := f.NewKubeClientFromContext(globalFlags.KubeContext, globalFlags.Namespace)
@@ -246,8 +247,6 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, options *Pipel
 	dependencies, err := f.NewDependencyManager(ctx, options.ConfigOptions).ResolveAll(ctx, dependency.ResolveOptions{
 		SkipDependencies: options.DependencyOptions.Exclude,
 		Dependencies:     options.Only,
-		Silent:           true,
-		Verbose:          false,
 	})
 	if err != nil {
 		return errors.Wrap(err, "deploy dependencies")

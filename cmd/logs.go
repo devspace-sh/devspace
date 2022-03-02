@@ -150,9 +150,7 @@ func getImageSelector(ctx *devspacecontext.Context, configLoader loader.ConfigLo
 			}
 
 			ctx = ctx.WithConfig(config)
-			dependencies, err = dependency.NewManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{
-				Silent: true,
-			})
+			dependencies, err = dependency.NewManager(ctx, configOptions).ResolveAll(ctx, dependency.ResolveOptions{})
 			if err != nil {
 				ctx.Log.Warnf("Error resolving dependencies: %v", err)
 			}

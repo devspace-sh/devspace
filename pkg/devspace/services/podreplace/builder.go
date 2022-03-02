@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"github.com/loft-sh/devspace/pkg/util/hash"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,14 +49,20 @@ func buildReplicaSet(ctx *devspacecontext.Context, name string, target runtime.O
 	case *appsv1.ReplicaSet:
 		replicaSet.Annotations[TargetNameAnnotation] = t.Name
 		replicaSet.Annotations[TargetKindAnnotation] = "ReplicaSet"
+		podTemplate.Labels = t.Spec.Template.Labels
+		podTemplate.Annotations = t.Spec.Template.Annotations
 		podTemplate.Spec = *t.Spec.Template.Spec.DeepCopy()
 	case *appsv1.Deployment:
 		replicaSet.Annotations[TargetNameAnnotation] = t.Name
 		replicaSet.Annotations[TargetKindAnnotation] = "Deployment"
+		podTemplate.Labels = t.Spec.Template.Labels
+		podTemplate.Annotations = t.Spec.Template.Annotations
 		podTemplate.Spec = *t.Spec.Template.Spec.DeepCopy()
 	case *appsv1.StatefulSet:
 		replicaSet.Annotations[TargetNameAnnotation] = t.Name
 		replicaSet.Annotations[TargetKindAnnotation] = "StatefulSet"
+		podTemplate.Labels = t.Spec.Template.Labels
+		podTemplate.Annotations = t.Spec.Template.Annotations
 		podTemplate.Spec = *t.Spec.Template.Spec.DeepCopy()
 		podTemplate.Spec.Hostname = strings.Replace(t.Name+"-0", ".", "-", -1)
 		for _, pvc := range t.Spec.VolumeClaimTemplates {
@@ -81,8 +88,6 @@ func buildReplicaSet(ctx *devspacecontext.Context, name string, target runtime.O
 	containers, err := matchesImageSelector(ctx, podTemplate, devPod)
 	if err != nil {
 		return nil, err
-	} else if len(containers) > 0 {
-		replicaSet.Annotations[selector.MatchedContainerAnnotation] = strings.Join(containers, ";")
 	}
 
 	// replace the image names
@@ -138,12 +143,22 @@ func buildReplicaSet(ctx *devspacecontext.Context, name string, target runtime.O
 	}
 
 	// reset the metadata
+	if podTemplate.Labels == nil {
+		podTemplate.Labels = map[string]string{}
+	}
+	if podTemplate.Annotations == nil {
+		podTemplate.Annotations = map[string]string{}
+	}
 	podTemplate.Labels[selector.ReplacedLabel] = "true"
 	imageSelector, err := hashImageSelector(ctx, devPod)
 	if err != nil {
 		return nil, err
 	} else if imageSelector != "" {
 		podTemplate.Annotations[selector.ImageSelectorAnnotation] = imageSelector
+	}
+	if len(containers) > 0 {
+		replicaSet.Annotations[selector.MatchedContainerAnnotation] = strings.Join(containers, ";")
+		podTemplate.Annotations[selector.MatchedContainerAnnotation] = strings.Join(containers, ";")
 	}
 
 	replicaSet.Spec = appsv1.ReplicaSetSpec{
@@ -152,6 +167,13 @@ func buildReplicaSet(ctx *devspacecontext.Context, name string, target runtime.O
 		},
 		Template: *podTemplate,
 	}
+
+	// make sure labels etc are there
+	if ctx.Log.GetLevel() == logrus.DebugLevel {
+		out, _ := yaml.Marshal(podTemplate)
+		ctx.Log.Debugf("Replaced pod spec: \n%v\n", string(out))
+	}
+
 	return replicaSet, nil
 }
 
@@ -240,7 +262,7 @@ func hashImageSelector(ctx *devspacecontext.Context, replacePod *latest.DevPod) 
 			return "", fmt.Errorf("couldn't resolve image selector: %v", replacePod.ImageSelector)
 		}
 
-		return hash.String(imageSelector.Image)[:32], nil
+		return imageSelector.Image, nil
 	}
 
 	return "", nil
@@ -257,7 +279,7 @@ func applyPodPatches(pod *corev1.PodTemplateSpec, devPod *latest.DevPod) (*corev
 	}
 
 	podRaw := map[string]interface{}{}
-	err = yaml.Unmarshal(podBytes, podRaw)
+	err = yaml.Unmarshal(podBytes, &podRaw)
 	if err != nil {
 		return nil, err
 	}
