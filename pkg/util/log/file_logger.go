@@ -276,15 +276,15 @@ func (f *fileLogger) GetLevel() logrus.Level {
 	return f.level
 }
 
-func (f *fileLogger) Writer(level logrus.Level) io.Writer {
+func (f *fileLogger) Writer(level logrus.Level) io.WriteCloser {
 	f.m.Lock()
 	defer f.m.Unlock()
 
 	if f.level < level {
-		return ioutil.Discard
+		return &NopCloser{ioutil.Discard}
 	}
 
-	return f
+	return &NopCloser{f}
 }
 
 func (f *fileLogger) Write(message []byte) (int, error) {

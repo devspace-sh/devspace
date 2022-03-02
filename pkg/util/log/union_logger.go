@@ -214,30 +214,25 @@ func (s *unionLogger) Printf(level logrus.Level, format string, args ...interfac
 	}
 }
 
-func (s *unionLogger) Writer(level logrus.Level) io.Writer {
+func (s *unionLogger) Writer(level logrus.Level) io.WriteCloser {
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	if s.level < level {
-		return ioutil.Discard
+		return &NopCloser{ioutil.Discard}
 	}
 
-	return s
+	return &NopCloser{s}
 }
 
 func (s *unionLogger) Write(message []byte) (int, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	errs := []error{}
 	for _, l := range s.Loggers {
-		_, err := l.Writer(logrus.PanicLevel).Write(message)
-		if err != nil {
-			errs = append(errs, err)
-		}
+		l.WriteString(logrus.PanicLevel, string(message))
 	}
-
-	return len(message), utilerrors.NewAggregate(errs)
+	return len(message), nil
 }
 
 func (s *unionLogger) WriteString(level logrus.Level, message string) {

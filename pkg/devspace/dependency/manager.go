@@ -23,17 +23,8 @@ import (
 
 // Manager can update, build, deploy and purge dependencies.
 type Manager interface {
-	// BuildAll builds all dependencies
-	BuildAll(ctx *devspacecontext.Context, options BuildOptions) ([]types.Dependency, error)
-
 	// ResolveAll resolves all dependencies and returns them
 	ResolveAll(ctx *devspacecontext.Context, options ResolveOptions) ([]types.Dependency, error)
-
-	// PurgeAll purges all dependencies
-	PurgeAll(ctx *devspacecontext.Context, options PurgeOptions) ([]types.Dependency, error)
-
-	// RenderAll renders all dependencies
-	RenderAll(ctx *devspacecontext.Context, options RenderOptions) ([]types.Dependency, error)
 }
 
 type manager struct {
@@ -66,8 +57,8 @@ func (m *manager) ResolveAll(ctx *devspacecontext.Context, options ResolveOption
 }
 
 // ExecuteCommand executes a given command from the available commands
-func ExecuteCommand(ctx context.Context, commands []*latest.CommandConfig, cmd string, args []string, dir string, stdout io.Writer, stderr io.Writer) error {
-	err := command.ExecuteCommand(ctx, commands, cmd, args, dir, stdout, stderr)
+func ExecuteCommand(ctx context.Context, commands []*latest.CommandConfig, cmd string, args []string, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
+	err := command.ExecuteCommand(ctx, commands, cmd, args, dir, stdout, stderr, stdin)
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok {
 			return &exit.ReturnCodeError{
@@ -88,44 +79,6 @@ type BuildOptions struct {
 	SkipDependencies []string
 	Dependencies     []string
 	Verbose          bool
-}
-
-// BuildAll will build all dependencies if there are any
-func (m *manager) BuildAll(ctx *devspacecontext.Context, options BuildOptions) ([]types.Dependency, error) {
-	return m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, false, false, options.Verbose, "Build", func(ctx *devspacecontext.Context, dependency *Dependency) error {
-		return dependency.Build(ctx, &options.BuildOptions)
-	})
-}
-
-// PurgeOptions has all options for purging all dependencies
-type PurgeOptions struct {
-	SkipDependencies []string
-	Dependencies     []string
-	Verbose          bool
-}
-
-// PurgeAll purges all dependencies in reverse order
-func (m *manager) PurgeAll(ctx *devspacecontext.Context, options PurgeOptions) ([]types.Dependency, error) {
-	return m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, true, false, options.Verbose, "Purge", func(ctx *devspacecontext.Context, dependency *Dependency) error {
-		return dependency.Purge(ctx)
-	})
-}
-
-// RenderOptions has all options for rendering all dependencies
-type RenderOptions struct {
-	SkipDependencies []string
-	Dependencies     []string
-	Verbose          bool
-	SkipBuild        bool
-	Writer           io.Writer
-
-	BuildOptions build.Options
-}
-
-func (m *manager) RenderAll(ctx *devspacecontext.Context, options RenderOptions) ([]types.Dependency, error) {
-	return m.handleDependencies(ctx, options.SkipDependencies, options.Dependencies, false, false, options.Verbose, "Render", func(ctx *devspacecontext.Context, dependency *Dependency) error {
-		return dependency.Render(ctx, options.SkipBuild, &options.BuildOptions, options.Writer)
-	})
 }
 
 func (m *manager) handleDependencies(ctx *devspacecontext.Context, skipDependencies, filterDependencies []string, reverse, silent, verbose bool, actionName string, action func(ctx *devspacecontext.Context, dependency *Dependency) error) ([]types.Dependency, error) {
@@ -155,7 +108,7 @@ func (m *manager) handleDependencies(ctx *devspacecontext.Context, skipDependenc
 		ctx.Log.Infof("To display the complete dependency execution log run with the '--verbose-dependencies' flag")
 	}
 
-	executedDependencies, err := m.executeDependenciesRecursive(ctx, "", dependencies, skipDependencies, filterDependencies, reverse, silent, verbose, actionName, action, map[string]bool{})
+	executedDependencies, err := m.executeDependenciesRecursive(ctx, "", dependencies, skipDependencies, filterDependencies, silent, verbose, actionName, action, map[string]bool{})
 	if err != nil {
 		hooksErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"error": err,
@@ -180,17 +133,13 @@ func (m *manager) executeDependenciesRecursive(
 	base string,
 	dependencies []types.Dependency,
 	skipDependencies, filterDependencies []string,
-	reverse, silent, verbose bool,
+	silent, verbose bool,
 	actionName string,
 	action func(ctx *devspacecontext.Context, dependency *Dependency) error,
 	executedDependenciesIDs map[string]bool,
 ) ([]types.Dependency, error) {
 	// Execute all dependencies
 	i := 0
-	if reverse {
-		i = len(dependencies) - 1
-	}
-
 	executedDependencies := []types.Dependency{}
 	for i >= 0 && i < len(dependencies) {
 		var (
@@ -198,12 +147,8 @@ func (m *manager) executeDependenciesRecursive(
 			buff       = &bytes.Buffer{}
 		)
 
-		// Increase / Decrease counter
-		if reverse {
-			i--
-		} else {
-			i++
-		}
+		// Increase counter
+		i++
 
 		// skip if dependency was executed already
 		if executedDependenciesIDs[dependency.Name()] {
@@ -228,7 +173,7 @@ func (m *manager) executeDependenciesRecursive(
 				return nil, hooksErr
 			}
 
-			_, err := m.executeDependenciesRecursive(dependencyCtx, dependencyName, dependency.Children(), skipDependencies, filterDependencies, reverse, silent, verbose, actionName, action, executedDependenciesIDs)
+			_, err := m.executeDependenciesRecursive(dependencyCtx, dependencyName, dependency.Children(), skipDependencies, filterDependencies, silent, verbose, actionName, action, executedDependenciesIDs)
 			if err != nil {
 				hooksErr := hook.ExecuteHooks(dependencyCtx, map[string]interface{}{
 					"error": err,

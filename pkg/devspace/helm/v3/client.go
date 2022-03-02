@@ -121,7 +121,9 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 	output, err := c.genericHelm.Exec(ctx, args, helmConfig)
 
 	if helmConfig.DisplayOutput {
-		_, _ = ctx.Log.Writer(logrus.InfoLevel).Write(output)
+		writer := ctx.Log.Writer(logrus.InfoLevel)
+		_, _ = writer.Write(output)
+		_ = writer.Close()
 	}
 
 	if err != nil {

@@ -32,7 +32,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	}
 
 	// use a pretty simple pipeline which was used by devspace before
-	deployPipeline := `run_dependencies_pipeline --all
+	deployPipeline := `run_dependencies_pipelines --all
 build_images --all`
 
 	// create the deploy pipeline based on concurrent deployments

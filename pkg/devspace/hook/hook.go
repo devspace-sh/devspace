@@ -3,13 +3,8 @@ package hook
 import (
 	"bytes"
 	"fmt"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/sirupsen/logrus"
-	"io"
-	"strings"
-	"time"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/command"
@@ -17,7 +12,11 @@ import (
 	"github.com/mgutz/ansi"
 	dockerterm "github.com/moby/term"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"io"
 	"k8s.io/apimachinery/pkg/labels"
+	"strings"
+	"time"
 )
 
 var (
@@ -125,41 +124,7 @@ func executeSingle(ctx *devspacecontext.Context, extraEnv map[string]string, eve
 				continue
 			}
 
-			// Determine output writer
-			var writer io.Writer
-			if ctx.Log == logpkg.GetInstance() {
-				writer = stdout
-			} else {
-				writer = ctx.Log.Writer(logrus.InfoLevel)
-			}
-
-			// If the hook is silent, we cache it in a buffer
-			hookWriter := writer
-			if hookConfig.Silent {
-				hookWriter = &bytes.Buffer{}
-			}
-
-			// Decide which hook type to use
-			var hook Hook
-			if hookConfig.Container != nil {
-				if hookConfig.Upload != nil {
-					hook = NewRemoteHook(NewUploadHook())
-				} else if hookConfig.Download != nil {
-					hook = NewRemoteHook(NewDownloadHook())
-				} else if hookConfig.Logs != nil {
-					// we use another waiting strategy here, because the pod might has finished already
-					hook = NewRemoteHookWithWaitingStrategy(NewLogsHook(hookWriter), targetselector.NewUntilNotWaitingStrategy(time.Second*2))
-				} else if hookConfig.Wait != nil {
-					hook = NewWaitHook()
-				} else {
-					hook = NewRemoteHook(NewRemoteCommandHook(hookWriter, hookWriter))
-				}
-			} else {
-				hook = NewLocalCommandHook(hookWriter, hookWriter)
-			}
-
-			// Execute the hook
-			err := executeHook(ctx, hookConfig, hookWriter, extraEnv, hook, event)
+			err := runHook(ctx, hookConfig, extraEnv, event)
 			if err != nil {
 				return err
 			}
@@ -169,7 +134,47 @@ func executeSingle(ctx *devspacecontext.Context, extraEnv map[string]string, eve
 	return nil
 }
 
-func executeHook(ctx *devspacecontext.Context, hookConfig *latest.HookConfig, hookWriter io.Writer, extraEnv map[string]string, hook Hook, event string) error {
+func runHook(ctx *devspacecontext.Context, hookConfig *latest.HookConfig, extraEnv map[string]string, event string) error {
+	// Determine output writer
+	var writer io.WriteCloser
+	if hookConfig.Silent {
+		writer = logpkg.WithNopCloser(&bytes.Buffer{})
+	} else if ctx.Log == logpkg.GetInstance() {
+		writer = logpkg.WithNopCloser(stdout)
+	} else {
+		writer = ctx.Log.Writer(logrus.InfoLevel)
+	}
+	defer writer.Close()
+
+	// Decide which hook type to use
+	var hook Hook
+	if hookConfig.Container != nil {
+		if hookConfig.Upload != nil {
+			hook = NewRemoteHook(NewUploadHook())
+		} else if hookConfig.Download != nil {
+			hook = NewRemoteHook(NewDownloadHook())
+		} else if hookConfig.Logs != nil {
+			// we use another waiting strategy here, because the pod might has finished already
+			hook = NewRemoteHookWithWaitingStrategy(NewLogsHook(writer), targetselector.NewUntilNotWaitingStrategy(time.Second*2))
+		} else if hookConfig.Wait != nil {
+			hook = NewWaitHook()
+		} else {
+			hook = NewRemoteHook(NewRemoteCommandHook(writer, writer))
+		}
+	} else {
+		hook = NewLocalCommandHook(writer, writer)
+	}
+
+	// Execute the hook
+	err := executeHook(ctx, hookConfig, writer, extraEnv, hook, event)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func executeHook(ctx *devspacecontext.Context, hookConfig *latest.HookConfig, hookWriter io.WriteCloser, extraEnv map[string]string, hook Hook, event string) error {
 	hookLog := ctx.Log
 	if hookConfig.Silent {
 		hookLog = logpkg.Discard
@@ -181,7 +186,7 @@ func executeHook(ctx *devspacecontext.Context, hookConfig *latest.HookConfig, ho
 			err := hook.Execute(ctx.WithLogger(hookLog), hookConfig, extraEnv)
 			if err != nil {
 				if hookConfig.Silent {
-					ctx.Log.Warnf("Error executing hook '%s' in background: %s %v", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(*bytes.Buffer).String(), err)
+					ctx.Log.Warnf("Error executing hook '%s' in background: %s %v", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(logpkg.NopCloser).Writer.(*bytes.Buffer).String(), err)
 				} else {
 					ctx.Log.Warnf("Error executing hook '%s' in background: %v", ansi.Color(hookName(hookConfig), "white+b"), err)
 				}
@@ -195,7 +200,7 @@ func executeHook(ctx *devspacecontext.Context, hookConfig *latest.HookConfig, ho
 	err := hook.Execute(ctx.WithLogger(hookLog), hookConfig, extraEnv)
 	if err != nil {
 		if hookConfig.Silent {
-			return errors.Wrapf(err, "in hook '%s': %s", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(*bytes.Buffer).String())
+			return errors.Wrapf(err, "in hook '%s': %s", ansi.Color(hookName(hookConfig), "white+b"), hookWriter.(logpkg.NopCloser).Writer.(*bytes.Buffer).String())
 		}
 		return errors.Wrapf(err, "in hook '%s'", ansi.Color(hookName(hookConfig), "white+b"))
 	}

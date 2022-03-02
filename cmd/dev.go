@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
+	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/interrupt"
@@ -22,7 +22,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -33,7 +32,6 @@ type DevCmd struct {
 
 	SkipPush                bool
 	SkipPushLocalKubernetes bool
-	VerboseDependencies     bool
 	Open                    bool
 
 	Dependency     []string
@@ -44,24 +42,18 @@ type DevCmd struct {
 	BuildSequential     bool
 	MaxConcurrentBuilds int
 
-	ForceDeploy       bool
-	Deployments       string
-	ForceDependencies bool
-
-	Sync            bool
-	ExitAfterDeploy bool
-	SkipPipeline    bool
-	Portforwarding  bool
-	VerboseSync     bool
-	PrintSyncLog    bool
+	ForceDeploy bool
+	SkipDeploy  bool
 
 	UI     bool
 	UIPort int
 
-	Terminal          bool
-	TerminalReconnect bool
-	WorkingDirectory  string
-	Interactive       bool
+	Terminal         bool
+	WorkingDirectory string
+	Pipeline         string
+
+	Sync           bool
+	Portforwarding bool
 
 	Wait    bool
 	Timeout int
@@ -110,8 +102,6 @@ Open terminal instead of logs:
 
 	devCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips the following dependencies for deployment")
 	devCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Deploys only the specified named dependencies")
-	devCmd.Flags().BoolVar(&cmd.VerboseDependencies, "verbose-dependencies", true, "Deploys the dependencies verbosely")
-	devCmd.Flags().BoolVar(&cmd.ForceDependencies, "force-dependencies", true, "Forces to re-evaluate dependencies (use with --force-build --force-deploy to actually force building & deployment of dependencies)")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceBuild, "force-build", "b", false, "Forces to build every image")
 	devCmd.Flags().BoolVar(&cmd.SkipBuild, "skip-build", false, "Skips building of images")
@@ -119,24 +109,20 @@ Open terminal instead of logs:
 	devCmd.Flags().IntVar(&cmd.MaxConcurrentBuilds, "max-concurrent-builds", 0, "The maximum number of image builds built in parallel (0 for infinite)")
 
 	devCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to deploy every deployment")
-	devCmd.Flags().StringVar(&cmd.Deployments, "deployments", "", "Only deploy a specific deployment (You can specify multiple deployments comma-separated")
+	devCmd.Flags().BoolVar(&cmd.SkipDeploy, "skip-deploy", false, "If enabled will skip deploying")
 
-	devCmd.Flags().BoolVarP(&cmd.SkipPipeline, "skip-pipeline", "x", false, "Skips build & deployment and only starts sync, portforwarding & terminal")
 	devCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 	devCmd.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", true, "Skips image pushing, if a local kubernetes environment is detected")
+
+	devCmd.Flags().BoolVar(&cmd.Sync, "sync", true, "Enable code synchronization")
+	devCmd.Flags().BoolVar(&cmd.Portforwarding, "portforwarding", true, "Enable port forwarding")
 
 	devCmd.Flags().BoolVar(&cmd.UI, "ui", true, "Start the ui server")
 	devCmd.Flags().IntVar(&cmd.UIPort, "ui-port", 0, "The port to use when opening the ui server")
 	devCmd.Flags().BoolVar(&cmd.Open, "open", true, "Open defined URLs in the browser, if defined")
-	devCmd.Flags().BoolVar(&cmd.Sync, "sync", true, "Enable code synchronization")
-	devCmd.Flags().BoolVar(&cmd.VerboseSync, "verbose-sync", false, "When enabled the sync will log every file change")
-	devCmd.Flags().BoolVar(&cmd.PrintSyncLog, "print-sync", false, "If enabled will print the sync log to the terminal")
+	devCmd.Flags().StringVar(&cmd.Pipeline, "pipeline", "dev", "The pipeline to execute")
 
-	devCmd.Flags().BoolVar(&cmd.Portforwarding, "portforwarding", true, "Enable port forwarding")
-
-	devCmd.Flags().BoolVar(&cmd.ExitAfterDeploy, "exit-after-deploy", false, "Exits the command after building the images and deploying the project")
 	devCmd.Flags().BoolVarP(&cmd.Terminal, "terminal", "t", false, "Open a terminal instead of showing logs")
-	devCmd.Flags().BoolVar(&cmd.TerminalReconnect, "terminal-reconnect", true, "Will try to reconnect the terminal if an unexpected exit code was encountered")
 	devCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
 
 	devCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "If true will wait first for pods to be running or fails after given timeout")
@@ -147,69 +133,16 @@ Open terminal instead of logs:
 
 // Run executes the command logic
 func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
-	if cmd.Interactive {
-		cmd.log.Warn("Interactive mode flag is deprecated and will be removed in the future. Please take a look at https://devspace.sh/cli/docs/guides/interactive-mode on how to transition to an interactive profile")
-	}
-
-	// Set config root
-	cmd.log = f.GetLog()
-	var err error
-	cmd.configLoader, err = f.NewConfigLoader(cmd.ConfigPath)
-	if err != nil {
-		return err
-	}
 	configOptions := cmd.ToConfigOptions()
-	configExists, err := cmd.configLoader.SetDevSpaceRoot(cmd.log)
-	if err != nil {
-		return err
-	}
-	if !configExists {
-		return errors.New(message.ConfigNotFound)
-	}
-
-	// Start file logging
-	log.StartFileLogging()
-
-	// Create kubectl client and switch context if specified
-	client, err := f.NewKubeClientFromContext(cmd.KubeContext, cmd.Namespace)
-	if err != nil {
-		return errors.Errorf("Unable to create new kubectl client: %v", err)
-	}
-
-	// load local cache
-	localCache, err := localcache.NewCacheLoaderFromDevSpacePath(cmd.ConfigPath).Load()
+	ctx, err := prepare(f, configOptions, cmd.GlobalFlags, false)
 	if err != nil {
 		return err
 	}
 
-	// If the current kube context or namespace is different than old,
-	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(localCache, cmd.NoWarn, cmd.log)
+	// Adjust the config
+	err = cmd.adjustConfig(ctx.Config)
 	if err != nil {
 		return err
-	}
-
-	// Load config
-	configInterface, err := cmd.configLoader.LoadWithCache(context.Background(), localCache, client, configOptions, cmd.log)
-	if err != nil {
-		return err
-	}
-
-	// Get the config
-	err = cmd.adjustConfig(configInterface)
-	if err != nil {
-		return err
-	}
-
-	// Create the devspace context
-	ctx := devspacecontext.NewContext(context.Background(), cmd.log).
-		WithConfig(configInterface).
-		WithKubeClient(client)
-
-	// Create namespace if necessary
-	err = client.EnsureNamespace(ctx.Context, ctx.KubeClient.Namespace(), cmd.log)
-	if err != nil {
-		return errors.Errorf("Unable to create namespace: %v", err)
 	}
 
 	return runWithHooks(ctx, "devCommand", func() error {
@@ -230,26 +163,34 @@ func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 }
 
 func (cmd *DevCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
-	err := runPipeline(ctx, f, configOptions, cmd.SkipDependency, cmd.Dependency, "dev", `run_dependencies_pipeline --all
-build_images --all
-create_deployments --all
-start_dev --all`, cmd.Wait, cmd.Timeout, 0, types.Options{
-		BuildOptions: build.Options{
-			SkipPush:                  cmd.SkipPush,
-			SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
-			ForceRebuild:              cmd.ForceBuild,
-			Sequential:                cmd.BuildSequential,
-			MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
+	return runPipeline(ctx, f, &PipelineOptions{
+		Options: types.Options{
+			BuildOptions: build.Options{
+				SkipBuild:                 cmd.SkipBuild,
+				SkipPush:                  cmd.SkipPush,
+				SkipPushOnLocalKubernetes: cmd.SkipPushLocalKubernetes,
+				ForceRebuild:              cmd.ForceBuild,
+				Sequential:                cmd.BuildSequential,
+				MaxConcurrentBuilds:       cmd.MaxConcurrentBuilds,
+			},
+			DeployOptions: deploy.Options{
+				ForceDeploy: cmd.ForceDeploy,
+				SkipDeploy:  cmd.SkipDeploy,
+			},
+			DependencyOptions: types.DependencyOptions{
+				Exclude: cmd.SkipDependency,
+			},
+			DevOptions: devpod.Options{
+				DisableSync:           !cmd.Sync,
+				DisablePortForwarding: !cmd.Portforwarding,
+			},
 		},
-		DeployOptions: deploy.Options{
-			ForceDeploy: cmd.ForceDeploy,
-		},
+		ConfigOptions: configOptions,
+		Only:          cmd.Dependency,
+		Pipeline:      cmd.Pipeline,
+		Wait:          cmd.Wait,
+		Timeout:       cmd.Timeout,
 	})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func runWithHooks(ctx *devspacecontext.Context, command string, fn func() error) (err error) {
@@ -276,30 +217,32 @@ func (cmd *DevCmd) adjustConfig(conf config.Config) error {
 	c := conf.Config()
 	if cmd.Terminal {
 		if len(c.Dev) == 0 {
-			return errors.New("No image available in devspace config")
+			return errors.New("No dev available in DevSpace config")
 		}
 
-		imageNames := make([]string, 0, len(c.Dev))
+		devNames := make([]string, 0, len(c.Dev))
 		for k, v := range c.Dev {
 			v.Terminal = nil
-			imageNames = append(imageNames, k)
+			devNames = append(devNames, k)
 		}
 
 		// if only one image exists, use it, otherwise show image picker
-		imageName := ""
-		if len(imageNames) == 1 {
-			imageName = imageNames[0]
+		devName := ""
+		if len(devNames) == 1 {
+			devName = devNames[0]
 		} else {
 			var err error
-			imageName, err = cmd.log.Question(&survey.QuestionOptions{
+			devName, err = cmd.log.Question(&survey.QuestionOptions{
 				Question: "Where do you want to open a terminal to?",
-				Options:  imageNames,
+				Options:  devNames,
 			})
 			if err != nil {
 				return err
 			}
 		}
-		c.Dev[imageName].Terminal = &latest.Terminal{}
+		c.Dev[devName].Terminal = &latest.Terminal{
+			WorkDir: cmd.WorkingDirectory,
+		}
 	}
 
 	return nil

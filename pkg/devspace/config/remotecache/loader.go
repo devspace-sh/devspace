@@ -42,7 +42,7 @@ type cacheLoader struct {
 func (c *cacheLoader) Load(ctx context.Context, client kubectl.Client) (Cache, error) {
 	secret, err := client.KubeClient().CoreV1().Secrets(client.Namespace()).Get(ctx, c.secretName, metav1.GetOptions{})
 	if err != nil {
-		if !kerrors.IsNotFound(err) {
+		if !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) {
 			return nil, err
 		}
 

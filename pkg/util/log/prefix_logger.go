@@ -3,17 +3,16 @@ package log
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/util/hash"
+	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
-	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 var Colors = []string{
@@ -98,19 +97,10 @@ func (s *prefixLogger) GetLevel() logrus.Level {
 func (s *prefixLogger) writeMessage(level logrus.Level, message string) {
 	if s.level >= level {
 		prefix := ""
-		if os.Getenv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
-			now := time.Now()
-			if s.color != "" {
-				prefix = ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b") + ansi.Color(s.prefix, s.color)
-			} else {
-				prefix = formatInt(now.Hour()) + ":" + formatInt(now.Minute()) + ":" + formatInt(now.Second()) + " " + s.prefix
-			}
+		if s.color != "" {
+			prefix = ansi.Color(s.prefix, s.color)
 		} else {
-			if s.color != "" {
-				prefix = ansi.Color(s.prefix, s.color)
-			} else {
-				prefix = s.prefix
-			}
+			prefix = s.prefix
 		}
 
 		s.base.Print(level, prefix+strings.TrimSpace(message))
@@ -235,19 +225,41 @@ func (s *prefixLogger) Printf(level logrus.Level, format string, args ...interfa
 	}
 }
 
-func (s *prefixLogger) Writer(level logrus.Level) io.Writer {
+func (s *prefixLogger) Writer(level logrus.Level) io.WriteCloser {
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	if s.level < level {
-		return ioutil.Discard
+		return WithNopCloser(ioutil.Discard)
 	}
 
-	return s
+	reader, writer := io.Pipe()
+	go func() {
+		sa := scanner.NewScanner(reader)
+		for sa.Scan() {
+			s.Print(level, sa.Text())
+		}
+	}()
+
+	return writer
 }
 
+func WithNopCloser(writer io.Writer) io.WriteCloser {
+	return &NopCloser{writer}
+}
+
+type NopCloser struct {
+	io.Writer
+}
+
+func (NopCloser) Close() error { return nil }
+
 func (s *prefixLogger) Write(message []byte) (int, error) {
-	return s.base.Writer(logrus.PanicLevel).Write(message)
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	s.base.WriteString(logrus.PanicLevel, string(message))
+	return len(message), nil
 }
 
 func (s *prefixLogger) WriteString(level logrus.Level, message string) {

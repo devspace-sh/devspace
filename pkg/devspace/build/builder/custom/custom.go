@@ -153,12 +153,13 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 	}
 
 	// Determine output writer
-	var writer io.Writer
+	var writer io.WriteCloser
 	if ctx.Log == logpkg.GetInstance() {
-		writer = stdout
+		writer = logpkg.WithNopCloser(stdout)
 	} else {
 		writer = ctx.Log.Writer(logrus.InfoLevel)
 	}
+	defer writer.Close()
 
 	ctx.Log.Infof("Build %s:%s with custom command '%s %s'", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "))
 	if len(args) == 0 {

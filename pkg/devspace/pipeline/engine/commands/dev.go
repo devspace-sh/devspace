@@ -8,11 +8,14 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/pkg/errors"
 )
 
 // StartDevOptions describe how deployments should get deployed
 type StartDevOptions struct {
+	devpod.Options
+
 	Set       []string `long:"set" description:"Set configuration"`
 	SetString []string `long:"set-string" description:"Set configuration as string"`
 	From      []string `long:"from" description:"Reuse an existing configuration"`
@@ -20,8 +23,10 @@ type StartDevOptions struct {
 	All bool `long:"all" description:"Start all dev configurations"`
 }
 
-func StartDev(ctx *devspacecontext.Context, devManager devpod.Manager, args []string) error {
-	options := &StartDevOptions{}
+func StartDev(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	options := &StartDevOptions{
+		Options: pipeline.Options().DevOptions,
+	}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
@@ -45,7 +50,7 @@ func StartDev(ctx *devspacecontext.Context, devManager devpod.Manager, args []st
 	} else {
 		return fmt.Errorf("either specify 'start_dev --all' or 'dev devConfig1 devConfig2'")
 	}
-	return devManager.StartMultiple(ctx, args)
+	return pipeline.DevPodManager().StartMultiple(ctx, args, options.Options)
 }
 
 // StopDevOptions describe how deployments should get deployed

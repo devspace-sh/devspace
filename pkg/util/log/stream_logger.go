@@ -96,32 +96,32 @@ type fnTypeInformation struct {
 
 var fnTypeInformationMap = map[logFunctionType]*fnTypeInformation{
 	debugFn: {
-		tag:      "[debug]  ",
+		tag:      "debug ",
 		color:    "green+b",
 		logLevel: logrus.DebugLevel,
 	},
 	infoFn: {
-		tag:      "[info]   ",
+		tag:      "info ",
 		color:    "cyan+b",
 		logLevel: logrus.InfoLevel,
 	},
 	warnFn: {
-		tag:      "[warn]   ",
+		tag:      "warn ",
 		color:    "red+b",
 		logLevel: logrus.WarnLevel,
 	},
 	errorFn: {
-		tag:      "[error]  ",
+		tag:      "error ",
 		color:    "red+b",
 		logLevel: logrus.ErrorLevel,
 	},
 	fatalFn: {
-		tag:      "[fatal]  ",
+		tag:      "fatal ",
 		color:    "red+b",
 		logLevel: logrus.FatalLevel,
 	},
 	doneFn: {
-		tag:      "[done] √ ",
+		tag:      "done ",
 		color:    "green+b",
 		logLevel: logrus.InfoLevel,
 	},
@@ -152,11 +152,11 @@ func (s *StreamLogger) writeMessage(fnType logFunctionType, message string) {
 	fnInformation := fnTypeInformationMap[fnType]
 	if s.level >= fnInformation.logLevel {
 		if s.format == TextFormat {
+			if os.Getenv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
+				now := time.Now()
+				_, _ = s.stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
+			}
 			if !s.disableTags {
-				if os.Getenv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
-					now := time.Now()
-					_, _ = s.stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
-				}
 				_, _ = s.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
 			}
 			_, _ = s.stream.Write([]byte(message))
@@ -335,15 +335,15 @@ func (s *StreamLogger) WithoutPrefix() Logger {
 	}
 }
 
-func (s *StreamLogger) Writer(level logrus.Level) io.Writer {
+func (s *StreamLogger) Writer(level logrus.Level) io.WriteCloser {
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	if s.level < level {
-		return ioutil.Discard
+		return &NopCloser{ioutil.Discard}
 	}
 
-	return s
+	return &NopCloser{s}
 }
 
 func (s *StreamLogger) Write(message []byte) (int, error) {

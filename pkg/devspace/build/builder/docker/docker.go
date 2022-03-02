@@ -135,6 +135,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 
 	// create context stream
 	body, writer, outStream, buildOptions, err := CreateContextStream(b.helper, contextPath, dockerfilePath, entrypoint, cmd, options, ctx.Log)
+	defer writer.Close()
 	if err != nil {
 		return err
 	}
@@ -232,18 +233,18 @@ func (b *Builder) pushImage(writer io.Writer, imageName string) error {
 
 // CreateContextStream creates a new context stream that includes the correct docker context, (modified) dockerfile and inject helper
 // if needed.
-func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfilePath string, entrypoint, cmd []string, options *types.ImageBuildOptions, log logpkg.Logger) (io.Reader, io.Writer, *streams.Out, *types.ImageBuildOptions, error) {
+func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfilePath string, entrypoint, cmd []string, options *types.ImageBuildOptions, log logpkg.Logger) (io.Reader, io.WriteCloser, *streams.Out, *types.ImageBuildOptions, error) {
 	// Determine output writer
-	var writer io.Writer
+	var writer io.WriteCloser
 	if log == logpkg.GetInstance() {
-		writer = stdout
+		writer = logpkg.WithNopCloser(stdout)
 	} else {
 		writer = log.Writer(logrus.InfoLevel)
 	}
 
 	contextDir, relDockerfile, err := build.GetContextFromLocalDir(contextPath, dockerfilePath)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, writer, nil, nil, err
 	}
 
 	// Dockerfile is out of context
@@ -252,7 +253,7 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 		// Dockerfile is outside of build-context; read the Dockerfile and pass it as dockerfileCtx
 		dockerfileCtx, err = os.Open(dockerfilePath)
 		if err != nil {
-			return nil, nil, nil, nil, errors.Errorf("unable to open Dockerfile: %v", err)
+			return nil, writer, nil, nil, errors.Errorf("unable to open Dockerfile: %v", err)
 		}
 		defer dockerfileCtx.Close()
 	}
@@ -262,11 +263,11 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 	relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
 	excludes, err := helper.ReadDockerignore(contextDir, relDockerfile)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, writer, nil, nil, err
 	}
 
 	if err := build.ValidateContextDirectory(contextDir, excludes); err != nil {
-		return nil, nil, nil, nil, errors.Errorf("Error checking context: '%s'", err)
+		return nil, writer, nil, nil, errors.Errorf("Error checking context: '%s'", err)
 	}
 
 	buildCtx, err := archive.TarWithOptions(contextDir, &archive.TarOptions{
@@ -274,14 +275,14 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 		ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
 	})
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, writer, nil, nil, err
 	}
 
 	// Check if we should overwrite entrypoint
 	if len(entrypoint) > 0 || len(cmd) > 0 || buildHelper.ImageConf.InjectRestartHelper || len(buildHelper.ImageConf.AppendDockerfileInstructions) > 0 {
 		dockerfilePath, err = helper.RewriteDockerfile(dockerfilePath, entrypoint, cmd, buildHelper.ImageConf.AppendDockerfileInstructions, options.Target, buildHelper.ImageConf.InjectRestartHelper, log)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, writer, nil, nil, err
 		}
 
 		// Check if dockerfile is out of context, then we use the docker way to replace the dockerfile
@@ -289,7 +290,7 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 			// We will add it to the build context
 			dockerfileCtx, err = os.Open(dockerfilePath)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Errorf("unable to open Dockerfile: %v", err)
+				return nil, writer, nil, nil, errors.Errorf("unable to open Dockerfile: %v", err)
 			}
 
 			defer dockerfileCtx.Close()
@@ -297,12 +298,12 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 			// We will add it to the build context
 			overwriteDockerfileCtx, err := os.Open(dockerfilePath)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Errorf("unable to open Dockerfile: %v", err)
+				return nil, writer, nil, nil, errors.Errorf("unable to open Dockerfile: %v", err)
 			}
 
 			buildCtx, err = helper.OverwriteDockerfileInBuildContext(overwriteDockerfileCtx, buildCtx, relDockerfile)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Errorf("Error overwriting %s: %v", relDockerfile, err)
+				return nil, writer, nil, nil, errors.Errorf("Error overwriting %s: %v", relDockerfile, err)
 			}
 		}
 
@@ -312,12 +313,12 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 		if buildHelper.ImageConf.InjectRestartHelper {
 			helperScript, err := restart.LoadRestartHelper(buildHelper.ImageConf.RestartHelperPath)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Wrap(err, "load restart helper")
+				return nil, writer, nil, nil, errors.Wrap(err, "load restart helper")
 			}
 
 			buildCtx, err = helper.InjectBuildScriptInContext(helperScript, buildCtx)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Wrap(err, "inject build script into context")
+				return nil, writer, nil, nil, errors.Wrap(err, "inject build script into context")
 			}
 		}
 	}
@@ -326,7 +327,7 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 	if dockerfileCtx != nil && buildCtx != nil {
 		buildCtx, relDockerfile, err = build.AddDockerfileToBuildContext(dockerfileCtx, buildCtx)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, writer, nil, nil, err
 		}
 	}
 

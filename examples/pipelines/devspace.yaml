@@ -1,6 +1,11 @@
 version: v2beta1
 name: pipelines
 
+commands:
+  - name: dev
+    command: |-
+      devspace --config dep1/dependency.yaml run dev
+
 dependencies:
   - source:
       path: dep1/dependency.yaml
@@ -9,14 +14,14 @@ pipelines:
   dev:
     steps:
       - run: |-
-          run_dependencies_pipelines --all
+          export IMAGE=testfabi
           
-          export IMAGE=loftsh/alpine:latest
+          build_images test --set image=${IMAGE}
           
           # Deploy test here
           create_deployments test --set helm.componentChart=true \
-                                  --set helm.values.containers[0].image=${IMAGE}
+                                  --set helm.values.containers[0].image=${runtime.images.test}
           
           # Start development mode for test here
-          start_dev test --set imageSelector=${IMAGE} \
-                         --set terminal.command=bash
+          start_dev test --set imageSelector=${runtime.images.test} \
+                         --set terminal.command=sh

@@ -11,12 +11,15 @@ import (
 
 // DependencyOptions describe how dependencies should get deployed
 type DependencyOptions struct {
-	Sequential bool `long:"sequential" description:"Run dependencies one after another"`
-	All        bool `long:"all" description:"Deploy all dependencies"`
+	types.DependencyOptions
+
+	All bool `long:"all" description:"Deploy all dependencies"`
 }
 
 func Dependency(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-	options := &DependencyOptions{}
+	options := &DependencyOptions{
+		DependencyOptions: pipeline.Options().DependencyOptions,
+	}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
@@ -25,6 +28,7 @@ func Dependency(ctx *devspacecontext.Context, pipeline types.Pipeline, args []st
 	duplicates := map[string]bool{}
 	deployDependencies := []types2.Dependency{}
 	if options.All {
+
 		deployDependencies = ctx.Dependencies
 	} else if len(args) > 0 {
 		for _, arg := range args {
@@ -49,5 +53,5 @@ func Dependency(ctx *devspacecontext.Context, pipeline types.Pipeline, args []st
 		return fmt.Errorf("either specify 'run_dependencies_pipelines --all' or 'run_dependency_pipelines dep1 dep2'")
 	}
 
-	return pipeline.StartNewDependencies(ctx, deployDependencies, options.Sequential)
+	return pipeline.StartNewDependencies(ctx, deployDependencies, options.DependencyOptions)
 }

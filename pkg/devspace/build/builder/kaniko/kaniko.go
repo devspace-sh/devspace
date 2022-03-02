@@ -386,12 +386,13 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 		ctx.Log.Done("Build pod has started")
 
 		// Determine output writer
-		var writer io.Writer
+		var writer io.WriteCloser
 		if ctx.Log == logpkg.GetInstance() {
-			writer = stdout
+			writer = logpkg.WithNopCloser(stdout)
 		} else {
 			writer = ctx.Log.Writer(logrus.InfoLevel)
 		}
+		defer writer.Close()
 
 		stdoutLogger := kanikoLogger{out: writer}
 

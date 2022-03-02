@@ -96,8 +96,8 @@ func (d *DiscardLogger) Write(message []byte) (int, error) {
 	return len(message), nil
 }
 
-func (d *DiscardLogger) Writer(level logrus.Level) io.Writer {
-	return ioutil.Discard
+func (d *DiscardLogger) Writer(level logrus.Level) io.WriteCloser {
+	return &NopCloser{ioutil.Discard}
 }
 
 // WriteString implements logger interface

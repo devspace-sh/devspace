@@ -32,9 +32,10 @@ type DependencyRegistry interface {
 	MarkDependenciesExcluded(ctx *devspacecontext.Context, dependencyNames []string, forceLeader bool) (map[string]bool, error)
 }
 
-func NewDependencyRegistry(server string) DependencyRegistry {
+func NewDependencyRegistry(server string, mock bool) DependencyRegistry {
 	return &dependencyRegistry{
 		server:               server,
+		mock:                 mock,
 		interProcess:         &dummyImplementation{},
 		excludedDependencies: map[string]bool{},
 	}
@@ -42,6 +43,7 @@ func NewDependencyRegistry(server string) DependencyRegistry {
 
 type dependencyRegistry struct {
 	server       string
+	mock         bool
 	interProcess InterProcess
 
 	excludedDependenciesLock sync.Mutex
@@ -82,13 +84,21 @@ func (d *dependencyRegistry) MarkDependenciesExcluded(ctx *devspacecontext.Conte
 	}
 
 	// exclude the dependencies
-	retMap, err := d.excludeDependencies(ctx, filteredDependencyNames, forceLeader, 4)
-	if err != nil {
-		return nil, err
+	retMap := map[string]bool{}
+	if !d.mock {
+		var err error
+		retMap, err = d.excludeDependencies(ctx, filteredDependencyNames, forceLeader, 4)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// now exclude all dependencies
 	for _, dependencyName := range filteredDependencyNames {
+		if d.mock {
+			retMap[dependencyName] = true
+		}
+
 		d.excludedDependencies[dependencyName] = true
 	}
 

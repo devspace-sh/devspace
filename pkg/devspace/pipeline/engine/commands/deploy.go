@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/pkg/errors"
+	"io"
 )
 
 // DeployOptions describe how deployments should get deployed
@@ -22,10 +23,10 @@ type DeployOptions struct {
 
 	All bool `long:"all" description:"Deploy all deployments"`
 
-	// Extra flags here to add an deployment
+	// Extra flags here to add a deployment
 }
 
-func Deploy(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+func Deploy(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string, stdout io.Writer) error {
 	options := &DeployOptions{
 		Options: pipeline.Options().DeployOptions,
 	}
@@ -53,6 +54,9 @@ func Deploy(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string
 		return fmt.Errorf("either specify 'create_deployments --all' or 'create_deployments deployment1 deployment2'")
 	}
 
+	if options.RenderWriter == nil {
+		options.RenderWriter = stdout
+	}
 	return deploy.NewController().Deploy(ctx, args, &options.Options)
 }
 

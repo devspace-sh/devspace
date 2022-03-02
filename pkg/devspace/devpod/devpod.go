@@ -41,7 +41,7 @@ func newDevPod() *devPod {
 	}
 }
 
-func (d *devPod) Start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod) error {
+func (d *devPod) Start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, options Options) error {
 	d.m.Lock()
 	defer d.m.Unlock()
 
@@ -52,7 +52,7 @@ func (d *devPod) Start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 	ctx = ctx.WithContext(d.cancelCtx)
 
 	// start the dev pod
-	err := d.startWithRetry(ctx, devPodConfig)
+	err := d.startWithRetry(ctx, devPodConfig, options)
 	if err != nil {
 		d.cancel()
 		<-d.done
@@ -76,7 +76,7 @@ func (d *devPod) Stop() {
 	}
 }
 
-func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *latest.DevPod) error {
+func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, options Options) error {
 	t := &tomb.Tomb{}
 
 	go func(ctx *devspacecontext.Context) {
@@ -90,7 +90,7 @@ func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *late
 			// a lost connection
 			if _, ok := t.Err().(DevPodLostConnection); ok {
 				for {
-					err := d.startWithRetry(ctx, devPodConfig)
+					err := d.startWithRetry(ctx, devPodConfig, options)
 					if err != nil {
 						if ctx.IsDone() {
 							return
@@ -121,7 +121,7 @@ func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *late
 		err         error
 	)
 	<-t.NotifyGo(func() error {
-		hasTerminal, err = d.start(ctx, devPodConfig, t)
+		hasTerminal, err = d.start(ctx, devPodConfig, options, t)
 		return err
 	})
 	if hasTerminal {
@@ -143,9 +143,9 @@ func (d *devPod) startWithRetry(ctx *devspacecontext.Context, devPodConfig *late
 	return nil
 }
 
-func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, parent *tomb.Tomb) (hasTerminal bool, err error) {
+func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, opts Options, parent *tomb.Tomb) (hasTerminal bool, err error) {
 	// check first if we need to replace the pod
-	if needPodReplace(devPodConfig) {
+	if !opts.DisablePodReplace && needPodReplace(devPodConfig) {
 		err := podreplace.NewPodReplacer().ReplacePod(ctx, devPodConfig)
 		if err != nil {
 			return false, errors.Wrap(err, "replace pod")
@@ -182,7 +182,7 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 	}
 
 	// start sync and port forwarding
-	err = d.startSyncAndPortForwarding(ctx, devPodConfig, newTargetSelector(d.selectedPod.Name, d.selectedPod.Namespace, parent), parent)
+	err = d.startSyncAndPortForwarding(ctx, devPodConfig, newTargetSelector(d.selectedPod.Name, d.selectedPod.Namespace, parent), opts, parent)
 	if err != nil {
 		return false, err
 	}
@@ -248,7 +248,7 @@ func (d *devPod) startTerminal(ctx *devspacecontext.Context, devContainer *lates
 	return nil
 }
 
-func (d *devPod) startSyncAndPortForwarding(ctx *devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, parent *tomb.Tomb) error {
+func (d *devPod) startSyncAndPortForwarding(ctx *devspacecontext.Context, devPod *latest.DevPod, selector targetselector.TargetSelector, opts Options, parent *tomb.Tomb) error {
 	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{}, "devCommand:before:sync", "dev.beforeSync", "devCommand:before:portForwarding", "dev.beforePortForwarding")
 	if pluginErr != nil {
 		return pluginErr
@@ -256,11 +256,19 @@ func (d *devPod) startSyncAndPortForwarding(ctx *devspacecontext.Context, devPod
 
 	// Start sync
 	syncDone := parent.NotifyGo(func() error {
+		if opts.DisableSync {
+			return nil
+		}
+
 		return sync.StartSync(ctx, devPod, selector, parent)
 	})
 
 	// Start Port Forwarding
 	portForwardingDone := parent.NotifyGo(func() error {
+		if opts.DisablePortForwarding {
+			return nil
+		}
+
 		return portforwarding.StartPortForwarding(ctx, devPod, selector, parent)
 	})
 

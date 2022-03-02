@@ -1,11 +1,9 @@
 package deploy
 
 import (
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"io"
-	"strings"
-
+	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl"
@@ -13,18 +11,23 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
+	"io"
+	"sort"
 )
 
 // Options describe how the deployments should be deployed
 type Options struct {
+	SkipDeploy  bool `long:"skip-deploy" description:"If enabled, will skip deploying"`
 	ForceDeploy bool `long:"force-deploy" description:"Forces redeployment"`
 	Sequential  bool `long:"sequential" description:"Sequentially deploys the deployments"`
+
+	Render       bool `long:"render" description:"If true, prints the rendered manifests to the stdout instead of deploying them"`
+	RenderWriter io.Writer
 }
 
 // Controller is the main deploying interface
 type Controller interface {
 	Deploy(ctx *devspacecontext.Context, deployments []string, options *Options) error
-	Render(ctx *devspacecontext.Context, deployments []string, options *Options, out io.Writer) error
 	Purge(ctx *devspacecontext.Context, deployments []string) error
 }
 
@@ -33,81 +36,6 @@ type controller struct{}
 // NewController creates a new image build controller
 func NewController() Controller {
 	return &controller{}
-}
-
-func (c *controller) Render(ctx *devspacecontext.Context, deployments []string, options *Options, out io.Writer) error {
-	config := ctx.Config.Config()
-	if config.Deployments != nil && len(config.Deployments) > 0 {
-		// Execute before deployments deploy hook
-		err := hook.ExecuteHooks(ctx, nil, "before:render")
-		if err != nil {
-			return err
-		}
-
-		for _, deployConfig := range config.Deployments {
-			if deployConfig.Disabled {
-				ctx.Log.Debugf("Skip deployment %s, because it is disabled", deployConfig.Name)
-				continue
-			}
-
-			if len(deployments) > 0 {
-				shouldSkip := true
-
-				for _, deployment := range deployments {
-					if deployment == strings.TrimSpace(deployConfig.Name) {
-						shouldSkip = false
-						break
-					}
-				}
-
-				if shouldSkip {
-					continue
-				}
-			}
-
-			deployClient, err := c.getDeployClient(ctx, deployConfig)
-			if err != nil {
-				return err
-			}
-
-			hookErr := hook.ExecuteHooks(ctx, map[string]interface{}{
-				"DEPLOY_NAME":   deployConfig.Name,
-				"DEPLOY_CONFIG": deployConfig,
-			}, hook.EventsForSingle("before:render", deployConfig.Name).With("deploy.beforeRender")...)
-			if hookErr != nil {
-				return hookErr
-			}
-
-			err = deployClient.Render(ctx, out)
-			if err != nil {
-				hookErr := hook.ExecuteHooks(ctx, map[string]interface{}{
-					"DEPLOY_NAME":   deployConfig.Name,
-					"DEPLOY_CONFIG": deployConfig,
-					"ERROR":         err,
-				}, hook.EventsForSingle("error:render", deployConfig.Name).With("deploy.errorRender")...)
-				if hookErr != nil {
-					return hookErr
-				}
-
-				return errors.Errorf("error deploying %s: %v", deployConfig.Name, err)
-			}
-
-			hookErr = hook.ExecuteHooks(ctx, map[string]interface{}{
-				"DEPLOY_NAME":   deployConfig.Name,
-				"DEPLOY_CONFIG": deployConfig,
-			}, hook.EventsForSingle("after:render", deployConfig.Name).With("deploy.afterRender")...)
-			if hookErr != nil {
-				return hookErr
-			}
-		}
-
-		err = hook.ExecuteHooks(ctx, nil, "after:render")
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (c *controller) getDeployClient(ctx *devspacecontext.Context, deployConfig *latest.DeploymentConfig) (deployer.Interface, error) {
@@ -140,23 +68,69 @@ func (c *controller) getDeployClient(ctx *devspacecontext.Context, deployConfig 
 // Deploy deploys all deployments in the config
 func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, options *Options) error {
 	config := ctx.Config.Config()
+	event := "deploy"
+	if options.Render {
+		event = "render"
+	}
+
+	if options.SkipDeploy {
+		ctx.Log.Debugf("Skip deploy because of --skip-deploy")
+		return nil
+	}
+
 	if config.Deployments != nil && len(config.Deployments) > 0 {
 		// Execute before deployments deploy hook
-		err := hook.ExecuteHooks(ctx, nil, "before:deploy")
+		err := hook.ExecuteHooks(ctx, nil, "before:"+event)
 		if err != nil {
 			return err
 		}
 
+		// get relevant deployments
 		var (
 			concurrentDeployments []*latest.DeploymentConfig
 			sequentialDeployments []*latest.DeploymentConfig
 		)
+		if len(deployments) == 0 {
+			for _, deployConfig := range config.Deployments {
+				if deployConfig.Disabled {
+					ctx.Log.Debugf("Skip deployment %s, because it is disabled", deployConfig.Name)
+					continue
+				}
 
-		for _, deployConfig := range config.Deployments {
-			if !options.Sequential {
-				concurrentDeployments = append(concurrentDeployments, deployConfig)
-			} else {
-				sequentialDeployments = append(sequentialDeployments, deployConfig)
+				if !options.Render && !options.Sequential {
+					concurrentDeployments = append(concurrentDeployments, deployConfig)
+				} else {
+					sequentialDeployments = append(sequentialDeployments, deployConfig)
+				}
+			}
+
+			// make sure --all behaves the same every rung
+			sort.Slice(concurrentDeployments, func(i, j int) bool {
+				return concurrentDeployments[i].Name < concurrentDeployments[j].Name
+			})
+			sort.Slice(sequentialDeployments, func(i, j int) bool {
+				return sequentialDeployments[i].Name < sequentialDeployments[j].Name
+			})
+		} else {
+			deploymentMap := config.Deployments
+			if deploymentMap == nil {
+				deploymentMap = map[string]*latest.DeploymentConfig{}
+			}
+
+			for _, deployment := range deployments {
+				deployConfig, ok := deploymentMap[deployment]
+				if !ok {
+					return fmt.Errorf("couldn't find deployment %v", deployment)
+				} else if deployConfig.Disabled {
+					ctx.Log.Debugf("Skip deployment %s, because it is disabled", deployConfig.Name)
+					continue
+				}
+
+				if !options.Render && !options.Sequential {
+					concurrentDeployments = append(concurrentDeployments, deployConfig)
+				} else {
+					sequentialDeployments = append(sequentialDeployments, deployConfig)
+				}
 			}
 		}
 
@@ -164,10 +138,9 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 			errChan      = make(chan error)
 			deployedChan = make(chan bool)
 		)
-
 		for i, deployConfig := range concurrentDeployments {
 			go func(deployConfig *latest.DeploymentConfig, deployNumber int) {
-				wasDeployed, err := c.deployOne(ctx.WithLogger(log.NewDefaultPrefixLogger("deploy:"+deployConfig.Name+" ", ctx.Log)), deployConfig, deployments, options)
+				wasDeployed, err := c.deployOne(ctx.WithLogger(log.NewDefaultPrefixLogger("deploy:"+deployConfig.Name+" ", ctx.Log)), deployConfig, options)
 				if err != nil {
 					errChan <- err
 				} else {
@@ -190,9 +163,9 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 			}
 		}
 
-		logsDeploy := log.NewDefaultPrefixLogger("[deploy] ", ctx.Log)
 		for _, deployConfig := range sequentialDeployments {
-			_, err := c.deployOne(ctx.WithLogger(logsDeploy), deployConfig, deployments, options)
+			logsDeploy := log.NewDefaultPrefixLogger("deploy:"+deployConfig.Name+" ", ctx.Log)
+			_, err := c.deployOne(ctx.WithLogger(logsDeploy), deployConfig, options)
 			if err != nil {
 				return err
 			}
@@ -204,7 +177,7 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 		}
 
 		// Execute after deployments deploy hook
-		err = hook.ExecuteHooks(ctx, nil, "after:deploy")
+		err = hook.ExecuteHooks(ctx, nil, "after:"+event)
 		if err != nil {
 			return err
 		}
@@ -213,23 +186,10 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 	return nil
 }
 
-func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *latest.DeploymentConfig, deployments []string, options *Options) (bool, error) {
-	if deployConfig.Disabled {
-		ctx.Log.Debugf("Skip deployment %s, because it is disabled", deployConfig.Name)
-		return true, nil
-	}
-
-	if len(deployments) > 0 {
-		shouldSkip := true
-		for _, deployment := range deployments {
-			if deployment == strings.TrimSpace(deployConfig.Name) {
-				shouldSkip = false
-				break
-			}
-		}
-		if shouldSkip {
-			return true, nil
-		}
+func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *latest.DeploymentConfig, options *Options) (bool, error) {
+	event := "deploy"
+	if options.Render {
+		event = "render"
 	}
 
 	var (
@@ -238,7 +198,7 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 		method       string
 	)
 
-	if deployConfig.Namespace != "" {
+	if !options.Render && deployConfig.Namespace != "" {
 		err = ctx.KubeClient.EnsureNamespace(ctx.Context, deployConfig.Namespace, ctx.Log)
 		if err != nil {
 			return false, err
@@ -272,18 +232,23 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 	err = hook.ExecuteHooks(ctx, map[string]interface{}{
 		"DEPLOY_NAME":   deployConfig.Name,
 		"DEPLOY_CONFIG": deployConfig,
-	}, hook.EventsForSingle("before:deploy", deployConfig.Name).With("deploy.beforeDeploy")...)
+	}, hook.EventsForSingle("before:"+event, deployConfig.Name)...)
 	if err != nil {
 		return true, err
 	}
 
-	wasDeployed, err := deployClient.Deploy(ctx, options.ForceDeploy)
+	wasDeployed := false
+	if !options.Render {
+		wasDeployed, err = deployClient.Deploy(ctx, options.ForceDeploy)
+	} else {
+		err = deployClient.Render(ctx, options.RenderWriter)
+	}
 	if err != nil {
 		hookErr := hook.ExecuteHooks(ctx, map[string]interface{}{
 			"DEPLOY_NAME":   deployConfig.Name,
 			"DEPLOY_CONFIG": deployConfig,
 			"ERROR":         err,
-		}, hook.EventsForSingle("error:deploy", deployConfig.Name).With("deploy.errorDeploy")...)
+		}, hook.EventsForSingle("error:"+event, deployConfig.Name)...)
 		if hookErr != nil {
 			return true, hookErr
 		}
@@ -297,7 +262,7 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 		err = hook.ExecuteHooks(ctx, map[string]interface{}{
 			"DEPLOY_NAME":   deployConfig.Name,
 			"DEPLOY_CONFIG": deployConfig,
-		}, hook.EventsForSingle("after:deploy", deployConfig.Name).With("deploy.afterDeploy")...)
+		}, hook.EventsForSingle("after:"+event, deployConfig.Name)...)
 		if err != nil {
 			return true, err
 		}
@@ -307,7 +272,7 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 		err = hook.ExecuteHooks(ctx, map[string]interface{}{
 			"DEPLOY_NAME":   deployConfig.Name,
 			"DEPLOY_CONFIG": deployConfig,
-		}, hook.EventsForSingle("skip:deploy", deployConfig.Name)...)
+		}, hook.EventsForSingle("skip:"+event, deployConfig.Name)...)
 		if err != nil {
 			return true, err
 		}
@@ -317,6 +282,7 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 
 // Purge removes all deployments or a set of deployments from the cluster
 func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) error {
+	ctx = ctx.WithLogger(log.NewDefaultPrefixLogger("purge", ctx.Log))
 	if deployments != nil && len(deployments) == 0 {
 		deployments = nil
 	}
@@ -333,7 +299,6 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) e
 		// Check if we should skip deleting deployment
 		if deployments != nil {
 			found := false
-
 			for _, value := range deployments {
 				if value == deploymentCache.Name {
 					found = true

@@ -1,7 +1,6 @@
 package helm
 
 import (
-	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/legacy"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
@@ -152,7 +151,7 @@ func (d *DeployConfig) internalDeploy(ctx *devspacecontext.Context, overwriteVal
 		return nil, nil
 	}
 
-	ctx.Log.Info(fmt.Sprintf("Deploying chart %s (%s) with helm...", d.DeploymentConfig.Helm.Chart.Name, d.DeploymentConfig.Name))
+	ctx.Log.Infof("Deploying chart %s (%s) with helm...", d.DeploymentConfig.Helm.Chart.Name, d.DeploymentConfig.Name)
 	valuesOut, _ := yaml.Marshal(overwriteValues)
 	ctx.Log.Debugf("Deploying chart with values:\n %v\n", string(valuesOut))
 

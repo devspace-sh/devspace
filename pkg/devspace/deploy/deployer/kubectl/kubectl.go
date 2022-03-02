@@ -162,6 +162,9 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, _ bool) (bool, error
 	ctx.Log.Info("Applying manifests with kubectl...")
 	wasDeployed := false
 	kubeObjects := []remotecache.KubectlObject{}
+	writer := ctx.Log.Writer(logrus.InfoLevel)
+	defer writer.Close()
+
 	for _, manifest := range d.Manifests {
 		shouldRedeploy, replacedManifest, parsedObjects, err := d.getReplacedManifest(ctx, manifest)
 		if err != nil {
@@ -173,7 +176,7 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, _ bool) (bool, error
 			stringReader := strings.NewReader(replacedManifest)
 			args := d.getCmdArgs("apply", "--force")
 			args = append(args, d.DeploymentConfig.Kubectl.ApplyArgs...)
-			err = command.Command(ctx.Context, ctx.WorkingDir, ctx.Log.Writer(logrus.InfoLevel), ctx.Log.Writer(logrus.InfoLevel), stringReader, d.CmdPath, args...)
+			err = command.Command(ctx.Context, ctx.WorkingDir, writer, writer, stringReader, d.CmdPath, args...)
 			if err != nil {
 				return false, errors.Errorf("%v\nPlease make sure the command `kubectl apply` does work locally with manifest `%s`", err, manifest)
 			}

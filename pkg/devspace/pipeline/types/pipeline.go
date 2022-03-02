@@ -11,8 +11,16 @@ import (
 )
 
 type Options struct {
-	BuildOptions  build.Options
-	DeployOptions deploy.Options
+	BuildOptions      build.Options
+	DeployOptions     deploy.Options
+	DependencyOptions DependencyOptions
+	DevOptions        devpod.Options
+}
+
+type DependencyOptions struct {
+	Pipeline   string   `long:"pipeline" description:"The pipeline to deploy from the dependency"`
+	Exclude    []string `long:"exclude" description:"Dependencies to exclude"`
+	Sequential bool     `long:"sequential" description:"Run dependencies one after another"`
 }
 
 type Pipeline interface {
@@ -45,5 +53,5 @@ type Pipeline interface {
 
 	// StartNewDependencies starts dependency pipelines in this pipeline. It is ensured
 	// that each pipeline will only run once ever and will otherwise be skipped.
-	StartNewDependencies(ctx *devspacecontext.Context, dependencies []types2.Dependency, sequentially bool) error
+	StartNewDependencies(ctx *devspacecontext.Context, dependencies []types2.Dependency, options DependencyOptions) error
 }

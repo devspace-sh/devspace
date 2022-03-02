@@ -90,7 +90,7 @@ func startSync(ctx *devspacecontext.Context, name, arch string, syncConfig *late
 	}
 
 	// should we print the logs?
-	if syncConfig.PrintLogs {
+	if syncConfig.PrintLogs || ctx.Log.GetLevel() == logrus.DebugLevel {
 		options.SyncLog = ctx.Log
 	} else {
 		options.SyncLog = logpkg.GetDevPodFileLogger(name)

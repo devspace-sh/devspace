@@ -311,8 +311,13 @@ func (l *RemoteCache) Save(ctx context.Context, client kubectl.Client) error {
 	waitErr := wait.PollImmediate(time.Second, time.Second*10, func() (done bool, err error) {
 		secret, err := client.KubeClient().CoreV1().Secrets(namespace).Get(ctx, l.secretName, metav1.GetOptions{})
 		if err != nil {
-			if !kerrors.IsNotFound(err) {
+			if !kerrors.IsNotFound(err) && !kerrors.IsForbidden(err) {
 				return false, errors.Wrapf(err, "get cache secret")
+			}
+
+			// don't do anything if its empty
+			if len(l.Vars) == 0 && len(l.Data) == 0 && len(l.DevPods) == 0 && len(l.Deployments) == 0 {
+				return true, nil
 			}
 
 			err = client.EnsureNamespace(ctx, namespace, log.Discard)

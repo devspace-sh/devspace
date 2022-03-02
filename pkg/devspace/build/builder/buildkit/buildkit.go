@@ -112,6 +112,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 
 	// create the context stream
 	body, writer, _, buildOptions, err := docker.CreateContextStream(b.helper, contextPath, dockerfilePath, entrypoint, cmd, options, ctx.Log)
+	defer writer.Close()
 	if err != nil {
 		return err
 	}

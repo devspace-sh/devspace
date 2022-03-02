@@ -1,8 +1,13 @@
 version: v2beta1
 name: dependency
 
+commands:
+  - name: dev
+    command: |-
+      devspace dev -n test
+
 pipelines:
-  deploy:
+  dev:
     steps:
       - run: |-
           # Deploy test here

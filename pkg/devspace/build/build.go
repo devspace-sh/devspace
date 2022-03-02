@@ -5,17 +5,13 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
-	"io"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
-	"github.com/loft-sh/devspace/pkg/util/scanner"
-
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 type imageNameAndTag struct {
@@ -28,10 +24,12 @@ type imageNameAndTag struct {
 
 // Options describe how images should be build
 type Options struct {
-	SkipPush                  bool `long:"skip-push" description:"Skip pushing"`
-	SkipPushOnLocalKubernetes bool `long:"skip-push-on-local-kubernetes" description:"Skip pushing"`
-	ForceRebuild              bool `long:"force-rebuild" description:"Skip pushing"`
-	Sequential                bool `long:"sequential" description:"Skip pushing"`
+	Tags                      []string `long:"tag" short:"t" description:"If enabled will override the default tags"`
+	SkipBuild                 bool     `long:"skip-build" description:"If enabled will skip building"`
+	SkipPush                  bool     `long:"skip-push" description:"Skip pushing"`
+	SkipPushOnLocalKubernetes bool     `long:"skip-push-on-local-kubernetes" description:"Skip pushing"`
+	ForceRebuild              bool     `long:"force-rebuild" description:"Skip pushing"`
+	Sequential                bool     `long:"sequential" description:"Skip pushing"`
 
 	MaxConcurrentBuilds int `long:"maxConcurrentBuilds" description:"A pointer to an integer"`
 }
@@ -60,7 +58,11 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 	)
 
 	// Check if we have at least 1 image to build
-	if len(conf.Images) == 0 {
+	if options.SkipBuild {
+		ctx.Log.Debugf("Skip building because of --skip-build")
+		return nil
+	} else if len(conf.Images) == 0 {
+		ctx.Log.Debugf("Skip building because no images are defined")
 		return nil
 	}
 
@@ -89,6 +91,7 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 
 	imagesToBuild := 0
 	for key, imageConf := range conf.Images {
+		ctx := ctx.WithLogger(logpkg.NewDefaultPrefixLogger("build:"+key+" ", ctx.Log))
 		if len(images) > 0 && !stringutil.Contains(images, key) {
 			continue
 		}
@@ -104,7 +107,9 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 
 		// Get image tags
 		imageTags := []string{}
-		if len(imageConf.Tags) > 0 {
+		if len(options.Tags) > 0 {
+			imageTags = append(imageTags, options.Tags...)
+		} else if len(imageConf.Tags) > 0 {
 			imageTags = append(imageTags, imageConf.Tags...)
 		} else {
 			imageTags = append(imageTags, randutil.GenerateRandomString(7))
@@ -222,23 +227,9 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 			}
 
 			imagesToBuild++
-			go func() {
-				// Create a string log
-				reader, writer := io.Pipe()
-				streamLog := logpkg.NewStreamLogger(writer, logrus.InfoLevel)
-				logsLog := logpkg.NewPrefixLogger("["+imageConfigName+"] ", logpkg.Colors[(len(logpkg.Colors)-1)-(imagesToBuild%len(logpkg.Colors))], ctx.Log)
-
-				// read from the reader
-				go func() {
-					scanner := scanner.NewScanner(reader)
-					for scanner.Scan() {
-						logsLog.Info(scanner.Text())
-					}
-				}()
-
+			go func(ctx *devspacecontext.Context) {
 				// Build the image
-				err := builder.Build(ctx.WithLogger(streamLog))
-				_ = writer.Close()
+				err := builder.Build(ctx)
 				if err != nil {
 					hook.LogExecuteHooks(ctx, map[string]interface{}{
 						"IMAGE_CONFIG_NAME": imageConfigName,
@@ -259,7 +250,7 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 					imageTags:       imageTags,
 					imageConfig:     cImageConf,
 				}
-			}()
+			}(ctx)
 		}
 	}
 

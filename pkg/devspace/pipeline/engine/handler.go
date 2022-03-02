@@ -79,11 +79,15 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 		})
 	case "create_deployments":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.Deploy(devCtx, e.pipeline, args)
+			return enginecommands.Deploy(devCtx, e.pipeline, args, hc.Stdout)
+		})
+	case "purge_deployments":
+		return e.executePipelineCommand(ctx, command, func() error {
+			return enginecommands.Purge(devCtx, args)
 		})
 	case "start_dev":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.StartDev(devCtx, e.pipeline.DevPodManager(), args)
+			return enginecommands.StartDev(devCtx, e.pipeline, args)
 		})
 	case "stop_dev":
 		return e.executePipelineCommand(ctx, command, func() error {

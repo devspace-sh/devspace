@@ -41,7 +41,7 @@ type Logger interface {
 	Print(level logrus.Level, args ...interface{})
 	Printf(level logrus.Level, format string, args ...interface{})
 
-	Writer(level logrus.Level) io.Writer
+	Writer(level logrus.Level) io.WriteCloser
 	WriteString(level logrus.Level, message string)
 
 	Question(params *survey.QuestionOptions) (string, error)

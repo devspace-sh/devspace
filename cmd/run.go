@@ -205,7 +205,7 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	}
 
 	// Execute command
-	return dependency.ExecuteCommand(ctx.Context, commands, args[0], args[1:], ctx.WorkingDir, cmd.Stdout, cmd.Stderr)
+	return dependency.ExecuteCommand(ctx.Context, commands, args[0], args[1:], ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin)
 }
 
 func getCommands(f factory.Factory) ([]*latest.CommandConfig, error) {

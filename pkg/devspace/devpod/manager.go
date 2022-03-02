@@ -12,9 +12,15 @@ import (
 	"sync"
 )
 
+type Options struct {
+	DisableSync           bool `long:"disable-sync" description:"If enabled will not start any sync configuration"`
+	DisablePortForwarding bool `long:"disable-port-forwarding" description:"If enabled will not start any port forwarding configuration"`
+	DisablePodReplace     bool `long:"disable-pod-replace" description:"If enabled will not replace any pods"`
+}
+
 type Manager interface {
 	// StartMultiple will start multiple or all dev pods
-	StartMultiple(ctx *devspacecontext.Context, devPods []string) error
+	StartMultiple(ctx *devspacecontext.Context, devPods []string, options Options) error
 
 	// Reset will stop the DevPod if it exists and reset the replaced pods
 	Reset(ctx *devspacecontext.Context, name string) error
@@ -80,7 +86,7 @@ func (d *devPodManager) Context() context.Context {
 	return d.ctx
 }
 
-func (d *devPodManager) StartMultiple(ctx *devspacecontext.Context, devPods []string) error {
+func (d *devPodManager) StartMultiple(ctx *devspacecontext.Context, devPods []string, options Options) error {
 	select {
 	case <-d.ctx.Done():
 		return d.ctx.Err()
@@ -105,7 +111,7 @@ func (d *devPodManager) StartMultiple(ctx *devspacecontext.Context, devPods []st
 		go func(devPod *latest.DevPod) {
 			defer close(initChan)
 
-			_, err := d.Start(ctx, devPod)
+			_, err := d.Start(ctx, devPod, options)
 			if err != nil {
 				errors <- err
 			}
@@ -145,7 +151,7 @@ func (d *devPodManager) Wait() {
 	}
 }
 
-func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodConfig *latest.DevPod) (*devPod, error) {
+func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodConfig *latest.DevPod, options Options) (*devPod, error) {
 	lock := d.lockFactory.GetLock(devPodConfig.Name)
 	lock.Lock()
 	defer lock.Unlock()
@@ -167,11 +173,11 @@ func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodCo
 	d.m.Unlock()
 
 	// create a DevPod logger
-	prefix := devPodConfig.Name + " "
+	prefix := "dev:" + devPodConfig.Name + " "
 	unionLogger := logpkg.NewUnionLogger(originalContext.Log.GetLevel(), logpkg.NewDefaultPrefixLogger(prefix, originalContext.Log), logpkg.GetDevPodFileLogger(prefix))
 
 	// start the dev pod
-	err := dp.Start(originalContext.WithLogger(unionLogger), devPodConfig)
+	err := dp.Start(originalContext.WithLogger(unionLogger), devPodConfig, options)
 	if err != nil {
 		return nil, err
 	}

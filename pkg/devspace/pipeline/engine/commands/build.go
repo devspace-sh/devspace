@@ -11,6 +11,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/strvals"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 // BuildOptions describe how images should be build
@@ -54,7 +55,16 @@ func Build(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string)
 		return fmt.Errorf("either specify 'build_images --all' or 'build_images image1 image2'")
 	}
 
-	return build.NewController().Build(ctx, args, &options.Options)
+	err = build.NewController().Build(ctx, args, &options.Options)
+	if err != nil {
+		if strings.Contains(err.Error(), "no space left on device") {
+			return errors.Errorf("Error building image: %v\n\n Try running `docker system prune` to free docker daemon space and retry", err)
+		}
+
+		return errors.Wrap(err, "build images")
+	}
+
+	return nil
 }
 
 func applyImageSetValues(config *latest.Config, image string, set, setString, from []string) error {

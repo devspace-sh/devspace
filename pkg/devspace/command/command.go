@@ -14,7 +14,7 @@ import (
 )
 
 // ExecuteCommand executes a command from the config
-func ExecuteCommand(ctx context.Context, commands []*latest.CommandConfig, name string, args []string, dir string, stdout io.Writer, stderr io.Writer) error {
+func ExecuteCommand(ctx context.Context, commands []*latest.CommandConfig, name string, args []string, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
 	shellCommand := ""
 	var shellArgs []string
 	var appendArgs bool
@@ -42,9 +42,9 @@ func ExecuteCommand(ctx context.Context, commands []*latest.CommandConfig, name 
 		}
 
 		// execute the command in a shell
-		return shell.ExecuteShellCommand(ctx, dir, stdout, stderr, nil, nil, shellCommand, args...)
+		return shell.ExecuteShellCommand(ctx, dir, stdout, stderr, stdin, nil, shellCommand, args...)
 	}
 
 	shellArgs = append(shellArgs, args...)
-	return command.Command(ctx, dir, stdout, stderr, nil, shellCommand, shellArgs...)
+	return command.Command(ctx, dir, stdout, stderr, stdin, shellCommand, shellArgs...)
 }
