@@ -129,28 +129,26 @@ func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache
 		return nil, pluginErr
 	}
 
+	// load the raw data
 	data, err := l.LoadRaw()
 	if err != nil {
 		return nil, err
 	}
 
+	// make sure name is in config
 	name := options.OverrideName
 	if name == "" {
-		nameInterface, ok := data["name"]
+		var ok bool
+		name, ok = data["name"].(string)
 		if !ok {
-			name = "devspace"
-		} else {
-			name, ok = nameInterface.(string)
-			if !ok || name == "" {
-				return nil, fmt.Errorf("name property is not a string")
-			}
+			return nil, fmt.Errorf("name is missing in " + filepath.Base(l.absConfigPath))
 		}
 	}
 
 	// create remote cache
 	var remoteCache remotecache.Cache
 	if client != nil {
-		remoteCache, err = remotecache.NewCacheLoader(name).Load(context.TODO(), client)
+		remoteCache, err = remotecache.NewCacheLoader(name).Load(ctx, client)
 		if err != nil {
 			return nil, fmt.Errorf("error trying to load remote cache from current context and namespace: %v", err)
 		}
@@ -596,7 +594,6 @@ func GetLastProfile(profiles []string) string {
 
 // configExistsInPath checks whether a devspace configuration exists at a certain path
 func configExistsInPath(path string) bool {
-	// check devspace.yaml
 	_, err := os.Stat(path)
 	return err == nil // false, no config file found
 }
@@ -621,6 +618,18 @@ func (l *configLoader) LoadRaw() (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	name, ok := rawMap["name"].(string)
+	if !ok || name == "" {
+		directoryName := filepath.Base(filepath.Dir(l.absConfigPath))
+		if directoryName != "" && len(directoryName) > 2 {
+			name = directoryName
+		} else {
+			name = "devspace"
+		}
+
+		rawMap["name"] = name
+	}
+
 	return rawMap, nil
 }
 
@@ -637,11 +646,11 @@ func (l *configLoader) SetDevSpaceRoot(log log.Logger) (bool, error) {
 			return configExists, nil
 		}
 
-		err := os.Chdir(filepath.Dir(ConfigPath(l.absConfigPath)))
+		err := os.Chdir(filepath.Dir(l.absConfigPath))
 		if err != nil {
 			return false, err
 		}
-		l.absConfigPath = filepath.Base(ConfigPath(l.absConfigPath))
+
 		return true, nil
 	}
 

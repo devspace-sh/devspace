@@ -90,10 +90,10 @@ func (c *client) Exec(ctx *devspacecontext.Context, args []string, helmConfig *l
 	result, err := command.Output(ctx.Context, ctx.WorkingDir, c.helmPath, args...)
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("error during '%s %s': %s%s => %v", c.helmPath, strings.Join(args, " "), string(result), string(exitError.Stderr), err)
+			return nil, fmt.Errorf("error during '%s %s':\n %s%s => %v", c.helmPath, strings.Join(args, " "), string(result), string(exitError.Stderr), err)
 		}
 
-		return nil, fmt.Errorf("error during '%s %s': %s => %v", c.helmPath, strings.Join(args, " "), string(result), err)
+		return nil, fmt.Errorf("error during '%s %s':\n %s => %v %s", c.helmPath, strings.Join(args, " "), string(result), err)
 	}
 
 	return result, nil

@@ -144,8 +144,7 @@ func CombinedOutputWithEnv(ctx context.Context, dir string, extraEnvVars map[str
 
 func Output(ctx context.Context, dir string, cmd string, args ...string) ([]byte, error) {
 	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-	err := CommandWithEnv(ctx, dir, stdout, stderr, nil, nil, cmd, args...)
+	err := CommandWithEnv(ctx, dir, stdout, nil, nil, nil, cmd, args...)
 	return stdout.Bytes(), err
 }
 

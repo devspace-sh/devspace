@@ -272,16 +272,9 @@ func GetDependencyConfigName(configPath string, config *latest.DependencyConfig)
 		return "", errors.Wrapf(err, "load dependency config %s", configPath)
 	}
 
-	name, ok := rawConfig["name"]
+	nameString, ok := rawConfig["name"].(string)
 	if !ok {
-		// no name present, we will just call it by the dependency path
-		return filepath.Base(configPath), nil
-	}
-
-	nameString, ok := name.(string)
-	if !ok {
-		// no name present, we will just call it by the dependency path
-		return filepath.Base(configPath), nil
+		return "", fmt.Errorf("devspace.yaml name is missing")
 	}
 
 	return nameString, nil

@@ -162,7 +162,7 @@ func (d *DeployConfig) internalDeploy(ctx *devspacecontext.Context, overwriteVal
 	// Deploy chart
 	appRelease, err := d.Helm.InstallChart(ctx, releaseName, releaseNamespace, overwriteValues, d.DeploymentConfig.Helm)
 	if err != nil {
-		return nil, errors.Errorf("Unable to deploy helm chart: %v", err)
+		return nil, errors.Errorf("unable to deploy helm chart: %v", err)
 	}
 
 	// Print revision

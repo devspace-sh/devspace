@@ -119,13 +119,11 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 	}
 	args = append(args, helmConfig.UpgradeArgs...)
 	output, err := c.genericHelm.Exec(ctx, args, helmConfig)
-
 	if helmConfig.DisplayOutput {
 		writer := ctx.Log.Writer(logrus.InfoLevel)
 		_, _ = writer.Write(output)
 		_ = writer.Close()
 	}
-
 	if err != nil {
 		return nil, err
 	}
