@@ -6,6 +6,7 @@ on:
   pull_request:
     branches:
       - master
+      - v6
     paths:
       - "**.go"
       - "!e2e/**" # exclude files from e2e tests
