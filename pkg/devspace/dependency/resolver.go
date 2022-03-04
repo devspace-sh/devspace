@@ -203,7 +203,7 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyCon
 			return err
 		}
 
-		dConfigWrapper, err = configLoader.LoadWithParser(ctx.Context, nil, client, loader.NewWithCommandsParser(), cloned, ctx.Log)
+		dConfigWrapper, err = configLoader.Load(ctx.Context, client, cloned, ctx.Log)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("loading config for dependency %s", dependencyName))
 		}

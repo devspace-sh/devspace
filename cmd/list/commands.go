@@ -70,6 +70,10 @@ func (cmd *commandsCmd) RunListProfiles(f factory.Factory, cobraCmd *cobra.Comma
 
 	rows := [][]string{}
 	for _, command := range commands {
+		if command.Internal {
+			continue
+		}
+
 		rows = append(rows, []string{
 			command.Name,
 			command.Command,

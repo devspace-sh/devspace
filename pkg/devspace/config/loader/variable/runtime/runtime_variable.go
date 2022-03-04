@@ -28,6 +28,7 @@ var Locations = []string{
 	"/dev/replacePods/*/replaceImage",
 	"/dev/terminal/imageSelector",
 	"/pipelines/**",
+	"/commands/**",
 }
 
 // NewRuntimeVariable creates a new variable that is loaded during runtime

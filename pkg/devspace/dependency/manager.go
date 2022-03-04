@@ -2,21 +2,15 @@ package dependency
 
 import (
 	"bytes"
-	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
-	"github.com/loft-sh/devspace/pkg/devspace/command"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-	"github.com/loft-sh/devspace/pkg/util/exit"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io"
-	"mvdan.cc/sh/v3/interp"
 	"strings"
 )
 
@@ -51,22 +45,6 @@ func (m *manager) ResolveAll(ctx *devspacecontext.Context, options ResolveOption
 	}
 
 	return dependencies, nil
-}
-
-// ExecuteCommand executes a given command from the available commands
-func ExecuteCommand(ctx context.Context, commands map[string]*latest.CommandConfig, cmd string, args []string, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
-	err := command.ExecuteCommand(ctx, commands, cmd, args, dir, stdout, stderr, stdin)
-	if err != nil {
-		if status, ok := interp.IsExitStatus(err); ok {
-			return &exit.ReturnCodeError{
-				ExitCode: int(status),
-			}
-		}
-
-		return errors.Wrap(err, "execute command")
-	}
-
-	return nil
 }
 
 // BuildOptions has all options for building all dependencies

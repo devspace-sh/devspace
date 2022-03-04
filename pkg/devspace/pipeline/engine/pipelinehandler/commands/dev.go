@@ -43,6 +43,10 @@ func StartDev(ctx *devspacecontext.Context, pipeline types.Pipeline, args []stri
 			if err != nil {
 				return err
 			}
+
+			if ctx.Config.Config().Dev == nil || ctx.Config.Config().Dev[devConfig] == nil {
+				return fmt.Errorf("couldn't find dev %v", devConfig)
+			}
 		}
 	} else {
 		return fmt.Errorf("either specify 'start_dev --all' or 'dev devConfig1 devConfig2'")

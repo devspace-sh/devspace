@@ -1,7 +1,6 @@
 package types
 
 import (
-	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -28,7 +27,4 @@ type Dependency interface {
 
 	// DependencyConfig is the config this dependency was created from
 	DependencyConfig() *latest.DependencyConfig
-
-	// Command executes a command from the dependency config
-	Command(ctx context.Context, command string, args []string) error
 }

@@ -1,13 +1,11 @@
 package dependency
 
 import (
-	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"os"
 )
 
 // Dependency holds the dependency config and has an id
@@ -40,10 +38,6 @@ func (d *Dependency) Path() string { return d.absolutePath }
 func (d *Dependency) DependencyConfig() *latest.DependencyConfig { return d.dependencyConfig }
 
 func (d *Dependency) Children() []types.Dependency { return d.children }
-
-func (d *Dependency) Command(ctx context.Context, command string, args []string) error {
-	return ExecuteCommand(ctx, d.localConfig.Config().Commands, command, args, d.absolutePath, os.Stdout, os.Stderr, os.Stdin)
-}
 
 func skipDependency(name string, skipDependencies []string) bool {
 	for _, sd := range skipDependencies {

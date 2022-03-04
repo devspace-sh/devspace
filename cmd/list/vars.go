@@ -7,7 +7,6 @@ import (
 	"sort"
 
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
@@ -61,7 +60,7 @@ func (cmd *varsCmd) RunListVars(f factory.Factory, cobraCmd *cobra.Command, args
 	}
 
 	// Fill variables config
-	config, err := configLoader.LoadWithParser(context.Background(), nil, nil, loader.NewWithCommandsParser(), cmd.ToConfigOptions(), logger)
+	config, err := configLoader.Load(context.Background(), nil, cmd.ToConfigOptions(), logger)
 	if err != nil {
 		return err
 	}

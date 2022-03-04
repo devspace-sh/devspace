@@ -43,6 +43,10 @@ func PullSecrets(ctx *devspacecontext.Context, args []string) error {
 			if err != nil {
 				return err
 			}
+
+			if ctx.Config.Config().PullSecrets == nil || ctx.Config.Config().PullSecrets[pullSecret] == nil {
+				return fmt.Errorf("couldn't find pull secret %v", pullSecret)
+			}
 		}
 	} else {
 		return fmt.Errorf("either specify 'ensure_pull_secrets --all' or 'ensure_pull_secrets pullSecret1 pullSecret2'")

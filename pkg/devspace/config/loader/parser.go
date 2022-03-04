@@ -23,18 +23,6 @@ type defaultParser struct{}
 
 func (d *defaultParser) Parse(ctx context.Context, originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, map[string]interface{}, error) {
 	// delete the commands, since we don't need it in a normal scenario
-	delete(rawConfig, "commands")
-
-	return fillVariablesAndParse(ctx, resolver, rawConfig, log)
-}
-
-func NewWithCommandsParser() Parser {
-	return &withCommandsParser{}
-}
-
-type withCommandsParser struct{}
-
-func (d *withCommandsParser) Parse(ctx context.Context, originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, map[string]interface{}, error) {
 	return fillVariablesAndParse(ctx, resolver, rawConfig, log)
 }
 
@@ -111,9 +99,9 @@ func fillVariablesAndParse(ctx context.Context, resolver variable.Resolver, prep
 	return latestConfig, preparedConfigInterface.(map[string]interface{}), nil
 }
 
-func Convert(prepatedConfig map[string]interface{}, log log.Logger) (*latest.Config, error) {
+func Convert(preparedConfig map[string]interface{}, log log.Logger) (*latest.Config, error) {
 	// Now convert the whole config to latest
-	latestConfig, err := versions.Parse(prepatedConfig, log)
+	latestConfig, err := versions.Parse(preparedConfig, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "convert config")
 	}

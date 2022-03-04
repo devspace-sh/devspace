@@ -3,8 +3,13 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/exit"
 	"io"
+	"mvdan.cc/sh/v3/interp"
 	"os"
 	"strings"
 
@@ -168,10 +173,10 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	if err != nil {
 		return err
 	}
-	commands := commandsInterface.Config().Commands
 
 	// create context
-	ctx := devspacecontext.NewContext(context.Background(), f.GetLog())
+	ctx := devspacecontext.NewContext(context.Background(), f.GetLog()).
+		WithConfig(commandsInterface)
 
 	// check if we should execute a dependency command
 	if cmd.Dependency != "" {
@@ -191,7 +196,8 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 			return fmt.Errorf("couldn't find dependency %s", cmd.Dependency)
 		}
 
-		return dep.Command(ctx.Context, args[0], args[1:])
+		ctx = ctx.AsDependency(dep)
+		return ExecuteConfigCommand(ctx.Context, ctx.Config, args[0], args[1:], ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin)
 	}
 
 	// Save variables
@@ -201,7 +207,56 @@ func (cmd *RunCmd) RunRun(f factory.Factory, args []string) error {
 	}
 
 	// Execute command
-	return dependency.ExecuteCommand(ctx.Context, commands, args[0], args[1:], ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin)
+	return ExecuteConfigCommand(ctx.Context, ctx.Config, args[0], args[1:], ctx.WorkingDir, cmd.Stdout, cmd.Stderr, os.Stdin)
+}
+
+// ExecuteConfigCommand executes a command from the config
+func ExecuteConfigCommand(ctx context.Context, config config.Config, name string, args []string, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
+	shellCommand := ""
+	var shellArgs []string
+	var appendArgs bool
+	for _, cmd := range config.Config().Commands {
+		if cmd.Name == name {
+			shellCommand = cmd.Command
+			shellArgs = cmd.Args
+			appendArgs = cmd.AppendArgs
+			break
+		}
+	}
+
+	extraEnv := map[string]string{}
+	for k, v := range config.Variables() {
+		extraEnv[k] = fmt.Sprintf("%v", v)
+	}
+
+	if shellCommand == "" {
+		return errors.Errorf("couldn't find command '%s' in devspace config", name)
+	}
+	if shellArgs == nil {
+		if appendArgs {
+			// Append args to shell command
+			for _, arg := range args {
+				arg = strings.Replace(arg, "'", "'\"'\"'", -1)
+
+				shellCommand += " '" + arg + "'"
+			}
+		}
+
+		// execute the command in a shell
+		err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, stdin, nil, shellCommand, args...)
+		if err != nil {
+			if status, ok := interp.IsExitStatus(err); ok {
+				return &exit.ReturnCodeError{
+					ExitCode: int(status),
+				}
+			}
+
+			return errors.Wrap(err, "execute command")
+		}
+	}
+
+	shellArgs = append(shellArgs, args...)
+	return command.CommandWithEnv(ctx, dir, stdout, stderr, stdin, nil, shellCommand, shellArgs...)
 }
 
 func getCommands(f factory.Factory) (map[string]*latest.CommandConfig, error) {

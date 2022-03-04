@@ -44,6 +44,9 @@ func Build(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string)
 			if err != nil {
 				return err
 			}
+			if ctx.Config.Config().Images == nil || ctx.Config.Config().Images[image] == nil {
+				return fmt.Errorf("couldn't find image %v", image)
+			}
 		}
 	} else {
 		return fmt.Errorf("either specify 'build_images --all' or 'build_images image1 image2'")

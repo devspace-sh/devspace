@@ -6,6 +6,14 @@ dependencies:
     source:
       path: dep2.yaml
 
+commands:
+  test2:
+    command: |
+      build_images tes
+  test:
+    command: |
+      run_command test2 abc
+
 pipelines:
   helper:
     steps:
@@ -14,7 +22,7 @@ pipelines:
   dev:
     steps:
       - run: |-
-          sleep 30
+          SWAG=fabi run_command test abc
           #run_dependency_pipelines --all --pipeline dev
           
           #export TEST=$(run_pipelines helper)

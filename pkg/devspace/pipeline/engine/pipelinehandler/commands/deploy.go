@@ -49,6 +49,10 @@ func Deploy(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string
 			if err != nil {
 				return err
 			}
+
+			if ctx.Config.Config().Deployments == nil || ctx.Config.Config().Deployments[deployment] == nil {
+				return fmt.Errorf("couldn't find deployment %v", deployment)
+			}
 		}
 	} else {
 		return fmt.Errorf("either specify 'create_deployments --all' or 'create_deployments deployment1 deployment2'")
