@@ -124,18 +124,18 @@ func validateRequire(config *latest.Config) error {
 }
 
 func validateDependencies(config *latest.Config) error {
-	for index, dep := range config.Dependencies {
-		if dep.OverrideName != "" && encoding.IsUnsafeName(dep.OverrideName) {
-			return fmt.Errorf("dependencies[%d].overrideName %s has to match the following regex: %v", index, dep.OverrideName, encoding.UnsafeNameRegEx.String())
+	for name, dep := range config.Dependencies {
+		if encoding.IsUnsafeName(name) {
+			return fmt.Errorf("dependencies[%s] has to match the following regex: %v", name, encoding.UnsafeNameRegEx.String())
 		}
 		if dep.Source == nil {
-			return errors.Errorf("dependencies[%d].source is required", index)
+			return errors.Errorf("dependencies[%s].source is required", name)
 		}
 		if dep.Source.Git == "" && dep.Source.Path == "" {
-			return errors.Errorf("dependencies[%d].source.git or dependencies[%d].source.path is required", index, index)
+			return errors.Errorf("dependencies[%s].source.git or dependencies[%s].source.path is required", name, name)
 		}
 		if len(dep.Profiles) > 0 && dep.Profile != "" {
-			return errors.Errorf("dependencies[%d].profiles and dependencies[%d].profile & dependencies[%d].profileParents cannot be used together", index, index, index)
+			return errors.Errorf("dependencies[%s].profiles and dependencies[%s].profile & dependencies[%s].profileParents cannot be used together", name, name, name)
 		}
 	}
 
@@ -143,15 +143,15 @@ func validateDependencies(config *latest.Config) error {
 }
 
 func validateCommands(config *latest.Config) error {
-	for index, command := range config.Commands {
+	for key, command := range config.Commands {
 		if command.Name == "" {
-			return errors.Errorf("commands[%d].name is required", index)
+			return errors.Errorf("commands[%s].name is required", key)
 		}
 		if encoding.IsUnsafeUpperName(command.Name) {
-			return fmt.Errorf("commands[%d].name %s has to match the following regex: %v", index, command.Name, encoding.UnsafeUpperNameRegEx.String())
+			return fmt.Errorf("commands[%s] has to match the following regex: %v", command.Name, encoding.UnsafeUpperNameRegEx.String())
 		}
 		if command.Command == "" {
-			return errors.Errorf("commands[%d].command is required", index)
+			return errors.Errorf("commands[%s].command is required", key)
 		}
 	}
 
@@ -265,9 +265,15 @@ func ValidateComponentConfig(deployConfig *latest.DeploymentConfig, overwriteVal
 }
 
 func validatePullSecrets(config *latest.Config) error {
-	for i, ps := range config.PullSecrets {
+	for k, ps := range config.PullSecrets {
+		if ps.Name == "" {
+			return errors.Errorf("pull secret keys cannot be an empty string")
+		}
+		if encoding.IsUnsafeName(ps.Name) {
+			return fmt.Errorf("pullSecrets[%s] has to match the following regex: %v", ps.Name, encoding.UnsafeNameRegEx.String())
+		}
 		if ps.Registry == "" {
-			return errors.Errorf("pullSecrets[%d].registry: cannot be empty", i)
+			return errors.Errorf("pullSecrets[%s].registry: cannot be empty", k)
 		}
 	}
 

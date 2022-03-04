@@ -8,16 +8,14 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/util"
-	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/pkg/errors"
 )
@@ -57,7 +55,7 @@ func (r *resolver) Resolve(ctx *devspacecontext.Context) ([]types.Dependency, er
 	}
 
 	// r.DependencyGraph.Root.ID == name here
-	err = r.resolveRecursive(ctx, currentWorkingDirectory, r.DependencyGraph.Root.ID, nil, r.BaseConfig.Dependencies)
+	err = r.resolveRecursive(ctx, currentWorkingDirectory, r.DependencyGraph.Root.ID, nil, transformMap(r.BaseConfig.Dependencies))
 	if err != nil {
 		if _, ok := err.(*graph.CyclicError); ok {
 			return nil, err
@@ -96,22 +94,17 @@ func (r *resolver) resolveRecursive(ctx *devspacecontext.Context, basePath, pare
 			return err
 		}
 
-		dependencyName, err := GetDependencyConfigName(dependencyConfigPath, dependencyConfig)
-		if err != nil {
-			return err
-		}
-
 		// Try to insert new edge
 		var (
 			child *Dependency
 		)
-		if n, ok := r.DependencyGraph.Nodes[dependencyName]; ok {
+		if n, ok := r.DependencyGraph.Nodes[dependencyConfig.Name]; ok {
 			child = n.Data.(*Dependency)
 			if child.Config().Path() != dependencyConfigPath {
 				ctx.Log.Warnf("Seems like you have multiple dependencies with name %s, but they use different source settings (%s != %s). This can lead to unexpected results and you should make sure that the devspace.yaml name is unique across your dependencies or that you use the dependencies.overrideName option", child.name, child.Config().Path(), dependencyConfigPath)
 			}
 
-			err := r.DependencyGraph.AddEdge(parentConfigName, dependencyName)
+			err := r.DependencyGraph.AddEdge(parentConfigName, dependencyConfig.Name)
 			if err != nil {
 				if _, ok := err.(*graph.CyclicError); !ok {
 					return err
@@ -120,26 +113,23 @@ func (r *resolver) resolveRecursive(ctx *devspacecontext.Context, basePath, pare
 				ctx.Log.Debugf(err.Error())
 			}
 		} else {
-			child, err = r.resolveDependency(ctx, dependencyConfigPath, dependencyName, dependencyConfig)
+			child, err = r.resolveDependency(ctx, dependencyConfigPath, dependencyConfig.Name, dependencyConfig)
 			if err != nil {
 				return err
 			}
 
-			_, err = r.DependencyGraph.InsertNodeAt(parentConfigName, dependencyName, child)
+			_, err = r.DependencyGraph.InsertNodeAt(parentConfigName, dependencyConfig.Name, child)
 			if err != nil {
 				return errors.Wrap(err, "insert node")
 			}
 
 			// load dependencies from dependency
 			if !dependencyConfig.IgnoreDependencies && child.localConfig.Config().Dependencies != nil && len(child.localConfig.Config().Dependencies) > 0 {
-				err = r.resolveRecursive(ctx, child.absolutePath, dependencyName, child, child.localConfig.Config().Dependencies)
+				err = r.resolveRecursive(ctx, child.absolutePath, dependencyConfig.Name, child, transformMap(child.localConfig.Config().Dependencies))
 				if err != nil {
 					return err
 				}
 			}
-
-			// after we traversed the dependencies initialize the managers with the correct dependencies
-			child.registryClient = pullsecrets.NewClient(child.dockerClient)
 		}
 
 		// add child
@@ -151,6 +141,17 @@ func (r *resolver) resolveRecursive(ctx *devspacecontext.Context, basePath, pare
 	return nil
 }
 
+func transformMap(depMap map[string]*latest.DependencyConfig) []*latest.DependencyConfig {
+	dependencies := []*latest.DependencyConfig{}
+	for _, dep := range depMap {
+		dependencies = append(dependencies, dep)
+	}
+	sort.SliceStable(dependencies, func(i, j int) bool {
+		return dependencies[i].Name < dependencies[j].Name
+	})
+	return dependencies
+}
+
 func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyConfigPath, dependencyName string, dependency *latest.DependencyConfig) (*Dependency, error) {
 	// clone config options
 	cloned, err := r.ConfigOptions.Clone()
@@ -159,7 +160,7 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyCon
 	}
 
 	// set dependency profile
-	cloned.OverrideName = dependency.OverrideName
+	cloned.OverrideName = dependency.Name
 	cloned.Profiles = []string{}
 	if dependency.Profile != "" {
 		cloned.Profiles = append(cloned.Profiles, dependency.Profile)
@@ -237,12 +238,6 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyCon
 		}
 	}
 
-	// Create docker client
-	dockerClient, err := docker.NewClient(ctx.Log)
-	if err != nil {
-		return nil, errors.Wrap(err, "create docker client")
-	}
-
 	// Create registry client for pull secrets
 	return &Dependency{
 		name:         dependencyName,
@@ -252,32 +247,8 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyCon
 		dependencyConfig: dependency,
 		dependencyCache:  r.BaseCache,
 
-		kubeClient:   client,
-		dockerClient: dockerClient,
+		kubeClient: client,
 	}, nil
-}
-
-func GetDependencyConfigName(configPath string, config *latest.DependencyConfig) (string, error) {
-	if config.OverrideName != "" {
-		return config.OverrideName, nil
-	}
-
-	configLoader, err := loader.NewConfigLoader(configPath)
-	if err != nil {
-		return "", errors.Wrap(err, "new config loader")
-	}
-
-	rawConfig, err := configLoader.LoadRaw()
-	if err != nil {
-		return "", errors.Wrapf(err, "load dependency config %s", configPath)
-	}
-
-	nameString, ok := rawConfig["name"].(string)
-	if !ok {
-		return "", fmt.Errorf("devspace.yaml name is missing")
-	}
-
-	return nameString, nil
 }
 
 func executeInDirectory(dir string, fn func() error) error {

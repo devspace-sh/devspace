@@ -97,7 +97,7 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 
 		dockerClient, err := dockerclient.NewClient(ctx.Log)
 		if err == nil {
-			err = pullsecrets.NewClient(dockerClient).EnsurePullSecret(ctx, ctx.KubeClient.Namespace(), registryURL)
+			err = pullsecrets.NewClient().EnsurePullSecret(ctx, dockerClient, ctx.KubeClient.Namespace(), registryURL)
 			if err != nil {
 				ctx.Log.Errorf("error ensuring pull secret for registry %s: %v", registryURL, err)
 			}

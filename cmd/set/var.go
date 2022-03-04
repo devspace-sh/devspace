@@ -128,14 +128,14 @@ type variableParser struct {
 	Used        map[string]bool
 }
 
-func (v *variableParser) Parse(ctx context.Context, originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, error) {
+func (v *variableParser) Parse(ctx context.Context, originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, map[string]interface{}, error) {
 	// Find out what vars are really used
 	varsUsed, err := resolver.FindVariables(rawConfig)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	v.Definitions = resolver.DefinedVars()
 	v.Used = varsUsed
-	return latest.NewRaw(), nil
+	return latest.NewRaw(), map[string]interface{}{}, nil
 }

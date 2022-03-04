@@ -154,7 +154,7 @@ func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache
 		}
 	}
 
-	parsedConfig, resolver, err := l.parseConfig(ctx, data, localCache, remoteCache, client, parser, options, log)
+	parsedConfig, rawBeforeConversion, resolver, err := l.parseConfig(ctx, data, localCache, remoteCache, client, parser, options, log)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache
 		return nil, errors.Wrap(err, "require versions")
 	}
 
-	c := config.NewConfig(data, parsedConfig, localCache, remoteCache, resolver.ResolvedVariables(), l.absConfigPath)
+	c := config.NewConfig(data, rawBeforeConversion, parsedConfig, localCache, remoteCache, resolver.ResolvedVariables(), l.absConfigPath)
 	pluginErr = plugin.ExecutePluginHookWithContext(map[string]interface{}{
 		"LOAD_PATH":     l.absConfigPath,
 		"LOADED_CONFIG": c.Config(),
@@ -278,11 +278,11 @@ func (l *configLoader) parseConfig(
 	parser Parser,
 	options *ConfigOptions,
 	log log.Logger,
-) (*latest.Config, variable.Resolver, error) {
+) (*latest.Config, map[string]interface{}, variable.Resolver, error) {
 	// copy raw config
-	copiedRawConfig, err := Imports(ctx, filepath.Dir(l.absConfigPath), rawConfig, log)
+	copiedRawConfig, err := ResolveImports(ctx, filepath.Dir(l.absConfigPath), rawConfig, log)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Delete imports from config
@@ -291,13 +291,13 @@ func (l *configLoader) parseConfig(
 	// Load defined variables
 	vars, err := versions.ParseVariables(copiedRawConfig, log)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// validate variables
 	err = validateVars(vars)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// create a new variable resolver
@@ -306,25 +306,25 @@ func (l *configLoader) parseConfig(
 	// parse cli --var's, the resolver will cache them for us
 	_, err = resolver.ConvertFlags(options.Vars)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// prepare profiles
 	copiedRawConfig, err = prepareProfiles(ctx, copiedRawConfig, resolver)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// apply the profiles
 	copiedRawConfig, err = l.applyProfiles(ctx, copiedRawConfig, options, resolver, log)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Load defined variables again (might be changed through profiles)
 	vars, err = versions.ParseVariables(copiedRawConfig, log)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// update the used vars in the resolver
@@ -333,45 +333,39 @@ func (l *configLoader) parseConfig(
 	// validate variables
 	err = validateVars(vars)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Delete vars from config
 	delete(copiedRawConfig, "vars")
 
 	// parse the config
-	latestConfig, err := parser.Parse(ctx, rawConfig, copiedRawConfig, resolver, log)
+	latestConfig, rawBeforeConversion, err := parser.Parse(ctx, rawConfig, copiedRawConfig, resolver, log)
 	if err != nil {
-		return nil, nil, err
-	}
-
-	// now we validate the config
-	err = Validate(latestConfig)
-	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// check if we do not want to change the generated config or
 	// secret vars.
 	if options.Dry {
-		return latestConfig, resolver, nil
+		return latestConfig, rawBeforeConversion, resolver, nil
 	}
 
 	// save local cache
 	err = localCache.Save()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// save remote cache
 	if client != nil {
 		err = remoteCache.Save(context.TODO(), client)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
-	return latestConfig, resolver, nil
+	return latestConfig, rawBeforeConversion, resolver, nil
 }
 
 func validateProfile(profile interface{}) error {

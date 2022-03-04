@@ -9,13 +9,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// PipelineOptions describe how pipelines should be run
-type PipelineOptions struct {
-	Sequential bool `long:"sequential" description:"Run pipelines one after another"`
-}
-
 func Pipeline(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-	options := &PipelineOptions{}
+	options := &types.PipelineOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
@@ -35,5 +30,5 @@ func Pipeline(ctx *devspacecontext.Context, pipeline types.Pipeline, args []stri
 		pipelines = append(pipelines, pipelineConfig)
 	}
 
-	return pipeline.StartNewPipelines(ctx, pipelines, options.Sequential)
+	return pipeline.StartNewPipelines(ctx, pipelines, *options)
 }

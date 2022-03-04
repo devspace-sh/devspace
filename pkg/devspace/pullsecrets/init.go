@@ -2,6 +2,8 @@ package pullsecrets
 
 import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -15,7 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (r *client) EnsurePullSecret(ctx *devspacecontext.Context, namespace, registryURL string) error {
+func (r *client) EnsurePullSecret(ctx *devspacecontext.Context, dockerClient docker.Client, namespace, registryURL string) error {
 	pullSecret := &latest.PullSecretConfig{Registry: registryURL}
 
 	// try to find in pull secrets
@@ -28,10 +30,10 @@ func (r *client) EnsurePullSecret(ctx *devspacecontext.Context, namespace, regis
 		}
 	}
 
-	return r.ensurePullSecret(ctx, namespace, pullSecret)
+	return r.ensurePullSecret(ctx, dockerClient, namespace, pullSecret)
 }
 
-func (r *client) ensurePullSecret(ctx *devspacecontext.Context, namespace string, pullSecretConf *latest.PullSecretConfig) error {
+func (r *client) ensurePullSecret(ctx *devspacecontext.Context, dockerClient docker.Client, namespace string, pullSecretConf *latest.PullSecretConfig) error {
 	if pullSecretConf.Disabled {
 		return nil
 	}
@@ -45,7 +47,7 @@ func (r *client) ensurePullSecret(ctx *devspacecontext.Context, namespace string
 	}
 
 	ctx.Log.Info("Ensuring image pull secret for registry: " + displayRegistryURL + "...")
-	err := r.createPullSecret(ctx, pullSecretConf)
+	err := r.createPullSecret(ctx, dockerClient, pullSecretConf)
 	if err != nil {
 		return errors.Errorf("failed to create pull secret for registry: %v", err)
 	}
@@ -68,19 +70,12 @@ func (r *client) ensurePullSecret(ctx *devspacecontext.Context, namespace string
 }
 
 // EnsurePullSecrets creates the image pull secrets
-func (r *client) EnsurePullSecrets(ctx *devspacecontext.Context, namespace string) (err error) {
-	createPullSecrets := []*latest.PullSecretConfig{}
-
-	// gather pull secrets from pullSecrets
-	if ctx.Config != nil {
-		createPullSecrets = append(createPullSecrets, ctx.Config.Config().PullSecrets...)
-	}
-
+func (r *client) EnsurePullSecrets(ctx *devspacecontext.Context, dockerClient docker.Client, pullSecrets []string) (err error) {
 	defer func() {
 		if err != nil {
 			// execute on error pull secrets hooks
 			pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
-				"PULL_SECRETS": createPullSecrets,
+				"PULL_SECRETS": pullSecrets,
 				"error":        err,
 			}, "error:createPullSecrets")
 			if pluginErr != nil {
@@ -91,15 +86,19 @@ func (r *client) EnsurePullSecrets(ctx *devspacecontext.Context, namespace strin
 
 	// execute before pull secrets hooks
 	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{
-		"PULL_SECRETS": createPullSecrets,
+		"PULL_SECRETS": pullSecrets,
 	}, "before:createPullSecrets")
 	if pluginErr != nil {
 		return pluginErr
 	}
 
 	// create pull secrets
-	for _, pullSecretConf := range createPullSecrets {
-		err = r.ensurePullSecret(ctx, namespace, pullSecretConf)
+	for _, pullSecretConf := range ctx.Config.Config().PullSecrets {
+		if len(pullSecrets) > 0 && !stringutil.Contains(pullSecrets, pullSecretConf.Name) {
+			continue
+		}
+
+		err = r.ensurePullSecret(ctx, dockerClient, ctx.KubeClient.Namespace(), pullSecretConf)
 		if err != nil {
 			return err
 		}
@@ -107,7 +106,7 @@ func (r *client) EnsurePullSecrets(ctx *devspacecontext.Context, namespace strin
 
 	// execute after pull secrets hooks
 	pluginErr = hook.ExecuteHooks(ctx, map[string]interface{}{
-		"PULL_SECRETS": createPullSecrets,
+		"PULL_SECRETS": pullSecrets,
 	}, "after:createPullSecrets")
 	if pluginErr != nil {
 		return pluginErr
@@ -162,11 +161,11 @@ func (r *client) addPullSecretsToServiceAccount(ctx *devspacecontext.Context, na
 	return nil
 }
 
-func (r *client) createPullSecret(ctx *devspacecontext.Context, pullSecret *latest.PullSecretConfig) error {
+func (r *client) createPullSecret(ctx *devspacecontext.Context, dockerClient docker.Client, pullSecret *latest.PullSecretConfig) error {
 	username := pullSecret.Username
 	password := pullSecret.Password
-	if username == "" && password == "" && r.dockerClient != nil {
-		authConfig, _ := r.dockerClient.GetAuthConfig(pullSecret.Registry, true)
+	if username == "" && password == "" && dockerClient != nil {
+		authConfig, _ := dockerClient.GetAuthConfig(pullSecret.Registry, true)
 		if authConfig != nil {
 			username = authConfig.Username
 			password = authConfig.Password

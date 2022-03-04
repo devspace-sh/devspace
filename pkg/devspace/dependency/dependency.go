@@ -6,9 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
-	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"os"
 )
 
@@ -24,9 +22,7 @@ type Dependency struct {
 	dependencyConfig *latest.DependencyConfig
 	dependencyCache  localcache.Cache
 
-	kubeClient     kubectl.Client
-	dockerClient   docker.Client
-	registryClient pullsecrets.Client
+	kubeClient kubectl.Client
 }
 
 // Implement Interface Methods

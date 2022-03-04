@@ -9,8 +9,10 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"github.com/pkg/errors"
+	"strings"
 	"sync"
 )
 
@@ -141,10 +143,20 @@ func (p *pipeline) StartNewDependencies(ctx *devspacecontext.Context, dependenci
 	return t.Wait()
 }
 
-func (p *pipeline) StartNewPipelines(ctx *devspacecontext.Context, pipelines []*latest.Pipeline, sequentially bool) error {
-	if sequentially {
+func (p *pipeline) StartNewPipelines(ctx *devspacecontext.Context, pipelines []*latest.Pipeline, options types.PipelineOptions) error {
+	if options.Background {
 		for _, configPipeline := range pipelines {
-			err := p.StartNewPipeline(ctx, configPipeline)
+			go func(configPipeline *latest.Pipeline) {
+				err := p.startNewPipeline(ctx, configPipeline, randutil.GenerateRandomString(5), options)
+				if err != nil {
+					ctx.Log.Errorf("starting pipeline %s has failed: %v", configPipeline.Name, err)
+				}
+			}(configPipeline)
+		}
+		return nil
+	} else if options.Sequential {
+		for _, configPipeline := range pipelines {
+			err := p.startNewPipeline(ctx, configPipeline, randutil.GenerateRandomString(5), options)
 			if err != nil {
 				return err
 			}
@@ -159,7 +171,7 @@ func (p *pipeline) StartNewPipelines(ctx *devspacecontext.Context, pipelines []*
 		for _, configPipeline := range pipelines {
 			func(configPipeline *latest.Pipeline) {
 				t.Go(func() error {
-					return p.StartNewPipeline(ctx, configPipeline)
+					return p.startNewPipeline(ctx, configPipeline, randutil.GenerateRandomString(5), options)
 				})
 			}(configPipeline)
 		}
@@ -176,7 +188,7 @@ func (p *pipeline) startNewDependency(ctx *devspacecontext.Context, dependency t
 		if dependency.DependencyConfig().Pipeline != "" {
 			pipeline = dependency.DependencyConfig().Pipeline
 		} else {
-			pipeline = p.name
+			pipeline = "deploy"
 		}
 	}
 
@@ -205,28 +217,69 @@ func (p *pipeline) startNewDependency(ctx *devspacecontext.Context, dependency t
 	return pip.Run(ctx.AsDependency(dependency))
 }
 
-func (p *pipeline) StartNewPipeline(ctx *devspacecontext.Context, configPipeline *latest.Pipeline) error {
+func (p *pipeline) startNewPipeline(ctx *devspacecontext.Context, configPipeline *latest.Pipeline, id string, options types.PipelineOptions) error {
 	if configPipeline.Name == p.name {
 		return fmt.Errorf("pipeline %s is already running", configPipeline.Name)
 	}
 
+	// parse env
+	envMap := map[string]string{}
+	for _, s := range options.Env {
+		if s == "" {
+			continue
+		}
+
+		splitted := strings.Split(s, "=")
+		if len(splitted) <= 1 {
+			return fmt.Errorf("invalid environment variable format. Has to be KEY=VALUE")
+		}
+
+		envMap[splitted[0]] = strings.Join(splitted[1:], "=")
+	}
+
 	// exchange job if it's not alive anymore
+	id, j, err := p.createJob(configPipeline, envMap)
+	if err != nil {
+		return err
+	}
+	defer p.removeJob(j, id)
+
+	err = p.executeJob(ctx, j)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *pipeline) createJob(configPipeline *latest.Pipeline, envMap map[string]string) (id string, job *Job, err error) {
 	p.m.Lock()
-	j, ok := p.jobs[configPipeline.Name]
+	defer p.m.Unlock()
+
+	j, ok := p.jobs[id]
 	if ok && !j.Terminated() {
-		p.m.Unlock()
-		return fmt.Errorf("pipeline %s is already running", configPipeline.Name)
+		return "", nil, fmt.Errorf("pipeline %s is already running", id)
 	}
 
 	j = &Job{
 		Pipeline: p,
 		Config:   configPipeline,
+		ExtraEnv: envMap,
 	}
-	p.jobs[configPipeline.Name] = j
-	p.m.Unlock()
+	p.jobs[id] = j
+	return id, j, nil
+}
 
-	ctx = ctx.WithLogger(log.NewDefaultPrefixLogger(configPipeline.Name+" ", ctx.Log))
-	return p.executeJob(ctx, j)
+func (p *pipeline) removeJob(j *Job, id string) {
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	nj, ok := p.jobs[id]
+	if !ok {
+		return
+	} else if nj == j {
+		delete(p.jobs, id)
+	}
 }
 
 func (p *pipeline) executeJob(ctx *devspacecontext.Context, j *Job) error {

@@ -27,36 +27,6 @@ import (
 // ErrNotList indicates that a non-list was treated as a list.
 var ErrNotList = errors.New("not a list")
 
-func MergeMapsMergeArrays(a, b map[string]interface{}) map[string]interface{} {
-	out := make(map[string]interface{}, len(a))
-	for k, v := range a {
-		out[k] = v
-	}
-	for k, v := range b {
-		if v, ok := v.(map[string]interface{}); ok {
-			if bv, ok := out[k]; ok {
-				if bv, ok := bv.(map[string]interface{}); ok {
-					out[k] = MergeMapsMergeArrays(bv, v)
-					continue
-				}
-			}
-		}
-		if v, ok := v.([]interface{}); ok {
-			if bv, ok := out[k]; ok {
-				if bv, ok := bv.([]interface{}); ok {
-					arr := []interface{}{}
-					arr = append(arr, v...)
-					arr = append(arr, bv...)
-					out[k] = arr
-					continue
-				}
-			}
-		}
-		out[k] = v
-	}
-	return out
-}
-
 func MergeMaps(a, b map[string]interface{}) map[string]interface{} {
 	out := make(map[string]interface{}, len(a))
 	for k, v := range a {

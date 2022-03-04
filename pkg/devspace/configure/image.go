@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/command"
+	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/sirupsen/logrus"
 	"os"
 	"path"
@@ -309,8 +310,8 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 			usernameVar := "REGISTRY_USERNAME"
 			passwordVar := "REGISTRY_PASSWORD"
 
-			m.config.PullSecrets = []*latest.PullSecretConfig{
-				{
+			m.config.PullSecrets = map[string]*latest.PullSecretConfig{
+				encoding.Convert(registryHostname): {
 					Registry: registryHostname,
 					Username: fmt.Sprintf("${%s}", usernameVar),
 					Password: fmt.Sprintf("${%s}", passwordVar),

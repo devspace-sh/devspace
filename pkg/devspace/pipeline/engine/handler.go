@@ -65,7 +65,7 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 	if e.stdout != nil && e.stdout == hc.Stdout {
 		devCtx = devCtx.WithLogger(e.ctx.Log)
 	} else {
-		devCtx = devCtx.WithLogger(log.NewStreamLogger(hc.Stdout, e.ctx.Log.GetLevel()))
+		devCtx = devCtx.WithLogger(log.NewStreamLogger(hc.Stdout, e.ctx.Log.GetLevel()).WithoutPrefix())
 	}
 
 	switch command {
@@ -93,9 +93,13 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 		return e.executePipelineCommand(ctx, command, func() error {
 			return enginecommands.StopDev(devCtx, e.pipeline.DevPodManager(), args)
 		})
-	case "run_dependencies_pipelines":
+	case "run_dependency_pipelines":
 		return e.executePipelineCommand(ctx, command, func() error {
 			return enginecommands.Dependency(devCtx, e.pipeline, args)
+		})
+	case "ensure_pull_secrets":
+		return e.executePipelineCommand(ctx, command, func() error {
+			return enginecommands.PullSecrets(devCtx, args)
 		})
 	}
 
@@ -117,6 +121,11 @@ func handleError(ctx context.Context, command string, err error) error {
 		return interp.NewExitStatus(0)
 	}
 
+	_, ok := interp.IsExitStatus(err)
+	if ok {
+		return err
+	}
+
 	hc := interp.HandlerCtx(ctx)
 	_, _ = fmt.Fprintln(hc.Stderr, errors.Wrap(err, command))
 	return interp.NewExitStatus(1)
@@ -127,6 +136,10 @@ func (e *execHandler) fallbackCommands(ctx context.Context, command string, args
 	hc := interp.HandlerCtx(ctx)
 
 	switch command {
+	case "is_equal":
+		return enginecommands.IsEqual(&hc, args)
+	case "is_command":
+		return enginecommands.IsCommand(args)
 	case "cat":
 		err := enginecommands.Cat(&hc, args)
 		if err != nil {

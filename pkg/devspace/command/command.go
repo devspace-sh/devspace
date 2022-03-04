@@ -14,7 +14,7 @@ import (
 )
 
 // ExecuteCommand executes a command from the config
-func ExecuteCommand(ctx context.Context, commands []*latest.CommandConfig, name string, args []string, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
+func ExecuteCommand(ctx context.Context, commands map[string]*latest.CommandConfig, name string, args []string, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
 	shellCommand := ""
 	var shellArgs []string
 	var appendArgs bool

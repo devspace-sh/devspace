@@ -3,10 +3,13 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/cmd/flags"
+	"github.com/loft-sh/devspace/pkg/devspace/analyze"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/dev"
@@ -18,19 +21,14 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
-	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
-	"k8s.io/client-go/kubernetes/fake"
-	"time"
-
-	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/analyze"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 // DeployCmd holds the required data for the down cmd
@@ -234,12 +232,6 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, options *Pipel
 		}
 	}
 
-	// create docker client
-	dockerClient, err := f.NewDockerClient(ctx.Log)
-	if err != nil {
-		dockerClient = nil
-	}
-
 	// deploy dependencies
 	dependencies, err := f.NewDependencyManager(ctx, options.ConfigOptions).ResolveAll(ctx, dependency.ResolveOptions{
 		SkipDependencies: options.DependencyOptions.Exclude,
@@ -260,12 +252,6 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, options *Pipel
 	err = hook.ExecuteHooks(ctx, nil, "deploy")
 	if err != nil {
 		return err
-	}
-
-	// create pull secrets if necessary
-	err = f.NewPullSecretClient(dockerClient).EnsurePullSecrets(ctx, ctx.KubeClient.Namespace())
-	if err != nil {
-		ctx.Log.Warn(err)
 	}
 
 	// update last used kube context & save generated yaml
@@ -337,25 +323,6 @@ func startServices(ctx *devspacecontext.Context, uiPort int) (*server.Server, er
 	serv, err := dev.UI(ctx, uiPort)
 	if err != nil {
 		return nil, err
-	}
-
-	// Run dev.open configs
-	for _, openConfig := range ctx.Config.Config().Open {
-		if openConfig.URL != "" {
-			maxWait := 4 * time.Minute
-			ctx.Log.Infof("Opening '%s' as soon as application will be started (timeout: %s)", openConfig.URL, maxWait)
-
-			go func(url string) {
-				// Use DiscardLogger as we do not want to print warnings about failed HTTP requests
-				err := openURL(url, nil, "", logpkg.Discard, maxWait)
-				if err != nil {
-					// Use warn instead of fatal to prevent exit
-					// Do not print warning
-					// log.Warn(err)
-					_ = err // just to avoid empty branch (SA9003) lint error
-				}
-			}(openConfig.URL)
-		}
 	}
 
 	return serv, nil

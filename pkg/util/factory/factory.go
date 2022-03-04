@@ -15,7 +15,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/log"
 )
@@ -38,9 +37,6 @@ type Factory interface {
 
 	// NewDependencyManager creates a new dependency manager
 	NewDependencyManager(ctx *devspacecontext.Context, configOptions *loader.ConfigOptions) dependency.Manager
-
-	// NewPullSecretClient creates a new pull secrets client
-	NewPullSecretClient(dockerClient docker.Client) pullsecrets.Client
 
 	// NewDockerClient creates a new docker API client
 	NewDockerClient(log log.Logger) (docker.Client, error)
@@ -104,11 +100,6 @@ func (f *DefaultFactoryImpl) GetLog() log.Logger {
 // NewDependencyManager implements interface
 func (f *DefaultFactoryImpl) NewDependencyManager(ctx *devspacecontext.Context, configOptions *loader.ConfigOptions) dependency.Manager {
 	return dependency.NewManager(ctx, configOptions)
-}
-
-// NewPullSecretClient implements interface
-func (f *DefaultFactoryImpl) NewPullSecretClient(dockerClient docker.Client) pullsecrets.Client {
-	return pullsecrets.NewClient(dockerClient)
 }
 
 // NewConfigLoader implements interface

@@ -515,7 +515,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 			config.Dev["default"].Forward = portMappings
 
 			// Add dev.open config
-			config.Open = []*latest.OpenConfig{
+			config.Dev["default"].Open = []*latest.OpenConfig{
 				{
 					URL: "http://localhost:" + strconv.Itoa(localPort),
 				},

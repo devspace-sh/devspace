@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/pkg/errors"
 	"io"
+	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/interp"
 	"os"
 	"strings"
@@ -21,6 +22,7 @@ import (
 type Job struct {
 	Pipeline types.Pipeline
 	Config   *latest.Pipeline
+	ExtraEnv map[string]string
 
 	m sync.Mutex
 	t *tomb.Tomb
@@ -122,7 +124,7 @@ func (j *Job) shouldExecuteStep(ctx *devspacecontext.Context, step *latest.Pipel
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	handler := engine.NewExecHandler(ctx, nil, j.Pipeline, false)
-	_, err := engine.ExecuteShellCommand(ctx.Context, step.Run, os.Args[1:], step.Directory, false, stdout, stderr, env.NewVariableEnvProvider(ctx.Config, ctx.Dependencies, step.Env), handler)
+	_, err := engine.ExecuteShellCommand(ctx.Context, step.Run, os.Args[1:], step.Directory, false, stdout, stderr, j.getEnv(ctx, step), handler)
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok && status == 1 {
 			return false, nil
@@ -149,6 +151,18 @@ func (j *Job) executeStep(ctx *devspacecontext.Context, step *latest.PipelineSte
 	})
 
 	handler := engine.NewExecHandler(ctx, stdoutWriter, j.Pipeline, true)
-	_, err := engine.ExecuteShellCommand(ctx.Context, step.Run, os.Args[1:], step.Directory, step.ContinueOnError, stdoutWriter, stdoutWriter, env.NewVariableEnvProvider(ctx.Config, ctx.Dependencies, step.Env), handler)
+	_, err := engine.ExecuteShellCommand(ctx.Context, step.Run, os.Args[1:], step.Directory, step.ContinueOnError, stdoutWriter, stdoutWriter, j.getEnv(ctx, step), handler)
 	return err
+}
+
+func (j *Job) getEnv(ctx *devspacecontext.Context, step *latest.PipelineStep) expand.Environ {
+	envMap := map[string]string{}
+	for k, v := range step.Env {
+		envMap[k] = v
+	}
+	for k, v := range j.ExtraEnv {
+		envMap[k] = v
+	}
+
+	return env.NewVariableEnvProvider(ctx.Config, ctx.Dependencies, envMap)
 }

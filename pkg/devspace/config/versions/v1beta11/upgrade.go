@@ -20,15 +20,70 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	}
 	clonedConfig.Deployments = nil
 	clonedConfig.Dev = DevConfig{}
+	clonedConfig.Dependencies = nil
+	clonedConfig.Commands = nil
+	clonedConfig.PullSecrets = nil
 	nextConfig := &next.Config{}
 	err = util.Convert(clonedConfig, nextConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	// use a pretty simple pipeline which was used by devspace before
-	deployPipeline := `run_dependencies_pipelines --all
-build_images --all`
+	deployPipeline := ""
+	buildPipeline := ""
+	purgePipeline := ""
+	nextConfig.Dependencies = map[string]*next.DependencyConfig{}
+	for _, dep := range c.Dependencies {
+		if dep.Source == nil {
+			continue
+		}
+
+		name := encoding.Convert(dep.Name)
+
+		// dev config for dependencies is not working anymore
+		if dep.Dev != nil {
+			if dep.Dev.ReplacePods || dep.Dev.Sync || dep.Dev.Ports {
+				log.Errorf("dependencies[*].dev.replacePods,dependencies[*].dev.sync and dependencies[*].dev.ports is not supported anymore in v6")
+				log.Errorf("Please use the dev pipeline instead via 'dependencies[*].pipeline: dev' which will start sync and port-forwarding as well")
+			}
+		}
+		nextConfig.Dependencies[name] = &next.DependencyConfig{
+			Source: &next.SourceConfig{
+				Git:            dep.Source.Git,
+				CloneArgs:      dep.Source.CloneArgs,
+				DisableShallow: dep.Source.DisableShallow,
+				DisablePull:    dep.Source.DisableShallow,
+				SubPath:        dep.Source.SubPath,
+				Branch:         dep.Source.Branch,
+				Tag:            dep.Source.Tag,
+				Revision:       dep.Source.Revision,
+				ConfigName:     dep.Source.ConfigName,
+				Path:           dep.Source.Path,
+			},
+			Disabled:                 dep.Disabled,
+			Profile:                  dep.Profile,
+			Profiles:                 dep.Profiles,
+			DisableProfileActivation: dep.DisableProfileActivation,
+			OverwriteVars:            dep.OverwriteVars,
+			SkipBuild:                dep.SkipBuild,
+			IgnoreDependencies:       dep.IgnoreDependencies,
+			Namespace:                dep.Namespace,
+		}
+		for _, v := range dep.Vars {
+			nextConfig.Dependencies[name].Vars = append(nextConfig.Dependencies[name].Vars, next.DependencyVar{
+				Name:  v.Name,
+				Value: v.Value,
+			})
+		}
+
+		deployPipeline += "run_dependency_pipelines " + name + "\n"
+		buildPipeline += "run_dependency_pipelines " + name + " --pipeline build\n"
+		purgePipeline += "run_dependency_pipelines " + name + " --pipeline purge\n"
+	}
+	buildPipeline += "\nbuild_images --all"
+
+	// use a pretty simple pipeline which was used by DevSpace before
+	deployPipeline += "\nensure_pull_secrets --all\nbuild_images --all\n"
 
 	// create the deploy pipeline based on concurrent deployments
 	concurrentDeployments := []string{}
@@ -41,18 +96,36 @@ build_images --all`
 		}
 	}
 
+	prependPurgePipeline := ""
 	if len(concurrentDeployments) > 0 {
+		prependPurgePipeline += "\npurge_deployments " + strings.Join(concurrentDeployments, " ")
 		deployPipeline += "\ncreate_deployments " + strings.Join(concurrentDeployments, " ")
 	}
 	if len(sequentialDeployments) > 0 {
+		prependPurgePipeline += "\npurge_deployments " + strings.Join(concurrentDeployments, " ") + " --sequential"
 		deployPipeline += "\ncreate_deployments " + strings.Join(sequentialDeployments, " ") + " --sequential"
 	}
+	purgePipeline = prependPurgePipeline + "\n" + purgePipeline
 
 	devPipeline := deployPipeline + "\n" + "start_dev --all"
 	if c.Dev.Terminal != nil && c.Dev.Terminal.ImageSelector == "" && len(c.Dev.Terminal.LabelSelector) == 0 {
 		devPipeline += "\n" + strings.Join(c.Dev.Terminal.Command, " ")
 	}
 	nextConfig.Pipelines = map[string]*next.Pipeline{
+		"build": {
+			Steps: []next.PipelineStep{
+				{
+					Run: buildPipeline,
+				},
+			},
+		},
+		"purge": {
+			Steps: []next.PipelineStep{
+				{
+					Run: purgePipeline,
+				},
+			},
+		},
 		"dev": {
 			Steps: []next.PipelineStep{
 				{
@@ -148,24 +221,6 @@ build_images --all`
 		}
 	}
 
-	for i, d := range c.Dependencies {
-		// dev config for dependencies is not working anymore
-		if d.Dev != nil {
-			if d.Dev.ReplacePods || d.Dev.Sync || d.Dev.Ports {
-				log.Errorf("dependencies[*].dev.replacePods,dependencies[*].dev.sync and dependencies[*].dev.ports is not supported anymore in v6")
-				log.Errorf("Please use the dev pipeline instead via 'dependencies[*].pipeline: dev' which will start sync and port-forwarding as well")
-			}
-		}
-
-		// we use dependency name as override name to identify it
-		nextConfig.Dependencies[i].OverrideName = encoding.Convert(d.Name)
-
-		// profile parents are removed
-		if len(d.ProfileParents) > 0 {
-			nextConfig.Dependencies[i].Profiles = append(nextConfig.Dependencies[i].Profiles, d.ProfileParents...)
-		}
-	}
-
 	// interactive mode was removed
 	if c.Dev.InteractiveEnabled || len(c.Dev.InteractiveImages) > 0 {
 		log.Errorf("Interactive mode is not supported anymore in DevSpace version 6 and has no effect. Please update your config to use terminal instead")
@@ -177,8 +232,41 @@ build_images --all`
 	}
 
 	// move dev.open -> open
-	for _, o := range c.Dev.Open {
-		nextConfig.Open = append(nextConfig.Open, &next.OpenConfig{URL: o.URL})
+	if len(nextConfig.Dev) > 0 {
+		for _, d := range nextConfig.Dev {
+			for _, o := range c.Dev.Open {
+				d.Open = append(d.Open, &next.OpenConfig{URL: o.URL})
+			}
+		}
+	}
+
+	// commands
+	nextConfig.Commands = map[string]*next.CommandConfig{}
+	for _, command := range c.Commands {
+		commandName := encoding.Convert(command.Name)
+		nextConfig.Commands[commandName] = &next.CommandConfig{
+			Name:        commandName,
+			Command:     command.Command,
+			Args:        command.Args,
+			AppendArgs:  command.AppendArgs,
+			Description: command.Description,
+		}
+	}
+
+	// pull secrets
+	nextConfig.PullSecrets = map[string]*next.PullSecretConfig{}
+	for idx, pullSecret := range c.PullSecrets {
+		pullSecretName := fmt.Sprintf("pull-secret-%d", idx)
+		nextConfig.PullSecrets[pullSecretName] = &next.PullSecretConfig{
+			Name:            pullSecretName,
+			Disabled:        pullSecret.Disabled,
+			Registry:        pullSecret.Registry,
+			Username:        pullSecret.Username,
+			Password:        pullSecret.Password,
+			Email:           pullSecret.Email,
+			Secret:          pullSecret.Secret,
+			ServiceAccounts: pullSecret.ServiceAccounts,
+		}
 	}
 
 	// merge dev config together

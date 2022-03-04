@@ -9,6 +9,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/sirupsen/logrus"
+	"github.com/skratchdot/open-golang/open"
+	"net/http"
 	"os"
 	syncpkg "sync"
 
@@ -22,6 +24,10 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/pkg/errors"
 	"time"
+)
+
+var (
+	openMaxWait = 5 * time.Minute
 )
 
 type devPod struct {
@@ -181,6 +187,32 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 		return false, errors.Wrap(err, "waiting for pod to become ready")
 	}
 	ctx.Log.Debugf("Selected pod:container %s:%s", d.selectedPod.Pod.Name, d.selectedPod.Container.Name)
+
+	// Run dev.open configs
+	for _, openConfig := range devPodConfig.Open {
+		if openConfig.URL != "" {
+			url := openConfig.URL
+			ctx.Log.Infof("Opening '%s' as soon as application will be started", openConfig.URL)
+			parent.Go(func() error {
+				now := time.Now()
+				for time.Since(now) < openMaxWait {
+					select {
+					case <-ctx.Context.Done():
+						return nil
+					case <-time.After(time.Second):
+						resp, _ := http.Get(url)
+						if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
+							time.Sleep(time.Second * 1)
+							_ = open.Start(url)
+							ctx.Log.Donef("Successfully opened %s", url)
+						}
+					}
+				}
+
+				return nil
+			})
+		}
+	}
 
 	// start sync and port forwarding
 	err = d.startSyncAndPortForwarding(ctx, devPodConfig, newTargetSelector(d.selectedPod.Pod.Name, d.selectedPod.Pod.Namespace, d.selectedPod.Container.Name, parent), opts, parent)

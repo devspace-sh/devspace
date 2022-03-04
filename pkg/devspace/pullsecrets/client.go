@@ -7,19 +7,15 @@ import (
 
 // Client communicates with a registry
 type Client interface {
-	EnsurePullSecrets(ctx *devspacecontext.Context, namespace string) error
-	EnsurePullSecret(ctx *devspacecontext.Context, namespace, registryURL string) error
+	EnsurePullSecrets(ctx *devspacecontext.Context, dockerClient docker.Client, pullSecrets []string) error
 
+	EnsurePullSecret(ctx *devspacecontext.Context, dockerClient docker.Client, namespace, registryURL string) error
 	CreatePullSecret(ctx *devspacecontext.Context, options *PullSecretOptions) error
 }
 
 // NewClient creates a client for a registry
-func NewClient(dockerClient docker.Client) Client {
-	return &client{
-		dockerClient: dockerClient,
-	}
+func NewClient() Client {
+	return &client{}
 }
 
-type client struct {
-	dockerClient docker.Client
-}
+type client struct{}

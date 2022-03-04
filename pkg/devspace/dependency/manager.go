@@ -54,7 +54,7 @@ func (m *manager) ResolveAll(ctx *devspacecontext.Context, options ResolveOption
 }
 
 // ExecuteCommand executes a given command from the available commands
-func ExecuteCommand(ctx context.Context, commands []*latest.CommandConfig, cmd string, args []string, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
+func ExecuteCommand(ctx context.Context, commands map[string]*latest.CommandConfig, cmd string, args []string, dir string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
 	err := command.ExecuteCommand(ctx, commands, cmd, args, dir, stdout, stderr, stdin)
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok {

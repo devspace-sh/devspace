@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/portforwarding"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/sirupsen/logrus"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"net/http"
 	"os"
@@ -38,9 +39,7 @@ import (
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -194,19 +193,23 @@ func (cmd *OpenCmd) RunOpen(f factory.Factory) error {
 		domainHash := hash.String(domain)
 
 		ingressName := "devspace-ingress-" + domainHash[:10]
-		_, err = client.KubeClient().ExtensionsV1beta1().Ingresses(namespace).Create(context.TODO(), &v1beta1.Ingress{
+		_, err = client.KubeClient().NetworkingV1().Ingresses(namespace).Create(context.TODO(), &networkingv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{Name: ingressName},
-			Spec: v1beta1.IngressSpec{
-				Rules: []v1beta1.IngressRule{
+			Spec: networkingv1.IngressSpec{
+				Rules: []networkingv1.IngressRule{
 					{
 						Host: domain,
-						IngressRuleValue: v1beta1.IngressRuleValue{
-							HTTP: &v1beta1.HTTPIngressRuleValue{
-								Paths: []v1beta1.HTTPIngressPath{
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{
 									{
-										Backend: v1beta1.IngressBackend{
-											ServiceName: serviceName,
-											ServicePort: intstr.FromInt(servicePort),
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: serviceName,
+												Port: networkingv1.ServiceBackendPort{
+													Number: int32(servicePort),
+												},
+											},
 										},
 									},
 								},
@@ -326,7 +329,7 @@ func (cmd *OpenCmd) openLocal(ctx *devspacecontext.Context, domain string) error
 		},
 	}
 
-	devSpaceConfig := config.Ensure(config.NewConfig(nil, fakeConfig, nil, nil, nil, constants.DefaultConfigPath))
+	devSpaceConfig := config.Ensure(config.NewConfig(nil, nil, fakeConfig, nil, nil, nil, constants.DefaultConfigPath))
 	ctx = ctx.WithConfig(devSpaceConfig)
 	options := targetselector.NewEmptyOptions().
 		WithLabelSelector(labels.Set(labelSelector).String()).
@@ -440,7 +443,7 @@ func (cmd *OpenCmd) findDomain(client kubectl.Client, namespace, host string) (s
 	cmd.log.Info("Retrieve ingresses...")
 
 	// List all ingresses and only create one if there is none already
-	ingressList, err := client.KubeClient().ExtensionsV1beta1().Ingresses(namespace).List(context.TODO(), metav1.ListOptions{})
+	ingressList, err := client.KubeClient().NetworkingV1().Ingresses(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return "", false, errors.Errorf("Error listing ingresses: %v", err)
 	}

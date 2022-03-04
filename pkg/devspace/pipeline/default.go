@@ -24,7 +24,8 @@ var DefaultDeployPipeline = &latest.Pipeline{
 	Name: "deploy",
 	Steps: []latest.PipelineStep{
 		{
-			Run: `run_dependencies_pipelines --all
+			Run: `run_dependency_pipelines --all
+ensure_pull_secrets --all
 build_images --all
 create_deployments --all`,
 		},
@@ -35,7 +36,8 @@ var DefaultDevPipeline = &latest.Pipeline{
 	Name: "dev",
 	Steps: []latest.PipelineStep{
 		{
-			Run: `run_dependencies_pipelines --all --pipeline deploy
+			Run: `run_dependency_pipelines --all
+ensure_pull_secrets --all
 build_images --all
 create_deployments --all
 start_dev --all`,
@@ -49,7 +51,7 @@ var DefaultPurgePipeline = &latest.Pipeline{
 		{
 			Run: `stop_dev --all
 purge_deployments --all
-run_dependencies_pipelines --all --pipeline purge`,
+run_dependency_pipelines --all --pipeline purge`,
 		},
 	},
 }
@@ -58,7 +60,7 @@ var DefaultBuildPipeline = &latest.Pipeline{
 	Name: "build",
 	Steps: []latest.PipelineStep{
 		{
-			Run: `run_dependencies_pipelines --all --pipeline build
+			Run: `run_dependency_pipelines --all --pipeline build
 build_images --all`,
 		},
 	},

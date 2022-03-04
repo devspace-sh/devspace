@@ -145,7 +145,7 @@ func (b *Builder) createPullSecret(ctx *devspacecontext.Context) error {
 		password = authConfig.IdentityToken
 	}
 
-	return pullsecrets.NewClient(b.dockerClient).CreatePullSecret(ctx, &pullsecrets.PullSecretOptions{
+	return pullsecrets.NewClient().CreatePullSecret(ctx, &pullsecrets.PullSecretOptions{
 		Namespace:       b.BuildNamespace,
 		RegistryURL:     registryURL,
 		Username:        username,

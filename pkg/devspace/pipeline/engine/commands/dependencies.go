@@ -28,7 +28,6 @@ func Dependency(ctx *devspacecontext.Context, pipeline types.Pipeline, args []st
 	duplicates := map[string]bool{}
 	deployDependencies := []types2.Dependency{}
 	if options.All {
-
 		deployDependencies = ctx.Dependencies
 	} else if len(args) > 0 {
 		for _, arg := range args {
@@ -50,7 +49,7 @@ func Dependency(ctx *devspacecontext.Context, pipeline types.Pipeline, args []st
 			}
 		}
 	} else {
-		return fmt.Errorf("either specify 'run_dependencies_pipelines --all' or 'run_dependency_pipelines dep1 dep2'")
+		return fmt.Errorf("either specify 'run_dependency_pipelines --all' or 'run_dependency_pipelines dep1 dep2'")
 	}
 
 	return pipeline.StartNewDependencies(ctx, deployDependencies, options.DependencyOptions)

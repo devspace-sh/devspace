@@ -81,8 +81,8 @@ func ParseProfile(ctx context.Context, basePath string, data map[string]interfac
 	return parsedProfiles, nil
 }
 
-// ParseImports parses only the commands from the config
-func ParseImports(data map[string]interface{}) (map[string]interface{}, error) {
+// GetImports parses only the commands from the config
+func GetImports(data map[string]interface{}) (map[string]interface{}, error) {
 	retMap := map[string]interface{}{}
 	err := util.Convert(data, &retMap)
 	if err != nil {
@@ -104,8 +104,7 @@ func ParseImports(data map[string]interface{}) (map[string]interface{}, error) {
 	}, nil
 }
 
-// ParseCommands parses only the commands from the config
-func ParseCommands(data map[string]interface{}) (map[string]interface{}, error) {
+func GetCommands(data map[string]interface{}) (map[string]interface{}, error) {
 	retMap := map[string]interface{}{}
 	err := util.Convert(data, &retMap)
 	if err != nil {
@@ -195,11 +194,20 @@ func Parse(data map[string]interface{}, log log.Logger) (*latest.Config, error) 
 }
 
 func adjustConfig(config *latest.Config) {
+	for name, command := range config.Commands {
+		command.Name = name
+	}
+	for name, pullSecret := range config.PullSecrets {
+		pullSecret.Name = name
+	}
 	for name, devPod := range config.Dev {
 		devPod.Name = name
 	}
 	for name, pipeline := range config.Pipelines {
 		pipeline.Name = name
+	}
+	for name, dep := range config.Dependencies {
+		dep.Name = name
 	}
 	if config.Images != nil {
 		newObjs := map[string]*latest.Image{}
@@ -220,15 +228,6 @@ func adjustConfig(config *latest.Config) {
 		}
 		config.Deployments = newObjs
 	}
-	if config.Dependencies != nil {
-		newObjs := []*latest.DependencyConfig{}
-		for _, v := range config.Dependencies {
-			if v != nil {
-				newObjs = append(newObjs, v)
-			}
-		}
-		config.Dependencies = newObjs
-	}
 	if config.Hooks != nil {
 		newObjs := []*latest.HookConfig{}
 		for _, v := range config.Hooks {
@@ -237,33 +236,6 @@ func adjustConfig(config *latest.Config) {
 			}
 		}
 		config.Hooks = newObjs
-	}
-	if config.PullSecrets != nil {
-		newObjs := []*latest.PullSecretConfig{}
-		for _, v := range config.PullSecrets {
-			if v != nil {
-				newObjs = append(newObjs, v)
-			}
-		}
-		config.PullSecrets = newObjs
-	}
-	if config.Commands != nil {
-		newObjs := []*latest.CommandConfig{}
-		for _, v := range config.Commands {
-			if v != nil {
-				newObjs = append(newObjs, v)
-			}
-		}
-		config.Commands = newObjs
-	}
-	if config.Open != nil {
-		newObjs := []*latest.OpenConfig{}
-		for _, v := range config.Open {
-			if v != nil {
-				newObjs = append(newObjs, v)
-			}
-		}
-		config.Open = newObjs
 	}
 }
 

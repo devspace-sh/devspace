@@ -56,7 +56,7 @@ type Config struct {
 
 	// PullSecrets are image pull secrets that will be created by devspace in the target namespace
 	// during devspace dev or devspace deploy
-	PullSecrets []*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
+	PullSecrets map[string]*PullSecretConfig `yaml:"pullSecrets,omitempty" json:"pullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"registry"`
 
 	// Images holds configuration of how devspace should build images
 	Images map[string]*Image `yaml:"images,omitempty" json:"images,omitempty"`
@@ -67,21 +67,18 @@ type Config struct {
 	// Dev holds development configuration for the 'devspace dev' command.
 	Dev map[string]*DevPod `yaml:"dev,omitempty" json:"dev,omitempty"`
 
-	// Open holds the open config for urls
-	Open []*OpenConfig `yaml:"open,omitempty" json:"open,omitempty"`
+	// Commands are custom commands that can be executed via 'devspace run COMMAND'
+	Commands map[string]*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
 	// Hooks are actions that are executed at certain points within the pipeline. Hooks are ordered and are executed
 	// in the order they are specified.
 	Hooks []*HookConfig `yaml:"hooks,omitempty" json:"hooks,omitempty"`
 
-	// Commands are custom commands that can be executed via 'devspace run COMMAND'
-	Commands []*CommandConfig `yaml:"commands,omitempty" json:"commands,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
-
 	// Profiles can be used to change the current configuration and change the behavior of devspace
 	Profiles []*ProfileConfig `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 
 	// Dependencies are sub devspace projects that lie in a local folder or can be accessed via git
-	Dependencies []*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Dependencies map[string]*DependencyConfig `yaml:"dependencies,omitempty" json:"dependencies,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 }
 
 // Import specifies the source of the devspace config to merge
@@ -757,6 +754,9 @@ type DevPod struct {
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 
+	// Open holds the open config for urls
+	Open []*OpenConfig `yaml:"open,omitempty" json:"open,omitempty"`
+
 	Forward            []*PortMapping      `yaml:"forward,omitempty" json:"forward,omitempty"`
 	Patches            []*PatchConfig      `yaml:"patches,omitempty" json:"patches,omitempty"`
 	PersistenceOptions *PersistenceOptions `yaml:"persistenceOptions,omitempty" json:"persistenceOptions,omitempty"`
@@ -979,7 +979,7 @@ type PodPatch struct {
 
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
-	OverrideName             string          `yaml:"overrideName" json:"overrideName"`
+	Name                     string          `yaml:"name" json:"name"`
 	Source                   *SourceConfig   `yaml:"source" json:"source"`
 	Disabled                 bool            `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 	Profile                  string          `yaml:"profile,omitempty" json:"profile,omitempty"`
@@ -1128,6 +1128,9 @@ type CommandConfig struct {
 	// Command is the command that should be executed. For example: 'echo 123'
 	Command string `yaml:"command" json:"command"`
 
+	// Internal commands are not show in list and are usable through run_command
+	Internal bool `yaml:"internal,omitempty" json:"internal,omitempty"`
+
 	// Args are optional and if defined, command is not executed within a shell
 	// and rather directly.
 	Args []string `yaml:"args,omitempty" json:"args,omitempty"`
@@ -1244,6 +1247,9 @@ type PatchConfig struct {
 
 // PullSecretConfig defines a pull secret that should be created by DevSpace
 type PullSecretConfig struct {
+	// Name is the pull secret name to deploy
+	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
 	// If true, the pull secret will be not created
 	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 

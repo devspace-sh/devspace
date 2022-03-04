@@ -4,7 +4,7 @@ vars:
     value: yourusername/devspace
 images:
   default:
-    image: ${IMAGE}
+    image: loft-sh/vcluster
 deployments:
 - name: devspace-app
   kubectl:

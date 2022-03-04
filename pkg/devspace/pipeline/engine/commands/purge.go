@@ -22,9 +22,8 @@ func Purge(ctx *devspacecontext.Context, args []string) error {
 		return errors.Wrap(err, "parse args")
 	}
 
-	ctx = ctx.WithConfig(ctx.Config.WithParsedConfig(ctx.Config.Config().Clone()))
 	if !options.All && len(args) == 0 {
-		return fmt.Errorf("either specify 'create_deployments --all' or 'create_deployments deployment1 deployment2'")
+		return fmt.Errorf("either specify 'purge_deployments --all' or 'purge_deployments deployment1 deployment2'")
 	}
 
 	return deploy.NewController().Purge(ctx, args)
