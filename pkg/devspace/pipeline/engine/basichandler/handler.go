@@ -20,14 +20,43 @@ func NewBasicExecHandler() types.ExecHandler {
 type execHandler struct{}
 
 func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
-	if len(args) > 0 {
+	if len(args) == 0 {
 		// handle some special commands that are not found locally
 		hc := interp.HandlerCtx(ctx)
 		_, err := lookPathDir(hc.Dir, hc.Env, args[0])
 		if err != nil {
-			err = e.fallbackCommands(ctx, args[0], args[1:])
-			if err != nil {
-				return err
+			logger := log.GetFileLogger("shell")
+			hc := interp.HandlerCtx(ctx)
+			switch args[0] {
+			case "is_equal":
+				return enginecommands.IsEqual(&hc, args[1:])
+			case "is_command":
+				return enginecommands.IsCommand(args[1:])
+			case "sleep":
+				return handleError(hc, enginecommands.Sleep(args[1:]))
+			case "cat":
+				return handleError(hc, enginecommands.Cat(&hc, args[1:]))
+			case "kubectl":
+				path, err := downloader.NewDownloader(commands.NewKubectlCommand(), logger).EnsureCommand(ctx)
+				if err != nil {
+					_, _ = fmt.Fprintln(hc.Stderr, err)
+					return interp.NewExitStatus(127)
+				}
+				args[0] = path
+			case "helm":
+				path, err := downloader.NewDownloader(commands.NewHelmV3Command(), logger).EnsureCommand(ctx)
+				if err != nil {
+					_, _ = fmt.Fprintln(hc.Stderr, err)
+					return interp.NewExitStatus(127)
+				}
+				args[0] = path
+			case "devspace":
+				bin, err := os.Executable()
+				if err != nil {
+					_, _ = fmt.Fprintln(hc.Stderr, err)
+					return interp.NewExitStatus(1)
+				}
+				args[0] = bin
 			}
 		}
 	}
@@ -35,53 +64,12 @@ func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
 	return interp.DefaultExecHandler(2*time.Second)(ctx, args)
 }
 
-func (e *execHandler) executePipelineCommand(ctx context.Context, command string) (bool, error) {
-	hc := interp.HandlerCtx(ctx)
-	_, _ = fmt.Fprintln(hc.Stderr, fmt.Errorf("%s: cannot execute the command because it can only be executed within a pipeline step", command))
-	return true, interp.NewExitStatus(1)
-}
-
-func (e *execHandler) fallbackCommands(ctx context.Context, command string, args []string) error {
-	logger := log.GetFileLogger("shell")
-	hc := interp.HandlerCtx(ctx)
-
-	switch command {
-	case "is_equal":
-		return enginecommands.IsEqual(&hc, args)
-	case "is_command":
-		return enginecommands.IsCommand(args)
-	case "sleep":
-		return handleError(hc, enginecommands.Sleep(args))
-	case "cat":
-		return handleError(hc, enginecommands.Cat(&hc, args))
-	case "kubectl":
-		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), logger).EnsureCommand(ctx)
-		if err != nil {
-			_, _ = fmt.Fprintln(hc.Stderr, err)
-			return interp.NewExitStatus(127)
-		}
-		command = path
-	case "helm":
-		path, err := downloader.NewDownloader(commands.NewHelmV3Command(), logger).EnsureCommand(ctx)
-		if err != nil {
-			_, _ = fmt.Fprintln(hc.Stderr, err)
-			return interp.NewExitStatus(127)
-		}
-		command = path
-	case "devspace":
-		bin, err := os.Executable()
-		if err != nil {
-			_, _ = fmt.Fprintln(hc.Stderr, err)
-			return interp.NewExitStatus(1)
-		}
-		command = bin
-	}
-	return nil
-}
-
 func handleError(hc interp.HandlerContext, err error) error {
 	if err != nil {
 		_, _ = fmt.Fprintln(hc.Stderr, err)
+		if _, ok := interp.IsExitStatus(err); ok {
+			return err
+		}
 		return interp.NewExitStatus(1)
 	}
 	return interp.NewExitStatus(0)

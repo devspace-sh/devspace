@@ -215,22 +215,18 @@ func ExecuteConfigCommand(ctx context.Context, config config.Config, name string
 	shellCommand := ""
 	var shellArgs []string
 	var appendArgs bool
-	for _, cmd := range config.Config().Commands {
-		if cmd.Name == name {
-			shellCommand = cmd.Command
-			shellArgs = cmd.Args
-			appendArgs = cmd.AppendArgs
-			break
-		}
+	if config.Config().Commands == nil || config.Config().Commands[name] == nil {
+		return errors.Errorf("couldn't find command '%s' in devspace config", name)
 	}
+
+	cmd := config.Config().Commands[name]
+	shellCommand = strings.TrimSpace(cmd.Command)
+	shellArgs = cmd.Args
+	appendArgs = cmd.AppendArgs
 
 	extraEnv := map[string]string{}
 	for k, v := range config.Variables() {
 		extraEnv[k] = fmt.Sprintf("%v", v)
-	}
-
-	if shellCommand == "" {
-		return errors.Errorf("couldn't find command '%s' in devspace config", name)
 	}
 	if shellArgs == nil {
 		if appendArgs {
@@ -243,7 +239,7 @@ func ExecuteConfigCommand(ctx context.Context, config config.Config, name string
 		}
 
 		// execute the command in a shell
-		err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, stdin, nil, shellCommand, args...)
+		err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, stdin, extraEnv, shellCommand, args...)
 		if err != nil {
 			if status, ok := interp.IsExitStatus(err); ok {
 				return &exit.ReturnCodeError{
@@ -253,10 +249,12 @@ func ExecuteConfigCommand(ctx context.Context, config config.Config, name string
 
 			return errors.Wrap(err, "execute command")
 		}
+
+		return nil
 	}
 
 	shellArgs = append(shellArgs, args...)
-	return command.CommandWithEnv(ctx, dir, stdout, stderr, stdin, nil, shellCommand, shellArgs...)
+	return command.CommandWithEnv(ctx, dir, stdout, stderr, stdin, extraEnv, shellCommand, shellArgs...)
 }
 
 func getCommands(f factory.Factory) (map[string]*latest.CommandConfig, error) {
