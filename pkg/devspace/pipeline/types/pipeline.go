@@ -41,12 +41,18 @@ type Pipeline interface {
 	DependencyRegistry() registry.DependencyRegistry
 
 	// Dependencies retrieves the currently created dependencies
-	Dependencies() []Pipeline
+	Dependencies() map[string]Pipeline
+
+	// Close kills the pipeline including all dependencies and waits for it
+	// to exit as well as closes the dev pod manager and all related dev pods
+	Close() error
 
 	// Options retrieves the default options for the pipeline
 	Options() Options
 
-	// Name retrieves the name of the pipeline
+	// Name retrieves the name of the DevSpace yaml. This is NOT the name of the
+	// pipeline like deploy, dev or purge and holds the value of the current
+	// project like my-microservice etc.
 	Name() string
 
 	// WaitDev waits for the dependency dev managers as well current

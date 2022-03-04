@@ -1,25 +1,16 @@
 version: v2beta1
-name: pipelines
-
-dependencies:
-  dep2:
-    source:
-      path: dep2.yaml
+name: pipelines2
 
 pipelines:
   helper:
     steps:
       - run: |-
-          sleep 10
+          echo "Hello World!"
   dev:
     steps:
       - run: |-
-          sleep 30
-          #run_dependency_pipelines --all --pipeline dev
-          
-          #export TEST=$(run_pipelines helper)
-          #echo $TEST > swag.txt
-          
+          run_pipelines helper
+         
           #build_images test --set image=${IMAGE}
           
           #create_deployments test2

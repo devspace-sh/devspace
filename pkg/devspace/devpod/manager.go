@@ -25,13 +25,13 @@ type Manager interface {
 	// Reset will stop the DevPod if it exists and reset the replaced pods
 	Reset(ctx *devspacecontext.Context, name string) error
 
-	// Stop will stop the DevPod
+	// Stop will stop a specific DevPod
 	Stop(ctx *devspacecontext.Context, name string)
 
 	// List lists the currently active dev pods
 	List() []string
 
-	// Close will close the manager and wait for all dev pods
+	// Close will close the manager and wait for all dev pods to stop
 	Close()
 
 	// Context returns the context of the DevManager

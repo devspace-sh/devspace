@@ -2,13 +2,14 @@ package dev
 
 import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/mgutz/ansi"
 	"github.com/sirupsen/logrus"
 )
 
-func UI(ctx *devspacecontext.Context, port int) (*server.Server, error) {
+func UI(ctx *devspacecontext.Context, port int, pipeline types.Pipeline) (*server.Server, error) {
 	var defaultPort *int
 	if port != 0 {
 		defaultPort = &port
@@ -16,7 +17,7 @@ func UI(ctx *devspacecontext.Context, port int) (*server.Server, error) {
 
 	// Create server
 	uiLogger := log.GetFileLogger("ui")
-	serv, err := server.NewServer(ctx.Config, ctx.Dependencies, "localhost", false, ctx.KubeClient.CurrentContext(), ctx.KubeClient.Namespace(), defaultPort, uiLogger)
+	serv, err := server.NewServer(ctx.WithLogger(uiLogger), "localhost", false, defaultPort, pipeline)
 	if err != nil {
 		ctx.Log.Warnf("Couldn't start UI server: %v", err)
 	} else {

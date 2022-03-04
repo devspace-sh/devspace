@@ -21,6 +21,7 @@ func NewPipeline(name string, devPodManager devpod.Manager, dependencyRegistry r
 		name:               name,
 		devPodManager:      devPodManager,
 		dependencyRegistry: dependencyRegistry,
+		dependencies:       map[string]types.Pipeline{},
 		options:            options,
 		jobs:               make(map[string]*Job),
 	}
@@ -40,10 +41,20 @@ type pipeline struct {
 	devPodManager      devpod.Manager
 	dependencyRegistry registry.DependencyRegistry
 
-	dependencies []types.Pipeline
+	dependencies map[string]types.Pipeline
 
 	main *Job
 	jobs map[string]*Job
+}
+
+func (p *pipeline) Close() error {
+	err := p.main.Stop()
+	if err != nil {
+		return err
+	}
+
+	p.devPodManager.Close()
+	return nil
 }
 
 func (p *pipeline) Options() types.Options {
@@ -55,7 +66,9 @@ func (p *pipeline) Options() types.Options {
 func (p *pipeline) WaitDev() {
 	children := []types.Pipeline{}
 	p.m.Lock()
-	children = append(children, p.dependencies...)
+	for _, v := range p.dependencies {
+		children = append(children, v)
+	}
 	p.m.Unlock()
 
 	// wait for children first
@@ -79,12 +92,14 @@ func (p *pipeline) DependencyRegistry() registry.DependencyRegistry {
 	return p.dependencyRegistry
 }
 
-func (p *pipeline) Dependencies() []types.Pipeline {
+func (p *pipeline) Dependencies() map[string]types.Pipeline {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	children := []types.Pipeline{}
-	children = append(children, p.dependencies...)
+	children := map[string]types.Pipeline{}
+	for k, v := range p.dependencies {
+		children[k] = v
+	}
 	return children
 }
 
@@ -143,6 +158,42 @@ func (p *pipeline) StartNewDependencies(ctx *devspacecontext.Context, dependenci
 	return t.Wait()
 }
 
+func (p *pipeline) startNewDependency(ctx *devspacecontext.Context, dependency types2.Dependency, options types.DependencyOptions) error {
+	// find the dependency pipeline to execute
+	pipeline := options.Pipeline
+	if pipeline == "" {
+		if dependency.DependencyConfig().Pipeline != "" {
+			pipeline = dependency.DependencyConfig().Pipeline
+		} else {
+			pipeline = "deploy"
+		}
+	}
+
+	// find pipeline
+	var (
+		pipelineConfig *latest.Pipeline
+		err            error
+	)
+	if dependency.Config().Config().Pipelines == nil || dependency.Config().Config().Pipelines[pipeline] == nil {
+		pipelineConfig, err = GetDefaultPipeline(pipeline)
+		if err != nil {
+			return err
+		}
+	} else {
+		pipelineConfig = dependency.Config().Config().Pipelines[pipeline]
+	}
+
+	dependencyDevPodManager := devpod.NewManager(p.devPodManager.Context())
+	pip := NewPipeline(dependency.Name(), dependencyDevPodManager, p.dependencyRegistry, pipelineConfig, p.options)
+
+	p.m.Lock()
+	p.dependencies[dependency.Name()] = pip
+	p.m.Unlock()
+
+	ctx = ctx.WithLogger(log.NewDefaultPrefixLogger(dependency.Name()+" ", ctx.Log))
+	return pip.Run(ctx.AsDependency(dependency))
+}
+
 func (p *pipeline) StartNewPipelines(ctx *devspacecontext.Context, pipelines []*latest.Pipeline, options types.PipelineOptions) error {
 	if options.Background {
 		for _, configPipeline := range pipelines {
@@ -179,42 +230,6 @@ func (p *pipeline) StartNewPipelines(ctx *devspacecontext.Context, pipelines []*
 	})
 
 	return t.Wait()
-}
-
-func (p *pipeline) startNewDependency(ctx *devspacecontext.Context, dependency types2.Dependency, options types.DependencyOptions) error {
-	// find the dependency pipeline to execute
-	pipeline := options.Pipeline
-	if pipeline == "" {
-		if dependency.DependencyConfig().Pipeline != "" {
-			pipeline = dependency.DependencyConfig().Pipeline
-		} else {
-			pipeline = "deploy"
-		}
-	}
-
-	// find pipeline
-	var (
-		pipelineConfig *latest.Pipeline
-		err            error
-	)
-	if dependency.Config().Config().Pipelines == nil || dependency.Config().Config().Pipelines[pipeline] == nil {
-		pipelineConfig, err = GetDefaultPipeline(pipeline)
-		if err != nil {
-			return err
-		}
-	} else {
-		pipelineConfig = dependency.Config().Config().Pipelines[pipeline]
-	}
-
-	dependencyDevPodManager := devpod.NewManager(p.devPodManager.Context())
-	pip := NewPipeline(dependency.Name(), dependencyDevPodManager, p.dependencyRegistry, pipelineConfig, p.options)
-
-	p.m.Lock()
-	p.dependencies = append(p.dependencies, pip)
-	p.m.Unlock()
-
-	ctx = ctx.WithLogger(log.NewDefaultPrefixLogger(dependency.Name()+" ", ctx.Log))
-	return pip.Run(ctx.AsDependency(dependency))
 }
 
 func (p *pipeline) startNewPipeline(ctx *devspacecontext.Context, configPipeline *latest.Pipeline, id string, options types.PipelineOptions) error {

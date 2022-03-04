@@ -103,14 +103,14 @@ func (h *handler) logsMultiple(w http.ResponseWriter, r *http.Request) {
 
 func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	// Kube Context
-	kubeContext := h.defaultContext
+	kubeContext := h.ctx.KubeClient.CurrentContext()
 	contextParam, ok := r.URL.Query()["context"]
 	if ok && len(contextParam) == 1 && contextParam[0] != "" {
 		kubeContext = contextParam[0]
 	}
 
 	// Namespace
-	kubeNamespace := h.defaultNamespace
+	kubeNamespace := h.ctx.KubeClient.Namespace()
 	namespace, ok := r.URL.Query()["namespace"]
 	if ok && len(namespace) == 1 && namespace[0] != "" {
 		kubeNamespace = namespace[0]
@@ -119,7 +119,7 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	// Create kubectl client
 	client, err := kubectl.NewClientFromContext(kubeContext, kubeNamespace, false, kubeconfig.NewLoader())
 	if err != nil {
-		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+		h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -137,7 +137,7 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		h.log.Errorf("Error upgrading connection in %s: %v", r.URL.String(), err)
+		h.ctx.Log.Errorf("Error upgrading connection in %s: %v", r.URL.String(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -147,7 +147,7 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	// Open logs connection
 	reader, err := client.Logs(context.Background(), namespace[0], name[0], container[0], false, ptr.Int64(100), true)
 	if err != nil {
-		h.log.Errorf("Error in %s: %v", r.URL.String(), err)
+		h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)
 		websocketError(ws, err)
 		return
 	}
@@ -158,7 +158,7 @@ func (h *handler) logs(w http.ResponseWriter, r *http.Request) {
 	stream := &wsStream{WebSocket: ws}
 	_, err = io.Copy(stream, reader)
 	if err != nil {
-		h.log.Errorf("Error in %s pipeReader: %v", r.URL.String(), err)
+		h.ctx.Log.Errorf("Error in %s pipeReader: %v", r.URL.String(), err)
 		websocketError(ws, err)
 		return
 	}

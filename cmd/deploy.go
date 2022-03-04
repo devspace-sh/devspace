@@ -19,7 +19,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
-	"github.com/loft-sh/devspace/pkg/devspace/server"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
@@ -29,6 +28,8 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 	"k8s.io/client-go/kubernetes/fake"
+	"os"
+	"strings"
 )
 
 // DeployCmd holds the required data for the down cmd
@@ -124,7 +125,7 @@ func (cmd *DeployCmd) Run(f factory.Factory) error {
 }
 
 func (cmd *DeployCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
-	return runPipeline(ctx, f, &PipelineOptions{
+	return runPipeline(ctx, f, true, &PipelineOptions{
 		Options: types.Options{
 			BuildOptions: build.Options{
 				SkipBuild:                 cmd.SkipBuild,
@@ -223,7 +224,7 @@ type PipelineOptions struct {
 	UIPort        int
 }
 
-func runPipeline(ctx *devspacecontext.Context, f factory.Factory, options *PipelineOptions) error {
+func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bool, options *PipelineOptions) error {
 	// create namespace if necessary
 	if !options.DeployOptions.Render {
 		err := ctx.KubeClient.EnsureNamespace(ctx.Context, ctx.KubeClient.Namespace(), ctx.Log)
@@ -241,12 +242,6 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, options *Pipel
 		return errors.Wrap(err, "deploy dependencies")
 	}
 	ctx = ctx.WithDependencies(dependencies)
-
-	// start ui & open
-	serv, err := startServices(ctx, options.UIPort)
-	if err != nil {
-		return err
-	}
 
 	// execute plugin hook
 	err = hook.ExecuteHooks(ctx, nil, "deploy")
@@ -270,29 +265,36 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, options *Pipel
 		}
 	}
 
-	// create dependency registry
-	dependencyRegistry := registry.NewDependencyRegistry("http://"+serv.Server.Addr, options.DeployOptions.Render)
-
-	// exclude ourselves
-	couldExclude, err := dependencyRegistry.MarkDependencyExcluded(ctx, ctx.Config.Config().Name, true)
-	if err != nil {
-		return err
-	} else if !couldExclude {
-		return fmt.Errorf("couldn't start project %s, because there is another DevSpace instance active in the current namespace right now that uses the same project", ctx.Config.Config().Name)
-	}
-
-	// create a new base dev pod manager
-	devPodManager := devpod.NewManager(ctx.Context)
-	defer devPodManager.Close()
-
 	// marshal pipeline
 	configPipelineBytes, err := yaml.Marshal(configPipeline)
 	if err == nil {
 		ctx.Log.Debugf("Run pipeline:\n%s\n", string(configPipelineBytes))
 	}
 
+	// create a new base dev pod manager
+	devPodManager := devpod.NewManager(ctx.Context)
+	defer devPodManager.Close()
+
+	// create dependency registry
+	dependencyRegistry := registry.NewDependencyRegistry(options.DeployOptions.Render)
+
 	// get deploy pipeline
-	pipe := pipeline.NewPipeline(options.Pipeline, devPodManager, dependencyRegistry, configPipeline, options.Options)
+	pipe := pipeline.NewPipeline(ctx.Config.Config().Name, devPodManager, dependencyRegistry, configPipeline, options.Options)
+
+	// start ui & open
+	serv, err := dev.UI(ctx, options.UIPort, pipe)
+	if err != nil {
+		return err
+	}
+	dependencyRegistry.SetServer("http://" + serv.Server.Addr)
+
+	// exclude ourselves
+	couldExclude, err := dependencyRegistry.MarkDependencyExcluded(ctx, ctx.Config.Config().Name, forceLeader)
+	if err != nil {
+		return err
+	} else if !couldExclude {
+		return fmt.Errorf("couldn't execute '%s', because there is another DevSpace instance active in the current namespace right now that uses the same project name (%s)", strings.Join(os.Args, " "), ctx.Config.Config().Name)
+	}
 
 	// start pipeline
 	err = pipe.Run(ctx.WithLogger(ctx.Log.WithoutPrefix()))
@@ -316,14 +318,4 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, options *Pipel
 	}
 
 	return nil
-}
-
-func startServices(ctx *devspacecontext.Context, uiPort int) (*server.Server, error) {
-	// Open UI if configured
-	serv, err := dev.UI(ctx, uiPort)
-	if err != nil {
-		return nil, err
-	}
-
-	return serv, nil
 }

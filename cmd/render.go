@@ -91,7 +91,7 @@ func (cmd *RenderCmd) Run(f factory.Factory) error {
 }
 
 func (cmd *RenderCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
-	return runPipeline(ctx, f, &PipelineOptions{
+	return runPipeline(ctx, f, true, &PipelineOptions{
 		Options: pipelinetypes.Options{
 			BuildOptions: build.Options{
 				Tags:                      cmd.Tags,

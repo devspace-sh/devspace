@@ -76,7 +76,7 @@ func (cmd *PurgeCmd) Run(f factory.Factory) error {
 }
 
 func (cmd *PurgeCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
-	return runPipeline(ctx, f, &PipelineOptions{
+	return runPipeline(ctx, f, false, &PipelineOptions{
 		Options: types.Options{
 			DependencyOptions: types.DependencyOptions{
 				Exclude: cmd.SkipDependency,

@@ -168,7 +168,7 @@ func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 }
 
 func (cmd *DevCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
-	return runPipeline(ctx, f, &PipelineOptions{
+	return runPipeline(ctx, f, true, &PipelineOptions{
 		Options: types.Options{
 			BuildOptions: build.Options{
 				SkipBuild:                 cmd.SkipBuild,

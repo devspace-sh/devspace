@@ -30,13 +30,15 @@ type DependencyRegistry interface {
 
 	// MarkDependenciesExcluded same as MarkDependencyExcluded but for multiple dependencies
 	MarkDependenciesExcluded(ctx *devspacecontext.Context, dependencyNames []string, forceLeader bool) (map[string]bool, error)
+
+	// SetServer sets the target server
+	SetServer(server string)
 }
 
-func NewDependencyRegistry(server string, mock bool) DependencyRegistry {
+func NewDependencyRegistry(mock bool) DependencyRegistry {
 	return &dependencyRegistry{
-		server:               server,
 		mock:                 mock,
-		interProcess:         &dummyImplementation{},
+		interProcess:         NewInterProcessCommunicator(),
 		excludedDependencies: map[string]bool{},
 	}
 }
@@ -48,6 +50,13 @@ type dependencyRegistry struct {
 
 	excludedDependenciesLock sync.Mutex
 	excludedDependencies     map[string]bool
+}
+
+func (d *dependencyRegistry) SetServer(server string) {
+	d.excludedDependenciesLock.Lock()
+	defer d.excludedDependenciesLock.Unlock()
+
+	d.server = server
 }
 
 func (d *dependencyRegistry) ForceExclude(dependencyName string) {
@@ -212,18 +221,22 @@ func (d *dependencyRegistry) excludeDependencies(ctx *devspacecontext.Context, d
 
 		// check if we should take over
 		if forceLeader {
-			err = d.interProcess.ExcludeDependency(ctx.Context, payload.Server, &ExcludePayload{
+			excludeCtx, excludeCancel := context.WithTimeout(ctx.Context, time.Second*10)
+			allowed, err := d.interProcess.ExcludeDependency(excludeCtx, payload.Server, &ExcludePayload{
 				RunID:          payload.RunID,
 				DependencyName: dependencyName,
 			})
-			if err != nil {
-				ctx.Log.Debugf("error taking over dependency: %v", err)
-			}
+			excludeCancel()
+			if err != nil || allowed {
+				if err != nil {
+					ctx.Log.Debugf("error taking over dependency: %v", err)
+				}
 
-			configMap.Data[dependencyName] = string(encoded)
-			retMap[dependencyName] = true
-			shouldUpdate = true
-			continue
+				configMap.Data[dependencyName] = string(encoded)
+				retMap[dependencyName] = true
+				shouldUpdate = true
+				continue
+			}
 		}
 	}
 

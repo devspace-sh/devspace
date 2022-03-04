@@ -189,7 +189,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 	}
 
 	// Create server
-	server, err := server.NewServer(config, nil, cmd.Host, cmd.Dev, client.CurrentContext(), client.Namespace(), forcePort, cmd.log)
+	server, err := server.NewServer(ctx, cmd.Host, cmd.Dev, forcePort, nil)
 	if err != nil {
 		return err
 	}

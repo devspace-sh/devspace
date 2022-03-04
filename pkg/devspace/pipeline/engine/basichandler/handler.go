@@ -50,13 +50,10 @@ func (e *execHandler) fallbackCommands(ctx context.Context, command string, args
 		return enginecommands.IsEqual(&hc, args)
 	case "is_command":
 		return enginecommands.IsCommand(args)
+	case "sleep":
+		return handleError(hc, enginecommands.Sleep(args))
 	case "cat":
-		err := enginecommands.Cat(&hc, args)
-		if err != nil {
-			_, _ = fmt.Fprintln(hc.Stderr, err)
-			return interp.NewExitStatus(1)
-		}
-		return interp.NewExitStatus(0)
+		return handleError(hc, enginecommands.Cat(&hc, args))
 	case "kubectl":
 		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), logger).EnsureCommand(ctx)
 		if err != nil {
@@ -80,6 +77,14 @@ func (e *execHandler) fallbackCommands(ctx context.Context, command string, args
 		command = bin
 	}
 	return nil
+}
+
+func handleError(hc interp.HandlerContext, err error) error {
+	if err != nil {
+		_, _ = fmt.Fprintln(hc.Stderr, err)
+		return interp.NewExitStatus(1)
+	}
+	return interp.NewExitStatus(0)
 }
 
 var lookPathDir = interp.LookPathDir
