@@ -3,6 +3,10 @@ package pipelinehandler
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"time"
+
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler"
@@ -11,7 +15,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
-	"io"
 	"mvdan.cc/sh/v3/interp"
 )
 

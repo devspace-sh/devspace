@@ -2,13 +2,14 @@ package v1beta11
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	next "github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/util"
 	"github.com/loft-sh/devspace/pkg/util/encoding"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"k8s.io/apimachinery/pkg/labels"
-	"strings"
 )
 
 // Upgrade upgrades the config

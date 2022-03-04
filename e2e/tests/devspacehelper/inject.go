@@ -76,7 +76,7 @@ var _ = DevSpaceDescribe("devspacehelper", func() {
 		framework.ExpectNoError(err)
 
 		log := log.GetInstance()
-		err = inject.InjectDevSpaceHelper(kubeClient.Client(), &pods.Items[0], "container-0", "", log)
+		err = inject.InjectDevSpaceHelper(context.TODO(), kubeClient.Client(), &pods.Items[0], "container-0", "", log)
 		framework.ExpectNoError(err)
 
 		out, err := kubeClient.ExecByContainer("app=curl-container", "container-0", ns, []string{"ls", inject.DevSpaceHelperContainerPath})
@@ -124,7 +124,7 @@ var _ = DevSpaceDescribe("devspacehelper", func() {
 		framework.ExpectNoError(err)
 
 		log := log.GetInstance()
-		err = inject.InjectDevSpaceHelper(kubeClient.Client(), &pods.Items[0], "container-0", "", log)
+		err = inject.InjectDevSpaceHelper(context.TODO(), kubeClient.Client(), &pods.Items[0], "container-0", "", log)
 		framework.ExpectNoError(err)
 
 		out, err := kubeClient.ExecByContainer("app=non-curl-container", "container-0", ns, []string{"ls", inject.DevSpaceHelperContainerPath})

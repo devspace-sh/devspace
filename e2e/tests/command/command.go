@@ -41,7 +41,7 @@ var _ = DevSpaceDescribe("command", func() {
 		// TODO
 	})
 
-	ginkgo.It("should and shouldnt append args", func() {
+	ginkgo.It("should and shouldn't append args", func() {
 		tempDir, err := framework.CopyToTempDir("tests/command/testdata/command-appended-args")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)

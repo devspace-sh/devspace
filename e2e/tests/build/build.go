@@ -40,9 +40,7 @@ var _ = DevSpaceDescribe("build", func() {
 	ginkgo.BeforeEach(func() {
 		f = framework.NewDefaultFactory()
 	})
-
 	// Test cases:
-
 	ginkgo.It("should build dockerfile with docker", func() {
 		tempDir, err := framework.CopyToTempDir("tests/build/testdata/docker")
 		framework.ExpectNoError(err)
@@ -153,7 +151,9 @@ var _ = DevSpaceDescribe("build", func() {
 		framework.ExpectNoError(err)
 
 		for _, image := range imageList {
-			if image.RepoTags[0] == "my-docker-username/helloworld-custom-build:latest" {
+			fmt.Println("+++++++++++++++++++++++++")
+			fmt.Println(image)
+			if len(image.RepoTags) > 0 && image.RepoTags[0] == "my-docker-username/helloworld-custom-build:latest" {
 				err = nil
 				break
 			} else {
