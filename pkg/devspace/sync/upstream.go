@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
 	"io/ioutil"
@@ -24,7 +25,6 @@ import (
 	"github.com/loft-sh/devspace/helper/util/crc32"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/command"
-	"github.com/loft-sh/devspace/pkg/util/shell"
 	"github.com/loft-sh/notify"
 	"github.com/pkg/errors"
 )
@@ -344,7 +344,7 @@ func (u *upstream) execCommand(exec latest.SyncExec, changedFiles []string) erro
 			out = &bytes.Buffer{}
 		)
 		if exec.Args == nil {
-			err = shell.ExecuteShellCommand(u.sync.ctx, u.sync.LocalPath, out, out, nil, nil, execCommand)
+			err = engine.ExecuteSimpleShellCommand(u.sync.ctx, u.sync.LocalPath, out, out, nil, nil, execCommand)
 		} else {
 			err = command.CommandWithEnv(u.sync.ctx, u.sync.LocalPath, out, out, nil, nil, execCommand, exec.Args...)
 		}

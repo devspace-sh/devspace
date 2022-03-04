@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/ptr"
-	"github.com/loft-sh/devspace/pkg/util/shell"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/loft-sh/devspace/pkg/util/yamlutil"
 )
@@ -262,7 +262,7 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 				m.log.WriteString(logrus.InfoLevel, "\n")
 				m.log.Infof("Cloning external repo `%s` containing to retrieve Helm chart", gitRepo)
 
-				err = shell.ExecuteShellCommand(context.TODO(), "", os.Stdout, os.Stderr, nil, nil, gitCommand)
+				err = engine.ExecuteSimpleShellCommand(context.TODO(), "", os.Stdout, os.Stderr, nil, nil, gitCommand)
 				if err != nil {
 					m.log.WriteString(logrus.InfoLevel, "\n")
 					m.log.Errorf("Unable to clone repository `%s` (branch: %s)", gitRepo, gitBranch)

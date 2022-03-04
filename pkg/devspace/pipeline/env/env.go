@@ -5,12 +5,11 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	enginetypes "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"mvdan.cc/sh/v3/expand"
 	"os"
 	"strings"
 )
-
-const DotReplacement = "___devspace___"
 
 var _ expand.Environ = &envProvider{}
 
@@ -63,7 +62,7 @@ func (e *envProvider) getVariable(name string) (expand.Variable, bool) {
 }
 
 func (e *envProvider) getRuntimeVariable(name string) (expand.Variable, bool) {
-	replacedName := strings.ReplaceAll(name, DotReplacement, ".")
+	replacedName := strings.ReplaceAll(name, enginetypes.DotReplacement, ".")
 	_, val, err := runtime.NewRuntimeVariable(replacedName, e.config, e.dependencies).Load()
 	if err != nil {
 		return expand.Variable{}, false

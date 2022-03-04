@@ -2,7 +2,8 @@ package engine
 
 import (
 	"context"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"github.com/pkg/errors"
 	"io"
 	"mvdan.cc/sh/v3/expand"
@@ -15,7 +16,27 @@ import (
 
 var replaceVariablesRegEx = regexp.MustCompile(`\$\{[a-zA-Z_.]+?\}`)
 
-func ExecuteShellCommand(
+func ExecuteSimpleShellCommand(
+	ctx context.Context,
+	dir string,
+	stdout io.Writer,
+	stderr io.Writer,
+	stdin io.Reader,
+	extraEnvVars map[string]string,
+	command string,
+	args ...string,
+) error {
+	env := os.Environ()
+	for k, v := range extraEnvVars {
+		env = append(env, k+"="+v)
+	}
+
+	environ := expand.ListEnviron(env...)
+	_, err := ExecutePipelineShellCommand(ctx, command, args, dir, false, stdout, stderr, stdin, environ, basichandler.NewBasicExecHandler())
+	return err
+}
+
+func ExecutePipelineShellCommand(
 	ctx context.Context,
 	command string,
 	args []string,
@@ -23,14 +44,15 @@ func ExecuteShellCommand(
 	continueOnError bool,
 	stdout io.Writer,
 	stderr io.Writer,
+	stdin io.Reader,
 	environ expand.Environ,
-	execHandler ExecHandler,
+	execHandler types.ExecHandler,
 ) (*interp.Runner, error) {
 	// Replace runtime environment variables with ., so a runtime.images.test => runtime_images_test
 	// which otherwise wouldn't be correct syntax
 	command = replaceVariablesRegEx.ReplaceAllStringFunc(command, func(s string) string {
 		if strings.Contains(s, ".") {
-			return strings.ReplaceAll(s, ".", env.DotReplacement)
+			return strings.ReplaceAll(s, ".", types.DotReplacement)
 		}
 
 		return s
@@ -53,7 +75,7 @@ func ExecuteShellCommand(
 	// create options
 	options := []interp.RunnerOption{
 		interp.Dir(dir),
-		interp.StdIO(os.Stdin, stdout, stderr),
+		interp.StdIO(stdin, stdout, stderr),
 		interp.Env(environ),
 		interp.ExecHandler(execHandler.ExecHandler),
 	}
@@ -80,5 +102,3 @@ func ExecuteShellCommand(
 
 	return r, nil
 }
-
-var lookPathDir = interp.LookPathDir

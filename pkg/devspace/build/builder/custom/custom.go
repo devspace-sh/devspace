@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/util/shell"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/sirupsen/logrus"
 	"io"
 	"strings"
@@ -163,7 +163,7 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 
 	ctx.Log.Infof("Build %s:%s with custom command '%s %s'", b.imageConf.Image, b.imageTags[0], commandPath, strings.Join(args, " "))
 	if len(args) == 0 {
-		err = shell.ExecuteShellCommand(ctx.Context, ctx.WorkingDir, writer, writer, nil, nil, commandPath, args...)
+		err = engine.ExecuteSimpleShellCommand(ctx.Context, ctx.WorkingDir, writer, writer, nil, nil, commandPath, args...)
 		if err != nil {
 			return errors.Errorf("error building image: %v", err)
 		}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"io"
 	"os"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
 	"github.com/loft-sh/devspace/pkg/util/command"
-	"github.com/loft-sh/devspace/pkg/util/shell"
 	"github.com/pkg/errors"
 )
 
@@ -64,7 +64,7 @@ func (l *localCommandHook) Execute(ctx *devspacecontext.Context, hook *latest.Ho
 	}()
 
 	if hook.Args == nil {
-		return shell.ExecuteShellCommand(ctx.Context, ctx.WorkingDir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), nil, extraEnv, hookCommand)
+		return engine.ExecuteSimpleShellCommand(ctx.Context, ctx.WorkingDir, io.MultiWriter(l.Stdout, stdout), io.MultiWriter(l.Stderr, stderr), nil, extraEnv, hookCommand)
 	}
 
 	// else we execute it directly

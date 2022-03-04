@@ -6,6 +6,8 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/pipelinehandler"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
@@ -123,8 +125,7 @@ func (j *Job) shouldExecuteStep(ctx *devspacecontext.Context, step *latest.Pipel
 	// check if step should be rerun
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	handler := engine.NewExecHandler(ctx, nil, j.Pipeline, false)
-	_, err := engine.ExecuteShellCommand(ctx.Context, step.Run, os.Args[1:], step.Directory, false, stdout, stderr, j.getEnv(ctx, step), handler)
+	_, err := engine.ExecutePipelineShellCommand(ctx.Context, step.Run, os.Args[1:], step.Directory, false, stdout, stderr, os.Stdin, j.getEnv(ctx, step), basichandler.NewBasicExecHandler())
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok && status == 1 {
 			return false, nil
@@ -150,8 +151,8 @@ func (j *Job) executeStep(ctx *devspacecontext.Context, step *latest.PipelineSte
 		return nil
 	})
 
-	handler := engine.NewExecHandler(ctx, stdoutWriter, j.Pipeline, true)
-	_, err := engine.ExecuteShellCommand(ctx.Context, step.Run, os.Args[1:], step.Directory, step.ContinueOnError, stdoutWriter, stdoutWriter, j.getEnv(ctx, step), handler)
+	handler := pipelinehandler.NewPipelineExecHandler(ctx, stdoutWriter, j.Pipeline, true)
+	_, err := engine.ExecutePipelineShellCommand(ctx.Context, step.Run, os.Args[1:], step.Directory, step.ContinueOnError, stdoutWriter, stdoutWriter, os.Stdin, j.getEnv(ctx, step), handler)
 	return err
 }
 

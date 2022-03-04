@@ -1,31 +1,27 @@
-package engine
+package pipelinehandler
 
 import (
 	"context"
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	enginecommands "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/commands"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/pipelinehandler/commands"
+	enginetypes "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
-	"github.com/loft-sh/devspace/pkg/util/downloader"
-	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"io"
 	"mvdan.cc/sh/v3/interp"
-	"os"
-	"time"
 )
 
-type ExecHandler interface {
-	ExecHandler(ctx context.Context, args []string) error
-}
-
-func NewExecHandler(ctx *devspacecontext.Context, stdout io.Writer, pipeline types.Pipeline, enablePipelineCommands bool) ExecHandler {
+func NewPipelineExecHandler(ctx *devspacecontext.Context, stdout io.Writer, pipeline types.Pipeline, enablePipelineCommands bool) enginetypes.ExecHandler {
 	return &execHandler{
 		ctx:                    ctx,
 		stdout:                 stdout,
 		pipeline:               pipeline,
 		enablePipelineCommands: enablePipelineCommands,
+
+		basicHandler: basichandler.NewBasicExecHandler(),
 	}
 }
 
@@ -34,6 +30,8 @@ type execHandler struct {
 	stdout                 io.Writer
 	pipeline               types.Pipeline
 	enablePipelineCommands bool
+
+	basicHandler enginetypes.ExecHandler
 }
 
 func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
@@ -43,19 +41,9 @@ func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
 		if handled || err != nil {
 			return err
 		}
-
-		// handle some special commands that are not found locally
-		hc := interp.HandlerCtx(ctx)
-		_, err = lookPathDir(hc.Dir, hc.Env, args[0])
-		if err != nil {
-			err = e.fallbackCommands(ctx, args[0], args[1:])
-			if err != nil {
-				return err
-			}
-		}
 	}
 
-	return interp.DefaultExecHandler(2*time.Second)(ctx, args)
+	return e.basicHandler.ExecHandler(ctx, args)
 }
 
 func (e *execHandler) handlePipelineCommands(ctx context.Context, command string, args []string) (bool, error) {
@@ -71,35 +59,35 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 	switch command {
 	case "run_pipelines":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.Pipeline(devCtx, e.pipeline, args)
+			return commands.Pipeline(devCtx, e.pipeline, args)
 		})
 	case "build_images":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.Build(devCtx, e.pipeline, args)
+			return commands.Build(devCtx, e.pipeline, args)
 		})
 	case "create_deployments":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.Deploy(devCtx, e.pipeline, args, hc.Stdout)
+			return commands.Deploy(devCtx, e.pipeline, args, hc.Stdout)
 		})
 	case "purge_deployments":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.Purge(devCtx, args)
+			return commands.Purge(devCtx, args)
 		})
 	case "start_dev":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.StartDev(devCtx, e.pipeline, args)
+			return commands.StartDev(devCtx, e.pipeline, args)
 		})
 	case "stop_dev":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.StopDev(devCtx, e.pipeline.DevPodManager(), args)
+			return commands.StopDev(devCtx, e.pipeline.DevPodManager(), args)
 		})
 	case "run_dependency_pipelines":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.Dependency(devCtx, e.pipeline, args)
+			return commands.Dependency(devCtx, e.pipeline, args)
 		})
 	case "ensure_pull_secrets":
 		return e.executePipelineCommand(ctx, command, func() error {
-			return enginecommands.PullSecrets(devCtx, args)
+			return commands.PullSecrets(devCtx, args)
 		})
 	}
 
@@ -107,7 +95,7 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 }
 
 func (e *execHandler) executePipelineCommand(ctx context.Context, command string, commandFn func() error) (bool, error) {
-	if !e.enablePipelineCommands {
+	if e.pipeline == nil || !e.enablePipelineCommands {
 		hc := interp.HandlerCtx(ctx)
 		_, _ = fmt.Fprintln(hc.Stderr, fmt.Errorf("%s: cannot execute the command because it can only be executed within a pipeline step", command))
 		return true, interp.NewExitStatus(1)
@@ -129,45 +117,4 @@ func handleError(ctx context.Context, command string, err error) error {
 	hc := interp.HandlerCtx(ctx)
 	_, _ = fmt.Fprintln(hc.Stderr, errors.Wrap(err, command))
 	return interp.NewExitStatus(1)
-}
-
-func (e *execHandler) fallbackCommands(ctx context.Context, command string, args []string) error {
-	logger := log.GetFileLogger("shell")
-	hc := interp.HandlerCtx(ctx)
-
-	switch command {
-	case "is_equal":
-		return enginecommands.IsEqual(&hc, args)
-	case "is_command":
-		return enginecommands.IsCommand(args)
-	case "cat":
-		err := enginecommands.Cat(&hc, args)
-		if err != nil {
-			_, _ = fmt.Fprintln(hc.Stderr, err)
-			return interp.NewExitStatus(1)
-		}
-		return interp.NewExitStatus(0)
-	case "kubectl":
-		path, err := downloader.NewDownloader(commands.NewKubectlCommand(), logger).EnsureCommand(ctx)
-		if err != nil {
-			_, _ = fmt.Fprintln(hc.Stderr, err)
-			return interp.NewExitStatus(127)
-		}
-		command = path
-	case "helm":
-		path, err := downloader.NewDownloader(commands.NewHelmV3Command(), logger).EnsureCommand(ctx)
-		if err != nil {
-			_, _ = fmt.Fprintln(hc.Stderr, err)
-			return interp.NewExitStatus(127)
-		}
-		command = path
-	case "devspace":
-		bin, err := os.Executable()
-		if err != nil {
-			_, _ = fmt.Fprintln(hc.Stderr, err)
-			return interp.NewExitStatus(1)
-		}
-		command = bin
-	}
-	return nil
 }

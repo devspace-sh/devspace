@@ -3,11 +3,11 @@ package variable
 import (
 	"bytes"
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/util/command"
-	"github.com/loft-sh/devspace/pkg/util/shell"
 	"github.com/pkg/errors"
 )
 
@@ -52,7 +52,7 @@ func execCommand(ctx context.Context, varName string, definition *latest.Variabl
 	stdErrWriter := &bytes.Buffer{}
 	var err error
 	if args == nil {
-		err = shell.ExecuteShellCommand(ctx, dir, writer, stdErrWriter, nil, nil, cmd)
+		err = engine.ExecuteSimpleShellCommand(ctx, dir, writer, stdErrWriter, nil, nil, cmd)
 	} else {
 		err = command.Command(ctx, dir, writer, stdErrWriter, nil, cmd, args...)
 	}

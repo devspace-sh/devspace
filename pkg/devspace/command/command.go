@@ -2,11 +2,11 @@ package command
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"io"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/util/command"
-	"github.com/loft-sh/devspace/pkg/util/shell"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 
@@ -42,7 +42,7 @@ func ExecuteCommand(ctx context.Context, commands map[string]*latest.CommandConf
 		}
 
 		// execute the command in a shell
-		return shell.ExecuteShellCommand(ctx, dir, stdout, stderr, stdin, nil, shellCommand, args...)
+		return engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, stdin, nil, shellCommand, args...)
 	}
 
 	shellArgs = append(shellArgs, args...)

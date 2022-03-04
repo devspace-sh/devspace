@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl/walk"
-	"github.com/loft-sh/devspace/pkg/util/shell"
 	"gopkg.in/yaml.v3"
 )
 
@@ -77,7 +77,7 @@ func ResolveExpressions(ctx context.Context, value, dir string) (interface{}, er
 
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
-		err := shell.ExecuteShellCommand(ctx, dir, stdout, stderr, nil, nil, match[1], os.Args[1:]...)
+		err := engine.ExecuteSimpleShellCommand(ctx, dir, stdout, stderr, nil, nil, match[1], os.Args[1:]...)
 		if err != nil {
 			return nil, fmt.Errorf("error executing config expression %s: %v (stdout: %s, stderr: %s)", match[1], err, stdout.String(), stderr.String())
 		}

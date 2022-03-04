@@ -15,7 +15,6 @@ func Pipeline(ctx *devspacecontext.Context, pipeline types.Pipeline, args []stri
 	if err != nil {
 		return errors.Wrap(err, "parse args")
 	}
-
 	if len(args) == 0 {
 		return fmt.Errorf("no pipeline to run specified")
 	}
