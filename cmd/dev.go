@@ -122,7 +122,7 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVar(&cmd.UI, "ui", true, "Start the ui server")
 	devCmd.Flags().IntVar(&cmd.UIPort, "ui-port", 0, "The port to use when opening the ui server")
 	devCmd.Flags().BoolVar(&cmd.Open, "open", true, "Open defined URLs in the browser, if defined")
-	devCmd.Flags().StringVar(&cmd.Pipeline, "pipeline", "dev", "The pipeline to execute")
+	devCmd.Flags().StringVar(&cmd.Pipeline, "pipeline", "", "The pipeline to execute")
 
 	devCmd.Flags().BoolVarP(&cmd.Terminal, "terminal", "t", false, "Open a terminal instead of showing logs")
 	devCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
@@ -169,6 +169,10 @@ func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 }
 
 func (cmd *DevCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
+	if cmd.Pipeline == "" {
+		cmd.Pipeline = "dev"
+	}
+
 	return runPipeline(ctx, f, true, &PipelineOptions{
 		Options: types.Options{
 			BuildOptions: build.Options{

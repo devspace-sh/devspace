@@ -194,7 +194,10 @@ func (r *resolver) findAndFillVariables(ctx context.Context, haystack interface{
 	// try resolving predefined variables
 	for _, name := range AlwaysResolvePredefinedVars {
 		// ignore errors here as those variables are probably not used anyways
-		_, _ = r.resolve(ctx, name, nil)
+		_, err := r.resolve(ctx, name, nil)
+		if err != nil {
+			r.log.Debugf("error resolving predefined variable: %v", err)
+		}
 	}
 
 	return r.fillVariables(ctx, haystack, exclude)
@@ -226,8 +229,20 @@ func (r *resolver) resolve(ctx context.Context, name string, definition *latest.
 		return v, nil
 	}
 
+	// is predefined variable?
+	variable, err := NewPredefinedVariable(name, r.options)
+	if err == nil {
+		value, err := variable.Load(ctx, definition)
+		if err != nil {
+			return nil, err
+		}
+
+		r.memoryCache[name] = value
+		return value, nil
+	}
+
 	// fill other variables in the variable definition
-	err := r.fillVariableDefinition(ctx, definition)
+	err = r.fillVariableDefinition(ctx, definition)
 	if err != nil {
 		return nil, err
 	}
@@ -399,12 +414,6 @@ func (r *resolver) resolveDefaultValue(ctx context.Context, definition *latest.V
 }
 
 func (r *resolver) fillVariable(ctx context.Context, name string, definition *latest.Variable) (interface{}, error) {
-	// is predefined variable?
-	variable, err := NewPredefinedVariable(name, r.options)
-	if err == nil {
-		return variable.Load(ctx, definition)
-	}
-
 	// is runtime variable
 	if strings.HasPrefix(name, "runtime.") {
 		return nil, fmt.Errorf("cannot resolve %s in this config area as this config region is loaded on startup. You can only use runtime variables in the following locations: \n  %s", name, strings.Join(runtime.Locations, "\n  "))

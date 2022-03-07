@@ -5,6 +5,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	types2 "github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/pkg/errors"
 )
@@ -52,5 +53,22 @@ func Dependency(ctx *devspacecontext.Context, pipeline types.Pipeline, args []st
 		return fmt.Errorf("either specify 'run_dependency_pipelines --all' or 'run_dependency_pipelines dep1 dep2'")
 	}
 
-	return pipeline.StartNewDependencies(ctx, deployDependencies, options.DependencyOptions)
+	// run hooks & deploy dependencies
+	pluginErr := hook.ExecuteHooks(ctx, map[string]interface{}{}, "before:deployDependencies", "before:buildDependencies", "before:renderDependencies", "before:purgeDependencies")
+	if pluginErr != nil {
+		return pluginErr
+	}
+
+	err = pipeline.StartNewDependencies(ctx, deployDependencies, options.DependencyOptions)
+	if err != nil {
+		return err
+	}
+
+	// run hooks & deploy dependencies
+	pluginErr = hook.ExecuteHooks(ctx, map[string]interface{}{}, "after:deployDependencies", "after:buildDependencies", "after:renderDependencies", "after:purgeDependencies")
+	if pluginErr != nil {
+		return pluginErr
+	}
+
+	return nil
 }

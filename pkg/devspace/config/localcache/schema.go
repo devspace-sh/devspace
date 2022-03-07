@@ -24,6 +24,7 @@ type Cache interface {
 
 	GetVar(varName string) (string, bool)
 	SetVar(varName, value string)
+	ListVars() map[string]string
 	ClearVars()
 
 	DeepCopy() Cache
@@ -137,6 +138,17 @@ func (l *LocalCache) SetVar(varName, value string) {
 	defer l.accessMutex.Unlock()
 
 	l.Vars[varName] = value
+}
+
+func (l *LocalCache) ListVars() map[string]string {
+	l.accessMutex.Lock()
+	defer l.accessMutex.Unlock()
+
+	listVars := map[string]string{}
+	for k, v := range l.Vars {
+		listVars[k] = v
+	}
+	return listVars
 }
 
 func (l *LocalCache) ClearVars() {

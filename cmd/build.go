@@ -23,6 +23,8 @@ type BuildCmd struct {
 	SkipDependency          []string
 	Dependency              []string
 
+	Pipeline string
+
 	ForceBuild          bool
 	BuildSequential     bool
 	MaxConcurrentBuilds int
@@ -54,6 +56,7 @@ Builds all defined images and pushes them
 	buildCmd.Flags().StringSliceVarP(&cmd.Tags, "tag", "t", []string{}, "Use the given tag for all built images")
 	buildCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips building the following dependencies")
 	buildCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Builds only the specific named dependencies")
+	buildCmd.Flags().StringVar(&cmd.Pipeline, "pipeline", "", "The pipeline to execute")
 
 	buildCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 	buildCmd.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", false, "Skips image pushing, if a local kubernetes environment is detected")
@@ -75,6 +78,10 @@ func (cmd *BuildCmd) Run(f factory.Factory) error {
 }
 
 func (cmd *BuildCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
+	if cmd.Pipeline == "" {
+		cmd.Pipeline = "build"
+	}
+
 	return runPipeline(ctx, f, true, &PipelineOptions{
 		Options: pipelinetypes.Options{
 			BuildOptions: build.Options{
@@ -91,6 +98,6 @@ func (cmd *BuildCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory,
 		},
 		ConfigOptions: configOptions,
 		Only:          cmd.Dependency,
-		Pipeline:      "build",
+		Pipeline:      cmd.Pipeline,
 	})
 }

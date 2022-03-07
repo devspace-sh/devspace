@@ -77,14 +77,16 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			})
 		}
 
-		deployPipeline += "run_dependency_pipelines " + name + "\n"
-		buildPipeline += "run_dependency_pipelines " + name + " --pipeline build\n"
-		purgePipeline += "run_dependency_pipelines " + name + " --pipeline purge\n"
+		if !dep.Disabled {
+			deployPipeline += "run_dependency_pipelines " + name + "\n"
+			buildPipeline += "run_dependency_pipelines " + name + " --pipeline build\n"
+			purgePipeline += "run_dependency_pipelines " + name + " --pipeline purge\n"
+		}
 	}
-	buildPipeline += "\nbuild_images --all"
+	buildPipeline += "build_images --all\n"
 
 	// use a pretty simple pipeline which was used by DevSpace before
-	deployPipeline += "\nensure_pull_secrets --all\nbuild_images --all\n"
+	deployPipeline += "ensure_pull_secrets --all\nbuild_images --all\n"
 
 	// create the deploy pipeline based on concurrent deployments
 	concurrentDeployments := []string{}
@@ -99,45 +101,45 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 
 	prependPurgePipeline := ""
 	if len(concurrentDeployments) > 0 {
-		prependPurgePipeline += "\npurge_deployments " + strings.Join(concurrentDeployments, " ")
-		deployPipeline += "\ncreate_deployments " + strings.Join(concurrentDeployments, " ")
+		prependPurgePipeline += "purge_deployments " + strings.Join(concurrentDeployments, " ") + "\n"
+		deployPipeline += "create_deployments " + strings.Join(concurrentDeployments, " ") + "\n"
 	}
 	if len(sequentialDeployments) > 0 {
-		prependPurgePipeline += "\npurge_deployments " + strings.Join(concurrentDeployments, " ") + " --sequential"
-		deployPipeline += "\ncreate_deployments " + strings.Join(sequentialDeployments, " ") + " --sequential"
+		prependPurgePipeline += "purge_deployments " + strings.Join(sequentialDeployments, " ") + " --sequential" + "\n"
+		deployPipeline += "create_deployments " + strings.Join(sequentialDeployments, " ") + " --sequential" + "\n"
 	}
-	purgePipeline = prependPurgePipeline + "\n" + purgePipeline
+	purgePipeline = prependPurgePipeline + "\n" + purgePipeline + "\n"
 
-	devPipeline := deployPipeline + "\n" + "start_dev --all"
+	devPipeline := deployPipeline + "\n" + "start_dev --all" + "\n"
 	if c.Dev.Terminal != nil && c.Dev.Terminal.ImageSelector == "" && len(c.Dev.Terminal.LabelSelector) == 0 {
-		devPipeline += "\n" + strings.Join(c.Dev.Terminal.Command, " ")
+		devPipeline += strings.Join(c.Dev.Terminal.Command, " ") + "\n"
 	}
 	nextConfig.Pipelines = map[string]*next.Pipeline{
 		"build": {
 			Steps: []next.PipelineStep{
 				{
-					Run: buildPipeline,
+					Run: strings.TrimSpace(buildPipeline),
 				},
 			},
 		},
 		"purge": {
 			Steps: []next.PipelineStep{
 				{
-					Run: purgePipeline,
+					Run: strings.TrimSpace(purgePipeline),
 				},
 			},
 		},
 		"dev": {
 			Steps: []next.PipelineStep{
 				{
-					Run: devPipeline,
+					Run: strings.TrimSpace(devPipeline),
 				},
 			},
 		},
 		"deploy": {
 			Steps: []next.PipelineStep{
 				{
-					Run: deployPipeline,
+					Run: strings.TrimSpace(deployPipeline),
 				},
 			},
 		},

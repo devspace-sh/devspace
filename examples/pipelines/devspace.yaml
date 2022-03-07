@@ -1,37 +1,37 @@
 version: v2beta1
 name: pipelines
 
-dependencies:
-  dep2:
-    source:
-      path: dep2.yaml
+imports:
+  - git: github.com/my-devspace/devspace
 
-commands:
-  test2:
-    command: |
-      build_images tes
-  test:
-    command: |
-      run_command test2 abc
+
+
+images:
+  test-1: ...
+  test-10: ...
+
+dev:
+  test: # -> select 1 pod
+    imageSelector: nginx
+    sync:
+      - ...
+      - ...
+    terminal: ...
+  test-2: # -> select 1 pod
+    ...
 
 pipelines:
-  helper:
+  deploy:
     steps:
       - run: |-
-          sleep 10
+          create_deployments test --set helm.componentChart=true \
+                                  --set helm.values.containers[0].image=nginx
   dev:
     steps:
       - run: |-
-          SWAG=fabi run_command test abc
-          #run_dependency_pipelines --all --pipeline dev
-          
-          #export TEST=$(run_pipelines helper)
-          #echo $TEST > swag.txt
-          
-          #build_images test --set image=${IMAGE}
-          
-          #create_deployments test2
-          
-          # Start development mode for test here
-          #start_dev test --set imageSelector=${runtime.images.test} \
-          #               --set terminal.command=sh
+          run_pipelines deploy --background
+
+          start_dev test --set imageSelector=nginx \
+                         --set terminal.command=bash \
+                         --set sync[0].containerPath=/app \
+                         --set sync[0].onUpload.restartContainer=true

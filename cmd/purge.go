@@ -19,6 +19,7 @@ type PurgeCmd struct {
 	*flags.GlobalFlags
 
 	Deployments string
+	Pipeline    string
 	All         bool
 
 	SkipDependency []string
@@ -56,6 +57,7 @@ devspace purge -d my-deployment
 
 	purgeCmd.Flags().StringVarP(&cmd.Deployments, "deployments", "d", "", "The deployment to delete (You can specify multiple deployments comma-separated, e.g. devspace-default,devspace-database etc.)")
 	purgeCmd.Flags().BoolVarP(&cmd.All, "all", "a", true, "When enabled purges the dependencies as well")
+	purgeCmd.Flags().StringVar(&cmd.Pipeline, "pipeline", "", "The pipeline to execute")
 
 	purgeCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips the following dependencies from purging")
 	purgeCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Purges only the specific named dependencies")
@@ -76,6 +78,10 @@ func (cmd *PurgeCmd) Run(f factory.Factory) error {
 }
 
 func (cmd *PurgeCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
+	if cmd.Pipeline == "" {
+		cmd.Pipeline = "purge"
+	}
+
 	return runPipeline(ctx, f, false, &PipelineOptions{
 		Options: types.Options{
 			DependencyOptions: types.DependencyOptions{
@@ -84,6 +90,6 @@ func (cmd *PurgeCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory,
 		},
 		ConfigOptions: configOptions,
 		Only:          cmd.Dependency,
-		Pipeline:      "purge",
+		Pipeline:      cmd.Pipeline,
 	})
 }

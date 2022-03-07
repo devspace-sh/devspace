@@ -84,9 +84,9 @@ func (r *resolver) resolveRecursive(ctx *devspacecontext.Context, basePath, pare
 	if currentDependency != nil {
 		currentDependency.children = []types.Dependency{}
 	}
-	for idx, dependencyConfig := range dependencies {
+	for _, dependencyConfig := range dependencies {
 		if dependencyConfig.Disabled {
-			ctx.Log.Debugf("Skip dependency at index %d, because it is disabled", idx)
+			ctx.Log.Debugf("Skip dependency %s, because it is disabled", dependencyConfig.Name)
 			continue
 		}
 

@@ -101,7 +101,7 @@ devspace deploy --kube-context=deploy-context
 	deployCmd.Flags().BoolVarP(&cmd.ForceDeploy, "force-deploy", "d", false, "Forces to (re-)deploy every deployment")
 	deployCmd.Flags().BoolVar(&cmd.SkipDeploy, "skip-deploy", false, "Skips deploying and only builds images")
 	deployCmd.Flags().BoolVar(&cmd.Render, "render", false, "If true will render manifests and print them instead of actually deploying them")
-	deployCmd.Flags().StringVar(&cmd.Pipeline, "pipeline", "deploy", "The pipeline to execute")
+	deployCmd.Flags().StringVar(&cmd.Pipeline, "pipeline", "", "The pipeline to execute")
 
 	deployCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips deploying the following dependencies")
 	deployCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Deploys only the specific named dependencies")
@@ -126,6 +126,10 @@ func (cmd *DeployCmd) Run(f factory.Factory) error {
 }
 
 func (cmd *DeployCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, configOptions *loader.ConfigOptions) error {
+	if cmd.Pipeline == "" {
+		cmd.Pipeline = "deploy"
+	}
+
 	return runPipeline(ctx, f, true, &PipelineOptions{
 		Options: types.Options{
 			BuildOptions: build.Options{
@@ -234,7 +238,13 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bo
 		}
 	}
 
-	// deploy dependencies
+	// print config
+	if ctx.Log.GetLevel() == logrus.DebugLevel {
+		out, _ := yaml.Marshal(ctx.Config.Config())
+		ctx.Log.Debugf("Use config:\n%s\n", string(out))
+	}
+
+	// resolve dependencies
 	dependencies, err := f.NewDependencyManager(ctx, options.ConfigOptions).ResolveAll(ctx, dependency.ResolveOptions{
 		SkipDependencies: options.DependencyOptions.Exclude,
 		Dependencies:     options.Only,
