@@ -144,6 +144,10 @@ func StartTerminal(
 fi
 if command -v screen; then
   echo "Screen installed successfully."
+
+  if [ ! -f ~/.screenrc ]; then
+    echo "termcapinfo xterm* ti@:te@" > ~/.screenrc
+  fi
 else
   echo "Couldn't find screen, need to fallback."
   exit 1
@@ -156,7 +160,7 @@ fi`,
 			}
 		}
 		if useScreen {
-			newCommand := []string{"screen", "-dRSq", "dev"}
+			newCommand := []string{"screen", "-dRSq", "dev", "-h", "1000"}
 			newCommand = append(newCommand, command...)
 			command = newCommand
 		}
