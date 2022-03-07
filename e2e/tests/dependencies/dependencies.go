@@ -2,24 +2,18 @@ package dependencies
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
-	"github.com/loft-sh/devspace/pkg/devspace/services/podreplace"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/loft-sh/devspace/e2e/framework"
 	"github.com/loft-sh/devspace/e2e/kube"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	"github.com/onsi/ginkgo"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -207,81 +201,81 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		framework.ExpectErrorMatch(err, "dependencies[nested].profiles and dependencies[nested].profile & dependencies[nested].profileParents cannot be used together")
 	})
 
-	ginkgo.It("should resolve dependencies with dependencies.dev.replacePods", func() {
-		ginkgo.Skip(" couldn't find pipeline")
-		fmt.Println("dependencies[*].dev.replacePods,dependencies[*].dev.sync and dependencies[*].dev.ports is not supported anymore in v6")
-		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/dev-replacepods")
-		framework.ExpectNoError(err)
-		defer framework.CleanupTempDir(initialDir, tempDir)
+	// ginkgo.It("should resolve dependencies with dependencies.dev.replacePods", func() {
+	// 	ginkgo.Skip(" couldn't find pipeline")
+	// 	fmt.Println("dependencies[*].dev.replacePods,dependencies[*].dev.sync and dependencies[*].dev.ports is not supported anymore in v6")
+	// 	tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/dev-replacepods")
+	// 	framework.ExpectNoError(err)
+	// 	defer framework.CleanupTempDir(initialDir, tempDir)
 
-		// load it from the regular path first
-		_, dependencies, err := framework.LoadConfig(f, kubeClient.Client(), filepath.Join(tempDir, "devspace.yaml"))
-		framework.ExpectNoError(err)
+	// 	// load it from the regular path first
+	// 	_, dependencies, err := framework.LoadConfig(f, kubeClient.Client(), filepath.Join(tempDir, "devspace.yaml"))
+	// 	framework.ExpectNoError(err)
 
-		// check if dependencies were loaded correctly
-		framework.ExpectEqual(len(dependencies), 1)
-		framework.ExpectEqual(dependencies[0].Name(), "dep")
+	// 	// check if dependencies were loaded correctly
+	// 	framework.ExpectEqual(len(dependencies), 1)
+	// 	framework.ExpectEqual(dependencies[0].Name(), "dep")
 
-		ns, err := kubeClient.CreateNamespace("dep-replacepods")
-		framework.ExpectNoError(err)
-		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+	// 	ns, err := kubeClient.CreateNamespace("dep-replacepods")
+	// 	framework.ExpectNoError(err)
+	// 	defer framework.ExpectDeleteNamespace(kubeClient, ns)
 
-		// create a new dev command
-		devCmd := &cmd.DevCmd{
-			GlobalFlags: &flags.GlobalFlags{
-				NoWarn:    true,
-				Namespace: ns,
-			},
-			Portforwarding: true,
-			Sync:           true,
-		}
-		err = devCmd.Run(f, []string{"sh", "-c", "exit"})
-		framework.ExpectNoError(err)
+	// 	// create a new dev command
+	// 	devCmd := &cmd.DevCmd{
+	// 		GlobalFlags: &flags.GlobalFlags{
+	// 			NoWarn:    true,
+	// 			Namespace: ns,
+	// 		},
+	// 		Portforwarding: true,
+	// 		Sync:           true,
+	// 	}
+	// 	err = devCmd.Run(f, []string{"sh", "-c", "exit"})
+	// 	framework.ExpectNoError(err)
 
-		// check if replica set exists & pod got replaced correctly
-		list, err := kubeClient.Client().KubeClient().AppsV1().ReplicaSets(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: podreplace.ReplicaSetLabel + "=true"})
-		framework.ExpectNoError(err)
-		framework.ExpectEqual(len(list.Items), 1)
+	// 	// check if replica set exists & pod got replaced correctly
+	// 	list, err := kubeClient.Client().KubeClient().AppsV1().ReplicaSets(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: podreplace.ReplicaSetLabel + "=true"})
+	// 	framework.ExpectNoError(err)
+	// 	framework.ExpectEqual(len(list.Items), 1)
 
-		// wait until a pod has started
-		var pods *corev1.PodList
-		err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
-			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
-			if err != nil {
-				return false, err
-			}
+	// 	// wait until a pod has started
+	// 	var pods *corev1.PodList
+	// 	err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
+	// 		pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
+	// 		if err != nil {
+	// 			return false, err
+	// 		}
 
-			return len(pods.Items) == 1, nil
-		})
-		framework.ExpectNoError(err)
-		framework.ExpectEqual(pods.Items[0].Spec.Containers[0].Image, "alpine:latest")
+	// 		return len(pods.Items) == 1, nil
+	// 	})
+	// 	framework.ExpectNoError(err)
+	// 	framework.ExpectEqual(pods.Items[0].Spec.Containers[0].Image, "alpine:latest")
 
-		// now purge the deployment, dependency and make sure the replica set is deleted as well
-		purgeCmd := &cmd.PurgeCmd{
-			GlobalFlags: &flags.GlobalFlags{
-				NoWarn:    true,
-				Namespace: ns,
-			},
-			All: true,
-		}
-		err = purgeCmd.Run(f)
-		framework.ExpectNoError(err)
+	// 	// now purge the deployment, dependency and make sure the replica set is deleted as well
+	// 	purgeCmd := &cmd.PurgeCmd{
+	// 		GlobalFlags: &flags.GlobalFlags{
+	// 			NoWarn:    true,
+	// 			Namespace: ns,
+	// 		},
+	// 		All: true,
+	// 	}
+	// 	err = purgeCmd.Run(f)
+	// 	framework.ExpectNoError(err)
 
-		// wait until all pods are killed
-		err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
-			pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
-			if err != nil {
-				return false, err
-			}
-			return len(pods.Items) == 0, nil
-		})
-		framework.ExpectNoError(err)
+	// 	// wait until all pods are killed
+	// 	err = wait.Poll(time.Second, time.Minute, func() (done bool, err error) {
+	// 		pods, err = kubeClient.RawClient().CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: selector.ReplacedLabel})
+	// 		if err != nil {
+	// 			return false, err
+	// 		}
+	// 		return len(pods.Items) == 0, nil
+	// 	})
+	// 	framework.ExpectNoError(err)
 
-		// make sure no replaced replica set exists anymore
-		list, err = kubeClient.Client().KubeClient().AppsV1().ReplicaSets(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: podreplace.ReplicaSetLabel + "=true"})
-		framework.ExpectNoError(err)
-		framework.ExpectEqual(len(list.Items), 0)
-	})
+	// 	// make sure no replaced replica set exists anymore
+	// 	list, err = kubeClient.Client().KubeClient().AppsV1().ReplicaSets(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: podreplace.ReplicaSetLabel + "=true"})
+	// 	framework.ExpectNoError(err)
+	// 	framework.ExpectEqual(len(list.Items), 0)
+	// })
 
 	ginkgo.It("should resolve cyclic dependencies", func() {
 		ginkgo.Skip(" dependencies[*].dev.replacePods,dependencies[*].dev.sync and dependencies[*].dev.ports is not supported anymore in v6")
