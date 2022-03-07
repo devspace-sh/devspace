@@ -22,7 +22,14 @@ func UI(ctx *devspacecontext.Context, port int, pipeline types.Pipeline) (*serve
 		ctx.Log.Warnf("Couldn't start UI server: %v", err)
 	} else {
 		// Start server
-		go func() { _ = serv.ListenAndServe() }()
+		go func() {
+			_ = serv.ListenAndServe()
+		}()
+
+		go func() {
+			<-ctx.Context.Done()
+			_ = serv.Server.Close()
+		}()
 
 		ctx.Log.WriteString(logrus.InfoLevel, "\n#########################################################\n")
 		ctx.Log.Infof("DevSpace UI available at: %s", ansi.Color("http://"+serv.Server.Addr, "white+b"))

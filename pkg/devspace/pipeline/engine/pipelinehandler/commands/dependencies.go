@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 // DependencyOptions describe how dependencies should get deployed
@@ -18,6 +19,7 @@ type DependencyOptions struct {
 }
 
 func Dependency(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	ctx.Log.Debugf("run_dependency_pipelines %s", strings.Join(args, " "))
 	options := &DependencyOptions{
 		DependencyOptions: pipeline.Options().DependencyOptions,
 	}

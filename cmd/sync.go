@@ -119,6 +119,12 @@ type nameConfig struct {
 
 // Run executes the command logic
 func (cmd *SyncCmd) Run(f factory.Factory) error {
+	if cmd.Ctx == nil {
+		var cancelFn context.CancelFunc
+		cmd.Ctx, cancelFn = context.WithCancel(context.Background())
+		defer cancelFn()
+	}
+
 	// Switch working directory
 	if cmd.GlobalFlags.ConfigPath != "" {
 		_, err := os.Stat(cmd.GlobalFlags.ConfigPath)
@@ -173,10 +179,6 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	if cmd.Ctx == nil {
-		cmd.Ctx = context.Background()
 	}
 
 	// create the devspace context

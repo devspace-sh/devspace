@@ -136,7 +136,9 @@ Open terminal instead of logs:
 // Run executes the command logic
 func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 	if cmd.Ctx == nil {
-		cmd.Ctx = context.Background()
+		var cancelFn context.CancelFunc
+		cmd.Ctx, cancelFn = context.WithCancel(context.Background())
+		defer cancelFn()
 	}
 
 	configOptions := cmd.ToConfigOptions()
@@ -152,12 +154,6 @@ func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
 	}
 
 	return runWithHooks(ctx, "devCommand", func() error {
-		// Execute plugin hook
-		err = hook.ExecuteHooks(ctx, nil, "dev")
-		if err != nil {
-			return err
-		}
-
 		// Build and deploy images
 		err = cmd.runCommand(ctx, f, configOptions)
 		if err != nil {

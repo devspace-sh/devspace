@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 // PullSecretsOptions describe how pull secrets should be deployed
@@ -19,6 +20,7 @@ type PullSecretsOptions struct {
 }
 
 func PullSecrets(ctx *devspacecontext.Context, args []string) error {
+	ctx.Log.Debugf("ensure_pull_secrets %s", strings.Join(args, " "))
 	options := &PullSecretsOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {

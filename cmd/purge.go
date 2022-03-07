@@ -26,6 +26,8 @@ type PurgeCmd struct {
 	Dependency     []string
 
 	log log.Logger
+
+	Ctx context.Context
 }
 
 // NewPurgeCmd creates a new purge command
@@ -66,8 +68,14 @@ devspace purge -d my-deployment
 
 // Run executes the purge command logic
 func (cmd *PurgeCmd) Run(f factory.Factory) error {
+	if cmd.Ctx == nil {
+		var cancelFn context.CancelFunc
+		cmd.Ctx, cancelFn = context.WithCancel(context.Background())
+		defer cancelFn()
+	}
+
 	configOptions := cmd.ToConfigOptions()
-	ctx, err := prepare(context.Background(), f, configOptions, cmd.GlobalFlags, false)
+	ctx, err := prepare(cmd.Ctx, f, configOptions, cmd.GlobalFlags, false)
 	if err != nil {
 		return err
 	}

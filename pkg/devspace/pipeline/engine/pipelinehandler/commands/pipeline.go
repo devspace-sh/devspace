@@ -7,9 +7,11 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 func Pipeline(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	ctx.Log.Debugf("run_pipelines %s", strings.Join(args, " "))
 	options := &types.PipelineOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {

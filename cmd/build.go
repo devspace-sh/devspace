@@ -28,6 +28,8 @@ type BuildCmd struct {
 	ForceBuild          bool
 	BuildSequential     bool
 	MaxConcurrentBuilds int
+
+	Ctx context.Context
 }
 
 // NewBuildCmd creates a new devspace build command
@@ -66,8 +68,14 @@ Builds all defined images and pushes them
 
 // Run executes the command logic
 func (cmd *BuildCmd) Run(f factory.Factory) error {
+	if cmd.Ctx == nil {
+		var cancelFn context.CancelFunc
+		cmd.Ctx, cancelFn = context.WithCancel(context.Background())
+		defer cancelFn()
+	}
+
 	configOptions := cmd.ToConfigOptions()
-	ctx, err := prepare(context.Background(), f, configOptions, cmd.GlobalFlags, true)
+	ctx, err := prepare(cmd.Ctx, f, configOptions, cmd.GlobalFlags, true)
 	if err != nil {
 		return err
 	}

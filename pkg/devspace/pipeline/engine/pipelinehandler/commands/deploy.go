@@ -27,6 +27,7 @@ type DeployOptions struct {
 }
 
 func Deploy(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string, stdout io.Writer) error {
+	ctx.Log.Debugf("create_deployments %s", strings.Join(args, " "))
 	options := &DeployOptions{
 		Options: pipeline.Options().DeployOptions,
 	}

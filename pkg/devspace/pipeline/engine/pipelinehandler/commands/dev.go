@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 // StartDevOptions describe how deployments should get deployed
@@ -22,6 +23,7 @@ type StartDevOptions struct {
 }
 
 func StartDev(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	ctx.Log.Debugf("start_dev %s", strings.Join(args, " "))
 	options := &StartDevOptions{
 		Options: pipeline.Options().DevOptions,
 	}
@@ -74,6 +76,7 @@ type StopDevOptions struct {
 }
 
 func StopDev(ctx *devspacecontext.Context, devManager devpod.Manager, args []string) error {
+	ctx.Log.Debugf("stop_dev %s", strings.Join(args, " "))
 	options := &StopDevOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {

@@ -22,6 +22,7 @@ type BuildOptions struct {
 }
 
 func Build(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	ctx.Log.Debugf("build_images %s", strings.Join(args, " "))
 	options := &BuildOptions{
 		Options: pipeline.Options().BuildOptions,
 	}

@@ -6,6 +6,7 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 // PurgeOptions describe how deployments should get deployed
@@ -16,6 +17,7 @@ type PurgeOptions struct {
 }
 
 func Purge(ctx *devspacecontext.Context, args []string) error {
+	ctx.Log.Debugf("purge_deployments %s", strings.Join(args, " "))
 	options := &PurgeOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {

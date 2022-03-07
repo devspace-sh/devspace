@@ -15,7 +15,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/dev"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
@@ -57,6 +56,8 @@ type DeployCmd struct {
 	Timeout int
 
 	log logpkg.Logger
+
+	Ctx context.Context
 }
 
 // NewDeployCmd creates a new deploy command
@@ -114,8 +115,14 @@ devspace deploy --kube-context=deploy-context
 
 // Run executes the down command logic
 func (cmd *DeployCmd) Run(f factory.Factory) error {
+	if cmd.Ctx == nil {
+		var cancelFn context.CancelFunc
+		cmd.Ctx, cancelFn = context.WithCancel(context.Background())
+		defer cancelFn()
+	}
+
 	configOptions := cmd.ToConfigOptions()
-	ctx, err := prepare(context.Background(), f, configOptions, cmd.GlobalFlags, false)
+	ctx, err := prepare(cmd.Ctx, f, configOptions, cmd.GlobalFlags, false)
 	if err != nil {
 		return err
 	}
@@ -253,12 +260,6 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bo
 		return errors.Wrap(err, "deploy dependencies")
 	}
 	ctx = ctx.WithDependencies(dependencies)
-
-	// execute plugin hook
-	err = hook.ExecuteHooks(ctx, nil, "deploy")
-	if err != nil {
-		return err
-	}
 
 	// update last used kube context & save generated yaml
 	err = updateLastKubeContext(ctx)
