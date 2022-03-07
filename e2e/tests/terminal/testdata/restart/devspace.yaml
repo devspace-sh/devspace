@@ -11,9 +11,6 @@ deployments:
           - name: container-0
             image: ${IMAGE}
 dev:
-  autoReload:
-    paths:
-      - ./devspace.yaml
   replacePods:
     - imageSelector: ${IMAGE}
       replaceImage: ubuntu:18.04
@@ -29,3 +26,4 @@ dev:
           value: "/workdir"
   terminal:
     imageSelector: ${IMAGE}
+    command: ["while sleep 1; do echo $HOSTNAME; done"]

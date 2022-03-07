@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"io"
 	kubectlExec "k8s.io/client-go/util/exec"
+	"k8s.io/kubectl/pkg/util/term"
 	"time"
 )
 
@@ -128,7 +129,7 @@ func StartTerminal(
 
 		// try to install screen
 		useScreen := false
-		if !devContainer.Terminal.DisableScreen {
+		if term.IsTerminal(stdin) && !devContainer.Terminal.DisableScreen {
 			bufferStdout, bufferStderr, err := ctx.KubeClient.ExecBuffered(ctx.Context, container.Pod, container.Container.Name, []string{
 				"sh",
 				"-c",

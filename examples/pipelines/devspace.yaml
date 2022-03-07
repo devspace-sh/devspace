@@ -1,37 +1,17 @@
 version: v2beta1
 name: pipelines
 
-imports:
-  - git: github.com/my-devspace/devspace
-
-
-
-images:
-  test-1: ...
-  test-10: ...
-
-dev:
-  test: # -> select 1 pod
-    imageSelector: nginx
-    sync:
-      - ...
-      - ...
-    terminal: ...
-  test-2: # -> select 1 pod
-    ...
-
 pipelines:
-  deploy:
+  dev:
     steps:
       - run: |-
           create_deployments test --set helm.componentChart=true \
                                   --set helm.values.containers[0].image=nginx
-  dev:
-    steps:
-      - run: |-
-          run_pipelines deploy --background
 
           start_dev test --set imageSelector=nginx \
-                         --set terminal.command=bash \
+                         --set logs.disabled=false \
+                         --set command[0]=sh \
+                         --set command[1]=-c \
+                         --set 'command[2]=while true; do sleep 2 && echo Hello; done' \
                          --set sync[0].containerPath=/app \
                          --set sync[0].onUpload.restartContainer=true

@@ -64,10 +64,7 @@ type DevCmd struct {
 	log          log.Logger
 
 	// used for testing to allow interruption
-	Ctx    context.Context
-	Stdout io.Writer
-	Stderr io.Writer
-	Stdin  io.Reader
+	Ctx context.Context
 }
 
 // NewDevCmd creates a new devspace dev command

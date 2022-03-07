@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/terminal"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/skratchdot/open-golang/open"
+	"io"
 	"net/http"
 	"os"
 	syncpkg "sync"
@@ -30,6 +31,12 @@ var (
 
 	terminalDevPodMutex syncpkg.Mutex
 	terminalDevPod      *devPod
+)
+
+var (
+	DefaultTerminalStdout io.Writer = os.Stdout
+	DefaultTerminalStderr io.Writer = os.Stderr
+	DefaultTerminalStdin  io.Reader = os.Stdin
 )
 
 type devPod struct {
@@ -256,7 +263,15 @@ func (d *devPod) startTerminal(ctx *devspacecontext.Context, devContainer *lates
 		}
 
 		// make sure the global log is silent
-		err = terminal.StartTerminal(ctx, devContainer, newTargetSelector(d.selectedPod.Pod.Name, d.selectedPod.Pod.Namespace, d.selectedPod.Container.Name, parent), os.Stdout, os.Stderr, os.Stdin, parent)
+		err = terminal.StartTerminal(
+			ctx,
+			devContainer,
+			newTargetSelector(d.selectedPod.Pod.Name, d.selectedPod.Pod.Namespace, d.selectedPod.Container.Name, parent),
+			DefaultTerminalStdout,
+			DefaultTerminalStderr,
+			DefaultTerminalStdin,
+			parent,
+		)
 		terminalDevPodMutex.Lock()
 		terminalDevPod = nil
 		terminalDevPodMutex.Unlock()

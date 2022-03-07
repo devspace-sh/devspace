@@ -19,4 +19,4 @@ pipelines:
           start_dev test --set imageSelector=nginx \
                          --set forward[0].port=8080 \
                          --set forward[0].containerPort=80 \
-                         --set logs.disabled=false
+                         --set terminal.command=sh

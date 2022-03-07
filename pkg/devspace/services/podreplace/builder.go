@@ -195,7 +195,7 @@ func replaceCommand(devPod *latest.DevPod, devContainer *latest.DevContainer, po
 		}
 	}
 	if len(devContainer.Command) == 0 && injectRestartHelper {
-		return fmt.Errorf("if you would like DevSpace to restart the container after uploading a change, please specify the entrypoint that should get restarted in dev.[%s].command", devPod.Name)
+		return fmt.Errorf("dev.%s.sync[*].onUpload.restartContainer is true, please specify the entrypoint that should get restarted in dev.%s.command", devPod.Name, devPod.Name)
 	}
 	if !injectRestartHelper && len(devContainer.Command) == 0 && devContainer.Args == nil {
 		return nil

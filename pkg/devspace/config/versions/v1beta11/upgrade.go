@@ -111,8 +111,12 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	purgePipeline = prependPurgePipeline + "\n" + purgePipeline + "\n"
 
 	devPipeline := deployPipeline + "\n" + "start_dev --all" + "\n"
-	if c.Dev.Terminal != nil && c.Dev.Terminal.ImageSelector == "" && len(c.Dev.Terminal.LabelSelector) == 0 {
-		devPipeline += strings.Join(c.Dev.Terminal.Command, " ") + "\n"
+	if c.Dev.Terminal != nil && c.Dev.Terminal.ImageSelector == "" && len(c.Dev.Terminal.LabelSelector) == 0 && len(c.Dev.Terminal.Command) > 0 {
+		for _, c := range c.Dev.Terminal.Command {
+			devPipeline += "'" + strings.Replace(c, "'", "'\"'\"'", -1) + "' "
+		}
+
+		devPipeline += "\n"
 	}
 	nextConfig.Pipelines = map[string]*next.Pipeline{
 		"build": {

@@ -31,27 +31,63 @@ const HelperScript = `#!/bin/sh
 # A process wrapper script to simulate a container restart. This file was injected with devspace during the build process
 #
 set -e
-pid=""
+
+restart=true
+screenSessionName="devspace"
+screenLogFile="/tmp/screen.log"
+pidFile="/.devspace/devspace-pid"
+
+mkdir -p $(dirname $screenLogFile)
+mkdir -p $(dirname $pidFile)
+
 trap quit TERM INT
 quit() {
-  if [ -n "$pid" ]; then
-    kill $pid
+  restart=false
+  if [ -f "$pidFile" ]; then
+    pidToKill="$(cat $pidFile)"
+    kill -2 $((0-$pidToKill)) >/dev/null 2>&1
+    timeout 5 tail --pid=$pidToKill -f /dev/null 2>&1
+    kill -15 $((0-$pidToKill)) >/dev/null 2>&1
+    timeout 5 tail --pid=$pidToKill -f /dev/null 2>&1
+    kill -9 $((0-$pidToKill)) >/dev/null 2>&1
+    timeout 5 tail --pid=$pidToKill -f /dev/null 2>&1
+  fi
+
+  if [ -f "$pidFile.screen" ]; then
+    pidToKill="$(cat $pidFile.screen)"
+    kill -9 $((0-$pidToKill)) >/dev/null 2>&1
   fi
 }
-while true; do
-  setsid "$@" &
-  pid=$!
-  echo "$pid" > /.devspace/devspace-pid
+
+while $restart; do
   set +e
-  wait $pid
-  exit_code=$?
-  if [ -f /.devspace/devspace-pid ]; then
-    rm -f /.devspace/devspace-pid 	
-    printf "\nContainer exited with $exit_code. Will restart in 7 seconds...\n"
-    sleep 7
+  if command -v screen >/dev/null; then
+    rm -f "$screenLogFile"
+    commandAndArguments="$@"
+    echo screen -L -Logfile "$screenLogFile" -dmS $screenSessionName sh -c "echo \$$>$pidFile; echo \$PPID>$pidFile.screen; exec "'"'"$commandAndArguments"'"'"; exit;" > /tmp/test-command
+    screen -L -Logfile "$screenLogFile" -dmS $screenSessionName sh -c "echo \$$>$pidFile; echo \$PPID>$pidFile.screen; exec "'"'"$commandAndArguments"'"'"; exit;"
+    while [ ! -f "$pidFile" ]; do
+      sleep 0.1
+    done
+    screen -r $screenSessionName -X colon "logfile flush 1^M"
+    pid="$(cat $pidFile)"
+    tail --pid=$pid -f "$screenLogFile"
+  else
+    setsid "$@" &
+    pid=$!
+    echo "$pid" >"$pidFile"
+    tail --pid=$pid -f /dev/null
   fi
   set -e
-  printf "\n\n############### Restart container ###############\n\n"
+
+  if $restart; then
+    if [ -f "$pidFile" ]; then
+      rm -f "$pidFile"
+      printf "\nContainer exited. Will restart in 7 seconds...\n"
+      sleep 7
+    fi
+    printf "\n\n############### Restart container ###############\n\n"
+  fi
 done
 `
 
