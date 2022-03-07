@@ -13,6 +13,8 @@ import (
 type PurgeOptions struct {
 	All bool `long:"all" description:"Deploy all deployments"`
 
+	Sequential bool `long:"sequential" description:"Sequentially purges the deployments"`
+
 	// Extra flags here to add a deployment
 }
 

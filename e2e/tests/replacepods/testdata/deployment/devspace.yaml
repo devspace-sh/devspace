@@ -24,5 +24,3 @@ dev:
         - op: add
           path: spec.containers[0].workingDir
           value: "/workdir"
-  terminal:
-    imageSelector: ${IMAGE}

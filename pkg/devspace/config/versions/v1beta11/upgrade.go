@@ -99,7 +99,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		}
 	}
 
-	prependPurgePipeline := ""
+	prependPurgePipeline := "stop_dev --all\n"
 	if len(concurrentDeployments) > 0 {
 		prependPurgePipeline += "purge_deployments " + strings.Join(concurrentDeployments, " ") + "\n"
 		deployPipeline += "create_deployments " + strings.Join(concurrentDeployments, " ") + "\n"

@@ -79,7 +79,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 			},
 			SkipPush: true,
 		}
-		err = devCmd.Run(f, nil)
+		err = devCmd.Run(f)
 		framework.ExpectError(err)
 
 		// check if files are correctly created
@@ -141,7 +141,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 		go func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
-			err = devCmd1.Run(f, nil)
+			err = devCmd1.Run(f)
 			framework.ExpectNoError(err)
 		}()
 
@@ -190,7 +190,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 		go func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
-			err = devCmd2.Run(f, nil)
+			err = devCmd2.Run(f)
 
 			framework.ExpectNoError(err)
 		}()

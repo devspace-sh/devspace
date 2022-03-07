@@ -135,15 +135,15 @@ func updateNeeded(ctx *devspacecontext.Context, deployment *appsv1.Deployment, d
 		return false, errors.Wrap(err, "hash config")
 	}
 
+	err = scaleDownTarget(ctx, target)
+	if err != nil {
+		ctx.Log.Warnf("Error scaling down target: %v", err)
+	}
+
 	// don't update if pod spec & config hash are the same
 	if apiequality.Semantic.DeepEqual(newDeployment.Spec.Template, deployment.Spec.Template) && configHash == deployment.Annotations[DevPodConfigHashAnnotation] {
 		// make sure target is downscaled
 		ctx.Log.Debugf("No changes required in replaced deployment %s", deployment.Name)
-		err = scaleDownTarget(ctx, target)
-		if err != nil {
-			ctx.Log.Warnf("Error scaling down target: %v", err)
-		}
-
 		return false, nil
 	}
 
@@ -157,11 +157,6 @@ func updateNeeded(ctx *devspacecontext.Context, deployment *appsv1.Deployment, d
 		return false, err
 	} else if string(patchBytes) == "{}" {
 		ctx.Log.Debugf("No changes required in replaced deployment %s", deployment.Name)
-		err = scaleDownTarget(ctx, target)
-		if err != nil {
-			ctx.Log.Warnf("Error scaling down target: %v", err)
-		}
-
 		return false, nil
 	}
 

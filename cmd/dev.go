@@ -94,11 +94,12 @@ Starts your project in development mode:
 Open terminal instead of logs:
 - Use "devspace dev -t" for opening a terminal
 #######################################################`,
+		Args: cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			// Print upgrade message if new version available
 			upgrade.PrintUpgradeMessage()
 			plugin.SetPluginCommand(cobraCmd, args)
-			return cmd.Run(f, args)
+			return cmd.Run(f)
 		},
 	}
 
@@ -134,7 +135,7 @@ Open terminal instead of logs:
 }
 
 // Run executes the command logic
-func (cmd *DevCmd) Run(f factory.Factory, args []string) error {
+func (cmd *DevCmd) Run(f factory.Factory) error {
 	if cmd.Ctx == nil {
 		var cancelFn context.CancelFunc
 		cmd.Ctx, cancelFn = context.WithCancel(context.Background())

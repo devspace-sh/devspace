@@ -136,6 +136,7 @@ func buildDeployment(ctx *devspacecontext.Context, name string, target runtime.O
 	if podTemplate.Annotations == nil {
 		podTemplate.Annotations = map[string]string{}
 	}
+	deployment.Labels[selector.ReplacedLabel] = "true"
 	podTemplate.Labels[selector.ReplacedLabel] = "true"
 	imageSelector, err := hashImageSelector(ctx, devPod)
 	if err != nil {
