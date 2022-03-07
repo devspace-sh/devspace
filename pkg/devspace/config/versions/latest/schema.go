@@ -972,6 +972,7 @@ type Terminal struct {
 
 	// Needed to turn pod replace off
 	DisableReplace bool `yaml:"disableReplace,omitempty" json:"disableReplace,omitempty"`
+	DisableScreen  bool `yaml:"disableScreen,omitempty" json:"disableScreen,omitempty"`
 }
 
 // PodPatch will patch a pod's owning ReplicaSet, Deployment or StatefulSet with the givens patches or image

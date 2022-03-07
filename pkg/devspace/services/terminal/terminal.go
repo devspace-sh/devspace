@@ -126,6 +126,41 @@ func StartTerminal(
 		interruptpkg.Global.Stop()
 		defer interruptpkg.Global.Start()
 
+		// try to install screen
+		useScreen := false
+		if !devContainer.Terminal.DisableScreen {
+			bufferStdout, bufferStderr, err := ctx.KubeClient.ExecBuffered(ctx.Context, container.Pod, container.Container.Name, []string{
+				"sh",
+				"-c",
+				`if ! command -v screen; then
+  if command -v apk; then
+    apk add --no-cache screen
+  elif command -v apt-get; then
+    apt-get -qq update && apt-get install -y screen && rm -rf /var/lib/apt/lists/*
+  else
+    echo "Couldn't install screen using neither apt-get nor apk."
+    exit 1
+  fi
+fi
+if command -v screen; then
+  echo "Screen installed successfully."
+else
+  echo "Couldn't find screen, need to fallback."
+  exit 1
+fi`,
+			}, nil)
+			if err != nil {
+				ctx.Log.Debugf("Error installing screen: %s %s %v", string(bufferStdout), string(bufferStderr), err)
+			} else {
+				useScreen = true
+			}
+		}
+		if useScreen {
+			newCommand := []string{"screen", "-dRSq", "dev"}
+			newCommand = append(newCommand, command...)
+			command = newCommand
+		}
+
 		errChan <- ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
 			Pod:         container.Pod,
 			Container:   container.Container.Name,
