@@ -2,6 +2,9 @@ package pipeline
 
 import (
 	"fmt"
+	"strings"
+	"sync"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
@@ -12,8 +15,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"github.com/pkg/errors"
-	"strings"
-	"sync"
 )
 
 func NewPipeline(name string, devPodManager devpod.Manager, dependencyRegistry registry.DependencyRegistry, config *latest.Pipeline, options types.Options) types.Pipeline {

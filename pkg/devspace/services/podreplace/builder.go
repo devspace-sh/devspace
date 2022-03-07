@@ -3,6 +3,8 @@ package podreplace
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
@@ -18,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"strings"
 )
 
 var (
@@ -46,10 +47,11 @@ func buildDeployment(ctx *devspacecontext.Context, name string, target runtime.O
 
 	podTemplate := &corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{},
-			Labels:      map[string]string{},
+			Annotations: make(map[string]string),
+			Labels:      make(map[string]string),
 		},
 	}
+
 	switch t := target.(type) {
 	case *appsv1.ReplicaSet:
 		deployment.Annotations[TargetNameAnnotation] = t.Name
@@ -437,11 +439,16 @@ func applyPodPatches(pod *corev1.PodTemplateSpec, devPod *latest.DevPod) (*corev
 		return nil, err
 	}
 
-	retPod := &corev1.PodTemplateSpec{}
+	retPod := &corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: make(map[string]string),
+			Labels:      make(map[string]string),
+		},
+	}
+
 	err = json.Unmarshal(rawJSON, retPod)
 	if err != nil {
 		return nil, err
 	}
-
 	return retPod, nil
 }

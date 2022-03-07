@@ -2,14 +2,15 @@ package dependency
 
 import (
 	"fmt"
-	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/devspace/dependency/graph"
-	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/graph"
+	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
