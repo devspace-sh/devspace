@@ -40,6 +40,9 @@ type Pipeline interface {
 	// DependencyRegistry retrieves the dependency registry
 	DependencyRegistry() registry.DependencyRegistry
 
+	// Parent retrieves the pipeline parent or nil if there is non
+	Parent() Pipeline
+
 	// Dependencies retrieves the currently created dependencies
 	Dependencies() map[string]Pipeline
 

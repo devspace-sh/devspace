@@ -68,8 +68,8 @@ type DevPodCache struct {
 	// Namespace is the namespace where the replace happened
 	Namespace string `yaml:"namespace,omitempty"`
 
-	// ReplicaSet is the replica set that was created by DevSpace
-	ReplicaSet string `yaml:"replicaSet,omitempty"`
+	// Deployment is the deployment that was created by DevSpace
+	Deployment string `yaml:"deployment,omitempty"`
 
 	// TargetKind is the kind of the original parent
 	TargetKind string `yaml:"parentKind,omitempty"`

@@ -165,7 +165,7 @@ func Parse(data map[string]interface{}, log log.Logger) (*latest.Config, error) 
 	decoder.KnownFields(true)
 	err = decoder.Decode(latestConfig)
 	if err != nil {
-		return nil, errors.Errorf("Error loading config: %v", err)
+		return nil, errors.Errorf("error loading config: %v", err)
 	}
 
 	// Upgrade config to latest

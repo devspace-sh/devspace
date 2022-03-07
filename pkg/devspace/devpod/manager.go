@@ -13,9 +13,14 @@ import (
 )
 
 type Options struct {
+	ContinueOnTerminalExit bool `long:"continue-on-terminal-exit" description:"Continue on terminal exit"`
+
 	DisableSync           bool `long:"disable-sync" description:"If enabled will not start any sync configuration"`
 	DisablePortForwarding bool `long:"disable-port-forwarding" description:"If enabled will not start any port forwarding configuration"`
 	DisablePodReplace     bool `long:"disable-pod-replace" description:"If enabled will not replace any pods"`
+
+	// KillApplication kills the whole pipeline including all dev pods
+	KillApplication func()
 }
 
 type Manager interface {

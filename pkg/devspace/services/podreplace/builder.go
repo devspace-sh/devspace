@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ghodss/yaml"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -20,22 +21,26 @@ import (
 	"strings"
 )
 
-func buildReplicaSet(ctx *devspacecontext.Context, name string, target runtime.Object, devPod *latest.DevPod) (*appsv1.ReplicaSet, error) {
+var (
+	restartHelperAnnotation = "devspace.sh/restart-helper-"
+
+	mode = int32(0777)
+)
+
+func buildDeployment(ctx *devspacecontext.Context, name string, target runtime.Object, devPod *latest.DevPod) (*appsv1.Deployment, error) {
 	configHash, err := hashConfig(devPod)
 	if err != nil {
 		return nil, errors.Wrap(err, "hash config")
 	}
 
-	replicaSet := &appsv1.ReplicaSet{
+	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: target.(metav1.Object).GetNamespace(),
 			Annotations: map[string]string{
 				DevPodConfigHashAnnotation: configHash,
 			},
-			Labels: map[string]string{
-				ReplicaSetLabel: "true",
-			},
+			Labels: map[string]string{},
 		},
 	}
 
@@ -47,20 +52,20 @@ func buildReplicaSet(ctx *devspacecontext.Context, name string, target runtime.O
 	}
 	switch t := target.(type) {
 	case *appsv1.ReplicaSet:
-		replicaSet.Annotations[TargetNameAnnotation] = t.Name
-		replicaSet.Annotations[TargetKindAnnotation] = "ReplicaSet"
+		deployment.Annotations[TargetNameAnnotation] = t.Name
+		deployment.Annotations[TargetKindAnnotation] = "ReplicaSet"
 		podTemplate.Labels = t.Spec.Template.Labels
 		podTemplate.Annotations = t.Spec.Template.Annotations
 		podTemplate.Spec = *t.Spec.Template.Spec.DeepCopy()
 	case *appsv1.Deployment:
-		replicaSet.Annotations[TargetNameAnnotation] = t.Name
-		replicaSet.Annotations[TargetKindAnnotation] = "Deployment"
+		deployment.Annotations[TargetNameAnnotation] = t.Name
+		deployment.Annotations[TargetKindAnnotation] = "Deployment"
 		podTemplate.Labels = t.Spec.Template.Labels
 		podTemplate.Annotations = t.Spec.Template.Annotations
 		podTemplate.Spec = *t.Spec.Template.Spec.DeepCopy()
 	case *appsv1.StatefulSet:
-		replicaSet.Annotations[TargetNameAnnotation] = t.Name
-		replicaSet.Annotations[TargetKindAnnotation] = "StatefulSet"
+		deployment.Annotations[TargetNameAnnotation] = t.Name
+		deployment.Annotations[TargetKindAnnotation] = "StatefulSet"
 		podTemplate.Labels = t.Spec.Template.Labels
 		podTemplate.Annotations = t.Spec.Template.Annotations
 		podTemplate.Spec = *t.Spec.Template.Spec.DeepCopy()
@@ -104,34 +109,14 @@ func buildReplicaSet(ctx *devspacecontext.Context, name string, target runtime.O
 
 	// check if terminal and modify pod
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
-		if devContainer.Terminal == nil || devContainer.Terminal.Disabled || devContainer.Terminal.DisableReplace {
-			return true
-		}
-
-		if devContainer.Container == "" && len(podTemplate.Spec.Containers) > 1 {
-			names := []string{}
-			for _, c := range podTemplate.Spec.Containers {
-				names = append(names, c.Name)
-			}
-
-			err = fmt.Errorf("couldn't open terminal as multiple containers were found %s, but no containerName was specified", strings.Join(names, " "))
+		err = modifyDevContainer(devPod, devContainer, podTemplate)
+		if err != nil {
 			return false
 		}
-
-		for i, con := range podTemplate.Spec.Containers {
-			if devContainer.Container == "" || con.Name == devContainer.Container {
-				podTemplate.Spec.Containers[i].ReadinessProbe = nil
-				podTemplate.Spec.Containers[i].StartupProbe = nil
-				podTemplate.Spec.Containers[i].LivenessProbe = nil
-				podTemplate.Spec.Containers[i].Command = []string{"sleep", "1000000000"}
-				podTemplate.Spec.Containers[i].Args = []string{}
-			}
-		}
-
-		return false
+		return true
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "apply terminal")
+		return nil, err
 	}
 
 	// replace paths
@@ -157,11 +142,11 @@ func buildReplicaSet(ctx *devspacecontext.Context, name string, target runtime.O
 		podTemplate.Annotations[selector.ImageSelectorAnnotation] = imageSelector
 	}
 	if len(containers) > 0 {
-		replicaSet.Annotations[selector.MatchedContainerAnnotation] = strings.Join(containers, ";")
+		deployment.Annotations[selector.MatchedContainerAnnotation] = strings.Join(containers, ";")
 		podTemplate.Annotations[selector.MatchedContainerAnnotation] = strings.Join(containers, ";")
 	}
 
-	replicaSet.Spec = appsv1.ReplicaSetSpec{
+	deployment.Spec = appsv1.DeploymentSpec{
 		Selector: &metav1.LabelSelector{
 			MatchLabels: podTemplate.ObjectMeta.Labels,
 		},
@@ -174,7 +159,164 @@ func buildReplicaSet(ctx *devspacecontext.Context, name string, target runtime.O
 		ctx.Log.Debugf("Replaced pod spec: \n%v\n", string(out))
 	}
 
-	return replicaSet, nil
+	return deployment, nil
+}
+
+func modifyDevContainer(devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+	err := replaceTerminal(devContainer, podTemplate)
+	if err != nil {
+		return errors.Wrap(err, "replace terminal")
+	}
+
+	err = replaceEnv(devContainer, podTemplate)
+	if err != nil {
+		return errors.Wrap(err, "replace env")
+	}
+
+	err = replaceCommand(devPod, devContainer, podTemplate)
+	if err != nil {
+		return errors.Wrap(err, "replace entrypoint")
+	}
+
+	return nil
+}
+
+func replaceCommand(devPod *latest.DevPod, devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+	// replace with DevSpace helper
+	injectRestartHelper := false
+	if !devContainer.DisableRestartHelper {
+		for _, s := range devContainer.Sync {
+			if s.OnUpload != nil && s.OnUpload.RestartContainer {
+				injectRestartHelper = true
+			}
+		}
+	}
+	if len(devContainer.Command) == 0 && injectRestartHelper {
+		return fmt.Errorf("if you would like DevSpace to restart the container after uploading a change, please specify the entrypoint that should get restarted in dev.[%s].command", devPod.Name)
+	}
+	if !injectRestartHelper && len(devContainer.Command) == 0 && devContainer.Args == nil {
+		return nil
+	}
+
+	index, container, err := getPodTemplateContainer(devContainer, podTemplate)
+	if err != nil {
+		return err
+	}
+
+	// should we inject devspace restart helper?
+	if injectRestartHelper {
+		annotationName := restartHelperAnnotation + container.Name
+		if podTemplate.Annotations == nil {
+			podTemplate.Annotations = map[string]string{}
+		}
+		restartHelperString, err := restart.LoadRestartHelper(devContainer.RestartHelperPath)
+		if err != nil {
+			return errors.Wrap(err, "load restart helper")
+		}
+		podTemplate.Annotations[annotationName] = restartHelperString
+
+		volumeName := "devspace-restart-" + container.Name
+		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, corev1.Volume{
+			Name: volumeName,
+			VolumeSource: corev1.VolumeSource{
+				DownwardAPI: &corev1.DownwardAPIVolumeSource{
+					DefaultMode: &mode,
+					Items: []corev1.DownwardAPIVolumeFile{
+						{
+							Path: restart.ScriptName,
+							FieldRef: &corev1.ObjectFieldSelector{
+								APIVersion: "v1",
+								FieldPath:  "metadata.annotations['" + annotationName + "']",
+							},
+							Mode: &mode,
+						},
+					},
+				},
+			},
+		})
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+			Name:      volumeName,
+			ReadOnly:  true,
+			SubPath:   restart.ScriptName,
+			MountPath: restart.ScriptPath,
+		})
+
+		container.Command = []string{restart.ScriptPath}
+		container.Command = append(container.Command, devContainer.Command...)
+		if devContainer.Args != nil {
+			container.Args = devContainer.Args
+		}
+		podTemplate.Spec.Containers[index] = *container
+		return nil
+	}
+
+	if len(devContainer.Command) > 0 {
+		container.Command = devContainer.Command
+	}
+	if devContainer.Args != nil {
+		container.Args = devContainer.Args
+	}
+	podTemplate.Spec.Containers[index] = *container
+	return nil
+}
+
+func replaceEnv(devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+	if len(devContainer.Env) == 0 {
+		return nil
+	}
+
+	index, container, err := getPodTemplateContainer(devContainer, podTemplate)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range devContainer.Env {
+		container.Env = append(container.Env, corev1.EnvVar{
+			Name:  v.Name,
+			Value: v.Value,
+		})
+	}
+
+	podTemplate.Spec.Containers[index] = *container
+	return nil
+}
+
+func replaceTerminal(devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+	if devContainer.Terminal == nil || devContainer.Terminal.Disabled || devContainer.Terminal.DisableReplace {
+		return nil
+	}
+
+	index, container, err := getPodTemplateContainer(devContainer, podTemplate)
+	if err != nil {
+		return err
+	}
+
+	container.ReadinessProbe = nil
+	container.StartupProbe = nil
+	container.LivenessProbe = nil
+	container.Command = []string{"sleep", "1000000000"}
+	container.Args = []string{}
+	podTemplate.Spec.Containers[index] = *container
+	return nil
+}
+
+func getPodTemplateContainer(devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) (int, *corev1.Container, error) {
+	if devContainer.Container == "" && len(podTemplate.Spec.Containers) > 1 {
+		names := []string{}
+		for _, c := range podTemplate.Spec.Containers {
+			names = append(names, c.Name)
+		}
+
+		return 0, nil, fmt.Errorf("couldn't modify pod as multiple containers were found %s, but no containerName was specified", strings.Join(names, " "))
+	}
+
+	for i, con := range podTemplate.Spec.Containers {
+		if devContainer.Container == "" || con.Name == devContainer.Container {
+			return i, &con, nil
+		}
+	}
+
+	return 0, nil, fmt.Errorf("couldn't find container %s", devContainer.Container)
 }
 
 func hashConfig(replacePod *latest.DevPod) (string, error) {

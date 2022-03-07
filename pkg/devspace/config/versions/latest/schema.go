@@ -750,6 +750,7 @@ type KubectlConfig struct {
 
 type DevPod struct {
 	Name          string            `yaml:"name,omitempty" json:"name,omitempty"`
+	Pod           string            `yaml:"pod,omitempty" json:"pod,omitempty"`
 	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
@@ -770,14 +771,24 @@ type DevContainer struct {
 	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
 	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
 
-	PortMappingsReverse []*PortMapping   `yaml:"reverseForward,omitempty" json:"reverseForward,omitempty"`
-	Container           string           `yaml:"container,omitempty" json:"container,omitempty"`
-	Terminal            *Terminal        `yaml:"terminal,omitempty" json:"terminal,omitempty"`
-	Logs                *Logs            `yaml:"logs,omitempty" json:"logs,omitempty"`
-	Attach              *Attach          `yaml:"attach,omitempty" json:"attach,omitempty"`
-	ReplaceImage        string           `yaml:"replaceImage,omitempty" json:"replaceImage,omitempty"`
-	PersistPaths        []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
-	Sync                []*SyncConfig    `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
+	PortMappingsReverse  []*PortMapping   `yaml:"reverseForward,omitempty" json:"reverseForward,omitempty"`
+	Container            string           `yaml:"container,omitempty" json:"container,omitempty"`
+	Command              []string         `yaml:"command,omitempty" json:"command,omitempty"`
+	Args                 []string         `yaml:"args,omitempty" json:"args,omitempty"`
+	Env                  []EnvVar         `yaml:"env,omitempty" json:"env,omitempty"`
+	RestartHelperPath    string           `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
+	DisableRestartHelper bool             `yaml:"disableRestartHelper,omitempty" json:"disableRestartHelper,omitempty"`
+	Terminal             *Terminal        `yaml:"terminal,omitempty" json:"terminal,omitempty"`
+	Logs                 *Logs            `yaml:"logs,omitempty" json:"logs,omitempty"`
+	Attach               *Attach          `yaml:"attach,omitempty" json:"attach,omitempty"`
+	ReplaceImage         string           `yaml:"replaceImage,omitempty" json:"replaceImage,omitempty"`
+	PersistPaths         []PersistentPath `yaml:"persistPaths,omitempty" json:"persistPaths,omitempty"`
+	Sync                 []*SyncConfig    `yaml:"sync,omitempty" json:"sync,omitempty" patchStrategy:"merge" patchMergeKey:"localSubPath"`
+}
+
+type EnvVar struct {
+	Name  string `yaml:"name" json:"name"`
+	Value string `yaml:"value" json:"value"`
 }
 
 type Attach struct {

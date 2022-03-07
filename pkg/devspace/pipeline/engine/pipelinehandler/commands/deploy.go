@@ -76,13 +76,12 @@ func applySetValues(ctx *devspacecontext.Context, name, objName string, set, set
 		return nil, err
 	}
 
+	if rawConfig[name] == nil {
+		rawConfig[name] = map[string]interface{}{}
+	}
 	_, ok := rawConfig[name].(map[string]interface{})
 	if !ok {
 		return ctx, nil
-	}
-
-	if rawConfig[name] == nil {
-		rawConfig[name] = map[string]interface{}{}
 	}
 	if rawConfig[name].(map[string]interface{})[objName] == nil {
 		rawConfig[name].(map[string]interface{})[objName] = map[string]interface{}{}

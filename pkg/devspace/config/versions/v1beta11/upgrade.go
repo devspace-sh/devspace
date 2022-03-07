@@ -515,6 +515,13 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 		}
 	}
 
+	// disable sync replace
+	for k := range devPods {
+		for i := range devPods[k].Containers {
+			devPods[k].Containers[i].DisableRestartHelper = true
+		}
+	}
+
 	// flatten dev containers
 	for k := range devPods {
 		if len(devPods[k].Containers) == 1 {

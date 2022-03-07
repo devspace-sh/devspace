@@ -327,36 +327,6 @@ func validateImages(config *latest.Config) error {
 	return nil
 }
 
-func isDevPodUnique(index string, rp *latest.DevPod, rps map[string]*latest.DevPod) bool {
-	for i, r := range rps {
-		if i == index {
-			continue
-		}
-
-		if r.ImageSelector != "" && r.ImageSelector == rp.ImageSelector {
-			return false
-		} else if len(r.LabelSelector) > 0 && len(rp.LabelSelector) > 0 && strMapEquals(r.LabelSelector, rp.LabelSelector) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func strMapEquals(a, b map[string]string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for k, v := range a {
-		if w, ok := b[k]; !ok || v != w {
-			return false
-		}
-	}
-
-	return true
-}
-
 func validateDev(config *latest.Config) error {
 	for devPodName, devPod := range config.Dev {
 		if devPodName == "" {
@@ -365,11 +335,14 @@ func validateDev(config *latest.Config) error {
 		if encoding.IsUnsafeName(devPodName) {
 			return fmt.Errorf("dev[%s] has to match the following regex: %v", devPodName, encoding.UnsafeNameRegEx.String())
 		}
-		if len(devPod.LabelSelector) == 0 && devPod.ImageSelector == "" {
-			return errors.Errorf("dev[%s]: image selector and label selector are nil", devPodName)
+		if len(devPod.LabelSelector) == 0 && devPod.ImageSelector == "" && devPod.Pod == "" {
+			return errors.Errorf("dev[%s]: image selector, pod and label selector are nil", devPodName)
 		}
 
 		definedSelectors := 0
+		if devPod.Pod != "" {
+			definedSelectors++
+		}
 		if devPod.ImageSelector != "" {
 			definedSelectors++
 		}
@@ -377,10 +350,7 @@ func validateDev(config *latest.Config) error {
 			definedSelectors++
 		}
 		if definedSelectors > 1 {
-			return errors.Errorf("dev[%s]: image selector and label selector cannot both be defined", devPodName)
-		}
-		if !isDevPodUnique(devPodName, devPod, config.Dev) {
-			return errors.Errorf("dev[%s]: image selector or label selector is not unique", devPodName)
+			return errors.Errorf("dev[%s]: image selector, pod and label selector cannot all be defined", devPodName)
 		}
 
 		err := validateDevContainer(fmt.Sprintf("dev[%s]", devPodName), &devPod.DevContainer, false)

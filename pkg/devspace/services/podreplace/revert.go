@@ -24,11 +24,11 @@ func (p *replacer) RevertReplacePod(ctx *devspacecontext.Context, devPodCache *r
 
 	// delete replica set & scale up parent
 	deleted := false
-	if devPodCache.ReplicaSet != "" {
-		err := ctx.KubeClient.KubeClient().AppsV1().ReplicaSets(namespace).Delete(ctx.Context, devPodCache.ReplicaSet, metav1.DeleteOptions{})
+	if devPodCache.Deployment != "" {
+		err := ctx.KubeClient.KubeClient().AppsV1().Deployments(namespace).Delete(ctx.Context, devPodCache.Deployment, metav1.DeleteOptions{})
 		if err != nil {
 			if !kerrors.IsNotFound(err) {
-				return false, errors.Wrap(err, "delete devspace replica set")
+				return false, errors.Wrap(err, "delete devspace deployment")
 			}
 		} else {
 			deleted = true

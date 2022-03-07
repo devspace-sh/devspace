@@ -3,14 +3,13 @@ package command
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // streamCommand is the a command whose output is streamed to a log
@@ -117,7 +116,7 @@ func CommandWithEnv(ctx context.Context, dir string, stdout io.Writer, stderr io
 	err := newStreamCommand(cmd, args).RunWithEnv(ctx, dir, stdout, stderr, stdin, extraEnvVars)
 	if err != nil {
 		if errr, ok := err.(*exec.ExitError); ok {
-			return errors.Errorf("error executing '%s %s': code: %d, error: %s, %s", cmd, strings.Join(args, " "), errr.ExitCode(), string(errr.Stderr), errr)
+			return fmt.Errorf("error executing '%s %s': %s", cmd, strings.Join(args, " "), string(errr.Stderr))
 		}
 
 		return err

@@ -7,13 +7,13 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	interruptpkg "github.com/loft-sh/devspace/pkg/util/interrupt"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
+	"github.com/mgutz/ansi"
 	"github.com/sirupsen/logrus"
 	"io"
 	kubectlExec "k8s.io/client-go/util/exec"
 	"time"
-
-	"github.com/mgutz/ansi"
 )
 
 // StartTerminalFromCMD opens a new terminal
@@ -109,6 +109,10 @@ func StartTerminal(
 			return
 		}
 	}()
+
+	before := log.GetBaseInstance().GetLevel()
+	log.GetBaseInstance().SetLevel(logrus.PanicLevel)
+	defer log.GetBaseInstance().SetLevel(before)
 
 	command := getCommand(devContainer)
 	container, err := selector.WithContainer(devContainer.Container).SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)

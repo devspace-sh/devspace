@@ -42,9 +42,14 @@ type pipeline struct {
 	dependencyRegistry registry.DependencyRegistry
 
 	dependencies map[string]types.Pipeline
+	parent       types.Pipeline
 
 	main *Job
 	jobs map[string]*Job
+}
+
+func (p *pipeline) Parent() types.Pipeline {
+	return p.parent
 }
 
 func (p *pipeline) Close() error {
@@ -160,12 +165,12 @@ func (p *pipeline) StartNewDependencies(ctx *devspacecontext.Context, dependenci
 
 func (p *pipeline) startNewDependency(ctx *devspacecontext.Context, dependency types2.Dependency, options types.DependencyOptions) error {
 	// find the dependency pipeline to execute
-	pipeline := options.Pipeline
-	if pipeline == "" {
+	executePipeline := options.Pipeline
+	if executePipeline == "" {
 		if dependency.DependencyConfig().Pipeline != "" {
-			pipeline = dependency.DependencyConfig().Pipeline
+			executePipeline = dependency.DependencyConfig().Pipeline
 		} else {
-			pipeline = "deploy"
+			executePipeline = "deploy"
 		}
 	}
 
@@ -174,17 +179,18 @@ func (p *pipeline) startNewDependency(ctx *devspacecontext.Context, dependency t
 		pipelineConfig *latest.Pipeline
 		err            error
 	)
-	if dependency.Config().Config().Pipelines == nil || dependency.Config().Config().Pipelines[pipeline] == nil {
-		pipelineConfig, err = GetDefaultPipeline(pipeline)
+	if dependency.Config().Config().Pipelines == nil || dependency.Config().Config().Pipelines[executePipeline] == nil {
+		pipelineConfig, err = GetDefaultPipeline(executePipeline)
 		if err != nil {
 			return err
 		}
 	} else {
-		pipelineConfig = dependency.Config().Config().Pipelines[pipeline]
+		pipelineConfig = dependency.Config().Config().Pipelines[executePipeline]
 	}
 
 	dependencyDevPodManager := devpod.NewManager(p.devPodManager.Context())
 	pip := NewPipeline(dependency.Name(), dependencyDevPodManager, p.dependencyRegistry, pipelineConfig, p.options)
+	pip.(*pipeline).parent = p
 
 	p.m.Lock()
 	p.dependencies[dependency.Name()] = pip

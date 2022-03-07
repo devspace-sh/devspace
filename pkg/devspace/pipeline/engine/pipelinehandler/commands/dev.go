@@ -51,7 +51,21 @@ func StartDev(ctx *devspacecontext.Context, pipeline types.Pipeline, args []stri
 	} else {
 		return fmt.Errorf("either specify 'start_dev --all' or 'dev devConfig1 devConfig2'")
 	}
+	options.Options.KillApplication = func() {
+		killApplication(pipeline)
+	}
 	return pipeline.DevPodManager().StartMultiple(ctx, args, options.Options)
+}
+
+func killApplication(pipeline types.Pipeline) {
+	for pipeline.Parent() != nil {
+		pipeline = pipeline.Parent()
+	}
+
+	err := pipeline.Close()
+	if err != nil {
+		logpkg.GetInstance().Errorf("error closing pipeline: %v", err)
+	}
 }
 
 // StopDevOptions describe how deployments should get deployed
