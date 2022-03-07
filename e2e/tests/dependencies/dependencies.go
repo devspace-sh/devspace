@@ -2,6 +2,7 @@ package dependencies
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -40,7 +41,7 @@ var _ = DevSpaceDescribe("dependencies", func() {
 	})
 
 	ginkgo.It("should skip equal dependencies", func() {
-		ginkgo.Skip("Troubleshoot: Failed to deploy dep3 dependency.")
+		ginkgo.Skip("couldn't find pipeline")
 		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/overlapping")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -87,10 +88,11 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		// check if dependencies were loaded correctly
 		framework.ExpectEqual(len(dependencies), 1)
 		framework.ExpectEqual(dependencies[0].Name(), "flat2")
-		framework.ExpectEqual(config.Path(), "devspace.yaml")
+		framework.ExpectEqual(config.Path(), filepath.Join(tempDir, "devspace.yaml"))
 	})
 
 	ginkgo.It("should resolve dependencies with dev configuration and hooks", func() {
+		ginkgo.Skip("dependencies[*].dev.replacePods,dependencies[*].dev.sync and dependencies[*].dev.ports is not supported anymore in v6")
 		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/dev-sync")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -157,7 +159,7 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		framework.ExpectEqual(len(dependencies), 1)
 		framework.ExpectEqual(dependencies[0].Name(), "nested")
 		framework.ExpectEqual(len(dependencies[0].Config().Config().Deployments), 2)
-		framework.ExpectEqual(config.Path(), "activated.yaml")
+		framework.ExpectEqual(config.Path(), filepath.Join(tempDir, "activated.yaml"))
 	})
 
 	ginkgo.It("should resolve dependencies and deactivate activated dependency profiles with --disable-profile-activation", func() {
@@ -202,11 +204,12 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		_, _, err = framework.LoadConfig(f, kubeClient.Client(), filepath.Join(tempDir, "validate-error.yaml"))
-		framework.ExpectErrorMatch(err, "dependencies[0].profiles and dependencies[0].profile & dependencies[0].profileParents cannot be used together")
+		framework.ExpectErrorMatch(err, "dependencies[nested].profiles and dependencies[nested].profile & dependencies[nested].profileParents cannot be used together")
 	})
 
 	ginkgo.It("should resolve dependencies with dependencies.dev.replacePods", func() {
-		ginkgo.Skip("Troubleshoot:  Back-off pulling image username/app")
+		ginkgo.Skip(" couldn't find pipeline")
+		fmt.Println("dependencies[*].dev.replacePods,dependencies[*].dev.sync and dependencies[*].dev.ports is not supported anymore in v6")
 		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/dev-replacepods")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -281,6 +284,7 @@ var _ = DevSpaceDescribe("dependencies", func() {
 	})
 
 	ginkgo.It("should resolve cyclic dependencies", func() {
+		ginkgo.Skip(" dependencies[*].dev.replacePods,dependencies[*].dev.sync and dependencies[*].dev.ports is not supported anymore in v6")
 		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/cyclic")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
