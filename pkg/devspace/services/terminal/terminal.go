@@ -160,7 +160,7 @@ fi`,
 			}
 		}
 		if useScreen {
-			newCommand := []string{"screen", "-dRSq", "dev", "-h", "1000"}
+			newCommand := []string{"screen", "-dRSqL", "dev"}
 			newCommand = append(newCommand, command...)
 			command = newCommand
 		}
