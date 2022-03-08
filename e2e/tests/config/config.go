@@ -1864,7 +1864,7 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectEqual(deployment1.Name, "development1")
 		framework.ExpectEqual(deployment1.Helm.CleanupOnFail, false)
 		framework.ExpectEqual(deployment1.Helm.Timeout, "1000s")
-		gomega.Expect(*deployment1.Helm.ComponentChart).To(gomega.BeTrue())
+		gomega.Expect(deployment1.Helm).ToNot(gomega.BeNil())
 	})
 
 	ginkgo.It("should apply patch to some deployments using wildcard profile patches", func() {
@@ -1882,7 +1882,7 @@ var _ = DevSpaceDescribe("config", func() {
 		deployment1 := config.Config().Deployments["test"]
 		framework.ExpectEqual(deployment1.Name, "test")
 		gomega.Expect(deployment1.Kubectl).To(gomega.BeNil())
-		gomega.Expect(*deployment1.Helm.ComponentChart).To(gomega.BeTrue())
+		gomega.Expect(deployment1.Helm).ToNot(gomega.BeNil())
 
 		deployment2 := config.Config().Deployments["test2"]
 		framework.ExpectEqual(deployment2.Name, "test2")
@@ -1906,7 +1906,7 @@ var _ = DevSpaceDescribe("config", func() {
 		deployment1 := config.Config().Deployments["backend"]
 		framework.ExpectEqual(deployment1.Name, "backend")
 		gomega.Expect(deployment1.Kubectl).To(gomega.BeNil())
-		gomega.Expect(*deployment1.Helm.ComponentChart).To(gomega.BeTrue())
+		gomega.Expect(deployment1.Helm).ToNot(gomega.BeNil())
 	})
 
 	ginkgo.It("should apply patch even value is empty", func() {
@@ -1924,7 +1924,7 @@ var _ = DevSpaceDescribe("config", func() {
 		deployment1 := config.Config().Deployments["test-sigsegv"]
 		framework.ExpectEqual(deployment1.Name, "test-sigsegv")
 		gomega.Expect(deployment1.Kubectl).To(gomega.BeNil())
-		gomega.Expect(*deployment1.Helm.ComponentChart).To(gomega.BeTrue())
+		gomega.Expect(deployment1.Helm).ToNot(gomega.BeNil())
 	})
 
 	// regression test for issue: https://github.com/loft-sh/devspace/issues/1835
@@ -1953,6 +1953,6 @@ var _ = DevSpaceDescribe("config", func() {
 		framework.ExpectEqual(v["name"], "replace-0")
 
 		gomega.Expect(deployment.Kubectl).To(gomega.BeNil())
-		gomega.Expect(*deployment.Helm.ComponentChart).To(gomega.BeTrue())
+		gomega.Expect(deployment.Helm).ToNot(gomega.BeNil())
 	})
 })

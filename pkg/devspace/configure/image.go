@@ -314,10 +314,13 @@ func (m *manager) addPullSecretConfig(dockerClient docker.Client, image string) 
 				},
 			}
 
-			m.config.Vars = append(m.config.Vars, &latest.Variable{
+			if m.config.Vars == nil {
+				m.config.Vars = map[string]*latest.Variable{}
+			}
+			m.config.Vars[passwordVar] = &latest.Variable{
 				Name:     passwordVar,
 				Password: true,
-			})
+			}
 
 			m.localCache.SetVar(usernameVar, registryUsername)
 			m.localCache.SetVar(passwordVar, registryPassword)

@@ -277,10 +277,13 @@ func (cmd *InitCmd) Run(f factory.Factory) error {
 
 		if config.Images != nil && config.Images[imageName] != nil {
 			// Move full image name to variables
-			config.Vars = append(config.Vars, &latest.Variable{
+			if config.Vars == nil {
+				config.Vars = map[string]*latest.Variable{}
+			}
+			config.Vars[imageVarName] = &latest.Variable{
 				Name:  imageVarName,
 				Value: config.Images[imageName].Image,
-			})
+			}
 
 			// Use variable in images section
 			config.Images[imageName].Image = imageVar

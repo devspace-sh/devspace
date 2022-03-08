@@ -572,7 +572,7 @@ func (l *configLoader) applyProfiles(ctx context.Context, data map[string]interf
 	return data, nil
 }
 
-func (l *configLoader) newVariableResolver(localCache localcache.Cache, remoteCache remotecache.Cache, client kubectl.Client, options *ConfigOptions, vars []*latest.Variable, log log.Logger) variable.Resolver {
+func (l *configLoader) newVariableResolver(localCache localcache.Cache, remoteCache remotecache.Cache, client kubectl.Client, options *ConfigOptions, vars map[string]*latest.Variable, log log.Logger) variable.Resolver {
 	return variable.NewResolver(localCache, remoteCache, &variable.PredefinedVariableOptions{
 		ConfigPath: l.absConfigPath,
 		KubeClient: client,

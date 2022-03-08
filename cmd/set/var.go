@@ -82,14 +82,19 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 			return errors.Errorf("Unexpected variable format. Expected key=value, got %s", v)
 		} else if variable.IsPredefinedVariable(splitted[0]) {
 			return errors.Errorf("cannot set predefined variable %s", splitted[0])
-		} else if !variableParser.Used[splitted[0]] {
-			allowedVarsArr := []string{}
-			for k := range variableParser.Used {
-				if variable.IsPredefinedVariable(k) {
-					continue
-				}
+		}
 
-				allowedVarsArr = append(allowedVarsArr, k)
+		found := false
+		for _, u := range variableParser.Used {
+			if u.Name == splitted[0] {
+				found = true
+				break
+			}
+		}
+		if !found {
+			allowedVarsArr := []string{}
+			for _, v := range variableParser.Used {
+				allowedVarsArr = append(allowedVarsArr, v.Name)
 			}
 
 			return errors.Errorf("variable %s is not allowed. Allowed vars: %+v", splitted[0], allowedVarsArr)
@@ -105,7 +110,7 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 		}
 
 		// only overwrite it if the flag is true and value is not set yet
-		_, found := c.LocalCache().GetVar(splitted[0])
+		_, found = c.LocalCache().GetVar(splitted[0])
 		if cmd.Overwrite || !found {
 			c.LocalCache().SetVar(splitted[0], splitted[1])
 		} else {
@@ -124,8 +129,8 @@ func (cmd *varCmd) RunSetVar(f factory.Factory, cobraCmd *cobra.Command, args []
 }
 
 type variableParser struct {
-	Definitions []*latest.Variable
-	Used        map[string]bool
+	Definitions map[string]*latest.Variable
+	Used        []*latest.Variable
 }
 
 func (v *variableParser) Parse(ctx context.Context, originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, map[string]interface{}, error) {

@@ -81,20 +81,13 @@ func Validate(config *latest.Config) error {
 	return nil
 }
 
-func validateVars(vars []*latest.Variable) error {
+func validateVars(vars map[string]*latest.Variable) error {
 	for i, v := range vars {
-		if v.Name == "" {
+		if i == "" {
 			return fmt.Errorf("vars[*].name has to be specified")
 		}
 		if encoding.IsUnsafeUpperName(v.Name) {
-			return fmt.Errorf("vars[%d].name %s has to match the following regex: %v", i, v.Name, encoding.UnsafeUpperNameRegEx.String())
-		}
-
-		// make sure is unique
-		for j, v2 := range vars {
-			if i != j && v.Name == v2.Name {
-				return fmt.Errorf("multiple definitions for variable %s found", v.Name)
-			}
+			return fmt.Errorf("vars[%s].name %s has to match the following regex: %v", i, v.Name, encoding.UnsafeUpperNameRegEx.String())
 		}
 	}
 

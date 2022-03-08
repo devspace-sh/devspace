@@ -4,6 +4,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
+	"strings"
 )
 
 // Version is the current api version
@@ -52,7 +53,7 @@ type Config struct {
 	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
 
 	// Vars are config variables that can be used inside other config sections to replace certain values dynamically
-	Vars []*Variable `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Vars map[string]*Variable `yaml:"vars,omitempty" json:"vars,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 
 	// PullSecrets are image pull secrets that will be created by devspace in the target namespace
 	// during devspace dev or devspace deploy
@@ -1155,6 +1156,23 @@ type Variable struct {
 	// Commands are additional commands that can be used to run a different command on a different operating
 	// system.
 	Commands []VariableCommand `yaml:"commands,omitempty" json:"commands,omitempty"`
+}
+
+func (v *Variable) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// try string next
+	varString := ""
+	err := unmarshal(&varString)
+	if err != nil {
+		return unmarshal(v)
+	}
+	if strings.HasPrefix(varString, "$(") && strings.HasSuffix(varString, ")") {
+		varString = strings.TrimPrefix(strings.TrimSuffix(varString, ")"), "$(")
+		v.Command = varString
+		return nil
+	}
+
+	v.Value = varString
+	return nil
 }
 
 type VariableCommand struct {

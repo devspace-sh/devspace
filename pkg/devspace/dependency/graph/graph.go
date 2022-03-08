@@ -11,12 +11,25 @@ type Graph struct {
 	Nodes map[string]*Node
 
 	Root *Node
+
+	item string
 }
 
 func NewGraph(root *Node) *Graph {
 	graph := &Graph{
 		Nodes: make(map[string]*Node),
 		Root:  root,
+	}
+
+	graph.Nodes[root.ID] = root
+	return graph
+}
+
+func NewGraphOf(root *Node, item string) *Graph {
+	graph := &Graph{
+		Nodes: make(map[string]*Node),
+		Root:  root,
+		item:  item,
 	}
 
 	graph.Nodes[root.ID] = root
@@ -142,6 +155,7 @@ func (g *Graph) AddEdge(fromID string, toID string) error {
 	if path != nil {
 		return &CyclicError{
 			path: path,
+			What: g.item,
 		}
 	}
 

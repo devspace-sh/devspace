@@ -27,13 +27,13 @@ type Resolver interface {
 	ConvertFlags(flags []string) (map[string]interface{}, error)
 
 	// DefinedVars returns the defined variables
-	DefinedVars() []*latest.Variable
+	DefinedVars() map[string]*latest.Variable
 
 	// UpdateVars sets the defined variables to use in the resolver
-	UpdateVars(vars []*latest.Variable)
+	UpdateVars(vars map[string]*latest.Variable)
 
 	// FindVariables returns all variable names that were found in the given map
-	FindVariables(haystack interface{}) (map[string]bool, error)
+	FindVariables(haystack interface{}) ([]*latest.Variable, error)
 
 	// FillVariables finds the used variables first and then fills in those in the haystack
 	FillVariables(ctx context.Context, haystack interface{}) (interface{}, error)

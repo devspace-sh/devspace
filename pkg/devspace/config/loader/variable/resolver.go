@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
+	"github.com/loft-sh/devspace/pkg/devspace/dependency/graph"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -21,7 +22,7 @@ import (
 var AlwaysResolvePredefinedVars = []string{"devspace.version", "devspace.random", "devspace.profile", "devspace.userHome", "devspace.timestamp", "devspace.context", "devspace.namespace"}
 
 // NewResolver creates a new resolver that caches resolved variables in memory and in the provided cache
-func NewResolver(localCache localcache.Cache, remoteCache remotecache.Cache, predefinedVariableOptions *PredefinedVariableOptions, vars []*latest.Variable, log log.Logger) Resolver {
+func NewResolver(localCache localcache.Cache, remoteCache remotecache.Cache, predefinedVariableOptions *PredefinedVariableOptions, vars map[string]*latest.Variable, log log.Logger) Resolver {
 	return &resolver{
 		memoryCache: map[string]interface{}{},
 		localCache:  localCache,
@@ -33,7 +34,7 @@ func NewResolver(localCache localcache.Cache, remoteCache remotecache.Cache, pre
 }
 
 type resolver struct {
-	vars        []*latest.Variable
+	vars        map[string]*latest.Variable
 	memoryCache map[string]interface{}
 	localCache  localcache.Cache
 	remoteCache remotecache.Cache
@@ -45,11 +46,11 @@ func varMatchFn(key, value string) bool {
 	return varspkg.VarMatchRegex.MatchString(value)
 }
 
-func (r *resolver) DefinedVars() []*latest.Variable {
+func (r *resolver) DefinedVars() map[string]*latest.Variable {
 	return r.vars
 }
 
-func (r *resolver) UpdateVars(vars []*latest.Variable) {
+func (r *resolver) UpdateVars(vars map[string]*latest.Variable) {
 	r.vars = vars
 }
 
@@ -96,10 +97,9 @@ func (r *resolver) replaceString(ctx context.Context, str string) (interface{}, 
 	})
 }
 
-func (r *resolver) FindVariables(haystack interface{}) (map[string]bool, error) {
+func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, error) {
 	// find out what vars are really used
 	varsUsed := map[string]bool{}
-
 	switch t := haystack.(type) {
 	case string:
 		_, _ = varspkg.ParseString(t, func(v string) (interface{}, error) {
@@ -120,22 +120,90 @@ func (r *resolver) FindVariables(haystack interface{}) (map[string]bool, error) 
 		}
 	}
 
-	// find out what vars are used within other vars definition
+	// add always resolve variables
 	for _, v := range r.vars {
-		varsUsedInDefinition := r.findVariablesInDefinition(v)
-		for usedVar := range varsUsedInDefinition {
-			varsUsed[usedVar] = true
+		if v.AlwaysResolve {
+			varsUsed[v.Name] = true
 		}
 	}
 
 	// filter out runtime environment variables
 	for k := range varsUsed {
-		if strings.HasPrefix(k, "runtime.") {
+		if r.vars[k] == nil || IsPredefinedVariable(k) || strings.HasPrefix(k, "runtime.") {
 			delete(varsUsed, k)
 		}
 	}
 
-	return varsUsed, nil
+	return r.orderVariables(varsUsed)
+}
+
+func (r *resolver) orderVariables(vars map[string]bool) ([]*latest.Variable, error) {
+	root := graph.NewNode("root", nil)
+	g := graph.NewGraphOf(root, "variable")
+	for name := range vars {
+		// check if has definition
+		definition, ok := r.vars[name]
+		if !ok {
+			continue
+		}
+
+		err := r.insertVariableGraph(g, definition)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// now get all the leaf nodes
+	retVars := []*latest.Variable{}
+	for {
+		nextLeaf := g.GetNextLeaf(root)
+		if nextLeaf == root {
+			break
+		}
+
+		retVars = append(retVars, nextLeaf.Data.(*latest.Variable))
+		err := g.RemoveNode(nextLeaf.ID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// reverse the slice
+	for i, j := 0, len(retVars)-1; i < j; i, j = i+1, j-1 {
+		retVars[i], retVars[j] = retVars[j], retVars[i]
+	}
+	return retVars, nil
+}
+
+func (r *resolver) insertVariableGraph(g *graph.Graph, node *latest.Variable) error {
+	if _, ok := g.Nodes[node.Name]; !ok {
+		_, err := g.InsertNodeAt("root", node.Name, node)
+		if err != nil {
+			return err
+		}
+	}
+
+	parents := r.findVariablesInDefinition(node)
+	for parent := range parents {
+		parentDefinition, ok := r.vars[parent]
+		if !ok {
+			continue
+		}
+
+		if _, ok := g.Nodes[parentDefinition.Name]; !ok {
+			err := r.insertVariableGraph(g, parentDefinition)
+			if err != nil {
+				return err
+			}
+		}
+
+		err := g.AddEdge(parent, node.Name)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *resolver) FillVariablesExclude(ctx context.Context, haystack interface{}, excludedPaths []string) (interface{}, error) {
@@ -178,25 +246,20 @@ func (r *resolver) findAndFillVariables(ctx context.Context, haystack interface{
 		return nil, err
 	}
 
-	// resolve used defined variables
-	for _, v := range r.vars {
-		if v.AlwaysResolve || varsUsed[strings.TrimSpace(v.Name)] {
-			name := strings.TrimSpace(v.Name)
-
-			// resolve the variable with definition
-			_, err := r.resolve(ctx, name, v)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
 	// try resolving predefined variables
 	for _, name := range AlwaysResolvePredefinedVars {
 		// ignore errors here as those variables are probably not used anyways
 		_, err := r.resolve(ctx, name, nil)
 		if err != nil {
 			r.log.Debugf("error resolving predefined variable: %v", err)
+		}
+	}
+
+	// resolve used defined variables
+	for _, v := range varsUsed {
+		_, err := r.resolve(ctx, v.Name, v)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -316,6 +379,13 @@ func (r *resolver) findVariablesInDefinition(definition *latest.Variable) map[st
 		}
 	}
 
+	// filter out runtime environment variables and non existing ones
+	for k := range varsUsed {
+		if r.vars[k] == nil || IsPredefinedVariable(k) || strings.HasPrefix(k, "runtime.") {
+			delete(varsUsed, k)
+		}
+	}
+
 	return varsUsed
 }
 
@@ -393,6 +463,10 @@ func (r *resolver) resolveDefinitionString(ctx context.Context, str string, defi
 			// check if its a predefined variable
 			variable, err := NewPredefinedVariable(varName, r.options)
 			if err != nil {
+				if r.vars[varName] == nil {
+					return "${" + varName + "}", nil
+				}
+
 				return nil, errors.Errorf("variable '%s' was not resolved yet, however is used in the definition of variable '%s' as '%s'. Please make sure you define '%s' before '%s' in the vars array", varName, definition.Name, str, varName, definition.Name)
 			}
 

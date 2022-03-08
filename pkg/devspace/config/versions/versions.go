@@ -127,7 +127,7 @@ func GetCommands(data map[string]interface{}) (map[string]interface{}, error) {
 }
 
 // ParseVariables parses only the variables from the config
-func ParseVariables(data map[string]interface{}, log log.Logger) ([]*latest.Variable, error) {
+func ParseVariables(data map[string]interface{}, log log.Logger) (map[string]*latest.Variable, error) {
 	strippedData, err := getVariables(data)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading variables")
@@ -194,6 +194,9 @@ func Parse(data map[string]interface{}, log log.Logger) (*latest.Config, error) 
 }
 
 func adjustConfig(config *latest.Config) {
+	for name, v := range config.Vars {
+		v.Name = name
+	}
 	for name, command := range config.Commands {
 		command.Name = name
 	}

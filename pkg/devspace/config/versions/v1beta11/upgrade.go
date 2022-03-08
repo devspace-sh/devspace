@@ -25,10 +25,40 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	clonedConfig.Dependencies = nil
 	clonedConfig.Commands = nil
 	clonedConfig.PullSecrets = nil
+	clonedConfig.Vars = nil
 	nextConfig := &next.Config{}
 	err = util.Convert(clonedConfig, nextConfig)
 	if err != nil {
 		return nil, err
+	}
+
+	// convert vars
+	if len(c.Vars) > 0 {
+		nextConfig.Vars = map[string]*next.Variable{}
+		for _, v := range c.Vars {
+			nextConfig.Vars[v.Name] = &next.Variable{
+				Name:              v.Name,
+				Question:          v.Question,
+				Options:           v.Options,
+				Password:          v.Password,
+				ValidationPattern: v.ValidationPattern,
+				ValidationMessage: v.ValidationMessage,
+				NoCache:           v.NoCache,
+				AlwaysResolve:     v.AlwaysResolve,
+				Value:             v.Value,
+				Default:           v.Default,
+				Source:            next.VariableSource(v.Source),
+				Command:           v.Command,
+				Args:              v.Args,
+			}
+			for _, c := range v.Commands {
+				nextConfig.Vars[v.Name].Commands = append(nextConfig.Vars[v.Name].Commands, next.VariableCommand{
+					Command:         c.Command,
+					Args:            c.Args,
+					OperatingSystem: c.OperatingSystem,
+				})
+			}
+		}
 	}
 
 	deployPipeline := ""

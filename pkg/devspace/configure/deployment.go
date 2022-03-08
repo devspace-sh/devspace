@@ -219,10 +219,13 @@ func (m *manager) AddHelmDeployment(deploymentName string) error {
 							helmConfig.Chart.Username = fmt.Sprintf("${%s}", usernameVar)
 							helmConfig.Chart.Password = fmt.Sprintf("${%s}", passwordVar)
 
-							m.config.Vars = append(m.config.Vars, &latest.Variable{
+							if m.config.Vars == nil {
+								m.config.Vars = map[string]*latest.Variable{}
+							}
+							m.config.Vars[passwordVar] = &latest.Variable{
 								Name:     passwordVar,
 								Password: true,
-							})
+							}
 
 							m.localCache.SetVar(usernameVar, username)
 							m.localCache.SetVar(passwordVar, password)
