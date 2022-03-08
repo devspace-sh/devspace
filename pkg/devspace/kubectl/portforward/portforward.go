@@ -79,7 +79,7 @@ type ForwardedPort struct {
 	- selects a random available local port,
 	  forwards from localhost:<random port> to pod:5000
 */
-func parsePorts(ports []string) ([]ForwardedPort, error) {
+func ParsePorts(ports []string) ([]ForwardedPort, error) {
 	var forwards []ForwardedPort
 	for _, portString := range ports {
 		parts := strings.Split(portString, ":")
@@ -173,7 +173,7 @@ func NewOnAddresses(dialer httpstream.Dialer, addresses []string, ports []string
 	if len(ports) == 0 {
 		return nil, errors.New("you must specify at least 1 port")
 	}
-	parsedPorts, err := parsePorts(ports)
+	parsedPorts, err := ParsePorts(ports)
 	if err != nil {
 		return nil, err
 	}

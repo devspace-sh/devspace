@@ -3,8 +3,8 @@ package portforwarding
 import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
-	"strconv"
 	"strings"
 	"time"
 
@@ -26,17 +26,17 @@ func StartPortForwarding(ctx *devspacecontext.Context, devPod *latest.DevPod, se
 
 	// forward
 	initDoneArray := []chan struct{}{}
-	if len(devPod.Forward) > 0 {
+	if len(devPod.Ports) > 0 {
 		initDoneArray = append(initDoneArray, parent.NotifyGo(func() error {
-			return startPortForwardingWithHooks(ctx, devPod.Name, devPod.Forward, selector, parent)
+			return startPortForwardingWithHooks(ctx, devPod.Name, devPod.Ports, selector, parent)
 		}))
 	}
 
 	// reverse
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
-		if len(devPod.PortMappingsReverse) > 0 {
+		if len(devPod.ReversePorts) > 0 {
 			initDoneArray = append(initDoneArray, parent.NotifyGo(func() error {
-				return startReversePortForwardingWithHooks(ctx, devPod.Name, string(devContainer.Arch), devContainer.PortMappingsReverse, selector.WithContainer(devContainer.Container), parent)
+				return startReversePortForwardingWithHooks(ctx, devPod.Name, string(devContainer.Arch), devContainer.ReversePorts, selector.WithContainer(devContainer.Container), parent)
 			}))
 		}
 		return true
@@ -115,22 +115,23 @@ func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 	ports := make([]string, len(portMappings))
 	addresses := make([]string, len(portMappings))
 	for index, value := range portMappings {
-		if value.LocalPort == nil {
+		if value.Port == "" {
 			return errors.Errorf("port is not defined in portmapping %d", index)
 		}
 
-		localPort := strconv.Itoa(*value.LocalPort)
-		remotePort := localPort
-		if value.RemotePort != nil {
-			remotePort = strconv.Itoa(*value.RemotePort)
+		mappings, err := portforward.ParsePorts([]string{value.Port})
+		if err != nil {
+			return fmt.Errorf("error parsing port %s: %v", value.Port, err)
 		}
 
-		open, _ := port.Check(*value.LocalPort)
+		localPort := mappings[0].Local
+		remotePort := mappings[0].Remote
+		open, _ := port.Check(int(localPort))
 		if !open {
-			ctx.Log.Warnf("Seems like port %d is already in use. Is another application using that port?", *value.LocalPort)
+			ctx.Log.Debugf("Seems like port %d is already in use. Is another application using that port?", localPort)
 		}
 
-		ports[index] = localPort + ":" + remotePort
+		ports[index] = fmt.Sprintf("%d:%d", int(localPort), int(remotePort))
 		if value.BindAddress == "" {
 			addresses[index] = "localhost"
 		} else {

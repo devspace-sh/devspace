@@ -13,7 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/pullsecrets"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"github.com/pkg/errors"
 )
 
@@ -22,14 +21,14 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 	var err error
 	var bldr builder.Interface
 
-	if imageConf.Build != nil && imageConf.Build.Custom != nil {
+	if imageConf.Custom != nil {
 		bldr = custom.NewBuilder(imageConfigName, imageConf, imageTags)
-	} else if imageConf.Build != nil && imageConf.Build.BuildKit != nil {
+	} else if imageConf.BuildKit != nil {
 		bldr, err = buildkit.NewBuilder(ctx, imageConfigName, imageConf, imageTags, options.SkipPush, options.SkipPushOnLocalKubernetes)
 		if err != nil {
 			return nil, errors.Errorf("Error creating kaniko builder: %v", err)
 		}
-	} else if imageConf.Build != nil && imageConf.Build.Docker == nil && imageConf.Build.Kaniko != nil {
+	} else if imageConf.Docker == nil && imageConf.Kaniko != nil {
 		dockerClient, err := dockerclient.NewClient(ctx.Log)
 		if err != nil {
 			return nil, errors.Errorf("Error creating docker client: %v", err)
@@ -51,8 +50,8 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 		}
 	} else {
 		preferMinikube := true
-		if imageConf.Build != nil && imageConf.Build.Docker != nil && imageConf.Build.Docker.PreferMinikube != nil {
-			preferMinikube = *imageConf.Build.Docker.PreferMinikube
+		if imageConf.Docker != nil && imageConf.Docker.PreferMinikube != nil {
+			preferMinikube = *imageConf.Docker.PreferMinikube
 		}
 
 		kubeContext := ""
@@ -73,7 +72,7 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 		// Check if docker daemon is running
 		_, err = dockerClient.Ping(context.Background())
 		if err != nil {
-			if imageConf.Build != nil && imageConf.Build.Docker != nil && imageConf.Build.Docker.DisableFallback != nil && *imageConf.Build.Docker.DisableFallback {
+			if imageConf.Docker != nil && imageConf.Docker.DisableFallback != nil && *imageConf.Docker.DisableFallback {
 				return nil, errors.Errorf("Couldn't reach docker daemon: %v. Is the docker daemon running?", err)
 			}
 
@@ -109,28 +108,26 @@ func (c *controller) createBuilder(ctx *devspacecontext.Context, imageConfigName
 
 func convertDockerConfigToKanikoConfig(dockerConfig *latest.Image) *latest.Image {
 	kanikoBuildOptions := &latest.KanikoConfig{
-		Cache: ptr.Bool(true),
+		Cache: true,
 	}
-
-	if dockerConfig.Build != nil && dockerConfig.Build.Kaniko != nil {
-		kanikoBuildOptions = dockerConfig.Build.Kaniko
-	} else if dockerConfig.Build != nil && dockerConfig.Build.Docker != nil && dockerConfig.Build.Docker.Options != nil {
-		kanikoBuildOptions.Options = dockerConfig.Build.Docker.Options
+	if dockerConfig.Kaniko != nil {
+		kanikoBuildOptions = dockerConfig.Kaniko
 	}
-
 	kanikoConfig := &latest.Image{
-		Image:               dockerConfig.Image,
-		Tags:                dockerConfig.Tags,
-		Dockerfile:          dockerConfig.Dockerfile,
-		Context:             dockerConfig.Context,
-		Entrypoint:          dockerConfig.Entrypoint,
-		Cmd:                 dockerConfig.Cmd,
-		RebuildStrategy:     dockerConfig.RebuildStrategy,
-		InjectRestartHelper: dockerConfig.InjectRestartHelper,
-		CreatePullSecret:    dockerConfig.CreatePullSecret,
-		Build: &latest.BuildConfig{
-			Kaniko: kanikoBuildOptions,
-		},
+		Image:                        dockerConfig.Image,
+		Tags:                         dockerConfig.Tags,
+		Dockerfile:                   dockerConfig.Dockerfile,
+		Context:                      dockerConfig.Context,
+		Entrypoint:                   dockerConfig.Entrypoint,
+		Cmd:                          dockerConfig.Cmd,
+		RebuildStrategy:              dockerConfig.RebuildStrategy,
+		InjectRestartHelper:          dockerConfig.InjectRestartHelper,
+		AppendDockerfileInstructions: dockerConfig.AppendDockerfileInstructions,
+		CreatePullSecret:             dockerConfig.CreatePullSecret,
+		BuildArgs:                    dockerConfig.BuildArgs,
+		Network:                      dockerConfig.Network,
+		Target:                       dockerConfig.Target,
+		Kaniko:                       kanikoBuildOptions,
 	}
 
 	return kanikoConfig

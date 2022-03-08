@@ -69,13 +69,8 @@ func (m *manager) AddImage(imageName, image, dockerfile string, dockerfileGenera
 			return err
 		}
 
-		buildCommandSplit := strings.Split(strings.TrimSpace(buildCommand), " ")
-
-		imageConfig.Build = &latest.BuildConfig{
-			Custom: &latest.CustomConfig{
-				Command: buildCommandSplit[0],
-				Args:    buildCommandSplit[1:],
-			},
+		imageConfig.Custom = &latest.CustomConfig{
+			Command: buildCommand + "${runtime.images." + imageName + "}",
 		}
 	} else {
 		if buildMethod == createNewDockerfile {

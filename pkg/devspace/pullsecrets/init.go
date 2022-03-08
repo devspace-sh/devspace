@@ -34,10 +34,6 @@ func (r *client) EnsurePullSecret(ctx *devspacecontext.Context, dockerClient doc
 }
 
 func (r *client) ensurePullSecret(ctx *devspacecontext.Context, dockerClient docker.Client, namespace string, pullSecretConf *latest.PullSecretConfig) error {
-	if pullSecretConf.Disabled {
-		return nil
-	}
-
 	displayRegistryURL := pullSecretConf.Registry
 	if displayRegistryURL == "" {
 		displayRegistryURL = "hub.docker.com"

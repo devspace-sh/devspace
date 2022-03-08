@@ -96,7 +96,7 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 
 	forceDeploy = forceDeploy || redeploy || deployCache.DeploymentConfigHash != deploymentConfigHash || helmCache.ValuesHash != deployValuesHash || helmCache.OverridesHash != helmOverridesHash || helmCache.ChartHash != hash
 	if !forceDeploy {
-		releases, err := d.Helm.ListReleases(ctx, d.DeploymentConfig.Helm)
+		releases, err := d.Helm.ListReleases(ctx)
 		if err != nil {
 			return false, err
 		}

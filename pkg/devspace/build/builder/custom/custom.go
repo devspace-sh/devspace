@@ -42,7 +42,7 @@ func NewBuilder(imageConfigName string, imageConf *latest.Image, imageTags []str
 
 // ShouldRebuild implements interface
 func (b *Builder) ShouldRebuild(ctx *devspacecontext.Context, forceRebuild bool) (bool, error) {
-	if b.imageConf.Build.Custom.OnChange == nil || len(b.imageConf.Build.Custom.OnChange) == 0 {
+	if b.imageConf.Custom.OnChange == nil || len(b.imageConf.Custom.OnChange) == 0 {
 		return true, nil
 	}
 
@@ -55,7 +55,7 @@ func (b *Builder) ShouldRebuild(ctx *devspacecontext.Context, forceRebuild bool)
 
 	// Loop over on change globs
 	customFilesHash := ""
-	for _, pattern := range b.imageConf.Build.Custom.OnChange {
+	for _, pattern := range b.imageConf.Custom.OnChange {
 		files, err := doublestar.Glob(ctx.ResolvePath(pattern))
 		if err != nil {
 			return false, err
@@ -98,8 +98,8 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 	}
 
 	// loop over args
-	for i := range b.imageConf.Build.Custom.Args {
-		resolvedArg, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(ctx.Context, b.imageConf.Build.Custom.Args[i], ctx.Config, ctx.Dependencies)
+	for i := range b.imageConf.Custom.Args {
+		resolvedArg, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(ctx.Context, b.imageConf.Custom.Args[i], ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return err
 		}
@@ -108,13 +108,13 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 	}
 
 	// add image arg
-	if !b.imageConf.Build.Custom.SkipImageArg {
+	if b.imageConf.Custom.SkipImageArg == nil || !*b.imageConf.Custom.SkipImageArg {
 		for _, tag := range b.imageTags {
-			if b.imageConf.Build.Custom.ImageFlag != "" {
-				args = append(args, b.imageConf.Build.Custom.ImageFlag)
+			if b.imageConf.Custom.ImageFlag != "" {
+				args = append(args, b.imageConf.Custom.ImageFlag)
 			}
 
-			if !b.imageConf.Build.Custom.ImageTagOnly {
+			if !b.imageConf.Custom.ImageTagOnly {
 				args = append(args, b.imageConf.Image+":"+tag)
 			} else {
 				args = append(args, tag)
@@ -123,8 +123,8 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 	}
 
 	// append the rest
-	for i := range b.imageConf.Build.Custom.AppendArgs {
-		resolvedArg, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(ctx.Context, b.imageConf.Build.Custom.AppendArgs[i], ctx.Config, ctx.Dependencies)
+	for i := range b.imageConf.Custom.AppendArgs {
+		resolvedArg, err := runtime.NewRuntimeResolver(ctx.WorkingDir, false).FillRuntimeVariablesAsString(ctx.Context, b.imageConf.Custom.AppendArgs[i], ctx.Config, ctx.Dependencies)
 		if err != nil {
 			return err
 		}
@@ -133,8 +133,8 @@ func (b *Builder) Build(ctx *devspacecontext.Context) error {
 	}
 
 	// get the command
-	commandPath := b.imageConf.Build.Custom.Command
-	for _, c := range b.imageConf.Build.Custom.Commands {
+	commandPath := b.imageConf.Custom.Command
+	for _, c := range b.imageConf.Custom.Commands {
 		if !command.ShouldExecuteOnOS(c.OperatingSystem) {
 			continue
 		}

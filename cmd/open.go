@@ -308,8 +308,7 @@ func (cmd *OpenCmd) openLocal(ctx *devspacecontext.Context, domain string) error
 	domain = "http://localhost:" + strconv.Itoa(localPort)
 	portMappings := []*latest.PortMapping{
 		{
-			LocalPort:  &localPort,
-			RemotePort: &servicePort,
+			Port: fmt.Sprintf("%d:%d", localPort, servicePort),
 		},
 	}
 
@@ -321,7 +320,7 @@ func (cmd *OpenCmd) openLocal(ctx *devspacecontext.Context, domain string) error
 	devPod := &latest.DevPod{
 		Name:          "open",
 		LabelSelector: labelSelector,
-		Forward:       portMappings,
+		Ports:         portMappings,
 	}
 	fakeConfig := &latest.Config{
 		Dev: map[string]*latest.DevPod{

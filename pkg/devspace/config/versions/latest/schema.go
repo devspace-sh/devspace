@@ -199,23 +199,19 @@ type Image struct {
 	// This option is ignored for custom builds.
 	RebuildStrategy RebuildStrategy `yaml:"rebuildStrategy,omitempty" json:"rebuildStrategy,omitempty"`
 
-	// Specific build options how to build the specified image
-	Build *BuildConfig `yaml:"build,omitempty" json:"build,omitempty"`
-}
+	// Target is the target that should get used during the build. Only works if the dockerfile supports this
+	Target string `yaml:"target,omitempty" json:"target,omitempty"`
 
-// RebuildStrategy is the type of a image rebuild strategy
-type RebuildStrategy string
+	// Network is the network that should get used to build the image
+	Network string `yaml:"network,omitempty" json:"network,omitempty"`
 
-// List of values that source can take
-const (
-	RebuildStrategyDefault              RebuildStrategy = "default"
-	RebuildStrategyAlways               RebuildStrategy = "always"
-	RebuildStrategyIgnoreContextChanges RebuildStrategy = "ignoreContextChanges"
-)
+	// BuildArgs are the build args that should get passed to the build config
+	BuildArgs map[string]*string `yaml:"buildArgs,omitempty" json:"buildArgs,omitempty"`
 
-// BuildConfig defines the build process for an image. Only one of the options below
-// can be specified.
-type BuildConfig struct {
+	// SkipPush will not push the image to a registry if enabled. Only works if docker or buildkit is chosen as
+	// as build method
+	SkipPush bool `yaml:"skipPush,omitempty" json:"skipPush,omitempty"`
+
 	// If docker is specified, DevSpace will build the image using the local docker daemon
 	Docker *DockerConfig `yaml:"docker,omitempty" json:"docker,omitempty"`
 
@@ -230,22 +226,29 @@ type BuildConfig struct {
 	Custom *CustomConfig `yaml:"custom,omitempty" json:"custom,omitempty"`
 }
 
+// RebuildStrategy is the type of a image rebuild strategy
+type RebuildStrategy string
+
+// List of values that source can take
+const (
+	RebuildStrategyDefault              RebuildStrategy = "default"
+	RebuildStrategyAlways               RebuildStrategy = "always"
+	RebuildStrategyIgnoreContextChanges RebuildStrategy = "ignoreContextChanges"
+)
+
 // DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type DockerConfig struct {
-	PreferMinikube  *bool         `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty"`
-	SkipPush        bool          `yaml:"skipPush,omitempty" json:"skipPush,omitempty"`
-	DisableFallback *bool         `yaml:"disableFallback,omitempty" json:"disableFallback,omitempty"`
-	UseBuildKit     bool          `yaml:"useBuildKit,omitempty" json:"useBuildKit,omitempty"`
-	UseCLI          bool          `yaml:"useCli,omitempty" json:"useCli,omitempty"`
-	Args            []string      `yaml:"args,omitempty" json:"args,omitempty"`
-	Options         *BuildOptions `yaml:"options,omitempty" json:"options,omitempty"`
+	PreferMinikube  *bool    `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty"`
+	DisableFallback *bool    `yaml:"disableFallback,omitempty" json:"disableFallback,omitempty"`
+	UseCLI          bool     `yaml:"useCli,omitempty" json:"useCli,omitempty"`
+	Args            []string `yaml:"args,omitempty" json:"args,omitempty"`
+
+	// Deprecated
+	UseBuildKit bool `yaml:"useBuildKit,omitempty" json:"useBuildKit,omitempty"`
 }
 
 // BuildKitConfig tells the DevSpace CLI to
 type BuildKitConfig struct {
-	// If this is true, DevSpace will not push any images
-	SkipPush bool `yaml:"skipPush,omitempty" json:"skipPush,omitempty"`
-
 	// If false, will not try to use the minikube docker daemon to build the image
 	PreferMinikube *bool `yaml:"preferMinikube,omitempty" json:"preferMinikube,omitempty"`
 
@@ -257,9 +260,6 @@ type BuildKitConfig struct {
 
 	// Override the base command to create a builder and build images. Defaults to ["docker", "buildx"]
 	Command []string `yaml:"command,omitempty" json:"command,omitempty"`
-
-	// Additional build options
-	Options *BuildOptions `yaml:"options,omitempty" json:"options,omitempty"`
 }
 
 // BuildKitInClusterConfig holds the buildkit builder config
@@ -301,7 +301,7 @@ type BuildKitInClusterConfig struct {
 // KanikoConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
 type KanikoConfig struct {
 	// if a cache repository should be used. defaults to true
-	Cache *bool `yaml:"cache,omitempty" json:"cache,omitempty"`
+	Cache bool `yaml:"cache,omitempty" json:"cache,omitempty"`
 
 	// the snapshot mode kaniko should use. defaults to time
 	SnapshotMode string `yaml:"snapshotMode,omitempty" json:"snapshotMode,omitempty"`
@@ -361,9 +361,6 @@ type KanikoConfig struct {
 
 	// the resources that should be set on the kaniko pod
 	Resources *PodResources `yaml:"resources,omitempty" json:"resources,omitempty"`
-
-	// other build options that will be passed to the kaniko pod
-	Options *BuildOptions `yaml:"options,omitempty" json:"options,omitempty"`
 }
 
 // PodResources describes the resources section of the started kaniko pod
@@ -467,29 +464,22 @@ type KanikoAdditionalMountKeyToPath struct {
 
 // CustomConfig tells the DevSpace CLI to build with a custom build script
 type CustomConfig struct {
-	Command  string                `yaml:"command,omitempty" json:"command,omitempty"`
-	Commands []CustomConfigCommand `yaml:"commands,omitempty" json:"commands,omitempty"`
-
-	Args         []string `yaml:"args,omitempty" json:"args,omitempty"`
-	AppendArgs   []string `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty"`
-	ImageFlag    string   `yaml:"imageFlag,omitempty" json:"imageFlag,omitempty"`
-	ImageTagOnly bool     `yaml:"imageTagOnly,omitempty" json:"imageTagOnly,omitempty"`
-	SkipImageArg bool     `yaml:"skipImageArg,omitempty" json:"skipImageArg,omitempty"`
-
+	Command  string   `yaml:"command,omitempty" json:"command,omitempty"`
 	OnChange []string `yaml:"onChange,omitempty" json:"onChange,omitempty"`
+
+	// Depreacted do not use anymore
+	Commands     []CustomConfigCommand `yaml:"commands,omitempty" json:"commands,omitempty"`
+	Args         []string              `yaml:"args,omitempty" json:"args,omitempty"`
+	AppendArgs   []string              `yaml:"appendArgs,omitempty" json:"appendArgs,omitempty"`
+	ImageFlag    string                `yaml:"imageFlag,omitempty" json:"imageFlag,omitempty"`
+	ImageTagOnly bool                  `yaml:"imageTagOnly,omitempty" json:"imageTagOnly,omitempty"`
+	SkipImageArg *bool                 `yaml:"skipImageArg,omitempty" json:"skipImageArg,omitempty"`
 }
 
 // CustomConfigCommand holds the information about a command on a specific operating system
 type CustomConfigCommand struct {
 	Command         string `yaml:"command,omitempty" json:"command,omitempty"`
 	OperatingSystem string `yaml:"os,omitempty" json:"os,omitempty"`
-}
-
-// BuildOptions defines options for building Docker images
-type BuildOptions struct {
-	Target    string             `yaml:"target,omitempty" json:"target,omitempty"`
-	Network   string             `yaml:"network,omitempty" json:"network,omitempty"`
-	BuildArgs map[string]*string `yaml:"buildArgs,omitempty" json:"buildArgs,omitempty"`
 }
 
 // DeploymentConfig defines the configuration how the devspace should be deployed
@@ -684,16 +674,7 @@ type HelmConfig struct {
 	Values           map[string]interface{} `yaml:"values,omitempty" json:"values,omitempty"`
 	ValuesFiles      []string               `yaml:"valuesFiles,omitempty" json:"valuesFiles,omitempty"`
 	ReplaceImageTags bool                   `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
-	Wait             bool                   `yaml:"wait,omitempty" json:"wait,omitempty"`
 	DisplayOutput    bool                   `yaml:"displayOutput,omitempty" json:"output,omitempty"`
-	Timeout          string                 `yaml:"timeout,omitempty" json:"timeout,omitempty"`
-	Force            bool                   `yaml:"force,omitempty" json:"force,omitempty"`
-	Atomic           bool                   `yaml:"atomic,omitempty" json:"atomic,omitempty"`
-	CleanupOnFail    bool                   `yaml:"cleanupOnFail,omitempty" json:"cleanupOnFail,omitempty"`
-	Recreate         bool                   `yaml:"recreate,omitempty" json:"recreate,omitempty"`
-	DisableHooks     bool                   `yaml:"disableHooks,omitempty" json:"disableHooks,omitempty"`
-	Driver           string                 `yaml:"driver,omitempty" json:"driver,omitempty"`
-	Path             string                 `yaml:"path,omitempty" json:"path,omitempty"`
 
 	TemplateArgs []string `yaml:"templateArgs,omitempty" json:"templateArgs,omitempty"`
 	UpgradeArgs  []string `yaml:"upgradeArgs,omitempty" json:"upgradeArgs,omitempty"`
@@ -702,12 +683,12 @@ type HelmConfig struct {
 
 // ChartConfig defines the helm chart options
 type ChartConfig struct {
+	Source   *SourceConfig `yaml:",inline" json:",inline"`
 	Name     string        `yaml:"name,omitempty" json:"name,omitempty"`
 	Version  string        `yaml:"version,omitempty" json:"version,omitempty"`
 	RepoURL  string        `yaml:"repo,omitempty" json:"repo,omitempty"`
 	Username string        `yaml:"username,omitempty" json:"username,omitempty"`
 	Password string        `yaml:"password,omitempty" json:"password,omitempty"`
-	Source   *SourceConfig `yaml:",inline" json:",inline"`
 }
 
 // KubectlConfig defines the specific kubectl options used during deployment
@@ -718,7 +699,9 @@ type KubectlConfig struct {
 	ReplaceImageTags bool     `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
 	CreateArgs       []string `yaml:"createArgs,omitempty" json:"createArgs,omitempty"`
 	ApplyArgs        []string `yaml:"applyArgs,omitempty" json:"applyArgs,omitempty"`
-	CmdPath          string   `yaml:"cmdPath,omitempty" json:"cmdPath,omitempty"`
+
+	KustomizeBinaryPath string `yaml:"kustomizeBinaryPath,omitempty" json:"kustomizeBinaryPath,omitempty"`
+	KubectlBinaryPath   string `yaml:"kubectlBinaryPath,omitempty" json:"kubectlBinaryPath,omitempty"`
 }
 
 type DevPod struct {
@@ -730,7 +713,7 @@ type DevPod struct {
 	// Open holds the open config for urls
 	Open []*OpenConfig `yaml:"open,omitempty" json:"open,omitempty"`
 
-	Forward            []*PortMapping      `yaml:"forward,omitempty" json:"forward,omitempty"`
+	Ports              []*PortMapping      `yaml:"ports,omitempty" json:"ports,omitempty"`
 	Patches            []*PatchConfig      `yaml:"patches,omitempty" json:"patches,omitempty"`
 	PersistenceOptions *PersistenceOptions `yaml:"persistenceOptions,omitempty" json:"persistenceOptions,omitempty"`
 
@@ -740,11 +723,12 @@ type DevPod struct {
 }
 
 type DevContainer struct {
+	Container string `yaml:"container,omitempty" json:"container,omitempty"`
+
 	// Target Container architecture to use for the devspacehelper (currently amd64 or arm64). Defaults to amd64
 	Arch ContainerArchitecture `yaml:"arch,omitempty" json:"arch,omitempty"`
 
-	PortMappingsReverse  []*PortMapping   `yaml:"reverseForward,omitempty" json:"reverseForward,omitempty"`
-	Container            string           `yaml:"container,omitempty" json:"container,omitempty"`
+	ReversePorts         []*PortMapping   `yaml:"reversePorts,omitempty" json:"reversePorts,omitempty"`
 	Command              []string         `yaml:"command,omitempty" json:"command,omitempty"`
 	Args                 []string         `yaml:"args,omitempty" json:"args,omitempty"`
 	Env                  []EnvVar         `yaml:"env,omitempty" json:"env,omitempty"`
@@ -794,8 +778,7 @@ type PersistentPathInitContainer struct {
 
 // PortMapping defines the ports for a PortMapping
 type PortMapping struct {
-	LocalPort   *int   `yaml:"port" json:"port"`
-	RemotePort  *int   `yaml:"remotePort,omitempty" json:"remotePort,omitempty"`
+	Port        string `yaml:"port" json:"port"`
 	BindAddress string `yaml:"bindAddress,omitempty" json:"bindAddress,omitempty"`
 }
 
@@ -808,8 +791,7 @@ type OpenConfig struct {
 type SyncConfig struct {
 	PrintLogs bool `yaml:"printLogs,omitempty" json:"printLogs,omitempty"`
 
-	LocalSubPath         string               `yaml:"localSubPath,omitempty" json:"localSubPath,omitempty"`
-	ContainerPath        string               `yaml:"containerPath,omitempty" json:"containerPath,omitempty"`
+	Path                 string               `yaml:"path,omitempty" json:"path,omitempty"`
 	ExcludePaths         []string             `yaml:"excludePaths,omitempty" json:"excludePaths,omitempty"`
 	ExcludeFile          string               `yaml:"excludeFile,omitempty" json:"excludeFile,omitempty"`
 	DownloadExcludePaths []string             `yaml:"downloadExcludePaths,omitempty" json:"downloadExcludePaths,omitempty"`
@@ -1248,9 +1230,6 @@ type PatchConfig struct {
 type PullSecretConfig struct {
 	// Name is the pull secret name to deploy
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
-
-	// If true, the pull secret will be not created
-	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 
 	// The registry to create the image pull secret for.
 	// e.g. gcr.io

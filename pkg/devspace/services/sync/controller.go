@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
@@ -264,26 +265,49 @@ func (c *controller) startSync(ctx *devspacecontext.Context, options *Options, o
 		return nil, nil, errors.Errorf("Sync error: %v", err)
 	}
 
-	containerPath := "."
-	if syncConfig.ContainerPath != "" {
-		containerPath = syncConfig.ContainerPath
+	syncPath := "."
+	if syncConfig.Path != "" {
+		syncPath = syncConfig.Path
 	}
 
-	ctx.Log.Donef("Sync started on %s:%s", syncClient.LocalPath, containerPath)
+	ctx.Log.Donef("Sync started on %s", syncPath)
 	return syncClient, container, nil
 }
 
+func ParseSyncPath(path string) (localPath string, remotePath string, err error) {
+	if path == "" {
+		return ".", ".", nil
+	}
+
+	splitted := strings.Split(path, ":")
+	if len(splitted) > 2 {
+		return "", "", fmt.Errorf("error in sync path %s: should have format local:remote", path)
+	}
+
+	if len(splitted) == 1 {
+		return splitted[0], splitted[0], nil
+	}
+
+	if splitted[0] == "" {
+		splitted[0] = "."
+	}
+	if splitted[1] == "" {
+		splitted[1] = "."
+	}
+	return splitted[0], splitted[1], nil
+}
+
 func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch, container string, syncConfig *latest.SyncConfig, verbose bool, customLog logpkg.Logger) (*sync.Sync, error) {
-	localPath := "."
-	if syncConfig.LocalSubPath != "" {
-		localPath = syncConfig.LocalSubPath
+	localPath, containerPath, err := ParseSyncPath(syncConfig.Path)
+	if err != nil {
+		return nil, err
 	}
 
 	// make sure we resolve it correctly
 	localPath = ctx.ResolvePath(localPath)
 
 	// check if local path exists
-	_, err := os.Stat(localPath)
+	_, err = os.Stat(localPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, err
@@ -298,11 +322,6 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 	err = inject.InjectDevSpaceHelper(ctx.Context, ctx.KubeClient, pod, container, arch, customLog)
 	if err != nil {
 		return nil, err
-	}
-
-	containerPath := "."
-	if syncConfig.ContainerPath != "" {
-		containerPath = syncConfig.ContainerPath
 	}
 
 	upstreamDisabled := false
@@ -357,7 +376,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 	}
 
 	if syncConfig.ExcludeFile != "" {
-		paths, err := parseExcludeFile(filepath.Join(syncConfig.LocalSubPath, syncConfig.ExcludeFile))
+		paths, err := parseExcludeFile(filepath.Join(localPath, syncConfig.ExcludeFile))
 		if err != nil {
 			return nil, errors.Wrap(err, "parse exclude file")
 		}
@@ -369,7 +388,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 	}
 
 	if syncConfig.DownloadExcludeFile != "" {
-		paths, err := parseExcludeFile(filepath.Join(syncConfig.LocalSubPath, syncConfig.DownloadExcludeFile))
+		paths, err := parseExcludeFile(filepath.Join(localPath, syncConfig.DownloadExcludeFile))
 		if err != nil {
 			return nil, errors.Wrap(err, "parse download exclude file")
 		}
@@ -381,7 +400,7 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 	}
 
 	if syncConfig.UploadExcludeFile != "" {
-		paths, err := parseExcludeFile(filepath.Join(syncConfig.LocalSubPath, syncConfig.UploadExcludeFile))
+		paths, err := parseExcludeFile(filepath.Join(localPath, syncConfig.UploadExcludeFile))
 		if err != nil {
 			return nil, errors.Wrap(err, "parse upload exclude file")
 		}

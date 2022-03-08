@@ -39,9 +39,8 @@ type SyncCmd struct {
 	Wait          bool
 	Polling       bool
 
-	Exclude       []string
-	ContainerPath string
-	LocalPath     string
+	Exclude []string
+	Path    string
 
 	InitialSync string
 
@@ -92,8 +91,7 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().BoolVar(&cmd.Pick, "pick", true, "Select a pod")
 
 	syncCmd.Flags().StringSliceVarP(&cmd.Exclude, "exclude", "e", []string{}, "Exclude directory from sync")
-	syncCmd.Flags().StringVar(&cmd.LocalPath, "local-path", "", "Local path to use (Default is current directory")
-	syncCmd.Flags().StringVar(&cmd.ContainerPath, "container-path", "", "Container path to use (Default is working directory)")
+	syncCmd.Flags().StringVar(&cmd.Path, "path", "", "Path to use (Default is current directory). Example: ./local-path:/remote-path or local-path:.")
 
 	syncCmd.Flags().BoolVar(&cmd.DownloadOnInitialSync, "download-on-initial-sync", true, "DEPRECATED: Downloads all locally non existing remote files in the beginning")
 	syncCmd.Flags().StringVar(&cmd.InitialSync, "initial-sync", "", "The initial sync strategy to use (mirrorLocal, mirrorRemote, preferLocal, preferRemote, preferNewest, keepAll)")
@@ -214,17 +212,18 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 	}
 	if cmd.GlobalFlags.ConfigPath != "" && configInterface != nil {
 		devSection := configInterface.Config().Dev
-
 		syncConfigs := []nameConfig{}
 		for _, v := range devSection {
-			for _, s := range v.Sync {
-				syncConfigs = append(syncConfigs, fromSyncConfig(v, v.Container, s))
-			}
-			for _, c := range v.Containers {
-				for _, s := range c.Sync {
-					syncConfigs = append(syncConfigs, fromSyncConfig(v, c.Container, s))
+			loader.EachDevContainer(v, func(devContainer *latest.DevContainer) bool {
+				for _, s := range devContainer.Sync {
+					n, err := fromSyncConfig(v, devContainer.Container, s)
+					if err != nil {
+						return true
+					}
+					syncConfigs = append(syncConfigs, n)
 				}
-			}
+				return true
+			})
 		}
 		if len(syncConfigs) == 0 {
 			return fmt.Errorf("no sync config found in %s", cmd.GlobalFlags.ConfigPath)
@@ -277,15 +276,10 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 	return sync.StartSyncFromCmd(ctx, targetselector.NewTargetSelector(options), syncConfig.syncConfig, cmd.NoWatch, cmd.Verbose)
 }
 
-func fromSyncConfig(devPod *latest.DevPod, containerName string, sc *latest.SyncConfig) nameConfig {
-	localPath := sc.LocalSubPath
-	if localPath == "" {
-		localPath = "."
-	}
-
-	remotePath := sc.ContainerPath
-	if remotePath == "" {
-		remotePath = "."
+func fromSyncConfig(devPod *latest.DevPod, containerName string, sc *latest.SyncConfig) (nameConfig, error) {
+	localPath, remotePath, err := sync.ParseSyncPath(sc.Path)
+	if err != nil {
+		return nameConfig{}, err
 	}
 
 	selector := ""
@@ -303,15 +297,12 @@ func fromSyncConfig(devPod *latest.DevPod, containerName string, sc *latest.Sync
 		devPod:        devPod,
 		containerName: containerName,
 		syncConfig:    sc,
-	}
+	}, nil
 }
 
 func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig, options targetselector.Options) (targetselector.Options, error) {
-	if cmd.LocalPath != "" {
-		syncConfig.LocalSubPath = cmd.LocalPath
-	}
-	if cmd.ContainerPath != "" {
-		syncConfig.ContainerPath = cmd.ContainerPath
+	if cmd.Path != "" {
+		syncConfig.Path = cmd.Path
 	}
 	if len(cmd.Exclude) > 0 {
 		syncConfig.ExcludePaths = cmd.Exclude

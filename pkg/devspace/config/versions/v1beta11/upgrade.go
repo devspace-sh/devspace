@@ -2,6 +2,7 @@ package v1beta11
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/ptr"
 	"path"
 	"strings"
 
@@ -26,6 +27,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 	clonedConfig.Commands = nil
 	clonedConfig.PullSecrets = nil
 	clonedConfig.Vars = nil
+	clonedConfig.Images = nil
 	nextConfig := &next.Config{}
 	err = util.Convert(clonedConfig, nextConfig)
 	if err != nil {
@@ -123,12 +125,185 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		}
 	}
 
+	// pull secrets
+	pullSecrets := []string{}
+	nextConfig.PullSecrets = map[string]*next.PullSecretConfig{}
+	for idx, pullSecret := range c.PullSecrets {
+		pullSecretName := fmt.Sprintf("pull-secret-%d", idx)
+		nextConfig.PullSecrets[pullSecretName] = &next.PullSecretConfig{
+			Name:            pullSecretName,
+			Registry:        pullSecret.Registry,
+			Username:        pullSecret.Username,
+			Password:        pullSecret.Password,
+			Email:           pullSecret.Email,
+			Secret:          pullSecret.Secret,
+			ServiceAccounts: pullSecret.ServiceAccounts,
+		}
+		if pullSecret.Disabled {
+			continue
+		}
+
+		pullSecrets = append(pullSecrets, pullSecretName)
+	}
+
 	// use a pretty simple pipeline which was used by DevSpace before
-	deployPipeline += "ensure_pull_secrets --all\n"
+	if len(pullSecrets) > 0 {
+		deployPipeline += fmt.Sprintf("ensure_pull_secrets %s\n", strings.Join(pullSecrets, " "))
+	}
 	buildImages := []string{}
-	for k, v := range nextConfig.Images {
-		delete(nextConfig.Images, k)
-		nextConfig.Images[encoding.Convert(k)] = v
+	nextConfig.Images = map[string]*next.Image{}
+	for k, image := range c.Images {
+		imageName := encoding.Convert(k)
+		nextConfig.Images[imageName] = &next.Image{
+			Image:                        image.Image,
+			Tags:                         image.Tags,
+			Dockerfile:                   image.Dockerfile,
+			Context:                      image.Context,
+			Entrypoint:                   image.Entrypoint,
+			Cmd:                          image.Cmd,
+			CreatePullSecret:             image.CreatePullSecret,
+			InjectRestartHelper:          image.InjectRestartHelper,
+			RestartHelperPath:            image.RestartHelperPath,
+			AppendDockerfileInstructions: image.AppendDockerfileInstructions,
+		}
+		if image.RebuildStrategy == "" {
+			nextConfig.Images[imageName].RebuildStrategy = next.RebuildStrategyDefault
+		}
+		if image.Build != nil && image.Build.Kaniko != nil && image.Build.Kaniko.Options != nil {
+			nextConfig.Images[imageName].Network = image.Build.Kaniko.Options.Network
+			nextConfig.Images[imageName].BuildArgs = image.Build.Kaniko.Options.BuildArgs
+			nextConfig.Images[imageName].Target = image.Build.Kaniko.Options.Target
+		}
+		if image.Build != nil && image.Build.Docker != nil && image.Build.Docker.Options != nil {
+			nextConfig.Images[imageName].Network = image.Build.Docker.Options.Network
+			nextConfig.Images[imageName].BuildArgs = image.Build.Docker.Options.BuildArgs
+			nextConfig.Images[imageName].Target = image.Build.Docker.Options.Target
+		}
+		if image.Build != nil && image.Build.BuildKit != nil && image.Build.BuildKit.Options != nil {
+			nextConfig.Images[imageName].Network = image.Build.BuildKit.Options.Network
+			nextConfig.Images[imageName].BuildArgs = image.Build.BuildKit.Options.BuildArgs
+			nextConfig.Images[imageName].Target = image.Build.BuildKit.Options.Target
+		}
+		if image.Build != nil && image.Build.Docker != nil && image.Build.Docker.SkipPush {
+			nextConfig.Images[imageName].SkipPush = true
+		}
+		if image.Build != nil && image.Build.BuildKit != nil && image.Build.BuildKit.SkipPush {
+			nextConfig.Images[imageName].SkipPush = true
+		}
+		if image.Build.Docker != nil {
+			nextConfig.Images[imageName].Docker = &next.DockerConfig{
+				PreferMinikube:  image.Build.Docker.PreferMinikube,
+				DisableFallback: image.Build.Docker.DisableFallback,
+				UseBuildKit:     image.Build.Docker.UseBuildKit,
+				UseCLI:          image.Build.Docker.UseCLI,
+				Args:            image.Build.Docker.Args,
+			}
+		}
+		if image.Build.BuildKit != nil {
+			nextConfig.Images[imageName].BuildKit = &next.BuildKitConfig{
+				PreferMinikube: image.Build.BuildKit.PreferMinikube,
+				Args:           image.Build.BuildKit.Args,
+				Command:        image.Build.BuildKit.Command,
+			}
+			if image.Build.BuildKit.InCluster != nil {
+				nextConfig.Images[imageName].BuildKit.InCluster = &next.BuildKitInClusterConfig{
+					Name:         image.Build.BuildKit.InCluster.Name,
+					Namespace:    image.Build.BuildKit.InCluster.Namespace,
+					Rootless:     image.Build.BuildKit.InCluster.Rootless,
+					Image:        image.Build.BuildKit.InCluster.Image,
+					NodeSelector: image.Build.BuildKit.InCluster.NodeSelector,
+					NoCreate:     image.Build.BuildKit.InCluster.NoCreate,
+					NoRecreate:   image.Build.BuildKit.InCluster.NoRecreate,
+					NoLoad:       image.Build.BuildKit.InCluster.NoLoad,
+					CreateArgs:   image.Build.BuildKit.InCluster.CreateArgs,
+				}
+			}
+		}
+		if image.Build.Custom != nil {
+			nextConfig.Images[imageName].Custom = &next.CustomConfig{
+				Command:  image.Build.Custom.Command,
+				OnChange: image.Build.Custom.OnChange,
+
+				// Deprecated
+				Args:         image.Build.Custom.Args,
+				AppendArgs:   image.Build.Custom.AppendArgs,
+				ImageFlag:    image.Build.Custom.ImageFlag,
+				ImageTagOnly: image.Build.Custom.ImageTagOnly,
+			}
+			if !image.Build.Custom.SkipImageArg {
+				nextConfig.Images[imageName].Custom.SkipImageArg = ptr.Bool(false)
+			}
+			for _, c := range image.Build.Custom.Commands {
+				nextConfig.Images[imageName].Custom.Commands = append(nextConfig.Images[imageName].Custom.Commands, next.CustomConfigCommand{
+					Command:         c.Command,
+					OperatingSystem: c.OperatingSystem,
+				})
+			}
+		}
+		if image.Build.Kaniko != nil {
+			nextConfig.Images[imageName].Kaniko = &next.KanikoConfig{
+				SnapshotMode:        image.Build.Kaniko.SnapshotMode,
+				Image:               image.Build.Kaniko.Image,
+				InitImage:           image.Build.Kaniko.InitImage,
+				Args:                image.Build.Kaniko.Args,
+				Command:             image.Build.Kaniko.Command,
+				Namespace:           image.Build.Kaniko.Namespace,
+				Insecure:            image.Build.Kaniko.Insecure,
+				PullSecret:          image.Build.Kaniko.PullSecret,
+				SkipPullSecretMount: image.Build.Kaniko.SkipPullSecretMount,
+				NodeSelector:        image.Build.Kaniko.NodeSelector,
+				Tolerations:         image.Build.Kaniko.Tolerations,
+				ServiceAccount:      image.Build.Kaniko.ServiceAccount,
+				Annotations:         image.Build.Kaniko.Annotations,
+				Labels:              image.Build.Kaniko.Labels,
+				InitEnv:             image.Build.Kaniko.InitEnv,
+				Env:                 image.Build.Kaniko.Env,
+				EnvFrom:             image.Build.Kaniko.EnvFrom,
+			}
+			if image.Build.Kaniko.Cache == nil || *image.Build.Kaniko.Cache {
+				nextConfig.Images[imageName].Kaniko.Cache = true
+			}
+			if image.Build.Kaniko.Resources != nil {
+				nextConfig.Images[imageName].Kaniko.Resources = &next.PodResources{
+					Requests: image.Build.Kaniko.Resources.Requests,
+					Limits:   image.Build.Kaniko.Resources.Limits,
+				}
+			}
+			for _, c := range image.Build.Kaniko.AdditionalMounts {
+				mount := next.KanikoAdditionalMount{
+					ReadOnly:  c.ReadOnly,
+					MountPath: c.MountPath,
+					SubPath:   c.SubPath,
+				}
+				if c.Secret != nil {
+					mount.Secret = &next.KanikoAdditionalMountSecret{
+						Name:        c.Secret.Name,
+						DefaultMode: c.Secret.DefaultMode,
+					}
+					for _, item := range c.Secret.Items {
+						mount.Secret.Items = append(mount.Secret.Items, next.KanikoAdditionalMountKeyToPath{
+							Key:  item.Key,
+							Path: item.Path,
+							Mode: item.Mode,
+						})
+					}
+				}
+				if c.ConfigMap != nil {
+					mount.ConfigMap = &next.KanikoAdditionalMountConfigMap{
+						Name:        c.ConfigMap.Name,
+						DefaultMode: c.ConfigMap.DefaultMode,
+					}
+					for _, item := range c.ConfigMap.Items {
+						mount.ConfigMap.Items = append(mount.ConfigMap.Items, next.KanikoAdditionalMountKeyToPath{
+							Key:  item.Key,
+							Path: item.Path,
+							Mode: item.Mode,
+						})
+					}
+				}
+				nextConfig.Images[imageName].Kaniko.AdditionalMounts = append(nextConfig.Images[imageName].Kaniko.AdditionalMounts, mount)
+			}
+		}
 
 		if c.Images[k].Build != nil && c.Images[k].Build.Disabled {
 			continue
@@ -220,19 +395,34 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			nextConfig.Deployments[name].Helm = &next.HelmConfig{
 				Values:        deployment.Helm.Values,
 				ValuesFiles:   deployment.Helm.ValuesFiles,
-				Wait:          deployment.Helm.Wait,
 				DisplayOutput: deployment.Helm.DisplayOutput,
-				Timeout:       deployment.Helm.Timeout,
-				Force:         deployment.Helm.Force,
-				Atomic:        deployment.Helm.Atomic,
-				CleanupOnFail: deployment.Helm.CleanupOnFail,
-				Recreate:      deployment.Helm.Recreate,
-				DisableHooks:  deployment.Helm.DisableHooks,
-				Driver:        deployment.Helm.Driver,
-				Path:          deployment.Helm.Path,
 				TemplateArgs:  deployment.Helm.TemplateArgs,
 				UpgradeArgs:   deployment.Helm.UpgradeArgs,
 				FetchArgs:     deployment.Helm.FetchArgs,
+			}
+			if deployment.Helm.Driver != "" {
+				log.Warnf("deployments[*].helm.driver is not supported anymore in DevSpace v6")
+			}
+			if deployment.Helm.Path != "" {
+				log.Warnf("deployments[*].helm.path is not supported anymore in DevSpace v6")
+			}
+			if deployment.Helm.Wait {
+				nextConfig.Deployments[name].Helm.UpgradeArgs = append(nextConfig.Deployments[name].Helm.UpgradeArgs, "--wait")
+			}
+			if deployment.Helm.Timeout != "" {
+				nextConfig.Deployments[name].Helm.UpgradeArgs = append(nextConfig.Deployments[name].Helm.UpgradeArgs, "--timeout", deployment.Helm.Timeout)
+			}
+			if deployment.Helm.Atomic {
+				nextConfig.Deployments[name].Helm.UpgradeArgs = append(nextConfig.Deployments[name].Helm.UpgradeArgs, "--atomic")
+			}
+			if deployment.Helm.CleanupOnFail {
+				nextConfig.Deployments[name].Helm.UpgradeArgs = append(nextConfig.Deployments[name].Helm.UpgradeArgs, "--cleanup-on-fail")
+			}
+			if deployment.Helm.Force {
+				nextConfig.Deployments[name].Helm.UpgradeArgs = append(nextConfig.Deployments[name].Helm.UpgradeArgs, "--force")
+			}
+			if deployment.Helm.DisableHooks {
+				nextConfig.Deployments[name].Helm.UpgradeArgs = append(nextConfig.Deployments[name].Helm.UpgradeArgs, "--no-hooks")
 			}
 			if deployment.Helm.Chart != nil {
 				nextConfig.Deployments[name].Helm.Chart = &next.ChartConfig{
@@ -261,12 +451,12 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			}
 		} else if deployment.Kubectl != nil {
 			nextConfig.Deployments[name].Kubectl = &next.KubectlConfig{
-				Manifests:     deployment.Kubectl.Manifests,
-				Kustomize:     deployment.Kubectl.Kustomize,
-				KustomizeArgs: deployment.Kubectl.KustomizeArgs,
-				CreateArgs:    deployment.Kubectl.CreateArgs,
-				ApplyArgs:     deployment.Kubectl.ApplyArgs,
-				CmdPath:       deployment.Kubectl.CmdPath,
+				Manifests:         deployment.Kubectl.Manifests,
+				Kustomize:         deployment.Kubectl.Kustomize,
+				KustomizeArgs:     deployment.Kubectl.KustomizeArgs,
+				CreateArgs:        deployment.Kubectl.CreateArgs,
+				ApplyArgs:         deployment.Kubectl.ApplyArgs,
+				KubectlBinaryPath: deployment.Kubectl.CmdPath,
 			}
 			if len(deployment.Kubectl.DeleteArgs) > 0 {
 				log.Warnf("deployments[*].kubectl.deleteArgs is not supported anymore in v6")
@@ -306,22 +496,6 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			Args:        command.Args,
 			AppendArgs:  command.AppendArgs,
 			Description: command.Description,
-		}
-	}
-
-	// pull secrets
-	nextConfig.PullSecrets = map[string]*next.PullSecretConfig{}
-	for idx, pullSecret := range c.PullSecrets {
-		pullSecretName := fmt.Sprintf("pull-secret-%d", idx)
-		nextConfig.PullSecrets[pullSecretName] = &next.PullSecretConfig{
-			Name:            pullSecretName,
-			Disabled:        pullSecret.Disabled,
-			Registry:        pullSecret.Registry,
-			Username:        pullSecret.Username,
-			Password:        pullSecret.Password,
-			Email:           pullSecret.Email,
-			Secret:          pullSecret.Secret,
-			ServiceAccounts: pullSecret.ServiceAccounts,
 		}
 	}
 
@@ -405,9 +579,16 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 		devPod := getMatchingDevPod(devPods, name, portForwarding.LabelSelector, portForwarding.ImageSelector)
 		devPod.Namespace = portForwarding.Namespace
 		for _, pr := range portForwarding.PortMappings {
-			devPod.Forward = append(devPod.Forward, &next.PortMapping{
-				LocalPort:   pr.LocalPort,
-				RemotePort:  pr.RemotePort,
+			if pr.LocalPort == nil {
+				continue
+			}
+			mapping := fmt.Sprintf("%d", *pr.LocalPort)
+			if pr.RemotePort != nil {
+				mapping += fmt.Sprintf(":%d", *pr.RemotePort)
+			}
+
+			devPod.Ports = append(devPod.Ports, &next.PortMapping{
+				Port:        mapping,
 				BindAddress: pr.BindAddress,
 			})
 		}
@@ -416,9 +597,16 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 			devContainer := getMatchingDevContainer(devPod, portForwarding.ContainerName)
 			devContainer.Arch = next.ContainerArchitecture(portForwarding.Arch)
 			for _, pr := range portForwarding.PortMappingsReverse {
-				devContainer.PortMappingsReverse = append(devContainer.PortMappingsReverse, &next.PortMapping{
-					LocalPort:   pr.LocalPort,
-					RemotePort:  pr.RemotePort,
+				if pr.LocalPort == nil {
+					continue
+				}
+				mapping := fmt.Sprintf("%d", *pr.LocalPort)
+				if pr.RemotePort != nil {
+					mapping += fmt.Sprintf(":%d", *pr.RemotePort)
+				}
+
+				devContainer.ReversePorts = append(devContainer.ReversePorts, &next.PortMapping{
+					Port:        mapping,
 					BindAddress: pr.BindAddress,
 				})
 			}
@@ -443,8 +631,6 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 		devContainer := getMatchingDevContainer(devPod, syncConfig.ContainerName)
 		nextSyncConfig := &next.SyncConfig{
 			PrintLogs:            printSyncLogs,
-			LocalSubPath:         syncConfig.LocalSubPath,
-			ContainerPath:        syncConfig.ContainerPath,
 			ExcludePaths:         syncConfig.ExcludePaths,
 			ExcludeFile:          syncConfig.ExcludeFile,
 			DownloadExcludePaths: syncConfig.DownloadExcludePaths,
@@ -460,6 +646,14 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 			OnUpload:             nil,
 			OnDownload:           nil,
 		}
+		syncPath := "."
+		if syncConfig.LocalSubPath != "" {
+			syncPath = syncConfig.LocalSubPath
+		}
+		if syncConfig.ContainerPath != "" {
+			syncPath += ":" + syncConfig.ContainerPath
+		}
+		nextSyncConfig.Path = syncPath
 		if syncConfig.ThrottleChangeDetection != nil {
 			log.Errorf("dev.sync[*].throttleChangeDetection is no longer supported in DevSpace version 6 and has no effect")
 		}

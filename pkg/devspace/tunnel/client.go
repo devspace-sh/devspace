@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"io"
 	"net"
 	"strings"
@@ -232,16 +233,17 @@ func StartReverseForward(ctx context.Context, reader io.ReadCloser, writer io.Wr
 	}()
 
 	for i, portMapping := range tunnels {
-		if portMapping.LocalPort == nil {
+		if portMapping.Port == "" {
 			return fmt.Errorf("local port cannot be undefined")
 		}
 
-		localPort := *portMapping.LocalPort
-		remotePort := localPort
-		if portMapping.RemotePort != nil {
-			remotePort = *portMapping.RemotePort
+		mappings, err := portforward.ParsePorts([]string{portMapping.Port})
+		if err != nil {
+			return fmt.Errorf("error parsing port %s: %v", portMapping.Port, err)
 		}
 
+		localPort := mappings[0].Local
+		remotePort := mappings[0].Remote
 		c := make(chan bool, 1)
 		go func(closeStream chan bool, localPort, remotePort int32) {
 			tunnelScheme, ok := remote.TunnelScheme_value[scheme]
@@ -281,7 +283,7 @@ func StartReverseForward(ctx context.Context, reader io.ReadCloser, writer io.Wr
 			}()
 
 			// wait until close
-			log.Donef("Reverse port forwarding started at %d:%d (%s/%s)", remotePort, localPort, namespace, name)
+			log.Donef("Reverse port forwarding started at %d->%d (%s/%s)", remotePort, localPort, namespace, name)
 			<-closeStream
 		}(c, int32(localPort), int32(remotePort))
 		closeStreams[i] = c

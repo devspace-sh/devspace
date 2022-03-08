@@ -65,26 +65,26 @@ const waitTimeout = 20 * time.Minute
 
 // NewBuilder creates a new kaniko.Builder instance
 func NewBuilder(ctx *devspacecontext.Context, dockerClient docker.Client, imageConfigName string, imageConf *latest.Image, imageTags []string) (builder.Interface, error) {
-	if imageConf.Build != nil && imageConf.Build.Kaniko != nil && imageConf.Build.Kaniko.Namespace != "" {
-		err := ctx.KubeClient.EnsureNamespace(ctx.Context, imageConf.Build.Kaniko.Namespace, ctx.Log)
+	if imageConf.Kaniko != nil && imageConf.Kaniko.Namespace != "" {
+		err := ctx.KubeClient.EnsureNamespace(ctx.Context, imageConf.Kaniko.Namespace, ctx.Log)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	buildNamespace := ctx.KubeClient.Namespace()
-	if imageConf.Build.Kaniko.Namespace != "" {
-		buildNamespace = imageConf.Build.Kaniko.Namespace
+	if imageConf.Kaniko.Namespace != "" {
+		buildNamespace = imageConf.Kaniko.Namespace
 	}
 
 	allowInsecurePush := false
-	if imageConf.Build.Kaniko.Insecure != nil {
-		allowInsecurePush = *imageConf.Build.Kaniko.Insecure
+	if imageConf.Kaniko.Insecure != nil {
+		allowInsecurePush = *imageConf.Kaniko.Insecure
 	}
 
 	pullSecretName := ""
-	if imageConf.Build.Kaniko.PullSecret != "" {
-		pullSecretName = imageConf.Build.Kaniko.PullSecret
+	if imageConf.Kaniko.PullSecret != "" {
+		pullSecretName = imageConf.Kaniko.PullSecret
 	}
 
 	b := &Builder{
@@ -99,7 +99,7 @@ func NewBuilder(ctx *devspacecontext.Context, dockerClient docker.Client, imageC
 	}
 
 	// create pull secret
-	if !imageConf.Build.Kaniko.SkipPullSecretMount {
+	if !imageConf.Kaniko.SkipPullSecretMount {
 		err := b.createPullSecret(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "create pull secret")
@@ -158,18 +158,16 @@ func (b *Builder) createPullSecret(ctx *devspacecontext.Context) error {
 func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfilePath string, entrypoint []string, cmd []string) error {
 	var err error
 
-	// Buildoptions
+	// build options
 	options := &types.ImageBuildOptions{}
-	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Kaniko != nil && b.helper.ImageConf.Build.Kaniko.Options != nil {
-		if b.helper.ImageConf.Build.Kaniko.Options.BuildArgs != nil {
-			options.BuildArgs = b.helper.ImageConf.Build.Kaniko.Options.BuildArgs
-		}
-		if b.helper.ImageConf.Build.Kaniko.Options.Target != "" {
-			options.Target = b.helper.ImageConf.Build.Kaniko.Options.Target
-		}
-		if b.helper.ImageConf.Build.Kaniko.Options.Network != "" {
-			options.NetworkMode = b.helper.ImageConf.Build.Kaniko.Options.Network
-		}
+	if b.helper.ImageConf.BuildArgs != nil {
+		options.BuildArgs = b.helper.ImageConf.BuildArgs
+	}
+	if b.helper.ImageConf.Target != "" {
+		options.Target = b.helper.ImageConf.Target
+	}
+	if b.helper.ImageConf.Network != "" {
+		options.NetworkMode = b.helper.ImageConf.Network
 	}
 
 	// Check if we should overwrite entrypoint

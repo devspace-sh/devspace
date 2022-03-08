@@ -279,7 +279,7 @@ func validateImages(config *latest.Config) error {
 		if _, tag, _ := imageselector.GetStrippedDockerImageName(imageConf.Image); tag != "" {
 			return errors.Errorf("images.%s.image '%s' can not have tag '%s'", imageConfigName, imageConf.Image, tag)
 		}
-		if imageConf.Build != nil && imageConf.Build.Custom != nil && imageConf.Build.Custom.Command == "" && len(imageConf.Build.Custom.Commands) == 0 {
+		if imageConf.Custom != nil && imageConf.Custom.Command == "" && len(imageConf.Custom.Commands) == 0 {
 			return errors.Errorf("images.%s.build.custom.command or images.%s.build.custom.commands is required", imageConfigName, imageConfigName)
 		}
 		if images[imageConf.Image] {
@@ -288,8 +288,8 @@ func validateImages(config *latest.Config) error {
 		if imageConf.RebuildStrategy != "" && imageConf.RebuildStrategy != latest.RebuildStrategyDefault && imageConf.RebuildStrategy != latest.RebuildStrategyAlways && imageConf.RebuildStrategy != latest.RebuildStrategyIgnoreContextChanges {
 			return errors.Errorf("images.%s.rebuildStrategy %s is invalid. Please choose one of %v", imageConfigName, string(imageConf.RebuildStrategy), []latest.RebuildStrategy{latest.RebuildStrategyAlways, latest.RebuildStrategyIgnoreContextChanges})
 		}
-		if imageConf.Build != nil && imageConf.Build.Kaniko != nil && imageConf.Build.Kaniko.EnvFrom != nil {
-			for _, v := range imageConf.Build.Kaniko.EnvFrom {
+		if imageConf.Kaniko != nil && imageConf.Kaniko.EnvFrom != nil {
+			for _, v := range imageConf.Kaniko.EnvFrom {
 				o, err := yaml.Marshal(v)
 				if err != nil {
 					return errors.Errorf("images.%s.build.kaniko.envFrom is invalid: %v", imageConfigName, err)
@@ -368,9 +368,9 @@ func validateDevContainer(path string, devContainer *latest.DevContainer, nameRe
 			}
 		}
 	}
-	for index, port := range devContainer.PortMappingsReverse {
-		if port.LocalPort == nil || *port.LocalPort == 0 {
-			return errors.Errorf("%s.forward[%d].port is required", path, index)
+	for index, port := range devContainer.ReversePorts {
+		if port.Port == "" {
+			return errors.Errorf("%s.reversePorts[%d].port is required", path, index)
 		}
 	}
 	for j, p := range devContainer.PersistPaths {

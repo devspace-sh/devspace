@@ -47,8 +47,8 @@ func New(ctx *devspacecontext.Context, deployConfig *latest.DeploymentConfig) (d
 		err     error
 		cmdPath string
 	)
-	if deployConfig.Kubectl.CmdPath != "" {
-		cmdPath = deployConfig.Kubectl.CmdPath
+	if deployConfig.Kubectl.KubectlBinaryPath != "" {
+		cmdPath = deployConfig.Kubectl.KubectlBinaryPath
 	} else {
 		cmdPath, err = downloader.NewDownloader(commands.NewKubectlCommand(), ctx.Log).EnsureCommand(ctx.Context)
 		if err != nil {
@@ -261,8 +261,13 @@ func (d *DeployConfig) getCmdArgs(method string, additionalArgs ...string) []str
 
 func (d *DeployConfig) buildManifests(ctx *devspacecontext.Context, manifest string) ([]*unstructured.Unstructured, error) {
 	// Check if we should use kustomize or kubectl
-	if d.DeploymentConfig.Kubectl.Kustomize != nil && *d.DeploymentConfig.Kubectl.Kustomize && d.isKustomizeInstalled(ctx.Context, ctx.WorkingDir, "kustomize") {
-		return NewKustomizeBuilder("kustomize", d.DeploymentConfig, ctx.Log).Build(ctx.Context, ctx.WorkingDir, manifest)
+	kustomizePath := "kustomize"
+	if d.DeploymentConfig.Kubectl.KustomizeBinaryPath != "" {
+		kustomizePath = d.DeploymentConfig.Kubectl.KustomizeBinaryPath
+	}
+
+	if d.DeploymentConfig.Kubectl.Kustomize != nil && *d.DeploymentConfig.Kubectl.Kustomize && d.isKustomizeInstalled(ctx.Context, ctx.WorkingDir, kustomizePath) {
+		return NewKustomizeBuilder(kustomizePath, d.DeploymentConfig, ctx.Log).Build(ctx.Context, ctx.WorkingDir, manifest)
 	}
 
 	// Build with kubectl

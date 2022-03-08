@@ -2,7 +2,7 @@ version: v2beta1
 name: pipelines
 
 vars:
-  MELLO: $(echo "TEST")
+  MELLO: $(echo ${DELLO})
   DELLO: ${MELLO}-${CHELLO}
   HELLO: ${devspace.namespace}-${DELLO}
 
@@ -10,4 +10,4 @@ pipelines:
   dev:
     steps:
       - run: |-
-          echo ${HELLO}
+          echo "Hello World!"

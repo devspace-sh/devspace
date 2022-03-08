@@ -52,7 +52,7 @@ var defaultResources = &availableResources{
 }
 
 func (b *Builder) getBuildPod(ctx *devspacecontext.Context, buildID string, options *types.ImageBuildOptions, dockerfilePath string) (*k8sv1.Pod, error) {
-	kanikoOptions := b.helper.ImageConf.Build.Kaniko
+	kanikoOptions := b.helper.ImageConf.Kaniko
 
 	registryURL, err := pullsecrets.GetRegistryFromImageName(b.FullImageName)
 	if err != nil {
@@ -109,7 +109,7 @@ func (b *Builder) getBuildPod(ctx *devspacecontext.Context, buildID string, opti
 	}
 
 	// cache flags
-	if kanikoOptions.Cache == nil || *kanikoOptions.Cache {
+	if kanikoOptions.Cache {
 		ref, err := reference.ParseNormalizedNamed(b.FullImageName)
 		if err != nil {
 			return nil, err

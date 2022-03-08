@@ -23,32 +23,26 @@ import (
 
 const stableChartRepo = "https://charts.helm.sh/stable"
 
-type VersionedClient interface {
-	Command() commands.Command
-}
-
 type Client interface {
-	Exec(ctx *devspacecontext.Context, args []string, helmConfig *latest.HelmConfig) ([]byte, error)
+	Exec(ctx *devspacecontext.Context, args []string) ([]byte, error)
 	FetchChart(ctx *devspacecontext.Context, helmConfig *latest.HelmConfig) (bool, string, error)
 	WriteValues(values map[string]interface{}) (string, error)
 }
 
-func NewGenericClient(versionedClient VersionedClient, log log.Logger) Client {
+func NewGenericClient(command commands.Command, log log.Logger) Client {
 	c := &client{
-		log:             log,
-		versionedClient: versionedClient,
-		extract:         extract.NewExtractor(),
+		log:     log,
+		extract: extract.NewExtractor(),
 	}
 
-	c.downloader = downloader.NewDownloader(versionedClient.Command(), log)
+	c.downloader = downloader.NewDownloader(command, log)
 	return c
 }
 
 type client struct {
-	log             log.Logger
-	versionedClient VersionedClient
-	extract         extract.Extract
-	downloader      downloader.Downloader
+	log        log.Logger
+	extract    extract.Extract
+	downloader downloader.Downloader
 
 	helmPath string
 }
@@ -72,8 +66,8 @@ func (c *client) WriteValues(values map[string]interface{}) (string, error) {
 	return f.Name(), nil
 }
 
-func (c *client) Exec(ctx *devspacecontext.Context, args []string, helmConfig *latest.HelmConfig) ([]byte, error) {
-	err := c.ensureHelmBinary(ctx.Context, helmConfig)
+func (c *client) Exec(ctx *devspacecontext.Context, args []string) ([]byte, error) {
+	err := c.ensureHelmBinary(ctx.Context)
 	if err != nil {
 		return nil, err
 	}
@@ -94,20 +88,8 @@ func (c *client) Exec(ctx *devspacecontext.Context, args []string, helmConfig *l
 	return result, nil
 }
 
-func (c *client) ensureHelmBinary(ctx context.Context, helmConfig *latest.HelmConfig) error {
+func (c *client) ensureHelmBinary(ctx context.Context) error {
 	if c.helmPath != "" {
-		return nil
-	}
-
-	if helmConfig != nil && helmConfig.Path != "" {
-		valid, err := c.versionedClient.Command().IsValid(ctx, helmConfig.Path)
-		if err != nil {
-			return err
-		} else if !valid {
-			return fmt.Errorf("helm binary at '%s' is not a valid helm v2 binary", helmConfig.Path)
-		}
-
-		c.helmPath = helmConfig.Path
 		return nil
 	}
 
@@ -140,7 +122,7 @@ func (c *client) FetchChart(ctx *devspacecontext.Context, helmConfig *latest.Hel
 	args = append(args, "--repository-config=''")
 
 	args = append(args, helmConfig.FetchArgs...)
-	out, err := c.Exec(ctx, args, helmConfig)
+	out, err := c.Exec(ctx, args)
 	if err != nil {
 		_ = os.RemoveAll(tempFolder)
 		return false, "", fmt.Errorf("error running helm fetch: %s => %v", string(out), err)

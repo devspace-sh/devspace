@@ -89,7 +89,7 @@ func Delete(ctx *devspacecontext.Context, deploymentName string) error {
 		return errors.Wrap(err, "new helm client")
 	}
 
-	err = helmClient.DeleteRelease(ctx, deploymentCache.Helm.Release, deploymentCache.Helm.ReleaseNamespace, &latest.HelmConfig{})
+	err = helmClient.DeleteRelease(ctx, deploymentCache.Helm.Release, deploymentCache.Helm.ReleaseNamespace)
 	if err != nil {
 		return err
 	}

@@ -109,7 +109,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 	}
 
 	// Authenticate
-	if !b.skipPush && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || !b.helper.ImageConf.Build.Docker.SkipPush) {
+	if !b.skipPush && !b.helper.ImageConf.SkipPush {
 		ctx.Log.Info("Authenticating (" + displayRegistryURL + ")...")
 		_, err = b.Authenticate()
 		if err != nil {
@@ -121,16 +121,14 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 
 	// Buildoptions
 	options := &types.ImageBuildOptions{}
-	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && b.helper.ImageConf.Build.Docker.Options != nil {
-		if b.helper.ImageConf.Build.Docker.Options.BuildArgs != nil {
-			options.BuildArgs = b.helper.ImageConf.Build.Docker.Options.BuildArgs
-		}
-		if b.helper.ImageConf.Build.Docker.Options.Target != "" {
-			options.Target = b.helper.ImageConf.Build.Docker.Options.Target
-		}
-		if b.helper.ImageConf.Build.Docker.Options.Network != "" {
-			options.NetworkMode = b.helper.ImageConf.Build.Docker.Options.Network
-		}
+	if b.helper.ImageConf.BuildArgs != nil {
+		options.BuildArgs = b.helper.ImageConf.BuildArgs
+	}
+	if b.helper.ImageConf.Target != "" {
+		options.Target = b.helper.ImageConf.Target
+	}
+	if b.helper.ImageConf.Network != "" {
+		options.NetworkMode = b.helper.ImageConf.Network
 	}
 
 	// create context stream
@@ -142,11 +140,11 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 
 	// Should we build with cli?
 	useBuildKit := false
-	useDockerCli := b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil && b.helper.ImageConf.Build.Docker.UseCLI
+	useDockerCli := b.helper.ImageConf.Docker != nil && b.helper.ImageConf.Docker.UseCLI
 	cliArgs := []string{}
-	if b.helper.ImageConf.Build != nil && b.helper.ImageConf.Build.Docker != nil {
-		cliArgs = b.helper.ImageConf.Build.Docker.Args
-		if b.helper.ImageConf.Build.Docker.UseBuildKit {
+	if b.helper.ImageConf.Docker != nil {
+		cliArgs = b.helper.ImageConf.Docker.Args
+		if b.helper.ImageConf.Docker.UseBuildKit {
 			useBuildKit = true
 		}
 	}
@@ -172,7 +170,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 	}
 
 	// Check if we skip push
-	if !b.skipPush && (b.helper.ImageConf.Build == nil || b.helper.ImageConf.Build.Docker == nil || !b.helper.ImageConf.Build.Docker.SkipPush) {
+	if !b.skipPush || !b.helper.ImageConf.SkipPush {
 		for _, tag := range buildOptions.Tags {
 			err = b.pushImage(writer, tag)
 			if err != nil {

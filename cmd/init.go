@@ -491,13 +491,11 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 			}
 
 			portMapping := latest.PortMapping{
-				LocalPort: &port,
+				Port: fmt.Sprintf("%d", port),
 			}
-
 			if port != localPort {
 				portMapping = latest.PortMapping{
-					LocalPort:  &localPort,
-					RemotePort: &port,
+					Port: fmt.Sprintf("%d:%d", &localPort, &port),
 				}
 			}
 
@@ -514,8 +512,7 @@ func (cmd *InitCmd) addDevConfig(config *latest.Config, imageName, image string,
 					ImageSelector: image,
 				}
 			}
-
-			config.Dev["default"].Forward = portMappings
+			config.Dev["default"].Ports = portMappings
 
 			// Add dev.open config
 			config.Dev["default"].Open = []*latest.OpenConfig{
@@ -674,72 +671,49 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config, imageName string) er
 			}
 
 			// If image building is disabled, move it to production profile instead of disabling it
-			if imageConfig.Build != nil {
-				imageConfig.AppendDockerfileInstructions = []string{}
-				imageConfig.InjectRestartHelper = false
-				imageConfig.RebuildStrategy = latest.RebuildStrategyDefault
-				imageConfig.Entrypoint = []string{}
+			patchRemoveOp := "remove"
+			patches := []*latest.PatchConfig{}
 
-				if imageConfig.Build.Docker != nil && imageConfig.Build.Docker.Options != nil && imageConfig.Build.Docker.Options.Target != "" {
-					imageConfig.Build.Docker.Options.Target = ""
-				}
-
-				if imageConfig.Build.Docker == nil && imageConfig.Build.BuildKit == nil && imageConfig.Build.Kaniko == nil {
-					imageConfig.Build = nil
-				}
-
-				profile.Merge = &latest.ProfileConfigStructure{
-					Images: map[string]interface{}{
-						imageName: imageConfig,
-					},
-				}
-
-				delete(config.Images, imageName)
-			} else {
-				patchRemoveOp := "remove"
-				patches := []*latest.PatchConfig{}
-
-				if len(imageConfig.AppendDockerfileInstructions) > 0 {
-					patches = append(patches, &latest.PatchConfig{
-						Operation: patchRemoveOp,
-						Path:      "images." + imageName + ".appendDockerfileInstructions",
-					})
-				}
-
-				if imageConfig.InjectRestartHelper {
-					patches = append(patches, &latest.PatchConfig{
-						Operation: patchRemoveOp,
-						Path:      "images." + imageName + ".injectRestartHelper",
-					})
-				}
-
-				if imageConfig.RebuildStrategy != latest.RebuildStrategyDefault {
-					patches = append(patches, &latest.PatchConfig{
-						Operation: patchRemoveOp,
-						Path:      "images." + imageName + ".rebuildStrategy",
-					})
-				}
-
-				if len(imageConfig.Entrypoint) > 0 {
-					patches = append(patches, &latest.PatchConfig{
-						Operation: patchRemoveOp,
-						Path:      "images." + imageName + ".entrypoint",
-					})
-				}
-
-				if imageConfig.Build != nil && imageConfig.Build.Docker != nil && imageConfig.Build.Docker.Options != nil && imageConfig.Build.Docker.Options.Target != "" {
-					patches = append(patches, &latest.PatchConfig{
-						Operation: patchRemoveOp,
-						Path:      "images." + imageName + ".build.docker.options.target",
-					})
-				}
-
-				if len(patches) == 0 {
-					return nil
-				}
-
-				profile.Patches = patches
+			if len(imageConfig.AppendDockerfileInstructions) > 0 {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + imageName + ".appendDockerfileInstructions",
+				})
 			}
+
+			if imageConfig.InjectRestartHelper {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + imageName + ".injectRestartHelper",
+				})
+			}
+
+			if imageConfig.RebuildStrategy != latest.RebuildStrategyDefault {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + imageName + ".rebuildStrategy",
+				})
+			}
+
+			if len(imageConfig.Entrypoint) > 0 {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + imageName + ".entrypoint",
+				})
+			}
+
+			if imageConfig.Target != "" {
+				patches = append(patches, &latest.PatchConfig{
+					Operation: patchRemoveOp,
+					Path:      "images." + imageName + ".build.docker.options.target",
+				})
+			}
+
+			if len(patches) == 0 {
+				return nil
+			}
+
+			profile.Patches = patches
 
 			config.Profiles = append(config.Profiles, profile)
 
