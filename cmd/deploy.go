@@ -233,6 +233,7 @@ type PipelineOptions struct {
 	Pipeline      string
 	Wait          bool
 	Timeout       int
+	ShowUI        bool
 	UIPort        int
 }
 
@@ -294,7 +295,7 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bo
 	pipe := pipeline.NewPipeline(ctx.Config.Config().Name, devPodManager, dependencyRegistry, configPipeline, options.Options)
 
 	// start ui & open
-	serv, err := dev.UI(ctx, options.UIPort, pipe)
+	serv, err := dev.UI(ctx, options.UIPort, options.ShowUI, pipe)
 	if err != nil {
 		return err
 	}

@@ -192,6 +192,8 @@ func (cmd *DevCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, c
 		ConfigOptions: configOptions,
 		Only:          cmd.Dependency,
 		Pipeline:      cmd.Pipeline,
+		ShowUI:        cmd.UI,
+		UIPort:        cmd.UIPort,
 		Wait:          cmd.Wait,
 		Timeout:       cmd.Timeout,
 	})

@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func UI(ctx *devspacecontext.Context, port int, pipeline types.Pipeline) (*server.Server, error) {
+func UI(ctx *devspacecontext.Context, port int, showUI bool, pipeline types.Pipeline) (*server.Server, error) {
 	var defaultPort *int
 	if port != 0 {
 		defaultPort = &port
@@ -31,9 +31,11 @@ func UI(ctx *devspacecontext.Context, port int, pipeline types.Pipeline) (*serve
 			_ = serv.Server.Close()
 		}()
 
-		ctx.Log.WriteString(logrus.InfoLevel, "\n#########################################################\n")
-		ctx.Log.Infof("DevSpace UI available at: %s", ansi.Color("http://"+serv.Server.Addr, "white+b"))
-		ctx.Log.WriteString(logrus.InfoLevel, "#########################################################\n\n")
+		if showUI {
+			ctx.Log.WriteString(logrus.InfoLevel, "\n#########################################################\n")
+			ctx.Log.Infof("DevSpace UI available at: %s", ansi.Color("http://"+serv.Server.Addr, "white+b"))
+			ctx.Log.WriteString(logrus.InfoLevel, "#########################################################\n\n")
+		}
 	}
 	return serv, nil
 }
