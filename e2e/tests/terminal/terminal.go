@@ -41,7 +41,7 @@ var _ = DevSpaceDescribe("terminal", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.FIt("should restart terminal", func() {
+	ginkgo.It("should restart terminal", func() {
 		tempDir, err := framework.CopyToTempDir("tests/terminal/testdata/restart")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)

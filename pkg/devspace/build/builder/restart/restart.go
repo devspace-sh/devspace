@@ -28,17 +28,19 @@ const ProcessIDFilePath = "/.devspace/devspace-pid"
 // HelperScript is the content of the restart script in the container
 const HelperScript = `#!/bin/sh
 #
-# A process wrapper script to simulate a container restart. This file was injected with devspace during the build process
+# DevSpace Restart Helper
 #
 set -e
 
 restart=true
 screenSessionName="devspace"
-screenLogFile="/tmp/screen.log"
-pidFile="/.devspace/devspace-pid"
+workDir="$PWD"
+tmpDir="/.devspace"
+screenLogFile="$tmpDir/screenlog.0"
+pidFile="$tmpDir/devspace-pid"
+sidFile="$tmpDir/devspace-sid"
 
-mkdir -p $(dirname $screenLogFile)
-mkdir -p $(dirname $pidFile)
+mkdir -p $tmpDir
 
 trap quit TERM INT
 quit() {
@@ -53,8 +55,8 @@ quit() {
     timeout 5 tail --pid=$pidToKill -f /dev/null 2>&1
   fi
 
-  if [ -f "$pidFile.screen" ]; then
-    pidToKill="$(cat $pidFile.screen)"
+  if [ -f "$ppidFile" ]; then
+    pidToKill="$(cat $ppidFile)"
     kill -9 $((0-$pidToKill)) >/dev/null 2>&1
   fi
 }
@@ -63,14 +65,20 @@ while $restart; do
   set +e
   if command -v screen >/dev/null; then
     rm -f "$screenLogFile"
-    commandAndArguments="$@"
-    echo screen -L -Logfile "$screenLogFile" -dmS $screenSessionName sh -c "echo \$$>$pidFile; echo \$PPID>$pidFile.screen; exec "'"'"$commandAndArguments"'"'"; exit;" > /tmp/test-command
-    screen -L -Logfile "$screenLogFile" -dmS $screenSessionName sh -c "echo \$$>$pidFile; echo \$PPID>$pidFile.screen; exec "'"'"$commandAndArguments"'"'"; exit;"
-    while [ ! -f "$pidFile" ]; do
+    rm -f "$pidFile"
+    rm -f "$sidFile"
+
+    cd "$tmpDir"
+
+    screen -q -L -dmS $screenSessionName sh -c 'echo $$>"'$pidFile'"; echo $PPID>"'$sidFile'"; cd "'$workDir'"; exec "$@"; exit;' _ "$@"
+
+    while [ ! -f "$sidFile" ]; do
       sleep 0.1
     done
-    screen -r $screenSessionName -X colon "logfile flush 1^M"
+    sid="$(cat $sidFile).${screenSessionName}"
     pid="$(cat $pidFile)"
+
+    screen -q -S "${sid}" -X colon "logfile flush 1^M"
     tail --pid=$pid -f "$screenLogFile"
   else
     setsid "$@" &
