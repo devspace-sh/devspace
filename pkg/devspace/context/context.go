@@ -103,6 +103,10 @@ func (c *Context) ToOriginalRelativePath(absPath string) string {
 }
 
 func (c *Context) ResolvePath(relPath string) string {
+	if relPath == "" {
+		return c.WorkingDir
+	}
+
 	relPath = filepath.ToSlash(relPath)
 	if filepath.IsAbs(relPath) {
 		return path.Clean(relPath)

@@ -671,7 +671,7 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config, imageName string) er
 			}
 
 			// If image building is disabled, move it to production profile instead of disabling it
-			if imageConfig.Build != nil && imageConfig.Build.Disabled {
+			if imageConfig.Build != nil {
 				imageConfig.AppendDockerfileInstructions = []string{}
 				imageConfig.InjectRestartHelper = false
 				imageConfig.RebuildStrategy = latest.RebuildStrategyDefault
@@ -681,7 +681,6 @@ func (cmd *InitCmd) addProfileConfig(config *latest.Config, imageName string) er
 					imageConfig.Build.Docker.Options.Target = ""
 				}
 
-				imageConfig.Build.Disabled = false
 				if imageConfig.Build.Docker == nil && imageConfig.Build.BuildKit == nil && imageConfig.Build.Kaniko == nil {
 					imageConfig.Build = nil
 				}

@@ -40,7 +40,7 @@ func New(ctx *devspacecontext.Context, helmClient helmtypes.Client, deployConfig
 	ctx.Config = config2.Ensure(ctx.Config)
 
 	// Exchange chart
-	if deployConfig.Helm.ComponentChart != nil && *deployConfig.Helm.ComponentChart {
+	if deployConfig.Helm.Chart == nil || (deployConfig.Helm.Chart.Name == DevSpaceChartConfig.Name && deployConfig.Helm.Chart.RepoURL == DevSpaceChartConfig.RepoURL) {
 		// extract component chart if possible
 		filename := "component-chart-" + DevSpaceChartConfig.Version + ".tgz"
 		componentChartBytes, err := assets.Asset(filename)

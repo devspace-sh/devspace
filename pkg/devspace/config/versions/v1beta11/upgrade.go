@@ -2,6 +2,7 @@ package v1beta11
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
@@ -58,7 +59,6 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				Branch:         dep.Source.Branch,
 				Tag:            dep.Source.Tag,
 				Revision:       dep.Source.Revision,
-				ConfigName:     dep.Source.ConfigName,
 				Path:           dep.Source.Path,
 			},
 			Disabled:                 dep.Disabled,
@@ -66,9 +66,18 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			Profiles:                 dep.Profiles,
 			DisableProfileActivation: dep.DisableProfileActivation,
 			OverwriteVars:            dep.OverwriteVars,
-			SkipBuild:                dep.SkipBuild,
 			IgnoreDependencies:       dep.IgnoreDependencies,
 			Namespace:                dep.Namespace,
+		}
+		if dep.SkipBuild {
+			log.Warnf("dependencies[*].skipBuild is not supported anymore in v6")
+		}
+		if dep.Source != nil && dep.Source.ConfigName != "" {
+			if dep.Source.Path != "" {
+				nextConfig.Dependencies[name].Source.Path = path.Join(dep.Source.Path, dep.Source.ConfigName)
+			} else {
+				nextConfig.Dependencies[name].Source.SubPath = path.Join(dep.Source.SubPath, dep.Source.ConfigName)
+			}
 		}
 		for _, v := range dep.Vars {
 			nextConfig.Dependencies[name].Vars = append(nextConfig.Dependencies[name].Vars, next.DependencyVar{
@@ -83,15 +92,31 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			purgePipeline += "run_dependency_pipelines " + name + " --pipeline purge\n"
 		}
 	}
-	buildPipeline += "build_images --all\n"
 
 	// use a pretty simple pipeline which was used by DevSpace before
-	deployPipeline += "ensure_pull_secrets --all\nbuild_images --all\n"
+	deployPipeline += "ensure_pull_secrets --all\n"
+	buildImages := []string{}
+	for k, v := range nextConfig.Images {
+		delete(nextConfig.Images, k)
+		nextConfig.Images[encoding.Convert(k)] = v
+
+		if c.Images[k].Build != nil && c.Images[k].Build.Disabled {
+			continue
+		}
+		buildImages = append(buildImages, k)
+	}
+	if len(buildImages) > 0 {
+		buildPipeline += fmt.Sprintf("build_images %s\n", strings.Join(buildImages, " "))
+		deployPipeline += fmt.Sprintf("build_images %s\n", strings.Join(buildImages, " "))
+	}
 
 	// create the deploy pipeline based on concurrent deployments
 	concurrentDeployments := []string{}
 	sequentialDeployments := []string{}
 	for _, d := range c.Deployments {
+		if d.Disabled {
+			continue
+		}
 		if d.Concurrent {
 			concurrentDeployments = append(concurrentDeployments, d.Name)
 		} else {
@@ -118,6 +143,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 
 		devPipeline += "\n"
 	}
+
 	nextConfig.Pipelines = map[string]*next.Pipeline{
 		"build": {
 			Steps: []next.PipelineStep{
@@ -149,11 +175,6 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		},
 	}
 
-	for k, v := range nextConfig.Images {
-		delete(nextConfig.Images, k)
-		nextConfig.Images[encoding.Convert(k)] = v
-	}
-
 	nextConfig.Deployments = map[string]*next.DeploymentConfig{}
 	for _, deployment := range c.Deployments {
 		if deployment.Name == "" {
@@ -164,26 +185,24 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		nextConfig.Deployments[name] = &next.DeploymentConfig{
 			Name:      name,
 			Namespace: deployment.Namespace,
-			Disabled:  deployment.Disabled,
 		}
 		if deployment.Helm != nil {
 			nextConfig.Deployments[name].Helm = &next.HelmConfig{
-				ComponentChart: deployment.Helm.ComponentChart,
-				Values:         deployment.Helm.Values,
-				ValuesFiles:    deployment.Helm.ValuesFiles,
-				Wait:           deployment.Helm.Wait,
-				DisplayOutput:  deployment.Helm.DisplayOutput,
-				Timeout:        deployment.Helm.Timeout,
-				Force:          deployment.Helm.Force,
-				Atomic:         deployment.Helm.Atomic,
-				CleanupOnFail:  deployment.Helm.CleanupOnFail,
-				Recreate:       deployment.Helm.Recreate,
-				DisableHooks:   deployment.Helm.DisableHooks,
-				Driver:         deployment.Helm.Driver,
-				Path:           deployment.Helm.Path,
-				TemplateArgs:   deployment.Helm.TemplateArgs,
-				UpgradeArgs:    deployment.Helm.UpgradeArgs,
-				FetchArgs:      deployment.Helm.FetchArgs,
+				Values:        deployment.Helm.Values,
+				ValuesFiles:   deployment.Helm.ValuesFiles,
+				Wait:          deployment.Helm.Wait,
+				DisplayOutput: deployment.Helm.DisplayOutput,
+				Timeout:       deployment.Helm.Timeout,
+				Force:         deployment.Helm.Force,
+				Atomic:        deployment.Helm.Atomic,
+				CleanupOnFail: deployment.Helm.CleanupOnFail,
+				Recreate:      deployment.Helm.Recreate,
+				DisableHooks:  deployment.Helm.DisableHooks,
+				Driver:        deployment.Helm.Driver,
+				Path:          deployment.Helm.Path,
+				TemplateArgs:  deployment.Helm.TemplateArgs,
+				UpgradeArgs:   deployment.Helm.UpgradeArgs,
+				FetchArgs:     deployment.Helm.FetchArgs,
 			}
 			if deployment.Helm.Chart != nil {
 				nextConfig.Deployments[name].Helm.Chart = &next.ChartConfig{
@@ -194,8 +213,8 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 					Password: deployment.Helm.Chart.Password,
 				}
 				if deployment.Helm.Chart.Git != nil {
-					nextConfig.Deployments[name].Helm.Chart.Git = &next.GitSource{
-						URL:       deployment.Helm.Chart.Git.URL,
+					nextConfig.Deployments[name].Helm.Chart.Source = &next.SourceConfig{
+						Git:       deployment.Helm.Chart.Git.URL,
 						CloneArgs: deployment.Helm.Chart.Git.CloneArgs,
 						Branch:    deployment.Helm.Chart.Git.Branch,
 						Tag:       deployment.Helm.Chart.Git.Tag,
@@ -532,8 +551,11 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 	// flatten dev containers
 	for k := range devPods {
 		if len(devPods[k].Containers) == 1 {
-			devPods[k].DevContainer = devPods[k].Containers[0]
-			devPods[k].Containers = nil
+			for c := range devPods[k].Containers {
+				devPods[k].DevContainer = *devPods[k].Containers[c]
+				devPods[k].Containers = nil
+				break
+			}
 		}
 	}
 
@@ -543,14 +565,17 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 func getMatchingDevContainer(devPod *next.DevPod, containerName string) *next.DevContainer {
 	for key, container := range devPod.Containers {
 		if container.Container == containerName {
-			return &devPod.Containers[key]
+			return devPod.Containers[key]
 		}
 	}
 
-	devPod.Containers = append(devPod.Containers, next.DevContainer{
+	if devPod.Containers == nil {
+		devPod.Containers = map[string]*next.DevContainer{}
+	}
+	devPod.Containers[containerName] = &next.DevContainer{
 		Container: containerName,
-	})
-	return &devPod.Containers[len(devPod.Containers)-1]
+	}
+	return devPod.Containers[containerName]
 }
 
 func getMatchingDevPod(devPods map[string]*next.DevPod, name string, labelSelector map[string]string, imageSelector string) *next.DevPod {

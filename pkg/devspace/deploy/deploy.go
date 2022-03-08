@@ -92,11 +92,6 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 		)
 		if len(deployments) == 0 {
 			for _, deployConfig := range config.Deployments {
-				if deployConfig.Disabled {
-					ctx.Log.Debugf("Skip deployment %s, because it is disabled", deployConfig.Name)
-					continue
-				}
-
 				if !options.Render && !options.Sequential {
 					concurrentDeployments = append(concurrentDeployments, deployConfig)
 				} else {
@@ -121,9 +116,6 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 				deployConfig, ok := deploymentMap[deployment]
 				if !ok {
 					return fmt.Errorf("couldn't find deployment %v", deployment)
-				} else if deployConfig.Disabled {
-					ctx.Log.Debugf("Skip deployment %s, because it is disabled", deployConfig.Name)
-					continue
 				}
 
 				if !options.Render && !options.Sequential {

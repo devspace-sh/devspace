@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/sirupsen/logrus"
 	"net/http"
@@ -332,8 +333,11 @@ func (m *manager) AddComponentDeployment(deploymentName, image string, servicePo
 	m.config.Deployments[deploymentName] = &latest.DeploymentConfig{
 		Name: deploymentName,
 		Helm: &latest.HelmConfig{
-			ComponentChart: ptr.Bool(true),
-			Values:         chartValues,
+			Chart: &latest.ChartConfig{
+				Name:    helm.DevSpaceChartConfig.Name,
+				RepoURL: helm.DevSpaceChartConfig.RepoURL,
+			},
+			Values: chartValues,
 		},
 	}
 

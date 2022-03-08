@@ -2,8 +2,8 @@ package v3
 
 import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,7 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/helm/generic"
 	"github.com/loft-sh/devspace/pkg/devspace/helm/types"
 	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
-	"github.com/loft-sh/devspace/pkg/util/git"
 	"github.com/loft-sh/devspace/pkg/util/log"
 )
 
@@ -55,30 +54,13 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 	}
 
 	// Chart settings
-	if helmConfig.Chart.Git != nil {
-		chartName, err := ioutil.TempDir("", "")
+	if helmConfig.Chart.Source != nil {
+		chartName, err := dependencyutil.DownloadDependency(ctx.Context, ctx.WorkingDir, helmConfig.Chart.Source, ctx.Log)
 		if err != nil {
 			return nil, err
 		}
 
-		defer os.RemoveAll(chartName)
-		repo, err := git.NewGitCLIRepository(ctx.Context, chartName)
-		if err != nil {
-			return nil, err
-		}
-		err = repo.Clone(ctx.Context, git.CloneOptions{
-			URL:    helmConfig.Chart.Git.URL,
-			Branch: helmConfig.Chart.Git.Branch,
-			Tag:    helmConfig.Chart.Git.Tag,
-			Args:   helmConfig.Chart.Git.CloneArgs,
-			Commit: helmConfig.Chart.Git.Revision,
-		})
-		if err != nil {
-			return nil, err
-		}
-		if helmConfig.Chart.Git.SubPath != "" {
-			chartName = filepath.Join(chartName, helmConfig.Chart.Git.SubPath)
-		}
+		chartName = filepath.Dir(chartName)
 		args = append(args, chartName)
 	} else {
 		chartName, chartRepo := generic.ChartNameAndRepo(helmConfig)

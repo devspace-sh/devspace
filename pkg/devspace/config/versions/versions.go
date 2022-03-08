@@ -202,6 +202,9 @@ func adjustConfig(config *latest.Config) {
 	}
 	for name, devPod := range config.Dev {
 		devPod.Name = name
+		for c, v := range devPod.Containers {
+			v.Container = c
+		}
 	}
 	for name, pipeline := range config.Pipelines {
 		pipeline.Name = name

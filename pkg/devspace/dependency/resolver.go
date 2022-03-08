@@ -215,8 +215,6 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyCon
 		return nil, err
 	}
 
-	dConfig := dConfigWrapper.Config()
-
 	// set parsed variables in parent config
 	if dependency.OverwriteVars {
 		baseVars := ctx.Config.Variables()
@@ -225,17 +223,6 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyCon
 			if !ok {
 				baseVars[k] = v
 			}
-		}
-	}
-
-	// Check if we should skip building
-	if dependency.SkipBuild {
-		for _, b := range dConfig.Images {
-			if b.Build == nil {
-				b.Build = &latest.BuildConfig{}
-			}
-
-			b.Build.Disabled = true
 		}
 	}
 

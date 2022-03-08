@@ -93,21 +93,12 @@ type Pipeline struct {
 	// Name of the pipeline, will be filled automatically
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
-	// Rerun defines when this job should get reexecuted
-	Rerun *JobRerun `yaml:"rerun,omitempty" json:"rerun,omitempty"`
-
 	// Steps are the steps that are run in order for this job
 	Steps []PipelineStep `yaml:"steps,omitempty" json:"steps,omitempty"`
 }
 
-type JobRerun struct {
-}
-
 // PipelineStep is a step within a single pipeline
 type PipelineStep struct {
-	// Name of the pipeline step to execute
-	Name string `yaml:"name,omitempty" json:"name,omitempty"`
-
 	// If defines a condition as shell command to check if the command
 	// should get executed.
 	If string `yaml:"if,omitempty" json:"if,omitempty"`
@@ -120,11 +111,8 @@ type PipelineStep struct {
 	// pipeline step
 	Run string `yaml:"run,omitempty" json:"run,omitempty"`
 
-	// Directory is the working directory of the pipeline step
-	Directory string `yaml:"directory,omitempty" json:"directory,omitempty"`
-
-	// Env are additional environment variables to use for this pipeline step.
-	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
+	// WorkingDir is the working directory of the pipeline step
+	WorkingDir string `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
 }
 
 type RequireConfig struct {
@@ -219,7 +207,7 @@ type RebuildStrategy string
 
 // List of values that source can take
 const (
-	RebuildStrategyDefault              RebuildStrategy = ""
+	RebuildStrategyDefault              RebuildStrategy = "default"
 	RebuildStrategyAlways               RebuildStrategy = "always"
 	RebuildStrategyIgnoreContextChanges RebuildStrategy = "ignoreContextChanges"
 )
@@ -239,10 +227,6 @@ type BuildConfig struct {
 	// If custom is specified, DevSpace will build the image with the help of
 	// a custom script.
 	Custom *CustomConfig `yaml:"custom,omitempty" json:"custom,omitempty"`
-
-	// This overrides other options and is able to disable the build for this image.
-	// Useful if you just want to select the image in a sync path or via devspace enter --image
-	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 }
 
 // DockerConfig tells the DevSpace CLI to build with Docker on Minikube or on localhost
@@ -511,7 +495,6 @@ type BuildOptions struct {
 type DeploymentConfig struct {
 	Name      string         `yaml:"name" json:"name"`
 	Namespace string         `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	Disabled  bool           `yaml:"disabled,omitempty" json:"disabled,omitempty"`
 	Helm      *HelmConfig    `yaml:"helm,omitempty" json:"helm,omitempty"`
 	Kubectl   *KubectlConfig `yaml:"kubectl,omitempty" json:"kubectl,omitempty"`
 }
@@ -697,7 +680,6 @@ type RollingUpdateConfig struct {
 // HelmConfig defines the specific helm options used during deployment
 type HelmConfig struct {
 	Chart            *ChartConfig           `yaml:"chart,omitempty" json:"chart,omitempty"`
-	ComponentChart   *bool                  `yaml:"componentChart,omitempty" json:"componentChart,omitempty"`
 	Values           map[string]interface{} `yaml:"values,omitempty" json:"values,omitempty"`
 	ValuesFiles      []string               `yaml:"valuesFiles,omitempty" json:"valuesFiles,omitempty"`
 	ReplaceImageTags bool                   `yaml:"replaceImageTags,omitempty" json:"replaceImageTags,omitempty"`
@@ -719,22 +701,12 @@ type HelmConfig struct {
 
 // ChartConfig defines the helm chart options
 type ChartConfig struct {
-	Name     string     `yaml:"name,omitempty" json:"name,omitempty"`
-	Version  string     `yaml:"version,omitempty" json:"version,omitempty"`
-	RepoURL  string     `yaml:"repo,omitempty" json:"repo,omitempty"`
-	Username string     `yaml:"username,omitempty" json:"username,omitempty"`
-	Password string     `yaml:"password,omitempty" json:"password,omitempty"`
-	Git      *GitSource `yaml:"git,omitempty" json:"git,omitempty"`
-}
-
-//GitSource defines the git repository options
-type GitSource struct {
-	URL       string   `yaml:"url,omitempty" json:"url,omitempty"`
-	CloneArgs []string `yaml:"cloneArgs,omitempty" json:"cloneArgs,omitempty"`
-	Branch    string   `yaml:"branch,omitempty" json:"branch,omitempty"`
-	Tag       string   `yaml:"tag,omitempty" json:"tag,omitempty"`
-	Revision  string   `yaml:"revision,omitempty" json:"revision,omitempty"`
-	SubPath   string   `yaml:"subPath,omitempty" json:"subPath,omitempty"`
+	Name     string        `yaml:"name,omitempty" json:"name,omitempty"`
+	Version  string        `yaml:"version,omitempty" json:"version,omitempty"`
+	RepoURL  string        `yaml:"repo,omitempty" json:"repo,omitempty"`
+	Username string        `yaml:"username,omitempty" json:"username,omitempty"`
+	Password string        `yaml:"password,omitempty" json:"password,omitempty"`
+	Source   *SourceConfig `yaml:",inline" json:",inline"`
 }
 
 // KubectlConfig defines the specific kubectl options used during deployment
@@ -750,7 +722,6 @@ type KubectlConfig struct {
 
 type DevPod struct {
 	Name          string            `yaml:"name,omitempty" json:"name,omitempty"`
-	Pod           string            `yaml:"pod,omitempty" json:"pod,omitempty"`
 	ImageSelector string            `yaml:"imageSelector,omitempty" json:"imageSelector,omitempty"`
 	LabelSelector map[string]string `yaml:"labelSelector,omitempty" json:"labelSelector,omitempty"`
 	Namespace     string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
@@ -764,7 +735,7 @@ type DevPod struct {
 
 	// Container Options
 	DevContainer `yaml:",inline" json:",inline"`
-	Containers   []DevContainer `yaml:"containers,omitempty" json:"containers,omitempty"`
+	Containers   map[string]*DevContainer `yaml:"containers,omitempty" json:"containers,omitempty"`
 }
 
 type DevContainer struct {
@@ -1000,7 +971,6 @@ type DependencyConfig struct {
 	DisableProfileActivation bool            `yaml:"disableProfileActivation,omitempty" json:"disableProfileActivation,omitempty"`
 	Vars                     []DependencyVar `yaml:"vars,omitempty" json:"vars,omitempty"`
 	OverwriteVars            bool            `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
-	SkipBuild                bool            `yaml:"skipBuild,omitempty" json:"skipBuild,omitempty"`
 	IgnoreDependencies       bool            `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
 	Namespace                string          `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 }
@@ -1040,7 +1010,6 @@ type SourceConfig struct {
 	Branch         string   `yaml:"branch,omitempty" json:"branch,omitempty"`
 	Tag            string   `yaml:"tag,omitempty" json:"tag,omitempty"`
 	Revision       string   `yaml:"revision,omitempty" json:"revision,omitempty"`
-	ConfigName     string   `yaml:"configName,omitempty" json:"configName,omitempty"`
 
 	Path string `yaml:"path,omitempty" json:"path,omitempty"`
 }

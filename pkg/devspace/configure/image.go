@@ -43,9 +43,6 @@ func (m *manager) AddImage(imageName, image, dockerfile string, dockerfileGenera
 	imageConfig := &latest.Image{
 		Image:      strings.ToLower(image),
 		Dockerfile: dockerfile,
-		Build: &latest.BuildConfig{
-			Disabled: true,
-		},
 	}
 
 	buildMethods := []string{createNewDockerfile, subPathDockerfile}
@@ -75,7 +72,6 @@ func (m *manager) AddImage(imageName, image, dockerfile string, dockerfileGenera
 		buildCommandSplit := strings.Split(strings.TrimSpace(buildCommand), " ")
 
 		imageConfig.Build = &latest.BuildConfig{
-			Disabled: true,
 			Custom: &latest.CustomConfig{
 				Command: buildCommandSplit[0],
 				Args:    buildCommandSplit[1:],

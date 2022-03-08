@@ -70,13 +70,11 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 	if !options.Sequential {
 		// check if all images are disabled besides one
 		imagesToBuild := 0
-		for k, image := range conf.Images {
+		for k := range conf.Images {
 			if len(images) > 0 && !stringutil.Contains(images, k) {
 				continue
 			}
-			if image.Build == nil || !image.Build.Disabled {
-				imagesToBuild++
-			}
+			imagesToBuild++
 		}
 		if len(conf.Images) <= 1 || imagesToBuild <= 1 {
 			options.Sequential = true
@@ -93,10 +91,6 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 	for key, imageConf := range conf.Images {
 		ctx := ctx.WithLogger(logpkg.NewDefaultPrefixLogger("build:"+key+" ", ctx.Log))
 		if len(images) > 0 && !stringutil.Contains(images, key) {
-			continue
-		}
-		if imageConf.Build != nil && imageConf.Build.Disabled {
-			ctx.Log.Infof("Skipping building image %s", key)
 			continue
 		}
 

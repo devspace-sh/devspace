@@ -171,7 +171,7 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 	// wait for pod to be ready
 	ctx.Log.Infof("Waiting for pod to become ready...")
 	options := targetselector.NewEmptyOptions().
-		ApplyConfigParameter("", devPodConfig.LabelSelector, imageSelector, devPodConfig.Namespace, devPodConfig.Pod).
+		ApplyConfigParameter("", devPodConfig.LabelSelector, imageSelector, devPodConfig.Namespace, "").
 		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Millisecond * 500)).
 		WithSkipInitContainers(true)
 	var err error
@@ -242,15 +242,13 @@ func (d *devPod) startLogs(ctx *devspacecontext.Context, devPodConfig *latest.De
 func (d *devPod) getTerminalDevContainer(devPodConfig *latest.DevPod) *latest.DevContainer {
 	// find dev container config
 	var devContainer *latest.DevContainer
-	if devPodConfig.Terminal != nil && !devPodConfig.Terminal.Disabled {
-		devContainer = &devPodConfig.DevContainer
-	}
-	for _, d := range devPodConfig.Containers {
+	loader.EachDevContainer(devPodConfig, func(d *latest.DevContainer) bool {
 		if d.Terminal != nil && !d.Terminal.Disabled {
-			devContainer = &d
-			break
+			devContainer = d
+			return false
 		}
-	}
+		return true
+	})
 
 	return devContainer
 }

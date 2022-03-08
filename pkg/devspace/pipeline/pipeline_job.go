@@ -86,11 +86,6 @@ func (j *Job) Run(ctx *devspacecontext.Context) error {
 			return t.Err()
 		}
 
-		// if rerun we should watch here
-		if j.Config.Rerun != nil {
-			// TODO: watch and restart job here
-		}
-
 		return nil
 	})
 
@@ -125,7 +120,8 @@ func (j *Job) shouldExecuteStep(ctx *devspacecontext.Context, step *latest.Pipel
 	// check if step should be rerun
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	_, err := engine.ExecutePipelineShellCommand(ctx.Context, step.Run, os.Args[1:], step.Directory, false, stdout, stderr, os.Stdin, j.getEnv(ctx, step), basichandler.NewBasicExecHandler())
+
+	_, err := engine.ExecutePipelineShellCommand(ctx.Context, step.Run, os.Args[1:], ctx.ResolvePath(step.WorkingDir), false, stdout, stderr, os.Stdin, j.getEnv(ctx), basichandler.NewBasicExecHandler())
 	if err != nil {
 		if status, ok := interp.IsExitStatus(err); ok && status == 1 {
 			return false, nil
@@ -152,15 +148,12 @@ func (j *Job) executeStep(ctx *devspacecontext.Context, step *latest.PipelineSte
 	})
 
 	handler := pipelinehandler.NewPipelineExecHandler(ctx, stdoutWriter, j.Pipeline, true)
-	_, err := engine.ExecutePipelineShellCommand(ctx.Context, step.Run, os.Args[1:], step.Directory, step.ContinueOnError, stdoutWriter, stdoutWriter, os.Stdin, j.getEnv(ctx, step), handler)
+	_, err := engine.ExecutePipelineShellCommand(ctx.Context, step.Run, os.Args[1:], ctx.ResolvePath(step.WorkingDir), step.ContinueOnError, stdoutWriter, stdoutWriter, os.Stdin, j.getEnv(ctx), handler)
 	return err
 }
 
-func (j *Job) getEnv(ctx *devspacecontext.Context, step *latest.PipelineStep) expand.Environ {
+func (j *Job) getEnv(ctx *devspacecontext.Context) expand.Environ {
 	envMap := map[string]string{}
-	for k, v := range step.Env {
-		envMap[k] = v
-	}
 	for k, v := range j.ExtraEnv {
 		envMap[k] = v
 	}

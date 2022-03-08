@@ -216,29 +216,16 @@ func validateHooks(config *latest.Config) error {
 func validateDeployments(config *latest.Config) error {
 	for index, deployConfig := range config.Deployments {
 		if deployConfig.Name == "" {
-			return errors.Errorf("deployments[%d].name is required", index)
+			return errors.Errorf("deployments[%s].name is required", index)
 		}
 		if encoding.IsUnsafeName(deployConfig.Name) {
-			return fmt.Errorf("deployments[%d].name %s has to match the following regex: %v", index, deployConfig.Name, encoding.UnsafeNameRegEx.String())
+			return fmt.Errorf("deployments[%s].name %s has to match the following regex: %v", index, deployConfig.Name, encoding.UnsafeNameRegEx.String())
 		}
 		if deployConfig.Helm == nil && deployConfig.Kubectl == nil {
 			return errors.Errorf("Please specify either helm or kubectl as deployment type in deployment %s", deployConfig.Name)
 		}
-		if deployConfig.Helm != nil {
-			if deployConfig.Helm.Chart == nil &&
-				(deployConfig.Helm.ComponentChart == nil || !*deployConfig.Helm.ComponentChart) {
-				return errors.Errorf("deployments[%d].helm.chart or deployments[%d].helm.componentChart is required", index, index)
-			}
-
-			if deployConfig.Helm.Chart != nil &&
-				((deployConfig.Helm.Chart.Name != "" && deployConfig.Helm.Chart.Git != nil) ||
-					(deployConfig.Helm.Chart.Name == "" && deployConfig.Helm.Chart.Git == nil)) {
-				return errors.Errorf("deployments[%d].helm.chart.name or deployments[%d].helm.chart.git is required", index, index)
-			}
-		}
-
 		if deployConfig.Kubectl != nil && deployConfig.Kubectl.Manifests == nil {
-			return errors.Errorf("deployments[%d].kubectl.manifests is required", index)
+			return errors.Errorf("deployments[%s].kubectl.manifests is required", index)
 		}
 	}
 
@@ -246,7 +233,7 @@ func validateDeployments(config *latest.Config) error {
 }
 
 func ValidateComponentConfig(deployConfig *latest.DeploymentConfig, overwriteValues map[string]interface{}) error {
-	if deployConfig.Helm != nil && deployConfig.Helm.ComponentChart != nil && *deployConfig.Helm.ComponentChart {
+	if deployConfig.Helm != nil && deployConfig.Helm.Chart == nil {
 		b, err := yaml.Marshal(overwriteValues)
 		if err != nil {
 			return errors.Errorf("deployments[%s].helm: Error marshaling overwrite values: %v", deployConfig.Name, err)
@@ -305,7 +292,7 @@ func validateImages(config *latest.Config) error {
 		if images[imageConf.Image] {
 			return errors.Errorf("multiple image definitions with the same image name are not allowed")
 		}
-		if imageConf.RebuildStrategy != latest.RebuildStrategyDefault && imageConf.RebuildStrategy != latest.RebuildStrategyAlways && imageConf.RebuildStrategy != latest.RebuildStrategyIgnoreContextChanges {
+		if imageConf.RebuildStrategy != "" && imageConf.RebuildStrategy != latest.RebuildStrategyDefault && imageConf.RebuildStrategy != latest.RebuildStrategyAlways && imageConf.RebuildStrategy != latest.RebuildStrategyIgnoreContextChanges {
 			return errors.Errorf("images.%s.rebuildStrategy %s is invalid. Please choose one of %v", imageConfigName, string(imageConf.RebuildStrategy), []latest.RebuildStrategy{latest.RebuildStrategyAlways, latest.RebuildStrategyIgnoreContextChanges})
 		}
 		if imageConf.Build != nil && imageConf.Build.Kaniko != nil && imageConf.Build.Kaniko.EnvFrom != nil {
@@ -335,14 +322,11 @@ func validateDev(config *latest.Config) error {
 		if encoding.IsUnsafeName(devPodName) {
 			return fmt.Errorf("dev[%s] has to match the following regex: %v", devPodName, encoding.UnsafeNameRegEx.String())
 		}
-		if len(devPod.LabelSelector) == 0 && devPod.ImageSelector == "" && devPod.Pod == "" {
-			return errors.Errorf("dev[%s]: image selector, pod and label selector are nil", devPodName)
+		if len(devPod.LabelSelector) == 0 && devPod.ImageSelector == "" {
+			return errors.Errorf("dev[%s]: image selector and label selector are nil", devPodName)
 		}
 
 		definedSelectors := 0
-		if devPod.Pod != "" {
-			definedSelectors++
-		}
 		if devPod.ImageSelector != "" {
 			definedSelectors++
 		}
@@ -350,7 +334,7 @@ func validateDev(config *latest.Config) error {
 			definedSelectors++
 		}
 		if definedSelectors > 1 {
-			return errors.Errorf("dev[%s]: image selector, pod and label selector cannot all be defined", devPodName)
+			return errors.Errorf("dev[%s]: image selector and label selector cannot all be defined", devPodName)
 		}
 
 		err := validateDevContainer(fmt.Sprintf("dev[%s]", devPodName), &devPod.DevContainer, false)
@@ -359,7 +343,7 @@ func validateDev(config *latest.Config) error {
 		}
 		if len(devPod.Containers) > 0 {
 			for i, c := range devPod.Containers {
-				err := validateDevContainer(fmt.Sprintf("dev[%s].containers[%d]", devPodName, i), &c, true)
+				err := validateDevContainer(fmt.Sprintf("dev[%s].containers[%s]", devPodName, i), c, true)
 				if err != nil {
 					return err
 				}
@@ -408,8 +392,7 @@ func validateDevContainer(path string, devContainer *latest.DevContainer, nameRe
 func EachDevContainer(devPod *latest.DevPod, each func(devContainer *latest.DevContainer) bool) {
 	if len(devPod.Containers) > 0 {
 		for _, devContainer := range devPod.Containers {
-			d := devContainer
-			cont := each(&d)
+			cont := each(devContainer)
 			if !cont {
 				break
 			}
