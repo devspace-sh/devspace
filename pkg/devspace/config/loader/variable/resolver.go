@@ -129,7 +129,7 @@ func (r *resolver) FindVariables(haystack interface{}) ([]*latest.Variable, erro
 
 	// filter out runtime environment variables
 	for k := range varsUsed {
-		if r.vars[k] == nil || IsPredefinedVariable(k) || strings.HasPrefix(k, "runtime.") {
+		if !strings.HasPrefix(k, "runtime.") && !IsPredefinedVariable(k) && r.vars[k] == nil {
 			delete(varsUsed, k)
 		}
 	}
@@ -141,10 +141,17 @@ func (r *resolver) orderVariables(vars map[string]bool) ([]*latest.Variable, err
 	root := graph.NewNode("root", nil)
 	g := graph.NewGraphOf(root, "variable")
 	for name := range vars {
-		// check if has definition
-		definition, ok := r.vars[name]
-		if !ok {
-			continue
+		// check if predefined variable
+		var definition *latest.Variable
+		if IsPredefinedVariable(name) {
+			definition = &latest.Variable{Name: name}
+		} else {
+			// check if has definition
+			var ok bool
+			definition, ok = r.vars[name]
+			if !ok {
+				continue
+			}
 		}
 
 		err := r.insertVariableGraph(g, definition)
@@ -381,7 +388,7 @@ func (r *resolver) findVariablesInDefinition(definition *latest.Variable) map[st
 
 	// filter out runtime environment variables and non existing ones
 	for k := range varsUsed {
-		if r.vars[k] == nil || IsPredefinedVariable(k) || strings.HasPrefix(k, "runtime.") {
+		if !strings.HasPrefix(k, "runtime.") && !IsPredefinedVariable(k) && r.vars[k] == nil {
 			delete(varsUsed, k)
 		}
 	}

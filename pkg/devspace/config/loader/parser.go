@@ -12,7 +12,13 @@ import (
 )
 
 type Parser interface {
-	Parse(ctx context.Context, originalRawConfig map[string]interface{}, rawConfig map[string]interface{}, resolver variable.Resolver, log log.Logger) (*latest.Config, map[string]interface{}, error)
+	Parse(
+		ctx context.Context,
+		originalRawConfig map[string]interface{},
+		rawConfig map[string]interface{},
+		resolver variable.Resolver,
+		log log.Logger,
+	) (*latest.Config, map[string]interface{}, error)
 }
 
 func NewDefaultParser() Parser {

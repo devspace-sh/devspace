@@ -3,6 +3,7 @@ package log
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/env"
 	"io"
 	"io/ioutil"
 	"os"
@@ -152,7 +153,7 @@ func (s *StreamLogger) writeMessage(fnType logFunctionType, message string) {
 	fnInformation := fnTypeInformationMap[fnType]
 	if s.level >= fnInformation.logLevel {
 		if s.format == TextFormat {
-			if os.Getenv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
+			if env.GlobalGetEnv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
 				now := time.Now()
 				_, _ = s.stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
 			}

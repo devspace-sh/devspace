@@ -48,7 +48,8 @@ func (e *envProvider) Get(name string) expand.Variable {
 }
 
 func (e *envProvider) getVariable(name string) (expand.Variable, bool) {
-	v, ok := e.config.Variables()[name]
+	replacedName := strings.ReplaceAll(name, enginetypes.DotReplacement, ".")
+	v, ok := e.config.Variables()[replacedName]
 	if ok {
 		return expand.Variable{
 			Exported: true,

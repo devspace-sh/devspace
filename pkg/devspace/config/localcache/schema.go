@@ -3,6 +3,7 @@ package localcache
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/env"
 	"github.com/loft-sh/devspace/pkg/util/encryption"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
@@ -191,7 +192,7 @@ func (l *LocalCache) Save() error {
 	}
 
 	// encrypt variables
-	if os.Getenv(DevSpaceDisableVarsEncryptionEnv) != "true" && EncryptionKey != "" {
+	if env.GlobalGetEnv(DevSpaceDisableVarsEncryptionEnv) != "true" && EncryptionKey != "" {
 		for k, v := range copiedConfig.Vars {
 			if len(v) == 0 {
 				continue

@@ -2,6 +2,7 @@ package upgrade
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/env"
 	"os"
 	"regexp"
 	"sync"
@@ -35,7 +36,7 @@ func eraseVersionPrefix(version string) (string, error) {
 
 // PrintUpgradeMessage prints an upgrade message if there is a new version available
 func PrintUpgradeMessage() {
-	if os.Getenv("DEVSPACE_SKIP_VERSION_CHECK") != "true" {
+	if env.GlobalGetEnv("DEVSPACE_SKIP_VERSION_CHECK") != "true" {
 		// Get version of current binary
 		latestVersion := NewerVersionAvailable()
 		if latestVersion != "" {

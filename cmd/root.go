@@ -1,10 +1,18 @@
 package cmd
 
 import (
+	"context"
 	"flag"
+	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	"github.com/loft-sh/devspace/pkg/devspace/env"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/loft-sh/devspace/pkg/util/message"
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
@@ -157,6 +165,14 @@ func BuildRoot(f factory.Factory, excludePlugins bool) *cobra.Command {
 		plugin.SetPlugins(plugins)
 	}
 
+	// try to parse the raw config
+	rawConfig, err := parseConfig(f)
+	if err != nil {
+		f.GetLog().Debugf("error parsing raw config: %v", err)
+	} else {
+		env.GlobalGetEnv = rawConfig.GetEnv
+	}
+
 	// build the root cmd
 	rootCmd := NewRootCmd(f)
 	rootCmd.SetHelpCommand(&cobra.Command{
@@ -232,7 +248,7 @@ Additional run commands:
 	rootCmd.AddCommand(NewLogsCmd(f, globalFlags))
 	rootCmd.AddCommand(NewOpenCmd(f, globalFlags))
 	rootCmd.AddCommand(NewUICmd(f, globalFlags))
-	rootCmd.AddCommand(NewRunCmd(f, globalFlags))
+	rootCmd.AddCommand(NewRunCmd(f, globalFlags, rawConfig))
 	rootCmd.AddCommand(NewAttachCmd(f, globalFlags))
 	rootCmd.AddCommand(NewPrintCmd(f, globalFlags))
 	rootCmd.AddCommand(NewCompletionCmd())
@@ -253,4 +269,97 @@ func disableKlog() {
 	klogv2.InitFlags(flagSet)
 	_ = flagSet.Set("logtostderr", "false")
 	klogv2.SetOutput(ioutil.Discard)
+}
+
+func parseConfig(f factory.Factory) (*RawConfig, error) {
+	// get current working dir
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	// set working dir back to original
+	defer func() { _ = os.Chdir(cwd) }()
+
+	// Set config root
+	configLoader, err := f.NewConfigLoader("")
+	if err != nil {
+		return nil, err
+	}
+	configExists, err := configLoader.SetDevSpaceRoot(log.Discard)
+	if err != nil {
+		return nil, err
+	} else if !configExists {
+		return nil, errors.New(message.ConfigNotFound)
+	}
+
+	// Parse commands
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	r := &RawConfig{}
+	_, err = configLoader.LoadWithParser(timeoutCtx, nil, nil, r, &loader.ConfigOptions{Dry: true}, log.Discard)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+type RawConfig struct {
+	Ctx               context.Context
+	OriginalRawConfig map[string]interface{}
+	RawConfig         map[string]interface{}
+	Resolver          variable.Resolver
+
+	resolvedMutex sync.Mutex
+	resolved      map[string]string
+}
+
+func (r *RawConfig) Parse(
+	ctx context.Context,
+	originalRawConfig map[string]interface{},
+	rawConfig map[string]interface{},
+	resolver variable.Resolver,
+	log log.Logger,
+) (*latest.Config, map[string]interface{}, error) {
+	r.Ctx = ctx
+	r.OriginalRawConfig = originalRawConfig
+	r.RawConfig = rawConfig
+	r.Resolver = resolver
+	return nil, nil, fmt.Errorf("error parsing")
+}
+
+func (r *RawConfig) GetEnv(name string) string {
+	// try to get from environment
+	value := os.Getenv(name)
+	if value != "" {
+		return value
+	}
+
+	// try to find devspace variable
+	if r.Resolver != nil {
+		r.resolvedMutex.Lock()
+		defer r.resolvedMutex.Unlock()
+
+		// cache which ones were tried
+		value, ok := r.resolved[name]
+		if ok {
+			return value
+		}
+
+		varName := "${" + name + "}"
+		out, err := r.Resolver.FillVariables(r.Ctx, varName)
+		if err == nil {
+			value := fmt.Sprintf("%v", out)
+			if value != varName && value != "" {
+				r.resolved[name] = value
+				return value
+			}
+		}
+
+		r.resolved[name] = ""
+	}
+
+	return ""
 }

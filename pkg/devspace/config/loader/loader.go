@@ -144,6 +144,8 @@ func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache
 		if !ok {
 			return nil, fmt.Errorf("name is missing in " + filepath.Base(l.absConfigPath))
 		}
+	} else {
+		data["name"] = options.OverrideName
 	}
 
 	// create remote cache

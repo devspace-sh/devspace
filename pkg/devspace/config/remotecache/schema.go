@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/env"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/encryption"
 	"github.com/loft-sh/devspace/pkg/util/log"
@@ -14,7 +15,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"os"
 	"sync"
 	"time"
 )
@@ -277,7 +277,7 @@ func (l *RemoteCache) Save(ctx context.Context, client kubectl.Client) error {
 	}
 
 	// encrypt variables
-	if os.Getenv(localcache.DevSpaceDisableVarsEncryptionEnv) != "true" && localcache.EncryptionKey != "" {
+	if env.GlobalGetEnv(localcache.DevSpaceDisableVarsEncryptionEnv) != "true" && localcache.EncryptionKey != "" {
 		for k, v := range copiedConfig.Vars {
 			if len(v) == 0 {
 				continue

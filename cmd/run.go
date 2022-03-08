@@ -5,25 +5,23 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/loft-sh/devspace/pkg/util/command"
 	"github.com/loft-sh/devspace/pkg/util/exit"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"io"
 	"mvdan.cc/sh/v3/interp"
 	"os"
 	"strings"
 
-	"github.com/loft-sh/devspace/pkg/devspace/hook"
-
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
-	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	flagspkg "github.com/loft-sh/devspace/pkg/util/flags"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
 	"github.com/sirupsen/logrus"
 
@@ -41,7 +39,7 @@ type RunCmd struct {
 }
 
 // NewRunCmd creates a new run command
-func NewRunCmd(f factory.Factory, globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewRunCmd(f factory.Factory, globalFlags *flags.GlobalFlags, rawConfig *RawConfig) *cobra.Command {
 	cmd := &RunCmd{
 		GlobalFlags: globalFlags,
 		Stdout:      os.Stdout,
@@ -103,29 +101,32 @@ devspace --dependency my-dependency run any-command --any-command-flag
 		},
 	}
 
-	commands, _ := getCommands(f)
-	for _, command := range commands {
-		description := command.Description
-		if description == "" {
-			description = "Runs command: " + command.Command
-		}
-		if len(description) > 64 {
-			if len(description) > 64 {
-				description = description[:61] + "..."
+	if rawConfig != nil {
+		latest, _, _ := loader.NewCommandsParser().Parse(rawConfig.Ctx, rawConfig.OriginalRawConfig, rawConfig.RawConfig, rawConfig.Resolver, log.Discard)
+		if latest != nil {
+			for _, cmd := range latest.Commands {
+				description := cmd.Description
+				if description == "" {
+					description = "Runs command: " + cmd.Command
+				}
+				if len(description) > 64 {
+					if len(description) > 64 {
+						description = description[:61] + "..."
+					}
+				}
+				runCmd.AddCommand(&cobra.Command{
+					Use:                cmd.Name,
+					Short:              description,
+					Long:               description,
+					Args:               cobra.ArbitraryArgs,
+					DisableFlagParsing: true,
+					RunE: func(cobraCmd *cobra.Command, args []string) error {
+						return cobraCmd.Parent().RunE(cobraCmd, args)
+					},
+				})
 			}
 		}
-		runCmd.AddCommand(&cobra.Command{
-			Use:                command.Name,
-			Short:              description,
-			Long:               description,
-			Args:               cobra.ArbitraryArgs,
-			DisableFlagParsing: true,
-			RunE: func(cobraCmd *cobra.Command, args []string) error {
-				return cobraCmd.Parent().RunE(cobraCmd, args)
-			},
-		})
 	}
-
 	runCmd.Flags().StringVar(&cmd.Dependency, "dependency", "", "Run a command from a specific dependency")
 	return runCmd
 }
@@ -255,35 +256,4 @@ func ExecuteConfigCommand(ctx context.Context, config config.Config, name string
 
 	shellArgs = append(shellArgs, args...)
 	return command.CommandWithEnv(ctx, dir, stdout, stderr, stdin, extraEnv, shellCommand, shellArgs...)
-}
-
-func getCommands(f factory.Factory) (map[string]*latest.CommandConfig, error) {
-	// get current working dir
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
-	// set working dir back to original
-	defer func() { _ = os.Chdir(cwd) }()
-
-	// Set config root
-	configLoader, err := f.NewConfigLoader("")
-	if err != nil {
-		return nil, err
-	}
-	configExists, err := configLoader.SetDevSpaceRoot(log.Discard)
-	if err != nil {
-		return nil, err
-	}
-	if !configExists {
-		return nil, errors.New(message.ConfigNotFound)
-	}
-
-	// Parse commands
-	commandsInterface, err := configLoader.LoadWithParser(context.Background(), nil, nil, loader.NewCommandsParser(), &loader.ConfigOptions{Dry: true}, log.Discard)
-	if err != nil {
-		return nil, err
-	}
-	return commandsInterface.Config().Commands, nil
 }
