@@ -137,6 +137,13 @@ func formatInt(i int) string {
 	return formatted
 }
 
+func (s *StreamLogger) GetFormat() Format {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	return s.format
+}
+
 func (s *StreamLogger) WithLevel(level logrus.Level) Logger {
 	s.m.Lock()
 	defer s.m.Unlock()

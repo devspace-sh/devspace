@@ -48,12 +48,17 @@ func (r *client) CreatePullSecret(ctx *devspacecontext.Context, options *PullSec
 		authToken = options.Username + ":" + authToken
 	}
 
+	email := options.Email
+	if email == "" {
+		email = "noreply@devspace.sh"
+	}
+
 	registryAuthEncoded := base64.StdEncoding.EncodeToString([]byte(authToken))
 	pullSecretDataValue := []byte(`{
 			"auths": {
 				"` + options.RegistryURL + `": {
 					"auth": "` + registryAuthEncoded + `",
-					"email": "` + options.Email + `"
+					"email": "` + email + `"
 				}
 			}
 		}`)

@@ -3,6 +3,7 @@ package pullsecrets
 import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/docker"
+	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"time"
 
@@ -94,6 +95,7 @@ func (r *client) EnsurePullSecrets(ctx *devspacecontext.Context, dockerClient do
 			continue
 		}
 
+		ctx := ctx.WithLogger(log.NewDefaultPrefixLogger("pullsecret:"+pullSecretConf.Name+" ", ctx.Log))
 		err = r.ensurePullSecret(ctx, dockerClient, ctx.KubeClient.Namespace(), pullSecretConf)
 		if err != nil {
 			return err
@@ -170,7 +172,7 @@ func (r *client) createPullSecret(ctx *devspacecontext.Context, dockerClient doc
 
 	email := pullSecret.Email
 	if email == "" {
-		email = "noreply@devspace.cloud"
+		email = "noreply@devspace.sh"
 	}
 
 	if username != "" && password != "" {
