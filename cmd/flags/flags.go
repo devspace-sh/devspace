@@ -55,6 +55,6 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.StringVar(&globalFlags.KubeContext, "kube-context", "", "The kubernetes context to use")
 	flags.StringSliceVar(&globalFlags.Vars, "var", []string{}, "Variables to override during execution (e.g. --var=MYVAR=MYVALUE)")
 
-	flags.IntVar(&globalFlags.InactivityTimeout, "inactivity-timeout", 180, "Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems")
+	flags.IntVar(&globalFlags.InactivityTimeout, "inactivity-timeout", 0, "Minutes the current user is inactive (no mouse or keyboard interaction) until DevSpace will exit automatically. 0 to disable. Only supported on windows and mac operating systems")
 	return globalFlags
 }
