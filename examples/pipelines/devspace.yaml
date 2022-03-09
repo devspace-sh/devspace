@@ -3,7 +3,6 @@ name: pipelines
 
 vars:
   HELLO: test
-  DEVSPACE_LOG_TIMESTAMPS: true
 
 pipelines:
   dev:

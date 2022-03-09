@@ -186,7 +186,7 @@ func SendData(stream remote.Tunnel_InitTunnelClient, sessions <-chan *tunnel.Ses
 	}
 }
 
-func StartReverseForward(ctx context.Context, reader io.ReadCloser, writer io.WriteCloser, tunnels []*latest.PortMapping, stopChan chan error, namespace string, name string, log logpkg.Logger) error {
+func StartReverseForward(ctx context.Context, reader io.ReadCloser, writer io.WriteCloser, tunnels []*latest.PortMapping, stopChan chan struct{}, namespace string, name string, log logpkg.Logger) error {
 	scheme := "TCP"
 	closeStreams := make([]chan bool, len(tunnels))
 	defer func() {

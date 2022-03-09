@@ -36,7 +36,7 @@ func startReversePortForwarding(ctx *devspacecontext.Context, name, arch string,
 	}
 
 	errorChan := make(chan error, 2)
-	closeChan := make(chan error)
+	closeChan := make(chan struct{})
 
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()

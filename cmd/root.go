@@ -77,6 +77,12 @@ func NewRootCmd(f factory.Factory) *cobra.Command {
 					log.Debugf("Applying extra flags from environment: %s", strings.Join(extraFlags, " "))
 				}
 
+				if globalFlags.Silent {
+					log.SetLevel(logrus.FatalLevel)
+				} else if globalFlags.Debug {
+					log.SetLevel(logrus.DebugLevel)
+				}
+
 				// call inactivity timeout
 				if globalFlags.InactivityTimeout > 0 {
 					m, err := idle.NewIdleMonitor()

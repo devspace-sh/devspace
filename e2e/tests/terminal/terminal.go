@@ -3,7 +3,6 @@ package terminal
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"github.com/loft-sh/devspace/cmd"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/e2e/framework"
@@ -11,7 +10,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	"github.com/onsi/ginkgo"
-	"io/ioutil"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -78,7 +76,6 @@ var _ = DevSpaceDescribe("terminal", func() {
 		// wait until we get the first hostnames
 		var podName string
 		err = wait.PollImmediate(time.Second, time.Minute*3, func() (done bool, err error) {
-			fmt.Println(buffer.String())
 			lines := strings.Split(buffer.String(), "\n")
 			if len(lines) <= 1 {
 				return false, nil
@@ -90,16 +87,7 @@ var _ = DevSpaceDescribe("terminal", func() {
 		framework.ExpectNoError(err)
 
 		// make sure the pod exists
-		pod, err := kubeClient.RawClient().CoreV1().Pods(ns).Get(context.TODO(), podName, metav1.GetOptions{})
-		framework.ExpectNoError(err)
-		framework.ExpectEqual(pod.Spec.Containers[0].Image, "ubuntu:18.04")
-
-		// now make a change to the config
-		fileContents, err := ioutil.ReadFile("devspace.yaml")
-		framework.ExpectNoError(err)
-		newString := strings.Replace(string(fileContents), "ubuntu:18.04", "alpine:3.14", -1)
-		newString = strings.Replace(newString, "container-0", "container-1", -1)
-		err = ioutil.WriteFile("devspace.yaml", []byte(newString), 0666)
+		err = kubeClient.RawClient().CoreV1().Pods(ns).Delete(context.TODO(), podName, metav1.DeleteOptions{})
 		framework.ExpectNoError(err)
 
 		// wait until pod is terminated
@@ -135,10 +123,8 @@ var _ = DevSpaceDescribe("terminal", func() {
 		framework.ExpectNoError(err)
 
 		// make sure the pod exists
-		pod, err = kubeClient.RawClient().CoreV1().Pods(ns).Get(context.TODO(), podName, metav1.GetOptions{})
+		_, err = kubeClient.RawClient().CoreV1().Pods(ns).Get(context.TODO(), podName, metav1.GetOptions{})
 		framework.ExpectNoError(err)
-		framework.ExpectEqual(pod.Spec.Containers[0].Image, "alpine:3.14")
-		framework.ExpectEqual(pod.Spec.Containers[0].Name, "container-1")
 
 		// make sure command terminates correctly
 		cancel()

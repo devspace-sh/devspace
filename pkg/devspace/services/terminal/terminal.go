@@ -181,6 +181,7 @@ fi`,
 
 	select {
 	case <-ctx.Context.Done():
+		<-errChan
 		return nil
 	case err = <-errChan:
 		if err != nil {

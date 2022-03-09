@@ -84,7 +84,7 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 	var (
 		onInitUploadDone   chan struct{}
 		onInitDownloadDone chan struct{}
-		onError            = make(chan error)
+		onError            = make(chan error, 1)
 		onDone             = make(chan struct{})
 	)
 

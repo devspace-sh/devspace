@@ -91,8 +91,12 @@ devspace --dependency my-dependency run any-command --any-command-flag
 			_, err := flagspkg.ApplyExtraFlags(cobraCmd, osArgs, true)
 			if err != nil {
 				return err
-			} else if cmd.Silent {
+			}
+
+			if cmd.Silent {
 				log.SetLevel(logrus.FatalLevel)
+			} else if cmd.Debug {
+				log.SetLevel(logrus.DebugLevel)
 			}
 
 			args := os.Args[index:]

@@ -140,7 +140,7 @@ func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 	}
 
 	readyChan := make(chan struct{})
-	errorChan := make(chan error)
+	errorChan := make(chan error, 1)
 	pf, err := ctx.KubeClient.NewPortForwarder(pod, ports, addresses, make(chan struct{}), readyChan, errorChan)
 	if err != nil {
 		return errors.Errorf("Error starting port forwarding: %v", err)
