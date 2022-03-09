@@ -1,0 +1,15 @@
+version: v2beta1
+name: build
+images:
+  app:
+    image: username/app
+    tags:
+    - latest
+    build:
+      custom:
+        command: ./build.sh
+pipelines:
+    build:
+        name: build
+        steps:
+            - run: build_images app

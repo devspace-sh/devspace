@@ -1,0 +1,14 @@
+version: v2beta1
+name: build
+images:
+  app:
+    image: username/app
+    tags:
+    - latest
+    dockerfile: dockerfile/Dockerfile
+    context: app/
+pipelines:
+    build:
+        name: build
+        steps:
+            - run: build_images app

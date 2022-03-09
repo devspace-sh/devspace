@@ -1,0 +1,12 @@
+version: v2beta1
+name: build
+images:
+  app:
+    image: username/app
+    tags:
+    - latest
+pipelines:
+    build:
+        name: build
+        steps:
+            - run: build_images app

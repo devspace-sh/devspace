@@ -1,8 +1,8 @@
-version: v1beta11
+version: v2beta1
+name: build
 images:
   app:
     image: username/app
-    dockerfile: ./Dockerfile
     tags:
     - latest
     build:
@@ -10,3 +10,8 @@ images:
         cache: false
         args:
         - --no-push
+pipelines:
+    build:
+        name: build
+        steps:
+            - run: build_images app
