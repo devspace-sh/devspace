@@ -197,7 +197,9 @@ func (p *pipeline) startNewDependency(ctx *devspacecontext.Context, dependency t
 	p.dependencies[dependency.Name()] = pip
 	p.m.Unlock()
 
-	ctx = ctx.WithLogger(log.NewDefaultPrefixLogger(dependency.Name()+" ", ctx.Log))
+	if _, ok := ctx.Log.(*log.StreamLogger); !ok {
+		ctx = ctx.WithLogger(log.NewDefaultPrefixLogger(dependency.Name()+" ", ctx.Log))
+	}
 	return pip.Run(ctx.AsDependency(dependency))
 }
 

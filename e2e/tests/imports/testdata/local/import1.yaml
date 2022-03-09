@@ -1,0 +1,14 @@
+version: v2beta1
+name: import1
+
+imports:
+  - path: import3.yaml
+
+vars:
+  IMPORT1: import1
+
+pipelines:
+  import1:
+    steps:
+    - run: |-
+        echo ${IMPORT1}

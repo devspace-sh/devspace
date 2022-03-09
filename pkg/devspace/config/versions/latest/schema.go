@@ -945,42 +945,15 @@ type PodPatch struct {
 
 // DependencyConfig defines the devspace dependency
 type DependencyConfig struct {
-	Name                     string          `yaml:"name" json:"name"`
-	Source                   *SourceConfig   `yaml:"source" json:"source"`
-	Disabled                 bool            `yaml:"disabled,omitempty" json:"disabled,omitempty"`
-	Profile                  string          `yaml:"profile,omitempty" json:"profile,omitempty"`
-	Pipeline                 string          `yaml:"pipeline,omitempty" json:"pipeline,omitempty"`
-	Profiles                 []string        `yaml:"profiles,omitempty" json:"profiles,omitempty"`
-	DisableProfileActivation bool            `yaml:"disableProfileActivation,omitempty" json:"disableProfileActivation,omitempty"`
-	Vars                     []DependencyVar `yaml:"vars,omitempty" json:"vars,omitempty"`
-	OverwriteVars            bool            `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
-	IgnoreDependencies       bool            `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
-	Namespace                string          `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-}
-
-// DependencyDev specifies which parts of the dependency dev config should
-// be reused
-type DependencyDev struct {
-	// If ports is true, DevSpace will forward and reverse forward the
-	// specified ports in the dependency's dev.ports config.
-	Ports bool `yaml:"ports,omitempty" json:"ports,omitempty"`
-
-	// If sync is true, DevSpace will run the specified sync paths
-	// from the dependency's dev.sync config
-	Sync bool `yaml:"sync,omitempty" json:"sync,omitempty"`
-
-	// If replacePods is true, DevSpace will replace the specified pods
-	// from the dependency's dev.replacePods config
-	ReplacePods bool `yaml:"replacePods,omitempty" json:"replacePods,omitempty"`
-}
-
-// DependencyVar holds an override value for a config variable
-type DependencyVar struct {
-	// Name is the name of the variable
-	Name string `yaml:"name,omitempty" json:"name,omitempty"`
-
-	// Value is the value to override
-	Value string `yaml:"value,omitempty" json:"value,omitempty"`
+	Source                   *SourceConfig     `yaml:",inline" json:",inline"`
+	Name                     string            `yaml:"name" json:"name"`
+	Pipeline                 string            `yaml:"pipeline,omitempty" json:"pipeline,omitempty"`
+	Profiles                 []string          `yaml:"profiles,omitempty" json:"profiles,omitempty"`
+	DisableProfileActivation bool              `yaml:"disableProfileActivation,omitempty" json:"disableProfileActivation,omitempty"`
+	Vars                     map[string]string `yaml:"vars,omitempty" json:"vars,omitempty"`
+	OverwriteVars            bool              `yaml:"overwriteVars,omitempty" json:"overwriteVars,omitempty"`
+	IgnoreDependencies       bool              `yaml:"ignoreDependencies,omitempty" json:"ignoreDependencies,omitempty"`
+	Namespace                string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 }
 
 // SourceConfig defines the dependency source

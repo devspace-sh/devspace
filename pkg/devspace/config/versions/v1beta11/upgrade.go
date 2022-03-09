@@ -93,13 +93,14 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				Revision:       dep.Source.Revision,
 				Path:           dep.Source.Path,
 			},
-			Disabled:                 dep.Disabled,
-			Profile:                  dep.Profile,
 			Profiles:                 dep.Profiles,
 			DisableProfileActivation: dep.DisableProfileActivation,
 			OverwriteVars:            dep.OverwriteVars,
 			IgnoreDependencies:       dep.IgnoreDependencies,
 			Namespace:                dep.Namespace,
+		}
+		if dep.Profile != "" {
+			nextConfig.Dependencies[name].Profiles = append(nextConfig.Dependencies[name].Profiles, dep.Profile)
 		}
 		if dep.SkipBuild {
 			log.Warnf("dependencies[*].skipBuild is not supported anymore in v6")
@@ -111,11 +112,11 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				nextConfig.Dependencies[name].Source.SubPath = path.Join(dep.Source.SubPath, dep.Source.ConfigName)
 			}
 		}
-		for _, v := range dep.Vars {
-			nextConfig.Dependencies[name].Vars = append(nextConfig.Dependencies[name].Vars, next.DependencyVar{
-				Name:  v.Name,
-				Value: v.Value,
-			})
+		if len(dep.Vars) > 0 {
+			nextConfig.Dependencies[name].Vars = map[string]string{}
+			for _, v := range dep.Vars {
+				nextConfig.Dependencies[name].Vars[v.Name] = v.Value
+			}
 		}
 
 		if !dep.Disabled {

@@ -307,12 +307,15 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bo
 	} else if !couldExclude {
 		return fmt.Errorf("couldn't execute '%s', because there is another DevSpace instance active in the current namespace right now that uses the same project name (%s)", strings.Join(os.Args, " "), ctx.Config.Config().Name)
 	}
+	ctx.Log.Debugf("Marked project excluded: %v", ctx.Config.Config().Name)
 
 	// start pipeline
 	err = pipe.Run(ctx.WithLogger(ctx.Log.WithoutPrefix()))
 	if err != nil {
 		return err
 	}
+
+	ctx.Log.Debugf("Wait for dev to finish")
 
 	// wait for dev
 	pipe.WaitDev()

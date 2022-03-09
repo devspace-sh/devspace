@@ -1,0 +1,26 @@
+version: v2beta1
+name: base
+
+imports:
+  - path: import1.yaml
+  - path: import2.yaml
+
+vars:
+  BASE: base
+
+dependencies:
+  import1:
+    path: import1.yaml
+    pipeline: import3
+
+pipelines:
+  deploy:
+    steps:
+      - run: |-
+          run_dependency_pipelines --all > dependency.txt
+          
+          run_pipelines import1 > import1.txt
+          run_pipelines import2 > import2.txt
+          run_pipelines import3 > import3.txt
+
+          echo ${DEVSPACE_NAMESPACE}-${devspace.namespace}-${BASE}-${IMPORT1}-${IMPORT2}-${IMPORT3} > vars.txt

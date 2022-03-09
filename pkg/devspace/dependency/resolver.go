@@ -85,11 +85,6 @@ func (r *resolver) resolveRecursive(ctx *devspacecontext.Context, basePath, pare
 		currentDependency.children = []types.Dependency{}
 	}
 	for _, dependencyConfig := range dependencies {
-		if dependencyConfig.Disabled {
-			ctx.Log.Debugf("Skip dependency %s, because it is disabled", dependencyConfig.Name)
-			continue
-		}
-
 		dependencyConfigPath, err := util.DownloadDependency(ctx.Context, basePath, dependencyConfig.Source, ctx.Log)
 		if err != nil {
 			return err
@@ -163,9 +158,6 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyCon
 	// set dependency profile
 	cloned.OverrideName = dependency.Name
 	cloned.Profiles = []string{}
-	if dependency.Profile != "" {
-		cloned.Profiles = append(cloned.Profiles, dependency.Profile)
-	}
 	cloned.Profiles = append(cloned.Profiles, dependency.Profiles...)
 	cloned.DisableProfileActivation = dependency.DisableProfileActivation || r.ConfigOptions.DisableProfileActivation
 
@@ -179,8 +171,8 @@ func (r *resolver) resolveDependency(ctx *devspacecontext.Context, dependencyCon
 			cloned.Vars = append(cloned.Vars, strings.TrimSpace(k)+"="+strings.TrimSpace(fmt.Sprintf("%v", v)))
 		}
 	}
-	for _, v := range dependency.Vars {
-		cloned.Vars = append(cloned.Vars, strings.TrimSpace(v.Name)+"="+strings.TrimSpace(v.Value))
+	for k, v := range dependency.Vars {
+		cloned.Vars = append(cloned.Vars, strings.TrimSpace(k)+"="+strings.TrimSpace(v))
 	}
 
 	// Recreate client if necessary

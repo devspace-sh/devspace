@@ -3,6 +3,7 @@ package pipelinehandler
 import (
 	"context"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
@@ -55,7 +56,7 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 	if e.stdout != nil && e.stdout == hc.Stdout {
 		devCtx = devCtx.WithLogger(e.ctx.Log)
 	} else {
-		devCtx = devCtx.WithLogger(log.NewStreamLogger(hc.Stdout, e.ctx.Log.GetLevel()).WithoutPrefix())
+		devCtx = devCtx.WithLogger(log.NewStreamLogger(hc.Stdout, logrus.InfoLevel).WithoutPrefix())
 	}
 
 	switch command {

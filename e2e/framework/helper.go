@@ -135,6 +135,12 @@ func ExpectLocalFileContents(filePath string, contents string) {
 	ExpectNoErrorWithOffset(1, err)
 }
 
+func ExpectLocalFileContentsWithoutSpaces(filePath string, contents string) {
+	out, err := ioutil.ReadFile(filePath)
+	ExpectNoError(err)
+	gomega.ExpectWithOffset(2, strings.TrimSpace(string(out))).To(gomega.Equal(contents))
+}
+
 func ExpectLocalFileNotFound(filePath string) {
 	_, err := os.Stat(filePath)
 	gomega.ExpectWithOffset(1, os.IsNotExist(err)).Should(gomega.BeTrue())

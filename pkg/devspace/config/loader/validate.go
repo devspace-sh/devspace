@@ -125,10 +125,7 @@ func validateDependencies(config *latest.Config) error {
 			return errors.Errorf("dependencies[%s].source is required", name)
 		}
 		if dep.Source.Git == "" && dep.Source.Path == "" {
-			return errors.Errorf("dependencies[%s].source.git or dependencies[%s].source.path is required", name, name)
-		}
-		if len(dep.Profiles) > 0 && dep.Profile != "" {
-			return errors.Errorf("dependencies[%s].profiles and dependencies[%s].profile & dependencies[%s].profileParents cannot be used together", name, name, name)
+			return errors.Errorf("dependencies[%s].git or dependencies[%s].path is required", name, name)
 		}
 	}
 

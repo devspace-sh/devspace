@@ -1,0 +1,11 @@
+version: v2beta1
+name: import3
+
+vars:
+  IMPORT3: import3
+
+pipelines:
+  import3:
+    steps:
+      - run: |-
+          echo ${IMPORT3}
