@@ -2,7 +2,7 @@ version: v2beta1
 name: pipelines
 
 vars:
-  HELLO: ${devspace.namespace}
+  HELLO: ${LOFT_CLUSTER}
 
 pipelines:
   dev:

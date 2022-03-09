@@ -1862,8 +1862,6 @@ var _ = DevSpaceDescribe("config", func() {
 
 		deployment1 := config.Config().Deployments["development1"]
 		framework.ExpectEqual(deployment1.Name, "development1")
-		framework.ExpectEqual(deployment1.Helm.CleanupOnFail, false)
-		framework.ExpectEqual(deployment1.Helm.Timeout, "1000s")
 		gomega.Expect(deployment1.Helm).ToNot(gomega.BeNil())
 	})
 

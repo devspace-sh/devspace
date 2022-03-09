@@ -73,7 +73,7 @@ var _ = DevSpaceDescribe("sync", func() {
 				Namespace: ns,
 				Debug:     true,
 			},
-			ContainerPath: "/test_sync",
+			Path:          ".:/test_sync",
 			NoWatch:       true,
 			ImageSelector: "busybox",
 		}
@@ -134,7 +134,7 @@ var _ = DevSpaceDescribe("sync", func() {
 				Namespace: ns,
 			},
 			ImageSelector: "node:13.14-alpine",
-			ContainerPath: "/app",
+			Path:          ".:/app",
 			UploadOnly:    true,
 			Polling:       true,
 			Wait:          true,
@@ -422,9 +422,9 @@ var _ = DevSpaceDescribe("sync", func() {
 				Namespace:  ns,
 				ConfigPath: "devspace.yaml",
 			},
-			Container:     "container2",
-			ContainerPath: "/app2",
-			Ctx:           cancelCtx,
+			Container: "container2",
+			Path:      ".:/app2",
+			Ctx:       cancelCtx,
 		}
 
 		// start the command
