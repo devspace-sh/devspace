@@ -123,8 +123,8 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 	}
 
 	// Switch working directory
-	if cmd.GlobalFlags.ConfigPath != "" {
-		_, err := os.Stat(cmd.GlobalFlags.ConfigPath)
+	if cmd.ConfigPath != "" {
+		_, err := os.Stat(cmd.ConfigPath)
 		if err != nil {
 			return errors.Errorf("--config is specified, but config %s cannot be loaded: %v", cmd.GlobalFlags.ConfigPath, err)
 		}
@@ -251,6 +251,8 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 					break
 				}
 			}
+		} else {
+			syncConfig = syncConfigs[0]
 		}
 	}
 
@@ -272,7 +274,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 
 	// Start sync
 	options = options.WithSkipInitContainers(true)
-	return sync.StartSyncFromCmd(ctx, targetselector.NewTargetSelector(options), syncConfig.syncConfig, cmd.NoWatch, cmd.Verbose)
+	return sync.StartSyncFromCmd(ctx, targetselector.NewTargetSelector(options), syncConfig.devPod.Name, syncConfig.syncConfig, cmd.NoWatch, cmd.Verbose)
 }
 
 func fromSyncConfig(devPod *latest.DevPod, containerName string, sc *latest.SyncConfig) (nameConfig, error) {

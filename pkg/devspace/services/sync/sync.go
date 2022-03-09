@@ -12,9 +12,10 @@ import (
 )
 
 // StartSyncFromCmd starts a new sync from command
-func StartSyncFromCmd(ctx *devspacecontext.Context, selector targetselector.TargetSelector, syncConfig *latest.SyncConfig, noWatch, verbose bool) error {
+func StartSyncFromCmd(ctx *devspacecontext.Context, selector targetselector.TargetSelector, name string, syncConfig *latest.SyncConfig, noWatch, verbose bool) error {
 	ctx, parent := ctx.WithNewTomb()
 	options := &Options{
+		Name:           name,
 		SyncConfig:     syncConfig,
 		Selector:       selector,
 		RestartOnError: true,
@@ -25,23 +26,35 @@ func StartSyncFromCmd(ctx *devspacecontext.Context, selector targetselector.Targ
 
 	// Start the tomb
 	<-parent.NotifyGo(func() error {
+		// this is needed as otherwise the context
+		// is cancelled alongside the tomb
+		parent.Go(func() error {
+			<-ctx.Context.Done()
+			return nil
+		})
+
 		return NewController().Start(ctx, options, parent)
 	})
 
 	// Handle no watch
 	if noWatch {
-		parent.Kill(nil)
-		_ = parent.Wait()
-		return nil
+		select {
+		case <-parent.Dead():
+			return parent.Err()
+		default:
+			parent.Kill(nil)
+			_ = parent.Wait()
+			return nil
+		}
 	}
 
 	// Handle interrupt
 	select {
+	case <-parent.Dead():
+		return parent.Err()
 	case <-ctx.Context.Done():
 		_ = parent.Wait()
 		return nil
-	case <-parent.Dead():
-		return parent.Err()
 	}
 }
 

@@ -160,6 +160,10 @@ func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 	case <-readyChan:
 		ctx.Log.Donef("Port forwarding started on %s (%s/%s)", strings.Join(ports, ", "), pod.Namespace, pod.Name)
 	case err := <-errorChan:
+		if ctx.IsDone() {
+			return nil
+		}
+
 		return errors.Wrap(err, "forward ports")
 	case <-time.After(20 * time.Second):
 		return errors.Errorf("Timeout waiting for port forwarding to start")
@@ -172,6 +176,11 @@ func startForwarding(ctx *devspacecontext.Context, name string, portMappings []*
 			pf.Close()
 			stopPortForwarding(ctx, name, portMappings, fileLog, parent)
 		case err := <-errorChan:
+			if ctx.IsDone() {
+				pf.Close()
+				stopPortForwarding(ctx, name, portMappings, fileLog, parent)
+				return nil
+			}
 			if err != nil {
 				fileLog.Errorf("Portforwarding restarting, because: %v", err)
 				sync.PrintPodError(ctx.Context, ctx.KubeClient, pod, fileLog)

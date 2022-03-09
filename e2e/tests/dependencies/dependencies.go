@@ -38,7 +38,7 @@ var _ = DevSpaceDescribe("dependencies", func() {
 		kubeClient, err = kube.NewKubeHelper()
 	})
 
-	ginkgo.FIt("should skip equal dependencies", func() {
+	ginkgo.It("should skip equal dependencies", func() {
 		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/overlapping")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)

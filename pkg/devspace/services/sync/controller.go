@@ -132,6 +132,9 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 				if pluginErr != nil {
 					return pluginErr
 				}
+				if ctx.IsDone() {
+					return nil
+				}
 				return errors.Wrap(err, "initial sync")
 			case <-onInitUploadDone:
 				uploadDone = true
@@ -176,6 +179,10 @@ func (c *controller) startWithWait(ctx *devspacecontext.Context, options *Option
 			case <-ctx.Context.Done():
 				syncStop(ctx, client, options, parent)
 			case err = <-onError:
+				if ctx.IsDone() {
+					syncStop(ctx, client, options, parent)
+					return nil
+				}
 				hook.LogExecuteHooks(ctx.WithLogger(options.SyncLog), map[string]interface{}{
 					"sync_config": options.SyncConfig,
 					"ERROR":       err,

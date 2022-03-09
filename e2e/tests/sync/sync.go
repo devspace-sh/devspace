@@ -90,6 +90,7 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectNoError(err)
 
 		// rerun sync command
+		syncCmd.Ctx = nil
 		err = syncCmd.Run(f)
 		framework.ExpectNoError(err)
 
@@ -482,7 +483,8 @@ var _ = DevSpaceDescribe("sync", func() {
 				Namespace:  ns,
 				ConfigPath: "devspace.yaml",
 			},
-			Ctx: cancelCtx,
+			Wait: true,
+			Ctx:  cancelCtx,
 		}
 
 		// start the command

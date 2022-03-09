@@ -184,11 +184,13 @@ fi`,
 		<-errChan
 		return nil
 	case err = <-errChan:
+		if ctx.IsDone() {
+			return nil
+		}
+
 		if err != nil {
 			// check if context is done
-			if ctx.IsDone() {
-				return nil
-			} else if exitError, ok := err.(kubectlExec.CodeExitError); ok {
+			if exitError, ok := err.(kubectlExec.CodeExitError); ok {
 				// Expected exit codes are (https://shapeshed.com/unix-exit-codes/):
 				// 1 - Catchall for general errors
 				// 2 - Misuse of shell builtins (according to Bash documentation)

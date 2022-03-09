@@ -62,6 +62,13 @@ func startReversePortForwarding(ctx *devspacecontext.Context, name, arch string,
 			_ = stdoutWriter.Close()
 			doneReverseForwarding(ctx, name, portForwarding, fileLog, parent)
 		case err := <-errorChan:
+			if ctx.IsDone() {
+				close(closeChan)
+				_ = stdinWriter.Close()
+				_ = stdoutWriter.Close()
+				doneReverseForwarding(ctx, name, portForwarding, fileLog, parent)
+				return nil
+			}
 			if err != nil {
 				fileLog.Errorf("Reverse portforwarding restarting, because: %v", err)
 				sync.PrintPodError(ctx.Context, ctx.KubeClient, container.Pod, fileLog)
