@@ -309,12 +309,15 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bo
 	}
 	ctx.Log.Debugf("Marked project excluded: %v", ctx.Config.Config().Name)
 
+	// get a writer
+	writer := ctx.Log.Writer(ctx.Log.GetLevel())
+	defer writer.Close()
+
 	// start pipeline
-	err = pipe.Run(ctx.WithLogger(ctx.Log.WithoutPrefix()))
+	err = pipe.Run(ctx.WithLogger(logpkg.NewStreamLoggerWithFormat(writer, ctx.Log.GetLevel(), logpkg.TimeFormat)))
 	if err != nil {
 		return err
 	}
-
 	ctx.Log.Debugf("Wait for dev to finish")
 
 	// wait for dev

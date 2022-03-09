@@ -284,20 +284,6 @@ func (s *unionLogger) GetLevel() logrus.Level {
 	return s.level
 }
 
-func (s *unionLogger) WithoutPrefix() Logger {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	loggers := []Logger{}
-	for _, l := range s.Loggers {
-		loggers = append(loggers, l.WithoutPrefix())
-	}
-	return &unionLogger{
-		Loggers: loggers,
-		level:   s.level,
-	}
-}
-
 func (s *unionLogger) Children() []Logger {
 	s.m.Lock()
 	defer s.m.Unlock()

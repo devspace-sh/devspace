@@ -52,10 +52,6 @@ type Logger interface {
 	// WithLevel creates a new logger with the given level
 	WithLevel(level logrus.Level) Logger
 
-	// WithoutPrefix returns a new logger of the same type
-	// but disables the current loggers prefixes.
-	WithoutPrefix() Logger
-
 	// Children can be used to gather child loggers of the current logger
 	Children() []Logger
 }

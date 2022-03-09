@@ -57,10 +57,6 @@ func (d *DiscardLogger) Fatalf(format string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func (d *DiscardLogger) WithoutPrefix() Logger {
-	return d
-}
-
 // Done implements logger interface
 func (d *DiscardLogger) Done(args ...interface{}) {}
 

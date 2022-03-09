@@ -31,7 +31,7 @@ type fileLogger struct {
 }
 
 func GetDevPodFileLogger(devPodName string) Logger {
-	return GetFileLogger("devpod-" + devPodName)
+	return GetFileLogger("devpod-" + strings.TrimSpace(devPodName))
 }
 
 // GetFileLogger returns a logger instance for the specified filename
@@ -310,10 +310,6 @@ func stripEscapeSequences(str string) string {
 
 func (f *fileLogger) Question(params *survey.QuestionOptions) (string, error) {
 	return "", errors.New("questions in file logger not supported")
-}
-
-func (f *fileLogger) WithoutPrefix() Logger {
-	return f
 }
 
 // WithLevel implements logger interface

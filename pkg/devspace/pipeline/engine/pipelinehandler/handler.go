@@ -56,7 +56,7 @@ func (e *execHandler) handlePipelineCommands(ctx context.Context, command string
 	if e.stdout != nil && e.stdout == hc.Stdout {
 		devCtx = devCtx.WithLogger(e.ctx.Log)
 	} else {
-		devCtx = devCtx.WithLogger(log.NewStreamLogger(hc.Stdout, logrus.InfoLevel).WithoutPrefix())
+		devCtx = devCtx.WithLogger(log.NewStreamLoggerWithFormat(hc.Stdout, logrus.InfoLevel, log.RawFormat))
 	}
 
 	switch command {

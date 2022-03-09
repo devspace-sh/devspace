@@ -297,13 +297,15 @@ func parseConfig(f factory.Factory) (*RawConfig, error) {
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	r := &RawConfig{}
+	r := &RawConfig{
+		resolved: map[string]string{},
+	}
 	_, err = configLoader.LoadWithParser(timeoutCtx, nil, nil, r, &loader.ConfigOptions{Dry: true}, log.Discard)
-	if err != nil {
-		return nil, err
+	if r.Resolver != nil {
+		return r, nil
 	}
 
-	return r, nil
+	return nil, err
 }
 
 type RawConfig struct {

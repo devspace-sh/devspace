@@ -170,7 +170,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 	}
 
 	// Check if we skip push
-	if !b.skipPush || !b.helper.ImageConf.SkipPush {
+	if !b.skipPush && !b.helper.ImageConf.SkipPush {
 		for _, tag := range buildOptions.Tags {
 			err = b.pushImage(writer, tag)
 			if err != nil {

@@ -29,7 +29,9 @@ type Format int
 
 const (
 	TextFormat Format = iota
+	TimeFormat Format = iota
 	JsonFormat Format = iota
+	RawFormat  Format = iota
 )
 
 func NewStdoutLogger(reader io.Reader, writer io.Writer, level logrus.Level) Logger {
@@ -70,10 +72,9 @@ type StreamLogger struct {
 	m     sync.Mutex
 	level logrus.Level
 
-	format      Format
-	isTerminal  bool
-	disableTags bool
-	stream      io.Writer
+	format     Format
+	isTerminal bool
+	stream     io.Writer
 
 	survey survey.Survey
 }
@@ -152,14 +153,20 @@ func (s *StreamLogger) WithLevel(level logrus.Level) Logger {
 func (s *StreamLogger) writeMessage(fnType logFunctionType, message string) {
 	fnInformation := fnTypeInformationMap[fnType]
 	if s.level >= fnInformation.logLevel {
-		if s.format == TextFormat {
+		if s.format == RawFormat {
+			_, _ = s.stream.Write([]byte(message))
+		} else if s.format == TimeFormat {
 			if env.GlobalGetEnv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
 				now := time.Now()
 				_, _ = s.stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
 			}
-			if !s.disableTags {
-				_, _ = s.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
+			_, _ = s.stream.Write([]byte(message))
+		} else if s.format == TextFormat {
+			if env.GlobalGetEnv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
+				now := time.Now()
+				_, _ = s.stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
 			}
+			_, _ = s.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
 			_, _ = s.stream.Write([]byte(message))
 		} else if s.format == JsonFormat {
 			s.writeJSON(message, fnInformation.logLevel)
@@ -317,25 +324,6 @@ func (s *StreamLogger) GetLevel() logrus.Level {
 	return s.level
 }
 
-func (s *StreamLogger) WithoutPrefix() Logger {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	if s.format == JsonFormat {
-		return s
-	}
-
-	return &StreamLogger{
-		m:           sync.Mutex{},
-		level:       s.level,
-		format:      s.format,
-		isTerminal:  s.isTerminal,
-		disableTags: true,
-		stream:      s.stream,
-		survey:      survey.NewSurvey(),
-	}
-}
-
 func (s *StreamLogger) Writer(level logrus.Level) io.WriteCloser {
 	s.m.Lock()
 	defer s.m.Unlock()
@@ -376,7 +364,6 @@ func (s *StreamLogger) write(message []byte) (int, error) {
 	} else {
 		n, err = s.stream.Write(message)
 	}
-
 	return n, err
 }
 

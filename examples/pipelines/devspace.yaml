@@ -2,10 +2,12 @@ version: v2beta1
 name: pipelines
 
 vars:
-  HELLO: ${LOFT_CLUSTER}
+  HELLO: test
+  DEVSPACE_LOG_TIMESTAMPS: true
 
 pipelines:
   dev:
     steps:
       - run: |-
+          create_deployments test --set helm.values.containers[0].image=ubuntu
           echo "${HELLO} ${DEVSPACE_NAMESPACE}"

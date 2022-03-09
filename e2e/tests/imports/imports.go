@@ -29,7 +29,7 @@ var _ = DevSpaceDescribe("imports", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.FIt("should import correctly", func() {
+	ginkgo.It("should import correctly", func() {
 		tempDir, err := framework.CopyToTempDir("tests/imports/testdata/local")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)

@@ -60,10 +60,6 @@ type prefixLogger struct {
 	m sync.Mutex
 }
 
-func (s *prefixLogger) WithoutPrefix() Logger {
-	return s.base
-}
-
 func (s *prefixLogger) Children() []Logger {
 	return []Logger{s.base}
 }
