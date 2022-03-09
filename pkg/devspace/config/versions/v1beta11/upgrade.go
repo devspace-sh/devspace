@@ -191,7 +191,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 		if image.Build != nil && image.Build.BuildKit != nil && image.Build.BuildKit.SkipPush {
 			nextConfig.Images[imageName].SkipPush = true
 		}
-		if image.Build.Docker != nil {
+		if image.Build != nil && image.Build.Docker != nil {
 			nextConfig.Images[imageName].Docker = &next.DockerConfig{
 				PreferMinikube:  image.Build.Docker.PreferMinikube,
 				DisableFallback: image.Build.Docker.DisableFallback,
@@ -200,7 +200,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				Args:            image.Build.Docker.Args,
 			}
 		}
-		if image.Build.BuildKit != nil {
+		if image.Build != nil && image.Build.BuildKit != nil {
 			nextConfig.Images[imageName].BuildKit = &next.BuildKitConfig{
 				PreferMinikube: image.Build.BuildKit.PreferMinikube,
 				Args:           image.Build.BuildKit.Args,
@@ -220,7 +220,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				}
 			}
 		}
-		if image.Build.Custom != nil {
+		if image.Build != nil && image.Build.Custom != nil {
 			nextConfig.Images[imageName].Custom = &next.CustomConfig{
 				Command:  image.Build.Custom.Command,
 				OnChange: image.Build.Custom.OnChange,
@@ -241,7 +241,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 				})
 			}
 		}
-		if image.Build.Kaniko != nil {
+		if image.Build != nil && image.Build.Kaniko != nil {
 			nextConfig.Images[imageName].Kaniko = &next.KanikoConfig{
 				SnapshotMode:        image.Build.Kaniko.SnapshotMode,
 				Image:               image.Build.Kaniko.Image,

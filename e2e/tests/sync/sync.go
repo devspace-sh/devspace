@@ -38,7 +38,6 @@ var _ = DevSpaceDescribe("sync", func() {
 	})
 
 	ginkgo.It("devspace sync should override permissions on initial sync", func() {
-		ginkgo.Skip("permission not synced")
 		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/permissions")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -272,7 +271,6 @@ var _ = DevSpaceDescribe("sync", func() {
 	})
 
 	ginkgo.It("should sync to a pod and watch changes", func() {
-		ginkgo.Skip("error selecting container: couldn't find a pod / container with everything selector")
 		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-simple")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -340,7 +338,6 @@ var _ = DevSpaceDescribe("sync", func() {
 	})
 
 	ginkgo.It("should sync to a pod and not watch changes with --no-watch", func() {
-		ginkgo.Skip("imageselector issue")
 		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-simple")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -389,7 +386,6 @@ var _ = DevSpaceDescribe("sync", func() {
 	})
 
 	ginkgo.It("should sync to a pod container with --container and --container-path", func() {
-		ginkgo.Skip("error selecting container: couldn't find a pod / container with everything selector")
 		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-containers")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
@@ -454,7 +450,6 @@ var _ = DevSpaceDescribe("sync", func() {
 	})
 
 	ginkgo.It("should sync to a pod container with excludeFile, downloadExcludeFile, and uploadExcludeFile configuration", func() {
-		ginkgo.Skip("todo")
 		tempDir, err := framework.CopyToTempDir("tests/sync/testdata/sync-exclude-file")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
