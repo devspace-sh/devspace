@@ -131,9 +131,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Portforwarding: true,
-			Sync:           true,
-			Ctx:            cancelCtx1,
+			Ctx: cancelCtx1,
 		}
 
 		// start the command
@@ -180,9 +178,7 @@ var _ = DevSpaceDescribe("hooks", func() {
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Portforwarding: true,
-			Sync:           true,
-			Ctx:            cancelCtx2,
+			Ctx: cancelCtx2,
 		}
 
 		// start the command

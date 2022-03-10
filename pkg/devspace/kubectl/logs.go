@@ -27,7 +27,7 @@ func (client *client) ReadLogs(ctx context.Context, namespace, podName, containe
 
 // Logs prints the container logs
 func (client *client) Logs(ctx context.Context, namespace, podName, containerName string, lastContainerLog bool, tail *int64, follow bool) (io.ReadCloser, error) {
-	lines := int64(100)
+	lines := int64(500)
 	if tail != nil {
 		lines = *tail
 	}

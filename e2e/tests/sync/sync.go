@@ -193,9 +193,7 @@ var _ = DevSpaceDescribe("sync", func() {
 				NoWarn:    true,
 				Namespace: ns,
 			},
-			Portforwarding: true,
-			Sync:           true,
-			Ctx:            cancelCtx,
+			Ctx: cancelCtx,
 		}
 
 		// start the command

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/cmd/flags"
-	"github.com/loft-sh/devspace/pkg/devspace/analyze"
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -50,9 +49,6 @@ type DeployCmd struct {
 	Render                  bool
 	Dependency              []string
 	SkipDependency          []string
-
-	Wait    bool
-	Timeout int
 
 	log logpkg.Logger
 
@@ -106,9 +102,6 @@ devspace deploy --kube-context=deploy-context
 	deployCmd.Flags().StringSliceVar(&cmd.SkipDependency, "skip-dependency", []string{}, "Skips deploying the following dependencies")
 	deployCmd.Flags().StringSliceVar(&cmd.Dependency, "dependency", []string{}, "Deploys only the specific named dependencies")
 
-	deployCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "If true will wait for pods to be running or fails after given timeout")
-	deployCmd.Flags().IntVar(&cmd.Timeout, "timeout", 120, "Timeout until deploy should stop waiting")
-
 	return deployCmd
 }
 
@@ -158,8 +151,6 @@ func (cmd *DeployCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory
 		ConfigOptions: configOptions,
 		Only:          cmd.Dependency,
 		Pipeline:      cmd.Pipeline,
-		Wait:          cmd.Wait,
-		Timeout:       cmd.Timeout,
 	})
 }
 
@@ -230,8 +221,6 @@ type PipelineOptions struct {
 	ConfigOptions *loader.ConfigOptions
 	Only          []string
 	Pipeline      string
-	Wait          bool
-	Timeout       int
 	ShowUI        bool
 	UIPort        int
 }
@@ -322,18 +311,6 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bo
 
 	// wait for dev
 	pipe.WaitDev()
-
-	// wait if necessary
-	if options.Wait {
-		report, err := f.NewAnalyzer(ctx.KubeClient, f.GetLog()).CreateReport(ctx.KubeClient.Namespace(), analyze.Options{Wait: true, Patient: true, Timeout: options.Timeout, IgnorePodRestarts: true})
-		if err != nil {
-			return errors.Wrap(err, "analyze")
-		}
-
-		if len(report) > 0 {
-			return errors.Errorf(analyze.ReportToString(report))
-		}
-	}
 
 	return nil
 }

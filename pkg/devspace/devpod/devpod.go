@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
+	"github.com/loft-sh/devspace/pkg/devspace/services/attach"
 	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
 	"github.com/loft-sh/devspace/pkg/devspace/services/terminal"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
+	"github.com/sirupsen/logrus"
 	"github.com/skratchdot/open-golang/open"
+	"gopkg.in/yaml.v3"
 	"io"
 	"net/http"
 	"os"
@@ -65,6 +68,14 @@ func (d *devPod) Start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 	}
 	d.cancelCtx, d.cancel = context.WithCancel(ctx.Context)
 	ctx = ctx.WithContext(d.cancelCtx)
+
+	// log devpod to console if debug
+	if ctx.Log.GetLevel() == logrus.DebugLevel {
+		out, err := yaml.Marshal(devPodConfig)
+		if err == nil {
+			ctx.Log.Debugf("DevPod Config: \n%s\n", string(out))
+		}
+	}
 
 	// start the dev pod
 	err := d.startWithRetry(ctx, devPodConfig, options)
@@ -182,28 +193,30 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 	ctx.Log.Debugf("Selected pod:container %s:%s", d.selectedPod.Pod.Name, d.selectedPod.Container.Name)
 
 	// Run dev.open configs
-	for _, openConfig := range devPodConfig.Open {
-		if openConfig.URL != "" {
-			url := openConfig.URL
-			ctx.Log.Infof("Opening '%s' as soon as application will be started", openConfig.URL)
-			parent.Go(func() error {
-				now := time.Now()
-				for time.Since(now) < openMaxWait {
-					select {
-					case <-ctx.Context.Done():
-						return nil
-					case <-time.After(time.Second):
-						resp, _ := http.Get(url)
-						if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
-							time.Sleep(time.Second * 1)
-							_ = open.Start(url)
-							ctx.Log.Donef("Successfully opened %s", url)
+	if !opts.DisableOpen {
+		for _, openConfig := range devPodConfig.Open {
+			if openConfig.URL != "" {
+				url := openConfig.URL
+				ctx.Log.Infof("Opening '%s' as soon as application will be started", openConfig.URL)
+				parent.Go(func() error {
+					now := time.Now()
+					for time.Since(now) < openMaxWait {
+						select {
+						case <-ctx.Context.Done():
+							return nil
+						case <-time.After(time.Second):
+							resp, _ := http.Get(url)
+							if resp != nil && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable {
+								time.Sleep(time.Second * 1)
+								_ = open.Start(url)
+								ctx.Log.Donef("Successfully opened %s", url)
+							}
 						}
 					}
-				}
 
-				return nil
-			})
+					return nil
+				})
+			}
 		}
 	}
 
@@ -213,19 +226,24 @@ func (d *devPod) start(ctx *devspacecontext.Context, devPodConfig *latest.DevPod
 		return err
 	}
 
-	// start logs or terminal
+	// start logs
 	terminalDevContainer := d.getTerminalDevContainer(devPodConfig)
 	if terminalDevContainer != nil {
 		return d.startTerminal(ctx, terminalDevContainer, opts, parent)
 	}
 
-	// TODO attach
+	// start attach if defined
+	attachDevContainer := d.getAttachDevContainer(devPodConfig)
+	if attachDevContainer != nil {
+		return d.startAttach(ctx, attachDevContainer, opts, parent)
+	}
+
 	return d.startLogs(ctx, devPodConfig, parent)
 }
 
 func (d *devPod) startLogs(ctx *devspacecontext.Context, devPodConfig *latest.DevPod, parent *tomb.Tomb) error {
 	loader.EachDevContainer(devPodConfig, func(devContainer *latest.DevContainer) bool {
-		if devContainer.Logs == nil || devContainer.Logs.Disabled {
+		if devContainer.Logs == nil || (devContainer.Logs.Enabled != nil && !*devContainer.Logs.Enabled) {
 			return true
 		}
 
@@ -239,18 +257,68 @@ func (d *devPod) startLogs(ctx *devspacecontext.Context, devPodConfig *latest.De
 	return nil
 }
 
+func (d *devPod) getAttachDevContainer(devPodConfig *latest.DevPod) *latest.DevContainer {
+	// find dev container config
+	var devContainer *latest.DevContainer
+	loader.EachDevContainer(devPodConfig, func(d *latest.DevContainer) bool {
+		if d.Attach == nil || (d.Attach.Enabled != nil && !*d.Attach.Enabled) {
+			return true
+		}
+		devContainer = d
+		return false
+	})
+
+	return devContainer
+}
+
 func (d *devPod) getTerminalDevContainer(devPodConfig *latest.DevPod) *latest.DevContainer {
 	// find dev container config
 	var devContainer *latest.DevContainer
 	loader.EachDevContainer(devPodConfig, func(d *latest.DevContainer) bool {
-		if d.Terminal != nil && !d.Terminal.Disabled {
-			devContainer = d
-			return false
+		if d.Terminal == nil || (d.Terminal.Enabled != nil && !*d.Terminal.Enabled) {
+			return true
 		}
-		return true
+		devContainer = d
+		return false
 	})
 
 	return devContainer
+}
+
+func (d *devPod) startAttach(ctx *devspacecontext.Context, devContainer *latest.DevContainer, opts Options, parent *tomb.Tomb) error {
+	parent.Go(func() error {
+		err := setTerminalDevPod(d)
+		if err != nil {
+			return err
+		}
+
+		// make sure the global log is silent
+		err = attach.StartAttach(
+			ctx,
+			devContainer,
+			newTargetSelector(d.selectedPod.Pod.Name, d.selectedPod.Pod.Namespace, d.selectedPod.Container.Name, parent),
+			DefaultTerminalStdout,
+			DefaultTerminalStderr,
+			DefaultTerminalStdin,
+			parent,
+		)
+		terminalDevPodMutex.Lock()
+		terminalDevPod = nil
+		terminalDevPodMutex.Unlock()
+		if err != nil {
+			return errors.Wrap(err, "error in attach")
+		}
+
+		// kill ourselves here
+		if !opts.ContinueOnTerminalExit && opts.KillApplication != nil {
+			go opts.KillApplication()
+		} else {
+			parent.Kill(nil)
+		}
+		return nil
+	})
+
+	return nil
 }
 
 func (d *devPod) startTerminal(ctx *devspacecontext.Context, devContainer *latest.DevContainer, opts Options, parent *tomb.Tomb) error {
@@ -301,7 +369,11 @@ func (d *devPod) startSyncAndPortForwarding(ctx *devspacecontext.Context, devPod
 			return nil
 		}
 
-		return sync.StartSync(ctx, devPod, selector, parent)
+		err := sync.StartSync(ctx, devPod, selector, parent)
+		if err != nil {
+			fmt.Println(err)
+		}
+		return err
 	})
 
 	// Start Port Forwarding
@@ -350,7 +422,10 @@ func needPodReplaceContainer(devContainer *latest.DevContainer) bool {
 	if len(devContainer.PersistPaths) > 0 {
 		return true
 	}
-	if devContainer.Terminal != nil && !devContainer.Terminal.Disabled && !devContainer.Terminal.DisableReplace {
+	if devContainer.Terminal != nil && !devContainer.Terminal.DisableReplace && (devContainer.Terminal.Enabled == nil || *devContainer.Terminal.Enabled) {
+		return true
+	}
+	if devContainer.Attach != nil && !devContainer.Attach.DisableReplace && (devContainer.Attach.Enabled == nil || *devContainer.Attach.Enabled) {
 		return true
 	}
 	if len(devContainer.Env) > 0 {

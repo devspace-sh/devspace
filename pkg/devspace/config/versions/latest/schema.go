@@ -748,11 +748,20 @@ type EnvVar struct {
 }
 
 type Attach struct {
+	// If enabled is false, DevSpace will not attach to the pod
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// If this is true, DevSpace will not replace the pod
+	DisableReplace bool `yaml:"disableReplace,omitempty" json:"disableReplace,omitempty"`
+	DisableTTY     bool `yaml:"disableTTY,omitempty" json:"disableTTY,omitempty"`
 }
 
 type Logs struct {
-	// If disabled is true, DevSpace will not print any logs
-	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+	// If enabled is false, DevSpace will not print any logs
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+
+	// LastLines is the amount of lines to print of the running container initially
+	LastLines int64 `yaml:"lastLines,omitempty" json:"lastLines,omitempty"`
 }
 
 type PersistenceOptions struct {
@@ -921,8 +930,8 @@ type Terminal struct {
 	Command string `yaml:"command,omitempty" json:"command,omitempty"`
 	WorkDir string `yaml:"workDir,omitempty" json:"workDir,omitempty"`
 
-	// If disabled is true, DevSpace will not use the terminal
-	Disabled bool `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+	// If enabled is true, DevSpace will not use the terminal
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 
 	// Needed to turn pod replace off
 	DisableReplace bool `yaml:"disableReplace,omitempty" json:"disableReplace,omitempty"`

@@ -57,7 +57,12 @@ func StartLogs(
 		return err
 	}
 
-	reader, err := ctx.KubeClient.Logs(ctx.Context, containerObj.Pod.Namespace, containerObj.Pod.Name, containerObj.Container.Name, false, nil, true)
+	lines := int64(500)
+	if devContainer.Logs.LastLines > 0 {
+		lines = devContainer.Logs.LastLines
+	}
+
+	reader, err := ctx.KubeClient.Logs(ctx.Context, containerObj.Pod.Namespace, containerObj.Pod.Name, containerObj.Container.Name, false, &lines, true)
 	if err != nil {
 		return err
 	}
@@ -82,6 +87,9 @@ func StartLogs(
 		<-errChan
 		return nil
 	case err := <-errChan:
+		if ctx.IsDone() {
+			return nil
+		}
 		if err != nil {
 			return errors.Wrap(err, "logs")
 		}

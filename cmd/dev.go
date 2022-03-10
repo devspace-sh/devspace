@@ -34,7 +34,6 @@ type DevCmd struct {
 
 	SkipPush                bool
 	SkipPushLocalKubernetes bool
-	Open                    bool
 
 	Dependency     []string
 	SkipDependency []string
@@ -47,18 +46,16 @@ type DevCmd struct {
 	ForceDeploy bool
 	SkipDeploy  bool
 
-	UI     bool
 	UIPort int
 
 	Terminal         bool
 	WorkingDirectory string
 	Pipeline         string
 
-	Sync           bool
-	Portforwarding bool
-
-	Wait    bool
-	Timeout int
+	DisableUI             bool
+	DisableOpen           bool
+	DisableSync           bool
+	DisablePortForwarding bool
 
 	configLoader loader.ConfigLoader
 	log          log.Logger
@@ -114,19 +111,16 @@ Open terminal instead of logs:
 	devCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "Skips image pushing, useful for minikube deployment")
 	devCmd.Flags().BoolVar(&cmd.SkipPushLocalKubernetes, "skip-push-local-kube", true, "Skips image pushing, if a local kubernetes environment is detected")
 
-	devCmd.Flags().BoolVar(&cmd.Sync, "sync", true, "Enable code synchronization")
-	devCmd.Flags().BoolVar(&cmd.Portforwarding, "portforwarding", true, "Enable port forwarding")
+	devCmd.Flags().BoolVar(&cmd.DisableSync, "disable-sync", false, "Disable code synchronization")
+	devCmd.Flags().BoolVar(&cmd.DisablePortForwarding, "disable-port-forwarding", false, "Disable port forwarding")
+	devCmd.Flags().BoolVar(&cmd.DisableUI, "disable-ui", false, "Disables the ui server")
+	devCmd.Flags().BoolVar(&cmd.DisableOpen, "disable-open", false, "Open defined URLs in the browser, if defined")
 
-	devCmd.Flags().BoolVar(&cmd.UI, "ui", true, "Start the ui server")
 	devCmd.Flags().IntVar(&cmd.UIPort, "ui-port", 0, "The port to use when opening the ui server")
-	devCmd.Flags().BoolVar(&cmd.Open, "open", true, "Open defined URLs in the browser, if defined")
 	devCmd.Flags().StringVar(&cmd.Pipeline, "pipeline", "", "The pipeline to execute")
 
 	devCmd.Flags().BoolVarP(&cmd.Terminal, "terminal", "t", false, "Open a terminal instead of showing logs")
 	devCmd.Flags().StringVar(&cmd.WorkingDirectory, "workdir", "", "The working directory where to open the terminal or execute the command")
-
-	devCmd.Flags().BoolVar(&cmd.Wait, "wait", false, "If true will wait first for pods to be running or fails after given timeout")
-	devCmd.Flags().IntVar(&cmd.Timeout, "timeout", 120, "Timeout until dev should stop waiting and fail")
 
 	return devCmd
 }
@@ -185,17 +179,16 @@ func (cmd *DevCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, c
 				Exclude: cmd.SkipDependency,
 			},
 			DevOptions: devpod.Options{
-				DisableSync:           !cmd.Sync,
-				DisablePortForwarding: !cmd.Portforwarding,
+				DisableSync:           cmd.DisableSync,
+				DisablePortForwarding: cmd.DisablePortForwarding,
+				DisableOpen:           cmd.DisableOpen,
 			},
 		},
 		ConfigOptions: configOptions,
 		Only:          cmd.Dependency,
 		Pipeline:      cmd.Pipeline,
-		ShowUI:        cmd.UI,
+		ShowUI:        !cmd.DisableUI,
 		UIPort:        cmd.UIPort,
-		Wait:          cmd.Wait,
-		Timeout:       cmd.Timeout,
 	})
 }
 

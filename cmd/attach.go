@@ -105,5 +105,5 @@ func (cmd *AttachCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []str
 		WithQuestion("Which pod do you want to attach to?")
 
 	// Start attach
-	return attach.StartAttach(ctx, targetselector.NewTargetSelector(options))
+	return attach.StartAttachFromCMD(ctx, targetselector.NewTargetSelector(options))
 }

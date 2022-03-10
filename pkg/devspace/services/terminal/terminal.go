@@ -205,7 +205,7 @@ fi`,
 				return nil
 			}
 
-			return fmt.Errorf("lost connection to pod %s", container.Pod.Name)
+			return fmt.Errorf("lost connection to pod %s: %v", container.Pod.Name, err)
 		}
 	}
 

@@ -39,6 +39,55 @@ var _ = DevSpaceDescribe("terminal", func() {
 		framework.ExpectNoError(err)
 	})
 
+	ginkgo.It("should attach", func() {
+		tempDir, err := framework.CopyToTempDir("tests/terminal/testdata/attach")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("attach")
+		framework.ExpectNoError(err)
+		defer framework.ExpectDeleteNamespace(kubeClient, ns)
+
+		buffer := &bytes.Buffer{}
+		devpod.DefaultTerminalStdout = buffer
+		devpod.DefaultTerminalStderr = buffer
+		devpod.DefaultTerminalStdin = strings.NewReader(`mkdir -p /test/devspace
+echo "Hello World!" > /test/devspace/test.txt
+sleep 1000000
+`)
+		defer func() {
+			devpod.DefaultTerminalStdout = os.Stdout
+			devpod.DefaultTerminalStderr = os.Stderr
+			devpod.DefaultTerminalStdin = os.Stdin
+		}()
+
+		// create a new dev command and start it
+		done := make(chan error)
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go func() {
+			devCmd := &cmd.DevCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+				Ctx: cancelCtx,
+			}
+			err := devCmd.Run(f)
+			if err != nil {
+				f.GetLog().Errorf("error: %v", err)
+			}
+			done <- err
+		}()
+
+		// check if file is there
+		framework.ExpectRemoteFileContents("ubuntu", ns, "/test/devspace/test.txt", "Hello World!\n")
+
+		cancel()
+		err = <-done
+		framework.ExpectNoError(err)
+	})
+
 	ginkgo.It("should restart terminal", func() {
 		tempDir, err := framework.CopyToTempDir("tests/terminal/testdata/restart")
 		framework.ExpectNoError(err)

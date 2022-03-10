@@ -171,6 +171,11 @@ func modifyDevContainer(devPod *latest.DevPod, devContainer *latest.DevContainer
 		return errors.Wrap(err, "replace terminal")
 	}
 
+	err = replaceAttach(devContainer, podTemplate)
+	if err != nil {
+		return errors.Wrap(err, "replace attach")
+	}
+
 	err = replaceEnv(devContainer, podTemplate)
 	if err != nil {
 		return errors.Wrap(err, "replace env")
@@ -284,8 +289,27 @@ func replaceEnv(devContainer *latest.DevContainer, podTemplate *corev1.PodTempla
 	return nil
 }
 
+func replaceAttach(devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+	if devContainer.Attach == nil || devContainer.Attach.DisableReplace || (devContainer.Attach.Enabled != nil && !*devContainer.Attach.Enabled) {
+		return nil
+	}
+
+	index, container, err := getPodTemplateContainer(devContainer, podTemplate)
+	if err != nil {
+		return err
+	}
+
+	container.ReadinessProbe = nil
+	container.StartupProbe = nil
+	container.LivenessProbe = nil
+	container.Stdin = true
+	container.TTY = !devContainer.Attach.DisableTTY
+	podTemplate.Spec.Containers[index] = *container
+	return nil
+}
+
 func replaceTerminal(devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
-	if devContainer.Terminal == nil || devContainer.Terminal.Disabled || devContainer.Terminal.DisableReplace {
+	if devContainer.Terminal == nil || devContainer.Terminal.DisableReplace || (devContainer.Terminal.Enabled != nil && !*devContainer.Terminal.Enabled) {
 		return nil
 	}
 

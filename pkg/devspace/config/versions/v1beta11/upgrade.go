@@ -744,7 +744,7 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 			devContainer.Terminal = &next.Terminal{
 				Command:        strings.Join(c.Dev.Terminal.Command, " "),
 				WorkDir:        c.Dev.Terminal.WorkDir,
-				Disabled:       c.Dev.Terminal.Disabled,
+				Enabled:        ptr.Bool(!c.Dev.Terminal.Disabled),
 				DisableReplace: true,
 			}
 		}
@@ -758,7 +758,7 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 
 			devContainer := getMatchingDevContainer(devPod, selector.ContainerName)
 			devContainer.Logs = &next.Logs{
-				Disabled: c.Dev.Logs.Disabled != nil && *c.Dev.Logs.Disabled,
+				Enabled: ptr.Bool(!(c.Dev.Logs.Disabled != nil && *c.Dev.Logs.Disabled)),
 			}
 		}
 		if c.Dev.Logs.ShowLast != nil {
