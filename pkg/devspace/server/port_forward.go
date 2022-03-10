@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -91,7 +92,7 @@ func (h *handler) forward(w http.ResponseWriter, r *http.Request) {
 	errorChan := make(chan error)
 	ports := []string{strconv.Itoa(checkPort) + ":" + targetPort[0]}
 
-	pf, err := client.NewPortForwarder(pod, ports, []string{"127.0.0.1"}, stopChan, readyChan, nil)
+	pf, err := kubectl.NewPortForwarder(client, pod, ports, []string{"127.0.0.1"}, stopChan, readyChan, nil)
 
 	if err != nil {
 		h.ctx.Log.Errorf("Error in %s: %v", r.URL.String(), err)

@@ -14,6 +14,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
 	"github.com/loft-sh/devspace/pkg/devspace/dev"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	fakekube "github.com/loft-sh/devspace/pkg/devspace/kubectl/testing"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
@@ -151,10 +152,10 @@ func (cmd *DeployCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory
 			},
 			DependencyOptions: types.DependencyOptions{
 				Exclude: cmd.SkipDependency,
+				Only:    cmd.Dependency,
 			},
 		},
 		ConfigOptions: configOptions,
-		Only:          cmd.Dependency,
 		Pipeline:      cmd.Pipeline,
 	})
 }
@@ -212,7 +213,7 @@ func prepare(ctx context.Context, f factory.Factory, configOptions *loader.Confi
 
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(localCache, globalFlags.NoWarn, log)
+	client, err = kubectl.CheckKubeContext(client, localCache, globalFlags.NoWarn, log)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +234,6 @@ type PipelineOptions struct {
 	types.Options
 
 	ConfigOptions *loader.ConfigOptions
-	Only          []string
 	Pipeline      string
 	ShowUI        bool
 	UIPort        int
@@ -242,7 +242,7 @@ type PipelineOptions struct {
 func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bool, options *PipelineOptions) error {
 	// create namespace if necessary
 	if !options.DeployOptions.Render {
-		err := ctx.KubeClient.EnsureNamespace(ctx.Context, ctx.KubeClient.Namespace(), ctx.Log)
+		err := kubectl.EnsureNamespace(ctx.Context, ctx.KubeClient, ctx.KubeClient.Namespace(), ctx.Log)
 		if err != nil {
 			return errors.Errorf("unable to create namespace: %v", err)
 		}
@@ -255,10 +255,7 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bo
 	}
 
 	// resolve dependencies
-	dependencies, err := f.NewDependencyManager(ctx, options.ConfigOptions).ResolveAll(ctx, dependency.ResolveOptions{
-		SkipDependencies: options.DependencyOptions.Exclude,
-		Dependencies:     options.Only,
-	})
+	dependencies, err := f.NewDependencyManager(ctx, options.ConfigOptions).ResolveAll(ctx, dependency.ResolveOptions{})
 	if err != nil {
 		return errors.Wrap(err, "deploy dependencies")
 	}

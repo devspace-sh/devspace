@@ -37,7 +37,7 @@ func (client *client) execStreamWithTransport(ctx context.Context, options *Exec
 		options.SubResource = SubResourceExec
 	}
 
-	wrapper, upgradeRoundTripper, err := client.GetUpgraderWrapper()
+	wrapper, upgradeRoundTripper, err := GetUpgraderWrapper(client)
 	if err != nil {
 		return err
 	}

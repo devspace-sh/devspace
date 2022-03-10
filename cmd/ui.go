@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -155,7 +156,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(localCache, cmd.NoWarn, cmd.log)
+	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.log)
 	if err != nil {
 		return err
 	}

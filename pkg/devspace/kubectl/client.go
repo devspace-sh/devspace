@@ -13,7 +13,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/util"
 	"github.com/loft-sh/devspace/pkg/devspace/upgrade"
 
-	"github.com/loft-sh/devspace/pkg/devspace/kubectl/portforward"
 	"github.com/loft-sh/devspace/pkg/util/kubeconfig"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/survey"
@@ -49,10 +48,6 @@ type Client interface {
 	// KubeConfigLoader returns the kube config loader interface
 	KubeConfigLoader() kubeconfig.Loader
 
-	// CheckKubeContext this function will print a warning if the generated config contains a different last kube context / namespace
-	// than the one that is used currently
-	CheckKubeContext(localCache localcache.Cache, noWarning bool, log log.Logger) (Client, error)
-
 	// CopyFromReader copies and extracts files into the container from the reader interface
 	CopyFromReader(ctx context.Context, pod *k8sv1.Pod, container, containerPath string, reader io.Reader) error
 
@@ -75,15 +70,6 @@ type Client interface {
 	// Logs starts a new logs request to the given pod and container and returns a ReadCloser interface
 	// to allow continuous reading. Can also follow a log if specified.
 	Logs(ctx context.Context, namespace, podName, containerName string, lastContainerLog bool, tail *int64, follow bool) (io.ReadCloser, error)
-
-	// EnsureNamespace ensures the config names exist and if not creates them
-	EnsureNamespace(ctx context.Context, namespace string, log log.Logger) error
-
-	// NewPortForwarder creates a new port forwarder object for the current kube context to the given pod
-	NewPortForwarder(pod *k8sv1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}, errorChan chan error) (*portforward.PortForwarder, error)
-
-	// IsLocalKubernetes returns true if a local kubernetes installation such as minikube is detected
-	IsLocalKubernetes() bool
 
 	// IsInCluster returns true if in cluster kubernetes configuration is detected
 	IsInCluster() bool
@@ -197,8 +183,8 @@ func (client *client) IsInCluster() bool {
 	return client.isInCluster
 }
 
-// PrintWarning prints a warning if the last kube context is different than this one
-func (client *client) CheckKubeContext(localCache localcache.Cache, noWarning bool, log log.Logger) (Client, error) {
+// CheckKubeContext prints a warning if the last kube context is different than this one
+func CheckKubeContext(client Client, localCache localcache.Cache, noWarning bool, log log.Logger) (Client, error) {
 	currentConfigContext := &localcache.LastContextConfig{
 		Namespace: client.Namespace(),
 		Context:   client.CurrentContext(),
@@ -286,7 +272,7 @@ func (client *client) CheckKubeContext(localCache localcache.Cache, noWarning bo
 	log.Infof("Using namespace '%s'", ansi.Color(currentConfigContext.Namespace, "white+b"))
 	log.Infof("Using kube context '%s'", ansi.Color(currentConfigContext.Context, "white+b"))
 	if resetClient {
-		return NewClientFromContext(currentConfigContext.Context, currentConfigContext.Namespace, true, client.kubeLoader)
+		return NewClientFromContext(currentConfigContext.Context, currentConfigContext.Namespace, true, client.KubeConfigLoader())
 	}
 
 	return client, nil

@@ -66,7 +66,7 @@ const waitTimeout = 20 * time.Minute
 // NewBuilder creates a new kaniko.Builder instance
 func NewBuilder(ctx *devspacecontext.Context, dockerClient docker.Client, imageConfigName string, imageConf *latest.Image, imageTags []string) (builder.Interface, error) {
 	if imageConf.Kaniko != nil && imageConf.Kaniko.Namespace != "" {
-		err := ctx.KubeClient.EnsureNamespace(ctx.Context, imageConf.Kaniko.Namespace, ctx.Log)
+		err := kubectl.EnsureNamespace(ctx.Context, ctx.KubeClient, imageConf.Kaniko.Namespace, ctx.Log)
 		if err != nil {
 			return nil, err
 		}

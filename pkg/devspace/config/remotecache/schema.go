@@ -321,7 +321,7 @@ func (l *RemoteCache) Save(ctx context.Context, client kubectl.Client) error {
 				return true, nil
 			}
 
-			err = client.EnsureNamespace(ctx, namespace, log.Discard)
+			err = kubectl.EnsureNamespace(ctx, client, namespace, log.Discard)
 			if err != nil {
 				return false, err
 			}

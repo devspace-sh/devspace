@@ -3,6 +3,7 @@ package reset
 import (
 	"context"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
@@ -77,7 +78,7 @@ func (cmd *podsCmd) RunResetPods(f factory.Factory, cobraCmd *cobra.Command, arg
 
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(localCache, cmd.NoWarn, cmd.log)
+	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.log)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ import (
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/sync"
 	"os"
 
@@ -165,7 +166,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(localCache, cmd.NoWarn, logger)
+	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, logger)
 	if err != nil {
 		return err
 	}

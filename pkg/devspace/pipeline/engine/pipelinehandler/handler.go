@@ -19,6 +19,9 @@ import (
 
 // PipelineCommands are commands that can only be run within a pipeline and have special functionality in there
 var PipelineCommands = map[string]func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error{
+	"get_image": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		return commands.GetImage(devCtx, args)
+	},
 	"run_command": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return runCommand(devCtx, pipeline, args)
 	},

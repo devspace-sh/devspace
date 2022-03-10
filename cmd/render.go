@@ -108,10 +108,10 @@ func (cmd *RenderCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory
 			},
 			DependencyOptions: pipelinetypes.DependencyOptions{
 				Exclude: cmd.SkipDependency,
+				Only:    cmd.Dependency,
 			},
 		},
 		ConfigOptions: configOptions,
-		Only:          cmd.Dependency,
 		Pipeline:      "deploy",
 	})
 }

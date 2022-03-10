@@ -20,6 +20,7 @@ type Options struct {
 type DependencyOptions struct {
 	Pipeline   string   `long:"pipeline" description:"The pipeline to deploy from the dependency"`
 	Exclude    []string `long:"exclude" description:"Dependencies to exclude"`
+	Only       []string `long:"only" description:"Dependencies to include"`
 	Sequential bool     `long:"sequential" description:"Run dependencies one after another"`
 }
 

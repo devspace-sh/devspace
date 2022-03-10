@@ -42,7 +42,7 @@ type Builder struct {
 func NewBuilder(ctx *devspacecontext.Context, imageConfigName string, imageConf *latest.Image, imageTags []string, skipPush, skipPushOnLocalKubernetes bool) (*Builder, error) {
 	// ensure namespace
 	if imageConf.BuildKit != nil && imageConf.BuildKit.InCluster != nil && imageConf.BuildKit.InCluster.Namespace != "" {
-		err := ctx.KubeClient.EnsureNamespace(ctx.Context, imageConf.BuildKit.InCluster.Namespace, ctx.Log)
+		err := kubectl.EnsureNamespace(ctx.Context, ctx.KubeClient, imageConf.BuildKit.InCluster.Namespace, ctx.Log)
 		if err != nil {
 			return nil, err
 		}
@@ -66,7 +66,7 @@ func (b *Builder) ShouldRebuild(ctx *devspacecontext.Context, forceRebuild bool)
 
 	// Check if image is present in local repository
 	if !rebuild && err == nil && b.helper.ImageConf.BuildKit.InCluster == nil {
-		if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && ctx.KubeClient.IsLocalKubernetes() {
+		if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && kubectl.IsLocalKubernetes(ctx.KubeClient.CurrentContext()) {
 			dockerClient, err := dockerpkg.NewClientWithMinikube(ctx.KubeClient.CurrentContext(), b.helper.ImageConf.BuildKit.PreferMinikube == nil || *b.helper.ImageConf.BuildKit.PreferMinikube, ctx.Log)
 			if err != nil {
 				return false, err
@@ -116,7 +116,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 	}
 
 	// We skip pushing when it is the minikube client
-	if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && ctx.KubeClient.IsLocalKubernetes() {
+	if b.skipPushOnLocalKubernetes && ctx.KubeClient != nil && kubectl.IsLocalKubernetes(ctx.KubeClient.CurrentContext()) {
 		b.skipPush = true
 	}
 

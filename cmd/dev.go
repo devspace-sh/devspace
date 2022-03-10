@@ -181,6 +181,7 @@ func (cmd *DevCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, c
 			},
 			DependencyOptions: types.DependencyOptions{
 				Exclude: cmd.SkipDependency,
+				Only:    cmd.Dependency,
 			},
 			DevOptions: devpod.Options{
 				DisableSync:           cmd.DisableSync,
@@ -189,7 +190,6 @@ func (cmd *DevCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory, c
 			},
 		},
 		ConfigOptions: configOptions,
-		Only:          cmd.Dependency,
 		Pipeline:      cmd.Pipeline,
 		ShowUI:        !cmd.DisableUI,
 		UIPort:        cmd.UIPort,

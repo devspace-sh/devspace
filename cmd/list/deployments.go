@@ -9,6 +9,7 @@ import (
 	deployHelm "github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/helm"
 	deployKubectl "github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/helm"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/factory"
 	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/message"
@@ -79,7 +80,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(localCache, cmd.NoWarn, logger)
+	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, logger)
 	if err != nil {
 		return err
 	}

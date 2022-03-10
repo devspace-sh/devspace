@@ -22,6 +22,9 @@ var BasicCommands = map[string]func(ctx context.Context, args []string) error{
 	"is_equal": func(ctx context.Context, args []string) error {
 		return enginecommands.IsEqual(args)
 	},
+	"is_true": func(ctx context.Context, args []string) error {
+		return enginecommands.IsTrue(args)
+	},
 	"is_command": func(ctx context.Context, args []string) error {
 		return enginecommands.IsCommand(ctx, args)
 	},

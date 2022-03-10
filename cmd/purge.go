@@ -98,10 +98,10 @@ func (cmd *PurgeCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory,
 		Options: types.Options{
 			DependencyOptions: types.DependencyOptions{
 				Exclude: cmd.SkipDependency,
+				Only:    cmd.Dependency,
 			},
 		},
 		ConfigOptions: configOptions,
-		Only:          cmd.Dependency,
 		Pipeline:      cmd.Pipeline,
 	})
 }

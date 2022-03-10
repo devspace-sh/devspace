@@ -106,10 +106,10 @@ func (cmd *BuildCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory,
 			},
 			DependencyOptions: pipelinetypes.DependencyOptions{
 				Exclude: cmd.SkipDependency,
+				Only:    cmd.Dependency,
 			},
 		},
 		ConfigOptions: configOptions,
-		Only:          cmd.Dependency,
 		Pipeline:      cmd.Pipeline,
 	})
 }

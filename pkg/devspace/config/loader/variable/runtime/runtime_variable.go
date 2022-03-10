@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config"
 	"github.com/loft-sh/devspace/pkg/devspace/config/constants"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/types"
+	"github.com/pkg/errors"
 	"strings"
 )
 
@@ -103,36 +104,43 @@ func (e *runtimeVariable) Load() (bool, interface{}, error) {
 			onlyImage = true
 		}
 
-		// search for image name in cache
-		imageCache, ok := c.LocalCache().GetImageCache(imageName)
-		if ok && imageCache.ImageName != "" && imageCache.Tag != "" {
-			shouldRedeploy, image := BuildImageString(c, imageName, imageCache.ImageName, imageCache.Tag, onlyImage, onlyTag)
-			if image != "" {
-				return shouldRedeploy, image, nil
-			}
+		shouldRebuild, image, err := GetImage(c, imageName, onlyImage, onlyTag)
+		if err != nil {
+			return false, nil, errors.Wrapf(err, "resolving variable %s", e.name)
 		}
 
-		// search for image name in config
-		for configImageKey, configImage := range c.Config().Images {
-			if configImageKey != imageName {
-				continue
-			}
-
-			tag := ""
-			if len(configImage.Tags) > 0 {
-				tag = configImage.Tags[0]
-			}
-
-			shouldRedeploy, image := BuildImageString(c, imageName, configImage.Image, tag, onlyImage, onlyTag)
-			if image != "" {
-				return shouldRedeploy, image, nil
-			}
-		}
-
-		return false, nil, fmt.Errorf("couldn't find imageName %s resolving variable %s", imageName, e.name)
+		return shouldRebuild, image, nil
 	}
 
 	return false, nil, fmt.Errorf("couldn't find runtime variable %s", e.name)
+}
+
+func GetImage(c config.Config, imageName string, onlyImage, onlyTag bool) (bool, string, error) {
+	// search for image name in cache
+	imageCache, ok := c.LocalCache().GetImageCache(imageName)
+	if ok && imageCache.ImageName != "" && imageCache.Tag != "" {
+		shouldRedeploy, image := BuildImageString(c, imageName, imageCache.ImageName, imageCache.Tag, onlyImage, onlyTag)
+		if image != "" {
+			return shouldRedeploy, image, nil
+		}
+	}
+
+	// search for image name in config
+	if c.Config().Images != nil && c.Config().Images[imageName] != nil {
+		configImage := c.Config().Images[imageName]
+
+		tag := ""
+		if len(configImage.Tags) > 0 {
+			tag = configImage.Tags[0]
+		}
+
+		shouldRedeploy, image := BuildImageString(c, imageName, configImage.Image, tag, onlyImage, onlyTag)
+		if image != "" {
+			return shouldRedeploy, image, nil
+		}
+	}
+
+	return false, "", fmt.Errorf("couldn't find imageName %s", imageName)
 }
 
 func BuildImageString(c config.Config, name string, fallbackImage string, fallbackTag string, onlyImage, onlyTag bool) (bool, string) {

@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/deploy/deployer/kubectl"
 	helmclient "github.com/loft-sh/devspace/pkg/devspace/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
+	kubectlclient "github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"io"
@@ -191,7 +192,7 @@ func (c *controller) deployOne(ctx *devspacecontext.Context, deployConfig *lates
 	)
 
 	if !options.Render && deployConfig.Namespace != "" {
-		err = ctx.KubeClient.EnsureNamespace(ctx.Context, deployConfig.Namespace, ctx.Log)
+		err = kubectlclient.EnsureNamespace(ctx.Context, ctx.KubeClient, deployConfig.Namespace, ctx.Log)
 		if err != nil {
 			return false, err
 		}

@@ -126,7 +126,10 @@ func (p *pipeline) StartNewDependencies(ctx *devspacecontext.Context, dependenci
 
 	deployDependencies := []types2.Dependency{}
 	for _, dependency := range dependencies {
-		if stringutil.Contains(options.Exclude, dependency.Name()) {
+		if len(options.Only) > 0 && !stringutil.Contains(options.Only, dependency.Name()) {
+			ctx.Log.Debugf("Skipping dependency %s because it was excluded", dependency.Name())
+			continue
+		} else if stringutil.Contains(options.Exclude, dependency.Name()) {
 			ctx.Log.Debugf("Skipping dependency %s because it was excluded", dependency.Name())
 			continue
 		} else if !deployableDependencies[dependency.Name()] {

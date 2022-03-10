@@ -73,33 +73,6 @@ func IsPrivateIP(ip net.IP) bool {
 	return false
 }
 
-func (client *client) EnsureNamespace(ctx context.Context, namespace string, log log.Logger) error {
-	_, err := client.KubeClient().CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
-	if err != nil {
-		if !kerrors.IsNotFound(err) {
-			if kerrors.IsForbidden(err) {
-				return nil
-			}
-
-			return errors.Wrap(err, "get namespace")
-		}
-
-		// create namespace
-		_, err = client.KubeClient().CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: namespace,
-			},
-		}, metav1.CreateOptions{})
-		if err != nil && !kerrors.IsAlreadyExists(err) {
-			return err
-		}
-
-		log.Donef("Created namespace: %s", namespace)
-	}
-
-	return nil
-}
-
 // GetPodStatus returns the pod status as a string
 // Taken from https://github.com/kubernetes/kubernetes/pkg/printers/internalversion/printers.go
 func GetPodStatus(pod *corev1.Pod) string {
@@ -174,15 +147,42 @@ func GetPodStatus(pod *corev1.Pod) string {
 	return reason
 }
 
+func EnsureNamespace(ctx context.Context, client Client, namespace string, log log.Logger) error {
+	_, err := client.KubeClient().CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+	if err != nil {
+		if !kerrors.IsNotFound(err) {
+			if kerrors.IsForbidden(err) {
+				return nil
+			}
+
+			return errors.Wrap(err, "get namespace")
+		}
+
+		// create namespace
+		_, err = client.KubeClient().CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: namespace,
+			},
+		}, metav1.CreateOptions{})
+		if err != nil && !kerrors.IsAlreadyExists(err) {
+			return err
+		}
+
+		log.Donef("Created namespace: %s", namespace)
+	}
+
+	return nil
+}
+
 // NewPortForwarder creates a new port forwarder object for the specified pods, ports and addresses
-func (client *client) NewPortForwarder(pod *corev1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}, errorChan chan error) (*portforward.PortForwarder, error) {
+func NewPortForwarder(client Client, pod *corev1.Pod, ports []string, addresses []string, stopChan chan struct{}, readyChan chan struct{}, errorChan chan error) (*portforward.PortForwarder, error) {
 	execRequest := client.KubeClient().CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).
 		Namespace(pod.Namespace).
 		SubResource("portforward")
 
-	transport, upgrader, err := client.GetUpgraderWrapper()
+	transport, upgrader, err := GetUpgraderWrapper(client)
 	if err != nil {
 		return nil, err
 	}
@@ -196,11 +196,6 @@ func (client *client) NewPortForwarder(pod *corev1.Pod, ports []string, addresse
 	}
 
 	return fw, nil
-}
-
-// IsLocalKubernetes returns true if the current context belongs to a local Kubernetes cluster
-func (client *client) IsLocalKubernetes() bool {
-	return IsLocalKubernetes(client.currentContext)
 }
 
 // IsLocalKubernetes returns true if the context belongs to a local Kubernetes cluster

@@ -734,9 +734,9 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 			devContainer.Logs = &next.Logs{
 				Enabled: ptr.Bool(!(c.Dev.Logs.Disabled != nil && *c.Dev.Logs.Disabled)),
 			}
-		}
-		if c.Dev.Logs.ShowLast != nil {
-			log.Warnf("dev.logs.showLast is not supported anymore in DevSpace version 6 and has no effect")
+			if c.Dev.Logs.ShowLast != nil {
+				devContainer.Logs.LastLines = int64(*c.Dev.Logs.ShowLast)
+			}
 		}
 	}
 

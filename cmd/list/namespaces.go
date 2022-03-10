@@ -3,6 +3,7 @@ package list
 import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"strconv"
 
 	"github.com/loft-sh/devspace/cmd/flags"
@@ -70,7 +71,7 @@ func (cmd *namespacesCmd) RunListNamespaces(f factory.Factory, cobraCmd *cobra.C
 
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = client.CheckKubeContext(localCache, cmd.NoWarn, logger)
+	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, logger)
 	if err != nil {
 		return err
 	}
