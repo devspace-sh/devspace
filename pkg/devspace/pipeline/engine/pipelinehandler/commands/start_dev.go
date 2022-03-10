@@ -18,6 +18,7 @@ type StartDevOptions struct {
 	Set       []string `long:"set" description:"Set configuration"`
 	SetString []string `long:"set-string" description:"Set configuration as string"`
 	From      []string `long:"from" description:"Reuse an existing configuration"`
+	FromFile  []string `long:"from-file" description:"Reuse an existing configuration from a file"`
 
 	All bool `long:"all" description:"Start all dev configurations"`
 }
@@ -34,14 +35,14 @@ func StartDev(ctx *devspacecontext.Context, pipeline types.Pipeline, args []stri
 
 	if options.All {
 		for devConfig := range ctx.Config.Config().Dev {
-			ctx, err = applySetValues(ctx, "dev", devConfig, options.Set, options.SetString, options.From)
+			ctx, err = applySetValues(ctx, "dev", devConfig, options.Set, options.SetString, options.From, options.FromFile)
 			if err != nil {
 				return err
 			}
 		}
 	} else if len(args) > 0 {
 		for _, devConfig := range args {
-			ctx, err = applySetValues(ctx, "dev", devConfig, options.Set, options.SetString, options.From)
+			ctx, err = applySetValues(ctx, "dev", devConfig, options.Set, options.SetString, options.From, options.FromFile)
 			if err != nil {
 				return err
 			}
@@ -68,53 +69,4 @@ func killApplication(pipeline types.Pipeline) {
 	if err != nil {
 		logpkg.GetInstance().Errorf("error closing pipeline: %v", err)
 	}
-}
-
-// StopDevOptions describe how deployments should get deployed
-type StopDevOptions struct {
-	All bool `long:"all" description:"Stop all dev configurations"`
-}
-
-func StopDev(ctx *devspacecontext.Context, devManager devpod.Manager, args []string) error {
-	ctx.Log.Debugf("stop_dev %s", strings.Join(args, " "))
-	options := &StopDevOptions{}
-	args, err := flags.ParseArgs(options, args)
-	if err != nil {
-		return errors.Wrap(err, "parse args")
-	}
-
-	if options.All {
-		// loop over all pods in dev manager
-		for _, a := range devManager.List() {
-			ctx = ctx.WithLogger(logpkg.NewDefaultPrefixLogger("dev:"+a+" ", ctx.Log))
-			ctx.Log.Infof("Stopping dev %s", a)
-			err = devManager.Reset(ctx, a)
-			if err != nil {
-				return err
-			}
-		}
-
-		// loop over all in cache
-		for _, a := range ctx.Config.RemoteCache().ListDevPods() {
-			ctx = ctx.WithLogger(logpkg.NewDefaultPrefixLogger("dev:"+a.Name+" ", ctx.Log))
-			ctx.Log.Infof("Stopping dev %s", a.Name)
-			err = devManager.Reset(ctx, a.Name)
-			if err != nil {
-				return err
-			}
-		}
-	} else if len(args) > 0 {
-		for _, a := range args {
-			ctx = ctx.WithLogger(logpkg.NewDefaultPrefixLogger("dev:"+a+" ", ctx.Log))
-			ctx.Log.Infof("Stopping dev %s", a)
-			err = devManager.Reset(ctx, a)
-			if err != nil {
-				return err
-			}
-		}
-	} else {
-		return fmt.Errorf("stop_dev: either specify 'stop_dev --all' or 'stop_dev devConfig1 devConfig2'")
-	}
-
-	return nil
 }

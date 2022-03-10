@@ -10,9 +10,13 @@ import (
 	"strings"
 )
 
-func Pipeline(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+type RunPipelineOptions struct {
+	types.PipelineOptions
+}
+
+func RunPipelines(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 	ctx.Log.Debugf("run_pipelines %s", strings.Join(args, " "))
-	options := &types.PipelineOptions{}
+	options := &RunPipelineOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
@@ -31,5 +35,5 @@ func Pipeline(ctx *devspacecontext.Context, pipeline types.Pipeline, args []stri
 		pipelines = append(pipelines, pipelineConfig)
 	}
 
-	return pipeline.StartNewPipelines(ctx, pipelines, *options)
+	return pipeline.StartNewPipelines(ctx, pipelines, options.PipelineOptions)
 }

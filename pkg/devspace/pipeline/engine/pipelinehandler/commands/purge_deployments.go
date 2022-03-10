@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// PurgeOptions describe how deployments should get deployed
-type PurgeOptions struct {
+// PurgeDeploymentsOptions describe how deployments should get deployed
+type PurgeDeploymentsOptions struct {
 	All bool `long:"all" description:"Deploy all deployments"`
 
 	Sequential bool `long:"sequential" description:"Sequentially purges the deployments"`
@@ -18,9 +18,9 @@ type PurgeOptions struct {
 	// Extra flags here to add a deployment
 }
 
-func Purge(ctx *devspacecontext.Context, args []string) error {
+func PurgeDeployments(ctx *devspacecontext.Context, args []string) error {
 	ctx.Log.Debugf("purge_deployments %s", strings.Join(args, " "))
-	options := &PurgeOptions{}
+	options := &PurgeDeploymentsOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")

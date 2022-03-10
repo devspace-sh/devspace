@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/registry"
 	"github.com/loft-sh/devspace/pkg/devspace/deploy"
@@ -25,6 +26,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"k8s.io/client-go/kubernetes/fake"
 	"os"
 	"strings"
@@ -113,6 +115,9 @@ func (cmd *DeployCmd) Run(f factory.Factory) error {
 		defer cancelFn()
 	}
 
+	// set command in context
+	cmd.Ctx = values.WithCommand(cmd.Ctx, "deploy")
+
 	configOptions := cmd.ToConfigOptions()
 	ctx, err := prepare(cmd.Ctx, f, configOptions, cmd.GlobalFlags, false)
 	if err != nil {
@@ -157,6 +162,15 @@ func (cmd *DeployCmd) runCommand(ctx *devspacecontext.Context, f factory.Factory
 func prepare(ctx context.Context, f factory.Factory, configOptions *loader.ConfigOptions, globalFlags *flags.GlobalFlags, allowFailingKubeClient bool) (*devspacecontext.Context, error) {
 	// start file logging
 	logpkg.StartFileLogging()
+
+	// create a temporary folder for us to use
+	tempFolder, err := ioutil.TempDir("", "devspace-")
+	if err != nil {
+		return nil, errors.Wrap(err, "create temporary folder")
+	}
+
+	// add temp folder to context
+	ctx = values.WithTempFolder(ctx, tempFolder)
 
 	// get the main logger after file logging is started
 	log := f.GetLog()

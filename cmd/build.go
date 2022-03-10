@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/build"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	pipelinetypes "github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -73,6 +74,9 @@ func (cmd *BuildCmd) Run(f factory.Factory) error {
 		cmd.Ctx, cancelFn = context.WithCancel(context.Background())
 		defer cancelFn()
 	}
+
+	// set command in context
+	cmd.Ctx = values.WithCommand(cmd.Ctx, "build")
 
 	configOptions := cmd.ToConfigOptions()
 	ctx, err := prepare(cmd.Ctx, f, configOptions, cmd.GlobalFlags, true)

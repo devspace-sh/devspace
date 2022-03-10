@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -147,6 +148,9 @@ func (l *configLoader) LoadWithParser(ctx context.Context, localCache localcache
 	} else {
 		data["name"] = options.OverrideName
 	}
+
+	// set name to context
+	ctx = values.WithName(ctx, name)
 
 	// create remote cache
 	var remoteCache remotecache.Cache

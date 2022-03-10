@@ -10,18 +10,19 @@ import (
 	"strings"
 )
 
-// PullSecretsOptions describe how pull secrets should be deployed
-type PullSecretsOptions struct {
+// EnsurePullSecretsOptions describe how pull secrets should be deployed
+type EnsurePullSecretsOptions struct {
 	Set       []string `long:"set" description:"Set configuration"`
 	SetString []string `long:"set-string" description:"Set configuration as string"`
 	From      []string `long:"from" description:"Reuse an existing configuration"`
+	FromFile  []string `long:"from-file" description:"Reuse an existing configuration from a file"`
 
 	All bool `long:"all" description:"Ensure all pull secrets"`
 }
 
-func PullSecrets(ctx *devspacecontext.Context, args []string) error {
+func EnsurePullSecrets(ctx *devspacecontext.Context, args []string) error {
 	ctx.Log.Debugf("ensure_pull_secrets %s", strings.Join(args, " "))
-	options := &PullSecretsOptions{}
+	options := &EnsurePullSecretsOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
@@ -34,14 +35,14 @@ func PullSecrets(ctx *devspacecontext.Context, args []string) error {
 		}
 
 		for pullSecret := range pullSecrets {
-			ctx, err = applySetValues(ctx, "pullSecrets", pullSecret, options.Set, options.SetString, options.From)
+			ctx, err = applySetValues(ctx, "pullSecrets", pullSecret, options.Set, options.SetString, options.From, options.FromFile)
 			if err != nil {
 				return err
 			}
 		}
 	} else if len(args) > 0 {
 		for _, pullSecret := range args {
-			ctx, err = applySetValues(ctx, "pullSecrets", pullSecret, options.Set, options.SetString, options.From)
+			ctx, err = applySetValues(ctx, "pullSecrets", pullSecret, options.Set, options.SetString, options.From, options.FromFile)
 			if err != nil {
 				return err
 			}

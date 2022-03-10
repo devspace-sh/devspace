@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"os"
 	"path/filepath"
@@ -33,6 +34,20 @@ type PredefinedVariableFunction func(ctx context.Context, options *PredefinedVar
 
 // predefinedVars holds all predefined variables that can be used in the config
 var predefinedVars = map[string]PredefinedVariableFunction{
+	"devspace.name": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+		name, ok := values.NameFrom(ctx)
+		if !ok {
+			return "", nil
+		}
+		return name, nil
+	},
+	"devspace.tempFolder": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
+		tempFolder, ok := values.TempFolderFrom(ctx)
+		if !ok {
+			return os.TempDir(), nil
+		}
+		return tempFolder, nil
+	},
 	"devspace.version": func(ctx context.Context, options *PredefinedVariableOptions) (interface{}, error) {
 		return upgrade.GetVersion(), nil
 	},

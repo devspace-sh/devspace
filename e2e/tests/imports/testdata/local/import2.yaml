@@ -5,6 +5,10 @@ vars:
   IMPORT2: import2
 
 pipelines:
+  import2-name:
+    steps:
+      - run: |-
+          echo ${devspace.name}
   import2:
     steps:
       - run: |-

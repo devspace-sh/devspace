@@ -11,24 +11,27 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/strvals"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 	"io"
+	"io/ioutil"
 	"strings"
 )
 
-// DeployOptions describe how deployments should get deployed
-type DeployOptions struct {
+// CreateDeploymentsOptions describe how deployments should get deployed
+type CreateDeploymentsOptions struct {
 	deploy.Options
 
 	Set       []string `long:"set" description:"Set configuration"`
 	SetString []string `long:"set-string" description:"Set configuration as string"`
 	From      []string `long:"from" description:"Reuse an existing configuration"`
+	FromFile  []string `long:"from-file" description:"Reuse an existing configuration from a file"`
 
 	All bool `long:"all" description:"Deploy all deployments"`
 }
 
-func Deploy(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string, stdout io.Writer) error {
+func CreateDeployments(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string, stdout io.Writer) error {
 	ctx.Log.Debugf("create_deployments %s", strings.Join(args, " "))
-	options := &DeployOptions{
+	options := &CreateDeploymentsOptions{
 		Options: pipeline.Options().DeployOptions,
 	}
 	args, err := flags.ParseArgs(options, args)
@@ -39,14 +42,14 @@ func Deploy(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string
 	if options.All {
 		deployments := ctx.Config.Config().Deployments
 		for deployment := range deployments {
-			ctx, err = applySetValues(ctx, "deployments", deployment, options.Set, options.SetString, options.From)
+			ctx, err = applySetValues(ctx, "deployments", deployment, options.Set, options.SetString, options.From, options.FromFile)
 			if err != nil {
 				return err
 			}
 		}
 	} else if len(args) > 0 {
 		for _, deployment := range args {
-			ctx, err = applySetValues(ctx, "deployments", deployment, options.Set, options.SetString, options.From)
+			ctx, err = applySetValues(ctx, "deployments", deployment, options.Set, options.SetString, options.From, options.FromFile)
 			if err != nil {
 				return err
 			}
@@ -65,7 +68,7 @@ func Deploy(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string
 	return deploy.NewController().Deploy(ctx, args, &options.Options)
 }
 
-func applySetValues(ctx *devspacecontext.Context, name, objName string, set, setString, from []string) (*devspacecontext.Context, error) {
+func applySetValues(ctx *devspacecontext.Context, name, objName string, set, setString, from, fromFiles []string) (*devspacecontext.Context, error) {
 	if len(set) == 0 && len(setString) == 0 && len(from) == 0 {
 		return ctx, nil
 	}
@@ -89,8 +92,29 @@ func applySetValues(ctx *devspacecontext.Context, name, objName string, set, set
 	}
 
 	mapObj := rawConfig[name].(map[string]interface{})[objName].(map[string]interface{})
+	for _, f := range fromFiles {
+		f, ok := matchesObjName(f, objName)
+		if !ok {
+			continue
+		}
+
+		out, err := ioutil.ReadFile(f)
+		if err != nil {
+			return nil, fmt.Errorf("read %s: %v", f, err)
+		}
+
+		m := map[string]interface{}{}
+		err = yaml.Unmarshal(out, m)
+		if err != nil {
+			return nil, fmt.Errorf("error unmarshalling %s, %v", f, err)
+		}
+
+		mapObj = strvals.MergeMaps(mapObj, m)
+	}
+
 	for _, f := range from {
-		if !matchesObjName(f, objName) {
+		f, ok := matchesObjName(f, objName)
+		if !ok {
 			continue
 		}
 		if rawConfig[name].(map[string]interface{})[f] == nil {
@@ -101,7 +125,8 @@ func applySetValues(ctx *devspacecontext.Context, name, objName string, set, set
 	}
 
 	for _, s := range set {
-		if !matchesObjName(s, objName) {
+		s, ok := matchesObjName(s, objName)
+		if !ok {
 			continue
 		}
 
@@ -112,7 +137,8 @@ func applySetValues(ctx *devspacecontext.Context, name, objName string, set, set
 	}
 
 	for _, s := range setString {
-		if !matchesObjName(s, objName) {
+		s, ok := matchesObjName(s, objName)
+		if !ok {
 			continue
 		}
 
@@ -138,10 +164,17 @@ func applySetValues(ctx *devspacecontext.Context, name, objName string, set, set
 	)), nil
 }
 
-func matchesObjName(s string, objName string) bool {
+func matchesObjName(s string, objName string) (string, bool) {
 	splitted := strings.Split(s, ":")
-	if len(splitted) > 1 && !strings.Contains(splitted[0], ".") && !strings.Contains(splitted[0], "=") && splitted[0] != objName {
-		return false
+	if len(splitted) > 1 {
+		if strings.Contains(splitted[0], ".") || strings.Contains(splitted[0], "=") {
+			return s, true
+		} else if splitted[0] != objName {
+			return "", false
+		}
+
+		return strings.Join(splitted[1:], ":"), true
 	}
-	return true
+
+	return s, true
 }

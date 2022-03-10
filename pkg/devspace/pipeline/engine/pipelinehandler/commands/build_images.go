@@ -10,20 +10,21 @@ import (
 	"strings"
 )
 
-// BuildOptions describe how images should be build
-type BuildOptions struct {
+// BuildImagesOptions describe how images should be build
+type BuildImagesOptions struct {
 	build.Options
 
 	Set       []string `long:"set" description:"Set configuration"`
 	SetString []string `long:"set-string" description:"Set configuration as string"`
 	From      []string `long:"from" description:"Reuse an existing configuration"`
+	FromFile  []string `long:"from-file" description:"Reuse an existing configuration from a file"`
 
 	All bool `long:"all" description:"Build all images"`
 }
 
-func Build(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+func BuildImages(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 	ctx.Log.Debugf("build_images %s", strings.Join(args, " "))
-	options := &BuildOptions{
+	options := &BuildImagesOptions{
 		Options: pipeline.Options().BuildOptions,
 	}
 	args, err := flags.ParseArgs(options, args)
@@ -34,14 +35,14 @@ func Build(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string)
 	if options.All {
 		images := ctx.Config.Config().Images
 		for image := range images {
-			ctx, err = applySetValues(ctx, "images", image, options.Set, options.SetString, options.From)
+			ctx, err = applySetValues(ctx, "images", image, options.Set, options.SetString, options.From, options.FromFile)
 			if err != nil {
 				return err
 			}
 		}
 	} else if len(args) > 0 {
 		for _, image := range args {
-			ctx, err = applySetValues(ctx, "images", image, options.Set, options.SetString, options.From)
+			ctx, err = applySetValues(ctx, "images", image, options.Set, options.SetString, options.From, options.FromFile)
 			if err != nil {
 				return err
 			}

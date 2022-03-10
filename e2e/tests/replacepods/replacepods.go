@@ -38,7 +38,7 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.FIt("should inject restart helper and restart container", func() {
+	ginkgo.It("should inject restart helper and restart container", func() {
 		tempDir, err := framework.CopyToTempDir("tests/replacepods/testdata/restart-helper")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)

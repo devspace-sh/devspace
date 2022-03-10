@@ -9,3 +9,9 @@ pipelines:
     steps:
       - run: |-
           echo ${IMPORT3}
+  import3-dep:
+    steps:
+      - run: |-
+          echo ${IMPORT3}
+          echo ${devspace.name} > dependency-name.txt
+          echo ${devspace.tempFolder} > dependency-temp.txt

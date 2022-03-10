@@ -11,6 +11,7 @@ type GlobalFlags struct {
 	NoWarn bool
 	Debug  bool
 
+	OverrideName             string
 	Namespace                string
 	KubeContext              string
 	Profiles                 []string
@@ -29,6 +30,7 @@ func (gf *GlobalFlags) ToConfigOptions() *loader.ConfigOptions {
 	profiles := []string{}
 	profiles = append(profiles, gf.Profiles...)
 	return &loader.ConfigOptions{
+		OverrideName:             gf.OverrideName,
 		Profiles:                 profiles,
 		ProfileRefresh:           gf.ProfileRefresh,
 		DisableProfileActivation: gf.DisableProfileActivation,
@@ -43,6 +45,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 		Flags: flags,
 	}
 
+	flags.StringVar(&globalFlags.OverrideName, "override-name", "", "If specified will override the devspace.yaml name")
 	flags.BoolVar(&globalFlags.NoWarn, "no-warn", false, "If true does not show any warning when deploying into a different namespace or kube-context than before")
 	flags.BoolVar(&globalFlags.Debug, "debug", false, "Prints the stack trace if an error occurs")
 	flags.BoolVar(&globalFlags.Silent, "silent", false, "Run in silent mode and prevents any devspace log output except panics & fatals")

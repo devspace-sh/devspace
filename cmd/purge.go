@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/devspace/plugin"
 
@@ -73,6 +74,9 @@ func (cmd *PurgeCmd) Run(f factory.Factory) error {
 		cmd.Ctx, cancelFn = context.WithCancel(context.Background())
 		defer cancelFn()
 	}
+
+	// set command in context
+	cmd.Ctx = values.WithCommand(cmd.Ctx, "purge")
 
 	configOptions := cmd.ToConfigOptions()
 	ctx, err := prepare(cmd.Ctx, f, configOptions, cmd.GlobalFlags, false)

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"io"
 	"os"
 
@@ -133,6 +134,9 @@ func (cmd *DevCmd) Run(f factory.Factory) error {
 		defer cancelFn()
 	}
 
+	// set command in context
+	cmd.Ctx = values.WithCommand(cmd.Ctx, "dev")
+
 	configOptions := cmd.ToConfigOptions()
 	ctx, err := prepare(cmd.Ctx, f, configOptions, cmd.GlobalFlags, false)
 	if err != nil {
@@ -199,6 +203,10 @@ func runWithHooks(ctx *devspacecontext.Context, command string, fn func() error)
 	}
 
 	defer func() {
+		// delete temp folder
+		deleteTempFolder(ctx.Context, ctx.Log)
+
+		// execute hooks
 		if err != nil {
 			hook.LogExecuteHooks(ctx, map[string]interface{}{"error": err}, command+":after:execute", command+":error")
 		} else {
@@ -207,8 +215,23 @@ func runWithHooks(ctx *devspacecontext.Context, command string, fn func() error)
 	}()
 
 	return interrupt.Global.Run(fn, func() {
+		// delete temp folder
+		deleteTempFolder(ctx.Context, ctx.Log)
+
+		// execute hooks
 		hook.LogExecuteHooks(ctx, nil, command+":interrupt")
 	})
+}
+
+func deleteTempFolder(ctx context.Context, log log.Logger) {
+	// delete temp folder
+	tempFolder, ok := values.TempFolderFrom(ctx)
+	if ok && tempFolder != os.TempDir() {
+		err := os.RemoveAll(tempFolder)
+		if err != nil {
+			log.Debugf("error removing temp folder: %v", err)
+		}
+	}
 }
 
 func (cmd *DevCmd) adjustConfig(conf config.Config) error {

@@ -11,16 +11,16 @@ import (
 	"strings"
 )
 
-// DependencyOptions describe how dependencies should get deployed
-type DependencyOptions struct {
+// RunDependencyPipelinesOptions describe how dependencies should get deployed
+type RunDependencyPipelinesOptions struct {
 	types.DependencyOptions
 
 	All bool `long:"all" description:"Deploy all dependencies"`
 }
 
-func Dependency(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+func RunDependencyPipelines(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 	ctx.Log.Debugf("run_dependency_pipelines %s", strings.Join(args, " "))
-	options := &DependencyOptions{
+	options := &RunDependencyPipelinesOptions{
 		DependencyOptions: pipeline.Options().DependencyOptions,
 	}
 	args, err := flags.ParseArgs(options, args)

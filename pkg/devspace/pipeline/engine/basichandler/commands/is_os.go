@@ -2,14 +2,15 @@ package commands
 
 import (
 	"mvdan.cc/sh/v3/interp"
+	"runtime"
 )
 
-func IsEqual(args []string) error {
+func IsOS(args []string) error {
 	if len(args) != 2 {
 		return interp.NewExitStatus(1)
 	}
 
-	if args[0] == args[1] {
+	if args[0] == runtime.GOOS {
 		return interp.NewExitStatus(0)
 	}
 

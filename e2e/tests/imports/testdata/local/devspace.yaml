@@ -11,16 +11,20 @@ vars:
 dependencies:
   import1:
     path: import1.yaml
-    pipeline: import3
+    pipeline: import3-dep
 
 pipelines:
   deploy:
     steps:
       - run: |-
+          echo ${devspace.name} > name.txt
+          echo ${devspace.tempFolder} > temp.txt
+          
           run_dependency_pipelines --all > dependency.txt
           
           run_pipelines import1 > import1.txt
           run_pipelines import2 > import2.txt
+          run_pipelines import2-name > import2-name.txt
           run_pipelines import3 > import3.txt
 
           echo ${DEVSPACE_NAMESPACE}-${devspace.namespace}-${BASE}-${IMPORT1}-${IMPORT2}-${IMPORT3} > vars.txt
