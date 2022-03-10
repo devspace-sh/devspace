@@ -818,8 +818,7 @@ type SyncConfig struct {
 	WaitInitialSync *bool            `yaml:"waitInitialSync,omitempty" json:"waitInitialSync,omitempty"`
 	BandwidthLimits *BandwidthLimits `yaml:"bandwidthLimits,omitempty" json:"bandwidthLimits,omitempty"`
 
-	OnUpload   *SyncOnUpload   `yaml:"onUpload,omitempty" json:"onUpload,omitempty"`
-	OnDownload *SyncOnDownload `yaml:"onDownload,omitempty" json:"onDownload,omitempty"`
+	OnUpload *SyncOnUpload `yaml:"onUpload,omitempty" json:"onUpload,omitempty"`
 }
 
 type ContainerArchitecture string

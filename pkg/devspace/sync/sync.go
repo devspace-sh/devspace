@@ -37,12 +37,6 @@ type Options struct {
 
 	RestartContainer bool
 
-	FileChangeCmd  string
-	FileChangeArgs []string
-
-	DirCreateCmd  string
-	DirCreateArgs []string
-
 	UploadBatchCmd  string
 	UploadBatchArgs []string
 

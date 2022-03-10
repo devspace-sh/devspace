@@ -644,8 +644,6 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 			DisableUpload:        syncConfig.DisableUpload,
 			Polling:              syncConfig.Polling,
 			WaitInitialSync:      syncConfig.WaitInitialSync,
-			OnUpload:             nil,
-			OnDownload:           nil,
 		}
 		syncPath := "."
 		if syncConfig.LocalSubPath != "" {
@@ -704,31 +702,7 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 			}
 		}
 		if syncConfig.OnDownload != nil {
-			nextSyncConfig.OnDownload = &next.SyncOnDownload{}
-			if syncConfig.OnDownload.ExecLocal != nil {
-				nextSyncConfig.OnDownload.ExecLocal = &next.SyncExecCommand{
-					Command: syncConfig.OnDownload.ExecLocal.Command,
-					Args:    syncConfig.OnDownload.ExecLocal.Args,
-				}
-				if syncConfig.OnDownload.ExecLocal.OnBatch != nil {
-					nextSyncConfig.OnDownload.ExecLocal.OnBatch = &next.SyncCommand{
-						Command: syncConfig.OnDownload.ExecLocal.OnBatch.Command,
-						Args:    syncConfig.OnDownload.ExecLocal.OnBatch.Args,
-					}
-				}
-				if syncConfig.OnDownload.ExecLocal.OnDirCreate != nil {
-					nextSyncConfig.OnDownload.ExecLocal.OnDirCreate = &next.SyncCommand{
-						Command: syncConfig.OnDownload.ExecLocal.OnDirCreate.Command,
-						Args:    syncConfig.OnDownload.ExecLocal.OnDirCreate.Args,
-					}
-				}
-				if syncConfig.OnDownload.ExecLocal.OnFileChange != nil {
-					nextSyncConfig.OnDownload.ExecLocal.OnFileChange = &next.SyncCommand{
-						Command: syncConfig.OnDownload.ExecLocal.OnFileChange.Command,
-						Args:    syncConfig.OnDownload.ExecLocal.OnFileChange.Args,
-					}
-				}
-			}
+			log.Warnf("dev.sync[*].onDownload is not supported anymore in DevSpace v6, please use dev.sync[*].onUpload.exec instead")
 		}
 
 		devContainer.Sync = append(devContainer.Sync, nextSyncConfig)

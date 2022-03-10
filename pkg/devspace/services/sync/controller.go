@@ -369,15 +369,6 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 		options.Exec = syncConfig.OnUpload.Exec
 	}
 
-	// Add onDownload hooks
-	if syncConfig.OnDownload != nil && syncConfig.OnDownload.ExecLocal != nil {
-		fileCmd, fileArgs, dirCmd, dirArgs := getSyncCommands(syncConfig.OnDownload.ExecLocal)
-		options.FileChangeCmd = fileCmd
-		options.FileChangeArgs = fileArgs
-		options.DirCreateCmd = dirCmd
-		options.DirCreateArgs = dirArgs
-	}
-
 	if len(syncConfig.ExcludePaths) > 0 {
 		options.ExcludePaths = syncConfig.ExcludePaths
 	}
