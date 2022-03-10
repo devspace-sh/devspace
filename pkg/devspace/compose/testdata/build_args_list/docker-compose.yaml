@@ -1,7 +1,6 @@
 services:
   foo:
     build:
-      context: foo
       args:
       - buildno=1
       - gitcommithash=cdc3b19

@@ -1,4 +1,6 @@
-version: v1beta11
+version: v2beta1
+name: docker-compose
+
 images:
   foo:
     image: loft.sh/foo:latest
@@ -6,10 +8,12 @@ images:
     dockerfile: foo/Dockerfile
 
 deployments:
-- name: foo
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - name: foo-container
-        image: loft.sh/foo:latest
+  foo:
+    helm:
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      values:
+        containers:
+        - name: foo-container
+          image: loft.sh/foo:latest

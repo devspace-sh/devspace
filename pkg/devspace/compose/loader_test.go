@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	composeloader "github.com/compose-spec/compose-go/loader"
@@ -28,7 +29,9 @@ func TestLoad(t *testing.T) {
 	}
 
 	for _, dir := range dirs {
-		testLoad(dir.Name(), t)
+		if !strings.HasPrefix(dir.Name(), "x_") {
+			testLoad(dir.Name(), t)
+		}
 	}
 }
 
@@ -75,11 +78,11 @@ func testLoad(dir string, t *testing.T) {
 
 	assert.Check(
 		t,
-		cmp.DeepEqual(toDeploymentMap(expectedConfig.Deployments), toDeploymentMap(actualConfig.Deployments)),
+		cmp.DeepEqual(expectedConfig.Deployments, actualConfig.Deployments),
 		"deployment properties did not match in test case %s",
 		dir,
 	)
-	actualDeployments := actualConfig.Deployments
+	// actualDeployments := actualConfig.Deployments
 	actualConfig.Deployments = nil
 	expectedConfig.Deployments = nil
 
@@ -132,16 +135,16 @@ func testLoad(dir string, t *testing.T) {
 	err = dockerCompose.WithServices(nil, func(service composetypes.ServiceConfig) error {
 		waitHookIdx := getWaitHookIndex(service.Name, actualHooks)
 
-		for _, dep := range service.GetDependencies() {
-			// Check deployments order
-			assert.Check(t, getDeploymentIndex(dep, actualDeployments) < getDeploymentIndex(service.Name, actualDeployments), "%s deployment should come after %s for test case %s", service.Name, dep, dir)
+		// for _, dep := range service.GetDependencies() {
+		// 	// Check deployments order
+		// 	assert.Check(t, getDeploymentIndex(dep, actualDeployments) < getDeploymentIndex(service.Name, actualDeployments), "%s deployment should come after %s for test case %s", service.Name, dep, dir)
 
-			// Check for wait hook order
-			_, ok := expectedWaitHooks[service.Name]
-			if ok {
-				assert.Check(t, getWaitHookIndex(dep, actualHooks) < waitHookIdx, "%s wait hook should come after %s", service.Name, dep)
-			}
-		}
+		// 	// Check for wait hook order
+		// 	_, ok := expectedWaitHooks[service.Name]
+		// 	if ok {
+		// 		assert.Check(t, getWaitHookIndex(dep, actualHooks) < waitHookIdx, "%s wait hook should come after %s", service.Name, dep)
+		// 	}
+		// }
 
 		uploadDoneHookIdx := getUploadDoneHookIndex(service.Name, actualHooks)
 		if uploadDoneHookIdx != -1 {
@@ -181,15 +184,6 @@ func toWaitHookMap(hooks []*latest.HookConfig) map[string]latest.HookConfig {
 		hookMap[hookKey] = *hook
 	}
 	return hookMap
-}
-
-func getDeploymentIndex(name string, deployments []*latest.DeploymentConfig) int {
-	for idx, deployment := range deployments {
-		if deployment.Name == name {
-			return idx
-		}
-	}
-	return -1
 }
 
 func getWaitHookIndex(name string, hooks []*latest.HookConfig) int {

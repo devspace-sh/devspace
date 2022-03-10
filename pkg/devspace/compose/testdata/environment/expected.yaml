@@ -1,16 +1,20 @@
-version: v1beta11
+version: v2beta1
+name: docker-compose
+
 deployments:
-- name: db
-  helm:
-    componentChart: true
-    values:
-      containers:
-      - name: db-container
-        env:
-        - name: MYSQL_DATABASE
-          value: example
-        - name: MYSQL_ROOT_HOST
-          value: '%'
-        - name: MYSQL_ROOT_PASSWORD
-          value: /run/secrets/db-password
-        image: mysql/mysql-server:8.0.19
+  db:
+    helm:
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      values:
+        containers:
+        - name: db-container
+          env:
+          - name: MYSQL_DATABASE
+            value: example
+          - name: MYSQL_ROOT_HOST
+            value: '%'
+          - name: MYSQL_ROOT_PASSWORD
+            value: /run/secrets/db-password
+          image: mysql/mysql-server:8.0.19
