@@ -147,7 +147,7 @@ func (j *Job) executeStep(ctx *devspacecontext.Context, step *latest.PipelineSte
 		return nil
 	})
 
-	handler := pipelinehandler.NewPipelineExecHandler(ctx, stdoutWriter, j.Pipeline, true)
+	handler := pipelinehandler.NewPipelineExecHandler(ctx, stdoutWriter, j.Pipeline)
 	_, err := engine.ExecutePipelineShellCommand(ctx.Context, step.Run, os.Args[1:], ctx.ResolvePath(step.WorkingDir), step.ContinueOnError, stdoutWriter, stdoutWriter, os.Stdin, j.getEnv(ctx), handler)
 	return err
 }

@@ -148,6 +148,7 @@ func applySetValues(ctx *devspacecontext.Context, name, objName string, set, set
 		}
 	}
 
+	rawConfig[name].(map[string]interface{})[objName] = mapObj
 	latestConfig, err := loader.Convert(rawConfig, ctx.Log)
 	if err != nil {
 		return nil, err
