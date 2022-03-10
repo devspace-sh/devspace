@@ -70,7 +70,7 @@ func ExpectRemoteFileContents(imageSelector string, namespace string, filePath s
 			return false, nil
 		}
 
-		return out == contents, nil
+		return strings.TrimSpace(out) == strings.TrimSpace(contents), nil
 	})
 	ExpectNoErrorWithOffset(1, err)
 }

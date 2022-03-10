@@ -1,0 +1,21 @@
+version: v2beta1
+name: dep-test
+
+imports:
+  - git: https://github.com/loft-sh/e2e-test-dependency.git
+    branch: imports
+
+dependencies:
+  dependency:
+    git: https://github.com/loft-sh/e2e-test-dependency.git
+    pipeline: dev
+  dependency-deploy:
+    git: https://github.com/loft-sh/e2e-test-dependency.git
+
+pipelines:
+  dev:
+    steps:
+    - run: |-
+        run_dependency_pipelines dependency
+        run_dependency_pipelines dependency-deploy > dependency.txt
+        run_command dep-test > imports.txt

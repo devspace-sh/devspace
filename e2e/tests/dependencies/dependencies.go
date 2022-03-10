@@ -2,7 +2,10 @@ package dependencies
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
+	dependencyutil "github.com/loft-sh/devspace/pkg/devspace/dependency/util"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
+	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
@@ -36,6 +39,67 @@ var _ = DevSpaceDescribe("dependencies", func() {
 	ginkgo.BeforeEach(func() {
 		f = framework.NewDefaultFactory()
 		kubeClient, err = kube.NewKubeHelper()
+	})
+
+	ginkgo.It("should deploy git dependency", func() {
+		tempDir, err := framework.CopyToTempDir("tests/dependencies/testdata/git")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		ns, err := kubeClient.CreateNamespace("dependencies")
+		framework.ExpectNoError(err)
+		defer func() {
+			err := kubeClient.DeleteNamespace(ns)
+			framework.ExpectNoError(err)
+		}()
+
+		// create a new dev command and start it
+		done := make(chan error)
+		cancelCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go func() {
+			devCmd := &cmd.DevCmd{
+				GlobalFlags: &flags.GlobalFlags{
+					NoWarn:    true,
+					Namespace: ns,
+				},
+				Ctx: cancelCtx,
+			}
+			err := devCmd.Run(f)
+			if err != nil {
+				f.GetLog().Errorf("error: %v", err)
+			}
+			done <- err
+		}()
+
+		// make sure the dependencies are correctly deployed
+		id, err := dependencyutil.GetDependencyID(&latest.SourceConfig{
+			Git: "https://github.com/loft-sh/e2e-test-dependency.git",
+		})
+		framework.ExpectNoError(err)
+
+		// calculate dependency path
+		dependencyPath := filepath.Join(dependencyutil.DependencyFolderPath, id)
+
+		// wait until file is there
+		framework.ExpectLocalFileContents("imports.txt", "Test-dep-test\n")
+		framework.ExpectLocalFileContents(filepath.Join(dependencyPath, "dependency-dev.txt"), "Hello I am dependency\n")
+		framework.ExpectLocalFileContents(filepath.Join(dependencyPath, "dependency-deploy.txt"), "Hello I am dependency-deploy\n")
+		framework.ExpectLocalFileContents("dependency.txt", "Hello again I am dependency-deploy\n")
+
+		// expect remote file
+		framework.ExpectRemoteFileContents("alpine", ns, "/app/test.txt", "dependency123")
+
+		// now check if sync is still working
+		err = ioutil.WriteFile(filepath.Join(dependencyPath, "test123.txt"), []byte("test123"), 0777)
+		framework.ExpectNoError(err)
+
+		// now check if file gets synced
+		framework.ExpectRemoteFileContents("alpine", ns, "/app/test123.txt", "test123")
+
+		cancel()
+		err = <-done
+		framework.ExpectNoError(err)
 	})
 
 	ginkgo.It("should skip equal dependencies", func() {

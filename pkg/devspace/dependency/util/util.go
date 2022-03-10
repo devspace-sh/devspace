@@ -35,7 +35,7 @@ func init() {
 }
 
 func DownloadDependency(ctx context.Context, workingDirectory string, source *latest.SourceConfig, log log.Logger) (configPath string, err error) {
-	ID, err := getDependencyID(source)
+	ID, err := GetDependencyID(source)
 	if err != nil {
 		return "", err
 	}
@@ -46,7 +46,7 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 		gitPath := strings.TrimSpace(source.Git)
 
 		_ = os.MkdirAll(DependencyFolderPath, 0755)
-		localPath = filepath.Join(DependencyFolderPath, encoding.Convert(ID))
+		localPath = filepath.Join(DependencyFolderPath, ID)
 
 		// Check if dependency exists
 		_, statErr := os.Stat(localPath)
@@ -84,7 +84,7 @@ func DownloadDependency(ctx context.Context, workingDirectory string, source *la
 		}
 	} else if source.Path != "" {
 		if isURL(source.Path) {
-			localPath = filepath.Join(DependencyFolderPath, encoding.Convert(ID))
+			localPath = filepath.Join(DependencyFolderPath, ID)
 			_ = os.MkdirAll(localPath, 0755)
 
 			// Check if dependency exists
@@ -157,7 +157,7 @@ func getDependencyConfigPath(dependencyPath string, source *latest.SourceConfig)
 	return configPath, nil
 }
 
-func getDependencyID(source *latest.SourceConfig) (string, error) {
+func GetDependencyID(source *latest.SourceConfig) (string, error) {
 	// check if source is there
 	if source == nil {
 		return "", fmt.Errorf("source is missing")
@@ -174,7 +174,7 @@ func getDependencyID(source *latest.SourceConfig) (string, error) {
 			id += "@revision:" + source.Revision
 		}
 
-		return id, nil
+		return encoding.Convert(id), nil
 	} else if source.Path != "" {
 		return source.Path, nil
 	}
