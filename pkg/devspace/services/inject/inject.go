@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/fs"
 	"io/ioutil"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -64,6 +65,14 @@ func InjectDevSpaceHelper(ctx context.Context, client kubectl.Client, pod *v1.Po
 			arch = ""
 		} else {
 			arch = "-" + arch
+		}
+	} else {
+		// check arch on pod node
+		node, err := client.KubeClient().CoreV1().Nodes().Get(ctx, pod.Spec.NodeName, metav1.GetOptions{})
+		if err == nil {
+			if node.Labels != nil && node.Labels["beta.kubernetes.io/arch"] == "arm64" {
+				arch = "-" + string(latest.ContainerArchitectureArm64)
+			}
 		}
 	}
 

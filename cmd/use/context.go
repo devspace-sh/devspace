@@ -1,6 +1,7 @@
 package use
 
 import (
+	"fmt"
 	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/util/factory"
@@ -34,7 +35,7 @@ devspace use context my-context
 	`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.RunUseContext(f, cobraCmd, args)
+			return cmd.RunUseContext(f, args)
 		},
 	}
 
@@ -42,7 +43,7 @@ devspace use context my-context
 }
 
 // RunUseContext executes the functionality "devspace use namespace"
-func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command, args []string) error {
+func (cmd *ContextCmd) RunUseContext(f factory.Factory, args []string) error {
 	// Load kube-config
 	log := f.GetLog()
 	kubeLoader := f.NewKubeConfigLoader()
@@ -70,6 +71,12 @@ func (cmd *ContextCmd) RunUseContext(f factory.Factory, cobraCmd *cobra.Command,
 		if err != nil {
 			return err
 		}
+	}
+
+	// check if context exists
+	_, found := kubeConfig.Contexts[context]
+	if !found {
+		return fmt.Errorf("couldn't find context %s in kube config", context)
 	}
 
 	// Save old context
