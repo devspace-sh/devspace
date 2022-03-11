@@ -651,6 +651,8 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 		}
 		if syncConfig.ContainerPath != "" {
 			syncPath += ":" + syncConfig.ContainerPath
+		} else {
+			syncPath += ":."
 		}
 		nextSyncConfig.Path = syncPath
 		if syncConfig.ThrottleChangeDetection != nil {
