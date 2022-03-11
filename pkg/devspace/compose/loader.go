@@ -85,6 +85,7 @@ func (cl *configLoader) Load(log log.Logger) (*latest.Config, error) {
 	var images map[string]*latest.Image
 	var deployments map[string]*latest.DeploymentConfig
 	var dev map[string]*latest.DevPod
+	var pipelines map[string]*latest.Pipeline
 	baseDir := filepath.Dir(cl.composePath)
 
 	if len(dockerCompose.Networks) > 0 {
@@ -154,18 +155,24 @@ func (cl *configLoader) Load(log log.Logger) (*latest.Config, error) {
 		return nil, err
 	}
 
-	// for secretName, secret := range dockerCompose.Secrets {
-	// 	createHook, err := createSecretHook(secretName, cwd, secret)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	hooks = append(hooks, createHook)
-	// 	hooks = append(hooks, deleteSecretHook(secretName))
-	// }
+	for secretName, secret := range dockerCompose.Secrets {
+		if pipelines == nil {
+			pipelines = map[string]*latest.Pipeline{}
+		}
+
+		devSecretStep, err := createSecretPipeline(secretName, cwd, secret)
+		if err != nil {
+			return nil, err
+		}
+
+		pipelines["dev"] = devSecretStep
+		pipelines["purge"] = deleteSecretPipeline(secretName)
+	}
 
 	config.Images = images
 	config.Deployments = deployments
 	config.Dev = dev
+	config.Pipelines = pipelines
 	// config.Hooks = hooks
 
 	return config, nil
@@ -322,38 +329,38 @@ func imageConfig(cwd string, service composetypes.ServiceConfig) (*latest.Image,
 	return image, nil
 }
 
-// func createSecretHook(name string, cwd string, secret composetypes.SecretConfig) (*latest.HookConfig, error) {
-// 	file, err := filepath.Rel(cwd, filepath.Join(cwd, secret.File))
-// 	if err != nil {
-// 		return nil, err
-// 	}
+func createSecretPipeline(name string, cwd string, secret composetypes.SecretConfig) (*latest.Pipeline, error) {
+	file, err := filepath.Rel(cwd, filepath.Join(cwd, secret.File))
+	if err != nil {
+		return nil, err
+	}
 
-// 	return &latest.HookConfig{
-// 		Events:  []string{"before:deploy"},
-// 		Command: fmt.Sprintf("kubectl create secret generic %s --namespace=${devspace.namespace} --dry-run=client --from-file=%s=%s -o yaml | kubectl apply -f -", name, name, filepath.ToSlash(file)),
-// 	}, nil
-// }
+	return &latest.Pipeline{
+		Run: fmt.Sprintf(`kubectl create secret generic %s --namespace=${devspace.namespace} --dry-run=client --from-file=%s=%s -o yaml | kubectl apply -f -
+run_default_pipeline dev`, name, name, filepath.ToSlash(file)),
+	}, nil
+}
 
-// func deleteSecretHook(name string) *latest.HookConfig {
-// 	return &latest.HookConfig{
-// 		Events:  []string{"after:purge"},
-// 		Command: fmt.Sprintf("kubectl delete secret %s --namespace=${devspace.namespace} --ignore-not-found", name),
-// 	}
-// }
+func deleteSecretPipeline(name string) *latest.Pipeline {
+	return &latest.Pipeline{
+		Run: fmt.Sprintf(`run_default_pipeline purge
+kubectl delete secret %s --namespace=${devspace.namespace} --ignore-not-found`, name),
+	}
+}
 
 func (cl *configLoader) deploymentConfig(service composetypes.ServiceConfig, composeVolumes map[string]composetypes.VolumeConfig, log log.Logger) (*latest.DeploymentConfig, error) {
 	values := map[string]interface{}{}
 
-	// 	volumes, volumeMounts, bindVolumeMounts := volumesConfig(service, composeVolumes, log)
-	// 	if len(volumes) > 0 {
-	// 		values["volumes"] = volumes
-	// 	}
+	volumes, volumeMounts, _ := volumesConfig(service, composeVolumes, log)
+	if len(volumes) > 0 {
+		values["volumes"] = volumes
+	}
 
-	// 	if hasLocalSync(service) {
-	// 		values["initContainers"] = []interface{}{initContainerConfig(service, bindVolumeMounts)}
-	// 	}
+	// if hasLocalSync(service) {
+	// 	values["initContainers"] = []interface{}{initContainerConfig(service, bindVolumeMounts)}
+	// }
 
-	container, err := containerConfig(service, []interface{}{})
+	container, err := containerConfig(service, volumeMounts)
 	if err != nil {
 		return nil, err
 	}
@@ -445,73 +452,72 @@ func (cl *configLoader) deploymentConfig(service composetypes.ServiceConfig, com
 	}, nil
 }
 
-// func volumesConfig(
-// 	service composetypes.ServiceConfig,
-// 	composeVolumes map[string]composetypes.VolumeConfig,
-// 	log log.Logger,
-// ) (volumes []interface{}, volumeMounts []interface{}, bindVolumeMounts []interface{}) {
-// 	for _, secret := range service.Secrets {
-// 		volume := createSecretVolume(secret)
-// 		volumes = append(volumes, volume)
+func volumesConfig(
+	service composetypes.ServiceConfig,
+	composeVolumes map[string]composetypes.VolumeConfig,
+	log log.Logger,
+) (volumes []interface{}, volumeMounts []interface{}, bindVolumeMounts []interface{}) {
+	for _, secret := range service.Secrets {
+		volume := createSecretVolume(secret)
+		volumes = append(volumes, volume)
 
-// 		volumeMount := createSecretVolumeMount(secret)
-// 		volumeMounts = append(volumeMounts, volumeMount)
-// 	}
+		volumeMount := createSecretVolumeMount(secret)
+		volumeMounts = append(volumeMounts, volumeMount)
+	}
 
-// 	var volumeVolumes []composetypes.ServiceVolumeConfig
-// 	var bindVolumes []composetypes.ServiceVolumeConfig
-// 	var tmpfsVolumes []composetypes.ServiceVolumeConfig
-// 	for _, serviceVolume := range service.Volumes {
-// 		switch serviceVolume.Type {
-// 		case composetypes.VolumeTypeBind:
-// 			bindVolumes = append(bindVolumes, serviceVolume)
-// 		case composetypes.VolumeTypeTmpfs:
-// 			tmpfsVolumes = append(tmpfsVolumes, serviceVolume)
-// 		case composetypes.VolumeTypeVolume:
-// 			volumeVolumes = append(volumeVolumes, serviceVolume)
-// 		default:
-// 			log.Warnf("%s volumes are not supported", serviceVolume.Type)
-// 		}
-// 	}
+	var volumeVolumes []composetypes.ServiceVolumeConfig
+	var bindVolumes []composetypes.ServiceVolumeConfig
+	var tmpfsVolumes []composetypes.ServiceVolumeConfig
+	for _, serviceVolume := range service.Volumes {
+		switch serviceVolume.Type {
+		case composetypes.VolumeTypeBind:
+			bindVolumes = append(bindVolumes, serviceVolume)
+		case composetypes.VolumeTypeTmpfs:
+			tmpfsVolumes = append(tmpfsVolumes, serviceVolume)
+		case composetypes.VolumeTypeVolume:
+			volumeVolumes = append(volumeVolumes, serviceVolume)
+		default:
+			log.Warnf("%s volumes are not supported", serviceVolume.Type)
+		}
+	}
 
-// 	volumeMap := map[string]interface{}{}
-// 	for idx, volumeVolume := range volumeVolumes {
-// 		volumeName := resolveServiceVolumeName(service, volumeVolume, idx+1)
-// 		_, ok := volumeMap[volumeName]
-// 		if !ok {
-// 			volume := createVolume(volumeName, DefaultVolumeSize)
-// 			volumes = append(volumes, volume)
-// 			volumeMap[volumeName] = volume
-// 		}
+	volumeMap := map[string]interface{}{}
+	for idx, volumeVolume := range volumeVolumes {
+		volumeName := resolveServiceVolumeName(service, volumeVolume, idx+1)
+		_, ok := volumeMap[volumeName]
+		if !ok {
+			volume := createVolume(volumeName, DefaultVolumeSize)
+			volumes = append(volumes, volume)
+			volumeMap[volumeName] = volume
+		}
 
-// 		volumeMount := createServiceVolumeMount(volumeName, volumeVolume)
-// 		volumeMounts = append(volumeMounts, volumeMount)
-// 	}
+		volumeMount := createServiceVolumeMount(volumeName, volumeVolume)
+		volumeMounts = append(volumeMounts, volumeMount)
+	}
 
-// 	for _, tmpfsVolume := range tmpfsVolumes {
-// 		volumeName := resolveServiceVolumeName(service, tmpfsVolume, len(volumes))
-// 		volume := createEmptyDirVolume(volumeName, tmpfsVolume)
-// 		volumes = append(volumes, volume)
+	for _, tmpfsVolume := range tmpfsVolumes {
+		volumeName := resolveServiceVolumeName(service, tmpfsVolume, len(volumes))
+		volume := createEmptyDirVolume(volumeName, tmpfsVolume)
+		volumes = append(volumes, volume)
 
-// 		volumeMount := createServiceVolumeMount(volumeName, tmpfsVolume)
-// 		volumeMounts = append(volumeMounts, volumeMount)
-// 	}
+		volumeMount := createServiceVolumeMount(volumeName, tmpfsVolume)
+		volumeMounts = append(volumeMounts, volumeMount)
+	}
 
-// 	for idx, bindVolume := range bindVolumes {
-// 		volumeName := fmt.Sprintf("volume-%d", idx+1)
-// 		volume := createEmptyDirVolume(volumeName, bindVolume)
-// 		volumes = append(volumes, volume)
+	for idx, bindVolume := range bindVolumes {
+		volumeName := fmt.Sprintf("volume-%d", idx+1)
+		volume := createEmptyDirVolume(volumeName, bindVolume)
+		volumes = append(volumes, volume)
 
-// 		volumeMount := createServiceVolumeMount(volumeName, bindVolume)
-// 		volumeMounts = append(volumeMounts, volumeMount)
+		volumeMount := createServiceVolumeMount(volumeName, bindVolume)
+		volumeMounts = append(volumeMounts, volumeMount)
 
-// 		bindVolumeMount := createInitVolumeMount(volumeName, bindVolume)
-// 		bindVolumeMounts = append(bindVolumeMounts, bindVolumeMount)
-// 	}
+		bindVolumeMount := createInitVolumeMount(volumeName, bindVolume)
+		bindVolumeMounts = append(bindVolumeMounts, bindVolumeMount)
+	}
 
-// 	return volumes, volumeMounts, bindVolumeMounts
-
-// }
+	return volumes, volumeMounts, bindVolumeMounts
+}
 
 func containerConfig(service composetypes.ServiceConfig, volumeMounts []interface{}) (map[string]interface{}, error) {
 	container := map[string]interface{}{
@@ -620,68 +626,68 @@ func containerLivenessProbe(health *composetypes.HealthCheckConfig) (map[string]
 	return livenessProbe, nil
 }
 
-// func createEmptyDirVolume(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
-// 	// create an emptyDir volume
-// 	emptyDir := map[string]interface{}{}
-// 	if volume.Tmpfs != nil {
-// 		emptyDir["sizeLimit"] = fmt.Sprintf("%d", volume.Tmpfs.Size)
-// 	}
-// 	return map[string]interface{}{
-// 		"name":     volumeName,
-// 		"emptyDir": emptyDir,
-// 	}
-// }
+func createEmptyDirVolume(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
+	// create an emptyDir volume
+	emptyDir := map[string]interface{}{}
+	if volume.Tmpfs != nil {
+		emptyDir["sizeLimit"] = fmt.Sprintf("%d", volume.Tmpfs.Size)
+	}
+	return map[string]interface{}{
+		"name":     volumeName,
+		"emptyDir": emptyDir,
+	}
+}
 
-// func createSecretVolume(secret composetypes.ServiceSecretConfig) interface{} {
-// 	return map[string]interface{}{
-// 		"name": secret.Source,
-// 		"secret": map[string]interface{}{
-// 			"secretName": secret.Source,
-// 		},
-// 	}
-// }
+func createSecretVolume(secret composetypes.ServiceSecretConfig) interface{} {
+	return map[string]interface{}{
+		"name": secret.Source,
+		"secret": map[string]interface{}{
+			"secretName": secret.Source,
+		},
+	}
+}
 
-// func createSecretVolumeMount(secret composetypes.ServiceSecretConfig) interface{} {
-// 	target := secret.Source
-// 	if secret.Target != "" {
-// 		target = secret.Target
-// 	}
-// 	return map[string]interface{}{
-// 		"containerPath": fmt.Sprintf("/run/secrets/%s", target),
-// 		"volume": map[string]interface{}{
-// 			"name":     secret.Source,
-// 			"subPath":  target,
-// 			"readOnly": true,
-// 		},
-// 	}
-// }
+func createSecretVolumeMount(secret composetypes.ServiceSecretConfig) interface{} {
+	target := secret.Source
+	if secret.Target != "" {
+		target = secret.Target
+	}
+	return map[string]interface{}{
+		"containerPath": fmt.Sprintf("/run/secrets/%s", target),
+		"volume": map[string]interface{}{
+			"name":     secret.Source,
+			"subPath":  target,
+			"readOnly": true,
+		},
+	}
+}
 
-// func createServiceVolumeMount(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
-// 	return map[string]interface{}{
-// 		"containerPath": volume.Target,
-// 		"volume": map[string]interface{}{
-// 			"name":     volumeName,
-// 			"readOnly": volume.ReadOnly,
-// 		},
-// 	}
-// }
+func createServiceVolumeMount(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
+	return map[string]interface{}{
+		"containerPath": volume.Target,
+		"volume": map[string]interface{}{
+			"name":     volumeName,
+			"readOnly": volume.ReadOnly,
+		},
+	}
+}
 
-// func createInitVolumeMount(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
-// 	return map[string]interface{}{
-// 		"containerPath": volume.Target,
-// 		"volume": map[string]interface{}{
-// 			"name":     volumeName,
-// 			"readOnly": false,
-// 		},
-// 	}
-// }
+func createInitVolumeMount(volumeName string, volume composetypes.ServiceVolumeConfig) interface{} {
+	return map[string]interface{}{
+		"containerPath": volume.Target,
+		"volume": map[string]interface{}{
+			"name":     volumeName,
+			"readOnly": false,
+		},
+	}
+}
 
-// func createVolume(name string, size string) interface{} {
-// 	return map[string]interface{}{
-// 		"name": name,
-// 		"size": size,
-// 	}
-// }
+func createVolume(name string, size string) interface{} {
+	return map[string]interface{}{
+		"name": name,
+		"size": size,
+	}
+}
 
 func formatName(name string) string {
 	return regexp.MustCompile(`[\._]`).ReplaceAllString(name, "-")
@@ -724,13 +730,13 @@ func resolveImage(service composetypes.ServiceConfig) string {
 // 	return localSubPath
 // }
 
-// func resolveServiceVolumeName(service composetypes.ServiceConfig, volume composetypes.ServiceVolumeConfig, idx int) string {
-// 	volumeName := volume.Source
-// 	if volumeName == "" {
-// 		volumeName = fmt.Sprintf("%s-%d", formatName(service.Name), idx)
-// 	}
-// 	return volumeName
-// }
+func resolveServiceVolumeName(service composetypes.ServiceConfig, volume composetypes.ServiceVolumeConfig, idx int) string {
+	volumeName := volume.Source
+	if volumeName == "" {
+		volumeName = fmt.Sprintf("%s-%d", formatName(service.Name), idx)
+	}
+	return volumeName
+}
 
 // func createWaitHook(service composetypes.ServiceConfig) *latest.HookConfig {
 // 	serviceName := formatName(service.Name)
