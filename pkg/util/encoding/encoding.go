@@ -34,9 +34,9 @@ func Convert(ID string) string {
 	return SafeConcatName(ID)
 }
 
-var UnsafeNameRegEx = regexp.MustCompile(`[a-z0-9][a-z0-9\-]+[a-z0-9]`)
+var UnsafeNameRegEx = regexp.MustCompile(`^[a-z0-9]+(?:-?[a-z0-9]+)*$`)
 
-var UnsafeUpperNameRegEx = regexp.MustCompile(`[A-Za-z0-9][A-Za-z0-9\-_]+[A-Za-z0-9]`)
+var UnsafeUpperNameRegEx = regexp.MustCompile(`^[A-Za-z0-9]+(?:[\-_]?[A-Za-z0-9])*$`)
 
 func IsUnsafeUpperName(unsafeName string) bool {
 	if UnsafeUpperNameRegEx.MatchString(unsafeName) {
