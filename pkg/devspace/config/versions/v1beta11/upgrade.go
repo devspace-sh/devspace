@@ -164,6 +164,7 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 			Cmd:                          image.Cmd,
 			CreatePullSecret:             image.CreatePullSecret,
 			InjectRestartHelper:          image.InjectRestartHelper,
+			RebuildStrategy:              next.RebuildStrategy(image.RebuildStrategy),
 			RestartHelperPath:            image.RestartHelperPath,
 			AppendDockerfileInstructions: image.AppendDockerfileInstructions,
 		}
