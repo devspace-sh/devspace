@@ -1,10 +1,11 @@
 package latest
 
 import (
+	"strings"
+
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/config"
 	"gopkg.in/yaml.v3"
 	k8sv1 "k8s.io/api/core/v1"
-	"strings"
 )
 
 // Version is the current api version
@@ -96,6 +97,23 @@ type Import struct {
 type Pipeline struct {
 	// Name of the pipeline, will be filled automatically
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	// Steps are the steps that are run in order for this job
+	Steps []PipelineStep `yaml:"steps,omitempty" json:"steps,omitempty"`
+}
+
+func (c *Pipeline) Clone() *Pipeline {
+	out, _ := yaml.Marshal(c)
+	n := &Pipeline{}
+	_ = yaml.Unmarshal(out, n)
+	return n
+}
+
+// PipelineStep is a step within a single pipeline
+type PipelineStep struct {
+	// If defines a condition as shell command to check if the command
+	// should get executed.
+	If string `yaml:"if,omitempty" json:"if,omitempty"`
 
 	// ContinueOnError will not fail the whole job and pipeline if
 	// a call within the step fails.

@@ -1,0 +1,45 @@
+version: v2beta1
+name: docker-compose
+
+deployments:
+  db:
+    helm:
+      chart:
+        name: component-chart
+        repo: https://charts.devspace.sh
+      values:
+        containers:
+        - name: db-container
+          image: mysql/mysql-server:8.0.19
+          volumeMounts:
+          - containerPath: /run/secrets/db_secret
+            volume:
+              name: db-password
+              readOnly: true
+              subPath: db_secret
+        volumes:
+        - name: db-password
+          secret:
+            secretName: db-password
+
+pipelines:
+  dev:
+    name: dev
+    steps:
+    - run: |-
+        kubectl create secret generic db-password --namespace=${devspace.namespace} --dry-run=client --from-file=db-password=db/password.txt -o yaml | kubectl apply -f -
+    - run: |-
+        run_dependency_pipelines --all
+        ensure_pull_secrets --all
+        build_images --all
+        create_deployments --all
+        start_dev --all
+  purge:
+    name: purge
+    steps:
+    - run: |-
+        stop_dev --all
+        purge_deployments --all
+        run_dependency_pipelines --all --pipeline purge
+    - run: |-
+        kubectl delete secret db-password --namespace=${devspace.namespace} --ignore-not-found
