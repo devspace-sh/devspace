@@ -810,8 +810,9 @@ type SyncConfig struct {
 	InitialSync          InitialSyncStrategy  `yaml:"initialSync,omitempty" json:"initialSync,omitempty"`
 	InitialSyncCompareBy InitialSyncCompareBy `yaml:"initialSyncCompareBy,omitempty" json:"initialSyncCompareBy,omitempty"`
 
-	DisableDownload *bool `yaml:"disableDownload,omitempty" json:"disableDownload,omitempty"`
-	DisableUpload   *bool `yaml:"disableUpload,omitempty" json:"disableUpload,omitempty"`
+	DisableDownload bool `yaml:"disableDownload,omitempty" json:"disableDownload,omitempty"`
+	DisableUpload   bool `yaml:"disableUpload,omitempty" json:"disableUpload,omitempty"`
+	NoWatch         bool `yaml:"noWatch,omitempty" json:"noWatch,omitempty"`
 
 	Polling bool `yaml:"polling,omitempty" json:"polling,omitempty"`
 

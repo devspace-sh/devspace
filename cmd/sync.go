@@ -45,8 +45,6 @@ type SyncCmd struct {
 
 	InitialSync string
 
-	Verbose bool
-
 	NoWatch               bool
 	DownloadOnInitialSync bool
 	DownloadOnly          bool
@@ -97,7 +95,6 @@ devspace sync --container-path=/my-path
 	syncCmd.Flags().StringVar(&cmd.InitialSync, "initial-sync", "", "The initial sync strategy to use (mirrorLocal, mirrorRemote, preferLocal, preferRemote, preferNewest, keepAll)")
 
 	syncCmd.Flags().BoolVar(&cmd.NoWatch, "no-watch", false, "Synchronizes local and remote and then stops")
-	syncCmd.Flags().BoolVar(&cmd.Verbose, "verbose", false, "Shows every file that is synced")
 
 	syncCmd.Flags().BoolVar(&cmd.UploadOnly, "upload-only", false, "If set DevSpace will only upload files")
 	syncCmd.Flags().BoolVar(&cmd.DownloadOnly, "download-only", false, "If set DevSpace will only download files")
@@ -275,7 +272,7 @@ func (cmd *SyncCmd) Run(f factory.Factory) error {
 
 	// Start sync
 	options = options.WithSkipInitContainers(true)
-	return sync.StartSyncFromCmd(ctx, targetselector.NewTargetSelector(options), syncConfig.devPod.Name, syncConfig.syncConfig, cmd.NoWatch, cmd.Verbose)
+	return sync.StartSyncFromCmd(ctx, targetselector.NewTargetSelector(options), syncConfig.devPod.Name, syncConfig.syncConfig, cmd.NoWatch)
 }
 
 func fromSyncConfig(devPod *latest.DevPod, containerName string, sc *latest.SyncConfig) (nameConfig, error) {

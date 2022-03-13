@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
@@ -12,7 +13,7 @@ import (
 )
 
 // StartSyncFromCmd starts a new sync from command
-func StartSyncFromCmd(ctx *devspacecontext.Context, selector targetselector.TargetSelector, name string, syncConfig *latest.SyncConfig, noWatch, verbose bool) error {
+func StartSyncFromCmd(ctx *devspacecontext.Context, selector targetselector.TargetSelector, name string, syncConfig *latest.SyncConfig, noWatch bool) error {
 	ctx, parent := ctx.WithNewTomb()
 	options := &Options{
 		Name:           name,
@@ -21,7 +22,7 @@ func StartSyncFromCmd(ctx *devspacecontext.Context, selector targetselector.Targ
 		RestartOnError: true,
 		SyncLog:        ctx.Log,
 
-		Verbose: verbose,
+		Verbose: ctx.Log.GetLevel() == logrus.DebugLevel,
 	}
 
 	// Start the tomb
@@ -69,9 +70,22 @@ func StartSync(ctx *devspacecontext.Context, devPod *latest.DevPod, selector tar
 	loader.EachDevContainer(devPod, func(devContainer *latest.DevContainer) bool {
 		for i, syncConfig := range devContainer.Sync {
 			// start a new go routine in the tomb
-			initDoneArray = append(initDoneArray, parent.NotifyGo(func() error {
-				return startSync(ctx, devPod.Name, string(devContainer.Arch), syncConfig, selector.WithContainer(devContainer.Container), parent)
-			}))
+			s := syncConfig
+			var cancel context.CancelFunc
+			if s.NoWatch {
+				var cancelCtx context.Context
+				cancelCtx, cancel = context.WithCancel(ctx.Context)
+				defer cancel()
+				ctx = ctx.WithContext(cancelCtx)
+			}
+			initDone := parent.NotifyGo(func() error {
+				if cancel != nil {
+					defer cancel()
+				}
+
+				return startSync(ctx, devPod.Name, string(devContainer.Arch), s, selector.WithContainer(devContainer.Container), parent)
+			})
+			initDoneArray = append(initDoneArray, initDone)
 
 			// every five we wait
 			if i%5 == 0 {
