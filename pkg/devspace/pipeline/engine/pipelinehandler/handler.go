@@ -50,6 +50,9 @@ var PipelineCommands = map[string]func(devCtx *devspacecontext.Context, pipeline
 	"ensure_pull_secrets": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.EnsurePullSecrets(devCtx, args)
 	},
+	"is_dependency": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		return commands.IsDependency(devCtx.Context, args)
+	},
 }
 
 func init() {

@@ -10,6 +10,7 @@ const (
 	nameKey key = iota
 	tempFolderKey
 	commandKey
+	dependencyKey
 )
 
 // WithValue returns a copy of parent in which the value associated with key is val.
@@ -48,4 +49,13 @@ func WithCommand(parent context.Context, name string) context.Context {
 func CommandFrom(ctx context.Context) (string, bool) {
 	user, ok := ctx.Value(commandKey).(string)
 	return user, ok
+}
+
+func WithDependency(parent context.Context, dependency bool) context.Context {
+	return WithValue(parent, dependencyKey, dependency)
+}
+
+func IsDependencyFrom(ctx context.Context) (bool, bool) {
+	isDependency, ok := ctx.Value(dependencyKey).(bool)
+	return isDependency, ok
 }

@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/context/values"
 	"strings"
 	"sync"
 
@@ -114,6 +115,8 @@ func (p *pipeline) Run(ctx *devspacecontext.Context) error {
 }
 
 func (p *pipeline) StartNewDependencies(ctx *devspacecontext.Context, dependencies []types2.Dependency, options types.DependencyOptions) error {
+	// mark all commands from here that they are running within a dependency
+	ctx = ctx.WithContext(values.WithDependency(ctx.Context, true))
 	dependencyNames := []string{}
 	for _, dependency := range dependencies {
 		dependencyNames = append(dependencyNames, dependency.Name())
