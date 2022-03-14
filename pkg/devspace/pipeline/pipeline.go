@@ -187,7 +187,7 @@ func (p *pipeline) startNewDependency(ctx *devspacecontext.Context, dependency t
 		err            error
 	)
 	if dependency.Config().Config().Pipelines == nil || dependency.Config().Config().Pipelines[executePipeline] == nil {
-		pipelineConfig, err = GetDefaultPipeline(executePipeline)
+		pipelineConfig, err = types.GetDefaultPipeline(executePipeline)
 		if err != nil {
 			return err
 		}

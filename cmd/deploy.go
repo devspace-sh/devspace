@@ -271,7 +271,7 @@ func runPipeline(ctx *devspacecontext.Context, f factory.Factory, forceLeader bo
 	if ctx.Config.Config().Pipelines != nil && ctx.Config.Config().Pipelines[options.Pipeline] != nil {
 		configPipeline = ctx.Config.Config().Pipelines[options.Pipeline]
 	} else {
-		configPipeline, err = pipeline.GetDefaultPipeline(options.Pipeline)
+		configPipeline, err = types.GetDefaultPipeline(options.Pipeline)
 		if err != nil {
 			return err
 		}

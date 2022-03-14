@@ -7,7 +7,6 @@ import (
 	"io"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/pipelinehandler/commands"
 	enginetypes "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
@@ -19,11 +18,17 @@ import (
 
 // PipelineCommands are commands that can only be run within a pipeline and have special functionality in there
 var PipelineCommands = map[string]func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error{
+	"exec_container": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		return commands.ExecContainer(devCtx, args)
+	},
 	"get_image": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.GetImage(devCtx, args)
 	},
 	"run_command": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-		return runCommand(devCtx, pipeline, args)
+		return commands.RunCommand(devCtx, pipeline, args, NewPipelineExecHandler)
+	},
+	"run_default_pipeline": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		return commands.RunDefaultPipeline(devCtx, pipeline, args, NewPipelineExecHandler)
 	},
 	"run_pipelines": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.RunPipelines(devCtx, pipeline, args)
@@ -126,27 +131,6 @@ func (e *execHandler) executePipelineCommand(ctx context.Context, command string
 	}
 
 	return true, handleError(ctx, command, commandFn())
-}
-
-func runCommand(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-	hc := interp.HandlerCtx(ctx.Context)
-	if len(args) == 0 {
-		return fmt.Errorf("please specify a command to run")
-	}
-
-	// try to find command
-	for _, command := range ctx.Config.Config().Commands {
-		if command.Name == args[0] {
-			if len(command.Args) > 0 {
-				return fmt.Errorf("calling commands that use args is not supported currently")
-			}
-
-			_, err := engine.ExecutePipelineShellCommand(ctx.Context, command.Command, args[1:], ctx.WorkingDir, false, hc.Stdout, hc.Stderr, hc.Stdin, hc.Env, NewPipelineExecHandler(ctx, hc.Stdout, pipeline))
-			return err
-		}
-	}
-
-	return fmt.Errorf("couldn't find command %v", args[0])
 }
 
 func handleError(ctx context.Context, command string, err error) error {

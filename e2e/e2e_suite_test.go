@@ -18,6 +18,7 @@ import (
 	_ "github.com/loft-sh/devspace/e2e/tests/hooks"
 	_ "github.com/loft-sh/devspace/e2e/tests/imports"
 	_ "github.com/loft-sh/devspace/e2e/tests/init"
+	_ "github.com/loft-sh/devspace/e2e/tests/pipelines"
 	_ "github.com/loft-sh/devspace/e2e/tests/pullsecret"
 	_ "github.com/loft-sh/devspace/e2e/tests/render"
 	_ "github.com/loft-sh/devspace/e2e/tests/replacepods"
