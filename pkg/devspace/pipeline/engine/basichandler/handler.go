@@ -29,7 +29,7 @@ var BasicCommands = map[string]func(ctx context.Context, args []string) error{
 		return enginecommands.IsCommand(ctx, args)
 	},
 	"sleep": func(ctx context.Context, args []string) error {
-		return handleError(interp.HandlerCtx(ctx), enginecommands.Sleep(args))
+		return handleError(interp.HandlerCtx(ctx), enginecommands.Sleep(ctx, args))
 	},
 	"cat": func(ctx context.Context, args []string) error {
 		hc := interp.HandlerCtx(ctx)

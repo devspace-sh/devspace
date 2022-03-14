@@ -1,12 +1,13 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"time"
 )
 
-func Sleep(args []string) error {
+func Sleep(ctx context.Context, args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("usage: sleep seconds")
 	}
@@ -16,6 +17,9 @@ func Sleep(args []string) error {
 		return fmt.Errorf("usage: sleep seconds")
 	}
 
-	time.Sleep(time.Duration(duration) * time.Second)
+	select {
+	case <-ctx.Done():
+	case <-time.After(time.Duration(duration) * time.Second):
+	}
 	return nil
 }

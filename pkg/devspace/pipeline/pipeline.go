@@ -248,10 +248,6 @@ func (p *pipeline) StartNewPipelines(ctx *devspacecontext.Context, pipelines []*
 }
 
 func (p *pipeline) startNewPipeline(ctx *devspacecontext.Context, configPipeline *latest.Pipeline, id string, options types.PipelineOptions) error {
-	if configPipeline.Name == p.name {
-		return fmt.Errorf("pipeline %s is already running", configPipeline.Name)
-	}
-
 	// parse env
 	envMap := map[string]string{}
 	for _, s := range options.Env {
@@ -268,7 +264,7 @@ func (p *pipeline) startNewPipeline(ctx *devspacecontext.Context, configPipeline
 	}
 
 	// exchange job if it's not alive anymore
-	id, j, err := p.createJob(configPipeline, envMap)
+	j, err := p.createJob(configPipeline, envMap, id)
 	if err != nil {
 		return err
 	}
@@ -282,13 +278,13 @@ func (p *pipeline) startNewPipeline(ctx *devspacecontext.Context, configPipeline
 	return nil
 }
 
-func (p *pipeline) createJob(configPipeline *latest.Pipeline, envMap map[string]string) (id string, job *Job, err error) {
+func (p *pipeline) createJob(configPipeline *latest.Pipeline, envMap map[string]string, id string) (job *Job, err error) {
 	p.m.Lock()
 	defer p.m.Unlock()
 
 	j, ok := p.jobs[id]
 	if ok && !j.Terminated() {
-		return "", nil, fmt.Errorf("pipeline %s is already running", id)
+		return nil, fmt.Errorf("pipeline %s is already running", id)
 	}
 
 	j = &Job{
@@ -297,7 +293,7 @@ func (p *pipeline) createJob(configPipeline *latest.Pipeline, envMap map[string]
 		ExtraEnv: envMap,
 	}
 	p.jobs[id] = j
-	return id, j, nil
+	return j, nil
 }
 
 func (p *pipeline) removeJob(j *Job, id string) {

@@ -21,18 +21,22 @@ func RunPipelines(ctx *devspacecontext.Context, pipeline types.Pipeline, args []
 	if err != nil {
 		return errors.Wrap(err, "parse args")
 	}
-	if len(args) == 0 {
-		return fmt.Errorf("no pipeline to run specified")
-	}
 
 	pipelines := []*latest.Pipeline{}
 	for _, arg := range args {
+		if arg == "" {
+			continue
+		}
+
 		pipelineConfig, ok := ctx.Config.Config().Pipelines[arg]
 		if !ok {
 			return fmt.Errorf("couldn't find pipeline %s", arg)
 		}
 
 		pipelines = append(pipelines, pipelineConfig)
+	}
+	if len(pipelines) == 0 {
+		return fmt.Errorf("no pipeline to run specified")
 	}
 
 	return pipeline.StartNewPipelines(ctx, pipelines, options.PipelineOptions)

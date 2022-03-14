@@ -30,6 +30,9 @@ var PipelineCommands = map[string]func(devCtx *devspacecontext.Context, pipeline
 	"run_default_pipeline": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.RunDefaultPipeline(devCtx, pipeline, args, NewPipelineExecHandler)
 	},
+	"watch": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		return commands.Watch(devCtx, pipeline, args, NewPipelineExecHandler)
+	},
 	"run_pipelines": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.RunPipelines(devCtx, pipeline, args)
 	},
