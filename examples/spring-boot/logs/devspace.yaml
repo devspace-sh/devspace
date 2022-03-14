@@ -1,0 +1,32 @@
+version: v1beta11
+vars:
+- name: IMAGE
+  value: username/app
+images:
+  java:
+    image: ${IMAGE}
+    injectRestartHelper: true
+    restartHelperPath: ./restart-helper.sh
+deployments:
+- name: app
+  helm:
+    componentChart: true
+    values:
+      containers:
+      - image: ${IMAGE}
+      service:
+        ports:
+        - port: 8080
+dev:
+  ports:
+  - imageSelector: ${IMAGE}
+    forward:
+    - port: 8080
+  sync:
+  - imageSelector: ${IMAGE}
+    excludePaths:
+    - .git/
+    containerPath: /src
+    localSubPath: ./src
+    onUpload:
+      restartContainer: true
