@@ -6,13 +6,11 @@ import (
 	"github.com/bmatcuk/doublestar"
 	"github.com/jessevdk/go-flags"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
+	types2 "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/loft-sh/notify"
 	"github.com/pkg/errors"
-	"mvdan.cc/sh/v3/interp"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,7 +23,7 @@ type WatchOptions struct {
 	Paths []string `long:"path" short:"p" description:"The paths to watch. Can be patterns in the form of ./**/my-file.txt"`
 }
 
-func Watch(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string, newHandler NewHandlerFn) error {
+func Watch(devCtx *devspacecontext.Context, args []string, handler types2.ExecHandler) error {
 	devCtx.Log.Debugf("watch %s", strings.Join(args, " "))
 	options := &WatchOptions{}
 	args, err := flags.ParseArgs(options, args)
@@ -40,11 +38,8 @@ func Watch(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []stri
 	}
 
 	w := &watcher{}
-	hc := interp.HandlerCtx(devCtx.Context)
 	return w.Watch(devCtx.Context, options.Paths, options.FailOnError, func(ctx context.Context) error {
-		devCtx := devCtx.WithContext(ctx)
-		_, err := engine.ExecutePipelineShellCommand(ctx, args[0]+" $@", args[1:], hc.Dir, false, hc.Stdout, hc.Stderr, hc.Stdin, hc.Env, newHandler(devCtx, hc.Stdout, pipeline))
-		return err
+		return handler.ExecHandler(ctx, args)
 	}, devCtx.Log)
 }
 

@@ -14,7 +14,12 @@ pipelines:
       - run: |-
           echo "Hello World" >> test2.yaml
 
+  other3:
+    steps:
+      - run: |-
+          echo "other other2" | xargs run_pipelines
+
   dev:
     steps:
       - run: |-
-          watch -p *.txt -- run_pipelines other other2
+          watch -p *.txt -- run_pipelines other3

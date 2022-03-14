@@ -52,7 +52,7 @@ var _ = DevSpaceDescribe("portforward", func() {
 		framework.ExpectLocalFileContentsImmediately("test.txt", "Hello World!\n")
 	})
 
-	ginkgo.It("should exec container", func() {
+	ginkgo.It("should watch files", func() {
 		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/watch")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)

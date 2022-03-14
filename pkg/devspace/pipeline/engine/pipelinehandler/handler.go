@@ -18,6 +18,10 @@ import (
 
 // PipelineCommands are commands that can only be run within a pipeline and have special functionality in there
 var PipelineCommands = map[string]func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error{
+	"xargs": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+		hc := interp.HandlerCtx(devCtx.Context)
+		return commands.XArgs(devCtx, args, NewPipelineExecHandler(devCtx, hc.Stdout, pipeline))
+	},
 	"exec_container": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.ExecContainer(devCtx, args)
 	},
@@ -31,7 +35,8 @@ var PipelineCommands = map[string]func(devCtx *devspacecontext.Context, pipeline
 		return commands.RunDefaultPipeline(devCtx, pipeline, args, NewPipelineExecHandler)
 	},
 	"watch": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-		return commands.Watch(devCtx, pipeline, args, NewPipelineExecHandler)
+		hc := interp.HandlerCtx(devCtx.Context)
+		return commands.Watch(devCtx, args, NewPipelineExecHandler(devCtx, hc.Stdout, pipeline))
 	},
 	"run_pipelines": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.RunPipelines(devCtx, pipeline, args)
