@@ -29,6 +29,11 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 		hash        = ""
 	)
 
+	releaseNamespace := d.DeploymentConfig.Namespace
+	if releaseNamespace == "" {
+		releaseNamespace = ctx.KubeClient.Namespace()
+	}
+
 	// Hash the chart directory if there is any
 	_, err := os.Stat(ctx.ResolvePath(chartPath))
 	if err == nil {
@@ -96,7 +101,7 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 
 	forceDeploy = forceDeploy || redeploy || deployCache.DeploymentConfigHash != deploymentConfigHash || helmCache.ValuesHash != deployValuesHash || helmCache.OverridesHash != helmOverridesHash || helmCache.ChartHash != hash
 	if !forceDeploy {
-		releases, err := d.Helm.ListReleases(ctx)
+		releases, err := d.Helm.ListReleases(ctx, releaseNamespace)
 		if err != nil {
 			return false, err
 		}
@@ -119,11 +124,7 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, forceDeploy bool) (b
 
 		deployCache.DeploymentConfigHash = deploymentConfigHash
 		helmCache.Release = releaseName
-		if d.DeploymentConfig.Namespace != "" {
-			helmCache.ReleaseNamespace = d.DeploymentConfig.Namespace
-		} else {
-			helmCache.ReleaseNamespace = ctx.KubeClient.Namespace()
-		}
+		helmCache.ReleaseNamespace = releaseNamespace
 		helmCache.ChartHash = hash
 		helmCache.ValuesHash = deployValuesHash
 		helmCache.OverridesHash = helmOverridesHash

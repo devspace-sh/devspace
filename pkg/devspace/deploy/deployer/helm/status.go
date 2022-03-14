@@ -24,7 +24,7 @@ func (d *DeployConfig) Status(ctx *devspacecontext.Context) (*deployer.StatusRes
 	}
 
 	// Get all releases
-	releases, err := d.Helm.ListReleases(ctx)
+	releases, err := d.Helm.ListReleases(ctx, ctx.KubeClient.Namespace())
 	if err != nil {
 		return &deployer.StatusResult{
 			Name:   d.DeploymentConfig.Name,

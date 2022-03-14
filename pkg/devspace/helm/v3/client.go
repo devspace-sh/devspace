@@ -88,7 +88,7 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 		return nil, err
 	}
 
-	releases, err := c.ListReleases(ctx)
+	releases, err := c.ListReleases(ctx, releaseNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -157,11 +157,11 @@ func (c *client) DeleteRelease(ctx *devspacecontext.Context, releaseName string,
 	return nil
 }
 
-func (c *client) ListReleases(ctx *devspacecontext.Context) ([]*types.Release, error) {
+func (c *client) ListReleases(ctx *devspacecontext.Context, namespace string) ([]*types.Release, error) {
 	args := []string{
 		"list",
 		"--namespace",
-		ctx.KubeClient.Namespace(),
+		namespace,
 		"--max",
 		strconv.Itoa(0),
 		"--output",

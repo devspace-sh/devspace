@@ -67,6 +67,12 @@ func NewBasicExecHandler() types.ExecHandler {
 type execHandler struct{}
 
 func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
+	select {
+	case <-ctx.Done():
+		return interp.NewExitStatus(255)
+	default:
+	}
+
 	if len(args) > 0 {
 		hc := interp.HandlerCtx(ctx)
 
