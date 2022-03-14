@@ -307,10 +307,10 @@ func (cmd *SyncCmd) applyFlagsToSyncConfig(syncConfig *latest.SyncConfig, option
 		syncConfig.ExcludePaths = cmd.Exclude
 	}
 	if cmd.UploadOnly {
-		syncConfig.DisableDownload = &cmd.UploadOnly
+		syncConfig.DisableDownload = cmd.UploadOnly
 	}
 	if cmd.DownloadOnly {
-		syncConfig.DisableUpload = &cmd.DownloadOnly
+		syncConfig.DisableUpload = cmd.DownloadOnly
 	}
 
 	// if selection is specified through flags, we don't want to use the loaded

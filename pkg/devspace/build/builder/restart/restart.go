@@ -13,6 +13,10 @@ var LegacyScriptPath = "/" + ScriptName
 // ScriptPath is the absolute path of the restart script in the container
 var ScriptPath = "/.devspace/" + ScriptName
 
+// TouchPath is the absolute path of the touch file that signals initial syncing is done
+// and the container can start
+var TouchPath = "/.devspace/start"
+
 // ScriptContextPath is the absolute path of the restart script in the build context
 var ScriptContextPath = "/.devspace/.devspace/" + ScriptName
 
@@ -39,6 +43,7 @@ tmpDir="/.devspace"
 screenLogFile="$tmpDir/screenlog.0"
 pidFile="$tmpDir/devspace-pid"
 sidFile="$tmpDir/devspace-sid"
+touchFile="$tmpDir/start"
 
 mkdir -p $tmpDir
 
@@ -60,6 +65,10 @@ quit() {
     kill -9 $((0-$pidToKill)) >/dev/null 2>&1
   fi
 }
+
+until [ -f $touchFile ]; do
+     sleep 1
+done
 
 while $restart; do
   set +e

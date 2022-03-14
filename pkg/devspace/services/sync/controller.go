@@ -331,16 +331,8 @@ func (c *controller) initClient(ctx *devspacecontext.Context, pod *v1.Pod, arch,
 		return nil, err
 	}
 
-	upstreamDisabled := false
-	if syncConfig.DisableUpload != nil {
-		upstreamDisabled = *syncConfig.DisableUpload
-	}
-
-	downstreamDisabled := false
-	if syncConfig.DisableDownload != nil {
-		downstreamDisabled = *syncConfig.DisableDownload
-	}
-
+	upstreamDisabled := syncConfig.DisableUpload
+	downstreamDisabled := syncConfig.DisableDownload
 	compareBy := latest.InitialSyncCompareByMTime
 	if syncConfig.InitialSyncCompareBy != "" {
 		compareBy = syncConfig.InitialSyncCompareBy

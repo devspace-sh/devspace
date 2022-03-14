@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/restart"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/loft-sh/devspace/pkg/util/fsutil"
 	"io"
@@ -29,6 +30,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	TouchFile = ""
+)
+
 type upstream struct {
 	events   chan notify.EventInfo
 	symlinks map[string]*Symlink
@@ -49,6 +54,7 @@ type upstream struct {
 	initialSyncCompletedMutex sync.Mutex
 	initialSyncChanges        []string
 	initialSyncCompleted      bool
+	initialSyncTouchOnce      sync.Once
 }
 
 const (
@@ -249,9 +255,21 @@ func (u *upstream) mainLoop() error {
 	}
 }
 
-func (u *upstream) execCommandsAfterInitialSync() error {
+func (u *upstream) execCommandsAfterInitialSync() (err error) {
 	u.initialSyncCompletedMutex.Lock()
 	defer u.initialSyncCompletedMutex.Unlock()
+
+	// make sure the touch file is there
+	defer func() {
+		if err == nil && u.sync.Options.RestartContainer && u.initialSyncCompleted {
+			u.initialSyncTouchOnce.Do(func() {
+				_, err = u.client.Execute(u.sync.ctx, &remote.Command{
+					Cmd:  "touch",
+					Args: []string{restart.TouchPath},
+				})
+			})
+		}
+	}()
 
 	if !u.initialSyncCompleted || len(u.initialSyncChanges) == 0 {
 		return nil

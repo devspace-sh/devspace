@@ -641,10 +641,14 @@ func (c *Config) mergeDevConfig(log log.Logger) (map[string]*next.DevPod, error)
 			UploadExcludeFile:    syncConfig.UploadExcludeFile,
 			InitialSync:          next.InitialSyncStrategy(syncConfig.InitialSync),
 			InitialSyncCompareBy: next.InitialSyncCompareBy(syncConfig.InitialSyncCompareBy),
-			DisableDownload:      syncConfig.DisableDownload,
-			DisableUpload:        syncConfig.DisableUpload,
 			Polling:              syncConfig.Polling,
 			WaitInitialSync:      syncConfig.WaitInitialSync,
+		}
+		if syncConfig.DisableDownload != nil {
+			nextSyncConfig.DisableDownload = *syncConfig.DisableDownload
+		}
+		if syncConfig.DisableUpload != nil {
+			nextSyncConfig.DisableUpload = *syncConfig.DisableUpload
 		}
 		syncPath := "."
 		if syncConfig.LocalSubPath != "" {

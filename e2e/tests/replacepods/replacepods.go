@@ -67,6 +67,9 @@ var _ = DevSpaceDescribe("replacepods", func() {
 		}()
 
 		// check if file is there
+		framework.ExpectRemoteFileContents("ubuntu", ns, "/app/test2.txt", "Hello World 123")
+
+		// check if file is there
 		framework.ExpectRemoteFileContents("ubuntu", ns, "/test.txt", "Hello World\n")
 
 		// upload a file and restart the container
