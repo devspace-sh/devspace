@@ -438,6 +438,9 @@ func needPodReplaceContainer(devContainer *latest.DevContainer) bool {
 			}
 		}
 	}
+	if devContainer.WorkingDir != "" {
+		return true
+	}
 
 	return false
 }

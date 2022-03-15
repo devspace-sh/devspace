@@ -429,7 +429,9 @@ var _ = DevSpaceDescribe("sync", func() {
 			defer ginkgo.GinkgoRecover()
 			defer waitGroup.Done()
 			err = syncCmd.Run(f)
-			framework.ExpectNoError(err)
+			if err != nil && err != context.Canceled {
+				framework.ExpectNoError(err)
+			}
 		}()
 
 		// wait until files were synced

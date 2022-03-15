@@ -186,6 +186,26 @@ func modifyDevContainer(devPod *latest.DevPod, devContainer *latest.DevContainer
 		return errors.Wrap(err, "replace entrypoint")
 	}
 
+	err = replaceWorkingDir(devContainer, podTemplate)
+	if err != nil {
+		return errors.Wrap(err, "replace working dir")
+	}
+
+	return nil
+}
+
+func replaceWorkingDir(devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+	if devContainer.WorkingDir == "" {
+		return nil
+	}
+
+	index, container, err := getPodTemplateContainer(devContainer, podTemplate)
+	if err != nil {
+		return err
+	}
+
+	container.WorkingDir = devContainer.WorkingDir
+	podTemplate.Spec.Containers[index] = *container
 	return nil
 }
 
