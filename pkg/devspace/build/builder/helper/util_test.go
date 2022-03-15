@@ -1,7 +1,6 @@
 package helper
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -12,10 +11,7 @@ import (
 
 func TestCreateTempDockerfile(t *testing.T) {
 	//Create tempDir and go into it
-	dir, err := ioutil.TempDir("", "testDir")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
+	dir := t.TempDir()
 
 	wdBackup, err := os.Getwd()
 	if err != nil {
@@ -31,10 +27,6 @@ func TestCreateTempDockerfile(t *testing.T) {
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
 

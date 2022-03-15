@@ -366,7 +366,8 @@ var _ = DevSpaceDescribe("sync", func() {
 				Namespace:  ns,
 				ConfigPath: "no-watch.yaml",
 			},
-			NoWatch: true,
+			NoWatch:               true,
+			DownloadOnInitialSync: true,
 		}
 
 		// start the command
@@ -376,8 +377,11 @@ var _ = DevSpaceDescribe("sync", func() {
 		// wait until files were synced
 		framework.ExpectRemoteFileContents("node", ns, "/no-watch/file1.txt", "Hello World")
 
+		// check if file was downloaded correctly
+		framework.ExpectLocalFileContents(filepath.Join(tempDir, "initial-sync-done-before.txt"), "Hello World")
+
 		// check if file was downloaded through after hook
-		framework.ExpectLocalFileContents(filepath.Join(tempDir, "initial-sync-done.txt"), "Hello World")
+		framework.ExpectLocalFileNotFound(filepath.Join(tempDir, "initial-sync-done-after.txt"))
 	})
 
 	ginkgo.It("should sync to a pod container with --container and --container-path", func() {
@@ -404,6 +408,9 @@ var _ = DevSpaceDescribe("sync", func() {
 		framework.ExpectNoError(err)
 
 		// sync with --container and --container-path
+		interrupt, stop := framework.InterruptChan()
+		defer stop()
+
 		syncCmd := &cmd.SyncCmd{
 			GlobalFlags: &flags.GlobalFlags{
 				NoWarn:     true,
@@ -412,12 +419,18 @@ var _ = DevSpaceDescribe("sync", func() {
 			},
 			Container:     "container2",
 			ContainerPath: "/app2",
-			NoWatch:       true,
+			Interrupt:     interrupt,
 		}
 
 		// start the command
-		err = syncCmd.Run(f)
-		framework.ExpectNoError(err)
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(1)
+		go func() {
+			defer ginkgo.GinkgoRecover()
+			defer waitGroup.Done()
+			err = syncCmd.Run(f)
+			framework.ExpectNoError(err)
+		}()
 
 		// wait until files were synced
 		framework.ExpectRemoteContainerFileContents("e2e=sync-containers", "container2", ns, "/app2/file1.txt", "Hello World")
@@ -427,6 +440,12 @@ var _ = DevSpaceDescribe("sync", func() {
 		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
 		framework.ExpectNoError(err)
 		framework.ExpectRemoteContainerFileContents("e2e=sync-containers", "container2", ns, "/app2/watching.txt", payload)
+
+		// stop command
+		stop()
+
+		// wait for the command to finish
+		waitGroup.Wait()
 	})
 
 	ginkgo.It("should sync to a pod container with excludeFile, downloadExcludeFile, and uploadExcludeFile configuration", func() {
@@ -452,6 +471,9 @@ var _ = DevSpaceDescribe("sync", func() {
 		err = deployCmd.Run(f)
 		framework.ExpectNoError(err)
 
+		interrupt, stop := framework.InterruptChan()
+		defer stop()
+
 		// sync command
 		syncCmd := &cmd.SyncCmd{
 			GlobalFlags: &flags.GlobalFlags{
@@ -459,12 +481,18 @@ var _ = DevSpaceDescribe("sync", func() {
 				Namespace:  ns,
 				ConfigPath: "devspace.yaml",
 			},
-			NoWatch: true,
+			Interrupt: interrupt,
 		}
 
 		// start the command
-		err = syncCmd.Run(f)
-		framework.ExpectNoError(err)
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(1)
+		go func() {
+			defer ginkgo.GinkgoRecover()
+			defer waitGroup.Done()
+			err = syncCmd.Run(f)
+			framework.ExpectNoError(err)
+		}()
 
 		// wait for initial sync to complete
 		framework.ExpectLocalFileContents(filepath.Join(tempDir, "initial-sync-done.txt"), "Hello World")
@@ -488,5 +516,11 @@ var _ = DevSpaceDescribe("sync", func() {
 		err = ioutil.WriteFile(filepath.Join(tempDir, "watching.txt"), []byte(payload), 0666)
 		framework.ExpectNoError(err)
 		framework.ExpectRemoteFileContents("node", ns, "/app/watching.txt", payload)
+
+		// stop command
+		stop()
+
+		// wait for the command to finish
+		waitGroup.Wait()
 	})
 })

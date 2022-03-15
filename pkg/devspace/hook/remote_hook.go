@@ -93,22 +93,14 @@ func (r *remoteHook) execute(hook *latest.HookConfig, imageSelector []imageselec
 		wait = true
 	}
 
-	// select the container
-	targetSelector := targetselector.NewTargetSelector(client)
-	podContainer, err := targetSelector.SelectSingleContainer(context.TODO(), targetselector.Options{
-		Selector: selector.Selector{
-			ImageSelector: imageSelector,
-			LabelSelector: labelSelector,
-			Pod:           hook.Container.Pod,
-			ContainerName: hook.Container.ContainerName,
-			Namespace:     hook.Container.Namespace,
-		},
-		Wait:            &wait,
-		Timeout:         timeout,
-		SortPods:        selector.SortPodsByNewest,
-		SortContainers:  selector.SortContainersByNewest,
-		WaitingStrategy: r.WaitingStrategy,
-	}, log)
+	// build target selector
+	targetSelectorOptions := targetselector.NewOptionsFromFlags(hook.Container.ContainerName, labelSelector, targetselector.ToStringImageSelector(imageSelector), hook.Container.Namespace, hook.Container.Pod).
+		WithTimeout(timeout).
+		WithWait(wait).
+		WithWaitingStrategy(r.WaitingStrategy)
+
+	// select container
+	podContainer, err := targetselector.GlobalTargetSelector.SelectSingleContainer(context.TODO(), client, targetSelectorOptions, log)
 	if err != nil {
 		if _, ok := err.(*targetselector.NotFoundErr); ok {
 			return false, nil

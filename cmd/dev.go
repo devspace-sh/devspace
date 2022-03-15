@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
+	"github.com/loft-sh/devspace/pkg/util/stringutil"
 	"io"
 	"os"
 	"os/exec"
@@ -10,7 +12,6 @@ import (
 	"time"
 
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"github.com/loft-sh/devspace/pkg/util/command"
 
 	"github.com/loft-sh/devspace/pkg/devspace/config"
@@ -624,24 +625,24 @@ func (cmd *DevCmd) startOutput(configInterface config.Config, dependencies []typ
 				}
 				return 0, nil
 			} else {
-				selectorOptions := targetselector.NewDefaultOptions().ApplyCmdParameter("", "", cmd.Namespace, "")
+				selectorOptions := targetselector.NewEmptyOptions().
+					WithContainerFilter(selector.FilterNonRunningContainers).
+					WithPick(true).
+					WithNamespace(cmd.Namespace)
 				if config.Dev.Terminal != nil {
-					selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Terminal.LabelSelector, config.Dev.Terminal.Namespace, config.Dev.Terminal.ContainerName, "")
-				}
+					var imageSelectors []string
+					if config.Dev.Terminal.ImageSelector != "" {
+						imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(config.Dev.Terminal.ImageSelector, configInterface, dependencies)
+						if err != nil {
+							return 0, err
+						}
 
-				var imageSelectors []imageselector.ImageSelector
-				if config.Dev.Terminal != nil && config.Dev.Terminal.ImageSelector != "" {
-					imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(config.Dev.Terminal.ImageSelector, configInterface, dependencies)
-					if err != nil {
-						return 0, err
+						imageSelectors = []string{imageSelector.Image}
 					}
-
-					imageSelectors = append(imageSelectors, *imageSelector)
+					selectorOptions = selectorOptions.ApplyConfigParameter(config.Dev.Terminal.ContainerName, config.Dev.Terminal.LabelSelector, imageSelectors, config.Dev.Terminal.Namespace, "")
 				}
 
 				cmd.log.Info("Terminal: Waiting for containers to start...")
-				selectorOptions.ImageSelector = imageSelectors
-
 				code, err := servicesClient.StartTerminal(selectorOptions, args, cmd.WorkingDirectory, exitChan, true, cmd.TerminalReconnect, stdout, stderr, stdin)
 				if services.IsUnexpectedExitCode(code) {
 					cmd.log.Warnf("Command terminated with exit code %d", code)
@@ -758,7 +759,7 @@ func GetPaths(config *latest.Config) []string {
 		}
 	}
 
-	return removeDuplicates(paths)
+	return stringutil.RemoveDuplicates(paths)
 }
 
 func (cmd *DevCmd) loadConfig(configOptions *loader.ConfigOptions) (config.Config, error) {
@@ -821,25 +822,6 @@ func defaultStdStreams(stdout io.Writer, stderr io.Writer, stdin io.Reader) (io.
 		stdin = os.Stdin
 	}
 	return stdout, stderr, stdin
-}
-
-func removeDuplicates(arr []string) []string {
-	newArr := []string{}
-	for _, v := range arr {
-		if !contains(newArr, v) {
-			newArr = append(newArr, v)
-		}
-	}
-	return newArr
-}
-
-func contains(haystack []string, needle string) bool {
-	for _, v := range haystack {
-		if v == needle {
-			return true
-		}
-	}
-	return false
 }
 
 func updateLastKubeContext(configLoader loader.ConfigLoader, client kubectl.Client, generatedConfig *generated.Config) error {

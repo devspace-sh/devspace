@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test
+spec:
+  selector:
+    matchLabels:
+      test: test
+  template:
+    metadata:
+      labels:
+        test: test
+    spec:
+      containers:
+        - image: nginx:1.14.2
+          imagePullPolicy: Never
+          name: nginx

@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
 	"io"
 	"time"
 
@@ -20,25 +19,27 @@ import (
 )
 
 func (serviceClient *client) startReversePortForwarding(portForwarding *latest.PortForwardingConfig, interrupt chan error, fileLog, log logpkg.Logger) error {
-	var err error
-
-	// apply config & set image selector
-	options := targetselector.NewEmptyOptions().ApplyConfigParameter(portForwarding.LabelSelector, portForwarding.Namespace, portForwarding.ContainerName, "")
-	options.AllowPick = false
-	options.ImageSelector = []imageselector.ImageSelector{}
+	var (
+		err           error
+		imageSelector []string
+	)
 	if portForwarding.ImageSelector != "" {
-		imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(portForwarding.ImageSelector, serviceClient.config, serviceClient.dependencies)
+		imageSelectorObject, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(portForwarding.ImageSelector, serviceClient.config, serviceClient.dependencies)
 		if err != nil {
 			return err
 		}
 
-		options.ImageSelector = append(options.ImageSelector, *imageSelector)
+		imageSelector = []string{imageSelectorObject.Image}
 	}
-	options.WaitingStrategy = targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)
-	options.SkipInitContainers = true
+
+	// apply config & set image selector
+	options := targetselector.NewEmptyOptions().
+		ApplyConfigParameter(portForwarding.ContainerName, portForwarding.LabelSelector, imageSelector, portForwarding.Namespace, "").
+		WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Second * 2)).
+		WithSkipInitContainers(true)
 
 	log.Info("Reverse-Port-Forwarding: Waiting for containers to start...")
-	container, err := targetselector.NewTargetSelector(serviceClient.client).SelectSingleContainer(context.TODO(), options, log)
+	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(context.TODO(), serviceClient.client, options, log)
 	if err != nil {
 		return errors.Errorf("%s: %s", message.SelectorErrorPod, err.Error())
 	}

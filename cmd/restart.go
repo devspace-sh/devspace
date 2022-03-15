@@ -3,9 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/cmd/flags"
 	runtimevar "github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
-	"github.com/loft-sh/devspace/pkg/devspace/imageselector"
-
 	"github.com/loft-sh/devspace/pkg/devspace/dependency"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
@@ -13,9 +12,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/inject"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
 	"github.com/loft-sh/devspace/pkg/util/factory"
-	"github.com/loft-sh/devspace/pkg/util/ptr"
-
-	"github.com/loft-sh/devspace/cmd/flags"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 
@@ -85,7 +81,7 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 			return errors.Wrap(err, "create kube client")
 		}
 
-		return restartContainer(client, targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick), cmd.log)
+		return restartContainer(client, targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, nil, cmd.Namespace, cmd.Pod).WithPick(cmd.Pick), cmd.log)
 	}
 
 	log.StartFileLogging()
@@ -149,17 +145,19 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 		}
 
 		// create target selector options
-		options := targetselector.NewOptionsFromFlags("", "", cmd.Namespace, "", cmd.Pick).ApplyConfigParameter(syncPath.LabelSelector, syncPath.Namespace, syncPath.ContainerName, "")
-		options.ImageSelector = []imageselector.ImageSelector{}
+		var imageSelector []string
 		if syncPath.ImageSelector != "" {
-			imageSelector, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(syncPath.ImageSelector, configInterface, dep)
+			imageSelectorObject, err := runtimevar.NewRuntimeResolver(true).FillRuntimeVariablesAsImageSelector(syncPath.ImageSelector, configInterface, dep)
 			if err != nil {
 				return err
 			}
 
-			options.ImageSelector = append(options.ImageSelector, *imageSelector)
+			imageSelector = []string{imageSelectorObject.Image}
 		}
 
+		options := targetselector.NewOptionsFromFlags("", "", nil, cmd.Namespace, "").
+			WithPick(cmd.Pick).
+			ApplyConfigParameter(syncPath.ContainerName, syncPath.LabelSelector, imageSelector, syncPath.Namespace, "")
 		err = restartContainer(client, options, cmd.log)
 		if err != nil {
 			return err
@@ -179,8 +177,8 @@ func (cmd *RestartCmd) Run(f factory.Factory) error {
 }
 
 func restartContainer(client kubectl.Client, options targetselector.Options, log log.Logger) error {
-	options.Wait = ptr.Bool(false)
-	container, err := targetselector.NewTargetSelector(client).SelectSingleContainer(context.TODO(), options, log)
+	options = options.WithWait(false)
+	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(context.TODO(), client, options, log)
 	if err != nil {
 		return errors.Errorf("Error selecting pod: %v", err)
 	}

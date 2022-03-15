@@ -2,7 +2,6 @@ package generator
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -13,10 +12,7 @@ import (
 
 func TestContainerizeApplication(t *testing.T) {
 	//Create TmpFolder
-	dir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
+	dir := t.TempDir()
 
 	wdBackup, err := os.Getwd()
 	if err != nil {
@@ -32,10 +28,6 @@ func TestContainerizeApplication(t *testing.T) {
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
 
@@ -69,10 +61,7 @@ app.listen(3000, function () {
 
 func TestDockerfileGenerator(t *testing.T) {
 	//Create TmpFolder
-	dir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
+	dir := t.TempDir()
 
 	wdBackup, err := os.Getwd()
 	if err != nil {
@@ -88,10 +77,6 @@ func TestDockerfileGenerator(t *testing.T) {
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
 

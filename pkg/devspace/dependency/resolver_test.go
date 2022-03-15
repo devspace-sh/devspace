@@ -1,7 +1,6 @@
 package dependency
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -38,11 +37,7 @@ type resolverTestCase struct {
 }
 
 func TestResolver(t *testing.T) {
-	dir, err := ioutil.TempDir("", "testFolder")
-	if err != nil {
-		t.Fatalf("Error creating temporary directory: %v", err)
-	}
-	dir, err = filepath.EvalSymlinks(dir)
+	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,10 +58,6 @@ func TestResolver(t *testing.T) {
 		err = os.Chdir(wdBackup)
 		if err != nil {
 			t.Fatalf("Error changing dir back: %v", err)
-		}
-		err = os.RemoveAll(dir)
-		if err != nil {
-			t.Fatalf("Error removing dir: %v", err)
 		}
 	}()
 

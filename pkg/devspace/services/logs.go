@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"github.com/loft-sh/devspace/pkg/devspace/kubectl/selector"
 	"io"
 	"os"
 	"time"
@@ -17,17 +18,13 @@ func (serviceClient *client) StartLogs(options targetselector.Options, follow bo
 
 // StartLogsWithWriter prints the logs and then attaches to the container with the given stdout and stderr
 func (serviceClient *client) StartLogsWithWriter(options targetselector.Options, follow bool, tail int64, wait bool, writer io.Writer) error {
-	targetSelector := targetselector.NewTargetSelector(serviceClient.client)
-	options.Wait = &wait
-	if !wait {
-		options.FilterContainer = nil
-	} else {
-		options.FilterPod = nil
-		options.FilterContainer = nil
-		options.WaitingStrategy = targetselector.NewUntilNotWaitingStrategy(time.Second * 2)
+	options = options.WithWait(wait).
+		WithContainerFilter(selector.FilterTerminatingContainers)
+	if wait {
+		options = options.WithWaitingStrategy(targetselector.NewUntilNotWaitingStrategy(time.Second * 2))
 	}
 
-	container, err := targetSelector.SelectSingleContainer(context.TODO(), options, serviceClient.log)
+	container, err := targetselector.GlobalTargetSelector.SelectSingleContainer(context.TODO(), serviceClient.client, options, serviceClient.log)
 	if err != nil {
 		return err
 	}

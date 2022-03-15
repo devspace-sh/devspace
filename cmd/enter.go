@@ -117,17 +117,15 @@ func (cmd *EnterCmd) Run(f factory.Factory, cobraCmd *cobra.Command, args []stri
 		return err
 	}
 
-	// Build params
-	selectorOptions := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, cmd.Namespace, cmd.Pod, cmd.Pick)
-
 	// get image selector if specified
 	imageSelector, err := getImageSelector(client, configLoader, configOptions, cmd.Image, cmd.ImageSelector, logger)
 	if err != nil {
 		return err
 	}
 
-	// set image selector
-	selectorOptions.ImageSelector = imageSelector
+	// Build params
+	selectorOptions := targetselector.NewOptionsFromFlags(cmd.Container, cmd.LabelSelector, imageSelector, cmd.Namespace, cmd.Pod).
+		WithPick(cmd.Pick)
 
 	// Start terminal
 	stdout, stderr, stdin := defaultStdStreams(cmd.Stdout, cmd.Stderr, cmd.Stdin)

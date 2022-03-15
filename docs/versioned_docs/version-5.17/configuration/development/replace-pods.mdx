@@ -251,7 +251,7 @@ dev:
     persistPaths:
     - path: /app
       # Optional path on the persistent volume to mount
-      # volumePath: /my-volume/app
+      # volumePath: my-volume/app
       # Optional name of the container to persist this path
       # containerName: my-container
 ```
@@ -281,13 +281,13 @@ dev:
   - imageSelector: my-image/frontend
     persistPaths:
     - path: /app
-      volumePath: /app
+      volumePath: app
     persistenceOptions:
       name: my-pvc
   - imageSelector: my-image/backend
     persistPaths:
     - path: /backend
-      volumePath: /app
+      volumePath: app
     persistenceOptions:
       name: my-pvc
       readOnly: true

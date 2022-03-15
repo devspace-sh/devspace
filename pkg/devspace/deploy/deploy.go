@@ -212,19 +212,22 @@ func (c *controller) Deploy(options *Options, logLogger log.Logger) error {
 			}(deployConfig, i)
 		}
 
-		logLogger.StartWait(fmt.Sprintf("Deploying %d deployments concurrently", len(concurrentDeployments)))
+		if len(concurrentDeployments) > 0 {
+			logLogger.StartWait(fmt.Sprintf("Deploying %d deployments concurrently", len(concurrentDeployments)))
 
-		// Wait for concurrent deployments to complete before starting sequential deployments.
-		for i := 0; i < len(concurrentDeployments); i++ {
-			select {
-			case err := <-errChan:
-				return err
-			case <-deployedChan:
-				logLogger.StartWait(fmt.Sprintf("Deploying %d deployments concurrently", len(concurrentDeployments)-i-1))
+			// Wait for concurrent deployments to complete before starting sequential deployments.
+			for i := 0; i < len(concurrentDeployments); i++ {
+				select {
+				case err := <-errChan:
+					return err
+				case <-deployedChan:
+					logLogger.StartWait(fmt.Sprintf("Deploying %d deployments concurrently", len(concurrentDeployments)-i-1))
 
+				}
 			}
+
+			logLogger.StopWait()
 		}
-		logLogger.StopWait()
 
 		for _, deployConfig := range sequentialDeployments {
 			_, err := c.deployOne(deployConfig, logLogger, options, helmV2Clients)

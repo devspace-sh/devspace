@@ -142,19 +142,10 @@ func createFiles(dir string, file testFile) error {
 }
 
 func TestUpstreamServer(t *testing.T) {
-	fromDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	toDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	fromDir := t.TempDir()
+	toDir := t.TempDir()
 
-	defer os.RemoveAll(fromDir)
-	defer os.RemoveAll(toDir)
-
-	err = createFiles(fromDir, fileStructure)
+	err := createFiles(fromDir, fileStructure)
 	if err != nil {
 		t.Fatal(err)
 	}
