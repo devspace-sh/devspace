@@ -441,6 +441,9 @@ func needPodReplaceContainer(devContainer *latest.DevContainer) bool {
 	if devContainer.WorkingDir != "" {
 		return true
 	}
+	if devContainer.Resources != nil {
+		return true
+	}
 
 	return false
 }

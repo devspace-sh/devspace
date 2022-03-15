@@ -3,6 +3,7 @@ package podreplace
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/build/builder/kaniko/util"
 	"strings"
 
 	"github.com/ghodss/yaml"
@@ -191,6 +192,37 @@ func modifyDevContainer(devPod *latest.DevPod, devContainer *latest.DevContainer
 		return errors.Wrap(err, "replace working dir")
 	}
 
+	err = replaceResources(devContainer, podTemplate)
+	if err != nil {
+		return errors.Wrap(err, "replace resources")
+	}
+
+	return nil
+}
+
+func replaceResources(devContainer *latest.DevContainer, podTemplate *corev1.PodTemplateSpec) error {
+	if devContainer.Resources == nil {
+		return nil
+	}
+
+	index, container, err := getPodTemplateContainer(devContainer, podTemplate)
+	if err != nil {
+		return err
+	}
+
+	limits, err := util.ConvertMap(devContainer.Resources.Limits)
+	if err != nil {
+		return errors.Wrap(err, "parse limits")
+	}
+
+	requests, err := util.ConvertMap(devContainer.Resources.Requests)
+	if err != nil {
+		return errors.Wrap(err, "parse limits")
+	}
+
+	container.Resources.Limits = limits
+	container.Resources.Requests = requests
+	podTemplate.Spec.Containers[index] = *container
 	return nil
 }
 
@@ -269,6 +301,8 @@ func replaceCommand(devPod *latest.DevPod, devContainer *latest.DevContainer, po
 			MountPath: restart.ScriptPath,
 		})
 
+		container.ReadinessProbe = nil
+		container.LivenessProbe = nil
 		container.Command = []string{restart.ScriptPath}
 		container.Command = append(container.Command, devContainer.Command...)
 		if devContainer.Args != nil {
