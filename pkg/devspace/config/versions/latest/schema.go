@@ -721,6 +721,7 @@ type DevContainer struct {
 	Command              []string         `yaml:"command,omitempty" json:"command,omitempty"`
 	Args                 []string         `yaml:"args,omitempty" json:"args,omitempty"`
 	WorkingDir           string           `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
+	Resources            *PodResources    `yaml:"resources,omitempty" json:"resources,omitempty"`
 	Env                  []EnvVar         `yaml:"env,omitempty" json:"env,omitempty"`
 	RestartHelperPath    string           `yaml:"restartHelperPath,omitempty" json:"restartHelperPath,omitempty"`
 	DisableRestartHelper bool             `yaml:"disableRestartHelper,omitempty" json:"disableRestartHelper,omitempty"`
