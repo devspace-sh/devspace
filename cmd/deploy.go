@@ -213,7 +213,7 @@ func prepare(ctx context.Context, f factory.Factory, configOptions *loader.Confi
 
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = kubectl.CheckKubeContext(client, localCache, globalFlags.NoWarn, log)
+	client, err = kubectl.CheckKubeContext(client, localCache, globalFlags.NoWarn, globalFlags.SwitchContext, log)
 	if err != nil {
 		return nil, err
 	}

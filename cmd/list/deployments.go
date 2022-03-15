@@ -80,7 +80,7 @@ func (cmd *deploymentsCmd) RunDeploymentsStatus(f factory.Factory, cobraCmd *cob
 
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, logger)
+	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, logger)
 	if err != nil {
 		return err
 	}

@@ -184,14 +184,14 @@ func (client *client) IsInCluster() bool {
 }
 
 // CheckKubeContext prints a warning if the last kube context is different than this one
-func CheckKubeContext(client Client, localCache localcache.Cache, noWarning bool, log log.Logger) (Client, error) {
+func CheckKubeContext(client Client, localCache localcache.Cache, noWarning, autoSwitch bool, log log.Logger) (Client, error) {
 	currentConfigContext := &localcache.LastContextConfig{
 		Namespace: client.Namespace(),
 		Context:   client.CurrentContext(),
 	}
 
 	resetClient := false
-	if localCache != nil && log.GetLevel() >= logrus.InfoLevel && !noWarning {
+	if localCache != nil && !noWarning {
 		lastConfigContext := localCache.GetLastContext()
 
 		// print warning if context or namespace has changed since last deployment process (expect if explicitly provided as flags)
@@ -202,64 +202,75 @@ func CheckKubeContext(client Client, localCache localcache.Cache, noWarning bool
 			// then ask which namespace to use
 			if lastConfigContext.Context != "" &&
 				lastConfigContext.Context != currentConfigContext.Context {
-				log.WriteString(logrus.InfoLevel, "\n")
-				log.Warnf(ansi.Color("Are you using the correct kube context?", "white+b"))
-				log.Warnf("Current kube context: '%s'", ansi.Color(currentConfigContext.Context, "white+b"))
-				log.Warnf("Last    kube context: '%s'", ansi.Color(lastConfigContext.Context, "white+b"))
-
-				// if terminal is not interactive then return the same client
-				if !isTerminalIn {
-					return client, nil
-				}
-
-				kc, err := log.Question(&survey.QuestionOptions{
-					Question:     "Which context do you want to use?",
-					DefaultValue: currentConfigContext.Context,
-					Options: []string{
-						currentConfigContext.Context,
-						lastConfigContext.Context,
-					},
-				})
-				if err != nil {
-					return client, err
-				}
-				if kc != currentConfigContext.Context {
-					currentConfigContext.Context = kc
+				if autoSwitch {
+					currentConfigContext.Context = lastConfigContext.Context
 					currentConfigContext.Namespace = lastConfigContext.Namespace
 					resetClient = true
+				} else if log.GetLevel() >= logrus.InfoLevel {
+					log.WriteString(logrus.WarnLevel, "\n")
+					log.Warnf(ansi.Color("Are you using the correct kube context?", "white+b"))
+					log.Warnf("Current kube context: '%s'", ansi.Color(currentConfigContext.Context, "white+b"))
+					log.Warnf("Last    kube context: '%s'", ansi.Color(lastConfigContext.Context, "white+b"))
+
+					// if terminal is not interactive then return the same client
+					if !isTerminalIn {
+						return client, nil
+					}
+
+					kc, err := log.Question(&survey.QuestionOptions{
+						Question:     "Which context do you want to use?",
+						DefaultValue: currentConfigContext.Context,
+						Options: []string{
+							currentConfigContext.Context,
+							lastConfigContext.Context,
+						},
+					})
+					if err != nil {
+						return client, err
+					}
+					if kc != currentConfigContext.Context {
+						currentConfigContext.Context = kc
+						currentConfigContext.Namespace = lastConfigContext.Namespace
+						resetClient = true
+					}
 				}
 			} else if lastConfigContext.Namespace != "" &&
 				lastConfigContext.Namespace != currentConfigContext.Namespace {
-				log.WriteString(logrus.InfoLevel, "\n")
-				log.Warnf(ansi.Color("Are you using the correct namespace?", "white+b"))
-				log.Warnf("Current namespace: '%s'", ansi.Color(currentConfigContext.Namespace, "white+b"))
-				log.Warnf("Last    namespace: '%s'", ansi.Color(lastConfigContext.Namespace, "white+b"))
-
-				// if terminal is not interactive then return the same client
-				if !isTerminalIn {
-					return client, nil
-				}
-
-				ns, err := log.Question(&survey.QuestionOptions{
-					Question:     "Which namespace do you want to use?",
-					DefaultValue: currentConfigContext.Namespace,
-					Options: []string{
-						currentConfigContext.Namespace,
-						lastConfigContext.Namespace,
-					},
-				})
-				if err != nil {
-					return client, err
-				}
-				if ns != currentConfigContext.Namespace {
-					currentConfigContext.Namespace = ns
+				if autoSwitch {
+					currentConfigContext.Namespace = lastConfigContext.Namespace
 					resetClient = true
+				} else if log.GetLevel() >= logrus.InfoLevel {
+					log.WriteString(logrus.WarnLevel, "\n")
+					log.Warnf(ansi.Color("Are you using the correct namespace?", "white+b"))
+					log.Warnf("Current namespace: '%s'", ansi.Color(currentConfigContext.Namespace, "white+b"))
+					log.Warnf("Last    namespace: '%s'", ansi.Color(lastConfigContext.Namespace, "white+b"))
+
+					// if terminal is not interactive then return the same client
+					if !isTerminalIn {
+						return client, nil
+					}
+
+					ns, err := log.Question(&survey.QuestionOptions{
+						Question:     "Which namespace do you want to use?",
+						DefaultValue: currentConfigContext.Namespace,
+						Options: []string{
+							currentConfigContext.Namespace,
+							lastConfigContext.Namespace,
+						},
+					})
+					if err != nil {
+						return client, err
+					}
+					if ns != currentConfigContext.Namespace {
+						currentConfigContext.Namespace = ns
+						resetClient = true
+					}
 				}
 			}
 		}
 
 		// Warn if using default namespace unless previous deployment was also to default namespace
-		if currentConfigContext.Namespace == metav1.NamespaceDefault &&
+		if log.GetLevel() >= logrus.InfoLevel && currentConfigContext.Namespace == metav1.NamespaceDefault &&
 			(lastConfigContext == nil ||
 				lastConfigContext.Namespace != metav1.NamespaceDefault) {
 			log.Warn("Deploying into the 'default' namespace is usually not a good idea as this namespace cannot be deleted\n")

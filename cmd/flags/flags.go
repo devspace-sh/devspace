@@ -17,6 +17,7 @@ type GlobalFlags struct {
 	Profiles                 []string
 	ProfileRefresh           bool
 	DisableProfileActivation bool
+	SwitchContext            bool
 	ConfigPath               string
 	Vars                     []string
 
@@ -54,6 +55,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.StringSliceVarP(&globalFlags.Profiles, "profile", "p", []string{}, "The DevSpace profiles to apply. Multiple profiles are applied in the order they are specified")
 	flags.BoolVar(&globalFlags.ProfileRefresh, "profile-refresh", false, "If true will pull and re-download profile parent sources")
 	flags.BoolVar(&globalFlags.DisableProfileActivation, "disable-profile-activation", false, "If true will ignore all profile activations")
+	flags.BoolVarP(&globalFlags.SwitchContext, "switch-context", "s", false, "Switches and uses the last kube context and namespace that was used to deploy the DevSpace project")
 	flags.StringVarP(&globalFlags.Namespace, "namespace", "n", "", "The kubernetes namespace to use")
 	flags.StringVar(&globalFlags.KubeContext, "kube-context", "", "The kubernetes context to use")
 	flags.StringSliceVar(&globalFlags.Vars, "var", []string{}, "Variables to override during execution (e.g. --var=MYVAR=MYVALUE)")

@@ -156,7 +156,7 @@ func (cmd *UICmd) RunUI(f factory.Factory) error {
 
 	// If the current kube context or namespace is different than old,
 	// show warnings and reset kube client if necessary
-	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.log)
+	client, err = kubectl.CheckKubeContext(client, localCache, cmd.NoWarn, cmd.SwitchContext, cmd.log)
 	if err != nil {
 		return err
 	}
