@@ -1,0 +1,31 @@
+version: v2beta1
+name: get_config_value
+
+images:
+  app:
+    image: username/app
+
+deployments:
+  test:
+    helm:
+      chart:
+        name: test_chart
+
+pipelines:
+  dev:
+    steps:
+      - run: |-
+          if is_equal $(get_config_value deployments.test.helm.chart.name) "test_chart"
+          then
+            exit 0
+          else
+           exit 1
+          fi
+
+          if is_equal $(get_config_value images.app.image) "username/app"
+          then
+            exit 0
+          else
+           exit 1
+          fi
+          
