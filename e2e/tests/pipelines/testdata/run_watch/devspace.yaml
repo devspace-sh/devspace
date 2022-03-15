@@ -1,0 +1,21 @@
+version: v2beta1
+name: watch
+
+pipelines:
+  other:
+    run: |-
+      echo "Hello World" >> test.yaml
+      sleep 1000
+      echo "Hello World2" >> test.yaml
+
+  other2:
+    run: |-
+      echo "Hello World" >> test2.yaml
+
+  other3:
+    run: |-
+      echo "other other2" | xargs run_pipelines
+
+  dev:
+    run: |-
+      run_watch -p *.txt -- run_pipelines other3

@@ -142,7 +142,7 @@ func runHook(ctx *devspacecontext.Context, hookConfig *latest.HookConfig, extraE
 	} else if ctx.Log == logpkg.GetInstance() {
 		writer = logpkg.WithNopCloser(stdout)
 	} else {
-		writer = ctx.Log.Writer(logrus.InfoLevel)
+		writer = ctx.Log.Writer(logrus.InfoLevel, false)
 	}
 	defer writer.Close()
 

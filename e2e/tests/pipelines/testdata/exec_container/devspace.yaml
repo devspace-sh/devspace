@@ -11,8 +11,7 @@ deployments:
 
 pipelines:
   dev:
-    steps:
-      - run: |-
-          run_default_pipeline deploy
-          
-          echo "Hello World!" | exec_container --image-selector alpine --silent -- cat - > test.txt 
+    run: |-
+      run_default_pipeline deploy
+      
+      echo "Hello World!" | exec_container --image-selector alpine -- cat - > test.txt 

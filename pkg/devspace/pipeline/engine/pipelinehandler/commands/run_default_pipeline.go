@@ -4,9 +4,13 @@ import (
 	"fmt"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
+	enginetypes "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
+	"io"
 	"mvdan.cc/sh/v3/interp"
 )
+
+type NewHandlerFn func(ctx *devspacecontext.Context, stdout, stderr io.Writer, pipeline types.Pipeline) enginetypes.ExecHandler
 
 func RunDefaultPipeline(ctx *devspacecontext.Context, pipeline types.Pipeline, args []string, newHandler NewHandlerFn) error {
 	hc := interp.HandlerCtx(ctx.Context)
@@ -19,6 +23,6 @@ func RunDefaultPipeline(ctx *devspacecontext.Context, pipeline types.Pipeline, a
 		return err
 	}
 
-	_, err = engine.ExecutePipelineShellCommand(ctx.Context, defaultPipeline.Steps[0].Run, nil, hc.Dir, false, hc.Stdout, hc.Stderr, hc.Stdin, hc.Env, newHandler(ctx, hc.Stdout, pipeline))
+	_, err = engine.ExecutePipelineShellCommand(ctx.Context, defaultPipeline.Run, nil, hc.Dir, false, hc.Stdout, hc.Stderr, hc.Stdin, hc.Env, newHandler(ctx, hc.Stdout, hc.Stderr, pipeline))
 	return err
 }

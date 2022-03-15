@@ -5,7 +5,6 @@ import (
 	"github.com/jessevdk/go-flags"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/devpod"
-	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"strings"
 )
@@ -26,7 +25,7 @@ func StopDev(ctx *devspacecontext.Context, devManager devpod.Manager, args []str
 	if options.All {
 		// loop over all pods in dev manager
 		for _, a := range devManager.List() {
-			ctx = ctx.WithLogger(logpkg.NewDefaultPrefixLogger("dev:"+a+" ", ctx.Log))
+			ctx = ctx.WithLogger(ctx.Log.WithPrefix("dev:" + a + " "))
 			ctx.Log.Infof("Stopping dev %s", a)
 			err = devManager.Reset(ctx, a)
 			if err != nil {
@@ -36,7 +35,7 @@ func StopDev(ctx *devspacecontext.Context, devManager devpod.Manager, args []str
 
 		// loop over all in cache
 		for _, a := range ctx.Config.RemoteCache().ListDevPods() {
-			ctx = ctx.WithLogger(logpkg.NewDefaultPrefixLogger("dev:"+a.Name+" ", ctx.Log))
+			ctx = ctx.WithLogger(ctx.Log.WithPrefix("dev:" + a.Name + " "))
 			ctx.Log.Infof("Stopping dev %s", a.Name)
 			err = devManager.Reset(ctx, a.Name)
 			if err != nil {
@@ -45,7 +44,7 @@ func StopDev(ctx *devspacecontext.Context, devManager devpod.Manager, args []str
 		}
 	} else if len(args) > 0 {
 		for _, a := range args {
-			ctx = ctx.WithLogger(logpkg.NewDefaultPrefixLogger("dev:"+a+" ", ctx.Log))
+			ctx = ctx.WithLogger(ctx.Log.WithPrefix("dev:" + a + " "))
 			ctx.Log.Infof("Stopping dev %s", a)
 			err = devManager.Reset(ctx, a)
 			if err != nil {

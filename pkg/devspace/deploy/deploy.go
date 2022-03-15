@@ -10,7 +10,6 @@ import (
 	helmclient "github.com/loft-sh/devspace/pkg/devspace/helm"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
 	kubectlclient "github.com/loft-sh/devspace/pkg/devspace/kubectl"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
 	"io"
 	"sort"
@@ -18,8 +17,8 @@ import (
 
 // Options describe how the deployments should be deployed
 type Options struct {
-	SkipDeploy  bool `long:"skip-deploy" description:"If enabled, will skip deploying"`
-	ForceDeploy bool `long:"force-deploy" description:"Forces redeployment"`
+	SkipDeploy  bool `long:"skip" description:"If enabled, will skip deploying"`
+	ForceDeploy bool `long:"force-redeploy" description:"Forces redeployment"`
 	Sequential  bool `long:"sequential" description:"Sequentially deploys the deployments"`
 
 	Render       bool `long:"render" description:"If true, prints the rendered manifests to the stdout instead of deploying them"`
@@ -133,7 +132,7 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 		)
 		for i, deployConfig := range concurrentDeployments {
 			go func(deployConfig *latest.DeploymentConfig, deployNumber int) {
-				wasDeployed, err := c.deployOne(ctx.WithLogger(log.NewDefaultPrefixLogger("deploy:"+deployConfig.Name+" ", ctx.Log)), deployConfig, options)
+				wasDeployed, err := c.deployOne(ctx.WithLogger(ctx.Log.WithPrefix("deploy:"+deployConfig.Name+" ")), deployConfig, options)
 				if err != nil {
 					errChan <- err
 				} else {
@@ -157,7 +156,7 @@ func (c *controller) Deploy(ctx *devspacecontext.Context, deployments []string, 
 		}
 
 		for _, deployConfig := range sequentialDeployments {
-			logsDeploy := log.NewDefaultPrefixLogger("deploy:"+deployConfig.Name+" ", ctx.Log)
+			logsDeploy := ctx.Log.WithPrefix("deploy:" + deployConfig.Name + " ")
 			_, err := c.deployOne(ctx.WithLogger(logsDeploy), deployConfig, options)
 			if err != nil {
 				return err
@@ -302,7 +301,7 @@ func (c *controller) Purge(ctx *devspacecontext.Context, deployments []string) e
 				continue
 			}
 		}
-		ctx := ctx.WithLogger(log.NewDefaultPrefixLogger("purge:"+deploymentCache.Name+" ", ctx.Log))
+		ctx := ctx.WithLogger(ctx.Log.WithPrefix("purge:" + deploymentCache.Name + " "))
 
 		// Execute before deployment purge hook
 		err = hook.ExecuteHooks(ctx, map[string]interface{}{

@@ -163,7 +163,7 @@ func (m *manager) executeDependenciesRecursive(
 		}
 
 		// If not verbose log to a stream
-		dependencyCtx = dependencyCtx.WithLogger(log.NewStreamLogger(buff, logrus.InfoLevel))
+		dependencyCtx = dependencyCtx.WithLogger(log.NewStreamLogger(buff, buff, logrus.InfoLevel))
 		if dependency.Config() != nil {
 			pluginErr := plugin.ExecutePluginHookWithContext(map[string]interface{}{
 				"dependency_name":        dependency.Name(),

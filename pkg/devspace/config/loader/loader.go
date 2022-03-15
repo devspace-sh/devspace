@@ -308,7 +308,7 @@ func (l *configLoader) parseConfig(
 	}
 
 	// create a new variable resolver
-	resolver := l.newVariableResolver(localCache, remoteCache, client, options, vars, log)
+	resolver := l.newVariableResolver(localCache, client, options, vars, log)
 
 	// parse cli --var's, the resolver will cache them for us
 	_, err = resolver.ConvertFlags(options.Vars)
@@ -362,14 +362,6 @@ func (l *configLoader) parseConfig(
 	err = localCache.Save()
 	if err != nil {
 		return nil, nil, nil, err
-	}
-
-	// save remote cache
-	if client != nil {
-		err = remoteCache.Save(context.TODO(), client)
-		if err != nil {
-			return nil, nil, nil, err
-		}
 	}
 
 	return latestConfig, rawBeforeConversion, resolver, nil
@@ -578,8 +570,8 @@ func (l *configLoader) applyProfiles(ctx context.Context, data map[string]interf
 	return data, nil
 }
 
-func (l *configLoader) newVariableResolver(localCache localcache.Cache, remoteCache remotecache.Cache, client kubectl.Client, options *ConfigOptions, vars map[string]*latest.Variable, log log.Logger) variable.Resolver {
-	return variable.NewResolver(localCache, remoteCache, &variable.PredefinedVariableOptions{
+func (l *configLoader) newVariableResolver(localCache localcache.Cache, client kubectl.Client, options *ConfigOptions, vars map[string]*latest.Variable, log log.Logger) variable.Resolver {
+	return variable.NewResolver(localCache, &variable.PredefinedVariableOptions{
 		ConfigPath: l.absConfigPath,
 		KubeClient: client,
 		Profile:    GetLastProfile(options.Profiles),

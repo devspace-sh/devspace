@@ -2,6 +2,9 @@ package testing
 
 import (
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/util/log"
+	"io"
+	"io/ioutil"
 
 	"github.com/loft-sh/devspace/pkg/util/survey"
 	fakesurvey "github.com/loft-sh/devspace/pkg/util/survey/testing"
@@ -105,7 +108,7 @@ func (d *FakeLogger) Write(message []byte) (int, error) {
 }
 
 // WriteString implements logger interface
-func (d *FakeLogger) WriteString(message string) {}
+func (d *FakeLogger) WriteString(level logrus.Level, message string) {}
 
 // Question asks a new question
 func (d *FakeLogger) Question(params *survey.QuestionOptions) (string, error) {
@@ -114,4 +117,24 @@ func (d *FakeLogger) Question(params *survey.QuestionOptions) (string, error) {
 
 func (d *FakeLogger) SetAnswer(answer string) {
 	d.Survey.SetNextAnswer(answer)
+}
+
+func (d *FakeLogger) Writer(level logrus.Level, raw bool) io.WriteCloser {
+	return log.WithNopCloser(ioutil.Discard)
+}
+
+func (d *FakeLogger) WithSink(log log.Logger) log.Logger {
+	return d
+}
+
+func (d *FakeLogger) WithLevel(level logrus.Level) log.Logger {
+	return d
+}
+
+func (d *FakeLogger) AddSink(log log.Logger) {
+	return
+}
+
+func (d *FakeLogger) WithPrefix(prefix string) log.Logger {
+	return d
 }

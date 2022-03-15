@@ -53,7 +53,7 @@ var _ = DevSpaceDescribe("portforward", func() {
 	})
 
 	ginkgo.It("should watch files", func() {
-		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/watch")
+		tempDir, err := framework.CopyToTempDir("tests/pipelines/testdata/run_watch")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 

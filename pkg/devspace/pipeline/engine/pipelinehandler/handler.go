@@ -3,16 +3,17 @@ package pipelinehandler
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
 	"github.com/sirupsen/logrus"
 	"io"
 
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler"
+	basichandlercommands "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler/commands"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/pipelinehandler/commands"
 	enginetypes "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/log"
-	"github.com/pkg/errors"
 	"mvdan.cc/sh/v3/interp"
 )
 
@@ -20,7 +21,7 @@ import (
 var PipelineCommands = map[string]func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error{
 	"xargs": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		hc := interp.HandlerCtx(devCtx.Context)
-		return commands.XArgs(devCtx, args, NewPipelineExecHandler(devCtx, hc.Stdout, pipeline))
+		return basichandlercommands.XArgs(devCtx.Context, args, NewPipelineExecHandler(devCtx, hc.Stdout, hc.Stderr, pipeline))
 	},
 	"exec_container": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.ExecContainer(devCtx, args)
@@ -28,15 +29,12 @@ var PipelineCommands = map[string]func(devCtx *devspacecontext.Context, pipeline
 	"get_image": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.GetImage(devCtx, args)
 	},
-	"run_command": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
-		return commands.RunCommand(devCtx, pipeline, args, NewPipelineExecHandler)
-	},
 	"run_default_pipeline": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.RunDefaultPipeline(devCtx, pipeline, args, NewPipelineExecHandler)
 	},
-	"watch": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
+	"run_watch": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		hc := interp.HandlerCtx(devCtx.Context)
-		return commands.Watch(devCtx, args, NewPipelineExecHandler(devCtx, hc.Stdout, pipeline))
+		return basichandlercommands.RunWatch(devCtx.Context, args, NewPipelineExecHandler(devCtx, hc.Stdout, hc.Stderr, pipeline), devCtx.Log)
 	},
 	"run_pipelines": func(devCtx *devspacecontext.Context, pipeline types.Pipeline, args []string) error {
 		return commands.RunPipelines(devCtx, pipeline, args)
@@ -82,10 +80,11 @@ func init() {
 	}
 }
 
-func NewPipelineExecHandler(ctx *devspacecontext.Context, stdout io.Writer, pipeline types.Pipeline) enginetypes.ExecHandler {
+func NewPipelineExecHandler(ctx *devspacecontext.Context, stdout, stderr io.Writer, pipeline types.Pipeline) enginetypes.ExecHandler {
 	return &execHandler{
 		ctx:      ctx,
 		stdout:   stdout,
+		stderr:   stderr,
 		pipeline: pipeline,
 
 		basicHandler: basichandler.NewBasicExecHandler(),
@@ -95,6 +94,7 @@ func NewPipelineExecHandler(ctx *devspacecontext.Context, stdout io.Writer, pipe
 type execHandler struct {
 	ctx      *devspacecontext.Context
 	stdout   io.Writer
+	stderr   io.Writer
 	pipeline types.Pipeline
 
 	basicHandler enginetypes.ExecHandler
@@ -120,12 +120,22 @@ func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
 func (e *execHandler) handlePipelineCommands(ctx context.Context, command string, args []string) (bool, error) {
 	hc := interp.HandlerCtx(ctx)
 	devCtx := e.ctx.WithContext(ctx).WithWorkingDir(hc.Dir)
-	if e.stdout != nil && e.stdout == hc.Stdout {
+	if e.stdout != nil && e.stderr != nil && e.stdout == hc.Stdout && e.stderr == hc.Stderr {
 		devCtx = devCtx.WithLogger(e.ctx.Log)
 	} else {
-		devCtx = devCtx.WithLogger(log.NewStreamLoggerWithFormat(hc.Stdout, logrus.InfoLevel, log.RawFormat))
+		devCtx = devCtx.WithLogger(log.NewStreamLoggerWithFormat(hc.Stdout, hc.Stderr, logrus.InfoLevel, log.RawFormat))
 	}
 
+	// check if it's a function first
+	if devCtx.Config.Config().Functions != nil {
+		commandPayload, ok := devCtx.Config.Config().Functions[command]
+		if ok {
+			_, err := engine.ExecutePipelineShellCommand(devCtx.Context, commandPayload, args, hc.Dir, false, hc.Stdout, hc.Stderr, hc.Stdin, hc.Env, NewPipelineExecHandler(devCtx, hc.Stdout, hc.Stderr, e.pipeline))
+			return true, err
+		}
+	}
+
+	// resolve pipeline commands
 	pipelineCommand, ok := PipelineCommands[command]
 	if ok {
 		return e.executePipelineCommand(ctx, command, func() error {
@@ -143,20 +153,5 @@ func (e *execHandler) executePipelineCommand(ctx context.Context, command string
 		return true, interp.NewExitStatus(1)
 	}
 
-	return true, handleError(ctx, command, commandFn())
-}
-
-func handleError(ctx context.Context, command string, err error) error {
-	if err == nil {
-		return interp.NewExitStatus(0)
-	}
-
-	_, ok := interp.IsExitStatus(err)
-	if ok {
-		return err
-	}
-
-	hc := interp.HandlerCtx(ctx)
-	_, _ = fmt.Fprintln(hc.Stderr, errors.Wrap(err, command))
-	return interp.NewExitStatus(1)
+	return true, basichandler.HandleError(ctx, command, commandFn())
 }

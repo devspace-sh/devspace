@@ -353,32 +353,16 @@ func (c *Config) Upgrade(log log.Logger) (config.Config, error) {
 
 	nextConfig.Pipelines = map[string]*next.Pipeline{
 		"build": {
-			Steps: []next.PipelineStep{
-				{
-					Run: strings.TrimSpace(buildPipeline),
-				},
-			},
+			Run: strings.TrimSpace(buildPipeline),
 		},
 		"purge": {
-			Steps: []next.PipelineStep{
-				{
-					Run: strings.TrimSpace(purgePipeline),
-				},
-			},
+			Run: strings.TrimSpace(purgePipeline),
 		},
 		"dev": {
-			Steps: []next.PipelineStep{
-				{
-					Run: strings.TrimSpace(devPipeline),
-				},
-			},
+			Run: strings.TrimSpace(devPipeline),
 		},
 		"deploy": {
-			Steps: []next.PipelineStep{
-				{
-					Run: strings.TrimSpace(deployPipeline),
-				},
-			},
+			Run: strings.TrimSpace(deployPipeline),
 		},
 	}
 

@@ -1,23 +1,18 @@
 package pipeline
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine"
-	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/basichandler"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/pipelinehandler"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/env"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/types"
 	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
-	"github.com/pkg/errors"
 	"io"
 	"mvdan.cc/sh/v3/expand"
-	"mvdan.cc/sh/v3/interp"
 	"os"
-	"strings"
 	"sync"
 )
 
@@ -71,7 +66,7 @@ func (j *Job) Run(ctx *devspacecontext.Context) error {
 	t.Go(func() error {
 		// start the actual job
 		done := t.NotifyGo(func() error {
-			return j.doWork(ctx, t)
+			return j.execute(ctx, t)
 		})
 
 		// wait until job is dying
@@ -92,53 +87,11 @@ func (j *Job) Run(ctx *devspacecontext.Context) error {
 	return t.Wait()
 }
 
-func (j *Job) doWork(ctx *devspacecontext.Context, parent *tomb.Tomb) error {
-	// loop over steps and execute them
-	for i, step := range j.Config.Steps {
-		var (
-			execute = true
-			err     error
-		)
-		if step.If != "" {
-			execute, err = j.shouldExecuteStep(ctx, &step)
-			if err != nil {
-				return errors.Wrapf(err, "error checking if at step %d", i)
-			}
-		}
-		if execute {
-			err = j.executeStep(ctx, &step, parent)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func (j *Job) shouldExecuteStep(ctx *devspacecontext.Context, step *latest.PipelineStep) (bool, error) {
-	// check if step should be rerun
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-
-	_, err := engine.ExecutePipelineShellCommand(ctx.Context, step.Run, os.Args[1:], ctx.ResolvePath(step.WorkingDir), false, stdout, stderr, os.Stdin, j.getEnv(ctx), basichandler.NewBasicExecHandler())
-	if err != nil {
-		if status, ok := interp.IsExitStatus(err); ok && status == 1 {
-			return false, nil
-		}
-
-		return false, fmt.Errorf("error: %v (stdout: %s, stderr: %s)", err, stdout.String(), stderr.String())
-	} else if strings.TrimSpace(stdout.String()) == "false" {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-func (j *Job) executeStep(ctx *devspacecontext.Context, step *latest.PipelineStep, parent *tomb.Tomb) error {
+func (j *Job) execute(ctx *devspacecontext.Context, parent *tomb.Tomb) error {
 	ctx = ctx.WithLogger(ctx.Log)
 	stdoutReader, stdoutWriter := io.Pipe()
 	defer stdoutWriter.Close()
+
 	parent.Go(func() error {
 		s := scanner.NewScanner(stdoutReader)
 		for s.Scan() {
@@ -147,8 +100,19 @@ func (j *Job) executeStep(ctx *devspacecontext.Context, step *latest.PipelineSte
 		return nil
 	})
 
-	handler := pipelinehandler.NewPipelineExecHandler(ctx, stdoutWriter, j.Pipeline)
-	_, err := engine.ExecutePipelineShellCommand(ctx.Context, step.Run, os.Args[1:], ctx.ResolvePath(step.WorkingDir), step.ContinueOnError, stdoutWriter, stdoutWriter, os.Stdin, j.getEnv(ctx), handler)
+	stderrReader, stderrWriter := io.Pipe()
+	defer stderrWriter.Close()
+
+	parent.Go(func() error {
+		s := scanner.NewScanner(stderrReader)
+		for s.Scan() {
+			ctx.Log.Warn(s.Text())
+		}
+		return nil
+	})
+
+	handler := pipelinehandler.NewPipelineExecHandler(ctx, stdoutWriter, stderrWriter, j.Pipeline)
+	_, err := engine.ExecutePipelineShellCommand(ctx.Context, j.Config.Run, os.Args[1:], ctx.WorkingDir, j.Config.ContinueOnError, stdoutWriter, stderrWriter, os.Stdin, j.getEnv(ctx), handler)
 	return err
 }
 

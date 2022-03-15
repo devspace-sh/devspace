@@ -162,7 +162,7 @@ func (d *DeployConfig) Deploy(ctx *devspacecontext.Context, _ bool) (bool, error
 	ctx.Log.Info("Applying manifests with kubectl...")
 	wasDeployed := false
 	kubeObjects := []remotecache.KubectlObject{}
-	writer := ctx.Log.Writer(logrus.InfoLevel)
+	writer := ctx.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
 	for _, manifest := range d.Manifests {

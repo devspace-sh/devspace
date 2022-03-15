@@ -49,6 +49,9 @@ type Config struct {
 	// Imports merges specified config files into this one
 	Imports []Import `yaml:"imports,omitempty" json:"imports,omitempty"`
 
+	// Functions are bash functions that can be used within pipelines
+	Functions map[string]string `yaml:"functions,omitempty" json:"functions,omitempty"`
+
 	// Require defines what DevSpace, plugins and command versions are needed to use this config
 	Require RequireConfig `yaml:"require,omitempty" json:"require,omitempty"`
 
@@ -94,26 +97,12 @@ type Pipeline struct {
 	// Name of the pipeline, will be filled automatically
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
 
-	// Steps are the steps that are run in order for this job
-	Steps []PipelineStep `yaml:"steps,omitempty" json:"steps,omitempty"`
-}
-
-// PipelineStep is a step within a single pipeline
-type PipelineStep struct {
-	// If defines a condition as shell command to check if the command
-	// should get executed.
-	If string `yaml:"if,omitempty" json:"if,omitempty"`
-
 	// ContinueOnError will not fail the whole job and pipeline if
 	// a call within the step fails.
 	ContinueOnError bool `yaml:"continueOnError,omitempty" json:"continueOnError,omitempty"`
 
-	// Run is the actual shell command that should be executed during this
-	// pipeline step
+	// Run is the actual shell command that should be executed during this pipeline
 	Run string `yaml:"run,omitempty" json:"run,omitempty"`
-
-	// WorkingDir is the working directory of the pipeline step
-	WorkingDir string `yaml:"workingDir,omitempty" json:"workingDir,omitempty"`
 }
 
 type RequireConfig struct {
@@ -1098,7 +1087,6 @@ type Variable struct {
 	ValidationPattern string   `yaml:"validationPattern,omitempty" json:"validationPattern,omitempty"`
 	ValidationMessage string   `yaml:"validationMessage,omitempty" json:"validationMessage,omitempty"`
 	NoCache           bool     `yaml:"noCache,omitempty" json:"noCache,omitempty"`
-	RemoteCache       bool     `yaml:"remoteCache,omitempty" json:"remoteCache,omitempty"`
 	AlwaysResolve     bool     `yaml:"alwaysResolve,omitempty" json:"alwaysResolve,omitempty"`
 
 	// Value is a shortcut for using source: none and default: my-value

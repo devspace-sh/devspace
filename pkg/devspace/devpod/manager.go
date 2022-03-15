@@ -180,7 +180,7 @@ func (d *devPodManager) Start(originalContext *devspacecontext.Context, devPodCo
 
 	// create a DevPod logger
 	prefix := "dev:" + devPodConfig.Name + " "
-	unionLogger := logpkg.NewUnionLogger(originalContext.Log.GetLevel(), logpkg.NewDefaultPrefixLogger(prefix, originalContext.Log), logpkg.GetDevPodFileLogger(prefix))
+	unionLogger := originalContext.Log.WithPrefix(prefix).WithSink(logpkg.GetDevPodFileLogger(prefix))
 
 	// start the dev pod
 	err := dp.Start(originalContext.WithLogger(unionLogger), devPodConfig, options)

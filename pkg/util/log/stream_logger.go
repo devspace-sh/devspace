@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devspace/pkg/devspace/env"
+	"github.com/loft-sh/devspace/pkg/util/hash"
+	"github.com/loft-sh/devspace/pkg/util/scanner"
 	"io"
 	"io/ioutil"
 	"os"
@@ -21,9 +23,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var Colors = []string{
+	"blue",
+	"green",
+	"yellow",
+	"magenta",
+	"cyan",
+	"white+b",
+}
+
 const DevSpaceLogTimestamps = "DEVSPACE_LOG_TIMESTAMPS"
 
 var stdout = goansi.NewAnsiStdout()
+var stderr = goansi.NewAnsiStderr()
 
 type Format int
 
@@ -34,49 +46,60 @@ const (
 	RawFormat  Format = iota
 )
 
-func NewStdoutLogger(reader io.Reader, writer io.Writer, level logrus.Level) Logger {
-	isTerminal, _ := terminal.SetupTTY(reader, writer)
+func NewStdoutLogger(stdin io.Reader, stdout, stderr io.Writer, level logrus.Level) Logger {
+	isTerminal, _ := terminal.SetupTTY(stdin, stdout)
 	return &StreamLogger{
-		m:          sync.Mutex{},
-		level:      level,
-		format:     TextFormat,
-		isTerminal: isTerminal,
-		stream:     writer,
-		survey:     survey.NewSurvey(),
+		m:           &sync.Mutex{},
+		level:       level,
+		format:      TextFormat,
+		isTerminal:  isTerminal,
+		stream:      stdout,
+		errorStream: stderr,
+		survey:      survey.NewSurvey(),
 	}
 }
 
-func NewStreamLogger(writer io.Writer, level logrus.Level) Logger {
+func NewStreamLogger(stdout, stderr io.Writer, level logrus.Level) Logger {
 	return &StreamLogger{
-		m:          sync.Mutex{},
-		level:      level,
-		format:     TextFormat,
-		isTerminal: false,
-		stream:     writer,
-		survey:     survey.NewSurvey(),
+		m:           &sync.Mutex{},
+		level:       level,
+		format:      TextFormat,
+		isTerminal:  false,
+		stream:      stdout,
+		errorStream: stderr,
 	}
 }
 
-func NewStreamLoggerWithFormat(writer io.Writer, level logrus.Level, format Format) Logger {
+func NewStreamLoggerWithFormat(stdout, stderr io.Writer, level logrus.Level, format Format) Logger {
 	return &StreamLogger{
-		m:          sync.Mutex{},
-		level:      level,
-		isTerminal: false,
-		format:     format,
-		stream:     writer,
-		survey:     survey.NewSurvey(),
+		m:           &sync.Mutex{},
+		level:       level,
+		isTerminal:  false,
+		format:      format,
+		stream:      stdout,
+		errorStream: stderr,
 	}
 }
 
 type StreamLogger struct {
-	m     sync.Mutex
+	m     *sync.Mutex
 	level logrus.Level
 
-	format     Format
-	isTerminal bool
-	stream     io.Writer
+	prefixes []Prefix
+
+	format      Format
+	isTerminal  bool
+	stream      io.Writer
+	errorStream io.Writer
 
 	survey survey.Survey
+
+	sinks []Logger
+}
+
+type Prefix struct {
+	Prefix string
+	Color  string
 }
 
 type Line struct {
@@ -144,37 +167,100 @@ func (s *StreamLogger) GetFormat() Format {
 	return s.format
 }
 
+func (s *StreamLogger) WithPrefix(prefix string) Logger {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	hashNumber := int(hash.StringToNumber(prefix))
+	if hashNumber < 0 {
+		hashNumber = hashNumber * -1
+	}
+
+	n := *s
+	n.m = &sync.Mutex{}
+	n.prefixes = []Prefix{}
+	n.prefixes = append(n.prefixes, s.prefixes...)
+	n.prefixes = append(n.prefixes, Prefix{
+		Prefix: prefix,
+		Color:  Colors[hashNumber%len(Colors)],
+	})
+	return &n
+}
+
+func (s *StreamLogger) AddSink(log Logger) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	s.sinks = append(s.sinks, log)
+}
+
+func (s *StreamLogger) WithSink(log Logger) Logger {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	n := *s
+	n.m = &sync.Mutex{}
+	n.sinks = []Logger{}
+	n.sinks = append(n.sinks, s.sinks...)
+	n.sinks = append(n.sinks, log)
+	return &n
+}
+
 func (s *StreamLogger) WithLevel(level logrus.Level) Logger {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	return &StreamLogger{
-		stream:     s.stream,
-		format:     s.format,
-		isTerminal: s.isTerminal,
-		level:      level,
-		survey:     survey.NewSurvey(),
+	n := *s
+	n.m = &sync.Mutex{}
+	n.level = level
+	return &n
+}
+
+func (s *StreamLogger) getStream(level logrus.Level) io.Writer {
+	if level <= logrus.WarnLevel {
+		return s.errorStream
 	}
+
+	return s.stream
+}
+
+func (s *StreamLogger) writePrefixes(message string) string {
+	prefix := ""
+	for _, prefixDef := range s.prefixes {
+		if prefixDef.Color != "" {
+			prefix += ansi.Color(prefixDef.Prefix, prefixDef.Color)
+		} else {
+			prefix += prefixDef.Prefix
+		}
+	}
+
+	return prefix + message
 }
 
 func (s *StreamLogger) writeMessage(fnType logFunctionType, message string) {
 	fnInformation := fnTypeInformationMap[fnType]
+	message = s.writePrefixes(message)
+	for _, s := range s.sinks {
+		s.Print(fnInformation.logLevel, message)
+	}
+
 	if s.level >= fnInformation.logLevel {
+		stream := s.getStream(fnInformation.logLevel)
 		if s.format == RawFormat {
-			_, _ = s.stream.Write([]byte(message))
+			_, _ = stream.Write([]byte(message))
 		} else if s.format == TimeFormat {
 			if env.GlobalGetEnv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
 				now := time.Now()
-				_, _ = s.stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
+				_, _ = stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
 			}
-			_, _ = s.stream.Write([]byte(message))
+			_, _ = stream.Write([]byte(message))
 		} else if s.format == TextFormat {
 			if env.GlobalGetEnv(DevSpaceLogTimestamps) == "true" || s.level == logrus.DebugLevel {
 				now := time.Now()
-				_, _ = s.stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
+				_, _ = stream.Write([]byte(ansi.Color(formatInt(now.Hour())+":"+formatInt(now.Minute())+":"+formatInt(now.Second())+" ", "white+b")))
 			}
-			_, _ = s.stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
-			_, _ = s.stream.Write([]byte(message))
+			_, _ = stream.Write([]byte(ansi.Color(fnInformation.tag, fnInformation.color)))
+			_, _ = stream.Write([]byte(message))
 		} else if s.format == JsonFormat {
 			s.writeJSON(message, fnInformation.logLevel)
 		}
@@ -182,13 +268,14 @@ func (s *StreamLogger) writeMessage(fnType logFunctionType, message string) {
 }
 
 func (s *StreamLogger) writeJSON(message string, level logrus.Level) {
+	stream := s.getStream(level)
 	line, err := json.Marshal(&Line{
 		Time:    time.Now(),
 		Message: stripansi.Strip(strings.TrimSpace(message)),
 		Level:   level,
 	})
 	if err == nil {
-		_, _ = s.stream.Write([]byte(string(line) + "\n"))
+		_, _ = stream.Write([]byte(string(line) + "\n"))
 	}
 }
 
@@ -331,7 +418,7 @@ func (s *StreamLogger) GetLevel() logrus.Level {
 	return s.level
 }
 
-func (s *StreamLogger) Writer(level logrus.Level) io.WriteCloser {
+func (s *StreamLogger) Writer(level logrus.Level, raw bool) io.WriteCloser {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -339,28 +426,36 @@ func (s *StreamLogger) Writer(level logrus.Level) io.WriteCloser {
 		return &NopCloser{ioutil.Discard}
 	}
 
-	return &NopCloser{s}
-}
+	reader, writer := io.Pipe()
+	go func() {
+		sa := scanner.NewScanner(reader)
+		for sa.Scan() {
+			if raw {
+				s.WriteString(level, sa.Text()+"\n")
+			} else {
+				s.Print(level, sa.Text())
+			}
+		}
+	}()
 
-func (s *StreamLogger) Write(message []byte) (int, error) {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	return s.write(message)
+	return writer
 }
 
 func (s *StreamLogger) WriteString(level logrus.Level, message string) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
+	for _, s := range s.sinks {
+		s.WriteString(level, message)
+	}
+
 	if s.level < level {
 		return
 	}
-
-	_, _ = s.write([]byte(message))
+	_, _ = s.write(level, []byte(message))
 }
 
-func (s *StreamLogger) write(message []byte) (int, error) {
+func (s *StreamLogger) write(level logrus.Level, message []byte) (int, error) {
 	var (
 		n   int
 		err error
@@ -369,6 +464,7 @@ func (s *StreamLogger) write(message []byte) (int, error) {
 		s.writeJSON(string(message), logrus.InfoLevel)
 		n = len(message)
 	} else {
+		s.getStream(level)
 		n, err = s.stream.Write(message)
 	}
 	return n, err
@@ -387,6 +483,23 @@ func (s *StreamLogger) Question(params *survey.QuestionOptions) (string, error) 
 		return "", errors.Errorf("cannot ask question '%s' because log level is too low", params.Question)
 	}
 
-	_, _ = s.write([]byte("\n"))
+	// Try to silence the global log
+	id, err := AcquireGlobalSilence()
+	if err != nil {
+		return "", err
+	}
+	defer ReleaseGlobalSilence(id)
+
+	_, _ = s.write(logrus.InfoLevel, []byte("\n"))
 	return s.survey.Question(params)
 }
+
+func WithNopCloser(writer io.Writer) io.WriteCloser {
+	return &NopCloser{writer}
+}
+
+type NopCloser struct {
+	io.Writer
+}
+
+func (NopCloser) Close() error { return nil }

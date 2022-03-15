@@ -92,7 +92,7 @@ func (d *DiscardLogger) Write(message []byte) (int, error) {
 	return len(message), nil
 }
 
-func (d *DiscardLogger) Writer(level logrus.Level) io.WriteCloser {
+func (d *DiscardLogger) Writer(level logrus.Level, raw bool) io.WriteCloser {
 	return &NopCloser{ioutil.Discard}
 }
 
@@ -110,4 +110,16 @@ type SurveyError struct{}
 // Error implements error interface
 func (s SurveyError) Error() string {
 	return "Asking questions is not possible in silenced mode"
+}
+
+func (d *DiscardLogger) WithSink(log Logger) Logger {
+	return d
+}
+
+func (d *DiscardLogger) AddSink(log Logger) {
+	return
+}
+
+func (d *DiscardLogger) WithPrefix(prefix string) Logger {
+	return d
 }

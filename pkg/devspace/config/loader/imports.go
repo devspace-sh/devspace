@@ -20,6 +20,7 @@ var ImportSections = []string{
 	"images",
 	"pipelines",
 	"commands",
+	"functions",
 	"pullSecrets",
 	"dependencies",
 }

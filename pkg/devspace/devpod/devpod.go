@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/services/attach"
 	"github.com/loft-sh/devspace/pkg/devspace/services/logs"
 	"github.com/loft-sh/devspace/pkg/devspace/services/terminal"
+	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
 	"github.com/sirupsen/logrus"
 	"github.com/skratchdot/open-golang/open"
@@ -31,9 +32,6 @@ import (
 
 var (
 	openMaxWait = 5 * time.Minute
-
-	terminalDevPodMutex syncpkg.Mutex
-	terminalDevPod      *devPod
 )
 
 var (
@@ -287,10 +285,11 @@ func (d *devPod) getTerminalDevContainer(devPodConfig *latest.DevPod) *latest.De
 
 func (d *devPod) startAttach(ctx *devspacecontext.Context, devContainer *latest.DevContainer, opts Options, parent *tomb.Tomb) error {
 	parent.Go(func() error {
-		err := setTerminalDevPod(d)
+		id, err := logpkg.AcquireGlobalSilence()
 		if err != nil {
 			return err
 		}
+		defer logpkg.ReleaseGlobalSilence(id)
 
 		// make sure the global log is silent
 		err = attach.StartAttach(
@@ -302,9 +301,6 @@ func (d *devPod) startAttach(ctx *devspacecontext.Context, devContainer *latest.
 			DefaultTerminalStdin,
 			parent,
 		)
-		terminalDevPodMutex.Lock()
-		terminalDevPod = nil
-		terminalDevPodMutex.Unlock()
 		if err != nil {
 			return errors.Wrap(err, "error in attach")
 		}
@@ -323,10 +319,11 @@ func (d *devPod) startAttach(ctx *devspacecontext.Context, devContainer *latest.
 
 func (d *devPod) startTerminal(ctx *devspacecontext.Context, devContainer *latest.DevContainer, opts Options, parent *tomb.Tomb) error {
 	parent.Go(func() error {
-		err := setTerminalDevPod(d)
+		id, err := logpkg.AcquireGlobalSilence()
 		if err != nil {
 			return err
 		}
+		defer logpkg.ReleaseGlobalSilence(id)
 
 		// make sure the global log is silent
 		err = terminal.StartTerminal(
@@ -338,9 +335,6 @@ func (d *devPod) startTerminal(ctx *devspacecontext.Context, devContainer *lates
 			DefaultTerminalStdin,
 			parent,
 		)
-		terminalDevPodMutex.Lock()
-		terminalDevPod = nil
-		terminalDevPodMutex.Unlock()
 		if err != nil {
 			return errors.Wrap(err, "error in terminal forwarding")
 		}
@@ -446,16 +440,4 @@ func needPodReplaceContainer(devContainer *latest.DevContainer) bool {
 	}
 
 	return false
-}
-
-func setTerminalDevPod(devPod *devPod) error {
-	terminalDevPodMutex.Lock()
-	defer terminalDevPodMutex.Unlock()
-
-	if terminalDevPod != nil {
-		return fmt.Errorf("error starting terminal as it is currently already used by another dev pod")
-	}
-
-	terminalDevPod = devPod
-	return nil
 }

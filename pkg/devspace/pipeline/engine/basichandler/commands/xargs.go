@@ -1,21 +1,21 @@
 package commands
 
 import (
+	"context"
 	"errors"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"io/ioutil"
 	"mvdan.cc/sh/v3/interp"
 	"strings"
 )
 
-var xArgsUsage = errors.New(`usage:  xargs [utility [argument ...]]`)
+var xArgsUsage = errors.New(`usage: xargs [utility [argument ...]]`)
 
 type XArgsOptions struct {
 	Delimiter string
 }
 
-func XArgs(devCtx *devspacecontext.Context, args []string, handler types.ExecHandler) error {
+func XArgs(ctx context.Context, args []string, handler types.ExecHandler) error {
 	options := &XArgsOptions{
 		Delimiter: " ",
 	}
@@ -27,7 +27,7 @@ func XArgs(devCtx *devspacecontext.Context, args []string, handler types.ExecHan
 		return xArgsUsage
 	}
 
-	hc := interp.HandlerCtx(devCtx.Context)
+	hc := interp.HandlerCtx(ctx)
 	out, err := ioutil.ReadAll(hc.Stdin)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func XArgs(devCtx *devspacecontext.Context, args []string, handler types.ExecHan
 
 		args = append(args, addArg)
 	}
-	return handler.ExecHandler(devCtx.Context, args)
+	return handler.ExecHandler(ctx, args)
 }
 
 func parseXArgsOptions(args []string, options *XArgsOptions) ([]string, error) {

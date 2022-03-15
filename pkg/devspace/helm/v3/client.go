@@ -80,7 +80,7 @@ func (c *client) InstallChart(ctx *devspacecontext.Context, releaseName string, 
 	args = append(args, helmConfig.UpgradeArgs...)
 	output, err := c.genericHelm.Exec(ctx, args)
 	if helmConfig.DisplayOutput {
-		writer := ctx.Log.Writer(logrus.InfoLevel)
+		writer := ctx.Log.Writer(logrus.InfoLevel, false)
 		_, _ = writer.Write(output)
 		_ = writer.Close()
 	}

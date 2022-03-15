@@ -9,6 +9,5 @@ vars:
 
 pipelines:
   import1:
-    steps:
-    - run: |-
-        echo ${IMPORT1}
+    run: |-
+      echo ${IMPORT1}

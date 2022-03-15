@@ -9,7 +9,6 @@ import (
 
 	"github.com/loft-sh/devspace/pkg/devspace/config/versions/latest"
 	"github.com/loft-sh/devspace/pkg/devspace/hook"
-	logpkg "github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/randutil"
 	"github.com/pkg/errors"
 )
@@ -25,13 +24,13 @@ type imageNameAndTag struct {
 // Options describe how images should be build
 type Options struct {
 	Tags                      []string `long:"tag" short:"t" description:"If enabled will override the default tags"`
-	SkipBuild                 bool     `long:"skip-build" description:"If enabled will skip building"`
+	SkipBuild                 bool     `long:"skip" description:"If enabled will skip building"`
 	SkipPush                  bool     `long:"skip-push" description:"Skip pushing"`
 	SkipPushOnLocalKubernetes bool     `long:"skip-push-on-local-kubernetes" description:"Skip pushing"`
 	ForceRebuild              bool     `long:"force-rebuild" description:"Skip pushing"`
 	Sequential                bool     `long:"sequential" description:"Skip pushing"`
 
-	MaxConcurrentBuilds int `long:"maxConcurrentBuilds" description:"A pointer to an integer"`
+	MaxConcurrentBuilds int `long:"max-concurrent" description:"A pointer to an integer"`
 }
 
 // Controller is the main building interface
@@ -89,7 +88,7 @@ func (c *controller) Build(ctx *devspacecontext.Context, images []string, option
 
 	imagesToBuild := 0
 	for key, imageConf := range conf.Images {
-		ctx := ctx.WithLogger(logpkg.NewDefaultPrefixLogger("build:"+key+" ", ctx.Log))
+		ctx := ctx.WithLogger(ctx.Log.WithPrefix("build:" + key + " "))
 		if len(images) > 0 && !stringutil.Contains(images, key) {
 			continue
 		}
@@ -298,7 +297,7 @@ func (c *controller) waitForBuild(ctx *devspacecontext.Context, errChan <-chan e
 	case err := <-errChan:
 		return err
 	case done := <-cacheChan:
-		ctx := ctx.WithLogger(logpkg.NewDefaultPrefixLogger("build:"+done.imageConfigName+" ", ctx.Log))
+		ctx := ctx.WithLogger(ctx.Log.WithPrefix("build:" + done.imageConfigName + " "))
 		ctx.Log.Donef("Done building image %s:%s (%s)", done.imageName, done.imageTag, done.imageConfigName)
 
 		// Update cache

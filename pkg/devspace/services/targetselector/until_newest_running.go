@@ -111,14 +111,14 @@ func (u *PodInfoPrinter) PrintPodInfo(client kubectl.Client, pod *v1.Pod, log lo
 			for _, initContainer := range pod.Status.InitContainerStatuses {
 				if !stringutil.Contains(u.printedInitContainers, initContainer.Name) && initContainer.State.Running != nil {
 					// show logs of this currently running init container
-					log.Infof("Printing init container logs of pod %s", pod.Name)
+					log.Debugf("Printing init container logs of pod %s", pod.Name)
 					reader, err := client.Logs(context.TODO(), pod.Namespace, pod.Name, initContainer.Name, false, nil, true)
 					if err != nil {
 						log.Warnf("Error reading init container logs: %v", err)
 					} else {
 						scanner := scanner.NewScanner(reader)
 						for scanner.Scan() {
-							log.Info(scanner.Text())
+							log.Debug(scanner.Text())
 						}
 					}
 
@@ -131,7 +131,7 @@ func (u *PodInfoPrinter) PrintPodInfo(client kubectl.Client, pod *v1.Pod, log lo
 		status := kubectl.GetPodStatus(pod)
 		u.shownEvents = displayWarnings(relevantObjectsFromPod(pod), pod.Namespace, client, u.shownEvents, log)
 		if status != "Running" {
-			log.Infof("DevSpace is waiting, because Pod %s has status: %s", pod.Name, status)
+			log.Warnf("DevSpace is waiting, because Pod %s has status: %s", pod.Name, status)
 		}
 		u.LastWarning = time.Now()
 	}

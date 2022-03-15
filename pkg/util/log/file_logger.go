@@ -26,8 +26,10 @@ var overrideOnce sync.Once
 type fileLogger struct {
 	logger *logrus.Logger
 
-	m     sync.Mutex
-	level logrus.Level
+	m        *sync.Mutex
+	level    logrus.Level
+	sinks    []Logger
+	prefixes []string
 }
 
 func GetDevPodFileLogger(devPodName string) Logger {
@@ -45,6 +47,7 @@ func GetFileLogger(filename string) Logger {
 	if log == nil {
 		newLogger := &fileLogger{
 			logger: logrus.New(),
+			m:      &sync.Mutex{},
 		}
 		newLogger.logger.Formatter = &logrus.JSONFormatter{}
 		newLogger.logger.SetOutput(&lumberjack.Logger{
@@ -90,6 +93,21 @@ func OverrideRuntimeErrorHandler(discard bool) {
 	})
 }
 
+func (f *fileLogger) logSinks(level logrus.Level, message string) {
+	for _, s := range f.sinks {
+		s.Print(level, message)
+	}
+}
+
+func (f *fileLogger) addPrefixes(message string) string {
+	prefix := ""
+	for _, p := range f.prefixes {
+		prefix += p
+	}
+
+	return prefix + message
+}
+
 func (f *fileLogger) Debug(args ...interface{}) {
 	f.m.Lock()
 	defer f.m.Unlock()
@@ -98,11 +116,7 @@ func (f *fileLogger) Debug(args ...interface{}) {
 		return
 	}
 
-	f.logger.Debug(stripEscapeSequences(fmt.Sprint(args...)))
-}
-
-func (f *fileLogger) Children() []Logger {
-	return nil
+	f.logger.Debug(f.addPrefixes(stripEscapeSequences(fmt.Sprint(args...))))
 }
 
 func (f *fileLogger) Debugf(format string, args ...interface{}) {
@@ -113,7 +127,7 @@ func (f *fileLogger) Debugf(format string, args ...interface{}) {
 		return
 	}
 
-	f.logger.Debugf(stripEscapeSequences(fmt.Sprintf(format, args...)))
+	f.logger.Debugf(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }
 
 func (f *fileLogger) Info(args ...interface{}) {
@@ -124,7 +138,7 @@ func (f *fileLogger) Info(args ...interface{}) {
 		return
 	}
 
-	f.logger.Info(stripEscapeSequences(fmt.Sprint(args...)))
+	f.logger.Info(f.addPrefixes(stripEscapeSequences(fmt.Sprint(args...))))
 }
 
 func (f *fileLogger) Infof(format string, args ...interface{}) {
@@ -135,7 +149,7 @@ func (f *fileLogger) Infof(format string, args ...interface{}) {
 		return
 	}
 
-	f.logger.Info(stripEscapeSequences(fmt.Sprintf(format, args...)))
+	f.logger.Info(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }
 
 func (f *fileLogger) Warn(args ...interface{}) {
@@ -146,7 +160,7 @@ func (f *fileLogger) Warn(args ...interface{}) {
 		return
 	}
 
-	f.logger.Warn(stripEscapeSequences(fmt.Sprint(args...)))
+	f.logger.Warn(f.addPrefixes(stripEscapeSequences(fmt.Sprint(args...))))
 }
 
 func (f *fileLogger) Warnf(format string, args ...interface{}) {
@@ -157,7 +171,7 @@ func (f *fileLogger) Warnf(format string, args ...interface{}) {
 		return
 	}
 
-	f.logger.Warn(stripEscapeSequences(fmt.Sprintf(format, args...)))
+	f.logger.Warn(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }
 
 func (f *fileLogger) Error(args ...interface{}) {
@@ -168,7 +182,7 @@ func (f *fileLogger) Error(args ...interface{}) {
 		return
 	}
 
-	f.logger.Error(stripEscapeSequences(fmt.Sprint(args...)))
+	f.logger.Error(f.addPrefixes(stripEscapeSequences(fmt.Sprint(args...))))
 }
 
 func (f *fileLogger) Errorf(format string, args ...interface{}) {
@@ -179,7 +193,7 @@ func (f *fileLogger) Errorf(format string, args ...interface{}) {
 		return
 	}
 
-	f.logger.Error(stripEscapeSequences(fmt.Sprintf(format, args...)))
+	f.logger.Error(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }
 
 func (f *fileLogger) Fatal(args ...interface{}) {
@@ -190,7 +204,7 @@ func (f *fileLogger) Fatal(args ...interface{}) {
 		return
 	}
 
-	f.logger.Fatal(stripEscapeSequences(fmt.Sprint(args...)))
+	f.logger.Fatal(f.addPrefixes(stripEscapeSequences(fmt.Sprint(args...))))
 }
 
 func (f *fileLogger) Fatalf(format string, args ...interface{}) {
@@ -201,7 +215,7 @@ func (f *fileLogger) Fatalf(format string, args ...interface{}) {
 		return
 	}
 
-	f.logger.Fatal(stripEscapeSequences(fmt.Sprintf(format, args...)))
+	f.logger.Fatal(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }
 
 func (f *fileLogger) Done(args ...interface{}) {
@@ -212,7 +226,7 @@ func (f *fileLogger) Done(args ...interface{}) {
 		return
 	}
 
-	f.logger.Info(stripEscapeSequences(fmt.Sprint(args...)))
+	f.logger.Info(f.addPrefixes(stripEscapeSequences(fmt.Sprint(args...))))
 }
 
 func (f *fileLogger) Donef(format string, args ...interface{}) {
@@ -223,7 +237,7 @@ func (f *fileLogger) Donef(format string, args ...interface{}) {
 		return
 	}
 
-	f.logger.Info(stripEscapeSequences(fmt.Sprintf(format, args...)))
+	f.logger.Info(f.addPrefixes(stripEscapeSequences(fmt.Sprintf(format, args...))))
 }
 
 func (f *fileLogger) Print(level logrus.Level, args ...interface{}) {
@@ -278,7 +292,7 @@ func (f *fileLogger) GetLevel() logrus.Level {
 	return f.level
 }
 
-func (f *fileLogger) Writer(level logrus.Level) io.WriteCloser {
+func (f *fileLogger) Writer(level logrus.Level, raw bool) io.WriteCloser {
 	f.m.Lock()
 	defer f.m.Unlock()
 
@@ -317,8 +331,35 @@ func (f *fileLogger) WithLevel(level logrus.Level) Logger {
 	f.m.Lock()
 	defer f.m.Unlock()
 
-	return &fileLogger{
-		logger: f.logger,
-		level:  f.level,
-	}
+	n := *f
+	n.m = &sync.Mutex{}
+	n.level = level
+	return &n
+}
+
+func (f *fileLogger) WithSink(log Logger) Logger {
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	n := *f
+	n.m = &sync.Mutex{}
+	n.sinks = append(n.sinks, log)
+	return &n
+}
+
+func (f *fileLogger) AddSink(log Logger) {
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	f.sinks = append(f.sinks, log)
+}
+
+func (f *fileLogger) WithPrefix(prefix string) Logger {
+	f.m.Lock()
+	defer f.m.Unlock()
+
+	n := *f
+	n.m = &sync.Mutex{}
+	n.prefixes = append(n.prefixes, prefix)
+	return &n
 }

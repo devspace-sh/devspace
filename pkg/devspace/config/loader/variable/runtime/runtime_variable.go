@@ -30,6 +30,7 @@ var Locations = []string{
 	"/dev/terminal/imageSelector",
 	"/pipelines/**",
 	"/commands/**",
+	"/functions/**",
 }
 
 // NewRuntimeVariable creates a new variable that is loaded during runtime

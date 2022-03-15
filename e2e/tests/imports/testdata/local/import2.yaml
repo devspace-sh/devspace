@@ -6,10 +6,8 @@ vars:
 
 pipelines:
   import2-name:
-    steps:
-      - run: |-
-          echo ${devspace.name}
+    run: |-
+      echo ${devspace.name}
   import2:
-    steps:
-      - run: |-
-          echo ${IMPORT2}
+    run: |-
+      echo ${IMPORT2}

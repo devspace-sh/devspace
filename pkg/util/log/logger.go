@@ -41,7 +41,7 @@ type Logger interface {
 	Print(level logrus.Level, args ...interface{})
 	Printf(level logrus.Level, format string, args ...interface{})
 
-	Writer(level logrus.Level) io.WriteCloser
+	Writer(level logrus.Level, raw bool) io.WriteCloser
 	WriteString(level logrus.Level, message string)
 
 	Question(params *survey.QuestionOptions) (string, error)
@@ -52,6 +52,7 @@ type Logger interface {
 	// WithLevel creates a new logger with the given level
 	WithLevel(level logrus.Level) Logger
 
-	// Children can be used to gather child loggers of the current logger
-	Children() []Logger
+	WithPrefix(prefix string) Logger
+	WithSink(sink Logger) Logger
+	AddSink(sink Logger)
 }

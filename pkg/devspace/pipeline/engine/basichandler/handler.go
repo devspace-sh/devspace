@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devspace/pkg/util/downloader"
 	"github.com/loft-sh/devspace/pkg/util/downloader/commands"
 	"github.com/loft-sh/devspace/pkg/util/log"
+	"github.com/pkg/errors"
 	"mvdan.cc/sh/v3/interp"
 	"os"
 	"time"
@@ -29,11 +30,21 @@ var BasicCommands = map[string]func(ctx context.Context, args []string) error{
 		return enginecommands.IsCommand(ctx, args)
 	},
 	"sleep": func(ctx context.Context, args []string) error {
-		return handleError(interp.HandlerCtx(ctx), enginecommands.Sleep(ctx, args))
+		return HandleError(ctx, "sleep", enginecommands.Sleep(ctx, args))
 	},
 	"cat": func(ctx context.Context, args []string) error {
 		hc := interp.HandlerCtx(ctx)
-		return handleError(hc, enginecommands.Cat(&hc, args))
+		return HandleError(ctx, "cat", enginecommands.Cat(&hc, args))
+	},
+}
+
+// OverwriteCommands are commands that overwrite existing bash commands
+var OverwriteCommands = map[string]func(ctx context.Context, args []string, handler types.ExecHandler) error{
+	"xargs": func(ctx context.Context, args []string, handler types.ExecHandler) error {
+		return HandleError(ctx, "xargs", enginecommands.XArgs(ctx, args, handler))
+	},
+	"run_watch": func(ctx context.Context, args []string, handler types.ExecHandler) error {
+		return HandleError(ctx, "run_watch", enginecommands.RunWatch(ctx, args, handler, log.Discard))
 	},
 }
 
@@ -87,6 +98,12 @@ func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
 
 			args[0] = bin
 		} else {
+			// handle overwrite commands
+			overwriteCommand, ok := OverwriteCommands[args[0]]
+			if ok {
+				return overwriteCommand(ctx, args[1:], e)
+			}
+
 			// handle some special commands that are not found locally
 			_, err := lookPathDir(hc.Dir, hc.Env, args[0])
 			if err != nil {
@@ -111,15 +128,19 @@ func (e *execHandler) ExecHandler(ctx context.Context, args []string) error {
 	return interp.DefaultExecHandler(2*time.Second)(ctx, args)
 }
 
-func handleError(hc interp.HandlerContext, err error) error {
-	if err != nil {
-		_, _ = fmt.Fprintln(hc.Stderr, err)
-		if _, ok := interp.IsExitStatus(err); ok {
-			return err
-		}
-		return interp.NewExitStatus(1)
+func HandleError(ctx context.Context, command string, err error) error {
+	if err == nil {
+		return interp.NewExitStatus(0)
 	}
-	return interp.NewExitStatus(0)
+
+	_, ok := interp.IsExitStatus(err)
+	if ok {
+		return err
+	}
+
+	hc := interp.HandlerCtx(ctx)
+	_, _ = fmt.Fprintln(hc.Stderr, errors.Wrap(err, command))
+	return interp.NewExitStatus(1)
 }
 
 var lookPathDir = interp.LookPathDir

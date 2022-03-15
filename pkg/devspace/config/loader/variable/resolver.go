@@ -6,7 +6,6 @@ import (
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/expression"
 	"github.com/loft-sh/devspace/pkg/devspace/config/loader/variable/runtime"
 	"github.com/loft-sh/devspace/pkg/devspace/config/localcache"
-	"github.com/loft-sh/devspace/pkg/devspace/config/remotecache"
 	"github.com/loft-sh/devspace/pkg/devspace/dependency/graph"
 	"path/filepath"
 	"regexp"
@@ -22,11 +21,10 @@ import (
 var AlwaysResolvePredefinedVars = []string{"devspace.name", "devspace.tempFolder", "devspace.version", "devspace.random", "devspace.profile", "devspace.userHome", "devspace.timestamp", "devspace.context", "devspace.namespace"}
 
 // NewResolver creates a new resolver that caches resolved variables in memory and in the provided cache
-func NewResolver(localCache localcache.Cache, remoteCache remotecache.Cache, predefinedVariableOptions *PredefinedVariableOptions, vars map[string]*latest.Variable, log log.Logger) Resolver {
+func NewResolver(localCache localcache.Cache, predefinedVariableOptions *PredefinedVariableOptions, vars map[string]*latest.Variable, log log.Logger) Resolver {
 	return &resolver{
 		memoryCache: map[string]interface{}{},
 		localCache:  localCache,
-		remoteCache: remoteCache,
 		vars:        vars,
 		options:     predefinedVariableOptions,
 		log:         log,
@@ -37,7 +35,6 @@ type resolver struct {
 	vars        map[string]*latest.Variable
 	memoryCache map[string]interface{}
 	localCache  localcache.Cache
-	remoteCache remotecache.Cache
 	options     *PredefinedVariableOptions
 	log         log.Logger
 }
@@ -513,7 +510,7 @@ func (r *resolver) fillVariable(ctx context.Context, name string, definition *la
 	case latest.VariableSourceEnv:
 		return NewEnvVariable(name).Load(ctx, definition)
 	case latest.VariableSourceDefault, latest.VariableSourceInput, latest.VariableSourceAll:
-		return NewDefaultVariable(name, filepath.Dir(r.options.ConfigPath), r.localCache, r.remoteCache, r.log).Load(ctx, definition)
+		return NewDefaultVariable(name, filepath.Dir(r.options.ConfigPath), r.localCache, r.log).Load(ctx, definition)
 	case latest.VariableSourceNone:
 		return NewNoneVariable(name).Load(ctx, definition)
 	case latest.VariableSourceCommand:

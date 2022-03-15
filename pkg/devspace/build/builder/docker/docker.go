@@ -238,7 +238,7 @@ func CreateContextStream(buildHelper *helper.BuildHelper, contextPath, dockerfil
 	if log == logpkg.GetInstance() {
 		writer = logpkg.WithNopCloser(stdout)
 	} else {
-		writer = log.Writer(logrus.InfoLevel)
+		writer = log.Writer(logrus.InfoLevel, false)
 	}
 
 	contextDir, relDockerfile, err := build.GetContextFromLocalDir(contextPath, dockerfilePath)

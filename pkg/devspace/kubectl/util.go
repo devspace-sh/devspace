@@ -190,7 +190,7 @@ func NewPortForwarder(client Client, pod *corev1.Pod, ports []string, addresses 
 	logFile := log.GetFileLogger("portforwarding")
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", execRequest.URL())
 
-	fw, err := portforward.NewOnAddresses(dialer, addresses, ports, stopChan, readyChan, errorChan, logFile.Writer(logrus.InfoLevel), logFile.Writer(logrus.InfoLevel))
+	fw, err := portforward.NewOnAddresses(dialer, addresses, ports, stopChan, readyChan, errorChan, logFile.Writer(logrus.InfoLevel, false), logFile.Writer(logrus.WarnLevel, false))
 	if err != nil {
 		return nil, err
 	}

@@ -388,7 +388,7 @@ func (b *Builder) BuildImage(ctx *devspacecontext.Context, contextPath, dockerfi
 		if ctx.Log == logpkg.GetInstance() {
 			writer = logpkg.WithNopCloser(stdout)
 		} else {
-			writer = ctx.Log.Writer(logrus.InfoLevel)
+			writer = ctx.Log.Writer(logrus.InfoLevel, false)
 		}
 		defer writer.Close()
 

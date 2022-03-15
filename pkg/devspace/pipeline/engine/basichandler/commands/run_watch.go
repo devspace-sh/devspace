@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/bmatcuk/doublestar"
 	"github.com/jessevdk/go-flags"
-	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	types2 "github.com/loft-sh/devspace/pkg/devspace/pipeline/engine/types"
 	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/loft-sh/devspace/pkg/util/tomb"
@@ -17,30 +16,30 @@ import (
 	"time"
 )
 
-type WatchOptions struct {
+type RunWatchOptions struct {
 	FailOnError bool `long:"fail-on-error" description:"If true the command will fail on an error while running the sub command"`
 
 	Paths []string `long:"path" short:"p" description:"The paths to watch. Can be patterns in the form of ./**/my-file.txt"`
 }
 
-func Watch(devCtx *devspacecontext.Context, args []string, handler types2.ExecHandler) error {
-	devCtx.Log.Debugf("watch %s", strings.Join(args, " "))
-	options := &WatchOptions{}
+func RunWatch(ctx context.Context, args []string, handler types2.ExecHandler, log log.Logger) error {
+	log.Debugf("run_watch %s", strings.Join(args, " "))
+	options := &RunWatchOptions{}
 	args, err := flags.ParseArgs(options, args)
 	if err != nil {
 		return errors.Wrap(err, "parse args")
 	}
 	if len(options.Paths) == 0 {
-		return fmt.Errorf("usage: watch --path MY_PATH -- my_command")
+		return fmt.Errorf("usage: run_watch --path MY_PATH -- my_command")
 	}
 	if len(args) == 0 {
-		return fmt.Errorf("usage: watch --path MY_PATH -- my_command")
+		return fmt.Errorf("usage: run_watch --path MY_PATH -- my_command")
 	}
 
 	w := &watcher{}
-	return w.Watch(devCtx.Context, options.Paths, options.FailOnError, func(ctx context.Context) error {
+	return w.Watch(ctx, options.Paths, options.FailOnError, func(ctx context.Context) error {
 		return handler.ExecHandler(ctx, args)
-	}, devCtx.Log)
+	}, log)
 }
 
 type watcher struct{}

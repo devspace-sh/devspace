@@ -57,13 +57,6 @@ func (cmd *namespaceCmd) RunUseNamespace(f factory.Factory, cobraCmd *cobra.Comm
 
 	// Check if current kube context belongs to a space
 	kubeLoader := client.KubeConfigLoader()
-	isSpace, err := kubeLoader.IsCloudSpace(client.CurrentContext())
-	if err != nil {
-		return errors.Errorf("Unable to check if context belongs to Space: %v", err)
-	}
-	if isSpace {
-		return errors.Errorf("Current kube-context belongs to a Space created by DevSpace Cloud. Changing the default namespace for a Space context is not possible.")
-	}
 
 	// Load kube-config
 	kubeConfig, err := kubeLoader.LoadRawConfig()

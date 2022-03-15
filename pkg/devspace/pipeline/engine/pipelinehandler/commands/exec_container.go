@@ -6,10 +6,9 @@ import (
 	devspacecontext "github.com/loft-sh/devspace/pkg/devspace/context"
 	"github.com/loft-sh/devspace/pkg/devspace/kubectl"
 	"github.com/loft-sh/devspace/pkg/devspace/services/targetselector"
-	"github.com/loft-sh/devspace/pkg/util/log"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"mvdan.cc/sh/v3/interp"
-	"strings"
 	"time"
 )
 
@@ -21,13 +20,11 @@ type ExecContainerOptions struct {
 	Namespace   string `long:"namespace" short:"n" description:"The namespace to use"`
 	DisableWait bool   `long:"disable-wait" description:"If true, will not wait for the container to become ready"`
 	Timeout     int64  `long:"timeout" description:"The timeout to wait. Defaults to 5 minutes"`
-	Silent      bool   `long:"silent" short:"s" description:"If true will not output any other log messages"`
+	Verbose     bool   `long:"verbose" description:"If true will print more information"`
 }
 
 func ExecContainer(ctx *devspacecontext.Context, args []string) error {
 	hc := interp.HandlerCtx(ctx.Context)
-
-	ctx.Log.Debugf("exec_container %s", strings.Join(args, " "))
 	options := &ExecContainerOptions{
 		Namespace: ctx.KubeClient.Namespace(),
 	}
@@ -42,16 +39,16 @@ func ExecContainer(ctx *devspacecontext.Context, args []string) error {
 		return fmt.Errorf("usage: exec_container [--image-selector|--label-selector] COMMAND")
 	}
 
-	logger := ctx.Log
-	if options.Silent {
-		logger = log.Discard
+	logger := ctx.Log.WithLevel(logrus.WarnLevel)
+	if options.Verbose {
+		logger = ctx.Log
 	}
 
 	selectorOptions := targetselector.NewOptionsFromFlags(options.Container, options.LabelSelector, []string{options.ImageSelector}, options.Namespace, "")
 	if options.Timeout != 0 {
 		selectorOptions = selectorOptions.WithTimeout(options.Timeout)
 	}
-	selectorOptions.WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Millisecond * 500))
+	selectorOptions.WithWaitingStrategy(targetselector.NewUntilNewestRunningWaitingStrategy(time.Millisecond * 100))
 	selectedContainer, err := targetselector.NewTargetSelector(selectorOptions).SelectSingleContainer(ctx.Context, ctx.KubeClient, logger)
 	if err != nil {
 		return err
