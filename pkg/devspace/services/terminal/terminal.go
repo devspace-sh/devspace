@@ -111,10 +111,6 @@ func StartTerminal(
 		}
 	}()
 
-	before := log.GetBaseInstance().GetLevel()
-	log.GetBaseInstance().SetLevel(logrus.PanicLevel)
-	defer log.GetBaseInstance().SetLevel(before)
-
 	command := getCommand(devContainer)
 	container, err := selector.WithContainer(devContainer.Container).SelectSingleContainer(ctx.Context, ctx.KubeClient, ctx.Log)
 	if err != nil {
@@ -130,6 +126,7 @@ func StartTerminal(
 		// try to install screen
 		useScreen := false
 		if term.IsTerminal(stdin) && !devContainer.Terminal.DisableScreen {
+			ctx.Log.Debugf("Installing screen in container...")
 			bufferStdout, bufferStderr, err := ctx.KubeClient.ExecBuffered(ctx.Context, container.Pod, container.Container.Name, []string{
 				"sh",
 				"-c",
@@ -166,6 +163,12 @@ fi`,
 			newCommand = append(newCommand, command...)
 			command = newCommand
 		}
+
+		ctx.Log.Debugf("Starting terminal...")
+
+		before := log.GetBaseInstance().GetLevel()
+		log.GetBaseInstance().SetLevel(logrus.PanicLevel)
+		defer log.GetBaseInstance().SetLevel(before)
 
 		errChan <- ctx.KubeClient.ExecStream(ctx.Context, &kubectl.ExecStreamOptions{
 			Pod:         container.Pod,
