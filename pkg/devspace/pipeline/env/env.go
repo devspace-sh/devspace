@@ -34,12 +34,13 @@ type envProvider struct {
 }
 
 func (e *envProvider) Get(name string) expand.Variable {
-	v, ok := e.getRuntimeVariable(name)
-	if ok {
-		return v
-	}
+	// Should we enable this?
+	// v, ok := e.getRuntimeVariable(name)
+	// if ok {
+	//	return v
+	// }
 
-	v, ok = e.getVariable(name)
+	v, ok := e.getVariable(name)
 	if ok {
 		return v
 	}
@@ -80,12 +81,13 @@ func (e *envProvider) getRuntimeVariable(name string) (expand.Variable, bool) {
 }
 
 func (e *envProvider) Each(visitor func(name string, vr expand.Variable) bool) {
-	for name := range e.config.ListRuntimeVariables() {
-		v, ok := e.getRuntimeVariable(name)
-		if ok {
-			visitor(name, v)
-		}
-	}
+	// Should we enable this?
+	// for name := range e.config.ListRuntimeVariables() {
+	//	v, ok := e.getRuntimeVariable(name)
+	//	if ok {
+	//		visitor(name, v)
+	//	}
+	// }
 
 	for name := range e.config.Variables() {
 		v, ok := e.getVariable(name)
